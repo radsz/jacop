@@ -59,7 +59,7 @@ final class SteinerCycleBound {
   static final long INF = Long.MAX_VALUE / 8;
 
   static final byte OUT = 0;
-  static final byte REQUIRED = 1;
+  static final byte REQUIRED_NODE = 1;
   static final byte OPTIONAL = 2;
 
   private final int n;
@@ -116,7 +116,7 @@ final class SteinerCycleBound {
   long solve() {
     r = 0;
     for (int i = 0; i < n; i++) {
-      if (kind[i] == REQUIRED) {
+      if (kind[i] == REQUIRED_NODE) {
         position[i] = r;
         required[r++] = i;
       }
@@ -159,12 +159,12 @@ final class SteinerCycleBound {
    * @return the increase, or at least INF when no cycle through the required nodes uses the arc.
    */
   long arc(int a, int b) {
-    long fa = kind[a] == REQUIRED ? -u[position[a] + 1] : forward[a];
-    long gb = kind[b] == REQUIRED ? -v[position[b] + 1] : backward[b];
+    long fa = kind[a] == REQUIRED_NODE ? -u[position[a] + 1] : forward[a];
+    long gb = kind[b] == REQUIRED_NODE ? -v[position[b] + 1] : backward[b];
     if (fa >= INF || gb >= INF) {
       return INF;
     }
-    return fa + costs[a][b] - (kind[a] == REQUIRED ? 0 : charge[a]) + gb;
+    return fa + costs[a][b] - (kind[a] == REQUIRED_NODE ? 0 : charge[a]) + gb;
   }
 
   /**
@@ -211,7 +211,7 @@ final class SteinerCycleBound {
       int b = val - offset;
       if (b != a) {
         long nd = d + row[b] - chargeA;
-        if (kind[b] == REQUIRED) {
+        if (kind[b] == REQUIRED_NODE) {
           int p = position[b];
           if (nd < out[p]) {
             out[p] = nd;
@@ -295,7 +295,7 @@ final class SteinerCycleBound {
       int last = x.max();
       for (int val = x.min(); ; val = x.domain.nextValue(val)) {
         int b = val - offset;
-        if (kind[b] == REQUIRED) {
+        if (kind[b] == REQUIRED_NODE) {
           long d = row[b] - c - v[position[b] + 1];
           if (d < backward[o]) {
             backward[o] = d;

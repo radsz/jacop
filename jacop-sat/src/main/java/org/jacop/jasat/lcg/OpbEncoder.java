@@ -352,7 +352,7 @@ final class OpbEncoder implements PbModel {
     guard.add(lit);
     try {
       return encoding.getAsBoolean();
-    } catch (IllegalStateException e) {
+    } catch (IllegalStateException _) {
       // an encoding the proof derives lines from: the constraint is listed as unsupported, which
       // stops the proof, so the lines it wrote under the guard do no harm
       return false;

@@ -107,6 +107,16 @@ public class Diffn extends Nooverlap {
   private int[] window = new int[0];
   private int windowCount;
 
+  // energetic reasoning on the strips across each dimension: 0 off, 1 with the dual feasible
+  // functions (as the area check uses them), 2 with the plain energy only
+  static final int ENERGETIC_DEFAULT = Integer.getInteger("org.jacop.diffn.energetic", 0);
+  private int energetic = ENERGETIC_DEFAULT;
+  private long[] stripDates = new long[0];
+  private int[] stripWidth = new int[0];
+  private int[] stripHeight = new int[0];
+  private int[] strip = new int[0];
+  private int stripCount;
+
   // whether a failure of the area check is explained by the rectangles in the window only
   static final boolean AREA_REASONS =
       !"false".equals(System.getProperty("org.jacop.diffn.areaReasons"));
@@ -228,8 +238,13 @@ public class Diffn extends Nooverlap {
 
     if (store.propagationHasOccurred) {
       store.addChanged(this);
-    } else if (doAreaCheck || DFF_MODE == DFF_ALWAYS) {
-      areaCheck();
+    } else {
+      if (doAreaCheck || DFF_MODE == DFF_ALWAYS) {
+        areaCheck();
+      }
+      if (energetic != 0) {
+        energeticCheck();
+      }
     }
   }
 
@@ -320,6 +335,140 @@ public class Diffn extends Nooverlap {
     return dffs().packingFails(width, height, dffWidth, dffHeight, m);
   }
 
+  /**
+   * It sets the energetic check on strips (see {@link #energeticCheck}); the default comes from the
+   * property {@code org.jacop.diffn.energetic}, 0.
+   *
+   * @param mode 0 off, 1 with the dual feasible functions, 2 with the plain energy only.
+   */
+  public void setEnergetic(int mode) {
+    this.energetic = mode;
+  }
+
+  /**
+   * Energetic reasoning on strips, the check of Clautiaux, Jouglet, Carlier and Moukrim (A new
+   * constraint programming approach for the orthogonal packing problem, Computers and Operations
+   * Research 35(3):944-959, 2008) in its failure form. For a dimension d and an interval [t1, t2)
+   * of it, every rectangle covers at least its minimal intersection with the interval at its
+   * smallest length in d, and its smallest length in the other dimension, all inside the strip of
+   * the interval and the space every rectangle may take in the other dimension. These parts must
+   * pack in the strip: the check fails when their area exceeds the strip's, or when a pair of the
+   * dual feasible functions of {@link DualFeasibleFunctions} shows they cannot be packed. The
+   * intervals run from the earliest and latest starts to the earliest and latest ends.
+   */
+  private void energeticCheck() {
+    invalidateBounds();
+    syncBounds();
+    int n = rectangle.length;
+    for (int i = 0; i < n; i++) {
+      bounds(i);
+    }
+    for (int d = 0; d < 2; d++) {
+      if (energeticFails(d)) {
+        throw Store.failException;
+      }
+    }
+  }
+
+  /**
+   * Whether the energetic check fails in dimension d on the bounds in est, lst, lMin and lMax; if
+   * so, the rectangles with a part in the failing strip are left in strip[0..stripCount).
+   */
+  private boolean energeticFails(int d) {
+    int e = 1 - d;
+    int n = rectangle.length;
+    long low = Long.MAX_VALUE;
+    long high = Long.MIN_VALUE;
+    for (int i = 0; i < n; i++) {
+      low = Math.min(low, est[e][i]);
+      high = Math.max(high, (long) lst[e][i] + lMax[e][i]);
+    }
+    long height = high - low;
+    if (height <= 0 || height > DualFeasibleFunctions.MAX_SIDE) {
+      return false;
+    }
+    if (stripDates.length < 2 * n) {
+      stripDates = new long[2 * n];
+      strip = new int[n];
+      stripWidth = new int[n];
+      stripHeight = new int[n];
+    }
+    int starts = 0;
+    for (int i = 0; i < n; i++) {
+      if (lMin[d][i] > 0 && lMin[e][i] > 0) {
+        stripDates[starts++] = est[d][i];
+        stripDates[starts++] = lst[d][i];
+      }
+    }
+    if (starts == 0) {
+      return false;
+    }
+    Arrays.sort(stripDates, 0, starts);
+    long[] ends = new long[2 * n];
+    int endCount = 0;
+    for (int i = 0; i < n; i++) {
+      if (lMin[d][i] > 0 && lMin[e][i] > 0) {
+        ends[endCount++] = (long) est[d][i] + lMin[d][i];
+        ends[endCount++] = (long) lst[d][i] + lMin[d][i];
+      }
+    }
+    Arrays.sort(ends, 0, endCount);
+    long previousStart = Long.MIN_VALUE;
+    for (int a = 0; a < starts; a++) {
+      long t1 = stripDates[a];
+      if (t1 == previousStart) {
+        continue;
+      }
+      previousStart = t1;
+      long previousEnd = Long.MIN_VALUE;
+      for (int b = 0; b < endCount; b++) {
+        long t2 = ends[b];
+        if (t2 <= t1 || t2 == previousEnd) {
+          continue;
+        }
+        previousEnd = t2;
+        if (stripFails(d, t1, t2, height)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // whether the parts of the rectangles in [t1, t2) x height cannot be packed in it
+  private boolean stripFails(int d, long t1, long t2, long height) {
+    int e = 1 - d;
+    int n = rectangle.length;
+    long width = t2 - t1;
+    if (width > DualFeasibleFunctions.MAX_SIDE) {
+      return false;
+    }
+    long energy = 0;
+    int m = 0;
+    for (int i = 0; i < n; i++) {
+      long l = lMin[d][i];
+      long h = lMin[e][i];
+      if (l <= 0 || h <= 0) {
+        continue;
+      }
+      long part = Math.min(Math.min(width, l), Math.min(est[d][i] + l - t1, t2 - lst[d][i]));
+      if (part <= 0) {
+        continue;
+      }
+      strip[m] = i;
+      stripWidth[m] = (int) part;
+      stripHeight[m++] = (int) Math.min(h, height);
+      energy += part * h;
+    }
+    stripCount = m;
+    if (energy > width * height) {
+      return true;
+    }
+    return energetic == 1
+        && m > 1
+        && dffs().packingFails((int) width, (int) height, stripWidth, stripHeight, m);
+  }
+
   private DualFeasibleFunctions dffs() {
     if (dffs == null) {
       dffs = new DualFeasibleFunctions();
@@ -374,7 +523,38 @@ public class Diffn extends Nooverlap {
         return true;
       }
     }
+    if (energetic != 0) {
+      for (int d = 0; d < 2; d++) {
+        if (energeticFails(d)) {
+          // the parts in the strip, and every rectangle inside the strip's other extent
+          for (int i = 0; i < stripCount; i++) {
+            Rectangle r = rectangle[strip[i]];
+            trail.addLowerBound(r.origin[d], position, out);
+            trail.addUpperBound(r.origin[d], position, out);
+            trail.addLowerBound(r.length[d], position, out);
+            trail.addLowerBound(r.length[1 - d], position, out);
+          }
+          addStripExtent(trail, position, 1 - d, out);
+          out.sortUnique(mark);
+          return true;
+        }
+      }
+    }
     return super.explainFailure(trail, out);
+  }
+
+  /**
+   * The bounds that put every rectangle of the strip inside the extent the check used in dimension
+   * e: the lowest earliest start and the highest latest end of all rectangles. Each rectangle of
+   * the strip is inside it by its own bounds, which are at least as tight.
+   */
+  private void addStripExtent(AtomicTrail trail, int position, int e, EntryList out) {
+    for (int i = 0; i < stripCount; i++) {
+      Rectangle r = rectangle[strip[i]];
+      trail.addLowerBound(r.origin[e], position, out);
+      trail.addUpperBound(r.origin[e], position, out);
+      trail.addUpperBound(r.length[e], position, out);
+    }
   }
 
   // the part of rectangle s that must lie within the extent of rectangle r in dimension d
@@ -448,10 +628,10 @@ public class Diffn extends Nooverlap {
       log.debug("===========================");
     }
 
-    boolean[] inProfile = this.inProfile;
-    Arrays.fill(inProfile, false);
-    List<Interval> sweepLine = this.sweepLine;
-    sweepLine.clear();
+    boolean[] localInProfile = this.inProfile;
+    Arrays.fill(localInProfile, false);
+    List<Interval> localSweepLine = this.sweepLine;
+    localSweepLine.clear();
     int[] curProfile = new int[] {0};
     int[] startExcluded = new int[] {Integer.MAX_VALUE};
     int[] lastBarier = new int[] {Integer.MAX_VALUE};
@@ -471,19 +651,21 @@ public class Diffn extends Nooverlap {
               oDim,
               dim,
               limit,
-              inProfile,
-              sweepLine,
+              localInProfile,
+              localSweepLine,
               curProfile,
               startExcluded,
               lastBarier,
               considerR[0]);
           break;
         case PRUNE_START:
-          processPruneStart(e, oDim, dim, limit, inProfile, sweepLine, startExcluded, curProfile);
+          processPruneStart(
+              e, oDim, dim, limit, localInProfile, localSweepLine, startExcluded, curProfile);
           considerR[0] = true;
           break;
         case PRUNE_END:
-          processPruneEnd(e, oDim, dim, limit, inProfile, startExcluded, lastBarier, curProfile);
+          processPruneEnd(
+              e, oDim, dim, limit, localInProfile, startExcluded, lastBarier, curProfile);
           startExcluded[0] = Integer.MAX_VALUE;
           considerR[0] = false;
           break;
@@ -1048,6 +1230,8 @@ public class Diffn extends Nooverlap {
 
   @Override
   public Diffn copy(VarMap map) {
-    return new Diffn(rectangleVariables(map), strict);
+    Diffn c = new Diffn(rectangleVariables(map), strict);
+    c.energetic = energetic;
+    return c;
   }
 }

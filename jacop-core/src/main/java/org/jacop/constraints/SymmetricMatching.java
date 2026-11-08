@@ -90,19 +90,19 @@ final class SymmetricMatching {
     this.n = n;
     copyOf = new int[n];
     firstCopy = n;
-    int vertices = 2 * n + 1;
-    original = new int[vertices];
-    mate = new int[vertices];
-    alt = new int[vertices];
-    parent = new int[vertices];
-    base = new int[vertices];
-    queue = new int[vertices];
-    used = new boolean[vertices];
-    inBlossom = new int[vertices];
-    onPath = new int[vertices];
-    removed = new boolean[vertices];
-    degree = new int[vertices];
-    adjStart = new int[vertices + 1];
+    int localVertices = 2 * n + 1;
+    original = new int[localVertices];
+    mate = new int[localVertices];
+    alt = new int[localVertices];
+    parent = new int[localVertices];
+    base = new int[localVertices];
+    queue = new int[localVertices];
+    used = new boolean[localVertices];
+    inBlossom = new int[localVertices];
+    onPath = new int[localVertices];
+    removed = new boolean[localVertices];
+    degree = new int[localVertices];
+    adjStart = new int[localVertices + 1];
     Arrays.fill(mate, -1);
   }
 

@@ -265,8 +265,8 @@ public class IndexDomainView {
 
     if (DEBUG_ALL) {
       log.debug("Looking for {}", value);
-      for (int v : indexToValue) {
-        log.debug("val {}", v);
+      for (int localV : indexToValue) {
+        log.debug("val {}", localV);
       }
     }
 

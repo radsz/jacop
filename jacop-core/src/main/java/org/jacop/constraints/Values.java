@@ -959,16 +959,16 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
    */
   private void consistencyWithHashing(Store store) {
 
-    IntVar[] order = sorted == null ? Arrays.copyOf(list, list.length) : sorted;
-    sorted = order;
+    IntVar[] localOrder = sorted == null ? Arrays.copyOf(list, list.length) : sorted;
+    sorted = localOrder;
 
     do {
 
       store.propagationHasOccurred = false;
 
-      Arrays.sort(order, minFdv);
+      Arrays.sort(localOrder, minFdv);
 
-      ValuesConsistencyState state = buildAdjAndCounts(order);
+      ValuesConsistencyState state = buildAdjAndCounts(localOrder);
 
       count.domain.in(store.level, count, state.minNumberDifferent, state.maxNumberDifferent);
 

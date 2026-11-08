@@ -38,8 +38,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ShiftExplanation;
 
 /**
  * Constraint X + Y #= C.
@@ -157,6 +160,33 @@ public class XplusYeqC extends AbstractConstraintXandY
   @Override
   public XplusYeqC copy(VarMap map) {
     return new XplusYeqC(map.get(x), map.get(y), c);
+  }
+
+  // x = c - y: a value or bound of one variable from the mirrored values of the other, which also
+  // explains holes; the linear form when the mirror does not
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (getClass() == XplusYeqC.class && x != y) {
+      int mark = out.size();
+      IntVar v = trail.variable(entry);
+      if (ShiftExplanation.explainMirror(trail, entry, v, v == x ? y : x, c, out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return LinearExplainable.super.explain(trail, entry, out);
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (getClass() == XplusYeqC.class && x != y) {
+      int mark = out.size();
+      if (ShiftExplanation.explainMirrorFailure(trail, x, y, c, out)) {
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return LinearExplainable.super.explainFailure(trail, out);
   }
 
   @Override

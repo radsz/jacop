@@ -94,41 +94,41 @@ public class SplitSelect<T extends IntVar> extends SimpleSelect<T> {
   @Override
   public PrimitiveConstraint getChoiceConstraint(int index) {
 
-    T var = super.getChoiceVariable(index);
+    T aVar = super.getChoiceVariable(index);
 
-    if (var == null) {
+    if (aVar == null) {
       return null;
     }
 
-    return getChoiceConstraint(var);
+    return getChoiceConstraint(aVar);
   }
 
   /**
    * Returns the choice that splits the domain of a given variable, for a selection that chooses the
    * variable itself, such as {@link LastConflictSelect}.
    *
-   * @param var the variable to split, not a singleton.
+   * @param aVar the variable to split, not a singleton.
    * @return the choice constraint for the left branch.
    */
-  public PrimitiveConstraint getChoiceConstraint(T var) {
+  public PrimitiveConstraint getChoiceConstraint(T aVar) {
 
     int value;
-    if (var.domain.getSize() == 2 && var.dom().domainId() == IntDomain.BOUND_DOMAIN_ID) {
-      value = var.min();
+    if (aVar.domain.getSize() == 2 && aVar.dom().domainId() == IntDomain.BOUND_DOMAIN_ID) {
+      value = aVar.min();
     } else {
-      value = valueOrdering.indomain(var);
+      value = valueOrdering.indomain(aVar);
     }
 
     if (leftFirst) {
-      if (var.max() != value) {
-        return new XlteqC(var, value);
+      if (aVar.max() != value) {
+        return new XlteqC(aVar, value);
       } else {
-        return new XltC(var, value);
+        return new XltC(aVar, value);
       }
-    } else if (var.max() != value) {
-      return new XgtC(var, value);
+    } else if (aVar.max() != value) {
+      return new XgtC(aVar, value);
     } else {
-      return new XeqC(var, value);
+      return new XeqC(aVar, value);
     }
   }
 

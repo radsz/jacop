@@ -609,7 +609,7 @@ public class WeightedSubcircuits extends Constraint
       if (!tv.domain.contains(t)) {
         kind[i] = SteinerCycleBound.OUT;
       } else if (tv.singleton()) {
-        kind[i] = SteinerCycleBound.REQUIRED;
+        kind[i] = SteinerCycleBound.REQUIRED_NODE;
         required++;
       } else {
         kind[i] = SteinerCycleBound.OPTIONAL;
@@ -658,7 +658,8 @@ public class WeightedSubcircuits extends Constraint
         // an arc at a node fixed to tour t is in tour t when it is used
         if (b != a
             && kind[b] != SteinerCycleBound.OUT
-            && (kind[a] == SteinerCycleBound.REQUIRED || kind[b] == SteinerCycleBound.REQUIRED)
+            && (kind[a] == SteinerCycleBound.REQUIRED_NODE
+                || kind[b] == SteinerCycleBound.REQUIRED_NODE)
             && steiner.arc(a, b) > slack) {
           x.domain.inComplement(level, x, val);
         }

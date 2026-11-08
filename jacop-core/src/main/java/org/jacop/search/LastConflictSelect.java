@@ -76,12 +76,12 @@ public class LastConflictSelect<T extends IntVar> implements SelectChoicePoint<T
    * Records the variable of a decision whose left branch failed, if it is one of the variables of
    * this selection. {@link DepthFirstSearch} calls it.
    *
-   * @param var the variable of the failed decision.
+   * @param aVar the variable of the failed decision.
    */
   @SuppressWarnings("unchecked")
-  public void failedDecision(Var var) {
-    if (var != null && select.getVariablesMapping().containsKey(var)) {
-      conflict = (T) var;
+  public void failedDecision(Var aVar) {
+    if (aVar != null && select.getVariablesMapping().containsKey(aVar)) {
+      conflict = (T) aVar;
     }
   }
 

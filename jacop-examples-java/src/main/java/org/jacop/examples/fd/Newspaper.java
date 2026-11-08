@@ -142,7 +142,6 @@ public class Newspaper extends ExampleFd {
       // values within the constructor of the variable.
       algy[i] = new IntVar(store, "algy[" + i + "]", 0, upperBound);
 
-      // bertie[i] = new Variable(store, "bertie[" + i + "]", 15, upperBound);
       bertie[i] = new IntVar(store, "bertie[" + i + "]", -upperBound, upperBound);
       // Bertie wakes up 15 minutes after Algy
       // The second one is by imposing In constraint after initially creating
@@ -158,7 +157,6 @@ public class Newspaper extends ExampleFd {
       charlie[i] = new IntVar(store, "charlie[" + i + "]", dom);
 
       // Digby wakes up 60 minutes after Algy
-      // digby[i] = new Variable(store, "digby[" + i + "]", 60, upperBound);
       // The fourth way which is the slight variation of the third is
       // by creating it directly in the constructor of the variable.
       digby[i] = new IntVar(store, "digby[" + i + "]", new IntervalDomain(60, upperBound));

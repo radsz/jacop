@@ -1,5 +1,16 @@
 JaCoP properties that can be controlled by option -D in java command. For example, java -Dmax_edge_find_size=200 controls the maximal size of the task list in the cumulative constraint to use edge-finding algorithm.
 
+Most of these properties exist to measure or switch off one technique; the
+defaults are the settings that measured best. Boolean properties take true or
+false; "on/off" properties take the words given. A property is read once, when
+the class that uses it is loaded, so it must be given on the java command line
+(for MiniZinc, add it to the java command in the fzn-jacop script, or set it
+in JAVA_TOOL_OPTIONS), not set later in the program.
+
+Example with the FlatZinc front end:
+
+  java -Djacop.lcg=off -Dorg.jacop.lp.cuts=false -cp jacop.jar org.jacop.fz.Fz2jacop model.fzn
+
 
 Properties:
 
@@ -17,8 +28,101 @@ Java specific:
 - sub_circuit_dominance_pruning: use pruning method based on node
   domination in graphs; default false (one of sub_circuit_* must be true).
 
+- sub_circuit_dominance_skip: the largest number of calls the
+  dominance pruning of Subcircuit is skipped after a call that pruned
+  nothing (the skip doubles each time); default 32.
+
+- layered_graph_engine: propagation algorithm of the layered-graph
+  constraints (Regular, MDD): auto, counters (trailed counters of
+  alive edges, as in Gecode / MDD4R) or support_search (depth first
+  search for supports, as in mddc); default auto (counters, switching
+  to support search when that is faster).
+
+- jacop.asserts.enabled: run the internal consistency checks that
+  replaced Java assert statements; default false. For debugging only,
+  it slows the solver down.
+
+Constraints (core):
+===================
+- org.jacop.constraints.LinearIntDom.sumset: how LinearIntDom finds
+  the supports of an equality: auto (sumsets of partial sums when
+  estimated cheaper than enumeration), always (sumsets whenever within
+  their limit) or off; default auto.
+
+- jacop.convexAllocation.exact: the largest number of variables for
+  which ConvexAllocation computes the bounds exactly; above it uses
+  Lagrangian reduced costs; default 64.
+
+- jacop.differenceCycles.budget: the most arc relaxations of the first
+  Bellman-Ford pass of DifferenceCycles; default 50000000.
+
+- jacop.cumulative.optionalRules: overload check and edge finding over
+  optional tasks (resource use 0 or positive) in CumulativeUnary;
+  default false.
+
+- jacop.cumulative.presenceFit: a task that may use nothing gets use 0
+  where it fits nowhere (UnaryTimetable); default true.
+
+- org.jacop.diffn.dff: dual feasible functions in the area check of
+  Diffn: 0 off, 1 gated (only when the rectangles fill at least half
+  of the space, Steinberg's theorem), 2 always; default 1.
+
+- org.jacop.diffn.energetic: energetic reasoning on the strips across
+  each dimension of Diffn: 0 off, 1 with the dual feasible functions,
+  2 with the plain energy only; default 0.
+
+- org.jacop.diffn.areaReasons: under LCG a failure of the Diffn area
+  check is explained by the rectangles in the window only; default
+  true.
+
+- org.jacop.diffnk.reasons: under LCG DiffnK explains its pruning and
+  failures by the boxes of the rule (false: generic reasons); default
+  true.
+
 flatzinc compiler specific:
 ===========================
+Solver modes (defaults of command line options):
+
+- jacop.lcg: lazy clause generation, on or off; default on. Changes
+  the default of --lcg, for example to run the FlatZinc test suites,
+  whose expected outputs were recorded without LCG.
+
+- jacop.presolve: presolve mode, off, on or check; default off.
+  Changes the default of --presolve.
+
+- jacop.presolve.level: presolve rule level, fast, medium or
+  exhaustive; default exhaustive. Changes the default of
+  --presolve-level.
+
+- jacop.presolve.probe: probing in presolve, off, shave or sac;
+  default sac. Changes the default of --probe.
+
+- jacop.presolve.tabling: presolve replaces small groups of
+  constraints by tables; default false. Same as --presolve-tabling.
+
+- jacop.components: solve before search the independent components
+  the objective does not depend on, on or off; default on. Changes the
+  default of --components.
+
+- jacop.components.budget: the time, in milliseconds, the searches of
+  all those components may take together; default 2000.
+
+- jacop.symmetry: =presolve breaks symmetries only when presolve is
+  on, as the FlatZinc test suites do; by default symmetries are broken
+  with or without presolve (see --symmetry).
+
+- org.jacop.fz.symmetryTime: the most time, in milliseconds, of the
+  automorphism search of symmetry detection (also at most 1/20 of the
+  time left); default 1000.
+
+- fz_system_timer: if =true use System.nanoTime instead of ManagementFactory
+  timer for threads, otherwise use thread time.
+
+- jacop.fz.timeOutGrace: milliseconds after the time-out (-t) before
+  the watchdog stops the run; default 1000.
+
+Cumulative, disjunctive and diffn:
+
 - fz_cumulative_use_unary: during constraints generation in flatzinc
   compiler use CumulativeUnary for tasks that have resource capacity
   greater than half of the cumulative capacity bound; default=false
@@ -36,6 +140,9 @@ flatzinc compiler specific:
 - fz_cumulative_quad_ef: use the quadratic edge finding instead of
   the O(kn log n) one; by default chosen from the number of tasks and
   of distinct resource uses, always quadratic for variable tasks
+
+- fz_cumulative_heef: use horizontally elastic edge finding (Gingras
+  and Quimper, IJCAI 2016) in cumulative constraints; default=false
 
 - fz_cumulative_ttef: use time-table edge finding in cumulative
   constraints; default=true
@@ -60,5 +167,468 @@ flatzinc compiler specific:
   only), as before, for cumulative constraints with variable
   durations or resource uses; default=false
 
-- fz_system_timer: if =true use System.nonoTime instead of ManagementFactory
-  timer for threads, otherwise use thread time.
+- fz_cumulative_flow: add the preemptive flow check HornFlow to
+  cumulative constraints: unit (only when all tasks use one unit),
+  true (all) or false; default=false
+
+- org.jacop.fz.optionalAsUse: post optional tasks on a unary resource
+  with their presences as resource uses: lcg (only under lazy clause
+  generation), true (always) or false (never, CumulativeUnaryOptional);
+  default lcg.
+
+- org.jacop.fz.interDistance: a cumulative of tasks with one length
+  and one resource use becomes InterDistance or MultiInterDistance:
+  true (replace), add (post next to the cumulative) or false;
+  default true.
+
+- org.jacop.fz.multiCumulative: cumulative constraints over the same
+  tasks share one time-table sweep (MultiCumulative), without LCG and
+  presolve only; default true.
+
+- org.jacop.fz.presolveCumulative: presolve rule for cumulative
+  resources (dual fixing); default true.
+
+- fz_diffn_cumulative: diffn also gets a cumulative per axis;
+  default=true
+
+- fz_diffnk_projection: projection check of diffn_k (cross-sections
+  of the boxes must fit); default=false
+
+- fz_diffnk_slices: slice check of diffn_k; default=false
+
+Detection of global constraints in FlatZinc models. Each of these
+finds a pattern in the flattened model and posts a global constraint,
+mostly as a redundant one; =false turns the detection off (default true
+unless stated otherwise):
+
+- org.jacop.fz.alldifferent: all-different written as cliques of
+  disequalities; =redundant also keeps the disequalities.
+- org.jacop.fz.alldiffDomainSize: the largest number of values of an
+  all_different over dense domains that gets domain consistency
+  (Alldistinct) instead of bounds consistency (Alldiff); default 64.
+- org.jacop.fz.alldiffSum: AlldiffSum next to sums whose variables
+  are pairwise different (killer sudoku, magic squares).
+- org.jacop.fz.overlappingAlldiff: OverlappingAlldiff for pairs of
+  all_different constraints that share most of their variables.
+- org.jacop.fz.symmetricAlldifferent: how inverse(x, x) is posted:
+  matching (SymmetricAlldifferent), domain (its domain consistent
+  version) or false (Assignment, also used above 1000 variables);
+  default matching.
+- org.jacop.fz.balance: Deviation or Spread on balancing objectives.
+- org.jacop.fz.binPackingCardinality: counters of a GCC over the same
+  bin variables given to Binpacking.
+- org.jacop.fz.binPackingCliques: vector bin packing over several bin
+  packing constraints: false, vector (two dimensions or more) or all;
+  default false.
+- org.jacop.fz.binPackingSurrogate: the surrogate dimension of the
+  vector bin packing above.
+- org.jacop.fz.cardinality: GCC for counts written as sums of reified
+  equalities; =all also for counts with fixed bounds only.
+- org.jacop.fz.circuitCost: CircuitCost / SubcircuitCost for circuits
+  whose cost is a sum of arc costs.
+- org.jacop.fz.circuitCostPair: the pair reasoning of CircuitCost;
+  default true without LCG and false with LCG.
+- org.jacop.fz.costAlldifferent: CostAlldifferent for such costs.
+- org.jacop.fz.costGcc: CostGCC for such costs; default false.
+- org.jacop.fz.conditionalSelect: if_then_else on integers as
+  ConditionalSelect (bounds the result by the branches still possible)
+  instead of IfThenElse/Conditional.
+- org.jacop.fz.convexAllocation: ConvexAllocation on separable convex
+  costs of variables with a known sum; default true without LCG and
+  false with LCG.
+- org.jacop.fz.differenceBounds: shortest-path bounds of the
+  difference constraints before posting, and negative cycle check.
+- jacop.fz.differenceBudget: the most edge relaxations of each of its
+  two passes; default 200000000.
+- org.jacop.fz.differenceCycles: DifferenceCycles over the plain and
+  (half-)reified difference constraints.
+- org.jacop.fz.disjunctiveCliques: CumulativeUnary on sets of tasks
+  that can never overlap (Sidorov, Marijnissen, Demirovic, CP 2025).
+- org.jacop.fz.elementTable: element constraints over constant arrays
+  that share one index variable become one table.
+- org.jacop.fz.energyPrecedence: EnergyPrecedence on cumulatives
+  whose tasks are ordered by precedences.
+- org.jacop.fz.giantTour: Routes for vehicle routes written as a
+  giant tour.
+- org.jacop.fz.routes: Routes for vehicle routes written as 0/1 arc
+  variables.
+- org.jacop.fz.increasingSum: IncreasingSum on sums over ordered
+  variables.
+- org.jacop.fz.increasingNValue: IncreasingNValue on value counts
+  over ordered variables.
+- org.jacop.fz.knapsack: Knapsack on a surrogate of capacity rows of
+  0/1 variables.
+- org.jacop.fz.lattice: Hermite normal form of the components of the
+  linear equalities (LinearEqualities).
+- org.jacop.fz.latticeReformulate: Aardal-Hurkens-Lenstra lattice
+  reformulation of market split like components: auto, on (every
+  component) or off; default auto.
+- jacop.fz.latticeVars, jacop.fz.latticeRows: the largest component,
+  in variables and rows, given a normal form; default 300 each.
+- org.jacop.fz.linearCheck: root check that the linear relaxation of
+  the linear constraints has a solution within the domains.
+- org.jacop.fz.minOfSums: sums whose only use is a minimum merged
+  into MinOfSums.
+- org.jacop.fz.multiCostRegular: cost_regular constraints over the
+  same word and automaton filtered together; =lagrangian also adds
+  the Lagrangian relaxation.
+- org.jacop.fz.objectivePresolve: reading the facts objective
+  presolve needs.
+- org.jacop.fz.orBoolWatchMin: the shortest list of a reified
+  all-zero sum posted as OrBoolWatched (watched literals); default 8.
+- org.jacop.fz.partialCopies: merges the copies MiniZinc makes of the
+  result of a partial function.
+- org.jacop.fz.precedenceCost: PrecedenceCost on earliness/tardiness
+  sums over start times with precedences; default true for fixed
+  search and false for free search.
+- org.jacop.fz.sequence: Sequence for sliding-window cardinality
+  constraints stated window by window.
+- jacop.fz.sequenceWindows: the fewest windows of a chain that becomes
+  a Sequence; default 3.
+- jacop.fz.sequenceLift: when the 0/1 variables of the windows are
+  channelled by elements over a constant 0/1 array of other variables,
+  post the Sequence over those variables; default false.
+- org.jacop.fz.setUnion: a union of singleton sets becomes one
+  membership clause per element.
+- org.jacop.fz.setUnion.min: the fewest singletons in a replaced
+  chain; default 8.
+- org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
+- org.jacop.fz.weightedCompletion: WeightedCompletion on weighted sums
+  of completion times on a unary resource.
+- org.jacop.fz.weightedCompletion.parallel: the same detection on
+  cumulatives of capacity above 1.
+- org.jacop.fz.lateCount: detection of counts of late tasks.
+- org.jacop.fz.xorSystem: XorSystem (Gauss-Jordan over GF(2)) for the
+  parity constraints.
+- jacop.fz.xorSystemRows, jacop.fz.xorSystemCells: the largest XOR
+  system, in rows and in rows times columns; default 20000 and
+  50000000.
+- org.jacop.fz.zeroOneCount: counts over 0/1 variables posted as sums,
+  which the linear relaxation reads.
+- jacop.table: merging of the tuples of a table that differ in one
+  column: plain (none), star (into *) or sets (into sets of values);
+  default plain.
+
+Presolve:
+=========
+- org.jacop.fz.productDomains: int_times(x, y, z) restricts z to the
+  products of the values of x and y when there are at most 4096 value
+  pairs; default true.
+- jacop.presolve.alias: variable aliasing; default true.
+- jacop.presolve.affine: affine substitution (rule 2): on, aliases
+  (aliases only, no views) or off; default on.
+- jacop.presolve.doubletons: substitution of doubleton equations
+  (rule 8), on or off; default off with LCG and on without.
+- jacop.presolve.inPlace: =off makes presolve always work on a copy of
+  the store; by default it works in place.
+- jacop.presolve.global: global-specific presolve of the constraints
+  that rewrite themselves for the current domains; default true.
+- jacop.presolve.atMostOnes: the at-most-one rule; default true.
+- jacop.presolve.booleanProducts: products with a 0/1 factor
+  replaced by linear constraints; default true.
+- jacop.presolve.orderLiterals: reified comparisons of one variable
+  with constants merged into one ChannelOrder; default true.
+- jacop.presolve.resolution: variable elimination by resolution in
+  SAT presolve; default true.
+- jacop.presolve.domcol: dominated columns in the dual reductions;
+  default true.
+- jacop.presolve.domcol.budget: the work budget of that search;
+  default 20000000.
+
+Lazy clause generation (--lcg):
+===============================
+Search of the LCG solver:
+
+- jacop.lcg.branching: decisions outside the search annotation:
+  activity (most active integer variable), literals (the SAT solver's
+  own decisions), auto (literals, but activity from 1000 conflicts to
+  the first solution) or alternate (runs take turns at each restart);
+  default activity.
+- jacop.lcg.value: value of an activity decision: split (lower half),
+  max or min; default split.
+- jacop.lcg.lastConflict: last-conflict branching; default true.
+- jacop.lcg.booleansFirst: activity branching on 0/1 variables
+  first; default true.
+- jacop.lcg.late: none, or defined (the defined variables and the
+  Booleans of redundant constraints are branched on last); default
+  defined.
+- jacop.lcg.lpGuideRoot: the activity runs of fixed search follow
+  the root solution of the linear relaxation, not its last one;
+  default true.
+- jacop.lcg.stableForGood: after the first 1000 conflicts in focused
+  mode, stay in stable mode (far fewer restarts); default true.
+- jacop.lcg.fullFixpoint: run the store to its fixpoint before the
+  clauses propagate again; false returns to the clauses after each
+  pruning; default true.
+
+Core-guided phase (free search, --lcg -f):
+
+- jacop.lcg.coreTrial: the share of the core-guided phase that
+  measures its rate when the objective's root bound is above the
+  cores' lower bound; default 0.1.
+- jacop.lcg.coreSkip: skip the core-guided phase when its probe's
+  rate cannot raise the bound to the root bound; default true.
+- jacop.lcg.coreNoSolution: the core phase gives its time to branch
+  and bound when it has no solution of its own by this share of its
+  time, 0 turns it off; default 0.33.
+- jacop.lcg.coreRestore: after the core phase, branch and bound
+  starts from the activity before it; default true.
+- jacop.lcg.coreAnySolution: the old test, any best solution counts,
+  also one of branch and bound before the phase; default false.
+- jacop.lcg.workPerMs: the solver work per millisecond of a time limit,
+  from which the phases take their shares, so that a run repeats
+  with the same limit whatever the load of the machine; default 2000.
+- jacop.lcg.workPerCall: the work of one consistency call, in
+  propagated literals; default 3.
+- jacop.lcg.clockSlack: a phase also stops at this many times its
+  share of the time left; default 1.5.
+
+Literals and clauses:
+
+- jacop.lcg.literalBudget: the solver variables in use above which a
+  value removal without a literal of its own is kept out of the solver;
+  default one per 1 KB of the maximum heap.
+- jacop.lcg.releaseLiterals: release literals created only to push a
+  bound (Chuffed's lazy literals); default true.
+- jacop.lcg.liftLiterals: cite a weaker existing literal for a lifted
+  bound; default true.
+- jacop.lcg.holeLimit: domains with more values than this keep only
+  their bounds in the atomic trail; default 10000.
+- jacop.lcg.reasonKeep: reasons of up to this many literals stay as
+  clauses; default 3.
+- jacop.lcg.semantic: semantic minimisation of learnt clauses;
+  default true.
+- jacop.lcg.semanticUip: semantic UIPs in conflict analysis; default
+  true.
+- jacop.lcg.graphClauses: Regular and MDD constraints become clauses
+  of the solver; default true.
+- org.jacop.lcg.alldiffCover: cover clauses for an all-different whose
+  variables have as many values as there are variables; default true.
+- org.jacop.lcg.alldiffCoverLimit: the most (variable, value) pairs
+  those clauses may use; default 16384.
+
+Explanations:
+
+- jacop.lcg.lift: reasons lifted, bounds weakened as far as the
+  propagation allows; default true.
+- jacop.lcg.replay: replayed explanations; default true.
+- jacop.lcg.replayGroups: reasons with more groups than this get the
+  generic reason; default 256.
+- jacop.lcg.replayShare: the most consistency calls the replays of a
+  constraint may take, as a multiple of its own calls; default 0.25.
+- jacop.lcg.flowShare: the largest share of the time the flow
+  explanations of a constraint (GCC) may take; default 0.25.
+- jacop.lcg.cardinalityCounts: counting reasons of GCC tried before
+  the flow network; default true.
+- jacop.lcg.binpackingCounts: Binpacking explanations cover the
+  cardinality rules; default true.
+- jacop.lcg.cumulativePairs: cumulative explains starts by pairs of
+  tasks that cannot overlap; default true.
+- jacop.lcg.windowLift: cumulative window reasons keep only the energy
+  the excess needs; default true.
+- jacop.lcg.optionalExplain: explanations of CumulativeOptional and
+  CumulativeUnaryOptional; default true.
+- jacop.lcg.unaryExplain: CumulativeUnary explains the bounds of its
+  unary rules by precedences; default true.
+- jacop.lcg.reservoirExplain: Reservoir explanations; default true.
+
+Linear conflict analysis:
+
+- jacop.lcg.linear: cut-based conflict analysis of linear failures:
+  off, stats (only counts what it derives) or learn (also imposes each
+  learnt sum at the root); default off.
+- jacop.lcg.linearSteps, jacop.lcg.linearTerms: the most steps and
+  terms of one analysis; default 64 and 200.
+- jacop.lcg.linearLimit: the most learnt sums imposed; default 20000.
+- jacop.lcg.linearKept: for a literal set by a kept clause, the
+  analysis uses the constraint whose explanation that clause is;
+  default true.
+- jacop.lcg.linearClauses: explanations over 0/1 variables as linear
+  rows of their clause; default true.
+- jacop.lcg.linearRows: the analysis also uses the rows of the
+  constraints that are not linear (their linearizations); default
+  true.
+
+Proofs (--proof):
+
+- jacop.lcg.proofTerms: the most terms of the OPB model of a proof;
+  default 20000000.
+- jacop.lcg.proofTrace: name the constraint behind each explanation
+  in a comment and write each conflict clause as a step (debugging);
+  default false.
+
+Linear relaxation (LP):
+=======================
+Rows and encodings:
+
+- org.jacop.lp.linearize: add the rows of constraints that are not
+  linear relations; default true.
+- org.jacop.lp.smallExtra: such rows are kept when they move the bound,
+  find infeasibility or are at most this many; default 100.
+- org.jacop.lp.valueColumns: value encodings over LP-only columns;
+  default true.
+- org.jacop.lp.valueColumnsDomain, org.jacop.lp.valueColumnsMax: the
+  largest domain encoded and the most columns per model; default 128
+  and 20000.
+- org.jacop.lp.valueEncodings: value encodings of counting,
+  all-different and element constraints; default true.
+- org.jacop.lp.valueEncodingsDomain, org.jacop.lp.valueEncodingsMax:
+  the largest domain encoded and the most columns per model; default
+  64 and 20000.
+- org.jacop.lp.flowEncodings: flow model of the layered graphs of
+  Regular and MDD; default true.
+- org.jacop.lp.binpackingRows: assignment rows of bin packing among
+  the value encodings; default false.
+- org.jacop.lp.tableCliques: clique rows of binary tables; default
+  true.
+- org.jacop.lp.tableCliqueArity: the largest table, in variables,
+  whose projections on pairs give conflicts; default 6.
+- org.jacop.lp.tableCliqueDomain: the largest domain that gets value
+  columns; default 16.
+- org.jacop.lp.tableCliqueLiterals, org.jacop.lp.tableCliqueRows: the
+  most columns and rows of the conflict graph; default 8000 and 20000.
+- org.jacop.lp.tableEncodings: rows of the convex hull of tables over
+  tuple columns; default true.
+- org.jacop.lp.tableTupleColumns, org.jacop.lp.tableTuples: the most
+  tuple columns over all tables and the most tuples of one table;
+  default 20000 and 2000.
+- org.jacop.lp.pairCliques: conflicts of pairs of 0/1 literals merged
+  into clique rows; default true.
+
+Cuts:
+
+- org.jacop.lp.cuts: MIR cuts at the root; default true.
+- org.jacop.lp.cutRounds, org.jacop.lp.cutsPerRound: rounds and cuts
+  per round; default 5 and 50.
+- org.jacop.lp.reduceCuts: a cut with weights too large or too far
+  apart is scaled down instead of dropped; default true.
+- org.jacop.lp.slackGomory: root Gomory cuts over the rows and their
+  slacks (false: MIR of the aggregate of the rows alone); default true.
+- org.jacop.lp.capacityCuts: rounded capacity cuts of Routes at the
+  root; default true.
+- org.jacop.lp.capacityRounds: their rounds; default 50.
+- org.jacop.lp.multistarCuts: multistar cuts over the same sets;
+  default true.
+- org.jacop.lp.capacitySearch: capacity and multistar cuts also in
+  search; default true.
+- org.jacop.lp.capacitySearchCuts: the most cuts per separation in
+  search; default 10.
+- org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
+  root; default true.
+
+Row pool and lazy rows:
+
+- org.jacop.lp.pool: rows of other constraints and cuts leave the
+  simplex after poolAge optimal solves in which they are inactive;
+  default true.
+- org.jacop.lp.poolAge: default 100.
+- org.jacop.lp.poolExtra: rows the root trial does not keep stay in
+  the pool instead of being dropped; default false.
+- org.jacop.lp.poolCuts: cuts of a round that does not move the bound
+  stay in the pool; default false.
+- org.jacop.lp.lazyBatch, org.jacop.lp.lazyRounds, org.jacop.lp.lazyAge:
+  lazy rows: the most rows added per round, the rounds per solve and
+  the optimal solves a row stays inactive before it leaves; default
+  50, 100 and 100.
+
+Work limits:
+
+- org.jacop.lp.work: the most work credit of the relaxation in search
+  (tableau entries); default 20000000.
+- org.jacop.lp.rootWork: the work budget of the root solve; default
+  1000000000.
+- org.jacop.lp.rootPivots: the most pivots of the first solve; default
+  20000.
+- org.jacop.lp.workPerCall: the credit earned by each consistency
+  call; default 4096.
+- org.jacop.lp.pruneDiscount: a solve that only tightens bounds pays
+  1/this of its work; default 16.
+- org.jacop.lp.idle, org.jacop.lp.maxPeriod: the solve period doubles
+  after this many solves that deduce nothing, up to maxPeriod; default
+  32 and 4096.
+- org.jacop.lp.maxTableau: the largest dense tableau, rows times
+  columns; default 4000000.
+- org.jacop.lp.maxNonzeros: the most nonzeros of the rows of the
+  sparse simplex; default 4000000.
+
+Simplex choice and bases:
+
+- org.jacop.lp.sparseRows: the dense simplex for relaxations below
+  this many rows, the sparse one (JaLP) from it on; -1 always dense;
+  default 100.
+- org.jacop.lp.sparseMaxRows, org.jacop.lp.sparseMaxColumns: the
+  largest relaxation the sparse simplex is chosen for; default 25000
+  and 30000.
+- org.jacop.lp.sparseRootWork: the work budget of a root solve of the
+  sparse simplex; default 4000000000.
+- org.jacop.lp.sparseRootSeconds: the most time of such a solve, in
+  seconds; default 3.
+- org.jacop.lp.sparseCost: the work of the sparse simplex in units of
+  a dense tableau entry; default 1.
+- org.jacop.lp.keepBases: keep the basis of each level of the branch
+  and restore it after restarts and long backjumps; default true.
+- org.jacop.lp.basisJump: the levels a jump must span to restore a
+  kept basis; default 2.
+- org.jacop.lp.maxBases: the most kept bases; default 32.
+- org.jacop.lp.denseBasisDepth: the dense simplex keeps the bases of
+  levels at most this far below the first solve, -1 none; default 3.
+- org.jacop.lp.basisProbation: the calls after a jump during which the
+  basis the deeper node left is used; default 1000.
+- org.jacop.lp.restartFromRoot: a solve at a restart starts from the
+  root basis; default true.
+- org.jacop.lp.restartSolves: solve again at the root level whenever
+  the objective bound improved; default false.
+- org.jacop.lp.restartCuts: new cut rounds in those solves; default
+  true.
+- org.jacop.lp.rootReducedCosts: root reduced-cost fixing; default
+  true.
+- org.jacop.lp.givenDuals: duals for the costs as given (false: for
+  the perturbed costs); default true.
+- org.jacop.lp.exact: remove the perturbation at the end of every solve
+  (JaLP's clean-up); default false.
+- org.jacop.lp.clean: clean the combination of a certificate (drop
+  multipliers of a missing side, divide by gcd); default true.
+
+JaLP sparse simplex:
+====================
+- org.jacop.jalp.perturbation: relative size of the cost
+  perturbation; default 1e-6.
+- org.jacop.jalp.boundPerturbation: relative bound perturbation after
+  a run of degenerate pivots; default 5e-6.
+- org.jacop.jalp.maxScaleExponent: the largest exponent of a scale
+  factor; default 20.
+- org.jacop.jalp.refactorWeight: refactorize when the last solves cost
+  more than the average pivot, with the factorization counted this
+  many times its work, 0 for a fixed limit of 100 updates; default 1.
+- org.jacop.jalp.refactorUpdates: the most updates before a
+  refactorization; default 1000.
+- org.jacop.jalp.refactorFill: the most nonzeros of the updates, as a
+  multiple of the factors; default 2.
+- org.jacop.jalp.refactorMin: the fewest updates before a
+  refactorization; default 10.
+- org.jacop.jalp.hyper: the share of the steps a solve may reach for
+  the hypersparse (Gilbert-Peierls) solve; default 0.1.
+- org.jacop.jalp.crash: crash basis of the first solve: off, eq,
+  ranged or all; default off.
+- org.jacop.jalp.crashPivot: a crash pivot must be at least this
+  share of the largest entry of its column; default 0.9.
+- org.jacop.jalp.crashZeroCost: crash only with columns without cost;
+  default false.
+- org.jacop.jalp.crashGuard: drop a crash basis with more dual
+  infeasibilities than the slack basis; default true.
+- org.jacop.jalp.crashExactWeights: exact steepest-edge weights of the
+  crash basis; default false.
+- org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
+  comma separated list of primal and reobjective; default empty.
+
+Debugging:
+==========
+- jacop.lcg.check: check every LCG explanation (ExplanationChecker);
+  default false.
+- jacop.lcg.minimality: every this many explanations one is minimised
+  and measured, 0 for none; default 0.
+- jacop.jasat.check: check the propagation invariants of the SAT solver
+  at every fixpoint; default false.
+- jacop.ls.debug: print why local search rejects moves; default false.
+- tmp.lattice: print the pruning of LinearEqualities by residue
+  classes; default false.

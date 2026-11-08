@@ -343,18 +343,18 @@ public class Shaving<T extends IntVar> implements ExitChildListener<T>, Consiste
 
     v.domain.in(store.level, v, val, val);
 
-    boolean shavable = !store.consistency();
+    boolean localShavable = !store.consistency();
 
     store.removeLevel(depth);
     store.setLevel(--depth);
 
-    if (shavable) {
+    if (localShavable) {
       successes++;
     } else {
       failures++;
     }
 
-    return shavable;
+    return localShavable;
   }
 
   /**

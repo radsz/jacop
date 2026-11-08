@@ -1993,7 +1993,7 @@ class AtomicTrailTest {
       boolean ok;
       try {
         ok = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         ok = false;
       }
       if (!ok) {
@@ -2232,7 +2232,7 @@ class AtomicTrailTest {
           s[i].domain.in(store.level, s[i], lo[i], hi[i]);
         }
         consistent = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         consistent = false;
       }
       if (consistent || store.recentlyFailedConstraint != unary) {

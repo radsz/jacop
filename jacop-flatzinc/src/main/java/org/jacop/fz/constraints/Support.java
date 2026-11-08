@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -125,6 +126,8 @@ public class Support implements ParserTreeConstants {
   // ============ SAT solver interface ==============
   final SatTranslation sat;
   final ArrayList<IntVar[]> parameterListForAlldistincts = new ArrayList<>();
+  // how many of the lists above are implied by other constraints, by list
+  private final Map<List<IntVar>, Integer> impliedAlldistincts = new HashMap<>();
   // the variables of every all_different of the model, for OverlappingAlldiff
   final ArrayList<IntVar[]> alldifferentLists = new ArrayList<>();
   // all different variables found by AlldifferentDetector, for AlldiffSum only
@@ -775,7 +778,39 @@ public class Support implements ParserTreeConstants {
 
   /** Posts the conflict cliques of the bin packing constraints over the same bins. */
   public void detectBinPackingCliques() {
-    binPackingCliques.detect();
+    implied(binPackingCliques::detect);
+  }
+
+  /**
+   * Runs a step that adds only redundant constraints, every solution of the model satisfying them,
+   * and marks them implied in the store ({@link Store#markImplied(Constraint)}), the delayed ones
+   * among them too. Local search does not evaluate them.
+   *
+   * @param step the step that poses the redundant constraints.
+   */
+  public void implied(Runnable step) {
+    boolean was = store.isImposingImplied();
+    int delayed = delayedConstraints.size();
+    store.imposingImplied(true);
+    try {
+      step.run();
+    } finally {
+      store.imposingImplied(was);
+    }
+    for (int i = delayed; i < delayedConstraints.size(); i++) {
+      store.markImplied(delayedConstraints.get(i));
+    }
+  }
+
+  /**
+   * Collects an all different that is implied by the other constraints of the model, such as the
+   * one of a circuit, to be posted with the others and marked implied.
+   *
+   * @param v the variables.
+   */
+  void addImpliedAlldistinct(IntVar[] v) {
+    parameterListForAlldistincts.add(v);
+    impliedAlldistincts.merge(List.of(v), 1, Integer::sum);
   }
 
   /** Imposes all delayed constraints. */
@@ -824,7 +859,7 @@ public class Support implements ParserTreeConstants {
       }
     }
     poseAlldistinctConstraints();
-    poseOverlappingAlldiffs();
+    implied(this::poseOverlappingAlldiffs);
     poseAlldiffSums();
 
     // generate channeling constraints instead of reified constraints
@@ -846,12 +881,21 @@ public class Support implements ParserTreeConstants {
   void poseAlldistinctConstraints() {
     // the same array can be collected twice, e.g. from circuit and from all_different
     Set<List<IntVar>> posted = new HashSet<>();
+    Map<List<IntVar>, Integer> collected = new HashMap<>();
     for (IntVar[] v : parameterListForAlldistincts) {
-      if (!posted.add(List.of(v))) {
+      collected.merge(List.of(v), 1, Integer::sum);
+    }
+    for (IntVar[] v : parameterListForAlldistincts) {
+      List<IntVar> key = List.of(v);
+      if (!posted.add(key)) {
         continue;
       }
       Alldistinct ad = new Alldistinct(v);
       store.impose(ad);
+      // implied when no constraint of the model collected the same list
+      if (collected.get(key).equals(impliedAlldistincts.get(key))) {
+        store.markImplied(ad);
+      }
       if (options.debug()) {
         String s = "% " + ad;
         FzConsole.println(s.replace("\n", "\n% "));
@@ -1234,7 +1278,7 @@ public class Support implements ParserTreeConstants {
     final int c;
     final IntVar b;
     final boolean isReified;
-    final int numberId;
+    final int fzNumberId;
 
     FzXeqC(IntVar x, int c, IntVar b, boolean isReified) {
       super(new IntVar[] {x, b});
@@ -1242,7 +1286,7 @@ public class Support implements ParserTreeConstants {
       this.c = c;
       this.b = b;
       this.isReified = isReified;
-      this.numberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
+      this.fzNumberId = isReified ? n1.incrementAndGet() : n2.incrementAndGet();
     }
 
     @Override
@@ -1290,15 +1334,15 @@ public class Support implements ParserTreeConstants {
     @Override
     public String toString() {
       if (isReified) {
-        return "fzXeqCreified" + numberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
+        return "fzXeqCreified" + fzNumberId + ": XeqC_Reified(" + x + ", " + c + ", " + b + " )";
       } else {
-        return "fzXeqCimplied" + numberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
+        return "fzXeqCimplied" + fzNumberId + ": XeqC_Implied(" + b + ", " + x + ", " + c + " )";
       }
     }
 
     @Override
     public String id() {
-      return isReified ? "fzXeqCreified" + numberId : "fzXeqCimplied" + numberId;
+      return isReified ? "fzXeqCreified" + fzNumberId : "fzXeqCimplied" + fzNumberId;
     }
 
     // the reified constraint, for its explanations
@@ -1354,7 +1398,7 @@ public class Support implements ParserTreeConstants {
     final int c;
     final IntVar b;
     final boolean isReified;
-    final int numberId;
+    final int fzNumberId;
 
     FzXneqC(IntVar x, int c, IntVar b, boolean isReified) {
       super(new IntVar[] {x, b});
@@ -1362,7 +1406,7 @@ public class Support implements ParserTreeConstants {
       this.c = c;
       this.b = b;
       this.isReified = isReified;
-      this.numberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
+      this.fzNumberId = isReified ? n3.incrementAndGet() : n4.incrementAndGet();
     }
 
     @Override
@@ -1389,15 +1433,15 @@ public class Support implements ParserTreeConstants {
     @Override
     public String toString() {
       if (isReified) {
-        return "fzXneqCreified" + numberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
+        return "fzXneqCreified" + fzNumberId + ": XneqC_Reified(" + x + ", " + c + ", " + b + " )";
       } else {
-        return "fzXneqCImpled" + numberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
+        return "fzXneqCImpled" + fzNumberId + ": XneqC_Implied(" + b + ", " + x + ", " + c + " )";
       }
     }
 
     @Override
     public String id() {
-      return isReified ? "fzXneqCreified" + numberId : "fzXneqCimplied" + numberId;
+      return isReified ? "fzXneqCreified" + fzNumberId : "fzXneqCimplied" + fzNumberId;
     }
 
     // the reified constraint, for its explanations
@@ -1458,7 +1502,7 @@ public class Support implements ParserTreeConstants {
     final IntVar y;
     final IntVar b;
     final boolean isReified;
-    final int numberId;
+    final int fzNumberId;
 
     FzXeqY(IntVar x, IntVar y, IntVar b, boolean isReified) {
       super(new IntVar[] {x, y, b});
@@ -1466,7 +1510,7 @@ public class Support implements ParserTreeConstants {
       this.y = y;
       this.b = b;
       this.isReified = isReified;
-      this.numberId = isReified ? n5.incrementAndGet() : n6.incrementAndGet();
+      this.fzNumberId = isReified ? n5.incrementAndGet() : n6.incrementAndGet();
     }
 
     @Override
@@ -1488,15 +1532,15 @@ public class Support implements ParserTreeConstants {
     @Override
     public String toString() {
       if (isReified) {
-        return "fzXeYCReified" + numberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
+        return "fzXeYCReified" + fzNumberId + ": XeqY_Reified(" + x + ", " + y + ", " + b + " )";
       } else {
-        return "fzXeqYimplied" + numberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
+        return "fzXeqYimplied" + fzNumberId + ": XeqY_Implied(" + x + ", " + y + ", " + b + " )";
       }
     }
 
     @Override
     public String id() {
-      return isReified ? "fzXeqYreified" + numberId : "fzXeqYimplied" + numberId;
+      return isReified ? "fzXeqYreified" + fzNumberId : "fzXeqYimplied" + fzNumberId;
     }
 
     // the reified constraint, for its explanations
@@ -1565,13 +1609,13 @@ public class Support implements ParserTreeConstants {
 
     final IntVar b;
     final IntVar x;
-    final int numberId;
+    final int fzNumberId;
 
     FzIfThenBool(IntVar b, IntVar x) {
       super(new IntVar[] {b, x});
       this.b = b;
       this.x = x;
-      this.numberId = n7.incrementAndGet();
+      this.fzNumberId = n7.incrementAndGet();
     }
 
     @Override
@@ -1599,12 +1643,12 @@ public class Support implements ParserTreeConstants {
 
     @Override
     public String toString() {
-      return "fzIfThenBool" + numberId + ": IfThenBool(" + b + ", " + x + " )";
+      return "fzIfThenBool" + fzNumberId + ": IfThenBool(" + b + ", " + x + " )";
     }
 
     @Override
     public String id() {
-      return "fzIfThenBool" + numberId;
+      return "fzIfThenBool" + fzNumberId;
     }
 
     @Override

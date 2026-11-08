@@ -136,7 +136,7 @@ public class IncreasingDetector implements ParserTreeConstants {
       return replaced;
     }
     for (ASTConstElem node : nvalues) {
-      IntVar count = var(node, 0);
+      IntVar count = aVar(node, 0);
       IntVar[] x = ordered(List.of(support.getVarArray(child(node, 1))));
       if (x == null || x.length == 0 || size(x) > IncreasingNValue.VALUE_LIMIT) {
         continue;
@@ -175,8 +175,8 @@ public class IncreasingDetector implements ParserTreeConstants {
       case "jacop_strictly_increasing" -> chain(support.getVarArray(child(node, 0)), true, false);
       case "jacop_decreasing" -> chain(support.getVarArray(child(node, 0)), false, true);
       case "jacop_strictly_decreasing" -> chain(support.getVarArray(child(node, 0)), true, true);
-      case "int_le" -> order(var(node, 0), var(node, 1), false);
-      case "int_lt" -> order(var(node, 0), var(node, 1), true);
+      case "int_le" -> order(aVar(node, 0), aVar(node, 1), false);
+      case "int_lt" -> order(aVar(node, 0), aVar(node, 1), true);
       case "int_lin_le" -> {
         difference(node);
         linears.add(node);
@@ -193,7 +193,7 @@ public class IncreasingDetector implements ParserTreeConstants {
     return (SimpleNode) node.jjtGetChild(i);
   }
 
-  private IntVar var(SimpleNode node, int i) {
+  private IntVar aVar(SimpleNode node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 

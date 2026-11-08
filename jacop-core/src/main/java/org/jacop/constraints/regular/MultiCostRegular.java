@@ -374,15 +374,15 @@ public class MultiCostRegular extends Constraint
   }
 
   /** A variable compared by identity. */
-  private record IdentityKey(IntVar var) {
+  private record IdentityKey(IntVar aVar) {
     @Override
     public boolean equals(Object o) {
-      return o instanceof IdentityKey k && k.var == var;
+      return o instanceof IdentityKey k && k.aVar == aVar;
     }
 
     @Override
     public int hashCode() {
-      return System.identityHashCode(var);
+      return System.identityHashCode(aVar);
     }
   }
 

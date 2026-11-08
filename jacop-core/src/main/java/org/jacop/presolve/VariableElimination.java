@@ -342,7 +342,7 @@ final class VariableElimination {
           max = Math.addExact(max, Math.max(lo, hi));
         }
       }
-    } catch (ArithmeticException e) {
+    } catch (ArithmeticException _) {
       return null;
     }
     return new long[] {min, max};
@@ -455,7 +455,7 @@ final class VariableElimination {
         if (consistency()) {
           return true;
         }
-      } catch (FailException f) {
+      } catch (FailException _) {
         // fall through
       }
       pop();
@@ -470,7 +470,7 @@ final class VariableElimination {
     private boolean consistency() {
       try {
         return store.consistency();
-      } catch (FailException f) {
+      } catch (FailException _) {
         return false;
       }
     }
@@ -540,7 +540,7 @@ final class VariableElimination {
         }
       }
       rhs = Math.subtractExact(fl.c(), Math.multiplyExact(k, fe.c()));
-    } catch (ArithmeticException ex) {
+    } catch (ArithmeticException _) {
       return;
     }
     terms.values().removeIf(w -> w == 0);
@@ -572,7 +572,7 @@ final class VariableElimination {
           l.getClass() == LinearIntDom.class
               ? new LinearIntDom(vars, weights, rel, (int) rhs)
               : new LinearInt(vars, weights, rel, (int) rhs);
-    } catch (ArithmeticException | IllegalArgumentException ex) {
+    } catch (ArithmeticException | IllegalArgumentException _) {
       // the sum can overflow
       return;
     }

@@ -271,7 +271,7 @@ class RedundantConstraintsTest {
       try {
         kept = new ArrayList<>(m.constraints());
         kept.removeAll(RedundantConstraints.find(kept).removed());
-      } catch (FailException e) {
+      } catch (FailException _) {
         continue;
       }
       assertThat(RedundantConstraints.find(kept).removed()).isEmpty();

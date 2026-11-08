@@ -753,13 +753,7 @@ public class LinearIntDom extends LinearInt {
     assignments[index] = element;
 
     // Recursion differs based on positive/negative phase
-    if (!positive) {
-      findSupport(false, newIndex, newPartialSum);
-    } else if (newIndex < pos) {
-      findSupport(true, newIndex, newPartialSum);
-    } else {
-      findSupport(false, newIndex, newPartialSum);
-    }
+    findSupport(positive && newIndex < pos, newIndex, newPartialSum);
 
     return false; // continue
   }

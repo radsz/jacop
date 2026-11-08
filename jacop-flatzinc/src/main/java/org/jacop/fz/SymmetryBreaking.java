@@ -135,7 +135,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * symmetry moves, or a constant written as a string. An integer constant has its value; when it
    * stands for a value of a value space ({@code space >= 0}) it is a vertex, not a constant.
    */
-  private record Atom(IntVar var, Var other, String constant, int space, int value) {
+  private record Atom(IntVar aVar, Var other, String constant, int space, int value) {
     boolean isConstant() {
       return constant != null && space < 0;
     }
@@ -370,6 +370,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private final List<IntVar[][]> postedVariables = new ArrayList<>();
   // the constraints posted with their symmetries, for local search
   private final SymmetryCanonicalizer canonicalizer = new SymmetryCanonicalizer();
+  // the atoms of each named array, read once: a table of a hundred thousand tuples is often an
+  // argument of many constraints
+  private final Map<String, Atom[]> namedArrays = new HashMap<>();
+  // one atom for each integer constant
+  private final Map<Integer, Atom> intAtoms = new HashMap<>();
+  // the key of each array of constants, the same for arrays with the same elements
+  private final Map<Atom[], String> constantArrays = new IdentityHashMap<>();
+  private final Map<Contents, String> contentKeys = new HashMap<>();
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
@@ -447,8 +455,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
     for (Item item : items) {
       if (item.name().startsWith("jacop_bin_packing") && item.args().length > 1) {
         for (Atom a : item.args()[1]) {
-          if (a.var() != null) {
-            loads.add(a.var());
+          if (a.aVar() != null) {
+            loads.add(a.aVar());
           }
         }
       }
@@ -458,11 +466,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if ((item.name().equals("jacop_maximum") || item.name().equals("array_int_maximum"))
           && args.length == 2
           && args[0].length == 1
-          && args[0][0].var() == objective
+          && args[0][0].aVar() == objective
           && args[1].length > 0) {
         boolean all = true;
         for (Atom a : args[1]) {
-          all &= a.var() != null && loads.contains(a.var());
+          all &= a.aVar() != null && loads.contains(a.aVar());
         }
         if (all) {
           return true;
@@ -527,8 +535,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
     for (Item item : items) {
       for (Atom[] arg : item.args()) {
         for (Atom a : arg) {
-          if (a.var() != null && seen.add(a.var())) {
-            ranked.add(a.var());
+          if (a.aVar() != null && seen.add(a.aVar())) {
+            ranked.add(a.aVar());
           }
         }
       }
@@ -566,7 +574,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // the position of each variable in the lex-leader order
     Map<IntVar, Integer> rank = new IdentityHashMap<>();
     for (IntVar v : ranked) {
-      if (graph.varVertex.containsKey(v)) {
+      if (graph.varVertices.containsKey(v)) {
         rank.putIfAbsent(v, rank.size());
       }
     }
@@ -575,14 +583,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     // the variables are the base of the search, in the lex-leader order
     int[] base = new int[rank.size()];
-    rank.forEach((x, r) -> base[r] = graph.varVertex.getOrDefault(x, 0));
+    rank.forEach((x, r) -> base[r] = graph.varVertices.getOrDefault(x, 0));
     long left = Math.max(0, deadline - System.nanoTime());
     GraphAutomorphisms.Result result =
         new GraphAutomorphisms(graph.colors(), graph.adjacency(), base).generators(MAX_WORK, left);
 
     IntVar[] varAt = new IntVar[n];
     int[] rankAt = new int[n];
-    graph.varVertex.forEach(
+    graph.varVertices.forEach(
         (x, v) -> {
           varAt[v] = x;
           rankAt[v] = rank.getOrDefault(x, 0);
@@ -756,7 +764,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       return null;
     }
     Atom y = scalarAtom(init);
-    if (y.var() == null || y.var() == x) {
+    if (y.aVar() == null || y.aVar() == x) {
       return null;
     }
     return new Item("int_eq", new Atom[][] {{variable(x)}, {y}}, new boolean[2]);
@@ -864,7 +872,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       IntVar first = null;
       for (int a = 0; a < item.args().length; a++) {
         for (Atom atom : item.args()[a]) {
-          IntVar x = atom.var();
+          IntVar x = atom.aVar();
           if (x == null) {
             continue;
           }
@@ -1011,7 +1019,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       for (Atom[] arg : item.args()) {
         for (Atom a : arg) {
-          if (a.var() == objective) {
+          if (a.aVar() == objective) {
             return null;
           }
         }
@@ -1029,7 +1037,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     Atom[][] args = item.args();
     switch (item.name()) {
       case "int_le" -> {
-        return args.length == 2 && args[1][0].var() == z && single(args[0][0], z, xs);
+        return args.length == 2 && args[1][0].aVar() == z && single(args[0][0], z, xs);
       }
       case "int_lin_le" -> {
         if (args.length != 3
@@ -1042,19 +1050,19 @@ final class SymmetryBreaking implements ParserTreeConstants {
         }
         int a = args[0][0].value();
         int b = args[0][1].value();
-        if (a == 1 && b == -1 && args[1][1].var() == z) {
+        if (a == 1 && b == -1 && args[1][1].aVar() == z) {
           return single(args[1][0], z, xs);
         }
-        return a == -1 && b == 1 && args[1][0].var() == z && single(args[1][1], z, xs);
+        return a == -1 && b == 1 && args[1][0].aVar() == z && single(args[1][1], z, xs);
       }
       case "int_max" -> {
         return args.length == 3
-            && args[2][0].var() == z
+            && args[2][0].aVar() == z
             && single(args[0][0], z, xs)
             && single(args[1][0], z, xs);
       }
       case "array_int_maximum", "jacop_maximum" -> {
-        if (args.length != 2 || args[0].length != 1 || args[0][0].var() != z) {
+        if (args.length != 2 || args[0].length != 1 || args[0][0].aVar() != z) {
           return false;
         }
         for (Atom a : args[1]) {
@@ -1072,11 +1080,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   /** Adds the variable of an atom; a constant bounds nothing, and the objective cannot be bound. */
   private static boolean single(Atom a, IntVar z, List<IntVar> xs) {
-    if (a.var() == z || a.other() != null) {
+    if (a.aVar() == z || a.other() != null) {
       return false;
     }
-    if (a.var() != null) {
-      xs.add(a.var());
+    if (a.aVar() != null) {
+      xs.add(a.aVar());
       return true;
     }
     return a.isInt();
@@ -1635,7 +1643,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     private final List<String> colorKeys = new ArrayList<>();
     private int[][] adjacency = new int[64][];
     private int[] degree = new int[64];
-    final Map<IntVar, Integer> varVertex = new IdentityHashMap<>();
+    final Map<IntVar, Integer> varVertices = new IdentityHashMap<>();
     private final Map<Var, Integer> otherVertex = new IdentityHashMap<>();
     private final Map<Long, Integer> valueVertex = new HashMap<>();
     private final Set<String> distinct = new HashSet<>();
@@ -1689,8 +1697,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       for (int a : spec.shared()) {
         for (Atom atom : item.args()[a]) {
-          if (atom.var() != null) {
-            Integer s = spaceOf.get(atom.var());
+          if (atom.aVar() != null) {
+            Integer s = spaceOf.get(atom.aVar());
             return s == null ? -1 : s;
           }
         }
@@ -1775,7 +1783,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         if (grouped[a]) {
           continue;
         }
-        if (array[a]) {
+        String key = array[a] ? constantArray(args[a]) : null;
+        if (key != null) {
+          constants.add(a + "=" + key);
+        } else if (array[a]) {
           constants.add(a + "#" + args[a].length);
           for (int j = 0; j < args[a].length; j++) {
             position(constraint, "o|" + prefix + a + "[" + j + "]", args[a][j], constants);
@@ -1823,6 +1834,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       for (int a = 0; a < arity; a++) {
         if (!grouped[a]) {
+          String constants = array[a] ? constantArray(args[a]) : null;
+          if (constants != null) {
+            key.append("[=").append(constants).append(',');
+            continue;
+          }
           key.append(array[a] ? "[" : "(");
           for (Atom atom : args[a]) {
             key.append(id(atom)).append(',');
@@ -1902,8 +1918,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
 
     private int atomVertex(Atom atom) {
-      if (atom.var() != null) {
-        return varVertex(atom.var());
+      if (atom.aVar() != null) {
+        return varVertex(atom.aVar());
       }
       if (atom.space() >= 0) {
         return valueVertex(atom.space(), atom.value());
@@ -1930,7 +1946,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
 
     int varVertex(IntVar x) {
-      Integer v = varVertex.get(x);
+      Integer v = varVertices.get(x);
       if (v == null) {
         Integer space = spaceOf == null ? null : spaceOf.get(x);
         String key;
@@ -1942,7 +1958,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
           key = "v|" + x.getClass().getName() + "|" + x.dom().getClass().getName() + "|" + x.dom();
         }
         v = vertex(key);
-        varVertex.put(x, v);
+        varVertices.put(x, v);
         vars.add(x);
         if (space != null && !spaces.get(space).sameDomain) {
           for (ValueEnumeration e = x.dom().valueEnumeration(); e.hasMoreElements(); ) {
@@ -1977,12 +1993,65 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
   }
 
+  /** The elements of an array of constants, compared by their values. */
+  private static final class Contents {
+    private final Atom[] atoms;
+    private final int hash;
+
+    Contents(Atom[] atoms) {
+      this.atoms = atoms;
+      int h = atoms.length;
+      for (Atom a : atoms) {
+        h = 31 * h + a.constant().hashCode();
+      }
+      this.hash = h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof Contents c) || c.hash != hash || c.atoms.length != atoms.length) {
+        return false;
+      }
+      for (int i = 0; i < atoms.length; i++) {
+        if (atoms[i] != c.atoms[i] && !atoms[i].constant().equals(c.atoms[i].constant())) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+  }
+
+  /**
+   * A short key for an array argument of constants only, the same for two arrays exactly when they
+   * have the same elements, or null when the array holds a variable or a value of a value space.
+   * The graph uses it in place of one entry per element, so that a table of a hundred thousand
+   * tuples costs one string, not a hundred thousand.
+   */
+  private String constantArray(Atom[] arg) {
+    if (constantArrays.containsKey(arg)) {
+      return constantArrays.get(arg);
+    }
+    String key = null;
+    if (Arrays.stream(arg).allMatch(Atom::isConstant)) {
+      key = contentKeys.computeIfAbsent(new Contents(arg), c -> "k" + contentKeys.size());
+    }
+    constantArrays.put(arg, key);
+    return key;
+  }
+
   private boolean isArrayName(SimpleNode arg) {
     if (arg.getId() != JJTSCALARFLATEXPR || ((ASTScalarFlatExpr) arg).getType() != 2) {
       return false;
     }
     String ident = ((ASTScalarFlatExpr) arg).getIdent();
-    return dictionary.getVariableArray(ident) != null
+    return namedArrays.containsKey(ident)
+        || dictionary.getIntArray(ident) != null
+        || dictionary.getVariableArray(ident) != null
         || dictionary.getSetArray(ident) != null
         || dictionary.getFloatArray(ident) != null
         || dictionary.variableFloatArrayTable.containsKey(ident)
@@ -2052,6 +2121,23 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * variables are not supported.
    */
   private Atom[] namedArray(String ident) {
+    Atom[] atoms = namedArrays.get(ident);
+    if (atoms == null) {
+      atoms = readArray(ident);
+      namedArrays.put(ident, atoms);
+    }
+    return atoms;
+  }
+
+  private Atom[] readArray(String ident) {
+    int[] ints = dictionary.getIntArray(ident);
+    if (ints != null) {
+      Atom[] atoms = new Atom[ints.length];
+      for (int i = 0; i < ints.length; i++) {
+        atoms[i] = intConstant(ints[i]);
+      }
+      return atoms;
+    }
     IntVar[] a = dictionary.getVariableArray(ident);
     if (a != null) {
       Atom[] atoms = new Atom[a.length];
@@ -2080,12 +2166,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
     throw new Unsupported("array " + ident);
   }
 
-  private static Atom variable(IntVar v) {
+  private Atom variable(IntVar v) {
     return v.singleton() ? intConstant(v.value()) : new Atom(v, null, null, -1, 0);
   }
 
-  private static Atom intConstant(int c) {
-    return new Atom(null, null, "i" + c, -1, c);
+  private Atom intConstant(int c) {
+    return intAtoms.computeIfAbsent(c, k -> new Atom(null, null, "i" + k, -1, k));
   }
 
   private static Atom constant(String c) {

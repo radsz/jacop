@@ -332,7 +332,7 @@ public final class SetImposeGroundingHarness {
             + " non-solution "
             + Arrays.toString(plan);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       // rejecting a non-solution at impose is fine
     } catch (Throwable e) {
       return describe(e, "impose with all variables ground to " + Arrays.toString(plan));
@@ -559,7 +559,7 @@ public final class SetImposeGroundingHarness {
           restrict(store, x, plan, i -> true, elementWise);
           phase = "search at level " + (root + 1);
           found = solveAll(store, x, values, constraint[0], satisfiedError);
-        } catch (FailException e) {
+        } catch (FailException _) {
           // the restriction itself is inconsistent; no solutions
         }
         if (satisfiedError[0] != null) {
@@ -785,7 +785,7 @@ public final class SetImposeGroundingHarness {
           }
         }
         dfs(store, x, index, constraint, found, error);
-      } catch (FailException e) {
+      } catch (FailException _) {
         // dead branch
       }
       store.removeLevel(level + 1);

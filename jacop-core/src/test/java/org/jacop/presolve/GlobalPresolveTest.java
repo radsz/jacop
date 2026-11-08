@@ -581,7 +581,7 @@ class GlobalPresolveTest {
     try {
       x[restricted].domain.in(store.level, x[restricted], kept, kept);
       return true;
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
   }

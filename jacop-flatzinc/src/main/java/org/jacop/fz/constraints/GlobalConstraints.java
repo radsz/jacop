@@ -489,11 +489,12 @@ class GlobalConstraints implements ParserTreeConstants {
     if (p != null) {
       useCumulativeUnary = Boolean.parseBoolean(p);
     }
+    // both are redundant: local search does not evaluate them
     if (useCumulativeUnary) {
-      impliedCumulativeUnaryConstraints(s, d, r, b);
+      support.implied(() -> impliedCumulativeUnaryConstraints(s, d, r, b));
     }
     if (useDisjunctions) {
-      impliedDisjunctionConstraints(s, d, r, b);
+      support.implied(() -> impliedDisjunctionConstraints(s, d, r, b));
     }
   }
 
@@ -507,7 +508,8 @@ class GlobalConstraints implements ParserTreeConstants {
     String mode = System.getProperty("fz_cumulative_flow", FALSE);
     boolean unit = Arrays.stream(r).allMatch(v -> v.singleton(1));
     if ("true".equals(mode) || "unit".equals(mode) && unit) {
-      support.delayedConstraints.add(new HornFlow(s, d, r, b));
+      // redundant: local search does not evaluate it
+      support.implied(() -> support.delayedConstraints.add(new HornFlow(s, d, r, b)));
     }
   }
 
@@ -660,7 +662,7 @@ class GlobalConstraints implements ParserTreeConstants {
   private void addImpliedAlldistinct(IntVar[] v) {
     if (!support.options.getBoundConsistency()
         && (support.domainConsistency || v.length >= CIRCUIT_ALLDISTINCT_MIN_SIZE)) {
-      support.parameterListForAlldistincts.add(v);
+      support.addImpliedAlldistinct(v);
     }
   }
 
@@ -1172,11 +1174,12 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       // with the other axis fixed, rectangles apart along it never meet and diffn knows it; the
       // projection then only adds cost (accap), unless all of them cross one line (filters)
+      // the projections are redundant: local search does not evaluate them
       if (!fixedApart(y, ly) && !cumulativeTasks.contains(taskKey(x, lx, ly))) {
-        poseCumulative(x, lx, ly, span(y, ly));
+        support.implied(() -> poseCumulative(x, lx, ly, span(y, ly)));
       }
       if (!fixedApart(x, lx) && !cumulativeTasks.contains(taskKey(y, ly, lx))) {
-        poseCumulative(y, ly, lx, span(x, lx));
+        support.implied(() -> poseCumulative(y, ly, lx, span(x, lx)));
       }
     }
     diffnProjections.clear();
@@ -1216,7 +1219,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
   /** A variable equal to max(o[i] + l[i]) - min(o[i]), the span of the intervals along one axis. */
   private IntVar span(IntVar[] o, IntVar[] l) {
-    Store store = support.store;
+    Store localStore = support.store;
     IntVar[] end = new IntVar[o.length];
     int low = IntDomain.MAX_INT;
     int high = IntDomain.MIN_INT;
@@ -1226,13 +1229,13 @@ class GlobalConstraints implements ParserTreeConstants {
       if (l[i].singleton(0)) {
         end[i] = o[i];
       } else {
-        end[i] = new IntVar(store, o[i].min() + l[i].min(), o[i].max() + l[i].max());
+        end[i] = new IntVar(localStore, o[i].min() + l[i].min(), o[i].max() + l[i].max());
         support.pose(new XplusYeqZ(o[i], l[i], end[i]));
       }
     }
-    IntVar first = new IntVar(store, low, high);
-    IntVar last = new IntVar(store, low, high);
-    IntVar span = new IntVar(store, 0, Math.max(0, high - low));
+    IntVar first = new IntVar(localStore, low, high);
+    IntVar last = new IntVar(localStore, low, high);
+    IntVar span = new IntVar(localStore, 0, Math.max(0, high - low));
     support.pose(new Min(o, first));
     support.pose(new Max(end, last));
     support.pose(new XplusYeqZ(first, span, last));
@@ -1988,14 +1991,14 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
-  private void poseTableSingleVar(IntVar var, int[][] tt) {
+  private void poseTableSingleVar(IntVar aVar, int[][] tt) {
     IntervalDomain d = new IntervalDomain();
     for (int[] ints : tt) {
       d.addDom(new IntervalDomain(ints[0], ints[0]));
     }
-    var.domain.in(store.level, var, d);
+    aVar.domain.in(store.level, aVar, d);
     if (support.options.debug()) {
-      FzConsole.println("% " + var + " in " + d);
+      FzConsole.println("% " + aVar + " in " + d);
     }
   }
 
@@ -2067,7 +2070,7 @@ class GlobalConstraints implements ParserTreeConstants {
             .getBoundConsistency()) { // we add additional implied constraint if domain consistency
       // is
       // required
-      support.parameterListForAlldistincts.add(f);
+      support.addImpliedAlldistinct(f);
     }
 
     support.delayedConstraints.add(new Assignment(f, invf, indexF, indexInvf));
@@ -2321,7 +2324,7 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] d = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
-    int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+    support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6)); // the minimum index, unused
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all
