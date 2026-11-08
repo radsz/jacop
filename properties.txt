@@ -28,6 +28,12 @@ Java specific:
 - sub_circuit_dominance_pruning: use pruning method based on node
   domination in graphs; default false (one of sub_circuit_* must be true).
 
+- jacop.values.cliques: Values (MiniZinc nvalue) reads at the root the
+  pairs of its variables that other constraints force to differ (x != y,
+  alldifferent, x = y + t or |x - y| = t with t never 0, x = y + c with
+  c != 0) and bounds the number of values from below by a clique of
+  them; default true.
+
 - sub_circuit_dominance_skip: the largest number of calls the
   dominance pruning of Subcircuit is skipped after a call that pruned
   nothing (the skip doubles each time); default 32.
@@ -48,6 +54,9 @@ Constraints (core):
   the supports of an equality: auto (sumsets of partial sums when
   estimated cheaper than enumeration), always (sumsets whenever within
   their limit) or off; default auto.
+
+- org.jacop.exactCover.inclusion: the DL+ rule of ExactCover; default
+  true.
 
 - jacop.convexAllocation.exact: the largest number of variables for
   which ConvexAllocation computes the bounds exactly; above it uses
@@ -236,6 +245,10 @@ unless stated otherwise):
 - org.jacop.fz.convexAllocation: ConvexAllocation on separable convex
   costs of variables with a known sum; default true without LCG and
   false with LCG.
+- org.jacop.fz.exactCover: ExactCover on the equalities
+  x_1 + ... + x_k = 1 over 0/1 variables; default false.
+- org.jacop.fz.exactCoverRows: the fewest equalities of such a cover;
+  default 4.
 - org.jacop.fz.differenceBounds: shortest-path bounds of the
   difference constraints before posting, and negative cycle check.
 - jacop.fz.differenceBudget: the most edge relaxations of each of its
@@ -293,6 +306,12 @@ unless stated otherwise):
 - org.jacop.fz.setUnion.min: the fewest singletons in a replaced
   chain; default 8.
 - org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
+- org.jacop.fz.tableCover: TableCover on tables over groups of the
+  variables of an all different (tilings); default true without LCG
+  and false with LCG.
+- org.jacop.fz.tableCoverGroups, org.jacop.fz.tableCoverTuples: the
+  fewest groups and the most tuples of such a cover; default 3 and
+  200000.
 - org.jacop.fz.weightedCompletion: WeightedCompletion on weighted sums
   of completion times on a unary resource.
 - org.jacop.fz.weightedCompletion.parallel: the same detection on
@@ -311,6 +330,9 @@ unless stated otherwise):
 
 Presolve:
 =========
+- org.jacop.fz.productDomains: int_times(x, y, z) restricts z to the
+  products of the values of x and y when there are at most 4096 value
+  pairs; default true.
 - jacop.presolve.alias: variable aliasing; default true.
 - jacop.presolve.affine: affine substitution (rule 2): on, aliases
   (aliases only, no views) or off; default on.
@@ -618,6 +640,12 @@ JaLP sparse simplex:
   infeasibilities than the slack basis; default true.
 - org.jacop.jalp.crashExactWeights: exact steepest-edge weights of the
   crash basis; default false.
+- org.jacop.jalp.presolve: presolve the first solve of a JaLP problem
+  and start the whole problem from the postsolved basis; default true.
+- org.jacop.jalp.presolveRows: presolve only problems with at least
+  this many rows; default 1.
+- org.jacop.jalp.presolveTrace: print the sizes and the reductions of
+  each presolve to standard error; default false.
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
   comma separated list of primal and reobjective; default empty.
 
