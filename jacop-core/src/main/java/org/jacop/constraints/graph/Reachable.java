@@ -561,6 +561,52 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
     }
   }
 
+  /**
+   * Whether the selected edges must form a forest of the undirected graph ({@link Tree} and {@link
+   * Path}).
+   *
+   * @return true when the selected edges are acyclic
+   */
+  public boolean acyclic() {
+    return acyclic;
+  }
+
+  /**
+   * The node Booleans; node {@code base + i} is selected when {@code nodes()[i]} is 1.
+   *
+   * @return the node Booleans, not a copy
+   */
+  public IntVar[] nodes() {
+    return ns;
+  }
+
+  /**
+   * The edge Booleans.
+   *
+   * @return the edge Booleans, not a copy
+   */
+  public IntVar[] edges() {
+    return es;
+  }
+
+  /**
+   * The node of each edge's tail, counted from 0.
+   *
+   * @return a new array of the tails
+   */
+  public int[] tails() {
+    return tail.clone();
+  }
+
+  /**
+   * The node of each edge's head, counted from 0.
+   *
+   * @return a new array of the heads
+   */
+  public int[] heads() {
+    return head.clone();
+  }
+
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.ANY;

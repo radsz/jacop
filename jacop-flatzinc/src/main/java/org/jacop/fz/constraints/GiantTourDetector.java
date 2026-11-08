@@ -80,13 +80,31 @@ import org.jacop.fz.SimpleNode;
  *       times at the end nodes (cvrp).
  * </ul>
  *
+ * <p>A travelling salesman tour, one circuit {@code circuit(x)} with no successor fixed, is a
+ * single route from its first node, taken as the depot, back to it. The detector posts the same
+ * arcs, cost rows and {@link Routes} for it, with the degree rows of the depot, so that the linear
+ * relaxation becomes the subtour elimination relaxation of Dantzig, Fulkerson and Johnson, with
+ * subtour cuts (the capacity cuts without demands) and blossom and comb cuts (Padberg and Rao,
+ * Grötschel and Padberg). This is off by default: System property org.jacop.fz.tsp=true turns it
+ * on, for tours of at most org.jacop.fz.tspArcs arcs (default 40,000). Use it for a pure TSP whose
+ * objective is the sum of the arc costs of the tour. On 42 TSPLIB instances at 600 s it proves 30
+ * optima instead of 24 with free search (23 instead of 20 with the model's search), and on the
+ * instances of 70 to 152 cities its bound is within 0.8 % of the optimum (median 0 %, against 0.7 %
+ * with free search and 3.4 % with the model's search without it). Each LP solve costs time, so at
+ * short time limits the solutions found on tours of more than about 120 cities can be worse.
+ *
  * <p>All the constraints of the model stay. System property org.jacop.fz.giantTour=false turns the
  * detection off; org.jacop.fz.routes=false turns it off with the other routes.
  *
  * <p>References: P. Kilby and P. Shaw, Vehicle Routing, in Handbook of Constraint Programming,
  * Elsevier, 2006 (the giant-tour model); J. Lysgaard, A. N. Letchford and R. W. Eglese, A new
  * branch-and-cut algorithm for the capacitated vehicle routing problem, Mathematical Programming
- * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts).
+ * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts); G. Dantzig, R. Fulkerson
+ * and S. Johnson, Solution of a large-scale traveling-salesman problem, Operations Research 2(4),
+ * 1954 (the subtour elimination relaxation); M. W. Padberg and M. R. Rao, Odd minimum cut-sets and
+ * b-matchings, Mathematics of Operations Research 7(1), 1982, and M. Grötschel and M. W. Padberg,
+ * On the symmetric travelling salesman problem I and II, Mathematical Programming 16, 1979 (blossom
+ * and comb cuts).
  */
 public class GiantTourDetector implements ParserTreeConstants {
 
@@ -95,6 +113,9 @@ public class GiantTourDetector implements ParserTreeConstants {
 
   // the most arcs of one tour: one Boolean each
   private static final int MAX_ARCS = 20_000;
+
+  // the most arcs of such a tour
+  private static final int MAX_TSP_ARCS = Integer.getInteger("org.jacop.fz.tspArcs", 40_000);
 
   // the most variables of a row read for an increment: a[n] = T[n] + slack[n] + d[n] has four
   private static final int MAX_ROW = 5;
@@ -292,14 +313,16 @@ public class GiantTourDetector implements ParserTreeConstants {
         fixedCount++;
       }
     }
-    if (fixedCount == 0) {
+    // a travelling salesman tour: its first node is the depot, both start and end of one route
+    boolean tsp = fixedCount == 0;
+    if (tsp && !Boolean.getBoolean("org.jacop.fz.tsp")) {
       return;
     }
     // customer number (1..k) of each node, or 0 for a depot node
     int[] customer = new int[n];
     List<Integer> customers = new ArrayList<>();
     customers.add(-1);
-    for (int v = 0; v < n; v++) {
+    for (int v = tsp ? 1 : 0; v < n; v++) {
       if (!fixed[v] && !target[v]) {
         customer[v] = customers.size();
         customers.add(v);
@@ -319,6 +342,10 @@ public class GiantTourDetector implements ParserTreeConstants {
         starts.add(v);
       }
       end[v] = fixed[v] && !target[v];
+    }
+    if (tsp) {
+      starts.add(0);
+      end[0] = true;
     }
     if (starts.isEmpty()) {
       return;
@@ -378,7 +405,7 @@ public class GiantTourDetector implements ParserTreeConstants {
     for (int i = 1; i <= k; i++) {
       count += x[customers.get(i)].getSize();
     }
-    if (count > MAX_ARCS) {
+    if (count > (tsp ? MAX_TSP_ARCS : MAX_ARCS)) {
       return;
     }
     for (int i = 1; i <= k; i++) {
@@ -456,6 +483,10 @@ public class GiantTourDetector implements ParserTreeConstants {
       }
     }
 
+    if (tsp && !depotRows(x, offset, customers, arc, posted)) {
+      return;
+    }
+
     int[] tails = new int[arcs.size()];
     int[] heads = new int[arcs.size()];
     for (int a = 0; a < tails.length; a++) {
@@ -470,7 +501,9 @@ public class GiantTourDetector implements ParserTreeConstants {
     posted.add(routes);
     if (support.options.debug()) {
       FzConsole.println(
-          "% redundant Routes of a giant tour: "
+          (tsp
+                  ? "% redundant Routes of a travelling salesman tour: "
+                  : "% redundant Routes of a giant tour: ")
               + k
               + " customers, "
               + tails.length
@@ -484,6 +517,35 @@ public class GiantTourDetector implements ParserTreeConstants {
     }
     support.delayedConstraints.addAll(posted);
     support.dictionary.addAuxiliaryVariables(literals);
+  }
+
+  // the degree rows of the depot of a travelling salesman tour and b[0,j] <-> x[0] = j; false when
+  // the depot has no arc out or in
+  private static boolean depotRows(
+      IntVar[] x, int offset, List<Integer> customers, IntVar[][] arc, List<Constraint> posted) {
+    int k = customers.size() - 1;
+    List<IntVar> out = new ArrayList<>();
+    List<IntVar> in = new ArrayList<>();
+    List<Integer> vs = new ArrayList<>();
+    for (int j = 1; j <= k; j++) {
+      if (arc[0][j] != null) {
+        out.add(arc[0][j]);
+        vs.add(customers.get(j) + offset);
+      }
+      if (arc[j][0] != null) {
+        in.add(arc[j][0]);
+      }
+    }
+    if (out.isEmpty() || in.isEmpty()) {
+      return false;
+    }
+    posted.add(ones(out));
+    posted.add(ones(in));
+    posted.add(
+        new ChannelReif(
+                x[0], out.toArray(new IntVar[0]), vs.stream().mapToInt(Integer::intValue).toArray())
+            .setDegreeWeight(0));
+    return true;
   }
 
   private static Constraint ones(List<IntVar> vs) {

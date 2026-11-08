@@ -544,6 +544,27 @@ public abstract class LayeredGraphConstraint extends Constraint
   }
 
   /**
+   * Attaches the constraint to its variables again after {@link #removeConstraint()} at the root
+   * level, when the clauses of {@link #encodeClauses} no longer stand for it, for example when
+   * search without learning takes over from a lazy clause generation solver. Every level is queued,
+   * so that the next consistency removes what the domains lost while the constraint was detached.
+   *
+   * @param store the store the constraint was imposed in
+   */
+  public void restoreConstraint(Store store) {
+    for (Var v : arguments()) {
+      // a variable fixed when the constraint was removed kept it
+      if (!v.singleton()) {
+        v.putModelConstraint(this, getSubscriptionPruningEvent(v));
+      }
+    }
+    for (IntVar v : list) {
+      queueVariable(store.level, v);
+    }
+    store.addChanged(this);
+  }
+
+  /**
    * Returns the edges of the graph over the current domains that lie on a path from level 0 to the
    * last level, four ints per edge: its level, its source node, its value and its target node, the
    * nodes numbered within their level as described. The linear relaxation states the flow model of

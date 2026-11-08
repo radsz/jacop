@@ -296,6 +296,11 @@ unless stated otherwise):
   whose tasks are ordered by precedences.
 - org.jacop.fz.giantTour: Routes for vehicle routes written as a
   giant tour.
+- org.jacop.fz.tsp: Routes, arc Booleans and cost rows also for a
+  pure travelling salesman tour (circuit with no fixed successor),
+  for the subtour, blossom and comb cuts of the LP; default false.
+  Use it for a pure TSP.
+- org.jacop.fz.tspArcs: the most arcs of such a tour; default 40000.
 - org.jacop.fz.routes: Routes for vehicle routes written as 0/1 arc
   variables.
 - org.jacop.fz.increasingSum: IncreasingSum on sums over ordered
@@ -410,6 +415,10 @@ Search of the LCG solver:
 - jacop.lcg.late: none, or defined (the defined variables and the
   Booleans of redundant constraints are branched on last); default
   defined.
+- org.jacop.fz.lcgDomWdegLimit: above this many default search
+  variables, the default search of a model without a search annotation
+  branches in input order instead of dom/wdeg, whose scan over all of
+  them at every decision costs too much; default 50000.
 - jacop.lcg.lpGuideRoot: the activity runs of fixed search follow
   the root solution of the linear relaxation, not its last one;
   default true.
@@ -570,12 +579,23 @@ Cuts:
 - org.jacop.lp.capacityRounds: their rounds; default 50.
 - org.jacop.lp.multistarCuts: multistar cuts over the same sets;
   default true.
+- org.jacop.lp.combCuts: blossom and comb cuts of Routes over the
+  mandatory customers, in the slots the capacity cuts leave; true or
+  false for every Routes; by default only for Routes without a
+  capacity (travelling salesman tours).
+- org.jacop.lp.combSearch: blossom and comb cuts also in search (by
+  default only at the root); default false.
 - org.jacop.lp.capacitySearch: capacity and multistar cuts also in
   search; default true.
 - org.jacop.lp.capacitySearchCuts: the most cuts per separation in
   search; default 10.
 - org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
   root; default true.
+- org.jacop.lp.treeCuts: generalized subtour elimination cuts of the
+  forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at the
+  root, for an objective; a model with them also takes all its other
+  rows into the relaxation; default true.
+- org.jacop.lp.treeRounds: their rounds; default 200.
 
 Row pool and lazy rows:
 
@@ -683,6 +703,9 @@ JaLP sparse simplex:
   and start the whole problem from the postsolved basis; default true.
 - org.jacop.jalp.presolveRows: presolve only problems with at least
   this many rows; default 1.
+- org.jacop.jalp.presolveParallel: in the presolve, merge parallel rows
+  and parallel columns (Andersen and Andersen 1995, sections 3.4 and
+  3.6); default true.
 - org.jacop.jalp.presolveTrace: print the sizes and the reductions of
   each presolve to standard error; default false.
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a

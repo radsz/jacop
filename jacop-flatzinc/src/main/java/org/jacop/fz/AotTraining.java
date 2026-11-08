@@ -30,7 +30,9 @@
 
 package org.jacop.fz;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 
@@ -43,8 +45,11 @@ import lombok.extern.slf4j.Slf4j;
  * java -XX:AOTCacheOutput=jacop.aot -cp ... org.jacop.fz.AotTraining -t 3000 a.fzn -- --lcg -f a.fzn
  * </pre>
  *
- * <p>The arguments are Fz2jacop command lines separated by {@code --}. The solver output goes to
- * standard output as usual; the training script discards it.
+ * <p>The arguments are Fz2jacop command lines separated by {@code --}. With {@code --models dir}
+ * instead, every {@code .fzn} file of the directory is solved with its own search, with free search
+ * and with lazy clause generation, 3 s each, as {@code fzn-jacop-aot} does (the MiniZinc Challenge
+ * image uses it, so that its Dockerfile needs no shell loop). The solver output goes to standard
+ * output as usual; the training script discards it.
  */
 @Slf4j
 public final class AotTraining {
@@ -57,6 +62,14 @@ public final class AotTraining {
    * @param args Fz2jacop command lines separated by {@code --}
    */
   public static void main(String[] args) {
+    if (args.length == 2 && "--models".equals(args[0])) {
+      for (String fzn : models(args[1])) {
+        solve(List.of("-t", "3000", fzn));
+        solve(List.of("-t", "3000", "-f", fzn));
+        solve(List.of("-t", "3000", "--lcg", "-f", fzn));
+      }
+      return;
+    }
     List<String> run = new ArrayList<>();
     for (String arg : args) {
       if (arg.equals("--")) {
@@ -67,6 +80,20 @@ public final class AotTraining {
       }
     }
     solve(run);
+  }
+
+  // the FlatZinc files of the directory, in name order
+  private static List<String> models(String dir) {
+    File[] files = new File(dir).listFiles((d, name) -> name.endsWith(".fzn"));
+    if (files == null) {
+      throw new IllegalArgumentException("AotTraining: no directory " + dir);
+    }
+    List<String> names = new ArrayList<>();
+    for (File f : files) {
+      names.add(f.getPath());
+    }
+    Collections.sort(names);
+    return names;
   }
 
   private static void solve(List<String> run) {
