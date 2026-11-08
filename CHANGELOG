@@ -3412,7 +3412,36 @@ Version 5.0 (unreleased)
      LangfordBin-039 to 240 are solved in 0.6 to 9 s (none of these in
      240 s before) and 010 is proved infeasible in 7 s instead of 16 s.
 
-200. New global UnaryEarlinessTardiness bounds a sum of earliness and
+200. The MiniZinc Challenge image (jacop-flatzinc/src/main/minizinc/
+     Dockerfile) trains the JVM's ahead-of-time cache (Java 25) on the
+     aot-training models with the image's own JVM and the classpath of
+     fzn-exec, and fzn-exec starts from it. On the 33 instances of the
+     2026 Challenge that JaCoP finishes in under 5 s the median run takes
+     0.27 s instead of 0.47 s; on a loaded machine (four runs on four
+     cores) zephyrus 14__6__10__3 took 2.2 s instead of 2.9-3.4 s. The
+     Challenge compares times in whole seconds.
+
+201. The linear relaxation makes generalized subtour elimination cuts of
+     the forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at
+     the root, for an objective: for a set S of nodes and a node k of S,
+     the selected edges inside S are at most the selected nodes of S
+     other than k (Lucena and Resende, Strong lower bounds for the prize
+     collecting Steiner problem in graphs, Discrete Applied Mathematics
+     141, 2004; Padberg and Wolsey, Trees and cuts, Annals of Discrete
+     Mathematics 17, 1983). A most violated cut for each k is a maximum
+     weight closure found with one maximum flow (Picard, Management
+     Science 22, 1976). A model with trees also takes all its other rows
+     into the relaxation and keeps them in search, and under -f the
+     solution of the relaxation guides the annotation's runs
+     (lcg-lp-branching=auto). On the 2026 Challenge's surface-based-tsp
+     the root bound is now the optimum on all five instances (st70: 490
+     before, 675; ch130: 3,744 before, 6,112). At 240 s, two runs each,
+     -f proves st70 in 1.5-1.8 s (before: not in 240 s) and berlin52 in
+     1.6-2.4 s (15 s); fixed search proves st70 in 22-23 s (not in 240 s)
+     and berlin52 in 6-8 s (13 s). -Dorg.jacop.lp.treeCuts=false turns
+     the cuts off; org.jacop.lp.treeRounds (200) bounds their rounds.
+
+202. New global UnaryEarlinessTardiness bounds a sum of earliness and
      tardiness costs of tasks on unary machines by the assignment
      bound of Sourd and Kedad-Sidhoum: each task is split into unit
      operations assigned to time slots of capacity one, with unit costs
@@ -3450,7 +3479,7 @@ Version 5.0 (unreleased)
      GlobalConstraintBruteForceTest, UnaryEarlinessTardinessLcgTest and
      LcgFuzzTest (explanation checker on), PrecedenceCostFuzzTest.
 
-201. Presolve tabling (--presolve-tabling) no longer runs out of memory
+203. Presolve tabling (--presolve-tabling) no longer runs out of memory
      on groups over wide domains. Its enumeration listed every value of
      the variable it branched on into an array before the node limit
      could stop it; with auxiliary variables of about 10^9 values this
@@ -3460,7 +3489,7 @@ Version 5.0 (unreleased)
      group reached its node limit before too, so it gets no table either
      way.
 
-202. Local search keeps more of its state incrementally, as Comet's
+204. Local search keeps more of its state incrementally, as Comet's
      invariants do (L. Michel and P. Van Hentenryck, A constraint-based
      architecture for local search, OOPSLA 2002, 83-100; P. Van
      Hentenryck and L. Michel, Constraint-Based Local Search, MIT Press
@@ -3493,7 +3522,7 @@ Version 5.0 (unreleased)
      gives only the first solution, LNS does the rest) and trains18 (387
      instead of 386).
 
-203. Free search (-f) under --lcg leaves every decision to the SAT
+205. Free search (-f) under --lcg leaves every decision to the SAT
      solver when the model is a CNF: all its variables are 0/1 and every
      constraint became clauses (Regular and MDD under --lcg, change
      #447). Before, the runs took turns between the annotation (or
