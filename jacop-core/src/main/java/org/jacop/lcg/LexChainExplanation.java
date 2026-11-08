@@ -192,7 +192,7 @@ public final class LexChainExplanation {
   private int[] nearestCrossing(int i) {
     for (long span = 1; ; span *= 2) {
       int from = (int) Math.max(0, i - span);
-      int to = (int) Math.min(m - 1, i + span);
+      int to = (int) Math.min(m - 1L, i + span);
       if (crosses(from, to, i) || (from == 0 && to == m - 1)) {
         return new int[] {from, to};
       }
