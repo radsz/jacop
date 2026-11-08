@@ -145,7 +145,7 @@ class LinearEqualitiesTest {
     boolean failed = false;
     try {
       le.apply(rows);
-    } catch (FailException e) {
+    } catch (FailException _) {
       failed = true;
     }
     assertThat(failed).isTrue();
@@ -355,7 +355,7 @@ class LinearEqualitiesTest {
       try {
         le.apply(rows);
         found = count(store, x, le.lattice);
-      } catch (FailException e) {
+      } catch (FailException _) {
         found = 0;
         infeasible++;
       }

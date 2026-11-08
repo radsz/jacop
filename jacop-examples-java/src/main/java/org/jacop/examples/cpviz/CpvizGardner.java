@@ -108,7 +108,7 @@ public class CpvizGardner {
       for (int j = i + 1; j < days.length; j++) {
         SetVar intersect = new SetVar(store, "" + i + j, 1, persons);
         store.impose(new AintersectBeqC(days[i], days[j], intersect));
-        IntVar card = new BooleanVar(store); // IntVar(store, 0, 1);
+        IntVar card = new BooleanVar(store);
         store.impose(new CardAeqX(intersect, card));
       }
     }

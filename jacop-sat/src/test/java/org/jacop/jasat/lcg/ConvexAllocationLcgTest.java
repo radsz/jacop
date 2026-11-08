@@ -72,7 +72,7 @@ class ConvexAllocationLcgTest {
       int n = 3 + rnd.nextInt(4);
       IntVar[] x = new IntVar[n];
       for (int i = 0; i < n; i++) {
-        x[i] = var("x" + i, -1 + rnd.nextInt(2), 3 + rnd.nextInt(3));
+        x[i] = aVar("x" + i, -1 + rnd.nextInt(2), 3 + rnd.nextInt(3));
         if (rnd.nextInt(3) == 0) {
           x[i].domain.subtractAdapt(x[i].min() + 1);
           x[i].refreshBounds();
@@ -91,8 +91,8 @@ class ConvexAllocationLcgTest {
           f[i] = cost();
         }
         IntVar total =
-            rnd.nextBoolean() ? var("t" + k, m, m) : var("t" + k, rnd.nextInt(m + 1), m + 3 * m);
-        costs[k] = var("c" + k, 0, 200);
+            rnd.nextBoolean() ? aVar("t" + k, m, m) : aVar("t" + k, rnd.nextInt(m + 1), m + 3 * m);
+        costs[k] = aVar("c" + k, 0, 200);
         ConvexAllocation a = new ConvexAllocation(p, f, total, costs[k]);
         a.lagrangianOnly(rnd.nextInt(4) == 0);
         store.impose(a);
@@ -107,7 +107,7 @@ class ConvexAllocationLcgTest {
       if (costs.length == 1) {
         objective = costs[0];
       } else {
-        objective = var("obj", 0, 400);
+        objective = aVar("obj", 0, 400);
         store.impose(
             new LinearInt(
                 new IntVar[] {costs[0], costs[1], objective}, new int[] {1, 1, -1}, "==", 0));
@@ -126,7 +126,7 @@ class ConvexAllocationLcgTest {
       };
     }
 
-    private IntVar var(String name, int min, int max) {
+    private IntVar aVar(String name, int min, int max) {
       IntVar v = new IntVar(store, name, min, max);
       vars.add(v);
       return v;

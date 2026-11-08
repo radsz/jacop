@@ -132,6 +132,7 @@ class LcgSlowFallbackFlatzincTest {
       "-f",
       "-a",
       "-s",
+      "-v",
       "--lp",
       "off",
       "-t",

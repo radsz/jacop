@@ -1219,7 +1219,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
   /** A variable equal to max(o[i] + l[i]) - min(o[i]), the span of the intervals along one axis. */
   private IntVar span(IntVar[] o, IntVar[] l) {
-    Store store = support.store;
+    Store localStore = support.store;
     IntVar[] end = new IntVar[o.length];
     int low = IntDomain.MAX_INT;
     int high = IntDomain.MIN_INT;
@@ -1229,13 +1229,13 @@ class GlobalConstraints implements ParserTreeConstants {
       if (l[i].singleton(0)) {
         end[i] = o[i];
       } else {
-        end[i] = new IntVar(store, o[i].min() + l[i].min(), o[i].max() + l[i].max());
+        end[i] = new IntVar(localStore, o[i].min() + l[i].min(), o[i].max() + l[i].max());
         support.pose(new XplusYeqZ(o[i], l[i], end[i]));
       }
     }
-    IntVar first = new IntVar(store, low, high);
-    IntVar last = new IntVar(store, low, high);
-    IntVar span = new IntVar(store, 0, Math.max(0, high - low));
+    IntVar first = new IntVar(localStore, low, high);
+    IntVar last = new IntVar(localStore, low, high);
+    IntVar span = new IntVar(localStore, 0, Math.max(0, high - low));
     support.pose(new Min(o, first));
     support.pose(new Max(end, last));
     support.pose(new XplusYeqZ(first, span, last));
@@ -1991,14 +1991,14 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
-  private void poseTableSingleVar(IntVar var, int[][] tt) {
+  private void poseTableSingleVar(IntVar aVar, int[][] tt) {
     IntervalDomain d = new IntervalDomain();
     for (int[] ints : tt) {
       d.addDom(new IntervalDomain(ints[0], ints[0]));
     }
-    var.domain.in(store.level, var, d);
+    aVar.domain.in(store.level, aVar, d);
     if (support.options.debug()) {
-      FzConsole.println("% " + var + " in " + d);
+      FzConsole.println("% " + aVar + " in " + d);
     }
   }
 
@@ -2324,7 +2324,7 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] d = support.getIntArray((SimpleNode) node.jjtGetChild(3));
     int q0 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
     IntDomain F = support.getSetLiteral(node, 5);
-    int minIndex = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+    support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6)); // the minimum index, unused
 
     // ---- KK, 2018-07-27
     // regular must not have duplicated variables; we create all

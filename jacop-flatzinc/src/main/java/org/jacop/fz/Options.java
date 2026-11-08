@@ -165,13 +165,15 @@ public class Options {
                 Print this message.
             -a, --all, --all-solutions
             -v, --verbose
+                Print more: with -s also the statistics of JaCoP's own components (lcg*,
+                presolve*, lp*, components*, lns*, ls*, symmetry*, probe*, portfolio*, ...).
             -t <value>, --time-out <value>
                 <value> - time in milisecond.
             -s, --statistics
                 Print the standard FlatZinc statistics (nodes, failures, restarts, peakDepth, ...).
             --search-statistics
-                As -s, and also the statistics of JaCoP's own components (lcg*, presolve*, lp*,
-                lns*, ls*, symmetry*, probe*, portfolio*, ...). -debug together with -s does the same.
+                As -s, and also the statistics of JaCoP's own components, as -s -v but without
+                the -v output after each solution. -debug together with -s does the same.
             -n <value>, --num-solutions <value>
                 <value> - limit on solution number.
             --gap <percent>
@@ -938,13 +940,14 @@ public class Options {
 
   /**
    * It returns true if the statistics of JaCoP's own components (LCG, presolve, LP, LNS, local
-   * search, symmetry, probing, portfolio) are printed as well as the standard FlatZinc ones: with
-   * --search-statistics, or with -s and -debug.
+   * search, symmetry, probing, components, portfolio) are printed as well as the standard FlatZinc
+   * ones: with -s and -v, with --search-statistics (the same as -s -v, kept for scripts), or with
+   * -s and -debug.
    *
    * @return true if the extra statistics are printed, false otherwise.
    */
   public boolean searchStatistics() {
-    return statistics && (searchStatistics || debug);
+    return statistics && (verbose || searchStatistics || debug);
   }
 
   /**

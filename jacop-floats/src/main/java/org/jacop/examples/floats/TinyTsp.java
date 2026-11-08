@@ -99,11 +99,11 @@ public class TinyTsp {
     }
 
     FloatVar route = new FloatVar(store, "route", 0.0, maxFloat);
-    FloatVar[] var = new FloatVar[n + 1];
-    System.arraycopy(dist, 0, var, 0, n);
-    var[n] = route;
+    FloatVar[] variable = new FloatVar[n + 1];
+    System.arraycopy(dist, 0, variable, 0, n);
+    variable[n] = route;
 
-    store.impose(new LinearFloat(var, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
+    store.impose(new LinearFloat(variable, new double[] {1.0, 1.0, 1.0, 1.0, -1.0}, "==", 0.0));
 
     log.info(
         "\bVar store size: "

@@ -54,11 +54,11 @@ public interface SearchMonitor {
    * Called after a decision has been taken on a variable, before propagation. The left branch is
    * {@code var = value}, the right branch {@code var != value}.
    *
-   * @param var the variable of the decision.
+   * @param aVar the variable of the decision.
    * @param value the value of the decision.
    * @param left true for the left branch, false for the right branch.
    */
-  default void onDecision(Var var, int value, boolean left) {}
+  default void onDecision(Var aVar, int value, boolean left) {}
 
   /**
    * Called after a decision has been taken on a constraint, before propagation. The left branch

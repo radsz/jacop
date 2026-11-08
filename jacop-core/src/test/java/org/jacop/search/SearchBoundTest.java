@@ -59,7 +59,7 @@ class SearchBoundTest {
       Store store = new Store();
       IntVar[] x = new IntVar[5];
       IntVar cost = model(store, r, x);
-      long optimum = this.optimum;
+      long localOptimum = this.optimum;
 
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
@@ -70,14 +70,16 @@ class SearchBoundTest {
               ? new SimpleSelect<>(x, null, new IndomainMin<>())
               : new SimpleSelect<>(x, new SmallestDomain<>(), new IndomainMax<>());
       boolean found = search.labeling(store, select, cost);
-      if (optimum == Long.MAX_VALUE) {
+      if (localOptimum == Long.MAX_VALUE) {
         assertThat(found).isFalse();
         continue;
       }
       assertThat(found).isTrue();
-      assertThat(search.getCostValue()).as("instance %d", instance).isEqualTo((int) optimum);
+      assertThat(search.getCostValue()).as("instance %d", instance).isEqualTo((int) localOptimum);
       for (int k = 0; k < bounds.size(); k++) {
-        assertThat((long) bounds.get(k)).as("instance %d", instance).isLessThanOrEqualTo(optimum);
+        assertThat((long) bounds.get(k))
+            .as("instance %d", instance)
+            .isLessThanOrEqualTo(localOptimum);
         if (k > 0) {
           assertThat(bounds.get(k)).isGreaterThanOrEqualTo(bounds.get(k - 1));
         }

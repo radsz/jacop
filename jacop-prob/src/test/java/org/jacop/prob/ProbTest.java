@@ -278,7 +278,7 @@ class ProbTest {
     final int[] lo;
     final int[] hi;
     final int[][] holes;
-    final int[] var;
+    final int[] aVar;
     final int[][] a;
     final int[] b;
     final long[] w;
@@ -298,9 +298,9 @@ class ProbTest {
             r.nextInt(3) == 0 ? new int[] {lo[i] + 1 + r.nextInt(hi[i] - lo[i])} : new int[0];
       }
       int columns = n + (r.nextInt(4) == 0 ? 1 : 0);
-      var = new int[columns];
+      aVar = new int[columns];
       for (int k = 0; k < columns; k++) {
-        var[k] = k < n ? k : r.nextInt(n);
+        aVar[k] = k < n ? k : r.nextInt(n);
       }
       int scenarios = 1 + r.nextInt(7);
       a = new int[scenarios][columns];
@@ -336,9 +336,9 @@ class ProbTest {
     }
 
     IntVar[] columns(IntVar[] x) {
-      IntVar[] c = new IntVar[var.length];
-      for (int k = 0; k < var.length; k++) {
-        c[k] = x[var[k]];
+      IntVar[] c = new IntVar[aVar.length];
+      for (int k = 0; k < aVar.length; k++) {
+        c[k] = x[aVar[k]];
       }
       return c;
     }
@@ -347,8 +347,8 @@ class ProbTest {
       long weight = 0;
       for (int s = 0; s < a.length; s++) {
         long act = 0;
-        for (int k = 0; k < var.length; k++) {
-          act += (long) a[s][k] * value[var[k]];
+        for (int k = 0; k < aVar.length; k++) {
+          act += (long) a[s][k] * value[aVar[k]];
         }
         if (act <= b[s]) {
           weight += w[s];
@@ -394,7 +394,7 @@ class ProbTest {
           + " holes="
           + Arrays.deepToString(holes)
           + " var="
-          + Arrays.toString(var)
+          + Arrays.toString(aVar)
           + " a="
           + Arrays.deepToString(a)
           + " b="
@@ -599,8 +599,8 @@ class ProbTest {
         }
         for (int s = 0; s < in.a.length; s++) {
           long act = 0;
-          for (int k = 0; k < in.var.length; k++) {
-            act += (long) in.a[s][k] * tuple[in.var[k]];
+          for (int k = 0; k < in.aVar.length; k++) {
+            act += (long) in.a[s][k] * tuple[in.aVar[k]];
           }
           value.put(store.findVariable("ok" + s), act <= in.b[s] ? 1L : 0L);
         }

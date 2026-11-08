@@ -197,11 +197,11 @@ public class ArborescenceBound extends Constraint
   }
 
   @Override
-  public int getConsistencyPruningEvent(Var var) {
-    if (var == root && consistencyPruningEvents == null) {
+  public int getConsistencyPruningEvent(Var variable) {
+    if (variable == root && consistencyPruningEvents == null) {
       return IntDomain.ANY;
     }
-    return super.getConsistencyPruningEvent(var);
+    return super.getConsistencyPruningEvent(variable);
   }
 
   @Override

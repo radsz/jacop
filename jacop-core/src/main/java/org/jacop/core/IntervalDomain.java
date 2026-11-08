@@ -1840,8 +1840,6 @@ public class IntervalDomain extends IntDomain {
           }
         }
 
-        // currentDomain2.max > currentDomain1.min) {
-
         int min = Math.min(currentDomain1.min(), currentDomain2.min());
 
         while ((currentDomain1.max() + 1 >= currentDomain2.min()

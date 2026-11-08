@@ -176,15 +176,15 @@ public class XorSystemDetector implements ParserTreeConstants {
       // c = a xor b
       case "bool_xor" -> {
         if (node.jjtGetNumChildren() == 3) {
-          row(new IntVar[] {var(node, 0), var(node, 1), var(node, 2)}, 0);
+          row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 0);
         }
       }
-      case "bool_not" -> row(new IntVar[] {var(node, 0), var(node, 1)}, 1);
-      case "bool_eq" -> row(new IntVar[] {var(node, 0), var(node, 1)}, 0);
+      case "bool_not" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1)}, 1);
+      case "bool_eq" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1)}, 0);
       // r = (a == b): a xor b xor r = 1
-      case "bool_eq_reif" -> row(new IntVar[] {var(node, 0), var(node, 1), var(node, 2)}, 1);
+      case "bool_eq_reif" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 1);
       // r = (a != b): a xor b xor r = 0
-      case "bool_ne_reif" -> row(new IntVar[] {var(node, 0), var(node, 1), var(node, 2)}, 0);
+      case "bool_ne_reif" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 0);
       case "jacop_table_int", "jacop_table_bool" -> {
         if (node.jjtGetNumChildren() == 2) {
           table(node, false);
@@ -350,7 +350,7 @@ public class XorSystemDetector implements ParserTreeConstants {
     return dim + 1;
   }
 
-  private IntVar var(ASTConstElem node, int i) {
+  private IntVar aVar(ASTConstElem node, int i) {
     return support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(i));
   }
 

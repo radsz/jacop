@@ -147,7 +147,9 @@ class FlatzincFrontEndTest {
     // MiniZinc Challenge 2023: 4.7 million nodes against Choco's 22 thousand).
     String out = run(pigeonsAfterFreeVariables(3), "-s")[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
-    int failures = Integer.parseInt(out.replaceAll("(?s).*%%%mzn-stat: failures=(\\d+).*", "$1"));
+    Matcher fm = Pattern.compile("%%%mzn-stat: failures=(\\d+)").matcher(out);
+    assertTrue(fm.find(), out);
+    int failures = Integer.parseInt(fm.group(1));
     assertTrue(failures < 200, out);
   }
 
@@ -554,20 +556,20 @@ class FlatzincFrontEndTest {
     int c = rnd.nextInt(9) - 4;
     int[] lo = new int[k];
     int[] hi = new int[k];
-    int[] var = new int[k];
+    int[] aVar = new int[k];
     for (int i = 0; i < k; i++) {
       lo[i] = bools ? 0 : rnd.nextInt(7) - 3;
       hi[i] = bools ? 1 : lo[i] + rnd.nextInt(4);
-      var[i] = i > 0 && rnd.nextInt(5) == 0 ? var[rnd.nextInt(i)] : i;
+      aVar[i] = i > 0 && rnd.nextInt(5) == 0 ? aVar[rnd.nextInt(i)] : i;
     }
     StringBuilder fzn = new StringBuilder();
     StringJoiner args = new StringJoiner(",");
     for (int i = 0; i < k; i++) {
-      if (var[i] == i) {
+      if (aVar[i] == i) {
         fzn.append(bools ? "var bool" : "var " + lo[i] + ".." + hi[i]).append(": x").append(i);
         fzn.append(":: output_var;\n");
       }
-      args.add("x" + var[i]);
+      args.add("x" + aVar[i]);
     }
     boolean reif = !kind.isEmpty();
     if (reif) {
@@ -597,10 +599,10 @@ class FlatzincFrontEndTest {
         v,
         lo,
         hi,
-        var,
+        aVar,
         () -> {
           for (int i = 0; i < k; i++) {
-            value[i] = v[var[i]];
+            value[i] = v[aVar[i]];
           }
           Boolean holds;
           if (fName.startsWith("int_lin_") || w != null) {
@@ -632,7 +634,7 @@ class FlatzincFrontEndTest {
           }
           StringJoiner sol = new StringJoiner(" ");
           for (int i = 0; i < k; i++) {
-            if (var[i] == i) {
+            if (aVar[i] == i) {
               sol.add(
                   "x"
                       + i
@@ -657,17 +659,17 @@ class FlatzincFrontEndTest {
   }
 
   private static void enumerateBuiltin(
-      int i, int[] v, int[] lo, int[] hi, int[] var, Runnable check) {
+      int i, int[] v, int[] lo, int[] hi, int[] aVar, Runnable check) {
     if (i == v.length) {
       check.run();
       return;
     }
-    if (var[i] != i) {
-      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+    if (aVar[i] != i) {
+      enumerateBuiltin(i + 1, v, lo, hi, aVar, check);
       return;
     }
     for (v[i] = lo[i]; v[i] <= hi[i]; v[i]++) {
-      enumerateBuiltin(i + 1, v, lo, hi, var, check);
+      enumerateBuiltin(i + 1, v, lo, hi, aVar, check);
     }
   }
 
@@ -2194,6 +2196,36 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("lcgExplanations"), out);
     String last = out.substring(out.lastIndexOf("x = "));
     assertTrue(last.startsWith("x = 5;") && last.contains("b = true;"), last);
+  }
+
+  @Test
+  void engineStatisticsArePrintedOnlyInVerboseMode() throws IOException {
+    // -s prints the standard FlatZinc statistics only; the statistics of LCG, LP, presolve,
+    // components, ... come with -v (or --search-statistics, or -debug) as well
+    String model =
+        """
+        var 0..5: x :: output_var;
+        var 0..5: y :: output_var;
+        constraint int_lin_le([1, 1], [x, y], 7);
+        constraint int_ne(x, y);
+        solve maximize x;
+        """;
+    String plain = run(model, "-s")[0];
+    assertTrue(plain.contains("%%%mzn-stat: nodes="), plain);
+    for (String extra : List.of("lcg", "components", "presolve", "lp", "nodesPerSecond")) {
+      assertTrue(
+          plain.lines().noneMatch(l -> l.startsWith("%%%mzn-stat: " + extra)),
+          extra + "\n" + plain);
+    }
+    for (String[] flags :
+        List.of(
+            new String[] {"-s", "-v"},
+            new String[] {"--search-statistics"},
+            new String[] {"-s", "-debug"})) {
+      String out = run(model, flags)[0];
+      assertTrue(out.contains("%%%mzn-stat: lpRows="), String.join(" ", flags) + "\n" + out);
+      assertTrue(out.contains("%%%mzn-stat: components="), String.join(" ", flags) + "\n" + out);
+    }
   }
 
   @Test

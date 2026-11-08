@@ -154,7 +154,7 @@ public final class EnergyCuts {
           separate(unary, true, mirror, column, value, lo, hi, found);
         }
       }
-    } catch (ArithmeticException overflow) {
+    } catch (ArithmeticException _) {
       // the cuts found so far are exact
     }
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));

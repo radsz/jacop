@@ -225,6 +225,10 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExp
         }
       }
     }
+    // entailed when the sum can no longer reach the value: no change can prune
+    if (!reified && (sum.min() > max || sum.max() < min)) {
+      removeConstraint();
+    }
   }
 
   private void pruneGt(int min, int max) {

@@ -82,9 +82,7 @@ public class SinCosExample {
             + store.numberConstraints());
 
     DepthFirstSearch<FloatVar> label = new DepthFirstSearch<>();
-    SplitSelectFloat<FloatVar> s =
-        new SplitSelectFloat<>(
-            store, new FloatVar[] {p, q}, null); // new SmallestDomainFloat<FloatVar>());
+    SplitSelectFloat<FloatVar> s = new SplitSelectFloat<>(store, new FloatVar[] {p, q}, null);
     s.roundRobin = false;
     label.setAssignSolution(true);
     label.getSolutionListener().recordSolutions(true);

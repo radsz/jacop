@@ -299,9 +299,9 @@ public abstract class FloatDomain extends Domain {
    */
   public static double previousForMinimization(double d) {
     if (minimizationStep == 0) {
-      return previous(d); // + upBit(d);
+      return previous(d);
     } else {
-      return d - minimizationStep; // + upBit(d);
+      return d - minimizationStep;
     }
   }
 

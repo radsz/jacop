@@ -398,24 +398,24 @@ public class VariablesParameters implements ParserTreeConstants {
   private void initAndRegisterIntVar(
       Store store,
       String ident,
-      IntVar var,
+      IntVar aVar,
       SimpleNode node,
       int initChild,
       Tables table,
       boolean outputVar) {
-    table.addVariable(ident, var);
+    table.addVariable(ident, aVar);
     if (initChild < node.jjtGetNumChildren()) {
       if (constant_int(node, initChild)) {
         int initVal = getScalarFlatExpr(node, initChild);
-        var.domain.inValue(store.level, var, initVal);
+        aVar.domain.inValue(store.level, aVar, initVal);
       } else {
         IntVar initVar = getScalarFlatExpr_var(store, node, initChild);
-        pose(store, new XeqY(var, initVar));
+        pose(store, new XeqY(aVar, initVar));
       }
     }
-    table.addSearchVar(var);
+    table.addSearchVar(aVar);
     if (outputVar) {
-      table.addOutVar(var);
+      table.addOutVar(aVar);
     }
   }
 
@@ -426,24 +426,24 @@ public class VariablesParameters implements ParserTreeConstants {
   private void initAndRegisterSetVar(
       Store store,
       String ident,
-      SetVar var,
+      SetVar aVar,
       SimpleNode node,
       int initChild,
       Tables table,
       boolean outputVar) {
-    table.addSetVariable(ident, var);
+    table.addSetVariable(ident, aVar);
     if (initChild < node.jjtGetNumChildren()) {
       if (constant_set(node, initChild)) {
         IntDomain setValue = getSetLiteral(node, initChild);
-        pose(store, new AeqS(var, setValue));
+        pose(store, new AeqS(aVar, setValue));
       } else {
         SetVar initSetVar = getSetFlatExpr_var(store, node, initChild);
-        pose(store, new AeqB(var, initSetVar));
+        pose(store, new AeqB(aVar, initSetVar));
       }
     }
-    table.addSearchSetVar(var);
+    table.addSearchSetVar(aVar);
     if (outputVar) {
-      table.addOutVar(var);
+      table.addOutVar(aVar);
     }
     numberSetVariables++;
   }
@@ -455,24 +455,24 @@ public class VariablesParameters implements ParserTreeConstants {
   private void initAndRegisterFloatVar(
       Store store,
       String ident,
-      FloatVar var,
+      FloatVar aVar,
       SimpleNode node,
       int initChild,
       Tables table,
       boolean outputVar) {
-    table.addFloatVariable(ident, var);
+    table.addFloatVariable(ident, aVar);
     if (initChild < node.jjtGetNumChildren()) {
       if (constant_float(node, initChild)) {
         double initValFloat = getScalarFlatExprFloat(node, initChild);
-        var.domain.in(store.level, var, initValFloat, initValFloat);
+        aVar.domain.in(store.level, aVar, initValFloat, initValFloat);
       } else {
         FloatVar initVarFloat = getScalarFlatExpr_varFloat(store, node, initChild);
-        pose(store, new PeqQ(var, initVarFloat));
+        pose(store, new PeqQ(aVar, initVarFloat));
       }
     }
-    table.addSearchFloatVar(var);
+    table.addSearchFloatVar(aVar);
     if (outputVar) {
-      table.addOutVar(var);
+      table.addOutVar(aVar);
     }
     numberFloatVariables++;
   }
@@ -1320,7 +1320,7 @@ public class VariablesParameters implements ParserTreeConstants {
             return v;
           } else {
             Integer n = dictionary.getInt(((ASTScalarFlatExpr) child).getIdent());
-            return dictionary.getConstant(n); // new IntVar(store, n.intValue(), n.intValue());
+            return dictionary.getConstant(n);
           }
         case 3: // array acces
           IntVar avar =
@@ -1334,7 +1334,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 dictionary
                     .getIntArray(((ASTScalarFlatExpr) child).getIdent())[
                     ((ASTScalarFlatExpr) child).getInt()];
-            return dictionary.getConstant(an); // new IntVar(store, an.intValue(), an.intValue());
+            return dictionary.getConstant(an);
           }
         default: // string & float;
           throw new IllegalArgumentException(
@@ -1356,8 +1356,7 @@ public class VariablesParameters implements ParserTreeConstants {
             return v;
           } else {
             Double n = dictionary.getFloat(((ASTScalarFlatExpr) child).getIdent());
-            return dictionary.getFloatConstant(
-                n); // new FloatVar(store, n.doubleValue(), n.doubleValue());
+            return dictionary.getFloatConstant(n);
           }
         case 3: // array acces
           FloatVar avar =
@@ -1371,8 +1370,7 @@ public class VariablesParameters implements ParserTreeConstants {
                 dictionary
                     .getFloatArray(((ASTScalarFlatExpr) child).getIdent())[
                     ((ASTScalarFlatExpr) child).getInt()];
-            return dictionary.getFloatConstant(
-                an); // new FloatVar(store, an.doubleValue(), an.doubleValue());
+            return dictionary.getFloatConstant(an);
           }
         case 5: // float
           return dictionary.getFloatConstant(((ASTScalarFlatExpr) child).getFloat());

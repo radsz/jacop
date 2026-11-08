@@ -151,7 +151,7 @@ class BalanceConstraintTest {
         try {
           decide(random.nextInt(4), v, value, level);
           ok = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           ok = false;
         }
       }

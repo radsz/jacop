@@ -463,7 +463,7 @@ class SingleConstraintTest {
             }
             store.removeLevel(2);
           }
-        } catch (FailException e) {
+        } catch (FailException _) {
           // not accepted
         }
         store.removeLevel(2);
@@ -623,7 +623,7 @@ class SingleConstraintTest {
         try {
           x.domain.in(1, x, v, v);
           accepted = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           accepted = false;
         }
       }
@@ -694,10 +694,14 @@ class SingleConstraintTest {
             }
 
             @Override
-            public void setChildrenListeners(ConsistencyListener[] children) {}
+            public void setChildrenListeners(ConsistencyListener[] children) {
+              // the test listener has no children
+            }
 
             @Override
-            public void setChildrenListeners(ConsistencyListener child) {}
+            public void setChildrenListeners(ConsistencyListener child) {
+              // the test listener has no children
+            }
           });
 
       assertThat(search.labeling(store, select, x)).isTrue();
@@ -732,7 +736,7 @@ class SingleConstraintTest {
     try {
       store.impose(build.apply(p, r));
       return store.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       return false;
     }
   }

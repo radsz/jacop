@@ -222,14 +222,14 @@ public class UnaryTransition extends Constraint
         }
       }
     }
-    long[] ttk = familyBounds(tt);
+    long[] localTtk = familyBounds(tt);
     famOfTask = fam;
-    this.ttk = ttk;
-    normal = new TransitionReasoning(n, tt, ttk);
-    reversed = new TransitionReasoning(n, ttReversed, ttk);
+    this.ttk = localTtk;
+    normal = new TransitionReasoning(n, tt, localTtk);
+    reversed = new TransitionReasoning(n, ttReversed, localTtk);
     taskAt = new int[n];
     if (this.optional != null) {
-      withOptional = new TransitionReasoning(n, tt, ttk);
+      withOptional = new TransitionReasoning(n, tt, localTtk);
       optionalTaskAt = new int[n];
       setScope(
           Stream.concat(

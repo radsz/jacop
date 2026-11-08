@@ -297,7 +297,7 @@ class FloatPropagationFuzzTest {
     Constraint[] constraints;
     try {
       constraints = wrapped(t);
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       return null;
     }
     String where = describe(t, constraints);
@@ -305,7 +305,7 @@ class FloatPropagationFuzzTest {
       for (Constraint constraint : constraints) {
         t.store.impose(constraint);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return checkFailure(t, "impose", where);
     }
     int cost = random.nextInt(t.vars.length);
@@ -397,7 +397,7 @@ class FloatPropagationFuzzTest {
     Constraint[] constraints;
     try {
       constraints = wrapped(t);
-    } catch (IllegalArgumentException e) {
+    } catch (IllegalArgumentException _) {
       // a constructor may reject a box, for example a constant out of range
       return null;
     }
@@ -406,7 +406,7 @@ class FloatPropagationFuzzTest {
       for (Constraint constraint : constraints) {
         t.store.impose(constraint);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return checkFailure(t, "impose", where);
     } catch (RuntimeException e) {
       return "impose threw " + e + "\n    " + where;
@@ -750,7 +750,7 @@ class FloatPropagationFuzzTest {
         FloatVar f = (FloatVar) t.vars[i];
         f.domain.in(store.level, f, lo, hi);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       t.failed = true;
       return checkFailure(t, "decision", where);
     }
@@ -762,7 +762,7 @@ class FloatPropagationFuzzTest {
     boolean consistent;
     try {
       consistent = store.consistency();
-    } catch (FailException e) {
+    } catch (FailException _) {
       consistent = false;
     } catch (RuntimeException | StackOverflowError e) {
       return what + " consistency threw " + e + "\n    " + where;

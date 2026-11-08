@@ -613,7 +613,7 @@ public final class SetPrimitiveGroundingHarness {
           fix(store, x, specs, plan, i -> true);
           phase = "search at level " + (root + 1);
           found = solveAll(store, x, specs);
-        } catch (FailException e) {
+        } catch (FailException _) {
           // the plan itself is inconsistent; no solutions
         }
         String diff = compare(found, expected);
@@ -701,7 +701,7 @@ public final class SetPrimitiveGroundingHarness {
         failures.add(
             where + ": notSatisfied() is " + p.notSatisfied() + " but the relation is " + holds);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       if (holds) {
         failures.add(where + ": FailException on impose although the relation holds");
       }
@@ -852,7 +852,7 @@ public final class SetPrimitiveGroundingHarness {
     try {
       decision.run();
       dfs(store, x, specs, found);
-    } catch (FailException e) {
+    } catch (FailException _) {
       // dead branch
     }
     store.removeLevel(level + 1);

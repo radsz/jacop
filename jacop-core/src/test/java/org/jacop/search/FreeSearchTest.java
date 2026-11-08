@@ -635,7 +635,7 @@ class FreeSearchTest {
         v -> {
           try {
             Thread.sleep(20);
-          } catch (InterruptedException e) {
+          } catch (InterruptedException _) {
             Thread.currentThread().interrupt();
           }
           return min.indomain(v);

@@ -53,10 +53,10 @@ final class FznBuilder {
   static final long UNBOUNDED = 1L << 40;
 
   /** A constant or a variable, of type int or bool. */
-  record Term(String var, long value, boolean bool) {
+  record Term(String aVar, long value, boolean bool) {
 
     boolean isConst() {
-      return var == null;
+      return aVar == null;
     }
 
     boolean isTrue() {
@@ -68,8 +68,8 @@ final class FznBuilder {
     }
 
     String text() {
-      if (var != null) {
-        return var;
+      if (aVar != null) {
+        return aVar;
       }
       return bool ? Boolean.toString(value != 0) : Long.toString(value);
     }
@@ -150,11 +150,11 @@ final class FznBuilder {
     if (t.isConst()) {
       return t.value;
     }
-    long[] b = bounds.get(t.var);
+    long[] b = bounds.get(t.aVar);
     if (b != null) {
       return b[0];
     }
-    SetLit d = model.domain(new Ident(t.var));
+    SetLit d = model.domain(new Ident(t.aVar));
     return d == null ? -UNBOUNDED : d.min();
   }
 
@@ -162,11 +162,11 @@ final class FznBuilder {
     if (t.isConst()) {
       return t.value;
     }
-    long[] b = bounds.get(t.var);
+    long[] b = bounds.get(t.aVar);
     if (b != null) {
       return b[1];
     }
-    SetLit d = model.domain(new Ident(t.var));
+    SetLit d = model.domain(new Ident(t.aVar));
     return d == null ? UNBOUNDED : d.max();
   }
 
@@ -288,12 +288,12 @@ final class FznBuilder {
     for (int i = 0; i < coefs.length; i++) {
       Term t = xs.get(i);
       if (t.bool && !t.isConst()) {
-        throw new IllegalArgumentException("bool variable in a linear constraint: " + t.var);
+        throw new IllegalArgumentException("bool variable in a linear constraint: " + t.aVar);
       }
       if (t.isConst()) {
         rhs -= coefs[i] * t.value;
       } else {
-        merged.merge(t.var, coefs[i], Long::sum);
+        merged.merge(t.aVar, coefs[i], Long::sum);
       }
     }
     merged.values().removeIf(c -> c == 0);

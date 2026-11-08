@@ -170,7 +170,7 @@ class UnaryReasoningTest {
           case EDGE_FIND -> u.edgeFind(ts, n, store);
         }
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return null;
     }
     return bounds(v[0]);
@@ -198,7 +198,7 @@ class UnaryReasoningTest {
         u.load(ts, n);
         u.detectable(ts, n, store);
       } while (!Arrays.deepEquals(before, bounds(v[0])));
-    } catch (FailException e) {
+    } catch (FailException _) {
       return null;
     }
     return bounds(v[0]);
@@ -293,7 +293,7 @@ class UnaryReasoningTest {
                 : new TaskNormalView(v[0][i], v[1][i], v[2][i]);
         t.updateNotFirstNotLast(store.level, lct[i]);
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       return null;
     }
     return bounds(v[0]);
