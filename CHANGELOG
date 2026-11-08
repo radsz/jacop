@@ -3416,10 +3416,13 @@ Version 5.0 (unreleased)
      before the first solution: each round assumes the objective at its
      root lower bound, one run per round and without shaving, until a
      solution is found. Before, those runs waited for a first solution.
-     XCSP3 ButtonsScissors-00 and -02, where every first solution lies
-     near the optimum (0.2 s with the objective at most 9, the optimum,
-     no solution in 15 s with at most 13), are proved optimal in 7-17 s
-     and 5 s; neither had a solution in 60 s.
+     A run that neither raises the bound nor finds a solution halves the
+     share of the next run until the bound goes up again, so the search
+     for a first solution keeps its time. XCSP3 ButtonsScissors-00 and
+     -02, where every first solution lies near the optimum (0.2 s with
+     the objective at most 9, the optimum, no solution in 15 s with at
+     most 13), are proved optimal in 10-60 s; neither had a solution in
+     600 s (00 in one of two runs).
 
 201. The default search under --lcg, for a model without a search
      annotation, branches in input order with the smallest value instead
@@ -3427,8 +3430,10 @@ Version 5.0 (unreleased)
      (-Dorg.jacop.fz.lcgDomWdegLimit, stat lcgInputOrder): dom/wdeg
      scans every variable at each decision, about 1 ms a decision on
      the 160,000 cells of XCSP3 AztecDiamond-200. AztecDiamond 200 to
-     300, Takuzu 040 and 050 and WordDesign1 065 now have a solution in
-     12 to 57 s (none in 60 s before).
+     300, Takuzu 040 and 050, WordDesign1 065 and NonTransitiveDice
+     30-30-4 now have a solution in 12 to 75 s (none in 600 s before,
+     AztecDiamond-300 in 527 s); RamseyPartition-equ-3-0600 takes 200 s
+     instead of 57 s to prove unsatisfiable.
 
 Version 4.11
 =============

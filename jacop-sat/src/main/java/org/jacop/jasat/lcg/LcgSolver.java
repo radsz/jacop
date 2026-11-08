@@ -2981,6 +2981,11 @@ public final class LcgSolver implements ExternalPropagator {
   private int minimizeWithLowerBoundSearch() {
     long budget = lowerBoundBudget;
     double share = lowerBoundShare;
+    // before the first solution a run that neither raises the bound nor finds a solution halves the
+    // share of the next one, and a raise restores it: the runs take time from the search for a
+    // first
+    // solution (XCSP3 IHTC-i30 found none in 600 s with the full share, base finds one after 240 s)
+    double early = 1;
     while (true) {
       long before = best == null ? Long.MAX_VALUE : best[objective];
       long limit = sat.conflicts + budget;
@@ -3001,9 +3006,14 @@ public final class LcgSolver implements ExternalPropagator {
           // a round that did not improve the best solution gives the bound more of the next one
           share = best[objective] < before ? lowerBoundShare : Math.min(share * shaveGrowth, 4);
         }
-        result = lowerBoundRun((long) (budget * share));
+        boolean noSolution = best == null;
+        long raisedBefore = lowerBoundRaised;
+        result = lowerBoundRun((long) (budget * share * (noSolution ? early : 1)));
         if (result != CdclSolver.UNKNOWN) {
           return result;
+        }
+        if (noSolution) {
+          early = lowerBoundRaised > raisedBefore ? 1 : early / 2;
         }
       }
       budget += budget / 2;
