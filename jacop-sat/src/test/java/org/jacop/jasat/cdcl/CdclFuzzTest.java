@@ -191,6 +191,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();
     int next = 0;
@@ -200,7 +201,7 @@ class CdclFuzzTest {
         s.addClause(f.get(next));
         added.add(f.get(next));
       }
-      int[] assumed = new int[rnd.nextInt(4)];
+      int[] assumed = new int[rnd.nextInt(seed % 4 == 1 ? 24 : 4)];
       for (int i = 0; i < assumed.length; i++) {
         int v = 1 + rnd.nextInt(vars);
         assumed[i] = rnd.nextBoolean() ? v : -v;

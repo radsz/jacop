@@ -3737,14 +3737,17 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyRestart() {
-    deleteLpSteps();
-    if (onBound != null && objective >= 0 && store.level == baseLevel) {
-      rootBound();
+    // a restart under assumptions keeps their level, whose bounds hold only under them
+    if (store.level == baseLevel) {
+      deleteLpSteps();
+      if (onBound != null && objective >= 0) {
+        rootBound();
+      }
+      if (restartPresolve > 0) {
+        presolveAtRestart();
+      }
+      exchangeShared();
     }
-    if (restartPresolve > 0 && store.level == baseLevel) {
-      presolveAtRestart();
-    }
-    exchangeShared();
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {
