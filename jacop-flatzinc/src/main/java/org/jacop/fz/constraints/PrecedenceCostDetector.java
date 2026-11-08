@@ -373,6 +373,25 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
     if (plan != null && plan.contains(z)) {
       plan = null;
     }
+    // the precedences between the tasks of the plan, for its Lagrangian bound
+    int[][] unaryPrecedences = new int[0][];
+    if (plan != null) {
+      List<IntVar> all = new ArrayList<>(starts);
+      List<int[]> found = precedences(all, new IdentityHashMap<>(task));
+      Map<IntVar, Integer> position = new IdentityHashMap<>();
+      for (int i = 0; i < plan.starts.length; i++) {
+        position.put(plan.starts[i], i);
+      }
+      List<int[]> mapped = new ArrayList<>();
+      for (int[] p : found) {
+        Integer a = position.get(all.get(p[0]));
+        Integer b = position.get(all.get(p[1]));
+        if (a != null && b != null) {
+          mapped.add(new int[] {a, b, p[2]});
+        }
+      }
+      unaryPrecedences = mapped.toArray(new int[0][]);
+    }
     if (!precedences.isEmpty()) {
       // the starts with the variables the precedences go through
       List<IntVar> all = new ArrayList<>(starts);
@@ -428,7 +447,13 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
     if (plan != null) {
       UnaryEarlinessTardiness et =
           new UnaryEarlinessTardiness(
-              plan.starts, plan.durations, plan.machines, plan.owner, plan.terms, bound);
+              plan.starts,
+              plan.durations,
+              plan.machines,
+              plan.owner,
+              plan.terms,
+              unaryPrecedences,
+              bound);
       et.setDegreeWeight(0);
       if (support.options.debug()) {
         FzConsole.println(
@@ -438,7 +463,9 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
                 + plan.machines.length
                 + " machines, "
                 + plan.terms.length
-                + " terms");
+                + " terms, "
+                + unaryPrecedences.length
+                + " precedences");
       }
       support.delayedConstraints.add(et);
     }

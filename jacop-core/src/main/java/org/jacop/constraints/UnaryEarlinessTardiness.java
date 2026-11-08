@@ -117,7 +117,25 @@ public class UnaryEarlinessTardiness extends Constraint
   final int[][] machines;
   final int[] owner;
   final int[][] terms;
+  final int[][] precedences;
   final IntVar cost;
+
+  // the iterations of the subgradient search of the multipliers of the precedences at the root
+  static final int LAGRANGE = Integer.getInteger("org.jacop.unaryEarlinessTardiness.lagrange", 30);
+
+  // internal costs are in units of 1 / unit, so that the multipliers can be fractions
+  private final long unit;
+  // the linear part a[i] * (s - anchor[i]) of the cost of each task from the multipliers, with
+  // the anchor at the end of its first window that keeps it nonnegative
+  private final long[] linear;
+  private final long[] anchor;
+  // the constant of the relaxed precedences, times SCALE, in internal units
+  private long constantScaled;
+  private boolean lagrangeDone;
+  private long[] multipliers;
+  // the first bounds of the starts
+  private final long[] firstLo;
+  private final long[] firstHi;
 
   private final int n;
   // the terms of each task: due date, earliness and tardiness weights, and the flat part 2w
@@ -133,7 +151,7 @@ public class UnaryEarlinessTardiness extends Constraint
   private final Map<IntVar, Integer> index = new IdentityHashMap<>();
 
   // the tasks owning costs but on no machine
-  private final int[] outside;
+  private int[] outside;
 
   // solves of a machine after which it is turned off if its bound never beat the exact minima
   static final int TRIAL = Integer.getInteger("org.jacop.unaryEarlinessTardiness.trial", 200);
@@ -288,7 +306,7 @@ public class UnaryEarlinessTardiness extends Constraint
   }
 
   /**
-   * It constructs the constraint on several machines.
+   * It constructs the constraint on several machines, without precedences.
    *
    * @param starts the start times.
    * @param durations the durations, at least 1.
@@ -300,6 +318,34 @@ public class UnaryEarlinessTardiness extends Constraint
    */
   public UnaryEarlinessTardiness(
       IntVar[] starts, int[] durations, int[][] machines, int[] owner, int[][] terms, IntVar cost) {
+    this(starts, durations, machines, owner, terms, new int[0][], cost);
+  }
+
+  /**
+   * It constructs the constraint on several machines, with precedences {i, j, d}: s[j] &gt;= s[i] +
+   * d. The precedences are part of the relation (the constraint fails on a ground schedule that
+   * breaks one) but are not propagated: they need their own constraints. The bound relaxes them in
+   * the Lagrangian way, with multipliers found by a subgradient search at the root (Fisher, The
+   * Lagrangian relaxation method for solving integer programming problems, Management Science
+   * 27(1), 1981), so the machines and the chains of tasks are bounded together.
+   *
+   * @param starts the start times.
+   * @param durations the durations, at least 1.
+   * @param machines the tasks of each machine, as indices of starts; a task may be on several.
+   * @param owner the machine that counts the costs of each task, or -1 for none.
+   * @param terms quadruples {i, b, e, t}: e * max(0, b - s[i]) + t * max(0, s[i] - b), e, t &gt;=
+   *     0.
+   * @param precedences triples {i, j, d}: s[j] &gt;= s[i] + d.
+   * @param cost the bound on the total cost.
+   */
+  public UnaryEarlinessTardiness(
+      IntVar[] starts,
+      int[] durations,
+      int[][] machines,
+      int[] owner,
+      int[][] terms,
+      int[][] precedences,
+      IntVar cost) {
     checkInputForNullness(new String[] {"starts", "cost"}, starts, new Object[] {cost});
     this.n = starts.length;
     if (durations == null
@@ -351,6 +397,29 @@ public class UnaryEarlinessTardiness extends Constraint
       }
     }
 
+    if (precedences == null) {
+      throw new IllegalArgumentException("UnaryEarlinessTardiness: null precedences.");
+    }
+    this.precedences = new int[precedences.length][];
+    for (int k = 0; k < precedences.length; k++) {
+      int[] r = precedences[k];
+      if (r == null || r.length != 3 || r[0] < 0 || r[0] >= n || r[1] < 0 || r[1] >= n) {
+        throw new IllegalArgumentException(
+            "UnaryEarlinessTardiness needs precedences {i, j, d} of task indices.");
+      }
+      this.precedences[k] = r.clone();
+    }
+    this.unit = this.precedences.length > 0 && LAGRANGE > 0 ? 16 : 1;
+    this.linear = new long[n];
+    this.anchor = new long[n];
+    this.multipliers = new long[this.precedences.length];
+    this.firstLo = new long[n];
+    this.firstHi = new long[n];
+    for (int i = 0; i < n; i++) {
+      firstLo[i] = starts[i].min();
+      firstHi[i] = starts[i].max();
+    }
+
     this.terms = new int[terms.length][];
     int[] count = new int[n];
     for (int k = 0; k < terms.length; k++) {
@@ -378,31 +447,13 @@ public class UnaryEarlinessTardiness extends Constraint
       int i = r[0];
       int k = count[i]++;
       termB[i][k] = r[1];
-      termE[i][k] = r[2];
-      termT[i][k] = r[3];
+      termE[i][k] = unit * r[2];
+      termT[i][k] = unit * r[3];
       termW2[i][k] = flat(durations[i], r[2], r[3], flats);
     }
     hasCost = new boolean[n];
     bestStart = new long[n];
     bestSlot = new long[n];
-    int outsideCount = 0;
-    for (int i = 0; i < n; i++) {
-      for (int k = 0; k < termB[i].length; k++) {
-        hasCost[i] |= termE[i][k] + termT[i][k] > 0;
-      }
-      bestStart[i] = minimizer(i, false);
-      bestSlot[i] = minimizer(i, true);
-      if (hasCost[i] && owner[i] < 0) {
-        outsideCount++;
-      }
-    }
-    outside = new int[outsideCount];
-    outsideCount = 0;
-    for (int i = 0; i < n; i++) {
-      if (hasCost[i] && owner[i] < 0) {
-        outside[outsideCount++] = i;
-      }
-    }
 
     machine = new Machine[machines.length];
     int nodes = 0;
@@ -418,10 +469,6 @@ public class UnaryEarlinessTardiness extends Constraint
         last = 1;
       }
       machine[m] = new Machine(this.machines[m], first, last);
-      final int mm = m;
-      machine[m].owned =
-          Arrays.stream(this.machines[m]).filter(i -> owner[i] == mm && hasCost[i]).toArray();
-      machine[m].off = machine[m].owned.length < 2;
       nodes = Math.max(nodes, machine[m].jobs + machine[m].blocks + 2);
     }
     pot = new long[nodes];
@@ -438,6 +485,8 @@ public class UnaryEarlinessTardiness extends Constraint
     reasonCostMax = new long[2 * n];
     reasonLimit = new long[2 * n];
     needHi = new long[n];
+
+    costsChanged();
 
     this.queueIndex = 3;
     setScope(Stream.concat(Arrays.stream(starts), Stream.of(cost)));
@@ -467,6 +516,84 @@ public class UnaryEarlinessTardiness extends Constraint
       t[i] = new int[] {i, due[i], earliness[i], tardiness[i]};
     }
     return t;
+  }
+
+  // after the costs changed: which tasks have costs, their minimizers, the tasks on no machine
+  // that count their exact minima, and the tasks each machine counts
+  private void costsChanged() {
+    int outsideCount = 0;
+    for (int i = 0; i < n; i++) {
+      hasCost[i] = linear[i] != 0;
+      for (int k = 0; k < termB[i].length; k++) {
+        hasCost[i] |= termE[i][k] + termT[i][k] > 0;
+      }
+      bestStart[i] = minimizer(i, false);
+      bestSlot[i] = minimizer(i, true);
+      if (hasCost[i] && owner[i] < 0) {
+        outsideCount++;
+      }
+    }
+    outside = new int[outsideCount];
+    outsideCount = 0;
+    for (int i = 0; i < n; i++) {
+      if (hasCost[i] && owner[i] < 0) {
+        outside[outsideCount++] = i;
+      }
+    }
+    for (int m = 0; m < machine.length; m++) {
+      final int mm = m;
+      Machine mc = machine[m];
+      mc.owned = Arrays.stream(machines[m]).filter(i -> owner[i] == mm && hasCost[i]).toArray();
+      mc.off = mc.owned.length < 2;
+      mc.valid = false;
+      mc.dual = false;
+      mc.solves = 0;
+      mc.wins = 0;
+    }
+    certificateValid = false;
+    Arrays.fill(reasonLimit, 0);
+    Arrays.fill(reasonCostMax, Long.MIN_VALUE);
+  }
+
+  /**
+   * It sets the multipliers of the precedences, in units of 1 / 16 of the cost: precedence k adds
+   * multipliers[k] * (s[i] + d - s[j]) &lt;= 0 to the cost, which moves into linear costs of the
+   * tasks and a constant.
+   *
+   * @param lambda a multiplier per precedence, at least 0.
+   */
+  public void setMultipliers(long[] lambda) {
+    if (lambda.length != precedences.length) {
+      throw new IllegalArgumentException("UnaryEarlinessTardiness: one multiplier per precedence.");
+    }
+    multipliers = lambda.clone();
+    Arrays.fill(linear, 0);
+    long constant = 0;
+    for (int k = 0; k < precedences.length; k++) {
+      long l = Math.max(0, lambda[k]);
+      multipliers[k] = l;
+      linear[precedences[k][0]] += l;
+      linear[precedences[k][1]] -= l;
+      constant += l * precedences[k][2];
+    }
+    // a * s = sum of the units' a * (u - anchor) / p + a * anchor - a * (p - 1) / 2
+    long scaled = SCALE * constant;
+    for (int i = 0; i < n; i++) {
+      long p = durations[i];
+      anchor[i] = linear[i] >= 0 ? firstLo[i] : firstHi[i] + p - 1;
+      scaled += SCALE * linear[i] * anchor[i] - SCALE / 2 * linear[i] * (p - 1);
+    }
+    constantScaled = scaled;
+    costsChanged();
+  }
+
+  /**
+   * It returns the multipliers of the precedences in use.
+   *
+   * @return the multipliers, in units of 1 / 16 of the cost.
+   */
+  public long[] multipliers() {
+    return multipliers.clone();
   }
 
   // ---------------------------------------------------------------- the unit costs
@@ -543,6 +670,7 @@ public class UnaryEarlinessTardiness extends Constraint
     for (int k = 0; k < termB[i].length; k++) {
       s += hinge2(p, termE[i][k], termT[i][k], termW2[i][k], 2 * (u - termB[i][k]));
     }
+    s += 2 * linear[i] * (u - anchor[i]);
     return Math.floorDiv(SCALE * s, 2 * p);
   }
 
@@ -559,7 +687,21 @@ public class UnaryEarlinessTardiness extends Constraint
       long b = termB[i][k];
       v += s < b ? termE[i][k] * (b - s) : termT[i][k] * (s - b);
     }
+    if (linear[i] != 0) {
+      // the sum of the units' linear costs, rounded down
+      v += Math.floorDiv(2 * linear[i] * (s - anchor[i]) + linear[i] * (durations[i] - 1), 2);
+    }
     return v;
+  }
+
+  // the cost of the terms of task i at start s, in the units of the cost
+  private long trueCost(int i, long s) {
+    long v = 0;
+    for (int k = 0; k < termB[i].length; k++) {
+      long b = termB[i][k];
+      v += s < b ? termE[i][k] * (b - s) : termT[i][k] * (s - b);
+    }
+    return v / unit;
   }
 
   // an integer minimizer of f[i] (or of the slot cost), among the integers next to its kinks
@@ -591,6 +733,16 @@ public class UnaryEarlinessTardiness extends Constraint
           bestValue = v;
           best = x;
         }
+      }
+    }
+    // a linear part may put the minimum at an end of the first window
+    long[] ends =
+        slot ? new long[] {firstLo[i], firstHi[i] + p - 1} : new long[] {firstLo[i], firstHi[i]};
+    for (long x : ends) {
+      long v = slot ? slotCost(i, x) : taskCost(i, x);
+      if (v < bestValue) {
+        bestValue = v;
+        best = x;
       }
     }
     return best;
@@ -973,7 +1125,7 @@ public class UnaryEarlinessTardiness extends Constraint
       outsideTotal += outsideCost(i);
     }
     if (approximate
-        && (upper >= INF || ceilScaled(upper) + outsideTotal > max)
+        && (upper >= INF || total(upper, outsideTotal) > max)
         && (!adaptive || (eligible++ % stride == 0 && withinBudget()))) {
       // the bound could exceed the maximum: solve the machines exactly
       for (int m = 0; m < machine.length; m++) {
@@ -998,7 +1150,7 @@ public class UnaryEarlinessTardiness extends Constraint
         scaled += Math.max(mc.lower, mc.trivialValue);
       }
     }
-    long total = ceilScaled(scaled) + outsideTotal;
+    long total = total(scaled, outsideTotal);
     if (certify) {
       certify();
     }
@@ -1014,8 +1166,10 @@ public class UnaryEarlinessTardiness extends Constraint
     return a >= INF || b >= INF ? INF : a + b;
   }
 
-  private static long ceilScaled(long scaled) {
-    return scaled <= 0 ? 0 : (scaled + SCALE - 1) / SCALE;
+  // the bound of the cost from the scaled bounds of the machines and the minima of the other tasks
+  private long total(long scaled, long outsideTotal) {
+    long numerator = scaled + SCALE * outsideTotal + constantScaled;
+    return numerator <= 0 ? 0 : -Math.floorDiv(-numerator, SCALE * unit);
   }
 
   // the exact minima of the tasks a machine owns, scaled
@@ -1134,6 +1288,18 @@ public class UnaryEarlinessTardiness extends Constraint
 
   @Override
   public void consistency(Store store) {
+    propagate(store);
+    // the filtering may fix the last starts, and a constraint is not woken by its own changes
+    boolean ground = true;
+    for (int i = 0; i < n && ground; i++) {
+      ground = starts[i].singleton();
+    }
+    if (ground) {
+      propagate(store);
+    }
+  }
+
+  private void propagate(Store store) {
     boolean ground = true;
     for (int i = 0; i < n; i++) {
       lo[i] = starts[i].min();
@@ -1150,6 +1316,10 @@ public class UnaryEarlinessTardiness extends Constraint
         cost.domain.inMin(store.level, cost, (int) total);
       }
       return;
+    }
+    if (!lagrangeDone && precedences.length > 0 && LAGRANGE > 0) {
+      lagrangeDone = true;
+      subgradient(cost.max());
     }
     adaptive = TRIAL > 0;
     forcedSolve = false;
@@ -1217,7 +1387,7 @@ public class UnaryEarlinessTardiness extends Constraint
       }
       // the room of this machine: its bound may reach cap before the total exceeds the maximum
       long rest = scaled - Math.max(mc.lower, mc.trivialValue);
-      long cap = (max - outsideTotal) * SCALE - rest;
+      long cap = max * SCALE * unit - SCALE * outsideTotal - constantScaled - rest;
       long slack = cap - value;
       if (slack < 0) {
         continue;
@@ -1246,7 +1416,7 @@ public class UnaryEarlinessTardiness extends Constraint
           }
           if (a + 1 > starts[i].min()) {
             prunings++;
-            long room = (excess(mc, j, i, counted, lo[i], a + p - 1, slack) - 1) / SCALE;
+            long room = (excess(mc, j, i, counted, lo[i], a + p - 1, slack) - 1) / (SCALE * unit);
             record(m, j, true, a + 1, max + room);
             starts[i].domain.inMin(store.level, starts[i], (int) (a + 1));
           }
@@ -1268,7 +1438,7 @@ public class UnaryEarlinessTardiness extends Constraint
           }
           if (a - 1 < starts[i].max()) {
             prunings++;
-            long room = (excess(mc, j, i, counted, a, hi[i] + p - 1, slack) - 1) / SCALE;
+            long room = (excess(mc, j, i, counted, a, hi[i] + p - 1, slack) - 1) / (SCALE * unit);
             record(m, j, false, a - 1, max + room);
             starts[i].domain.inMax(store.level, starts[i], (int) (a - 1));
           }
@@ -1363,6 +1533,129 @@ public class UnaryEarlinessTardiness extends Constraint
     return new long[] {prunings, filterCalls};
   }
 
+  // ---------------------------------------------------------------- Lagrangian multipliers
+
+  /**
+   * It searches the multipliers of the precedences by subgradient optimization over the current box
+   * (Held, Wolfe and Crowder, Validation of subgradient optimization, Mathematical Programming 6,
+   * 1974): each step solves the machines, reads a start per task from the flows, and moves each
+   * multiplier by the violation of its precedence, with the step of Polyak towards a target above
+   * the best bound. It keeps the multipliers of the best bound.
+   */
+  private void subgradient(long max) {
+    int count = precedences.length;
+    double[] lambda = new double[count];
+    long[] best = new long[count];
+    double bestValue = -1;
+    double theta = 2.0;
+    int stall = 0;
+    long[] at = new long[n];
+    long[] trial = new long[count];
+    for (int it = 0; it < LAGRANGE; it++) {
+      for (int k = 0; k < count; k++) {
+        trial[k] = Math.round(lambda[k] * unit);
+      }
+      setMultipliers(trial);
+      long scaled = exactScaled();
+      if (scaled == Long.MIN_VALUE) {
+        // an overloaded machine: the propagation fails anyway
+        break;
+      }
+      double value = (double) scaled / ((double) SCALE * unit);
+      if (value > bestValue + 1e-9) {
+        bestValue = value;
+        best = trial.clone();
+        stall = 0;
+      } else if (++stall >= 4) {
+        theta /= 2;
+        stall = 0;
+      }
+      starts(at);
+      double norm = 0;
+      double[] g = new double[count];
+      for (int k = 0; k < count; k++) {
+        int[] q = precedences[k];
+        g[k] = at[q[0]] + q[2] - at[q[1]];
+        if (g[k] < 0 && lambda[k] <= 0) {
+          g[k] = 0;
+        }
+        norm += g[k] * g[k];
+      }
+      if (norm == 0 || theta < 0.01) {
+        break;
+      }
+      double target = Math.min(max, 1.1 * Math.max(bestValue, 0) + 1);
+      if (target <= value) {
+        target = value + 1;
+      }
+      double step = theta * (target - value) / norm;
+      for (int k = 0; k < count; k++) {
+        lambda[k] = Math.max(0, lambda[k] + step * g[k]);
+      }
+    }
+    setMultipliers(best);
+  }
+
+  // the scaled bound numerator of the current box by exact solves, Long.MIN_VALUE if overloaded
+  private long exactScaled() {
+    long scaled = 0;
+    for (int m = 0; m < machine.length; m++) {
+      Machine mc = machine[m];
+      fillCosts(m);
+      mc.trivialValue = trivialScaled(mc);
+      if (mc.off) {
+        scaled += mc.trivialValue;
+        continue;
+      }
+      if (!solve(m)) {
+        return Long.MIN_VALUE;
+      }
+      scaled += Math.max(mc.value, mc.trivialValue);
+    }
+    long outsideTotal = 0;
+    for (int i : outside) {
+      outsideTotal += outsideCost(i);
+    }
+    return scaled + SCALE * outsideTotal + constantScaled;
+  }
+
+  // a start per task from the flows of the last solves: the mean slot of its units
+  private void starts(long[] at) {
+    boolean[] seen = new boolean[n];
+    for (int m = 0; m < machine.length; m++) {
+      Machine mc = machine[m];
+      if (mc.off || !mc.valid) {
+        continue;
+      }
+      for (int j = 0; j < mc.jobs; j++) {
+        int i = mc.task[j];
+        if (seen[i] && owner[i] != m) {
+          continue;
+        }
+        long p = durations[i];
+        boolean counted = owner[i] == m && hasCost[i];
+        double sum = 0;
+        for (int k = 0; k < mc.blocks; k++) {
+          long f = mc.flow[j * mc.blocks + k];
+          if (f > 0) {
+            long a = Math.max(mc.start(k), lo[i]);
+            long z = Math.min(mc.end(k) - 1, hi[i] + p - 1);
+            double pos = counted ? Math.max(a, Math.min(z, bestSlot[i])) : (a + z) / 2.0;
+            sum += f * pos;
+          }
+        }
+        long s = Math.round(sum / p - (p - 1) / 2.0);
+        at[i] = Math.max(lo[i], Math.min(hi[i], s));
+        seen[i] = true;
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      if (!seen[i]) {
+        at[i] = Math.max(lo[i], Math.min(hi[i], bestStart[i]));
+      }
+    }
+  }
+
   // the exact cost of a ground schedule; fails if two tasks of a machine overlap
   private long groundCost() {
     for (int[] tasks : machines) {
@@ -1377,9 +1670,14 @@ public class UnaryEarlinessTardiness extends Constraint
         }
       }
     }
+    for (int[] q : precedences) {
+      if (lo[q[1]] < lo[q[0]] + q[2]) {
+        throw Store.failException;
+      }
+    }
     long total = 0;
     for (int i = 0; i < n; i++) {
-      total += taskCost(i, lo[i]);
+      total += trueCost(i, lo[i]);
     }
     return total;
   }
@@ -1568,6 +1866,7 @@ public class UnaryEarlinessTardiness extends Constraint
     result.append(", ").append(Arrays.deepToString(machines));
     result.append(", ").append(Arrays.toString(owner));
     result.append(", ").append(Arrays.deepToString(terms));
+    result.append(", ").append(Arrays.deepToString(precedences));
     result.append(", ").append(cost).append(")");
     return result.toString();
   }
@@ -1575,6 +1874,6 @@ public class UnaryEarlinessTardiness extends Constraint
   @Override
   public UnaryEarlinessTardiness copy(VarMap map) {
     return new UnaryEarlinessTardiness(
-        map.get(starts), durations, machines, owner, terms, map.get(cost));
+        map.get(starts), durations, machines, owner, terms, precedences, map.get(cost));
   }
 }

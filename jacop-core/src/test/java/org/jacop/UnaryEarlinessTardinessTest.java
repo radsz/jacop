@@ -383,6 +383,125 @@ class UnaryEarlinessTardinessTest {
     assertTrue(prunings > 0, "the filtering never pruned");
   }
 
+  // random precedences {i, j, d} between tasks i < j
+  private static int[][] randomPrecedences(Random r, Problem q) {
+    List<int[]> list = new ArrayList<>();
+    for (int i = 0; i < q.n; i++) {
+      for (int j = i + 1; j < q.n; j++) {
+        if (r.nextInt(3) == 0) {
+          list.add(new int[] {i, j, r.nextInt(q.p[i] + 2)});
+        }
+      }
+    }
+    return list.toArray(new int[0][]);
+  }
+
+  private static boolean precedencesHold(int[][] precedences, int[] x) {
+    for (int[] q : precedences) {
+      if (x[q[1]] < x[q[0]] + q[2]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * With precedences the bound stays below the brute-force minimum over the schedules that fit and
+   * keep the precedences, for random multipliers and for the ones of the subgradient search, and
+   * the propagation keeps every start of a schedule within the maximum.
+   */
+  @Test
+  void lagrangianBoundStaysBelowTheMinimum() {
+    Random r = new Random(6);
+    int raised = 0;
+    for (int t = 0; t < INSTANCES; t++) {
+      Problem q = Problem.random(r, 5, 12, 4);
+      int[][] precedences = randomPrecedences(r, q);
+      if (precedences.length == 0) {
+        continue;
+      }
+      long best = Long.MAX_VALUE;
+      boolean[][] supported = new boolean[q.n][];
+      for (int i = 0; i < q.n; i++) {
+        supported[i] = new boolean[q.hi[i] - q.lo[i] + 1];
+      }
+      int[] x = q.lo.clone();
+      List<int[]> schedules = new ArrayList<>();
+      while (true) {
+        if (q.feasible(x) && precedencesHold(precedences, x)) {
+          best = Math.min(best, q.cost(x));
+          schedules.add(x.clone());
+        }
+        int k = 0;
+        while (k < q.n && x[k] == q.hi[k]) {
+          x[k] = q.lo[k];
+          k++;
+        }
+        if (k == q.n) {
+          break;
+        }
+        x[k]++;
+      }
+      String what = "instance " + t + " " + q + " precedences " + Arrays.deepToString(precedences);
+      long[] low = Arrays.stream(q.lo).asLongStream().toArray();
+      long[] high = Arrays.stream(q.hi).asLongStream().toArray();
+      if (best == Long.MAX_VALUE) {
+        continue;
+      }
+      long max = best + r.nextInt(3);
+      for (int[] y : schedules) {
+        if (q.cost(y) <= max) {
+          for (int i = 0; i < q.n; i++) {
+            supported[i][y[i] - q.lo[i]] = true;
+          }
+        }
+      }
+      Store scratch = new Store();
+      IntVar[] f = new IntVar[q.n];
+      for (int i = 0; i < q.n; i++) {
+        f[i] = new IntVar(scratch, "s" + i, q.lo[i], q.hi[i]);
+      }
+      UnaryEarlinessTardiness probe =
+          new UnaryEarlinessTardiness(
+              f, q.p, q.machines, q.owner, q.terms, precedences, new IntVar(scratch, 0, 100_000));
+      long plain = probe.boundFor(low, high);
+      for (int rep = 0; rep < 3; rep++) {
+        long[] lambda = new long[precedences.length];
+        for (int k = 0; k < lambda.length; k++) {
+          lambda[k] = r.nextInt(4) == 0 ? 0 : r.nextInt(80);
+        }
+        probe.setMultipliers(lambda);
+        long b = probe.boundFor(low, high);
+        assertTrue(
+            b == Long.MAX_VALUE || b <= best,
+            what + " lambda " + Arrays.toString(lambda) + ": " + b + " > " + best);
+      }
+      Store store = new Store();
+      IntVar[] s = new IntVar[q.n];
+      for (int i = 0; i < q.n; i++) {
+        s[i] = new IntVar(store, "s" + i, q.lo[i], q.hi[i]);
+      }
+      IntVar c = new IntVar(store, "c", 0, (int) max);
+      UnaryEarlinessTardiness et =
+          new UnaryEarlinessTardiness(s, q.p, q.machines, q.owner, q.terms, precedences, c);
+      store.impose(et);
+      assertTrue(store.consistency(), what + " max " + max);
+      for (int i = 0; i < q.n; i++) {
+        for (int v = q.lo[i]; v <= q.hi[i]; v++) {
+          if (supported[i][v - q.lo[i]]) {
+            assertTrue(
+                s[i].domain.contains(v), what + " max " + max + ": s" + i + " = " + v + " removed");
+          }
+        }
+      }
+      et.setMultipliers(et.multipliers());
+      if (et.boundFor(low, high) > plain) {
+        raised++;
+      }
+    }
+    assertTrue(raised > 0, "the multipliers never raised the bound");
+  }
+
   /** The optimum with the constraint alone (and the disjunctions), the decomposition, and both. */
   @Test
   void optimaMatchDecomposition() {

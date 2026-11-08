@@ -52,15 +52,17 @@ import org.junit.jupiter.api.Test;
 
 /**
  * UnaryEarlinessTardiness under lazy clause generation, with every explanation checked: random
- * earliness and tardiness problems on one or two unary machines (stated as disjunctions), minimised
- * with the global and compared with the decomposition alone by depth-first search.
+ * earliness and tardiness problems on one or two unary machines (stated as disjunctions), with or
+ * without precedences (then relaxed in the bound with Lagrangian multipliers), minimised with the
+ * global and compared with the decomposition alone by depth-first search.
  */
 class UnaryEarlinessTardinessLcgTest {
 
   // -Dunaryet.lcg.instances=5000 for a longer run
   private static final int INSTANCES = Integer.getInteger("unaryet.lcg.instances", 300);
 
-  private record Problem(int n, int[] p, int[] lo, int[] hi, int[][] machines, int[][] terms) {
+  private record Problem(
+      int n, int[] p, int[] lo, int[] hi, int[][] machines, int[][] terms, int[][] precedences) {
 
     static Problem random(Random r) {
       int n = 3 + r.nextInt(4);
@@ -90,7 +92,18 @@ class UnaryEarlinessTardinessLcgTest {
           terms.add(new int[] {i, r.nextInt(16), r.nextInt(4), r.nextInt(4)});
         }
       }
-      return new Problem(n, p, lo, hi, machines, terms.toArray(new int[0][]));
+      List<int[]> precedences = new ArrayList<>();
+      if (r.nextBoolean()) {
+        for (int i = 0; i < n; i++) {
+          for (int j = i + 1; j < n; j++) {
+            if (r.nextInt(4) == 0) {
+              precedences.add(new int[] {i, j, r.nextInt(p[i] + 2)});
+            }
+          }
+        }
+      }
+      return new Problem(
+          n, p, lo, hi, machines, terms.toArray(new int[0][]), precedences.toArray(new int[0][]));
     }
 
     IntVar[] post(Store store, IntVar cost, boolean global) {
@@ -111,6 +124,9 @@ class UnaryEarlinessTardinessLcgTest {
           }
         }
       }
+      for (int[] q : precedences) {
+        store.impose(new XplusClteqZ(s[q[0]], q[2], s[q[1]]));
+      }
       IntVar[] vars = new IntVar[2 * terms.length + 1];
       int[] w = new int[vars.length];
       for (int k = 0; k < terms.length; k++) {
@@ -128,7 +144,7 @@ class UnaryEarlinessTardinessLcgTest {
       w[w.length - 1] = -1;
       store.impose(new LinearInt(vars, w, "<=", 0));
       if (global) {
-        store.impose(new UnaryEarlinessTardiness(s, p, machines, owner, terms, cost));
+        store.impose(new UnaryEarlinessTardiness(s, p, machines, owner, terms, precedences, cost));
       }
       return s;
     }
@@ -157,7 +173,12 @@ class UnaryEarlinessTardinessLcgTest {
       LcgSolver solver = new LcgSolver(store);
       solver.setChecking(true);
       solver.setSeed(instance % 3);
-      int status = solver.minimize(cost);
+      int status;
+      try {
+        status = solver.minimize(cost);
+      } catch (IllegalStateException e) {
+        throw new IllegalStateException("instance " + instance, e);
+      }
       if (!found) {
         assertThat(status).as("instance %d %s", instance, q).isEqualTo(CdclSolver.UNSAT);
         continue;

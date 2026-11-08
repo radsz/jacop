@@ -90,6 +90,12 @@ Constraints (core):
   when restricting the task's window raises the dual bound of its
   machine above the maximum of the cost; default true.
 
+- org.jacop.unaryEarlinessTardiness.lagrange: iterations of the
+  subgradient search, at the root, of the Lagrangian multipliers of the
+  precedences given to UnaryEarlinessTardiness (the FlatZinc front end
+  gives it the precedences it finds between its tasks); 0 relaxes the
+  precedences without multipliers; default 30.
+
 - org.jacop.diffn.dff: dual feasible functions in the area check of
   Diffn: 0 off, 1 gated (only when the rectangles fill at least half
   of the space, Steinberg's theorem), 2 always; default 1.
