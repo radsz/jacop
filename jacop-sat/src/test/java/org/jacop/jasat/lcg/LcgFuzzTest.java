@@ -127,6 +127,7 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.UnaryEarlinessTardiness;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -568,7 +569,8 @@ class LcgFuzzTest {
           yield flow;
         }
         case 30 -> valuesWithDifferences();
-        case 31 -> colouredTree();
+        case 31 -> unaryEarlinessTardiness(p);
+        case 32 -> colouredTree();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -611,7 +613,20 @@ class LcgFuzzTest {
       return a;
     }
 
-    // three starts under precedences with lags, earliness and tardiness at most a cost variable
+    // three tasks of lengths 1 or 2 on one machine (or two on one and one alone), earliness and
+    // tardiness at most a cost variable
+    private UnaryEarlinessTardiness unaryEarlinessTardiness(IntVar[] p) {
+      int[] d = {1 + rnd.nextInt(2), 1 + rnd.nextInt(2), 1 + rnd.nextInt(2)};
+      boolean split = rnd.nextBoolean();
+      int[][] machines = split ? new int[][] {{0, 1}} : new int[][] {{0, 1, 2}};
+      int[] owner = {0, 0, split ? -1 : 0};
+      int[][] terms = new int[p.length][];
+      for (int i = 0; i < p.length; i++) {
+        terms[i] = new int[] {i, rnd.nextInt(5), rnd.nextInt(3), rnd.nextInt(3)};
+      }
+      return new UnaryEarlinessTardiness(p, d, machines, owner, terms, intVar("uet", 0, 12));
+    }
+
     // a spanning tree of 3 nodes over the Booleans b as edges, with colour limits and a cost
     private ColouredSpanningTreeBound colouredTree() {
       int m = b.length;
@@ -630,6 +645,7 @@ class LcgFuzzTest {
           3, from, to, w, colours, caps, b, rnd.nextBoolean() ? one() : intVar("ct", 0, 8), 0);
     }
 
+    // three starts under precedences with lags, earliness and tardiness at most a cost variable
     private PrecedenceCost precedenceCost() {
       IntVar[] p = pick(x, 3);
       List<int[]> prec = new ArrayList<>();
