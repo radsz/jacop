@@ -1243,26 +1243,26 @@ public final class Linearizations {
     long c = f.c();
     switch (f.relation()) {
       case LinearForm.LE -> {
-        implyLe(f, b, 1, c, most, out);
+        implyLe(f, b, 1, c, least, most, out);
         if (both) {
-          implyGe(f, b, 0, Math.addExact(c, 1), least, out);
+          implyGe(f, b, 0, Math.addExact(c, 1), least, most, out);
         }
       }
       case LinearForm.GE -> {
-        implyGe(f, b, 1, c, least, out);
+        implyGe(f, b, 1, c, least, most, out);
         if (both) {
-          implyLe(f, b, 0, Math.subtractExact(c, 1), most, out);
+          implyLe(f, b, 0, Math.subtractExact(c, 1), least, most, out);
         }
       }
       case LinearForm.EQ -> {
-        implyLe(f, b, 1, c, most, out);
-        implyGe(f, b, 1, c, least, out);
+        implyLe(f, b, 1, c, least, most, out);
+        implyGe(f, b, 1, c, least, most, out);
       }
       default -> {
         // x != c: only the negation is linear
         if (both) {
-          implyLe(f, b, 0, c, most, out);
-          implyGe(f, b, 0, c, least, out);
+          implyLe(f, b, 0, c, least, most, out);
+          implyGe(f, b, 0, c, least, most, out);
         }
       }
     }
@@ -1270,18 +1270,19 @@ public final class Linearizations {
 
   // b = when -> sum w x <= c: sum w x + M b <= c + M, or sum w x - M b <= c, with M = most - c
   private static void implyLe(
-      LinearForm f, IntVar b, int when, long c, long most, List<LinearForm> out) {
+      LinearForm f, IntVar b, int when, long c, long least, long most, List<LinearForm> out) {
     long big = Math.subtractExact(most, c);
     if (big <= 0) {
       return; // holds anyway
     }
     out.add(
         withB(f, b, when == 1 ? big : -big, when == 1 ? Math.addExact(c, big) : c, LinearForm.LE));
+    perspective(f.vars(), f.weights(), 1, c, least, b, when, out);
   }
 
   // b = when -> sum w x >= c: sum w x - M b >= c - M, or sum w x + M b >= c, with M = c - least
   private static void implyGe(
-      LinearForm f, IntVar b, int when, long c, long least, List<LinearForm> out) {
+      LinearForm f, IntVar b, int when, long c, long least, long most, List<LinearForm> out) {
     long big = Math.subtractExact(c, least);
     if (big <= 0) {
       return;
@@ -1293,6 +1294,89 @@ public final class Linearizations {
             when == 1 ? -big : big,
             when == 1 ? Math.subtractExact(c, big) : c,
             LinearForm.GE));
+    // sum w x >= c is sum -w x <= -c, whose least is -most
+    perspective(
+        f.vars(), f.weights(), -1, Math.negateExact(c), Math.negateExact(most), b, when, out);
+  }
+
+  /**
+   * Whether {@link #reified} adds the perspective rows of each half-reified relation besides its
+   * big-M row ({@code org.jacop.lp.perspective}, on by default).
+   */
+  static final boolean PERSPECTIVE =
+      !"false".equals(System.getProperty("org.jacop.lp.perspective"));
+
+  /**
+   * The perspective rows of {@code b = when -> sum s w x <= c} over two or more variables, where
+   * {@code least} is the least value of the sum within the bounds: for each variable {@code x_i}
+   * whose bound the implication tightens to {@code u'} (from {@code s w_i x_i <= c - least + min(s
+   * w_i x_i)}, rounded to an integer), {@code x_i <= u' + (max(x_i) - u') [b != when]}, or the same
+   * for a lower bound.
+   *
+   * <p>These are the one-variable inequalities of the convex hull of the disjunction {@code (b =
+   * when, sum s w x <= c, x in box) or (b != when, x in box)} (Balas 1979, 1998): with copies
+   * {@code x = x1 + x0}, {@code x1} in {@code [b] box} with {@code sum s w x1 <= c [b]} and {@code
+   * x0} in {@code (1 - [b]) box}, the projection on {@code (x, b)} is, for every subset {@code S}
+   * of the variables, {@code sum_{i in S} a_i x_i + [b] (sum_{i in S} a_i u_i + sum_{i not in S}
+   * a_i l_i - c) <= sum_{i in S} a_i u_i} (for {@code a_i > 0}, {@code u_i} the upper and {@code
+   * l_i} the lower bound; the other way round for {@code a_i < 0}). The full set is the big-M row
+   * and a single variable is its implied bound; that is the perspective reformulation of a
+   * semi-continuous variable (Frangioni and Gentile 2006; Günlük and Linderoth 2010), which with
+   * the big-M row alone the relaxation loses at a fractional b. The bound is rounded as for a
+   * Chvátal-Gomory cut, which is valid since x is integer.
+   *
+   * <p>E. Balas, Disjunctive programming, Annals of Discrete Mathematics 5 (1979) 3-51. E. Balas,
+   * Disjunctive programming: properties of the convex hull of feasible points, Discrete Applied
+   * Mathematics 89 (1998) 3-44. A. Frangioni and C. Gentile, Perspective cuts for a class of convex
+   * 0-1 mixed integer programs, Mathematical Programming 106 (2006) 225-236. O. Günlük and J.
+   * Linderoth, Perspective reformulations of mixed integer nonlinear programs with indicator
+   * variables, Mathematical Programming 124 (2010) 183-205.
+   */
+  private static void perspective(
+      IntVar[] vars,
+      long[] weights,
+      int s,
+      long c,
+      long least,
+      IntVar b,
+      int when,
+      List<LinearForm> out) {
+    if (!PERSPECTIVE || vars.length < 2) {
+      return; // with one variable the big-M row is the hull
+    }
+    for (int i = 0; i < vars.length; i++) {
+      long a = s * weights[i];
+      IntVar x = vars[i];
+      if (a == 0 || x.singleton()) {
+        continue;
+      }
+      long lo = x.min();
+      long hi = x.max();
+      long room =
+          Math.addExact(Math.subtractExact(c, least), Math.multiplyExact(a, a > 0 ? lo : hi));
+      if (a > 0) {
+        long u = Math.floorDiv(room, a);
+        if (u < hi) {
+          out.add(boundRow(x, b, when, hi, u, LinearForm.LE));
+        }
+      } else {
+        long l = Math.ceilDiv(room, a);
+        if (l > lo) {
+          out.add(boundRow(x, b, when, lo, l, LinearForm.GE));
+        }
+      }
+    }
+  }
+
+  // b = when -> x <= tight (relation LE, loose = max x) or x >= tight (GE, loose = min x):
+  // x + (loose - tight) [b = when] <= loose, i.e. with b for when = 1 and 1 - b for when = 0
+  private static LinearForm boundRow(
+      IntVar x, IntVar b, int when, long loose, long tight, int relation) {
+    long gap = Math.subtractExact(loose, tight); // > 0 for LE, < 0 for GE
+    IntVar[] vs = {x, b};
+    return when == 1
+        ? new LinearForm(vs, new long[] {1, gap}, loose, relation)
+        : new LinearForm(vs, new long[] {1, -gap}, tight, relation);
   }
 
   private static LinearForm withB(LinearForm f, IntVar b, long wb, long c, int relation) {

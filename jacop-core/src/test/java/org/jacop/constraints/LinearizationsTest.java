@@ -236,6 +236,72 @@ class LinearizationsTest {
   }
 
   @Test
+  void perspectiveRowsCutOffFractionalPointsOfBigM() {
+    // b -> x + y <= 3 with x, y in [0, 10]: the big-M row x + y + 17 b <= 20 admits b = 1/2,
+    // x = 10, y = 3/2; the perspective row x + 7 b <= 10 (b -> x <= 3) cuts it off
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    for (boolean reified : new boolean[] {false, true}) {
+      PrimitiveConstraint le = new LinearInt(new IntVar[] {x, y}, new int[] {1, 1}, "<=", 3);
+      List<LinearForm> made = Linearizations.of(reified ? new Reified(le, b) : new Implies(b, le));
+      double[] point = {10, 1.5, 0.5};
+      IntVar[] scope = {x, y, b};
+      assertThat(made).anyMatch(f -> !holdsReal(f, scope, point));
+      // the point with b = 0 meets every row
+      assertThat(made).allMatch(f -> holdsReal(f, scope, new double[] {10, 10, 0}));
+    }
+  }
+
+  @Test
+  void perspectiveRowsOfLowerBoundsAndNegatedSides() {
+    // b <-> 2x - 3y >= 4, x in [0, 6], y in [0, 5]: b -> x >= 2 and b -> y <= 2 (ceiling and
+    // floor of 8/3); !b -> 2x - 3y <= 3 tightens neither bound
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 6);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    List<LinearForm> made =
+        Linearizations.of(
+            new Reified(new LinearInt(new IntVar[] {x, y}, new int[] {2, -3}, ">=", 4), b));
+    IntVar[] scope = {x, y, b};
+    // x - 2 b >= 0 (b -> x >= 2) cuts off x = 1, y = 0, b = 3/4, which the big-M row
+    // 2x - 3y - 19 b >= -15 admits
+    assertThat(made).anyMatch(f -> !holdsReal(f, scope, new double[] {1, 0, 0.75}));
+    assertThat(made)
+        .anyMatch(
+            f ->
+                f.vars().length == 2
+                    && f.vars()[0] == x
+                    && f.vars()[1] == b
+                    && f.relation() == LinearForm.GE);
+    assertThat(made)
+        .anyMatch(
+            f ->
+                f.vars().length == 2
+                    && f.vars()[0] == y
+                    && f.vars()[1] == b
+                    && f.relation() == LinearForm.LE);
+    assertThat(made).hasSize(4); // the two big-M rows and the two bounds of b
+  }
+
+  private static boolean holdsReal(LinearForm f, IntVar[] scope, double[] value) {
+    double sum = 0;
+    for (int i = 0; i < f.vars().length; i++) {
+      int at = Arrays.asList(scope).indexOf(f.vars()[i]);
+      sum += f.weights()[i] * value[at];
+    }
+    double eps = 1e-9;
+    return switch (f.relation()) {
+      case LinearForm.LE -> sum <= f.c() + eps;
+      case LinearForm.GE -> sum >= f.c() - eps;
+      case LinearForm.EQ -> Math.abs(sum - f.c()) <= eps;
+      default -> Math.abs(sum - f.c()) > eps;
+    };
+  }
+
+  @Test
   void tableCliquesHoldForEverySolutionAndKeepThemAll() {
     Random rnd = new Random(11);
     int rows = 0;
