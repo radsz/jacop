@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
@@ -61,6 +62,29 @@ import org.junit.jupiter.api.Test;
 class LinearizationsTest {
 
   private static final String[] RELATIONS = {"==", "!=", "<", "<=", ">", ">="};
+
+  @Test
+  void knapsackGivesItsWeightAndProfitRows() {
+    Store store = new Store();
+    IntVar[] q = new IntVar[3];
+    for (int i = 0; i < q.length; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, 1);
+    }
+    IntVar capacity = new IntVar(store, "capacity", 0, 9);
+    IntVar profit = new IntVar(store, "profit", 0, 20);
+    Knapsack k = new Knapsack(new int[] {4, 5, 6}, new int[] {3, 4, 5}, q, capacity, profit);
+    List<LinearForm> rows = Linearizations.of(k);
+    assertThat(rows).hasSize(2);
+    // 3 q0 + 4 q1 + 5 q2 - capacity = 0 and 4 q0 + 5 q1 + 6 q2 - profit = 0
+    assertThat(rows.get(0).relation()).isEqualTo(LinearForm.EQ);
+    assertThat(rows.get(1).relation()).isEqualTo(LinearForm.EQ);
+    Linearizations.knapsackRows = false;
+    try {
+      assertThat(Linearizations.of(k)).isEmpty();
+    } finally {
+      Linearizations.knapsackRows = true;
+    }
+  }
 
   @Test
   void rowsHoldForEverySolution() {
