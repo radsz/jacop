@@ -372,6 +372,8 @@ public final class LcgSolver implements ExternalPropagator {
   // variables that no constraint uses: never branched on, at their least value in a solution
   private final boolean[] unused;
   private double activityInc = 1;
+  // per integer variable: the conflict count at its last bump
+  private long[] bumpedAt = new long[0];
   private long activityConflicts;
   // variables taken off the heap because they were fixed, with the decision level at the time
   private int[] popped = new int[16];
@@ -512,6 +514,9 @@ public final class LcgSolver implements ExternalPropagator {
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
+    // activity bumps every variable the conflict analysis met, not only the learnt clause's
+    // (MiniSat): 600 s wide set, default mode 22 better / 9 worse, -f 19 / 14
+    sat.setAnalysedNotify(!"learnt".equals(System.getProperty("jacop.lcg.bump", "seen")));
     // after the first 1,000 conflicts in focused mode, stable mode for good: restarts are far
     // rarer, and each costs the CP propagation back down. Under --lcg -f, on the 123 mznbench
     // instances with at least 2,000 conflicts in 60 s, 23 better and 13 worse, 59 against 54 runs
@@ -555,6 +560,8 @@ public final class LcgSolver implements ExternalPropagator {
     eq = new LiteralMap[n];
     linked = new LiteralMap[n];
     activity = new double[n];
+    bumpedAt = new long[n];
+    Arrays.fill(bumpedAt, -1);
     heap.grow(n, activity);
     wide.grow(n, activity);
     lateHeap.grow(n, activity);
@@ -3586,6 +3593,16 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   @Override
+  public void notifyAnalysedLiteral(int var) {
+    if (var < litVar.length && litVar[var] >= 0 && branching != Branching.LITERALS) {
+      int i = litVar[var];
+      if (bumpedAt[i] != sat.conflicts) {
+        bump(i); // each integer variable once per conflict, learnt ones not again
+      }
+    }
+  }
+
+  @Override
   public void notifyKeptLiteral(int lit) {
     keep(lit);
   }
@@ -4936,6 +4953,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private void bump(int i) {
+    bumpedAt[i] = sat.conflicts;
     if (sat.conflicts != activityConflicts) {
       activityConflicts = sat.conflicts;
       activityInc /= 0.95;

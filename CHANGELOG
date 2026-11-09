@@ -3634,7 +3634,21 @@ Version 5.0 (unreleased)
      --default-search input, in about half the runs). The master now
      records its part before it stops.
 
-212. Hall cuts of item 188 with value copies, and in search. The
+212. Activity branching under --lcg bumps every integer variable whose
+     atoms conflict analysis resolved or minimised away, as MiniSat bumps
+     every variable the analysis meets (N. Een, N. Sorensson, An
+     Extensible SAT-solver, SAT 2003), not only the variables of the
+     learnt clause; each variable once per conflict. On the 220 instances
+     of the wide set at 600 s: fixed search 179 solved instead of 178, 22
+     instances better and 9 worse, no family worse (2019 liner-sf-
+     repositioning tp7_4 proved optimal, celar graph11 309218 -> 239859);
+     -f 178 solved in both, 19 better and 14 worse, 7 families better and
+     3 worse. -Djacop.lcg.bump=learnt restores the old bumping. Reason-
+     side bumping (J. H. Liang, V. Ganesh, P. Poupart, K. Czarnecki,
+     Learning Rate Based Branching Heuristic for SAT Solvers, SAT 2016)
+     was tried and lost on top of it.
+
+213. Hall cuts of item 188 with value copies, and in search. The
      Williams-Yan cuts now also come from all-different constraints with
      exceptions (alldifferent_except_0, AlldifferentExcept) and from
      global cardinality constraints (GCC, CountValues,
@@ -3670,7 +3684,7 @@ Version 5.0 (unreleased)
      instance18_real 7750 to 6915), -f 12 to 12 with differences of
      search timing only; no wrong answer.
 
-213. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
+214. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
      for spanning trees with limits on the number of edges taken from
      disjoint edge sets (colours). Such trees are the common bases of a
      graphic and a partition matroid (Edmonds 1970). At every node it
@@ -3691,7 +3705,7 @@ Version 5.0 (unreleased)
      Challenge or wide-set model combines weighted_spanning_tree with
      such limits, so the default benchmarks are not affected.
 
-214. Values (MiniZinc nvalue) reads its difference graph once more at its
+215. Values (MiniZinc nvalue) reads its difference graph once more at its
      first call below the root, from the root constraints and domains.
      Before, it read the graph only at root calls, so a difference
      constraint imposed after its last root call was missed when nothing
@@ -3703,7 +3717,7 @@ Version 5.0 (unreleased)
      call instead of 180 to 900 on the XCSP Rlfap instances, with the
      same pruning.
 
-206. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
+216. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
      Pr(sum(i) w[i] * x[i] <= c) >= alphaNum / alphaDen for independent
      random weights w[i] (Dist), x[i] >= 0 and a capacity variable c.
      It never lists the joint scenarios: a convolution over the loads

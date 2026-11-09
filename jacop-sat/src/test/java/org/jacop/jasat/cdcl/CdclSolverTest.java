@@ -279,6 +279,43 @@ class CdclSolverTest {
   }
 
   @Test
+  void analysedVariablesAreNotifiedOncePerConflictAndNotLearnt() {
+    for (boolean on : new boolean[] {false, true}) {
+      CdclSolver s = new CdclSolver();
+      s.setChecking(true);
+      pigeonhole(s, 6);
+      s.setAnalysedNotify(on);
+      Set<Integer> learnt = new HashSet<>();
+      Set<Integer> analysed = new HashSet<>();
+      boolean[] inAnalysed = {false};
+      int[] count = {0};
+      s.connect(
+          new ExternalPropagator() {
+            @Override
+            public void notifyLearntLiteral(int lit) {
+              if (inAnalysed[0]) {
+                learnt.clear();
+                analysed.clear();
+                inAnalysed[0] = false;
+              }
+              learnt.add(Math.abs(lit));
+            }
+
+            @Override
+            public void notifyAnalysedLiteral(int var) {
+              inAnalysed[0] = true;
+              count[0]++;
+              assertFalse(learnt.contains(var), "a learnt variable is notified as analysed");
+              assertTrue(analysed.add(var), "an analysed variable is notified twice");
+              assertTrue(s.levelOf(var) > 0, "a root variable is notified as analysed");
+            }
+          });
+      assertEquals(CdclSolver.UNSAT, s.solve());
+      assertEquals(on, count[0] > 0);
+    }
+  }
+
+  @Test
   void pigeonholeIsUnsatisfiable() {
     CdclSolver s = new CdclSolver();
     pigeonhole(s, 7);
