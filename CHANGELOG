@@ -3797,7 +3797,23 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
-220. Dichotomic bound search, off by default. --free-config
+220. Under lazy clause generation (--lcg), a value excluded by a bound
+     is explained by the earliest bound of the variable beyond it,
+     instead of the variable's latest bound. Explanations that say
+     "x cannot take v" (Count, the counting reasons of GCC, Element,
+     linear reasons over holes, ...) cite weaker atoms from earlier
+     levels, so learnt clauses are more general: on peacable_queens 8
+     under -f, a third of the Count reason atoms could be weakened to
+     an earlier one before, none now. The earliest bound is found by
+     binary search over the variable's bound entries, whose values
+     only tighten. -Djacop.lcg.lift=false keeps the latest bound. On
+     the osolpro wide set at 600 s, --lcg: 5 very hard instances
+     better (cargo, blocks-world, ihtc kletzander and marte,
+     rcpsp-wet-diverse), none worse; --lcg -f, two repetitions: 6 very
+     hard instances better (gbac, tdtsp, neighbours, blocks-world,
+     cargo, work-task-variation), 1 worse (java-routing trip_8_3).
+
+221. Dichotomic bound search, off by default. --free-config
      lcg-bisect=<gap> makes LCG free search probe the objective: it
      assumes obj <= lb + (best - 1 - lb) / 2 under a conflict limit, and
      a probe that fails on that assumption alone proves obj > target
@@ -3818,7 +3834,7 @@ Version 5.0 (unreleased)
      objective instances of wide-quick. OR-Tools CP-SAT runs similar
      probes in its objective_shaving workers.
 
-221. The LP relaxation (LinearRelaxation) now has the weight and profit
+222. The LP relaxation (LinearRelaxation) now has the weight and profit
      rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
      knapsacks KnapsackDetector posts), as linearised rows tried at the
      root. Before, a model stated with knapsack constraints had no LP
