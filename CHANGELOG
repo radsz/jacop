@@ -4035,7 +4035,18 @@ Version 5.0 (unreleased)
      and hid the solutions; -s now prints only the solutions and the
      final statistics. --gap still stops at the same bound.
 
-232. Under --lcg, LateCount explains its pruning itself instead of
+235. IntVar keeps the size of its domain once counted, until the domain
+     changes (the same refresh that keeps its bounds), so getSize() no
+     longer walks the intervals of the domain at each call. dom/wdeg
+     and the other domain-size heuristics read the size of every
+     unfixed variable at every decision: on 2013 celar graph11 with
+     -f --lcg off the search runs about 2x more nodes per second. The
+     search does not change. Wide set (600 s, paired) on the instances
+     where size counting takes at least 1 % of a 60 s profile: same
+     solved and objectives (7 model-search, 15 -f instances); celar
+     -f proved the optimum in 139 s instead of 152 s in that run.
+
+236. Under --lcg, LateCount explains its pruning itself instead of
      with every atom of its variables. A reason holds the late tasks
      (start > due - p), the tasks that must be on time (start <= due -
      p), the minima of the starts lowered towards their root values by
@@ -4050,7 +4061,7 @@ Version 5.0 (unreleased)
      of 23), with no objective worse. -Dorg.jacop.lateCount.reasons=false
      restores the generic reason.
 
-233. The core-guided phase of --lcg -f also gives its time to branch and
+237. The core-guided phase of --lcg -f also gives its time to branch and
      bound when its lower bound stalls: at three times its rate over
      the second half of the phase's work it would not meet the best
      solution before the end of the run. The rate since the phase's
@@ -4065,7 +4076,7 @@ Version 5.0 (unreleased)
      instead of 566 s, community-detection 2026 in 379 s and 260 s
      instead of 408 s and 293 s. -Djacop.lcg.coreStall=0 turns it off.
 
-235. ChanceTable (jacop-prob): p = sum(s, w[s] * [x satisfies scenario s])
+238. ChanceTable (jacop-prob): p = sum(s, w[s] * [x satisfies scenario s])
      over scenario tables, the one-stage stochastic CSP of Walsh
      ("Stochastic constraint programming", ECAI 2002) with the
      decisions taken before the random variables are seen. Scenario s
@@ -4082,7 +4093,7 @@ Version 5.0 (unreleased)
      values that kill the tuples of the heaviest scenarios. FlatZinc:
      chance_table in jacop_prob.mzn.
 
-236. ProbMdd (jacop-prob): p = floor(scale * Pr(T)) for a layered
+239. ProbMdd (jacop-prob): p = floor(scale * Pr(T)) for a layered
      decision diagram of decision levels (edges labelled by the values
      of one variable) and chance levels (edges with probability
      numerators), the compiled form of stochastic constraint problems

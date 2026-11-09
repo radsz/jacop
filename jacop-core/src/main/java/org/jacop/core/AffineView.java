@@ -156,6 +156,12 @@ public final class AffineView extends IntVar {
     return a * base.value() + b;
   }
 
+  /** Returns the size of the base, which a*base + b keeps. */
+  @Override
+  public int getSize() {
+    return base.getSize();
+  }
+
   /** Returns the level of the last change of the values, the level of the base. */
   @Override
   public int level() {
