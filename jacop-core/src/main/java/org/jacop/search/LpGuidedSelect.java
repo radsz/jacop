@@ -30,6 +30,9 @@
 
 package org.jacop.search;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -99,8 +102,17 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
     lp.keepSolutions();
   }
 
+  // for a large relaxation, whose last solution stays as it is in search: its candidate columns in
+  // the order the scan below picks them, the fractional ones nearest to 0.5 first and then those
+  // at 1, each by index, and the solution they were taken from
+  private int[] order;
+  private int orderVersion = -1;
+
   @Override
   public Var getChoiceVariable(int index) {
+    if (!root && lp.large()) {
+      return chooseInOrder(index);
+    }
     IntVar best = null;
     double bestScore = Double.POSITIVE_INFINITY;
     int bestValue = 0;
@@ -166,6 +178,74 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
     }
     fromLp = false;
     return fallback == null ? null : fallback.getChoiceVariable(index);
+  }
+
+  // the decision of the scan of getChoiceVariable over the columns in the order of their values,
+  // computed once per solution: the first open one in that order is the one the scan picks (the
+  // least score, ties by index; else the first column at 1). A scan of every column at each
+  // decision took most of the search on rcpsp-wet-diverse j60_19_6 (140,186 columns)
+  private Var chooseInOrder(int index) {
+    if (orderVersion != lp.solutionVersion()) {
+      orderVersion = lp.solutionVersion();
+      order = candidates();
+    }
+    for (int j : order) {
+      IntVar x = lp.column(j);
+      IntVar decided = x;
+      int at = 1;
+      if (x instanceof LpColumn c) {
+        decided = c.variable();
+        at = c.value();
+        if (decided.singleton() || !decided.domain.contains(at)) {
+          continue;
+        }
+      } else if (x.singleton() || x.min() != 0 || x.max() != 1) {
+        continue;
+      }
+      double v = lp.solutionValue(j);
+      boolean isFractional = v > EPSILON && v < 1 - EPSILON;
+      if (isFractional && v < 0.5 && decided != x) {
+        continue;
+      }
+      fromLp = true;
+      value = !isFractional || v >= 0.5 ? at : 0;
+      lpDecisions++;
+      return decided;
+    }
+    fromLp = false;
+    return fallback == null ? null : fallback.getChoiceVariable(index);
+  }
+
+  // the columns that can give a decision, fractional ones by score and index, then those at 1
+  private int[] candidates() {
+    IntVar objective = lp.objective();
+    int n = lp.solutionColumns();
+    List<Integer> fractional = new ArrayList<>();
+    List<Integer> ones = new ArrayList<>();
+    for (int j = 0; j < n; j++) {
+      IntVar x = lp.column(j);
+      if (x == objective || x instanceof LpColumn c && (c.isArc() || c.isFree())) {
+        continue;
+      }
+      double v = lp.solutionValue(j);
+      if (v > EPSILON && v < 1 - EPSILON) {
+        fractional.add(j);
+      } else if (v >= 1 - EPSILON) {
+        ones.add(j);
+      }
+    }
+    fractional.sort(
+        Comparator.comparingDouble((Integer j) -> Math.abs(lp.solutionValue(j) - 0.5))
+            .thenComparingInt(j -> j));
+    int[] r = new int[fractional.size() + ones.size()];
+    int k = 0;
+    for (int j : fractional) {
+      r[k++] = j;
+    }
+    for (int j : ones) {
+      r[k++] = j;
+    }
+    return r;
   }
 
   @Override

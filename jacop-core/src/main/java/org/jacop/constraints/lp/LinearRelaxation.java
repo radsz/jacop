@@ -423,6 +423,19 @@ public class LinearRelaxation extends Constraint
   // whether the sparse simplex was chosen by the size of the relaxation in place of the dense one
   private boolean bySize;
 
+  // a relaxation over the size caps of the sparse simplex in search: solved at the root only
+  private boolean large;
+
+  // the solutions kept so far, which tells a reader of the last solution when it changed
+  private int solutionVersion;
+
+  // the time of a root solve of a large relaxation, in nanoseconds
+  private long largeRootNanos = (long) (LARGE_ROOT_SECONDS * 1e9);
+
+  // when the time of the solves of the root of a large relaxation runs out (0 before they start;
+  // each restart solve starts again)
+  private long largeDeadline;
+
   // MIR cuts at the root: rounds, cuts per round, and the share of the rows they may add
   private static final boolean CUTS_ENABLED =
       !"false".equals(System.getProperty("org.jacop.lp.cuts"));
@@ -1071,9 +1084,12 @@ public class LinearRelaxation extends Constraint
     Set<LinearForm> flow = Collections.newSetFromMap(new IdentityHashMap<>());
     flow.addAll(valueRows.flow());
     boolean auto = simplex == Simplex.DENSE && SPARSE_ROWS >= 0;
+    boolean large = false;
     if (auto && !sparseTakes(localForms)) {
-      // too large for the sparse simplex as it is: the dense one, or no relaxation over its cap
-      auto = false;
+      // too large for the sparse simplex in search: a large relaxation, solved at the root only, or
+      // the dense one, or no relaxation over its cap
+      large = largeTakes(localForms);
+      auto = large;
     }
     if (auto && (localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
@@ -1115,6 +1131,7 @@ public class LinearRelaxation extends Constraint
     }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
+    r.large = large && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
@@ -1387,6 +1404,43 @@ public class LinearRelaxation extends Constraint
   private static final int SPARSE_MAX_COLUMNS =
       Integer.getInteger("org.jacop.lp.sparseMaxColumns", 30_000);
 
+  // large relaxations: those over the size caps of the sparse simplex up to these many rows and
+  // columns (and org.jacop.lp.maxNonzeros nonzeros) are solved at the root only, with a time budget
+  // instead of a pivot budget, and not again in search, where each solve would stop at its pivot
+  // limit. The store x warehouse form of the 2026 warehouse model (olal41: 116,974 rows after the
+  // pair cliques, 24,151 columns) had no relaxation over the caps; the root solve takes 4,078
+  // pivots and 9 s, and its bound, 38,467, is the bound CP-SAT proves (38,413)
+  private static final boolean LARGE = !"false".equals(System.getProperty("org.jacop.lp.large"));
+  private static final int LARGE_MAX_ROWS =
+      Integer.getInteger("org.jacop.lp.largeMaxRows", 1_000_000);
+  private static final int LARGE_MAX_COLUMNS =
+      Integer.getInteger("org.jacop.lp.largeMaxColumns", 250_000);
+
+  // the time of a root solve of a large relaxation, in seconds, unless setTimeLimit sets a share of
+  // the time limit of the run
+  private static final double LARGE_ROOT_SECONDS =
+      Double.parseDouble(System.getProperty("org.jacop.lp.largeRootSeconds", "30"));
+
+  // the share of the time limit of the run that a root solve of a large relaxation may take
+  private static final double LARGE_ROOT_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.largeRootShare", "0.1"));
+
+  private static boolean largeTakes(List<LinearForm> forms) {
+    if (!LARGE || forms.size() > LARGE_MAX_ROWS) {
+      return false;
+    }
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    long nonzeros = 0;
+    for (LinearForm f : forms) {
+      vars.addAll(Arrays.asList(f.vars()));
+      nonzeros += f.vars().length;
+      if (vars.size() > LARGE_MAX_COLUMNS || nonzeros > MAX_NONZEROS) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private static boolean sparseTakes(List<LinearForm> forms) {
     if (forms.size() > SPARSE_MAX_ROWS) {
       return false;
@@ -1446,6 +1500,8 @@ public class LinearRelaxation extends Constraint
       rows++;
       nonzeros += f.vars().length;
     }
+    // a large relaxation may be over the column cap already: further rows add no columns then
+    int columns = vars.size();
     // the rows with a share of their own are not counted in the share of the others
     int counted = 0;
     boolean fitted = true;
@@ -1458,7 +1514,7 @@ public class LinearRelaxation extends Constraint
       if (simplex == Simplex.DENSE
           ? (rows + 1) * (rows + 1 + vars.size() + added + 1) > MAX_TABLEAU
           : nonzeros + f.vars().length > MAX_NONZEROS
-              || denseCap && vars.size() + added > SPARSE_MAX_COLUMNS) {
+              || denseCap && vars.size() + added > Math.max(SPARSE_MAX_COLUMNS, columns)) {
         return false;
       }
       if (denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share) {
@@ -1595,6 +1651,39 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Sets the time limit of the run, which gives a root solve of a large relaxation its time:
+   * org.jacop.lp.largeRootShare (0.1) of it.
+   *
+   * @param millis the time limit of the run in milliseconds; 0 or less for none
+   */
+  public void setTimeLimit(long millis) {
+    if (millis > 0) {
+      largeRootNanos = (long) (millis * 1e6 * LARGE_ROOT_SHARE);
+    }
+  }
+
+  /**
+   * Returns whether the relaxation is large: over the size caps of the sparse simplex in search,
+   * and so solved at the root only.
+   *
+   * @return whether the relaxation is large
+   */
+  public boolean large() {
+    return large;
+  }
+
+  /**
+   * Returns whether the relaxation is large by its rows: over org.jacop.lp.sparseMaxRows (25,000)
+   * of them, as MIP models with a row for each pair of their 0/1 columns are, not only by its
+   * columns, as time-indexed encodings with few rows are.
+   *
+   * @return whether the relaxation is large and has more rows than the sparse simplex takes
+   */
+  public boolean largeByRows() {
+    return large && rows() > SPARSE_MAX_ROWS;
+  }
+
+  /**
    * Returns the pivots made so far.
    *
    * @return the pivots
@@ -1670,6 +1759,15 @@ public class LinearRelaxation extends Constraint
    */
   public void keepSolutions() {
     keepSolutions = true;
+  }
+
+  /**
+   * Returns the number of solutions kept so far: it changes whenever the last solution does.
+   *
+   * @return the number of solutions kept so far
+   */
+  public int solutionVersion() {
+    return solutionVersion;
   }
 
   /**
@@ -1802,6 +1900,13 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void consistency(Store store) {
+    if (large && calls > 0 && store.level > rootLevel && !restarting) {
+      // a large relaxation does nothing in search once it is solved: it never prunes there, so
+      // the constraints of its rows hold an assignment to them, and checking the ground columns
+      // would cost a scan of up to all of them at every node (rcpsp-wet-diverse j60_19_6, 140,186
+      // columns: 40 instead of 70 million nodes in 240 s)
+      return;
+    }
     // the simplex may skip a node, round its multipliers to nothing, or fix the last variables by
     // its own pruning without being run again; an assignment that breaks a row must still fail
     checkGround();
@@ -1917,6 +2022,7 @@ public class LinearRelaxation extends Constraint
    */
   private void restartSolve(Store store) {
     restartSolves++;
+    largeDeadline = 0;
     long started = System.nanoTime();
     long pruned = prunings;
     restarting = true;
@@ -2045,6 +2151,12 @@ public class LinearRelaxation extends Constraint
     if (rows() == 0 && (calls > 0 || extraColumns.length == 0)) {
       return; // the bounds of the variables alone deduce nothing
     }
+    if (large && calls > 0 && !restarting) {
+      // a large relaxation is solved at the root only: in search each solve would stop at its
+      // pivot limit (olal41 of the warehouse MIP: 5 pivots, 15 ms a call, never optimal); the root
+      // solution guides the search and its reduced costs fix columns at the root level
+      return;
+    }
     calls++;
     boolean jump = calls > 1 && lastSolveLevel - store.level >= BASIS_JUMP;
     long pivotsBefore = lp.pivots();
@@ -2148,6 +2260,7 @@ public class LinearRelaxation extends Constraint
       for (int j = 0; j < n; j++) {
         solution[j] = lp.value(j);
       }
+      solutionVersion++;
       solutionLevel = store.level;
       if (keepSolutions && store.level <= rootSolutionLevel) {
         rootSolution = solution.clone();
@@ -2401,6 +2514,20 @@ public class LinearRelaxation extends Constraint
   private int rootSolve(LpSolver s, int pivots, long work, long nanos) {
     if (s instanceof DualSimplex) {
       return s.solve(pivots);
+    }
+    if (large) {
+      // the pivots of a large relaxation cost far more than its work estimate says, and its root
+      // solve is the only one: it gets time instead of pivots and work
+      // the solves of the root (the first one, the trial of further rows and the cut rounds) share
+      // the time, so that its rounds of cuts do not take it again each (wlp22 of the warehouse
+      // MIP: 62 s of LP time in a 240 s run)
+      long now = System.nanoTime();
+      if (largeDeadline == 0) {
+        largeDeadline = now + largeRootNanos;
+      }
+      pivots = Integer.MAX_VALUE;
+      work = Long.MAX_VALUE;
+      nanos = Math.max(0, largeDeadline - now);
     }
     long startPivots = s.pivots();
     long startWork = s.work();
