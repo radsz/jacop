@@ -1193,4 +1193,48 @@ class RevisedDualSimplexTest {
     assertThat(counts[RevisedDualSimplex.OPTIMAL]).isGreaterThan(runs / 20);
     assertThat(counts[RevisedDualSimplex.INFEASIBLE]).isGreaterThan(runs / 2);
   }
+
+  @Test
+  void solvesWithALimitOfOnePivotEndWhenARowIsLeftOut() {
+    // an unbounded problem with equal and opposite equations (rows 1 and 2, 4 and 5, 6 and 7): at
+    // artificial bounds of 1e12 a row has no proof on fresh factors and is left out as round-off;
+    // that took the one step of the limit, the rows left out are taken back at the next call, and
+    // solve(1) answered LIMIT forever (found by the exact LP fuzzer, osolpro
+    // benchmarks/jalp-allsolutions)
+    for (boolean scale : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {
+                {1, 3, 4, 7, 9}, {0, 1, 2, 3, 6}, {0, 1, 2, 3, 6}, {7}, {0, 4, 6, 8, 9},
+                {0, 4, 6, 8, 9}, {1, 6, 9}, {1, 6, 9}, {5, 6}, {0, 1, 4, 6, 7, 8}
+              },
+              new double[][] {
+                {2, -3, -7, -9, -3},
+                {9, 1, 5, 3, -4},
+                {-27, -3, -15, -9, 12},
+                {5},
+                {1, 3, 7, -1, 14},
+                {-1, -3, -7, 1, -14},
+                {9, 9, 18},
+                {18, 18, 36},
+                {8, 2},
+                {-7, 8, -5, 9, 8, -4}
+              },
+              new double[] {55, 5, -15, 1, 8, -8, -25, -50, 50, 15},
+              new double[] {55, 5, -15, INF, 8, -8, -25, -50, 50, 15},
+              new double[] {2, -1, 4, 1, 5, 5, 4, -1, -1, 8},
+              scale);
+      lp.setPresolve(false);
+      double[] lo = {-INF, -INF, 2, -INF, -4, -INF, 1, -INF, -1, -5};
+      double[] hi = {INF, 1, INF, INF, INF, 6, INF, INF, INF, -1};
+      for (int j = 0; j < lo.length; j++) {
+        lp.setBounds(j, lo[j], hi[j]);
+      }
+      int status = RevisedDualSimplex.LIMIT;
+      for (int call = 0; call < 10_000 && status == RevisedDualSimplex.LIMIT; call++) {
+        status = lp.solve(1);
+      }
+      assertThat(status).as("scale " + scale).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+    }
+  }
 }

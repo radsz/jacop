@@ -1026,7 +1026,9 @@ public final class RevisedDualSimplex {
       placeNonbasic();
     }
     updateBeta();
-    for (int iter = 0; iter < limit; iter++) {
+    int iter = 0;
+    while (iter < limit) {
+      iter++;
       ops += 3L * m;
       int r = leavingRow();
       if (r < 0) {
@@ -1072,6 +1074,10 @@ public final class RevisedDualSimplex {
           // out of the choice of leaving rows until the end of the solve
           skipped[r] = true;
           skippedRows++;
+          // leaving a row out is no step of the limit: the rows left out are taken back at the
+          // next call, and a solve called with a limit of one pivot left out the same row at
+          // every call and never ended; each row is left out at most once per call
+          iter--;
           continue;
         }
         infeasibleRow = r;
