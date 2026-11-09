@@ -4018,7 +4018,17 @@ Version 5.0 (unreleased)
      as well as the calls of the store's propagators: a model whose
      constraints became clauses (nonogram) printed only the root's calls.
 
-233. fzn-jacop prints the running objective bound (%%%mzn-stat:
+233. Bug fix: the FlatZinc front end rejected weighted_subcircuits when
+     its arguments shared a variable or an equal constant, for example
+     tour[1] = tour[2] or two tour costs fixed to 0 ("Constraint of type
+     WeightedSubcircuits has parameter list, tour, tourCost and cost that
+     contains repeated values."), so a satisfiable model reported an
+     error. Repeated variables of tour, tour_cost and cost are now
+     replaced by copies constrained to be equal. Found by the
+     all-solutions suite (random variants of its weighted_subcircuits
+     model).
+
+234. fzn-jacop prints the running objective bound (%%%mzn-stat:
      objectiveBound and objectiveBoundTime, one stat block per better
      bound) only in verbose mode, with -s -v or --search-statistics.
      With -s alone these blocks came out many times during the search
