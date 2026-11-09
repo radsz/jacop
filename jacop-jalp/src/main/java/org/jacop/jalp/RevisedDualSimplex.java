@@ -1197,24 +1197,8 @@ public final class RevisedDualSimplex {
 
   // at a primal feasible basis: the status to return, or -1 to go on pivoting
   private int atOptimum() {
-    if (skippedRows > 0) {
-      // the rows left out must hold on fresh basic values, or have no proof of infeasibility on
-      // fresh factors either; then their violation is round-off and the solve ends as if they
-      // held (two equal rows and free columns at artificial bounds of 1e12: the basic slack of
-      // one row off by 2e-5, the combination of the rows 0 over every column). A row with a
-      // proof stops the solve at its limit
-      clearSkipped();
-      refactor();
-      for (int r = leavingRow(); r >= 0; r = leavingRow()) {
-        rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
-        if (proofHolds(r)) {
-          clearSkipped();
-          return LIMIT;
-        }
-        skipped[r] = true;
-        skippedRows++;
-      }
-      clearSkipped();
+    if (skippedRows > 0 && !skippedRowsHold()) {
+      return LIMIT;
     }
     if (feasibility) {
       // feasible, but the objective pulled a column past every artificial bound
@@ -1237,8 +1221,35 @@ public final class RevisedDualSimplex {
         return -1;
       }
     }
-    // a nonbasic column at an artificial bound that the objective pulls on: the bounds are too
-    // close
+    return artificialBoundsHold();
+  }
+
+  /**
+   * Whether the rows left out as round-off hold on fresh basic values, or have no proof of
+   * infeasibility on fresh factors either; then their violation is round-off and the solve ends as
+   * if they held (two equal rows and free columns at artificial bounds of 1e12: the basic slack of
+   * one row off by 2e-5, the combination of the rows 0 over every column). A row with a proof stops
+   * the solve at its limit (false).
+   */
+  private boolean skippedRowsHold() {
+    clearSkipped();
+    refactor();
+    for (int r = leavingRow(); r >= 0; r = leavingRow()) {
+      rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
+      if (proofHolds(r)) {
+        clearSkipped();
+        return false;
+      }
+      skipped[r] = true;
+      skippedRows++;
+    }
+    clearSkipped();
+    return true;
+  }
+
+  // OPTIMAL unless a nonbasic column at an artificial bound is pulled on by the objective: the
+  // bounds are too close (-1 to go on, UNBOUNDED when they cannot grow)
+  private int artificialBoundsHold() {
     if (infiniteLen < 0) {
       listInfinite();
     }
@@ -1248,22 +1259,23 @@ public final class RevisedDualSimplex {
           && isArtificial(j, upper[j])
           && lo[j] != hi[j]
           && (upper[j] ? d[j] < -DUAL_TOL : d[j] > DUAL_TOL)) {
-        if (perturbed && !trueCostsPull(j)) {
-          // only the perturbation pulls (a column with no cost, alone or with basic columns of no
-          // cost): it and the basic columns of its ray keep their costs as given, as in the
-          // primal simplex, instead of the bounds growing until the answer is UNBOUNDED (min x1,
-          // x1 >= 1, a free column x0 in no row: UNBOUNDED at x0 = -1e14)
-          unperturbRay(j);
-          computeDuals();
-          return -1;
-        }
-        if (!enlarge()) {
-          return UNBOUNDED;
-        }
-        return -1;
+        return pulledColumn(j);
       }
     }
     return OPTIMAL;
+  }
+
+  private int pulledColumn(int j) {
+    if (perturbed && !trueCostsPull(j)) {
+      // only the perturbation pulls (a column with no cost, alone or with basic columns of no
+      // cost): it and the basic columns of its ray keep their costs as given, as in the primal
+      // simplex, instead of the bounds growing until the answer is UNBOUNDED (min x1, x1 >= 1, a
+      // free column x0 in no row: UNBOUNDED at x0 = -1e14)
+      unperturbRay(j);
+      computeDuals();
+      return -1;
+    }
+    return enlarge() ? -1 : UNBOUNDED;
   }
 
   /**
