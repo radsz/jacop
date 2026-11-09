@@ -68,6 +68,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -2055,6 +2056,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       searchVars.defaultVars();
       ls = runLocalSearch(costVar, searchVars, worker, true);
     }
+    // the pump dives in the store, before the solver takes it over
+    Hint pumped = options.freeSearch() && ls == null ? pumpHint() : null;
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -2076,6 +2079,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Hint constraintHint = constraintHints();
     if (constraintHint != null) {
       lcg.setPhase(constraintHint.vars, constraintHint.values);
+    }
+    if (pumped != null) {
+      lcg.setPhase(pumped.vars, pumped.values);
     }
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
@@ -3082,6 +3088,70 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // the outcome of the feasibility pump of --free-config pump=1, or null
+  private FeasibilityPump.Result pumpResult;
+
+  /**
+   * The rounding of the feasibility pump ({@link FeasibilityPump}) when --free-config pump=1, as a
+   * hint for the first run, or null; pump-iterations caps the distance problems (default 200) and
+   * pump-max the milliseconds (default a tenth of the time left, at most 30 s). The pump's LP has
+   * the convex hulls of the tables over the columns of variables of up to {@link
+   * FeasibilityPump#HULL_DOMAIN} values, and its distance leaves out the defined variables.
+   */
+  private Hint pumpHint() {
+    if (!"1".equals(options.freeConfig("pump", "0"))) {
+      return null;
+    }
+    long start = System.currentTimeMillis();
+    long budget = Long.parseLong(options.freeConfig("pump-max", "0"));
+    if (budget <= 0) {
+      budget =
+          options.getTimeOut() > 0 ? Math.min(30_000, options.getRemainingTimeOut() / 10) : 30_000;
+    }
+    List<LinearForm> tables =
+        dictionary.tables().isEmpty()
+            ? List.of()
+            : TableCliques.rows(
+                    dictionary.tables(),
+                    options.lcg() ? implications(sat.collectedClauses()) : Map.of(),
+                    FeasibilityPump.HULL_DOMAIN)
+                .all();
+    List<IntVar> defined = new ArrayList<>();
+    for (Var v : dictionary.definedVariables) {
+      if (v instanceof IntVar x) {
+        defined.add(x);
+      }
+    }
+    FeasibilityPump pump = FeasibilityPump.of(store, tables, defined);
+    if (pump != null) {
+      pumpResult =
+          pump.run(
+              Integer.parseInt(options.freeConfig("pump-iterations", "200")),
+              start + budget,
+              new Random(options.getRandomSeed()));
+    }
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: pumpTime="
+              + (System.currentTimeMillis() - start) / 1000.0
+              + "\n%%%mzn-stat: pumpRows="
+              + (pump == null ? 0 : pump.rows())
+              + "\n%%%mzn-stat: pumpColumns="
+              + (pump == null ? 0 : pump.binaryColumns())
+              + (pumpResult == null
+                  ? ""
+                  : "\n%%%mzn-stat: pumpIterations="
+                      + pumpResult.iterations()
+                      + "\n%%%mzn-stat: pumpIntegral="
+                      + pumpResult.integral()
+                      + "\n%%%mzn-stat: pumpDistance="
+                      + String.format(Locale.ROOT, "%.2f", pumpResult.distance())
+                      + "\n%%%mzn-stat: pumpPivots="
+                      + pump.pivots()));
+    }
+    return pumpResult == null ? null : new Hint(pumpResult.vars(), pumpResult.values());
+  }
+
   /**
    * The hints of the constraints that give one ({@link SolutionHint}), such as a feasible tree of
    * {@link org.jacop.constraints.graph.ColouredSpanningTreeBound}, or null when there is none or
@@ -3301,6 +3371,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // the first run follows the hints of constraints, unless local search gives a solution
       for (IndomainLastSolution saver : phaseSavers) {
         saver.hint(constraintHint.vars, constraintHint.values);
+      }
+      builder.mainBranchingFirst(true);
+    }
+    Hint pumped = allSolutions || phaseSavers.isEmpty() ? null : pumpHint();
+    if (pumped != null) {
+      // the rounding of the pump replaces the hints of constraints where they meet
+      for (IndomainLastSolution saver : phaseSavers) {
+        saver.hint(pumped.vars, pumped.values);
       }
       builder.mainBranchingFirst(true);
     }
@@ -4836,7 +4914,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private ObjectiveGap gap() {
     if (objectiveGap == null) {
       objectiveGap =
-          new ObjectiveGap(options.gap(), !minimize, options.getStatistics() ? IO::println : null);
+          new ObjectiveGap(
+              options.gap(), !minimize, options.searchStatistics() ? IO::println : null);
     }
     return objectiveGap;
   }

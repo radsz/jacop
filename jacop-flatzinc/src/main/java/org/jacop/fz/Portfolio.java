@@ -583,7 +583,7 @@ final class Portfolio {
           new ObjectiveGap(
               options.gap(),
               maximise,
-              options.getStatistics() ? line -> printBound(out, line) : null);
+              options.searchStatistics() ? line -> printBound(out, line) : null);
     }
     return gap;
   }

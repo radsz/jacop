@@ -166,7 +166,8 @@ public class Options {
             -a, --all, --all-solutions
             -v, --verbose
                 Print more: with -s also the statistics of JaCoP's own components (lcg*,
-                presolve*, lp*, components*, lns*, ls*, symmetry*, probe*, portfolio*, ...).
+                presolve*, lp*, components*, lns*, ls*, symmetry*, probe*, portfolio*, ...)
+                and each improvement of the objective's bound (objectiveBound).
             -t <value>, --time-out <value>
                 <value> - time in milisecond.
             -s, --statistics
@@ -180,8 +181,8 @@ public class Options {
                 optimisation: stop once the best solution is within <percent> % of the
                 objective's proved bound, |best - bound| <= percent/100 * |best|, as MIP solvers'
                 relative gap. The best solution is printed without "==========", since it is not
-                proved optimal. With -s, every improvement of the bound is printed at once as
-                %%%mzn-stat: objectiveBound=<value>.
+                proved optimal. With -s -v (or --search-statistics), every improvement of the
+                bound is printed at once as %%%mzn-stat: objectiveBound=<value>.
             -f free search; no need to follow search annotations.
             --free-engine <value> engine for free search; one of "new" (default), "legacy"
             --default-search <value> search for a model without search annotation; one of
@@ -281,6 +282,10 @@ public class Options {
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
                 these shares are of the solver's work, counted against -t (or lcg-core-time=<ms>
                 without -t, default 60000) at a fixed rate, not of the clock, so runs repeat
+                pump=1|0 (with -f, also with --lcg: the feasibility pump over the linear
+                relaxation with the value encodings and table hulls, at the root, for values the
+                first run follows; default 0 = off), pump-max=<ms> (its time, default a tenth of
+                the time left, at most 30000), pump-iterations=<n> (its rounds, default 200),
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer

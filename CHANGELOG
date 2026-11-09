@@ -3913,7 +3913,34 @@ Version 5.0 (unreleased)
      were tried as well and are not included: the MIR cuts already
      reach the same root bounds on the MiniZinc Challenge instances.
 
-227. Bug fix: the MiniZinc predicate channel(x, b) of JaCoP's library
+227. Feasibility pump for first solutions of free search, off by
+     default. --free-config pump=1 (with -f, with or without --lcg)
+     runs the pump of M. Fischetti, F. Glover and A. Lodi ("The
+     feasibility pump", Mathematical Programming 104, 2005) at the root,
+     over its own linear relaxation with the value encodings, and gives
+     its last rounding as the hint the first run follows: each round
+     rounds every variable to the value its columns [x = v] prefer, then
+     the primal simplex of JaLP finds the LP point closest to that
+     rounding in L1 distance over the 0/1 columns, leaving out the
+     FlatZinc defined variables; a repeated rounding is perturbed as in
+     that paper. pump-max=<ms> (default a tenth of the time left, at
+     most 30 s) and pump-iterations=<n> (default 200) bound it. The
+     pump's relaxation also has the table hulls keyed by a variable of
+     up to 64 values (TableCliques.rows(tables, implied, hullDomain);
+     the default LP keeps 16), and rows over the value columns for
+     CountValuesBounds and for b <-> x in S (Reified/Implies of In)
+     (Linearizations.valueRows(..., sets)); without them the option
+     Booleans of car sequencing are tied only to the mean of the class
+     and no rounding is ever a solution. On 34 MiniZinc benchmark car
+     sequencing instances (17 cars, 17 carseq) at 240 s, -f solves 31
+     with the pump against 10 without (with --lcg off, 30 against 4);
+     SCIP finds these solutions with its feasibility pump at the root.
+     On the wide set it is not a default: 186 -> 185 solved at 240 s,
+     10 better and 32 worse, the pump's time spent on optimisation
+     models whose first solution is easy (osolpro
+     benchmarks/feasibility-pump).
+
+228. Bug fix: the MiniZinc predicate channel(x, b) of JaCoP's library
      paired b with the values of dom(x) instead of with the indices of b,
      although it is documented as x = i <-> b[i]. With dom(x) = 2..6 and
      b indexed 1..5, b[1] was true for x = 2; when dom(x) and index_set(b)
@@ -3923,7 +3950,7 @@ Version 5.0 (unreleased)
      and channels over index_set(b). Found by the all-solutions suite
      (random variants of its channel model).
 
-228. Free search (-f) that continues after LCG gave way runs its large
+229. Free search (-f) that continues after LCG gave way runs its large
      neighbourhoods from LCG's best solution. They waited for free
      search's own first solution, which must improve on LCG's; on
      saeling 2026 j0050_m003 (makespan) it never came and no
@@ -3934,7 +3961,7 @@ Version 5.0 (unreleased)
      neighbourhoods (the tasks after a window of time may start
      earlier); off by default, as it loses on the wide set.
 
-229. WeightedCompletion on a resource of capacity above 1 (P|r_j|sum w_j
+230. WeightedCompletion on a resource of capacity above 1 (P|r_j|sum w_j
      C_j) bounds the cost with the parallel inequalities of the prefixes
      of Smith's order (A. S. Schulz, "Scheduling to minimize total
      weighted completion time: performance guarantees of LP-based
@@ -3957,7 +3984,7 @@ Version 5.0 (unreleased)
      137787 to 128330 (-f). -Dorg.jacop.weightedCompletion.prefixRows
      and ...weakReasons=false turn the two parts off.
 
-230. The FlatZinc front end posts a domain-consistent Alldistinct (Régin,
+231. The FlatZinc front end posts a domain-consistent Alldistinct (Régin,
      "A filtering algorithm for constraints of difference in CSPs",
      AAAI 1994) instead of the bounds-consistent Alldiff (Puget, "A fast
      algorithm for the bound consistency of alldiff constraints", AAAI
@@ -3977,7 +4004,7 @@ Version 5.0 (unreleased)
      old rule, =loose drops the condition on the values, =all lifts the
      limits.
 
-231. Fixed search (no -f) with --lcg follows the search annotation again,
+232. Fixed search (no -f) with --lcg follows the search annotation again,
      as the fixed search (fd) category of the MiniZinc Challenge requires
      ("FD search solvers must follow the search strategy defined in the
      problem"): the solver no longer restarts (--free-config
@@ -3990,6 +4017,13 @@ Version 5.0 (unreleased)
      propagations statistic under --lcg now counts JaSAT's propagations
      as well as the calls of the store's propagators: a model whose
      constraints became clauses (nonogram) printed only the root's calls.
+
+233. fzn-jacop prints the running objective bound (%%%mzn-stat:
+     objectiveBound and objectiveBoundTime, one stat block per better
+     bound) only in verbose mode, with -s -v or --search-statistics.
+     With -s alone these blocks came out many times during the search
+     and hid the solutions; -s now prints only the solutions and the
+     final statistics. --gap still stops at the same bound.
 
 Version 4.11
 =============
