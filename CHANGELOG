@@ -4035,6 +4035,21 @@ Version 5.0 (unreleased)
      and hid the solutions; -s now prints only the solutions and the
      final statistics. --gap still stops at the same bound.
 
+232. The core-guided phase of --lcg -f also gives its time to branch and
+     bound when its lower bound stalls: at three times its rate over
+     the second half of the phase's work it would not meet the best
+     solution before the end of the run. The rate since the phase's
+     start stays high after a fast first rise (often from a far initial
+     bound) and kept the phase to the end of the run. The test starts
+     after a tenth of the run's work after the phase's start, as some
+     phases stall for a while and then prove the optimum
+     (work-task-variation 2025 seed-8). On the 25 instances of the 2026
+     Challenge (atp-stage2, community-detection) and the wide set where
+     it fires, 600 s, -f: 14.6 vs 10.4 pair points, 5 families better
+     and none worse; javarouting trip_7_2 proves its optimum in 428 s
+     instead of 566 s, community-detection 2026 in 379 s and 260 s
+     instead of 408 s and 293 s. -Djacop.lcg.coreStall=0 turns it off.
+
 Version 4.11
 =============
 
