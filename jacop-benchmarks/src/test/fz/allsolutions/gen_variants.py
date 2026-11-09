@@ -1,5 +1,6 @@
 """Random variants of the suite's small models: each var domain lo..hi gets a new upper bound
 hi + d (d in -1..1, never below lo), from seed 11 on constants of constraints move by one too,
+from seed 68 on lower bounds move by -1..1 as well and so do the values of constant arrays,
 flattened with JaCoP's and MiniZinc's std library.
 Usage: MZN=minizinc MZN_SOLVER_PATH=... gen_variants.py SEED COUNT OUTDIR, then run
 AllSolutionsSuite with -Dsuite.roots=gen=OUTDIR (see decomposition/README.md)."""
@@ -20,6 +21,8 @@ for k in range(count * 3):
     src = open(f'{A}/models/{m}.mzn').read()
     def change(mt):
         lo, hi = int(mt.group(2)), int(mt.group(3))
+        if seed >= 68:
+            lo += rnd.randint(-1, 1)
         return f'{mt.group(1)}{lo}..{max(lo, hi + rnd.randint(-1, 1))}'
     new = dom.sub(change, src)
     if seed >= 11:
@@ -29,6 +32,14 @@ for k in range(count * 3):
             return str(max(0, v + rnd.choice([-1, 1]))) if rnd.random() < 0.3 else mt.group(0)
         new = '\n'.join(re.sub(r'(?<![\w.\[])\d+(?![\w.\]])', nudge, l) if l.startswith('constraint') else l
                         for l in new.split('\n'))
+    if seed >= 68:
+        # from seed 68 on, also move the values of constant int arrays (durations, weights, tables)
+        def nudge_values(l):
+            if not re.match(r'array\[[^]]*\] of int: *\w+ *=', l):
+                return l
+            head, _, body = l.partition('=')
+            return head + '=' + re.sub(r'(?<![\w.])\d+(?![\w.])', nudge, body)
+        new = '\n'.join(nudge_values(l) for l in new.split('\n'))
     if new == src:
         continue
     name = f'{m}_s{seed}_{k}'
