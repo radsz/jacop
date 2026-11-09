@@ -1246,7 +1246,7 @@ public class LinearRelaxation extends Constraint
 
   // the constraints of the variables in the store and of the named ones, such as Boolean
   // variables, which have no store index
-  private static Set<Constraint> constraintsOf(Store store) {
+  static Set<Constraint> constraintsOf(Store store) {
     Set<Constraint> constraints = new LinkedHashSet<>();
     for (int i = 0; i < store.size(); i++) {
       constraints.addAll(store.vars[i].dom().constraints());

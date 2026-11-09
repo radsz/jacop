@@ -3895,6 +3895,33 @@ Version 5.0 (unreleased)
      were tried as well and are not included: the MIR cuts already
      reach the same root bounds on the MiniZinc Challenge instances.
 
+226. Feasibility pump for first solutions of free search, off by
+     default. --free-config pump=1 (with -f, with or without --lcg)
+     runs the pump of M. Fischetti, F. Glover and A. Lodi ("The
+     feasibility pump", Mathematical Programming 104, 2005) at the root,
+     over its own linear relaxation with the value encodings, and gives
+     its last rounding as the hint the first run follows: each round
+     rounds every variable to the value its columns [x = v] prefer, then
+     the primal simplex of JaLP finds the LP point closest to that
+     rounding in L1 distance over the 0/1 columns, leaving out the
+     FlatZinc defined variables; a repeated rounding is perturbed as in
+     that paper. pump-max=<ms> (default a tenth of the time left, at
+     most 30 s) and pump-iterations=<n> (default 200) bound it. The
+     pump's relaxation also has the table hulls keyed by a variable of
+     up to 64 values (TableCliques.rows(tables, implied, hullDomain);
+     the default LP keeps 16), and rows over the value columns for
+     CountValuesBounds and for b <-> x in S (Reified/Implies of In)
+     (Linearizations.valueRows(..., sets)); without them the option
+     Booleans of car sequencing are tied only to the mean of the class
+     and no rounding is ever a solution. On 34 MiniZinc benchmark car
+     sequencing instances (17 cars, 17 carseq) at 240 s, -f solves 31
+     with the pump against 10 without (with --lcg off, 30 against 4);
+     SCIP finds these solutions with its feasibility pump at the root.
+     On the wide set it is not a default: 186 -> 185 solved at 240 s,
+     10 better and 32 worse, the pump's time spent on optimisation
+     models whose first solution is easy (osolpro
+     benchmarks/feasibility-pump).
+
 Version 4.11
 =============
 

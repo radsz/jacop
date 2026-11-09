@@ -280,6 +280,10 @@ public class Options {
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
                 these shares are of the solver's work, counted against -t (or lcg-core-time=<ms>
                 without -t, default 60000) at a fixed rate, not of the clock, so runs repeat
+                pump=1|0 (with -f, also with --lcg: the feasibility pump over the linear
+                relaxation with the value encodings and table hulls, at the root, for values the
+                first run follows; default 0 = off), pump-max=<ms> (its time, default a tenth of
+                the time left, at most 30000), pump-iterations=<n> (its rounds, default 200),
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
