@@ -4065,6 +4065,38 @@ Version 5.0 (unreleased)
      instead of 566 s, community-detection 2026 in 379 s and 260 s
      instead of 408 s and 293 s. -Djacop.lcg.coreStall=0 turns it off.
 
+235. ChanceTable (jacop-prob): p = sum(s, w[s] * [x satisfies scenario s])
+     over scenario tables, the one-stage stochastic CSP of Walsh
+     ("Stochastic constraint programming", ECAI 2002) with the
+     decisions taken before the random variables are seen. Scenario s
+     holds when x is a tuple of each of its tables; a table shared by
+     scenarios (one constraint for one value of its random variable) is
+     stored and checked once. Filtering is the support counting of a
+     compact table (Demeulenaere et al., "Compact-Table: efficiently
+     filtering table constraints with reversible sparse bit-sets", CP
+     2016) weighted by scenario: a value whose supporting scenarios weigh
+     less than the lower bound of p is removed, the upper bound of p is
+     the weight of the scenarios still alive and its lower bound the
+     weight of those whose tables contain every tuple of the domains. It
+     explains its pruning for lazy clause generation by the removed
+     values that kill the tuples of the heaviest scenarios. FlatZinc:
+     chance_table in jacop_prob.mzn.
+
+236. ProbMdd (jacop-prob): p = floor(scale * Pr(T)) for a layered
+     decision diagram of decision levels (edges labelled by the values
+     of one variable) and chance levels (edges with probability
+     numerators), the compiled form of stochastic constraint problems
+     and probabilistic programs (Babaki, Guns and De Raedt, "Stochastic
+     constraint optimization using propagation on ordered binary
+     decision diagrams", StarAI 2017; Latour et al., "Combining
+     stochastic constraint optimization and probabilistic programming",
+     CP 2017). Two passes in the (+, max) semiring bound p and remove
+     the values whose edges carry too little mass; with all decisions
+     fixed, Pr(T) is computed exactly on big integers. The passes use
+     doubles rounded outward. Lazy clause generation gets the removed
+     labels of the other levels and the bound of p. FlatZinc: prob_mdd
+     in jacop_prob.mzn.
+
 Version 4.11
 =============
 
