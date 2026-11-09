@@ -145,6 +145,13 @@ library file of the same name (`lex_chain_less_bool.mzn` did). `models/<m>.jacop
 flags to the JaCoP flattening and `models/<m>.no-std` skips the standard one.
 `AllSolutionsModelsTest` (in the build) runs every model that has both flattenings.
 
+`allsolutions/gen_variants.py SEED COUNT OUTDIR` writes random variants of these models (every
+`var lo..hi` domain gets a new upper bound) with both flattenings, for an endless supply of
+problems: run the suite on them with `-Dsuite.roots=gen=OUTDIR -Dsuite.familyCap=100
+-Dsuite.cap=1000`. A variant may break a documented precondition (the first did: the variable
+based softgcc requires `sum(soft_counters) <= length(x)`); the decompositions and shims must
+state such preconditions too.
+
 A reference run that prints solutions and then `=====UNSATISFIABLE=====` is an error, not a
 complete run: JaCoP did that at the time limit before the fix of the timed-out child search
 (KidneyExchange-4-041_c23), and the suite then reported false `WRONG` verdicts.

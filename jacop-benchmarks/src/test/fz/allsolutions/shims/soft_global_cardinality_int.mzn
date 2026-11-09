@@ -9,6 +9,7 @@ predicate soft_global_cardinality_int(array[int] of var int: x, array[int] of in
     array[int] of var int: hard_counters, array[int] of var int: soft_counters, var int: cost,
     bool: variableBased) =
   if variableBased then
+    sum(soft_counters) <= length(x) /\
     forall(i in index_set(values))(hard_counters[i] = sum(j in index_set(x))(bool2int(x[j] = values[i]))) /\
     cost = max(sum(i in index_set(values))(max(0, soft_counters[i] - hard_counters[i])),
                sum(i in index_set(values))(max(0, hard_counters[i] - soft_counters[i])))

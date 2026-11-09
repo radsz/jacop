@@ -432,6 +432,8 @@ final class JacopDecompositions {
       excess.add(maxZero(b, diff));
     }
     if (variableBased) {
+      // the variable based measure requires sum(soft_counters) <= length(x), which SoftGCC imposes
+      b.linear(ones(soft.size()), soft, "le", x.size());
       Term s = b.sum(ones(shortage.size()), shortage, 0);
       Term e = b.sum(ones(excess.size()), excess, 0);
       b.post("int_max", s, e, cost);

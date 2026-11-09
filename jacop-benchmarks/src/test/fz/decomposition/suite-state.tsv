@@ -9833,3 +9833,620 @@ C	xcsp:2022/instancesXCSP22/CSP/Molnar-3-8_c22	c50b9afd99b92965	obj1:plain	PASS	
 C	xcsp:2022/instancesXCSP22/CSP/Molnar-3-8_c22	c50b9afd99b92965	obj1:f	PASS	COMPLETE	0	16077	2026-11-09T11:08:34Z	
 C	xcsp:2022/instancesXCSP22/CSP/Molnar-3-8_c22	c50b9afd99b92965	obj1:lcg	PASS	COMPLETE	0	84730	2026-11-09T11:09:59Z	
 C	xcsp:2022/instancesXCSP22/CSP/Molnar-3-8_c22	c50b9afd99b92965	obj1:lcg-f	PASS	COMPLETE	0	31291	2026-11-09T11:10:30Z	
+P	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	satisfy		COMPLETE	29	29	5837083521fd5404	478	120	2026-11-09T11:11:14Z	jacop_weighted_subcircuits
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	all:f	PASS	COMPLETE	29	840	2026-11-09T11:11:15Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	decomp:jacop_weighted_subcircuits	NO_DECOMPOSITION				2026-11-09T11:11:15Z	
+P	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	satisfy		COMPLETE	7740	7740	4f4960e7cfa9769b	1759	120	2026-11-09T11:11:15Z	jacop_softgcc,jacop_softgcc_var
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	std	PASS	COMPLETE	29	746	2026-11-09T11:11:16Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	all:f	PASS	COMPLETE	7740	1170	2026-11-09T11:11:16Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	std:f	PASS	COMPLETE	29	780	2026-11-09T11:11:16Z	
+P	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	satisfy		COMPLETE	117312	117312	e4c6d3c00317508	3418	120	2026-11-09T11:11:17Z	jacop_sequence
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	objstd:lcg	PASS	COMPLETE	1	924	2026-11-09T11:11:17Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	decomp:jacop_softgcc	PASS	COMPLETE	7740	1267	2026-11-09T11:11:18Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj0:plain	PASS	COMPLETE	1	740	2026-11-09T11:11:18Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj0:f	PASS	COMPLETE	1	750	2026-11-09T11:11:19Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	all:f	PASS	COMPLETE	117312	2062	2026-11-09T11:11:19Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	decomp:jacop_softgcc_var	WRONG	COMPLETE	8340	1292	2026-11-09T11:11:19Z	600 solutions that the reference does not have
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj0:lcg	PASS	COMPLETE	1	647	2026-11-09T11:11:19Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	std	WRONG	COMPLETE	8340	1195	2026-11-09T11:11:20Z	600 solutions that the reference does not have
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj0:lcg-f	PASS	COMPLETE	1	869	2026-11-09T11:11:20Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj1:plain	PASS	COMPLETE	1	638	2026-11-09T11:11:21Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	std:f	WRONG	COMPLETE	8340	1020	2026-11-09T11:11:21Z	600 solutions that the reference does not have
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	decomp:jacop_sequence	PASS	COMPLETE	117312	2516	2026-11-09T11:11:22Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj1:f	PASS	COMPLETE	1	704	2026-11-09T11:11:22Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	objstd:lcg	PASS	COMPLETE	1	700	2026-11-09T11:11:22Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj1:lcg	PASS	COMPLETE	1	859	2026-11-09T11:11:23Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj0:plain	PASS	COMPLETE	1	811	2026-11-09T11:11:23Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	std	PASS	COMPLETE	117312	1710	2026-11-09T11:11:23Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj0:f	PASS	COMPLETE	1	666	2026-11-09T11:11:23Z	
+C	gen:m_weighted_subcircuits_s1_27/m_weighted_subcircuits_s1_27	44929e29623a27ac	obj1:lcg-f	PASS	COMPLETE	1	861	2026-11-09T11:11:23Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj0:lcg	PASS	COMPLETE	1	637	2026-11-09T11:11:24Z	
+P	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	satisfy		COMPLETE	44	44	eea37013e1d218fa	650	120	2026-11-09T11:11:24Z	jacop_bounded_path,jacop_reachable
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj0:lcg-f	PASS	COMPLETE	1	592	2026-11-09T11:11:25Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	all:f	PASS	COMPLETE	44	701	2026-11-09T11:11:25Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	decomp:jacop_bounded_path	NO_DECOMPOSITION				2026-11-09T11:11:25Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	decomp:jacop_reachable	NO_DECOMPOSITION				2026-11-09T11:11:25Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	std:f	PASS	COMPLETE	117312	1614	2026-11-09T11:11:25Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj0:lcg:decomp:jacop_softgcc	PASS	COMPLETE	1	667	2026-11-09T11:11:25Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	std	PASS	COMPLETE	44	742	2026-11-09T11:11:26Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	objstd:lcg	PASS	COMPLETE	1	715	2026-11-09T11:11:26Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj0:lcg:decomp:jacop_softgcc_var	PASS	COMPLETE	1	759	2026-11-09T11:11:26Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj0:plain	PASS	COMPLETE	1	524	2026-11-09T11:11:26Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	std:f	PASS	COMPLETE	44	809	2026-11-09T11:11:26Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj1:plain	PASS	COMPLETE	1	534	2026-11-09T11:11:27Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj0:f	PASS	COMPLETE	1	566	2026-11-09T11:11:27Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj1:f	PASS	COMPLETE	1	586	2026-11-09T11:11:27Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj0:lcg	PASS	COMPLETE	1	538	2026-11-09T11:11:27Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	objstd:lcg	PASS	COMPLETE	1	952	2026-11-09T11:11:27Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj1:lcg	PASS	COMPLETE	1	568	2026-11-09T11:11:28Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj0:plain	PASS	COMPLETE	1	533	2026-11-09T11:11:28Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj0:lcg-f	PASS	COMPLETE	1	615	2026-11-09T11:11:28Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	c1a39d2839f250b7	obj1:lcg-f	PASS	COMPLETE	1	624	2026-11-09T11:11:28Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj0:lcg:decomp:jacop_sequence	PASS	COMPLETE	1	559	2026-11-09T11:11:28Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj0:f	PASS	COMPLETE	1	632	2026-11-09T11:11:28Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj1:plain	PASS	COMPLETE	1	617	2026-11-09T11:11:29Z	
+P	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	satisfy		COMPLETE	594	594	6122684f383f5fd6	684	120	2026-11-09T11:11:29Z	jacop_bounded_dpath,jacop_dconnected,jacop_dsteiner,jacop_dtree,jacop_dwst
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj0:lcg	PASS	COMPLETE	1	649	2026-11-09T11:11:29Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	all:f	PASS	COMPLETE	594	605	2026-11-09T11:11:30Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	decomp:jacop_bounded_dpath	NO_DECOMPOSITION				2026-11-09T11:11:30Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	decomp:jacop_dtree	NO_DECOMPOSITION				2026-11-09T11:11:30Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	decomp:jacop_dsteiner	NO_DECOMPOSITION				2026-11-09T11:11:30Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	decomp:jacop_dwst	NO_DECOMPOSITION				2026-11-09T11:11:30Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	decomp:jacop_dconnected	NO_DECOMPOSITION				2026-11-09T11:11:30Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj1:f	PASS	COMPLETE	1	625	2026-11-09T11:11:30Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj0:lcg-f	PASS	COMPLETE	1	581	2026-11-09T11:11:30Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj1:lcg	PASS	COMPLETE	1	537	2026-11-09T11:11:30Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj1:plain	PASS	COMPLETE	1	570	2026-11-09T11:11:30Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	std	PASS	COMPLETE	594	970	2026-11-09T11:11:31Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj1:f	PASS	COMPLETE	1	567	2026-11-09T11:11:31Z	
+C	gen:m_sliding_among_s1_47/m_sliding_among_s1_47	0664fd8956e29469	obj1:lcg-f	PASS	COMPLETE	1	622	2026-11-09T11:11:31Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	std:f	PASS	COMPLETE	594	801	2026-11-09T11:11:31Z	
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj1:lcg	PASS	COMPLETE	1	667	2026-11-09T11:11:31Z	
+P	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	satisfy		COMPLETE	64	64	d84010149d79b9ea	682	120	2026-11-09T11:11:32Z	jacop_disjunctive_setup_optional
+C	gen:m_graphs_undirected_s1_41/m_graphs_undirected_s1_41	8cb1aaf499a100de	obj1:lcg-f	PASS	COMPLETE	1	612	2026-11-09T11:11:32Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	all:f	PASS	COMPLETE	64	604	2026-11-09T11:11:32Z	
+P	gen:m_regular_nfa_s1_12/m_regular_nfa_s1_12	248006caf3f6fdea	satisfy		COMPLETE	1	1	45052dc5e9a950	482	120	2026-11-09T11:11:33Z	jacop_regular_nfa
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	objstd:lcg	PASS	COMPLETE	1	1184	2026-11-09T11:11:33Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	decomp:jacop_disjunctive_setup_optional	PASS	COMPLETE	64	806	2026-11-09T11:11:33Z	
+C	gen:m_regular_nfa_s1_12/m_regular_nfa_s1_12	248006caf3f6fdea	all:f	PASS	COMPLETE	1	474	2026-11-09T11:11:33Z	
+C	gen:m_regular_nfa_s1_12/m_regular_nfa_s1_12	248006caf3f6fdea	decomp:jacop_regular_nfa	NO_DECOMPOSITION				2026-11-09T11:11:33Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj0:plain	PASS	COMPLETE	1	585	2026-11-09T11:11:33Z	
+P	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	satisfy		COMPLETE	15	15	47ae4ae017f17281	533	120	2026-11-09T11:11:34Z	jacop_subcircuit_cost
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	std	PASS	COMPLETE	64	675	2026-11-09T11:11:34Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj0:f	PASS	COMPLETE	1	610	2026-11-09T11:11:34Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	all:f	PASS	COMPLETE	15	522	2026-11-09T11:11:34Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	std:f	PASS	COMPLETE	64	656	2026-11-09T11:11:34Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj0:lcg	PASS	COMPLETE	1	684	2026-11-09T11:11:35Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	decomp:jacop_subcircuit_cost	PASS	COMPLETE	15	594	2026-11-09T11:11:35Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	objstd:lcg	PASS	COMPLETE	1	746	2026-11-09T11:11:35Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj0:lcg-f	PASS	COMPLETE	1	656	2026-11-09T11:11:35Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	std	PASS	COMPLETE	15	585	2026-11-09T11:11:35Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj0:plain	PASS	COMPLETE	1	655	2026-11-09T11:11:36Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj1:plain	PASS	COMPLETE	1	613	2026-11-09T11:11:36Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	std:f	PASS	COMPLETE	15	593	2026-11-09T11:11:36Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj0:f	PASS	COMPLETE	1	593	2026-11-09T11:11:36Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj1:f	PASS	COMPLETE	1	602	2026-11-09T11:11:36Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	objstd:lcg	PASS	COMPLETE	1	669	2026-11-09T11:11:37Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj0:lcg	PASS	COMPLETE	1	614	2026-11-09T11:11:37Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj1:lcg	PASS	COMPLETE	1	623	2026-11-09T11:11:37Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj0:plain	PASS	COMPLETE	1	508	2026-11-09T11:11:37Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj0:lcg-f	PASS	COMPLETE	1	610	2026-11-09T11:11:38Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj0:f	PASS	COMPLETE	1	485	2026-11-09T11:11:38Z	
+C	gen:m_graphs_directed_s1_38/m_graphs_directed_s1_38	31c30bbd1e496357	obj1:lcg-f	PASS	COMPLETE	1	639	2026-11-09T11:11:38Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj0:lcg:decomp:jacop_disjunctive_setup_optional	PASS	COMPLETE	1	620	2026-11-09T11:11:38Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj0:lcg	PASS	COMPLETE	1	555	2026-11-09T11:11:38Z	
+P	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	satisfy		COMPLETE	144	144	880aef5e2f621fb7	615	120	2026-11-09T11:11:38Z	jacop_alldistinct
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj0:lcg-f	PASS	COMPLETE	1	542	2026-11-09T11:11:39Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	all:f	PASS	COMPLETE	144	532	2026-11-09T11:11:39Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj1:plain	PASS	COMPLETE	1	692	2026-11-09T11:11:39Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj0:lcg:decomp:jacop_subcircuit_cost	PASS	COMPLETE	1	642	2026-11-09T11:11:39Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	decomp:jacop_alldistinct	PASS	COMPLETE	144	557	2026-11-09T11:11:39Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj1:f	PASS	COMPLETE	1	651	2026-11-09T11:11:39Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj1:plain	PASS	COMPLETE	1	517	2026-11-09T11:11:40Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	std	PASS	COMPLETE	144	606	2026-11-09T11:11:40Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj1:lcg	PASS	COMPLETE	1	616	2026-11-09T11:11:40Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj1:f	PASS	COMPLETE	1	505	2026-11-09T11:11:40Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	std:f	PASS	COMPLETE	144	541	2026-11-09T11:11:41Z	
+C	gen:m_disjunctive_setup_opt_s1_10/m_disjunctive_setup_opt_s1_10	bd7165fc2f34312f	obj1:lcg-f	PASS	COMPLETE	1	696	2026-11-09T11:11:41Z	
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj1:lcg	PASS	COMPLETE	1	541	2026-11-09T11:11:41Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	objstd:lcg	PASS	COMPLETE	1	723	2026-11-09T11:11:41Z	
+P	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	satisfy		COMPLETE	328	328	ed141c2f8c23975	539	120	2026-11-09T11:11:41Z	jacop_reservoir
+C	gen:m_subcircuit_cost_b_s1_32/m_subcircuit_cost_b_s1_32	0ae9caae8d1cfd04	obj1:lcg-f	PASS	COMPLETE	1	613	2026-11-09T11:11:42Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	all:f	PASS	COMPLETE	328	425	2026-11-09T11:11:42Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj0:plain	PASS	COMPLETE	1	607	2026-11-09T11:11:42Z	
+P	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	satisfy		COMPLETE	42	42	93011cc5fe7aa440	480	120	2026-11-09T11:11:42Z	jacop_diff2
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj0:f	PASS	COMPLETE	1	516	2026-11-09T11:11:42Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	decomp:jacop_reservoir	PASS	COMPLETE	328	698	2026-11-09T11:11:42Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	all:f	PASS	COMPLETE	42	502	2026-11-09T11:11:43Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj0:lcg	PASS	COMPLETE	1	565	2026-11-09T11:11:43Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	decomp:jacop_diff2	PASS	COMPLETE	42	555	2026-11-09T11:11:43Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	std	PASS	COMPLETE	328	613	2026-11-09T11:11:43Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj0:lcg-f	PASS	COMPLETE	1	550	2026-11-09T11:11:43Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	std	PASS	COMPLETE	42	550	2026-11-09T11:11:44Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	std:f	PASS	COMPLETE	328	623	2026-11-09T11:11:44Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj0:lcg:decomp:jacop_alldistinct	PASS	COMPLETE	1	644	2026-11-09T11:11:44Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	std:f	PASS	COMPLETE	42	593	2026-11-09T11:11:44Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	objstd:lcg	PASS	COMPLETE	1	673	2026-11-09T11:11:44Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	objstd:lcg	PASS	COMPLETE	1	566	2026-11-09T11:11:45Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj1:plain	PASS	COMPLETE	1	653	2026-11-09T11:11:45Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj0:plain	PASS	COMPLETE	1	563	2026-11-09T11:11:45Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj0:plain	PASS	COMPLETE	1	523	2026-11-09T11:11:45Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj1:f	PASS	COMPLETE	1	535	2026-11-09T11:11:45Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj0:f	PASS	COMPLETE	1	535	2026-11-09T11:11:45Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj0:f	PASS	COMPLETE	1	455	2026-11-09T11:11:46Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj1:lcg	PASS	COMPLETE	1	576	2026-11-09T11:11:46Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj0:lcg	PASS	COMPLETE	1	574	2026-11-09T11:11:46Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj0:lcg	PASS	COMPLETE	1	587	2026-11-09T11:11:46Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj0:lcg-f	PASS	COMPLETE	1	514	2026-11-09T11:11:47Z	
+C	gen:m_all_distinct_b_s1_11/m_all_distinct_b_s1_11	0bcbabd3a160c3b5	obj1:lcg-f	PASS	COMPLETE	1	665	2026-11-09T11:11:47Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj0:lcg-f	PASS	COMPLETE	1	677	2026-11-09T11:11:47Z	
+P	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	satisfy		COMPLETE	91	91	1a552863d6c2fc89	516	120	2026-11-09T11:11:47Z	jacop_deviation,jacop_spread
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj0:lcg:decomp:jacop_reservoir	PASS	COMPLETE	1	678	2026-11-09T11:11:47Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	all:f	PASS	COMPLETE	91	487	2026-11-09T11:11:48Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj0:lcg:decomp:jacop_diff2	PASS	COMPLETE	1	723	2026-11-09T11:11:48Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj1:plain	PASS	COMPLETE	1	627	2026-11-09T11:11:48Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	decomp:jacop_deviation	PASS	COMPLETE	91	548	2026-11-09T11:11:48Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj1:plain	PASS	COMPLETE	1	522	2026-11-09T11:11:48Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj1:f	PASS	COMPLETE	1	532	2026-11-09T11:11:48Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	decomp:jacop_spread	PASS	COMPLETE	91	568	2026-11-09T11:11:49Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj1:f	PASS	COMPLETE	1	617	2026-11-09T11:11:49Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj1:lcg	PASS	COMPLETE	1	573	2026-11-09T11:11:49Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	std	PASS	COMPLETE	91	598	2026-11-09T11:11:49Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj1:lcg	PASS	COMPLETE	1	559	2026-11-09T11:11:49Z	
+C	gen:m_reservoir_b_s1_9/m_reservoir_b_s1_9	389d12dbb1bcde7b	obj1:lcg-f	PASS	COMPLETE	1	703	2026-11-09T11:11:50Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	std:f	PASS	COMPLETE	91	520	2026-11-09T11:11:50Z	
+C	gen:m_diff2_s1_1/m_diff2_s1_1	1618180f4fa29a9b	obj1:lcg-f	PASS	COMPLETE	1	661	2026-11-09T11:11:50Z	
+P	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	satisfy		COMPLETE	19	19	825419598546bda5	463	120	2026-11-09T11:11:50Z	jacop_stretch
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	objstd:lcg	PASS	COMPLETE	1	544	2026-11-09T11:11:50Z	
+P	gen:m_channel_b_s1_4/m_channel_b_s1_4	374e025b3d78ef36	satisfy		ERROR	0	0	0	390	120	2026-11-09T11:11:51Z	jacop_channel
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	all:f	PASS	COMPLETE	19	584	2026-11-09T11:11:51Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj0:plain	PASS	COMPLETE	1	576	2026-11-09T11:11:51Z	
+P	gen:m_channel_b_s1_36/m_channel_b_s1_36	53e44f074b2ee74c	satisfy		ERROR	0	0	0	491	120	2026-11-09T11:11:51Z	jacop_channel
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	decomp:jacop_stretch	PASS	COMPLETE	19	594	2026-11-09T11:11:51Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj0:f	PASS	COMPLETE	1	599	2026-11-09T11:11:52Z	
+P	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	satisfy		COMPLETE	1140	1140	5e50f8382e5aa9b0	795	120	2026-11-09T11:11:52Z	jacop_inter_distance,jacop_multi_inter_distance
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	std	PASS	COMPLETE	19	703	2026-11-09T11:11:52Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj0:lcg	PASS	COMPLETE	1	603	2026-11-09T11:11:52Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	all:f	PASS	COMPLETE	1140	694	2026-11-09T11:11:53Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	std:f	PASS	COMPLETE	19	626	2026-11-09T11:11:53Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj0:lcg-f	PASS	COMPLETE	1	759	2026-11-09T11:11:53Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	decomp:jacop_inter_distance	PASS	COMPLETE	1140	918	2026-11-09T11:11:53Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	objstd:lcg	PASS	COMPLETE	1	817	2026-11-09T11:11:53Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj0:lcg:decomp:jacop_deviation	PASS	COMPLETE	1	648	2026-11-09T11:11:54Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	decomp:jacop_multi_inter_distance	PASS	COMPLETE	1140	685	2026-11-09T11:11:54Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj0:plain	PASS	COMPLETE	1	675	2026-11-09T11:11:54Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj0:lcg:decomp:jacop_spread	PASS	COMPLETE	1	644	2026-11-09T11:11:54Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj0:f	PASS	COMPLETE	1	534	2026-11-09T11:11:55Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	std	PASS	COMPLETE	1140	715	2026-11-09T11:11:55Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj1:plain	PASS	COMPLETE	1	668	2026-11-09T11:11:55Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj0:lcg	PASS	COMPLETE	1	603	2026-11-09T11:11:55Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj1:f	PASS	COMPLETE	1	565	2026-11-09T11:11:55Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	std:f	PASS	COMPLETE	1140	685	2026-11-09T11:11:56Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj0:lcg-f	PASS	COMPLETE	1	624	2026-11-09T11:11:56Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	objstd:lcg	PASS	COMPLETE	1	630	2026-11-09T11:11:56Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj1:lcg	PASS	COMPLETE	1	704	2026-11-09T11:11:56Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj0:lcg:decomp:jacop_stretch	PASS	COMPLETE	1	662	2026-11-09T11:11:57Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj0:plain	PASS	COMPLETE	1	607	2026-11-09T11:11:57Z	
+C	gen:m_deviation_s1_16/m_deviation_s1_16	17f662501598b45a	obj1:lcg-f	PASS	COMPLETE	1	620	2026-11-09T11:11:57Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj1:plain	PASS	COMPLETE	1	510	2026-11-09T11:11:57Z	
+P	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	satisfy		COMPLETE	243	243	6379bdbc316fc45a	587	120	2026-11-09T11:11:57Z	jacop_among_var
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj0:f	PASS	COMPLETE	1	608	2026-11-09T11:11:57Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj1:f	PASS	COMPLETE	1	693	2026-11-09T11:11:58Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj0:lcg	PASS	COMPLETE	1	480	2026-11-09T11:11:58Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	all:f	PASS	COMPLETE	243	581	2026-11-09T11:11:58Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj0:lcg-f	PASS	COMPLETE	1	497	2026-11-09T11:11:58Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj1:lcg	PASS	COMPLETE	1	578	2026-11-09T11:11:58Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	decomp:jacop_among_var	PASS	COMPLETE	243	656	2026-11-09T11:11:59Z	
+C	gen:m_stretch_s1_8/m_stretch_s1_8	f8de8b27c7888815	obj1:lcg-f	PASS	COMPLETE	1	584	2026-11-09T11:11:59Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj0:lcg:decomp:jacop_inter_distance	PASS	COMPLETE	1	607	2026-11-09T11:11:59Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	std	PASS	COMPLETE	243	635	2026-11-09T11:11:59Z	
+P	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	satisfy		COMPLETE	13	13	9e0faf79f43db657	475	120	2026-11-09T11:11:59Z	jacop_weighted_subcircuits
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj0:lcg:decomp:jacop_multi_inter_distance	PASS	COMPLETE	1	608	2026-11-09T11:12:00Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	std:f	PASS	COMPLETE	243	617	2026-11-09T11:12:00Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	all:f	PASS	COMPLETE	13	493	2026-11-09T11:12:00Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	decomp:jacop_weighted_subcircuits	NO_DECOMPOSITION				2026-11-09T11:12:00Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj1:plain	PASS	COMPLETE	1	636	2026-11-09T11:12:00Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	std	PASS	COMPLETE	13	559	2026-11-09T11:12:01Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	objstd:lcg	PASS	COMPLETE	1	681	2026-11-09T11:12:01Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj1:f	PASS	COMPLETE	1	639	2026-11-09T11:12:01Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj0:plain	PASS	COMPLETE	1	553	2026-11-09T11:12:01Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	std:f	PASS	COMPLETE	13	616	2026-11-09T11:12:01Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj1:lcg	PASS	COMPLETE	1	583	2026-11-09T11:12:01Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj0:f	PASS	COMPLETE	1	527	2026-11-09T11:12:02Z	
+C	gen:m_inter_distance_s1_6/m_inter_distance_s1_6	945410e983784d63	obj1:lcg-f	PASS	COMPLETE	1	634	2026-11-09T11:12:02Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	objstd:lcg	PASS	COMPLETE	1	976	2026-11-09T11:12:02Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj0:lcg	PASS	COMPLETE	1	595	2026-11-09T11:12:02Z	
+P	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	satisfy		COMPLETE	33	33	99aed5cf5ef58e7a	538	120	2026-11-09T11:12:03Z	jacop_channel
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj0:plain	PASS	COMPLETE	1	533	2026-11-09T11:12:03Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj0:lcg-f	PASS	COMPLETE	1	518	2026-11-09T11:12:03Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	all:f	PASS	COMPLETE	33	470	2026-11-09T11:12:03Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj0:f	PASS	COMPLETE	1	587	2026-11-09T11:12:03Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj0:lcg:decomp:jacop_among_var	PASS	COMPLETE	1	615	2026-11-09T11:12:03Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	decomp:jacop_channel	PASS	COMPLETE	33	465	2026-11-09T11:12:04Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj0:lcg	PASS	COMPLETE	1	577	2026-11-09T11:12:04Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj1:plain	PASS	COMPLETE	1	493	2026-11-09T11:12:04Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	std	PASS	COMPLETE	33	460	2026-11-09T11:12:04Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj1:f	PASS	COMPLETE	1	595	2026-11-09T11:12:04Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj0:lcg-f	PASS	COMPLETE	1	660	2026-11-09T11:12:04Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	std:f	PASS	COMPLETE	33	551	2026-11-09T11:12:05Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj1:plain	PASS	COMPLETE	1	585	2026-11-09T11:12:05Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj1:lcg	PASS	COMPLETE	1	615	2026-11-09T11:12:05Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	objstd:lcg	PASS	COMPLETE	1	615	2026-11-09T11:12:05Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj1:f	PASS	COMPLETE	1	579	2026-11-09T11:12:06Z	
+C	gen:m_among_var_s1_53/m_among_var_s1_53	1720f88f80b51754	obj1:lcg-f	PASS	COMPLETE	1	662	2026-11-09T11:12:06Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj0:plain	PASS	COMPLETE	1	587	2026-11-09T11:12:06Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj1:lcg	PASS	COMPLETE	1	550	2026-11-09T11:12:06Z	
+P	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	satisfy		COMPLETE	66	66	59f9525cadb8648	593	120	2026-11-09T11:12:06Z	jacop_table_bool_imp,jacop_table_bool_reif,jacop_table_int_imp,jacop_table_int_reif
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj0:f	PASS	COMPLETE	1	651	2026-11-09T11:12:06Z	
+C	gen:m_weighted_subcircuits_s1_28/m_weighted_subcircuits_s1_28	0a78d825aba843dd	obj1:lcg-f	PASS	COMPLETE	1	665	2026-11-09T11:12:07Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	all:f	PASS	COMPLETE	66	547	2026-11-09T11:12:07Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj0:lcg	PASS	COMPLETE	1	597	2026-11-09T11:12:07Z	
+P	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	satisfy		COMPLETE	16	16	1efff732ff07c3b8	446	120	2026-11-09T11:12:07Z	jacop_assignment,jacop_lex_less_int,jacop_sort,jacop_sort_permutation
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	decomp:jacop_table_int_reif	PASS	COMPLETE	66	621	2026-11-09T11:12:08Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj0:lcg-f	PASS	COMPLETE	1	613	2026-11-09T11:12:08Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	all:f	PASS	COMPLETE	16	503	2026-11-09T11:12:08Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	decomp:jacop_table_int_imp	PASS	COMPLETE	66	642	2026-11-09T11:12:08Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj0:lcg:decomp:jacop_channel	PASS	COMPLETE	1	576	2026-11-09T11:12:08Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	decomp:jacop_sort	PASS	COMPLETE	16	628	2026-11-09T11:12:08Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	decomp:jacop_table_bool_reif	PASS	COMPLETE	66	523	2026-11-09T11:12:09Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj1:plain	PASS	COMPLETE	1	562	2026-11-09T11:12:09Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	decomp:jacop_sort_permutation	PASS	COMPLETE	16	538	2026-11-09T11:12:09Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	decomp:jacop_table_bool_imp	PASS	COMPLETE	66	538	2026-11-09T11:12:09Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj1:f	PASS	COMPLETE	1	564	2026-11-09T11:12:09Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	decomp:jacop_assignment	PASS	COMPLETE	16	511	2026-11-09T11:12:09Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	std	PASS	COMPLETE	66	591	2026-11-09T11:12:10Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj1:lcg	PASS	COMPLETE	1	558	2026-11-09T11:12:10Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	decomp:jacop_lex_less_int	PASS	COMPLETE	16	555	2026-11-09T11:12:10Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	std:f	PASS	COMPLETE	66	532	2026-11-09T11:12:10Z	
+C	gen:m_channel_s1_34/m_channel_s1_34	23a9d056accdbb97	obj1:lcg-f	PASS	COMPLETE	1	594	2026-11-09T11:12:11Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	std	PASS	COMPLETE	16	642	2026-11-09T11:12:11Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	objstd:lcg	PASS	COMPLETE	1	676	2026-11-09T11:12:11Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	std:f	PASS	COMPLETE	16	640	2026-11-09T11:12:11Z	
+P	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	satisfy		COMPLETE	720	720	3cbe2742ba932c1c	806	120	2026-11-09T11:12:11Z	jacop_bounded_path,jacop_connected,jacop_path,jacop_steiner,jacop_tree,jacop_wst
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:plain	PASS	COMPLETE	1	569	2026-11-09T11:12:12Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	all:f	PASS	COMPLETE	720	717	2026-11-09T11:12:12Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	decomp:jacop_bounded_path	NO_DECOMPOSITION				2026-11-09T11:12:12Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	decomp:jacop_tree	NO_DECOMPOSITION				2026-11-09T11:12:12Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	decomp:jacop_steiner	NO_DECOMPOSITION				2026-11-09T11:12:12Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	decomp:jacop_path	NO_DECOMPOSITION				2026-11-09T11:12:12Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	decomp:jacop_wst	NO_DECOMPOSITION				2026-11-09T11:12:12Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	decomp:jacop_connected	NO_DECOMPOSITION				2026-11-09T11:12:12Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	objstd:lcg	PASS	COMPLETE	1	746	2026-11-09T11:12:12Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:f	PASS	COMPLETE	1	598	2026-11-09T11:12:12Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:plain	PASS	COMPLETE	1	545	2026-11-09T11:12:13Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:lcg	PASS	COMPLETE	1	647	2026-11-09T11:12:13Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:f	PASS	COMPLETE	1	719	2026-11-09T11:12:13Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:lcg-f	PASS	COMPLETE	1	865	2026-11-09T11:12:14Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:lcg	PASS	COMPLETE	1	861	2026-11-09T11:12:14Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:lcg:decomp:jacop_table_int_reif	PASS	COMPLETE	1	783	2026-11-09T11:12:14Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:lcg-f	PASS	COMPLETE	1	647	2026-11-09T11:12:15Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:lcg:decomp:jacop_table_int_imp	PASS	COMPLETE	1	591	2026-11-09T11:12:15Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:lcg:decomp:jacop_sort	PASS	COMPLETE	1	703	2026-11-09T11:12:16Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	std	PASS	COMPLETE	720	3549	2026-11-09T11:12:16Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:lcg:decomp:jacop_table_bool_reif	PASS	COMPLETE	1	629	2026-11-09T11:12:16Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:lcg:decomp:jacop_sort_permutation	PASS	COMPLETE	1	618	2026-11-09T11:12:16Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj0:lcg:decomp:jacop_table_bool_imp	PASS	COMPLETE	1	678	2026-11-09T11:12:16Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	812	2026-11-09T11:12:17Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj1:plain	PASS	COMPLETE	1	636	2026-11-09T11:12:17Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj1:f	PASS	COMPLETE	1	739	2026-11-09T11:12:18Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj0:lcg:decomp:jacop_lex_less_int	PASS	COMPLETE	1	885	2026-11-09T11:12:18Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj1:lcg	PASS	COMPLETE	1	726	2026-11-09T11:12:18Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj1:plain	PASS	COMPLETE	1	661	2026-11-09T11:12:19Z	
+C	gen:m_table_reif_b_s1_20/m_table_reif_b_s1_20	844d348686fe20b4	obj1:lcg-f	PASS	COMPLETE	1	585	2026-11-09T11:12:19Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj1:f	PASS	COMPLETE	1	624	2026-11-09T11:12:19Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	std:f	PASS	COMPLETE	720	3767	2026-11-09T11:12:19Z	
+P	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	satisfy		COMPLETE	120	120	32e8a09e843ef54c	550	120	2026-11-09T11:12:20Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj1:lcg	PASS	COMPLETE	1	721	2026-11-09T11:12:20Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	all:f	PASS	COMPLETE	120	721	2026-11-09T11:12:20Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	decomp:jacop_bounded_dpath	NO_DECOMPOSITION				2026-11-09T11:12:20Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	decomp:jacop_dtree	NO_DECOMPOSITION				2026-11-09T11:12:20Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	decomp:jacop_dsteiner	NO_DECOMPOSITION				2026-11-09T11:12:20Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	decomp:jacop_dreachable	NO_DECOMPOSITION				2026-11-09T11:12:20Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	decomp:jacop_dwst	NO_DECOMPOSITION				2026-11-09T11:12:20Z	
+C	gen:m_sort_b_s1_18/m_sort_b_s1_18	3608a2b0eddeb48c	obj1:lcg-f	PASS	COMPLETE	1	755	2026-11-09T11:12:21Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	objstd:lcg	PASS	COMPLETE	1	1433	2026-11-09T11:12:21Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	std	PASS	COMPLETE	120	833	2026-11-09T11:12:21Z	
+P	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	satisfy		COMPLETE	15	15	47ae4ae017f17281	668	120	2026-11-09T11:12:21Z	jacop_subcircuit_cost
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj0:plain	PASS	COMPLETE	1	633	2026-11-09T11:12:21Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	all:f	PASS	COMPLETE	15	591	2026-11-09T11:12:22Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	std:f	PASS	COMPLETE	120	823	2026-11-09T11:12:22Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj0:f	PASS	COMPLETE	1	725	2026-11-09T11:12:22Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	decomp:jacop_subcircuit_cost	PASS	COMPLETE	15	690	2026-11-09T11:12:23Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj0:lcg	PASS	COMPLETE	1	710	2026-11-09T11:12:23Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	std	PASS	COMPLETE	15	639	2026-11-09T11:12:23Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	objstd:lcg	PASS	COMPLETE	1	1347	2026-11-09T11:12:23Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj0:lcg-f	PASS	COMPLETE	1	765	2026-11-09T11:12:24Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	std:f	PASS	COMPLETE	15	590	2026-11-09T11:12:24Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj0:plain	PASS	COMPLETE	1	526	2026-11-09T11:12:24Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj1:plain	PASS	COMPLETE	1	661	2026-11-09T11:12:24Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj0:f	PASS	COMPLETE	1	562	2026-11-09T11:12:24Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	objstd:lcg	PASS	COMPLETE	1	683	2026-11-09T11:12:25Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj1:f	PASS	COMPLETE	1	662	2026-11-09T11:12:25Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj0:plain	PASS	COMPLETE	1	461	2026-11-09T11:12:25Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj0:lcg	PASS	COMPLETE	1	668	2026-11-09T11:12:25Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj1:lcg	PASS	COMPLETE	1	592	2026-11-09T11:12:26Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj0:f	PASS	COMPLETE	1	623	2026-11-09T11:12:26Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj0:lcg-f	PASS	COMPLETE	1	643	2026-11-09T11:12:26Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj0:lcg	PASS	COMPLETE	1	541	2026-11-09T11:12:26Z	
+C	gen:m_graphs_undirected_b_s1_30/m_graphs_undirected_b_s1_30	4d14a2b0d7f644f4	obj1:lcg-f	PASS	COMPLETE	1	662	2026-11-09T11:12:26Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj1:plain	PASS	COMPLETE	1	629	2026-11-09T11:12:26Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj0:lcg-f	PASS	COMPLETE	1	650	2026-11-09T11:12:27Z	
+P	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	satisfy		COMPLETE	81	81	d1dbb0407b023cf5	598	120	2026-11-09T11:12:27Z	jacop_regular_nfa
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj1:f	PASS	COMPLETE	1	584	2026-11-09T11:12:27Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	all:f	PASS	COMPLETE	81	460	2026-11-09T11:12:27Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	decomp:jacop_regular_nfa	NO_DECOMPOSITION				2026-11-09T11:12:27Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj0:lcg:decomp:jacop_subcircuit_cost	PASS	COMPLETE	1	707	2026-11-09T11:12:27Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj1:lcg	PASS	COMPLETE	1	599	2026-11-09T11:12:28Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	std	PASS	COMPLETE	81	540	2026-11-09T11:12:28Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj1:plain	PASS	COMPLETE	1	517	2026-11-09T11:12:28Z	
+C	gen:m_graphs_directed_b_s1_13/m_graphs_directed_b_s1_13	d481eb4cdf63b849	obj1:lcg-f	PASS	COMPLETE	1	721	2026-11-09T11:12:28Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	std:f	PASS	COMPLETE	81	520	2026-11-09T11:12:28Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj1:f	PASS	COMPLETE	1	589	2026-11-09T11:12:29Z	
+P	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	satisfy		COMPLETE	91	91	1a552863d6c2fc89	457	120	2026-11-09T11:12:29Z	jacop_deviation,jacop_spread
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	objstd:lcg	PASS	COMPLETE	1	548	2026-11-09T11:12:29Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj1:lcg	PASS	COMPLETE	1	532	2026-11-09T11:12:29Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	all:f	PASS	COMPLETE	91	483	2026-11-09T11:12:29Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj0:plain	PASS	COMPLETE	1	628	2026-11-09T11:12:30Z	
+C	gen:m_subcircuit_cost_b_s1_51/m_subcircuit_cost_b_s1_51	06712bac1916bfb1	obj1:lcg-f	PASS	COMPLETE	1	569	2026-11-09T11:12:30Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	decomp:jacop_deviation	PASS	COMPLETE	91	566	2026-11-09T11:12:30Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj0:f	PASS	COMPLETE	1	495	2026-11-09T11:12:30Z	
+P	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	satisfy		COMPLETE	19	19	825419598546bda5	491	120	2026-11-09T11:12:30Z	jacop_stretch
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	decomp:jacop_spread	PASS	COMPLETE	91	538	2026-11-09T11:12:30Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj0:lcg	PASS	COMPLETE	1	481	2026-11-09T11:12:31Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	all:f	PASS	COMPLETE	19	376	2026-11-09T11:12:31Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	std	PASS	COMPLETE	91	518	2026-11-09T11:12:31Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj0:lcg-f	PASS	COMPLETE	1	569	2026-11-09T11:12:31Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	decomp:jacop_stretch	PASS	COMPLETE	19	498	2026-11-09T11:12:31Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	std:f	PASS	COMPLETE	91	485	2026-11-09T11:12:31Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj1:plain	PASS	COMPLETE	1	570	2026-11-09T11:12:32Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	std	PASS	COMPLETE	19	582	2026-11-09T11:12:32Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	objstd:lcg	PASS	COMPLETE	1	600	2026-11-09T11:12:32Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	std:f	PASS	COMPLETE	19	608	2026-11-09T11:12:32Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj1:f	PASS	COMPLETE	1	685	2026-11-09T11:12:32Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj0:plain	PASS	COMPLETE	1	540	2026-11-09T11:12:33Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj1:lcg	PASS	COMPLETE	1	604	2026-11-09T11:12:33Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj0:f	PASS	COMPLETE	1	533	2026-11-09T11:12:33Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	objstd:lcg	PASS	COMPLETE	1	800	2026-11-09T11:12:33Z	
+C	gen:m_regular_nfa_b_s1_31/m_regular_nfa_b_s1_31	be5feaf5f39f2cdc	obj1:lcg-f	PASS	COMPLETE	1	587	2026-11-09T11:12:34Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj0:lcg	PASS	COMPLETE	1	587	2026-11-09T11:12:34Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj0:plain	PASS	COMPLETE	1	610	2026-11-09T11:12:34Z	
+P	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	satisfy		COMPLETE	12	12	e79c539f7db9a447	469	120	2026-11-09T11:12:34Z	jacop_diff2
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj0:lcg-f	PASS	COMPLETE	1	551	2026-11-09T11:12:34Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj0:f	PASS	COMPLETE	1	629	2026-11-09T11:12:34Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	all:f	PASS	COMPLETE	12	443	2026-11-09T11:12:34Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj0:lcg:decomp:jacop_deviation	PASS	COMPLETE	1	583	2026-11-09T11:12:35Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj0:lcg	PASS	COMPLETE	1	536	2026-11-09T11:12:35Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	decomp:jacop_diff2	PASS	COMPLETE	12	561	2026-11-09T11:12:35Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj0:lcg:decomp:jacop_spread	PASS	COMPLETE	1	630	2026-11-09T11:12:35Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj0:lcg-f	PASS	COMPLETE	1	640	2026-11-09T11:12:36Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	std	PASS	COMPLETE	12	505	2026-11-09T11:12:36Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj1:plain	PASS	COMPLETE	1	559	2026-11-09T11:12:36Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	std:f	PASS	COMPLETE	12	569	2026-11-09T11:12:36Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj0:lcg:decomp:jacop_stretch	PASS	COMPLETE	1	696	2026-11-09T11:12:36Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj1:f	PASS	COMPLETE	1	526	2026-11-09T11:12:36Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	objstd:lcg	PASS	COMPLETE	1	639	2026-11-09T11:12:37Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj1:plain	PASS	COMPLETE	1	603	2026-11-09T11:12:37Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj1:lcg	PASS	COMPLETE	1	580	2026-11-09T11:12:37Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj0:plain	PASS	COMPLETE	1	635	2026-11-09T11:12:37Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj1:f	PASS	COMPLETE	1	656	2026-11-09T11:12:37Z	
+C	gen:m_deviation_s1_43/m_deviation_s1_43	ab28d1806f9623f0	obj1:lcg-f	PASS	COMPLETE	1	640	2026-11-09T11:12:38Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj0:f	PASS	COMPLETE	1	563	2026-11-09T11:12:38Z	
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj1:lcg	PASS	COMPLETE	1	541	2026-11-09T11:12:38Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj0:lcg	PASS	COMPLETE	1	638	2026-11-09T11:12:39Z	
+P	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	satisfy		COMPLETE	11640	11640	60e63918872084de	1031	120	2026-11-09T11:12:39Z	jacop_inter_distance,jacop_multi_inter_distance
+C	gen:m_stretch_s1_14/m_stretch_s1_14	ad70346914444b5c	obj1:lcg-f	PASS	COMPLETE	1	749	2026-11-09T11:12:39Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj0:lcg-f	PASS	COMPLETE	1	602	2026-11-09T11:12:39Z	
+P	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	satisfy		COMPLETE	29	29	5837083521fd5404	575	120	2026-11-09T11:12:39Z	jacop_weighted_subcircuits
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	all:f	PASS	COMPLETE	11640	829	2026-11-09T11:12:40Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj0:lcg:decomp:jacop_diff2	PASS	COMPLETE	1	655	2026-11-09T11:12:40Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	all:f	PASS	COMPLETE	29	582	2026-11-09T11:12:40Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	decomp:jacop_weighted_subcircuits	NO_DECOMPOSITION				2026-11-09T11:12:40Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj1:plain	PASS	COMPLETE	1	682	2026-11-09T11:12:41Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	decomp:jacop_inter_distance	PASS	COMPLETE	11640	1022	2026-11-09T11:12:41Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	std	PASS	COMPLETE	29	790	2026-11-09T11:12:41Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj1:f	PASS	COMPLETE	1	548	2026-11-09T11:12:41Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	std:f	PASS	COMPLETE	29	790	2026-11-09T11:12:41Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj1:lcg	PASS	COMPLETE	1	467	2026-11-09T11:12:42Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	decomp:jacop_multi_inter_distance	PASS	COMPLETE	11640	1192	2026-11-09T11:12:42Z	
+C	gen:m_diff2_b_s1_46/m_diff2_b_s1_46	2b22c66caafa8f84	obj1:lcg-f	PASS	COMPLETE	1	695	2026-11-09T11:12:42Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	objstd:lcg	PASS	COMPLETE	1	1182	2026-11-09T11:12:43Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	std	PASS	COMPLETE	11640	1139	2026-11-09T11:12:43Z	
+P	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	satisfy		COMPLETE	120	120	32e8a09e843ef54c	765	120	2026-11-09T11:12:43Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj0:plain	PASS	COMPLETE	1	744	2026-11-09T11:12:43Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	all:f	PASS	COMPLETE	120	770	2026-11-09T11:12:44Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	decomp:jacop_bounded_dpath	NO_DECOMPOSITION				2026-11-09T11:12:44Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	decomp:jacop_dtree	NO_DECOMPOSITION				2026-11-09T11:12:44Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	decomp:jacop_dsteiner	NO_DECOMPOSITION				2026-11-09T11:12:44Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	decomp:jacop_dreachable	NO_DECOMPOSITION				2026-11-09T11:12:44Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	decomp:jacop_dwst	NO_DECOMPOSITION				2026-11-09T11:12:44Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	std:f	PASS	COMPLETE	11640	880	2026-11-09T11:12:44Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj0:f	PASS	COMPLETE	1	681	2026-11-09T11:12:44Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	objstd:lcg	PASS	COMPLETE	1	797	2026-11-09T11:12:45Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	std	PASS	COMPLETE	120	1050	2026-11-09T11:12:45Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj0:lcg	PASS	COMPLETE	1	927	2026-11-09T11:12:45Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj0:plain	PASS	COMPLETE	1	697	2026-11-09T11:12:45Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	std:f	PASS	COMPLETE	120	807	2026-11-09T11:12:46Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj0:lcg-f	PASS	COMPLETE	1	849	2026-11-09T11:12:46Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj0:f	PASS	COMPLETE	1	708	2026-11-09T11:12:46Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj1:plain	PASS	COMPLETE	1	819	2026-11-09T11:12:47Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj0:lcg	PASS	COMPLETE	1	714	2026-11-09T11:12:47Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	objstd:lcg	PASS	COMPLETE	1	1270	2026-11-09T11:12:47Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj0:lcg-f	PASS	COMPLETE	1	575	2026-11-09T11:12:47Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj1:f	PASS	COMPLETE	1	725	2026-11-09T11:12:47Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj0:plain	PASS	COMPLETE	1	662	2026-11-09T11:12:48Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj0:lcg:decomp:jacop_inter_distance	PASS	COMPLETE	1	683	2026-11-09T11:12:48Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj0:f	PASS	COMPLETE	1	651	2026-11-09T11:12:48Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj1:lcg	PASS	COMPLETE	1	826	2026-11-09T11:12:48Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj0:lcg:decomp:jacop_multi_inter_distance	PASS	COMPLETE	1	743	2026-11-09T11:12:49Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj0:lcg	PASS	COMPLETE	1	600	2026-11-09T11:12:49Z	
+C	gen:m_weighted_subcircuits_s1_40/m_weighted_subcircuits_s1_40	eaedba115af0408b	obj1:lcg-f	PASS	COMPLETE	1	621	2026-11-09T11:12:49Z	
+P	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	satisfy		COMPLETE	0	0	0	378	120	2026-11-09T11:12:49Z	jacop_regular_nfa
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj1:plain	PASS	COMPLETE	1	628	2026-11-09T11:12:49Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj0:lcg-f	PASS	COMPLETE	1	683	2026-11-09T11:12:50Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	all:f	PASS	COMPLETE	0	426	2026-11-09T11:12:50Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	decomp:jacop_regular_nfa	NO_DECOMPOSITION				2026-11-09T11:12:50Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	std	PASS	COMPLETE	0	369	2026-11-09T11:12:50Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj1:plain	PASS	COMPLETE	1	576	2026-11-09T11:12:50Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj1:f	PASS	COMPLETE	1	687	2026-11-09T11:12:50Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	std:f	PASS	COMPLETE	0	380	2026-11-09T11:12:50Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj1:lcg	PASS	COMPLETE	1	523	2026-11-09T11:12:51Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj1:f	PASS	COMPLETE	1	682	2026-11-09T11:12:51Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	objstd:lcg	PASS	COMPLETE	0	384	2026-11-09T11:12:51Z	
+C	gen:m_inter_distance_s1_24/m_inter_distance_s1_24	0cd5a6a3b0ad9d01	obj1:lcg-f	PASS	COMPLETE	1	476	2026-11-09T11:12:51Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj0:plain	PASS	COMPLETE	0	369	2026-11-09T11:12:51Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj1:lcg	PASS	COMPLETE	1	610	2026-11-09T11:12:51Z	
+P	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	satisfy		COMPLETE	91	91	1a552863d6c2fc89	511	120	2026-11-09T11:12:52Z	jacop_deviation,jacop_spread
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj0:f	PASS	COMPLETE	0	422	2026-11-09T11:12:52Z	
+C	gen:m_graphs_directed_b_s1_49/m_graphs_directed_b_s1_49	48f884c435d91e89	obj1:lcg-f	PASS	COMPLETE	1	648	2026-11-09T11:12:52Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	all:f	PASS	COMPLETE	91	451	2026-11-09T11:12:52Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj0:lcg	PASS	COMPLETE	0	494	2026-11-09T11:12:52Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj0:lcg-f	PASS	COMPLETE	0	406	2026-11-09T11:12:53Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	decomp:jacop_deviation	PASS	COMPLETE	91	522	2026-11-09T11:12:53Z	
+P	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	satisfy		COMPLETE	170	170	61ea7bfbace703fd	575	120	2026-11-09T11:12:53Z	jacop_stretch
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj1:plain	PASS	COMPLETE	0	371	2026-11-09T11:12:53Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	all:f	PASS	COMPLETE	170	454	2026-11-09T11:12:53Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	decomp:jacop_spread	PASS	COMPLETE	91	596	2026-11-09T11:12:53Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj1:f	PASS	COMPLETE	0	418	2026-11-09T11:12:53Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj1:lcg	PASS	COMPLETE	0	454	2026-11-09T11:12:54Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	decomp:jacop_stretch	PASS	COMPLETE	170	740	2026-11-09T11:12:54Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	std	PASS	COMPLETE	91	624	2026-11-09T11:12:54Z	
+C	gen:m_regular_nfa_b_s1_54/m_regular_nfa_b_s1_54	07b60bcf49db458d	obj1:lcg-f	PASS	COMPLETE	0	386	2026-11-09T11:12:54Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	std:f	PASS	COMPLETE	91	432	2026-11-09T11:12:54Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	std	PASS	COMPLETE	170	630	2026-11-09T11:12:54Z	
+P	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	satisfy		COMPLETE	10	10	a03f5ffc7a31f800	527	120	2026-11-09T11:12:55Z	jacop_geost
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	objstd:lcg	PASS	COMPLETE	1	637	2026-11-09T11:12:55Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	std:f	PASS	COMPLETE	170	552	2026-11-09T11:12:55Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	all:f	PASS	COMPLETE	10	510	2026-11-09T11:12:55Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	decomp:jacop_geost	NO_DECOMPOSITION				2026-11-09T11:12:55Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj0:plain	PASS	COMPLETE	1	570	2026-11-09T11:12:55Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj0:plain	PASS	COMPLETE	1	561	2026-11-09T11:12:56Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	objstd:lcg	PASS	COMPLETE	1	781	2026-11-09T11:12:56Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj0:f	PASS	COMPLETE	1	746	2026-11-09T11:12:56Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj0:plain	PASS	COMPLETE	1	600	2026-11-09T11:12:56Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj0:f	PASS	COMPLETE	1	618	2026-11-09T11:12:56Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj0:lcg	PASS	COMPLETE	1	524	2026-11-09T11:12:57Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj0:lcg	PASS	COMPLETE	1	580	2026-11-09T11:12:57Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj0:f	PASS	COMPLETE	1	661	2026-11-09T11:12:57Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj0:lcg-f	PASS	COMPLETE	1	594	2026-11-09T11:12:57Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj0:lcg-f	PASS	COMPLETE	1	507	2026-11-09T11:12:57Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj0:lcg	PASS	COMPLETE	1	587	2026-11-09T11:12:58Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj0:lcg:decomp:jacop_deviation	PASS	COMPLETE	1	541	2026-11-09T11:12:58Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj1:plain	PASS	COMPLETE	1	543	2026-11-09T11:12:58Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj0:lcg-f	PASS	COMPLETE	1	585	2026-11-09T11:12:58Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj0:lcg:decomp:jacop_spread	PASS	COMPLETE	1	709	2026-11-09T11:12:59Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj1:f	PASS	COMPLETE	1	598	2026-11-09T11:12:59Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj0:lcg:decomp:jacop_stretch	PASS	COMPLETE	1	885	2026-11-09T11:12:59Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj1:lcg	PASS	COMPLETE	1	548	2026-11-09T11:12:59Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj1:plain	PASS	COMPLETE	1	615	2026-11-09T11:12:59Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj1:plain	PASS	COMPLETE	1	545	2026-11-09T11:13:00Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj1:f	PASS	COMPLETE	1	500	2026-11-09T11:13:00Z	
+C	gen:m_geost_fixed_s1_17/m_geost_fixed_s1_17	75bf3e7f7fac913e	obj1:lcg-f	PASS	COMPLETE	1	584	2026-11-09T11:13:00Z	
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj1:lcg	PASS	COMPLETE	1	447	2026-11-09T11:13:00Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj1:f	PASS	COMPLETE	1	686	2026-11-09T11:13:00Z	
+P	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	satisfy		COMPLETE	720	720	639748916ca7a075	708	120	2026-11-09T11:13:00Z	jacop_list_diff2
+C	gen:m_deviation_s1_44/m_deviation_s1_44	6b3ae9e8c41d70c6	obj1:lcg-f	PASS	COMPLETE	1	544	2026-11-09T11:13:01Z	
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj1:lcg	PASS	COMPLETE	1	546	2026-11-09T11:13:01Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	all:f	PASS	COMPLETE	720	720	2026-11-09T11:13:01Z	
+P	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	satisfy		COMPLETE	64	64	88a7cd14bc8a22be	510	120	2026-11-09T11:13:01Z	jacop_regular_nfa
+C	gen:m_stretch_s1_22/m_stretch_s1_22	33b75b9df61e8091	obj1:lcg-f	PASS	COMPLETE	1	733	2026-11-09T11:13:02Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	all:f	PASS	COMPLETE	64	475	2026-11-09T11:13:02Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	decomp:jacop_regular_nfa	NO_DECOMPOSITION				2026-11-09T11:13:02Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	decomp:jacop_list_diff2	PASS	COMPLETE	720	718	2026-11-09T11:13:02Z	
+P	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	satisfy		COMPLETE	10	10	a03f5ffc7a31f800	477	120	2026-11-09T11:13:02Z	jacop_geost
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	std	PASS	COMPLETE	64	568	2026-11-09T11:13:02Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	std	PASS	COMPLETE	720	709	2026-11-09T11:13:03Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	all:f	PASS	COMPLETE	10	567	2026-11-09T11:13:03Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	decomp:jacop_geost	NO_DECOMPOSITION				2026-11-09T11:13:03Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	std:f	PASS	COMPLETE	64	645	2026-11-09T11:13:03Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj0:plain	PASS	COMPLETE	1	532	2026-11-09T11:13:03Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	std:f	PASS	COMPLETE	720	623	2026-11-09T11:13:03Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	objstd:lcg	PASS	COMPLETE	1	723	2026-11-09T11:13:04Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	objstd:lcg	PASS	COMPLETE	1	542	2026-11-09T11:13:04Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj0:f	PASS	COMPLETE	1	609	2026-11-09T11:13:04Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj0:plain	PASS	COMPLETE	1	542	2026-11-09T11:13:04Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj0:plain	PASS	COMPLETE	1	654	2026-11-09T11:13:04Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj0:lcg	PASS	COMPLETE	1	630	2026-11-09T11:13:04Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj0:f	PASS	COMPLETE	1	670	2026-11-09T11:13:05Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj0:lcg-f	PASS	COMPLETE	1	553	2026-11-09T11:13:05Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj0:f	PASS	COMPLETE	1	554	2026-11-09T11:13:05Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj0:lcg	PASS	COMPLETE	1	614	2026-11-09T11:13:05Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj1:plain	PASS	COMPLETE	1	517	2026-11-09T11:13:06Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj0:lcg	PASS	COMPLETE	1	571	2026-11-09T11:13:06Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj1:f	PASS	COMPLETE	1	564	2026-11-09T11:13:06Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj0:lcg-f	PASS	COMPLETE	1	663	2026-11-09T11:13:06Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj0:lcg-f	PASS	COMPLETE	1	814	2026-11-09T11:13:06Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj1:lcg	PASS	COMPLETE	1	524	2026-11-09T11:13:07Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj1:plain	PASS	COMPLETE	1	704	2026-11-09T11:13:07Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj0:lcg:decomp:jacop_list_diff2	PASS	COMPLETE	1	515	2026-11-09T11:13:07Z	
+C	gen:m_geost_fixed_s1_57/m_geost_fixed_s1_57	1310034235788a08	obj1:lcg-f	PASS	COMPLETE	1	605	2026-11-09T11:13:07Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj1:f	PASS	COMPLETE	1	576	2026-11-09T11:13:07Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj1:plain	PASS	COMPLETE	1	615	2026-11-09T11:13:08Z	
+P	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	satisfy		COMPLETE	1720	1720	5bb42766748454f	827	120	2026-11-09T11:13:08Z	jacop_list_diff2
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj1:lcg	PASS	COMPLETE	1	690	2026-11-09T11:13:08Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj1:f	PASS	COMPLETE	1	649	2026-11-09T11:13:08Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	all:f	PASS	COMPLETE	1720	735	2026-11-09T11:13:09Z	
+C	gen:m_regular_nfa_s1_58/m_regular_nfa_s1_58	fad7dfcf97b73374	obj1:lcg-f	PASS	COMPLETE	1	725	2026-11-09T11:13:09Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj1:lcg	PASS	COMPLETE	1	707	2026-11-09T11:13:09Z	
+P	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	satisfy		COMPLETE	66	66	50fb8c13e1ff95b9	534	120	2026-11-09T11:13:09Z	jacop_cumulative_optional
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	decomp:jacop_list_diff2	PASS	COMPLETE	1720	805	2026-11-09T11:13:10Z	
+C	gen:m_list_diff2_s1_3/m_list_diff2_s1_3	97894f7426669bd9	obj1:lcg-f	PASS	COMPLETE	1	704	2026-11-09T11:13:10Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	all:f	PASS	COMPLETE	66	481	2026-11-09T11:13:10Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	std	PASS	COMPLETE	1720	607	2026-11-09T11:13:10Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	decomp:jacop_cumulative_optional	PASS	COMPLETE	66	597	2026-11-09T11:13:10Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	std:f	PASS	COMPLETE	1720	650	2026-11-09T11:13:11Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	std	PASS	COMPLETE	66	690	2026-11-09T11:13:11Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	objstd:lcg	PASS	COMPLETE	1	563	2026-11-09T11:13:11Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	std:f	PASS	COMPLETE	66	580	2026-11-09T11:13:12Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj0:plain	PASS	COMPLETE	1	584	2026-11-09T11:13:12Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	objstd:lcg	PASS	COMPLETE	1	602	2026-11-09T11:13:12Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj0:f	PASS	COMPLETE	1	597	2026-11-09T11:13:13Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj0:plain	PASS	COMPLETE	1	549	2026-11-09T11:13:13Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj0:lcg	PASS	COMPLETE	1	627	2026-11-09T11:13:13Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj0:f	PASS	COMPLETE	1	470	2026-11-09T11:13:13Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj0:lcg	PASS	COMPLETE	1	401	2026-11-09T11:13:14Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj0:lcg-f	PASS	COMPLETE	1	534	2026-11-09T11:13:14Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj0:lcg-f	PASS	COMPLETE	1	494	2026-11-09T11:13:14Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj0:lcg:decomp:jacop_list_diff2	PASS	COMPLETE	1	512	2026-11-09T11:13:14Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj0:lcg:decomp:jacop_cumulative_optional	PASS	COMPLETE	1	532	2026-11-09T11:13:15Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj1:plain	PASS	COMPLETE	1	512	2026-11-09T11:13:15Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj1:plain	PASS	COMPLETE	1	458	2026-11-09T11:13:15Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj1:f	PASS	COMPLETE	1	476	2026-11-09T11:13:15Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj1:lcg	PASS	COMPLETE	1	416	2026-11-09T11:13:16Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj1:f	PASS	COMPLETE	1	529	2026-11-09T11:13:16Z	
+C	gen:m_list_diff2_s1_39/m_list_diff2_s1_39	4f2947b551564efb	obj1:lcg-f	PASS	COMPLETE	1	593	2026-11-09T11:13:16Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj1:lcg	PASS	COMPLETE	1	517	2026-11-09T11:13:16Z	
+C	gen:m_cumulatives_s1_0/m_cumulatives_s1_0	649b3a19b1139567	obj1:lcg-f	PASS	COMPLETE	1	358	2026-11-09T11:13:17Z	
+P	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	satisfy		COMPLETE	7740	7740	4f4960e7cfa9769b	1620	120	2026-11-09T11:14:00Z	jacop_softgcc,jacop_softgcc_var
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	all:f	PASS	COMPLETE	7740	1290	2026-11-09T11:14:01Z	
+P	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	satisfy		COMPLETE	31724	31724	923fc81fd25808fc	3186	120	2026-11-09T11:14:01Z	jacop_softgcc,jacop_softgcc_var
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	decomp:jacop_softgcc	PASS	COMPLETE	7740	1179	2026-11-09T11:14:02Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	decomp:jacop_softgcc_var	PASS	COMPLETE	7740	1423	2026-11-09T11:14:04Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	all:f	PASS	COMPLETE	31724	2438	2026-11-09T11:14:04Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	std	PASS	COMPLETE	7740	961	2026-11-09T11:14:05Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	std:f	PASS	COMPLETE	7740	1074	2026-11-09T11:14:06Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	decomp:jacop_softgcc	PASS	COMPLETE	31724	2549	2026-11-09T11:14:06Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	objstd:lcg	PASS	COMPLETE	1	693	2026-11-09T11:14:06Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj0:plain	PASS	COMPLETE	1	603	2026-11-09T11:14:07Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj0:f	PASS	COMPLETE	1	720	2026-11-09T11:14:08Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	decomp:jacop_softgcc_var	PASS	COMPLETE	31724	1548	2026-11-09T11:14:08Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj0:lcg	PASS	COMPLETE	1	567	2026-11-09T11:14:08Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj0:lcg-f	PASS	COMPLETE	1	758	2026-11-09T11:14:09Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	std	PASS	COMPLETE	31724	1305	2026-11-09T11:14:09Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj0:lcg:decomp:jacop_softgcc	PASS	COMPLETE	1	560	2026-11-09T11:14:10Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	std:f	PASS	COMPLETE	31724	1144	2026-11-09T11:14:10Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj0:lcg:decomp:jacop_softgcc_var	PASS	COMPLETE	1	752	2026-11-09T11:14:10Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	objstd:lcg	PASS	COMPLETE	1	568	2026-11-09T11:14:11Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj1:plain	PASS	COMPLETE	1	460	2026-11-09T11:14:11Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj1:f	PASS	COMPLETE	1	481	2026-11-09T11:14:11Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj0:plain	PASS	COMPLETE	1	583	2026-11-09T11:14:11Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj1:lcg	PASS	COMPLETE	1	433	2026-11-09T11:14:12Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj0:f	PASS	COMPLETE	1	503	2026-11-09T11:14:12Z	
+C	gen:m_soft_gcc_s1_21/m_soft_gcc_s1_21	8c1e003a1669911e	obj1:lcg-f	PASS	COMPLETE	1	509	2026-11-09T11:14:12Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj0:lcg	PASS	COMPLETE	1	496	2026-11-09T11:14:12Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj0:lcg-f	PASS	COMPLETE	1	399	2026-11-09T11:14:13Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj0:lcg:decomp:jacop_softgcc	PASS	COMPLETE	1	509	2026-11-09T11:14:13Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj0:lcg:decomp:jacop_softgcc_var	PASS	COMPLETE	1	641	2026-11-09T11:14:14Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj1:plain	PASS	COMPLETE	1	472	2026-11-09T11:14:14Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj1:f	PASS	COMPLETE	1	485	2026-11-09T11:14:15Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj1:lcg	PASS	COMPLETE	1	386	2026-11-09T11:14:15Z	
+C	jacop:allsolutions/m_soft_gcc/m_soft_gcc	2ee35f0d86eeb839	obj1:lcg-f	PASS	COMPLETE	1	409	2026-11-09T11:14:16Z	
