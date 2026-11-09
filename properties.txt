@@ -72,6 +72,26 @@ Constraints (core):
 - jacop.cumulative.presenceFit: a task that may use nothing gets use 0
   where it fits nowhere (UnaryTimetable); default true.
 
+- org.jacop.weightedCompletion.prefixRows: on a resource of capacity
+  above 1, WeightedCompletion tightens the fluid bound with the rows of
+  the prefixes of Smith's order, each also bounded by the earliest
+  completion of its tasks; default true.
+
+- org.jacop.weightedCompletion.prefixWork: the work (tasks times time
+  points) of one bound above which the prefix rows are left out;
+  default 40000.
+
+- org.jacop.weightedCompletion.prefixOthers: the prefix rows also in the
+  bound of the other tasks that limits each start (one more pass per
+  task); default false.
+
+- org.jacop.weightedCompletion.weakReasons: under --lcg, the reasons of
+  the parallel bound lower the minima of the free starts towards their
+  root values as far as the propagation still follows; default true.
+
+- org.jacop.weightedCompletion.reasonRounds: the halvings tried when
+  weakening such a reason; default 4.
+
 - org.jacop.unaryEarlinessTardiness.blocks: the most blocks of time
   slots of a machine in the assignment bound of
   UnaryEarlinessTardiness; slots are grouped into blocks of equal

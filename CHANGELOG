@@ -3797,6 +3797,29 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
+220. WeightedCompletion on a resource of capacity above 1 (P|r_j|sum w_j
+     C_j) bounds the cost with the parallel inequalities of the prefixes
+     of Smith's order (A. S. Schulz, "Scheduling to minimize total
+     weighted completion time: performance guarantees of LP-based
+     heuristics and lower bounds", IPCO 1996, LNCS 1084), each prefix S
+     bounded by integral (e(S) - min(A, B)) dt with A the work of the
+     fluid schedule of S and B the work of its tasks' earliest
+     processing, so the rows also hold the earliest completions. The
+     greedy dual of the rows (as for Queyranne's polytope, Math.
+     Programming 58, 1993) makes it a sum over the prefixes, at most
+     twice the cost of the fluid bound it replaces, which it never
+     goes below. Under --lcg the reasons of the parallel bound lower the
+     minima of the free starts towards their root values as far as the
+     bound still holds (checked by recomputing it), and a pruned start
+     no longer cites its own minimum. On 36 random P|r_j|sum w_j C_j
+     instances (n = 20 to 40, 2 to 4 machines) the proven bound is
+     higher on 23 at 240 s in both modes; the mean gap goes from 3.4 %
+     to 2.9 % (model search) and from 1.3 % to 1.1 % (-f), with the
+     same objectives on average. 2017 cargo challenge16 (wide set,
+     600 s) improves from 136790 to 125504 (model search) and from
+     137787 to 128330 (-f). -Dorg.jacop.weightedCompletion.prefixRows
+     and ...weakReasons=false turn the two parts off.
+
 Version 4.11
 =============
 
