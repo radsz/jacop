@@ -49,10 +49,16 @@ import org.jacop.fz.SimpleNode;
  * cost read through elements, cost[i][x[i]] &lt;= z, as in a bottleneck assignment, removes values
  * from the middle of the domains of x; the matching of Alldistinct then fixes or fails far earlier.
  *
+ * <p>Hall sets that are not intervals matter when the all_different is close to a permutation, with
+ * few more values than variables, as in an assignment. With many spare values (a choice of words
+ * from a dictionary, of origins from a large set) the matching rarely prunes, and on the Challenge
+ * instances of that kind Alldistinct lost more than it gained.
+ *
  * <p>The system property {@code org.jacop.fz.alldiffChannel} selects the rule: {@code true} (the
  * default) posts Alldistinct above the limits when at least half of the not fixed variables are
- * channelled, {@code all} posts it above the limits whatever the channelling, and {@code false}
- * keeps the limits.
+ * channelled and there are at most a quarter more values than variables, {@code loose} drops the
+ * condition on the values, {@code all} posts it above the limits whatever the channelling and the
+ * values, and {@code false} keeps the limits.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -67,12 +73,12 @@ public final class AlldiffChannels implements ParserTreeConstants {
   /**
    * The rule of the system property {@code org.jacop.fz.alldiffChannel}.
    *
-   * @return "true", "all" or "false".
+   * @return "true", "loose", "all" or "false".
    */
   public static String rule() {
     String rule = System.getProperty("org.jacop.fz.alldiffChannel", "true").toLowerCase();
     return switch (rule) {
-      case "all", "false" -> rule;
+      case "all", "loose", "false" -> rule;
       default -> "true";
     };
   }
@@ -151,10 +157,11 @@ public final class AlldiffChannels implements ParserTreeConstants {
    *
    * @param v the variables of the all_different.
    * @param channelled the variables from {@link #collect(Support, SimpleNode)}, or null.
+   * @param values the number of values of the variables together.
    * @param rule the rule from {@link #rule()}.
    * @return true for Alldistinct.
    */
-  static boolean domainConsistent(IntVar[] v, Set<IntVar> channelled, String rule) {
+  static boolean domainConsistent(IntVar[] v, Set<IntVar> channelled, int values, String rule) {
     if ("false".equals(rule)) {
       return false;
     }
@@ -173,6 +180,10 @@ public final class AlldiffChannels implements ParserTreeConstants {
     if (pairs > MAX_PAIRS) {
       return false;
     }
-    return "all".equals(rule) || 2 * linked >= open && linked > 0;
+    if ("all".equals(rule)) {
+      return true;
+    }
+    boolean tight = "loose".equals(rule) || 4L * values <= 5L * v.length;
+    return tight && linked > 0 && 2 * linked >= open;
   }
 }

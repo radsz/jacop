@@ -723,7 +723,8 @@ class GlobalConstraints implements ParserTreeConstants {
     // consistency: those constraints make holes that bounds consistency does not see
     if (useAlldiff && support.alldiffChannels != null) {
       support.alldiffsChecked++;
-      if (AlldiffChannels.domainConsistent(v, support.alldiffChannels, AlldiffChannels.rule())) {
+      if (AlldiffChannels.domainConsistent(
+          v, support.alldiffChannels, dom.getSize(), AlldiffChannels.rule())) {
         support.alldiffsChannelled++;
         useAlldiff = false;
       }
