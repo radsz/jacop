@@ -640,7 +640,13 @@ class GlobalConstraints implements ParserTreeConstants {
     int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     checkForDuplicateVariables(next);
     support.pose(new Alldistinct(next));
-    support.pose(new WeightedSubcircuits(next, tour, costs, tourCost, cost, offset));
+    // tour, tourCost and cost may share variables (or equal constants) with each other and with
+    // next; WeightedSubcircuits needs distinct variables, so repeated ones become equal copies
+    Set<IntVar> seen = new HashSet<>(Arrays.asList(next));
+    IntVar[] tourVars = distinctCopies(tour, seen);
+    IntVar[] tourCostVars = distinctCopies(tourCost, seen);
+    IntVar costVar = distinctCopies(new IntVar[] {cost}, seen)[0];
+    support.pose(new WeightedSubcircuits(next, tourVars, costs, tourCostVars, costVar, offset));
   }
 
   private static int[][] matrix(int[] values, int n) {
@@ -714,14 +720,21 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     // a large all_different over sparse domains (successor arrays) keeps domain consistency:
     // bounds consistency prunes nothing inside them
-    if (v.length > 100 && !isSparseDomains(v)) {
-      support.pose(new Alldiff(v));
-      return;
-    }
     boolean useAlldiff =
-        (support.boundsConsistency || support.options.getBoundConsistency())
-            && !isSparseDomains(v)
-            && dom.getSize() > alldiffDomainSize();
+        v.length > 100 && !isSparseDomains(v)
+            || (support.boundsConsistency || support.options.getBoundConsistency())
+                && !isSparseDomains(v)
+                && dom.getSize() > alldiffDomainSize();
+    // over the limits, an all_different whose variables elements or tables channel keeps domain
+    // consistency: those constraints make holes that bounds consistency does not see
+    if (useAlldiff && support.alldiffChannels != null) {
+      support.alldiffsChecked++;
+      if (AlldiffChannels.domainConsistent(
+          v, support.alldiffChannels, dom.getSize(), AlldiffChannels.rule())) {
+        support.alldiffsChannelled++;
+        useAlldiff = false;
+      }
+    }
     if (useAlldiff) {
       support.pose(new Alldiff(v));
     } else {

@@ -42,6 +42,7 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
@@ -252,6 +253,10 @@ public class Constraints implements ParserTreeConstants {
         new DifferenceBoundsDetector(support).detect(astTree);
       }
 
+      if (!"false".equals(AlldiffChannels.rule())) {
+        support.alldiffChannels = AlldiffChannels.collect(support, astTree);
+      }
+
       int n = astTree.jjtGetNumChildren();
 
       for (int i = 0; i < n; i++) {
@@ -272,6 +277,7 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      support.reportAlldiffChannels();
       cf.poseCounts();
       cf.poseDiffnProjections();
 
