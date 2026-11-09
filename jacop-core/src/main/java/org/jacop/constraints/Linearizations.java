@@ -279,6 +279,27 @@ public final class Linearizations {
    */
   public static ValueRows valueRows(
       Collection<Constraint> constraints, Collection<LinearForm> extra, boolean tried) {
+    return valueRows(constraints, extra, tried, false);
+  }
+
+  /**
+   * Returns the rows of {@link #valueRows(Collection, Collection, boolean)}, with, when asked, the
+   * further encodings of {@link CountValuesBounds} ({@code lb_v <= sum_i x_iv <= ub_v}) and of
+   * {@code b <-> x in S} and {@code b -> x in S} ({@link In}: {@code b = sum x_v} over the values v
+   * of S, or {@code b <=}), which tie the option Booleans of car sequencing to the columns of the
+   * classes; the feasibility pump ({@link org.jacop.constraints.lp.FeasibilityPump}) asks for them.
+   *
+   * @param constraints the constraints
+   * @param extra the further rows of the relaxation, whose LP-only columns are reused
+   * @param tried whether the further encodings are made
+   * @param sets whether the encodings of count bounds and set membership are made too
+   * @return the rows
+   */
+  public static ValueRows valueRows(
+      Collection<Constraint> constraints,
+      Collection<LinearForm> extra,
+      boolean tried,
+      boolean sets) {
     Map<IntVar, Map<Integer, IntVar>> given = valueBooleans(constraints);
     Set<IntVar> byModel = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : given.entrySet()) {
@@ -302,6 +323,7 @@ public final class Linearizations {
       return new ValueRows(kept, List.of());
     }
     Encoder e = new Encoder(given, encoded, byModel);
+    e.sets = sets;
     for (Constraint c : constraints) {
       e.rows(c);
     }
@@ -425,6 +447,8 @@ public final class Linearizations {
     private final List<IntVar> order = new ArrayList<>();
     private List<LinearForm> out = new ArrayList<>();
     private int made;
+    // whether count bounds and set membership are encoded
+    private boolean sets;
     // the reified comparisons linked so far
     private final Set<Constraint> linked = Collections.newSetFromMap(new IdentityHashMap<>());
 
@@ -492,6 +516,9 @@ public final class Linearizations {
       } else if (k == CountValues.class) {
         CountValues cv = (CountValues) c;
         counts(cv.list, cv.values, cv.counters());
+      } else if (k == CountValuesBounds.class && sets) {
+        CountValuesBounds cb = (CountValuesBounds) c;
+        countBounds(cb.list, cb.values, cb.lb, cb.ub);
       } else if (k == Count.class) {
         Count ct = (Count) c;
         counts(ct.list, new int[] {ct.countedValue()}, new IntVar[] {ct.counter()});
@@ -625,6 +652,40 @@ public final class Linearizations {
       }
     }
 
+    // lb_k <= sum_i [x_i = v_k] <= ub_k, as counts with constant counters
+    private void countBounds(IntVar[] list, int[] values, int[] lb, int[] ub) {
+      Map<IntVar, Map<Integer, IntVar>> m = of(list);
+      if (m == null) {
+        return;
+      }
+      for (int k = 0; k < values.length; k++) {
+        List<IntVar> vars = new ArrayList<>();
+        List<Long> w = new ArrayList<>();
+        long fixed = 0;
+        for (IntVar x : list) {
+          if (x.singleton()) {
+            fixed += x.value() == values[k] ? 1 : 0;
+          } else if (x.domain.contains(values[k])) {
+            vars.add(m.get(x).get(values[k]));
+            w.add(1L);
+          }
+        }
+        if (vars.isEmpty()) {
+          continue;
+        }
+        if (lb[k] == ub[k]) {
+          out.add(row(vars, w, ub[k] - fixed, LinearForm.EQ));
+          continue;
+        }
+        if (ub[k] - fixed < vars.size()) {
+          out.add(row(vars, w, ub[k] - fixed, LinearForm.LE));
+        }
+        if (lb[k] - fixed > 0) {
+          out.add(row(new ArrayList<>(vars), new ArrayList<>(w), lb[k] - fixed, LinearForm.GE));
+        }
+      }
+    }
+
     /**
      * Adds the assignment model of a bin packing: {@code load_b = sum_i w_i [bin_i = b]} for each
      * bin b, over the value columns of the bins of the items, the formulation of L. V. Kantorovich
@@ -723,6 +784,19 @@ public final class Linearizations {
             link(cmp, r.b, c.getClass() == Reified.class, m, out);
             linked.add(c);
           }
+        } else if (sets
+            && c instanceof AbstractReifiedConstraint r
+            && (c.getClass() == Reified.class || c.getClass() == Implies.class)
+            && r.c.getClass() == In.class
+            && boolean01(r.b)
+            && !linked.contains(c)) {
+          // b <-> x in S: b = sum of x_v over the values of S, as the option bits of a class
+          In in = (In) r.c;
+          Map<Integer, IntVar> m = full.get(in.x);
+          if (m != null && !m.containsValue(r.b)) {
+            link(in.x, in.dom::contains, r.b, c.getClass() == Reified.class, m, out);
+            linked.add(c);
+          }
         }
       }
     }
@@ -799,13 +873,23 @@ public final class Linearizations {
   // satisfy it, or b = 1 - sum x_v over those that do not when the implicit value 0 satisfies it
   private static void link(
       AbstractXcompC cmp, IntVar b, boolean both, Map<Integer, IntVar> m, List<LinearForm> out) {
-    IntVar x = cmp.x;
+    link(cmp.x, v -> holds(cmp, v), b, both, m, out);
+  }
+
+  // b <-> x op c (or b -> x op c) for any test of the values of x, as link above
+  private static void link(
+      IntVar x,
+      java.util.function.IntPredicate test,
+      IntVar b,
+      boolean both,
+      Map<Integer, IntVar> m,
+      List<LinearForm> out) {
     boolean zeroHolds = false;
     List<IntVar> in = new ArrayList<>();
     List<IntVar> notIn = new ArrayList<>();
     for (ValueEnumeration en = x.domain.valueEnumeration(); en.hasMoreElements(); ) {
       int v = en.nextElement();
-      boolean holds = holds(cmp, v);
+      boolean holds = test.test(v);
       IntVar xv = m.get(v);
       if (xv == null) {
         zeroHolds = holds; // the implicit value 0
