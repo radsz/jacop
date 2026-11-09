@@ -1114,4 +1114,35 @@ class RevisedDualSimplexTest {
       assertThat(lp.value(0)).as("exact " + exact).isCloseTo(5.0, offset(1e-9));
     }
   }
+
+  @Test
+  void anExactPrimalSolveWithALimitOfOnePivotEnds() {
+    // after a new objective, solvePrimal(1) with the exact clean-up: each call perturbed the costs
+    // again, found the optimum and took its one step removing the perturbation, and the answer was
+    // LIMIT forever (found by the exact LP fuzzer, osolpro benchmarks/jalp-allsolutions)
+    double[] lo = {4, 2, -1, -4, 1, 0, -2};
+    double[] hi = {9, 6, -1, -3, 1, 0, 5};
+    for (boolean scale : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 3, 4, 6}},
+              new double[][] {{4, 1, 3, -8}},
+              new double[] {3},
+              new double[] {3},
+              new double[] {1, 1, 1, 1, 1, 1, 1},
+              scale);
+      lp.setExact(true);
+      for (int j = 0; j < lo.length; j++) {
+        lp.setBounds(j, lo[j], hi[j]);
+      }
+      assertThat(lp.solve(1000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      lp.setCost(new double[] {-4, 0, 0, 4, -3, -5, 5});
+      int status = RevisedDualSimplex.LIMIT;
+      for (int call = 0; call < 1000 && status == RevisedDualSimplex.LIMIT; call++) {
+        status = lp.solvePrimal(1);
+      }
+      assertThat(status).as("scale " + scale).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).as("scale " + scale).isCloseTo(-35.0, offset(1e-9));
+    }
+  }
 }

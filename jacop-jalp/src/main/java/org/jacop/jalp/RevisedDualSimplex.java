@@ -2705,6 +2705,9 @@ public final class RevisedDualSimplex {
       status = solve((int) Math.max(0, limit - (totalPivots - start)));
     }
     ended = status != LIMIT;
+    if (ended) {
+      cleaning = false;
+    }
     return status;
   }
 
@@ -2789,7 +2792,10 @@ public final class RevisedDualSimplex {
   private int primalPivots(int limit) {
     infeasibleRow = -1;
     clearSkipped();
-    if (feasibility || (exact && !perturbed)) {
+    // a clean-up of the perturbation that the last call left at its limit goes on with the costs
+    // as given: perturbing them again here made a primal solve called with a limit of one pivot
+    // answer LIMIT forever (each call ended by removing the perturbation)
+    if (feasibility || exact && !perturbed && !cleaning) {
       feasibility = false;
       setCosts(true);
       if (factorValid) {
@@ -2956,6 +2962,7 @@ public final class RevisedDualSimplex {
       return DUAL;
     }
     if (exact && perturbed) {
+      cleaning = true;
       setCosts(false);
       computeDuals();
       return GO_ON;
