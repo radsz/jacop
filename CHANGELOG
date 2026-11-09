@@ -3634,7 +3634,12 @@ Version 5.0 (unreleased)
      instead of a sum over all tasks. Pruning and reasons are unchanged.
      On largescheduling instance-1600-2 (1600 tasks) the search makes
      2.1x the nodes in 60 s: the old explanations stalled it for most of
-     the run after 8 solutions.
+     the run after 8 solutions. At 600 s, over the 71 bench instances
+     with a cumulative or disjunctive constraint (34 of the wide set and
+     a topic set with 100+ tasks), the same 32 are solved; without -f
+     the objective is better on 19 and worse on 2, with -f better on 16
+     and worse on 12; the 10 largescheduling instances run 1.3x to 9.9x
+     the nodes per second.
 
 Version 4.11
 =============
