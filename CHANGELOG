@@ -4004,7 +4004,21 @@ Version 5.0 (unreleased)
      old rule, =loose drops the condition on the values, =all lifts the
      limits.
 
-232. Bug fix: the FlatZinc front end rejected weighted_subcircuits when
+232. Fixed search (no -f) with --lcg follows the search annotation again,
+     as the fixed search (fd) category of the MiniZinc Challenge requires
+     ("FD search solvers must follow the search strategy defined in the
+     problem"): the solver no longer restarts (--free-config
+     fixed-restarts=off is the default, was turns), so no run branches on
+     the SAT solver's literals or on activity, and the core-guided phase
+     no longer runs for an objective without a first solution
+     (fixed-core=0 is the default, was 0.1). Learnt clauses still prune
+     the annotation's tree. fixed-restarts=turns|alternate|replay and
+     fixed-core=<share> keep the 5.0 behaviour for experiments. The
+     propagations statistic under --lcg now counts JaSAT's propagations
+     as well as the calls of the store's propagators: a model whose
+     constraints became clauses (nonogram) printed only the root's calls.
+
+233. Bug fix: the FlatZinc front end rejected weighted_subcircuits when
      its arguments shared a variable or an equal constant, for example
      tour[1] = tour[2] or two tour costs fixed to 0 ("Constraint of type
      WeightedSubcircuits has parameter list, tour, tourCost and cost that
@@ -4014,7 +4028,7 @@ Version 5.0 (unreleased)
      all-solutions suite (random variants of its weighted_subcircuits
      model).
 
-233. fzn-jacop prints the running objective bound (%%%mzn-stat:
+234. fzn-jacop prints the running objective bound (%%%mzn-stat:
      objectiveBound and objectiveBoundTime, one stat block per better
      bound) only in verbose mode, with -s -v or --search-statistics.
      With -s alone these blocks came out many times during the search

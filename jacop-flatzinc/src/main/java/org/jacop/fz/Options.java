@@ -207,17 +207,18 @@ public class Options {
                 branching, in runs alternated with the annotation),
                 interleave=restart|solution|none (with --lcg: default restart; none with literals
                 and auto),
-                fixed-restarts=turns|alternate|replay|off (with --lcg, without -f, for a model
-                with a search annotation: turns (default) restarts and takes turns between runs
-                of the annotation, the SAT solver's decisions on literals and activity branching;
-                alternate between the annotation and activity; replay restarts and follows the
-                annotation in every run; off never restarts, as before 5.0),
+                fixed-restarts=off|replay|alternate|turns (with --lcg, without -f, for a model
+                with a search annotation: off (default) never restarts and follows the
+                annotation, as the fixed search category of the MiniZinc Challenge requires;
+                replay restarts and follows the annotation in every run; alternate takes turns
+                between runs of the annotation and activity branching; turns between runs of
+                the annotation, the SAT solver's decisions on literals and activity branching),
                 fixed-restarts-from=start|solution (restarts from the start or only after a
                 first solution),
                 fixed-core=<share> (with --lcg, without -f, a linear objective and an
                 annotation: when branch and bound under the annotation has no solution after
                 fixed-core-delay of the time, default 0.15, the core-guided phase of -f runs for
-                this share of the time, default 0.1; 0 = off),
+                this share of the time; default 0 = off, as it does not follow the annotation),
                 fixed-completion=output|activity (with --lcg, without -f, for a model with a
                 search annotation: output (default) decides the output variables the annotation
                 leaves open in input order, lower half first, as fixed search without --lcg does;
