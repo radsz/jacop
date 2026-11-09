@@ -645,7 +645,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       }
     }
     // list[0..hi] are before the position; find the first whose value is beyond v
-    int last = hi;
+    int end = hi;
     lo = 0;
     while (lo <= hi) {
       int mid = (lo + hi) >>> 1;
@@ -656,7 +656,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         lo = mid + 1;
       }
     }
-    return lo <= last ? list[lo] : -1;
+    return lo <= end ? list[lo] : -1;
   }
 
   private int latest(IntVar x, int position, int k) {

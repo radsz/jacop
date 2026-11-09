@@ -1116,7 +1116,7 @@ class AtomicTrailTest {
       reason.sortUnique(0);
       assertThat(reason.size())
           .as("reason of %s", trail.atomString(entry))
-          .isEqualTo(trail.atomString(entry).equals("[c >= 4]") ? 2 : 1);
+          .isEqualTo("[c >= 4]".equals(trail.atomString(entry)) ? 2 : 1);
       explained++;
     }
     assertThat(explained).isGreaterThanOrEqualTo(3);
