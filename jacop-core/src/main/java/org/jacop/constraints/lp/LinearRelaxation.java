@@ -2133,7 +2133,11 @@ public class LinearRelaxation extends Constraint
       return;
     }
     stalled = 0;
-    if (keepSolutions && status == LpSolver.OPTIMAL) {
+    if (status == LpSolver.OPTIMAL && (keepSolutions || store.level <= rootSolutionLevel)) {
+      // the root solution is kept also before keepSolutions: the selection that follows the
+      // solutions is made after the root propagation, and the solves of the search may never be
+      // optimal (surface-based-tsp ch130: the root solution after the tree cuts is the optimum,
+      // and every one of the 60 solves in search stopped at the pivot limit or was infeasible)
       int n = lp.columns();
       if (solution.length != n) {
         solution = new double[n];
