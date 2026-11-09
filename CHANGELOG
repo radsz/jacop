@@ -3797,6 +3797,21 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
+220. The LP relaxation (LinearRelaxation) now has the weight and profit
+     rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
+     knapsacks KnapsackDetector posts), as linearised rows tried at the
+     root. Before, a model stated with knapsack constraints had no LP
+     row of them: on MiniZinc Challenge multi-knapsack the root LP was
+     empty or far from the optimum (mknap2-10: 1101197, optimum 624319)
+     and is now at the optimum. On the 15 multi-knapsack instances of
+     the Challenge (600 s), total time 95 s -> 38 s, and with -f 109 s
+     -> 38 s (mknap2-2: 32 s -> 12 s); no other wide-set instance gets
+     a different LP. -Dorg.jacop.lp.knapsackRows=false turns it off.
+     Lifted cover cuts of the knapsack rows (sequence-independent
+     lifting, Gu, Nemhauser and Savelsbergh, J. Comb. Optim. 4, 2000)
+     were tried as well and are not included: the MIR cuts already
+     reach the same root bounds on the MiniZinc Challenge instances.
+
 Version 4.11
 =============
 
