@@ -491,6 +491,9 @@ public class LinearRelaxation extends Constraint
   // the separations of the capacity cuts, one for each Routes with its arcs among the columns
   private List<CapacityCuts> capacity = new ArrayList<>();
 
+  // blossom and comb cuts (CombCuts) also in search, not only at the root
+  private static final boolean COMB_SEARCH = Boolean.getBoolean("org.jacop.lp.combSearch");
+
   // energy cuts of the cumulative resources at the root, in the rounds of the capacity cuts
   private static final boolean ENERGY_CUTS =
       !"false".equals(System.getProperty("org.jacop.lp.energyCuts"));
@@ -521,6 +524,65 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the objective bound after the Hall cuts, before the MIR cuts, or NaN. */
   public double alldiffBound = Double.NaN;
+
+  // the Hall cuts of the all-different constraints with exceptions (alldifferent_except_0) and of
+  // the global cardinality constraints (GCC, CountValues), with the copies of their values
+  private static final boolean ALLDIFF_VARIANTS =
+      !"false".equals(System.getProperty("org.jacop.lp.alldiffVariants"));
+
+  // Hall cuts in search, as the capacity cuts: separated from the solution of an optimal solve
+  // every hallPeriod solves, the period doubling (up to CAPACITY_MAX_PERIOD) after a separation
+  // that finds no violated cut and halving after one that does; the cuts use the root domains, so
+  // they hold globally, and go into the row pool; off by default, as on the Challenge instances
+  // that have them they cost more solves than the bound gains (osolpro alldiff-hall-search)
+  private static final boolean ALLDIFF_SEARCH =
+      "true".equals(System.getProperty("org.jacop.lp.alldiffSearch"));
+  private static final int ALLDIFF_SEARCH_CUTS =
+      Integer.getInteger("org.jacop.lp.alldiffSearchCuts", 10);
+  private boolean alldiffSearch = ALLDIFF_SEARCH;
+  private int hallPeriod = 4;
+  private int hallWaited;
+  // the column of each variable of each separation, -1 when the variable is not a column
+  private int[][] hallColumns;
+  private final Set<List<Long>> hallSeen = new HashSet<>();
+
+  /** Statistics: the all-different constraints with Hall cuts, and those of them with copies. */
+  public long alldiffLists;
+
+  public long alldiffVariantLists;
+
+  /** Statistics: Hall cuts added in search. */
+  public long alldiffSearchCuts;
+
+  /** Statistics: separations of Hall cuts in search. */
+  public long alldiffSeparations;
+
+  // generalized subtour elimination cuts of the forests of Tree and Path ({@link TreeCuts}) at the
+  // root, after the Hall cuts and before the MIR cuts, in rounds like those; for an objective only
+  private static final boolean TREE_CUTS =
+      !"false".equals(System.getProperty("org.jacop.lp.treeCuts"));
+
+  // the separations of the tree cuts, one for each acyclic Reachable
+  private List<TreeCuts> trees = new ArrayList<>();
+
+  // the most rounds of tree cuts: each round adds a few dozen cuts and the bound climbs far (ch130
+  // of surface-based-tsp: 6,096 after 50 rounds, 6,108 of the optimum 6,112 at the end)
+  private static final int TREE_ROUNDS = Integer.getInteger("org.jacop.lp.treeRounds", 200);
+
+  /** Statistics: subtour elimination cuts of trees and paths added. */
+  public long treeCuts;
+
+  /** Statistics: the objective bound after the tree cuts, before the MIR cuts, or NaN. */
+  public double treeBound = Double.NaN;
+
+  /**
+   * The number of trees and paths whose subtour elimination cuts the relaxation makes at the root.
+   *
+   * @return the number of acyclic Reachable constraints with tree cuts
+   */
+  public int treeConstraints() {
+    return trees.size();
+  }
 
   // capacity and multistar cuts in search: separated from the solution of an optimal solve every
   // capacityPeriod solves, the period doubling (up to CAPACITY_MAX_PERIOD) after a separation that
@@ -911,11 +973,16 @@ public class LinearRelaxation extends Constraint
     List<CapacityCuts> separations = new ArrayList<>();
     List<EnergyCuts> resources = new ArrayList<>();
     List<AlldifferentCuts> hall = new ArrayList<>();
+    List<TreeCuts> trees = new ArrayList<>();
     for (Constraint c : constraints) {
-      IntVar[] distinct =
-          ALLDIFF_CUTS && objective != null ? Linearizations.alldifferentList(c) : null;
+      TreeCuts forest = TREE_CUTS && objective != null ? TreeCuts.of(c) : null;
+      if (forest != null) {
+        trees.add(forest);
+      }
+      AlldifferentCuts distinct =
+          ALLDIFF_CUTS && objective != null ? Linearizations.hallCuts(c, ALLDIFF_VARIANTS) : null;
       if (distinct != null) {
-        hall.add(new AlldifferentCuts(distinct));
+        hall.add(distinct);
       }
       if (CAPACITY_CUTS && c instanceof Routes routes) {
         separations.add(new CapacityCuts(routes));
@@ -1031,7 +1098,11 @@ public class LinearRelaxation extends Constraint
     // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
     // trial stays in proportion to the relaxation (a trial over every candidate of a large model
     // can take a minute and then drop them all)
-    if (!fitsSimplex(localForms, candidates, simplex, auto, exempt, own, further)
+    // a model with trees takes all its other rows: the tree cuts need them (st70 of
+    // surface-based-tsp: 388 of its 561 other rows fit the share, root bound 490 and 633 after
+    // the tree cuts; all of them, 656 and 675, the optimum)
+    long share = trees.isEmpty() ? 2L * localForms.size() + SPARSE_ROWS + exempt : Long.MAX_VALUE;
+    if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
       // far from it rarely move its bound (tiny-cvrp: 852 of 6,936 rows, those over the variables
@@ -1040,7 +1111,7 @@ public class LinearRelaxation extends Constraint
       // takes the rows before them
       further.clear();
       List<LinearForm> sorted = fitOrder(localForms, candidates, exempt, triedSet, flow, objective);
-      fitsSimplex(localForms, sorted, simplex, auto, exempt, own, further);
+      fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
     }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
@@ -1051,6 +1122,7 @@ public class LinearRelaxation extends Constraint
     r.capacity = separations;
     r.energy = resources;
     r.hall = hall;
+    r.trees = trees;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
   }
 
@@ -1360,7 +1432,7 @@ public class LinearRelaxation extends Constraint
       List<LinearForm> candidates,
       Simplex simplex,
       boolean denseCap,
-      int exempt,
+      long share,
       Set<LinearForm> own,
       List<LinearForm> further) {
     if (tooLarge(forms, simplex)) {
@@ -1389,10 +1461,7 @@ public class LinearRelaxation extends Constraint
               || denseCap && vars.size() + added > SPARSE_MAX_COLUMNS) {
         return false;
       }
-      if (denseCap
-          && simplex != Simplex.DENSE
-          && !ownShare
-          && counted >= 2L * forms.size() + SPARSE_ROWS + exempt) {
+      if (denseCap && simplex != Simplex.DENSE && !ownShare && counted >= share) {
         if (own.isEmpty()) {
           return false;
         }
@@ -1984,7 +2053,7 @@ public class LinearRelaxation extends Constraint
     }
     sendBounds();
     long size = Math.max(1, lp.pivotWork());
-    if (beforeExtra != null && bySize && !keepEncodings) {
+    if (beforeExtra != null && bySize && !keepEncodings && trees.isEmpty()) {
       // the extra rows on a simplex chosen by size are judged by the pivot limit of the dense
       // tableau they would make, as before the choice: a sparse work unit takes two to four times
       // a dense entry, and the sparse limit alone keeps rows that slow every solve (slnb7x7)
@@ -2023,6 +2092,16 @@ public class LinearRelaxation extends Constraint
       capacityWaited = 0;
       status = searchCapacityCuts(limit);
     }
+    if (status == LpSolver.OPTIMAL
+        && alldiffSearch
+        && hallColumns != null
+        && hallColumns.length > 0
+        && calls > 1
+        && !restarting
+        && ++hallWaited >= hallPeriod) {
+      hallWaited = 0;
+      status = searchHallCuts(limit);
+    }
     lastSolveLevel = store.level;
     if (jump) {
       jumpSolves++;
@@ -2039,8 +2118,13 @@ public class LinearRelaxation extends Constraint
       // the root solution: judge the extra rows only over 20 solves per limit or more
       // the value encodings over auxiliary columns are the relaxation: without them it is the
       // model's few linear rows, so they stay, and the back-off of the solves bounds their cost
+      // the rows of a model with trees stay too: the tree cuts made over them are its bound
+      // (berlin52
+      // of surface-based-tsp: 7,542, the optimum, with them; 6,572 without, and fixed search took
+      // 60-190 s instead of 13 s)
       if (beforeExtra != null
           && !keepEncodings
+          && trees.isEmpty()
           && extraHits >= EXTRA_LIMITS
           && extraHits * 20 > calls
           && calls >= 20L * EXTRA_LIMITS) {
@@ -2765,6 +2849,12 @@ public class LinearRelaxation extends Constraint
           return status;
         }
       }
+      if (!trees.isEmpty()) {
+        int status = treeRounds();
+        if (status != DualSimplex.OPTIMAL) {
+          return status;
+        }
+      }
     }
     // the bounds of the first solve, which hold everywhere, also for the cuts made at restarts
     long[] lo = Arrays.copyOf(rootLo, n);
@@ -3103,7 +3193,7 @@ public class LinearRelaxation extends Constraint
     }
     for (int round = 0; round < CAPACITY_ROUNDS && stall < CAPACITY_STALL; round++) {
       // energy cuts stay at the root; in search only capacity cuts are separated
-      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen);
+      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen, true);
       int n = lp.columns();
       int routing = chosen.size();
       if (!energy.isEmpty()) {
@@ -3175,11 +3265,11 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
-   * Rounds of Hall cuts ({@link AlldifferentCuts}) of the all-different constraints whose variables
-   * are all columns, at the root, each followed by a re-solve. As for the capacity cuts, the rounds
-   * stop when no cut is violated, the bound has not moved for a few rounds, or a solve stops at its
-   * limit (that round's cuts are dropped); when the cuts leave the bound where it was they are all
-   * dropped.
+   * Rounds of Hall cuts ({@link AlldifferentCuts}) of the all-different and cardinality constraints
+   * over their variables that are columns (two or more), at the root, each followed by a re-solve.
+   * As for the capacity cuts, the rounds stop when no cut is violated, the bound has not moved for
+   * a few rounds, or a solve stops at its limit (that round's cuts are dropped); when the cuts
+   * leave the bound where it was they are all dropped.
    *
    * @return the status of the last solve
    */
@@ -3188,15 +3278,136 @@ public class LinearRelaxation extends Constraint
     for (int j = 0; j < lp.columns(); j++) {
       columnOf.put(x[j], j);
     }
-    hall.removeIf(h -> Arrays.stream(h.literals()).anyMatch(v -> !columnOf.containsKey(v)));
-    int[][] columns = new int[hall.size()][];
+    // the variables that are not columns stay out of the cuts; two columns or more are needed
+    hall.removeIf(h -> Arrays.stream(h.literals()).filter(columnOf::containsKey).count() < 2);
+    alldiffLists = hall.size();
+    alldiffVariantLists = hall.stream().filter(h -> !h.plain()).count();
+    hallColumns = new int[hall.size()][];
     for (int c = 0; c < hall.size(); c++) {
       IntVar[] list = hall.get(c).literals();
-      columns[c] = new int[list.length];
+      hallColumns[c] = new int[list.length];
       for (int a = 0; a < list.length; a++) {
-        columns[c][a] = columnOf.get(list[a]);
+        hallColumns[c][a] = columnOf.getOrDefault(list[a], -1);
       }
     }
+    if (hall.isEmpty()) {
+      return DualSimplex.OPTIMAL;
+    }
+    int firstCount = rows();
+    long[] result = separatedRounds(() -> violatedHall(CUTS_PER_ROUND), CAPACITY_ROUNDS, false);
+    alldiffCuts += result[1];
+    // search does not add the cuts kept here again
+    for (int i = firstCount; i < firstCount + result[1]; i++) {
+      hallSeen.add(key(MirCut.row(rowColumns[i], rowWeights[i], rowHi[i], 0)));
+    }
+    if (result[0] == DualSimplex.OPTIMAL) {
+      alldiffBound = lp.value(0);
+    }
+    return (int) result[0];
+  }
+
+  /**
+   * Rounds of generalized subtour elimination cuts ({@link TreeCuts}) of the forests of Tree and
+   * Path, at the root, like the Hall cuts. A node Boolean that is not a column counts at its
+   * largest value and an edge Boolean that is not a column at its least, which keeps the cuts
+   * valid.
+   *
+   * @return the status of the last solve
+   */
+  private int treeRounds() {
+    Map<IntVar, Integer> columnOf = new IdentityHashMap<>();
+    for (int j = 0; j < lp.columns(); j++) {
+      columnOf.put(x[j], j);
+    }
+    int[][] columns = new int[trees.size()][];
+    for (int c = 0; c < trees.size(); c++) {
+      IntVar[] list = trees.get(c).literals();
+      columns[c] = new int[list.length];
+      for (int a = 0; a < list.length; a++) {
+        Integer j = columnOf.get(list[a]);
+        columns[c][a] = j == null ? -1 : j;
+      }
+    }
+    long[] result =
+        separatedRounds(
+            () -> {
+              List<MirCut> found = new ArrayList<>();
+              for (int c = 0; c < trees.size(); c++) {
+                TreeCuts t = trees.get(c);
+                IntVar[] list = t.literals();
+                double[] value = new double[list.length];
+                for (int a = 0; a < value.length; a++) {
+                  value[a] =
+                      columns[c][a] >= 0
+                          ? lp.value(columns[c][a])
+                          : a < t.nodeCount() ? list[a].max() : list[a].min();
+                }
+                for (TreeCuts.Cut cut : t.separate(value, CUTS_PER_ROUND)) {
+                  MirCut row = row(cut, t, columns[c]);
+                  if (row != null) {
+                    found.add(row);
+                  }
+                }
+              }
+              return found;
+            },
+            TREE_ROUNDS,
+            true);
+    treeCuts += result[1];
+    if (result[0] == DualSimplex.OPTIMAL) {
+      treeBound = lp.value(0);
+    }
+    return (int) result[0];
+  }
+
+  // the tree cut as a row sum w x <= rhs over the columns; a node that is not a column moves to
+  // the right-hand side at its largest value, an edge at its least; null when no column is left
+  private static MirCut row(TreeCuts.Cut cut, TreeCuts t, int[] column) {
+    IntVar[] list = t.literals();
+    int nodes = t.nodeCount();
+    Map<Integer, Long> weights = new java.util.TreeMap<>();
+    long rhs = 0;
+    for (int i : cut.nodes()) {
+      if (column[i] < 0) {
+        rhs += list[i].max();
+      } else {
+        weights.merge(column[i], -1L, Long::sum);
+      }
+    }
+    for (int e : cut.edges()) {
+      int a = nodes + e;
+      if (column[a] < 0) {
+        rhs -= list[a].min();
+      } else {
+        weights.merge(column[a], 1L, Long::sum);
+      }
+    }
+    weights.values().removeIf(w -> w == 0);
+    if (weights.isEmpty()) {
+      return null;
+    }
+    int[] cs = new int[weights.size()];
+    long[] ws = new long[weights.size()];
+    int k = 0;
+    for (Map.Entry<Integer, Long> e : weights.entrySet()) {
+      cs[k] = e.getKey();
+      ws[k++] = e.getValue();
+    }
+    return MirCut.row(cs, ws, rhs, cut.efficacy());
+  }
+
+  /**
+   * Rounds of cuts from a separation at the root, each followed by a re-solve, shared by the Hall
+   * and tree cuts.
+   *
+   * @param separation the violated cuts of the current solution, as rows
+   * @param rounds the most rounds
+   * @param toSparse whether a dense tableau with no room left moves to the sparse simplex once the
+   *     cuts have raised the bound
+   * @return the status of the last solve and the number of cuts kept
+   */
+  private long[] separatedRounds(
+      java.util.function.Supplier<List<MirCut>> separation, int rounds, boolean toSparse) {
     double start = lp.value(0);
     int firstCount = rows();
     LpSolver first = lp.copy();
@@ -3205,19 +3416,21 @@ public class LinearRelaxation extends Constraint
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
     Set<List<Long>> seen = new HashSet<>();
-    for (int round = 0;
-        round < CAPACITY_ROUNDS && stall < CAPACITY_STALL && !hall.isEmpty();
-        round++) {
-      List<MirCut> found = new ArrayList<>();
-      for (int c = 0; c < hall.size(); c++) {
-        double[] value = new double[columns[c].length];
-        for (int a = 0; a < value.length; a++) {
-          value[a] = lp.value(columns[c][a]);
-        }
-        for (AlldifferentCuts.Cut cut : hall.get(c).separate(value, CUTS_PER_ROUND)) {
-          found.add(row(cut, columns[c]));
-        }
+    for (int round = 0; round < rounds && stall < CAPACITY_STALL; round++) {
+      if (toSparse
+          && simplex == Simplex.DENSE
+          && Math.abs(lp.value(0) - start) > 1e-6 * (1 + Math.abs(start))
+          && moveToSparse()) {
+        // the cuts raised the bound and the dense tableau has no room for another round: the rows
+        // and the cuts so far move to the sparse simplex for good (ch130 of surface-based-tsp
+        // needs about 1,300 tree cuts, which the dense cap stops at a third of the bound's gain);
+        // the bound has moved, so the cuts are not dropped at the end either
+        denseBeforeCuts = null;
+        denseLpRow = null;
+        denseInLp = null;
+        denseInactive = null;
       }
+      List<MirCut> found = separation.get();
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
       List<MirCut> chosen = new ArrayList<>();
       int n = lp.columns();
@@ -3263,12 +3476,71 @@ public class LinearRelaxation extends Constraint
       dropCuts(added, first, firstRows);
       added = 0;
     }
-    alldiffCuts += added;
     keepCapacityForms(firstCount, added);
-    if (status == DualSimplex.OPTIMAL) {
-      alldiffBound = lp.value(0);
+    return new long[] {status, added};
+  }
+
+  // the Hall cuts violated by the solution of the simplex, at most limit of each constraint, as
+  // rows; a variable that is not a column stays out of them
+  private List<MirCut> violatedHall(int limit) {
+    List<MirCut> found = new ArrayList<>();
+    for (int c = 0; c < hall.size(); c++) {
+      int[] column = hallColumns[c];
+      double[] value = new double[column.length];
+      for (int a = 0; a < value.length; a++) {
+        value[a] = column[a] < 0 ? Double.NaN : lp.value(column[a]);
+      }
+      for (AlldifferentCuts.Cut cut : hall.get(c).separate(value, limit)) {
+        found.add(row(cut, column));
+      }
     }
-    return status;
+    return found;
+  }
+
+  // the violated Hall cuts, the most efficacious first, at most limit and within the dense cap;
+  // the keys of the cuts chosen are added to seen, and cuts already seen are left out
+  private List<MirCut> separateHall(int limit, Set<List<Long>> seen) {
+    List<MirCut> found = violatedHall(limit);
+    found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
+    List<MirCut> chosen = new ArrayList<>();
+    int n = lp.columns();
+    for (MirCut row : found) {
+      long m = (long) lp.rows() + chosen.size() + 1;
+      if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+        break;
+      }
+      if (seen.add(key(row))) {
+        chosen.add(row);
+      }
+    }
+    return chosen;
+  }
+
+  /**
+   * Sets whether Hall cuts are also separated in search ({@code org.jacop.lp.alldiffSearch}, off by
+   * default), for tests.
+   *
+   * @param on whether they are
+   */
+  void setAlldiffSearch(boolean on) {
+    alldiffSearch = on;
+  }
+
+  // Hall cuts from the solution of an optimal solve in search: the violated ones go into the
+  // simplex and the pool, and the relaxation is solved again with them
+  private int searchHallCuts(int limit) {
+    alldiffSeparations++;
+    List<MirCut> chosen = separateHall(ALLDIFF_SEARCH_CUTS, hallSeen);
+    if (chosen.isEmpty()) {
+      hallPeriod = Math.min(2 * hallPeriod, CAPACITY_MAX_PERIOD);
+      return LpSolver.OPTIMAL;
+    }
+    hallPeriod = Math.max(1, hallPeriod / 2);
+    int first = rows();
+    addCuts(chosen);
+    alldiffSearchCuts += chosen.size();
+    keepCapacityForms(first, chosen.size());
+    return solvePool(limit);
   }
 
   // the Hall cut as a row sum w x <= rhs over the columns of the variables of its constraint
@@ -3291,7 +3563,7 @@ public class LinearRelaxation extends Constraint
 
   // the cuts violated by the solution of the simplex, at most limit and within the dense cap, as
   // rows; the keys of the cuts chosen are added to seen, and cuts already seen are left out
-  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen) {
+  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen, boolean root) {
     List<MirCut> chosen = new ArrayList<>();
     int n = lp.columns();
     for (int c = 0; c < capacity.size(); c++) {
@@ -3302,7 +3574,7 @@ public class LinearRelaxation extends Constraint
       for (int a = 0; a < literals.length; a++) {
         value[a] = column[a] < 0 ? literals[a].min() : lp.value(column[a]);
       }
-      for (CapacityCuts.Cut cut : cc.separate(value, limit)) {
+      for (CapacityCuts.Cut cut : cc.separate(value, limit, root || COMB_SEARCH)) {
         MirCut row = row(cut, column);
         long m = (long) lp.rows() + chosen.size() + 1;
         if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
@@ -3331,7 +3603,7 @@ public class LinearRelaxation extends Constraint
   // ones go into the simplex and the pool, and the relaxation is solved again with them
   private int searchCapacityCuts(int limit) {
     capacitySeparations++;
-    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen);
+    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen, false);
     if (chosen.isEmpty()) {
       capacityPeriod = Math.min(2 * capacityPeriod, CAPACITY_MAX_PERIOD);
       return LpSolver.OPTIMAL;
@@ -3680,7 +3952,9 @@ public class LinearRelaxation extends Constraint
                   && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
       keep = raised || few && k <= SMALL_EXTRA;
     }
-    keep |= keepExtra;
+    // the other rows of a model with trees are kept: alone they rarely move the bound, but with
+    // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
+    keep |= keepExtra || !trees.isEmpty();
     if (keep) {
       trialStatus = withExtra;
       return full;
@@ -3735,6 +4009,9 @@ public class LinearRelaxation extends Constraint
     }
     truncateRows(baseRows);
     allRowsInSimplex(baseRows);
+    // the columns that came with the rows are gone: the search cuts leave their variables out
+    forgetColumns(capacityColumns, lp.columns());
+    forgetColumns(hallColumns, lp.columns());
     beforeExtra = null;
     extraForms = new ArrayList<>();
     extraRows = 0;
@@ -3744,6 +4021,20 @@ public class LinearRelaxation extends Constraint
     idle = 0;
     period = 1;
     credit = WORK;
+  }
+
+  // marks the columns from n on as not columns
+  private static void forgetColumns(int[][] columns, int n) {
+    if (columns == null) {
+      return;
+    }
+    for (int[] column : columns) {
+      for (int a = 0; a < column.length; a++) {
+        if (column[a] >= n) {
+          column[a] = -1;
+        }
+      }
+    }
   }
 
   // keeps the first m rows
@@ -4011,6 +4302,9 @@ public class LinearRelaxation extends Constraint
     }
     for (AlldifferentCuts h : hall) {
       c.hall.add(h.copy(map));
+    }
+    for (TreeCuts t : trees) {
+      c.trees.add(t.copy(map));
     }
     return c;
   }

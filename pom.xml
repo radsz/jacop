@@ -242,6 +242,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -258,10 +259,12 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -289,6 +292,9 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
+                                <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -430,6 +436,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -446,10 +453,12 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -477,6 +486,9 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
+                                <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -619,6 +631,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -635,10 +648,12 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -666,6 +681,9 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
+                                <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -808,6 +826,7 @@ setup to run configuration. -->
                                 <include>**/LinearRelaxationTest.java</include>
                                 <include>**/MirCutTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
+                                <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -824,10 +843,12 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
                                 <include>**/RoutesFlatzincTest.java</include>
                                 <include>**/GiantTourFlatzincTest.java</include>
+                                <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -855,6 +876,9 @@ setup to run configuration. -->
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
                                 <include>**/PrecedenceCostFuzzTest.java</include>
+                                <include>**/UnaryEarlinessTardinessTest.java</include>
+                                <include>**/UnaryEarlinessTardinessLcgTest.java</include>
+                                <include>**/ColouredTreeFuzzTest.java</include>
                                 <include>**/ConstraintArgumentValidationTest.java</include>
                                 <include>**/SetRelationsTest.java</include>
                                 <include>**/SetPrimitiveGroundingTest.java</include>
@@ -1356,6 +1380,7 @@ setup to run configuration. -->
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
+                        <include>**/ClauseEncoderTest.java</include>
                         <include>**/OrBoolWatchedTest.java</include>
                         <include>**/AccumulatedFailureCountTest.java</include>
                         <include>**/SimpleSelectTieBreakTest.java</include>

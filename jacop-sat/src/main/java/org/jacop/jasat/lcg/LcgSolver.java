@@ -55,6 +55,7 @@ import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -372,6 +373,8 @@ public final class LcgSolver implements ExternalPropagator {
   // variables that no constraint uses: never branched on, at their least value in a solution
   private final boolean[] unused;
   private double activityInc = 1;
+  // per integer variable: the conflict count at its last bump
+  private long[] bumpedAt = new long[0];
   private long activityConflicts;
   // variables taken off the heap because they were fixed, with the decision level at the time
   private int[] popped = new int[16];
@@ -512,6 +515,9 @@ public final class LcgSolver implements ExternalPropagator {
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
+    // activity bumps every variable the conflict analysis met, not only the learnt clause's
+    // (MiniSat): 600 s wide set, default mode 22 better / 9 worse, -f 19 / 14
+    sat.setAnalysedNotify(!"learnt".equals(System.getProperty("jacop.lcg.bump", "seen")));
     // after the first 1,000 conflicts in focused mode, stable mode for good: restarts are far
     // rarer, and each costs the CP propagation back down. Under --lcg -f, on the 123 mznbench
     // instances with at least 2,000 conflicts in 60 s, 23 better and 13 worse, 59 against 54 runs
@@ -555,6 +561,8 @@ public final class LcgSolver implements ExternalPropagator {
     eq = new LiteralMap[n];
     linked = new LiteralMap[n];
     activity = new double[n];
+    bumpedAt = new long[n];
+    Arrays.fill(bumpedAt, -1);
     heap.grow(n, activity);
     wide.grow(n, activity);
     lateHeap.grow(n, activity);
@@ -2376,6 +2384,7 @@ public final class LcgSolver implements ExternalPropagator {
    *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
    */
   public int minimize(IntVar objective) {
+    clauseObjective = objective;
     encodeGraphs();
     this.objective = trail.id(objective);
     best = null;
@@ -2981,6 +2990,11 @@ public final class LcgSolver implements ExternalPropagator {
   private int minimizeWithLowerBoundSearch() {
     long budget = lowerBoundBudget;
     double share = lowerBoundShare;
+    // before the first solution a run that neither raises the bound nor finds a solution halves the
+    // share of the next one, and a raise restores it: the runs take time from the search for a
+    // first
+    // solution (XCSP3 IHTC-i30 found none in 600 s with the full share, base finds one after 240 s)
+    double early = 1;
     while (true) {
       long before = best == null ? Long.MAX_VALUE : best[objective];
       long limit = sat.conflicts + budget;
@@ -2996,14 +3010,19 @@ public final class LcgSolver implements ExternalPropagator {
           return result;
         }
       }
-      if (lowerBoundShare > 0 && best != null) {
-        if (shaveGrowth > 1) {
+      if (lowerBoundShare > 0) {
+        if (shaveGrowth > 1 && best != null) {
           // a round that did not improve the best solution gives the bound more of the next one
           share = best[objective] < before ? lowerBoundShare : Math.min(share * shaveGrowth, 4);
         }
-        result = lowerBoundRun((long) (budget * share));
+        boolean noSolution = best == null;
+        long raisedBefore = lowerBoundRaised;
+        result = lowerBoundRun((long) (budget * share * (noSolution ? early : 1)));
         if (result != CdclSolver.UNKNOWN) {
           return result;
+        }
+        if (noSolution) {
+          early = lowerBoundRaised > raisedBefore ? 1 : early / 2;
         }
       }
       budget += budget / 2;
@@ -3025,11 +3044,16 @@ public final class LcgSolver implements ExternalPropagator {
     while (true) {
       // after solve the domains are those of level 0
       int lb = Math.max(vars[objective].min(), raised);
-      if (best == null || lb >= best[objective]) {
+      // before the first solution the run assumes the objective at its lower bound, without
+      // shaving: puzzles such as ButtonsScissors have their first solutions only near the optimum
+      // and are much easier with the tightest bound (XCSP3 ButtonsScissors-00: 0.2 s with the
+      // objective at most 9, the optimum, no solution in 15 s with at most 13)
+      if (best == null ? lb >= vars[objective].max() : lb >= best[objective]) {
         return CdclSolver.UNKNOWN;
       }
       // objective <= target: the lower bound itself, or a step above it when shaving
-      int target = shaving ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
+      int target =
+          shaving && best != null ? (int) Math.min(lb + shaveStep - 1, best[objective] - 1L) : lb;
       int lit = -geLit(objective, target + 1);
       sat.setConflictLimit(limit);
       lowerBoundRuns++;
@@ -3041,10 +3065,12 @@ public final class LcgSolver implements ExternalPropagator {
         if (sat.conflicts < limit) {
           return result; // stopped by the deadline
         }
-        shaveStep = Math.max(1, shaveStep / 2);
+        if (best != null) {
+          shaveStep = Math.max(1, shaveStep / 2);
+        }
         return CdclSolver.UNKNOWN;
       }
-      if (sat.failedAssumptions().length == 0 || best[objective] <= target) {
+      if (sat.failedAssumptions().length == 0 || best != null && best[objective] <= target) {
         // no better solution at all; or the run found one within the target and then none
         // better, and every better one would be within the target too
         return result;
@@ -3053,7 +3079,9 @@ public final class LcgSolver implements ExternalPropagator {
       lowerBoundRaised++;
       raised = target + 1;
       reportBound(target + 1L);
-      if (!shaving) {
+      if (!shaving || best == null) {
+        // before the first solution one step per round: a sum objective (XCSP3 Cargo) raised its
+        // bound one by one for the whole round and found no solution
         return CdclSolver.UNKNOWN;
       }
       shaveStep = Math.min(2 * shaveStep, 1L << 30);
@@ -3371,6 +3399,9 @@ public final class LcgSolver implements ExternalPropagator {
   /** Whether {@link #encodeGraphs} ran. */
   private boolean graphsEncoded;
 
+  /** The layered-graph constraints {@link #encodeGraphs} removed from the store. */
+  private final List<LayeredGraphConstraint> encodedGraphs = new ArrayList<>();
+
   /**
    * Sets whether layered-graph constraints (regular, mdd) become clauses of the solver, before it
    * starts; on by default.
@@ -3423,15 +3454,253 @@ public final class LcgSolver implements ExternalPropagator {
             }
           }
         };
+    boolean propagatorLeft = false;
+    objectiveTerms = objectiveTerms();
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
+        encodedGraphs.add(g);
         graphConstraintsEncoded++;
-      } else if (c instanceof ImpliedClauses i && !rootFailed) {
-        impliedClauses += i.impliedClauses(model);
+      } else if (clauseCandidate(c) && encodeAsClauses(c)) {
+        constraintsAsClauses++;
+      } else {
+        propagatorLeft = true;
+        if (c instanceof ImpliedClauses i && !rootFailed) {
+          impliedClauses += i.impliedClauses(model);
+        }
       }
     }
+    if (PURE_CLAUSE_LITERALS
+        && freeSearch
+        && branching == Branching.ALTERNATE
+        && annotation != null
+        && !propagatorLeft
+        && allBinary()) {
+      // every constraint became clauses and every variable is 0/1: the model is a CNF, and the
+      // turns of the annotation (or dom/wdeg) and of activity branching only make slower SAT
+      // decisions. Nonograms at 600 s, two seeds: 2026 hard_03 53-56 s instead of 388 s and
+      // unsolved, 2013 dom_14 4-22 s instead of 79-129 s; 19 of 58 runs faster, 1 slower. Not with
+      // wider domains: pentominoes, whose regular constraints become clauses too, lost up to 4x
+      branching = Branching.LITERALS;
+      annotation = null;
+      annotationRun = false;
+      activityBranching = false;
+      pureClauses = true;
+    }
   }
+
+  /**
+   * The classes of small constraints that become clauses of the solver in place of their
+   * propagators ({@link ClauseEncoder}): a comma-separated list of simple class names, "all" or
+   * "none", by the system property {@code jacop.lcg.clauses}.
+   */
+  static final String CLAUSE_CLASSES = System.getProperty("jacop.lcg.clauses", "none");
+
+  /** The most clauses one constraint may become, {@code jacop.lcg.clauses.limit}. */
+  static final int CLAUSE_LIMIT = Integer.getInteger("jacop.lcg.clauses.limit", 256);
+
+  /** The most values a variable of such a constraint may have, {@code jacop.lcg.clauses.dom}. */
+  static final int CLAUSE_DOM = Integer.getInteger("jacop.lcg.clauses.dom", 64);
+
+  /** Prints each constraint tried as clauses, {@code jacop.lcg.clauses.debug}. */
+  static final boolean CLAUSE_DEBUG = Boolean.getBoolean("jacop.lcg.clauses.debug");
+
+  /**
+   * The most clauses of a sum of 0/1 variables (with at most one other variable) outside a
+   * reification, which becomes a unary counter, {@code jacop.lcg.clauses.counter}.
+   */
+  static final int CLAUSE_COUNTER = Integer.getInteger("jacop.lcg.clauses.counter", 20000);
+
+  /** The most unfixed 0/1 variables of such a sum, {@code jacop.lcg.clauses.boolArity}. */
+  static final int CLAUSE_BOOL_ARITY = Integer.getInteger("jacop.lcg.clauses.boolArity", 256);
+
+  private static final java.util.Set<String> CLAUSE_SET =
+      new java.util.HashSet<>(Arrays.asList(CLAUSE_CLASSES.split(",")));
+
+  /** Statistics: constraints given to the solver as clauses by {@link ClauseEncoder}. */
+  public long constraintsAsClauses;
+
+  /** Statistics: clauses of those constraints. */
+  public long constraintClauses;
+
+  /** The constraints removed from the store as clauses, put back by {@link #release}. */
+  private final List<Constraint> encodedConstraints = new ArrayList<>();
+
+  private ClauseEncoder clauseEncoder;
+
+  /** The classes "counter" in {@code jacop.lcg.clauses} gives to the unary counter alone. */
+  private static final java.util.Set<String> COUNTER_CLASSES =
+      java.util.Set.of(
+          "LinearInt",
+          "SumBool",
+          "LinearBool",
+          "SumInt",
+          "Count",
+          "CountBounds",
+          "AtMost",
+          "AtLeast");
+
+  private boolean counterOnly(Constraint c) {
+    String name = c.getClass().getSimpleName();
+    return CLAUSE_SET.contains("counter")
+        && COUNTER_CLASSES.contains(name)
+        && !"all".equals(CLAUSE_CLASSES)
+        && !CLAUSE_SET.contains(name);
+  }
+
+  /**
+   * The variables of the objective's definition (the objective and the terms of a linear form over
+   * it), or an empty set. A constraint over them stays a propagator: the core-guided phase and the
+   * LP read the definitions of the objective's terms from the store, such as {@code b <=> x = c} of
+   * a term b (spot5 28 loses its at-most-one groups and its proof when they are clauses).
+   */
+  private java.util.Set<IntVar> objectiveTerms() {
+    java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    if (clauseObjective == null || "none".equals(CLAUSE_CLASSES)) {
+      return terms;
+    }
+    terms.add(clauseObjective);
+    List<LinearForm> forms = new ArrayList<>();
+    for (Constraint c : store.getConstraints()) {
+      LinearForm f = LinearForms.of(c);
+      if (f != null && f.relation() == LinearForm.EQ) {
+        forms.add(f);
+      }
+    }
+    // the objective's sum, then the definitions of its terms that are defined once more (blocks
+    // of a split sum, y = b of bool2int), as the core phase follows them
+    Map<IntVar, Integer> occurs = new IdentityHashMap<>();
+    for (LinearForm f : forms) {
+      for (IntVar x : f.vars()) {
+        occurs.merge(x, 1, Integer::sum);
+      }
+    }
+    java.util.Set<IntVar> last = java.util.Set.of(clauseObjective);
+    for (int round = 0; !last.isEmpty() && round < 4; round++) {
+      java.util.Set<IntVar> added = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : forms) {
+        boolean follow = false;
+        for (IntVar x : f.vars()) {
+          follow |= last.contains(x) && (round == 0 || occurs.get(x) <= 2);
+        }
+        if (follow) {
+          for (IntVar x : f.vars()) {
+            if (terms.add(x)) {
+              added.add(x);
+            }
+          }
+        }
+      }
+      last = added;
+    }
+    return terms;
+  }
+
+  private java.util.Set<IntVar> objectiveTerms = java.util.Set.of();
+
+  /** The objective of {@link #minimize}, known when its terms are left out of the clauses. */
+  private IntVar clauseObjective;
+
+  private boolean clauseCandidate(Constraint c) {
+    if ("none".equals(CLAUSE_CLASSES)
+        || !("all".equals(CLAUSE_CLASSES)
+            || CLAUSE_SET.contains(c.getClass().getSimpleName())
+            || counterOnly(c))) {
+      return false;
+    }
+    int arity = 0;
+    int wide = 0;
+    for (org.jacop.core.Var v : c.arguments()) {
+      if (!(v instanceof IntVar x) || objectiveTerms.contains(x)) {
+        return false;
+      }
+      if (!x.singleton()) {
+        arity++;
+        if (trail.id(x) >= vars.length || x.getSize() > CLAUSE_BOOL_ARITY + 1) {
+          return false;
+        }
+        if (x.getSize() > CLAUSE_DOM) {
+          wide++;
+        }
+      }
+    }
+    // one variable wider than the limit, such as the count of a counter; the encoder's own limits
+    // decide the rest
+    return wide <= 1 && arity <= CLAUSE_BOOL_ARITY && (wide == 0 || arity > 2);
+  }
+
+  private boolean encodeAsClauses(Constraint c) {
+    if (clauseEncoder == null) {
+      clauseEncoder =
+          new ClauseEncoder(
+              new ClauseEncoder.Literals() {
+                @Override
+                public int atLeast(IntVar x, int v) {
+                  return geLit(trail.id(x), v);
+                }
+
+                @Override
+                public int valueLiteral(IntVar x, int v) {
+                  return eqVar(trail.id(x), v);
+                }
+
+                @Override
+                public int auxiliary() {
+                  return newAuxiliary();
+                }
+
+                @Override
+                public IntDomain root(IntVar x) {
+                  return x.dom();
+                }
+              },
+              CLAUSE_LIMIT,
+              CLAUSE_COUNTER);
+    }
+    List<int[]> cs = clauseEncoder.encode(c, counterOnly(c));
+    if (CLAUSE_DEBUG) {
+      String s = c.toString();
+      System.out.println(
+          "% clauses "
+              + (cs == null ? "rejected " : cs.size() + " ")
+              + (s.length() > 300 ? s.substring(0, 300) : s));
+    }
+    if (cs == null) {
+      return false;
+    }
+    for (int[] cl : cs) {
+      constraintClauses++;
+      if (!rootFailed && !sat.addClause(cl)) {
+        rootFailed = true;
+        clauseFailedAtRoot = true;
+      }
+    }
+    c.removeConstraint();
+    encodedConstraints.add(c);
+    return true;
+  }
+
+  /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
+  private boolean allBinary() {
+    for (IntVar x : vars) {
+      if (x != null && x.getSize() > 2) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Whether a free search whose model is clauses only, with no constraint left in the store once
+   * {@link #encodeGraphs} has run, leaves all decisions to the SAT solver (as {@link
+   * Branching#LITERALS}). On by default; the system property {@code jacop.lcg.pureClauseLiterals}
+   * set to false turns it off.
+   */
+  static final boolean PURE_CLAUSE_LITERALS =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.pureClauseLiterals", "true"));
+
+  /** Whether the model became clauses only and its search was left to the SAT solver. */
+  public boolean pureClauses;
 
   /**
    * Turns the explanation checker on or off: every explanation is then derived again in a scratch
@@ -3520,6 +3789,16 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   @Override
+  public void notifyAnalysedLiteral(int var) {
+    if (var < litVar.length && litVar[var] >= 0 && branching != Branching.LITERALS) {
+      int i = litVar[var];
+      if (bumpedAt[i] != sat.conflicts) {
+        bump(i); // each integer variable once per conflict, learnt ones not again
+      }
+    }
+  }
+
+  @Override
   public void notifyKeptLiteral(int lit) {
     keep(lit);
   }
@@ -3576,6 +3855,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     while (numAnnotationIndices > 0 && annotationLevel[numAnnotationIndices - 1] > level) {
       numAnnotationIndices--;
+    }
+    while (numLastLevels > 0 && lastLevel[numLastLevels - 1] > level) {
+      lastSize = lastLevelSize[--numLastLevels];
     }
     // a notified literal at or below the level stays assigned, and the solver does not notify it
     // again: it is applied at the next propagation (the root's, when a probe stopped at the
@@ -4028,11 +4310,21 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Hands the store back for search without learning: its changes are no longer recorded. The
-   * solver cannot solve again afterwards; its best solution stays readable.
+   * Hands the store back for search without learning: its changes are no longer recorded, and the
+   * layered-graph constraints that went to the solver as clauses are in the store again. The solver
+   * cannot solve again afterwards; its best solution stays readable.
    */
   public void release() {
     trail.detach();
+    for (LayeredGraphConstraint g : encodedGraphs) {
+      g.restoreConstraint(store);
+    }
+    encodedGraphs.clear();
+    // search without learning needs the propagators of the constraints that became clauses
+    for (Constraint c : encodedConstraints) {
+      c.impose(store);
+    }
+    encodedConstraints.clear();
   }
 
   /**
@@ -4686,6 +4978,16 @@ public final class LcgSolver implements ExternalPropagator {
     return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
   }
 
+  // decideLast scans the variables in lastOrder[0, lastSize), moving the fixed ones past lastSize;
+  // lastLevelSize[k] is lastSize when the scan first ran at decision level lastLevel[k], restored
+  // when search backtracks below that level (the scan over all variables at each decision took
+  // 48 % of skill-allocation's run time)
+  private int[] lastOrder;
+  private int lastSize;
+  private int[] lastLevel = new int[16];
+  private int[] lastLevelSize = new int[16];
+  private int numLastLevels;
+
   /**
    * Without activity branching, once the solver has assigned every literal, branches on {@code [x
    * <= min]} of the unfixed variable with the smallest domain.
@@ -4695,14 +4997,47 @@ public final class LcgSolver implements ExternalPropagator {
     if (activityBranching || !structural.isEmpty()) {
       return 0;
     }
+    if (lastOrder == null || lastOrder.length != vars.length) {
+      lastOrder = new int[vars.length];
+      lastSize = 0;
+      for (int i = 0; i < vars.length; i++) {
+        if (vars[i] != null && !unused[i]) {
+          lastOrder[lastSize++] = i;
+        }
+      }
+      numLastLevels = 0;
+    }
+    int level = sat.decisionLevel();
+    if (numLastLevels == 0 || lastLevel[numLastLevels - 1] < level) {
+      if (numLastLevels == lastLevel.length) {
+        lastLevel = Arrays.copyOf(lastLevel, 2 * numLastLevels);
+        lastLevelSize = Arrays.copyOf(lastLevelSize, 2 * numLastLevels);
+      }
+      lastLevel[numLastLevels] = level;
+      lastLevelSize[numLastLevels++] = lastSize;
+    }
     int localBest = -1;
     int bestSize = Integer.MAX_VALUE;
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] != null && !unused[i] && !vars[i].singleton() && vars[i].getSize() < bestSize) {
-        localBest = i;
-        bestSize = vars[i].getSize();
+    int size = lastSize;
+    for (int p = 0; p < size; ) {
+      int i = lastOrder[p];
+      IntVar x = vars[i];
+      if (x.singleton()) {
+        // fixed at this level or below: out of the scan until a backtrack below the level
+        lastOrder[p] = lastOrder[--size];
+        lastOrder[size] = i;
+        continue;
+      }
+      p++;
+      if (!unused[i]) {
+        int n = x.getSize();
+        if (n < bestSize || (n == bestSize && i < localBest)) {
+          localBest = i;
+          bestSize = n;
+        }
       }
     }
+    lastSize = size;
     if (localBest < 0) {
       return 0;
     }
@@ -4819,6 +5154,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private void bump(int i) {
+    bumpedAt[i] = sat.conflicts;
     if (sat.conflicts != activityConflicts) {
       activityConflicts = sat.conflicts;
       activityInc /= 0.95;

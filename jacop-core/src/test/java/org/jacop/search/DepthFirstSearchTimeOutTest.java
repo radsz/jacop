@@ -33,6 +33,7 @@ package org.jacop.search;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
@@ -76,6 +77,45 @@ class DepthFirstSearchTimeOutTest {
     store.impose(new LinearInt(all, weights, "==", 25));
 
     assertMasterTimesOutWithChild(store, new IntVar[] {x}, y, 200, 200);
+  }
+
+  @Test
+  void childSearchTimingOutAfterASolutionKeepsTheMastersPartOfIt() {
+    // All solutions: the master labels x, the child labels y. Under x = 1 the child has a single
+    // solution; under x = 2 it enumerates 2^24 solutions and times out among them. The master
+    // recorded its own part of a solution only when the child returned without a time-out, so the
+    // last solution paired x = 1 with the child's y0 = 2. Assigning it at the end of labeling threw
+    // FailException, and Fz2jacop printed =====UNSATISFIABLE===== after the solutions it had
+    // printed (KidneyExchange-4-041_c23 with -a --default-search input -t).
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar[] y = new IntVar[25];
+    y[0] = new IntVar(store, "y0", 1, 2);
+    store.impose(new XeqY(x, y[0]));
+    for (int i = 1; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+      store.impose(new XltY(y[i], x));
+    }
+
+    DepthFirstSearch<IntVar> master = new DepthFirstSearch<>();
+    DepthFirstSearch<IntVar> child = new DepthFirstSearch<>();
+    master.setPrintInfo(false);
+    child.setPrintInfo(false);
+    master.getSolutionListener().searchAll(true);
+    child.getSolutionListener().searchAll(true);
+    child.setSelectChoicePoint(new SimpleSelect<>(y, null, new IndomainMin<>()));
+    child.setTimeOutMilliseconds(200);
+    master.addChildSearch(child);
+    int level = store.level;
+
+    boolean result =
+        master.labeling(store, new SimpleSelect<>(new IntVar[] {x}, null, new IndomainMin<>()));
+
+    assertThat(result).isTrue();
+    assertThat(master.timeOutOccured).isTrue();
+    assertThat(x.value()).isEqualTo(2);
+    assertThat(y[0].value()).isEqualTo(2);
+    assertThat(store.level).isEqualTo(level);
   }
 
   /** Labels x with a master search and y with its child search, which times out. */

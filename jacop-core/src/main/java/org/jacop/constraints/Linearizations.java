@@ -43,6 +43,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.jacop.constraints.binpacking.Binpacking;
+import org.jacop.constraints.lp.AlldifferentCuts;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.constraints.regular.Regular;
@@ -1513,6 +1514,73 @@ public final class Linearizations {
       return null;
     }
     return list;
+  }
+
+  /**
+   * Returns the separation of the Hall cuts ({@link AlldifferentCuts}) of a constraint whose
+   * variables, three or more, pairwise distinct and not all fixed, take values with limits on their
+   * copies: an all-different ({@link #alldifferentList}), an all-different with exceptions ({@link
+   * AlldifferentExcept}, {@link AlldifferentExceptZero}) or a global cardinality constraint ({@link
+   * GCC}, {@link CountValues}, {@link CountValuesBounds}).
+   *
+   * @param c the constraint
+   * @param variants whether the constraints other than all-different are taken
+   * @return the separation, or null for another constraint
+   */
+  public static AlldifferentCuts hallCuts(Constraint c, boolean variants) {
+    IntVar[] distinct = alldifferentList(c);
+    if (distinct != null) {
+      return new AlldifferentCuts(distinct);
+    }
+    if (!variants) {
+      return null;
+    }
+    Class<?> k = c.getClass();
+    if (k == AlldifferentExcept.class || k == AlldifferentExceptZero.class) {
+      AlldifferentExcept a = (AlldifferentExcept) c;
+      if (!hallList(a.list) || a.s.getSize() > HALL_VALUES) {
+        return null;
+      }
+      int[] exceptions = new int[a.s.getSize()];
+      int t = 0;
+      for (ValueEnumeration en = a.s.valueEnumeration(); en.hasMoreElements(); ) {
+        exceptions[t++] = en.nextElement();
+      }
+      return AlldifferentCuts.except(a.list, exceptions);
+    }
+    if (k == GCC.class) {
+      GCC g = (GCC) c;
+      int[] values = g.countedValues();
+      if (!hallList(g.countedVariables()) || values.length == 0 || values.length > HALL_VALUES) {
+        return null;
+      }
+      return AlldifferentCuts.cardinality(g.countedVariables(), values, g.valueCounters(), true);
+    }
+    if (k == CountValues.class) {
+      CountValues cv = (CountValues) c;
+      if (!hallList(cv.list) || cv.values.length == 0 || cv.values.length > HALL_VALUES) {
+        return null;
+      }
+      return AlldifferentCuts.cardinality(cv.list, cv.values, cv.counters(), false);
+    }
+    if (k == CountValuesBounds.class) {
+      CountValuesBounds cb = (CountValuesBounds) c;
+      if (!hallList(cb.list) || cb.values.length == 0 || cb.values.length > HALL_VALUES) {
+        return null;
+      }
+      return AlldifferentCuts.cardinality(cb.list, cb.values, cb.lb, cb.ub, false);
+    }
+    return null;
+  }
+
+  // the most values with their own limits in a constraint of hallCuts
+  private static final int HALL_VALUES = 1_000;
+
+  // three or more pairwise distinct variables, not all fixed
+  private static boolean hallList(IntVar[] list) {
+    return list.length >= 3
+        && Arrays.stream(list).distinct().count() == list.length
+        && !Arrays.stream(list).allMatch(IntVar::singleton);
   }
 
   // whether valueRows encodes every unfixed variable of the list (up to its column cap)
