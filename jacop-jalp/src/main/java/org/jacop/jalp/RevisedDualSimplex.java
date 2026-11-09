@@ -294,7 +294,10 @@ public final class RevisedDualSimplex {
   // the ratio test: the candidates, their pivots and ratios, and the columns flipped
   private int[] candidate = {};
   private double[] candPivot = {};
-  private double[] candSlack = {};
+  // the ratio of each candidate (its dual slack over its pivot) and the ratio with the dual
+  // tolerance added (Harris), computed once for all the passes of the ratio test
+  private double[] candRatio = {};
+  private double[] candHarris = {};
   private double[] candRange = {};
   private int[] flipped = {};
   private int flips;
@@ -628,7 +631,8 @@ public final class RevisedDualSimplex {
     isTouched = new boolean[cols];
     candidate = new int[cols];
     candPivot = new double[cols];
-    candSlack = new double[cols];
+    candRatio = new double[cols];
+    candHarris = new double[cols];
     candRange = new double[cols];
     flipped = new int[cols];
     moved = new int[cols];
@@ -1866,16 +1870,21 @@ public final class RevisedDualSimplex {
       }
       if ((upper[j] ? alpha > 0 : alpha < 0) == toLower) {
         candidate[count] = j;
-        candPivot[count] = Math.abs(alpha);
-        candSlack[count] = upper[j] ? -d[j] : d[j];
+        double pivot = Math.abs(alpha);
+        double slack = Math.max(0, upper[j] ? -d[j] : d[j]);
+        candPivot[count] = pivot;
+        candRatio[count] = slack / pivot;
+        candHarris[count] = (slack + DUAL_TOL) / pivot;
         // a column moving to an artificial bound enters rather than flips
         candRange[count] = isArtificial(j, !upper[j]) ? Double.POSITIVE_INFINITY : hi[j] - lo[j];
         count++;
       } else if (isArtificial(j, upper[j]) && Math.abs(d[j]) <= DUAL_TOL) {
         // a column at an artificial bound with no pull on it may move on past that bound
         candidate[count] = j;
-        candPivot[count] = Math.abs(alpha);
-        candSlack[count] = 0;
+        double pivot = Math.abs(alpha);
+        candPivot[count] = pivot;
+        candRatio[count] = 0;
+        candHarris[count] = DUAL_TOL / pivot;
         candRange[count] = Double.POSITIVE_INFINITY;
         count++;
       }
@@ -1886,14 +1895,14 @@ public final class RevisedDualSimplex {
       ops += count;
       double bound = Double.POSITIVE_INFINITY;
       for (int i = 0; i < count; i++) {
-        bound = Math.min(bound, (Math.max(0, candSlack[i]) + DUAL_TOL) / candPivot[i]);
+        bound = Math.min(bound, candHarris[i]);
       }
       // the group of breakpoints up to the bound, moved to the front
       int g = 0;
       double drop = 0;
       int pick = -1;
       for (int i = 0; i < count; i++) {
-        if (Math.max(0, candSlack[i]) / candPivot[i] <= bound) {
+        if (candRatio[i] <= bound) {
           swap(i, g);
           drop += candPivot[g] * candRange[g];
           if (pick < 0 || candPivot[g] > candPivot[pick]) {
@@ -1913,7 +1922,8 @@ public final class RevisedDualSimplex {
       // what is left moves to the front
       System.arraycopy(candidate, g, candidate, 0, count - g);
       System.arraycopy(candPivot, g, candPivot, 0, count - g);
-      System.arraycopy(candSlack, g, candSlack, 0, count - g);
+      System.arraycopy(candRatio, g, candRatio, 0, count - g);
+      System.arraycopy(candHarris, g, candHarris, 0, count - g);
       System.arraycopy(candRange, g, candRange, 0, count - g);
       count -= g;
       ops += g;
@@ -1939,9 +1949,12 @@ public final class RevisedDualSimplex {
     double v = candPivot[a];
     candPivot[a] = candPivot[b];
     candPivot[b] = v;
-    v = candSlack[a];
-    candSlack[a] = candSlack[b];
-    candSlack[b] = v;
+    v = candRatio[a];
+    candRatio[a] = candRatio[b];
+    candRatio[b] = v;
+    v = candHarris[a];
+    candHarris[a] = candHarris[b];
+    candHarris[b] = v;
     v = candRange[a];
     candRange[a] = candRange[b];
     candRange[b] = v;

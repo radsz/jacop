@@ -3810,6 +3810,70 @@ Version 5.0 (unreleased)
      follow the root solution kept from the first solve in search, is
      unchanged.
 
+221. JaLP pivots are about 1.1x faster with the same arithmetic. The full
+     passes of ftran and btran over U read the pivot row, position, pivot
+     and column of each slot of the order in sequence, with the columns of
+     U in one flat array laid out in that order (a Forrest-Tomlin column
+     is appended), and the rows of L are indexed by step; the
+     factorization no longer allocates per step, and the bound-flipping
+     ratio test computes each breakpoint ratio once instead of in every
+     pass. On the LP bench (659 LPs, 120 s) every LP has the same pivots,
+     objective and factorizations; sgm 1.11x on the 199 LPs of 0.5 s or
+     more, 1.15x on those of 5 s or more (map10 1.5x, map16715-04 1.55x,
+     i_n13 1.29x).
+
+222. Under lazy clause generation (--lcg), a value excluded by a bound
+     is explained by the earliest bound of the variable beyond it,
+     instead of the variable's latest bound. Explanations that say
+     "x cannot take v" (Count, the counting reasons of GCC, Element,
+     linear reasons over holes, ...) cite weaker atoms from earlier
+     levels, so learnt clauses are more general: on peacable_queens 8
+     under -f, a third of the Count reason atoms could be weakened to
+     an earlier one before, none now. The earliest bound is found by
+     binary search over the variable's bound entries, whose values
+     only tighten. -Djacop.lcg.lift=false keeps the latest bound. On
+     the osolpro wide set at 600 s, --lcg: 5 very hard instances
+     better (cargo, blocks-world, ihtc kletzander and marte,
+     rcpsp-wet-diverse), none worse; --lcg -f, two repetitions: 6 very
+     hard instances better (gbac, tdtsp, neighbours, blocks-world,
+     cargo, work-task-variation), 1 worse (java-routing trip_8_3).
+
+223. Dichotomic bound search, off by default. --free-config
+     lcg-bisect=<gap> makes LCG free search probe the objective: it
+     assumes obj <= lb + (best - 1 - lb) / 2 under a conflict limit, and
+     a probe that fails on that assumption alone proves obj > target
+     (a root clause and the objectiveBound); a probe out of conflicts
+     halves the step, a proof doubles it again (at most half the gap).
+     Within the gap it runs branch and bound. --free-config
+     portfolio-bisect=<gap> gives this search to the second thread of
+     -p (without the core-guided phase and without clause sharing:
+     its clauses cost jp-encoding its proofs in the other threads),
+     in place of the last thread of the default layout. At -p 4, 240 s,
+     on 68 MiniZinc Challenge instances with an open bound gap
+     (osolpro benchmarks/bound-worker): the gap to the best known
+     solution averages 0.139 instead of 0.167 at 60 s, but at 240 s
+     the bound is better on 8 and worse on 6 (proved 42 against 44,
+     within run-to-run noise); tsptw n20w180.004 is proved only with
+     it, while spot5 1401 and community-detection Zakhary.s12.k4 lose
+     the bound of the DFS thread it replaces. Neutral on the 43
+     objective instances of wide-quick. OR-Tools CP-SAT runs similar
+     probes in its objective_shaving workers.
+
+224. The LP relaxation (LinearRelaxation) now has the weight and profit
+     rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
+     knapsacks KnapsackDetector posts), as linearised rows tried at the
+     root. Before, a model stated with knapsack constraints had no LP
+     row of them: on MiniZinc Challenge multi-knapsack the root LP was
+     empty or far from the optimum (mknap2-10: 1101197, optimum 624319)
+     and is now at the optimum. On the 15 multi-knapsack instances of
+     the Challenge (600 s), total time 95 s -> 38 s, and with -f 109 s
+     -> 38 s (mknap2-2: 32 s -> 12 s); no other wide-set instance gets
+     a different LP. -Dorg.jacop.lp.knapsackRows=false turns it off.
+     Lifted cover cuts of the knapsack rows (sequence-independent
+     lifting, Gu, Nemhauser and Savelsbergh, J. Comb. Optim. 4, 2000)
+     were tried as well and are not included: the MIR cuts already
+     reach the same root bounds on the MiniZinc Challenge instances.
+
 Version 4.11
 =============
 

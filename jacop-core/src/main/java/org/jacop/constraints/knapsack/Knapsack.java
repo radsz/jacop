@@ -48,6 +48,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Linearizations;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -84,12 +85,17 @@ public class Knapsack extends Constraint
         RemoveLevelLate,
         Copyable<Knapsack>,
         Explainable,
-        PbEncodable {
+        PbEncodable,
+        Linearizations.Relaxable {
 
   /** It specifies if any debugging information should be printed. */
   public static final boolean DEBUG_ALL = false;
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
+
+  // whether the LP relaxation gets the weight and profit rows, -Dorg.jacop.lp.knapsackRows=false
+  private static final boolean LP_ROWS =
+      !"false".equals(System.getProperty("org.jacop.lp.knapsackRows"));
 
   /**
    * It specifies the current level of the constraint store at which the consistency function of
@@ -1118,6 +1124,17 @@ public class Knapsack extends Constraint
     return new LinearForm[] {
       new LinearForm(vars, w, 0, LinearForm.EQ), new LinearForm(profitVars, p, 0, LinearForm.EQ)
     };
+  }
+
+  /**
+   * Returns the weight and profit rows ({@link #rows()}) for the LP relaxation, unless {@code
+   * -Dorg.jacop.lp.knapsackRows=false}.
+   *
+   * @return the rows
+   */
+  @Override
+  public List<LinearForm> relaxation() {
+    return LP_ROWS ? Arrays.asList(rows()) : List.of();
   }
 
   /**
