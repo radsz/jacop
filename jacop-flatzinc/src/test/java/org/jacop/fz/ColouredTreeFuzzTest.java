@@ -237,4 +237,60 @@ class ColouredTreeFuzzTest {
         detected >= 2 * satisfiable,
         detected + " detections, " + satisfiable + " satisfiable models");
   }
+
+  /**
+   * The edge filtering at the first call selects edges after the components were made, so the
+   * solution hint has to make them again; with the old components it found no common base and the
+   * model was reported unsatisfiable.
+   */
+  @Test
+  void hintAfterTheFilteringSelectsEdges() throws IOException {
+    String model =
+        String.join(
+            "\n",
+            "array [1..9] of int: from = [2,3,4,5,2,2,4,5,1];",
+            "array [1..9] of int: to = [1,2,2,1,2,4,3,5,2];",
+            "array [1..9] of int: w = [8,4,0,0,9,3,5,0,7];",
+            "var bool: es0 :: output_var;",
+            "var 0..1: i0;",
+            "var bool: es1 :: output_var;",
+            "var 0..1: i1;",
+            "var bool: es2 :: output_var;",
+            "var 0..1: i2;",
+            "var bool: es3 :: output_var;",
+            "var 0..1: i3;",
+            "var bool: es4 :: output_var;",
+            "var 0..1: i4;",
+            "var bool: es5 :: output_var;",
+            "var 0..1: i5;",
+            "var bool: es6 :: output_var;",
+            "var 0..1: i6;",
+            "var bool: es7 :: output_var;",
+            "var 0..1: i7;",
+            "var bool: es8 :: output_var;",
+            "var 0..1: i8;",
+            "array [1..9] of var bool: es :: output_array([1..9]) = [es0,es1,es2,es3,es4,es5,es6,es7,es8];",
+            "var 0..36: K :: output_var;",
+            "constraint bool2int(es0,i0);",
+            "constraint bool2int(es1,i1);",
+            "constraint bool2int(es2,i2);",
+            "constraint bool2int(es3,i3);",
+            "constraint bool2int(es4,i4);",
+            "constraint bool2int(es5,i5);",
+            "constraint bool2int(es6,i6);",
+            "constraint bool2int(es7,i7);",
+            "constraint bool2int(es8,i8);",
+            "constraint jacop_wst(5,from,to,w,es,K);",
+            "constraint int_lin_le([1],[i8],0);",
+            "constraint int_lin_le([1,1,1],[i2,i4,i7],2);",
+            "constraint int_lin_le([1,1,1,1,1],[i0,i1,i3,i5,i6],3);",
+            "constraint int_lin_le([1,1,1],[i0,i3,i8],2);",
+            "constraint int_lin_le([1,1,1,1,1,1],[i0,i1,i2,i4,i5,i8],2);",
+            "constraint int_lin_le([1,1],[i1,i6],2);",
+            "constraint int_lin_le([1,1,1],[i2,i5,i6],2);",
+            "constraint int_lin_le([1,1],[i3,i7],2);",
+            "solve minimize K;");
+    assertTrue(Integer.valueOf(13).equals(solve(model + "\n", "--lcg", "off")));
+    assertTrue(Integer.valueOf(13).equals(solve(model + "\n")));
+  }
 }

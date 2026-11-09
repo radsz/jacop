@@ -278,6 +278,9 @@ unless stated otherwise):
 - org.jacop.fz.conditionalSelect: if_then_else on integers as
   ConditionalSelect (bounds the result by the branches still possible)
   instead of IfThenElse/Conditional.
+- org.jacop.fz.constraintHints: solution hints of constraints (a common
+  base of ColouredSpanningTreeBound) as the first values of the search
+  and the saved phases; default true.
 - org.jacop.fz.convexAllocation: ConvexAllocation on separable convex
   costs of variables with a known sum; default true without LCG and
   false with LCG.
@@ -413,6 +416,9 @@ Search of the LCG solver:
 - jacop.lcg.value: value of an activity decision: split (lower half),
   max or min; default split.
 - jacop.lcg.lastConflict: last-conflict branching; default true.
+- jacop.lcg.bump: which variables a conflict bumps for activity
+  branching: seen (every integer variable whose atoms the analysis
+  met) or learnt (only the learnt clause's); default seen.
 - jacop.lcg.booleansFirst: activity branching on 0/1 variables
   first; default true.
 - jacop.lcg.late: none, or defined (the defined variables and the
