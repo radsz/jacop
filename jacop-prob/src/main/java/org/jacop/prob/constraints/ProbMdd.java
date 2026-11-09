@@ -88,7 +88,7 @@ public class ProbMdd extends Constraint
   /** The scaled probability of reaching the true sink. */
   final IntVar p;
 
-  /** The scale of p, at least 1. */
+  /** The scale of p, at least 1 and at most IntDomain.MAX_INT. */
   final long scale;
 
   // the diagram as given, for copies
@@ -136,7 +136,7 @@ public class ProbMdd extends Constraint
    *     numerator (chance level); the labels of a node's decision edges differ
    * @param edgeTarget for each edge, the index of its node in the next level, or -1 for the true
    *     sink, which only the edges of the last level reach
-   * @param scale the scale of p, at least 1 and at most Integer.MAX_VALUE
+   * @param scale the scale of p, at least 1 and at most IntDomain.MAX_INT
    * @param p floor(scale * Pr(T))
    */
   public ProbMdd(
@@ -165,7 +165,7 @@ public class ProbMdd extends Constraint
     if (levelSize[0] != 1) {
       throw new IllegalArgumentException("ProbMdd: the first level must have one node");
     }
-    if (scale < 1 || scale > Integer.MAX_VALUE) {
+    if (scale < 1 || scale > IntDomain.MAX_INT) {
       throw new IllegalArgumentException("ProbMdd: scale out of range");
     }
     for (IntVar v : x) {
@@ -326,11 +326,19 @@ public class ProbMdd extends Constraint
           size++;
         }
       }
+      // one look-up per label: the edges of a label are consecutive in byLabel
+      int[] group = byLabel[l];
+      for (int from = 0, to; from < group.length; from = to) {
+        to = endOf(group, from);
+        scratch.clear();
+        boolean in = !trail.excludedBefore(x[v], edgeLabel[group[from]], pos, scratch);
+        for (int k = from; k < to; k++) {
+          edgeIn[group[k]] = in;
+        }
+      }
       for (int n = levelStart[l]; n < levelStart[l + 1]; n++) {
         int count = 0;
         for (int e = edgeStart[n]; e < edgeStart[n + 1]; e++) {
-          scratch.clear();
-          edgeIn[e] = !trail.excludedBefore(x[v], edgeLabel[e], pos, scratch);
           if (edgeIn[e]) {
             count++;
           }
@@ -562,9 +570,11 @@ public class ProbMdd extends Constraint
       if (v < 0 || l == skip) {
         continue;
       }
-      for (int e = edgeStart[levelStart[l]]; e < edgeStart[levelStart[l + 1]]; e++) {
-        if (!edgeIn[e]) {
-          trail.excludedBefore(x[v], edgeLabel[e], pos, out);
+      int[] group = byLabel[l];
+      for (int from = 0, to; from < group.length; from = to) {
+        to = endOf(group, from);
+        if (!edgeIn[group[from]]) {
+          trail.excludedBefore(x[v], edgeLabel[group[from]], pos, out);
         }
       }
     }

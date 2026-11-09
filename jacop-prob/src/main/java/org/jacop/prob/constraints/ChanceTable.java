@@ -140,7 +140,7 @@ public class ChanceTable extends Constraint
    * @param tuples the tuples of each table, each with the values of its scope
    * @param scenarios the tables of each scenario, indices into scopes; it holds when x is a tuple
    *     of each of them
-   * @param weights the weight of each scenario, at least 0, of total at most Integer.MAX_VALUE
+   * @param weights the weight of each scenario, at least 0, of total at most IntDomain.MAX_INT
    * @param p the total weight of the scenarios that x satisfies
    */
   public ChanceTable(
@@ -262,8 +262,8 @@ public class ChanceTable extends Constraint
         throw new IllegalArgumentException("ChanceTable: negative weight");
       }
       sum += weights[s];
-      if (sum > Integer.MAX_VALUE) {
-        throw new IllegalArgumentException("ChanceTable: total weight above Integer.MAX_VALUE");
+      if (sum > IntDomain.MAX_INT) {
+        throw new IllegalArgumentException("ChanceTable: total weight above IntDomain.MAX_INT");
       }
       for (int f : scenarios[s]) {
         if (f < 0 || f >= scopes.length) {
