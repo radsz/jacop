@@ -183,6 +183,22 @@ public final class TableCliques {
    * @return the rows and the count of new columns
    */
   public static Result rows(List<Table> tables, Map<IntVar, List<IntVar>> implied) {
+    return rows(tables, implied, MAX_DOMAIN);
+  }
+
+  /**
+   * Returns the rows of {@link #rows(List, Map)}, with the hulls over the value columns of
+   * variables of up to {@code hullDomain} values instead of {@code
+   * -Dorg.jacop.lp.tableCliqueDomain} (16): a larger limit gives the tables keyed by a variable of
+   * more values, such as the class of a slot in car sequencing (25 classes), the hull over the
+   * columns of the key, which ties the other variables to its values and not only to its mean.
+   *
+   * @param tables the tables
+   * @param implied the Booleans each Boolean implies
+   * @param hullDomain the largest domain of a variable whose values get columns in the hulls
+   * @return the rows and the count of new columns
+   */
+  public static Result rows(List<Table> tables, Map<IntVar, List<IntVar>> implied, int hullDomain) {
     Columns columns = new Columns(tables, implied);
     List<LinearForm> rows = new ArrayList<>();
     cliques(tables, columns, rows);
@@ -193,7 +209,7 @@ public final class TableCliques {
     List<LinearForm> hulls = new ArrayList<>();
     columns.rows = hulls;
     if (TABLE_ENCODINGS) {
-      hulls(tables, columns, hulls);
+      hulls(tables, columns, hulls, hullDomain);
     }
     return new Result(all, cliqueColumns, hulls, columns.count - cliqueColumns);
   }
@@ -328,7 +344,8 @@ public final class TableCliques {
   }
 
   // the rows of the convex hull of each table over its tuple columns
-  private static void hulls(List<Table> tables, Columns cols, List<LinearForm> rows) {
+  private static void hulls(
+      List<Table> tables, Columns cols, List<LinearForm> rows, int hullDomain) {
     int made = 0;
     for (Table t : tables) {
       IntVar[] x = t.x();
@@ -349,7 +366,7 @@ public final class TableCliques {
       int some = -1;
       int key = -1;
       for (int j = 0; j < arity; j++) {
-        if (!x[j].singleton() && small(x[j])) {
+        if (!x[j].singleton() && small(x[j], hullDomain)) {
           some = some < 0 ? j : some;
           key = key < 0 && distinct(live, j) ? j : key;
         }
@@ -380,7 +397,7 @@ public final class TableCliques {
         // the values of x_j tie the tuples to other rows over its columns; when the tuples have
         // columns of their own, which only these rows link, and x_j has no columns yet, its value
         // is enough (a key's columns, as for the merged elements of table-layout)
-        if (small(x[j]) && (key < 0 || cols.made.containsKey(x[j]))) {
+        if (small(x[j], hullDomain) && (key < 0 || cols.made.containsKey(x[j]))) {
           valueRows(x[j], j, live, tupleColumn, cols, rows);
         } else {
           // x_j = sum of its values in the tuples, weighted by their columns
@@ -512,7 +529,11 @@ public final class TableCliques {
   }
 
   private static boolean small(IntVar x) {
-    return x.getSize() <= MAX_DOMAIN && x.max() - x.min() < Integer.MAX_VALUE;
+    return small(x, MAX_DOMAIN);
+  }
+
+  private static boolean small(IntVar x, int domain) {
+    return x.getSize() <= domain && x.max() - x.min() < Integer.MAX_VALUE;
   }
 
   private static long pair(int a, int b) {
