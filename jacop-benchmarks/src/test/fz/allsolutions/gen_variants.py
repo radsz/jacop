@@ -1,5 +1,6 @@
 """Random variants of the suite's small models: each var domain lo..hi gets a new upper bound
-hi + d (d in -1..1, never below lo), flattened with JaCoP's and MiniZinc's std library.
+hi + d (d in -1..1, never below lo), from seed 11 on constants of constraints move by one too,
+flattened with JaCoP's and MiniZinc's std library.
 Usage: MZN=minizinc MZN_SOLVER_PATH=... gen_variants.py SEED COUNT OUTDIR, then run
 AllSolutionsSuite with -Dsuite.roots=gen=OUTDIR (see decomposition/README.md)."""
 import os, random, re, subprocess, sys
@@ -21,6 +22,13 @@ for k in range(count * 3):
         lo, hi = int(mt.group(2)), int(mt.group(3))
         return f'{mt.group(1)}{lo}..{max(lo, hi + rnd.randint(-1, 1))}'
     new = dom.sub(change, src)
+    if seed >= 11:
+        # from seed 11 on, also move constants of constraints by one (not ranges or indices)
+        def nudge(mt):
+            v = int(mt.group(0))
+            return str(max(0, v + rnd.choice([-1, 1]))) if rnd.random() < 0.3 else mt.group(0)
+        new = '\n'.join(re.sub(r'(?<![\w.\[])\d+(?![\w.\]])', nudge, l) if l.startswith('constraint') else l
+                        for l in new.split('\n'))
     if new == src:
         continue
     name = f'{m}_s{seed}_{k}'
