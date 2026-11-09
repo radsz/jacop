@@ -222,6 +222,68 @@ class SchedulingBoundsFlatzincTest {
     assertTrue(detected > 75, "detected " + detected);
   }
 
+  /**
+   * 1|r_j|sum U_j with nothing else on the starts and a horizon with room for the late tasks: the
+   * dominance rule is turned on and keeps the optimum; a precedence between two starts turns it
+   * off.
+   */
+  @Test
+  void lateCountDominanceOnlyOnPureModels() throws IOException {
+    Random random = new Random(23);
+    int dominance = 0;
+    for (int trial = 0; trial < 80; trial++) {
+      int n = 4 + random.nextInt(3);
+      int[] d = new int[n];
+      for (int i = 0; i < n; i++) {
+        d[i] = 1 + random.nextInt(3);
+      }
+      boolean precedence = trial % 4 == 3;
+      StringBuilder fzn = new StringBuilder();
+      starts(n, 3 + Arrays.stream(d).sum(), random, fzn);
+      fzn.append("var 0..").append(n).append(": y0:: output_var;\n");
+      for (int i = 0; i < n; i++) {
+        fzn.append("var bool: b").append(i).append(";\n");
+        fzn.append("var 0..1: u").append(i).append(";\n");
+      }
+      fzn.append("constraint jacop_cumulative(s,")
+          .append(Arrays.toString(d).replace(" ", ""))
+          .append(',')
+          .append(Arrays.toString(IntStream.generate(() -> 1).limit(n).toArray()).replace(" ", ""))
+          .append(",1);\n");
+      StringBuilder vars = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        int due = d[i] + random.nextInt(8);
+        fzn.append("constraint int_le_reif(")
+            .append(due - d[i] + 1)
+            .append(",s")
+            .append(i)
+            .append(",b")
+            .append(i)
+            .append(");\n");
+        fzn.append("constraint bool2int(b").append(i).append(",u").append(i).append(");\n");
+        vars.append('u').append(i).append(',');
+      }
+      if (precedence) {
+        fzn.append("constraint int_le(s0,s1);\n");
+      }
+      fzn.append("constraint int_lin_eq([")
+          .append("1,".repeat(n))
+          .append("-1],[")
+          .append(vars)
+          .append("y0],0);\n");
+      fzn.append("solve minimize y0;\n");
+      String model = fzn.toString();
+      String out = run(model, true, "-debug");
+      boolean on = out.contains(", dominance)");
+      if (precedence) {
+        assertFalse(on, model);
+      }
+      dominance += on ? 1 : 0;
+      assertEquals(optimum(run(model, false)), optimum(out), "trial " + trial + "\n" + model);
+    }
+    assertTrue(dominance > 40, "dominance " + dominance);
+  }
+
   @Test
   void lateCountOfMiniZincModel() throws IOException {
     // flattened from sum(i)(bool2int(s[i] + p[i] > d[i])) with disjunctive(s, p)
