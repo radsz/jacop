@@ -52,7 +52,8 @@ import org.junit.jupiter.api.io.TempDir;
 
 /**
  * --gap stops an optimisation once the best solution is within the given percentage of the proved
- * bound, and -s prints each better bound as the statistic objectiveBound.
+ * bound, and -s -v prints each better bound as the statistic objectiveBound (plain -s does not, so
+ * that the bounds do not hide the solutions).
  */
 @Timeout(120)
 class ObjectiveGapFlatzincTest {
@@ -172,23 +173,32 @@ class ObjectiveGapFlatzincTest {
   }
 
   @Test
-  void boundIsPrintedWithStatisticsInTheModelsObjective() throws IOException {
-    String out = solve(MINIMISE, "--lcg=off", "-s");
+  void boundIsPrintedWithVerboseStatisticsInTheModelsObjective() throws IOException {
+    String out = solve(MINIMISE, "--lcg=off", "-s", "-v");
     assertEquals(List.of(100L), all(BOUND, out), out);
-    out = solve(MAXIMISE, "--lcg=off", "-s");
+    out = solve(MAXIMISE, "--lcg=off", "-s", "-v");
+    assertEquals(List.of(100L), all(BOUND, out), out);
+    out = solve(MAXIMISE, "--lcg=off", "--search-statistics");
     assertEquals(List.of(100L), all(BOUND, out), out);
     out = solve(MINIMISE, "--lcg=off");
+    assertTrue(all(BOUND, out).isEmpty(), out);
+    // plain -s keeps the final statistics and the solutions, without the running bounds
+    out = solve(MINIMISE, "--lcg=off", "-s");
+    assertTrue(all(BOUND, out).isEmpty(), out);
+    assertFalse(out.contains("objectiveBoundTime"), out);
+    assertTrue(out.contains("%%%mzn-stat: solveTime="), out);
+    out = solve(MINIMISE, "-p", "2", "-s");
     assertTrue(all(BOUND, out).isEmpty(), out);
   }
 
   @Test
   void boundsRiseDuringTheSearchWithoutRestarts() throws IOException {
     // depth-first search: each refuted obj = v leaves the subtree obj > v, whose minimum is a bound
-    String out = solve(RISING, "--lcg=off", "-s");
+    String out = solve(RISING, "--lcg=off", "-s", "-v");
     assertEquals(3, lastObjective(out), out);
     assertEquals(List.of(0L, 1L, 2L, 3L), all(BOUND, out), out);
     // LCG under the annotation, without restarts: the backjumps to the root raise the bound
-    out = solve(RISING, "--lcg=on", "-s");
+    out = solve(RISING, "--lcg=on", "-s", "-v");
     assertEquals(3, lastObjective(out), out);
     List<Long> bounds = all(BOUND, out);
     for (int k = 0; k < bounds.size(); k++) {
@@ -201,7 +211,7 @@ class ObjectiveGapFlatzincTest {
     assertTrue(out.contains("%%%mzn-stat: objectiveBoundTime="), out);
     // free search without LCG: refuted probes and nogoods raise the root's bound between runs
     for (String seed : new String[] {"1", "2", "3"}) {
-      out = solve(RISING, "--lcg=off", "-f", "-s", "-r", seed);
+      out = solve(RISING, "--lcg=off", "-f", "-s", "-v", "-r", seed);
       assertEquals(3, lastObjective(out), out);
       bounds = all(BOUND, out);
       for (int k = 0; k < bounds.size(); k++) {
@@ -224,7 +234,7 @@ class ObjectiveGapFlatzincTest {
         solve :: int_search([x], input_order, indomain_min, complete) maximize obj;
         """;
     for (String engine : new String[] {"--lcg=off", "--lcg=on"}) {
-      String out = solve(model, engine, "-s");
+      String out = solve(model, engine, "-s", "-v");
       assertEquals(109, lastObjective(out), out);
       assertTrue(out.contains("=========="), out);
       List<Long> bounds = all(BOUND, out);
@@ -235,7 +245,7 @@ class ObjectiveGapFlatzincTest {
   @Test
   void learntBoundsHoldAndRise() throws IOException {
     for (String seed : new String[] {"1", "2", "3"}) {
-      String out = solve(PAIRS, "-f", "-s", "-r", seed);
+      String out = solve(PAIRS, "-f", "-s", "-v", "-r", seed);
       assertEquals(10, lastObjective(out), out);
       assertTrue(out.contains("=========="), out);
       List<Long> bounds = all(BOUND, out);
@@ -244,16 +254,16 @@ class ObjectiveGapFlatzincTest {
         assertTrue(k == 0 || bounds.get(k) > bounds.get(k - 1), out);
       }
       // the last bound printed and the answer satisfy the gap
-      out = solve(PAIRS, "-f", "-s", "-r", seed, "--gap", "40");
+      out = solve(PAIRS, "-f", "-s", "-v", "-r", seed, "--gap", "40");
       assertGapHolds(out, 0.4, false);
     }
   }
 
   @Test
   void portfolioStopsWithinTheGap() throws IOException {
-    assertGapHolds(solve(MINIMISE, "-p", "3", "-s", "--gap", "10"), 0.1, false);
-    assertGapHolds(solve(MAXIMISE, "-p", "3", "-s", "--gap", "10"), 0.1, true);
-    assertGapHolds(solve(PAIRS, "-p", "3", "-s", "--gap", "10"), 0.1, false);
+    assertGapHolds(solve(MINIMISE, "-p", "3", "-s", "-v", "--gap", "10"), 0.1, false);
+    assertGapHolds(solve(MAXIMISE, "-p", "3", "-s", "-v", "--gap", "10"), 0.1, true);
+    assertGapHolds(solve(PAIRS, "-p", "3", "-s", "-v", "--gap", "10"), 0.1, false);
   }
 
   @Test
