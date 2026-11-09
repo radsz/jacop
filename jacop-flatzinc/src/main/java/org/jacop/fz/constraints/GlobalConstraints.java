@@ -640,7 +640,13 @@ class GlobalConstraints implements ParserTreeConstants {
     int offset = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(5));
     checkForDuplicateVariables(next);
     support.pose(new Alldistinct(next));
-    support.pose(new WeightedSubcircuits(next, tour, costs, tourCost, cost, offset));
+    // tour, tourCost and cost may share variables (or equal constants) with each other and with
+    // next; WeightedSubcircuits needs distinct variables, so repeated ones become equal copies
+    Set<IntVar> seen = new HashSet<>(Arrays.asList(next));
+    IntVar[] tourVars = distinctCopies(tour, seen);
+    IntVar[] tourCostVars = distinctCopies(tourCost, seen);
+    IntVar costVar = distinctCopies(new IntVar[] {cost}, seen)[0];
+    support.pose(new WeightedSubcircuits(next, tourVars, costs, tourCostVars, costVar, offset));
   }
 
   private static int[][] matrix(int[] values, int n) {
