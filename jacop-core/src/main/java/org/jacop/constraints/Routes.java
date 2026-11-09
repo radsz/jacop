@@ -579,6 +579,10 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
 
   // the arc is 1: every other arc out of its tail, or into its head, is 0
   private boolean explainOne(AtomicTrail trail, int p, int a, EntryList out) {
+    if (!degrees) {
+      // only the degrees set an arc to 1
+      return false;
+    }
     int t = tails[a];
     int h = heads[a];
     if (t != 0 && allOthersZero(trail, p, a, outArc, outStart[t], outStart[t + 1], selfLoop[t])) {
@@ -635,13 +639,19 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
       if (t == 0) {
         return true;
       }
-      return otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], -1, out)
-          || otherOne(trail, p, a, inArc, inStart[t], inStart[t + 1], -1, out);
+      return degrees
+          && (otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], -1, out)
+              || otherOne(trail, p, a, inArc, inStart[t], inStart[t + 1], -1, out));
     }
-    if (t != 0 && otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], selfLoop[t], out)) {
+    // without its degrees the constraint removes no arc because another arc at its node is 1
+    if (degrees
+        && t != 0
+        && otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], selfLoop[t], out)) {
       return true;
     }
-    if (h != 0 && otherOne(trail, p, a, inArc, inStart[h], inStart[h + 1], selfLoop[h], out)) {
+    if (degrees
+        && h != 0
+        && otherOne(trail, p, a, inArc, inStart[h], inStart[h + 1], selfLoop[h], out)) {
       return true;
     }
     if ((t == 0 || h == 0) && demands == null) {
@@ -721,9 +731,15 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
   private boolean failure(AtomicTrail trail, int p, EntryList out) {
     // a node with two arcs at 1, or with every arc out or in at 0
     for (int v = 1; v < n; v++) {
-      if (twoOnes(trail, p, outArc, outStart[v], outStart[v + 1], selfLoop[v], out)
-          || twoOnes(trail, p, inArc, inStart[v], inStart[v + 1], selfLoop[v], out)) {
+      // without its degrees a self loop at 1 does not exclude the other arcs here
+      int self = degrees ? selfLoop[v] : -1;
+      if (twoOnes(trail, p, outArc, outStart[v], outStart[v + 1], self, out)
+          || twoOnes(trail, p, inArc, inStart[v], inStart[v + 1], self, out)) {
         return true;
+      }
+      if (!degrees) {
+        // a node without an arc out or in is left to the constraints that keep the degrees
+        continue;
       }
       if (allOthersZero(trail, p, -1, outArc, outStart[v], outStart[v + 1], selfLoop[v])) {
         addZeros(trail, p, -1, outArc, outStart[v], outStart[v + 1], selfLoop[v], out);
