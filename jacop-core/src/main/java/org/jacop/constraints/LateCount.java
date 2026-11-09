@@ -39,6 +39,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Number of late tasks on a unary resource. Tasks i with start s[i] and duration d[i] do not
@@ -75,7 +78,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class LateCount extends Constraint implements SatisfiedPresent, Copyable<LateCount> {
+public class LateCount extends Constraint
+    implements SatisfiedPresent, Copyable<LateCount>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -111,6 +115,19 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
 
   // per position of order: the processing left after the origin of the run
   private final long[] eff;
+
+  // per task: the bounds of its start the relaxation reads (the domains, or the trail when
+  // explaining), and when explaining the minimum before weakening and the root minimum
+  private final long[] lo;
+  private final long[] hi;
+  private final long[] low;
+  private final long[] root;
+
+  // own reasons under lazy clause generation, on unless -Dorg.jacop.lateCount.reasons=false
+  static final boolean REASONS = !"false".equals(System.getProperty("org.jacop.lateCount.reasons"));
+
+  // the halvings tried when weakening the minima of a reason
+  private static final int REASON_ROUNDS = 4;
 
   // the bound with release dates (origins after the earliest start), on unless
   // -Dorg.jacop.lateCount.releases=false
@@ -197,6 +214,10 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     this.onTime = new boolean[n];
     this.key = new long[n];
     this.eff = new long[n];
+    this.lo = new long[n];
+    this.hi = new long[n];
+    this.low = new long[n];
+    this.root = new long[n];
     this.releases = releases == null ? null : Arrays.copyOf(releases, n);
     int[][] pairs = releases == null ? new int[2][0] : dominancePairs(this.releases);
     this.dominant = pairs[0];
@@ -221,48 +242,14 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
       checkFixed();
       dominance(store);
 
-      // count the tasks that must be late, collect the others with a positive duration
-      int sure = 0;
-      size = 0;
-      long origin = Long.MAX_VALUE;
       for (int i = 0; i < n; i++) {
-        IntVar s = starts[i];
-        if (s.min() > lastOnTime(i)) {
-          sure++;
-        } else if (durations[i] > 0) {
-          key[size++] = ((long) dues[i] << 24) | i;
-          origin = Math.min(origin, s.min());
-        }
+        lo[i] = starts[i].min();
+        hi[i] = starts[i].max();
       }
-      Arrays.sort(key, 0, size);
-      for (int k = 0; k < size; k++) {
-        int i = (int) (key[k] & 0xFFFFFF);
-        order[k] = i;
-        forced[k] = starts[i].max() <= lastOnTime(i);
-      }
-
-      // the origin with the largest bound: the earliest start of all, or a later one with the
-      // processing each task can do before it on a machine of its own taken off
-      long theta = origin;
-      int relaxed = -1;
-      if (RELEASES) {
-        for (int k = 0; k < size; k++) {
-          long t = starts[order[k]].min();
-          if (seen(k, t)) {
-            continue;
-          }
-          int value = lateOf(t, -1, false);
-          if (value > relaxed) {
-            relaxed = value;
-            theta = t;
-            if (value == IMPOSSIBLE) {
-              break;
-            }
-          }
-        }
-      }
-      relaxed = lateOf(theta, -1, false);
-      origin = theta;
+      int sure = prepare();
+      long theta = bestOrigin();
+      long origin = theta;
+      int relaxed = lateOf(theta, -1, false);
       if (relaxed == IMPOSSIBLE) {
         throw Store.failException;
       }
@@ -310,6 +297,61 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
       // also after a change of late, which may be one of the starts
       again = boundsSum() != before;
     } while (again);
+  }
+
+  /**
+   * It sorts the tasks by the bounds lo and hi: it counts the ones that must be late and puts the
+   * others with a positive duration into order by due date, with forced the ones that must be on
+   * time.
+   *
+   * @return the number of tasks that must be late.
+   */
+  private int prepare() {
+    int sure = 0;
+    size = 0;
+    for (int i = 0; i < n; i++) {
+      if (lo[i] > lastOnTime(i)) {
+        sure++;
+      } else if (durations[i] > 0) {
+        key[size++] = ((long) dues[i] << 24) | i;
+      }
+    }
+    Arrays.sort(key, 0, size);
+    for (int k = 0; k < size; k++) {
+      int i = (int) (key[k] & 0xFFFFFF);
+      order[k] = i;
+      forced[k] = hi[i] <= lastOnTime(i);
+    }
+    return sure;
+  }
+
+  /**
+   * The origin with the largest bound: the earliest start of all, or a later one with the
+   * processing each task can do before it on a machine of its own taken off.
+   */
+  private long bestOrigin() {
+    long theta = Long.MAX_VALUE;
+    for (int k = 0; k < size; k++) {
+      theta = Math.min(theta, lo[order[k]]);
+    }
+    if (RELEASES) {
+      int relaxed = -1;
+      for (int k = 0; k < size; k++) {
+        long t = lo[order[k]];
+        if (seen(k, t)) {
+          continue;
+        }
+        int value = lateOf(t, -1, false);
+        if (value > relaxed) {
+          relaxed = value;
+          theta = t;
+          if (value == IMPOSSIBLE) {
+            break;
+          }
+        }
+      }
+    }
+    return theta;
   }
 
   /**
@@ -374,7 +416,7 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
   // whether a task before position k in order has earliest start t
   private boolean seen(int k, long t) {
     for (int l = 0; l < k; l++) {
-      if (starts[order[l]].min() == t) {
+      if (lo[order[l]] == t) {
         return true;
       }
     }
@@ -421,7 +463,7 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     // its own (a relaxation); a task with none left is on time
     for (int k = 0; k < size; k++) {
       int i = order[k];
-      eff[k] = Math.max(0, durations[i] - Math.max(0, origin - starts[i].min()));
+      eff[k] = Math.max(0, durations[i] - Math.max(0, origin - lo[i]));
     }
     // forward: the due date of a free task less the forced durations before it, and the slack of
     // each forced task
@@ -522,6 +564,216 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     }
     heap[c] = last;
     return m;
+  }
+
+  /**
+   * The relaxation reads, for each task, whether it must be late (its minimum after its latest on
+   * time start), whether it must be on time (its maximum at most that start) and the minimum of its
+   * start, and to prune it reads the maximum of late. An atom is explained by those bounds, cited
+   * as weakly as they serve: late tasks by start &gt; due - p, on time ones by start &lt;= due - p,
+   * the minima lowered towards their root values by a common fraction (1, 1/2, 1/4, ...) as far as
+   * the bound from the same origin still implies the atom, and late by the largest maximum that
+   * still fails. The dominance rule and fixed overlaps have reasons of their own.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (!REASONS || !ownReason(trail, entry, out)) {
+      return false;
+    }
+    int kind = trail.kind(entry);
+    // inMin and inMax may have moved the bound past holes next to the computed one
+    if (kind == AtomicTrail.GE || kind == AtomicTrail.LE) {
+      trail.addSkippedHoles(
+          entry, kind == AtomicTrail.GE ? Integer.MIN_VALUE : Integer.MAX_VALUE, out);
+    }
+    return true;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return REASONS && ownReason(trail, trail.size(), out);
+  }
+
+  // what an own reason explains
+  private static final int LATE_MIN = 0;
+  private static final int ON_TIME = 1;
+  private static final int MADE_LATE = 2;
+  private static final int FAILURE = 3;
+
+  /**
+   * It adds the reason of the entry at position (a failure when position is the trail size), or
+   * returns false when this is not an entry the constraint explains, so the generic reason is used.
+   */
+  private boolean ownReason(AtomicTrail trail, int position, EntryList out) {
+    int what;
+    int task = -1;
+    for (IntVar s : starts) {
+      if (s == late) {
+        return false;
+      }
+    }
+    if (position == trail.size()) {
+      what = FAILURE;
+    } else {
+      IntVar x = trail.variable(position);
+      int kind = trail.kind(position);
+      long v = trail.skippedBound(position);
+      if (x == late) {
+        if (kind != AtomicTrail.GE) {
+          return false;
+        }
+        what = LATE_MIN;
+        return countReason(trail, position, what, -1, v, out);
+      }
+      for (int i = 0; i < n; i++) {
+        if (starts[i] == x) {
+          if (task >= 0) {
+            return false;
+          }
+          task = i;
+        }
+      }
+      if (task < 0) {
+        return false;
+      }
+      if (kind == AtomicTrail.LE && lastOnTime(task) <= v) {
+        what = ON_TIME;
+      } else if (kind == AtomicTrail.GE && lastOnTime(task) + 1 >= v) {
+        what = MADE_LATE;
+      } else {
+        return false;
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      lo[i] = trail.minBefore(starts[i], position);
+      hi[i] = trail.maxBefore(starts[i], position);
+    }
+    if (dominanceReason(trail, position, what, task, out)) {
+      return true;
+    }
+    if (what == FAILURE && overlapReason(trail, position, out)) {
+      return true;
+    }
+    return countReason(trail, position, what, task, 0, out);
+  }
+
+  // a reason from one pair of the dominance rule
+  private boolean dominanceReason(
+      AtomicTrail trail, int position, int what, int task, EntryList out) {
+    for (int k = 0; k < dominant.length; k++) {
+      int i = dominant[k];
+      int j = dominated[k];
+      boolean jOnTime = hi[j] <= lastOnTime(j);
+      boolean iLate = lo[i] > lastOnTime(i);
+      if (what == ON_TIME && i == task && jOnTime
+          || what == MADE_LATE && j == task && iLate
+          || what == FAILURE && jOnTime && iLate) {
+        if (what != MADE_LATE) {
+          trail.addBoundReaching(starts[j], position, false, lastOnTime(j), out);
+        }
+        if (what != ON_TIME) {
+          trail.addBoundReaching(starts[i], position, true, lastOnTime(i) + 1, out);
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // a reason of two fixed tasks that overlap
+  private boolean overlapReason(AtomicTrail trail, int position, EntryList out) {
+    for (int i = 0; i < n; i++) {
+      if (lo[i] != hi[i] || durations[i] == 0) {
+        continue;
+      }
+      for (int j = i + 1; j < n; j++) {
+        if (lo[j] == hi[j]
+            && durations[j] > 0
+            && lo[i] < lo[j] + durations[j]
+            && lo[j] < lo[i] + durations[i]) {
+          for (int t : new int[] {i, j}) {
+            trail.addLowerBound(starts[t], position, out);
+            trail.addUpperBound(starts[t], position, out);
+          }
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * A reason from the count: the task of an atom start &lt;= due - p is taken late, of an atom
+   * start &gt; due - p on time, and the count from the best origin must exceed the maximum of late
+   * (or reach v for an atom late &gt;= v). The minima are then weakened at that origin.
+   */
+  private boolean countReason(
+      AtomicTrail trail, int position, int what, int task, long v, EntryList out) {
+    if (what == LATE_MIN) {
+      for (int i = 0; i < n; i++) {
+        lo[i] = trail.minBefore(starts[i], position);
+        hi[i] = trail.maxBefore(starts[i], position);
+      }
+    }
+    if (what == ON_TIME) {
+      lo[task] = Math.max(lo[task], lastOnTime(task) + 1);
+    } else if (what == MADE_LATE) {
+      hi[task] = Math.min(hi[task], lastOnTime(task));
+    }
+    long max = trail.maxBefore(late, position);
+    int sure = prepare();
+    long theta = bestOrigin();
+    if (!follows(what, sure, lateOf(theta, -1, false), v, max)) {
+      return false;
+    }
+    for (int k = 0; k < size; k++) {
+      int i = order[k];
+      low[i] = lo[i];
+      root[i] = Math.min(lo[i], trail.rootDomain(starts[i]).min());
+    }
+    double fraction = 0;
+    double step = 1;
+    for (int round = 0; round < REASON_ROUNDS && fraction < 1; round++) {
+      double tryFraction = fraction + step;
+      if (tryFraction <= 1 && follows(what, sure, relaxedAt(theta, tryFraction), v, max)) {
+        fraction = tryFraction;
+      }
+      step /= 2;
+    }
+    int relaxed = relaxedAt(theta, fraction);
+    for (int i = 0; i < n; i++) {
+      if (lo[i] > lastOnTime(i)) {
+        if (i != task || what != ON_TIME) {
+          trail.addBoundReaching(starts[i], position, true, lastOnTime(i) + 1, out);
+        }
+      } else if (durations[i] > 0) {
+        if (hi[i] <= lastOnTime(i) && (i != task || what != MADE_LATE)) {
+          trail.addBoundReaching(starts[i], position, false, lastOnTime(i), out);
+        }
+        trail.addBoundReaching(starts[i], position, true, lo[i], out);
+      }
+    }
+    if (what != LATE_MIN && relaxed != IMPOSSIBLE) {
+      trail.addBoundReaching(late, position, false, sure + (long) relaxed - 1, out);
+    }
+    return true;
+  }
+
+  // the count from origin theta with the minima of the relaxed tasks lowered by fraction
+  private int relaxedAt(long theta, double fraction) {
+    for (int k = 0; k < size; k++) {
+      int i = order[k];
+      lo[i] = low[i] - (long) Math.floor(fraction * (low[i] - root[i]));
+    }
+    return lateOf(theta, -1, false);
+  }
+
+  private static boolean follows(int what, int sure, int relaxed, long v, long max) {
+    if (relaxed == IMPOSSIBLE) {
+      return true;
+    }
+    long count = sure + (long) relaxed;
+    return what == LATE_MIN ? count >= v : count > max;
   }
 
   @Override

@@ -74,6 +74,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Deviation;
+import org.jacop.constraints.DifferenceCycles;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -137,7 +138,9 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgtY;
+import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XgteqY;
+import org.jacop.constraints.XltC;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
@@ -151,11 +154,14 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusCneqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYgtC;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
@@ -188,6 +194,7 @@ import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
 import org.jacop.constraints.table.Table;
 import org.jacop.core.BooleanVar;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -214,13 +221,17 @@ import org.junit.jupiter.api.Test;
  *
  * <p>The number of models is set by {@code lcg.fuzz.runs} (default 2000, 300 in the {@code min}
  * profile) and the first seed by {@code lcg.fuzz.seed} (default 1). A failure names the seed, which
- * rebuilds the same model.
+ * rebuilds the same model. With {@code lcg.fuzz.holes=true} every variable, auxiliary ones too,
+ * gets up to two holes inside its domain, for the reasons of bounds that skip holes; a model that
+ * fails while its constraints are imposed is skipped.
  */
 class LcgFuzzTest {
 
   private static final int RUNS = Integer.getInteger("lcg.fuzz.runs", 2000);
 
   private static final int SEED = Integer.getInteger("lcg.fuzz.seed", 1);
+
+  private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
 
   /** A random model; built twice from the same seed, once for each solver. */
   private static final class Model {
@@ -232,8 +243,11 @@ class LcgFuzzTest {
     IntVar[] b;
     IntVar objective;
 
+    final Random holes;
+
     Model(long seed) {
       rnd = new Random(seed);
+      holes = HOLES ? new Random(seed * 31 + 7) : null;
       int n = 4 + rnd.nextInt(4);
       x = new IntVar[n];
       for (int i = 0; i < n; i++) {
@@ -268,8 +282,22 @@ class LcgFuzzTest {
 
     private IntVar intVar(String name, int min, int max) {
       IntVar v = new IntVar(store, name + "_" + vars.size(), min, max); // names may repeat
+      if (holes != null) {
+        punch(v);
+      }
       vars.add(v);
       return v;
+    }
+
+    // holes inside the domain, drawn from their own generator so the model is otherwise the same
+    private void punch(IntVar v) {
+      for (int k = holes.nextInt(3); k > 0 && v.max() - v.min() >= 2; k--) {
+        int h = v.min() + 1 + holes.nextInt(v.max() - v.min() - 1);
+        if (v.domain.contains(h) && v.domain.getSize() > 2) {
+          v.domain.subtractAdapt(h);
+          v.refreshBounds();
+        }
+      }
     }
 
     private IntVar sumObjective() {
@@ -474,8 +502,17 @@ class LcgFuzzTest {
                 1 + rnd.nextInt(2));
         case 6 -> new Spread(p, rnd.nextInt(6), intVar("sp", 0, 20));
         case 7 -> new Deviation(p, rnd.nextInt(6), intVar("dv", 0, 12));
-        case 8 -> new SubcircuitCost(chain("sn", 4, 1, 4), costs(4), intVar("sk", 0, 20));
-        case 9 -> new CircuitCost(chain("cn", 4, 1, 4), costs(4), intVar("ck", 0, 20));
+        case 8 -> {
+          // the cost globals check the structure only when ground: posted beside it, as documented
+          IntVar[] sn = chain("sn", 4, 1, 4);
+          post(new Subcircuit(sn));
+          yield new SubcircuitCost(sn, costs(4), intVar("sk", 0, 20));
+        }
+        case 9 -> {
+          IntVar[] cn = chain("cn", 4, 1, 4);
+          post(new Circuit(cn));
+          yield new CircuitCost(cn, costs(4), intVar("ck", 0, 20));
+        }
         case 10 ->
             new Alternative(
                 bool(), one(), intVar("ad", 0, 2), pick(b, 2), pick(x, 2), chain("ai", 2, 0, 2));
@@ -816,7 +853,7 @@ class LcgFuzzTest {
     Object randomConstraint() {
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(81)) {
+      return switch (rnd.nextInt(84)) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -1052,6 +1089,23 @@ class LcgFuzzTest {
               new String[] {"==", "!=", "<="}[rnd.nextInt(3)],
               value() + 2);
         }
+        case 81 -> differenceCycles();
+        case 82 -> {
+          // the basic time-table cumulative, durations possibly zero
+          IntVar[] s = pick(x, 3);
+          yield new CumulativeBasic(
+              s,
+              rnd.nextBoolean() ? constants(3, 1, 3) : chain("bd", 3, 0, 3),
+              chain("br", 3, 1, 2),
+              rnd.nextBoolean() ? constant(2 + rnd.nextInt(2)) : chain("bc", 1, 1, 4)[0]);
+        }
+        case 83 ->
+            switch (rnd.nextInt(4)) {
+              case 0 -> new XplusCneqZ(p[0], rnd.nextInt(3) - 1, p[1]);
+              case 1 -> new XplusYgtC(p[0], p[1], value());
+              case 2 -> new XgteqC(p[0], value());
+              default -> new XltC(p[0], value());
+            };
         default ->
             switch (rnd.nextInt(3)) {
               case 0 -> {
@@ -1084,6 +1138,34 @@ class LcgFuzzTest {
               }
             };
       };
+    }
+
+    // conditional difference constraints x - y <= c (each always, or when b == v), posted as
+    // primitives, and DifferenceCycles over them, as the FlatZinc detector posts it
+    private DifferenceCycles differenceCycles() {
+      int m = 3 + rnd.nextInt(3);
+      // arcs among three variables, so that they close cycles
+      IntVar[] nodes = pick(x, 3);
+      IntVar[] xs = new IntVar[m];
+      IntVar[] ys = new IntVar[m];
+      IntVar[] bs = new IntVar[m];
+      int[] c = new int[m];
+      int[] v = new int[m];
+      for (int i = 0; i < m; i++) {
+        IntVar[] e = pick(nodes, 2);
+        xs[i] = e[0];
+        ys[i] = e[1];
+        c[i] = rnd.nextInt(4) - 2;
+        XplusClteqZ d = new XplusClteqZ(xs[i], -c[i], ys[i]);
+        if (rnd.nextBoolean()) {
+          bs[i] = b[rnd.nextInt(b.length)];
+          v[i] = rnd.nextInt(2);
+          post(new IfThen(new XeqC(bs[i], v[i]), d));
+        } else {
+          post(d);
+        }
+      }
+      return new DifferenceCycles(xs, ys, c, bs, v);
     }
 
     private String relation() {
@@ -1638,7 +1720,13 @@ class LcgFuzzTest {
     long bisectProbes = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
-      Integer expected = reference(new Model(seed));
+      Integer expected;
+      try {
+        expected = reference(new Model(seed));
+      } catch (FailException _) {
+        // a constraint failed when it was imposed (machines outside a domain with holes)
+        continue;
+      }
       Model model = new Model(seed);
       String where = "seed " + seed + "\n" + model.describe();
       int status;

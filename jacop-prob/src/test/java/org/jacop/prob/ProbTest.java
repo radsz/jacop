@@ -33,6 +33,7 @@ package org.jacop.prob;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.IdentityHashMap;
@@ -50,7 +51,9 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
 import org.jacop.prob.constraints.ChanceSum;
+import org.jacop.prob.constraints.ChanceTable;
 import org.jacop.prob.constraints.ExpectedSum;
+import org.jacop.prob.constraints.ProbMdd;
 import org.jacop.prob.constraints.ScenarioChance;
 import org.jacop.prob.dist.Dist;
 import org.jacop.prob.num.ProbArith;
@@ -1050,6 +1053,691 @@ class ProbTest {
         unsat++;
       }
       long[] counts = solver.explanationStatistics().get("ChanceSum");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    assertThat(sat).isPositive();
+    assertThat(unsat).isPositive();
+    assertThat(own).isGreaterThan(generic);
+  }
+
+  // a random ChanceTable instance: shared tables over a few variables, scenarios of tables
+  private static final class TableInstance {
+    final int n;
+    final int[][] domains;
+    final int[] repeat;
+    final int[][] scopes;
+    final int[][][] tables;
+    final int[][] scenarios;
+    final long[] weights;
+    final int[] pDomain;
+    final long seed;
+
+    TableInstance(long seed) {
+      this.seed = seed;
+      Random random = new Random(seed);
+      n = 1 + random.nextInt(4);
+      domains = new int[n][];
+      repeat = new int[n];
+      for (int i = 0; i < n; i++) {
+        domains[i] = SumInstance.values(random, random.nextInt(2), 3 + random.nextInt(2));
+        repeat[i] = i > 0 && random.nextInt(8) == 0 ? random.nextInt(i) : -1;
+      }
+      int f = 1 + random.nextInt(5);
+      scopes = new int[f][];
+      tables = new int[f][][];
+      boolean unary = random.nextInt(3) == 0;
+      for (int t = 0; t < f; t++) {
+        int arity = unary ? 1 : 1 + random.nextInt(Math.min(3, n));
+        scopes[t] = new int[arity];
+        for (int k = 0; k < arity; k++) {
+          scopes[t][k] = random.nextInt(n);
+        }
+        int rows = random.nextInt(9);
+        tables[t] = new int[rows][arity];
+        for (int r = 0; r < rows; r++) {
+          for (int k = 0; k < arity; k++) {
+            tables[t][r][k] = random.nextInt(6);
+          }
+        }
+      }
+      int ns = 1 + random.nextInt(6);
+      scenarios = new int[ns][];
+      weights = new long[ns];
+      long total = 0;
+      for (int s = 0; s < ns; s++) {
+        scenarios[s] = new int[random.nextInt(3)];
+        for (int k = 0; k < scenarios[s].length; k++) {
+          scenarios[s][k] = random.nextInt(f);
+        }
+        weights[s] = random.nextInt(6);
+        total += weights[s];
+      }
+      pDomain = SumInstance.values(random, random.nextInt(3) == 0 ? -1 : 0, (int) total + 1);
+    }
+
+    IntVar[] vars(Store store) {
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        if (repeat[i] >= 0) {
+          x[i] = x[repeat[i]];
+          continue;
+        }
+        x[i] = new IntVar(store, "x" + i);
+        for (int a : domains[i]) {
+          x[i].addDom(a, a);
+        }
+      }
+      return x;
+    }
+
+    IntVar p(Store store) {
+      IntVar p = new IntVar(store, "p");
+      for (int a : pDomain) {
+        p.addDom(a, a);
+      }
+      return p;
+    }
+
+    ChanceTable constraint(IntVar[] x, IntVar p) {
+      return new ChanceTable(x, scopes, tables, scenarios, weights, p);
+    }
+
+    // the weight of the scenarios that the values of x (one per position of x) satisfy
+    long weightOf(int[] xv) {
+      long w = 0;
+      for (int s = 0; s < scenarios.length; s++) {
+        boolean holds = true;
+        for (int t : scenarios[s]) {
+          boolean found = false;
+          for (int[] row : tables[t]) {
+            boolean match = true;
+            for (int k = 0; k < row.length; k++) {
+              match &= xv[scopes[t][k]] == row[k];
+            }
+            found |= match;
+          }
+          holds &= found;
+        }
+        if (holds) {
+          w += weights[s];
+        }
+      }
+      return w;
+    }
+
+    int[] values(IntVar[] x, int[] tuple, IntVar[] dx) {
+      int[] xv = new int[n];
+      for (int i = 0; i < n; i++) {
+        xv[i] = tuple[Arrays.asList(dx).indexOf(x[i])];
+      }
+      return xv;
+    }
+
+    String describe() {
+      return "seed "
+          + seed
+          + " scopes "
+          + Arrays.deepToString(scopes)
+          + " tables "
+          + Arrays.deepToString(tables)
+          + " scenarios "
+          + Arrays.deepToString(scenarios)
+          + " weights "
+          + Arrays.toString(weights)
+          + " domains "
+          + Arrays.deepToString(domains)
+          + " repeat "
+          + Arrays.toString(repeat)
+          + " p "
+          + Arrays.toString(pDomain);
+    }
+  }
+
+  @Test
+  void testChanceTableAgainstBruteForce() {
+    int sat = 0;
+    for (int t = 0; t < TRIALS; t++) {
+      TableInstance in = new TableInstance(7_000_000L + t);
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar p = in.p(store);
+      IntVar[] dx = distinct(x);
+      IntVar[] all = Arrays.copyOf(dx, dx.length + 1);
+      all[dx.length] = p;
+      int expected = 0;
+      for (int[] tuple : tuples(all)) {
+        if (in.weightOf(in.values(x, tuple, dx)) == tuple[dx.length]) {
+          expected++;
+        }
+      }
+      store.impose(in.constraint(x, p));
+      int count = store.consistency() ? countSolutions(store, all) : 0;
+      assertThat(count).as(in.describe()).isEqualTo(expected);
+      if (expected > 0) {
+        sat++;
+      }
+
+      // a copy into a fresh store gives the same solutions
+      Store fresh = new Store();
+      IntVar[] fx = in.vars(fresh);
+      IntVar fp = in.p(fresh);
+      Map<Var, Var> freshMap = new IdentityHashMap<>();
+      Store plain = new Store();
+      IntVar[] px = in.vars(plain);
+      IntVar pp = in.p(plain);
+      for (int i = 0; i < x.length; i++) {
+        freshMap.put(px[i], fx[i]);
+      }
+      freshMap.put(pp, fp);
+      fresh.impose(in.constraint(px, pp).copy(identityMap(freshMap, fresh)));
+      IntVar[] fdx = distinct(fx);
+      IntVar[] freshAll = Arrays.copyOf(fdx, fdx.length + 1);
+      freshAll[fdx.length] = fp;
+      int copied = fresh.consistency() ? countSolutions(fresh, freshAll) : 0;
+      assertThat(copied).as(in.describe()).isEqualTo(expected);
+    }
+    assertThat(sat).isPositive();
+    assertThat(sat).isLessThan(TRIALS);
+  }
+
+  @Test
+  void testChanceTablePrunesByWeight() {
+    // two scenarios over x in 0..2: x in {0, 1} with weight 3, x in {1} with weight 2
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2);
+    IntVar p = new IntVar(store, "p", 4, 5);
+    int[][] scopes = {{0}, {0}};
+    int[][][] tables = {{{0}, {1}}, {{1}}};
+    store.impose(
+        new ChanceTable(
+            new IntVar[] {x}, scopes, tables, new int[][] {{0}, {1}}, new long[] {3, 2}, p));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.singleton()).isTrue();
+    assertThat(x.value()).isEqualTo(1);
+    assertThat(p.value()).isEqualTo(5);
+  }
+
+  @Test
+  void testChanceTableRejectsBadInput() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 2);
+    IntVar p = new IntVar(store, "p", 0, 5);
+    IntVar[] xs = {x};
+    int[][][] one = {{{0}}};
+    assertThatThrownBy(
+            () -> new ChanceTable(xs, new int[][] {{1}}, one, new int[][] {{0}}, new long[] {1}, p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new ChanceTable(xs, new int[][] {{0}}, one, new int[][] {{0}}, new long[] {-1}, p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> new ChanceTable(xs, new int[][] {{0}}, one, new int[][] {{1}}, new long[] {1}, p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new ChanceTable(
+                    new IntVar[] {p}, new int[][] {{0}}, one, new int[][] {{0}}, new long[] {1}, p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new ChanceTable(
+                    xs,
+                    new int[][] {{0}},
+                    new int[][][] {{{0, 1}}},
+                    new int[][] {{0}},
+                    new long[] {1},
+                    p))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testChanceTableWithLcg() {
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int t = 0; t < TRIALS; t++) {
+      TableInstance in = new TableInstance(8_000_000L + t);
+      Integer expected = null;
+      {
+        Store store = new Store();
+        IntVar[] x = in.vars(store);
+        IntVar p = in.p(store);
+        IntVar[] dx = distinct(x);
+        for (int[] tuple : tuples(dx)) {
+          long w = in.weightOf(in.values(x, tuple, dx));
+          if (p.domain.contains((int) w)) {
+            expected = expected == null ? (int) -w : Math.min(expected, (int) -w);
+          }
+        }
+      }
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar p = in.p(store);
+      store.impose(in.constraint(x, p));
+      IntVar objective = new IntVar(store, "obj", -1000, 1000);
+      store.impose(new LinearInt(new IntVar[] {p, objective}, new int[] {1, 1}, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status;
+      try {
+        status = solver.minimize(objective);
+      } catch (IllegalStateException e) {
+        throw new AssertionError(in.describe(), e);
+      }
+      assertThat(status).as(in.describe()).isNotEqualTo(CdclSolver.UNKNOWN);
+      assertThat(status == CdclSolver.SAT).as(in.describe()).isEqualTo(expected != null);
+      if (status == CdclSolver.SAT) {
+        IntVar[] dx = distinct(x);
+        int[] values = new int[dx.length];
+        for (int i = 0; i < dx.length; i++) {
+          values[i] = solver.value(dx[i]);
+        }
+        assertThat(in.weightOf(in.values(x, values, dx)))
+            .as(in.describe())
+            .isEqualTo(solver.value(p));
+        assertThat(solver.value(objective)).as(in.describe()).isEqualTo(expected);
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("ChanceTable");
+      if (counts != null) {
+        own += counts[0] - counts[1] + counts[3] - counts[4];
+        generic += counts[1] + counts[4];
+      }
+    }
+    assertThat(sat).isPositive();
+    assertThat(unsat).isPositive();
+    assertThat(own).isGreaterThan(generic);
+  }
+
+  // a random ProbMdd instance: decision levels in a random order between chance levels
+  private static final class MddInstance {
+    final int n;
+    final int[][] domains;
+    final int[] repeat;
+    final int[] levelVar;
+    final int[] levelDen;
+    final int[] levelSize;
+    final int[] nodeEdges;
+    final int[] edgeLabel;
+    final int[] edgeTarget;
+    final long scale;
+    final int[] pDomain;
+    final long seed;
+
+    MddInstance(long seed) {
+      this.seed = seed;
+      Random random = new Random(seed);
+      n = 1 + random.nextInt(4);
+      domains = new int[n][];
+      repeat = new int[n];
+      for (int i = 0; i < n; i++) {
+        domains[i] = SumInstance.values(random, random.nextInt(2), 2 + random.nextInt(2));
+        repeat[i] = i > 0 && random.nextInt(10) == 0 ? random.nextInt(i) : -1;
+      }
+      List<Integer> order = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        if (random.nextInt(5) != 0) {
+          order.add(i);
+        }
+      }
+      int chance = random.nextInt(4);
+      for (int c = 0; c < chance; c++) {
+        order.add(random.nextInt(order.size() + 1), -1);
+      }
+      if (order.isEmpty()) {
+        order.add(-1);
+      }
+      int levels = order.size();
+      levelVar = order.stream().mapToInt(Integer::intValue).toArray();
+      levelDen = new int[levels];
+      levelSize = new int[levels];
+      for (int l = 0; l < levels; l++) {
+        levelDen[l] = 1 + random.nextInt(6);
+        levelSize[l] = l == 0 ? 1 : 1 + random.nextInt(3);
+      }
+      List<Integer> counts = new ArrayList<>();
+      List<Integer> labels = new ArrayList<>();
+      List<Integer> targets = new ArrayList<>();
+      for (int l = 0; l < levels; l++) {
+        int next = l == levels - 1 ? 0 : levelSize[l + 1];
+        for (int node = 0; node < levelSize[l]; node++) {
+          int count = 0;
+          if (levelVar[l] >= 0) {
+            for (int v = 0; v <= 4; v++) {
+              if (random.nextInt(3) != 0) {
+                labels.add(v);
+                targets.add(next == 0 ? -1 : random.nextInt(next));
+                count++;
+              }
+            }
+          } else {
+            int left = levelDen[l] - (random.nextInt(4) == 0 ? 1 : 0);
+            int k = 1 + random.nextInt(3);
+            for (int j = 0; j < k && left > 0; j++) {
+              int w = j == k - 1 ? left : random.nextInt(left + 1);
+              left -= w;
+              labels.add(w);
+              targets.add(next == 0 ? -1 : random.nextInt(next));
+              count++;
+            }
+          }
+          counts.add(count);
+        }
+      }
+      nodeEdges = counts.stream().mapToInt(Integer::intValue).toArray();
+      edgeLabel = labels.stream().mapToInt(Integer::intValue).toArray();
+      edgeTarget = targets.stream().mapToInt(Integer::intValue).toArray();
+      long den = 1;
+      for (int l = 0; l < levels; l++) {
+        if (levelVar[l] < 0) {
+          den *= levelDen[l];
+        }
+      }
+      scale = random.nextBoolean() ? den : 1 + random.nextInt(40);
+      pDomain = SumInstance.values(random, random.nextInt(4) == 0 ? -1 : 0, (int) scale + 1);
+    }
+
+    IntVar[] vars(Store store) {
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        if (repeat[i] >= 0) {
+          x[i] = x[repeat[i]];
+          continue;
+        }
+        x[i] = new IntVar(store, "x" + i);
+        for (int a : domains[i]) {
+          x[i].addDom(a, a);
+        }
+      }
+      return x;
+    }
+
+    IntVar p(Store store) {
+      IntVar p = new IntVar(store, "p");
+      for (int a : pDomain) {
+        p.addDom(a, a);
+      }
+      return p;
+    }
+
+    ProbMdd constraint(IntVar[] x, IntVar p) {
+      return new ProbMdd(
+          x, levelVar, levelDen, levelSize, nodeEdges, edgeLabel, edgeTarget, scale, p);
+    }
+
+    // floor(scale * Pr(T)) for the values of x, by a walk over the paths with exact fractions
+    long value(int[] xv) {
+      BigInteger[] r = walk(0, 0, xv);
+      return r[0].multiply(BigInteger.valueOf(scale)).divide(r[1]).longValueExact();
+    }
+
+    // {numerator, denominator} of the probability of reaching T from a node of a level
+    private BigInteger[] walk(int level, int node, int[] xv) {
+      if (level == levelVar.length) {
+        return new BigInteger[] {BigInteger.ONE, BigInteger.ONE};
+      }
+      int first = 0;
+      for (int l = 0; l < level; l++) {
+        first += levelSize[l];
+      }
+      int edge = 0;
+      for (int k = 0; k < first + node; k++) {
+        edge += nodeEdges[k];
+      }
+      BigInteger num = BigInteger.ZERO;
+      BigInteger den = BigInteger.ONE;
+      for (int e = edge; e < edge + nodeEdges[first + node]; e++) {
+        int t = edgeTarget[e];
+        BigInteger[] child = walk(level + 1, Math.max(t, 0), xv);
+        if (levelVar[level] >= 0) {
+          if (edgeLabel[e] == xv[levelVar[level]]) {
+            return child;
+          }
+        } else {
+          // num / den + w * child / (levelDen * child den)
+          BigInteger d = BigInteger.valueOf(levelDen[level]).multiply(child[1]);
+          num =
+              num.multiply(d)
+                  .add(BigInteger.valueOf(edgeLabel[e]).multiply(child[0]).multiply(den));
+          den = den.multiply(d);
+        }
+      }
+      return new BigInteger[] {num, den};
+    }
+
+    int[] values(IntVar[] x, int[] tuple, IntVar[] dx) {
+      int[] xv = new int[n];
+      for (int i = 0; i < n; i++) {
+        xv[i] = tuple[Arrays.asList(dx).indexOf(x[i])];
+      }
+      return xv;
+    }
+
+    String describe() {
+      return "seed "
+          + seed
+          + " levelVar "
+          + Arrays.toString(levelVar)
+          + " levelDen "
+          + Arrays.toString(levelDen)
+          + " levelSize "
+          + Arrays.toString(levelSize)
+          + " nodeEdges "
+          + Arrays.toString(nodeEdges)
+          + " labels "
+          + Arrays.toString(edgeLabel)
+          + " targets "
+          + Arrays.toString(edgeTarget)
+          + " scale "
+          + scale
+          + " domains "
+          + Arrays.deepToString(domains)
+          + " repeat "
+          + Arrays.toString(repeat)
+          + " p "
+          + Arrays.toString(pDomain);
+    }
+  }
+
+  @Test
+  void testProbMddAgainstBruteForce() {
+    int sat = 0;
+    for (int t = 0; t < TRIALS; t++) {
+      MddInstance in = new MddInstance(9_000_000L + t);
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar p = in.p(store);
+      IntVar[] dx = distinct(x);
+      IntVar[] all = Arrays.copyOf(dx, dx.length + 1);
+      all[dx.length] = p;
+      int expected = 0;
+      for (int[] tuple : tuples(all)) {
+        if (in.value(in.values(x, tuple, dx)) == tuple[dx.length]) {
+          expected++;
+        }
+      }
+      store.impose(in.constraint(x, p));
+      int count = store.consistency() ? countSolutions(store, all) : 0;
+      assertThat(count).as(in.describe()).isEqualTo(expected);
+      if (expected > 0) {
+        sat++;
+      }
+
+      Store fresh = new Store();
+      IntVar[] fx = in.vars(fresh);
+      IntVar fp = in.p(fresh);
+      Store plain = new Store();
+      IntVar[] px = in.vars(plain);
+      IntVar pp = in.p(plain);
+      Map<Var, Var> freshMap = new IdentityHashMap<>();
+      for (int i = 0; i < x.length; i++) {
+        freshMap.put(px[i], fx[i]);
+      }
+      freshMap.put(pp, fp);
+      fresh.impose(in.constraint(px, pp).copy(identityMap(freshMap, fresh)));
+      IntVar[] fdx = distinct(fx);
+      IntVar[] freshAll = Arrays.copyOf(fdx, fdx.length + 1);
+      freshAll[fdx.length] = fp;
+      int copied = fresh.consistency() ? countSolutions(fresh, freshAll) : 0;
+      assertThat(copied).as(in.describe()).isEqualTo(expected);
+    }
+    assertThat(sat).isPositive();
+    assertThat(sat).isLessThan(TRIALS);
+  }
+
+  @Test
+  void testProbMddPrunesDecisions() {
+    // x0 then a coin of 3/4 towards T: x0 = 1 reaches the coin, x0 = 0 the false sink
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar p = new IntVar(store, "p", 1, 4);
+    store.impose(
+        new ProbMdd(
+            new IntVar[] {x},
+            new int[] {0, -1},
+            new int[] {1, 4},
+            new int[] {1, 1},
+            new int[] {1, 1},
+            new int[] {1, 3},
+            new int[] {0, -1},
+            4,
+            p));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.value()).isEqualTo(1);
+    assertThat(p.value()).isEqualTo(3);
+  }
+
+  @Test
+  void testProbMddRejectsBadInput() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar p = new IntVar(store, "p", 0, 4);
+    IntVar[] xs = {x};
+    // two roots, a variable on two levels, probabilities above 1, a repeated label, a bad target
+    assertThatThrownBy(
+            () ->
+                new ProbMdd(
+                    xs,
+                    new int[] {0},
+                    new int[] {1},
+                    new int[] {2},
+                    new int[] {1, 1},
+                    new int[] {0, 1},
+                    new int[] {-1, -1},
+                    4,
+                    p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new ProbMdd(
+                    xs,
+                    new int[] {0, 0},
+                    new int[] {1, 1},
+                    new int[] {1, 1},
+                    new int[] {1, 1},
+                    new int[] {0, 1},
+                    new int[] {0, -1},
+                    4,
+                    p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new ProbMdd(
+                    xs,
+                    new int[] {-1},
+                    new int[] {4},
+                    new int[] {1},
+                    new int[] {2},
+                    new int[] {3, 2},
+                    new int[] {-1, -1},
+                    4,
+                    p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new ProbMdd(
+                    xs,
+                    new int[] {0},
+                    new int[] {1},
+                    new int[] {1},
+                    new int[] {2},
+                    new int[] {1, 1},
+                    new int[] {-1, -1},
+                    4,
+                    p))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () ->
+                new ProbMdd(
+                    xs,
+                    new int[] {0, -1},
+                    new int[] {1, 2},
+                    new int[] {1, 1},
+                    new int[] {1, 1},
+                    new int[] {1, 1},
+                    new int[] {1, -1},
+                    4,
+                    p))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testProbMddWithLcg() {
+    int sat = 0;
+    int unsat = 0;
+    long own = 0;
+    long generic = 0;
+    for (int t = 0; t < TRIALS; t++) {
+      MddInstance in = new MddInstance(10_000_000L + t);
+      Integer expected = null;
+      {
+        Store store = new Store();
+        IntVar[] x = in.vars(store);
+        IntVar p = in.p(store);
+        IntVar[] dx = distinct(x);
+        for (int[] tuple : tuples(dx)) {
+          long w = in.value(in.values(x, tuple, dx));
+          if (p.domain.contains((int) w)) {
+            expected = expected == null ? (int) -w : Math.min(expected, (int) -w);
+          }
+        }
+      }
+      Store store = new Store();
+      IntVar[] x = in.vars(store);
+      IntVar p = in.p(store);
+      store.impose(in.constraint(x, p));
+      IntVar objective = new IntVar(store, "obj", -100_000, 100_000);
+      store.impose(new LinearInt(new IntVar[] {p, objective}, new int[] {1, 1}, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      int status;
+      try {
+        status = solver.minimize(objective);
+      } catch (IllegalStateException e) {
+        throw new AssertionError(in.describe(), e);
+      }
+      assertThat(status).as(in.describe()).isNotEqualTo(CdclSolver.UNKNOWN);
+      assertThat(status == CdclSolver.SAT).as(in.describe()).isEqualTo(expected != null);
+      if (status == CdclSolver.SAT) {
+        IntVar[] dx = distinct(x);
+        int[] values = new int[dx.length];
+        for (int i = 0; i < dx.length; i++) {
+          values[i] = solver.value(dx[i]);
+        }
+        assertThat(in.value(in.values(x, values, dx))).as(in.describe()).isEqualTo(solver.value(p));
+        assertThat(solver.value(objective)).as(in.describe()).isEqualTo(expected);
+        sat++;
+      } else {
+        unsat++;
+      }
+      long[] counts = solver.explanationStatistics().get("ProbMdd");
       if (counts != null) {
         own += counts[0] - counts[1] + counts[3] - counts[4];
         generic += counts[1] + counts[4];

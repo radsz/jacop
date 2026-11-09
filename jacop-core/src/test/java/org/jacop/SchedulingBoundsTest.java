@@ -33,6 +33,7 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
@@ -45,8 +46,12 @@ import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.ExplanationChecker;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.Search;
@@ -330,5 +335,69 @@ class SchedulingBoundsTest {
       store.impose(new LateCount(s, p, due, late, global == 2));
     }
     return minimize(store, s, late);
+  }
+
+  /**
+   * Random dives on LateCount alone, with release dates, zero durations and the dominance rule:
+   * every reason it gives (the count, the dominance pairs, fixed overlaps, failures) must imply its
+   * atom with the domains before the dive.
+   */
+  @Test
+  void lateCountReasonsImplyTheirAtoms() {
+    Random rnd = new Random(31);
+    int checked = 0;
+    int failures = 0;
+    for (int instance = 0; instance < 400; instance++) {
+      Store store = new Store();
+      int n = 3 + rnd.nextInt(5);
+      IntVar[] s = new IntVar[n];
+      int[] d = new int[n];
+      int[] due = new int[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, rnd.nextInt(5), 14);
+        if (rnd.nextInt(4) == 0) {
+          s[i].domain.inComplement(0, s[i], s[i].min() + 1 + rnd.nextInt(4));
+        }
+        d[i] = rnd.nextInt(6) == 0 ? 0 : 1 + rnd.nextInt(4);
+        due[i] = s[i].min() + d[i] + rnd.nextInt(6);
+      }
+      IntVar late = new IntVar(store, "late", 0, n);
+      AtomicTrail trail = new AtomicTrail(store);
+      LateCount lc = new LateCount(s, d, due, late, rnd.nextBoolean());
+      store.impose(lc);
+      boolean consistent = store.consistency();
+      for (int step = 0; consistent && step < 10; step++) {
+        store.setLevel(store.level + 1);
+        IntVar x = rnd.nextInt(3) == 0 ? late : s[rnd.nextInt(n)];
+        int v = x.min() + rnd.nextInt(x.max() - x.min() + 1);
+        try {
+          switch (rnd.nextInt(4)) {
+            case 0 -> x.domain.inMin(store.level, x, v);
+            case 1 -> x.domain.inMax(store.level, x, v);
+            case 2 -> x.domain.inComplement(store.level, x, v);
+            default -> x.domain.in(store.level, x, v, v);
+          }
+          consistent = store.consistency();
+        } catch (FailException _) {
+          consistent = false;
+        }
+      }
+      ExplanationChecker checker = new ExplanationChecker(trail);
+      for (int e = 0; e < trail.size(); e++) {
+        EntryList reason = new EntryList();
+        if (trail.reason(e) == lc && lc.explain(trail, e, reason)) {
+          assertNull(checker.checkReason(e, reason), "instance " + instance);
+          checked++;
+        }
+      }
+      EntryList reason = new EntryList();
+      if (!consistent && lc.explainFailure(trail, reason)) {
+        assertNull(checker.checkFailure(lc, reason), "failure, instance " + instance);
+        failures++;
+      }
+      trail.detach();
+    }
+    assertTrue(checked > 300, "reasons checked: " + checked);
+    assertTrue(failures > 20, "failures checked: " + failures);
   }
 }

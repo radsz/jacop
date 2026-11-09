@@ -60,3 +60,59 @@ predicate chance_sum(array[int] of var int: x, array[int, int] of int: value,
   assert(forall(i in index_set(x))(lb(x[i]) >= 0), "chance_sum: the variables must be at least 0") /\
   jacop_chance_sum(array1d(x), array1d(value), array1d(prob), card(index_set_2of2(value)), den,
                    c, alpha);
+
+% The native constraint: the arguments of chance_table, with x as a one-dimensional array.
+predicate jacop_chance_table(array[int] of var int: x, array[int] of int: scope_len,
+                             array[int] of int: scope, array[int] of int: rows,
+                             array[int] of int: tuples, array[int] of int: scen_len,
+                             array[int] of int: scen_tables, array[int] of int: prob,
+                             var int: p);
+
+/** The chance constraint over scenario tables: p = sum(s)(prob[s] * [x satisfies scenario s]).
+  Table t has the scope_len[t] variables of x at the positions (from 1) listed next in scope and
+  the rows[t] tuples listed next in tuples, row by row. Scenario s holds when x is a tuple of each
+  of the scen_len[s] tables listed next in scen_tables (from 1), and has the weight prob[s], a
+  probability numerator. Maximising p gives the most probable decision of a one-stage stochastic
+  CSP; p >= alpha is the chance constraint. A table shared by scenarios is listed once. */
+predicate chance_table(array[int] of var int: x, array[int] of int: scope_len,
+                       array[int] of int: scope, array[int] of int: rows,
+                       array[int] of int: tuples, array[int] of int: scen_len,
+                       array[int] of int: scen_tables, array[int] of int: prob, var int: p) =
+  assert(length(scope_len) = length(rows) /\ sum(scope_len) = length(scope)
+         /\ sum(t in index_set(rows))(scope_len[t] * rows[t]) = length(tuples)
+         /\ length(scen_len) = length(prob) /\ sum(scen_len) = length(scen_tables),
+         "chance_table: the lengths of the arrays do not match") /\
+  assert(forall(i in index_set(scope))(scope[i] >= 1 /\ scope[i] <= length(x))
+         /\ forall(i in index_set(scen_tables))(scen_tables[i] >= 1
+                                                /\ scen_tables[i] <= length(rows))
+         /\ forall(s in index_set(prob))(prob[s] >= 0),
+         "chance_table: a position, a table index or a weight is out of range") /\
+  jacop_chance_table(array1d(x), array1d(scope_len), array1d(scope), array1d(rows),
+                     array1d(tuples), array1d(scen_len), array1d(scen_tables), array1d(prob), p);
+
+% The native constraint: the arguments of prob_mdd, with x as a one-dimensional array.
+predicate jacop_prob_mdd(array[int] of var int: x, array[int] of int: level_var,
+                         array[int] of int: level_den, array[int] of int: level_size,
+                         array[int] of int: node_edges, array[int] of int: edge_label,
+                         array[int] of int: edge_to, int: scale, var int: p);
+
+/** The probability that a layered decision diagram reaches its true sink: p = floor(scale * Pr).
+  Level l is a decision level of the variable x[level_var[l]] (a position from 1), or a chance
+  level when level_var[l] = 0, whose edges carry probability numerators over level_den[l]. Level l
+  has level_size[l] nodes (the first one node, the root); the nodes, level by level, have
+  node_edges[n] edges each, and the edges, node by node, a label (a value of the level's variable,
+  or a probability numerator) and a target edge_to, the position from 1 of a node of the next level,
+  or 0 for the true sink, which only the last level reaches. A missing edge leads to the false
+  sink. Each variable labels at most one level. */
+predicate prob_mdd(array[int] of var int: x, array[int] of int: level_var,
+                   array[int] of int: level_den, array[int] of int: level_size,
+                   array[int] of int: node_edges, array[int] of int: edge_label,
+                   array[int] of int: edge_to, int: scale, var int: p) =
+  assert(length(level_var) = length(level_den) /\ length(level_var) = length(level_size)
+         /\ sum(level_size) = length(node_edges) /\ sum(node_edges) = length(edge_label)
+         /\ length(edge_label) = length(edge_to),
+         "prob_mdd: the lengths of the arrays do not match") /\
+  assert(forall(l in index_set(level_var))(level_var[l] >= 0 /\ level_var[l] <= length(x)),
+         "prob_mdd: a level variable is out of range") /\
+  jacop_prob_mdd(array1d(x), array1d(level_var), array1d(level_den), array1d(level_size),
+                 array1d(node_edges), array1d(edge_label), array1d(edge_to), scale, p);
