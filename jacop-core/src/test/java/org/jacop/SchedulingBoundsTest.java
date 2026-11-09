@@ -300,11 +300,15 @@ class SchedulingBoundsTest {
       }
       String what =
           "p=" + Arrays.toString(p) + " r=" + Arrays.toString(r) + " due=" + Arrays.toString(due);
-      assertEquals(lateOptimum(p, r, due, false), lateOptimum(p, r, due, true), what);
+      int optimum = lateOptimum(p, r, due, 0);
+      assertEquals(optimum, lateOptimum(p, r, due, 1), what);
+      // the horizon leaves room for the late tasks, so the dominance rule keeps an optimum
+      assertEquals(optimum, lateOptimum(p, r, due, 2), what + " with dominance");
     }
   }
 
-  private static int lateOptimum(int[] p, int[] r, int[] due, boolean global) {
+  // global: 0 the decomposition only, 1 with LateCount, 2 with LateCount and its dominance rule
+  private static int lateOptimum(int[] p, int[] r, int[] due, int global) {
     Store store = new Store();
     int n = p.length;
     int horizon = 8 + Arrays.stream(p).sum();
@@ -322,8 +326,8 @@ class SchedulingBoundsTest {
     IntVar late = new IntVar(store, "late", 0, n);
     store.impose(new SumInt(b, "==", late));
     store.impose(new CumulativeUnary(s, dv, one, new IntVar(store, 1, 1)));
-    if (global) {
-      store.impose(new LateCount(s, p, due, late));
+    if (global > 0) {
+      store.impose(new LateCount(s, p, due, late, global == 2));
     }
     return minimize(store, s, late);
   }

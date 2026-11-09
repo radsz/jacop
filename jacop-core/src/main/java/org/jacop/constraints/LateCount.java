@@ -59,8 +59,14 @@ import org.jacop.core.Store;
  * the bound above the maximum of late, the task must be late (on time), which bounds its start.
  * Propagation of the number of late jobs on a unary resource with release dates was studied by
  * Baptiste, Le Pape and Peridy ("Global constraints for partial CSPs: a case-study of resource and
- * due date constraints", CP 1998, LNCS 1520); this constraint is the cheap bound without release
- * dates.
+ * due date constraints", CP 1998, LNCS 1520). Release dates are used by a relaxation: for an origin
+ * t (each earliest start in turn), every task does its processing before t on a machine of its own,
+ * at most t - est of it, and the rest from t on the machine, which Moore and Hodgson solves; the
+ * origin with the largest bound is kept, and the earliest start of all gives the bound without
+ * release dates. With the dominance rule of P. Baptiste, L. Peridy and E. Pinson ("A branch and
+ * bound to minimize the number of late jobs on a single machine with release time constraints",
+ * European J. Operational Research 144(1), 2003), see {@link #LateCount(IntVar[], int[], int[],
+ * IntVar, boolean)}, a task on time keeps the tasks that dominate it on time.
  *
  * <p>The constraint enforces non overlap only between fixed tasks; post it as a redundant
  * constraint next to a unary resource (cumulative with capacity 1, disjunctive). late is an upper
@@ -97,6 +103,20 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
 
   private final long[] key;
 
+  // the release dates of the dominance rule (null without it), and the pairs: dominant[k] is on
+  // time when dominated[k] is
+  private final int[] releases;
+  private final int[] dominant;
+  private final int[] dominated;
+
+  // per position of order: the processing left after the origin of the run
+  private final long[] eff;
+
+  // the bound with release dates (origins after the earliest start), on unless
+  // -Dorg.jacop.lateCount.releases=false
+  static final boolean RELEASES =
+      !"false".equals(System.getProperty("org.jacop.lateCount.releases"));
+
   // the result of a run whose must-be-on-time tasks cannot all be on time
   private static final int IMPOSSIBLE = Integer.MAX_VALUE / 4;
 
@@ -109,6 +129,43 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
    * @param late the bound on the number of late tasks.
    */
   public LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late) {
+    this(starts, durations, dues, late, null);
+  }
+
+  /**
+   * It constructs a late count constraint on a unary resource that also enforces the dominance rule
+   * of Baptiste, Peridy and Pinson (2003) between the tasks: task i dominates task j when p[i]
+   * &lt;= p[j], r[i] + p[i] &lt;= r[j] + p[j], due[i] - p[i] &gt;= due[j] - p[j] and r[i] + p[i]
+   * &lt;= due[i], with r the release dates (the minima of the starts now); then if j is on time, so
+   * is i. In any schedule with j on time and i late, i fits into the interval of j, and the on time
+   * tasks can be left justified and the late ones put after them, so the number of late tasks stays
+   * the same. Such a rule keeps an optimal schedule but removes others: it is valid only when the
+   * tasks are constrained by nothing else than this unary resource, their release dates and a
+   * horizon that leaves room for the late tasks at the end (each start's maximum at least max(r) +
+   * sum(p) - p), and the objective counts the late tasks with one weight.
+   *
+   * @param starts the start of each task.
+   * @param durations the duration of each task, at least 0.
+   * @param dues the due date of each task: it is late if its start plus duration exceeds it.
+   * @param late the bound on the number of late tasks.
+   * @param dominance true to enforce the dominance rule.
+   */
+  public LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late, boolean dominance) {
+    this(starts, durations, dues, late, dominance ? releases(starts) : null);
+  }
+
+  private static int[] releases(IntVar[] starts) {
+    if (starts == null) {
+      return new int[0];
+    }
+    int[] r = new int[starts.length];
+    for (int i = 0; i < starts.length; i++) {
+      r[i] = starts[i] == null ? 0 : starts[i].min();
+    }
+    return r;
+  }
+
+  private LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late, int[] releases) {
 
     if (starts == null
         || durations == null
@@ -139,6 +196,11 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     this.heap = new int[n];
     this.onTime = new boolean[n];
     this.key = new long[n];
+    this.eff = new long[n];
+    this.releases = releases == null ? null : Arrays.copyOf(releases, n);
+    int[][] pairs = releases == null ? new int[2][0] : dominancePairs(this.releases);
+    this.dominant = pairs[0];
+    this.dominated = pairs[1];
 
     this.queueIndex = 2;
 
@@ -157,6 +219,7 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     do {
       final long before = boundsSum();
       checkFixed();
+      dominance(store);
 
       // count the tasks that must be late, collect the others with a positive duration
       int sure = 0;
@@ -178,7 +241,28 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
         forced[k] = starts[i].max() <= lastOnTime(i);
       }
 
-      int relaxed = lateOf(origin, -1, false);
+      // the origin with the largest bound: the earliest start of all, or a later one with the
+      // processing each task can do before it on a machine of its own taken off
+      long theta = origin;
+      int relaxed = -1;
+      if (RELEASES) {
+        for (int k = 0; k < size; k++) {
+          long t = starts[order[k]].min();
+          if (seen(k, t)) {
+            continue;
+          }
+          int value = lateOf(t, -1, false);
+          if (value > relaxed) {
+            relaxed = value;
+            theta = t;
+            if (value == IMPOSSIBLE) {
+              break;
+            }
+          }
+        }
+      }
+      relaxed = lateOf(theta, -1, false);
+      origin = theta;
       if (relaxed == IMPOSSIBLE) {
         throw Store.failException;
       }
@@ -228,6 +312,75 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     } while (again);
   }
 
+  /**
+   * The pairs of the dominance rule of Baptiste, Peridy and Pinson (2003): i dominates j if p[i]
+   * &lt;= p[j], r[i] + p[i] &lt;= r[j] + p[j], due[i] - p[i] &gt;= due[j] - p[j] and r[i] + p[i]
+   * &lt;= due[i], strictly in one of the first three or with i &lt; j, which orders the rules so
+   * that one optimal schedule satisfies all of them: each exchange replaces an on time task by one
+   * earlier in that order.
+   */
+  private int[][] dominancePairs(int[] r) {
+    int[] from = new int[16];
+    int[] to = new int[16];
+    int count = 0;
+    for (int i = 0; i < n; i++) {
+      long pi = durations[i];
+      if (pi == 0 || r[i] + pi > dues[i]) {
+        continue;
+      }
+      for (int j = 0; j < n; j++) {
+        long pj = durations[j];
+        if (j == i || pj == 0) {
+          continue;
+        }
+        long ai = r[i] + pi;
+        long aj = r[j] + pj;
+        long bi = (long) dues[i] - pi;
+        long bj = (long) dues[j] - pj;
+        if (pi > pj || ai > aj || bi < bj) {
+          continue;
+        }
+        if (pi == pj && ai == aj && bi == bj && i > j) {
+          continue;
+        }
+        if (count == from.length) {
+          from = Arrays.copyOf(from, 2 * count);
+          to = Arrays.copyOf(to, 2 * count);
+        }
+        from[count] = i;
+        to[count++] = j;
+      }
+    }
+    return new int[][] {Arrays.copyOf(from, count), Arrays.copyOf(to, count)};
+  }
+
+  // the dominance rule: a dominated task on time keeps its dominant on time, a late dominant makes
+  // the dominated task late
+  private void dominance(Store store) {
+    for (int k = 0; k < dominant.length; k++) {
+      int i = dominant[k];
+      int j = dominated[k];
+      IntVar si = starts[i];
+      IntVar sj = starts[j];
+      if (sj.max() <= lastOnTime(j) && si.max() > lastOnTime(i)) {
+        si.domain.inMax(store.level, si, (int) Math.max(lastOnTime(i), IntDomain.MIN_INT));
+      }
+      if (si.min() > lastOnTime(i) && sj.min() <= lastOnTime(j)) {
+        sj.domain.inMin(store.level, sj, (int) Math.min(lastOnTime(j) + 1, IntDomain.MAX_INT));
+      }
+    }
+  }
+
+  // whether a task before position k in order has earliest start t
+  private boolean seen(int k, long t) {
+    for (int l = 0; l < k; l++) {
+      if (starts[order[l]].min() == t) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   // the bounds of the starts change only by narrowing, so their sum tells whether one changed
   private long boundsSum() {
     long sum = 0;
@@ -264,14 +417,23 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
    * @return the minimum number of late free tasks, IMPOSSIBLE if the forced ones cannot be on time.
    */
   private int lateOf(long origin, int special, boolean specialOnTime) {
+    // the processing left after origin: a task can do origin - est of it before, on a machine of
+    // its own (a relaxation); a task with none left is on time
+    for (int k = 0; k < size; k++) {
+      int i = order[k];
+      eff[k] = Math.max(0, durations[i] - Math.max(0, origin - starts[i].min()));
+    }
     // forward: the due date of a free task less the forced durations before it, and the slack of
     // each forced task
     long forcedSum = 0;
     for (int k = 0; k < size; k++) {
+      if (eff[k] == 0) {
+        continue;
+      }
       int i = order[k];
       boolean f = forced[k] || k == special && specialOnTime;
       if (f) {
-        forcedSum += durations[i];
+        forcedSum += eff[k];
         due[k] = dues[i] - origin - forcedSum;
         if (due[k] < 0) {
           return IMPOSSIBLE;
@@ -283,6 +445,9 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     // backward: a free task also ends before the slack of every forced task after it
     long slack = Long.MAX_VALUE;
     for (int k = size - 1; k >= 0; k--) {
+      if (eff[k] == 0) {
+        continue;
+      }
       boolean f = forced[k] || k == special && specialOnTime;
       if (f) {
         slack = Math.min(slack, due[k]);
@@ -299,8 +464,12 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
       if (forced[k] || k == special) {
         continue;
       }
+      if (eff[k] == 0) {
+        onTime[k] = true;
+        continue;
+      }
       free++;
-      int p = durations[order[k]];
+      long p = eff[k];
       time += p;
       heapSize = push(heapSize, k);
       onTime[k] = true;
@@ -308,15 +477,15 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
         int longest = heap[0];
         heapSize = pop(heapSize);
         onTime[longest] = false;
-        time -= durations[order[longest]];
+        time -= eff[longest];
       }
     }
     return free - heapSize;
   }
 
   private boolean longer(int k, int l) {
-    int a = durations[order[k]];
-    int b = durations[order[l]];
+    long a = eff[k];
+    long b = eff[l];
     return a > b || a == b && k > l;
   }
 
@@ -397,13 +566,17 @@ public class LateCount extends Constraint implements SatisfiedPresent, Copyable<
     }
     result.append("], ").append(Arrays.toString(durations));
     result.append(", ").append(Arrays.toString(dues));
-    result.append(", ").append(late).append(")");
+    result.append(", ").append(late);
+    if (releases != null) {
+      result.append(", dominance");
+    }
+    result.append(")");
 
     return result.toString();
   }
 
   @Override
   public LateCount copy(VarMap map) {
-    return new LateCount(map.get(starts), durations, dues, map.get(late));
+    return new LateCount(map.get(starts), durations, dues, map.get(late), releases);
   }
 }

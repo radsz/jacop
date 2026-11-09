@@ -417,6 +417,18 @@ public final class LcgSolver implements ExternalPropagator {
   // the factor by which the lower-bound runs' share grows after a round without a better solution
   private double shaveGrowth = 1;
 
+  // dichotomic bound search: the relative gap below which it gives way to branch and bound; 0 = off
+  private double bisectGap;
+
+  /** Statistics: probes of dichotomic bound search. */
+  public long bisectProbes;
+
+  /** Statistics: probes of dichotomic bound search that proved their half empty. */
+  public long bisectRaised;
+
+  /** Statistics: probes of dichotomic bound search that ran out of conflicts. */
+  public long bisectLimits;
+
   // the variable minimised by branch and bound, or -1
   private int objective = -1;
   private int[] best;
@@ -2398,7 +2410,9 @@ public final class LcgSolver implements ExternalPropagator {
     // a conflict limit set before bounds the core-guided phase and branch and bound
     conflictCap = sat.conflictLimit();
     try {
-      if (coreSearch != null) {
+      if (bisectGap > 0 && proof == null) {
+        result = minimizeByBisection();
+      } else if (coreSearch != null) {
         result = minimizeWithCores();
       } else {
         result = interleaved() ? minimizeWithLowerBoundSearch() : solve();
@@ -3089,6 +3103,100 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Dichotomic search on the objective's bound, for a thread of a portfolio that works on the lower
+   * bound while others look for solutions: each probe assumes the objective at most a value between
+   * its lower bound lb and the best solution ub, here or shared, at first the midpoint. A probe
+   * that proves this impossible raises lb above that value by a clause; one that finds solutions
+   * lowers ub, and goes on as branch and bound under the assumption. A probe that runs out of
+   * conflicts tries a value nearer lb next, at half the distance, as CP-SAT's objective shaving
+   * does, and at lb itself the probes get twice the conflicts. A proof moves the next value back
+   * towards the midpoint. Once ub - lb is within the gap of |ub|, branch and bound takes over, with
+   * its own lower-bound runs.
+   *
+   * <p>The probe's bound is an assumption, a decision, so every clause learnt under it holds for
+   * the model under the bound of branch and bound, as the clauses of branch and bound do, and may
+   * be shared; only the clause added after a proof, lb >= value + 1, depends on the probe, and it
+   * is implied by the model and ub. Without a solution anywhere, branch and bound runs first, with
+   * a growing budget of conflicts, until it or another thread finds one.
+   *
+   * @return {@link CdclSolver#UNKNOWN} when a limit stopped the search; else the result of the
+   *     search as for {@link #solve}: SAT when a solution was found at the smallest value of the
+   *     objective, UNSAT when no solution is better than ub
+   */
+  private int minimizeByBisection() {
+    long budget = lowerBoundBudget > 0 ? lowerBoundBudget : 1000;
+    long noSolutionBudget = budget;
+    // the share of [lb, ub - 1] below the probe's value
+    double fraction = 0.5;
+    int raised = Integer.MIN_VALUE; // the bound proved here, which the root may not show yet
+    while (true) {
+      long ub = boundObjective();
+      if (ub == Long.MAX_VALUE) {
+        // no solution yet: branch and bound until one, here or elsewhere
+        long limit = sat.conflicts + noSolutionBudget;
+        sat.setConflictLimit(limit);
+        int result = solve();
+        sat.setConflictLimit(Long.MAX_VALUE);
+        if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
+          return result; // done, or stopped by the deadline
+        }
+        noSolutionBudget += noSolutionBudget / 2;
+        continue;
+      }
+      // after solve the domains are those of level 0
+      long lb = Math.max(vars[objective].min(), raised);
+      if (lb >= ub || ub - lb <= bisectGap * Math.abs((double) ub)) {
+        // closed, or within the gap: branch and bound from here, which also proves lb >= ub
+        return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+      }
+      long hi = ub - 1; // a better solution has the objective at most hi
+      int target = (int) Math.min(hi, lb + (long) Math.floor(fraction * (hi - lb)));
+      int lit = -geLit(objective, target + 1);
+      long limit = sat.conflicts + budget;
+      sat.setConflictLimit(limit);
+      bisectProbes++;
+      int result = solve(lit);
+      sat.setConflictLimit(Long.MAX_VALUE);
+      if (result == CdclSolver.SAT) {
+        return result; // a solution at the smallest value of the objective
+      }
+      if (result != CdclSolver.UNSAT) {
+        if (sat.conflicts < limit) {
+          return result; // stopped by the deadline
+        }
+        bisectLimits++;
+        if (target > lb) {
+          fraction /= 2;
+        } else {
+          budget = Math.min(2 * budget, 1L << 40);
+        }
+        continue;
+      }
+      if (sat.failedAssumptions().length == 0 || bestObjective() <= target) {
+        // no better solution than ub at all; or the probe found one within its value and then
+        // none better, and every better one would be within the value too
+        return result;
+      }
+      addProvedClause(-lit); // objective >= target + 1
+      bisectRaised++;
+      raised = target + 1;
+      reportBound(target + 1L);
+      fraction = Math.min(0.5, 2 * fraction);
+    }
+  }
+
+  /**
+   * Turns on dichotomic bound search in {@link #minimize} (see {@link #minimizeByBisection}), in
+   * place of the core-guided phase, until the gap between the best solution and the lower bound is
+   * at most the given share of the best solution.
+   *
+   * @param gap the relative gap at which branch and bound takes over; 0 turns it off
+   */
+  public void setBisection(double gap) {
+    bisectGap = Math.max(0, gap);
+  }
+
+  /**
    * Runs in large neighbourhoods of the best solution for the given time: each run assumes that the
    * variables outside the neighbourhood keep their values in the best solution and stops after its
    * conflicts. The assumptions are decisions, so what the runs learn holds for every later search.
@@ -3101,13 +3209,21 @@ public final class LcgSolver implements ExternalPropagator {
     long end = Math.min(System.nanoTime() + nanos, sat.deadline());
     while (System.nanoTime() < end) {
       int[] fixed = lns.neighbourhood();
-      int[] assumed = new int[fixed.length];
+      int[] upper = lns.upperBounded();
+      int[] assumed = new int[fixed.length + upper.length];
       int n = 0;
       for (int k : fixed) {
         int i = lnsIds[k];
         int v = lns.value(k);
         if (i >= 0 && !vars[i].singleton() && vars[i].domain.contains(v)) {
           assumed[n++] = eqVar(i, v);
+        }
+      }
+      for (int k : upper) {
+        int i = lnsIds[k];
+        int v = lns.value(k);
+        if (i >= 0 && !vars[i].singleton() && v >= vars[i].min() && v < vars[i].max()) {
+          assumed[n++] = -geVar(i, v + 1);
         }
       }
       long before = best[objective];

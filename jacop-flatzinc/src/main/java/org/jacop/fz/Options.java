@@ -251,6 +251,13 @@ public class Options {
                 lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
                 neighbourhood and lower-bound runs on one decision level, kept at restarts;
                 0 gives each its own level, default 1),
+                lcg-bisect=<gap> (with --lcg and an objective: dichotomic probes of the
+                objective's bound, obj <= the middle of [lower bound, best - 1], until the
+                relative gap is at most this share of the best solution, then branch and bound;
+                replaces the core-guided phase; default 0 = off),
+                portfolio-bisect=<gap> (with -p 2 or more and an objective: the second thread
+                runs lcg-bisect=<gap> and proves lower bounds for the others, in place of the
+                last thread of the default layout; e.g. 0.1; default 0 = off),
                 share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),

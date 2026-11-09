@@ -1635,6 +1635,7 @@ class LcgFuzzTest {
     long checked = 0;
     long lowerBoundRuns = 0;
     long lowerBoundRaised = 0;
+    long bisectProbes = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected = reference(new Model(seed));
@@ -1652,6 +1653,7 @@ class LcgFuzzTest {
         checked += solver.checker().checked;
         lowerBoundRuns += solver.lowerBoundRuns;
         lowerBoundRaised += solver.lowerBoundRaised;
+        bisectProbes += solver.bisectProbes;
         IntVar[] vars = model.decisionVars();
         values = new int[vars.length];
         if (status == CdclSolver.SAT) {
@@ -1682,8 +1684,8 @@ class LcgFuzzTest {
     if (RUNS >= 1000) {
       System.out.printf(
           "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
-              + " %d lower-bound runs (%d raised the bound)%n",
-          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised);
+              + " %d lower-bound runs (%d raised the bound), %d bisection probes%n",
+          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised, bisectProbes);
       statistics.forEach(
           (k, v) ->
               System.out.printf(
@@ -1710,6 +1712,14 @@ class LcgFuzzTest {
         solver.setShaving(true);
         solver.setLowerBoundGrowth(random.nextBoolean() ? 1 : 2);
       }
+    }
+    // one run in four probes the objective dichotomically first (and then no core-guided search),
+    // with probes of a few conflicts, until the gap is closed or within a share of the best
+    Random bisect = new Random(seed * 13 + 5);
+    if (bisect.nextInt(4) == 0) {
+      solver.setBisection(new double[] {1e-9, 0.05, 0.5}[bisect.nextInt(3)]);
+      // probes of 1 to 3 conflicts; branch and bound after them with or without lower-bound runs
+      solver.setLowerBoundSearch(bisect.nextBoolean() ? 0.5 : 0, 1 + bisect.nextInt(3));
     }
     // one run in three starts with core-guided search, for a few conflicts
     Random core = new Random(seed * 17 + 3);

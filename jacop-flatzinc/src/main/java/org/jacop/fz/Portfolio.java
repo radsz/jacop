@@ -105,6 +105,9 @@ final class Portfolio {
   /** The most threads the portfolio uses: the options given and each setting above. */
   static final int MAX_THREADS = CONFIGS.length + 1;
 
+  /** The name of the thread of {@link #boundSetting}. */
+  static final String BOUND_THREAD = "lcg-bisect";
+
   private static final String SEARCH_COMPLETE = "==========";
 
   /** The value shared for a variable that is not fixed in a solution. */
@@ -240,7 +243,8 @@ final class Portfolio {
     boolean satisfaction = isSatisfaction(readModel(options));
     workers.add(new Worker("given", arguments(base, List.of(), false)));
     String given = search(options.lcg(), options.freeSearch(), options.freeConfig, satisfaction);
-    for (String[] config : settings(given, threads - 1, satisfaction)) {
+    double bisect = Double.parseDouble(options.freeConfig("portfolio-bisect", "0"));
+    for (String[] config : settings(given, threads - 1, satisfaction, bisect)) {
       List<String> flags = Arrays.asList(config).subList(1, config.length);
       workers.add(new Worker(config[0], arguments(base, flags, true)));
     }
@@ -441,6 +445,52 @@ final class Portfolio {
   }
 
   /**
+   * The settings of the threads after the first, as {@link #settings(String, int, boolean)} gives
+   * them, with the bound thread of {@link #boundSetting} first when bisect is above 0 and the model
+   * has an objective; it takes the place of the last setting.
+   *
+   * @param given the search of the first thread
+   * @param count how many settings at most
+   * @param satisfaction whether the model has no objective
+   * @param bisect the relative gap of the bound thread, 0 for none
+   * @return the settings
+   */
+  static List<String[]> settings(String given, int count, boolean satisfaction, double bisect) {
+    List<String[]> chosen = settings(given, count, satisfaction);
+    if (bisect > 0 && !satisfaction && count > 0) {
+      chosen.add(0, boundSetting(bisect));
+      if (chosen.size() > count) {
+        chosen.remove(chosen.size() - 1);
+      }
+    }
+    return chosen;
+  }
+
+  /**
+   * The setting of a thread that works on the objective's lower bound (option {@code --free-config
+   * portfolio-bisect=<gap>}): LCG free search by dichotomic probes of the objective between its
+   * lower bound and the portfolio's best solution, until the relative gap is within the given
+   * share, then branch and bound. The thread proves bounds for the others, which take them through
+   * the shared clauses and the portfolio's bound; it has no core-guided phase, which the thread
+   * with the options given (LCG free search by default) runs already. It shares no clauses: with
+   * its clauses (learnt next to probe assumptions) jp-encoding and community-detection lost their
+   * proofs at 240 s in the other threads; its bounds still reach the portfolio's objective bound.
+   *
+   * @param gap the relative gap, a fraction
+   * @return the setting, its name first
+   */
+  static String[] boundSetting(double gap) {
+    return new String[] {
+      BOUND_THREAD,
+      "--lcg",
+      "on",
+      "-f",
+      "--free-config",
+      "lcg-bisect=" + gap + ",lcg-core=0,share-clauses=0"
+    };
+  }
+
+  /**
    * The search a setting runs on a model of this kind, as a key: two settings with the same key
    * would run the same search. Without an objective the settings of the objective (core-guided and
    * lower-bound search, LNS, probes) change nothing, so lcg-bb is lcg on a satisfaction model.
@@ -462,6 +512,8 @@ final class Portfolio {
   private static String search(
       boolean lcg, boolean free, Map<String, String> config, boolean satisfaction) {
     Map<String, String> c = new TreeMap<>(config);
+    // the settings of the portfolio's layout are not the search of a thread
+    c.keySet().removeIf(k -> k.startsWith("portfolio-"));
     if (satisfaction) {
       c.keySet().removeIf(Portfolio::objectiveSetting);
     }
@@ -472,6 +524,7 @@ final class Portfolio {
     return key.startsWith("lcg-core")
         || key.startsWith("lcg-lb")
         || "lcg-shave".equals(key)
+        || "lcg-bisect".equals(key)
         || key.startsWith("lns")
         || key.startsWith("probe");
   }
