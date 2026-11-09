@@ -714,18 +714,23 @@ final class LpExactFuzz {
       p.lo[j] = 0;
       p.hi[j] = 1;
     }
-    double x;
-    if (p.lo[j] > -INF && p.hi[j] < INF) {
-      x = p.lo[j] + rnd.nextInt((int) (p.hi[j] - p.lo[j]) + 1);
-    } else if (p.lo[j] > -INF) {
-      x = p.lo[j] + rnd.nextInt(4);
-    } else if (p.hi[j] < INF) {
-      x = p.hi[j] - rnd.nextInt(4);
-    } else {
-      x = (double) rnd.nextInt(9) - 4;
-    }
+    double x = pointIn(p.lo[j], p.hi[j], rnd);
     p.cost[j] = (double) rnd.nextInt(11) - 5;
     return x;
+  }
+
+  // an integer point in [lo, hi], near the finite bound when the other one is infinite
+  private static double pointIn(double lo, double hi, Random rnd) {
+    if (lo > -INF && hi < INF) {
+      return lo + rnd.nextInt((int) (hi - lo) + 1);
+    }
+    if (lo > -INF) {
+      return lo + rnd.nextInt(4);
+    }
+    if (hi < INF) {
+      return hi - rnd.nextInt(4);
+    }
+    return (double) rnd.nextInt(9) - 4;
   }
 
   // a row over a few columns, its bounds through or near x0, and maybe a parallel row
@@ -734,23 +739,7 @@ final class LpExactFuzz {
     int k = 1 + rnd.nextInt(Math.min(p.n, 6));
     int[] c = new int[k];
     double[] v = new double[k];
-    Pool pool = new Pool(p.n);
-    double act = 0;
-    for (int e = 0; e < k; e++) {
-      c[e] = pool.take(rnd);
-      int a = rnd.nextInt(19) - 9;
-      if (a == 0) {
-        a = 1;
-      }
-      v[e] = a * rs;
-      if (BIGM.equals(family) && e == 0 && rnd.nextBoolean()) {
-        v[e] = -1000 * rs;
-      }
-      if (KNAPSACK.equals(family)) {
-        v[e] = 1.0 + rnd.nextInt(50);
-      }
-      act += v[e] * x0[c[e]];
-    }
+    double act = coefficients(c, v, x0, rnd, family, rs);
     Arrays.sort(c);
     p.cols.add(c);
     p.vals.add(v);
@@ -779,6 +768,29 @@ final class LpExactFuzz {
     if (PARALLEL.equals(family) && rnd.nextBoolean()) {
       parallelRow(p, c, v, lo, hi, rnd);
     }
+  }
+
+  // the columns and weights of a row, drawn at random; returns its activity at x0
+  private static double coefficients(
+      int[] c, double[] v, double[] x0, Random rnd, String family, double rs) {
+    Pool pool = new Pool(x0.length);
+    double act = 0;
+    for (int e = 0; e < c.length; e++) {
+      c[e] = pool.take(rnd);
+      int a = rnd.nextInt(19) - 9;
+      if (a == 0) {
+        a = 1;
+      }
+      v[e] = a * rs;
+      if (BIGM.equals(family) && e == 0 && rnd.nextBoolean()) {
+        v[e] = -1000 * rs;
+      }
+      if (KNAPSACK.equals(family)) {
+        v[e] = 1.0 + rnd.nextInt(50);
+      }
+      act += v[e] * x0[c[e]];
+    }
+    return act;
   }
 
   // a multiple of a row, possibly with other bounds
