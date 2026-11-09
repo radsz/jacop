@@ -104,11 +104,11 @@ import org.junit.jupiter.api.Test;
  * *.fzn.gz} below each dir), {@code suite.state}, {@code suite.timeout} (seconds per run, 300),
  * {@code suite.solutions} (solution limit of a counting run, 2000000), {@code suite.threads} (1),
  * {@code suite.cap} (30), {@code suite.familyCap} (3), {@code suite.maxBytes} (largest FlatZinc
- * file, 1000000), {@code suite.objectives} (2), {@code suite.maxProblems}, {@code suite.hours}
- * (stop picking new problems after this time), {@code suite.problems} (regular expression on
- * names), {@code suite.retry} (verdicts to check again), {@code suite.report} (coverage file),
- * {@code suite.mznlib} (JaCoP's MiniZinc library, for the list of all constraints), {@code
- * suite.out} (models of differences).
+ * file, 1000000), {@code suite.maxDecomposedBytes} (largest decomposed file, 50000000), {@code
+ * suite.objectives} (2), {@code suite.maxProblems}, {@code suite.hours} (stop picking new problems
+ * after this time), {@code suite.problems} (regular expression on names), {@code suite.retry}
+ * (verdicts to check again), {@code suite.report} (coverage file), {@code suite.mznlib} (JaCoP's
+ * MiniZinc library, for the list of all constraints), {@code suite.out} (models of differences).
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -135,6 +135,9 @@ class AllSolutionsSuite {
       System.currentTimeMillis()
           + (long) (Double.parseDouble(System.getProperty("suite.hours", "1000000")) * 3_600_000);
   private final Pattern problemFilter = Pattern.compile(System.getProperty("suite.problems", ".*"));
+  // largest decomposed FlatZinc file to run
+  private final long maxDecomposedBytes = Long.getLong("suite.maxDecomposedBytes", 50_000_000L);
+
   private final Set<String> retry =
       new HashSet<>(List.of(System.getProperty("suite.retry", "").split(",")));
   private final Path statePath =
@@ -659,6 +662,11 @@ class AllSolutionsSuite {
       return;
     }
     String text = DecompositionCheck.render(model, replaced, builder, bound, true, false);
+    if (text.length() > maxDecomposedBytes) {
+      // a time decomposition of a long horizon: JaCoP runs out of memory reading it
+      record(c, sha, check, "UNSUPPORTED", null, "decomposition of " + text.length() + " bytes");
+      return;
+    }
     Path file = write(c, check, text);
     SolverRun r = settle(SolverRun.run(file, options, true, solutionLimit, timeoutMillis));
     String verdict;
@@ -704,6 +712,10 @@ class AllSolutionsSuite {
     FznBuilder b = builder == null ? new FznBuilder(model, "X_DECOMP_") : builder;
     Term obj = objectiveTerm(b, o);
     String text = DecompositionCheck.render(model, replaced, b, bound, true, false);
+    if (text.length() > maxDecomposedBytes) {
+      record(c, sha, check, "UNSUPPORTED", null, "decomposition of " + text.length() + " bytes");
+      return;
+    }
     int solve = text.lastIndexOf("satisfy;");
     text = text.substring(0, solve) + "minimize " + obj.text() + ";\n";
     List<String> options =

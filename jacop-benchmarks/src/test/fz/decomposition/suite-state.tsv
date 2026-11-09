@@ -7285,7 +7285,6 @@ C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed
 C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_if_then_else_bool	PASS	COMPLETE	0	1440	2026-11-09T03:11:09Z	
 P	mznc:upTo5sec/2016_filters/fir_1_3	9b97078bc2ddda7b	minimize	15	INCOMPLETE	2000000	2000000	235ffd19e318060e	74778	120	2026-11-09T03:11:44Z	jacop_diff2_strict,jacop_maximum
 P	mznc:above1hour/2018_concert-hall-cap/concert-cap.mznc2018.03	61c266a9f56e14fb	maximize	28774	INCOMPLETE	0	0	0	120328	120	2026-11-09T03:12:57Z	jacop_alldifferent_except,jacop_value_precede_chain_int
-C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_cumulative	ERROR	ERROR	0	103468	2026-11-09T03:13:05Z	exit=1 %% Option -a ignored since number of solutions has been specified by option -n |
 C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:plain	PASS	COMPLETE	0	1749	2026-11-09T03:13:07Z	
 C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:f	PASS	COMPLETE	0	1687	2026-11-09T03:13:09Z	
 C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg	PASS	COMPLETE	0	1577	2026-11-09T03:13:10Z	
@@ -7410,3 +7409,30 @@ P	mznc:upTo5sec/2026_rect-euler/3venn_combined_model_input	c7dbaa537a99090b	mini
 P	mznc:above1hour/2023_pennies-opt/n9	2979314b04330ff1	maximize	8	INCOMPLETE	564	564	8a7907dae05d75d1	120131	120	2026-11-09T03:46:17Z	jacop_alldifferent_opt,jacop_if_then_else_bool,jacop_increasing
 P	mznc:upTo30sec/2026_saeling/instance__j0010_m003_w01_g2x2_s018	51625ec7d83fbb0b	minimize	232	INCOMPLETE	0	0	0	120151	120	2026-11-09T03:48:34Z	jacop_array_var_int_element_nonshifted,jacop_disjunctive_optional,jacop_if_then_else_int,jacop_maximum
 P	mznc:above1hour/2011_carpet-cutting/mzn_rnd_test.15	2c0865fbc72b99d8	minimize	2404	INCOMPLETE	0	0	0	120121	120	2026-11-09T03:49:07Z	jacop_array_var_int_element_nonshifted,jacop_cumulative,jacop_diff2_strict
+P	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	minimize		COMPLETE	0	0	0	792	120	2026-11-09T03:51:32Z	jacop_all_equal_int,jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_circuit,jacop_cumulative,jacop_if_then_else_bool,jacop_increasing,jacop_maximum,jacop_table_int,jacop_value_precede_chain_int,jacop_value_precede_int
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	all:f	PASS	COMPLETE	0	777	2026-11-09T03:51:32Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	0	762	2026-11-09T03:51:33Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_circuit	PASS	COMPLETE	0	822	2026-11-09T03:51:34Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_alldiff	PASS	COMPLETE	0	867	2026-11-09T03:51:35Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_all_equal_int	PASS	COMPLETE	0	764	2026-11-09T03:51:36Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_table_int	PASS	COMPLETE	0	1095	2026-11-09T03:51:37Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_increasing	PASS	COMPLETE	0	818	2026-11-09T03:51:38Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_maximum	PASS	COMPLETE	0	800	2026-11-09T03:51:38Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_value_precede_int	PASS	COMPLETE	0	1573	2026-11-09T03:51:40Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_value_precede_chain_int	PASS	COMPLETE	0	915	2026-11-09T03:51:41Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_if_then_else_bool	PASS	COMPLETE	0	819	2026-11-09T03:51:42Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	decomp:jacop_cumulative	UNSUPPORTED				2026-11-09T03:51:51Z	decomposition of 530172581 bytes
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:plain	PASS	COMPLETE	0	863	2026-11-09T03:51:51Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:f	PASS	COMPLETE	0	817	2026-11-09T03:51:52Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg	PASS	COMPLETE	0	762	2026-11-09T03:51:53Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg-f	PASS	COMPLETE	0	795	2026-11-09T03:51:54Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	0	804	2026-11-09T03:51:55Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_circuit	PASS	COMPLETE	0	856	2026-11-09T03:51:55Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	0	774	2026-11-09T03:51:56Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_all_equal_int	PASS	COMPLETE	0	748	2026-11-09T03:51:57Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_table_int	PASS	COMPLETE	0	1109	2026-11-09T03:51:58Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_increasing	PASS	COMPLETE	0	747	2026-11-09T03:51:59Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_maximum	PASS	COMPLETE	0	768	2026-11-09T03:52:00Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_value_precede_int	PASS	COMPLETE	0	1402	2026-11-09T03:52:01Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_value_precede_chain_int	PASS	COMPLETE	0	851	2026-11-09T03:52:02Z	
+C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_if_then_else_bool	PASS	COMPLETE	0	814	2026-11-09T03:52:03Z	
