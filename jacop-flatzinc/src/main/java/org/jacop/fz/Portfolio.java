@@ -471,14 +471,21 @@ final class Portfolio {
    * lower bound and the portfolio's best solution, until the relative gap is within the given
    * share, then branch and bound. The thread proves bounds for the others, which take them through
    * the shared clauses and the portfolio's bound; it has no core-guided phase, which the thread
-   * with the options given (LCG free search by default) runs already.
+   * with the options given (LCG free search by default) runs already. It shares no clauses: with
+   * its clauses (learnt next to probe assumptions) jp-encoding and community-detection lost their
+   * proofs at 240 s in the other threads; its bounds still reach the portfolio's objective bound.
    *
    * @param gap the relative gap, a fraction
    * @return the setting, its name first
    */
   static String[] boundSetting(double gap) {
     return new String[] {
-      BOUND_THREAD, "--lcg", "on", "-f", "--free-config", "lcg-bisect=" + gap + ",lcg-core=0"
+      BOUND_THREAD,
+      "--lcg",
+      "on",
+      "-f",
+      "--free-config",
+      "lcg-bisect=" + gap + ",lcg-core=0,share-clauses=0"
     };
   }
 
