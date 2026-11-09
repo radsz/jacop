@@ -438,6 +438,13 @@ Search of the LCG solver:
 - jacop.lcg.lpGuideRoot: the activity runs of fixed search follow
   the root solution of the linear relaxation, not its last one;
   default true.
+- org.jacop.lns.shift: large neighbourhood search (-f) also uses shift
+  neighbourhoods: the tasks of cumulative, unary and disjunctive
+  resources that start in a window of time are free, those after it
+  may start earlier than in the best solution (start <= its value) and
+  the rest keep their values; default false (saeling 2026 j0050_m003
+  makespan 1333 instead of 1350 at 600 s, but worse on rcpsp-wet-
+  diverse, cgt and multi-agent-graph-coverage).
 - jacop.lcg.stableForGood: after the first 1000 conflicts in focused
   mode, stay in stable mode (far fewer restarts); default true.
 - jacop.lcg.fullFixpoint: run the store to its fixpoint before the

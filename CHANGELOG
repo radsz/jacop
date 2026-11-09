@@ -3895,6 +3895,17 @@ Version 5.0 (unreleased)
      were tried as well and are not included: the MIR cuts already
      reach the same root bounds on the MiniZinc Challenge instances.
 
+226. Free search (-f) that continues after LCG gave way runs its large
+     neighbourhoods from LCG's best solution. They waited for free
+     search's own first solution, which must improve on LCG's; on
+     saeling 2026 j0050_m003 (makespan) it never came and no
+     neighbourhood ran: 1350 instead of 1442 at 600 s (CP-SAT free
+     reached 1392 in the 2026 Challenge). On the 25 wide-set instances
+     where LCG gives way, 600 s, -f: 13.5 vs 12.5 pair points, 6
+     families better and 5 worse. -Dorg.jacop.lns.shift=true adds shift
+     neighbourhoods (the tasks after a window of time may start
+     earlier); off by default, as it loses on the wide set.
+
 Version 4.11
 =============
 
