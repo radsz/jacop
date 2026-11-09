@@ -130,6 +130,11 @@ public class Support implements ParserTreeConstants {
   private final Map<List<IntVar>, Integer> impliedAlldistincts = new HashMap<>();
   // the variables of every all_different of the model, for OverlappingAlldiff
   final ArrayList<IntVar[]> alldifferentLists = new ArrayList<>();
+  // the variables channelled by elements and tables (AlldiffChannels), null when the rule is off
+  public Set<IntVar> alldiffChannels;
+  // all_different constraints over the size limits, and those of them given Alldistinct
+  int alldiffsChecked;
+  int alldiffsChannelled;
   // all different variables found by AlldifferentDetector, for AlldiffSum only
   final ArrayList<IntVar[]> detectedAlldifferentLists = new ArrayList<>();
   // sums with unit coefficients that get an AlldiffSum when their variables are all different
@@ -811,6 +816,18 @@ public class Support implements ParserTreeConstants {
   void addImpliedAlldistinct(IntVar[] v) {
     parameterListForAlldistincts.add(v);
     impliedAlldistincts.merge(List.of(v), 1, Integer::sum);
+  }
+
+  /** Prints, under debug, how many all_different constraints the channel rule changed. */
+  public void reportAlldiffChannels() {
+    if (options.debug() && alldiffsChecked > 0) {
+      FzConsole.println(
+          "% alldiff channels: "
+              + alldiffsChannelled
+              + " of "
+              + alldiffsChecked
+              + " all_different over the size limits get Alldistinct");
+    }
   }
 
   /** Imposes all delayed constraints. */

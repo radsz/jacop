@@ -3957,6 +3957,26 @@ Version 5.0 (unreleased)
      137787 to 128330 (-f). -Dorg.jacop.weightedCompletion.prefixRows
      and ...weakReasons=false turn the two parts off.
 
+230. The FlatZinc front end posts a domain-consistent Alldistinct (Régin,
+     "A filtering algorithm for constraints of difference in CSPs",
+     AAAI 1994) instead of the bounds-consistent Alldiff (Puget, "A fast
+     algorithm for the bound consistency of alldiff constraints", AAAI
+     1998) for an all_different over the size limits (more than
+     org.jacop.fz.alldiffDomainSize values or more than 100 dense
+     variables) when at least half of its variables are element indexes
+     or table variables and it has at most a quarter more values than
+     variables. Elements and tables make holes inside the domains, e.g.
+     a cost bound cost[i, x[i]] <= z in a bottleneck assignment, which
+     bounds consistency does not see. On 72 random bottleneck
+     assignments (30 to 250 agents) the optima go from 58 to 72 at 600 s
+     in model search and with -f. In the MiniZinc Challenge 2008-2026 the
+     rule changes 4 of 1,881 instances (orthorio). Lifting the limits
+     altogether, or dropping the condition on the values, lost on the
+     Challenge instances they reach (cgt, crosswords, ma-path-finding,
+     cable-tree-wiring). -Dorg.jacop.fz.alldiffChannel=false keeps the
+     old rule, =loose drops the condition on the values, =all lifts the
+     limits.
+
 Version 4.11
 =============
 
