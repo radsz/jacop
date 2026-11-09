@@ -4011,6 +4011,29 @@ Version 5.0 (unreleased)
      and hid the solutions; -s now prints only the solutions and the
      final statistics. --gap still stops at the same bound.
 
+232. JaLP (RevisedDualSimplex) gives the right answers in five cases found by
+     an exact-arithmetic differential fuzzer (osolpro
+     benchmarks/jalp-allsolutions), now also run in the build as
+     LpSolverExactTest (dense DualSimplex, JalpSimplex and RevisedDualSimplex
+     checked against a rational simplex: status, objective, primal values,
+     duals and Farkas rows).
+     - It no longer answers UNBOUNDED when only its cost perturbation pulls
+       a column without cost to an infinite bound (min x1 with x1 >= 1 and a
+       free column in no row was UNBOUNDED).
+     - An UNBOUNDED answer no longer leaves the artificial bounds at 1e14
+       for the next solve: after a cut that bounded the problem the optimum
+       was 4.93 instead of 5. They start again at 1e6 with each new answer.
+     - solvePrimal with a limit of a few pivots per call answered LIMIT
+       forever with the exact clean-up (setExact), and on an infeasible
+       problem, where each call's primal phase 1 undid the dual simplex
+       pivots of the call before.
+     - solve with a limit of one pivot never ended when a row was left out
+       as round-off; leaving a row out no longer counts against the limit.
+     Behind JaCoP's relaxation (JalpSimplex) an UNBOUNDED answer counts as a
+     limit, solvePrimal is not called, and only LP-only columns can have
+     infinite bounds, so JaCoP lost at most pruning; the stand-alone solver
+     (LpMain) could give a wrong status or objective.
+
 Version 4.11
 =============
 
