@@ -636,22 +636,9 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
     int t = tails[a];
     int h = heads[a];
     if (t == h) {
-      if (t == 0) {
-        return true;
-      }
-      return degrees
-          && (otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], -1, out)
-              || otherOne(trail, p, a, inArc, inStart[t], inStart[t + 1], -1, out));
+      return t == 0 || otherOneAt(trail, p, a, out);
     }
-    // without its degrees the constraint removes no arc because another arc at its node is 1
-    if (degrees
-        && t != 0
-        && otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], selfLoop[t], out)) {
-      return true;
-    }
-    if (degrees
-        && h != 0
-        && otherOne(trail, p, a, inArc, inStart[h], inStart[h + 1], selfLoop[h], out)) {
+    if (otherOneAt(trail, p, a, out)) {
       return true;
     }
     if ((t == 0 || h == 0) && demands == null) {
@@ -697,6 +684,22 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
     return sum > capacity;
   }
 
+  // another arc out of the tail or into the head of arc a is 1 (for a self loop, any arc at its
+  // node); without its degrees the constraint removes no arc for that reason
+  private boolean otherOneAt(AtomicTrail trail, int p, int a, EntryList out) {
+    if (!degrees) {
+      return false;
+    }
+    int t = tails[a];
+    int h = heads[a];
+    if (t == h) {
+      return otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], -1, out)
+          || otherOne(trail, p, a, inArc, inStart[t], inStart[t + 1], -1, out);
+    }
+    return t != 0 && otherOne(trail, p, a, outArc, outStart[t], outStart[t + 1], selfLoop[t], out)
+        || h != 0 && otherOne(trail, p, a, inArc, inStart[h], inStart[h + 1], selfLoop[h], out);
+  }
+
   // the arc at 1 out of node w (not its self loop) just before the position, or -1
   private int arcOut(AtomicTrail trail, int w, int p) {
     for (int q = outStart[w]; q < outStart[w + 1]; q++) {
@@ -729,7 +732,11 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
   }
 
   private boolean failure(AtomicTrail trail, int p, EntryList out) {
-    // a node with two arcs at 1, or with every arc out or in at 0
+    return degreeFailure(trail, p, out) || pathFailure(trail, p, out);
+  }
+
+  // a node with two arcs at 1, or with every arc out or in at 0
+  private boolean degreeFailure(AtomicTrail trail, int p, EntryList out) {
     for (int v = 1; v < n; v++) {
       // without its degrees a self loop at 1 does not exclude the other arcs here
       int self = degrees ? selfLoop[v] : -1;
@@ -750,7 +757,11 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
         return true;
       }
     }
-    // a circuit of arcs at 1 without the depot, or a path over the capacity
+    return false;
+  }
+
+  // a circuit of arcs at 1 without the depot, or a path over the capacity
+  private boolean pathFailure(AtomicTrail trail, int p, EntryList out) {
     int[] succ = new int[n];
     int[] pred = new int[n];
     Arrays.fill(succ, -1);
