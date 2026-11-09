@@ -1145,4 +1145,52 @@ class RevisedDualSimplexTest {
       assertThat(lp.objective()).as("scale " + scale).isCloseTo(-35.0, offset(1e-9));
     }
   }
+
+  @Test
+  void primalSolvesWithALimitOfAFewPivotsEnd() {
+    // solvePrimal called again and again with a limit of one to three pivots, as a caller that
+    // budgets its work would: with the exact clean-up each call perturbed the costs again and
+    // ended removing the perturbation, and on an infeasible problem each call made primal phase 1
+    // pivots that undid the dual simplex the last one handed over to; both answered LIMIT forever
+    // (found by the exact LP fuzzer, osolpro benchmarks/jalp-allsolutions)
+    Random rnd = new Random(13);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 10;
+    int[] counts = new int[4];
+    for (int run = 0; run < runs; run++) {
+      int m = 2 + rnd.nextInt(10);
+      int n = 2 + rnd.nextInt(12);
+      Lp p = new Lp(rnd, m, n, 0.4, 0);
+      for (int j = 0; j < n; j++) {
+        p.lo[j] = -5.0 + rnd.nextInt(5);
+        p.hi[j] = p.lo[j] + rnd.nextInt(6);
+      }
+      RevisedDualSimplex lp = p.simplex(true);
+      lp.setExact(rnd.nextBoolean());
+      lp.solve(1_000_000);
+      double[] c = new double[n];
+      for (int j = 0; j < n; j++) {
+        c[j] = rnd.nextInt(11) - 5.0;
+      }
+      p.cost = c;
+      lp.setCost(c);
+      int limit = 1 + rnd.nextInt(3);
+      int status = RevisedDualSimplex.LIMIT;
+      for (int call = 0; call < 100_000 && status == RevisedDualSimplex.LIMIT; call++) {
+        status = lp.solvePrimal(limit);
+      }
+      String what = "run " + run + " limit " + limit;
+      assertThat(status).as(what).isNotEqualTo(RevisedDualSimplex.LIMIT);
+      RevisedDualSimplex fresh = p.simplex(true);
+      assertThat(fresh.solve(1_000_000)).as(what).isEqualTo(status);
+      if (status == RevisedDualSimplex.OPTIMAL) {
+        assertThat(lp.objective())
+            .as(what)
+            .isCloseTo(fresh.objective(), offset(1e-6 * (1 + Math.abs(fresh.objective()))));
+      }
+      counts[status]++;
+    }
+    // 22 optimal and 278 infeasible of 300
+    assertThat(counts[RevisedDualSimplex.OPTIMAL]).isGreaterThan(runs / 20);
+    assertThat(counts[RevisedDualSimplex.INFEASIBLE]).isGreaterThan(runs / 2);
+  }
 }

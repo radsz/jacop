@@ -438,6 +438,7 @@ public final class RevisedDualSimplex {
     seed = o.seed;
     exact = o.exact;
     cleaning = o.cleaning;
+    dualPending = o.dualPending;
     // copy() postsolves an open reduced solve first, so the copy has none
     reducedLp = null;
     reducedBy = null;
@@ -526,6 +527,7 @@ public final class RevisedDualSimplex {
     System.arraycopy(c, 0, givenCost, 0, n);
     setCosts(true);
     cleaning = false;
+    dualPending = false;
     placed = false;
     dualsChecked = false;
     if (factorValid) {
@@ -2687,6 +2689,15 @@ public final class RevisedDualSimplex {
     flushReduced();
     shrinkArtificial();
     ended = false;
+    if (dualPending) {
+      // the last call handed over to the dual simplex and stopped at its limit: the dual simplex
+      // goes on (a primal phase 1 again undid its pivots, and an infeasible problem solved with a
+      // few pivots per call never ended)
+      int status = solve(limit);
+      dualPending = status == LIMIT;
+      ended = !dualPending;
+      return status;
+    }
     long start = totalPivots;
     int status = primalPivots(limit);
     // the primal pivots change the basis and the reduced costs: the dual simplex places every
@@ -2703,6 +2714,7 @@ public final class RevisedDualSimplex {
     if (status == DUAL) {
       computeDuals();
       status = solve((int) Math.max(0, limit - (totalPivots - start)));
+      dualPending = status == LIMIT;
     }
     ended = status != LIMIT;
     if (ended) {
@@ -2715,6 +2727,9 @@ public final class RevisedDualSimplex {
   private double[] savedLo;
   private double[] savedHi;
   private boolean boundsPerturbed;
+
+  // a primal solve handed over to the dual simplex, which stopped at the limit
+  private boolean dualPending;
 
   // the status of a primal solve that hands over to the dual simplex
   private static final int DUAL = -2;
