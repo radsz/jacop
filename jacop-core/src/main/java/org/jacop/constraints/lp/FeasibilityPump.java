@@ -96,19 +96,69 @@ public final class FeasibilityPump {
 
   private static final double EPSILON = 1e-6;
 
-  /**
-   * The outcome of a pump.
-   *
-   * @param vars the variables of the store in the relaxation.
-   * @param values their values, from the last rounding.
-   * @param integral true if the last LP point was integral on the columns of the distance: the
-   *     rounding is then a point of the relaxation.
-   * @param iterations the distance problems solved.
-   * @param distance the L1 distance over the columns of the distance between the last LP point and
-   *     its rounding.
-   */
-  public record Result(
-      IntVar[] vars, int[] values, boolean integral, int iterations, double distance) {}
+  /** The outcome of a pump. */
+  public static final class Result {
+    private final IntVar[] vars;
+    private final int[] values;
+    private final boolean integral;
+    private final int iterations;
+    private final double distance;
+
+    Result(IntVar[] vars, int[] values, boolean integral, int iterations, double distance) {
+      this.vars = vars;
+      this.values = values;
+      this.integral = integral;
+      this.iterations = iterations;
+      this.distance = distance;
+    }
+
+    /**
+     * Returns the variables of the store in the relaxation.
+     *
+     * @return the variables.
+     */
+    public IntVar[] vars() {
+      return vars.clone();
+    }
+
+    /**
+     * Returns the values of the variables, from the last rounding.
+     *
+     * @return the values.
+     */
+    public int[] values() {
+      return values.clone();
+    }
+
+    /**
+     * Returns whether the last LP point was integral on the columns of the distance: the rounding
+     * is then a point of the relaxation.
+     *
+     * @return true if it was integral.
+     */
+    public boolean integral() {
+      return integral;
+    }
+
+    /**
+     * Returns the number of distance problems solved.
+     *
+     * @return the iterations.
+     */
+    public int iterations() {
+      return iterations;
+    }
+
+    /**
+     * Returns the L1 distance over the columns of the distance between the last LP point and its
+     * rounding.
+     *
+     * @return the distance.
+     */
+    public double distance() {
+      return distance;
+    }
+  }
 
   private final List<IntVar> columns = new ArrayList<>();
   private final Map<IntVar, Integer> index = new IdentityHashMap<>();
