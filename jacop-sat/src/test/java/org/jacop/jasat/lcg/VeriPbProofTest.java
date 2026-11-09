@@ -60,6 +60,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariableFast;
@@ -932,6 +933,51 @@ class VeriPbProofTest {
           .as("seed %d", seed)
           .isNull();
     }
+  }
+
+  // count_values whose variables may take values it does not count: two of them outside the
+  // counted values leave the counters at most n - 2, which needs the rest over the value literals
+  // (generalized-peacable-queens n9_q5)
+  @Test
+  void countValuesWithRestIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 5 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 1, 4);
+          int[] values = {2, 3, 4};
+          IntVar[] counter = new IntVar[values.length];
+          for (int k = 0; k < counter.length; k++) {
+            counter[k] = new IntVar(store, "c" + k, 0, n);
+          }
+          store.impose(new CountValues(x, counter, values));
+          IntVar[] terms = Arrays.copyOf(counter, counter.length + 2);
+          terms[counter.length] = x[0];
+          terms[counter.length + 1] = x[1];
+          return weightedSum(store, random, terms);
+        });
+  }
+
+  // count_values with tight counters: a reason whose flow cut needs the rest as a node of its own,
+  // bounded by the rest, and its line over the other values (generalized-peacable-queens)
+  @Test
+  void countValuesRestInFlowCutsIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 8 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 1, 6);
+          int[] values = {2, 3};
+          IntVar[] counter = new IntVar[values.length];
+          for (int k = 0; k < counter.length; k++) {
+            counter[k] = new IntVar(store, "c" + k, 0, n / 2);
+          }
+          store.impose(new CountValues(x, counter, values));
+          IntVar[] terms = Arrays.copyOf(counter, counter.length + 2);
+          terms[counter.length] = x[0];
+          terms[counter.length + 1] = x[1];
+          return weightedSum(store, random, terms);
+        });
   }
 
   // a knapsack without its dynamic program, whose reasons are rows of the two equalities, with

@@ -1038,18 +1038,37 @@ public final class LcgSolver implements ExternalPropagator {
     for (int k = 0; k < m; k++) {
       valueIndex.put(values[k], k);
     }
-    // the values not counted by an open constraint are free: any number of variables take them
+    // the values not counted by an open constraint are free: any number of variables take them,
+    // or as many as the rest counts, when one does: then all of them are one node
     Map<Integer, Integer> freeValues = new HashMap<>();
+    int restNode = n + m + 2;
     for (int j = 0; j < n && !lines.closed; j++) {
       for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
         int v = e.nextElement();
         if (!valueIndex.containsKey(v)) {
-          freeValues.putIfAbsent(v, n + m + 2 + freeValues.size());
+          freeValues.putIfAbsent(v, lines.rest >= 0 ? restNode : n + m + 2 + freeValues.size());
         }
       }
     }
+    IntDomain restDomain = null;
+    if (lines.rest >= 0) {
+      IntDomain[] restricted = new IntDomain[1];
+      hypotheses(
+          Map.of(lines.rest, 0),
+          new int[] {lines.rest},
+          atoms,
+          from,
+          entry,
+          restricted,
+          new StringBuilder[1]);
+      restDomain = restricted[0];
+      if (restDomain.isEmpty()) {
+        return;
+      }
+    }
+    int freeNodes = lines.rest >= 0 ? 1 : freeValues.size();
     // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
-    int source = n + m + 2 + freeValues.size();
+    int source = n + m + 2 + freeNodes;
     int sink = source + 1;
     Flow flow = new Flow(sink + 1);
     for (int j = 0; j < n; j++) {
@@ -1065,8 +1084,12 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
-    for (int node : freeValues.values()) {
-      flow.add(node, 1, 0, n);
+    if (restDomain != null) {
+      flow.add(restNode, 1, Math.max(0, restDomain.min()), Math.min(n, restDomain.max()));
+    } else {
+      for (int node : freeValues.values()) {
+        flow.add(node, 1, 0, n);
+      }
     }
     for (int k = 0; k < m; k++) {
       if (count[k].isEmpty()) {
@@ -1103,6 +1126,10 @@ public final class LcgSolver implements ExternalPropagator {
           }
         }
       }
+      if (restDomain != null && cut[restNode]) {
+        pol.append(operands++ == 0 ? "" : " ").append(lines.restUpper);
+        pol.append(operands > 1 ? " +" : "");
+      }
       for (int j = 0; j < n; j++) {
         int i = variables[j];
         if (!cut[2 + j] || proofDomains[i].singleton()) {
@@ -1121,6 +1148,10 @@ public final class LcgSolver implements ExternalPropagator {
           pol.append(operands++ == 0 ? "" : " ").append(lines.lower[k]);
           pol.append(operands > 1 ? " +" : "");
         }
+      }
+      if (restDomain != null && !cut[restNode]) {
+        pol.append(operands++ == 0 ? "" : " ").append(lines.restLower);
+        pol.append(operands > 1 ? " +" : "");
       }
       for (int j = 0; j < n; j++) {
         if (!cut[2 + j] && lines.atMostOne[j] > 0) {
