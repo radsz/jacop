@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.BoolClause;
@@ -201,6 +202,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the linear relaxation (--lp), or null
   private LinearRelaxation linearRelaxation;
+
+  // above this many default search variables, the default search under --lcg branches in input
+  // order instead of dom/wdeg, whose scan over all of them at every decision costs too much
+  private static final int DOM_WDEG_LIMIT =
+      Integer.getInteger("org.jacop.fz.lcgDomWdegLimit", 50_000);
 
   // fixed search's activity runs follow the relaxation's root solution, not its last one, which
   // comes from another branch
@@ -715,6 +721,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.alldiffCuts
             + "\n%%%mzn-stat: lpAlldiffBound="
             + r.alldiffBound
+            + "\n%%%mzn-stat: lpAlldiffLists="
+            + r.alldiffLists
+            + "\n%%%mzn-stat: lpAlldiffVariantLists="
+            + r.alldiffVariantLists
+            + "\n%%%mzn-stat: lpAlldiffSearchCuts="
+            + r.alldiffSearchCuts
+            + "\n%%%mzn-stat: lpAlldiffSeparations="
+            + r.alldiffSeparations
+            + "\n%%%mzn-stat: lpTreeCuts="
+            + r.treeCuts
+            + "\n%%%mzn-stat: lpTreeBound="
+            + r.treeBound
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
@@ -2054,6 +2072,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     lcg.setRestartPresolve(options.presolveRestart());
+    // the hints of constraints first; a solution of local search replaces them
+    Hint constraintHint = constraintHints();
+    if (constraintHint != null) {
+      lcg.setPhase(constraintHint.vars, constraintHint.values);
+    }
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2117,6 +2140,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     boolean literalsOnly =
         branching == LcgSolver.Branching.LITERALS || branching == LcgSolver.Branching.AUTO;
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");
+    // the assumptions of core-guided, neighbourhood and lower-bound runs on one decision level
+    lcg.sat().setAssumptionsOnOneLevel(!"0".equals(options.freeConfig("lcg-assume-level", "1")));
     if (free) {
       lcg.setBranching(branching);
       if (branching != LcgSolver.Branching.ACTIVITY) {
@@ -2163,12 +2188,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the columns of tried encodings that the root trial dropped (gbac UD8 342 instead of 89). On
     // concert-hall-cap 2024 200_20 the relaxation's solution is the optimum: -f proves it in 1 s
     // with them, 40-55 s without, and the model's annotation (offers rejected first) does not find
-    // it in 60 s
+    // it in 60 s. Under -f also on when the relaxation has the subtour elimination cuts of trees,
+    // whose root solution is often the optimum (surface-based-tsp berlin52: -f finds it in 2 s with
+    // them, in 13-50 s without); in fixed search the activity runs it guides slowed berlin52 down
+    // (149 s instead of 60 s)
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching) && linearRelaxation.simplexValueColumns() > 0);
+                || "auto".equals(lpBranching)
+                    && (linearRelaxation.simplexValueColumns() > 0
+                        || free && linearRelaxation.treeConstraints() > 0));
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -2176,6 +2206,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!free && lpGuided) {
       // fixed search: the runs of activity branching between the annotation's runs start from it
       lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
+    }
+    if (defaultSearch && constraintHint != null) {
+      // no search annotation: the runs of the default search start with the values of the hints
+      IndomainLastSolution hinted =
+          new IndomainLastSolution(constraintHint.vars, new IndomainMin<>());
+      hinted.hint(constraintHint.vars, constraintHint.values);
+      SelectChoicePoint<IntVar> first = new SimpleSelect<>(constraintHint.vars, null, hinted);
+      annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
     lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
@@ -2418,6 +2456,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the element positions lcgDefaultSelect branches on first, for the statistics
   private int elementPositionCount;
 
+  // the default search variables lcgDefaultSelect gave to input order instead of dom/wdeg, for the
+  // statistics
+  private int inputOrderCount;
+
   /**
    * The branching that the runs of LCG free search alternate with when the model has no search
    * annotation. A model with cumulative or unary resources gets set times on the start variables of
@@ -2464,6 +2506,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           new SimpleSelect<>(positions, new WeightedDegree<>(store), new IndomainMin<>());
       select.inputOrderTieBreaking = false;
       return select;
+    }
+    if (vars.size() > DOM_WDEG_LIMIT) {
+      // dom/wdeg scans every variable at each decision: on the 160,000 cells of XCSP3
+      // AztecDiamond-200 that is about 1 ms a decision, and no solution came in 60 s. Input order
+      // finds one in 1.2 s without a failure (AztecDiamond 200-300, Takuzu 040/050 and WordDesign1
+      // 065 solved at 60 s, none lost on the 17 fast gaps above 20,000 variables)
+      inputOrderCount = vars.size();
+      return new SimpleSelect<>(vars.toArray(new IntVar[0]), null, new IndomainMin<>());
     }
     SimpleSelect<IntVar> select =
         new SimpleSelect<>(
@@ -2633,6 +2683,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgConstraintsAsClauses="
+            + lcg.constraintsAsClauses
+            + "\n%%%mzn-stat: lcgConstraintClauses="
+            + lcg.constraintClauses
+            + "\n%%%mzn-stat: lcgPureClauses="
+            + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="
             + lcg.impliedClauses
             + "\n%%%mzn-stat: lcgSatVariables="
@@ -2673,6 +2729,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + setTimesStarts
             + "\n%%%mzn-stat: lcgElementPositions="
             + elementPositionCount
+            + "\n%%%mzn-stat: lcgInputOrder="
+            + inputOrderCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgLearntAvg="
@@ -2943,6 +3001,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .skipImplied(!"0".equals(options.freeConfig("ls-implied", "1")))
             // the columns of a table with a key column (a row lookup) follow the key
             .tableKeys(!"0".equals(options.freeConfig("ls-keys", "1")))
+            // the cells of a matrix only element constraints look up follow them
+            .follow(!"0".equals(options.freeConfig("ls-follow", "1")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {
@@ -3006,6 +3066,53 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   // the integer variables of the store not fixed at the root, which a solution hint covers
+  /** Variables with the values a hint prefers for them. */
+  private static final class Hint {
+    final IntVar[] vars;
+    final int[] values;
+
+    Hint(IntVar[] vars, int[] values) {
+      this.vars = vars;
+      this.values = values;
+    }
+  }
+
+  /**
+   * The hints of the constraints that give one ({@link SolutionHint}), such as a feasible tree of
+   * {@link org.jacop.constraints.graph.ColouredSpanningTreeBound}, or null when there is none or
+   * -Dorg.jacop.fz.constraintHints is false. A variable hinted twice keeps its first value.
+   */
+  private Hint constraintHints() {
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.constraintHints"))) {
+      return null;
+    }
+    Map<IntVar, Integer> seen = new IdentityHashMap<>();
+    List<IntVar> vars = new ArrayList<>();
+    List<Integer> values = new ArrayList<>();
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof SolutionHint h && h.hintValues() != null) {
+        IntVar[] xs = h.hintVariables();
+        int[] vs = h.hintValues();
+        for (int i = 0; i < xs.length; i++) {
+          if (!xs[i].singleton()
+              && xs[i].domain.contains(vs[i])
+              && seen.putIfAbsent(xs[i], vs[i]) == null) {
+            vars.add(xs[i]);
+            values.add(vs[i]);
+          }
+        }
+      }
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    if (options.debug()) {
+      IO.println("% constraint hints: " + vars.size() + " variables");
+    }
+    return new Hint(
+        vars.toArray(new IntVar[0]), values.stream().mapToInt(Integer::intValue).toArray());
+  }
+
   private IntVar[] hintedVariables() {
     Set<IntVar> all = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < store.size(); i++) {
@@ -3184,6 +3291,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               : FreeSearch.Alternation.EVERY_RESTART);
     }
     Portfolio.Worker worker = options.portfolioWorker();
+    Hint constraintHint = allSolutions || phaseSavers.isEmpty() ? null : constraintHints();
+    if (constraintHint != null) {
+      // the first run follows the hints of constraints, unless local search gives a solution
+      for (IndomainLastSolution saver : phaseSavers) {
+        saver.hint(constraintHint.vars, constraintHint.values);
+      }
+      builder.mainBranchingFirst(true);
+    }
     if (!allSolutions && !onRestart && !phaseSavers.isEmpty()) {
       localSearchPhase(costVar, searchVars, worker, builder);
     }

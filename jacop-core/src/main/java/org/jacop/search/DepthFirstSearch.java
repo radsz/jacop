@@ -702,6 +702,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
       int currentChildSolutionNo =
           childSearches[currentChildSearch].getSolutionListener().solutionsNo();
       childResult = childSearches[currentChildSearch].labeling();
+      // checked before the time-out: a child cut short after finding solutions still needs this
+      // search to record its own part of them, or the last solution pairs the child's part with
+      // the part of an earlier node
+      if (childSearches[currentChildSearch].getSolutionListener().solutionsNo()
+          > currentChildSolutionNo) {
+        childFoundSolution = true;
+      }
       if (childSearches[currentChildSearch] instanceof DepthFirstSearch<?> child
           && child.timeOutOccured) {
         // the child search was cut short, so the subtree below this node is not exhausted
@@ -710,10 +717,6 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
           markTimeOutOccurred();
         }
         break;
-      }
-      if (childSearches[currentChildSearch].getSolutionListener().solutionsNo()
-          > currentChildSolutionNo) {
-        childFoundSolution = true;
       }
       if (childResult) {
         break;

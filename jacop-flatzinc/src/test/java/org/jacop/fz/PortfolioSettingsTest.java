@@ -57,12 +57,12 @@ class PortfolioSettingsTest {
     assertEquals(
         List.of(
             "lcg-lits",
-            "free-chs-luby",
+            "ls",
             "default",
+            "free-chs-luby",
             "lcg-fixed",
             "free-afc",
             "free",
-            "ls",
             "free-cacd"),
         names(lcgFree, 8, true));
   }
@@ -70,16 +70,16 @@ class PortfolioSettingsTest {
   @Test
   void optimisationKeepsTheOrder() {
     String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), false);
-    assertEquals(List.of("lcg-lits", "free-chs-luby", "default"), names(lcgFree, 3, false));
+    assertEquals(List.of("lcg-lits", "ls", "default"), names(lcgFree, 3, false));
     assertEquals(
         List.of(
             "lcg-lits",
-            "free-chs-luby",
+            "ls",
             "default",
+            "free-chs-luby",
             "lcg-fixed",
             "free-afc",
             "free",
-            "ls",
             "lcg-bb"),
         names(lcgFree, 8, false));
   }
@@ -87,10 +87,9 @@ class PortfolioSettingsTest {
   @Test
   void theGivenSettingIsNotRepeated() {
     String lcgFixed = Portfolio.search(List.of("--lcg", "on"), false);
-    assertEquals(
-        List.of("lcg-lits", "free-chs-luby", "default", "free-afc"), names(lcgFixed, 4, false));
+    assertEquals(List.of("lcg-lits", "ls", "default", "free-chs-luby"), names(lcgFixed, 4, false));
     String annotation = Portfolio.search(List.of("--lcg", "off"), false);
-    assertEquals(List.of("lcg-lits", "free-chs-luby", "lcg-fixed"), names(annotation, 3, false));
+    assertEquals(List.of("lcg-lits", "ls", "free-chs-luby"), names(annotation, 3, false));
     assertEquals(
         Portfolio.search(List.of("--lcg", "-f"), false),
         Portfolio.search(List.of("--lcg", "on", "-f"), false));

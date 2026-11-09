@@ -72,7 +72,10 @@ public interface ExternalPropagator {
    */
   default void notifyBacktrack(int level) {}
 
-  /** The solver restarted; {@link #notifyBacktrack} to level 0 came just before. */
+  /**
+   * The solver restarted; {@link #notifyBacktrack} came just before, to level 0, or to level 1 when
+   * the solver searches under assumptions, which it keeps on level 1 at restarts.
+   */
   default void notifyRestart() {}
 
   /**
@@ -82,6 +85,15 @@ public interface ExternalPropagator {
    * @param lit the literal
    */
   default void notifyLearntLiteral(int lit) {}
+
+  /**
+   * A variable that conflict analysis met but did not put in the learnt clause, when {@link
+   * CdclSolver#setAnalysedNotify} asks for them: once per variable and conflict, after the learnt
+   * literals.
+   *
+   * @param var the DIMACS variable
+   */
+  default void notifyAnalysedLiteral(int var) {}
 
   /**
    * A literal of a reason the solver keeps as a learnt clause. Called once per literal of each kept
