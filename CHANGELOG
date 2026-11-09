@@ -3895,6 +3895,16 @@ Version 5.0 (unreleased)
      were tried as well and are not included: the MIR cuts already
      reach the same root bounds on the MiniZinc Challenge instances.
 
+226. Bug fix: the MiniZinc predicate channel(x, b) of JaCoP's library
+     paired b with the values of dom(x) instead of with the indices of b,
+     although it is documented as x = i <-> b[i]. With dom(x) = 2..6 and
+     b indexed 1..5, b[1] was true for x = 2; when dom(x) and index_set(b)
+     had different sizes (holes in dom(x), or a narrower or wider domain),
+     the model was rejected with "Status array size ... has not equal
+     size as number of values". channel(x, b) now posts x in index_set(b)
+     and channels over index_set(b). Found by the all-solutions suite
+     (random variants of its channel model).
+
 Version 4.11
 =============
 
