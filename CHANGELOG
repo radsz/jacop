@@ -3797,7 +3797,19 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
-220. Under lazy clause generation (--lcg), a value excluded by a bound
+220. JaLP pivots are about 1.1x faster with the same arithmetic. The full
+     passes of ftran and btran over U read the pivot row, position, pivot
+     and column of each slot of the order in sequence, with the columns of
+     U in one flat array laid out in that order (a Forrest-Tomlin column
+     is appended), and the rows of L are indexed by step; the
+     factorization no longer allocates per step, and the bound-flipping
+     ratio test computes each breakpoint ratio once instead of in every
+     pass. On the LP bench (659 LPs, 120 s) every LP has the same pivots,
+     objective and factorizations; sgm 1.11x on the 199 LPs of 0.5 s or
+     more, 1.15x on those of 5 s or more (map10 1.5x, map16715-04 1.55x,
+     i_n13 1.29x).
+
+221. Under lazy clause generation (--lcg), a value excluded by a bound
      is explained by the earliest bound of the variable beyond it,
      instead of the variable's latest bound. Explanations that say
      "x cannot take v" (Count, the counting reasons of GCC, Element,
@@ -3813,7 +3825,7 @@ Version 5.0 (unreleased)
      hard instances better (gbac, tdtsp, neighbours, blocks-world,
      cargo, work-task-variation), 1 worse (java-routing trip_8_3).
 
-221. Dichotomic bound search, off by default. --free-config
+222. Dichotomic bound search, off by default. --free-config
      lcg-bisect=<gap> makes LCG free search probe the objective: it
      assumes obj <= lb + (best - 1 - lb) / 2 under a conflict limit, and
      a probe that fails on that assumption alone proves obj > target
@@ -3834,7 +3846,7 @@ Version 5.0 (unreleased)
      objective instances of wide-quick. OR-Tools CP-SAT runs similar
      probes in its objective_shaving workers.
 
-222. The LP relaxation (LinearRelaxation) now has the weight and profit
+223. The LP relaxation (LinearRelaxation) now has the weight and profit
      rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
      knapsacks KnapsackDetector posts), as linearised rows tried at the
      root. Before, a model stated with knapsack constraints had no LP
