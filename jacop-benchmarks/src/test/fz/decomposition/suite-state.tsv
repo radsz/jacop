@@ -9289,3 +9289,7 @@ C	mznc:upTo10min/2015_p1f/17	08d2f680d431270a	obj1:f	PASS	COMPLETE	0	426	2026-11
 C	mznc:upTo10min/2015_p1f/17	08d2f680d431270a	obj1:lcg	PASS	COMPLETE	0	387	2026-11-09T10:02:26Z	
 C	mznc:upTo10min/2015_p1f/17	08d2f680d431270a	obj1:lcg-f	PASS	COMPLETE	0	394	2026-11-09T10:02:26Z	
 P	mznc:above1hour/2023_chessboard/chessboard_n9_1	2d72012f45deb2d0	maximize	194	INCOMPLETE	0	0	0	120349	120	2026-11-09T10:02:59Z	jacop_array_var_int_element_nonshifted,jacop_count_values,jacop_lex_lesseq_int
+P	hakank:upTo5sec/hakank_find_missing_number2/find_missing_number2_50_44	202e76345c74f047	satisfy		COMPLETE	2	1	681c3aa42cc1d2d5	490	120	2026-11-09T10:26:04Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_count,jacop_if_then_else_bool,jacop_if_then_else_int
+C	hakank:upTo5sec/hakank_find_missing_number2/find_missing_number2_50_44	202e76345c74f047	all:f	PASS	COMPLETE	1	480	2026-11-09T10:26:04Z	
+P	hakank:upTo5sec/hakank_find_missing_number2/find_missing_number2_50_18	dc62ef23732614ac	satisfy		COMPLETE	2	1	c4f2459ccaf88d0a	526	120	2026-11-09T10:26:09Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_count,jacop_if_then_else_bool,jacop_if_then_else_int
+C	hakank:upTo5sec/hakank_find_missing_number2/find_missing_number2_50_18	dc62ef23732614ac	all:f	PASS	COMPLETE	1	490	2026-11-09T10:26:10Z	

@@ -683,7 +683,13 @@ class AllSolutionsSuite {
       verdict = "MISSED";
       note = "finished with " + r.distinctCount() + " of " + ref.distinctCount() + " solutions";
     } else if (r.status == SolverRun.Status.COMPLETE) {
-      verdict = r.solutions == ref.solutions ? "PASS" : "DUPLICATES";
+      // a variable that MiniZinc marks as defined by a half-reification (int_eq_imp) is free when
+      // its condition holds, is not printed, and gives the reference repeated printed solutions;
+      // a search that labels only the printed variables then prints each once
+      boolean refRepeats = ref.solutions != ref.distinctCount();
+      boolean same =
+          refRepeats ? r.distinctCount() == ref.distinctCount() : r.solutions == ref.solutions;
+      verdict = same ? "PASS" : "DUPLICATES";
       note = verdict.equals("PASS") ? "" : r.solutions + " printed, " + ref.solutions + " expected";
     } else {
       verdict = "PARTIAL";
