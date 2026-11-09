@@ -100,9 +100,9 @@ class PortfolioSettingsTest {
     String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), false);
     List<String> layout =
         Portfolio.settings(lcgFree, 3, false, 0.1).stream().map(c -> c[0]).toList();
-    assertEquals(List.of(Portfolio.BOUND_THREAD, "lcg-lits", "free-chs-luby"), layout);
+    assertEquals(List.of(Portfolio.BOUND_THREAD, "lcg-lits", "ls"), layout);
     assertEquals(
-        List.of("lcg-lits", "free-chs-luby", "default"),
+        List.of("lcg-lits", "ls", "default"),
         Portfolio.settings(lcgFree, 3, true, 0.1).stream().map(c -> c[0]).toList());
     assertEquals(
         names(lcgFree, 3, false),
