@@ -1475,7 +1475,7 @@ class AtomicTrailTest {
   }
 
   @Test
-  void excludedBeforeCitesTheLatestEntryThatRemovesTheValue() {
+  void excludedBeforeCitesTheEarliestEntryThatRemovesTheValue() {
     Random rnd = new Random(12);
     int[] spans = {40, 600, (1 << 16) + 10};
     for (int run = 0; run < 90; run++) {
@@ -1509,6 +1509,7 @@ class AtomicTrailTest {
           for (int e = 0; e < position; e++) {
             if (trail.variable(e) == x && removes(trail, e, v)) {
               expected = e;
+              break;
             }
           }
           out.clear();

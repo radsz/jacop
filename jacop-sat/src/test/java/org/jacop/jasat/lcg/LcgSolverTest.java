@@ -1492,7 +1492,8 @@ class LcgSolverTest {
     System.out.printf(
         "seq precede chain colouring: %d unsat, %d own and %d generic or replayed explanations%n",
         unsat, own, generic);
-    assertThat(own).isGreaterThan(1000);
+    // about 800 since reasons cite the earliest bound beyond a value (shorter searches)
+    assertThat(own).isGreaterThan(500);
     assertThat(own).isGreaterThan(20 * generic);
   }
 

@@ -1061,6 +1061,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     int mark = out.size();
     replayed = false;
     if (reason[entry] instanceof Explainable c && c.explain(this, entry, out)) {
+      dropDominatedBounds(out, mark);
       return true;
     }
     out.truncate(mark);
@@ -1070,6 +1071,94 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     out.truncate(mark);
     genericReason(entry, out);
     return false;
+  }
+
+  // per variable and bound kind, the latest entry of that kind in the reason being reduced, or -1
+  private int[] latestInReason = new int[0];
+
+  // the least slack the kept entry of each variable and bound kind may have
+  private int[] slackInReason = new int[0];
+
+  private final EntryList reduced = new EntryList();
+
+  /*
+   * Keeps, of the bound entries of one variable and kind in a reason, only the latest, which
+   * implies the others, and drops the != entries that a kept bound implies: excludedBefore cites
+   * the earliest entry that removes each value, so a range of values cites every bound up to the
+   * one beyond the last value. The kept bound gets the least slack for which its weakened bound
+   * still implies each dropped entry.
+   */
+  private void dropDominatedBounds(EntryList out, int mark) {
+    if (!LIFTING || out.size() - mark < 2) {
+      return;
+    }
+    if (latestInReason.length < numBounds.length) {
+      int old = latestInReason.length;
+      latestInReason = Arrays.copyOf(latestInReason, numBounds.length);
+      slackInReason = Arrays.copyOf(slackInReason, numBounds.length);
+      Arrays.fill(latestInReason, old, latestInReason.length, -1);
+    }
+    for (int k = mark; k < out.size(); k++) {
+      int e = out.get(k);
+      if (kind[e] != NE) {
+        int b = 2 * id(variable(e)) + kind[e];
+        latestInReason[b] = Math.max(latestInReason[b], e);
+        slackInReason[b] = Integer.MAX_VALUE;
+      }
+    }
+    boolean dominated = false;
+    for (int k = mark; k < out.size(); k++) {
+      int e = out.get(k);
+      int i = 2 * id(variable(e));
+      if (kind[e] != NE) {
+        int f = latestInReason[i + kind[e]];
+        dominated |= f != e;
+        long gap = kind[e] == GE ? (long) value[f] - value[e] : (long) value[e] - value[f];
+        cap(i + kind[e], gap + out.slack(k));
+      } else {
+        int g = latestInReason[i + GE];
+        int l = latestInReason[i + LE];
+        if (g >= 0 && value[g] > value[e]) {
+          dominated = true;
+          cap(i + GE, (long) value[g] - value[e] - 1);
+        } else if (l >= 0 && value[l] < value[e]) {
+          dominated = true;
+          cap(i + LE, (long) value[e] - value[l] - 1);
+        }
+      }
+    }
+    if (dominated) {
+      reduced.clear();
+      for (int k = mark; k < out.size(); k++) {
+        int e = out.get(k);
+        int i = 2 * id(variable(e));
+        if (kind[e] == NE) {
+          int g = latestInReason[i + GE];
+          int l = latestInReason[i + LE];
+          if (!(g >= 0 && value[g] > value[e]) && !(l >= 0 && value[l] < value[e])) {
+            reduced.addFrom(out, k);
+          }
+        } else if (latestInReason[i + kind[e]] == e && slackInReason[i + kind[e]] >= 0) {
+          reduced.addLifted(e, slackInReason[i + kind[e]]);
+          // a repeated entry is kept once
+          slackInReason[i + kind[e]] = -1;
+        }
+      }
+      out.truncate(mark);
+      for (int k = 0; k < reduced.size(); k++) {
+        out.addFrom(reduced, k);
+      }
+    }
+    for (int k = mark; k < out.size(); k++) {
+      int e = out.get(k);
+      if (kind[e] != NE) {
+        latestInReason[2 * id(variable(e)) + kind[e]] = -1;
+      }
+    }
+  }
+
+  private void cap(int b, long slack) {
+    slackInReason[b] = (int) Math.min(slackInReason[b], slack);
   }
 
   /**
@@ -1109,6 +1198,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     int mark = out.size();
     replayed = false;
     if (failed instanceof Explainable c && c.explainFailure(this, out)) {
+      dropDominatedBounds(out, mark);
       return true;
     }
     out.truncate(mark);
