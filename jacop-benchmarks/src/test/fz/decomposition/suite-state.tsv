@@ -6667,3 +6667,19 @@ C	jacop:upTo5sec/road-cons/road_8	e55992b0e865f3a0	obj1:f	PASS	COMPLETE	1	562	20
 C	jacop:upTo5sec/road-cons/road_8	e55992b0e865f3a0	obj1:lcg	PASS	COMPLETE	1	581	2026-11-09T01:53:04Z	
 C	jacop:upTo5sec/road-cons/road_8	e55992b0e865f3a0	obj1:lcg-f	PASS	COMPLETE	1	640	2026-11-09T01:53:05Z	
 C	jacop:upTo5min/liner-sf-repositioning/fm3_11	d1cdfcab53e95ce6	obj1:lcg-f	PASS	COMPLETE	1	25030	2026-11-09T01:53:06Z	
+P	jacop:upTo5sec/bibd/06_03_02	c35f6a9e9520b14c	satisfy		COMPLETE	1	1	f3fd8fb888f236d1	782	120	2026-11-09T01:53:39Z	jacop_lex_lesseq_bool
+P	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	maximize	9074	COMPLETE	2	2	7cc27268fe1277b5	876	120	2026-11-09T01:53:40Z	jacop_knapsack
+C	jacop:upTo5sec/bibd/06_03_02	c35f6a9e9520b14c	all:f	PASS	COMPLETE	1	1191	2026-11-09T01:53:41Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	all:f	PASS	COMPLETE	2	925	2026-11-09T01:53:41Z	
+C	jacop:upTo5sec/bibd/06_03_02	c35f6a9e9520b14c	decomp:jacop_lex_lesseq_bool	PASS	COMPLETE	1	1470	2026-11-09T01:53:42Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	decomp:jacop_knapsack	PASS	COMPLETE	2	1059	2026-11-09T01:53:42Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	std	PASS	COMPLETE	2	853	2026-11-09T01:53:43Z	
+C	jacop:upTo5sec/bibd/06_03_02	c35f6a9e9520b14c	obj0:plain	PASS	COMPLETE	1	992	2026-11-09T01:53:43Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	std:f	PASS	COMPLETE	2	659	2026-11-09T01:53:44Z	
+C	jacop:upTo5sec/bibd/06_03_02	c35f6a9e9520b14c	obj0:f	PASS	COMPLETE	1	903	2026-11-09T01:53:44Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	objstd:lcg	PASS	COMPLETE	1	782	2026-11-09T01:53:45Z	
+C	jacop:upTo5sec/bibd/06_03_02	c35f6a9e9520b14c	obj0:lcg	PASS	COMPLETE	1	970	2026-11-09T01:53:45Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	obj0:plain	PASS	COMPLETE	1	627	2026-11-09T01:53:45Z	
+C	jacop:upTo5sec/bibd/06_03_02	c35f6a9e9520b14c	obj0:lcg-f	PASS	COMPLETE	1	858	2026-11-09T01:53:46Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	obj0:f	PASS	COMPLETE	1	726	2026-11-09T01:53:46Z	
+C	jacop:upTo5sec/multi-knapsack/mknap2-31	67547f132850c15b	obj0:lcg	PASS	COMPLETE	1	644	2026-11-09T01:53:47Z	
