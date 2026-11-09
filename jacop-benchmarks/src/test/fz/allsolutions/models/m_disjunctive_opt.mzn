@@ -1,0 +1,11 @@
+include "globals.mzn";
+array[1..4] of var opt 0..3: s;
+array[1..4] of var opt 0..3: t;
+array[1..4] of int: d = [2, 1, 0, 2];
+constraint disjunctive(s, d);
+constraint disjunctive_strict(t, d);
+constraint sum(i in 1..4)(bool2int(occurs(s[i]))) >= 3;
+constraint sum(i in 1..4)(bool2int(occurs(t[i]))) >= 3;
+constraint forall(i in 1..4)(occurs(s[i]) -> deopt(s[i]) + d[i] <= 5);
+constraint forall(i in 1..4)(occurs(t[i]) -> deopt(t[i]) + d[i] <= 5);
+solve satisfy;

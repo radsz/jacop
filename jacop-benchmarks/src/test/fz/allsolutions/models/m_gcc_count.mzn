@@ -1,0 +1,12 @@
+include "globals.mzn";
+include "GCC.mzn";
+array[1..5] of var 1..3: x;
+array[1..3] of var 0..3: c;
+constraint GCC(x, c);
+array[1..4] of var 0..3: y;
+var 0..4: k; var bool: r1; var bool: r2;
+constraint r1 <-> count_eq(y, 2, k);
+constraint r2 <-> count_eq(y, x[1], 2);
+constraint count_eq(y, x[2]) = c[1];
+constraint r1 \/ r2;
+solve satisfy;

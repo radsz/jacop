@@ -1,0 +1,15 @@
+include "globals.mzn";
+array[1..3] of var bool: a;
+array[1..3] of var bool: b;
+constraint lex_less(a, b);
+array[1..4] of var bool: p;
+var 1..4: imax; var 1..4: imin;
+constraint imax = arg_max(p);
+constraint imin = arg_min(p);
+array[1..3] of var 1..3: u;
+var 1..3: v; var bool: mb;
+constraint mb <-> member(u, v);
+constraint mb -> u[1] != u[2];
+var bool: eb;
+constraint eb <-> all_equal([u[2], u[3], v]);
+solve satisfy;
