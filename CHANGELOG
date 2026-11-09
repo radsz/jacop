@@ -3797,6 +3797,27 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
+221. LateCount uses release dates. For each earliest start t as origin,
+     every task may do up to t - est of its processing before t on a
+     machine of its own (a relaxation), and Moore and Hodgson bounds the
+     late tasks among the rest from t on; the best origin gives the
+     bound and the filtering, the earliest start of all the bound of
+     before. With new LateCount(s, d, due, late, true) it also enforces
+     the dominance rule of Baptiste, Peridy and Pinson (European J.
+     Operational Research 144(1), 2003): when p[i] <= p[j], r[i] + p[i]
+     <= r[j] + p[j], due[i] - p[i] >= due[j] - p[j] and r[i] + p[i] <=
+     due[i], task i is on time whenever task j is. The rule keeps an
+     optimum only when nothing else constrains the tasks, so the
+     FlatZinc front end turns it on only then: each start occurs only in
+     the unary resource and in its lateness test, the tests count with
+     one weight, the domains are intervals and leave room for the late
+     tasks at the end (-Dorg.jacop.fz.lateCount.dominance=false turns it
+     off; -Dorg.jacop.lateCount.releases=false the release bound). On 60
+     random 1|r_j|sum U_j instances (n = 40 to 150), 240 s, the optima
+     proved go from 49 to 60 with the model's search and from 54 to 60
+     with -f, no objective worse. On the 11 instances the base does not
+     prove, the release bound alone proves 11 and the dominance alone 7.
+
 Version 4.11
 =============
 
