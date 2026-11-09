@@ -60,3 +60,32 @@ predicate chance_sum(array[int] of var int: x, array[int, int] of int: value,
   assert(forall(i in index_set(x))(lb(x[i]) >= 0), "chance_sum: the variables must be at least 0") /\
   jacop_chance_sum(array1d(x), array1d(value), array1d(prob), card(index_set_2of2(value)), den,
                    c, alpha);
+
+% The native constraint: the arguments of chance_table, with x as a one-dimensional array.
+predicate jacop_chance_table(array[int] of var int: x, array[int] of int: scope_len,
+                             array[int] of int: scope, array[int] of int: rows,
+                             array[int] of int: tuples, array[int] of int: scen_len,
+                             array[int] of int: scen_tables, array[int] of int: prob,
+                             var int: p);
+
+/** The chance constraint over scenario tables: p = sum(s)(prob[s] * [x satisfies scenario s]).
+  Table t has the scope_len[t] variables of x at the positions (from 1) listed next in scope and
+  the rows[t] tuples listed next in tuples, row by row. Scenario s holds when x is a tuple of each
+  of the scen_len[s] tables listed next in scen_tables (from 1), and has the weight prob[s], a
+  probability numerator. Maximising p gives the most probable decision of a one-stage stochastic
+  CSP; p >= alpha is the chance constraint. A table shared by scenarios is listed once. */
+predicate chance_table(array[int] of var int: x, array[int] of int: scope_len,
+                       array[int] of int: scope, array[int] of int: rows,
+                       array[int] of int: tuples, array[int] of int: scen_len,
+                       array[int] of int: scen_tables, array[int] of int: prob, var int: p) =
+  assert(length(scope_len) = length(rows) /\ sum(scope_len) = length(scope)
+         /\ sum(t in index_set(rows))(scope_len[t] * rows[t]) = length(tuples)
+         /\ length(scen_len) = length(prob) /\ sum(scen_len) = length(scen_tables),
+         "chance_table: the lengths of the arrays do not match") /\
+  assert(forall(i in index_set(scope))(scope[i] >= 1 /\ scope[i] <= length(x))
+         /\ forall(i in index_set(scen_tables))(scen_tables[i] >= 1
+                                                /\ scen_tables[i] <= length(rows))
+         /\ forall(s in index_set(prob))(prob[s] >= 0),
+         "chance_table: a position, a table index or a weight is out of range") /\
+  jacop_chance_table(array1d(x), array1d(scope_len), array1d(scope), array1d(rows),
+                     array1d(tuples), array1d(scen_len), array1d(scen_tables), array1d(prob), p);

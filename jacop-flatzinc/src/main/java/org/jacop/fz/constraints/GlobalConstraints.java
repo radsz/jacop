@@ -156,6 +156,7 @@ import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.prob.constraints.ChanceSum;
+import org.jacop.prob.constraints.ChanceTable;
 import org.jacop.prob.constraints.ScenarioChance;
 import org.jacop.prob.dist.Dist;
 import org.jacop.prob.num.ProbArith;
@@ -2335,6 +2336,51 @@ class GlobalConstraints implements ParserTreeConstants {
       w[i] = new Dist(Arrays.copyOfRange(value, i * k, (i + 1) * k), p, den);
     }
     support.delayedConstraints.add(new ChanceSum(x, w, c, alpha, den));
+  }
+
+  void gen_jacop_chance_table(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] scopeLen = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] scopeFlat = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    int[] rows = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+    int[] tupleFlat = support.getIntArray((SimpleNode) node.jjtGetChild(4));
+    int[] scenLen = support.getIntArray((SimpleNode) node.jjtGetChild(5));
+    int[] scenFlat = support.getIntArray((SimpleNode) node.jjtGetChild(6));
+    int[] prob = support.getIntArray((SimpleNode) node.jjtGetChild(7));
+    IntVar p = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(8));
+
+    if (scopeLen.length != rows.length || scenLen.length != prob.length) {
+      throw new IllegalArgumentException("jacop_chance_table: arrays of different lengths");
+    }
+    int[][] scopes = new int[rows.length][];
+    int[][][] tuples = new int[rows.length][][];
+    int at = 0;
+    int tupleAt = 0;
+    for (int t = 0; t < rows.length; t++) {
+      scopes[t] = new int[scopeLen[t]];
+      for (int k = 0; k < scopeLen[t]; k++) {
+        scopes[t][k] = scopeFlat[at++] - 1;
+      }
+      tuples[t] = new int[rows[t]][];
+      for (int r = 0; r < rows[t]; r++) {
+        tuples[t][r] = Arrays.copyOfRange(tupleFlat, tupleAt, tupleAt + scopeLen[t]);
+        tupleAt += scopeLen[t];
+      }
+    }
+    int[][] scenarios = new int[scenLen.length][];
+    long[] weights = new long[prob.length];
+    at = 0;
+    for (int s = 0; s < scenLen.length; s++) {
+      scenarios[s] = new int[scenLen[s]];
+      for (int k = 0; k < scenLen[s]; k++) {
+        scenarios[s][k] = scenFlat[at++] - 1;
+      }
+      weights[s] = prob[s];
+    }
+    if (at != scenFlat.length || tupleAt != tupleFlat.length) {
+      throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
+    }
+    support.delayedConstraints.add(new ChanceTable(x, scopes, tuples, scenarios, weights, p));
   }
 
   void gen_jacop_mdd(SimpleNode node) {
