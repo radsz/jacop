@@ -625,6 +625,40 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return e;
   }
 
+  // the earliest k bound entry before the position whose value is beyond v (above it for GE, below
+  // it for LE), by binary search over the variable's bound entries, whose values only tighten; -1
+  // when there is none
+  private int firstBeyond(IntVar x, int v, int position, int k) {
+    int b = 2 * id(x) + k;
+    if (b >= numBounds.length) {
+      return -1;
+    }
+    int[] list = bounds[b];
+    int lo = 0;
+    int hi = numBounds[b] - 1;
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      if (list[mid] < position) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    // list[0..hi] are before the position; find the first whose value is beyond v
+    int end = hi;
+    lo = 0;
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      int w = value[list[mid]];
+      if (k == GE ? w > v : w < v) {
+        hi = mid - 1;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return lo <= end ? list[lo] : -1;
+  }
+
   private int latest(IntVar x, int position, int k) {
     if (k != NE) {
       int b = 2 * id(x) + k;
@@ -927,15 +961,34 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (!root[i].contains(v)) {
       return true;
     }
+    int f = removals.get(i, v);
+    int removal = f < position ? f : -1;
+    int g = latest(x, position, GE);
+    int l = latest(x, position, LE);
+    if (LIFTING) {
+      // the earliest entry before the position that removes v: the value's NE entry, or the
+      // weakest bound of either kind that is beyond v, since a later bound only tightens it
+      int earliestGe = g >= 0 && value[g] > v ? firstBeyond(x, v, position, GE) : -1;
+      int earliestLe = l >= 0 && value[l] < v ? firstBeyond(x, v, position, LE) : -1;
+      int found = removal;
+      if (earliestGe >= 0 && (found < 0 || earliestGe < found)) {
+        found = earliestGe;
+      }
+      if (earliestLe >= 0 && (found < 0 || earliestLe < found)) {
+        found = earliestLe;
+      }
+      if (found < 0) {
+        return false;
+      }
+      out.add(found);
+      return true;
+    }
     // the latest entry before the position that removes v: the value's NE entry, or the last bound
     // of either kind, which removes v when any bound of its kind before it does
-    int f = removals.get(i, v);
-    int found = f < position ? f : -1;
-    int g = latest(x, position, GE);
+    int found = removal;
     if (g > found && value[g] > v) {
       found = g;
     }
-    int l = latest(x, position, LE);
     if (l > found && value[l] < v) {
       found = l;
     }
