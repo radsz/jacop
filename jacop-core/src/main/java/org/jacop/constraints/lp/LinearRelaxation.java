@@ -494,6 +494,9 @@ public class LinearRelaxation extends Constraint
   // the separations of the capacity cuts, one for each Routes with its arcs among the columns
   private List<CapacityCuts> capacity = new ArrayList<>();
 
+  // blossom and comb cuts (CombCuts) also in search, not only at the root
+  private static final boolean COMB_SEARCH = Boolean.getBoolean("org.jacop.lp.combSearch");
+
   // energy cuts of the cumulative resources at the root, in the rounds of the capacity cuts
   private static final boolean ENERGY_CUTS =
       !"false".equals(System.getProperty("org.jacop.lp.energyCuts"));
@@ -524,6 +527,38 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the objective bound after the Hall cuts, before the MIR cuts, or NaN. */
   public double alldiffBound = Double.NaN;
+
+  // the Hall cuts of the all-different constraints with exceptions (alldifferent_except_0) and of
+  // the global cardinality constraints (GCC, CountValues), with the copies of their values
+  private static final boolean ALLDIFF_VARIANTS =
+      !"false".equals(System.getProperty("org.jacop.lp.alldiffVariants"));
+
+  // Hall cuts in search, as the capacity cuts: separated from the solution of an optimal solve
+  // every hallPeriod solves, the period doubling (up to CAPACITY_MAX_PERIOD) after a separation
+  // that finds no violated cut and halving after one that does; the cuts use the root domains, so
+  // they hold globally, and go into the row pool; off by default, as on the Challenge instances
+  // that have them they cost more solves than the bound gains (osolpro alldiff-hall-search)
+  private static final boolean ALLDIFF_SEARCH =
+      "true".equals(System.getProperty("org.jacop.lp.alldiffSearch"));
+  private static final int ALLDIFF_SEARCH_CUTS =
+      Integer.getInteger("org.jacop.lp.alldiffSearchCuts", 10);
+  private boolean alldiffSearch = ALLDIFF_SEARCH;
+  private int hallPeriod = 4;
+  private int hallWaited;
+  // the column of each variable of each separation, -1 when the variable is not a column
+  private int[][] hallColumns;
+  private final Set<List<Long>> hallSeen = new HashSet<>();
+
+  /** Statistics: the all-different constraints with Hall cuts, and those of them with copies. */
+  public long alldiffLists;
+
+  public long alldiffVariantLists;
+
+  /** Statistics: Hall cuts added in search. */
+  public long alldiffSearchCuts;
+
+  /** Statistics: separations of Hall cuts in search. */
+  public long alldiffSeparations;
 
   // generalized subtour elimination cuts of the forests of Tree and Path ({@link TreeCuts}) at the
   // root, after the Hall cuts and before the MIR cuts, in rounds like those; for an objective only
@@ -947,10 +982,10 @@ public class LinearRelaxation extends Constraint
       if (forest != null) {
         trees.add(forest);
       }
-      IntVar[] distinct =
-          ALLDIFF_CUTS && objective != null ? Linearizations.alldifferentList(c) : null;
+      AlldifferentCuts distinct =
+          ALLDIFF_CUTS && objective != null ? Linearizations.hallCuts(c, ALLDIFF_VARIANTS) : null;
       if (distinct != null) {
-        hall.add(new AlldifferentCuts(distinct));
+        hall.add(distinct);
       }
       if (CAPACITY_CUTS && c instanceof Routes routes) {
         separations.add(new CapacityCuts(routes));
@@ -2060,6 +2095,16 @@ public class LinearRelaxation extends Constraint
       capacityWaited = 0;
       status = searchCapacityCuts(limit);
     }
+    if (status == LpSolver.OPTIMAL
+        && alldiffSearch
+        && hallColumns != null
+        && hallColumns.length > 0
+        && calls > 1
+        && !restarting
+        && ++hallWaited >= hallPeriod) {
+      hallWaited = 0;
+      status = searchHallCuts(limit);
+    }
     lastSolveLevel = store.level;
     if (jump) {
       jumpSolves++;
@@ -3154,7 +3199,7 @@ public class LinearRelaxation extends Constraint
     }
     for (int round = 0; round < CAPACITY_ROUNDS && stall < CAPACITY_STALL; round++) {
       // energy cuts stay at the root; in search only capacity cuts are separated
-      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen);
+      List<MirCut> chosen = separateCapacity(CUTS_PER_ROUND, seen, true);
       int n = lp.columns();
       int routing = chosen.size();
       if (!energy.isEmpty()) {
@@ -3226,11 +3271,11 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
-   * Rounds of Hall cuts ({@link AlldifferentCuts}) of the all-different constraints whose variables
-   * are all columns, at the root, each followed by a re-solve. As for the capacity cuts, the rounds
-   * stop when no cut is violated, the bound has not moved for a few rounds, or a solve stops at its
-   * limit (that round's cuts are dropped); when the cuts leave the bound where it was they are all
-   * dropped.
+   * Rounds of Hall cuts ({@link AlldifferentCuts}) of the all-different and cardinality constraints
+   * over their variables that are columns (two or more), at the root, each followed by a re-solve.
+   * As for the capacity cuts, the rounds stop when no cut is violated, the bound has not moved for
+   * a few rounds, or a solve stops at its limit (that round's cuts are dropped); when the cuts
+   * leave the bound where it was they are all dropped.
    *
    * @return the status of the last solve
    */
@@ -3239,36 +3284,28 @@ public class LinearRelaxation extends Constraint
     for (int j = 0; j < lp.columns(); j++) {
       columnOf.put(x[j], j);
     }
-    hall.removeIf(h -> Arrays.stream(h.literals()).anyMatch(v -> !columnOf.containsKey(v)));
-    int[][] columns = new int[hall.size()][];
+    // the variables that are not columns stay out of the cuts; two columns or more are needed
+    hall.removeIf(h -> Arrays.stream(h.literals()).filter(columnOf::containsKey).count() < 2);
+    alldiffLists = hall.size();
+    alldiffVariantLists = hall.stream().filter(h -> !h.plain()).count();
+    hallColumns = new int[hall.size()][];
     for (int c = 0; c < hall.size(); c++) {
       IntVar[] list = hall.get(c).literals();
-      columns[c] = new int[list.length];
+      hallColumns[c] = new int[list.length];
       for (int a = 0; a < list.length; a++) {
-        columns[c][a] = columnOf.get(list[a]);
+        hallColumns[c][a] = columnOf.getOrDefault(list[a], -1);
       }
     }
     if (hall.isEmpty()) {
       return DualSimplex.OPTIMAL;
     }
-    long[] result =
-        separatedRounds(
-            () -> {
-              List<MirCut> found = new ArrayList<>();
-              for (int c = 0; c < hall.size(); c++) {
-                double[] value = new double[columns[c].length];
-                for (int a = 0; a < value.length; a++) {
-                  value[a] = lp.value(columns[c][a]);
-                }
-                for (AlldifferentCuts.Cut cut : hall.get(c).separate(value, CUTS_PER_ROUND)) {
-                  found.add(row(cut, columns[c]));
-                }
-              }
-              return found;
-            },
-            CAPACITY_ROUNDS,
-            false);
+    int firstCount = rows();
+    long[] result = separatedRounds(() -> violatedHall(CUTS_PER_ROUND), CAPACITY_ROUNDS, false);
     alldiffCuts += result[1];
+    // search does not add the cuts kept here again
+    for (int i = firstCount; i < firstCount + result[1]; i++) {
+      hallSeen.add(key(MirCut.row(rowColumns[i], rowWeights[i], rowHi[i], 0)));
+    }
     if (result[0] == DualSimplex.OPTIMAL) {
       alldiffBound = lp.value(0);
     }
@@ -3449,6 +3486,69 @@ public class LinearRelaxation extends Constraint
     return new long[] {status, added};
   }
 
+  // the Hall cuts violated by the solution of the simplex, at most limit of each constraint, as
+  // rows; a variable that is not a column stays out of them
+  private List<MirCut> violatedHall(int limit) {
+    List<MirCut> found = new ArrayList<>();
+    for (int c = 0; c < hall.size(); c++) {
+      int[] column = hallColumns[c];
+      double[] value = new double[column.length];
+      for (int a = 0; a < value.length; a++) {
+        value[a] = column[a] < 0 ? Double.NaN : lp.value(column[a]);
+      }
+      for (AlldifferentCuts.Cut cut : hall.get(c).separate(value, limit)) {
+        found.add(row(cut, column));
+      }
+    }
+    return found;
+  }
+
+  // the violated Hall cuts, the most efficacious first, at most limit and within the dense cap;
+  // the keys of the cuts chosen are added to seen, and cuts already seen are left out
+  private List<MirCut> separateHall(int limit, Set<List<Long>> seen) {
+    List<MirCut> found = violatedHall(limit);
+    found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
+    List<MirCut> chosen = new ArrayList<>();
+    int n = lp.columns();
+    for (MirCut row : found) {
+      long m = (long) lp.rows() + chosen.size() + 1;
+      if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+        break;
+      }
+      if (seen.add(key(row))) {
+        chosen.add(row);
+      }
+    }
+    return chosen;
+  }
+
+  /**
+   * Sets whether Hall cuts are also separated in search ({@code org.jacop.lp.alldiffSearch}, off by
+   * default), for tests.
+   *
+   * @param on whether they are
+   */
+  void setAlldiffSearch(boolean on) {
+    alldiffSearch = on;
+  }
+
+  // Hall cuts from the solution of an optimal solve in search: the violated ones go into the
+  // simplex and the pool, and the relaxation is solved again with them
+  private int searchHallCuts(int limit) {
+    alldiffSeparations++;
+    List<MirCut> chosen = separateHall(ALLDIFF_SEARCH_CUTS, hallSeen);
+    if (chosen.isEmpty()) {
+      hallPeriod = Math.min(2 * hallPeriod, CAPACITY_MAX_PERIOD);
+      return LpSolver.OPTIMAL;
+    }
+    hallPeriod = Math.max(1, hallPeriod / 2);
+    int first = rows();
+    addCuts(chosen);
+    alldiffSearchCuts += chosen.size();
+    keepCapacityForms(first, chosen.size());
+    return solvePool(limit);
+  }
+
   // the Hall cut as a row sum w x <= rhs over the columns of the variables of its constraint
   private static MirCut row(AlldifferentCuts.Cut cut, int[] column) {
     int[] vars = cut.vars();
@@ -3469,7 +3569,7 @@ public class LinearRelaxation extends Constraint
 
   // the cuts violated by the solution of the simplex, at most limit and within the dense cap, as
   // rows; the keys of the cuts chosen are added to seen, and cuts already seen are left out
-  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen) {
+  private List<MirCut> separateCapacity(int limit, Set<List<Long>> seen, boolean root) {
     List<MirCut> chosen = new ArrayList<>();
     int n = lp.columns();
     for (int c = 0; c < capacity.size(); c++) {
@@ -3480,7 +3580,7 @@ public class LinearRelaxation extends Constraint
       for (int a = 0; a < literals.length; a++) {
         value[a] = column[a] < 0 ? literals[a].min() : lp.value(column[a]);
       }
-      for (CapacityCuts.Cut cut : cc.separate(value, limit)) {
+      for (CapacityCuts.Cut cut : cc.separate(value, limit, root || COMB_SEARCH)) {
         MirCut row = row(cut, column);
         long m = (long) lp.rows() + chosen.size() + 1;
         if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
@@ -3509,7 +3609,7 @@ public class LinearRelaxation extends Constraint
   // ones go into the simplex and the pool, and the relaxation is solved again with them
   private int searchCapacityCuts(int limit) {
     capacitySeparations++;
-    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen);
+    List<MirCut> chosen = separateCapacity(CAPACITY_SEARCH_CUTS, capacitySeen, false);
     if (chosen.isEmpty()) {
       capacityPeriod = Math.min(2 * capacityPeriod, CAPACITY_MAX_PERIOD);
       return LpSolver.OPTIMAL;
@@ -3959,6 +4059,9 @@ public class LinearRelaxation extends Constraint
     }
     truncateRows(baseRows);
     allRowsInSimplex(baseRows);
+    // the columns that came with the rows are gone: the search cuts leave their variables out
+    forgetColumns(capacityColumns, lp.columns());
+    forgetColumns(hallColumns, lp.columns());
     beforeExtra = null;
     extraForms = new ArrayList<>();
     extraRows = 0;
@@ -3968,6 +4071,20 @@ public class LinearRelaxation extends Constraint
     idle = 0;
     period = 1;
     credit = WORK;
+  }
+
+  // marks the columns from n on as not columns
+  private static void forgetColumns(int[][] columns, int n) {
+    if (columns == null) {
+      return;
+    }
+    for (int[] column : columns) {
+      for (int a = 0; a < column.length; a++) {
+        if (column[a] >= n) {
+          column[a] = -1;
+        }
+      }
+    }
   }
 
   // keeps the first m rows

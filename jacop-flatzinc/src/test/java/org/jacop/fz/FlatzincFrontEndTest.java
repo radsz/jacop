@@ -1091,14 +1091,14 @@ class FlatzincFrontEndTest {
     // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
     // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
     // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
-    // s.
+    // s (400 variables were solved in 2 s once activity bumped every analysed variable).
     Random r = new Random(1);
-    int n = 400;
+    int n = 600;
     StringBuilder model = new StringBuilder();
     for (int i = 0; i < n; i++) {
       model.append("var bool: x").append(i).append(";\n");
     }
-    for (int c = 0; c < 1720; c++) {
+    for (int c = 0; c < 2580; c++) {
       StringJoiner pos = new StringJoiner(",");
       StringJoiner neg = new StringJoiner(",");
       Set<Integer> vars = new TreeSet<>();
@@ -2517,6 +2517,32 @@ class FlatzincFrontEndTest {
       assertEquals(lastObjective(dfs), lastObjective(lcg), lcg);
       assertEquals(jobs * machines, statistic(lcg, "lcgSetTimesStarts"), lcg);
     }
+  }
+
+  /**
+   * Without a search annotation, the default search under --lcg branches in input order on a model
+   * with more than 50,000 search variables: dom/wdeg scans all of them at every decision (XCSP3
+   * AztecDiamond-200, 160,000 cells, had no solution in 60 s and has one in about a second).
+   */
+  @Test
+  void lcgDefaultSearchOnManyVariablesIsInInputOrder() throws Exception {
+    int n = 50_001;
+    StringBuilder model = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      model.append("var bool: b").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i + 1 < n; i++) {
+      model
+          .append("constraint bool_clause([b")
+          .append(i)
+          .append(", b")
+          .append(i + 1)
+          .append("], []);\n");
+    }
+    model.append("solve satisfy;\n");
+    String out = run(model.toString(), "--lcg", "--search-statistics")[0];
+    assertTrue(out.contains("----------"), out.substring(Math.max(0, out.length() - 2000)));
+    assertEquals(n, statistic(out, "lcgInputOrder"));
   }
 
   private static String lastObjective(String out) {

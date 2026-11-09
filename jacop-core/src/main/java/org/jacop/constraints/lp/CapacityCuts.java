@@ -60,6 +60,11 @@ import org.jacop.core.IntVar;
  * outside S, for the sets whose rounded capacity cut holds. The cuts use the demands, the capacity
  * and the bounds of the self loops at the first separation (the root), so they hold for the whole
  * search, also when separated later.
+ *
+ * <p>For routes without a capacity (a travelling salesman tour) it also separates blossom and comb
+ * cuts over the same customers, see {@link CombCuts} (Padberg and Rao, Odd minimum cut-sets and
+ * b-matchings, Mathematics of Operations Research 7, 1982; Grötschel and Padberg, Mathematical
+ * Programming 16, 1979).
  */
 public final class CapacityCuts {
 
@@ -69,6 +74,10 @@ public final class CapacityCuts {
   // the multistar cuts, also separated over the sets of the capacity cuts
   private static final boolean MULTISTAR =
       !"false".equals(System.getProperty("org.jacop.lp.multistarCuts"));
+
+  // the blossom and comb cuts of the customers (CombCuts): true or false for all Routes; by default
+  // only for Routes without a capacity (travelling salesman tours), as on CVRP they were level
+  private static final String COMBS = System.getProperty("org.jacop.lp.combCuts", "");
 
   // flows below this are taken as zero in the support graph
   private static final double EPSILON = 1e-6;
@@ -211,6 +220,18 @@ public final class CapacityCuts {
    * @return the cuts
    */
   public List<Cut> separate(double[] value, int limit) {
+    return separate(value, limit, true);
+  }
+
+  /**
+   * It returns the cuts violated by values of the arcs, the most effective first.
+   *
+   * @param value the value of each arc in the LP solution
+   * @param limit the most cuts returned
+   * @param combs whether blossom and comb cuts ({@link CombCuts}) fill the slots left
+   * @return the cuts
+   */
+  public List<Cut> separate(double[] value, int limit, boolean combs) {
     // the nodes every route must visit: a self loop that is fixed to 0 or none, at the first
     // separation (the root), so that the cuts made later in the search hold everywhere too
     if (mandatory == null) {
@@ -260,7 +281,18 @@ public final class CapacityCuts {
       }
     }
     cuts.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
-    return cuts.size() > limit ? new ArrayList<>(cuts.subList(0, limit)) : cuts;
+    if (cuts.size() >= limit) {
+      return new ArrayList<>(cuts.subList(0, limit));
+    }
+    // blossoms and combs only take the slots the capacity cuts leave: competing for them by
+    // efficacy, they lowered the root bound on CVRP (A-n37-k5 659 to 643)
+    boolean uncapacitated = demands == null || capacity <= 0;
+    if (combs && ("true".equals(COMBS) || uncapacitated && !"false".equals(COMBS))) {
+      List<Cut> found = CombCuts.separate(tails, heads, value, mandatory, flow);
+      found.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
+      cuts.addAll(found.subList(0, Math.min(found.size(), limit - cuts.size())));
+    }
+    return cuts;
   }
 
   // the routes needed by a set: its demand over the capacity, rounded up, and at least one
