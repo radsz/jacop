@@ -194,13 +194,43 @@ public final class ShiftExplanation {
       long c = trail.minBefore(fixed, entry);
       int mark = out.size();
       if (v == z ? explain(trail, entry, z, other, c, out) : explain(trail, entry, v, z, -c, out)) {
-        trail.addLowerBound(fixed, entry, out);
-        trail.addUpperBound(fixed, entry, out);
+        addFixed(trail, entry, fixed, z, mark, out);
         return true;
       }
       out.truncate(mark);
     }
     return false;
+  }
+
+  /** Whether a bound explained by one bound of the other variable cites one bound of the term. */
+  static final boolean ONE_SIDE = !"false".equals(System.getProperty("jacop.lcg.shiftOneSide"));
+
+  /*
+   * Adds the bounds of the fixed term. When the shift gave a bound entry by one bound of the
+   * other variable alone (no holes), one bound of the term suffices: z >= a from y >= a - c needs
+   * only x >= c, and y >= a from z >= a + c only x <= c.
+   */
+  private static void addFixed(
+      AtomicTrail trail, int entry, IntVar fixed, IntVar z, int mark, EntryList out) {
+    int kind = trail.kind(entry);
+    if (ONE_SIDE && kind != AtomicTrail.NE && out.size() == mark + 1) {
+      int a = out.get(mark);
+      IntVar w = trail.variable(a);
+      int k = trail.kind(a);
+      if (w != fixed && w != trail.variable(entry) && k != AtomicTrail.NE) {
+        // a bound of the sum pairs with the opposite bound of the term, a bound of the other term
+        // with the same bound
+        boolean lower = w == z ? k == AtomicTrail.LE : k == AtomicTrail.GE;
+        if (lower) {
+          trail.addLowerBound(fixed, entry, out);
+        } else {
+          trail.addUpperBound(fixed, entry, out);
+        }
+        return;
+      }
+    }
+    trail.addLowerBound(fixed, entry, out);
+    trail.addUpperBound(fixed, entry, out);
   }
 
   /**

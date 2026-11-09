@@ -1181,6 +1181,56 @@ class AtomicTrailTest {
   }
 
   /**
+   * x + y = z with x fixed to 3 by x &gt;= 3 and then x &lt;= 3: y &gt;= 5 gives z &gt;= 8, whose
+   * reason is y &gt;= 5 and x &gt;= 3 alone, since x &lt;= 3 cannot lower the sum; z &lt;= 10 then
+   * gives y &lt;= 7 by z &lt;= 10 and x &gt;= 3 alone.
+   */
+  @Test
+  void sumWithFixedTermCitesOneBoundOfTheTerm() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 20);
+    IntVar z = new IntVar(store, "z", 0, 30);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new XplusYeqZ(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMin(store.level, x, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x.domain.inMax(store.level, x, 3);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    y.domain.inMin(store.level, y, 5);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    z.domain.inMax(store.level, z, 10);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.min()).isEqualTo(8);
+    assertThat(y.max()).isEqualTo(7);
+    for (int e = 0; e < trail.size(); e++) {
+      boolean zMin =
+          trail.variable(e) == z && trail.kind(e) == AtomicTrail.GE && trail.value(e) == 8;
+      boolean yMax =
+          trail.variable(e) == y && trail.kind(e) == AtomicTrail.LE && trail.value(e) == 7;
+      if (!zMin && !yMax) {
+        continue;
+      }
+      EntryList reason = new EntryList();
+      assertThat(trail.explain(e, reason)).isTrue();
+      reason.sortUnique(0);
+      StringBuilder atoms = new StringBuilder();
+      for (int k = 0; k < reason.size(); k++) {
+        atoms.append(trail.atomString(reason.get(k)));
+      }
+      assertThat(atoms.toString())
+          .as("reason of %s", trail.atomString(e))
+          .isEqualTo(zMin ? "[x >= 3][y >= 5]" : "[x >= 3][z <= 10]");
+    }
+    trail.detach();
+  }
+
+  /**
    * x + 19 y - z = 19 (or_matching_orig): z has lost 19..84, and x != 9 with y >= 5 leaves 1..18
    * and 85 without a support, so domain consistency moves z from 1 to 86. The reason of z >= 86
    * must hold the holes 81..84, which have supports in the domains of x and y; it held only the
