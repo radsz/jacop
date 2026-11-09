@@ -113,6 +113,11 @@ final class OpbEncoder implements PbModel {
     final long[] upper;
     final long[] lower;
     final long[] atMostOne;
+    // the variable counting the variables that take other values, or -1, and its two lines
+    // sum_j sum_{v not counted} [x_j = v] - rest >= 0, then <= 0
+    int rest = -1;
+    long restLower;
+    long restUpper;
 
     /**
      * Collects the lines.
@@ -639,6 +644,8 @@ final class OpbEncoder implements PbModel {
       counted.add(v);
     }
     long[] atMostOne = new long[x.length];
+    long restLower = 0;
+    long restUpper = 0;
     for (int j = 0; j < x.length; j++) {
       int i = id.applyAsInt(x[j]);
       variables[j] = i;
@@ -692,9 +699,31 @@ final class OpbEncoder implements PbModel {
       long[] ones = new long[all.length];
       Arrays.fill(ones, 1);
       sum(new String[0], new long[0], all, ones, LinearForm.EQ, x.length);
+      // and over the other values: sum_j sum_{v not counted} [x_j = v] - rest = 0, so that the
+      // variables known to take a counted value bound the rest without the counters, which unit
+      // propagation cannot reach through the counters (generalized-peacable-queens)
+      List<String> others = new ArrayList<>();
+      for (IntVar xj : x) {
+        for (ValueEnumeration e = domain(xj).valueEnumeration(); e.hasMoreElements(); ) {
+          int v = e.nextElement();
+          if (!counted.contains(v)) {
+            others.add(equalTo(xj, v));
+          }
+        }
+      }
+      long[] one = new long[others.size()];
+      Arrays.fill(one, 1);
+      sum(
+          others.toArray(String[]::new),
+          one,
+          new IntVar[] {rest},
+          new long[] {-1},
+          LinearForm.EQ,
+          0);
+      restLower = numConstraints - 1;
+      restUpper = numConstraints;
     }
-    cardinality.put(
-        current,
+    CardinalityLines lines =
         new CardinalityLines(
             variables,
             position,
@@ -706,7 +735,13 @@ final class OpbEncoder implements PbModel {
             counterPosition,
             upper,
             lower,
-            atMostOne));
+            atMostOne);
+    if (rest != null) {
+      lines.rest = id.applyAsInt(rest);
+      lines.restLower = restLower;
+      lines.restUpper = restUpper;
+    }
+    cardinality.put(current, lines);
   }
 
   /**
