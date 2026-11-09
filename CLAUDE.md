@@ -166,5 +166,7 @@ mvn -Pmin -pl jacop-sat test -Dtest=LcgFuzzTest -Dsurefire.rerunFailingTestsCoun
 ```
 
 A failure names the seed; the model of a seed is rebuilt with `-Dlcg.fuzz.runs=1 -Dlcg.fuzz.seed=N`.
+Add `-Dlcg.fuzz.holes=true` for up to two holes in every variable's domain: reasons of bounds that
+skip holes were the most frequent explanation bug (LinearIntDom, Diffn, WeightedCompletion).
 A constraint whose pruning depends on a variable that is not among its arguments (such as an
 internal counter) needs that variable in its scope, or the generic reason is unsound.
