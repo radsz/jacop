@@ -2134,10 +2134,13 @@ public class LinearRelaxation extends Constraint
     }
     stalled = 0;
     if (status == LpSolver.OPTIMAL && (keepSolutions || store.level <= rootSolutionLevel)) {
-      // the root solution is kept also before keepSolutions: the selection that follows the
-      // solutions is made after the root propagation, and the solves of the search may never be
-      // optimal (surface-based-tsp ch130: the root solution after the tree cuts is the optimum,
-      // and every one of the 60 solves in search stopped at the pivot limit or was infeasible)
+      // the last solution is kept also before keepSolutions: the selection that follows it is
+      // made after the root propagation, and the solves of the search may never be optimal
+      // (surface-based-tsp ch130: the root solution after the tree cuts is the optimum, and every
+      // one of the 60 solves in search stopped at the pivot limit or was infeasible). The root
+      // solution of rootSolutionValue starts with keepSolutions, as before: fixed search, whose
+      // activity runs follow it, took 504,252 nodes instead of 422,577 on lot-sizing pigment20a
+      // with the solution of the first solve
       int n = lp.columns();
       if (solution.length != n) {
         solution = new double[n];
@@ -2146,7 +2149,7 @@ public class LinearRelaxation extends Constraint
         solution[j] = lp.value(j);
       }
       solutionLevel = store.level;
-      if (store.level <= rootSolutionLevel) {
+      if (keepSolutions && store.level <= rootSolutionLevel) {
         rootSolution = solution.clone();
         rootSolutionLevel = store.level;
       }

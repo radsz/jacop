@@ -3797,6 +3797,19 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
+220. The LP-guided search decisions (lcg-lp-branching) see the root
+     solution of the linear relaxation also when the search that uses
+     them is set up after the root propagation, as free search is: the
+     relaxation kept its solutions only from then on, and when no solve
+     in search is optimal the guide had no solution to follow.
+     surface-based-tsp 2026 ch130, whose root solution after the tree
+     cuts is the optimum, is proved in 7-12 s under -f instead of being
+     unsolved at 600 s; the other 16 instances of the wide set where the
+     guide is on keep their proofs and objectives (stable-goods s-d19 -f
+     7385 instead of 7485 at 600 s). Fixed search, whose activity runs
+     follow the root solution kept from the first solve in search, is
+     unchanged.
+
 Version 4.11
 =============
 

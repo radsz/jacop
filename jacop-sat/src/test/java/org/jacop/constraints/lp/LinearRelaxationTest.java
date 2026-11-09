@@ -1327,7 +1327,6 @@ class LinearRelaxationTest {
     assertThat(store.consistency()).isTrue();
     LpGuidedSelect last = new LpGuidedSelect(r, null);
     assertThat(r.solutionColumns()).isPositive();
-    assertThat(r.rootSolutionColumns()).isEqualTo(r.solutionColumns());
     assertThat(last.getChoiceVariable(0)).isSameAs(b[0]);
     assertThat(last.getChoiceValue()).isEqualTo(1);
   }
