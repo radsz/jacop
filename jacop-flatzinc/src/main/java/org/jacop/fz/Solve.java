@@ -4898,7 +4898,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private ObjectiveGap gap() {
     if (objectiveGap == null) {
       objectiveGap =
-          new ObjectiveGap(options.gap(), !minimize, options.getStatistics() ? IO::println : null);
+          new ObjectiveGap(
+              options.gap(), !minimize, options.searchStatistics() ? IO::println : null);
     }
     return objectiveGap;
   }
