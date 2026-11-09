@@ -60,6 +60,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.CountValues;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ElementVariableFast;
@@ -311,6 +312,32 @@ class VeriPbProofTest {
     assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
     assertThat(checker.conclusion).isEqualTo("SAT");
     assertThat(opb()).contains("3 x");
+  }
+
+  // a search stopped at a solution whose objective is the least the root leaves (as the front end
+  // stops a slow LCG search and hands over to free search, steelmillslab): the solution's
+  // improving constraint contradicts the root bound, so the proof concludes the optimum
+  @Test
+  void stoppedSearchAtTheRootBoundConcludesTheOptimum() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar obj = new IntVar(store, "obj", -5, 9);
+    store.impose(new LinearInt(x, new int[] {1, 1, 1}, "==", obj));
+    store.impose(new XgteqC(obj, 2));
+    LcgSolver lcg = withProof(store);
+    // the first solution comes from the call that looks for one before the cores; the stop makes
+    // the next call, branch and bound's, return at once
+    lcg.setCoreSearch(0.5, 1000, 1000);
+    lcg.setCoresWithoutSolutionOnly(true);
+    lcg.onSolution(lcg::stop);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
+    assertThat(lcg.value(obj)).isEqualTo(2);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 2 2");
   }
 
   // two different items by element tables of weight and cost: least cost of weight at least 9
@@ -934,6 +961,51 @@ class VeriPbProofTest {
     }
   }
 
+  // count_values whose variables may take values it does not count: two of them outside the
+  // counted values leave the counters at most n - 2, which needs the rest over the value literals
+  // (generalized-peacable-queens n9_q5)
+  @Test
+  void countValuesWithRestIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 5 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 1, 4);
+          int[] values = {2, 3, 4};
+          IntVar[] counter = new IntVar[values.length];
+          for (int k = 0; k < counter.length; k++) {
+            counter[k] = new IntVar(store, "c" + k, 0, n);
+          }
+          store.impose(new CountValues(x, counter, values));
+          IntVar[] terms = Arrays.copyOf(counter, counter.length + 2);
+          terms[counter.length] = x[0];
+          terms[counter.length + 1] = x[1];
+          return weightedSum(store, random, terms);
+        });
+  }
+
+  // count_values with tight counters: a reason whose flow cut needs the rest as a node of its own,
+  // bounded by the rest, and its line over the other values (generalized-peacable-queens)
+  @Test
+  void countValuesRestInFlowCutsIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 8 + random.nextInt(3);
+          IntVar[] x = holeyVariables(store, random, n, 1, 6);
+          int[] values = {2, 3};
+          IntVar[] counter = new IntVar[values.length];
+          for (int k = 0; k < counter.length; k++) {
+            counter[k] = new IntVar(store, "c" + k, 0, n / 2);
+          }
+          store.impose(new CountValues(x, counter, values));
+          IntVar[] terms = Arrays.copyOf(counter, counter.length + 2);
+          terms[counter.length] = x[0];
+          terms[counter.length + 1] = x[1];
+          return weightedSum(store, random, terms);
+        });
+  }
+
   // a knapsack without its dynamic program, whose reasons are rows of the two equalities, with
   // the profit maximised under a capacity bound and a side constraint
   @Test
@@ -989,6 +1061,37 @@ class VeriPbProofTest {
           IntVar obj = new IntVar(store, "obj", 0, m);
           store.impose(new SumInt(used, "==", obj));
           return obj;
+        });
+  }
+
+  // bin packing into bins whose loads take every third value only: the search fails on packed
+  // weights that hit a removed value of a load, each needing the load's bound past it
+  // (steelmillslab)
+  @Test
+  void binpackingIntoHoleyLoadsIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 7 + random.nextInt(3);
+          int m = 3;
+          int[] w = new int[n];
+          IntVar[] bin = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            w[i] = 1 + random.nextInt(5);
+            bin[i] = new IntVar(store, "b" + i, 1, m);
+          }
+          int cap = Arrays.stream(w).sum();
+          IntVar[] load = new IntVar[m];
+          for (int j = 0; j < m; j++) {
+            load[j] = new IntVar(store, "l" + j, 0, cap);
+            for (int v = 1; v <= cap; v++) {
+              if (v % 3 != j) {
+                load[j].domain.inComplement(0, load[j], v);
+              }
+            }
+          }
+          store.impose(new Binpacking(bin, load, w, 1).linearRulesOnly());
+          return weightedSum(store, random, load);
         });
   }
 

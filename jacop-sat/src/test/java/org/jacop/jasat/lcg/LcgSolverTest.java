@@ -4842,6 +4842,51 @@ class LcgSolverTest {
   }
 
   /**
+   * The core-guided phase also stops when its lower bound stalls over the second half of its work,
+   * but only after a tenth of the run's work after its start: work-task-variation 2025 seed-8 rose
+   * from a far initial bound, stalled for 20 s and then proved its optimum, while
+   * community-detection 2026 and javarouting trip_7_2 stalled for good and kept the phase to the
+   * end of the run (444 s and 566 s to their proofs at 600 s, 379 s and 428 s with the stop). The
+   * rate since the start stays high after such a rise, so it never ends the phase.
+   */
+  @Test
+  void corePhaseStopsWhenItsBoundStallsOverItsSecondHalf() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 30);
+    store.impose(
+        new LinearInt(new IntVar[] {x[0], x[1], x[2], obj}, new int[] {1, 1, 1, -1}, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    CoreSearch cores = CoreSearch.of(solver, obj);
+    assertThat(cores).isNotNull();
+    assertThat(CoreSearch.STALL).isEqualTo(0.1);
+    long end = 1_000_000;
+    cores.lowerBound = -1_000_000; // a far initial bound
+    cores.start(0);
+    cores.lowerBound = 60; // rises at once
+    cores.sample(10_000);
+    cores.sample(20_000);
+    // flat since 10,000, but before a tenth of the run
+    assertThat(cores.stalled(20_000, end, 248)).isFalse();
+    cores.sample(99_000);
+    assertThat(cores.stalled(99_000, end, 248)).isFalse();
+    cores.sample(100_000);
+    assertThat(cores.stalled(100_000, end, 248)).isTrue(); // flat since 50,000
+    // a rise over the second half that could meet the best solution in the work left
+    cores.lowerBound = 100;
+    cores.sample(200_000);
+    assertThat(cores.stalled(200_000, end, 248)).isFalse();
+    assertThat(cores.stalled(200_000, Long.MAX_VALUE, 248)).isFalse(); // no end of the run
+    // the same rise does not reach a far best solution: (100 - 60) / 100,000 per unit, three times
+    // over 800,000 units is 960
+    assertThat(cores.stalled(200_000, end, 100 + 960)).isFalse();
+    assertThat(cores.stalled(200_000, end, 100 + 961)).isTrue();
+  }
+
+  /**
    * Whether the core-guided phase could reach the objective's root bound: at three times the rate
    * of its lower bound per unit of the solver's work since the mark, within the work given. Before
    * a mark, and once the bound is there, it could.

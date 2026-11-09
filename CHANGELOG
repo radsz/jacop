@@ -4004,14 +4004,38 @@ Version 5.0 (unreleased)
      old rule, =loose drops the condition on the values, =all lifts the
      limits.
 
-231. fzn-jacop prints the running objective bound (%%%mzn-stat:
+232. Fixed search (no -f) with --lcg follows the search annotation again,
+     as the fixed search (fd) category of the MiniZinc Challenge requires
+     ("FD search solvers must follow the search strategy defined in the
+     problem"): the solver no longer restarts (--free-config
+     fixed-restarts=off is the default, was turns), so no run branches on
+     the SAT solver's literals or on activity, and the core-guided phase
+     no longer runs for an objective without a first solution
+     (fixed-core=0 is the default, was 0.1). Learnt clauses still prune
+     the annotation's tree. fixed-restarts=turns|alternate|replay and
+     fixed-core=<share> keep the 5.0 behaviour for experiments. The
+     propagations statistic under --lcg now counts JaSAT's propagations
+     as well as the calls of the store's propagators: a model whose
+     constraints became clauses (nonogram) printed only the root's calls.
+
+233. Bug fix: the FlatZinc front end rejected weighted_subcircuits when
+     its arguments shared a variable or an equal constant, for example
+     tour[1] = tour[2] or two tour costs fixed to 0 ("Constraint of type
+     WeightedSubcircuits has parameter list, tour, tourCost and cost that
+     contains repeated values."), so a satisfiable model reported an
+     error. Repeated variables of tour, tour_cost and cost are now
+     replaced by copies constrained to be equal. Found by the
+     all-solutions suite (random variants of its weighted_subcircuits
+     model).
+
+234. fzn-jacop prints the running objective bound (%%%mzn-stat:
      objectiveBound and objectiveBoundTime, one stat block per better
      bound) only in verbose mode, with -s -v or --search-statistics.
      With -s alone these blocks came out many times during the search
      and hid the solutions; -s now prints only the solutions and the
      final statistics. --gap still stops at the same bound.
 
-232. IntVar keeps the size of its domain once counted, until the domain
+235. IntVar keeps the size of its domain once counted, until the domain
      changes (the same refresh that keeps its bounds), so getSize() no
      longer walks the intervals of the domain at each call. dom/wdeg
      and the other domain-size heuristics read the size of every
@@ -4021,6 +4045,68 @@ Version 5.0 (unreleased)
      where size counting takes at least 1 % of a 60 s profile: same
      solved and objectives (7 model-search, 15 -f instances); celar
      -f proved the optimum in 139 s instead of 152 s in that run.
+
+236. Under --lcg, LateCount explains its pruning itself instead of
+     with every atom of its variables. A reason holds the late tasks
+     (start > due - p), the tasks that must be on time (start <= due -
+     p), the minima of the starts lowered towards their root values by
+     a common fraction (1, 1/2, ...) as far as the bound from the same
+     origin still implies the atom, and the weakest upper bound of late
+     that still fails; the dominance pairs and overlapping fixed
+     tasks have reasons of their own. On 1|r_j|sum U_j (osolpro
+     benchmarks/scheduling-bounds, 600 s): the 60 instances with 40 to
+     150 jobs are proved in a mean 6.8 s instead of 17.6 s (-f: 2.5 s
+     instead of 12.4 s, 60 proved instead of 59), and of 24 new ones
+     with 200 and 300 jobs 23 are proved instead of 16 (-f: 24 instead
+     of 23), with no objective worse. -Dorg.jacop.lateCount.reasons=false
+     restores the generic reason.
+
+237. The core-guided phase of --lcg -f also gives its time to branch and
+     bound when its lower bound stalls: at three times its rate over
+     the second half of the phase's work it would not meet the best
+     solution before the end of the run. The rate since the phase's
+     start stays high after a fast first rise (often from a far initial
+     bound) and kept the phase to the end of the run. The test starts
+     after a tenth of the run's work after the phase's start, as some
+     phases stall for a while and then prove the optimum
+     (work-task-variation 2025 seed-8). On the 25 instances of the 2026
+     Challenge (atp-stage2, community-detection) and the wide set where
+     it fires, 600 s, -f: 14.6 vs 10.4 pair points, 5 families better
+     and none worse; javarouting trip_7_2 proves its optimum in 428 s
+     instead of 566 s, community-detection 2026 in 379 s and 260 s
+     instead of 408 s and 293 s. -Djacop.lcg.coreStall=0 turns it off.
+
+238. ChanceTable (jacop-prob): p = sum(s, w[s] * [x satisfies scenario s])
+     over scenario tables, the one-stage stochastic CSP of Walsh
+     ("Stochastic constraint programming", ECAI 2002) with the
+     decisions taken before the random variables are seen. Scenario s
+     holds when x is a tuple of each of its tables; a table shared by
+     scenarios (one constraint for one value of its random variable) is
+     stored and checked once. Filtering is the support counting of a
+     compact table (Demeulenaere et al., "Compact-Table: efficiently
+     filtering table constraints with reversible sparse bit-sets", CP
+     2016) weighted by scenario: a value whose supporting scenarios weigh
+     less than the lower bound of p is removed, the upper bound of p is
+     the weight of the scenarios still alive and its lower bound the
+     weight of those whose tables contain every tuple of the domains. It
+     explains its pruning for lazy clause generation by the removed
+     values that kill the tuples of the heaviest scenarios. FlatZinc:
+     chance_table in jacop_prob.mzn.
+
+239. ProbMdd (jacop-prob): p = floor(scale * Pr(T)) for a layered
+     decision diagram of decision levels (edges labelled by the values
+     of one variable) and chance levels (edges with probability
+     numerators), the compiled form of stochastic constraint problems
+     and probabilistic programs (Babaki, Guns and De Raedt, "Stochastic
+     constraint optimization using propagation on ordered binary
+     decision diagrams", StarAI 2017; Latour et al., "Combining
+     stochastic constraint optimization and probabilistic programming",
+     CP 2017). Two passes in the (+, max) semiring bound p and remove
+     the values whose edges carry too little mass; with all decisions
+     fixed, Pr(T) is computed exactly on big integers. The passes use
+     doubles rounded outward. Lazy clause generation gets the removed
+     labels of the other levels and the bound of p. FlatZinc: prob_mdd
+     in jacop_prob.mzn.
 
 Version 4.11
 =============

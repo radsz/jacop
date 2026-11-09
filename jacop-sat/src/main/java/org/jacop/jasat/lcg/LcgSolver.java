@@ -57,6 +57,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
@@ -1038,18 +1039,37 @@ public final class LcgSolver implements ExternalPropagator {
     for (int k = 0; k < m; k++) {
       valueIndex.put(values[k], k);
     }
-    // the values not counted by an open constraint are free: any number of variables take them
+    // the values not counted by an open constraint are free: any number of variables take them,
+    // or as many as the rest counts, when one does: then all of them are one node
     Map<Integer, Integer> freeValues = new HashMap<>();
+    int restNode = n + m + 2;
     for (int j = 0; j < n && !lines.closed; j++) {
       for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
         int v = e.nextElement();
         if (!valueIndex.containsKey(v)) {
-          freeValues.putIfAbsent(v, n + m + 2 + freeValues.size());
+          freeValues.putIfAbsent(v, lines.rest >= 0 ? restNode : n + m + 2 + freeValues.size());
         }
       }
     }
+    IntDomain restDomain = null;
+    if (lines.rest >= 0) {
+      IntDomain[] restricted = new IntDomain[1];
+      hypotheses(
+          Map.of(lines.rest, 0),
+          new int[] {lines.rest},
+          atoms,
+          from,
+          entry,
+          restricted,
+          new StringBuilder[1]);
+      restDomain = restricted[0];
+      if (restDomain.isEmpty()) {
+        return;
+      }
+    }
+    int freeNodes = lines.rest >= 0 ? 1 : freeValues.size();
     // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
-    int source = n + m + 2 + freeValues.size();
+    int source = n + m + 2 + freeNodes;
     int sink = source + 1;
     Flow flow = new Flow(sink + 1);
     for (int j = 0; j < n; j++) {
@@ -1065,8 +1085,12 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
-    for (int node : freeValues.values()) {
-      flow.add(node, 1, 0, n);
+    if (restDomain != null) {
+      flow.add(restNode, 1, Math.max(0, restDomain.min()), Math.min(n, restDomain.max()));
+    } else {
+      for (int node : freeValues.values()) {
+        flow.add(node, 1, 0, n);
+      }
     }
     for (int k = 0; k < m; k++) {
       if (count[k].isEmpty()) {
@@ -1103,6 +1127,10 @@ public final class LcgSolver implements ExternalPropagator {
           }
         }
       }
+      if (restDomain != null && cut[restNode]) {
+        pol.append(operands++ == 0 ? "" : " ").append(lines.restUpper);
+        pol.append(operands > 1 ? " +" : "");
+      }
       for (int j = 0; j < n; j++) {
         int i = variables[j];
         if (!cut[2 + j] || proofDomains[i].singleton()) {
@@ -1121,6 +1149,10 @@ public final class LcgSolver implements ExternalPropagator {
           pol.append(operands++ == 0 ? "" : " ").append(lines.lower[k]);
           pol.append(operands > 1 ? " +" : "");
         }
+      }
+      if (restDomain != null && !cut[restNode]) {
+        pol.append(operands++ == 0 ? "" : " ").append(lines.restLower);
+        pol.append(operands > 1 ? " +" : "");
       }
       for (int j = 0; j < n; j++) {
         if (!cut[2 + j] && lines.atMostOne[j] > 0) {
@@ -1711,6 +1743,9 @@ public final class LcgSolver implements ExternalPropagator {
    * @param entry the entry explained, or -1 for a failure
    */
   private void proofLinearBounds(Constraint c, EntryList atoms, int from, int entry) {
+    if (proofStarted && c instanceof Binpacking b) {
+      proofBinLoads(b, atoms, from, entry);
+    }
     LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
     if (f == null && proofStarted && c instanceof Knapsack k) {
       f = proofKnapsackRow(k);
@@ -1838,6 +1873,171 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  /**
+   * Writes the bounds of the loads of a bin packing under the hypotheses of a clause, when a load
+   * has a removed value inside its bounds: the load of a bin is at least the weight of the items
+   * packed in it and at most that of the items that can be in it (its line sum w_i [x_i = b] - load
+   * = 0, {@link Binpacking#encode}), and the loads sum to the weight of all items. A rup step
+   * derives a bound from these lines when its negation contradicts them, but not one past a removed
+   * value, nor the bounds that follow from it: each bound of the fixpoint is a lemma under the
+   * clause, the one at the weight and then the one past the removed values (steelmillslab).
+   */
+  private void proofBinLoads(Binpacking b, EntryList atoms, int from, int entry) {
+    IntVar[] bins = b.binVariables();
+    int[] weights = b.itemWeights();
+    IntVar[] loads = b.loads();
+    List<Integer> ids = new ArrayList<>();
+    Map<Integer, Integer> position = new HashMap<>();
+    int[] itemPosition = new int[bins.length];
+    for (int k = 0; k < bins.length; k++) {
+      int i = trail.id(bins[k]);
+      Integer j = position.get(i);
+      if (j == null) {
+        j = ids.size();
+        position.put(i, j);
+        ids.add(i);
+      }
+      itemPosition[k] = j;
+    }
+    int[] loadPosition = new int[loads.length];
+    for (int l = 0; l < loads.length; l++) {
+      int i = trail.id(loads[l]);
+      if (position.containsKey(i)) {
+        return; // a load that is also a bin
+      }
+      loadPosition[l] = ids.size();
+      position.put(i, ids.size());
+      ids.add(i);
+    }
+    int[] variables = ids.stream().mapToInt(Integer::intValue).toArray();
+    IntDomain[] dom = new IntDomain[variables.length];
+    StringBuilder[] literals = new StringBuilder[variables.length];
+    hypotheses(position, variables, atoms, from, entry, dom, literals);
+    // only a load with a removed value inside its bounds, at the root or under the hypotheses,
+    // stops unit propagation
+    boolean hole = false;
+    for (int p : loadPosition) {
+      hole |= !dom[p].isEmpty() && dom[p].getSize() < (long) dom[p].max() - dom[p].min() + 1;
+    }
+    if (!hole) {
+      return;
+    }
+    StringBuilder clause = new StringBuilder();
+    for (StringBuilder l : literals) {
+      clause.append(l);
+    }
+    long all = 0;
+    for (int w : weights) {
+      all += w;
+    }
+    // the rows of the bins and the sum of the loads to a fixpoint, as unit propagation over the
+    // lines with the lemmas goes
+    boolean changed = true;
+    for (int round = 0; changed && round < 4 * (loads.length + bins.length); round++) {
+      changed = false;
+      for (int l = 0; l < loads.length; l++) {
+        int bin = b.minBin() + l;
+        long packed = 0;
+        long possible = 0;
+        for (int k = 0; k < bins.length; k++) {
+          IntDomain d = dom[itemPosition[k]];
+          if (d.contains(bin)) {
+            possible += weights[k];
+            if (d.singleton()) {
+              packed += weights[k];
+            }
+          }
+        }
+        int p = loadPosition[l];
+        IntDomain before = dom[p];
+        if (!proofTighten(variables[p], dom, p, packed, possible, clause)) {
+          return;
+        }
+        changed |= dom[p] != before;
+        // the items that overload the bin or that it needs
+        for (int k = 0; k < bins.length; k++) {
+          int q = itemPosition[k];
+          IntDomain d = dom[q];
+          if (!d.contains(bin) || d.singleton()) {
+            continue;
+          }
+          if (packed + weights[k] > dom[p].max()) {
+            dom[q] = d.subtract(bin);
+            changed = true;
+          } else if (possible - weights[k] < dom[p].min()) {
+            dom[q] = d.intersect(bin, bin);
+            changed = true;
+          }
+          if (dom[q].isEmpty()) {
+            return;
+          }
+        }
+      }
+      long sumMin = 0;
+      long sumMax = 0;
+      for (int l = 0; l < loads.length; l++) {
+        sumMin += dom[loadPosition[l]].min();
+        sumMax += dom[loadPosition[l]].max();
+      }
+      for (int l = 0; l < loads.length; l++) {
+        int p = loadPosition[l];
+        IntDomain before = dom[p];
+        long lo = all - (sumMax - before.max());
+        long hi = all - (sumMin - before.min());
+        if (!proofTighten(variables[p], dom, p, lo, hi, clause)) {
+          return;
+        }
+        if (dom[p] != before) {
+          changed = true;
+          sumMin += dom[p].min() - before.min();
+          sumMax += dom[p].max() - before.max();
+        }
+      }
+    }
+  }
+
+  /**
+   * Restricts dom[p], the domain of variable i, to lo..hi, writing the bound lemmas under the
+   * clause: each new bound, then the one past the removed values next to it. Returns false when the
+   * domain is empty.
+   */
+  private boolean proofTighten(
+      int i, IntDomain[] dom, int p, long lo, long hi, CharSequence clause) {
+    IntDomain d = dom[p];
+    if (lo > d.min()) {
+      if (lo > d.max()) {
+        return false;
+      }
+      proofBound(i, clause, (int) lo, true);
+      if (!d.contains((int) lo)) {
+        proofBound(i, clause, (int) Math.min(nextValue(d, (int) lo), hi + 1), true);
+      }
+    }
+    if (hi < d.max()) {
+      if (hi < d.min()) {
+        return false;
+      }
+      proofBound(i, clause, (int) hi, false);
+      if (!d.contains((int) hi)) {
+        proofBound(i, clause, (int) Math.max(previousValue(d, (int) hi), lo - 1), false);
+      }
+    }
+    if (lo > d.min() || hi < d.max()) {
+      dom[p] = d.intersect((int) Math.max(lo, d.min()), (int) Math.min(hi, d.max()));
+    }
+    return !dom[p].isEmpty();
+  }
+
+  // the smallest value of d above v, or d.max() + 1
+  private static int nextValue(IntDomain d, int v) {
+    return v >= d.max() ? d.max() + 1 : d.nextValue(v);
+  }
+
+  // the largest value of d below v, or d.min() - 1
+  private static int previousValue(IntDomain d, int v) {
+    return v <= d.min() ? d.min() - 1 : d.previousValue(v);
+  }
+
   // writes "clause or x >= v" (or x <= v); returns 1, or 0 when the bound is outside the root
   private int proofBound(int i, CharSequence clause, int v, boolean lower) {
     IntDomain d = proofDomains[i];
@@ -1925,8 +2125,14 @@ public final class LcgSolver implements ExternalPropagator {
       lower = Math.max(lower, coreSearch.lowerBound);
     }
     String upper = best == null ? null : Integer.toString(best[objective]);
+    boolean reached = best != null && best[objective] <= lower;
     if (d == null || d.singleton() || lower <= d.min()) {
-      proof.concludeNothing();
+      if (reached && d != null) {
+        // a solution at the least value of the objective: its improving constraint is false
+        proof.concludeBounds(upper, upper);
+      } else {
+        proof.concludeNothing();
+      }
       return;
     }
     StringBuilder s = new StringBuilder("rup");
@@ -1934,7 +2140,8 @@ public final class LcgSolver implements ExternalPropagator {
       s.append(" 1 ").append(OpbEncoder.ge(objective, v));
     }
     long id = proof.lemma(s.append(" >= ").append(lower - d.min()).append(" ;\n"));
-    proof.concludeBounds(lower + " : " + id, upper);
+    // with a solution at the bound, the improving constraint and the bound contradict each other
+    proof.concludeBounds(reached ? upper : lower + " : " + id, upper);
   }
 
   // ------------------------------------------------------------------------------- literals
