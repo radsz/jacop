@@ -41,6 +41,10 @@ import org.jacop.core.IntVar;
 
 abstract class TaskView extends Task {
 
+  // the constraint whose explanations gave this task a slot, and the slot (see CumulativeBasic)
+  Object explainOwner;
+  int explainSlot;
+
   TaskView(IntVar start, IntVar dur, IntVar res) {
     super(start, dur, res);
   }
