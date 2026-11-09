@@ -3634,7 +3634,24 @@ Version 5.0 (unreleased)
      --default-search input, in about half the runs). The master now
      records its part before it stops.
 
-212. Activity branching under --lcg bumps every integer variable whose
+212. The local-search thread (ls) of the parallel portfolio moves up from
+     seventh to second place among the extra threads, ahead of default and
+     free-chs-luby, so -p 3 and -p 4 run it in place of free-chs-luby
+     (-p 4: the options given, lcg-lits, ls, default). The thread runs
+     local search for up to half the time while it improves within 5 s,
+     then CP free search from its solution. With -f -p 4 at 600 s on 4
+     cores, against develop-5.0 324b78d21 in the same round: the wide set
+     (220) is neutral (185 to 186 solved, 15 better / 15 worse), job shops
+     9 of 17 solved instead of 7 (la38, ta71 proved; ta51 126 to 4 s), and
+     the local-search set (54) gives cutstock type04 a solution and better
+     objectives to cutstock type10 and largescheduling; on the wide set
+     cargo challenge16 152917 to 125910 and ihtc-2024 marte i01 5159 to
+     4388. -p 4 without -f is neutral (wide-quick, 240 s, 53 to 54 solved).
+     Sequential -f keeps local search off: it adds 1 to 3 s to every easy
+     instance (wide-quick 1 better / 18 worse at 240 s). Data in osolpro
+     benchmarks/ls-default.
+
+213. Activity branching under --lcg bumps every integer variable whose
      atoms conflict analysis resolved or minimised away, as MiniSat bumps
      every variable the analysis meets (N. Een, N. Sorensson, An
      Extensible SAT-solver, SAT 2003), not only the variables of the
@@ -3648,7 +3665,7 @@ Version 5.0 (unreleased)
      Learning Rate Based Branching Heuristic for SAT Solvers, SAT 2016)
      was tried and lost on top of it.
 
-213. Hall cuts of item 188 with value copies, and in search. The
+214. Hall cuts of item 188 with value copies, and in search. The
      Williams-Yan cuts now also come from all-different constraints with
      exceptions (alldifferent_except_0, AlldifferentExcept) and from
      global cardinality constraints (GCC, CountValues,
@@ -3684,7 +3701,7 @@ Version 5.0 (unreleased)
      instance18_real 7750 to 6915), -f 12 to 12 with differences of
      search timing only; no wrong answer.
 
-214. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
+215. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
      for spanning trees with limits on the number of edges taken from
      disjoint edge sets (colours). Such trees are the common bases of a
      graphic and a partition matroid (Edmonds 1970). At every node it
@@ -3705,7 +3722,7 @@ Version 5.0 (unreleased)
      Challenge or wide-set model combines weighted_spanning_tree with
      such limits, so the default benchmarks are not affected.
 
-215. Values (MiniZinc nvalue) reads its difference graph once more at its
+216. Values (MiniZinc nvalue) reads its difference graph once more at its
      first call below the root, from the root constraints and domains.
      Before, it read the graph only at root calls, so a difference
      constraint imposed after its last root call was missed when nothing
@@ -3717,7 +3734,7 @@ Version 5.0 (unreleased)
      call instead of 180 to 900 on the XCSP Rlfap instances, with the
      same pruning.
 
-216. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
+217. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
      Pr(sum(i) w[i] * x[i] <= c) >= alphaNum / alphaDen for independent
      random weights w[i] (Dist), x[i] >= 0 and a capacity variable c.
      It never lists the joint scenarios: a convolution over the loads
