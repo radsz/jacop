@@ -113,56 +113,13 @@ public final class ElementExplanation {
             || trail.rootDomain(index).max() > list.length + offset)) {
       return false; // index values off the list would need their own reasons
     }
-    if (y != value && y != index) {
-      return false;
-    }
-    int mark = out.size();
     for (int j = 0; j < list.length; j++) {
       int u = y == value ? list[j] : j + 1 + offset;
       if (violates(kind, a, u) && !excluded(trail, j, entry, index, list, value, offset, out)) {
         return false;
       }
     }
-    if (TWO_ORDERS) {
-      // the same positions excluded by the value first: a constant out of the value's domain
-      // excludes every position holding it, so it can need fewer atoms
-      out.sortUnique(mark);
-      int second = out.size();
-      for (int j = 0; j < list.length; j++) {
-        int u = y == value ? list[j] : j + 1 + offset;
-        if (violates(kind, a, u)
-            && !trail.excludedBefore(value, list[j], entry, out)
-            && !trail.excludedBefore(index, j + 1 + offset, entry, out)) {
-          out.truncate(second);
-          return true;
-        }
-      }
-      out.sortUnique(second);
-      keepShorter(out, mark, second);
-    }
-    return true;
-  }
-
-  /** Whether a reason is built both index first and value first, keeping the shorter. */
-  static final boolean TWO_ORDERS = !"false".equals(System.getProperty("jacop.lcg.elementOrders"));
-
-  // keeps of the two reasons out[mark, second) and out[second, size) the shorter, at mark
-  private static void keepShorter(EntryList out, int mark, int second) {
-    int byIndex = second - mark;
-    int byValue = out.size() - second;
-    if (byValue < byIndex) {
-      // move the value-first reason down to mark, keeping slacks
-      EntryList tmp = new EntryList();
-      for (int k = 0; k < byValue; k++) {
-        tmp.addFrom(out, second + k);
-      }
-      out.truncate(mark);
-      for (int k = 0; k < tmp.size(); k++) {
-        out.addFrom(tmp, k);
-      }
-    } else {
-      out.truncate(second);
-    }
+    return y == value || y == index;
   }
 
   /**
