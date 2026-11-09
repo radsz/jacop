@@ -43,7 +43,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import org.jacop.constraints.binpacking.Binpacking;
-import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.AlldifferentCuts;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
@@ -410,9 +409,6 @@ public final class Linearizations {
   // columns, though the root trial drops the rows, turn the auto LP guide on, which loses there
   // (2017 UD8 at 60 s: 89 without them, 342 with them). Package-visible for the tests
   static boolean binpackingRows = Boolean.getBoolean("org.jacop.lp.binpackingRows");
-
-  // the weight and profit rows of Knapsack, for the LP and its lifted cover cuts
-  static boolean knapsackRows = !"false".equals(System.getProperty("org.jacop.lp.knapsackRows"));
 
   /** The value encodings of valueRows: the columns of each variable and the rows made. */
   private static final class Encoder {
@@ -960,9 +956,6 @@ public final class Linearizations {
     } else if (k == ConditionalSelect.class) {
       ConditionalSelect s = (ConditionalSelect) c;
       select(s.b, s.x, s.y, out);
-    } else if (k == Knapsack.class && knapsackRows) {
-      // the weight and the profit rows; the cut rounds read the weight row as a 0-1 knapsack
-      out.addAll(Arrays.asList(((Knapsack) c).rows()));
     } else if (k == ChannelImply.class) {
       // b_v -> x = v: at most one of the Booleans
       AbstractChannel ch = (AbstractChannel) c;

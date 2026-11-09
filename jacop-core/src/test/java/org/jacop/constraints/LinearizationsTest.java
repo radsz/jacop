@@ -78,12 +78,6 @@ class LinearizationsTest {
     // 3 q0 + 4 q1 + 5 q2 - capacity = 0 and 4 q0 + 5 q1 + 6 q2 - profit = 0
     assertThat(rows.get(0).relation()).isEqualTo(LinearForm.EQ);
     assertThat(rows.get(1).relation()).isEqualTo(LinearForm.EQ);
-    Linearizations.knapsackRows = false;
-    try {
-      assertThat(Linearizations.of(k)).isEmpty();
-    } finally {
-      Linearizations.knapsackRows = true;
-    }
   }
 
   @Test
