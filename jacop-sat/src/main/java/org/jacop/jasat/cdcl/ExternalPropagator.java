@@ -87,6 +87,15 @@ public interface ExternalPropagator {
   default void notifyLearntLiteral(int lit) {}
 
   /**
+   * A variable that conflict analysis met but did not put in the learnt clause, when {@link
+   * CdclSolver#setAnalysedNotify} asks for them: once per variable and conflict, after the learnt
+   * literals.
+   *
+   * @param var the DIMACS variable
+   */
+  default void notifyAnalysedLiteral(int var) {}
+
+  /**
    * A literal of a reason the solver keeps as a learnt clause. Called once per literal of each kept
    * reason, so the propagator knows the literal now occurs in a clause.
    *
