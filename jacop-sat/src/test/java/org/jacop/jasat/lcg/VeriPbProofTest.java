@@ -314,6 +314,32 @@ class VeriPbProofTest {
     assertThat(opb()).contains("3 x");
   }
 
+  // a search stopped at a solution whose objective is the least the root leaves (as the front end
+  // stops a slow LCG search and hands over to free search, steelmillslab): the solution's
+  // improving constraint contradicts the root bound, so the proof concludes the optimum
+  @Test
+  void stoppedSearchAtTheRootBoundConcludesTheOptimum() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar obj = new IntVar(store, "obj", -5, 9);
+    store.impose(new LinearInt(x, new int[] {1, 1, 1}, "==", obj));
+    store.impose(new XgteqC(obj, 2));
+    LcgSolver lcg = withProof(store);
+    // the first solution comes from the call that looks for one before the cores; the stop makes
+    // the next call, branch and bound's, return at once
+    lcg.setCoreSearch(0.5, 1000, 1000);
+    lcg.setCoresWithoutSolutionOnly(true);
+    lcg.onSolution(lcg::stop);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
+    assertThat(lcg.value(obj)).isEqualTo(2);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 2 2");
+  }
+
   // two different items by element tables of weight and cost: least cost of weight at least 9
   @Test
   void elementOptimumIsProved() {

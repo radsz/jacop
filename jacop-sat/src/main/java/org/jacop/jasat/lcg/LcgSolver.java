@@ -2125,8 +2125,14 @@ public final class LcgSolver implements ExternalPropagator {
       lower = Math.max(lower, coreSearch.lowerBound);
     }
     String upper = best == null ? null : Integer.toString(best[objective]);
+    boolean reached = best != null && best[objective] <= lower;
     if (d == null || d.singleton() || lower <= d.min()) {
-      proof.concludeNothing();
+      if (reached && d != null) {
+        // a solution at the least value of the objective: its improving constraint is false
+        proof.concludeBounds(upper, upper);
+      } else {
+        proof.concludeNothing();
+      }
       return;
     }
     StringBuilder s = new StringBuilder("rup");
@@ -2134,7 +2140,8 @@ public final class LcgSolver implements ExternalPropagator {
       s.append(" 1 ").append(OpbEncoder.ge(objective, v));
     }
     long id = proof.lemma(s.append(" >= ").append(lower - d.min()).append(" ;\n"));
-    proof.concludeBounds(lower + " : " + id, upper);
+    // with a solution at the bound, the improving constraint and the bound contradict each other
+    proof.concludeBounds(reached ? upper : lower + " : " + id, upper);
   }
 
   // ------------------------------------------------------------------------------- literals
