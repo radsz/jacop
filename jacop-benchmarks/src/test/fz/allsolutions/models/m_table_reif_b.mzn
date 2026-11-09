@@ -1,0 +1,10 @@
+include "globals.mzn";
+array[1..3] of var 1..3: x;
+array[1..3] of var bool: y;
+var bool: b1; var bool: b2; var bool: b3; var bool: b4;
+constraint b1 <-> table(x, [| 1, 2, 3 | 3, 2, 1 | 2, 2, 2 |]);
+constraint b2 -> table([x[2], x[3]], [| 2, 3 | 3, 1 | 1, 1 |]);
+constraint b3 <-> table(y, [| true, false, true | false, false, false |]);
+constraint b4 -> table([y[1], y[2]], [| false, true |]);
+constraint b1 + b2 + b3 + b4 >= 2;
+solve satisfy;
