@@ -1038,6 +1038,37 @@ class VeriPbProofTest {
         });
   }
 
+  // bin packing into bins whose loads take every third value only: the search fails on packed
+  // weights that hit a removed value of a load, each needing the load's bound past it
+  // (steelmillslab)
+  @Test
+  void binpackingIntoHoleyLoadsIsProved() {
+    optimaAreProved(
+        40,
+        (store, random) -> {
+          int n = 7 + random.nextInt(3);
+          int m = 3;
+          int[] w = new int[n];
+          IntVar[] bin = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            w[i] = 1 + random.nextInt(5);
+            bin[i] = new IntVar(store, "b" + i, 1, m);
+          }
+          int cap = Arrays.stream(w).sum();
+          IntVar[] load = new IntVar[m];
+          for (int j = 0; j < m; j++) {
+            load[j] = new IntVar(store, "l" + j, 0, cap);
+            for (int v = 1; v <= cap; v++) {
+              if (v % 3 != j) {
+                load[j].domain.inComplement(0, load[j], v);
+              }
+            }
+          }
+          store.impose(new Binpacking(bin, load, w, 1).linearRulesOnly());
+          return weightedSum(store, random, load);
+        });
+  }
+
   /** Variables over min..max with two random holes each (the value may be missing already). */
   private static IntVar[] holeyVariables(Store store, Random random, int n, int min, int max) {
     IntVar[] x = new IntVar[n];
