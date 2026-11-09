@@ -3957,6 +3957,17 @@ Version 5.0 (unreleased)
      137787 to 128330 (-f). -Dorg.jacop.weightedCompletion.prefixRows
      and ...weakReasons=false turn the two parts off.
 
+230. IntVar keeps the size of its domain once counted, until the domain
+     changes (the same refresh that keeps its bounds), so getSize() no
+     longer walks the intervals of the domain at each call. dom/wdeg
+     and the other domain-size heuristics read the size of every
+     unfixed variable at every decision: on 2013 celar graph11 with
+     -f --lcg off the search runs about 2x more nodes per second. The
+     search does not change. Wide set (600 s, paired) on the instances
+     where size counting takes at least 1 % of a 60 s profile: same
+     solved and objectives (7 model-search, 15 -f instances); celar
+     -f proved the optimum in 139 s instead of 152 s in that run.
+
 Version 4.11
 =============
 
