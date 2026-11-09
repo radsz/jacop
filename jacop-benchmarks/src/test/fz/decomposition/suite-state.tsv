@@ -81841,3 +81841,138 @@ C	gen:s121/m_inter_distance_b_s121_30/m_inter_distance_b_s121_30	6fea854103f6298
 C	gen:s121/m_inter_distance_b_s121_30/m_inter_distance_b_s121_30	6fea854103f62988	obj1:f	PASS	COMPLETE	1	343	2026-11-09T22:59:03Z	
 C	gen:s121/m_inter_distance_b_s121_30/m_inter_distance_b_s121_30	6fea854103f62988	obj1:lcg	PASS	COMPLETE	1	358	2026-11-09T22:59:03Z	
 C	gen:s121/m_inter_distance_b_s121_30/m_inter_distance_b_s121_30	6fea854103f62988	obj1:lcg-f	PASS	COMPLETE	1	330	2026-11-09T22:59:04Z	
+P	gen:s75/m_graphs_directed_b_s75_0/m_graphs_directed_b_s75_0	25423f52a52eff5b	satisfy		ERROR	0	0	0	297	60	2026-11-09T23:01:04Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s81/m_graphs_directed_b_s81_3/m_graphs_directed_b_s81_3	26aeb02d8ea295e1	satisfy		ERROR	0	0	0	313	60	2026-11-09T23:01:15Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s85/m_graphs_directed_b_s85_2/m_graphs_directed_b_s85_2	1e30a770a4953a49	satisfy		ERROR	0	0	0	265	60	2026-11-09T23:01:26Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s94/m_graphs_directed_b_s94_6/m_graphs_directed_b_s94_6	d3c15e7a6ebebf23	satisfy		ERROR	0	0	0	283	60	2026-11-09T23:01:37Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s79/m_graphs_directed_b_s79_52/m_graphs_directed_b_s79_52	b6c0b8530f83b836	satisfy		ERROR	0	0	0	274	60	2026-11-09T23:01:47Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s89/m_graphs_directed_b_s89_35/m_graphs_directed_b_s89_35	1dc31ea370e1361a	satisfy		ERROR	0	0	0	244	60	2026-11-09T23:01:57Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s91/m_graphs_directed_b_s91_22/m_graphs_directed_b_s91_22	248ef78f577154a4	satisfy		ERROR	0	0	0	244	60	2026-11-09T23:02:06Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s98/m_graphs_directed_b_s98_11/m_graphs_directed_b_s98_11	f3216edc508a1aff	satisfy		ERROR	0	0	0	238	60	2026-11-09T23:02:16Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s99/m_graphs_directed_b_s99_49/m_graphs_directed_b_s99_49	7d1dad698138574d	satisfy		ERROR	0	0	0	255	60	2026-11-09T23:02:26Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s68/m_graphs_directed_b_s68_18/m_graphs_directed_b_s68_18	6914d669e9d36cba	satisfy		ERROR	0	0	0	246	60	2026-11-09T23:02:38Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s84/m_graphs_directed_b_s84_42/m_graphs_directed_b_s84_42	ea3297f826936cfa	satisfy		ERROR	0	0	0	286	60	2026-11-09T23:02:50Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s88/m_graphs_directed_b_s88_40/m_graphs_directed_b_s88_40	8591b474045a26f3	satisfy		ERROR	0	0	0	266	60	2026-11-09T23:03:02Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s92/m_graphs_directed_b_s92_12/m_graphs_directed_b_s92_12	3f03469da335821d	satisfy		ERROR	0	0	0	279	60	2026-11-09T23:03:14Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s95/m_graphs_directed_b_s95_16/m_graphs_directed_b_s95_16	88520df6ac000c5e	satisfy		ERROR	0	0	0	252	60	2026-11-09T23:03:23Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s97/m_graphs_directed_b_s97_32/m_graphs_directed_b_s97_32	37ebddb6ef4504a0	satisfy		ERROR	0	0	0	244	60	2026-11-09T23:03:33Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s98/m_graphs_directed_b_s98_31/m_graphs_directed_b_s98_31	b8aee23b9f63bfc3	satisfy		ERROR	0	0	0	296	60	2026-11-09T23:03:44Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s99/m_graphs_directed_b_s99_22/m_graphs_directed_b_s99_22	d38dda7d69eed728	satisfy		ERROR	0	0	0	266	60	2026-11-09T23:03:53Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s71/m_graphs_directed_b_s71_21/m_graphs_directed_b_s71_21	c90e6fe4808febe6	satisfy		ERROR	0	0	0	324	60	2026-11-09T23:04:05Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s79/m_graphs_directed_b_s79_27/m_graphs_directed_b_s79_27	400c4c36377d277d	satisfy		ERROR	0	0	0	275	60	2026-11-09T23:04:15Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s80/m_graphs_directed_b_s80_12/m_graphs_directed_b_s80_12	933ec6ef1f6103dc	satisfy		ERROR	0	0	0	276	60	2026-11-09T23:04:28Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s95/m_graphs_directed_b_s95_34/m_graphs_directed_b_s95_34	3463ac1624406f28	satisfy		ERROR	0	0	0	269	60	2026-11-09T23:04:40Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s101/m_graphs_directed_b_s101_5/m_graphs_directed_b_s101_5	46651b9efc6de59b	satisfy		ERROR	0	0	0	243	60	2026-11-09T23:04:50Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s103/m_graphs_directed_b_s103_9/m_graphs_directed_b_s103_9	5962b60071ea57ee	satisfy		ERROR	0	0	0	258	60	2026-11-09T23:05:02Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s106/m_graphs_directed_b_s106_1/m_graphs_directed_b_s106_1	2960565f2912fcad	satisfy		ERROR	0	0	0	231	60	2026-11-09T23:05:14Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s114/m_graphs_directed_b_s114_6/m_graphs_directed_b_s114_6	d2101ac2c363e887	satisfy		ERROR	0	0	0	242	60	2026-11-09T23:05:24Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s68/m_graphs_directed_b_s68_24/m_graphs_directed_b_s68_24	499dad23cf21bf5c	satisfy		ERROR	0	0	0	253	60	2026-11-09T23:05:34Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s76/m_graphs_directed_b_s76_37/m_graphs_directed_b_s76_37	9ee94ac11538465e	satisfy		ERROR	0	0	0	308	60	2026-11-09T23:05:45Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s106/m_graphs_directed_b_s106_28/m_graphs_directed_b_s106_28	a26a7656a54bb7d8	satisfy		ERROR	0	0	0	276	60	2026-11-09T23:05:57Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s109/m_graphs_directed_b_s109_28/m_graphs_directed_b_s109_28	ccc2717fbd7541e5	satisfy		ERROR	0	0	0	298	60	2026-11-09T23:06:07Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s106/m_graphs_directed_b_s106_24/m_graphs_directed_b_s106_24	2d99a6e799ebd1b8	satisfy		ERROR	0	0	0	294	60	2026-11-09T23:06:20Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s109/m_graphs_directed_b_s109_25/m_graphs_directed_b_s109_25	b1d89119f102e2b2	satisfy		ERROR	0	0	0	278	60	2026-11-09T23:06:31Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s115/m_graphs_directed_b_s115_16/m_graphs_directed_b_s115_16	521fbb022bc4bba7	satisfy		ERROR	0	0	0	265	60	2026-11-09T23:06:41Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s119/m_graphs_directed_b_s119_20/m_graphs_directed_b_s119_20	e3bfeee4447adf8f	satisfy		ERROR	0	0	0	261	60	2026-11-09T23:06:53Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s103/m_graphs_directed_b_s103_31/m_graphs_directed_b_s103_31	38a74412ef06c74f	satisfy		ERROR	0	0	0	266	60	2026-11-09T23:07:05Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s107/m_graphs_directed_b_s107_21/m_graphs_directed_b_s107_21	f2b0c3752636d228	satisfy		ERROR	0	0	0	260	60	2026-11-09T23:07:18Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s115/m_graphs_directed_b_s115_10/m_graphs_directed_b_s115_10	af08846ea9847bcb	satisfy		ERROR	0	0	0	265	60	2026-11-09T23:07:29Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s100/m_graphs_directed_b_s100_11/m_graphs_directed_b_s100_11	de86d0340374db47	satisfy		ERROR	0	0	0	249	60	2026-11-09T23:07:41Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s106/m_graphs_directed_b_s106_50/m_graphs_directed_b_s106_50	bf32680aa675c380	satisfy		ERROR	0	0	0	263	60	2026-11-09T23:07:53Z	jacop_bounded_dpath,jacop_dreachable,jacop_dsteiner,jacop_dtree,jacop_dwst
+P	gen:s79/m_graphs_undirected_s79_2/m_graphs_undirected_s79_2	a50b289d1d338a87	satisfy		ERROR	0	0	0	288	60	2026-11-09T23:08:04Z	jacop_bounded_path,jacop_reachable
+P	gen:s81/m_graphs_undirected_s81_39/m_graphs_undirected_s81_39	c797000fa29d0379	satisfy		ERROR	0	0	0	283	60	2026-11-09T23:08:15Z	jacop_bounded_path,jacop_reachable
+P	gen:s86/m_graphs_undirected_s86_44/m_graphs_undirected_s86_44	23662e7ffb5041ef	satisfy		ERROR	0	0	0	243	60	2026-11-09T23:08:27Z	jacop_bounded_path,jacop_reachable
+P	gen:s89/m_graphs_undirected_s89_30/m_graphs_undirected_s89_30	025195cf0b73d8e5	satisfy		ERROR	0	0	0	271	60	2026-11-09T23:08:37Z	jacop_bounded_path,jacop_reachable
+P	gen:s94/m_graphs_undirected_s94_45/m_graphs_undirected_s94_45	7f4b1c053adeadc5	satisfy		ERROR	0	0	0	257	60	2026-11-09T23:08:49Z	jacop_bounded_path,jacop_reachable
+P	gen:s71/m_graphs_undirected_s71_16/m_graphs_undirected_s71_16	ebdf226a17e6e35f	satisfy		ERROR	0	0	0	236	60	2026-11-09T23:09:01Z	jacop_bounded_path,jacop_reachable
+P	gen:s80/m_graphs_undirected_s80_21/m_graphs_undirected_s80_21	2022b26175460efe	satisfy		ERROR	0	0	0	224	60	2026-11-09T23:09:12Z	jacop_bounded_path,jacop_reachable
+P	gen:s81/m_graphs_undirected_s81_25/m_graphs_undirected_s81_25	48ab178b7b9ae211	satisfy		ERROR	0	0	0	229	60	2026-11-09T23:09:25Z	jacop_bounded_path,jacop_reachable
+P	gen:s84/m_graphs_undirected_s84_24/m_graphs_undirected_s84_24	d64acf22018c0045	satisfy		ERROR	0	0	0	257	60	2026-11-09T23:09:37Z	jacop_bounded_path,jacop_reachable
+P	gen:s89/m_graphs_undirected_s89_45/m_graphs_undirected_s89_45	f58cd423ebd22b0e	satisfy		ERROR	0	0	0	237	60	2026-11-09T23:09:48Z	jacop_bounded_path,jacop_reachable
+P	gen:s91/m_graphs_undirected_s91_15/m_graphs_undirected_s91_15	d627de323a911cfd	satisfy		ERROR	0	0	0	264	60	2026-11-09T23:10:00Z	jacop_bounded_path,jacop_reachable
+P	gen:s83/m_graphs_undirected_s83_16/m_graphs_undirected_s83_16	2da84e08d167cf8c	satisfy		ERROR	0	0	0	316	60	2026-11-09T23:10:10Z	jacop_bounded_path,jacop_reachable
+P	gen:s83/m_graphs_undirected_s83_38/m_graphs_undirected_s83_38	9c23722d2f63b281	satisfy		ERROR	0	0	0	315	60	2026-11-09T23:10:20Z	jacop_bounded_path,jacop_reachable
+P	gen:s86/m_graphs_undirected_s86_22/m_graphs_undirected_s86_22	b83212237016535a	satisfy		ERROR	0	0	0	253	60	2026-11-09T23:10:32Z	jacop_bounded_path,jacop_reachable
+P	gen:s118/m_graphs_undirected_s118_6/m_graphs_undirected_s118_6	53907d901c45e688	satisfy		ERROR	0	0	0	254	60	2026-11-09T23:10:44Z	jacop_bounded_path,jacop_reachable
+P	gen:s103/m_graphs_undirected_s103_30/m_graphs_undirected_s103_30	8ff637dd3bf49a71	satisfy		ERROR	0	0	0	270	60	2026-11-09T23:10:56Z	jacop_bounded_path,jacop_reachable
+P	gen:s104/m_graphs_undirected_s104_19/m_graphs_undirected_s104_19	df179eeba63930ef	satisfy		ERROR	0	0	0	246	60	2026-11-09T23:11:07Z	jacop_bounded_path,jacop_reachable
+P	gen:s111/m_graphs_undirected_s111_24/m_graphs_undirected_s111_24	25a866f14e7a80fd	satisfy		ERROR	0	0	0	237	60	2026-11-09T23:11:18Z	jacop_bounded_path,jacop_reachable
+P	gen:s114/m_graphs_undirected_s114_18/m_graphs_undirected_s114_18	621f00ac32035d57	satisfy		ERROR	0	0	0	253	60	2026-11-09T23:11:29Z	jacop_bounded_path,jacop_reachable
+P	gen:s114/m_graphs_undirected_s114_45/m_graphs_undirected_s114_45	4b40528257be679c	satisfy		ERROR	0	0	0	277	60	2026-11-09T23:11:41Z	jacop_bounded_path,jacop_reachable
+P	gen:s117/m_graphs_undirected_s117_27/m_graphs_undirected_s117_27	90581237d4a23997	satisfy		ERROR	0	0	0	265	60	2026-11-09T23:11:54Z	jacop_bounded_path,jacop_reachable
+P	gen:s100/m_graphs_undirected_s100_45/m_graphs_undirected_s100_45	94b99f18e471a5bd	satisfy		ERROR	0	0	0	269	60	2026-11-09T23:12:06Z	jacop_bounded_path,jacop_reachable
+P	gen:s115/m_graphs_undirected_s115_41/m_graphs_undirected_s115_41	7a05a51997899a23	satisfy		ERROR	0	0	0	252	60	2026-11-09T23:12:18Z	jacop_bounded_path,jacop_reachable
+P	gen:s121/m_graphs_undirected_s121_42/m_graphs_undirected_s121_42	7a6bd2284baab85d	satisfy		ERROR	0	0	0	246	60	2026-11-09T23:12:27Z	jacop_bounded_path,jacop_reachable
+P	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	satisfy		COMPLETE	0	0	0	251	60	2026-11-09T23:12:37Z	jacop_weighted_subcircuits
+P	gen:s76/m_stretch_s76_8/m_stretch_s76_8	a7aa064a7861ac6f	satisfy		ERROR	0	0	0	234	60	2026-11-09T23:12:47Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	all:f	PASS	COMPLETE	0	352	2026-11-09T23:12:59Z	
+P	gen:s41/m_stretch_s41_1/m_stretch_s41_1	dd43a90f4b6a416c	satisfy		ERROR	0	0	0	353	60	2026-11-09T23:12:59Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	decomp:jacop_weighted_subcircuits	NO_DECOMPOSITION				2026-11-09T23:13:08Z	
+P	gen:s50/m_stretch_s50_7/m_stretch_s50_7	507e01bf9465de13	satisfy		ERROR	0	0	0	301	60	2026-11-09T23:13:08Z	jacop_stretch
+P	gen:s62/m_stretch_s62_5/m_stretch_s62_5	383232e9d8ce163b	satisfy		ERROR	0	0	0	352	60	2026-11-09T23:13:19Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	std	PASS	COMPLETE	0	421	2026-11-09T23:13:19Z	
+P	gen:s66/m_stretch_s66_8/m_stretch_s66_8	ca453390dcd94ef1	satisfy		ERROR	0	0	0	301	60	2026-11-09T23:13:31Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	std:f	PASS	COMPLETE	0	426	2026-11-09T23:13:31Z	
+P	gen:s79/m_stretch_s79_1/m_stretch_s79_1	2cda0295ef8dfba1	satisfy		ERROR	0	0	0	391	60	2026-11-09T23:13:43Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	objstd:lcg	PASS	COMPLETE	0	431	2026-11-09T23:13:43Z	
+P	gen:s11/m_stretch_s11_20/m_stretch_s11_20	7a5f316e0fbf93ed	satisfy		ERROR	0	0	0	288	60	2026-11-09T23:13:55Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj0:plain	PASS	COMPLETE	0	338	2026-11-09T23:13:55Z	
+P	gen:s13/m_stretch_s13_35/m_stretch_s13_35	b1d8944915cb317f	satisfy		ERROR	0	0	0	235	60	2026-11-09T23:14:06Z	jacop_stretch
+P	gen:s21/m_stretch_s21_19/m_stretch_s21_19	e7ff85e1e4780043	satisfy		ERROR	0	0	0	335	60	2026-11-09T23:14:18Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj0:f	PASS	COMPLETE	0	392	2026-11-09T23:14:18Z	
+P	gen:s25/m_stretch_s25_19/m_stretch_s25_19	e2da6464eadcb9cb	satisfy		ERROR	0	0	0	315	60	2026-11-09T23:14:28Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj0:lcg	PASS	COMPLETE	0	364	2026-11-09T23:14:28Z	
+P	gen:s36/m_stretch_s36_34/m_stretch_s36_34	c981dc0ce3270d21	satisfy		ERROR	0	0	0	355	60	2026-11-09T23:14:39Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj0:lcg-f	PASS	COMPLETE	0	407	2026-11-09T23:14:39Z	
+P	gen:s39/m_stretch_s39_44/m_stretch_s39_44	8f6e006c6a941ee2	satisfy		ERROR	0	0	0	314	60	2026-11-09T23:14:48Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj1:plain	PASS	COMPLETE	0	344	2026-11-09T23:14:48Z	
+P	gen:s46/m_stretch_s46_48/m_stretch_s46_48	154f284a871fa3b2	satisfy		ERROR	0	0	0	360	60	2026-11-09T23:15:00Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj1:f	PASS	COMPLETE	0	380	2026-11-09T23:15:00Z	
+P	gen:s47/m_stretch_s47_23/m_stretch_s47_23	bbb4bde9d1f586b6	satisfy		ERROR	0	0	0	377	60	2026-11-09T23:15:12Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj1:lcg	PASS	COMPLETE	0	379	2026-11-09T23:15:12Z	
+P	gen:s50/m_stretch_s50_43/m_stretch_s50_43	183f4f2d75ee790f	satisfy		ERROR	0	0	0	310	60	2026-11-09T23:15:24Z	jacop_stretch
+C	gen:s98/m_weighted_subcircuits_s98_41/m_weighted_subcircuits_s98_41	4afc1eaca7669763	obj1:lcg-f	PASS	COMPLETE	0	345	2026-11-09T23:15:24Z	
+P	gen:s53/m_stretch_s53_11/m_stretch_s53_11	cd20372e8eec32c8	satisfy		ERROR	0	0	0	246	60	2026-11-09T23:15:36Z	jacop_stretch
+P	gen:s55/m_stretch_s55_42/m_stretch_s55_42	65f495d3e85025d6	satisfy		ERROR	0	0	0	243	60	2026-11-09T23:15:48Z	jacop_stretch
+P	gen:s56/m_stretch_s56_35/m_stretch_s56_35	bf2d720bafbaa4d4	satisfy		ERROR	0	0	0	237	60	2026-11-09T23:15:59Z	jacop_stretch
+P	gen:s64/m_stretch_s64_36/m_stretch_s64_36	0cba7b13dce56cf8	satisfy		ERROR	0	0	0	219	60	2026-11-09T23:16:10Z	jacop_stretch
+P	gen:s71/m_stretch_s71_28/m_stretch_s71_28	8ceb4dcb48a8d7e7	satisfy		ERROR	0	0	0	260	60	2026-11-09T23:16:21Z	jacop_stretch
+P	gen:s75/m_stretch_s75_30/m_stretch_s75_30	3e06f03b2109d873	satisfy		ERROR	0	0	0	262	60	2026-11-09T23:16:33Z	jacop_stretch
+P	gen:s76/m_stretch_s76_29/m_stretch_s76_29	940d27b000cea3dd	satisfy		ERROR	0	0	0	253	60	2026-11-09T23:16:45Z	jacop_stretch
+P	gen:s79/m_stretch_s79_45/m_stretch_s79_45	4343710a6e5c1968	satisfy		ERROR	0	0	0	256	60	2026-11-09T23:16:56Z	jacop_stretch
+P	gen:s82/m_stretch_s82_25/m_stretch_s82_25	6180ac036956f8c0	satisfy		ERROR	0	0	0	235	60	2026-11-09T23:17:07Z	jacop_stretch
+P	gen:s83/m_stretch_s83_13/m_stretch_s83_13	fff86726606ee884	satisfy		ERROR	0	0	0	285	60	2026-11-09T23:17:18Z	jacop_stretch
+P	gen:s92/m_stretch_s92_18/m_stretch_s92_18	f99f9ce337421b2a	satisfy		ERROR	0	0	0	242	60	2026-11-09T23:17:29Z	jacop_stretch
+P	gen:s110/m_stretch_s110_6/m_stretch_s110_6	4935aba122f542ec	satisfy		ERROR	0	0	0	229	60	2026-11-09T23:17:41Z	jacop_stretch
+P	gen:s102/m_stretch_s102_35/m_stretch_s102_35	e9d12fcb0d789e1d	satisfy		ERROR	0	0	0	236	60	2026-11-09T23:17:51Z	jacop_stretch
+P	gen:s103/m_stretch_s103_23/m_stretch_s103_23	0e6dd4de64565afc	satisfy		ERROR	0	0	0	243	60	2026-11-09T23:18:03Z	jacop_stretch
+P	gen:s104/m_stretch_s104_16/m_stretch_s104_16	0a8d87edbd05641c	satisfy		ERROR	0	0	0	251	60	2026-11-09T23:18:14Z	jacop_stretch
+P	gen:s115/m_stretch_s115_42/m_stretch_s115_42	433c8bf3019119b4	satisfy		ERROR	0	0	0	259	60	2026-11-09T23:18:26Z	jacop_stretch
+P	gen:s121/m_stretch_s121_28/m_stretch_s121_28	ba95959990ec991a	satisfy		ERROR	0	0	0	251	60	2026-11-09T23:18:37Z	jacop_stretch
+P	gen:s14/m_stretch_b_s14_7/m_stretch_b_s14_7	bb303827e857041f	satisfy		ERROR	0	0	0	271	60	2026-11-09T23:18:48Z	jacop_stretch
+P	gen:s15/m_stretch_b_s15_2/m_stretch_b_s15_2	f607a7ebf0931203	satisfy		ERROR	0	0	0	255	60	2026-11-09T23:19:00Z	jacop_stretch
+P	gen:s21/m_stretch_b_s21_9/m_stretch_b_s21_9	b57bc20a74071393	satisfy		ERROR	0	0	0	253	60	2026-11-09T23:19:12Z	jacop_stretch
+P	gen:s30/m_stretch_b_s30_8/m_stretch_b_s30_8	6d80238c8c1220bd	satisfy		ERROR	0	0	0	265	60	2026-11-09T23:19:23Z	jacop_stretch
+P	gen:s35/m_stretch_b_s35_8/m_stretch_b_s35_8	09632a1348be44c3	satisfy		ERROR	0	0	0	278	60	2026-11-09T23:19:35Z	jacop_stretch
+P	gen:s44/m_stretch_b_s44_9/m_stretch_b_s44_9	2a225eb12b6c1637	satisfy		ERROR	0	0	0	264	60	2026-11-09T23:19:46Z	jacop_stretch
+P	gen:s55/m_stretch_b_s55_6/m_stretch_b_s55_6	750fb3cedf64dc33	satisfy		ERROR	0	0	0	310	60	2026-11-09T23:19:56Z	jacop_stretch
+P	gen:s55/m_stretch_b_s55_9/m_stretch_b_s55_9	6654f9b5956af149	satisfy		ERROR	0	0	0	258	60	2026-11-09T23:20:07Z	jacop_stretch
+P	gen:s57/m_stretch_b_s57_2/m_stretch_b_s57_2	6a23b5b8a103e9b6	satisfy		ERROR	0	0	0	223	60	2026-11-09T23:20:19Z	jacop_stretch
+P	gen:s14/m_stretch_b_s14_34/m_stretch_b_s14_34	d4aeac5dbabe98a8	satisfy		ERROR	0	0	0	278	60	2026-11-09T23:20:31Z	jacop_stretch
+P	gen:s15/m_stretch_b_s15_11/m_stretch_b_s15_11	54ae6ffef53fd296	satisfy		ERROR	0	0	0	255	60	2026-11-09T23:20:43Z	jacop_stretch
+P	gen:s18/m_stretch_b_s18_25/m_stretch_b_s18_25	35fb378d805ac2cd	satisfy		ERROR	0	0	0	261	60	2026-11-09T23:20:55Z	jacop_stretch
+P	gen:s21/m_stretch_b_s21_14/m_stretch_b_s21_14	bd348aa4d07389df	satisfy		ERROR	0	0	0	270	60	2026-11-09T23:21:07Z	jacop_stretch
+P	gen:s24/m_stretch_b_s24_45/m_stretch_b_s24_45	c28e1bd6a14a97f8	satisfy		ERROR	0	0	0	253	60	2026-11-09T23:21:19Z	jacop_stretch
+P	gen:s26/m_stretch_b_s26_40/m_stretch_b_s26_40	f56f572f859e97b4	satisfy		ERROR	0	0	0	308	60	2026-11-09T23:21:31Z	jacop_stretch
+P	gen:s30/m_stretch_b_s30_21/m_stretch_b_s30_21	0131b4245dc0493d	satisfy		ERROR	0	0	0	262	60	2026-11-09T23:21:41Z	jacop_stretch
+P	gen:s38/m_stretch_b_s38_24/m_stretch_b_s38_24	383f92f46c8a2c1f	satisfy		ERROR	0	0	0	244	60	2026-11-09T23:21:53Z	jacop_stretch
+P	gen:s63/m_stretch_b_s63_25/m_stretch_b_s63_25	3e3d8a7afadbf616	satisfy		ERROR	0	0	0	228	60	2026-11-09T23:22:05Z	jacop_stretch
+P	gen:s64/m_stretch_b_s64_20/m_stretch_b_s64_20	6dba0c8b07961caa	satisfy		ERROR	0	0	0	287	60	2026-11-09T23:22:18Z	jacop_stretch
+P	gen:s71/m_stretch_b_s71_44/m_stretch_b_s71_44	2269984697ed6002	satisfy		ERROR	0	0	0	267	60	2026-11-09T23:22:30Z	jacop_stretch
+P	gen:s72/m_stretch_b_s72_35/m_stretch_b_s72_35	7a01d582e7a5c9be	satisfy		ERROR	0	0	0	242	60	2026-11-09T23:22:40Z	jacop_stretch
+P	gen:s81/m_stretch_b_s81_18/m_stretch_b_s81_18	1762f0b5c4b73114	satisfy		ERROR	0	0	0	239	60	2026-11-09T23:22:52Z	jacop_stretch
+P	gen:s102/m_stretch_b_s102_7/m_stretch_b_s102_7	e6c835b6b44b7899	satisfy		ERROR	0	0	0	251	60	2026-11-09T23:23:04Z	jacop_stretch
+P	gen:s107/m_stretch_b_s107_23/m_stretch_b_s107_23	e26d13143f4efccb	satisfy		ERROR	0	0	0	273	60	2026-11-09T23:23:17Z	jacop_stretch
+P	gen:s121/m_stretch_b_s121_25/m_stretch_b_s121_25	51c6d5df30847438	satisfy		ERROR	0	0	0	244	60	2026-11-09T23:23:28Z	jacop_stretch
+P	gen:s90/m_stretch_b_s90_33/m_stretch_b_s90_33	1dce623c57b6d213	satisfy		ERROR	0	0	0	267	60	2026-11-09T23:23:39Z	jacop_stretch
+P	gen:s114/m_stretch_b_s114_26/m_stretch_b_s114_26	b5651227f138da27	satisfy		ERROR	0	0	0	250	60	2026-11-09T23:23:51Z	jacop_stretch
