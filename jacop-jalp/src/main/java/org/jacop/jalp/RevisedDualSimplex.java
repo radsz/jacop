@@ -187,6 +187,8 @@ public final class RevisedDualSimplex {
   private double[] lo;
   private double[] hi;
   private double big = BIG_START;
+  // whether the last solve ended (not at its limit): the next one starts a new answer
+  private boolean ended = true;
 
   private int[] basis;
   private int[] row; // the row of a basic column, -1 for a nonbasic one
@@ -436,6 +438,7 @@ public final class RevisedDualSimplex {
     seed = o.seed;
     exact = o.exact;
     cleaning = o.cleaning;
+    dualPending = o.dualPending;
     // copy() postsolves an open reduced solve first, so the copy has none
     reducedLp = null;
     reducedBy = null;
@@ -448,6 +451,7 @@ public final class RevisedDualSimplex {
     lo = o.lo.clone();
     hi = o.hi.clone();
     big = o.big;
+    ended = o.ended;
     basis = o.basis.clone();
     row = o.row.clone();
     upper = o.upper.clone();
@@ -523,6 +527,7 @@ public final class RevisedDualSimplex {
     System.arraycopy(c, 0, givenCost, 0, n);
     setCosts(true);
     cleaning = false;
+    dualPending = false;
     placed = false;
     dualsChecked = false;
     if (factorValid) {
@@ -939,11 +944,38 @@ public final class RevisedDualSimplex {
    * @return {@link #OPTIMAL}, {@link #INFEASIBLE}, {@link #UNBOUNDED} or {@link #LIMIT}
    */
   public int solve(int limit) {
+    shrinkArtificial();
     int status = dualSolve(limit);
-    if (status != LIMIT) {
+    ended = status != LIMIT;
+    if (ended) {
       cleaning = false;
     }
     return status;
+  }
+
+  /**
+   * Puts the artificial bounds back to their first size at the start of a new answer. An unbounded
+   * answer leaves them at their largest (1e14), and the columns that stay nonbasic at them make
+   * every later basic value a difference of numbers of that size: after a cut that bounded the
+   * problem the optimum was 4.93 instead of 5 (x0 + ... with x0 at -7.5e13 before). They grow again
+   * when the objective pulls on them.
+   */
+  private void shrinkArtificial() {
+    if (!ended || big == BIG_START) {
+      return;
+    }
+    flushReduced();
+    big = BIG_START;
+    if (infiniteLen < 0) {
+      listInfinite();
+    }
+    for (int k = 0; k < infiniteLen; k++) {
+      int j = infinite[k];
+      workingBounds(j);
+      markMoved(j);
+    }
+    betaValid = false;
+    outsideValid = false;
   }
 
   private int dualSolve(int limit) {
@@ -1040,6 +1072,12 @@ public final class RevisedDualSimplex {
           // out of the choice of leaving rows until the end of the solve
           skipped[r] = true;
           skippedRows++;
+          // leaving a row out is no step of the limit: the rows left out are taken back at the
+          // next call, and a solve called with a limit of one pivot left out the same row at
+          // every call and never ended; each row is left out at most once per call
+          if (limit < Integer.MAX_VALUE) {
+            limit++;
+          }
           continue;
         }
         infeasibleRow = r;
@@ -1159,24 +1197,8 @@ public final class RevisedDualSimplex {
 
   // at a primal feasible basis: the status to return, or -1 to go on pivoting
   private int atOptimum() {
-    if (skippedRows > 0) {
-      // the rows left out must hold on fresh basic values, or have no proof of infeasibility on
-      // fresh factors either; then their violation is round-off and the solve ends as if they
-      // held (two equal rows and free columns at artificial bounds of 1e12: the basic slack of
-      // one row off by 2e-5, the combination of the rows 0 over every column). A row with a
-      // proof stops the solve at its limit
-      clearSkipped();
-      refactor();
-      for (int r = leavingRow(); r >= 0; r = leavingRow()) {
-        rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
-        if (proofHolds(r)) {
-          clearSkipped();
-          return LIMIT;
-        }
-        skipped[r] = true;
-        skippedRows++;
-      }
-      clearSkipped();
+    if (skippedRows > 0 && !skippedRowsHold()) {
+      return LIMIT;
     }
     if (feasibility) {
       // feasible, but the objective pulled a column past every artificial bound
@@ -1199,8 +1221,35 @@ public final class RevisedDualSimplex {
         return -1;
       }
     }
-    // a nonbasic column at an artificial bound that the objective pulls on: the bounds are too
-    // close
+    return artificialBoundsHold();
+  }
+
+  /**
+   * Whether the rows left out as round-off hold on fresh basic values, or have no proof of
+   * infeasibility on fresh factors either; then their violation is round-off and the solve ends as
+   * if they held (two equal rows and free columns at artificial bounds of 1e12: the basic slack of
+   * one row off by 2e-5, the combination of the rows 0 over every column). A row with a proof stops
+   * the solve at its limit (false).
+   */
+  private boolean skippedRowsHold() {
+    clearSkipped();
+    refactor();
+    for (int r = leavingRow(); r >= 0; r = leavingRow()) {
+      rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
+      if (proofHolds(r)) {
+        clearSkipped();
+        return false;
+      }
+      skipped[r] = true;
+      skippedRows++;
+    }
+    clearSkipped();
+    return true;
+  }
+
+  // OPTIMAL unless a nonbasic column at an artificial bound is pulled on by the objective: the
+  // bounds are too close (-1 to go on, UNBOUNDED when they cannot grow)
+  private int artificialBoundsHold() {
     if (infiniteLen < 0) {
       listInfinite();
     }
@@ -1210,13 +1259,23 @@ public final class RevisedDualSimplex {
           && isArtificial(j, upper[j])
           && lo[j] != hi[j]
           && (upper[j] ? d[j] < -DUAL_TOL : d[j] > DUAL_TOL)) {
-        if (!enlarge()) {
-          return UNBOUNDED;
-        }
-        return -1;
+        return pulledColumn(j);
       }
     }
     return OPTIMAL;
+  }
+
+  private int pulledColumn(int j) {
+    if (perturbed && !trueCostsPull(j)) {
+      // only the perturbation pulls (a column with no cost, alone or with basic columns of no
+      // cost): it and the basic columns of its ray keep their costs as given, as in the primal
+      // simplex, instead of the bounds growing until the answer is UNBOUNDED (min x1, x1 >= 1, a
+      // free column x0 in no row: UNBOUNDED at x0 = -1e14)
+      unperturbRay(j);
+      computeDuals();
+      return -1;
+    }
+    return enlarge() ? -1 : UNBOUNDED;
   }
 
   /**
@@ -1242,6 +1301,19 @@ public final class RevisedDualSimplex {
     dualsChecked = held;
     checkedWork = ops + (lu == null ? 0 : lu.ops) - before;
     return held;
+  }
+
+  // whether the costs as given pull nonbasic column j, at an artificial bound, further out: its
+  // reduced cost for them, over the column of the tableau left in alphaQ for unperturbRay
+  private boolean trueCostsPull(int j) {
+    clear(alphaQ, alphaIdx, alphaLen);
+    alphaLen = lu.ftran(rhs, rhsIdx, columnInto(j, rhs, rhsIdx), alphaQ, alphaIdx, true);
+    double z = j < n ? trueCost[j] : 0;
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
+      z -= trueCost[basis[i]] * alphaQ[i];
+    }
+    return upper[j] ? z < -DUAL_TOL : z > DUAL_TOL;
   }
 
   private void listInfinite() {
@@ -2633,6 +2705,17 @@ public final class RevisedDualSimplex {
    */
   public int solvePrimal(int limit) {
     flushReduced();
+    shrinkArtificial();
+    ended = false;
+    if (dualPending) {
+      // the last call handed over to the dual simplex and stopped at its limit: the dual simplex
+      // goes on (a primal phase 1 again undid its pivots, and an infeasible problem solved with a
+      // few pivots per call never ended)
+      int status = solve(limit);
+      dualPending = status == LIMIT;
+      ended = !dualPending;
+      return status;
+    }
     long start = totalPivots;
     int status = primalPivots(limit);
     // the primal pivots change the basis and the reduced costs: the dual simplex places every
@@ -2649,6 +2732,11 @@ public final class RevisedDualSimplex {
     if (status == DUAL) {
       computeDuals();
       status = solve((int) Math.max(0, limit - (totalPivots - start)));
+      dualPending = status == LIMIT;
+    }
+    ended = status != LIMIT;
+    if (ended) {
+      cleaning = false;
     }
     return status;
   }
@@ -2657,6 +2745,9 @@ public final class RevisedDualSimplex {
   private double[] savedLo;
   private double[] savedHi;
   private boolean boundsPerturbed;
+
+  // a primal solve handed over to the dual simplex, which stopped at the limit
+  private boolean dualPending;
 
   // the status of a primal solve that hands over to the dual simplex
   private static final int DUAL = -2;
@@ -2734,7 +2825,10 @@ public final class RevisedDualSimplex {
   private int primalPivots(int limit) {
     infeasibleRow = -1;
     clearSkipped();
-    if (feasibility || (exact && !perturbed)) {
+    // a clean-up of the perturbation that the last call left at its limit goes on with the costs
+    // as given: perturbing them again here made a primal solve called with a limit of one pivot
+    // answer LIMIT forever (each call ended by removing the perturbation)
+    if (feasibility || exact && !perturbed && !cleaning) {
       feasibility = false;
       setCosts(true);
       if (factorValid) {
@@ -2901,6 +2995,7 @@ public final class RevisedDualSimplex {
       return DUAL;
     }
     if (exact && perturbed) {
+      cleaning = true;
       setCosts(false);
       computeDuals();
       return GO_ON;

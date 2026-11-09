@@ -237,6 +237,7 @@ setup to run configuration. -->
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
+                                <include>**/LpSolverExactTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
@@ -433,6 +434,7 @@ setup to run configuration. -->
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
+                                <include>**/LpSolverExactTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
@@ -630,6 +632,7 @@ setup to run configuration. -->
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
+                                <include>**/LpSolverExactTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
@@ -827,6 +830,7 @@ setup to run configuration. -->
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/JalpSimplexTest.java</include>
+                                <include>**/LpSolverExactTest.java</include>
                                 <include>**/MpsReaderTest.java</include>
                                 <include>**/BasisLuTest.java</include>
                                 <include>**/LinearRelaxationTest.java</include>
