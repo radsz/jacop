@@ -601,6 +601,8 @@ Cuts:
   apart is scaled down instead of dropped; default true.
 - org.jacop.lp.slackGomory: root Gomory cuts over the rows and their
   slacks (false: MIR of the aggregate of the rows alone); default true.
+- org.jacop.lp.knapsackRows: the weight and profit rows of Knapsack
+  (jacop_knapsack) are linearised rows of the LP; default true.
 - org.jacop.lp.capacityCuts: rounded capacity cuts of Routes at the
   root; default true.
 - org.jacop.lp.capacityRounds: their rounds; default 50.

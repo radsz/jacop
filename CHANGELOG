@@ -3818,6 +3818,21 @@ Version 5.0 (unreleased)
      objective instances of wide-quick. OR-Tools CP-SAT runs similar
      probes in its objective_shaving workers.
 
+221. The LP relaxation (LinearRelaxation) now has the weight and profit
+     rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
+     knapsacks KnapsackDetector posts), as linearised rows tried at the
+     root. Before, a model stated with knapsack constraints had no LP
+     row of them: on MiniZinc Challenge multi-knapsack the root LP was
+     empty or far from the optimum (mknap2-10: 1101197, optimum 624319)
+     and is now at the optimum. On the 15 multi-knapsack instances of
+     the Challenge (600 s), total time 95 s -> 38 s, and with -f 109 s
+     -> 38 s (mknap2-2: 32 s -> 12 s); no other wide-set instance gets
+     a different LP. -Dorg.jacop.lp.knapsackRows=false turns it off.
+     Lifted cover cuts of the knapsack rows (sequence-independent
+     lifting, Gu, Nemhauser and Savelsbergh, J. Comb. Optim. 4, 2000)
+     were tried as well and are not included: the MIR cuts already
+     reach the same root bounds on the MiniZinc Challenge instances.
+
 Version 4.11
 =============
 
