@@ -3977,6 +3977,20 @@ Version 5.0 (unreleased)
      old rule, =loose drops the condition on the values, =all lifts the
      limits.
 
+231. Fixed search (no -f) with --lcg follows the search annotation again,
+     as the fixed search (fd) category of the MiniZinc Challenge requires
+     ("FD search solvers must follow the search strategy defined in the
+     problem"): the solver no longer restarts (--free-config
+     fixed-restarts=off is the default, was turns), so no run branches on
+     the SAT solver's literals or on activity, and the core-guided phase
+     no longer runs for an objective without a first solution
+     (fixed-core=0 is the default, was 0.1). Learnt clauses still prune
+     the annotation's tree. fixed-restarts=turns|alternate|replay and
+     fixed-core=<share> keep the 5.0 behaviour for experiments. The
+     propagations statistic under --lcg now counts JaSAT's propagations
+     as well as the calls of the store's propagators: a model whose
+     constraints became clauses (nonogram) printed only the root's calls.
+
 Version 4.11
 =============
 

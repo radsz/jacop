@@ -2291,9 +2291,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (!free && annotated != null) {
       // restarts under the annotation: off (followed down each branch, as without learning),
-      // replay (each run follows it again, with the learnt clauses) or alternate (runs take turns
-      // with activity branching); fixed-restarts-from=solution restarts only after a first solution
-      String restarts = options.freeConfig("fixed-restarts", "turns");
+      // replay (each run follows it again, with the learnt clauses), alternate or turns (runs take
+      // turns with activity branching and the SAT solver's decisions); fixed-restarts-from=solution
+      // restarts only after a first solution. Off is the default: the fixed search (fd) category of
+      // the MiniZinc Challenge requires the search of the annotation, and the runs of alternate
+      // and turns branch on other variables and values (turns solves nonogram 2026 hard_02 in
+      // 15 s, off not in 120 s)
+      String restarts = options.freeConfig("fixed-restarts", "off");
       String from = options.freeConfig("fixed-restarts-from", "start");
       if (!"start".equals(from) && !"solution".equals(from)) {
         throw new IllegalArgumentException("fixed-restarts-from=" + from);
@@ -2305,7 +2309,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed-core-delay of the time: unit-commitment L12 has none under its annotation in 60 s,
       // while the cores' assumptions find one in seconds. With a solution the annotation keeps the
       // time: core-guided search from the start lost the proofs of city-position and triangular.
-      double fixedCore = Double.parseDouble(options.freeConfig("fixed-core", "0.1"));
+      // Off by default: the assumptions of the core-guided phase are not the annotation's search
+      double fixedCore = Double.parseDouble(options.freeConfig("fixed-core", "0"));
       if (fixedCore > 0) {
         lcg.setCoreSearch(
             fixedCore, 100_000, Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
@@ -4387,6 +4392,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param depth peak search depth.
    * @param solutions total solutions found.
    */
+  /**
+   * The propagations of the search: the calls of the store's propagators and, with lazy clause
+   * generation, the literals JaSAT propagates on its clauses. Under --lcg a constraint posted as
+   * clauses (regular rows of nonogram, for example) propagates in JaSAT only, so the calls of the
+   * store alone stay at the root's count.
+   */
+  private long propagations() {
+    long calls = store.numberConsistencyCalls;
+    return lcg != null ? calls + lcg.sat().propagations : calls;
+  }
+
   private void printStatisticsOutput(int nodes, int wrong, int depth, int solutions) {
     long restarts = rs != null ? rs.restarts() : 0;
     if (freeSearch != null) {
@@ -4413,7 +4429,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n%%%mzn-stat: restarts="
             + nf.format(restarts)
             + "\n%%%mzn-stat: propagations="
-            + nf.format(store.numberConsistencyCalls)
+            + nf.format(propagations())
             + "\n%%%mzn-stat: failures="
             + nf.format(wrong)
             + "\n%%%mzn-stat: peakDepth="
