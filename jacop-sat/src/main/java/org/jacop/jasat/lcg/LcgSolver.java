@@ -261,6 +261,18 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: reason literals replaced by a weaker literal the solver already has. */
   public long liftedLiterals;
 
+  /** Statistics: alternative reasons (and failures) added as learnt clauses. */
+  public long alternativeClauses;
+
+  /** Statistics: literals of those clauses. */
+  public long alternativeLiterals;
+
+  /** Statistics: alternative reasons offered, those too long, those equal to the reason. */
+  public long alternativesOffered, alternativesTooLong, alternativesSame;
+
+  // alternative reasons of at most this many literals are added as learnt clauses, 0 for none
+  private static final int ALTERNATIVE_KEEP = Integer.getInteger("jacop.lcg.alternativeKeep", 64);
+
   // cite a weaker existing literal for a lifted bound, unless -Djacop.lcg.liftLiterals=false
   private final boolean liftLiterals =
       !"false".equals(System.getProperty("jacop.lcg.liftLiterals"));
@@ -4730,7 +4742,17 @@ public final class LcgSolver implements ExternalPropagator {
         if (linear != null) {
           learnLinear(linear.analyse(store.recentlyFailedConstraint, store.level));
         }
+        if (ALTERNATIVE_KEEP > 0 && proof == null) {
+          trail.wantAlternative(AtomicTrail.FAILURE);
+        }
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        EntryList alt = trail.takeAlternative();
+        if (own && alt.size() > 0 && alt.size() < ALTERNATIVE_KEEP && !sameEntries(alt, atoms)) {
+          int[] nogood = alternativeLiterals(alt, 0);
+          if (nogood != null) {
+            addAlternative(nogood, new int[0]);
+          }
+        }
         if (PROOF_TRACE && proof != null) {
           proof.comment((own ? "failure " : "generic failure ") + store.recentlyFailedConstraint);
         }
@@ -5021,8 +5043,21 @@ public final class LcgSolver implements ExternalPropagator {
     reason.clear();
     liftBefore = sat.trailPosition(lit);
     int extra;
+    int[] alternative = null;
     try {
+      if (ALTERNATIVE_KEEP > 0 && proof == null) {
+        trail.wantAlternative(e);
+      }
       extra = explainEntry(e, reason);
+      EntryList alt = trail.takeAlternative();
+      if (alt.size() > 0) {
+        alternativesOffered++;
+        if (alt.size() < ALTERNATIVE_KEEP) {
+          alternative = alternativeLiterals(alt, lit);
+        } else {
+          alternativesTooLong++;
+        }
+      }
       if (deferredAtoms > 0) {
         extra = explainDeferred(reason, extra);
       }
@@ -5037,9 +5072,112 @@ public final class LcgSolver implements ExternalPropagator {
     if (extra != 0) {
       clause[clause.length - 1] = -extra;
     }
+    if (alternative != null) {
+      addAlternative(alternative, clause);
+    }
     reasons++;
     reasonLiterals += clause.length;
     return clause;
+  }
+
+  /**
+   * Queues a second reason (or failure) of what {@code primary} explains as a learnt clause, unless
+   * it has the same literals: the solver adds it after the conflict at hand, as a redundant clause
+   * that unit propagation may use where the primary reason's literals do not all hold.
+   */
+  private final EntryList alternativeStack = new EntryList();
+
+  /**
+   * The clause of an alternative reason of {@code lit} (or, with lit 0, of a failure): the
+   * negations of its atoms, each atom not in the solver replaced by its own explanation, as {@link
+   * #conflict} does; null when that brings two solver literals.
+   */
+  private int[] alternativeLiterals(EntryList alt, int lit) {
+    EntryList stack = alternativeStack;
+    stack.clear();
+    for (int k = 0; k < alt.size(); k++) {
+      stack.addFrom(alt, k);
+    }
+    int seen = nextStamp();
+    if (entryStamp.length < trail.size()) {
+      entryStamp = Arrays.copyOf(entryStamp, Math.max(trail.size(), 2 * entryStamp.length));
+    }
+    int[] out = new int[16];
+    int n = 0;
+    if (lit != 0) {
+      out[n++] = lit;
+    }
+    while (stack.size() > 0) {
+      int last = stack.size() - 1;
+      int f = stack.get(last);
+      int slack = stack.slack(last);
+      stack.truncate(last);
+      int l;
+      if (inSolver(f)) {
+        l = -atomLit(f, slack);
+      } else {
+        if (entryStamp[f] == seen) {
+          continue;
+        }
+        entryStamp[f] = seen;
+        int more = explainEntry(f, stack);
+        if (more == 0) {
+          continue;
+        }
+        l = -more;
+      }
+      if (n == out.length) {
+        out = Arrays.copyOf(out, 2 * n);
+      }
+      out[n++] = l;
+    }
+    return Arrays.copyOf(out, n);
+  }
+
+  // whether two lists hold the same entries
+  private static boolean sameEntries(EntryList a, EntryList b) {
+    if (a.size() != b.size()) {
+      return false;
+    }
+    int[] x = new int[a.size()];
+    int[] y = new int[b.size()];
+    for (int k = 0; k < x.length; k++) {
+      x[k] = a.get(k);
+      y[k] = b.get(k);
+    }
+    Arrays.sort(x);
+    Arrays.sort(y);
+    return Arrays.equals(x, y);
+  }
+
+  private void addAlternative(int[] clause, int[] primary) {
+    int[] a = clause.clone();
+    int[] b = primary.clone();
+    Arrays.sort(a);
+    Arrays.sort(b);
+    int n = 0;
+    for (int i = 0; i < a.length; i++) {
+      if (n == 0 || a[n - 1] != a[i]) {
+        a[n++] = a[i];
+      }
+    }
+    int m = 0;
+    for (int i = 0; i < b.length; i++) {
+      if (m == 0 || b[m - 1] != b[i]) {
+        b[m++] = b[i];
+      }
+    }
+    if (n == m && Arrays.equals(a, 0, n, b, 0, m)) {
+      alternativesSame++;
+      return;
+    }
+    a = Arrays.copyOf(a, n);
+    for (int l : a) {
+      keep(l); // a transient literal in it must not be released before the clause is added
+    }
+    imports.add(a);
+    alternativeClauses++;
+    alternativeLiterals += n;
   }
 
   /**

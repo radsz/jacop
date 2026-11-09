@@ -2679,6 +2679,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.deferredAtoms
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
+            + "\n%%%mzn-stat: lcgAlternativeClauses="
+            + lcg.alternativeClauses
+            + "\n%%%mzn-stat: lcgAlternativeLiterals="
+            + lcg.alternativeLiterals
+            + "\n%%%mzn-stat: lcgAlternativesOffered="
+            + lcg.alternativesOffered
+            + "\n%%%mzn-stat: lcgAlternativesTooLong="
+            + lcg.alternativesTooLong
+            + "\n%%%mzn-stat: lcgAlternativesSame="
+            + lcg.alternativesSame
             + "\n%%%mzn-stat: lcgBoundLiterals="
             + lcg.boundLiterals
             + "\n%%%mzn-stat: lcgEqualityLiterals="

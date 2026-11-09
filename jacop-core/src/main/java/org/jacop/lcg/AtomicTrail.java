@@ -139,6 +139,50 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public static final int HOLE_LIMIT = Integer.getInteger("jacop.lcg.holeLimit", 10_000);
 
+  /** The entry an alternative reason is asked for, {@link #FAILURE} for a failure, or -1. */
+  private int alternativeWanted = -1;
+
+  private final EntryList alternative = new EntryList();
+
+  /** The entry of {@link #wantAlternative} that asks for an alternative reason of a failure. */
+  public static final int FAILURE = Integer.MAX_VALUE;
+
+  /**
+   * Asks the next explanation of an entry (or of a failure, with {@link #FAILURE}) to give, besides
+   * its reason, a second reason it could have given, when it has one: a redundant clause the solver
+   * may keep.
+   *
+   * @param entry the entry, {@link #FAILURE}, or -1 to ask for none
+   */
+  public void wantAlternative(int entry) {
+    alternativeWanted = entry;
+    alternative.clear();
+  }
+
+  /**
+   * The list where an explanation puts a second reason of an entry, when one is wanted for it.
+   *
+   * @param entry the entry explained, or {@link #FAILURE}
+   * @return the empty list to fill, or null when no alternative is wanted
+   */
+  public EntryList alternativeFor(int entry) {
+    if (alternativeWanted != entry) {
+      return null;
+    }
+    alternative.clear();
+    return alternative;
+  }
+
+  /**
+   * The second reason given since {@link #wantAlternative}; asking for alternatives stops.
+   *
+   * @return the reason, empty when there is none
+   */
+  public EntryList takeAlternative() {
+    alternativeWanted = -1;
+    return alternative;
+  }
+
   /**
    * Intersects the domain of x with d, as {@code x.domain.in} does, but while a trail records the
    * changes and x has more than {@link #HOLE_LIMIT} values only with d's bounds. Every value

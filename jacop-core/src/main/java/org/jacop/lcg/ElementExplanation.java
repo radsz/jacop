@@ -113,13 +113,85 @@ public final class ElementExplanation {
             || trail.rootDomain(index).max() > list.length + offset)) {
       return false; // index values off the list would need their own reasons
     }
+    if (y != value && y != index) {
+      return false;
+    }
+    int mark = out.size();
     for (int j = 0; j < list.length; j++) {
       int u = y == value ? list[j] : j + 1 + offset;
       if (violates(kind, a, u) && !excluded(trail, j, entry, index, list, value, offset, out)) {
         return false;
       }
     }
-    return y == value || y == index;
+    EntryList alt = trail.alternativeFor(entry);
+    if (ORDERS == INDEX_FIRST || (ORDERS == BOTH && alt == null)) {
+      return true;
+    }
+    // the same positions excluded by the value first: a constant out of the value's domain
+    // excludes every position holding it, so it can need fewer atoms
+    out.sortUnique(mark);
+    EntryList byValue = new EntryList();
+    for (int j = 0; j < list.length; j++) {
+      int u = y == value ? list[j] : j + 1 + offset;
+      if (violates(kind, a, u)
+          && !trail.excludedBefore(value, list[j], entry, byValue)
+          && !trail.excludedBefore(index, j + 1 + offset, entry, byValue)) {
+        return true;
+      }
+    }
+    byValue.sortUnique(0);
+    place(out, mark, byValue, alt);
+    return true;
+  }
+
+  /** Reasons index first only (the default). */
+  static final int INDEX_FIRST = 0;
+
+  /** Reasons by the shorter of index first and value first. */
+  static final int SHORTER = 1;
+
+  /** Reasons index first, value first given as an alternative reason. */
+  static final int BOTH = 2;
+
+  /** Reasons by the shorter order, the longer one given as an alternative reason. */
+  static final int SHORTER_BOTH = 3;
+
+  /**
+   * How reasons of index and value atoms are built: {@code -Djacop.lcg.elementOrders} = index
+   * (default), shorter, both or shorterBoth. Failures always keep the shorter order; with both or
+   * shorterBoth the longer one is the alternative.
+   */
+  static final int ORDERS =
+      switch (System.getProperty("jacop.lcg.elementOrders", "index")) {
+        case "shorter" -> SHORTER;
+        case "both" -> BOTH;
+        case "shorterBoth" -> SHORTER_BOTH;
+        default -> INDEX_FIRST;
+      };
+
+  // with out[mark, size) the index-first reason, places the reason and the alternative by ORDERS
+  private static void place(EntryList out, int mark, EntryList byValue, EntryList alt) {
+    int byIndex = out.size() - mark;
+    boolean valueShorter = byValue.size() < byIndex;
+    boolean valueFirst = (ORDERS == SHORTER || ORDERS == SHORTER_BOTH) && valueShorter;
+    boolean wantAlt = alt != null && (ORDERS == BOTH || ORDERS == SHORTER_BOTH);
+    if (wantAlt) {
+      if (valueFirst) {
+        for (int k = mark; k < out.size(); k++) {
+          alt.addFrom(out, k);
+        }
+      } else {
+        for (int k = 0; k < byValue.size(); k++) {
+          alt.addFrom(byValue, k);
+        }
+      }
+    }
+    if (valueFirst) {
+      out.truncate(mark);
+      for (int k = 0; k < byValue.size(); k++) {
+        out.addFrom(byValue, k);
+      }
+    }
   }
 
   /**
@@ -159,6 +231,15 @@ public final class ElementExplanation {
     }
     out.sortUnique(second);
     int byValue = out.size() - second;
+    EntryList alt =
+        ORDERS == BOTH || ORDERS == SHORTER_BOTH ? trail.alternativeFor(AtomicTrail.FAILURE) : null;
+    if (alt != null) {
+      int from = byValue < byIndex ? mark : second;
+      int to = byValue < byIndex ? second : out.size();
+      for (int k = from; k < to; k++) {
+        alt.addFrom(out, k);
+      }
+    }
     if (byValue < byIndex) {
       for (int k = 0; k < byValue; k++) {
         out.set(mark + k, out.get(second + k));
