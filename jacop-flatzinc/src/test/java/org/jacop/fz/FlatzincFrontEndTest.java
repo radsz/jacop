@@ -1372,6 +1372,46 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
   }
 
+  @Test
+  void channelledAlldiffOverManyValuesGetsDomainConsistency() throws IOException {
+    // An all_different over more than 64 dense values gets bounds consistency (Alldiff). Here the
+    // elements y_i = c[x_i] with y_i <= 2 leave x1 and x2 the values 3 and 5, a Hall set that is
+    // not an interval, so bounds consistency tries x3 = 3 first. The elements channel
+    // from the variables, so the constraint is an Alldistinct, which removes 3 and 5 from x3 at the
+    // root (as with cost bounds in a bottleneck assignment).
+    StringBuilder c = new StringBuilder();
+    for (int v = 1; v <= 100; v++) {
+      c.append(v > 1 ? "," : "").append(v == 3 || v == 5 ? 1 : 9);
+    }
+    String fzn =
+        "array [1..100] of int: c = ["
+            + c
+            + "];\n"
+            + "var 1..100: x1:: output_var;\n"
+            + "var 1..100: x2:: output_var;\n"
+            + "var 3..100: x3:: output_var;\n"
+            + "var 1..2: y1;\n"
+            + "var 1..2: y2;\n"
+            + "array [1..3] of var int: x = [x1,x2,x3];\n"
+            + "constraint array_int_element(x1,c,y1);\n"
+            + "constraint array_int_element(x2,c,y2);\n"
+            + "constraint jacop_alldiff(x);\n"
+            + "solve :: int_search([x3,x2,x1],input_order,indomain_min,complete) satisfy;\n";
+
+    // without --lcg, whose conflicts the failures statistic does not count
+    String out = run(fzn, "-s", "--lcg", "off")[0];
+    assertTrue(out.contains("x3 = 4;"), out);
+    assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+    System.setProperty("org.jacop.fz.alldiffChannel", "false");
+    try {
+      String bounds = run(fzn, "-s", "--lcg", "off")[0];
+      assertTrue(bounds.contains("x3 = 4;"), bounds);
+      assertTrue(!bounds.contains("%%%mzn-stat: failures=0"), bounds);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldiffChannel");
+    }
+  }
+
   /** Successors of n nodes with the Hall set {x1, x2} on {3, 4} and x_n in 1..4. */
   private static String hallSetSuccessors(int n) {
     StringBuilder fzn = new StringBuilder();

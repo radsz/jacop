@@ -714,14 +714,20 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     // a large all_different over sparse domains (successor arrays) keeps domain consistency:
     // bounds consistency prunes nothing inside them
-    if (v.length > 100 && !isSparseDomains(v)) {
-      support.pose(new Alldiff(v));
-      return;
-    }
     boolean useAlldiff =
-        (support.boundsConsistency || support.options.getBoundConsistency())
-            && !isSparseDomains(v)
-            && dom.getSize() > alldiffDomainSize();
+        v.length > 100 && !isSparseDomains(v)
+            || (support.boundsConsistency || support.options.getBoundConsistency())
+                && !isSparseDomains(v)
+                && dom.getSize() > alldiffDomainSize();
+    // over the limits, an all_different whose variables elements or tables channel keeps domain
+    // consistency: those constraints make holes that bounds consistency does not see
+    if (useAlldiff && support.alldiffChannels != null) {
+      support.alldiffsChecked++;
+      if (AlldiffChannels.domainConsistent(v, support.alldiffChannels, AlldiffChannels.rule())) {
+        support.alldiffsChannelled++;
+        useAlldiff = false;
+      }
+    }
     if (useAlldiff) {
       support.pose(new Alldiff(v));
     } else {

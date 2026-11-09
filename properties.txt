@@ -248,6 +248,12 @@ unless stated otherwise):
 - org.jacop.fz.alldiffDomainSize: the largest number of values of an
   all_different over dense domains that gets domain consistency
   (Alldistinct) instead of bounds consistency (Alldiff); default 64.
+- org.jacop.fz.alldiffChannel: an all_different over the size limits
+  (more than alldiffDomainSize values or more than 100 dense variables)
+  gets Alldistinct anyway when at least half of its not fixed variables
+  are element indexes or table variables (=true, default); =all gives
+  it Alldistinct whatever the channelling, =false keeps the limits.
+  Lists of more than 2^20 variable-value pairs keep Alldiff.
 - org.jacop.fz.alldiffSum: AlldiffSum next to sums whose variables
   are pairwise different (killer sudoku, magic squares).
 - org.jacop.fz.overlappingAlldiff: OverlappingAlldiff for pairs of
