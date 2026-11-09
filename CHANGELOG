@@ -4035,7 +4035,22 @@ Version 5.0 (unreleased)
      and hid the solutions; -s now prints only the solutions and the
      final statistics. --gap still stops at the same bound.
 
-232. The core-guided phase of --lcg -f also gives its time to branch and
+232. Under --lcg, LateCount explains its pruning itself instead of
+     with every atom of its variables. A reason holds the late tasks
+     (start > due - p), the tasks that must be on time (start <= due -
+     p), the minima of the starts lowered towards their root values by
+     a common fraction (1, 1/2, ...) as far as the bound from the same
+     origin still implies the atom, and the weakest upper bound of late
+     that still fails; the dominance pairs and overlapping fixed
+     tasks have reasons of their own. On 1|r_j|sum U_j (osolpro
+     benchmarks/scheduling-bounds, 600 s): the 60 instances with 40 to
+     150 jobs are proved in a mean 6.8 s instead of 17.6 s (-f: 2.5 s
+     instead of 12.4 s, 60 proved instead of 59), and of 24 new ones
+     with 200 and 300 jobs 23 are proved instead of 16 (-f: 24 instead
+     of 23), with no objective worse. -Dorg.jacop.lateCount.reasons=false
+     restores the generic reason.
+
+233. The core-guided phase of --lcg -f also gives its time to branch and
      bound when its lower bound stalls: at three times its rate over
      the second half of the phase's work it would not meet the best
      solution before the end of the run. The rate since the phase's
