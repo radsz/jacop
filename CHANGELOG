@@ -3797,7 +3797,28 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
-220. The LP-guided search decisions (lcg-lp-branching) see the root
+220. LateCount uses release dates. For each earliest start t as origin,
+     every task may do up to t - est of its processing before t on a
+     machine of its own (a relaxation), and Moore and Hodgson bounds the
+     late tasks among the rest from t on; the best origin gives the
+     bound and the filtering, the earliest start of all the bound of
+     before. With new LateCount(s, d, due, late, true) it also enforces
+     the dominance rule of Baptiste, Peridy and Pinson (European J.
+     Operational Research 144(1), 2003): when p[i] <= p[j], r[i] + p[i]
+     <= r[j] + p[j], due[i] - p[i] >= due[j] - p[j] and r[i] + p[i] <=
+     due[i], task i is on time whenever task j is. The rule keeps an
+     optimum only when nothing else constrains the tasks, so the
+     FlatZinc front end turns it on only then: each start occurs only in
+     the unary resource and in its lateness test, the tests count with
+     one weight, the domains are intervals and leave room for the late
+     tasks at the end (-Dorg.jacop.fz.lateCount.dominance=false turns it
+     off; -Dorg.jacop.lateCount.releases=false the release bound). On 60
+     random 1|r_j|sum U_j instances (n = 40 to 150), 240 s, the optima
+     proved go from 49 to 60 with the model's search and from 54 to 60
+     with -f, no objective worse. On the 11 instances the base does not
+     prove, the release bound alone proves 11 and the dominance alone 7.
+
+221. The LP-guided search decisions (lcg-lp-branching) see the root
      solution of the linear relaxation also when the search that uses
      them is set up after the root propagation, as free search is: the
      relaxation kept its solutions only from then on, and when no solve
@@ -3810,7 +3831,7 @@ Version 5.0 (unreleased)
      follow the root solution kept from the first solve in search, is
      unchanged.
 
-221. JaLP pivots are about 1.1x faster with the same arithmetic. The full
+222. JaLP pivots are about 1.1x faster with the same arithmetic. The full
      passes of ftran and btran over U read the pivot row, position, pivot
      and column of each slot of the order in sequence, with the columns of
      U in one flat array laid out in that order (a Forrest-Tomlin column
@@ -3822,7 +3843,7 @@ Version 5.0 (unreleased)
      more, 1.15x on those of 5 s or more (map10 1.5x, map16715-04 1.55x,
      i_n13 1.29x).
 
-222. Under lazy clause generation (--lcg), a value excluded by a bound
+223. Under lazy clause generation (--lcg), a value excluded by a bound
      is explained by the earliest bound of the variable beyond it,
      instead of the variable's latest bound. Explanations that say
      "x cannot take v" (Count, the counting reasons of GCC, Element,
@@ -3838,7 +3859,7 @@ Version 5.0 (unreleased)
      hard instances better (gbac, tdtsp, neighbours, blocks-world,
      cargo, work-task-variation), 1 worse (java-routing trip_8_3).
 
-223. Dichotomic bound search, off by default. --free-config
+224. Dichotomic bound search, off by default. --free-config
      lcg-bisect=<gap> makes LCG free search probe the objective: it
      assumes obj <= lb + (best - 1 - lb) / 2 under a conflict limit, and
      a probe that fails on that assumption alone proves obj > target
@@ -3859,7 +3880,7 @@ Version 5.0 (unreleased)
      objective instances of wide-quick. OR-Tools CP-SAT runs similar
      probes in its objective_shaving workers.
 
-224. The LP relaxation (LinearRelaxation) now has the weight and profit
+225. The LP relaxation (LinearRelaxation) now has the weight and profit
      rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
      knapsacks KnapsackDetector posts), as linearised rows tried at the
      root. Before, a model stated with knapsack constraints had no LP
