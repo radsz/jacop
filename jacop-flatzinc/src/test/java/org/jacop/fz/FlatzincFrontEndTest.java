@@ -1091,14 +1091,14 @@ class FlatzincFrontEndTest {
     // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
     // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
     // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
-    // s.
+    // s (400 variables were solved in 2 s once activity bumped every analysed variable).
     Random r = new Random(1);
-    int n = 400;
+    int n = 600;
     StringBuilder model = new StringBuilder();
     for (int i = 0; i < n; i++) {
       model.append("var bool: x").append(i).append(";\n");
     }
-    for (int c = 0; c < 1720; c++) {
+    for (int c = 0; c < 2580; c++) {
       StringJoiner pos = new StringJoiner(",");
       StringJoiner neg = new StringJoiner(",");
       Set<Integer> vars = new TreeSet<>();
