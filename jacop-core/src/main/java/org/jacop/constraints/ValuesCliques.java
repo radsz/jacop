@@ -30,8 +30,12 @@
 
 package org.jacop.constraints;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
+import java.util.List;
 import java.util.Map;
 import org.jacop.core.Domain;
 import org.jacop.core.IntDomain;
@@ -92,6 +96,12 @@ final class ValuesCliques {
   /** The variables of the clique, by position in the list. */
   final int[] clique;
 
+  // the group of each variable outside the clique, -1 for the clique's own variables
+  private final int[] group;
+
+  // the clique variables that no variable of a group is linked to
+  private final int[][] groupClique;
+
   private final boolean[] inClique;
 
   private ValuesCliques(int n, long[][] adjacent, int edges) {
@@ -103,6 +113,30 @@ final class ValuesCliques {
     for (int i : clique) {
       inClique[i] = true;
     }
+    // variables outside the clique with the same non-linked clique variables share one union
+    this.group = new int[n];
+    Map<BitSet, Integer> groups = new HashMap<>();
+    List<int[]> members = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      if (inClique[i]) {
+        group[i] = -1;
+        continue;
+      }
+      BitSet free = new BitSet(clique.length);
+      for (int t = 0; t < clique.length; t++) {
+        if (!linked(i, clique[t])) {
+          free.set(t);
+        }
+      }
+      Integer g = groups.get(free);
+      if (g == null) {
+        g = members.size();
+        groups.put(free, g);
+        members.add(free.stream().map(t -> clique[t]).toArray());
+      }
+      group[i] = g;
+    }
+    this.groupClique = members.toArray(new int[0][]);
   }
 
   /** The size of the clique, a lower bound on the number of different values. */
@@ -115,7 +149,8 @@ final class ValuesCliques {
   }
 
   /**
-   * Reads the difference graph of the list from the constraints attached to its variables now.
+   * Reads the difference graph of the list from the constraints attached to its variables at the
+   * root: the constraints and the domains of the root level, also when the store is deeper.
    *
    * @param list the variables of the Values constraint
    * @param previous the graph read before, or null
@@ -138,7 +173,7 @@ final class ValuesCliques {
     int[] edges = new int[1];
     Map<Constraint, Boolean> seen = new IdentityHashMap<>();
     for (IntVar x : list) {
-      Domain d = x.dom();
+      Domain d = root(x);
       if (d.modelConstraints == null) {
         continue;
       }
@@ -171,10 +206,10 @@ final class ValuesCliques {
       link(position, ne.x, ne.y, adjacent, edges);
     } else if (c instanceof XplusYeqZ s) {
       // z = x + y: z differs from x when y cannot be 0, and from y when x cannot be 0
-      if (!s.y.domain.contains(0)) {
+      if (!root(s.y).contains(0)) {
         link(position, s.z, s.x, adjacent, edges);
       }
-      if (!s.x.domain.contains(0)) {
+      if (!root(s.x).contains(0)) {
         link(position, s.z, s.y, adjacent, edges);
       }
     } else if (c instanceof XplusCeqZ s) {
@@ -182,7 +217,7 @@ final class ValuesCliques {
         link(position, s.x, s.z, adjacent, edges);
       }
     } else if (c instanceof Distance s) {
-      if (!s.z.domain.contains(0)) {
+      if (!root(s.z).contains(0)) {
         link(position, s.x, s.y, adjacent, edges);
       }
     } else if (c instanceof Alldistinct a) {
@@ -217,8 +252,17 @@ final class ValuesCliques {
     }
   }
 
+  // the domain of v at the root level, which holds at every level
+  static IntDomain root(IntVar v) {
+    IntDomain d = v.domain;
+    while (d.stamp > 0 && d.previousDomain != null) {
+      d = d.previousDomain;
+    }
+    return d;
+  }
+
   private static boolean holds(IntVar t, long v) {
-    return v >= IntDomain.MIN_INT && v <= IntDomain.MAX_INT && t.domain.contains((int) v);
+    return v >= IntDomain.MIN_INT && v <= IntDomain.MAX_INT && root(t).contains((int) v);
   }
 
   private static void clique(
@@ -259,12 +303,17 @@ final class ValuesCliques {
     if (count.max() > k) {
       return;
     }
+    IntDomain[] unions = new IntDomain[groupClique.length];
     for (int i = 0; i < n; i++) {
       if (inClique[i]) {
         continue;
       }
       IntVar x = list[i];
-      IntDomain allowed = allowed(list, i);
+      IntDomain allowed = unions[group[i]];
+      if (allowed == null) {
+        allowed = allowed(list, group[i]);
+        unions[group[i]] = allowed;
+      }
       if (!x.domain.isIntersecting(allowed)) {
         throw Store.failException;
       }
@@ -273,12 +322,11 @@ final class ValuesCliques {
   }
 
   // the values of the clique variables that variable i is not linked to
-  private IntDomain allowed(IntVar[] list, int i) {
+  // the union of the domains of the clique variables of group g
+  private IntDomain allowed(IntVar[] list, int g) {
     IntDomain allowed = new IntervalDomain();
-    for (int j : clique) {
-      if (!linked(i, j)) {
-        allowed = allowed.union(list[j].dom());
-      }
+    for (int j : groupClique[g]) {
+      allowed = allowed.union(list[j].dom());
     }
     return allowed;
   }

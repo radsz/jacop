@@ -121,6 +121,15 @@ public final class CdclSolver {
   private int targetAssigned;
   private double[] activity = new double[0];
   private byte[] seen = new byte[0];
+
+  /** Whether the analysed variables besides the learnt ones go to the external propagator. */
+  private boolean analysedNotify;
+
+  /** Per variable: the conflict stamp of the last {@link #notifyAnalysed} that named it. */
+  private int[] analysedMark = new int[0];
+
+  private int analysedStamp;
+
   private final VarHeap order = new VarHeap();
 
   private int[] trail = new int[0];
@@ -372,6 +381,7 @@ public final class CdclSolver {
       bestSign = Arrays.copyOf(bestSign, c);
       activity = Arrays.copyOf(activity, c);
       seen = Arrays.copyOf(seen, c);
+      analysedMark = Arrays.copyOf(analysedMark, c);
       trail = Arrays.copyOf(trail, c);
       trailPos = Arrays.copyOf(trailPos, c);
       shrinkMark = Arrays.copyOf(shrinkMark, c);
@@ -772,6 +782,18 @@ public final class CdclSolver {
    */
   public void setAssumptionsOnOneLevel(boolean on) {
     assumptionsOnOneLevel = on;
+  }
+
+  /**
+   * Sets whether the external propagator hears, through {@link
+   * ExternalPropagator#notifyAnalysedLiteral}, of every variable a conflict analysis resolved or
+   * minimised away besides the learnt clause's ones, as MiniSat bumps them (N. Eén, N. Sörensson,
+   * An Extensible SAT-solver, SAT 2003). Off by default.
+   *
+   * @param on whether to tell the propagator of the analysed variables
+   */
+  public void setAnalysedNotify(boolean on) {
+    analysedNotify = on;
   }
 
   /**
@@ -1583,6 +1605,8 @@ public final class CdclSolver {
     } while (pathCount > 0);
     learnt[0] = p ^ 1;
 
+    int analysedEnd = toClearSize;
+
     // recursive minimisation
     if (++poisonStamp == Integer.MAX_VALUE) {
       Arrays.fill(poisonMark, 0);
@@ -1616,6 +1640,9 @@ public final class CdclSolver {
       for (int i = 0; i < learntSize; i++) {
         external.notifyLearntLiteral(toDimacs(learnt[i]));
       }
+      if (analysedNotify) {
+        notifyAnalysed(analysedEnd);
+      }
     }
 
     if (learntSize == 1) {
@@ -1631,6 +1658,31 @@ public final class CdclSolver {
     learnt[1] = learnt[maxIndex];
     learnt[maxIndex] = tmp;
     return level[learnt[1] >> 1];
+  }
+
+  /**
+   * Tells the external propagator of the variables the analysis met that are not in the learnt
+   * clause: the first {@code end} of {@code toClear}, the variables resolved before minimisation.
+   */
+  private void notifyAnalysed(int end) {
+    if (++analysedStamp == Integer.MAX_VALUE) {
+      Arrays.fill(analysedMark, 0);
+      analysedStamp = 1;
+    }
+    int stamp = analysedStamp;
+    for (int i = 0; i < learntSize; i++) {
+      analysedMark[learnt[i] >> 1] = stamp;
+    }
+    for (int i = 0; i < end; i++) {
+      notifyAnalysedVar(toClear[i], stamp);
+    }
+  }
+
+  private void notifyAnalysedVar(int v, int stamp) {
+    if (analysedMark[v] != stamp && level[v] > 0) {
+      analysedMark[v] = stamp;
+      external.notifyAnalysedLiteral(v + 1);
+    }
   }
 
   /** Counts a conflict-level literal of the analysis under its integer variable. */

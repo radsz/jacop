@@ -270,11 +270,17 @@ unless stated otherwise):
   whose cost is a sum of arc costs.
 - org.jacop.fz.circuitCostPair: the pair reasoning of CircuitCost;
   default true without LCG and false with LCG.
+- org.jacop.fz.colouredTree: ColouredSpanningTreeBound on
+  weighted_spanning_tree with limits on the number of tree edges in
+  disjoint edge sets (colours); default true.
 - org.jacop.fz.costAlldifferent: CostAlldifferent for such costs.
 - org.jacop.fz.costGcc: CostGCC for such costs; default false.
 - org.jacop.fz.conditionalSelect: if_then_else on integers as
   ConditionalSelect (bounds the result by the branches still possible)
   instead of IfThenElse/Conditional.
+- org.jacop.fz.constraintHints: solution hints of constraints (a common
+  base of ColouredSpanningTreeBound) as the first values of the search
+  and the saved phases; default true.
 - org.jacop.fz.convexAllocation: ConvexAllocation on separable convex
   costs of variables with a known sum; default true without LCG and
   false with LCG.
@@ -410,6 +416,9 @@ Search of the LCG solver:
 - jacop.lcg.value: value of an activity decision: split (lower half),
   max or min; default split.
 - jacop.lcg.lastConflict: last-conflict branching; default true.
+- jacop.lcg.bump: which variables a conflict bumps for activity
+  branching: seen (every integer variable whose atoms the analysis
+  met) or learnt (only the learnt clause's); default seen.
 - jacop.lcg.booleansFirst: activity branching on 0/1 variables
   first; default true.
 - jacop.lcg.late: none, or defined (the defined variables and the
@@ -469,6 +478,24 @@ Literals and clauses:
   true.
 - jacop.lcg.graphClauses: Regular and MDD constraints become clauses
   of the solver; default true.
+- jacop.lcg.clauses: constraints given to the SAT solver as clauses
+  in place of propagators: none, all, or a comma-separated list of
+  class names (for example FzXeqC,Reified,Implies,SumBool); default
+  none. A constraint over the objective's definition stays a propagator.
+  The name counter gives the 0/1 sums (LinearInt, SumBool, LinearBool,
+  SumInt, Count, AtMost, AtLeast) to a unary counter alone and keeps
+  them unsplit in the FlatZinc front end, which can slow down a model
+  whose long sums are then not encoded.
+- jacop.lcg.clauses.limit: the most clauses of one constraint; default
+  256.
+- jacop.lcg.clauses.dom: the largest domain of its variables, one
+  variable of a longer constraint may be wider; default 64.
+- jacop.lcg.clauses.counter: the most clauses of the unary counter of
+  a 0/1 sum outside a reification; default 20000.
+- jacop.lcg.clauses.boolArity: the most unfixed variables of a
+  constraint as clauses, and the largest domain of any; default 256.
+- jacop.lcg.clauses.debug: print each constraint tried and its clause
+  count; default false.
 - jacop.lcg.pureClauseLiterals: under free search, a model whose
   variables are all 0/1 and whose constraints all became clauses leaves
   every decision to the SAT solver; default true.
@@ -591,6 +618,16 @@ Cuts:
   search; default 10.
 - org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
   root; default true.
+- org.jacop.lp.alldiffCuts: Hall cuts of all-different constraints at
+  the root, for an objective; default true.
+- org.jacop.lp.alldiffVariants: the same cuts, with value copies, for
+  all-different with exceptions (alldifferent_except_0) and global
+  cardinality constraints (GCC, CountValues, CountValuesBounds);
+  default true.
+- org.jacop.lp.alldiffSearch: Hall cuts also in search, every few LP
+  solves; default false.
+- org.jacop.lp.alldiffSearchCuts: the most Hall cuts per separation in
+  search; default 10.
 - org.jacop.lp.treeCuts: generalized subtour elimination cuts of the
   forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at the
   root, for an objective; a model with them also takes all its other

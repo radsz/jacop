@@ -1490,6 +1490,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     List<IntVar[][]> found = new ArrayList<>();
     boolean[] used = new boolean[swaps.size()];
+    // member[t] == s + 1 when swap t is in the orbitope started at s: a list scan per swap and
+    // pass was quadratic in the number of swaps
+    int[] member = new int[swaps.size()];
     for (int s = 0; s < swaps.size(); s++) {
       if (used[s]) {
         continue;
@@ -1509,11 +1512,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
       columns.add(c0);
       columns.add(c1);
       List<Integer> members = new ArrayList<>(List.of(s));
+      member[s] = s + 1;
       boolean grown = true;
       while (grown) {
         grown = false;
         for (int t = 0; t < swaps.size(); t++) {
-          if (used[t] || members.contains(t) || pairs.get(t).length != rows) {
+          if (used[t] || member[t] == s + 1 || pairs.get(t).length != rows) {
             continue;
           }
           int[] added = extend(pairs.get(t), cell, columns.size(), rows);
@@ -1523,9 +1527,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
             }
             columns.add(added);
             members.add(t);
+            member[t] = s + 1;
             grown = true;
           } else if (swapsColumns(pairs.get(t), cell)) {
             members.add(t);
+            member[t] = s + 1;
           }
         }
       }
@@ -1538,10 +1544,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       found.add(chain);
     }
+    Set<GraphAutomorphisms.Permutation> remove = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int t = 0; t < swaps.size(); t++) {
       if (used[t]) {
-        generators.remove(swaps.get(t));
+        remove.add(swaps.get(t));
       }
+    }
+    if (!remove.isEmpty()) {
+      generators.removeIf(remove::contains);
     }
     return found;
   }

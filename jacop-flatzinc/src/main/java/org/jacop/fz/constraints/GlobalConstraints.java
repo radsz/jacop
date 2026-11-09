@@ -155,7 +155,9 @@ import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
+import org.jacop.prob.constraints.ChanceSum;
 import org.jacop.prob.constraints.ScenarioChance;
+import org.jacop.prob.dist.Dist;
 import org.jacop.prob.num.ProbArith;
 import org.jacop.set.constraints.AdisjointB;
 import org.jacop.set.constraints.AeqB;
@@ -2302,6 +2304,30 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     support.delayedConstraints.add(
         new ScenarioChance(x, rows, b, weights, alpha, ok.length == 0 ? null : ok));
+  }
+
+  void gen_jacop_chance_sum(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] value = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] prob = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+    int den = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(4));
+    IntVar c = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(5));
+    int alpha = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(6));
+
+    if (k <= 0 || value.length != prob.length || value.length != (long) k * x.length) {
+      throw new IllegalArgumentException(
+          "jacop_chance_sum needs " + x.length + " rows of " + k + " values, got " + value.length);
+    }
+    Dist[] w = new Dist[x.length];
+    for (int i = 0; i < x.length; i++) {
+      long[] p = new long[k];
+      for (int j = 0; j < k; j++) {
+        p[j] = prob[i * k + j];
+      }
+      w[i] = new Dist(Arrays.copyOfRange(value, i * k, (i + 1) * k), p, den);
+    }
+    support.delayedConstraints.add(new ChanceSum(x, w, c, alpha, den));
   }
 
   void gen_jacop_mdd(SimpleNode node) {

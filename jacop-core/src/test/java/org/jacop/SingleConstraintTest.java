@@ -179,6 +179,7 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.graph.ColouredSpanningTreeBound;
 import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
@@ -5444,6 +5445,29 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfSolutions).isEqualTo(88);
   }
 
+  // the differences are imposed after the last root call of Values, which no root change wakes
+  // again; the graph is read at its first call below the root, so 3 values do not fit in 2
+  @Test
+  void testValuesReadsDifferencesImposedAfterItsLastRootCall() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 5);
+    }
+    IntVar count = new IntVar(store, "count", 2, 2);
+    store.impose(new Values(x, count));
+    assertThat(store.consistency()).isTrue();
+    store.impose(new XneqY(x[0], x[1]));
+    store.impose(new XneqY(x[1], x[2]));
+    store.impose(new XneqY(x[0], x[2]));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(1);
+    x[0].domain.in(store.level, x[0], 1, 4);
+
+    assertThat(store.consistency()).isFalse();
+  }
+
   // x0, x1 and x2 differ pairwise (a clique of the difference graph), so there are at least 3
   // values although all the intervals overlap
   @Test
@@ -9099,5 +9123,85 @@ class SingleConstraintTest extends TestHelper {
     assertThat(reasons).containsOnlyKeys(x);
     assertThat(reasons.get(x)).containsOnly(y).hasSize(1);
     trail.detach();
+  }
+
+  /**
+   * The solution hint of a coloured spanning tree is a common base within the domains after the
+   * root propagation: n-1 edges without a cycle, within the colour limits, with the selected edges
+   * in it and of the least cost, also when the filtering selected edges after the components were
+   * made.
+   */
+  @Test
+  void colouredSpanningTreeHintIsACommonBase() {
+    Random random = new Random(20261108L);
+    int hinted = 0;
+    for (int trial = 0; trial < 300; trial++) {
+      int n = 3 + random.nextInt(5);
+      int m = n - 1 + random.nextInt(2 * n);
+      int colourNo = 1 + random.nextInt(3);
+      int[] from = new int[m];
+      int[] to = new int[m];
+      int[] w = new int[m];
+      int[] colours = new int[m];
+      for (int e = 0; e < m; e++) {
+        from[e] = e < n - 1 ? e + 1 : random.nextInt(n);
+        to[e] = e < n - 1 ? random.nextInt(e + 1) : random.nextInt(n);
+        w[e] = random.nextInt(10);
+        colours[e] = random.nextInt(colourNo + 1) - 1;
+      }
+      int[] caps = new int[colourNo];
+      for (int c = 0; c < colourNo; c++) {
+        caps[c] = random.nextInt(n);
+      }
+      Store store = new Store();
+      IntVar[] es = new IntVar[m];
+      for (int e = 0; e < m; e++) {
+        es[e] = new IntVar(store, "e" + e, 0, 1);
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 9 * m);
+      ColouredSpanningTreeBound tree =
+          new ColouredSpanningTreeBound(n, from, to, w, colours, caps, es, cost, 0);
+      store.impose(tree);
+      if (!store.consistency() || tree.hintValues() == null) {
+        continue;
+      }
+      hinted++;
+      IntVar[] vars = tree.hintVariables();
+      int[] values = tree.hintValues();
+      int[] parent = IntStream.range(0, n).toArray();
+      int[] count = new int[colourNo];
+      int size = 0;
+      for (int i = 0; i < vars.length; i++) {
+        int e = Arrays.asList(es).indexOf(vars[i]);
+        assertThat(vars[i].domain.contains(values[i])).as("trial %d edge %d", trial, e).isTrue();
+        if (values[i] == 1) {
+          int a = root(parent, from[e]);
+          int b = root(parent, to[e]);
+          assertThat(a).as("trial %d: cycle at edge %d", trial, e).isNotEqualTo(b);
+          parent[a] = b;
+          size++;
+          if (colours[e] >= 0) {
+            count[colours[e]]++;
+            assertThat(count[colours[e]])
+                .as("trial %d colour", trial)
+                .isLessThanOrEqualTo(caps[colours[e]]);
+          }
+        }
+      }
+      assertThat(size).as("trial %d", trial).isEqualTo(n - 1);
+      int weight = 0;
+      for (int i = 0; i < vars.length; i++) {
+        weight += values[i] * w[Arrays.asList(es).indexOf(vars[i])];
+      }
+      assertThat(weight).as("trial %d", trial).isEqualTo(cost.min());
+    }
+    assertThat(hinted).isGreaterThan(50);
+  }
+
+  private static int root(int[] parent, int v) {
+    while (parent[v] != v) {
+      v = parent[v];
+    }
+    return v;
   }
 }
