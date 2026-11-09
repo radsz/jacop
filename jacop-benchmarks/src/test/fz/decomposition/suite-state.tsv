@@ -7436,3 +7436,365 @@ C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed
 C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_value_precede_int	PASS	COMPLETE	0	1402	2026-11-09T03:52:01Z	
 C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_value_precede_chain_int	PASS	COMPLETE	0	851	2026-11-09T03:52:02Z	
 C	mznc:upTo5sec/2021_yumi-dynamic/p_10_SSSSSS_SSSS_yumi_grid_setup_3_3_zones	2ed6d3146e5efcb9	obj0:lcg:decomp:jacop_if_then_else_bool	PASS	COMPLETE	0	814	2026-11-09T03:52:03Z	
+P	xcsp:2022/instancesXCSP22/CSP/NurseRostering-roster-5-00-08_c22	b30ca134d7910d21	satisfy		INCOMPLETE	0	0	0	120175	120	2026-11-09T03:55:16Z	jacop_alldiff,jacop_regular_set
+P	xcsp:2022/instancesXCSP22/CSP/NurseRostering-roster-5-00-14_c22	6c8775f9c90eec76	satisfy		INCOMPLETE	0	0	0	120157	120	2026-11-09T03:55:16Z	jacop_alldiff,jacop_regular_set
+P	mznc:upTo30sec/2014_rectangle-packing/rpp18_true	44f6d3dda7b49f75	satisfy		INCOMPLETE	745473	745473	e68cdbe634e90802	120181	120	2026-11-09T03:55:16Z	jacop_cumulative,jacop_diff2_strict
+P	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	maximize	7	COMPLETE	4	4	f38835b31b63217d	13886	120	2026-11-09T03:55:42Z	jacop_alldifferent_opt,jacop_if_then_else_bool,jacop_increasing
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	all:f	PASS	COMPLETE	4	14942	2026-11-09T03:55:57Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	decomp:jacop_alldifferent_opt	PASS	COMPLETE	4	9926	2026-11-09T03:56:07Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	decomp:jacop_if_then_else_bool	PASS	COMPLETE	4	14335	2026-11-09T03:56:22Z	
+P	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	minimize	5	COMPLETE	1	1	ecf3365afb9cc3f5	68515	120	2026-11-09T03:56:27Z	jacop_all_equal_int_reif
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	decomp:jacop_increasing	PASS	COMPLETE	4	14259	2026-11-09T03:56:36Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	all:f	PASS	COMPLETE	1	20054	2026-11-09T03:56:47Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	std	PASS	COMPLETE	4	32967	2026-11-09T03:57:09Z	
+P	mznc:upTo5min/2020_pillars-and-planks/p-d12	5ed39853f84d4787	minimize	5	INCOMPLETE	0	0	0	120167	120	2026-11-09T03:57:22Z	jacop_array_var_int_element_nonshifted,jacop_diff2_strict,jacop_maximum
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	decomp:jacop_all_equal_int_reif	PARTIAL	INCOMPLETE	1	120151	2026-11-09T03:58:47Z	1 of 1 solutions before the limit
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	std:f	PARTIAL	INCOMPLETE	0	120149	2026-11-09T03:59:09Z	0 of 1 solutions before the limit
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	objstd:lcg	PASS	COMPLETE	1	37114	2026-11-09T03:59:46Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj0:plain	PASS	COMPLETE	1	6563	2026-11-09T03:59:53Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj0:plain	PASS	COMPLETE	1	69988	2026-11-09T03:59:57Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj0:f	PASS	COMPLETE	1	6919	2026-11-09T04:00:04Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj0:lcg	PASS	COMPLETE	1	1449	2026-11-09T04:00:06Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj0:lcg-f	PASS	COMPLETE	1	1604	2026-11-09T04:00:07Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj0:f	PASS	COMPLETE	1	16013	2026-11-09T04:00:09Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj0:lcg:decomp:jacop_all_equal_int_reif	PASS	COMPLETE	1	1681	2026-11-09T04:00:09Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj0:lcg	PASS	COMPLETE	1	17905	2026-11-09T04:00:27Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj1:plain	PASS	COMPLETE	1	52683	2026-11-09T04:01:02Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj1:f	PASS	COMPLETE	1	4071	2026-11-09T04:01:06Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj1:lcg	PASS	COMPLETE	1	1285	2026-11-09T04:01:07Z	
+C	mznc:upTo1min/2023_speck-optimisation/easy_3	da1c4038e2c336e0	obj1:lcg-f	PASS	COMPLETE	1	1348	2026-11-09T04:01:08Z	
+P	mznc:above1hour/2020_pillars-and-planks/p-d2	eff1565a12b67bfc	minimize		INCOMPLETE	0	0	0	120140	120	2026-11-09T04:01:23Z	jacop_array_var_int_element_nonshifted,jacop_diff2_strict,jacop_maximum
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj0:lcg-f	PASS	COMPLETE	1	90858	2026-11-09T04:01:58Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj0:lcg:decomp:jacop_alldifferent_opt	PASS	COMPLETE	1	22531	2026-11-09T04:02:20Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj0:lcg:decomp:jacop_if_then_else_bool	PASS	COMPLETE	1	18827	2026-11-09T04:02:39Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj0:lcg:decomp:jacop_increasing	PASS	COMPLETE	1	18362	2026-11-09T04:02:57Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj1:plain	PASS	COMPLETE	1	14300	2026-11-09T04:03:12Z	
+P	mznc:upTo1min/2014_rectangle-packing/rpp22_false	3fcf243352d4b0be	satisfy		INCOMPLETE	855	855	209f73be1e153b86	120178	120	2026-11-09T04:03:23Z	jacop_cumulative,jacop_diff2_strict
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj1:f	PASS	COMPLETE	1	31156	2026-11-09T04:03:43Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj1:lcg	PASS	COMPLETE	1	38664	2026-11-09T04:04:21Z	
+C	mznc:upTo5sec/2023_pennies-opt/n7	fb96bc20e283cf1a	obj1:lcg-f	PASS	COMPLETE	1	37402	2026-11-09T04:04:59Z	
+P	mznc:upTo10min/2026_saeling/instance__j0010_m008_w02_g2x2_s021	143f467f16cee784	minimize	165	INCOMPLETE	0	0	0	120158	120	2026-11-09T04:05:09Z	jacop_array_var_int_element_nonshifted,jacop_disjunctive_optional,jacop_if_then_else_int,jacop_maximum
+P	mznc:above1hour/2014_rectangle-packing/rpp23_false	be74521d301b960f	satisfy		INCOMPLETE	0	0	0	120160	120	2026-11-09T04:05:23Z	jacop_cumulative,jacop_diff2_strict
+P	mznc:upTo10min/2026_workforce-alloc/instance_71	887849907aed9e33	minimize	10125	INCOMPLETE	0	0	0	120237	120	2026-11-09T04:08:59Z	jacop_all_equal_int,jacop_disjunctive_strict_optional,jacop_if_then_else_bool,jacop_if_then_else_int,jacop_maximum,jacop_minimum,jacop_nvalue
+P	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	satisfy		COMPLETE	24	24	76d34be9d0de7a31	454	120	2026-11-09T04:09:00Z	jacop_alldiff,jacop_strictly_increasing
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	all:f	PASS	COMPLETE	24	507	2026-11-09T04:09:00Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	decomp:jacop_alldiff	PASS	COMPLETE	24	513	2026-11-09T04:09:01Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	decomp:jacop_strictly_increasing	PASS	COMPLETE	24	428	2026-11-09T04:09:01Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj0:plain	PASS	COMPLETE	1	748	2026-11-09T04:09:02Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj0:f	PASS	COMPLETE	1	762	2026-11-09T04:09:03Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj0:lcg	PASS	COMPLETE	1	869	2026-11-09T04:09:04Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj0:lcg-f	PASS	COMPLETE	1	822	2026-11-09T04:09:05Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	841	2026-11-09T04:09:05Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj0:lcg:decomp:jacop_strictly_increasing	PASS	COMPLETE	1	1058	2026-11-09T04:09:07Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj1:plain	PASS	COMPLETE	1	744	2026-11-09T04:09:07Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj1:f	PASS	COMPLETE	1	1008	2026-11-09T04:09:08Z	
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj1:lcg	PASS	COMPLETE	1	785	2026-11-09T04:09:09Z	
+P	mznc:above1hour/2026_saeling/instance__j0050_m003_w01_g5x5_s022	655b85848c3d1ca6	minimize	1563	INCOMPLETE	0	0	0	120160	120	2026-11-09T04:09:09Z	jacop_array_var_int_element_nonshifted,jacop_disjunctive_optional,jacop_if_then_else_int,jacop_maximum
+C	xcsp:2022/instancesXCSP22/CSP/NumberPartitioning-020_c22	12bfbf6273ed1788	obj1:lcg-f	PASS	COMPLETE	1	1067	2026-11-09T04:09:10Z	
+P	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	satisfy		COMPLETE	1	1	4f33a5d2829418b1	794	120	2026-11-09T04:09:10Z	jacop_count_values_bounds,jacop_short_table_int
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	all:f	PASS	COMPLETE	1	529	2026-11-09T04:09:11Z	
+P	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	maximize	1008	COMPLETE	78	78	76f664e738b6ca8d	2539	120	2026-11-09T04:09:15Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_bin_packing_capacity,jacop_seq_precede_chain_int
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	all:f	PASS	COMPLETE	78	1174	2026-11-09T04:09:16Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	decomp:jacop_alldiff	PASS	COMPLETE	78	6156	2026-11-09T04:09:23Z	
+P	mznc:upTo5min/2026_rect-euler/Vitamins_combined_model_input	18c1abb651c63fbe	minimize	2953	INCOMPLETE	0	0	0	120181	120	2026-11-09T04:09:24Z	jacop_diff2_strict,jacop_maximum,jacop_minimum
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	78	2118	2026-11-09T04:09:25Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	decomp:jacop_bin_packing_capacity	PASS	COMPLETE	78	3922	2026-11-09T04:09:29Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	decomp:jacop_seq_precede_chain_int	PASS	COMPLETE	78	2434	2026-11-09T04:09:31Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	std	PASS	COMPLETE	78	9451	2026-11-09T04:09:40Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	std:f	PASS	COMPLETE	78	60306	2026-11-09T04:10:41Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	objstd:lcg	PASS	COMPLETE	1	6615	2026-11-09T04:10:47Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:plain	PASS	COMPLETE	1	1231	2026-11-09T04:10:49Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:f	PASS	COMPLETE	1	1604	2026-11-09T04:10:50Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:lcg	PASS	COMPLETE	1	1428	2026-11-09T04:10:52Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:lcg-f	PASS	COMPLETE	1	2925	2026-11-09T04:10:55Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	4452	2026-11-09T04:10:59Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	1913	2026-11-09T04:11:01Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:lcg:decomp:jacop_bin_packing_capacity	PASS	COMPLETE	1	2217	2026-11-09T04:11:03Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj0:lcg:decomp:jacop_seq_precede_chain_int	PASS	COMPLETE	1	1977	2026-11-09T04:11:05Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj1:plain	PASS	COMPLETE	1	2086	2026-11-09T04:11:07Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj1:f	PASS	COMPLETE	1	1900	2026-11-09T04:11:09Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	decomp:jacop_short_table_int	PARTIAL	INCOMPLETE	1	120290	2026-11-09T04:11:11Z	1 of 1 solutions before the limit
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj1:lcg	PASS	COMPLETE	1	2365	2026-11-09T04:11:12Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	decomp:jacop_count_values_bounds	PASS	COMPLETE	1	944	2026-11-09T04:11:12Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj0:plain	PASS	COMPLETE	1	881	2026-11-09T04:11:13Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj0:f	PASS	COMPLETE	1	876	2026-11-09T04:11:14Z	
+C	mznc:upTo30sec/2019_kidney-exchange/3_20_0.25_2	47d33a1a531d492d	obj1:lcg-f	PASS	COMPLETE	1	2760	2026-11-09T04:11:14Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj0:lcg	PASS	COMPLETE	1	904	2026-11-09T04:11:15Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj0:lcg-f	PASS	COMPLETE	1	1048	2026-11-09T04:11:16Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj0:lcg:decomp:jacop_short_table_int	PASS	COMPLETE	1	3220	2026-11-09T04:11:19Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj0:lcg:decomp:jacop_count_values_bounds	PASS	COMPLETE	1	1399	2026-11-09T04:11:20Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj1:plain	PASS	COMPLETE	1	604	2026-11-09T04:11:21Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj1:f	PASS	COMPLETE	1	517	2026-11-09T04:11:22Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj1:lcg	PASS	COMPLETE	1	671	2026-11-09T04:11:22Z	
+C	xcsp:2022/instancesXCSP22/CSP/Superpermutation-table-4_c22	45251fb1f381e769	obj1:lcg-f	PASS	COMPLETE	1	626	2026-11-09T04:11:23Z	
+P	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	minimize	6900	COMPLETE	1	1	75e03cf6549639d1	407	120	2026-11-09T04:11:24Z	jacop_tree
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	all:f	PASS	COMPLETE	1	488	2026-11-09T04:11:24Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	decomp:jacop_tree	NO_DECOMPOSITION				2026-11-09T04:11:24Z	
+P	mznc:upTo30sec/2025_stripboard/stripboard_w20_h15_l4_c4_n24	efd1ef1e69c8c85a	minimize	90	INCOMPLETE	34374	34374	f1945382b6074605	120321	120	2026-11-09T04:11:26Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_cumulative,jacop_diff2_strict,jacop_if_then_else_int,jacop_maximum
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	std	PASS	COMPLETE	1	1526	2026-11-09T04:11:26Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	std:f	PASS	COMPLETE	1	1695	2026-11-09T04:11:28Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	objstd:lcg	PASS	COMPLETE	1	2108	2026-11-09T04:11:30Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj0:plain	PASS	COMPLETE	1	1025	2026-11-09T04:11:31Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj0:f	PASS	COMPLETE	1	1071	2026-11-09T04:11:32Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj0:lcg	PASS	COMPLETE	1	924	2026-11-09T04:11:33Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj0:lcg-f	PASS	COMPLETE	1	811	2026-11-09T04:11:34Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj1:plain	PASS	COMPLETE	1	691	2026-11-09T04:11:34Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj1:f	PASS	COMPLETE	1	570	2026-11-09T04:11:35Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj1:lcg	PASS	COMPLETE	1	642	2026-11-09T04:11:36Z	
+C	mznc:upTo5sec/2026_surface-based-tsp/ulysses16	887f4fdf67835a4e	obj1:lcg-f	PASS	COMPLETE	1	662	2026-11-09T04:11:36Z	
+P	mznc:above1hour/2024_concert-hall-cap/concert-cap.mznc2018.04	254c5547eab6a54e	maximize	36778	INCOMPLETE	0	0	0	120259	120	2026-11-09T04:13:16Z	jacop_alldifferent_except,jacop_value_precede_chain_int
+P	mznc:upTo5sec/2025_is/avdoaYnfXq	715a32e47de89301	minimize	73728	INCOMPLETE	2000000	2000000	661b61ef04b23a52	99984	120	2026-11-09T04:13:18Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+P	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	minimize	90	COMPLETE	4	4	a730802715830950	1063	120	2026-11-09T04:13:18Z	jacop_alldiff,jacop_alldifferent_except,jacop_array_var_int_element_nonshifted
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	all:f	PASS	COMPLETE	4	884	2026-11-09T04:13:19Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	4	1057	2026-11-09T04:13:20Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	decomp:jacop_alldifferent_except	PASS	COMPLETE	4	1561	2026-11-09T04:13:21Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	decomp:jacop_alldiff	PASS	COMPLETE	4	1147	2026-11-09T04:13:23Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	std	PASS	COMPLETE	4	1136	2026-11-09T04:13:24Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	std:f	PASS	COMPLETE	4	1118	2026-11-09T04:13:25Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	objstd:lcg	PASS	COMPLETE	1	1505	2026-11-09T04:13:26Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj0:plain	PASS	COMPLETE	1	1989	2026-11-09T04:13:28Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj0:f	PASS	COMPLETE	1	1103	2026-11-09T04:13:29Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj0:lcg	PASS	COMPLETE	1	1084	2026-11-09T04:13:31Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj0:lcg-f	PASS	COMPLETE	1	1062	2026-11-09T04:13:32Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	1197	2026-11-09T04:13:33Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj0:lcg:decomp:jacop_alldifferent_except	PASS	COMPLETE	1	1647	2026-11-09T04:13:34Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	1139	2026-11-09T04:13:36Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj1:plain	PASS	COMPLETE	1	1547	2026-11-09T04:13:37Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj1:f	PASS	COMPLETE	1	1147	2026-11-09T04:13:38Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj1:lcg	PASS	COMPLETE	1	1056	2026-11-09T04:13:39Z	
+C	mznc:above1hour/2018_seat-moving/sm-10-20-05	0b953bc897993b11	obj1:lcg-f	PASS	COMPLETE	1	1104	2026-11-09T04:13:40Z	
+P	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	maximize	232	COMPLETE	3	3	c34872eae9c1814a	824	120	2026-11-09T04:13:42Z	jacop_alldifferent_except,jacop_connected,jacop_if_then_else_int
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	all:f	PASS	COMPLETE	3	747	2026-11-09T04:13:43Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	decomp:jacop_if_then_else_int	PASS	COMPLETE	3	815	2026-11-09T04:13:44Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	decomp:jacop_alldifferent_except	PASS	COMPLETE	3	1133	2026-11-09T04:13:45Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	decomp:jacop_connected	NO_DECOMPOSITION				2026-11-09T04:13:45Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj0:plain	PASS	COMPLETE	1	1006	2026-11-09T04:13:46Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj0:f	PASS	COMPLETE	1	806	2026-11-09T04:13:47Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj0:lcg	PASS	COMPLETE	1	1377	2026-11-09T04:13:48Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj0:lcg-f	PASS	COMPLETE	1	1079	2026-11-09T04:13:49Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj0:lcg:decomp:jacop_if_then_else_int	PASS	COMPLETE	1	1752	2026-11-09T04:13:51Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj0:lcg:decomp:jacop_alldifferent_except	PASS	COMPLETE	1	2484	2026-11-09T04:13:54Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj1:plain	PASS	COMPLETE	1	813	2026-11-09T04:13:55Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj1:f	PASS	COMPLETE	1	875	2026-11-09T04:13:55Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj1:lcg	PASS	COMPLETE	1	897	2026-11-09T04:13:56Z	
+C	mznc:upTo5sec/2025_hitori/h11-1	002b8bf19586c20a	obj1:lcg-f	PASS	COMPLETE	1	1088	2026-11-09T04:13:57Z	
+P	mznc:upTo5sec/2015_is/jZ9pQqRxJ2	e527fd5ef8b55ac8	minimize	210944	INCOMPLETE	842021	842021	dc0bdf56ca196a1	120198	120	2026-11-09T04:15:20Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+P	mznc:above1hour/2026_rect-euler/harrypotter_combined_model_input	729cdc9f2bb5ee94	minimize	3723	INCOMPLETE	0	0	0	120200	120	2026-11-09T04:15:26Z	jacop_diff2_strict,jacop_maximum,jacop_minimum
+P	mznc:above1hour/2022_stripboard/common-emitter-simple	f055917b2c55d8a1	minimize	40	INCOMPLETE	0	0	0	120158	120	2026-11-09T04:16:23Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_cumulative,jacop_diff2_strict,jacop_if_then_else_int,jacop_maximum
+P	mznc:upTo30sec/2020_is/A3PZaPjnUz	8dc5a503e73164c8	minimize	103936	INCOMPLETE	1015207	1015207	44410f068d42acb	120163	120	2026-11-09T04:17:21Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+P	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	maximize	45	COMPLETE	1	1	71831eeb9db51733	109223	120	2026-11-09T04:18:22Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	all:f	PASS	COMPLETE	1	16388	2026-11-09T04:18:38Z	
+P	mznc:upTo30sec/2015_is/A3PZaPjnUz	ce62efe1700f782e	minimize	103936	INCOMPLETE	1043080	1043080	37c552cef9b06eef	120158	120	2026-11-09T04:19:23Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+P	mznc:above1hour/2022_stripboard/nand-gate	18e939a95db78a55	minimize	72	INCOMPLETE	0	0	0	120196	120	2026-11-09T04:19:27Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_cumulative,jacop_diff2_strict,jacop_if_then_else_int,jacop_maximum
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	79974	2026-11-09T04:19:58Z	
+P	mznc:upTo5sec/2020_is/v1HjuSBQMb	63bcc393be52656c	minimize	454656	INCOMPLETE	1018667	1018667	fd945c4eaf23e61a	120162	120	2026-11-09T04:21:25Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+P	mznc:above1hour/2025_stripboard/stripboard_w20_h15_l7_c6_n24	adf56837fa749030	minimize	63	INCOMPLETE	1	1	9fcfa9f982a2a74b	120251	120	2026-11-09T04:21:31Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_cumulative,jacop_diff2_strict,jacop_if_then_else_int,jacop_maximum
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	decomp:jacop_maximum_arg_int	PARTIAL	INCOMPLETE	0	120167	2026-11-09T04:21:58Z	0 of 1 solutions before the limit
+P	mznc:upTo30sec/2026_atp-stage2/instance5-stage2	8816be8df3005069	minimize	1004380	INCOMPLETE	0	0	0	120140	120	2026-11-09T04:23:31Z	jacop_circuit_offset,jacop_cumulative
+P	mznc:upTo5sec/2020_code-generator/mips_gobmk.patterns.autohelperpat508	1af7ff31fd3c0ee4	minimize	34	INCOMPLETE	308327	308327	2d8e421e699d7641	120226	120	2026-11-09T04:23:36Z	jacop_array_var_int_element_nonshifted,jacop_cumulative,jacop_diff2_strict,jacop_increasing,jacop_list_diff2,jacop_maximum,jacop_member_int,jacop_table_int
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	decomp:jacop_array_var_bool_element_nonshifted	PASS	COMPLETE	1	108726	2026-11-09T04:23:47Z	
+P	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	minimize	3	COMPLETE	718	718	3a4d51019173e860	93674	120	2026-11-09T04:25:18Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_assignment,jacop_count_values,jacop_member_int,jacop_regular
+P	mznc:above1hour/2015_is/HgSWGJHxY5	dc32350bd9ba37d8	minimize	102176	INCOMPLETE	592867	592867	93e593d6543174ad	120193	120	2026-11-09T04:25:33Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	std	PARTIAL	INCOMPLETE	1	120197	2026-11-09T04:25:47Z	1 of 1 solutions before the limit
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	all:f	PARTIAL	INCOMPLETE	0	120187	2026-11-09T04:27:18Z	0 of 718 solutions before the limit
+P	mznc:upTo5min/2020_is/YfFfEiuCQo	8aea1c0d016a1dee	minimize	141440	INCOMPLETE	577487	577487	930c367d3f0ddbf1	120201	120	2026-11-09T04:27:36Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	std:f	PARTIAL	INCOMPLETE	0	120157	2026-11-09T04:27:47Z	0 of 1 solutions before the limit
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	objstd:lcg	PASS	COMPLETE	1	5274	2026-11-09T04:27:52Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	718	95413	2026-11-09T04:28:54Z	
+P	mznc:upTo1hour/2020_is/Ws5Q6fhGi5	42d69bbca1645654	minimize	180224	INCOMPLETE	559696	559696	a8ef8adc4cd21320	120145	120	2026-11-09T04:29:39Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj0:plain	PASS	COMPLETE	1	108688	2026-11-09T04:29:41Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	decomp:jacop_assignment	PARTIAL	INCOMPLETE	718	120152	2026-11-09T04:30:54Z	718 of 718 solutions before the limit
+P	mznc:above1hour/2020_is/LeTaZW8Ij5	4466951f668e822b	minimize	248576	INCOMPLETE	0	0	0	120138	120	2026-11-09T04:31:41Z	jacop_array_var_int_element_nonshifted,jacop_circuit_offset,jacop_table_int
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj0:f	PARTIAL	INCOMPLETE	0	120233	2026-11-09T04:31:41Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj0:lcg	PASS	COMPLETE	1	12039	2026-11-09T04:31:53Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj0:lcg-f	PASS	COMPLETE	1	10796	2026-11-09T04:32:04Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	6178	2026-11-09T04:32:10Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj0:lcg:decomp:jacop_maximum_arg_int	PASS	COMPLETE	1	9283	2026-11-09T04:32:20Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj0:lcg:decomp:jacop_array_var_bool_element_nonshifted	PASS	COMPLETE	1	6490	2026-11-09T04:32:26Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	decomp:jacop_member_int	PASS	COMPLETE	718	97077	2026-11-09T04:32:31Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	decomp:jacop_regular	PASS	COMPLETE	718	91532	2026-11-09T04:34:02Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj1:plain	PASS	COMPLETE	1	106362	2026-11-09T04:34:13Z	
+P	mznc:upTo5min/2026_atp-stage2/instance1-stage2	2a7195791e27ded9	minimize	7985080	INCOMPLETE	0	0	0	120145	120	2026-11-09T04:35:04Z	jacop_circuit_offset,jacop_cumulative
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	120146	2026-11-09T04:36:02Z	0 of 718 solutions before the limit
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj1:f	PARTIAL	INCOMPLETE	0	120121	2026-11-09T04:36:13Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj1:lcg	PASS	COMPLETE	1	7012	2026-11-09T04:36:20Z	
+C	mznc:upTo1min/2025_tower/tower_050_050_10_050-03	278faf318de5fe5a	obj1:lcg-f	PASS	COMPLETE	1	12211	2026-11-09T04:36:32Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	decomp:jacop_count_values	PASS	COMPLETE	718	96537	2026-11-09T04:37:39Z	
+P	mznc:above1hour/2026_atp-stage2/instance2-stage2	83eecd74e24d0f0e	minimize	1320964	INCOMPLETE	0	0	0	120166	120	2026-11-09T04:39:04Z	jacop_circuit_offset,jacop_cumulative
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	std	PARTIAL	INCOMPLETE	0	120147	2026-11-09T04:39:39Z	0 of 6 solutions before the limit
+P	mznc:upTo5min/2023_yumi-static/p_4_GG_GG_yumi_grid_setup_7_7	9f926ee8c4e1331e	minimize	457	INCOMPLETE	0	0	0	120152	120	2026-11-09T04:40:32Z	jacop_all_equal_int,jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_circuit,jacop_if_then_else_bool,jacop_increasing,jacop_maximum,jacop_table_int,jacop_value_precede_chain_int,jacop_value_precede_int
+P	mznc:above1hour/2023_speck-optimisation/medium_6	466b5aceb1341aa8	minimize	10	INCOMPLETE	0	0	0	120143	120	2026-11-09T04:41:15Z	jacop_all_equal_int_reif
+P	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	satisfy		COMPLETE	805168	805168	a65df763baf792dc	13244	120	2026-11-09T04:41:29Z	jacop_cumulative,jacop_list_diff2
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	std:f	PARTIAL	INCOMPLETE	0	120168	2026-11-09T04:41:39Z	0 of 6 solutions before the limit
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	all:f	PASS	COMPLETE	805168	16324	2026-11-09T04:41:45Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	objstd:lcg	PASS	COMPLETE	1	9141	2026-11-09T04:41:49Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	decomp:jacop_list_diff2	PASS	COMPLETE	805168	20051	2026-11-09T04:42:05Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:plain	PASS	COMPLETE	1	71897	2026-11-09T04:43:00Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	decomp:jacop_cumulative	PASS	COMPLETE	805168	82874	2026-11-09T04:43:28Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj0:plain	PASS	COMPLETE	1	2467	2026-11-09T04:43:31Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj0:f	PASS	COMPLETE	1	1629	2026-11-09T04:43:33Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj0:lcg	PASS	COMPLETE	1	1636	2026-11-09T04:43:34Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj0:lcg-f	PASS	COMPLETE	1	2828	2026-11-09T04:43:37Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj0:lcg:decomp:jacop_list_diff2	PASS	COMPLETE	1	1208	2026-11-09T04:43:38Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:f	PASS	COMPLETE	1	38187	2026-11-09T04:43:39Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj0:lcg:decomp:jacop_cumulative	PASS	COMPLETE	1	2656	2026-11-09T04:43:41Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj1:plain	PASS	COMPLETE	1	3426	2026-11-09T04:43:44Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj1:f	PASS	COMPLETE	1	2590	2026-11-09T04:43:47Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg	PASS	COMPLETE	1	8752	2026-11-09T04:43:47Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj1:lcg	PASS	COMPLETE	1	1329	2026-11-09T04:43:48Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	9e4f440f82b6cce2	obj1:lcg-f	PASS	COMPLETE	1	2651	2026-11-09T04:43:51Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg-f	PASS	COMPLETE	1	12650	2026-11-09T04:44:00Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	7042	2026-11-09T04:44:07Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	7939	2026-11-09T04:44:15Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg:decomp:jacop_member_int	PASS	COMPLETE	1	7717	2026-11-09T04:44:23Z	
+P	mznc:upTo1hour/2022_yumi-static/example_instance_4_GS_SG_yumi_grid_setup_7_7	f70c84fec9b796e4	minimize	528	INCOMPLETE	0	0	0	120161	120	2026-11-09T04:44:33Z	jacop_all_equal_int,jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_circuit,jacop_if_then_else_bool,jacop_increasing,jacop_maximum,jacop_table_int,jacop_value_precede_chain_int,jacop_value_precede_int
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg:decomp:jacop_regular	PASS	COMPLETE	1	12918	2026-11-09T04:44:36Z	
+P	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	maximize	1494	COMPLETE	1	1	2c6a7d7c294e6192	1200	120	2026-11-09T04:44:36Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_bin_packing_capacity,jacop_seq_precede_chain_int
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	all:f	PASS	COMPLETE	1	1154	2026-11-09T04:44:37Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	5522	2026-11-09T04:44:41Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj0:lcg:decomp:jacop_count_values	PASS	COMPLETE	1	4873	2026-11-09T04:44:46Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	decomp:jacop_alldiff	PASS	COMPLETE	1	8933	2026-11-09T04:44:46Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	1934	2026-11-09T04:44:48Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	decomp:jacop_bin_packing_capacity	PASS	COMPLETE	1	1866	2026-11-09T04:44:50Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	decomp:jacop_seq_precede_chain_int	PASS	COMPLETE	1	1272	2026-11-09T04:44:51Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	std	PASS	COMPLETE	1	9389	2026-11-09T04:45:01Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	std:f	PASS	COMPLETE	1	22280	2026-11-09T04:45:23Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	objstd:lcg	PASS	COMPLETE	1	3796	2026-11-09T04:45:27Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:plain	PASS	COMPLETE	1	1388	2026-11-09T04:45:28Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:f	PASS	COMPLETE	1	1338	2026-11-09T04:45:30Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:lcg	PASS	COMPLETE	1	1826	2026-11-09T04:45:31Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:lcg-f	PASS	COMPLETE	1	3064	2026-11-09T04:45:35Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	4095	2026-11-09T04:45:39Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	1821	2026-11-09T04:45:40Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:lcg:decomp:jacop_bin_packing_capacity	PASS	COMPLETE	1	2083	2026-11-09T04:45:43Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj0:lcg:decomp:jacop_seq_precede_chain_int	PASS	COMPLETE	1	1686	2026-11-09T04:45:44Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj1:plain	PASS	COMPLETE	1	1452	2026-11-09T04:45:46Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj1:f	PASS	COMPLETE	1	1449	2026-11-09T04:45:47Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj1:lcg	PASS	COMPLETE	1	2149	2026-11-09T04:45:49Z	
+C	mznc:upTo30sec/2023_kidney-exchange/3_20_0.30_4	2152908933ed2ee2	obj1:lcg-f	PASS	COMPLETE	1	2759	2026-11-09T04:45:52Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj1:plain	PASS	COMPLETE	1	68699	2026-11-09T04:45:55Z	
+P	mznc:upTo5min/2022_team-assignment/data1_6_6	d6d9196cb57a2803	maximize	6970	INCOMPLETE	0	0	0	120198	120	2026-11-09T04:45:55Z	jacop_alldiff,jacop_bin_packing,jacop_bin_packing_capacity,jacop_maximum,jacop_minimum
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj1:f	PASS	COMPLETE	1	12920	2026-11-09T04:46:08Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj1:lcg	PASS	COMPLETE	1	5880	2026-11-09T04:46:14Z	
+C	mznc:above1hour/2014_elitserien/handball19	1b3486fca8e1f930	obj1:lcg-f	PASS	COMPLETE	1	5740	2026-11-09T04:46:19Z	
+P	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	maximize	7	COMPLETE	20	20	ca7b7d8fc9c03e4f	2436	120	2026-11-09T04:46:27Z	jacop_count,jacop_lex_lesseq_int,jacop_regular,jacop_value_precede_int
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	all:f	PASS	COMPLETE	20	2292	2026-11-09T04:46:29Z	
+P	xcsp:2023/XCSP23_V2/COP23/KidneyExchange-4-041_c23	eba629780ce3a335	maximize	1	INCOMPLETE	2000000	2000000	2e37ae9c6c2eaa16	71242	120	2026-11-09T04:47:04Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_bin_packing_capacity,jacop_value_precede_chain_int
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	decomp:jacop_regular	PASS	COMPLETE	20	80615	2026-11-09T04:47:50Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	decomp:jacop_count	PASS	COMPLETE	20	2653	2026-11-09T04:47:53Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	decomp:jacop_lex_lesseq_int	PASS	COMPLETE	20	8585	2026-11-09T04:48:01Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	decomp:jacop_value_precede_int	PASS	COMPLETE	20	3050	2026-11-09T04:48:04Z	
+P	mznc:above1hour/2018_team-assignment/data2_4_15	138e1b5a2d959adb	maximize	9892	INCOMPLETE	0	0	0	120182	120	2026-11-09T04:48:06Z	jacop_alldiff,jacop_bin_packing,jacop_bin_packing_capacity,jacop_maximum,jacop_minimum
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	std	PASS	COMPLETE	20	88026	2026-11-09T04:49:32Z	
+P	mznc:upTo30sec/2026_gbac/csplib12-gbac	30a85e2b4cc5e7c6	minimize	0	INCOMPLETE	2000000	2000000	b86a0aa64e3bb8c9	118785	120	2026-11-09T04:50:12Z	jacop_bin_packing,jacop_count_values_bounds
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	std:f	PASS	COMPLETE	20	78309	2026-11-09T04:50:51Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	objstd:lcg	PASS	COMPLETE	1	13482	2026-11-09T04:51:04Z	
+P	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	maximize	8	INCOMPLETE	109	109	8c80dc7a174a390d	120173	120	2026-11-09T04:51:05Z	jacop_count_values_bounds,jacop_maximum,jacop_value_precede_chain_int
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:plain	PASS	COMPLETE	1	2358	2026-11-09T04:51:06Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:f	PASS	COMPLETE	1	2964	2026-11-09T04:51:09Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:lcg	PASS	COMPLETE	1	3979	2026-11-09T04:51:13Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:lcg-f	PASS	COMPLETE	1	3019	2026-11-09T04:51:16Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:lcg:decomp:jacop_regular	PASS	COMPLETE	1	6500	2026-11-09T04:51:23Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:lcg:decomp:jacop_count	PASS	COMPLETE	1	2967	2026-11-09T04:51:26Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:lcg:decomp:jacop_lex_lesseq_int	PASS	COMPLETE	1	3099	2026-11-09T04:51:29Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj0:lcg:decomp:jacop_value_precede_int	PASS	COMPLETE	1	3277	2026-11-09T04:51:32Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj1:plain	PASS	COMPLETE	1	2450	2026-11-09T04:51:35Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj1:f	PASS	COMPLETE	1	3609	2026-11-09T04:51:38Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj1:lcg	PASS	COMPLETE	1	7983	2026-11-09T04:51:46Z	
+C	mznc:upTo5sec/2024_peacable_queens/pq_n7	7c48007f33eed40c	obj1:lcg-f	PASS	COMPLETE	1	7276	2026-11-09T04:51:54Z	
+P	mznc:above1hour/2022_team-assignment/data2_6_15	3e9aa5755b4f95ba	maximize	26773	INCOMPLETE	0	0	0	120202	120	2026-11-09T04:52:22Z	jacop_alldiff,jacop_bin_packing,jacop_bin_packing_capacity,jacop_maximum,jacop_minimum
+P	mznc:upTo5sec/2023_test-scheduling/t20m10r10-17	b60fbab1f9489a76	minimize	1069	INCOMPLETE	2000000	2000000	95a85e1b116d163a	94835	120	2026-11-09T04:52:41Z	jacop_cumulative,jacop_maximum,jacop_minimum,jacop_value_precede_chain_int
+P	mznc:upTo30sec/2026_surface-based-tsp/berlin52	3137309f9472fd91	minimize	7542	INCOMPLETE	0	0	0	120186	120	2026-11-09T04:54:04Z	jacop_tree
+P	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	satisfy		COMPLETE	1	1	eae4f947896128ab	703	120	2026-11-09T04:54:05Z	jacop_count,jacop_count_var_reif
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	all:f	PASS	COMPLETE	1	583	2026-11-09T04:54:06Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	decomp:jacop_count	PASS	COMPLETE	1	745	2026-11-09T04:54:06Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	decomp:jacop_count_var_reif	PASS	COMPLETE	1	912	2026-11-09T04:54:07Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj0:plain	PASS	COMPLETE	1	784	2026-11-09T04:54:08Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj0:f	PASS	COMPLETE	1	1046	2026-11-09T04:54:09Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj0:lcg	PASS	COMPLETE	1	946	2026-11-09T04:54:10Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj0:lcg-f	PASS	COMPLETE	1	1002	2026-11-09T04:54:11Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj0:lcg:decomp:jacop_count	PASS	COMPLETE	1	1028	2026-11-09T04:54:12Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj0:lcg:decomp:jacop_count_var_reif	PASS	COMPLETE	1	1107	2026-11-09T04:54:13Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj1:plain	PASS	COMPLETE	1	862	2026-11-09T04:54:14Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj1:f	PASS	COMPLETE	1	1158	2026-11-09T04:54:15Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj1:lcg	PASS	COMPLETE	1	932	2026-11-09T04:54:16Z	
+C	mznc:upTo5sec/2014_amaze/2012-03-09	6b5dec91d7cd3e42	obj1:lcg-f	PASS	COMPLETE	1	1137	2026-11-09T04:54:17Z	
+P	mznc:upTo5sec/2021_mapping/mesh2x2_2	ac115ab8f3b4c9ad	minimize	970	INCOMPLETE	996368	996368	89128df6966c6c3c	120172	120	2026-11-09T04:54:23Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+P	mznc:upTo5sec/2016_mapping/mesh2x2_1	aeb1a05fda2360da	minimize	1000	INCOMPLETE	919034	919034	87a840d9a09a1e6a	120181	120	2026-11-09T04:56:24Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+P	mznc:above1hour/2026_surface-based-tsp/st70	c53ca69cbe2ad84d	minimize	675	INCOMPLETE	0	0	0	120213	120	2026-11-09T04:56:40Z	jacop_tree
+P	mznc:above1hour/2017_community-detection/Strike.s6.k5	64ab760563cb66a3	maximize	65	INCOMPLETE	0	0	0	120308	120	2026-11-09T04:56:42Z	jacop_count_values_bounds,jacop_maximum,jacop_value_precede_chain_int
+P	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	minimize	0	COMPLETE	24	24	7e7e679c779fda57	1156	120	2026-11-09T04:56:45Z	jacop_count_values,jacop_if_then_else_int,jacop_maximum,jacop_minimum,jacop_value_precede_chain_int
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	all:f	PASS	COMPLETE	24	1139	2026-11-09T04:56:46Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	decomp:jacop_if_then_else_int	PASS	COMPLETE	24	1262	2026-11-09T04:56:48Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	decomp:jacop_count_values	PASS	COMPLETE	24	1909	2026-11-09T04:56:50Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	decomp:jacop_minimum	PASS	COMPLETE	24	974	2026-11-09T04:56:50Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	decomp:jacop_maximum	PASS	COMPLETE	24	952	2026-11-09T04:56:51Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	decomp:jacop_value_precede_chain_int	PASS	COMPLETE	24	877	2026-11-09T04:56:52Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:plain	PASS	COMPLETE	1	1524	2026-11-09T04:56:54Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:f	PASS	COMPLETE	1	1684	2026-11-09T04:56:56Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:lcg	PASS	COMPLETE	1	1544	2026-11-09T04:56:57Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:lcg-f	PASS	COMPLETE	1	1525	2026-11-09T04:56:59Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:lcg:decomp:jacop_if_then_else_int	PASS	COMPLETE	1	1527	2026-11-09T04:57:00Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:lcg:decomp:jacop_count_values	PASS	COMPLETE	1	1917	2026-11-09T04:57:02Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:lcg:decomp:jacop_minimum	PASS	COMPLETE	1	1742	2026-11-09T04:57:04Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:lcg:decomp:jacop_maximum	PASS	COMPLETE	1	1620	2026-11-09T04:57:05Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj0:lcg:decomp:jacop_value_precede_chain_int	PASS	COMPLETE	1	1329	2026-11-09T04:57:07Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj1:plain	PASS	COMPLETE	1	1470	2026-11-09T04:57:08Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj1:f	PASS	COMPLETE	1	1709	2026-11-09T04:57:10Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj1:lcg	PASS	COMPLETE	1	1810	2026-11-09T04:57:12Z	
+C	mznc:upTo5sec/2025_mondoku/8-8-4	7fc08f3478456fb5	obj1:lcg-f	PASS	COMPLETE	1	1668	2026-11-09T04:57:13Z	
+P	mznc:upTo5sec/2015_mapping/full2x2	7664db68d7058073	minimize	793	INCOMPLETE	1130873	1130873	7b6d9042bda69b03	120159	120	2026-11-09T04:58:25Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+P	mznc:upTo5sec/2018_mapping/full2x2_mp3	96534deb5cf2cf33	minimize	1100	INCOMPLETE	584126	584126	8a1c99ab74fe5450	120162	120	2026-11-09T05:00:28Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+P	mznc:above1hour/2025_cgt/cgt_8_h16_r0.05_s0.5_3	1e6f31db5d194dc0	minimize	-105340	INCOMPLETE	0	0	0	120216	120	2026-11-09T05:00:40Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_if_then_else_int,jacop_strictly_increasing
+P	mznc:above1hour/2025_hitori/h14-1	51dde00ff7104e38	maximize	572	INCOMPLETE	0	0	0	120175	120	2026-11-09T05:01:14Z	jacop_alldifferent_except,jacop_connected,jacop_if_then_else_int
+P	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	maximize	594	COMPLETE	1	1	e6b952a60a1536cf	1493	120	2026-11-09T05:01:17Z	jacop_alldifferent_except,jacop_connected,jacop_if_then_else_int
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	all:f	PASS	COMPLETE	1	1180	2026-11-09T05:01:18Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	decomp:jacop_if_then_else_int	PASS	COMPLETE	1	1891	2026-11-09T05:01:20Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	decomp:jacop_alldifferent_except	PASS	COMPLETE	1	3046	2026-11-09T05:01:23Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	decomp:jacop_connected	NO_DECOMPOSITION				2026-11-09T05:01:23Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj0:plain	PASS	COMPLETE	1	1189	2026-11-09T05:01:24Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj0:f	PASS	COMPLETE	1	1252	2026-11-09T05:01:26Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj0:lcg	PASS	COMPLETE	1	1544	2026-11-09T05:01:27Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj0:lcg-f	PASS	COMPLETE	1	1527	2026-11-09T05:01:29Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj0:lcg:decomp:jacop_if_then_else_int	PASS	COMPLETE	1	1782	2026-11-09T05:01:31Z	
+P	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	minimize	2	COMPLETE	21483	21483	ed4e9372bb66a8ac	44198	120	2026-11-09T05:01:31Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_assignment,jacop_count_values,jacop_member_int,jacop_regular
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj0:lcg:decomp:jacop_alldifferent_except	PASS	COMPLETE	1	4155	2026-11-09T05:01:35Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj1:plain	PASS	COMPLETE	1	1853	2026-11-09T05:01:37Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj1:f	PASS	COMPLETE	1	1941	2026-11-09T05:01:39Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj1:lcg	PASS	COMPLETE	1	1572	2026-11-09T05:01:40Z	
+C	mznc:upTo5sec/2025_hitori/h15-1	0f1693bd6b88502d	obj1:lcg-f	PASS	COMPLETE	1	1832	2026-11-09T05:01:42Z	
+P	mznc:above1hour/2021_mapping/mesh3x3_4	bf3abe5f147c847a	minimize	1133	INCOMPLETE	352604	352604	520269aaec66260a	120163	120	2026-11-09T05:02:33Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	all:f	PARTIAL	INCOMPLETE	0	120255	2026-11-09T05:03:32Z	0 of 21483 solutions before the limit
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	21483	35516	2026-11-09T05:04:07Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	decomp:jacop_assignment	PASS	COMPLETE	21483	49212	2026-11-09T05:04:56Z	
+P	mznc:above1hour/2017_gbac/reduced_UD4-gbac	57de25ef8d946795	minimize	949	INCOMPLETE	0	0	0	120166	120	2026-11-09T05:05:11Z	jacop_bin_packing,jacop_count_values_bounds
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	decomp:jacop_member_int	PASS	COMPLETE	21483	36659	2026-11-09T05:05:33Z	
+P	mznc:above1hour/2022_tower/tower_070_070_15_070-09	7528eae5fab2af96	maximize	57	INCOMPLETE	0	0	0	120155	120	2026-11-09T05:05:42Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	decomp:jacop_regular	PASS	COMPLETE	21483	37215	2026-11-09T05:06:10Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	120148	2026-11-09T05:08:10Z	0 of 21483 solutions before the limit
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	decomp:jacop_count_values	PASS	COMPLETE	21483	34509	2026-11-09T05:08:45Z	
+P	mznc:above1hour/2016_gbac/reduced_UD6-gbac	92e02d5e7fc2bbfc	minimize	225	INCOMPLETE	0	0	0	120129	120	2026-11-09T05:09:11Z	jacop_bin_packing,jacop_count_values_bounds
+P	mznc:above1hour/2020_tower_challenge/tower_070_070_15_070-06	2f284d2f979326fe	maximize	57	INCOMPLETE	0	0	0	120143	120	2026-11-09T05:09:43Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	std	PARTIAL	INCOMPLETE	0	120189	2026-11-09T05:10:45Z	0 of 38 solutions before the limit
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	std:f	PARTIAL	INCOMPLETE	0	120158	2026-11-09T05:12:45Z	0 of 38 solutions before the limit
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	objstd:lcg	PASS	COMPLETE	1	12648	2026-11-09T05:12:58Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:plain	PASS	COMPLETE	1	9903	2026-11-09T05:13:08Z	
+P	mznc:above1hour/2026_gbac/UD6-gbac	c5427b9d4841bdc1	minimize	64	INCOMPLETE	0	0	0	120130	120	2026-11-09T05:13:12Z	jacop_bin_packing,jacop_count_values_bounds
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:f	PASS	COMPLETE	1	5319	2026-11-09T05:13:13Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg	PASS	COMPLETE	1	5632	2026-11-09T05:13:19Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg-f	PASS	COMPLETE	1	3392	2026-11-09T05:13:22Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	3169	2026-11-09T05:13:25Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg:decomp:jacop_assignment	PASS	COMPLETE	1	4990	2026-11-09T05:13:30Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg:decomp:jacop_member_int	PASS	COMPLETE	1	3674	2026-11-09T05:13:34Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg:decomp:jacop_regular	PASS	COMPLETE	1	6336	2026-11-09T05:13:40Z	
+P	mznc:above1hour/2025_tower/tower_070_070_15_070-08	b75975c85f8e3c83	maximize	58	INCOMPLETE	0	0	0	120174	120	2026-11-09T05:13:43Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	5794	2026-11-09T05:13:46Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj0:lcg:decomp:jacop_count_values	PASS	COMPLETE	1	5577	2026-11-09T05:13:52Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj1:plain	PASS	COMPLETE	1	11175	2026-11-09T05:14:03Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj1:f	PASS	COMPLETE	1	48803	2026-11-09T05:14:52Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj1:lcg	PASS	COMPLETE	1	12923	2026-11-09T05:15:05Z	
+C	mznc:upTo30sec/2016_elitserien/handball7	07f34e6c7b2bd53d	obj1:lcg-f	PASS	COMPLETE	1	45622	2026-11-09T05:15:50Z	
+P	mznc:upTo1hour/2025_tower/tower_070_070_15_070-02	5edc5ba44a8254d7	maximize	70	INCOMPLETE	0	0	0	120131	120	2026-11-09T05:16:20Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+P	mznc:above1hour/2020_gbac/UD10-gbac	d984569895c5b953	minimize	39	INCOMPLETE	0	0	0	120206	120	2026-11-09T05:17:12Z	jacop_bin_packing,jacop_count_values_bounds
+P	xcsp:2022/instancesXCSP22/COP/Filters-fir16-1-1_c22	a26411623e0cb205	minimize	35	INCOMPLETE	2000000	2000000	827ab1f9dfbc0103	56533	120	2026-11-09T05:17:18Z	jacop_list_diff2
+P	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	07286d915f53e14f	minimize	79	INCOMPLETE	7	7	3bca875db4e6d9bb	120178	120	2026-11-09T05:18:17Z	jacop_alldiff,jacop_strictly_increasing
