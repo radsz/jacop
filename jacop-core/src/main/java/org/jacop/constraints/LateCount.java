@@ -200,7 +200,13 @@ public class LateCount extends Constraint
    * weights of the late tasks (1|r_j|sum w_j U_j). With different weights the bound is the larger
    * of the linear relaxation of the on time tasks (a knapsack over the nested due dates, which
    * greedy by weight per unit of processing solves, as the constraints form a polymatroid) and the
-   * smallest weights of as many tasks as Moore and Hodgson finds late.
+   * smallest weights of as many tasks as Moore and Hodgson finds late. Without release dates the
+   * weighted problem is already NP-hard (it contains knapsack; E. L. Lawler and J. M. Moore, "A
+   * functional equation and its application to resource allocation and sequencing problems",
+   * Management Science 16(1), 1969, solve it by dynamic programming in pseudo-polynomial time). The
+   * greedy algorithm is optimal over a polymatroid (J. Edmonds, "Submodular functions, matroids,
+   * and certain polyhedra", Combinatorial Structures and their Applications, 1970); here every task
+   * takes the least slack of the due dates from its own on, kept in a segment tree.
    *
    * @param starts the start of each task.
    * @param durations the duration of each task, at least 0.
