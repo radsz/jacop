@@ -3797,6 +3797,18 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
+220. JaLP pivots are about 1.1x faster with the same arithmetic. The full
+     passes of ftran and btran over U read the pivot row, position, pivot
+     and column of each slot of the order in sequence, with the columns of
+     U in one flat array laid out in that order (a Forrest-Tomlin column
+     is appended), and the rows of L are indexed by step; the
+     factorization no longer allocates per step, and the bound-flipping
+     ratio test computes each breakpoint ratio once instead of in every
+     pass. On the LP bench (659 LPs, 120 s) every LP has the same pivots,
+     objective and factorizations; sgm 1.11x on the 199 LPs of 0.5 s or
+     more, 1.15x on those of 5 s or more (map10 1.5x, map16715-04 1.55x,
+     i_n13 1.29x).
+
 Version 4.11
 =============
 
