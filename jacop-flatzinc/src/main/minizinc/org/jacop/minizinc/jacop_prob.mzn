@@ -37,3 +37,26 @@ predicate jacop_expected_sum(array[int] of var int: x, array[int] of int: mean_n
          "jacop_expected_sum: x and mean_num must have the same length and den must be positive") /\
   let { array[int] of var int: y = array1d(x); array[int] of int: m = array1d(mean_num) } in
   z = sum(i in index_set(y))(m[i] * y[i]);
+
+% The native constraint: item i has the random weight that takes value[(i - 1) * k + j] with
+% probability prob[(i - 1) * k + j] / den, for j in 1..k (a probability of 0 pads a row).
+predicate jacop_chance_sum(array[int] of var int: x, array[int] of int: value,
+                           array[int] of int: prob, int: k, int: den, var int: c, int: alpha);
+
+/** The chance constraint over independent random weights: Pr(sum(i)(W[i] * x[i]) <= c) >= alpha /
+  den, where W[i] takes the value value[i, j] with probability prob[i, j] / den and the W[i] are
+  independent. The x[i] and the values must be at least 0. Unlike scenario_chance it never lists
+  the joint scenarios, whose number is the product of the support sizes. */
+predicate chance_sum(array[int] of var int: x, array[int, int] of int: value,
+                     array[int, int] of int: prob, int: den, var int: c, int: alpha) =
+  assert(index_set_1of2(value) = index_set_1of2(prob)
+         /\ index_set_2of2(value) = index_set_2of2(prob)
+         /\ card(index_set_1of2(value)) = length(x),
+         "chance_sum: value and prob must have one row per variable and the same columns") /\
+  assert(den > 0 /\ forall(i in index_set_1of2(prob))(
+           forall(j in index_set_2of2(prob))(prob[i, j] >= 0 /\ value[i, j] >= 0)
+           /\ sum(j in index_set_2of2(prob))(prob[i, j]) = den),
+         "chance_sum: each row of prob must be numerators from 0 over den summing to den, the values at least 0") /\
+  assert(forall(i in index_set(x))(lb(x[i]) >= 0), "chance_sum: the variables must be at least 0") /\
+  jacop_chance_sum(array1d(x), array1d(value), array1d(prob), card(index_set_2of2(value)), den,
+                   c, alpha);

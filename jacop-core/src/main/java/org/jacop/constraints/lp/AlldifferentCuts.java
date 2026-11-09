@@ -53,8 +53,20 @@ import org.jacop.core.IntervalEnumeration;
  * values separates them exactly. With different domains, the union of the domains of each prefix of
  * the order gives a valid inequality that is stronger than the one over the common domain.
  *
- * <p>The domains are those of the first separation, made at the root, so the cuts hold for the
- * whole search.
+ * <p>The same inequalities hold with multiplicities ({@link #except}, {@link #cardinality}): when a
+ * value v may be taken by at most u_v of the variables and must be taken by at least l_v of them,
+ * the sum over S is at least the least sum of a multiset of |S| values of U(S) that takes v at most
+ * min(u_v, |{i in S : v in D_i}|) times and at least l_v - |{i not in S : v in D_i}| times (the
+ * rest of the l_v must come from S), and at most the greatest such sum; the greedy choice, the
+ * forced copies first and then the smallest (largest) values left, gives it. For the
+ * all-different-except-0 constraint 0 has no upper limit; for a global cardinality constraint the
+ * limits are the bounds of its counters at the root. With fixed counts these are the inequalities
+ * of the permutahedron of a multiset, whose points are the vectors that the multiset majorizes (R.
+ * Rado, An inequality, Journal of the London Mathematical Society 27(1):1-6, 1952), and sorting
+ * again finds the most violated one of each size over a common domain.
+ *
+ * <p>The domains and the limits are those of the first separation, made at the root, so the cuts
+ * hold for the whole search.
  */
 public final class AlldifferentCuts {
 
@@ -62,10 +74,33 @@ public final class AlldifferentCuts {
   private static final double MIN_VIOLATION = 1e-4;
   private static final double RELATIVE_VIOLATION = 1e-6;
 
+  // no limit on the copies of a value
+  private static final long UNLIMITED = Long.MAX_VALUE;
+
   private final IntVar[] list;
+
+  // the values with their own limits, increasing, or an empty array for a plain all-different
+  private final int[] special;
+
+  // the counter of each special value, or null when the limits are fixed
+  private final IntVar[] counters;
+
+  // the fixed limits of the special values when there are no counters
+  private final long[] fixedLeast;
+  private final long[] fixedMost;
+
+  // the most copies of a value that is not special: 1, 0 (closed cardinality) or UNLIMITED
+  private final long otherMost;
 
   // the domains of the variables at the first separation
   private IntDomain[] domains;
+
+  // the limits of the special values at the first separation, the most at most list.length
+  private long[] least;
+  private long[] most;
+
+  // for each special value, the variables whose domain holds it at the first separation
+  private int[] holding;
 
   /**
    * A cut over variables of the constraint: {@code sum x[vars] >= bound} when lower, else {@code
@@ -132,7 +167,96 @@ public final class AlldifferentCuts {
    * @param list the variables, pairwise distinct
    */
   public AlldifferentCuts(IntVar[] list) {
+    this(list, new int[0], null, null, null, 1);
+  }
+
+  private AlldifferentCuts(
+      IntVar[] list,
+      int[] special,
+      IntVar[] counters,
+      long[] fixedLeast,
+      long[] fixedMost,
+      long otherMost) {
     this.list = list.clone();
+    this.special = special;
+    this.counters = counters;
+    this.fixedLeast = fixedLeast;
+    this.fixedMost = fixedMost;
+    this.otherMost = otherMost;
+  }
+
+  /**
+   * It creates the separation of the cuts of an all-different constraint with exceptions: the
+   * variables that do not take an exception value are pairwise distinct (alldifferent_except_0 for
+   * the exception 0).
+   *
+   * @param list the variables, pairwise distinct
+   * @param exceptions the values that any number of the variables may take
+   * @return the separation
+   */
+  public static AlldifferentCuts except(IntVar[] list, int[] exceptions) {
+    int[] values = Arrays.stream(exceptions).sorted().distinct().toArray();
+    long[] none = new long[values.length];
+    long[] all = new long[values.length];
+    Arrays.fill(all, UNLIMITED);
+    return new AlldifferentCuts(list, values, null, none, all, 1);
+  }
+
+  /**
+   * It creates the separation of the cuts of a global cardinality constraint: values[k] is taken by
+   * a number of the variables within the bounds of counters[k].
+   *
+   * @param list the variables, pairwise distinct
+   * @param values the counted values, pairwise distinct
+   * @param counters the counter of each value
+   * @param closed whether the variables take only counted values; otherwise any number of them take
+   *     the other values
+   * @return the separation
+   */
+  public static AlldifferentCuts cardinality(
+      IntVar[] list, int[] values, IntVar[] counters, boolean closed) {
+    Integer[] order = sortedPositions(values);
+    int[] v = new int[values.length];
+    IntVar[] c = new IntVar[values.length];
+    for (int k = 0; k < v.length; k++) {
+      v[k] = values[order[k]];
+      c[k] = counters[order[k]];
+    }
+    return new AlldifferentCuts(list, v, c, null, null, closed ? 0 : UNLIMITED);
+  }
+
+  /**
+   * It creates the separation of the cuts of a global cardinality constraint with fixed bounds:
+   * values[k] is taken by between least[k] and most[k] of the variables.
+   *
+   * @param list the variables, pairwise distinct
+   * @param values the counted values, pairwise distinct
+   * @param least the least number of variables taking each value
+   * @param most the most number of variables taking each value
+   * @param closed whether the variables take only counted values
+   * @return the separation
+   */
+  public static AlldifferentCuts cardinality(
+      IntVar[] list, int[] values, int[] least, int[] most, boolean closed) {
+    Integer[] order = sortedPositions(values);
+    int[] v = new int[values.length];
+    long[] l = new long[values.length];
+    long[] u = new long[values.length];
+    for (int k = 0; k < v.length; k++) {
+      v[k] = values[order[k]];
+      l[k] = least[order[k]];
+      u[k] = most[order[k]];
+    }
+    return new AlldifferentCuts(list, v, null, l, u, closed ? 0 : UNLIMITED);
+  }
+
+  private static Integer[] sortedPositions(int[] values) {
+    Integer[] order = new Integer[values.length];
+    for (int k = 0; k < order.length; k++) {
+      order[k] = k;
+    }
+    Arrays.sort(order, Comparator.comparingInt(k -> values[k]));
+    return order;
   }
 
   /**
@@ -142,6 +266,15 @@ public final class AlldifferentCuts {
    */
   public IntVar[] literals() {
     return list.clone();
+  }
+
+  /**
+   * It tells whether the constraint is a plain all-different, without values of their own limits.
+   *
+   * @return true for an all-different
+   */
+  public boolean plain() {
+    return special.length == 0 && otherMost == 1;
   }
 
   /**
@@ -156,38 +289,71 @@ public final class AlldifferentCuts {
     for (int k = 0; k < copied.length; k++) {
       copied[k] = map.get(list[k]);
     }
-    AlldifferentCuts c = new AlldifferentCuts(copied);
+    IntVar[] copiedCounters = null;
+    if (counters != null) {
+      copiedCounters = new IntVar[counters.length];
+      for (int k = 0; k < counters.length; k++) {
+        copiedCounters[k] = map.get(counters[k]);
+      }
+    }
+    AlldifferentCuts c =
+        new AlldifferentCuts(copied, special, copiedCounters, fixedLeast, fixedMost, otherMost);
     c.domains = domains;
+    c.least = least;
+    c.most = most;
+    c.holding = holding;
     return c;
+  }
+
+  // the domains and the limits of now, the root
+  private void init() {
+    int n = list.length;
+    domains = new IntDomain[n];
+    for (int i = 0; i < n; i++) {
+      domains[i] = list[i].dom().cloneLight();
+    }
+    int m = special.length;
+    least = new long[m];
+    most = new long[m];
+    holding = new int[m];
+    for (int k = 0; k < m; k++) {
+      least[k] = counters != null ? Math.max(0, counters[k].min()) : fixedLeast[k];
+      most[k] = Math.min(n, counters != null ? counters[k].max() : fixedMost[k]);
+      for (int i = 0; i < n; i++) {
+        holding[k] += domains[i].contains(special[k]) ? 1 : 0;
+      }
+    }
   }
 
   /**
    * It returns the cuts violated by values of the variables, the most effective first. The first
-   * call takes the current domains of the variables, which must be those of the root.
+   * call takes the current domains of the variables (and bounds of the counters), which must be
+   * those of the root.
    *
-   * @param value the value of each variable in the LP solution
+   * @param value the value of each variable in the LP solution, NaN for a variable left out of
+   *     every cut (one that is not a column of the LP)
    * @param limit the most cuts returned
    * @return the cuts
    */
   public List<Cut> separate(double[] value, int limit) {
     int n = list.length;
     if (domains == null) {
-      domains = new IntDomain[n];
-      for (int i = 0; i < n; i++) {
-        domains[i] = list[i].dom().cloneLight();
+      init();
+    }
+    List<Integer> present = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      if (!Double.isNaN(value[i])) {
+        present.add(i);
       }
     }
-    Integer[] order = new Integer[n];
-    for (int i = 0; i < n; i++) {
-      order[i] = i;
-    }
+    Integer[] order = present.toArray(new Integer[0]);
     Arrays.sort(order, Comparator.comparingDouble(i -> value[i]));
     List<Cut> cuts = new ArrayList<>();
     try {
       prefixes(order, value, true, cuts);
-      Integer[] reversed = new Integer[n];
-      for (int i = 0; i < n; i++) {
-        reversed[i] = order[n - 1 - i];
+      Integer[] reversed = new Integer[order.length];
+      for (int i = 0; i < order.length; i++) {
+        reversed[i] = order[order.length - 1 - i];
       }
       prefixes(reversed, value, false, cuts);
     } catch (ArithmeticException overflow) {
@@ -201,15 +367,23 @@ public final class AlldifferentCuts {
   // values of the union of its domains (lower), or <= the sum of the largest ones
   private void prefixes(Integer[] order, double[] value, boolean lower, List<Cut> cuts) {
     IntDomain union = new IntervalDomain();
+    int[] inside = new int[special.length];
     double sum = 0;
     for (int k = 0; k < order.length; k++) {
       int i = order[k];
       union = union.union(domains[i]);
+      for (int t = 0; t < special.length; t++) {
+        inside[t] += domains[i].contains(special[t]) ? 1 : 0;
+      }
       sum += value[i];
       if (k == 0) {
         continue; // a variable alone is held by its bounds
       }
-      long bound = extremeSum(union, k + 1, lower);
+      Long bound =
+          plain() ? extremeSum(union, k + 1, lower) : multisetSum(union, k + 1, inside, lower);
+      if (bound == null) {
+        continue;
+      }
       double violation = lower ? bound - sum : sum - bound;
       if (violation > MIN_VIOLATION + RELATIVE_VIOLATION * Math.abs((double) bound)) {
         int[] vars = new int[k + 1];
@@ -220,6 +394,81 @@ public final class AlldifferentCuts {
         cuts.add(new Cut(vars, lower, bound, violation / Math.sqrt(k + 1.0)));
       }
     }
+  }
+
+  /**
+   * Returns the least (or greatest) sum of a multiset of k values of a domain that takes each
+   * special value v at least {@code least_v - (holding_v - inside_v)} and at most {@code
+   * min(most_v, inside_v)} times and any other value at most otherMost times, or null when the
+   * least copies do not fit in k. When the domain runs out of copies the values go on past it, as
+   * in {@link #extremeSum}.
+   */
+  private Long multisetSum(IntDomain d, int k, int[] inside, boolean smallest) {
+    // segments of values in increasing order: [from, to] with the copies of each value
+    List<long[]> segments = new ArrayList<>();
+    long[] forced = new long[special.length];
+    long left = k;
+    long sum = 0;
+    int s = 0;
+    for (IntervalEnumeration en = d.intervalEnumeration(); en.hasMoreElements(); ) {
+      var in = en.nextElement();
+      long from = in.min();
+      while (s < special.length && special[s] < from) {
+        s++;
+      }
+      while (s < special.length && special[s] <= in.max()) {
+        long v = special[s];
+        if (from < v) {
+          segments.add(new long[] {from, v - 1, otherMost});
+        }
+        long cap = Math.min(most[s], inside[s]);
+        long need = Math.min(cap, Math.max(0, least[s] - (holding[s] - inside[s])));
+        forced[s] = need;
+        sum = Math.addExact(sum, Math.multiplyExact(need, v));
+        left -= need;
+        segments.add(new long[] {v, v, cap - need});
+        from = v + 1;
+        s++;
+      }
+      if (from <= in.max()) {
+        segments.add(new long[] {from, in.max(), otherMost});
+      }
+    }
+    if (left < 0) {
+      return null;
+    }
+    if (segments.isEmpty()) {
+      return 0L;
+    }
+    for (int t = 0; t < segments.size() && left > 0; t++) {
+      long[] g = segments.get(smallest ? t : segments.size() - 1 - t);
+      long copies = g[2];
+      if (copies == 0) {
+        continue;
+      }
+      long size = g[1] - g[0] + 1;
+      if (copies == UNLIMITED || g[0] == g[1]) {
+        // one value (or the end of the segment) takes all it can
+        long take = copies == UNLIMITED ? left : Math.min(copies, left);
+        long at = smallest ? g[0] : g[1];
+        sum = Math.addExact(sum, Math.multiplyExact(take, at));
+        left -= take;
+        continue;
+      }
+      // a run of distinct values, one copy each
+      long take = Math.min(size, left);
+      long first = smallest ? g[0] : g[1] - take + 1;
+      sum = Math.addExact(sum, Math.multiplyExact(take, first) + take * (take - 1) / 2);
+      left -= take;
+    }
+    if (left > 0) {
+      // too few copies: as if the values went on past the domain, which no assignment reaches
+      long end = smallest ? segments.get(segments.size() - 1)[1] : segments.get(0)[0];
+      for (long v = 1; v <= left; v++) {
+        sum = Math.addExact(sum, smallest ? end + v : end - v);
+      }
+    }
+    return sum;
   }
 
   /**

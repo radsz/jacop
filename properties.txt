@@ -270,6 +270,9 @@ unless stated otherwise):
   whose cost is a sum of arc costs.
 - org.jacop.fz.circuitCostPair: the pair reasoning of CircuitCost;
   default true without LCG and false with LCG.
+- org.jacop.fz.colouredTree: ColouredSpanningTreeBound on
+  weighted_spanning_tree with limits on the number of tree edges in
+  disjoint edge sets (colours); default true.
 - org.jacop.fz.costAlldifferent: CostAlldifferent for such costs.
 - org.jacop.fz.costGcc: CostGCC for such costs; default false.
 - org.jacop.fz.conditionalSelect: if_then_else on integers as
@@ -594,6 +597,16 @@ Cuts:
   search; default 10.
 - org.jacop.lp.energyCuts: energy cuts of cumulative resources at the
   root; default true.
+- org.jacop.lp.alldiffCuts: Hall cuts of all-different constraints at
+  the root, for an objective; default true.
+- org.jacop.lp.alldiffVariants: the same cuts, with value copies, for
+  all-different with exceptions (alldifferent_except_0) and global
+  cardinality constraints (GCC, CountValues, CountValuesBounds);
+  default true.
+- org.jacop.lp.alldiffSearch: Hall cuts also in search, every few LP
+  solves; default false.
+- org.jacop.lp.alldiffSearchCuts: the most Hall cuts per separation in
+  search; default 10.
 - org.jacop.lp.treeCuts: generalized subtour elimination cuts of the
   forests of Tree and Path (MiniZinc tree, dtree, path, dpath) at the
   root, for an objective; a model with them also takes all its other
