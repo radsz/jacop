@@ -3600,17 +3600,29 @@ public class LinearRelaxation extends Constraint
         mir(g, value, lo, hi, found);
       }
     }
+    List<MirCut> covers = new ArrayList<>();
     for (Aggregate row : unitRows) {
       mir(row, value, lo, hi, found);
       if (COVER_CUTS) {
-        cover(row, value, lo, hi, found);
+        cover(row, value, lo, hi, covers);
       }
     }
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
     List<MirCut> chosen = new ArrayList<>();
+    choose(found, chosen, seen, CUTS_PER_ROUND, n);
+    // the cover cuts come on top of the MIR cuts, with their own budget, so that they do not
+    // push out MIR cuts that close more of the gap (trucking 05: 287 to 284.6 when they compete)
+    covers.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
+    choose(covers, chosen, seen, chosen.size() + CUTS_PER_ROUND, n);
+    return chosen;
+  }
+
+  // adds the cuts, most efficacious first, that are new and far from parallel to those chosen
+  private void choose(
+      List<MirCut> found, List<MirCut> chosen, Set<List<Long>> seen, int limit, int n) {
     for (MirCut c : found) {
       long m = (long) lp.rows() + chosen.size() + 1;
-      if (chosen.size() >= CUTS_PER_ROUND || simplex == Simplex.DENSE && m * (m + n) > tableauCap) {
+      if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > tableauCap) {
         break;
       }
       List<Long> key = new ArrayList<>();
@@ -3624,7 +3636,6 @@ public class LinearRelaxation extends Constraint
         chosen.add(c);
       }
     }
-    return chosen;
   }
 
   // whether the cut is far enough from parallel to each of the cuts chosen
