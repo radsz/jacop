@@ -92,6 +92,10 @@ Constraints (core):
 - org.jacop.weightedCompletion.reasonRounds: the halvings tried when
   weakening such a reason; default 4.
 
+- org.jacop.lateCount.releases: LateCount bounds the late tasks from
+  the best origin, with the processing before it relaxed, instead of
+  from the earliest start of all; default true.
+
 - org.jacop.unaryEarlinessTardiness.blocks: the most blocks of time
   slots of a machine in the assignment bound of
   UnaryEarlinessTardiness; slots are grouped into blocks of equal
@@ -387,6 +391,9 @@ unless stated otherwise):
 - org.jacop.fz.weightedCompletion.parallel: the same detection on
   cumulatives of capacity above 1.
 - org.jacop.fz.lateCount: detection of counts of late tasks.
+- org.jacop.fz.lateCount.dominance: the dominance rule of Baptiste,
+  Peridy and Pinson in the detected LateCount, where nothing else
+  constrains the tasks; default true.
 - org.jacop.fz.xorSystem: XorSystem (Gauss-Jordan over GF(2)) for the
   parity constraints.
 - jacop.fz.xorSystemRows, jacop.fz.xorSystemCells: the largest XOR
@@ -527,7 +534,8 @@ Literals and clauses:
 Explanations:
 
 - jacop.lcg.lift: reasons lifted, bounds weakened as far as the
-  propagation allows; default true.
+  propagation allows, and a value excluded by a bound explained by the
+  earliest bound beyond it; default true.
 - jacop.lcg.replay: replayed explanations; default true.
 - jacop.lcg.replayGroups: reasons with more groups than this get the
   generic reason; default 256.
@@ -621,6 +629,8 @@ Cuts:
   apart is scaled down instead of dropped; default true.
 - org.jacop.lp.slackGomory: root Gomory cuts over the rows and their
   slacks (false: MIR of the aggregate of the rows alone); default true.
+- org.jacop.lp.knapsackRows: the weight and profit rows of Knapsack
+  (jacop_knapsack) are linearised rows of the LP; default true.
 - org.jacop.lp.capacityCuts: rounded capacity cuts of Routes at the
   root; default true.
 - org.jacop.lp.capacityRounds: their rounds; default 50.

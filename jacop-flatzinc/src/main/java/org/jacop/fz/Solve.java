@@ -2261,6 +2261,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // objective shaving in those runs: each assumes the objective a growing step above its bound
       lcg.setShaving("on".equals(options.freeConfig("lcg-shave", "on")));
       lcg.setLowerBoundGrowth(Double.parseDouble(options.freeConfig("lcg-lb-growth", "1")));
+      // dichotomic bound search in place of the core-guided phase, for a portfolio thread on the
+      // lower bound, until the relative gap is within this share of the best solution
+      lcg.setBisection(Double.parseDouble(options.freeConfig("lcg-bisect", "0")));
       // core-guided search for a sum objective before branch and bound: its share of the time,
       // and the conflicts one call of the solver may take before it stops. With cost variables
       // first, branch and bound finds near-optimal solutions at once and needs the time more:
@@ -2740,6 +2743,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.lowerBoundRuns
             + "\n%%%mzn-stat: lcgLowerBoundRaised="
             + lcg.lowerBoundRaised
+            + bisectStatistics(lcg)
             + coreStatistics()
             + lnsStatistics(lcg.lns())
             + sharingStatistics(lcg)
@@ -2773,6 +2777,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     lcg.setSharedClauses(worker.sharedClauses(), added, names::get, size, lbd);
+  }
+
+  // the probes of dichotomic bound search (lcg-bisect), when it ran
+  private static String bisectStatistics(LcgSolver lcg) {
+    if (lcg.bisectProbes == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lcgBisectProbes="
+        + lcg.bisectProbes
+        + "\n%%%mzn-stat: lcgBisectRaised="
+        + lcg.bisectRaised
+        + "\n%%%mzn-stat: lcgBisectLimits="
+        + lcg.bisectLimits;
   }
 
   private static String sharingStatistics(LcgSolver lcg) {
