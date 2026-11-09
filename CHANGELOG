@@ -4004,6 +4004,13 @@ Version 5.0 (unreleased)
      old rule, =loose drops the condition on the values, =all lifts the
      limits.
 
+231. fzn-jacop prints the running objective bound (%%%mzn-stat:
+     objectiveBound and objectiveBoundTime, one stat block per better
+     bound) only in verbose mode, with -s -v or --search-statistics.
+     With -s alone these blocks came out many times during the search
+     and hid the solutions; -s now prints only the solutions and the
+     final statistics. --gap still stops at the same bound.
+
 Version 4.11
 =============
 
