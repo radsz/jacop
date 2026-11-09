@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.BoolClause;
@@ -2071,6 +2072,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     lcg.setRestartPresolve(options.presolveRestart());
+    // the hints of constraints first; a solution of local search replaces them
+    Hint constraintHint = constraintHints();
+    if (constraintHint != null) {
+      lcg.setPhase(constraintHint.vars, constraintHint.values);
+    }
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2200,6 +2206,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!free && lpGuided) {
       // fixed search: the runs of activity branching between the annotation's runs start from it
       lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
+    }
+    if (defaultSearch && constraintHint != null) {
+      // no search annotation: the runs of the default search start with the values of the hints
+      IndomainLastSolution hinted =
+          new IndomainLastSolution(constraintHint.vars, new IndomainMin<>());
+      hinted.hint(constraintHint.vars, constraintHint.values);
+      SelectChoicePoint<IntVar> first = new SimpleSelect<>(constraintHint.vars, null, hinted);
+      annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
     lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
@@ -3031,6 +3045,53 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   // the integer variables of the store not fixed at the root, which a solution hint covers
+  /** Variables with the values a hint prefers for them. */
+  private static final class Hint {
+    final IntVar[] vars;
+    final int[] values;
+
+    Hint(IntVar[] vars, int[] values) {
+      this.vars = vars;
+      this.values = values;
+    }
+  }
+
+  /**
+   * The hints of the constraints that give one ({@link SolutionHint}), such as a feasible tree of
+   * {@link org.jacop.constraints.graph.ColouredSpanningTreeBound}, or null when there is none or
+   * -Dorg.jacop.fz.constraintHints is false. A variable hinted twice keeps its first value.
+   */
+  private Hint constraintHints() {
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.constraintHints"))) {
+      return null;
+    }
+    Map<IntVar, Integer> seen = new IdentityHashMap<>();
+    List<IntVar> vars = new ArrayList<>();
+    List<Integer> values = new ArrayList<>();
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof SolutionHint h && h.hintValues() != null) {
+        IntVar[] xs = h.hintVariables();
+        int[] vs = h.hintValues();
+        for (int i = 0; i < xs.length; i++) {
+          if (!xs[i].singleton()
+              && xs[i].domain.contains(vs[i])
+              && seen.putIfAbsent(xs[i], vs[i]) == null) {
+            vars.add(xs[i]);
+            values.add(vs[i]);
+          }
+        }
+      }
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    if (options.debug()) {
+      IO.println("% constraint hints: " + vars.size() + " variables");
+    }
+    return new Hint(
+        vars.toArray(new IntVar[0]), values.stream().mapToInt(Integer::intValue).toArray());
+  }
+
   private IntVar[] hintedVariables() {
     Set<IntVar> all = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < store.size(); i++) {
@@ -3209,6 +3270,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               : FreeSearch.Alternation.EVERY_RESTART);
     }
     Portfolio.Worker worker = options.portfolioWorker();
+    Hint constraintHint = allSolutions || phaseSavers.isEmpty() ? null : constraintHints();
+    if (constraintHint != null) {
+      // the first run follows the hints of constraints, unless local search gives a solution
+      for (IndomainLastSolution saver : phaseSavers) {
+        saver.hint(constraintHint.vars, constraintHint.values);
+      }
+      builder.mainBranchingFirst(true);
+    }
     if (!allSolutions && !onRestart && !phaseSavers.isEmpty()) {
       localSearchPhase(costVar, searchVars, worker, builder);
     }

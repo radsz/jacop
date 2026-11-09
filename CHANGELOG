@@ -3722,7 +3722,30 @@ Version 5.0 (unreleased)
      Challenge or wide-set model combines weighted_spanning_tree with
      such limits, so the default benchmarks are not affected.
 
-216. Values (MiniZinc nvalue) reads its difference graph once more at its
+216. ColouredSpanningTreeBound and SpanningTreeBound give their own LCG
+     reasons, and ColouredSpanningTreeBound a solution hint. The reasons
+     follow the cycle and cut optimality conditions of minimum spanning
+     trees (Tarjan, Sensitivity analysis of minimum spanning trees, Inf.
+     Process. Lett. 14, 1982): a lower bound on the cost cites only the
+     excluded edges cheaper than an edge of their tree path and the
+     selected edges that a cheaper edge could replace; the removal or
+     selection of an edge adds the edges of its tree path or of its
+     fundamental cut and the maximum of the cost. A coloured tree rebuilds
+     its bound with the multipliers of its last calls; the absence of a
+     common base keeps the generic reason. The hint is the Lagrangian
+     tree made a common base and improved by edge swaps, given when its
+     weight meets the lower bound of the cost (so it is optimal); the
+     FlatZinc front end tries the values of such hints first when the
+     model has no search annotation and puts them in the saved phases
+     (-Dorg.jacop.fz.constraintHints=false turns it off). On rb_100_s2
+     under --lcg the generic share of reasons drops from 0.48 to 0.06 and
+     the average reason from 128 to 41 atoms. On the 39 instances of
+     osolpro benchmarks/matroid-intersection at 600 s the total time
+     drops from 1121 s to 506 s (all proved before and after), e.g.
+     ccd_100_20_s3 34 s instead of 486 s, cc_150_30_s2 2.4 s instead of
+     52 s, and five instances 1-1.5 s instead of 19-20 s.
+
+217. Values (MiniZinc nvalue) reads its difference graph once more at its
      first call below the root, from the root constraints and domains.
      Before, it read the graph only at root calls, so a difference
      constraint imposed after its last root call was missed when nothing
@@ -3734,7 +3757,7 @@ Version 5.0 (unreleased)
      call instead of 180 to 900 on the XCSP Rlfap instances, with the
      same pruning.
 
-217. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
+218. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
      Pr(sum(i) w[i] * x[i] <= c) >= alphaNum / alphaDen for independent
      random weights w[i] (Dist), x[i] >= 0 and a capacity variable c.
      It never lists the joint scenarios: a convolution over the loads
