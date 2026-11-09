@@ -4021,6 +4021,21 @@ Version 5.0 (unreleased)
      values that kill the tuples of the heaviest scenarios. FlatZinc:
      chance_table in jacop_prob.mzn.
 
+233. ProbMdd (jacop-prob): p = floor(scale * Pr(T)) for a layered
+     decision diagram of decision levels (edges labelled by the values
+     of one variable) and chance levels (edges with probability
+     numerators), the compiled form of stochastic constraint problems
+     and probabilistic programs (Babaki, Guns and De Raedt, "Stochastic
+     constraint optimization using propagation on ordered binary
+     decision diagrams", StarAI 2017; Latour et al., "Combining
+     stochastic constraint optimization and probabilistic programming",
+     CP 2017). Two passes in the (+, max) semiring bound p and remove
+     the values whose edges carry too little mass; with all decisions
+     fixed, Pr(T) is computed exactly on big integers. The passes use
+     doubles rounded outward. Lazy clause generation gets the removed
+     labels of the other levels and the bound of p. FlatZinc: prob_mdd
+     in jacop_prob.mzn.
+
 Version 4.11
 =============
 

@@ -830,6 +830,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_chance_table(n);
   }
 
+  /** Handles the jacop_prob_mdd FlatZinc constraint. */
+  public void jacop_prob_mdd(SimpleNode n) {
+    gc.gen_jacop_prob_mdd(n);
+  }
+
   /** Handles the jacop_chance_sum FlatZinc constraint. */
   public void jacop_chance_sum(SimpleNode n) {
     gc.gen_jacop_chance_sum(n);

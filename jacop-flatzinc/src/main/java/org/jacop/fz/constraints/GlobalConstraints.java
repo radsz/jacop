@@ -157,6 +157,7 @@ import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.prob.constraints.ChanceSum;
 import org.jacop.prob.constraints.ChanceTable;
+import org.jacop.prob.constraints.ProbMdd;
 import org.jacop.prob.constraints.ScenarioChance;
 import org.jacop.prob.dist.Dist;
 import org.jacop.prob.num.ProbArith;
@@ -2381,6 +2382,29 @@ class GlobalConstraints implements ParserTreeConstants {
       throw new IllegalArgumentException("jacop_chance_table: arrays of the wrong length");
     }
     support.delayedConstraints.add(new ChanceTable(x, scopes, tuples, scenarios, weights, p));
+  }
+
+  void gen_jacop_prob_mdd(SimpleNode node) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] levelVar = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] levelDen = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    int[] levelSize = support.getIntArray((SimpleNode) node.jjtGetChild(3));
+    int[] nodeEdges = support.getIntArray((SimpleNode) node.jjtGetChild(4));
+    int[] edgeLabel = support.getIntArray((SimpleNode) node.jjtGetChild(5));
+    int[] edgeTo = support.getIntArray((SimpleNode) node.jjtGetChild(6));
+    int scale = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(7));
+    IntVar p = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(8));
+
+    int[] var = new int[levelVar.length];
+    for (int l = 0; l < var.length; l++) {
+      var[l] = levelVar[l] - 1;
+    }
+    int[] target = new int[edgeTo.length];
+    for (int e = 0; e < target.length; e++) {
+      target[e] = edgeTo[e] - 1;
+    }
+    support.delayedConstraints.add(
+        new ProbMdd(x, var, levelDen, levelSize, nodeEdges, edgeLabel, target, scale, p));
   }
 
   void gen_jacop_mdd(SimpleNode node) {

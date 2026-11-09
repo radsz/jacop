@@ -118,6 +118,7 @@ class MznlibGlobalsTest {
         "hook_scenario_chance",
         "hook_chance_sum",
         "hook_chance_table",
+        "hook_prob_mdd",
         "hook_channel"
       })
   void sameSolutionsAsDecomposition(String model) {

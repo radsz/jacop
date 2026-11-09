@@ -89,3 +89,30 @@ predicate chance_table(array[int] of var int: x, array[int] of int: scope_len,
          "chance_table: a position, a table index or a weight is out of range") /\
   jacop_chance_table(array1d(x), array1d(scope_len), array1d(scope), array1d(rows),
                      array1d(tuples), array1d(scen_len), array1d(scen_tables), array1d(prob), p);
+
+% The native constraint: the arguments of prob_mdd, with x as a one-dimensional array.
+predicate jacop_prob_mdd(array[int] of var int: x, array[int] of int: level_var,
+                         array[int] of int: level_den, array[int] of int: level_size,
+                         array[int] of int: node_edges, array[int] of int: edge_label,
+                         array[int] of int: edge_to, int: scale, var int: p);
+
+/** The probability that a layered decision diagram reaches its true sink: p = floor(scale * Pr).
+  Level l is a decision level of the variable x[level_var[l]] (a position from 1), or a chance
+  level when level_var[l] = 0, whose edges carry probability numerators over level_den[l]. Level l
+  has level_size[l] nodes (the first one node, the root); the nodes, level by level, have
+  node_edges[n] edges each, and the edges, node by node, a label (a value of the level's variable,
+  or a probability numerator) and a target edge_to, the position from 1 of a node of the next level,
+  or 0 for the true sink, which only the last level reaches. A missing edge leads to the false
+  sink. Each variable labels at most one level. */
+predicate prob_mdd(array[int] of var int: x, array[int] of int: level_var,
+                   array[int] of int: level_den, array[int] of int: level_size,
+                   array[int] of int: node_edges, array[int] of int: edge_label,
+                   array[int] of int: edge_to, int: scale, var int: p) =
+  assert(length(level_var) = length(level_den) /\ length(level_var) = length(level_size)
+         /\ sum(level_size) = length(node_edges) /\ sum(node_edges) = length(edge_label)
+         /\ length(edge_label) = length(edge_to),
+         "prob_mdd: the lengths of the arrays do not match") /\
+  assert(forall(l in index_set(level_var))(level_var[l] >= 0 /\ level_var[l] <= length(x)),
+         "prob_mdd: a level variable is out of range") /\
+  jacop_prob_mdd(array1d(x), array1d(level_var), array1d(level_den), array1d(level_size),
+                 array1d(node_edges), array1d(edge_label), array1d(edge_to), scale, p);
