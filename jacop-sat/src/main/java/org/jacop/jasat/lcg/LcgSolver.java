@@ -3209,13 +3209,21 @@ public final class LcgSolver implements ExternalPropagator {
     long end = Math.min(System.nanoTime() + nanos, sat.deadline());
     while (System.nanoTime() < end) {
       int[] fixed = lns.neighbourhood();
-      int[] assumed = new int[fixed.length];
+      int[] upper = lns.upperBounded();
+      int[] assumed = new int[fixed.length + upper.length];
       int n = 0;
       for (int k : fixed) {
         int i = lnsIds[k];
         int v = lns.value(k);
         if (i >= 0 && !vars[i].singleton() && vars[i].domain.contains(v)) {
           assumed[n++] = eqVar(i, v);
+        }
+      }
+      for (int k : upper) {
+        int i = lnsIds[k];
+        int v = lns.value(k);
+        if (i >= 0 && !vars[i].singleton() && v >= vars[i].min() && v < vars[i].max()) {
+          assumed[n++] = -geVar(i, v + 1);
         }
       }
       long before = best[objective];

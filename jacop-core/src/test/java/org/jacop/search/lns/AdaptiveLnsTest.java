@@ -199,6 +199,104 @@ class AdaptiveLnsTest {
     }
   }
 
+  /**
+   * The best solution given by values, as free search gives it the solution of LCG that the store
+   * no longer admits, makes the same neighbourhoods as the same solution held by the store; a
+   * solution that leaves a variable of the neighbourhoods without a value is not recorded.
+   */
+  @Test
+  void solutionByValuesMakesTheSameNeighbourhoods() {
+    AdaptiveLns held = withSolution(7);
+    AdaptiveLns given = new AdaptiveLns(store, x, cost, new Random(7));
+    assertFalse(given.solution(java.util.Arrays.copyOf(x, N - 1), new int[N - 1]));
+    assertFalse(given.ready());
+    int[] values = new int[N + 1];
+    IntVar[] all = java.util.Arrays.copyOf(x, N + 1);
+    all[N] = cost;
+    for (int i = 0; i < N; i++) {
+      values[i] = i;
+      values[N] += (i + 1) * i;
+    }
+    assertTrue(given.solution(all, values));
+    assertTrue(given.ready());
+    for (AdaptiveLns.Kind kind :
+        new AdaptiveLns.Kind[] {
+          AdaptiveLns.Kind.RANDOM, AdaptiveLns.Kind.GRAPH, AdaptiveLns.Kind.OBJECTIVE
+        }) {
+      for (int k = 0; k < 10; k++) {
+        assertEquals(
+            java.util.Arrays.toString(held.neighbourhood(kind)),
+            java.util.Arrays.toString(given.neighbourhood(kind)));
+      }
+    }
+    for (int i = 0; i < N; i++) {
+      assertEquals(held.value(i), given.value(i));
+    }
+  }
+
+  /**
+   * A shift neighbourhood relaxes the tasks of a window of time, bounds those after it from above
+   * by their starts in the best solution and fixes those before it, so the best solution stays in
+   * the neighbourhood and the schedule after the window can move to the left.
+   */
+  @Test
+  void shiftBoundsTheTasksAfterTheWindow() {
+    Store s = new Store();
+    int n = 12;
+    IntVar[] start = new IntVar[n];
+    IntVar[] one = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      start[i] = new IntVar(s, "t" + i, 0, 2 * n);
+      one[i] = new IntVar(s, 1, 1);
+    }
+    s.impose(new Cumulative(start, one, one, new IntVar(s, 1, 1)));
+    IntVar c = new IntVar(s, "c", 0, 1000);
+    AdaptiveLns lns = new AdaptiveLns(s, start, c, new Random(5));
+    // task i starts at 2 * (n - 1 - i): later tasks have smaller indices
+    int[] at = new int[n];
+    for (int i = 0; i < n; i++) {
+      at[i] = 2 * (n - 1 - i);
+    }
+    assertTrue(lns.solution(start, at));
+    int bounds = 0;
+    for (int k = 0; k < 50; k++) {
+      int[] fixed = lns.neighbourhood(AdaptiveLns.Kind.SHIFT);
+      int[] bounded = lns.upperBounded();
+      boolean[] isFixed = new boolean[n];
+      boolean[] isBounded = new boolean[n];
+      for (int i : fixed) {
+        isFixed[i] = true;
+      }
+      for (int i : bounded) {
+        assertFalse(isFixed[i]);
+        assertEquals(at[i], lns.value(i));
+        isBounded[i] = true;
+      }
+      bounds += bounded.length;
+      int windowFirst = Integer.MAX_VALUE;
+      int windowLast = Integer.MIN_VALUE;
+      for (int i = 0; i < n; i++) {
+        if (!isFixed[i] && !isBounded[i]) {
+          windowFirst = Math.min(windowFirst, at[i]);
+          windowLast = Math.max(windowLast, at[i]);
+        }
+      }
+      assertTrue(windowFirst <= windowLast);
+      for (int i = 0; i < n; i++) {
+        if (isFixed[i]) {
+          assertTrue(at[i] < windowFirst);
+        } else if (isBounded[i]) {
+          assertTrue(at[i] > windowLast);
+        }
+      }
+      lns.outcome(AdaptiveLns.Outcome.LIMIT);
+    }
+    assertTrue(bounds > 0);
+    // the other kinds bound nothing
+    lns.neighbourhood(AdaptiveLns.Kind.SCHEDULING);
+    assertEquals(0, lns.upperBounded().length);
+  }
+
   @Test
   void packingRelaxesRectanglesNearEachOther() {
     // 16 unit squares; the decision variables are their x and y origins
