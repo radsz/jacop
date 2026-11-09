@@ -65,10 +65,10 @@ final class MirCut {
   static final boolean REDUCE_CUTS = !"false".equals(System.getProperty("org.jacop.lp.reduceCuts"));
 
   // the largest ratio of the weights of a cut, against badly scaled rows in the simplex
-  static final double MAX_RATIO = 1e4;
+  private static final double MAX_RATIO = 1e4;
 
   // the largest weight of a cut, so that combinations with the rows stay within a long
-  static final long MAX_WEIGHT = 1L << 24;
+  private static final long MAX_WEIGHT = 1L << 24;
 
   /** The columns of the cut. */
   final int[] columns;
@@ -85,16 +85,7 @@ final class MirCut {
   /** The Euclidean norm of the weights. */
   final double norm;
 
-  /** Whether the cut is a lifted cover cut ({@link CoverCut}). */
-  final boolean cover;
-
   private MirCut(int[] columns, long[] weights, long rhs, double efficacy, double norm) {
-    this(columns, weights, rhs, efficacy, norm, false);
-  }
-
-  private MirCut(
-      int[] columns, long[] weights, long rhs, double efficacy, double norm, boolean cover) {
-    this.cover = cover;
     this.columns = columns;
     this.weights = weights;
     this.rhs = rhs;
@@ -113,26 +104,11 @@ final class MirCut {
    * @return the cut
    */
   static MirCut row(int[] columns, long[] weights, long rhs, double efficacy) {
-    return row(columns, weights, rhs, efficacy, false);
-  }
-
-  /**
-   * Returns a cut found by other means than the MIR, as {@link #row(int[], long[], long, double)},
-   * marked as a lifted cover cut or not.
-   *
-   * @param columns the columns, ascending
-   * @param weights the weight of each column
-   * @param rhs the side
-   * @param efficacy the violation by the LP solution over the norm of the cut
-   * @param cover whether it is a lifted cover cut
-   * @return the cut
-   */
-  static MirCut row(int[] columns, long[] weights, long rhs, double efficacy, boolean cover) {
     double norm = 0;
     for (long w : weights) {
       norm += (double) w * w;
     }
-    return new MirCut(columns, weights, rhs, efficacy, Math.sqrt(norm), cover);
+    return new MirCut(columns, weights, rhs, efficacy, Math.sqrt(norm));
   }
 
   /**

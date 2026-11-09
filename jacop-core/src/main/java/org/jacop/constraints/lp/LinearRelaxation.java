@@ -321,9 +321,6 @@ public class LinearRelaxation extends Constraint
   /** Statistics: cuts added. */
   public long cuts;
 
-  /** Statistics: lifted cover cuts among the cuts added ({@link CoverCut}). */
-  public long coverCuts;
-
   /** Statistics: cuts that did not move the root bound, kept in the pool out of the simplex. */
   public long pooledCuts;
 
@@ -2897,12 +2894,9 @@ public class LinearRelaxation extends Constraint
         if (status == DualSimplex.LIMIT) {
           dropCuts(chosen.size(), kept, keptRows);
           status = DualSimplex.OPTIMAL;
-        } else {
-          coverCuts += chosen.stream().filter(c -> c.cover).count();
         }
         break;
       }
-      coverCuts += chosen.stream().filter(c -> c.cover).count();
     }
     if (moved
         && status == DualSimplex.OPTIMAL
@@ -3700,29 +3694,14 @@ public class LinearRelaxation extends Constraint
         mir(g, value, lo, hi, found);
       }
     }
-    List<MirCut> covers = new ArrayList<>();
     for (Aggregate row : unitRows) {
       mir(row, value, lo, hi, found);
-      if (COVER_CUTS) {
-        cover(row, value, lo, hi, covers);
-      }
     }
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
     List<MirCut> chosen = new ArrayList<>();
-    choose(found, chosen, seen, CUTS_PER_ROUND, n);
-    // the cover cuts come on top of the MIR cuts, with their own budget, so that they do not
-    // push out MIR cuts that close more of the gap (trucking 05: 287 to 284.6 when they compete)
-    covers.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
-    choose(covers, chosen, seen, chosen.size() + CUTS_PER_ROUND, n);
-    return chosen;
-  }
-
-  // adds the cuts, most efficacious first, that are new and far from parallel to those chosen
-  private void choose(
-      List<MirCut> found, List<MirCut> chosen, Set<List<Long>> seen, int limit, int n) {
     for (MirCut c : found) {
       long m = (long) lp.rows() + chosen.size() + 1;
-      if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > tableauCap) {
+      if (chosen.size() >= CUTS_PER_ROUND || simplex == Simplex.DENSE && m * (m + n) > tableauCap) {
         break;
       }
       List<Long> key = new ArrayList<>();
@@ -3736,6 +3715,7 @@ public class LinearRelaxation extends Constraint
         chosen.add(c);
       }
     }
+    return chosen;
   }
 
   // whether the cut is far enough from parallel to each of the cuts chosen
@@ -3760,36 +3740,6 @@ public class LinearRelaxation extends Constraint
       }
     }
     return true;
-  }
-
-  // the lifted cover cuts of the knapsacks within the rows, see CoverCut
-  private static final boolean COVER_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.coverCuts"));
-
-  /**
-   * Adds the lifted cover cuts ({@link CoverCut}, Gu, Nemhauser and Savelsbergh 2000) of both sides
-   * of a row, read as 0-1 knapsacks.
-   */
-  private static void cover(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
-    if (g.hasUpper()) {
-      MirCut c = CoverCut.of(g.columns(), g.coef(), g.upper(), value, lo, hi);
-      if (c != null) {
-        found.add(c);
-      }
-    }
-    if (g.hasLower() && g.lower() != Long.MIN_VALUE) {
-      long[] neg = new long[g.coef().length];
-      for (int k = 0; k < neg.length; k++) {
-        if (g.coef()[k] == Long.MIN_VALUE) {
-          return;
-        }
-        neg[k] = -g.coef()[k];
-      }
-      MirCut c = CoverCut.of(g.columns(), neg, -g.lower(), value, lo, hi);
-      if (c != null) {
-        found.add(c);
-      }
-    }
   }
 
   private static void mir(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
