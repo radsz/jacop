@@ -130,6 +130,13 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
 
   private final List<Resource> resources = new ArrayList<>();
 
+  // the number of constraint arguments each variable occurs in
+  private final Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
+
+  // the dominance rule of LateCount where it is safe: -Dorg.jacop.fz.lateCount.dominance=false
+  private static final boolean DOMINANCE =
+      !OFF.equalsIgnoreCase(System.getProperty("org.jacop.fz.lateCount.dominance"));
+
   // tasks of a resource: start, duration (its minimum is used), use and capacity (1 if unary)
   // a class, not a record: a record compares array components by reference (Sonar S6218)
   private static final class Resource {
@@ -200,6 +207,13 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
             collect((ASTConstElem) item);
+            // bool2int makes one variable of its two (the Boolean and its 0/1 value)
+            for (int a = 0;
+                !"bool2int".equals(((ASTConstElem) item).getName()) && a < item.jjtGetNumChildren();
+                a++) {
+              PartialCopyDetector.countVariables(
+                  support, (SimpleNode) item.jjtGetChild(a), occurrences);
+            }
           }
         }
       }
@@ -637,6 +651,59 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     return count;
   }
 
+  /**
+   * It tells whether the dominance rule of LateCount keeps an optimal solution: every task of the
+   * resource is counted, with one weight, by a Boolean that holds exactly when its start passes a
+   * threshold; each start occurs only in the resource and in that test, each Boolean (with its 0/1
+   * variable of bool2int) only there and in the sum; the durations are fixed, the domains of the
+   * starts are intervals and each start can go up to max(r) + sum(p) - p, so the late tasks fit
+   * after the on time ones.
+   */
+  private boolean dominanceSafe(
+      Resource resource,
+      int[] a,
+      IntVar[] x,
+      int sign,
+      Threshold[] threshold,
+      int[] term,
+      int[] d) {
+    IntVar[] starts = resource.starts();
+    int n = starts.length;
+    long maxRelease = Long.MIN_VALUE;
+    long total = 0;
+    for (int t = 0; t < n; t++) {
+      if (!resource.durations()[t].singleton() || resource.uses()[t] != 1) {
+        return false;
+      }
+      maxRelease = Math.max(maxRelease, starts[t].min());
+      total += d[t];
+    }
+    int weight = sign * a[term[0]];
+    for (int t = 0; t < n; t++) {
+      IntVar s = starts[t];
+      int k = term[t];
+      IntVar y = x[k];
+      IntVar b = boolOf.getOrDefault(y, y);
+      if (sign * a[k] != weight
+          || threshold[k].x() != s
+          || occurrences.getOrDefault(s, 0) != 2
+          || b == y && occurrences.getOrDefault(y, 0) != 2
+          || b != y && (occurrences.getOrDefault(y, 0) != 1 || occurrences.getOrDefault(b, 0) != 1)
+          || s.domain.getSize() != (long) s.max() - s.min() + 1
+          || s.max() < maxRelease + total - d[t]) {
+        return false;
+      }
+    }
+    for (int t = 0; t < n; t++) {
+      for (int u = t + 1; u < n; u++) {
+        if (starts[t] == starts[u]) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   private boolean postLate(
       int[] a,
       IntVar[] x,
@@ -652,6 +719,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     Arrays.fill(due, Integer.MAX_VALUE);
     boolean[] taken = new boolean[n];
     boolean[] mapped = new boolean[x.length];
+    int[] term = new int[n];
     int count = 0;
     for (int t = 0; t < n; t++) {
       d[t] = resource.durations()[t].min();
@@ -672,6 +740,7 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
         }
         taken[t] = true;
         mapped[k] = true;
+        term[t] = k;
         due[t] = (int) date;
         count++;
         break;
@@ -725,7 +794,9 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
     coefficients[others.size()] = 1;
     support.delayedConstraints.add(
         new LinearInt(list, coefficients, "==", (int) constant).setDegreeWeight(0));
-    LateCount lc = new LateCount(starts, d, due, z);
+    boolean dominance =
+        DOMINANCE && count == n && dominanceSafe(resource, a, x, sign, threshold, term, d);
+    LateCount lc = new LateCount(starts, d, due, z, dominance);
     lc.setDegreeWeight(0);
     if (support.options.debug()) {
       FzConsole.println("% redundant " + lc);

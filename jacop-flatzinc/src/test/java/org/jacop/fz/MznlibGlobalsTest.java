@@ -115,7 +115,8 @@ class MznlibGlobalsTest {
         "hook_inter_distance",
         "hook_multi_inter_distance",
         "hook_cumulative_equal_length",
-        "hook_scenario_chance"
+        "hook_scenario_chance",
+        "hook_chance_sum"
       })
   void sameSolutionsAsDecomposition(String model) {
     Set<String> nativeSolutions = solveAll(DIR + model + ".fzn");

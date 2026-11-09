@@ -47,6 +47,7 @@ import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntPredicate;
 import java.util.function.Predicate;
+import java.util.function.ToLongBiFunction;
 import java.util.stream.IntStream;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.Alldiff;
@@ -81,6 +82,7 @@ import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Routes;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
@@ -126,6 +128,7 @@ import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.lns.AdaptiveLns;
@@ -589,6 +592,74 @@ class LcgSolverTest {
       assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
     }
     assertThat(represolves).isGreaterThan(0);
+  }
+
+  /**
+   * Dichotomic bound search keeps the optimum, never reports a bound above it, and raises the bound
+   * by proofs of its probes: the sum of pairwise different values with random linear side
+   * constraints is minimised by plain branch and bound and by bisection down to a zero gap.
+   */
+  @Test
+  void bisectionKeepsTheOptimumAndProvesBounds() {
+    Random rnd = new Random(59);
+    long raised = 0;
+    for (int instance = 0; instance < 8; instance++) {
+      long seed = rnd.nextLong();
+      int[] status = new int[2];
+      int[] optimum = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 8;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 2 * n);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 2; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(5) - 2;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(6)));
+        }
+        IntVar cost = new IntVar(store, "cost", 0, 1000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = 1 + r.nextInt(5);
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        if (!store.consistency()) {
+          break;
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setSeed(instance);
+        if (run == 1) {
+          // probes of a few conflicts, so that some run out and move towards the lower bound
+          solver.setLowerBoundSearch(0, 3);
+          solver.setBisection(1e-9);
+        }
+        List<Long> bounds = new ArrayList<>();
+        solver.onBound(bounds::add);
+        status[run] = solver.minimize(cost);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(cost);
+          for (long b : bounds) {
+            assertThat(b).as("instance %d", instance).isLessThanOrEqualTo(optimum[run]);
+          }
+        }
+        if (run == 1) {
+          raised += solver.bisectRaised;
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(raised).isPositive();
   }
 
   /**
@@ -1538,7 +1609,8 @@ class LcgSolverTest {
     System.out.printf(
         "seq precede chain colouring: %d unsat, %d own and %d generic or replayed explanations%n",
         unsat, own, generic);
-    assertThat(own).isGreaterThan(1000);
+    // about 800 since reasons cite the earliest bound beyond a value (shorter searches)
+    assertThat(own).isGreaterThan(500);
     assertThat(own).isGreaterThan(20 * generic);
   }
 
@@ -5010,5 +5082,123 @@ class LcgSolverTest {
     lcg.propagate(); // applies the pending literals, then gives the first atom they imply
     assertThat(x.min()).isEqualTo(1);
     assertThat(y.max()).isZero();
+  }
+
+  /**
+   * Routes without its own degrees (as the FlatZinc detector posts it, beside exactly-one rows)
+   * explains a failure only by what it propagates itself: never by a node whose arcs out or in are
+   * all 0, which only the rows rule out. The explanation checker copies the constraint alone, so
+   * such a reason showed as wrong (2014 stochastic-vrp under --lcg). The optimum must match a
+   * search with the degrees kept by Routes.
+   */
+  @Test
+  void routesWithoutDegreesExplainsOnlyItsOwnFailures() {
+    Random rnd = new Random(20261109L);
+    int routesFailures = 0;
+    for (int instance = 0; instance < 150; instance++) {
+      int n = 4 + rnd.nextInt(3);
+      int[] demands = new int[n];
+      for (int v = 1; v < n; v++) {
+        demands[v] = 1 + rnd.nextInt(3);
+      }
+      int capacity = 3 + rnd.nextInt(4);
+      int[][] weight = new int[n][n];
+      for (int t = 0; t < n; t++) {
+        for (int h = 0; h < n; h++) {
+          weight[t][h] = rnd.nextInt(20);
+        }
+      }
+      long best = routesOptimum(n, demands, capacity, weight, true, null);
+      int seed = instance % 3;
+      LcgSolver[] solver = new LcgSolver[1];
+      long got =
+          routesOptimum(
+              n,
+              demands,
+              capacity,
+              weight,
+              false,
+              (store, objective) -> {
+                solver[0] = new LcgSolver(store);
+                solver[0].setChecking(true);
+                solver[0].setSeed(seed);
+                int status = solver[0].minimize(objective);
+                return status == CdclSolver.SAT ? solver[0].value(objective) : Long.MAX_VALUE;
+              });
+      assertThat(got).as("instance %d", instance).isEqualTo(best);
+      long[] c = solver[0].explanationStatistics().get("Routes");
+      if (c != null) {
+        routesFailures += (int) c[3];
+      }
+    }
+    assertThat(routesFailures).isGreaterThan(0);
+  }
+
+  // the cheapest routes over the complete graph of n nodes; degrees false posts exactly-one rows
+  // and Routes without its degrees, and solves with lcg (DFS with null)
+  private static long routesOptimum(
+      int n,
+      int[] demands,
+      int capacity,
+      int[][] weight,
+      boolean degrees,
+      ToLongBiFunction<Store, IntVar> lcg) {
+    Store store = new Store();
+    List<int[]> arcs = new ArrayList<>();
+    for (int t = 0; t < n; t++) {
+      for (int h = 0; h < n; h++) {
+        if (t != h) {
+          arcs.add(new int[] {t, h});
+        }
+      }
+    }
+    int m = arcs.size();
+    int[] tails = new int[m];
+    int[] heads = new int[m];
+    int[] w = new int[m + 1];
+    IntVar[] literals = new IntVar[m];
+    for (int k = 0; k < m; k++) {
+      tails[k] = arcs.get(k)[0];
+      heads[k] = arcs.get(k)[1];
+      w[k] = weight[tails[k]][heads[k]];
+      literals[k] = new IntVar(store, "a" + tails[k] + "_" + heads[k], 0, 1);
+    }
+    Routes routes = new Routes(tails, heads, literals, demands, capacity);
+    if (!degrees) {
+      routes.setDegrees(false);
+      IntVar one = new IntVar(store, 1, 1);
+      for (int v = 1; v < n; v++) {
+        List<IntVar> out = new ArrayList<>();
+        List<IntVar> in = new ArrayList<>();
+        for (int k = 0; k < m; k++) {
+          if (tails[k] == v) {
+            out.add(literals[k]);
+          }
+          if (heads[k] == v) {
+            in.add(literals[k]);
+          }
+        }
+        store.impose(new SumBool(out.toArray(new IntVar[0]), "==", one));
+        store.impose(new SumBool(in.toArray(new IntVar[0]), "==", one));
+      }
+    }
+    store.impose(routes);
+    IntVar cost = new IntVar(store, "cost", 0, 1000);
+    IntVar[] terms = Arrays.copyOf(literals, m + 1);
+    terms[m] = cost;
+    w[m] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    if (lcg != null) {
+      return lcg.applyAsLong(store, cost);
+    }
+    if (!store.consistency()) {
+      return Long.MAX_VALUE;
+    }
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.setSolutionListener(new SimpleSolutionListener<>());
+    boolean found =
+        search.labeling(store, new SimpleSelect<>(literals, null, new IndomainMin<>()), cost);
+    return found ? cost.value() : Long.MAX_VALUE;
   }
 }

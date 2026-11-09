@@ -71,7 +71,7 @@ final class BasisLu {
   private final double[] diag;
 
   // L by step (the rows the step eliminated and their multipliers) and by row (the pivot rows of
-  // the steps that eliminated the row and the multipliers)
+  // the steps that eliminated the row and the multipliers), the rows in the order of their steps
   private int[] lStart;
   private int[] lRow;
   private double[] lVal;
@@ -86,9 +86,12 @@ final class BasisLu {
   private int[][] urPos;
   private double[][] urVal;
   private int[] urLen;
-  private int[][] ucRow;
-  private double[][] ucVal;
-  private int[] ucLen;
+  // the columns of U lie in one pair of arrays, the column of the step in each slot of the order
+  // from its slotStart over slotLen entries: laid out in the order at the factorization, and the
+  // new column of an update is added at the end, so that a pass over U reads them in sequence
+  private int[] ucRow;
+  private double[] ucVal;
+  private int ucEnd;
   private long uNonzeros;
 
   // the step of each position, which an update keeps, and the step of each row
@@ -100,6 +103,14 @@ final class BasisLu {
   private int[] order;
   private int orderLen;
   private int[] rank;
+
+  // the pivot row, the pivot position (-1 in a dead slot), the pivot and the column of U of the
+  // step in each slot of the order: the passes over U read them in sequence
+  private int[] slotRow;
+  private int[] slotPos;
+  private double[] slotDiag;
+  private int[] slotStart;
+  private int[] slotLen;
 
   // the row transformations of the updates: the step whose row was eliminated, and the multipliers
   // of the rows of the steps that eliminated it
@@ -174,6 +185,10 @@ final class BasisLu {
 
   private long initialUNonzeros;
 
+  // the empty rows and columns of the factors, shared (an update that adds to one copies it)
+  private static final int[] NO_INTS = {};
+  private static final double[] NO_DOUBLES = {};
+
   // the elimination, with its active matrix by row (positions and values) and by position (rows)
   private final class Factor {
     private final int[][] rIdx = new int[m][];
@@ -201,6 +216,12 @@ final class BasisLu {
     private final double[][] lStepVal = new double[m][];
     private final int[][] uStepPos = new int[m][];
     private final double[][] uStepVal = new double[m][];
+    // the pivot row, the multipliers and the marks of one elimination, kept for the next ones
+    private final int[] up = new int[m];
+    private final double[] uv = new double[m];
+    private final int[] lr = new int[m];
+    private final double[] lv = new double[m];
+    private final boolean[] seen = new boolean[m];
 
     Factor(int[][] colIdx, double[][] colVal, int[] colLen) {
       int[] count = new int[m];
@@ -358,8 +379,6 @@ final class BasisLu {
       int[] rp = rIdx[p];
       double[] vp = rVal[p];
       double piv = 0;
-      int[] up = new int[len];
-      double[] uv = new double[len];
       int u = 0;
       for (int e = 0; e < len; e++) {
         int k = rp[e];
@@ -372,17 +391,14 @@ final class BasisLu {
         }
       }
       diag[s] = piv;
-      uStepPos[s] = Arrays.copyOf(up, u);
-      uStepVal[s] = Arrays.copyOf(uv, u);
+      uStepPos[s] = u == 0 ? NO_INTS : Arrays.copyOf(up, u);
+      uStepVal[s] = u == 0 ? NO_DOUBLES : Arrays.copyOf(uv, u);
       for (int e = 0; e < u; e++) {
         where[up[e]] = e;
       }
       // the other rows of the pivot column: their multipliers, and row_i -= l row_p
       int cl = cLen[q];
-      int[] lr = new int[cl];
-      double[] lv = new double[cl];
       int nl = 0;
-      boolean[] seen = new boolean[u];
       for (int c = 0; c < cl; c++) {
         int i = cIdx[q][c];
         if (rowDone[i]) {
@@ -406,7 +422,7 @@ final class BasisLu {
         if (Math.abs(l) > DROP) {
           lr[nl] = i;
           lv[nl++] = l;
-          Arrays.fill(seen, false);
+          Arrays.fill(seen, 0, u, false);
           for (int f = 0; f < rLen[i]; f++) {
             int w = where[ri[f]];
             if (w >= 0) {
@@ -448,8 +464,8 @@ final class BasisLu {
       for (int e = 0; e < u; e++) {
         where[up[e]] = -1;
       }
-      lStepRow[s] = Arrays.copyOf(lr, nl);
-      lStepVal[s] = Arrays.copyOf(lv, nl);
+      lStepRow[s] = nl == 0 ? NO_INTS : Arrays.copyOf(lr, nl);
+      lStepVal[s] = nl == 0 ? NO_DOUBLES : Arrays.copyOf(lv, nl);
       cLen[q] = 0;
       cCount[q] = 0;
       rLen[p] = 0;
@@ -493,10 +509,10 @@ final class BasisLu {
         pivotRow[s] = replacedRow[t];
         pivotPos[s] = replacedPos[t];
         diag[s] = -1;
-        lStepRow[s] = new int[0];
-        lStepVal[s] = new double[0];
-        uStepPos[s] = new int[0];
-        uStepVal[s] = new double[0];
+        lStepRow[s] = NO_INTS;
+        lStepVal[s] = NO_DOUBLES;
+        uStepPos[s] = NO_INTS;
+        uStepVal[s] = NO_DOUBLES;
       }
     }
 
@@ -608,25 +624,25 @@ final class BasisLu {
       }
     }
     lStart[m] = nl;
+    posStep = new int[m];
+    rowStep = new int[m];
+    for (int t = 0; t < m; t++) {
+      posStep[pivotPos[t]] = t;
+      rowStep[pivotRow[t]] = t;
+    }
     lrStart = new int[m + 1];
-    for (int i = 0; i < m; i++) {
-      lrStart[i + 1] = lrStart[i] + rowCount[i];
+    for (int t = 0; t < m; t++) {
+      lrStart[t + 1] = lrStart[t] + rowCount[pivotRow[t]];
     }
     lrRow = new int[nl];
     lrVal = new double[nl];
     int[] fill = Arrays.copyOf(lrStart, m);
     for (int s = 0; s < m; s++) {
       for (int e = lStart[s]; e < lStart[s + 1]; e++) {
-        int i = lRow[e];
-        lrRow[fill[i]] = pivotRow[s];
-        lrVal[fill[i]++] = lVal[e];
+        int t = rowStep[lRow[e]];
+        lrRow[fill[t]] = pivotRow[s];
+        lrVal[fill[t]++] = lVal[e];
       }
-    }
-    posStep = new int[m];
-    rowStep = new int[m];
-    for (int t = 0; t < m; t++) {
-      posStep[pivotPos[t]] = t;
-      rowStep[pivotRow[t]] = t;
     }
     urPos = new int[m][];
     urVal = new double[m][];
@@ -640,27 +656,37 @@ final class BasisLu {
         posCount[k]++;
       }
     }
-    ucRow = new int[m][];
-    ucVal = new double[m][];
-    ucLen = new int[m];
-    for (int k = 0; k < m; k++) {
-      ucRow[k] = new int[Math.max(1, posCount[k])];
-      ucVal[k] = new double[Math.max(1, posCount[k])];
+    // the slot of each step is the step itself until the first update
+    ucRow = new int[nu + m + 16];
+    ucVal = new double[nu + m + 16];
+    slotStart = new int[m + 16];
+    slotLen = new int[m + 16];
+    ucEnd = 0;
+    for (int t = 0; t < m; t++) {
+      slotStart[t] = ucEnd;
+      ucEnd += posCount[pivotPos[t]];
     }
     for (int t = 0; t < m; t++) {
       for (int e = 0; e < usp[t].length; e++) {
-        int k = usp[t][e];
-        ucRow[k][ucLen[k]] = pivotRow[t];
-        ucVal[k][ucLen[k]++] = usv[t][e];
+        int k = posStep[usp[t][e]];
+        int f = slotStart[k] + slotLen[k]++;
+        ucRow[f] = pivotRow[t];
+        ucVal[f] = usv[t][e];
       }
     }
     uNonzeros = nu;
     initialUNonzeros = nu;
     order = new int[m + 16];
     rank = new int[m];
+    slotRow = new int[m + 16];
+    slotPos = new int[m + 16];
+    slotDiag = new double[m + 16];
     for (int t = 0; t < m; t++) {
       order[t] = t;
       rank[t] = t;
+      slotRow[t] = pivotRow[t];
+      slotPos[t] = pivotPos[t];
+      slotDiag[t] = diag[t];
     }
     orderLen = m;
     ops += 2L * (nl + nu) + m;
@@ -768,16 +794,24 @@ final class BasisLu {
     if (reached < 0) {
       ops += orderLen;
       for (int idx = orderLen - 1; idx >= 0; idx--) {
-        int s = order[idx];
-        if (rank[s] == idx && uColumn(x, y, s) && yi != null) {
-          yi[yn++] = pivotPos[s];
+        int q = slotPos[idx];
+        if (q < 0) {
+          continue;
+        }
+        if (x[slotRow[idx]] == 0) {
+          // a listed y is zero on entry
+          if (yi == null) {
+            y[q] = 0;
+          }
+        } else if (uColumn(x, y, idx) && yi != null) {
+          yi[yn++] = q;
         }
       }
     } else {
       for (int k = reached - 1; k >= 0; k--) {
-        int s = order[reach[k]];
-        if (uColumn(x, y, s)) {
-          yi[yn++] = pivotPos[s];
+        int idx = reach[k];
+        if (uColumn(x, y, idx)) {
+          yi[yn++] = slotPos[idx];
         }
       }
     }
@@ -796,29 +830,30 @@ final class BasisLu {
     }
   }
 
-  // the entry of y of step s from x, and x less the column of U of its position times it; whether
-  // the entry is not zero
-  private boolean uColumn(double[] x, double[] y, int s) {
-    int p = pivotRow[s];
-    int q = pivotPos[s];
+  // the entry of y of the step in slot idx from x, and x less the column of U of the step times
+  // it; whether the entry is not zero
+  private boolean uColumn(double[] x, double[] y, int idx) {
+    int p = slotRow[idx];
+    int q = slotPos[idx];
     double v = x[p];
     if (v == 0) {
       y[q] = 0;
       return false;
     }
-    double t = v / diag[s];
+    double t = v / slotDiag[idx];
     x[p] = 0;
     y[q] = t;
     if (t == 0) {
       return false;
     }
-    int[] cr = ucRow[q];
-    double[] cv = ucVal[q];
-    int end = ucLen[q];
-    for (int e = 0; e < end; e++) {
+    int[] cr = ucRow;
+    double[] cv = ucVal;
+    int start = slotStart[idx];
+    int end = start + slotLen[idx];
+    for (int e = start; e < end; e++) {
       x[cr[e]] -= cv[e] * t;
     }
-    ops += end;
+    ops += end - start;
     return true;
   }
 
@@ -877,16 +912,24 @@ final class BasisLu {
     if (reached < 0) {
       ops += orderLen;
       for (int idx = 0; idx < orderLen; idx++) {
-        int s = order[idx];
-        if (rank[s] == idx) {
-          uRow(z, y, s);
+        int q = slotPos[idx];
+        if (q < 0) {
+          continue;
+        }
+        if (z[q] == 0) {
+          // a listed y is zero on entry
+          if (yi == null) {
+            y[slotRow[idx]] = 0;
+          }
+        } else {
+          uRow(z, y, idx);
         }
       }
     } else {
       for (int k = 0; k < reached; k++) {
-        int s = order[reach[k]];
-        uRow(z, y, s);
-        reach[k] = s;
+        int idx = reach[k];
+        uRow(z, y, idx);
+        reach[k] = order[idx];
       }
     }
     // the row transformations, last first; a row they fill in joins the reached steps
@@ -932,18 +975,19 @@ final class BasisLu {
     return yn;
   }
 
-  // the entry of y of step s from z, and z less the row of U of the step times it
-  private void uRow(double[] z, double[] y, int s) {
-    int q = pivotPos[s];
+  // the entry of y of the step in slot idx from z, and z less the row of U of the step times it
+  private void uRow(double[] z, double[] y, int idx) {
+    int q = slotPos[idx];
     double v = z[q];
     if (v == 0) {
-      y[pivotRow[s]] = 0;
+      y[slotRow[idx]] = 0;
       return;
     }
-    double t = v / diag[s];
+    double t = v / slotDiag[idx];
     z[q] = 0;
-    y[pivotRow[s]] = t;
+    y[slotRow[idx]] = t;
     if (t != 0) {
+      int s = order[idx];
       int[] rp = urPos[s];
       double[] rv = urVal[s];
       int end = urLen[s];
@@ -956,16 +1000,15 @@ final class BasisLu {
 
   // y less the row of L of the pivot row of step s times its entry; whether the entry is not zero
   private boolean lRow(double[] y, int s) {
-    int i = pivotRow[s];
-    double v = y[i];
+    double v = y[pivotRow[s]];
     if (v == 0) {
       return false;
     }
-    int end = lrStart[i + 1];
-    for (int e = lrStart[i]; e < end; e++) {
+    int end = lrStart[s + 1];
+    for (int e = lrStart[s]; e < end; e++) {
       y[lrRow[e]] -= lrVal[e] * v;
     }
-    ops += end - lrStart[i];
+    ops += end - lrStart[s];
     return true;
   }
 
@@ -1081,16 +1124,15 @@ final class BasisLu {
         }
       case U_FTRAN:
         {
-          int q = pivotPos[s];
-          return e < ucLen[q] ? rowStep[ucRow[q][e]] : -1;
+          int idx = rank[s];
+          return e < slotLen[idx] ? rowStep[ucRow[slotStart[idx] + e]] : -1;
         }
       case U_BTRAN:
         return e < urLen[s] ? posStep[urPos[s][e]] : -1;
       default:
         {
-          int i = pivotRow[s];
-          int f = lrStart[i] + e;
-          return f < lrStart[i + 1] ? rowStep[lrRow[f]] : -1;
+          int f = lrStart[s] + e;
+          return f < lrStart[s + 1] ? rowStep[lrRow[f]] : -1;
         }
     }
   }
@@ -1111,11 +1153,14 @@ final class BasisLu {
   boolean update(int r) {
     int t = posStep[r];
     // the old column r leaves the rows of U
-    for (int e = 0; e < ucLen[r]; e++) {
-      removeFromRow(rowStep[ucRow[r][e]], r);
+    int old = rank[t];
+    for (int e = 0; e < slotLen[old]; e++) {
+      removeFromRow(rowStep[ucRow[slotStart[old] + e]], r);
     }
-    uNonzeros -= ucLen[r];
-    ucLen[r] = 0;
+    uNonzeros -= slotLen[old];
+    slotLen[old] = 0;
+    // the new column is built at the end of ucRow
+    int start = ucEnd;
     // the row of t, scattered, leaves the columns of U
     if (rowWork == null) {
       rowWork = new double[m];
@@ -1178,8 +1223,17 @@ final class BasisLu {
     if (orderLen == order.length) {
       compactOrder();
     }
-    order[orderLen] = t;
-    rank[t] = orderLen++;
+    // t moves to a new slot at the end of the order, with the new column; its old slot dies
+    slotRow[rank[t]] = -1;
+    slotPos[rank[t]] = -1;
+    int slot = orderLen++;
+    order[slot] = t;
+    slotRow[slot] = pivotRow[t];
+    slotPos[slot] = r;
+    slotDiag[slot] = pivot;
+    slotStart[slot] = start;
+    slotLen[slot] = ucEnd - start;
+    rank[t] = slot;
     return Math.abs(pivot) > 1e-11;
   }
 
@@ -1220,7 +1274,7 @@ final class BasisLu {
   private void spikeEntry(int r, int s) {
     double v = spike[pivotRow[s]];
     if (Math.abs(v) > DROP) {
-      addToColumn(r, s, v);
+      addToColumn(s, v);
       addToRow(s, r, v);
       uNonzeros++;
     }
@@ -1233,12 +1287,26 @@ final class BasisLu {
       int s = order[idx];
       if (rank[s] == idx) {
         order[k] = s;
+        slotRow[k] = pivotRow[s];
+        slotPos[k] = pivotPos[s];
+        slotDiag[k] = slotDiag[idx];
+        slotStart[k] = slotStart[idx];
+        slotLen[k] = slotLen[idx];
         rank[s] = k++;
       }
+    }
+    for (int idx = k; idx < orderLen; idx++) {
+      slotRow[idx] = -1;
+      slotPos[idx] = -1;
     }
     orderLen = k;
     if (orderLen + 1 >= order.length) {
       order = Arrays.copyOf(order, order.length * 2);
+      slotRow = Arrays.copyOf(slotRow, order.length);
+      slotPos = Arrays.copyOf(slotPos, order.length);
+      slotDiag = Arrays.copyOf(slotDiag, order.length);
+      slotStart = Arrays.copyOf(slotStart, order.length);
+      slotLen = Arrays.copyOf(slotLen, order.length);
     }
   }
 
@@ -1257,18 +1325,19 @@ final class BasisLu {
   }
 
   private void removeFromColumn(int k, int s) {
-    int[] cs = ucRow[k];
     int i = pivotRow[s];
-    for (int e = 0; e < ucLen[k]; e++) {
-      if (cs[e] == i) {
-        int last = --ucLen[k];
-        cs[e] = cs[last];
-        ucVal[k][e] = ucVal[k][last];
+    int idx = rank[posStep[k]];
+    int start = slotStart[idx];
+    for (int e = 0; e < slotLen[idx]; e++) {
+      if (ucRow[start + e] == i) {
+        int last = start + --slotLen[idx];
+        ucRow[start + e] = ucRow[last];
+        ucVal[start + e] = ucVal[last];
         ops += e;
         return;
       }
     }
-    ops += ucLen[k];
+    ops += slotLen[idx];
   }
 
   private void addToRow(int s, int k, double v) {
@@ -1281,13 +1350,13 @@ final class BasisLu {
     urVal[s][urLen[s]++] = v;
   }
 
-  private void addToColumn(int k, int s, double v) {
-    if (ucLen[k] == ucRow[k].length) {
-      int size = Math.max(4, ucLen[k] * 2);
-      ucRow[k] = Arrays.copyOf(ucRow[k], size);
-      ucVal[k] = Arrays.copyOf(ucVal[k], size);
+  // the entry of step s joins the new column of the update, built at the end of ucRow
+  private void addToColumn(int s, double v) {
+    if (ucEnd == ucRow.length) {
+      ucRow = Arrays.copyOf(ucRow, ucEnd * 2);
+      ucVal = Arrays.copyOf(ucVal, ucEnd * 2);
     }
-    ucRow[k][ucLen[k]] = pivotRow[s];
-    ucVal[k][ucLen[k]++] = v;
+    ucRow[ucEnd] = pivotRow[s];
+    ucVal[ucEnd++] = v;
   }
 }

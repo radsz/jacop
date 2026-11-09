@@ -57,12 +57,12 @@ class PortfolioSettingsTest {
     assertEquals(
         List.of(
             "lcg-lits",
-            "free-chs-luby",
+            "ls",
             "default",
+            "free-chs-luby",
             "lcg-fixed",
             "free-afc",
             "free",
-            "ls",
             "free-cacd"),
         names(lcgFree, 8, true));
   }
@@ -70,16 +70,16 @@ class PortfolioSettingsTest {
   @Test
   void optimisationKeepsTheOrder() {
     String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), false);
-    assertEquals(List.of("lcg-lits", "free-chs-luby", "default"), names(lcgFree, 3, false));
+    assertEquals(List.of("lcg-lits", "ls", "default"), names(lcgFree, 3, false));
     assertEquals(
         List.of(
             "lcg-lits",
-            "free-chs-luby",
+            "ls",
             "default",
+            "free-chs-luby",
             "lcg-fixed",
             "free-afc",
             "free",
-            "ls",
             "lcg-bb"),
         names(lcgFree, 8, false));
   }
@@ -87,12 +87,30 @@ class PortfolioSettingsTest {
   @Test
   void theGivenSettingIsNotRepeated() {
     String lcgFixed = Portfolio.search(List.of("--lcg", "on"), false);
-    assertEquals(
-        List.of("lcg-lits", "free-chs-luby", "default", "free-afc"), names(lcgFixed, 4, false));
+    assertEquals(List.of("lcg-lits", "ls", "default", "free-chs-luby"), names(lcgFixed, 4, false));
     String annotation = Portfolio.search(List.of("--lcg", "off"), false);
-    assertEquals(List.of("lcg-lits", "free-chs-luby", "lcg-fixed"), names(annotation, 3, false));
+    assertEquals(List.of("lcg-lits", "ls", "free-chs-luby"), names(annotation, 3, false));
     assertEquals(
         Portfolio.search(List.of("--lcg", "-f"), false),
         Portfolio.search(List.of("--lcg", "on", "-f"), false));
+  }
+
+  @Test
+  void theBoundThreadComesSecondOnlyWithAnObjective() {
+    String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), false);
+    List<String> layout =
+        Portfolio.settings(lcgFree, 3, false, 0.1).stream().map(c -> c[0]).toList();
+    assertEquals(List.of(Portfolio.BOUND_THREAD, "lcg-lits", "free-chs-luby"), layout);
+    assertEquals(
+        List.of("lcg-lits", "free-chs-luby", "default"),
+        Portfolio.settings(lcgFree, 3, true, 0.1).stream().map(c -> c[0]).toList());
+    assertEquals(
+        names(lcgFree, 3, false),
+        Portfolio.settings(lcgFree, 3, false, 0).stream().map(c -> c[0]).toList());
+    // the layout key is not part of the given thread's search
+    assertEquals(
+        lcgFree,
+        Portfolio.search(
+            List.of("--lcg", "on", "-f", "--free-config", "portfolio-bisect=0.1"), false));
   }
 }

@@ -229,12 +229,14 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
   }
 
   /**
-   * Reads the difference graph of the list at the root, where the domains of the other constraints'
-   * variables are facts. The count must not be in the list, since the graph's clique bounds the
-   * values of the list alone.
+   * Reads the difference graph of the list from the root constraints and root domains, which are
+   * facts. It is read again at every call on the root level, since constraints are still being
+   * imposed there, and once more at the first call below the root, since a constraint imposed after
+   * the last root call (with no change of the list or the count) would otherwise be missed. The
+   * count must not be in the list, since the graph's clique bounds the values of the list alone.
    */
   private void readCliques(Store store) {
-    if (cliquesFixed || store.level != 0 || !ValuesCliques.ENABLED) {
+    if (cliquesFixed || !ValuesCliques.ENABLED) {
       return;
     }
     for (IntVar x : list) {
@@ -244,6 +246,8 @@ public class Values extends Constraint implements SatisfiedPresent, Copyable<Val
       }
     }
     cliques = ValuesCliques.read(list, cliques);
+    // below the root the root constraints are all imposed, so the graph is final
+    cliquesFixed = store.level > 0;
   }
 
   @Override
