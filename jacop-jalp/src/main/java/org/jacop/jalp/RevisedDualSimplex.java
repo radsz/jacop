@@ -1210,6 +1210,15 @@ public final class RevisedDualSimplex {
           && isArtificial(j, upper[j])
           && lo[j] != hi[j]
           && (upper[j] ? d[j] < -DUAL_TOL : d[j] > DUAL_TOL)) {
+        if (perturbed && !trueCostsPull(j)) {
+          // only the perturbation pulls (a column with no cost, alone or with basic columns of no
+          // cost): it and the basic columns of its ray keep their costs as given, as in the
+          // primal simplex, instead of the bounds growing until the answer is UNBOUNDED (min x1,
+          // x1 >= 1, a free column x0 in no row: UNBOUNDED at x0 = -1e14)
+          unperturbRay(j);
+          computeDuals();
+          return -1;
+        }
         if (!enlarge()) {
           return UNBOUNDED;
         }
@@ -1242,6 +1251,19 @@ public final class RevisedDualSimplex {
     dualsChecked = held;
     checkedWork = ops + (lu == null ? 0 : lu.ops) - before;
     return held;
+  }
+
+  // whether the costs as given pull nonbasic column j, at an artificial bound, further out: its
+  // reduced cost for them, over the column of the tableau left in alphaQ for unperturbRay
+  private boolean trueCostsPull(int j) {
+    clear(alphaQ, alphaIdx, alphaLen);
+    alphaLen = lu.ftran(rhs, rhsIdx, columnInto(j, rhs, rhsIdx), alphaQ, alphaIdx, true);
+    double z = j < n ? trueCost[j] : 0;
+    for (int k = 0; k < alphaLen; k++) {
+      int i = alphaIdx[k];
+      z -= trueCost[basis[i]] * alphaQ[i];
+    }
+    return upper[j] ? z < -DUAL_TOL : z > DUAL_TOL;
   }
 
   private void listInfinite() {

@@ -31,6 +31,7 @@
 package org.jacop.jalp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -1053,5 +1054,35 @@ class RevisedDualSimplexTest {
     }
     assertThat(restored).isGreaterThan(60);
     assertThat(withRows).isGreaterThan(20);
+  }
+
+  @Test
+  void columnsWithoutCostAreNotPulledToUnboundedByThePerturbation() {
+    // min x1 with x1 >= 1 and x0 - x3 >= 0; x0 and x3 free, x2 <= 2, none of them with a cost:
+    // the optimum is 1, but the perturbed costs pulled x2 (in no row) and the ray of x0 and x3
+    // past every artificial bound, and the answer was UNBOUNDED (found by the exact LP fuzzer,
+    // osolpro benchmarks/jalp-allsolutions)
+    for (boolean exact : new boolean[] {false, true}) {
+      for (boolean presolve : new boolean[] {false, true}) {
+        RevisedDualSimplex lp =
+            new RevisedDualSimplex(
+                new int[][] {{1}, {0, 3}},
+                new double[][] {{1}, {1, -1}},
+                new double[] {1, 0},
+                new double[] {INF, INF},
+                new double[] {0, 1, 0, 0},
+                true);
+        lp.setExact(exact);
+        lp.setPresolve(presolve);
+        lp.setBounds(0, -INF, INF);
+        lp.setBounds(1, 0, 5);
+        lp.setBounds(2, -INF, 2);
+        lp.setBounds(3, -INF, INF);
+        String what = "exact " + exact + " presolve " + presolve;
+        assertThat(lp.solve(1000)).as(what).isEqualTo(RevisedDualSimplex.OPTIMAL);
+        assertThat(lp.objective()).as(what).isEqualTo(1.0);
+        assertThat(lp.value(0) - lp.value(3)).as(what).isGreaterThanOrEqualTo(-1e-9);
+      }
+    }
   }
 }
