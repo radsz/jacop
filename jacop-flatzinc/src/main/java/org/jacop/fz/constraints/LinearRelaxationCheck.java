@@ -79,6 +79,8 @@ public class LinearRelaxationCheck implements ParserTreeConstants {
   private final List<Boolean> equations = new ArrayList<>();
   private final Map<IntVar, Integer> index = new HashMap<>();
   private final List<IntVar> vars = new ArrayList<>();
+  // per variable position: 1 + its place in the row add is building, or 0
+  private int[] inRow = new int[16];
 
   /**
    * It creates a check reading variables through the given support.
@@ -178,8 +180,9 @@ public class LinearRelaxationCheck implements ParserTreeConstants {
 
   // a row a * x <= c (or = c); fixed variables go to the right hand side
   private void add(IntVar[] x, long[] a, long c, boolean equation) {
-    List<Integer> pos = new ArrayList<>();
-    List<Long> coef = new ArrayList<>();
+    int[] pos = new int[x.length];
+    long[] coef = new long[x.length];
+    int size = 0;
     for (int k = 0; k < x.length; k++) {
       if (a[k] == 0) {
         continue;
@@ -194,19 +197,28 @@ public class LinearRelaxationCheck implements ParserTreeConstants {
         index.put(x[k], p);
         vars.add(x[k]);
       }
-      int at = pos.indexOf(p);
+      if (p >= inRow.length) {
+        inRow = Arrays.copyOf(inRow, Math.max(p + 1, 2 * inRow.length));
+      }
+      // inRow holds 1 + the variable's place in this row, so that a repeated variable is found
+      // without a scan of the row: long rows (objectives, sums) were quadratic
+      int at = inRow[p] - 1;
       if (at >= 0) {
-        coef.set(at, coef.get(at) + a[k]);
+        coef[at] += a[k];
       } else {
-        pos.add(p);
-        coef.add(a[k]);
+        inRow[p] = size + 1;
+        pos[size] = p;
+        coef[size++] = a[k];
       }
     }
-    if (pos.isEmpty()) {
+    for (int k = 0; k < size; k++) {
+      inRow[pos[k]] = 0;
+    }
+    if (size == 0) {
       return; // constant rows are checked by their own constraints
     }
-    positions.add(pos.stream().mapToInt(Integer::intValue).toArray());
-    coefficients.add(coef.stream().mapToLong(Long::longValue).toArray());
+    positions.add(Arrays.copyOf(pos, size));
+    coefficients.add(Arrays.copyOf(coef, size));
     bounds.add(c);
     equations.add(equation);
   }

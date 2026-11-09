@@ -3535,7 +3535,8 @@ Version 5.0 (unreleased)
      slower, the rest equal. Not for wider domains: pentominoes, whose
      regular constraints become clauses too, lost up to 4x with it.
      -Djacop.lcg.pureClauseLiterals=false turns it off.
-204. Bug fix: when LCG free search gives way to free search without
+     
+206. Bug fix: when LCG free search gives way to free search without
      learning (lcg-slow-rate), the regular and MDD constraints that went
      to the SAT solver as clauses are imposed in the store again. Before,
      free search without learning ran without them, printed solutions
@@ -3543,7 +3544,7 @@ Version 5.0 (unreleased)
      FAPP-aux-18-0350 with large tables posted as MDD, every solution
      after the switch broke about 140 of its 1,425 tables.
 
-204. Opt-in TSP mode of the FlatZinc front end: with
+207. Opt-in TSP mode of the FlatZinc front end: with
      -Dorg.jacop.fz.tsp=true, a pure travelling salesman model, one
      circuit(x) with no fixed successor and a tour length
      sum(i)(d[i, x[i]]), gets the arc Booleans, cost rows and Routes of
@@ -3569,7 +3570,7 @@ Version 5.0 (unreleased)
      or off, -Dorg.jacop.lp.combSearch=true also separates them in
      search, -Dorg.jacop.fz.tspArcs (default 40000) limits the arcs.
 
-206. JaLP's presolve also removes parallel rows and merges parallel
+208. JaLP's presolve also removes parallel rows and merges parallel
      columns (E. D. Andersen and K. D. Andersen, Presolving in linear
      programming, Mathematical Programming 71 (1995) 221-245, sections
      3.4 and 3.6). A row that is a multiple of another gives its bounds
@@ -3600,7 +3601,7 @@ Version 5.0 (unreleased)
      well as or better than before: the search follows a different
      optimal root vertex.
 
-206. Under --lcg the objective lower-bound search (lcg-lb) starts
+209. Under --lcg the objective lower-bound search (lcg-lb) starts
      before the first solution: each round assumes the objective at its
      root lower bound, one run per round and without shaving, until a
      solution is found. Before, those runs waited for a first solution.
@@ -3612,7 +3613,7 @@ Version 5.0 (unreleased)
      most 13), are proved optimal in 10-60 s; neither had a solution in
      600 s (00 in one of two runs).
 
-207. The default search under --lcg, for a model without a search
+210. The default search under --lcg, for a model without a search
      annotation, branches in input order with the smallest value instead
      of dom/wdeg when it has more than 50,000 search variables
      (-Dorg.jacop.fz.lcgDomWdegLimit, stat lcgInputOrder): dom/wdeg
@@ -3623,7 +3624,25 @@ Version 5.0 (unreleased)
      AztecDiamond-300 in 527 s); RamseyPartition-equ-3-0600 takes 200 s
      instead of 57 s to prove unsatisfiable.
 
-206. Bug fix: a search with a child search (as the FlatZinc front end
+211. Cumulative with constant durations and resource uses (the time table
+     of CumulativeBasic, Cumulative and CumulativeUnary) sweeps as the
+     scalable sweep of Letort, Beldiceanu and Carlsson ("A Scalable Sweep
+     Algorithm for the cumulative Constraint", CP 2012): at each change of
+     the profile it touches only the tasks whose resource use crosses the
+     room left under the limit, instead of every task under pruning. Its
+     explanations under --lcg read the load of the compulsory parts at a
+     time point from a profile built once per explanation, O(log n)
+     instead of a sum over all tasks. Pruning and reasons are unchanged.
+     On largescheduling instance-1600-2 (1600 tasks) the search makes
+     2.1x the nodes in 60 s: the old explanations stalled it for most of
+     the run after 8 solutions. At 600 s, over the 71 bench instances
+     with a cumulative or disjunctive constraint (34 of the wide set and
+     a topic set with 100+ tasks), the same 32 are solved; without -f
+     the objective is better on 19 and worse on 2, with -f better on 16
+     and worse on 12; the 10 largescheduling instances run 1.3x to 9.9x
+     the nodes per second.
+
+212. Bug fix: a search with a child search (as the FlatZinc front end
      builds for integer then Boolean variables) that timed out while the
      child was enumerating solutions ended with the child's part of the
      last solution and the master's part of an earlier one. Assigning that
@@ -3632,6 +3651,311 @@ Version 5.0 (unreleased)
      =====TIME-OUT===== (seen on XCSP 2023 KidneyExchange-4-041_c23 with
      --default-search input, in about half the runs). The master now
      records its part before it stops.
+
+213. The local-search thread (ls) of the parallel portfolio moves up from
+     seventh to second place among the extra threads, ahead of default and
+     free-chs-luby, so -p 3 and -p 4 run it in place of free-chs-luby
+     (-p 4: the options given, lcg-lits, ls, default). The thread runs
+     local search for up to half the time while it improves within 5 s,
+     then CP free search from its solution. With -f -p 4 at 600 s on 4
+     cores, against develop-5.0 324b78d21 in the same round: the wide set
+     (220) is neutral (185 to 186 solved, 15 better / 15 worse), job shops
+     9 of 17 solved instead of 7 (la38, ta71 proved; ta51 126 to 4 s), and
+     the local-search set (54) gives cutstock type04 a solution and better
+     objectives to cutstock type10 and largescheduling; on the wide set
+     cargo challenge16 152917 to 125910 and ihtc-2024 marte i01 5159 to
+     4388. -p 4 without -f is neutral (wide-quick, 240 s, 53 to 54 solved).
+     Sequential -f keeps local search off: it adds 1 to 3 s to every easy
+     instance (wide-quick 1 better / 18 worse at 240 s). Data in osolpro
+     benchmarks/ls-default.
+
+214. Activity branching under --lcg bumps every integer variable whose
+     atoms conflict analysis resolved or minimised away, as MiniSat bumps
+     every variable the analysis meets (N. Een, N. Sorensson, An
+     Extensible SAT-solver, SAT 2003), not only the variables of the
+     learnt clause; each variable once per conflict. On the 220 instances
+     of the wide set at 600 s: fixed search 179 solved instead of 178, 22
+     instances better and 9 worse, no family worse (2019 liner-sf-
+     repositioning tp7_4 proved optimal, celar graph11 309218 -> 239859);
+     -f 178 solved in both, 19 better and 14 worse, 7 families better and
+     3 worse. -Djacop.lcg.bump=learnt restores the old bumping. Reason-
+     side bumping (J. H. Liang, V. Ganesh, P. Poupart, K. Czarnecki,
+     Learning Rate Based Branching Heuristic for SAT Solvers, SAT 2016)
+     was tried and lost on top of it.
+
+215. Hall cuts of item 188 with value copies, and in search. The
+     Williams-Yan cuts now also come from all-different constraints with
+     exceptions (alldifferent_except_0, AlldifferentExcept) and from
+     global cardinality constraints (GCC, CountValues,
+     CountValuesBounds): for the k variables of a prefix S of the
+     sorted LP values, each counted value v enters the greedy sum of the
+     k smallest (or largest) values at most min(u_v, |S holding v|)
+     times and at least max(0, l_v - |variables outside S holding v|)
+     times, and an excepted value any number of times: the extremal
+     points of the multiset permutahedron, after R. Rado, An
+     inequality, Journal of the London Mathematical Society 27 (1952)
+     1-6, with H. P. Williams and H. Yan (2001) and J. Lee (2002) as in
+     item 188. An all-different whose variables are not all LP columns
+     now keeps its cuts over the columns among them (two or more);
+     before, it was left out. -Dorg.jacop.lp.alldiffVariants=false turns
+     the copies off. Hall cuts are also separated in search, as the
+     capacity cuts of item 187 (every 4 to 1024 optimal solves, up to
+     -Dorg.jacop.lp.alldiffSearchCuts=10 cuts into the row pool), with
+     -Dorg.jacop.lp.alldiffSearch=true; they are off by default, as at
+     240 s they cost lot-sizing pigment20a and cable-tree-wiring A022
+     their optimum. Statistics lpAlldiffLists, lpAlldiffVariantLists,
+     lpAlldiffSearchCuts and lpAlldiffSeparations. Checks
+     (AlldifferentRowsTest): no cut with copies cuts off a solution of
+     random domains or a convex mix of them; random models with an
+     all-different-except-0 or a GCC keep their optimum, also under LCG
+     with the explanation checker (LinearRelaxationTest), and also after
+     the rows of the other constraints are dropped in search. Reach (429
+     Challenge optimisation instances with these constraints, 20 s): 243
+     have Hall lists, 99 of them with copies. The root bound of
+     physician-scheduling rises from 570 to 670, 1145 to 1245 and 570 to
+     620 (twice), and of vaccine v11 from 119 to 118 and v857 from 203 to
+     202 (maximisation); the 21 instances whose root changes, at 600 s:
+     default 12 to 12 solved, one better objective (physician
+     instance18_real 7750 to 6915), -f 12 to 12 with differences of
+     search timing only; no wrong answer.
+
+216. New constraint ColouredSpanningTreeBound (org.jacop.constraints.graph)
+     for spanning trees with limits on the number of edges taken from
+     disjoint edge sets (colours). Such trees are the common bases of a
+     graphic and a partition matroid (Edmonds 1970). At every node it
+     checks that a common base exists with Cunningham's augmenting paths
+     (SIAM J. Comput. 1986), bounds the cost from below with the
+     Lagrangian relaxation of the colour limits (Held and Karp 1970),
+     which is exact since the matroid intersection polytope is integral
+     (see also Gabow and Tarjan 1984 for one colour), and removes edges
+     by reduced costs on the Lagrangian tree (Sellmann CP 2004, Regin et
+     al. CPAIOR 2010). The FlatZinc front end posts it as an implied
+     constraint for weighted_spanning_tree (jacop_wst) with sums of edge
+     variables with all coefficients 1 that restrict the tree
+     (-Dorg.jacop.fz.colouredTree=false turns it off). On 30 generated
+     colour-limited and rainbow spanning tree instances with 30 to 150
+     nodes (osolpro benchmarks/matroid-intersection) JaCoP proves all 30
+     instead of 15 in 600 s, e.g. rb_100_s1 optimum 758 in 26 s (best
+     774 before) and cc_60_12_s1 in 19 s instead of 495 s. No MiniZinc
+     Challenge or wide-set model combines weighted_spanning_tree with
+     such limits, so the default benchmarks are not affected.
+
+217. ColouredSpanningTreeBound and SpanningTreeBound give their own LCG
+     reasons, and ColouredSpanningTreeBound a solution hint. The reasons
+     follow the cycle and cut optimality conditions of minimum spanning
+     trees (Tarjan, Sensitivity analysis of minimum spanning trees, Inf.
+     Process. Lett. 14, 1982): a lower bound on the cost cites only the
+     excluded edges cheaper than an edge of their tree path and the
+     selected edges that a cheaper edge could replace; the removal or
+     selection of an edge adds the edges of its tree path or of its
+     fundamental cut and the maximum of the cost. A coloured tree rebuilds
+     its bound with the multipliers of its last calls; the absence of a
+     common base keeps the generic reason. The hint is the Lagrangian
+     tree made a common base and improved by edge swaps, given when its
+     weight meets the lower bound of the cost (so it is optimal); the
+     FlatZinc front end tries the values of such hints first when the
+     model has no search annotation and puts them in the saved phases
+     (-Dorg.jacop.fz.constraintHints=false turns it off). On rb_100_s2
+     under --lcg the generic share of reasons drops from 0.48 to 0.06 and
+     the average reason from 128 to 41 atoms. On the 39 instances of
+     osolpro benchmarks/matroid-intersection at 600 s the total time
+     drops from 1121 s to 506 s (all proved before and after), e.g.
+     ccd_100_20_s3 34 s instead of 486 s, cc_150_30_s2 2.4 s instead of
+     52 s, and five instances 1-1.5 s instead of 19-20 s.
+
+218. Values (MiniZinc nvalue) reads its difference graph once more at its
+     first call below the root, from the root constraints and domains.
+     Before, it read the graph only at root calls, so a difference
+     constraint imposed after its last root call was missed when nothing
+     woke it again at the root, for example with a count fixed in its
+     domain; the clique bound and the filtering of Fages and Lapegue
+     (CP 2013; Artificial Intelligence 212, 2014) then did nothing. The
+     filtering also computes the union of clique domains once for all
+     variables linked to the same clique variables: 6 to 28 unions per
+     call instead of 180 to 900 on the XCSP Rlfap instances, with the
+     same pruning.
+
+219. With lazy clause generation (--lcg), -Djacop.lcg.clauses=Class,...
+     gives small constraints of the named classes (or all) to the SAT
+     solver as clauses in place of propagators; default none. The
+     clauses come from the constraints' pseudo-Boolean encodings:
+     clauses as they are, linear relations by the order encoding
+     (Tamura, Taga, Kitagawa and Banbara, Compiling finite linear CSP
+     into SAT, Constraints 14(2), 2009) with the direct encoding of
+     two-variable equalities, and 0/1 sums by a unary counter (Sinz,
+     Towards an optimal CNF encoding of Boolean cardinality constraints,
+     CP 2005). A constraint becomes clauses only within
+     jacop.lcg.clauses.limit (256 clauses), .dom (64 values) and
+     .counter, and constraints over the objective's definition stay
+     propagators, since the core-guided phase reads them. On the wide
+     benchmark set at 240 s the links (FzXeqC, FzXneqC, Reified,
+     Implies, Not, XeqC-like, ChannelReif, ChannelImply, In) and small
+     Boolean constraints (AndBoolSimple, OrBoolSimple, XorBool, SumBool,
+     LinearBool) raise conflicts per second by 16-27 % but change the
+     solved counts little, so the option stays off.
+
+220. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
+     Pr(sum(i) w[i] * x[i] <= c) >= alphaNum / alphaDen for independent
+     random weights w[i] (Dist), x[i] >= 0 and a capacity variable c.
+     It never lists the joint scenarios: a convolution over the loads
+     0..max(c) of the items at their minimum gives the probability as
+     an interval of outward-rounded doubles, and a comparison with
+     alpha that the interval leaves open is decided on BigInteger
+     numerators. It fails, lowers each max(x[j]) to the largest value
+     that keeps the probability (domain consistent for 0/1 x), raises
+     min(c) to the alpha-quantile, explains its pruning for lazy
+     clause generation (lower bounds of x, largest expected load
+     first, and max(c)), and gives the linear relaxation rows from the
+     Cantelli inequality (mean - c <= k * sigma, k = sqrt((1 - alpha) /
+     alpha), with tangents of the square root). jacop_prob.mzn has
+     chance_sum(x, value, prob, den, c, alpha). On the ccki family of
+     osolpro benchmarks/prob: the 8 small instances match brute force
+     (under 0.6 s); of the 6 large ones, whose 3^30 to 5^100 joint
+     scenarios no expansion can write, n30 are proved in 8 s and n60,
+     n100 have solutions at 240 s (the rows cut the n60 bound from 1202
+     to 976 and the n30 proofs from 15-24 s to 8 s).
+
+221. LateCount uses release dates. For each earliest start t as origin,
+     every task may do up to t - est of its processing before t on a
+     machine of its own (a relaxation), and Moore and Hodgson bounds the
+     late tasks among the rest from t on; the best origin gives the
+     bound and the filtering, the earliest start of all the bound of
+     before. With new LateCount(s, d, due, late, true) it also enforces
+     the dominance rule of Baptiste, Peridy and Pinson (European J.
+     Operational Research 144(1), 2003): when p[i] <= p[j], r[i] + p[i]
+     <= r[j] + p[j], due[i] - p[i] >= due[j] - p[j] and r[i] + p[i] <=
+     due[i], task i is on time whenever task j is. The rule keeps an
+     optimum only when nothing else constrains the tasks, so the
+     FlatZinc front end turns it on only then: each start occurs only in
+     the unary resource and in its lateness test, the tests count with
+     one weight, the domains are intervals and leave room for the late
+     tasks at the end (-Dorg.jacop.fz.lateCount.dominance=false turns it
+     off; -Dorg.jacop.lateCount.releases=false the release bound). On 60
+     random 1|r_j|sum U_j instances (n = 40 to 150), 240 s, the optima
+     proved go from 49 to 60 with the model's search and from 54 to 60
+     with -f, no objective worse. On the 11 instances the base does not
+     prove, the release bound alone proves 11 and the dominance alone 7.
+
+222. The LP-guided search decisions (lcg-lp-branching) see the root
+     solution of the linear relaxation also when the search that uses
+     them is set up after the root propagation, as free search is: the
+     relaxation kept its solutions only from then on, and when no solve
+     in search is optimal the guide had no solution to follow.
+     surface-based-tsp 2026 ch130, whose root solution after the tree
+     cuts is the optimum, is proved in 7-12 s under -f instead of being
+     unsolved at 600 s; the other 16 instances of the wide set where the
+     guide is on keep their proofs and objectives (stable-goods s-d19 -f
+     7385 instead of 7485 at 600 s). Fixed search, whose activity runs
+     follow the root solution kept from the first solve in search, is
+     unchanged.
+
+223. JaLP pivots are about 1.1x faster with the same arithmetic. The full
+     passes of ftran and btran over U read the pivot row, position, pivot
+     and column of each slot of the order in sequence, with the columns of
+     U in one flat array laid out in that order (a Forrest-Tomlin column
+     is appended), and the rows of L are indexed by step; the
+     factorization no longer allocates per step, and the bound-flipping
+     ratio test computes each breakpoint ratio once instead of in every
+     pass. On the LP bench (659 LPs, 120 s) every LP has the same pivots,
+     objective and factorizations; sgm 1.11x on the 199 LPs of 0.5 s or
+     more, 1.15x on those of 5 s or more (map10 1.5x, map16715-04 1.55x,
+     i_n13 1.29x).
+
+224. Under lazy clause generation (--lcg), a value excluded by a bound
+     is explained by the earliest bound of the variable beyond it,
+     instead of the variable's latest bound. Explanations that say
+     "x cannot take v" (Count, the counting reasons of GCC, Element,
+     linear reasons over holes, ...) cite weaker atoms from earlier
+     levels, so learnt clauses are more general: on peacable_queens 8
+     under -f, a third of the Count reason atoms could be weakened to
+     an earlier one before, none now. The earliest bound is found by
+     binary search over the variable's bound entries, whose values
+     only tighten. -Djacop.lcg.lift=false keeps the latest bound. On
+     the osolpro wide set at 600 s, --lcg: 5 very hard instances
+     better (cargo, blocks-world, ihtc kletzander and marte,
+     rcpsp-wet-diverse), none worse; --lcg -f, two repetitions: 6 very
+     hard instances better (gbac, tdtsp, neighbours, blocks-world,
+     cargo, work-task-variation), 1 worse (java-routing trip_8_3).
+
+225. Dichotomic bound search, off by default. --free-config
+     lcg-bisect=<gap> makes LCG free search probe the objective: it
+     assumes obj <= lb + (best - 1 - lb) / 2 under a conflict limit, and
+     a probe that fails on that assumption alone proves obj > target
+     (a root clause and the objectiveBound); a probe out of conflicts
+     halves the step, a proof doubles it again (at most half the gap).
+     Within the gap it runs branch and bound. --free-config
+     portfolio-bisect=<gap> gives this search to the second thread of
+     -p (without the core-guided phase and without clause sharing:
+     its clauses cost jp-encoding its proofs in the other threads),
+     in place of the last thread of the default layout. At -p 4, 240 s,
+     on 68 MiniZinc Challenge instances with an open bound gap
+     (osolpro benchmarks/bound-worker): the gap to the best known
+     solution averages 0.139 instead of 0.167 at 60 s, but at 240 s
+     the bound is better on 8 and worse on 6 (proved 42 against 44,
+     within run-to-run noise); tsptw n20w180.004 is proved only with
+     it, while spot5 1401 and community-detection Zakhary.s12.k4 lose
+     the bound of the DFS thread it replaces. Neutral on the 43
+     objective instances of wide-quick. OR-Tools CP-SAT runs similar
+     probes in its objective_shaving workers.
+
+226. The LP relaxation (LinearRelaxation) now has the weight and profit
+     rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
+     knapsacks KnapsackDetector posts), as linearised rows tried at the
+     root. Before, a model stated with knapsack constraints had no LP
+     row of them: on MiniZinc Challenge multi-knapsack the root LP was
+     empty or far from the optimum (mknap2-10: 1101197, optimum 624319)
+     and is now at the optimum. On the 15 multi-knapsack instances of
+     the Challenge (600 s), total time 95 s -> 38 s, and with -f 109 s
+     -> 38 s (mknap2-2: 32 s -> 12 s); no other wide-set instance gets
+     a different LP. -Dorg.jacop.lp.knapsackRows=false turns it off.
+     Lifted cover cuts of the knapsack rows (sequence-independent
+     lifting, Gu, Nemhauser and Savelsbergh, J. Comb. Optim. 4, 2000)
+     were tried as well and are not included: the MIR cuts already
+     reach the same root bounds on the MiniZinc Challenge instances.
+
+227. Bug fix: the MiniZinc predicate channel(x, b) of JaCoP's library
+     paired b with the values of dom(x) instead of with the indices of b,
+     although it is documented as x = i <-> b[i]. With dom(x) = 2..6 and
+     b indexed 1..5, b[1] was true for x = 2; when dom(x) and index_set(b)
+     had different sizes (holes in dom(x), or a narrower or wider domain),
+     the model was rejected with "Status array size ... has not equal
+     size as number of values". channel(x, b) now posts x in index_set(b)
+     and channels over index_set(b). Found by the all-solutions suite
+     (random variants of its channel model).
+
+228. Free search (-f) that continues after LCG gave way runs its large
+     neighbourhoods from LCG's best solution. They waited for free
+     search's own first solution, which must improve on LCG's; on
+     saeling 2026 j0050_m003 (makespan) it never came and no
+     neighbourhood ran: 1350 instead of 1442 at 600 s (CP-SAT free
+     reached 1392 in the 2026 Challenge). On the 25 wide-set instances
+     where LCG gives way, 600 s, -f: 13.5 vs 12.5 pair points, 6
+     families better and 5 worse. -Dorg.jacop.lns.shift=true adds shift
+     neighbourhoods (the tasks after a window of time may start
+     earlier); off by default, as it loses on the wide set.
+
+229. WeightedCompletion on a resource of capacity above 1 (P|r_j|sum w_j
+     C_j) bounds the cost with the parallel inequalities of the prefixes
+     of Smith's order (A. S. Schulz, "Scheduling to minimize total
+     weighted completion time: performance guarantees of LP-based
+     heuristics and lower bounds", IPCO 1996, LNCS 1084), each prefix S
+     bounded by integral (e(S) - min(A, B)) dt with A the work of the
+     fluid schedule of S and B the work of its tasks' earliest
+     processing, so the rows also hold the earliest completions. The
+     greedy dual of the rows (as for Queyranne's polytope, Math.
+     Programming 58, 1993) makes it a sum over the prefixes, at most
+     twice the cost of the fluid bound it replaces, which it never
+     goes below. Under --lcg the reasons of the parallel bound lower the
+     minima of the free starts towards their root values as far as the
+     bound still holds (checked by recomputing it), and a pruned start
+     no longer cites its own minimum. On 36 random P|r_j|sum w_j C_j
+     instances (n = 20 to 40, 2 to 4 machines) the proven bound is
+     higher on 23 at 240 s in both modes; the mean gap goes from 3.4 %
+     to 2.9 % (model search) and from 1.3 % to 1.1 % (-f), with the
+     same objectives on average. 2017 cargo challenge16 (wide set,
+     600 s) improves from 136790 to 125504 (model search) and from
+     137787 to 128330 (-f). -Dorg.jacop.weightedCompletion.prefixRows
+     and ...weakReasons=false turn the two parts off.
 
 Version 4.11
 =============

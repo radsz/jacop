@@ -57,6 +57,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.BoolClause;
@@ -720,6 +721,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.alldiffCuts
             + "\n%%%mzn-stat: lpAlldiffBound="
             + r.alldiffBound
+            + "\n%%%mzn-stat: lpAlldiffLists="
+            + r.alldiffLists
+            + "\n%%%mzn-stat: lpAlldiffVariantLists="
+            + r.alldiffVariantLists
+            + "\n%%%mzn-stat: lpAlldiffSearchCuts="
+            + r.alldiffSearchCuts
+            + "\n%%%mzn-stat: lpAlldiffSeparations="
+            + r.alldiffSeparations
             + "\n%%%mzn-stat: lpTreeCuts="
             + r.treeCuts
             + "\n%%%mzn-stat: lpTreeBound="
@@ -2063,6 +2072,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     lcg.setRestartPresolve(options.presolveRestart());
+    // the hints of constraints first; a solution of local search replaces them
+    Hint constraintHint = constraintHints();
+    if (constraintHint != null) {
+      lcg.setPhase(constraintHint.vars, constraintHint.values);
+    }
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2193,6 +2207,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search: the runs of activity branching between the annotation's runs start from it
       lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
     }
+    if (defaultSearch && constraintHint != null) {
+      // no search annotation: the runs of the default search start with the values of the hints
+      IndomainLastSolution hinted =
+          new IndomainLastSolution(constraintHint.vars, new IndomainMin<>());
+      hinted.hint(constraintHint.vars, constraintHint.values);
+      SelectChoicePoint<IntVar> first = new SimpleSelect<>(constraintHint.vars, null, hinted);
+      annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
+    }
     lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
       // defined variables follow from the others: activity branches on them last. A defined 0/1
@@ -2239,6 +2261,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // objective shaving in those runs: each assumes the objective a growing step above its bound
       lcg.setShaving("on".equals(options.freeConfig("lcg-shave", "on")));
       lcg.setLowerBoundGrowth(Double.parseDouble(options.freeConfig("lcg-lb-growth", "1")));
+      // dichotomic bound search in place of the core-guided phase, for a portfolio thread on the
+      // lower bound, until the relative gap is within this share of the best solution
+      lcg.setBisection(Double.parseDouble(options.freeConfig("lcg-bisect", "0")));
       // core-guided search for a sum objective before branch and bound: its share of the time,
       // and the conflicts one call of the solver may take before it stops. With cost variables
       // first, branch and bound finds near-optimal solutions at once and needs the time more:
@@ -2658,6 +2683,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgConstraintsAsClauses="
+            + lcg.constraintsAsClauses
+            + "\n%%%mzn-stat: lcgConstraintClauses="
+            + lcg.constraintClauses
             + "\n%%%mzn-stat: lcgPureClauses="
             + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="
@@ -2714,6 +2743,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.lowerBoundRuns
             + "\n%%%mzn-stat: lcgLowerBoundRaised="
             + lcg.lowerBoundRaised
+            + bisectStatistics(lcg)
             + coreStatistics()
             + lnsStatistics(lcg.lns())
             + sharingStatistics(lcg)
@@ -2747,6 +2777,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     lcg.setSharedClauses(worker.sharedClauses(), added, names::get, size, lbd);
+  }
+
+  // the probes of dichotomic bound search (lcg-bisect), when it ran
+  private static String bisectStatistics(LcgSolver lcg) {
+    if (lcg.bisectProbes == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lcgBisectProbes="
+        + lcg.bisectProbes
+        + "\n%%%mzn-stat: lcgBisectRaised="
+        + lcg.bisectRaised
+        + "\n%%%mzn-stat: lcgBisectLimits="
+        + lcg.bisectLimits;
   }
 
   private static String sharingStatistics(LcgSolver lcg) {
@@ -3023,6 +3066,53 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   // the integer variables of the store not fixed at the root, which a solution hint covers
+  /** Variables with the values a hint prefers for them. */
+  private static final class Hint {
+    final IntVar[] vars;
+    final int[] values;
+
+    Hint(IntVar[] vars, int[] values) {
+      this.vars = vars;
+      this.values = values;
+    }
+  }
+
+  /**
+   * The hints of the constraints that give one ({@link SolutionHint}), such as a feasible tree of
+   * {@link org.jacop.constraints.graph.ColouredSpanningTreeBound}, or null when there is none or
+   * -Dorg.jacop.fz.constraintHints is false. A variable hinted twice keeps its first value.
+   */
+  private Hint constraintHints() {
+    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.constraintHints"))) {
+      return null;
+    }
+    Map<IntVar, Integer> seen = new IdentityHashMap<>();
+    List<IntVar> vars = new ArrayList<>();
+    List<Integer> values = new ArrayList<>();
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof SolutionHint h && h.hintValues() != null) {
+        IntVar[] xs = h.hintVariables();
+        int[] vs = h.hintValues();
+        for (int i = 0; i < xs.length; i++) {
+          if (!xs[i].singleton()
+              && xs[i].domain.contains(vs[i])
+              && seen.putIfAbsent(xs[i], vs[i]) == null) {
+            vars.add(xs[i]);
+            values.add(vs[i]);
+          }
+        }
+      }
+    }
+    if (vars.isEmpty()) {
+      return null;
+    }
+    if (options.debug()) {
+      IO.println("% constraint hints: " + vars.size() + " variables");
+    }
+    return new Hint(
+        vars.toArray(new IntVar[0]), values.stream().mapToInt(Integer::intValue).toArray());
+  }
+
   private IntVar[] hintedVariables() {
     Set<IntVar> all = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < store.size(); i++) {
@@ -3201,6 +3291,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               : FreeSearch.Alternation.EVERY_RESTART);
     }
     Portfolio.Worker worker = options.portfolioWorker();
+    Hint constraintHint = allSolutions || phaseSavers.isEmpty() ? null : constraintHints();
+    if (constraintHint != null) {
+      // the first run follows the hints of constraints, unless local search gives a solution
+      for (IndomainLastSolution saver : phaseSavers) {
+        saver.hint(constraintHint.vars, constraintHint.values);
+      }
+      builder.mainBranchingFirst(true);
+    }
     if (!allSolutions && !onRestart && !phaseSavers.isEmpty()) {
       localSearchPhase(costVar, searchVars, worker, builder);
     }
@@ -3242,6 +3340,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.restartHook(dictionary.onRestart);
     } else if (restarts != null && !allSolutions) {
       freeLns = lnsNeighbourhoods(costVar);
+      if (freeLns != null && lcgHint != null) {
+        // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
+        // they waited for free search's own first solution, which must improve on it, and on
+        // saeling 2026 j0050_m003 free search never improved on LCG's makespan 1454 and made no
+        // neighbourhood run in 240 s
+        freeLns.solution(lcgHinted, lcgHint);
+      }
       if (freeLns != null) {
         builder.lns(
             freeLns,

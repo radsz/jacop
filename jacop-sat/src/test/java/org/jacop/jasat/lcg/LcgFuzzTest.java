@@ -172,6 +172,8 @@ import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
+import org.jacop.constraints.graph.ColouredSpanningTreeBound;
+import org.jacop.constraints.graph.SpanningTreeBound;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
 import org.jacop.constraints.netflow.NetworkBuilder;
@@ -458,7 +460,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(33)) {
+      return switch (rnd.nextInt(35)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -569,6 +571,8 @@ class LcgFuzzTest {
         }
         case 30 -> valuesWithDifferences();
         case 31 -> unaryEarlinessTardiness(p);
+        case 32 -> colouredTree();
+        case 33 -> spanningTree();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -623,6 +627,38 @@ class LcgFuzzTest {
         terms[i] = new int[] {i, rnd.nextInt(5), rnd.nextInt(3), rnd.nextInt(3)};
       }
       return new UnaryEarlinessTardiness(p, d, machines, owner, terms, intVar("uet", 0, 12));
+    }
+
+    // a spanning tree of 3 nodes over the Booleans b as edges, with colour limits and a cost
+    private ColouredSpanningTreeBound colouredTree() {
+      int m = b.length;
+      int[] from = new int[m];
+      int[] to = new int[m];
+      int[] w = new int[m];
+      int[] colours = new int[m];
+      for (int e = 0; e < m; e++) {
+        from[e] = rnd.nextInt(3);
+        to[e] = rnd.nextInt(3);
+        w[e] = rnd.nextInt(4);
+        colours[e] = rnd.nextInt(3) - 1;
+      }
+      int[] caps = {rnd.nextInt(2), 1 + rnd.nextInt(1)};
+      return new ColouredSpanningTreeBound(
+          3, from, to, w, colours, caps, b, rnd.nextBoolean() ? one() : intVar("ct", 0, 8), 0);
+    }
+
+    // the minimum spanning tree bound of 3 nodes over the Booleans b as edges
+    private SpanningTreeBound spanningTree() {
+      int m = b.length;
+      int[] from = new int[m];
+      int[] to = new int[m];
+      int[] w = new int[m];
+      for (int e = 0; e < m; e++) {
+        from[e] = rnd.nextInt(3);
+        to[e] = rnd.nextInt(3);
+        w[e] = rnd.nextInt(4);
+      }
+      return new SpanningTreeBound(3, from, to, w, b, intVar("st", 0, 6), 0);
     }
 
     // three starts under precedences with lags, earliness and tardiness at most a cost variable
@@ -1599,6 +1635,7 @@ class LcgFuzzTest {
     long checked = 0;
     long lowerBoundRuns = 0;
     long lowerBoundRaised = 0;
+    long bisectProbes = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected = reference(new Model(seed));
@@ -1616,6 +1653,7 @@ class LcgFuzzTest {
         checked += solver.checker().checked;
         lowerBoundRuns += solver.lowerBoundRuns;
         lowerBoundRaised += solver.lowerBoundRaised;
+        bisectProbes += solver.bisectProbes;
         IntVar[] vars = model.decisionVars();
         values = new int[vars.length];
         if (status == CdclSolver.SAT) {
@@ -1646,8 +1684,8 @@ class LcgFuzzTest {
     if (RUNS >= 1000) {
       System.out.printf(
           "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
-              + " %d lower-bound runs (%d raised the bound)%n",
-          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised);
+              + " %d lower-bound runs (%d raised the bound), %d bisection probes%n",
+          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised, bisectProbes);
       statistics.forEach(
           (k, v) ->
               System.out.printf(
@@ -1674,6 +1712,14 @@ class LcgFuzzTest {
         solver.setShaving(true);
         solver.setLowerBoundGrowth(random.nextBoolean() ? 1 : 2);
       }
+    }
+    // one run in four probes the objective dichotomically first (and then no core-guided search),
+    // with probes of a few conflicts, until the gap is closed or within a share of the best
+    Random bisect = new Random(seed * 13 + 5);
+    if (bisect.nextInt(4) == 0) {
+      solver.setBisection(new double[] {1e-9, 0.05, 0.5}[bisect.nextInt(3)]);
+      // probes of 1 to 3 conflicts; branch and bound after them with or without lower-bound runs
+      solver.setLowerBoundSearch(bisect.nextBoolean() ? 0.5 : 0, 1 + bisect.nextInt(3));
     }
     // one run in three starts with core-guided search, for a few conflicts
     Random core = new Random(seed * 17 + 3);

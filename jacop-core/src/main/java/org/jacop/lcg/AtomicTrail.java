@@ -95,6 +95,10 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // the bound before a position is found by binary search instead of a walk along the chain
   private int[][] bounds = new int[0][];
   private int[] numBounds = new int[0];
+  // the variable's NE entries in trail order, so that the holes before a position are listed
+  // without a walk over its bound entries
+  private int[][] holes = new int[0][];
+  private int[] numHoles = new int[0];
   // the NE entry of each removed value, so that whether a value was removed before a position is
   // found without a walk along the variable's chain
   private final EntryIndex removals = new EntryIndex();
@@ -210,6 +214,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       Arrays.fill(last, old, n, -1);
       bounds = Arrays.copyOf(bounds, 2 * n);
       numBounds = Arrays.copyOf(numBounds, 2 * n);
+      holes = Arrays.copyOf(holes, n);
+      numHoles = Arrays.copyOf(numHoles, n);
     }
     if (root[i] == null) {
       lateVariables++;
@@ -398,6 +404,12 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     last[i] = size;
     if (k == NE) {
       removals.put(i, v, size);
+      if (holes[i] == null) {
+        holes[i] = new int[8];
+      } else if (numHoles[i] == holes[i].length) {
+        holes[i] = Arrays.copyOf(holes[i], 2 * numHoles[i]);
+      }
+      holes[i][numHoles[i]++] = size;
     } else {
       int b = 2 * i + k;
       if (bounds[b] == null) {
@@ -421,6 +433,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         numBounds[2 * i + kind[size]]--;
       } else {
         removals.remove(i, value[size]);
+        numHoles[i]--;
       }
       if (last[i] < 0 || level[last[i]] < removedLevel) {
         // the variable's last removed entry: its domain is restored
@@ -612,6 +625,40 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return e;
   }
 
+  // the earliest k bound entry before the position whose value is beyond v (above it for GE, below
+  // it for LE), by binary search over the variable's bound entries, whose values only tighten; -1
+  // when there is none
+  private int firstBeyond(IntVar x, int v, int position, int k) {
+    int b = 2 * id(x) + k;
+    if (b >= numBounds.length) {
+      return -1;
+    }
+    int[] list = bounds[b];
+    int lo = 0;
+    int hi = numBounds[b] - 1;
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      if (list[mid] < position) {
+        lo = mid + 1;
+      } else {
+        hi = mid - 1;
+      }
+    }
+    // list[0..hi] are before the position; find the first whose value is beyond v
+    int end = hi;
+    lo = 0;
+    while (lo <= hi) {
+      int mid = (lo + hi) >>> 1;
+      int w = value[list[mid]];
+      if (k == GE ? w > v : w < v) {
+        hi = mid - 1;
+      } else {
+        lo = mid + 1;
+      }
+    }
+    return lo <= end ? list[lo] : -1;
+  }
+
   private int latest(IntVar x, int position, int k) {
     if (k != NE) {
       int b = 2 * id(x) + k;
@@ -620,11 +667,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       }
       return latestBound(b, position);
     }
-    int e = lastBefore(x, position);
-    while (e >= 0 && kind[e] != k) {
-      e = previous[e];
-    }
-    return e;
+    int i = id(x);
+    int h = holeBefore(i, position);
+    return h >= 0 ? holes[i][h] : -1;
   }
 
   // the last entry of bound list b (2 * id + GE or LE) before the position, or -1
@@ -916,15 +961,34 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (!root[i].contains(v)) {
       return true;
     }
+    int f = removals.get(i, v);
+    int removal = f < position ? f : -1;
+    int g = latest(x, position, GE);
+    int l = latest(x, position, LE);
+    if (LIFTING) {
+      // the earliest entry before the position that removes v: the value's NE entry, or the
+      // weakest bound of either kind that is beyond v, since a later bound only tightens it
+      int earliestGe = g >= 0 && value[g] > v ? firstBeyond(x, v, position, GE) : -1;
+      int earliestLe = l >= 0 && value[l] < v ? firstBeyond(x, v, position, LE) : -1;
+      int found = removal;
+      if (earliestGe >= 0 && (found < 0 || earliestGe < found)) {
+        found = earliestGe;
+      }
+      if (earliestLe >= 0 && (found < 0 || earliestLe < found)) {
+        found = earliestLe;
+      }
+      if (found < 0) {
+        return false;
+      }
+      out.add(found);
+      return true;
+    }
     // the latest entry before the position that removes v: the value's NE entry, or the last bound
     // of either kind, which removes v when any bound of its kind before it does
-    int f = removals.get(i, v);
-    int found = f < position ? f : -1;
-    int g = latest(x, position, GE);
+    int found = removal;
     if (g > found && value[g] > v) {
       found = g;
     }
-    int l = latest(x, position, LE);
     if (l > found && value[l] < v) {
       found = l;
     }
@@ -990,9 +1054,10 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       }
       return;
     }
-    for (int f = previous[entry]; f >= 0; f = previous[f]) {
-      if (kind[f] == NE
-          && (ge ? value[f] >= bound && value[f] < v : value[f] <= bound && value[f] > v)) {
+    int i = id(entryVar[entry]);
+    for (int k = holeBefore(i, entry); k >= 0; k--) {
+      int f = holes[i][k];
+      if (ge ? value[f] >= bound && value[f] < v : value[f] <= bound && value[f] > v) {
         out.add(f);
       }
     }
@@ -1018,11 +1083,36 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     if (le >= 0) {
       out.add(le);
     }
-    for (int f = lastBefore(x, position); f >= 0; f = previous[f]) {
-      if (kind[f] == NE && value[f] > lo && value[f] < hi) {
+    int i = id(x);
+    for (int k = holeBefore(i, position); k >= 0; k--) {
+      int f = holes[i][k];
+      if (value[f] > lo && value[f] < hi) {
         out.add(f);
       }
     }
+  }
+
+  // the index in holes[i] of the variable's last NE entry before the position, or -1; holes[i] is
+  // in trail order, so a binary search finds it
+  private int holeBefore(int i, int position) {
+    if (i >= numHoles.length) {
+      return -1;
+    }
+    int[] list = holes[i];
+    int hi = numHoles[i] - 1;
+    if (hi < 0 || list[hi] < position) {
+      return hi;
+    }
+    int lo = 0;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (list[mid] < position) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo - 1;
   }
 
   /**

@@ -32,8 +32,10 @@ package org.jacop.constraints.cumulative;
 
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
@@ -49,6 +51,15 @@ import org.jacop.core.TimeStamp;
 /*
  * CumulativePrimary implements the cumulative constraint using time tabling
  * algorithm.
+ *
+ * The sweep follows the scalable sweep of A. Letort, N. Beldiceanu and M. Carlsson, "A Scalable
+ * Sweep Algorithm for the cumulative Constraint", CP 2012, LNCS 7514, pp. 439-454: the tasks under
+ * pruning are kept by resource use, and at each change of the profile only the tasks whose use
+ * crosses the gap between the profile and the limit are touched, instead of every task under
+ * pruning. Unlike that paper, which computes the earliest start only, the sweep keeps removing
+ * every start that overlaps a point without room (holes), as before; the tasks are kept in two
+ * bit sets over the order of increasing resource use, which scans faster than the paper's heaps
+ * when, as on largescheduling, tasks cross the gap at almost every profile change.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -88,11 +99,22 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
   private final int[] eventIndex;
   private final int[] eventValue;
 
-  // sweep state, reused between calls
-  private final BitSet tasksToPrune;
-  private final boolean[] inProfile;
+  // sweep state, reused between calls: the state of each task and the waiting tasks (use at most
+  // the gap) and conflicting tasks (use more), as bit sets over the order by resource use
+  private static final byte NONE = 0;
+  private static final byte WAITING = 1;
+  private static final byte CONFLICT = 2;
+  private static final byte IN_PROFILE = 3;
+  private final byte[] state;
+  // tasks by rank, the order of increasing resource use (ties by index)
+  private final int[] rank;
+  private final int[] taskOfRank;
+  private final int[] resOfRank;
+  private final BitSet waiting;
+  private final BitSet conflict;
+  private final int[] releaseBuffer;
+  private int releaseCount;
   private final int[] startExcluded;
-  private final boolean[] startConsidered;
   private final int[] activeMap;
   private final TimeStamp<Integer> activePnt;
 
@@ -139,10 +161,23 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
     eventKeys = new long[4 * start.length];
     eventIndex = new int[4 * start.length];
     eventValue = new int[4 * start.length];
-    tasksToPrune = new BitSet(start.length);
-    inProfile = new boolean[start.length];
+    state = new byte[start.length];
+    taskOfRank =
+        IntStream.range(0, start.length)
+            .boxed()
+            .sorted(Comparator.comparingInt((Integer i) -> res[i]).thenComparingInt(i -> i))
+            .mapToInt(Integer::intValue)
+            .toArray();
+    rank = new int[start.length];
+    resOfRank = new int[start.length];
+    for (int r = 0; r < start.length; r++) {
+      rank[taskOfRank[r]] = r;
+      resOfRank[r] = res[taskOfRank[r]];
+    }
+    waiting = new BitSet(start.length);
+    conflict = new BitSet(start.length);
+    releaseBuffer = new int[start.length];
     startExcluded = new int[start.length];
-    startConsidered = new boolean[start.length];
     activeMap = new int[start.length];
     for (int i = 0; i < start.length; i++) {
       activeMap[i] = i;
@@ -238,9 +273,10 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
 
     logDebugNarrIfEnabled(count, limitMax);
 
-    tasksToPrune.clear();
-    Arrays.fill(inProfile, false);
-    Arrays.fill(startConsidered, false);
+    Arrays.fill(state, NONE);
+    waiting.clear();
+    conflict.clear();
+    releaseCount = 0;
 
     // current value of the PROFILE for mandatory parts
     int curProfile = 0;
@@ -256,7 +292,9 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
       switch (type) {
         case PROFILE:
           curProfile += eventValue[seq];
-          inProfile[index] = eventValue[seq] > 0;
+          if (state[index] != NONE) {
+            sweepPruningHandleOwnProfile(index, eventValue[seq] > 0);
+          }
           if (i == count - 1
               || type(eventKeys[i + 1]) != PROFILE
               || date < date(eventKeys[i + 1])) {
@@ -356,13 +394,26 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
     if (curProfile > limit.min()) {
       limit.domain.inMin(store.level, limit, curProfile);
     }
-    for (int ti = tasksToPrune.nextSetBit(0); ti >= 0; ti = tasksToPrune.nextSetBit(ti + 1)) {
-      if (!startConsidered[ti]) {
-        if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
-          startExcluded[ti] = date - dur[ti] + 1;
-          startConsidered[ti] = true;
-        }
-      } else if (inProfile[ti] || limitMax - curProfile >= res[ti]) {
+    // waiting tasks use at most the gap, conflicting tasks more; the tasks of rank from k on use
+    // more
+    int k = firstRankAbove(limitMax - curProfile);
+    // tasks in conflict that fit again; the tasks whose compulsory part started at this date are
+    // in the buffer already
+    for (int r = conflict.nextSetBit(0); r >= 0 && r < k; r = conflict.nextSetBit(r + 1)) {
+      conflict.clear(r);
+      int ti = taskOfRank[r];
+      state[ti] = WAITING;
+      releaseBuffer[releaseCount++] = ti;
+    }
+    if (releaseCount > 0) {
+      // the pruning happens in task order, as in the loop over all tasks
+      if (releaseCount > 1) {
+        Arrays.sort(releaseBuffer, 0, releaseCount);
+      }
+      int n = releaseCount;
+      releaseCount = 0;
+      for (int r = 0; r < n; r++) {
+        int ti = releaseBuffer[r];
         if (DEBUG_NARR) {
           log.debug(
               ">>> CumulativePrimary Profile 1. Narrowed {} \\ {}",
@@ -376,21 +427,67 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
           noStartLeft = start[ti];
           throw e;
         }
-        startConsidered[ti] = false;
+        if (state[ti] == WAITING) {
+          waiting.set(rank[ti]);
+        }
       }
+    }
+    // waiting tasks that do not fit any more
+    for (int r = waiting.nextSetBit(k); r >= 0; r = waiting.nextSetBit(r + 1)) {
+      waiting.clear(r);
+      int ti = taskOfRank[r];
+      startExcluded[ti] = date - dur[ti] + 1;
+      state[ti] = CONFLICT;
+      conflict.set(r);
+    }
+  }
+
+  // the first rank whose task uses more than gap
+  private int firstRankAbove(int gap) {
+    int lo = 0;
+    int hi = resOfRank.length;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (resOfRank[mid] <= gap) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
+  }
+
+  // the compulsory part of a task starts or ends; it does not conflict with itself
+  private void sweepPruningHandleOwnProfile(int ti, boolean in) {
+    if (in) {
+      if (state[ti] == CONFLICT) {
+        conflict.clear(rank[ti]);
+        releaseBuffer[releaseCount++] = ti;
+        state[ti] = IN_PROFILE;
+      } else if (state[ti] == WAITING) {
+        waiting.clear(rank[ti]);
+        state[ti] = IN_PROFILE;
+      }
+    } else if (state[ti] == IN_PROFILE) {
+      state[ti] = WAITING;
+      waiting.set(rank[ti]);
     }
   }
 
   private void sweepPruningHandlePruneStart(int ti, int date, int limitMax, int curProfile) {
-    if (!inProfile[ti] && limitMax - curProfile < res[ti]) {
+    if (limitMax - curProfile < res[ti]) {
       startExcluded[ti] = date;
-      startConsidered[ti] = true;
+      state[ti] = CONFLICT;
+      conflict.set(rank[ti]);
+    } else {
+      state[ti] = WAITING;
+      waiting.set(rank[ti]);
     }
-    tasksToPrune.set(ti);
   }
 
   private void sweepPruningHandlePruneEnd(Store store, int ti) {
-    if (startConsidered[ti]) {
+    if (state[ti] == CONFLICT) {
+      conflict.clear(rank[ti]);
       if (DEBUG_NARR) {
         log.debug(
             ">>> CumulativePrimary Profile 2. Narrowed {} inMax {} => {}",
@@ -404,9 +501,10 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
         noStartLeft = start[ti];
         throw e;
       }
+    } else if (state[ti] == WAITING) {
+      waiting.clear(rank[ti]);
     }
-    startConsidered[ti] = false;
-    tasksToPrune.set(ti, false);
+    state[ti] = NONE;
   }
 
   private void removeNotUsedProfleTasks() {

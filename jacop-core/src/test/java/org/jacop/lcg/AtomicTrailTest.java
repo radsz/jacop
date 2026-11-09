@@ -1078,7 +1078,9 @@ class AtomicTrailTest {
 
   /**
    * Member([a, b, c], e): c's bounds and holes bound e, and once a and b are apart from e, c is the
-   * last candidate and takes e's bounds. Each reason is one decision, not the generic one.
+   * last candidate and takes e's bounds. Each reason is one decision, not the generic one, except c
+   * &gt;= 4: it cites the earliest entry that removes each value of e below 4, e != 3 and e &gt;=
+   * 4.
    */
   @Test
   void memberHasItsOwnReasons() {
@@ -1112,7 +1114,9 @@ class AtomicTrailTest {
       assertThat(trail.explain(entry, reason)).isTrue();
       assertThat(trail.replayed()).as("explained by Member, not by its replay").isFalse();
       reason.sortUnique(0);
-      assertThat(reason.size()).as("reason of %s", trail.atomString(entry)).isEqualTo(1);
+      assertThat(reason.size())
+          .as("reason of %s", trail.atomString(entry))
+          .isEqualTo("[c >= 4]".equals(trail.atomString(entry)) ? 2 : 1);
       explained++;
     }
     assertThat(explained).isGreaterThanOrEqualTo(3);
@@ -1475,7 +1479,7 @@ class AtomicTrailTest {
   }
 
   @Test
-  void excludedBeforeCitesTheLatestEntryThatRemovesTheValue() {
+  void excludedBeforeCitesTheEarliestEntryThatRemovesTheValue() {
     Random rnd = new Random(12);
     int[] spans = {40, 600, (1 << 16) + 10};
     for (int run = 0; run < 90; run++) {
@@ -1509,6 +1513,7 @@ class AtomicTrailTest {
           for (int e = 0; e < position; e++) {
             if (trail.variable(e) == x && removes(trail, e, v)) {
               expected = e;
+              break;
             }
           }
           out.clear();

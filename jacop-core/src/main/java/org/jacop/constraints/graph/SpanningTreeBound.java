@@ -41,6 +41,9 @@ import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Cost bound of a spanning tree of an undirected graph: the selected edges must form a spanning
@@ -59,13 +62,17 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class SpanningTreeBound extends Constraint
-    implements SatisfiedPresent, Copyable<SpanningTreeBound> {
+    implements SatisfiedPresent, Explainable, Copyable<SpanningTreeBound> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   final int[] from;
   final int[] to;
   final int[] weights;
+  // the weights as long values for the reduced-cost filtering
+  private final long[] longWeights;
+  // the reasons under lazy clause generation, made at the first explanation
+  private TreeExplanation explanation;
   final IntVar[] es;
   final IntVar cost;
   final int base;
@@ -79,14 +86,7 @@ public class SpanningTreeBound extends Constraint
 
   private final int[] parent;
   private final boolean[] inTree;
-  // the tree rooted at node 0: treeParent[v] is the node above v, reached by edge treeEdge[v]
-  private final int[] treeParent;
-  private final int[] treeEdge;
-  private final int[] depth;
-  private final int[] adjStart;
-  private final int[] adjEdge;
-  private final int[] queue;
-  private final long[] replacement;
+  private final TreeReducedCosts reducedCosts;
 
   /**
    * It constructs the bound.
@@ -120,13 +120,13 @@ public class SpanningTreeBound extends Constraint
     this.from = Arrays.copyOf(from, m);
     this.to = Arrays.copyOf(to, m);
     this.weights = Arrays.copyOf(weights, m);
+    this.longWeights = Arrays.stream(weights).asLongStream().toArray();
     this.es = Arrays.copyOf(es, m);
     this.cost = cost;
     this.base = base;
 
     tail = new int[m];
     head = new int[m];
-    adjStart = new int[n + 1];
     for (int e = 0; e < m; e++) {
       tail[e] = from[e] - base;
       head[e] = to[e] - base;
@@ -139,12 +139,7 @@ public class SpanningTreeBound extends Constraint
             .toArray();
     parent = new int[n];
     inTree = new boolean[m];
-    treeParent = new int[n];
-    treeEdge = new int[n];
-    depth = new int[n];
-    adjEdge = new int[2 * Math.max(n - 1, 0)];
-    queue = new int[n];
-    replacement = new long[m];
+    reducedCosts = new TreeReducedCosts(n, m);
 
     setScope(es, new IntVar[] {cost});
   }
@@ -165,7 +160,7 @@ public class SpanningTreeBound extends Constraint
     int treeSize = 0;
     for (int e = 0; e < m; e++) {
       if (es[e].min() == 1) {
-        if (!union(tail[e], head[e])) {
+        if (!TreeReducedCosts.union(parent, tail[e], head[e])) {
           throw Store.failException;
         }
         inTree[e] = true;
@@ -174,7 +169,9 @@ public class SpanningTreeBound extends Constraint
       }
     }
     for (int e : order) {
-      if (es[e].min() == 0 && es[e].max() == 1 && union(tail[e], head[e])) {
+      if (es[e].min() == 0
+          && es[e].max() == 1
+          && TreeReducedCosts.union(parent, tail[e], head[e])) {
         inTree[e] = true;
         lower += weights[e];
         treeSize++;
@@ -188,108 +185,26 @@ public class SpanningTreeBound extends Constraint
     }
     cost.domain.inMin(store.level, cost, (int) lower);
 
-    filterEdges(store, lower, cost.max());
+    reducedCosts.filter(store, es, tail, head, inTree, longWeights, lower, cost.max());
   }
 
-  private boolean union(int a, int b) {
-    int ra = find(a);
-    int rb = find(b);
-    if (ra == rb) {
-      return false;
+  private TreeExplanation explanation() {
+    if (explanation == null) {
+      explanation = new TreeExplanation(n, es, tail, head, cost);
     }
-    parent[ra] = rb;
-    return true;
+    return explanation;
   }
 
-  private int find(int v) {
-    int r = v;
-    while (parent[r] != r) {
-      r = parent[r];
-    }
-    while (parent[v] != r) {
-      int next = parent[v];
-      parent[v] = r;
-      v = next;
-    }
-    return r;
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explanation().explain(trail, entry, longWeights, 0, 1, out);
   }
 
-  private void filterEdges(Store store, long lower, long upper) {
-
-    // root the tree at node 0
-    Arrays.fill(adjStart, 0);
-    for (int e = 0; e < m; e++) {
-      if (inTree[e]) {
-        adjStart[tail[e] + 1]++;
-        adjStart[head[e] + 1]++;
-      }
-    }
-    for (int v = 0; v < n; v++) {
-      adjStart[v + 1] += adjStart[v];
-    }
-    int[] fill = Arrays.copyOf(adjStart, n);
-    for (int e = 0; e < m; e++) {
-      if (inTree[e]) {
-        adjEdge[fill[tail[e]]++] = e;
-        adjEdge[fill[head[e]]++] = e;
-      }
-    }
-    Arrays.fill(treeParent, -1);
-    treeParent[0] = 0;
-    treeEdge[0] = -1;
-    depth[0] = 0;
-    int qh = 0;
-    int qt = 0;
-    queue[qt++] = 0;
-    while (qh < qt) {
-      int v = queue[qh++];
-      for (int i = adjStart[v]; i < adjStart[v + 1]; i++) {
-        int e = adjEdge[i];
-        int w = tail[e] == v ? head[e] : tail[e];
-        if (treeParent[w] < 0) {
-          treeParent[w] = v;
-          treeEdge[w] = e;
-          depth[w] = depth[v] + 1;
-          queue[qt++] = w;
-        }
-      }
-    }
-
-    Arrays.fill(replacement, Long.MAX_VALUE);
-    for (int e = 0; e < m; e++) {
-      if (inTree[e] || es[e].max() == 0 || tail[e] == head[e]) {
-        continue;
-      }
-      // walk the tree path between the nodes of e
-      int u = tail[e];
-      int v = head[e];
-      long heaviest = Long.MIN_VALUE;
-      while (u != v) {
-        if (depth[u] < depth[v]) {
-          int t = u;
-          u = v;
-          v = t;
-        }
-        int f = treeEdge[u];
-        if (es[f].min() == 0 && weights[f] > heaviest) {
-          heaviest = weights[f];
-        }
-        if (weights[e] < replacement[f]) {
-          replacement[f] = weights[e];
-        }
-        u = treeParent[u];
-      }
-      if (heaviest == Long.MIN_VALUE || lower - heaviest + weights[e] > upper) {
-        es[e].domain.in(store.level, es[e], 0, 0);
-      }
-    }
-    for (int e = 0; e < m; e++) {
-      if (inTree[e]
-          && es[e].min() == 0
-          && (replacement[e] == Long.MAX_VALUE || lower - weights[e] + replacement[e] > upper)) {
-        es[e].domain.in(store.level, es[e], 1, 1);
-      }
-    }
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    TreeExplanation t = explanation();
+    return t.addForcedConflict(trail, trail.size(), null, null, out)
+        || t.explainFailure(trail, longWeights, 0, 1, out);
   }
 
   @Override
@@ -312,7 +227,7 @@ public class SpanningTreeBound extends Constraint
         return false;
       }
       if (es[e].value() == 1) {
-        if (!union(tail[e], head[e])) {
+        if (!TreeReducedCosts.union(parent, tail[e], head[e])) {
           return false;
         }
         sum += weights[e];

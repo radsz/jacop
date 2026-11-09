@@ -119,7 +119,12 @@ public final class AdaptiveLns {
     /** The customers of whole vehicle routes, near each other. */
     ROUTES,
     /** Customers related by the cost of the arcs between them (Shaw removal). */
-    RELATED
+    RELATED,
+    /**
+     * The tasks that start in a window of time, with the tasks after it free to start earlier: a
+     * shift to the left of the schedule after the window.
+     */
+    SHIFT
   }
 
   /** How a run in a neighbourhood ended. */
@@ -411,6 +416,58 @@ public final class AdaptiveLns {
   }
 
   /**
+   * Records as the best solution one given by values rather than held by the store: the solution
+   * that another search found before this one, which the store no longer admits once the search
+   * must improve on it. Nothing is recorded when a variable of the neighbourhoods, a node they
+   * read, has no value given and is not fixed, or when the neighbourhoods follow vehicle routes,
+   * which read their solution from the store.
+   *
+   * @param xs variables of the store
+   * @param values their values in the solution
+   * @return true when the solution was recorded
+   */
+  public boolean solution(IntVar[] xs, int[] values) {
+    if (!routings.isEmpty()) {
+      return false;
+    }
+    Map<IntVar, Integer> valueOf = new IdentityHashMap<>();
+    for (int k = 0; k < xs.length; k++) {
+      valueOf.put(xs[k], values[k]);
+    }
+    int[] given = new int[nodes.length];
+    boolean[] known = new boolean[nodes.length];
+    for (int u = 0; u < nodes.length; u++) {
+      Integer v = valueOf.get(nodes[u]);
+      if (v != null) {
+        given[u] = v;
+        known[u] = true;
+      } else if (nodes[u].singleton()) {
+        given[u] = nodes[u].value();
+        known[u] = true;
+      }
+    }
+    for (int i = 0; i < vars.length; i++) {
+      if (!known[i]) {
+        return false;
+      }
+    }
+    for (int k = 0; k < terms.length; k++) {
+      if (!known[terms[k]]) {
+        return false;
+      }
+    }
+    System.arraycopy(given, 0, incumbent, 0, vars.length);
+    for (int k = 0; k < terms.length; k++) {
+      termValues[k] = given[terms[k]];
+    }
+    for (int u : watched) {
+      nodeValue[u] = known[u] ? given[u] : nodes[u].min();
+    }
+    hasIncumbent = true;
+    return true;
+  }
+
+  /**
    * Returns whether a solution was recorded, so that neighbourhoods can be built.
    *
    * @return true after the first {@link #solution()}.
@@ -430,9 +487,26 @@ public final class AdaptiveLns {
     return neighbourhood(choose());
   }
 
+  private static final boolean SHIFT_ON = Boolean.getBoolean("org.jacop.lns.shift");
+
+  // the variables that the last neighbourhood bounds from above by their values instead of fixing
+  private int[] bounded = new int[0];
+
+  /**
+   * Returns the variables that the last {@link #neighbourhood()} neither fixes nor relaxes but
+   * bounds from above by their values in the best solution, {@link #value(int)}: the tasks after
+   * the window of a {@link Kind#SHIFT} neighbourhood, which may start earlier.
+   *
+   * @return their indices, empty for the other kinds
+   */
+  public int[] upperBounded() {
+    return bounded;
+  }
+
   /** The next neighbourhood of the given kind, which the tests choose. */
   int[] neighbourhood(Kind kind) {
     last = kind;
+    bounded = new int[0];
     runs[kind.ordinal()]++;
     totalRuns++;
     int free = 0;
@@ -455,6 +529,7 @@ public final class AdaptiveLns {
           case OBJECTIVE -> graphRelax(relaxed, true);
           case CONSTRAINTS -> constraintsRelax(relaxed);
           case SCHEDULING -> schedulingRelax(relaxed);
+          case SHIFT -> shiftRelax(relaxed);
           case PACKING -> packingRelax(relaxed);
           default -> null;
         };
@@ -577,6 +652,7 @@ public final class AdaptiveLns {
       case OBJECTIVE -> terms.length > 0;
       case CONSTRAINTS -> conVars.length > 0;
       case SCHEDULING -> tasks.length > 1;
+      case SHIFT -> SHIFT_ON && tasks.length > 1;
       case PACKING -> packings.length > 0;
       case ROUTES, RELATED -> !routings.isEmpty();
       default -> true;
@@ -702,6 +778,47 @@ public final class AdaptiveLns {
     for (int k = first - 1; k >= 0 && count < relaxed; k--) {
       count += relaxTask(tasks[order[k]], relax);
     }
+    return relax;
+  }
+
+  /**
+   * Relaxes the tasks that start from a time chosen at random in the best solution on, in order of
+   * start, until enough decision variables are relaxed; the decision variables of the tasks after
+   * them (their starts and durations) are bounded by their values from above, so that the schedule
+   * after the window can move to the left as a block of the same order or better.
+   */
+  private boolean[] shiftRelax(int relaxed) {
+    boolean[] relax = new boolean[vars.length];
+    Integer[] order = new Integer[tasks.length];
+    for (int t = 0; t < tasks.length; t++) {
+      order[t] = t;
+    }
+    Arrays.sort(order, (a, b) -> Integer.compare(nodeValue[tasks[a][0]], nodeValue[tasks[b][0]]));
+    int first = random.nextInt(order.length);
+    int count = 0;
+    int k = first;
+    for (; k < order.length && count < relaxed; k++) {
+      count += relaxTask(tasks[order[k]], relax);
+    }
+    boolean[] after = new boolean[vars.length];
+    int n = 0;
+    for (; k < order.length; k++) {
+      for (int u : tasks[order[k]]) {
+        if (u >= 0 && u < vars.length && !relax[u] && !after[u] && !vars[u].singleton()) {
+          after[u] = true;
+          n++;
+        }
+      }
+    }
+    int[] b = new int[n];
+    n = 0;
+    for (int i = 0; i < vars.length; i++) {
+      if (after[i]) {
+        relax[i] = true;
+        b[n++] = i;
+      }
+    }
+    bounded = b;
     return relax;
   }
 
