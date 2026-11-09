@@ -328,6 +328,13 @@ final class JacopDecompositions {
       z.add(b.newInt(1, n));
     }
     sortWith(b, x, y, z, 1);
+    // z is not an argument: make it the stable permutation so that every (x, y) has exactly one z
+    // and the decomposition prints each solution once (equal x keep their order in y)
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        b.clause(List.of(b.neReif(x.get(i), x.get(j)), b.ltReif(z.get(i), z.get(j))), List.of());
+      }
+    }
   }
 
   /** jacop_sort_permutation(x, y, z, offset): y is x sorted and x[i] = y[z[i] - offset]. */
