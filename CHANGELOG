@@ -3703,6 +3703,27 @@ Version 5.0 (unreleased)
      call instead of 180 to 900 on the XCSP Rlfap instances, with the
      same pruning.
 
+206. jacop-prob: ChanceSum(x, w, c, alphaNum, alphaDen) states
+     Pr(sum(i) w[i] * x[i] <= c) >= alphaNum / alphaDen for independent
+     random weights w[i] (Dist), x[i] >= 0 and a capacity variable c.
+     It never lists the joint scenarios: a convolution over the loads
+     0..max(c) of the items at their minimum gives the probability as
+     an interval of outward-rounded doubles, and a comparison with
+     alpha that the interval leaves open is decided on BigInteger
+     numerators. It fails, lowers each max(x[j]) to the largest value
+     that keeps the probability (domain consistent for 0/1 x), raises
+     min(c) to the alpha-quantile, explains its pruning for lazy
+     clause generation (lower bounds of x, largest expected load
+     first, and max(c)), and gives the linear relaxation rows from the
+     Cantelli inequality (mean - c <= k * sigma, k = sqrt((1 - alpha) /
+     alpha), with tangents of the square root). jacop_prob.mzn has
+     chance_sum(x, value, prob, den, c, alpha). On the ccki family of
+     osolpro benchmarks/prob: the 8 small instances match brute force
+     (under 0.6 s); of the 6 large ones, whose 3^30 to 5^100 joint
+     scenarios no expansion can write, n30 are proved in 8 s and n60,
+     n100 have solutions at 240 s (the rows cut the n60 bound from 1202
+     to 976 and the n30 proofs from 15-24 s to 8 s).
+
 Version 4.11
 =============
 
