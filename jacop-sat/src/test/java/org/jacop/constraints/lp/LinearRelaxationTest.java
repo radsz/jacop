@@ -1306,6 +1306,32 @@ class LinearRelaxationTest {
   }
 
   /**
+   * The selection made after the root propagation, as free search makes it, still follows the root
+   * solution, also when no solve in search is optimal: surface-based-tsp ch130, whose root solution
+   * after the tree cuts is the optimum, took no proof in 240 s with a selection that saw no
+   * solution, and 7 s with this one.
+   */
+  @Test
+  void lpGuidedSelectMadeAfterTheRootSeesTheRootSolution() {
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    for (int i = 0; i < b.length; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+    }
+    IntVar z = new IntVar(store, "z", 0, 10);
+    store.impose(new LinearInt(b, new int[] {1, 1, 1}, "==", 1));
+    store.impose(
+        new LinearInt(new IntVar[] {b[0], b[1], b[2], z}, new int[] {2, 3, 5, -1}, "==", 0));
+    LinearRelaxation r = LinearRelaxation.of(store, z, false);
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    LpGuidedSelect last = new LpGuidedSelect(r, null);
+    assertThat(r.solutionColumns()).isPositive();
+    assertThat(last.getChoiceVariable(0)).isSameAs(b[0]);
+    assertThat(last.getChoiceValue()).isEqualTo(1);
+  }
+
+  /**
    * Fixed search with restarts whose activity runs start from the relaxation's root solution keeps
    * the optimum of hall assignments, with the explanation checker on. Most of these models are
    * solved before the first activity run; the guide's decisions are checked on the selection above.
