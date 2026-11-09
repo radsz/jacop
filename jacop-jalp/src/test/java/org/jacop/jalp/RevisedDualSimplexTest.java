@@ -1085,4 +1085,33 @@ class RevisedDualSimplexTest {
       }
     }
   }
+
+  @Test
+  void anUnboundedAnswerLeavesNoHugeValuesForTheNextSolve() {
+    // min 3 x0 - 3 x1 - 2 x2 with 8 x1 >= -7, 4 x0 + 4 x1 + 3 x2 >= 0, x0 free, x1 <= 2, x2 >= 2
+    // is unbounded; the artificial bounds grew to 1e14 and stayed. After the cut
+    // -2 x0 + 5 x2 in [-2, 0] the optimum is 5 at x0 = 5, but the basic values, differences of
+    // numbers of 1e14, gave 4.93 at x0 = 4.977, which breaks the cut by 0.047 (found by the exact
+    // LP fuzzer, osolpro benchmarks/jalp-allsolutions)
+    for (boolean exact : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{1}, {0, 1, 2}},
+              new double[][] {{8}, {4, 4, 3}},
+              new double[] {-7, 0},
+              new double[] {INF, INF},
+              new double[] {3, -3, -2},
+              true);
+      lp.setExact(exact);
+      lp.setBounds(0, -INF, INF);
+      lp.setBounds(1, -INF, 2);
+      lp.setBounds(2, 2, INF);
+      assertThat(lp.solve(100_000)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+      lp.addRows(
+          new int[][] {{0, 2}}, new double[][] {{-2, 5}}, new double[] {-2}, new double[] {0});
+      assertThat(lp.solve(100_000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).as("exact " + exact).isCloseTo(5.0, offset(1e-9));
+      assertThat(lp.value(0)).as("exact " + exact).isCloseTo(5.0, offset(1e-9));
+    }
+  }
 }

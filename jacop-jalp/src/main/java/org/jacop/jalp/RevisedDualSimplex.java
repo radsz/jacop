@@ -187,6 +187,8 @@ public final class RevisedDualSimplex {
   private double[] lo;
   private double[] hi;
   private double big = BIG_START;
+  // whether the last solve ended (not at its limit): the next one starts a new answer
+  private boolean ended = true;
 
   private int[] basis;
   private int[] row; // the row of a basic column, -1 for a nonbasic one
@@ -448,6 +450,7 @@ public final class RevisedDualSimplex {
     lo = o.lo.clone();
     hi = o.hi.clone();
     big = o.big;
+    ended = o.ended;
     basis = o.basis.clone();
     row = o.row.clone();
     upper = o.upper.clone();
@@ -939,11 +942,38 @@ public final class RevisedDualSimplex {
    * @return {@link #OPTIMAL}, {@link #INFEASIBLE}, {@link #UNBOUNDED} or {@link #LIMIT}
    */
   public int solve(int limit) {
+    shrinkArtificial();
     int status = dualSolve(limit);
-    if (status != LIMIT) {
+    ended = status != LIMIT;
+    if (ended) {
       cleaning = false;
     }
     return status;
+  }
+
+  /**
+   * Puts the artificial bounds back to their first size at the start of a new answer. An unbounded
+   * answer leaves them at their largest (1e14), and the columns that stay nonbasic at them make
+   * every later basic value a difference of numbers of that size: after a cut that bounded the
+   * problem the optimum was 4.93 instead of 5 (x0 + ... with x0 at -7.5e13 before). They grow again
+   * when the objective pulls on them.
+   */
+  private void shrinkArtificial() {
+    if (!ended || big == BIG_START) {
+      return;
+    }
+    flushReduced();
+    big = BIG_START;
+    if (infiniteLen < 0) {
+      listInfinite();
+    }
+    for (int k = 0; k < infiniteLen; k++) {
+      int j = infinite[k];
+      workingBounds(j);
+      markMoved(j);
+    }
+    betaValid = false;
+    outsideValid = false;
   }
 
   private int dualSolve(int limit) {
@@ -2655,6 +2685,8 @@ public final class RevisedDualSimplex {
    */
   public int solvePrimal(int limit) {
     flushReduced();
+    shrinkArtificial();
+    ended = false;
     long start = totalPivots;
     int status = primalPivots(limit);
     // the primal pivots change the basis and the reduced costs: the dual simplex places every
@@ -2672,6 +2704,7 @@ public final class RevisedDualSimplex {
       computeDuals();
       status = solve((int) Math.max(0, limit - (totalPivots - start)));
     }
+    ended = status != LIMIT;
     return status;
   }
 
