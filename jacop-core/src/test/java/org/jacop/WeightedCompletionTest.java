@@ -141,6 +141,52 @@ class WeightedCompletionTest {
     assertTrue(checked > 100, "reasons checked: " + checked);
   }
 
+  /**
+   * Larger parallel resources with release dates, where the prefix rows raise the bound and the
+   * reasons are weakened towards the root minima: every weakened reason must still imply its atom.
+   */
+  @Test
+  void parallelWeakenedReasonsImplyTheirAtoms() {
+    Random rnd = new Random(23);
+    int checked = 0;
+    for (int instance = 0; instance < 150; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(3);
+      IntVar[] s = new IntVar[n];
+      int[] d = new int[n];
+      int[] r = new int[n];
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        s[i] = new IntVar(store, "s" + i, rnd.nextInt(4), 9);
+        d[i] = 1 + rnd.nextInt(3);
+        r[i] = 1 + rnd.nextInt(2);
+        w[i] = rnd.nextInt(4);
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 150);
+      AtomicTrail trail = new AtomicTrail(store);
+      store.impose(new WeightedCompletion(s, d, r, w, 2 + rnd.nextInt(2), cost));
+      boolean consistent = store.consistency();
+      for (int step = 0; consistent && step < 10; step++) {
+        store.setLevel(store.level + 1);
+        IntVar x = rnd.nextInt(3) == 0 ? cost : s[rnd.nextInt(n)];
+        int v = x.min() + rnd.nextInt(x.max() - x.min() + 1);
+        try {
+          switch (rnd.nextInt(3)) {
+            case 0 -> x.domain.inMin(store.level, x, v);
+            case 1 -> x.domain.inMax(store.level, x, Math.max(v, (x.min() + x.max()) / 2));
+            default -> x.domain.in(store.level, x, v, v);
+          }
+          consistent = store.consistency();
+        } catch (FailException _) {
+          consistent = false;
+        }
+      }
+      checked += checkOwnReasons(trail);
+      trail.detach();
+    }
+    assertTrue(checked > 100, "reasons checked: " + checked);
+  }
+
   // checks the own reason of every atom WeightedCompletion propagated, by search in a copy
   private static int checkOwnReasons(AtomicTrail trail) {
     ExplanationChecker checker = new ExplanationChecker(trail);

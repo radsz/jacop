@@ -3340,6 +3340,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.restartHook(dictionary.onRestart);
     } else if (restarts != null && !allSolutions) {
       freeLns = lnsNeighbourhoods(costVar);
+      if (freeLns != null && lcgHint != null) {
+        // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
+        // they waited for free search's own first solution, which must improve on it, and on
+        // saeling 2026 j0050_m003 free search never improved on LCG's makespan 1454 and made no
+        // neighbourhood run in 240 s
+        freeLns.solution(lcgHinted, lcgHint);
+      }
       if (freeLns != null) {
         builder.lns(
             freeLns,

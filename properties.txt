@@ -72,6 +72,26 @@ Constraints (core):
 - jacop.cumulative.presenceFit: a task that may use nothing gets use 0
   where it fits nowhere (UnaryTimetable); default true.
 
+- org.jacop.weightedCompletion.prefixRows: on a resource of capacity
+  above 1, WeightedCompletion tightens the fluid bound with the rows of
+  the prefixes of Smith's order, each also bounded by the earliest
+  completion of its tasks; default true.
+
+- org.jacop.weightedCompletion.prefixWork: the work (tasks times time
+  points) of one bound above which the prefix rows are left out;
+  default 40000.
+
+- org.jacop.weightedCompletion.prefixOthers: the prefix rows also in the
+  bound of the other tasks that limits each start (one more pass per
+  task); default false.
+
+- org.jacop.weightedCompletion.weakReasons: under --lcg, the reasons of
+  the parallel bound lower the minima of the free starts towards their
+  root values as far as the propagation still follows; default true.
+
+- org.jacop.weightedCompletion.reasonRounds: the halvings tried when
+  weakening such a reason; default 4.
+
 - org.jacop.lateCount.releases: LateCount bounds the late tasks from
   the best origin, with the processing before it relaxed, instead of
   from the earliest start of all; default true.
@@ -438,6 +458,13 @@ Search of the LCG solver:
 - jacop.lcg.lpGuideRoot: the activity runs of fixed search follow
   the root solution of the linear relaxation, not its last one;
   default true.
+- org.jacop.lns.shift: large neighbourhood search (-f) also uses shift
+  neighbourhoods: the tasks of cumulative, unary and disjunctive
+  resources that start in a window of time are free, those after it
+  may start earlier than in the best solution (start <= its value) and
+  the rest keep their values; default false (saeling 2026 j0050_m003
+  makespan 1333 instead of 1350 at 600 s, but worse on rcpsp-wet-
+  diverse, cgt and multi-agent-graph-coverage).
 - jacop.lcg.stableForGood: after the first 1000 conflicts in focused
   mode, stay in stable mode (far fewer restarts); default true.
 - jacop.lcg.fullFixpoint: run the store to its fixpoint before the
