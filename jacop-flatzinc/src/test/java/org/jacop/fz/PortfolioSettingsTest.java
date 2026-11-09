@@ -94,4 +94,23 @@ class PortfolioSettingsTest {
         Portfolio.search(List.of("--lcg", "-f"), false),
         Portfolio.search(List.of("--lcg", "on", "-f"), false));
   }
+
+  @Test
+  void theBoundThreadComesSecondOnlyWithAnObjective() {
+    String lcgFree = Portfolio.search(List.of("--lcg", "on", "-f"), false);
+    List<String> layout =
+        Portfolio.settings(lcgFree, 3, false, 0.1).stream().map(c -> c[0]).toList();
+    assertEquals(List.of(Portfolio.BOUND_THREAD, "lcg-lits", "free-chs-luby"), layout);
+    assertEquals(
+        List.of("lcg-lits", "free-chs-luby", "default"),
+        Portfolio.settings(lcgFree, 3, true, 0.1).stream().map(c -> c[0]).toList());
+    assertEquals(
+        names(lcgFree, 3, false),
+        Portfolio.settings(lcgFree, 3, false, 0).stream().map(c -> c[0]).toList());
+    // the layout key is not part of the given thread's search
+    assertEquals(
+        lcgFree,
+        Portfolio.search(
+            List.of("--lcg", "on", "-f", "--free-config", "portfolio-bisect=0.1"), false));
+  }
 }

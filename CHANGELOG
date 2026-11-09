@@ -3797,7 +3797,28 @@ Version 5.0 (unreleased)
      n100 have solutions at 240 s (the rows cut the n60 bound from 1202
      to 976 and the n30 proofs from 15-24 s to 8 s).
 
-220. The LP relaxation (LinearRelaxation) now has the weight and profit
+220. Dichotomic bound search, off by default. --free-config
+     lcg-bisect=<gap> makes LCG free search probe the objective: it
+     assumes obj <= lb + (best - 1 - lb) / 2 under a conflict limit, and
+     a probe that fails on that assumption alone proves obj > target
+     (a root clause and the objectiveBound); a probe out of conflicts
+     halves the step, a proof doubles it again (at most half the gap).
+     Within the gap it runs branch and bound. --free-config
+     portfolio-bisect=<gap> gives this search to the second thread of
+     -p (without the core-guided phase and without clause sharing:
+     its clauses cost jp-encoding its proofs in the other threads),
+     in place of the last thread of the default layout. At -p 4, 240 s,
+     on 68 MiniZinc Challenge instances with an open bound gap
+     (osolpro benchmarks/bound-worker): the gap to the best known
+     solution averages 0.139 instead of 0.167 at 60 s, but at 240 s
+     the bound is better on 8 and worse on 6 (proved 42 against 44,
+     within run-to-run noise); tsptw n20w180.004 is proved only with
+     it, while spot5 1401 and community-detection Zakhary.s12.k4 lose
+     the bound of the DFS thread it replaces. Neutral on the 43
+     objective instances of wide-quick. OR-Tools CP-SAT runs similar
+     probes in its objective_shaving workers.
+
+221. The LP relaxation (LinearRelaxation) now has the weight and profit
      rows of Knapsack (MiniZinc jacop_knapsack, and the surrogate
      knapsacks KnapsackDetector posts), as linearised rows tried at the
      root. Before, a model stated with knapsack constraints had no LP
