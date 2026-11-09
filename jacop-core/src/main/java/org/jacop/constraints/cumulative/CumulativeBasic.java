@@ -696,13 +696,12 @@ public class CumulativeBasic extends Constraint
     int position = trail.size();
     snapshot(trail, position);
     int room = limitMax;
-    // the load rises only where a compulsory part begins, so an overload shows at such a point
-    for (TaskView task : taskNormal) {
-      int t = lst(task);
-      if (t < est(task) + dmin(position, task) && overloaded(trail, position, -1, t, room, null)) {
-        overloaded(trail, position, -1, t, room, out);
-        return true;
-      }
+    // the load rises only where a compulsory part begins, so an overload shows at such a point;
+    // the first such task in the order of taskNormal gives the reason
+    int t = firstOverloadedCompulsoryStart(position, room);
+    if (t != Integer.MIN_VALUE) {
+      overloaded(trail, position, -1, t, room, out);
+      return true;
     }
     if (explainNoStartLeft(trail, position, out)) {
       return true;
@@ -716,6 +715,95 @@ public class CumulativeBasic extends Constraint
       return true;
     }
     return false;
+  }
+
+  /**
+   * The start of the compulsory part of the first task in the order of taskNormal at which the
+   * compulsory parts of all tasks, just before the snapshot position, use more than room, or
+   * Integer.MIN_VALUE when there is none.
+   */
+  private int firstOverloadedCompulsoryStart(int position, long room) {
+    for (TaskView task : taskNormal) {
+      int t = lst(task);
+      if (t < est(task) + dmin(position, task) && compulsoryLoad(t) > room) {
+        return t;
+      }
+    }
+    return Integer.MIN_VALUE;
+  }
+
+  // the compulsory parts at the snapshot: the sorted start and end times of the parts with a
+  // resource use and the prefix sums of those uses, built at the first query after a snapshot
+  private int[] profileStartTime;
+  private int[] profileEndTime;
+  private long[] profileStartSum;
+  private long[] profileEndSum;
+  private long[] profileKeys;
+  private int profileSize = -1;
+
+  /**
+   * The resource use of the compulsory parts of all tasks at time t, just before the snapshot
+   * position, as the sum over the tasks that cover t, in O(log n) after an O(n log n) sweep built
+   * once per snapshot (the sums of the explanations otherwise take O(n) per time point).
+   */
+  private long compulsoryLoad(int t) {
+    if (profileSize < 0) {
+      buildCompulsoryProfile();
+    }
+    int m = profileSize;
+    return profileStartSum[countAtMost(profileStartTime, m, t)]
+        - profileEndSum[countAtMost(profileEndTime, m, t)];
+  }
+
+  private void buildCompulsoryProfile() {
+    int n = snapshotTasks.length;
+    if (profileKeys == null) {
+      profileKeys = new long[n];
+      profileStartTime = new int[n];
+      profileEndTime = new int[n];
+      profileStartSum = new long[n + 1];
+      profileEndSum = new long[n + 1];
+    }
+    int m = 0;
+    for (int i = 0; i < n; i++) {
+      if (snapshotLst[i] < snapshotEst[i] + snapshotDur[i] && snapshotRes[i] > 0) {
+        profileKeys[m++] = ((long) snapshotLst[i] << 32) | i;
+      }
+    }
+    Arrays.sort(profileKeys, 0, m);
+    for (int k = 0; k < m; k++) {
+      int i = (int) profileKeys[k];
+      profileStartTime[k] = snapshotLst[i];
+      profileStartSum[k + 1] = profileStartSum[k] + snapshotRes[i];
+    }
+    m = 0;
+    for (int i = 0; i < n; i++) {
+      if (snapshotLst[i] < snapshotEst[i] + snapshotDur[i] && snapshotRes[i] > 0) {
+        profileKeys[m++] = ((long) (snapshotEst[i] + snapshotDur[i]) << 32) | i;
+      }
+    }
+    Arrays.sort(profileKeys, 0, m);
+    for (int k = 0; k < m; k++) {
+      int i = (int) profileKeys[k];
+      profileEndTime[k] = snapshotEst[i] + snapshotDur[i];
+      profileEndSum[k + 1] = profileEndSum[k] + snapshotRes[i];
+    }
+    profileSize = m;
+  }
+
+  // the number of values of the first m of the sorted array that are at most t
+  private static int countAtMost(int[] sorted, int m, int t) {
+    int lo = 0;
+    int hi = m;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (sorted[mid] <= t) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
   }
 
   /**
@@ -793,6 +881,39 @@ public class CumulativeBasic extends Constraint
   // as above, leaving out the tasks skip and skip2
   private boolean overloaded(
       AtomicTrail trail, int position, int skip, int skip2, int t, long room, EntryList out) {
+    long load = compulsoryLoad(t);
+    if (skip >= 0 && covers(trail, position, taskNormal[skip], t)) {
+      load -= rmin(position, taskNormal[skip]);
+    }
+    if (skip2 >= 0 && skip2 != skip && covers(trail, position, taskNormal[skip2], t)) {
+      load -= rmin(position, taskNormal[skip2]);
+    }
+    assert load == loadBySum(trail, position, skip, skip2, t);
+    if (load <= room || out == null) {
+      return load > room;
+    }
+    // the tasks that cover t, by decreasing resource use and, on ties, by index (a stable sort)
+    long[] order = new long[taskNormal.length];
+    int m = 0;
+    for (int i = 0; i < taskNormal.length; i++) {
+      TaskView task = taskNormal[i];
+      if (i != skip && i != skip2 && covers(trail, position, task, t)) {
+        order[m++] = ((long) -rmin(position, task) << 32) | i;
+      }
+    }
+    Arrays.sort(order, 0, m);
+    trail.addUpperBound(limit, position, out);
+    long sum = 0;
+    for (int k = 0; k < m && sum <= room; k++) {
+      TaskView task = taskNormal[(int) order[k]];
+      addTaskReasonAt(trail, position, task, t, out);
+      sum += rmin(position, task);
+    }
+    return true;
+  }
+
+  // the load of overloaded as the sum over all tasks, for the assertion
+  private long loadBySum(AtomicTrail trail, int position, int skip, int skip2, int t) {
     long load = 0;
     for (int i = 0; i < taskNormal.length; i++) {
       TaskView task = taskNormal[i];
@@ -800,29 +921,7 @@ public class CumulativeBasic extends Constraint
         load += rmin(position, task);
       }
     }
-    if (load <= room || out == null) {
-      return load > room;
-    }
-    Integer[] order = new Integer[taskNormal.length];
-    for (int i = 0; i < order.length; i++) {
-      order[i] = i;
-    }
-    Arrays.sort(
-        order,
-        (a, b) -> Integer.compare(rmin(position, taskNormal[b]), rmin(position, taskNormal[a])));
-    trail.addUpperBound(limit, position, out);
-    long sum = 0;
-    for (int i : order) {
-      if (sum > room) {
-        break;
-      }
-      TaskView task = taskNormal[i];
-      if (i != skip && i != skip2 && covers(trail, position, task, t)) {
-        addTaskReasonAt(trail, position, task, t, out);
-        sum += rmin(position, task);
-      }
-    }
-    return true;
+    return load;
   }
 
   /**
@@ -1430,10 +1529,12 @@ public class CumulativeBasic extends Constraint
     int slot = slot(task);
     int saved = snapshotRes[slot];
     snapshotRes[slot] = w + 1;
+    profileSize = -1;
     boolean done =
         explainStartsBelow(
             trail, entry, i, est(task), lst(task) + 1, dmin(entry, task), limitMax - w - 1, out);
     snapshotRes[slot] = saved;
+    profileSize = -1;
     if (done) {
       return true;
     }
@@ -1472,8 +1573,10 @@ public class CumulativeBasic extends Constraint
     int slot = slot(task);
     int saved = snapshotRes[slot];
     snapshotRes[slot] = r;
+    profileSize = -1;
     boolean done = explainStartsBelow(trail, entry, i, est(task), lst(task) + 1, d, room, out);
     snapshotRes[slot] = saved;
+    profileSize = -1;
     return done;
   }
 
@@ -1597,6 +1700,10 @@ public class CumulativeBasic extends Constraint
   }
 
   private int slot(TaskView task) {
+    // the slot cached on the task, unless another constraint shares the task
+    if (task.explainOwner == this) {
+      return task.explainSlot;
+    }
     return taskSlot.get(task);
   }
 
@@ -1613,6 +1720,10 @@ public class CumulativeBasic extends Constraint
       taskSlot = new IdentityHashMap<>();
       for (int i = 0; i < n; i++) {
         taskSlot.put(snapshotTasks[i], i);
+        if (snapshotTasks[i].explainOwner == null) {
+          snapshotTasks[i].explainOwner = this;
+          snapshotTasks[i].explainSlot = i;
+        }
       }
       snapshotEst = new int[n];
       snapshotLst = new int[n];
@@ -1639,6 +1750,7 @@ public class CumulativeBasic extends Constraint
     limitMax = trail.maxBefore(limit, position);
     snapshotPosition = position;
     windowBudget = WINDOW_BUDGET;
+    profileSize = -1;
   }
 
   /**
