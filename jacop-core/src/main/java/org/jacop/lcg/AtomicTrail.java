@@ -139,6 +139,42 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public static final int HOLE_LIMIT = Integer.getInteger("jacop.lcg.holeLimit", 10_000);
 
+  /** Explanation style: Element reasons by the shorter of index first and value first. */
+  public static final int STYLE_ELEMENT_SHORTER = 1;
+
+  /** Explanation style: GCC and count reasons by the flow network, without counting reasons. */
+  public static final int STYLE_FLOW_FIRST = 2;
+
+  /** Explanation style: cumulative start reasons without task pairs. */
+  public static final int STYLE_NO_PAIRS = 4;
+
+  /** Explanation style: cumulative window reasons citing all the energy, not only the excess. */
+  public static final int STYLE_NO_WINDOW_LIFT = 8;
+
+  // the explanation style of the thread: portfolio workers explain in different ways
+  private static final ThreadLocal<int[]> STYLE =
+      ThreadLocal.withInitial(() -> new int[] {Integer.getInteger("jacop.lcg.explainStyle", 0)});
+
+  /**
+   * Sets the explanation style of the calling thread, a sum of the STYLE_ flags (0 by default), so
+   * that portfolio workers can learn different clauses from the same propagations.
+   *
+   * @param style the flags
+   */
+  public static void setStyle(int style) {
+    STYLE.get()[0] = style;
+  }
+
+  /**
+   * Whether the calling thread's explanation style has a flag.
+   *
+   * @param flag a STYLE_ flag
+   * @return true when it has it
+   */
+  public static boolean style(int flag) {
+    return (STYLE.get()[0] & flag) != 0;
+  }
+
   /** The entry an alternative reason is asked for, {@link #FAILURE} for a failure, or -1. */
   private int alternativeWanted = -1;
 

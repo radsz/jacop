@@ -1054,7 +1054,7 @@ public class CumulativeBasic extends Constraint
    * is the limit less j's resource use.
    */
   private int[] pairConflict(int position, int j, int u, int d, int room) {
-    if (!PAIRS) {
+    if (!PAIRS || AtomicTrail.style(AtomicTrail.STYLE_NO_PAIRS)) {
       return null;
     }
     int[] best = null;
@@ -1636,7 +1636,7 @@ public class CumulativeBasic extends Constraint
       }
     }
     long slack = 0;
-    if (WINDOW_LIFT) {
+    if (WINDOW_LIFT && !AtomicTrail.style(AtomicTrail.STYLE_NO_WINDOW_LIFT)) {
       slack =
           j < 0
               ? windowExcess(trail, position, -1, 0, a, b)

@@ -2143,6 +2143,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the other two find
     LcgSolver.Branching branching =
         LcgSolver.Branching.valueOf(options.freeConfig("lcg-branching", "alternate").toUpperCase());
+    // the explanation style of this thread (AtomicTrail STYLE_ flags), so portfolio workers differ
+    org.jacop.lcg.AtomicTrail.setStyle(
+        Integer.parseInt(
+            options.freeConfig(
+                "lcg-explain", Integer.getInteger("jacop.lcg.explainStyle", 0).toString())));
     boolean literalsOnly =
         branching == LcgSolver.Branching.LITERALS || branching == LcgSolver.Branching.AUTO;
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");

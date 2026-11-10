@@ -74,6 +74,12 @@ final class Portfolio {
 
   private static final String FREE_CONFIG = "--free-config";
 
+  // the explanation style of lcg-lits (AtomicTrail STYLE_ flags), -Djacop.portfolio.litsExplain
+  private static final String LITS_EXPLAIN =
+      Integer.getInteger("jacop.portfolio.litsExplain", 0) == 0
+          ? ""
+          : ",lcg-explain=" + Integer.getInteger("jacop.portfolio.litsExplain", 0);
+
   /**
    * The settings of the threads after the first, in this order; -f and --lcg are given here. The
    * order comes from each setting run alone on 240 hard instances (osolpro
@@ -88,7 +94,7 @@ final class Portfolio {
    * benchmarks/ls-default).
    */
   private static final String[][] CONFIGS = {
-    {"lcg-lits", LCG, "on", "-f", FREE_CONFIG, "lcg-branching=literals"},
+    {"lcg-lits", LCG, "on", "-f", FREE_CONFIG, "lcg-branching=literals" + LITS_EXPLAIN},
     // local search for half the time, as long as it progresses, then free search from its solution
     {"ls", LCG, "off", "-f", FREE_CONFIG, "ls=0.5,ls-patience=5000"},
     {"default", LCG, "off"},

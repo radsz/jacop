@@ -124,7 +124,8 @@ public final class ElementExplanation {
       }
     }
     EntryList alt = trail.alternativeFor(entry);
-    if (ORDERS == INDEX_FIRST || (ORDERS == BOTH && alt == null)) {
+    boolean shorter = ORDERS == SHORTER || AtomicTrail.style(AtomicTrail.STYLE_ELEMENT_SHORTER);
+    if ((ORDERS == INDEX_FIRST && !shorter) || (ORDERS == BOTH && alt == null)) {
       return true;
     }
     // the same positions excluded by the value first: a constant out of the value's domain
@@ -173,7 +174,11 @@ public final class ElementExplanation {
   private static void place(EntryList out, int mark, EntryList byValue, EntryList alt) {
     int byIndex = out.size() - mark;
     boolean valueShorter = byValue.size() < byIndex;
-    boolean valueFirst = (ORDERS == SHORTER || ORDERS == SHORTER_BOTH) && valueShorter;
+    boolean valueFirst =
+        (ORDERS == SHORTER
+                || ORDERS == SHORTER_BOTH
+                || AtomicTrail.style(AtomicTrail.STYLE_ELEMENT_SHORTER))
+            && valueShorter;
     boolean wantAlt = alt != null && (ORDERS == BOTH || ORDERS == SHORTER_BOTH);
     if (wantAlt) {
       if (valueFirst) {

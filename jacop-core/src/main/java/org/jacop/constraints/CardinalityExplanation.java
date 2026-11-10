@@ -223,7 +223,7 @@ final class CardinalityExplanation {
      *     time
      */
     boolean explain(AtomicTrail trail, int entry, EntryList out) {
-      if (FAST && counting(trail, entry, out)) {
+      if (FAST && !AtomicTrail.style(AtomicTrail.STYLE_FLOW_FIRST) && counting(trail, entry, out)) {
         return true;
       }
       long now = System.nanoTime();
@@ -254,7 +254,7 @@ final class CardinalityExplanation {
      *     of the time
      */
     boolean explainFailure(AtomicTrail trail, EntryList out) {
-      if (FAST) {
+      if (FAST && !AtomicTrail.style(AtomicTrail.STYLE_FLOW_FIRST)) {
         int position = trail.size();
         for (int j = 0; j < values.length; j++) {
           int bound = upper(trail, j, position);
