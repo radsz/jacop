@@ -379,8 +379,13 @@ public final class AlldifferentCuts {
       if (k == 0) {
         continue; // a variable alone is held by its bounds
       }
-      Long bound =
-          plain() ? extremeSum(union, k + 1, lower) : multisetSum(union, k + 1, inside, lower);
+      // not a conditional expression: its long branch would unbox the null of multisetSum
+      Long bound;
+      if (plain()) {
+        bound = extremeSum(union, k + 1, lower);
+      } else {
+        bound = multisetSum(union, k + 1, inside, lower);
+      }
       if (bound == null) {
         continue;
       }
