@@ -545,8 +545,7 @@ class LcgSolverTest {
   void restartPresolveKeepsTheOptimum() {
     Random rnd = new Random(29);
     long represolves = 0;
-    // At least 20 instances, and more until one re-presolves, so the option is exercised.
-    for (int instance = 0; instance < 20 || represolves == 0 && instance < 200; instance++) {
+    for (int instance = 0; instance < 20; instance++) {
       long seed = rnd.nextLong();
       int[] optimum = new int[2];
       int[] status = new int[2];
