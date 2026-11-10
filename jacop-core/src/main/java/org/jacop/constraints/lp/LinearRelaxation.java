@@ -1087,11 +1087,14 @@ public class LinearRelaxation extends Constraint
     boolean large = false;
     if (auto && !sparseTakes(localForms)) {
       // too large for the sparse simplex in search: a large relaxation, solved at the root only, or
-      // the dense one, or no relaxation over its cap
-      large = largeTakes(localForms);
+      // the dense one, or no relaxation over its cap. Only for an objective: without one a root
+      // solve can only find infeasibility (debruijn-binary, nmseq and slow-convergence of the
+      // Challenge: 1-5 s more start-up, no change in search)
+      large = objective != null && largeTakes(localForms);
       auto = large;
     }
-    if (auto && (localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
+    if (auto
+        && (large || localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
       // larger ones, also those over the dense size cap, which would get no relaxation at all
@@ -1399,8 +1402,8 @@ public class LinearRelaxation extends Constraint
   // EASY_200_50, 57,505 rows: 52 ms a pivot; rcpsp-wet-diverse j60_19_6, 140,925 columns), and the
   // largest that helped in the Challenge has 19,141 rows (table-layout) and 23,242 columns
   // (physician-scheduling)
-  private static final int SPARSE_MAX_ROWS =
-      Integer.getInteger("org.jacop.lp.sparseMaxRows", 25_000);
+  // not final, so that tests can make a small relaxation large
+  static int sparseMaxRows = Integer.getInteger("org.jacop.lp.sparseMaxRows", 25_000);
   private static final int SPARSE_MAX_COLUMNS =
       Integer.getInteger("org.jacop.lp.sparseMaxColumns", 30_000);
 
@@ -1442,7 +1445,7 @@ public class LinearRelaxation extends Constraint
   }
 
   private static boolean sparseTakes(List<LinearForm> forms) {
-    if (forms.size() > SPARSE_MAX_ROWS) {
+    if (forms.size() > sparseMaxRows) {
       return false;
     }
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -1680,7 +1683,7 @@ public class LinearRelaxation extends Constraint
    * @return whether the relaxation is large and has more rows than the sparse simplex takes
    */
   public boolean largeByRows() {
-    return large && rows() > SPARSE_MAX_ROWS;
+    return large && rows() > sparseMaxRows;
   }
 
   /**
