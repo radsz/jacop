@@ -117,12 +117,21 @@ final class AlldiffExplanation {
     int mark = out.size();
     int min = trail.minBefore(y, entry);
     if (lo < min) {
-      trail.addLowerBound(y, entry, out);
+      // the removed values below the bound need only a bound above them
+      if (EARLIEST) {
+        trail.addBoundReaching(y, entry, true, Math.min(hi, min - 1L) + 1, out);
+      } else {
+        trail.addLowerBound(y, entry, out);
+      }
       lo = min;
     }
     int max = trail.maxBefore(y, entry);
     if (hi > max) {
-      trail.addUpperBound(y, entry, out);
+      if (EARLIEST) {
+        trail.addBoundReaching(y, entry, false, Math.max(lo, max + 1L) - 1, out);
+      } else {
+        trail.addUpperBound(y, entry, out);
+      }
       hi = max;
     }
     if (lo > hi) {
@@ -476,10 +485,10 @@ final class AlldiffExplanation {
       }
       IntDomain root = trail.rootDomain(vars[k]);
       if (lowerEntry[k] >= 0 && outsideBelow(root, trail.value(lowerEntry[k]))) {
-        out.add(lowerEntry[k]);
+        addLower(k, root, out);
       }
       if (upperEntry[k] >= 0 && outsideAbove(root, trail.value(upperEntry[k]))) {
-        out.add(upperEntry[k]);
+        addUpper(k, root, out);
       }
       for (int h = holeStart[k]; h < holeStart[k + 1]; h++) {
         if (!inValues[trail.value(holes[h]) - base]) {
@@ -487,6 +496,41 @@ final class AlldiffExplanation {
         }
       }
     }
+  }
+
+  /** Whether a Hall set's bound atoms are the earliest bounds that keep the variable inside it. */
+  static final boolean EARLIEST = !"false".equals(System.getProperty("jacop.lcg.alldiffEarliest"));
+
+  /*
+   * Adds variable k's lower bound: the earliest bound entry above every unmarked root value below
+   * the bound, since the marked values between it and the bound are in the set anyway.
+   */
+  private void addLower(int k, IntDomain root, EntryList out) {
+    int bound = trail.value(lowerEntry[k]);
+    if (!EARLIEST) {
+      out.add(lowerEntry[k]);
+      return;
+    }
+    int limit = bound;
+    while (limit - 1 >= base && (!root.contains(limit - 1) || inValues[limit - 1 - base])) {
+      limit--;
+    }
+    trail.addBoundReaching(vars[k], position, true, limit, out);
+  }
+
+  // variable k's upper bound, as addLower
+  private void addUpper(int k, IntDomain root, EntryList out) {
+    int bound = trail.value(upperEntry[k]);
+    if (!EARLIEST) {
+      out.add(upperEntry[k]);
+      return;
+    }
+    int limit = bound;
+    while (limit + 1 < base + inValues.length
+        && (!root.contains(limit + 1) || inValues[limit + 1 - base])) {
+      limit++;
+    }
+    trail.addBoundReaching(vars[k], position, false, limit, out);
   }
 
   // whether some value of root below bound is not marked

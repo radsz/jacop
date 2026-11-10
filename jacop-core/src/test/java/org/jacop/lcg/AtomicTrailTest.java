@@ -1342,6 +1342,59 @@ class AtomicTrailTest {
   }
 
   /**
+   * a, b, c, d all different over 0..5: a >= 3, then a >= 4, b >= 3 and c >= 3 make a, b, c a Hall
+   * set over 3..5, so d <= 2. The reason cites a >= 3, the earliest bound that keeps a inside the
+   * set's values, not its latest bound a >= 4.
+   */
+  @Test
+  void hallSetReasonCitesTheEarliestBoundInsideTheSetsValues() {
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 0, 5);
+    IntVar b = new IntVar(store, "b", 0, 5);
+    IntVar c = new IntVar(store, "c", 0, 5);
+    IntVar d = new IntVar(store, "d", 0, 5);
+    AtomicTrail trail = new AtomicTrail(store);
+    Alldistinct alldistinct = new Alldistinct(new IntVar[] {a, b, c, d});
+    store.impose(alldistinct);
+    assertThat(store.consistency()).isTrue();
+    IntVar[] vars = {a, a, b, c};
+    int[] mins = {3, 4, 3, 3};
+    for (int i = 0; i < vars.length; i++) {
+      store.setLevel(store.level + 1);
+      vars[i].domain.inMin(store.level, vars[i], mins[i]);
+      assertThat(store.consistency()).isTrue();
+    }
+    assertThat(d.max()).isEqualTo(2);
+    int dBound = -1;
+    int aFirst = -1;
+    int aSecond = -1;
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.variable(e) == d && trail.kind(e) == AtomicTrail.LE && trail.value(e) == 2) {
+        dBound = e;
+      }
+      if (trail.variable(e) == a && trail.kind(e) == AtomicTrail.GE) {
+        if (trail.value(e) == 3) {
+          aFirst = e;
+        } else if (trail.value(e) == 4) {
+          aSecond = e;
+        }
+      }
+    }
+    assertThat(dBound).isNotNegative();
+    assertThat(aFirst).isNotNegative();
+    assertThat(aSecond).isNotNegative();
+    assertThat(trail.reason(dBound)).isSameAs(alldistinct);
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(dBound, reason)).isTrue();
+    List<Integer> cited = new ArrayList<>();
+    for (int k = 0; k < reason.size(); k++) {
+      cited.add(reason.get(k));
+    }
+    assertThat(cited).contains(aFirst).doesNotContain(aSecond);
+    trail.detach();
+  }
+
+  /**
    * 2a + b + c <= 1 fails with a, b, c >= 1, which leaves a slack of 2: it drops either a, or b and
    * c. The reason drops the two cheaper terms and cites a >= 1 alone.
    */
