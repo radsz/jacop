@@ -56,6 +56,11 @@ public class IntVar extends Var {
   private int lb = Integer.MAX_VALUE;
   private int ub = Integer.MIN_VALUE;
 
+  // the size of domain, or -1 when it has not been counted since the domain last changed: search
+  // heuristics read the sizes of all unfixed variables at every decision, and counting walks the
+  // intervals of the domain; every change that refreshes the bounds (or reports an event) clears it
+  private int size = -1;
+
   /*
   public SatCpBridge satBridge;
   */
@@ -211,6 +216,7 @@ public class IntVar extends Var {
     wider.previousDomain = domain.previousDomain;
     wider.stamp = domain.stamp;
     domain = wider;
+    size = -1;
   }
 
   /**
@@ -243,6 +249,7 @@ public class IntVar extends Var {
    */
   public final void refreshBounds() {
     IntDomain d = domain;
+    size = -1;
     if (d.isEmpty()) {
       lb = Integer.MAX_VALUE;
       ub = Integer.MIN_VALUE;
@@ -257,12 +264,14 @@ public class IntVar extends Var {
   void setBounds(int min, int max) {
     lb = min;
     ub = max;
+    size = -1;
   }
 
   // reads the bounds of a domain that is not empty (after a change, or restored on backtracking);
   // a test per domain class keeps each call monomorphic, so the JIT can inline it
   private void readBounds() {
     IntDomain d = domain;
+    size = -1;
     if (d instanceof IntervalDomain interval) {
       lb = interval.min();
       ub = interval.max();
@@ -287,6 +296,10 @@ public class IntVar extends Var {
     if (d.isEmpty() ? lb <= ub : lb != d.min() || ub != d.max()) {
       throw new IllegalStateException(
           "Cached bounds " + lb + ".." + ub + " of " + id + " differ from its domain " + d);
+    }
+    if (size >= 0 && size != d.getSize()) {
+      throw new IllegalStateException(
+          "Cached size " + size + " of " + id + " differs from its domain " + d);
     }
   }
 
@@ -388,7 +401,15 @@ public class IntVar extends Var {
    * @return the size of the variables domain.
    */
   public int getSize() {
-    return domain.getSize();
+    if (ASSERTS_ENABLED) {
+      checkBounds();
+    }
+    int n = size;
+    if (n < 0) {
+      n = domain.getSize();
+      size = n;
+    }
+    return n;
   }
 
   /**
@@ -457,6 +478,8 @@ public class IntVar extends Var {
     // an ANY event leaves the bounds as they were
     if (event != IntDomain.ANY) {
       readBounds();
+    } else {
+      size = -1;
     }
 
     if (ASSERTS_ENABLED
