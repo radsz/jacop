@@ -379,21 +379,36 @@ public final class AlldifferentCuts {
       if (k == 0) {
         continue; // a variable alone is held by its bounds
       }
-      Long bound =
-          plain() ? extremeSum(union, k + 1, lower) : multisetSum(union, k + 1, inside, lower);
+      Long bound = prefixBound(union, k + 1, inside, lower);
       if (bound == null) {
         continue;
       }
-      double violation = lower ? bound - sum : sum - bound;
-      if (violation > MIN_VIOLATION + RELATIVE_VIOLATION * Math.abs((double) bound)) {
-        int[] vars = new int[k + 1];
-        for (int t = 0; t <= k; t++) {
-          vars[t] = order[t];
-        }
-        Arrays.sort(vars);
-        cuts.add(new Cut(vars, lower, bound, violation / Math.sqrt(k + 1.0)));
-      }
+      addIfViolated(order, k, lower, bound, sum, cuts);
     }
+  }
+
+  // the cut over the first k + 1 variables of the order when its sum violates the bound enough
+  private static void addIfViolated(
+      Integer[] order, int k, boolean lower, long bound, double sum, List<Cut> cuts) {
+    double violation = lower ? bound - sum : sum - bound;
+    if (violation <= MIN_VIOLATION + RELATIVE_VIOLATION * Math.abs((double) bound)) {
+      return;
+    }
+    int[] vars = new int[k + 1];
+    for (int t = 0; t <= k; t++) {
+      vars[t] = order[t];
+    }
+    Arrays.sort(vars);
+    cuts.add(new Cut(vars, lower, bound, violation / Math.sqrt(k + 1.0)));
+  }
+
+  // the bound of a prefix of k variables, or null when the least counts do not fit in it; not a
+  // conditional expression, whose long branch would unbox the null of multisetSum
+  private Long prefixBound(IntDomain union, int k, int[] inside, boolean lower) {
+    if (plain()) {
+      return extremeSum(union, k, lower);
+    }
+    return multisetSum(union, k, inside, lower);
   }
 
   /**

@@ -62,6 +62,35 @@ class AlldifferentRowsTest {
 
   private static final int INSTANCES = Integer.getInteger("alldiff.instances", 200);
 
+  /**
+   * The cuts of a cardinality whose least counts no longer fit in a prefix (two copies of 1 and two
+   * of 2 over three variables) skip that prefix instead of unboxing the missing bound: a seed of
+   * {@link #variantCutsKeepEverySolution} threw a NullPointerException there.
+   */
+  @Test
+  void cardinalityCutsSkipPrefixesWhereTheLeastCountsDoNotFit() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 2);
+    }
+    for (boolean closed : new boolean[] {true, false}) {
+      AlldifferentCuts cuts =
+          AlldifferentCuts.cardinality(
+              x, new int[] {1, 2}, new int[] {2, 2}, new int[] {2, 2}, closed);
+      assertThat(cuts.separate(new double[] {1.5, 1.5, 1.5}, 100)).isNotNull();
+    }
+  }
+
+  // the bound of the alldifferent rows at the root, when there is one, is at most the optimum; an
+  // infeasible model (Long.MIN_VALUE) has no optimum to bound
+  private static void assertAlldiffBoundHolds(LinearRelaxation r, long expected, int run) {
+    if (Double.isNaN(r.alldiffBound) || expected == Long.MIN_VALUE) {
+      return;
+    }
+    assertThat(r.alldiffBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
+  }
+
   /** By the 0-1 principle, the comparators sort every input when they sort every 0-1 input. */
   @Test
   void comparatorsSortEveryZeroOneInput() {
@@ -372,9 +401,7 @@ class AlldifferentRowsTest {
       long got = m.optimum();
       assertThat(got).as("run %d", run).isEqualTo(expected);
       assertThat(r.rootBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      if (!Double.isNaN(r.alldiffBound)) {
-        assertThat(r.alldiffBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      }
+      assertAlldiffBoundHolds(r, expected, run);
       moved += r.alldiffCuts > 0 || r.simplexFreeColumns() > 0 ? 1 : 0;
     }
     assertThat(moved).isPositive();
@@ -406,9 +433,7 @@ class AlldifferentRowsTest {
       m.store.impose(r);
       long got = m.optimum();
       assertThat(got).as("run %d", run).isEqualTo(expected);
-      if (!Double.isNaN(r.alldiffBound)) {
-        assertThat(r.alldiffBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      }
+      assertAlldiffBoundHolds(r, expected, run);
       lists += (int) r.alldiffVariantLists;
       used += r.alldiffCuts + r.alldiffSearchCuts > 0 ? 1 : 0;
     }
