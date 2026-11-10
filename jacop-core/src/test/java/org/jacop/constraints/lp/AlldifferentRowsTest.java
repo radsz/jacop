@@ -62,7 +62,6 @@ class AlldifferentRowsTest {
 
   private static final int INSTANCES = Integer.getInteger("alldiff.instances", 200);
 
-  /** By the 0-1 principle, the comparators sort every input when they sort every 0-1 input. */
   /**
    * The cuts of a cardinality whose least counts no longer fit in a prefix (two copies of 1 and two
    * of 2 over three variables) skip that prefix instead of unboxing the missing bound: a seed of
@@ -83,6 +82,16 @@ class AlldifferentRowsTest {
     }
   }
 
+  // the bound of the alldifferent rows at the root, when there is one, is at most the optimum; an
+  // infeasible model (Long.MIN_VALUE) has no optimum to bound
+  private static void assertAlldiffBoundHolds(LinearRelaxation r, long expected, int run) {
+    if (Double.isNaN(r.alldiffBound) || expected == Long.MIN_VALUE) {
+      return;
+    }
+    assertThat(r.alldiffBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
+  }
+
+  /** By the 0-1 principle, the comparators sort every input when they sort every 0-1 input. */
   @Test
   void comparatorsSortEveryZeroOneInput() {
     for (int n = 2; n <= 16; n++) {
@@ -392,10 +401,7 @@ class AlldifferentRowsTest {
       long got = m.optimum();
       assertThat(got).as("run %d", run).isEqualTo(expected);
       assertThat(r.rootBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      if (!Double.isNaN(r.alldiffBound) && expected != Long.MIN_VALUE) {
-        // an infeasible model (Long.MIN_VALUE) has no optimum to bound
-        assertThat(r.alldiffBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      }
+      assertAlldiffBoundHolds(r, expected, run);
       moved += r.alldiffCuts > 0 || r.simplexFreeColumns() > 0 ? 1 : 0;
     }
     assertThat(moved).isPositive();
@@ -427,10 +433,7 @@ class AlldifferentRowsTest {
       m.store.impose(r);
       long got = m.optimum();
       assertThat(got).as("run %d", run).isEqualTo(expected);
-      if (!Double.isNaN(r.alldiffBound) && expected != Long.MIN_VALUE) {
-        // an infeasible model (Long.MIN_VALUE) has no optimum to bound
-        assertThat(r.alldiffBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      }
+      assertAlldiffBoundHolds(r, expected, run);
       lists += (int) r.alldiffVariantLists;
       used += r.alldiffCuts + r.alldiffSearchCuts > 0 ? 1 : 0;
     }
