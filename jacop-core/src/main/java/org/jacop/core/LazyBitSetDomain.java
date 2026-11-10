@@ -1575,6 +1575,8 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
   public IntDomain copy() {
     IntervalDomain result = toIntervalDomain();
     result.modelConstraints = modelConstraints;
+    result.modelKeys = modelKeys;
+    result.modelKeysOf = modelKeysOf;
     result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
     result.searchConstraints = searchConstraints;
     result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;

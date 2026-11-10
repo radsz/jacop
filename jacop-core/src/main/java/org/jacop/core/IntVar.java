@@ -210,6 +210,8 @@ public class IntVar extends Var {
     wider.setDomain(domain);
     wider.searchConstraints = domain.searchConstraints;
     wider.modelConstraints = domain.modelConstraints;
+    wider.modelKeys = domain.modelKeys;
+    wider.modelKeysOf = domain.modelKeysOf;
     wider.modelConstraintsToEvaluate = domain.modelConstraintsToEvaluate;
     wider.searchConstraintsToEvaluate = domain.searchConstraintsToEvaluate;
     wider.searchConstraintsCloned = domain.searchConstraintsCloned;

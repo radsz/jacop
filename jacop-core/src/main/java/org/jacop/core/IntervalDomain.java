@@ -78,6 +78,8 @@ public class IntervalDomain extends IntDomain {
    */
   private void installResultDomain(IntervalDomain result, int storeLevel, Var v) {
     result.modelConstraints = modelConstraints;
+    result.modelKeys = modelKeys;
+    result.modelKeysOf = modelKeysOf;
     result.searchConstraints = searchConstraints;
     result.stamp = storeLevel;
     result.previousDomain = this;
@@ -742,6 +744,10 @@ public class IntervalDomain extends IntDomain {
     cloned.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
 
     cloned.modelConstraints = modelConstraints;
+
+    cloned.modelKeys = modelKeys;
+
+    cloned.modelKeysOf = modelKeysOf;
     cloned.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
 
     cloned.searchConstraintsCloned = searchConstraintsCloned;
@@ -2605,6 +2611,10 @@ public class IntervalDomain extends IntDomain {
       final int returnedEvent = computeChangeEvent(result);
 
       result.modelConstraints = modelConstraints;
+
+      result.modelKeys = modelKeys;
+
+      result.modelKeysOf = modelKeysOf;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
       result.previousDomain = stamp == storeLevel ? previousDomain : this;
@@ -3667,6 +3677,10 @@ public class IntervalDomain extends IntDomain {
       }
 
       result.modelConstraints = modelConstraints;
+
+      result.modelKeys = modelKeys;
+
+      result.modelKeysOf = modelKeysOf;
       result.searchConstraints = searchConstraints;
       result.stamp = storeLevel;
       result.previousDomain = stamp == storeLevel ? previousDomain : this;

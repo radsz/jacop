@@ -1361,7 +1361,7 @@ public abstract class IntDomain extends Domain {
    * @param constraint the constraint to add
    * @param pruningEvent the pruning event index
    */
-  private void addConstraintToPruningEvent(Constraint constraint, int pruningEvent) {
+  private void addConstraintToPruningEvent(Constraint constraint, int pruningEvent, Store store) {
     Constraint[] pruningEventConstraints = modelConstraints[pruningEvent];
     int pruningConstraintsToEvaluate = modelConstraintsToEvaluate[pruningEvent];
     boolean owned =
@@ -1381,6 +1381,10 @@ public abstract class IntDomain extends Domain {
 
     if (owned && pruningConstraintsToEvaluate < pruningEventConstraints.length) {
       pruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
+      int[] keys = keysOf(pruningEvent, pruningEventConstraints);
+      if (keys != null) {
+        keys[pruningConstraintsToEvaluate] = store.wakeKey(constraint);
+      }
       if (table != null && tableAdd(table, constraint)) {
         int tableSize = ++ownedModelConstraintTableSizes[pruningEvent];
         // constraints removed and replaced by others fill the table, so it is then rebuilt
@@ -1401,7 +1405,15 @@ public abstract class IntDomain extends Domain {
       }
       newPruningEventConstraints[pruningConstraintsToEvaluate] = constraint;
 
+      int[] keys = keysOf(pruningEvent, pruningEventConstraints);
+      int[] newKeys = new int[newPruningEventConstraints.length];
+      for (int i = 0; i < pruningConstraintsToEvaluate; i++) {
+        newKeys[i] = keys != null ? keys[i] : store.wakeKey(pruningEventConstraints[i]);
+      }
+      newKeys[pruningConstraintsToEvaluate] = store.wakeKey(constraint);
+
       modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
+      setKeys(pruningEvent, newPruningEventConstraints, newKeys);
       if (ownedModelConstraints == null) {
         ownedModelConstraints = new Constraint[modelConstraints.length][];
         ownedModelConstraintTables = new Constraint[modelConstraints.length][];
@@ -1415,6 +1427,28 @@ public abstract class IntDomain extends Domain {
       }
     }
     changeModelConstraintsToEvaluate(pruningEvent, 1);
+  }
+
+  /**
+   * Returns the wake keys of a constraint array of the given pruning event, or null if this domain
+   * does not have them.
+   */
+  private int[] keysOf(int pruningEvent, Constraint[] constraints) {
+    if (constraints == null || modelKeys == null || modelKeysOf[pruningEvent] != constraints) {
+      return null;
+    }
+    return modelKeys[pruningEvent];
+  }
+
+  /** Records the wake keys of the constraint array of a pruning event, copying shared arrays. */
+  private void setKeys(int pruningEvent, Constraint[] constraints, int[] keys) {
+    int n = modelConstraints.length;
+    int[][] newKeys = modelKeys == null ? new int[n][] : modelKeys.clone();
+    Constraint[][] newKeysOf = modelKeysOf == null ? new Constraint[n][] : modelKeysOf.clone();
+    newKeys[pruningEvent] = keys;
+    newKeysOf[pruningEvent] = constraints;
+    modelKeys = newKeys;
+    modelKeysOf = newKeysOf;
   }
 
   /**
@@ -1478,6 +1512,8 @@ public abstract class IntDomain extends Domain {
   private IntDomain cloneAndInstall(int storeLevel, Var v) {
     IntDomain result = this.cloneForLevel();
     result.modelConstraints = modelConstraints;
+    result.modelKeys = modelKeys;
+    result.modelKeysOf = modelKeysOf;
     result.searchConstraints = searchConstraints;
     result.stamp = storeLevel;
     result.previousDomain = this;
@@ -1498,6 +1534,8 @@ public abstract class IntDomain extends Domain {
   private IntDomain cloneAndInstallForSearch(int storeLevel, Var v) {
     IntDomain result = this.cloneForLevel();
     result.modelConstraints = modelConstraints;
+    result.modelKeys = modelKeys;
+    result.modelKeysOf = modelKeysOf;
     result.searchConstraints =
         new ArrayList<>(searchConstraints.subList(0, searchConstraintsToEvaluate));
     result.searchConstraintsCloned = true;
@@ -1518,7 +1556,7 @@ public abstract class IntDomain extends Domain {
       return;
     }
 
-    addConstraintToPruningEvent(c, pruningEvent);
+    addConstraintToPruningEvent(c, pruningEvent, v.store);
   }
 
   /**
@@ -1543,10 +1581,20 @@ public abstract class IntDomain extends Domain {
       }
 
       if (isImposed) {
-        if (i != modelConstraintsToEvaluate[pruningEvent] - 1) {
-          modelConstraints[pruningEvent][i] =
-              modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1];
-          modelConstraints[pruningEvent][modelConstraintsToEvaluate[pruningEvent] - 1] = constraint;
+        int last = modelConstraintsToEvaluate[pruningEvent] - 1;
+        if (i != last) {
+          int[] keys = keysOf(pruningEvent, pruningEventConstraints);
+          if (keys == null) {
+            // other domains may hold wake keys of the shared array, so it is not changed in place
+            pruningEventConstraints = pruningEventConstraints.clone();
+            modelConstraints = copyModelConstraintsArray(pruningEvent, pruningEventConstraints);
+          } else {
+            int key = keys[i];
+            keys[i] = keys[last];
+            keys[last] = key;
+          }
+          pruningEventConstraints[i] = pruningEventConstraints[last];
+          pruningEventConstraints[last] = constraint;
         }
 
         changeModelConstraintsToEvaluate(pruningEvent, -1);

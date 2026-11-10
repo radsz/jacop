@@ -72,6 +72,16 @@ public abstract class Domain {
    */
   public int[] modelConstraintsToEvaluate;
 
+  /**
+   * The wake keys ({@link Store#wakeKey}) of the constraints of modelConstraints[i], at the same
+   * positions, when modelKeysOf[i] is modelConstraints[i]; any other pair is not used. The arrays
+   * are shared and changed in place together with their constraint arrays.
+   */
+  int[][] modelKeys;
+
+  /** The constraint array each array of {@link #modelKeys} holds the keys of. */
+  Constraint[][] modelKeysOf;
+
   /** It specifies constraints which are attached to current domain. */
   public List<Constraint> searchConstraints;
 

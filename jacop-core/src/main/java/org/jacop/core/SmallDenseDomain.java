@@ -245,6 +245,8 @@ public class SmallDenseDomain extends IntDomain {
    */
   private void installResultDomain(SmallDenseDomain result, int storeLevel, Var v) {
     result.modelConstraints = modelConstraints;
+    result.modelKeys = modelKeys;
+    result.modelKeysOf = modelKeysOf;
     result.searchConstraints = searchConstraints;
     result.stamp = storeLevel;
     result.previousDomain = this;
@@ -2129,6 +2131,10 @@ public class SmallDenseDomain extends IntDomain {
     cloned.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
 
     cloned.modelConstraints = modelConstraints;
+
+    cloned.modelKeys = modelKeys;
+
+    cloned.modelKeysOf = modelKeysOf;
     cloned.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
 
     cloned.searchConstraintsCloned = searchConstraintsCloned;

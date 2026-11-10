@@ -161,6 +161,12 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** Bit i is set while this constraint waits in propagation queue i of {@link #queueOwner}. */
   private int queueMembership;
 
+  /** The store that gave this constraint its wake key, see {@link Store#wakeKey(Constraint)}. */
+  private Store wakeOwner;
+
+  /** The wake key of this constraint in {@link #wakeOwner}. */
+  private int wakeKey = -1;
+
   /**
    * Constructs a constraint with the specified variable arrays as its scope.
    *
@@ -427,6 +433,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * @return bit i is set if the constraint is in queue i of the store.
    */
   public final int queueMembership(Store store) {
+    if (store == wakeOwner) {
+      return store.wakeMembership(wakeKey);
+    }
     return store == queueOwner ? queueMembership : 0;
   }
 
@@ -438,8 +447,45 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * @param membership bit i is set if the constraint is in queue i of the store.
    */
   public final void setQueueMembership(Store store, int membership) {
+    if (store == wakeOwner) {
+      store.setWakeMembership(wakeKey, membership, queueIndex);
+      return;
+    }
     queueOwner = store;
     queueMembership = membership;
+  }
+
+  /**
+   * Returns the wake key of this constraint in a store, which the store keeps its queue state
+   * under; see {@link Store#wakeKey(Constraint)}.
+   *
+   * @param store the store.
+   * @return the key, or -1 if the store gave this constraint none.
+   */
+  public final int wakeKey(Store store) {
+    return store == wakeOwner ? wakeKey : -1;
+  }
+
+  /**
+   * Tells whether a store gave this constraint a wake key; a constraint gets a key from one store
+   * only.
+   *
+   * @return true if the constraint has a wake key.
+   */
+  public final boolean hasWakeKey() {
+    return wakeOwner != null;
+  }
+
+  /**
+   * Records the wake key a store gave this constraint; only {@link Store#wakeKey(Constraint)} calls
+   * it.
+   *
+   * @param store the store.
+   * @param key the key.
+   */
+  public final void setWakeKey(Store store, int key) {
+    wakeOwner = store;
+    wakeKey = key;
   }
 
   /**

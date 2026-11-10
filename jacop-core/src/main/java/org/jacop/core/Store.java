@@ -104,6 +104,27 @@ public class Store {
   public final ConstraintQueue[] changed;
 
   /**
+   * The wake state of each constraint with a wake key of this store ({@link #wakeKey}): bits 0-31
+   * hold the propagation queues the constraint waits in, bit {@link #WAKE_ENTAILED} is set while it
+   * is entailed, bit {@link #WAKE_OVERRIDES} if its class overrides queueVariable, and the bits
+   * from {@link #WAKE_HOME_SHIFT} hold its own queue index. Domains keep the keys of their
+   * constraints next to them, so waking a variable skips a constraint that waits in its queue
+   * without reading the constraint object.
+   */
+  long[] wakeState = new long[256];
+
+  /** The number of wake keys given out. */
+  private int wakeKeys;
+
+  static final long WAKE_ENTAILED = 1L << 32;
+
+  static final long WAKE_OVERRIDES = 1L << 33;
+
+  static final int WAKE_HOME_SHIFT = 34;
+
+  private static final long WAKE_MEMBERSHIP = 0xFFFFFFFFL;
+
+  /**
    * More advanced constraints may require to be informed of a backtrack to be able to recover the
    * older versions of the data structures. For example, the constraints can clear their queue of
    * changed variables if a backtracks has occurred. It holds the list of constraints which want to
@@ -705,19 +726,94 @@ public class Store {
       return;
     }
     c.setEntailedAt(level);
+    int key = c.wakeKey(this);
+    if (key >= 0) {
+      wakeState[key] |= WAKE_ENTAILED;
+    }
     if (entailedSize == entailed.length) {
       entailed = Arrays.copyOf(entailed, entailedSize * 2);
     }
     entailed[entailedSize++] = c;
   }
 
+  /**
+   * Returns the wake key of a constraint in this store, giving it one if it has none. A constraint
+   * keyed by another store gets no key here (-1), and the store then reads its object.
+   *
+   * @param c the constraint.
+   * @return the key, or -1.
+   */
+  public int wakeKey(Constraint c) {
+    int key = c.wakeKey(this);
+    if (key >= 0 || c.hasWakeKey()) {
+      return key;
+    }
+    int membership = c.queueMembership(this);
+    key = wakeKeys++;
+    if (key == wakeState.length) {
+      wakeState = Arrays.copyOf(wakeState, key * 2);
+    }
+    wakeState[key] =
+        (membership & WAKE_MEMBERSHIP)
+            | (c.isEntailed() ? WAKE_ENTAILED : 0)
+            | (c.overridesQueueVariable() ? WAKE_OVERRIDES : 0)
+            | ((long) c.getQueueIndex() << WAKE_HOME_SHIFT);
+    c.setWakeKey(this, key);
+    return key;
+  }
+
+  /**
+   * Returns the propagation queues in which a keyed constraint waits; only {@link Constraint} and
+   * {@link ConstraintQueue} call it.
+   *
+   * @param key the constraint's wake key.
+   * @return bit i is set if the constraint is in queue i.
+   */
+  public int wakeMembership(int key) {
+    return (int) wakeState[key];
+  }
+
+  /**
+   * Records the propagation queues in which a keyed constraint waits, and its own queue index; only
+   * {@link Constraint} and {@link ConstraintQueue} call it.
+   *
+   * @param key the constraint's wake key.
+   * @param membership bit i is set if the constraint is in queue i.
+   * @param homeQueue the constraint's own queue index.
+   */
+  public void setWakeMembership(int key, int membership, int homeQueue) {
+    long state = wakeState[key];
+    wakeState[key] =
+        (state & (WAKE_ENTAILED | WAKE_OVERRIDES))
+            | (membership & WAKE_MEMBERSHIP)
+            | ((long) homeQueue << WAKE_HOME_SHIFT);
+  }
+
   private void queueModelConstraintsForVariable(Domain vdomain, Var v, int pruningEvent) {
+    int[][] keys = vdomain.modelKeys;
     for (int j : vdomain.getEventsInclusion(pruningEvent)) {
       Constraint[] addedConstraints = vdomain.modelConstraints[j];
+      int[] eventKeys = keys != null && vdomain.modelKeysOf[j] == addedConstraints ? keys[j] : null;
       for (int i = vdomain.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {
+        if (eventKeys != null) {
+          int key = eventKeys[i];
+          if (ASSERTS_ENABLED && key != addedConstraints[i].wakeKey(this)) {
+            throw new IllegalStateException("stale wake key of " + addedConstraints[i]);
+          }
+          // a constraint waiting in its own queue sees the change when it runs; skip it unless
+          // it is entailed (to detach it) or wants to be told about the variable
+          if (key >= 0 && isWaitingAtHome(wakeState[key])) {
+            continue;
+          }
+        }
         queueModelConstraint(vdomain, v, addedConstraints[i]);
       }
     }
+  }
+
+  private static boolean isWaitingAtHome(long state) {
+    int high = (int) (state >>> 32);
+    return (high & 3) == 0 && (((int) state >>> (high >>> 2)) & 1) != 0;
   }
 
   /** It wakes one model constraint of a changed variable. */
@@ -1539,7 +1635,12 @@ public class Store {
     trailManager.removeLevel(level);
 
     while (entailedSize > 0 && entailed[entailedSize - 1].entailedAt() >= level) {
-      entailed[--entailedSize].setEntailedAt(Integer.MAX_VALUE);
+      Constraint c = entailed[--entailedSize];
+      c.setEntailedAt(Integer.MAX_VALUE);
+      int key = c.wakeKey(this);
+      if (key >= 0) {
+        wakeState[key] &= ~WAKE_ENTAILED;
+      }
       entailed[entailedSize] = null;
     }
 
