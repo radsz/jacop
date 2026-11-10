@@ -196,6 +196,14 @@ public final class CdclSolver {
   private int shrinkStamp;
   // the depth of the minimisation's search, as CaDiCaL's minimizedepth
   private static final int MINIMIZE_DEPTH = 1000;
+
+  // the lazy explanations clause minimisation may ask for per conflict (system property
+  // jacop.jasat.minimizeExplain): negative is no limit, 0 tests only literals whose reasons are
+  // already explained
+  private static final int MINIMIZE_EXPLAIN = Integer.getInteger("jacop.jasat.minimizeExplain", -1);
+
+  // the lazy explanations the current minimisation may still ask for
+  private int minimizeExplainLeft;
   // variables found not redundant during this conflict's minimisation (poisoned), by stamp
   private int[] poisonMark = new int[0];
   private int poisonStamp;
@@ -1608,6 +1616,7 @@ public final class CdclSolver {
     int analysedEnd = toClearSize;
 
     // recursive minimisation
+    minimizeExplainLeft = MINIMIZE_EXPLAIN < 0 ? Integer.MAX_VALUE : MINIMIZE_EXPLAIN;
     if (++poisonStamp == Integer.MAX_VALUE) {
       Arrays.fill(poisonMark, 0);
       poisonStamp = 1;
@@ -1889,6 +1898,12 @@ public final class CdclSolver {
   }
 
   private boolean antecedentsRemovable(int v, int abstractLevels, int depth) {
+    if (reason[v] == EXTERNAL_REASON) {
+      if (minimizeExplainLeft <= 0) {
+        return false; // its explanation would cost a propagator call: the literal stays
+      }
+      minimizeExplainLeft--;
+    }
     int r = reasonRef(v);
     if (r == UNIT_REASON) {
       return true;
