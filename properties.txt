@@ -742,7 +742,9 @@ Simplex choice and bases:
   largeMaxColumns columns and maxNonzeros nonzeros, are kept as large
   relaxations: solved at the root only, with time instead of pivots,
   and their root solution guides free search (-f) when they are large
-  by their rows; false drops them as before; default true.
+  by their rows; one whose root bound does not cut the domain of the
+  objective is removed after its root solve (stat lpLarge=dropped);
+  false drops them as before; default true.
 - org.jacop.lp.largeMaxRows, org.jacop.lp.largeMaxColumns: the largest
   large relaxation; default 1000000 and 250000.
 - org.jacop.lp.largeRootShare: the share of the time limit (-t) that
@@ -750,6 +752,9 @@ Simplex choice and bases:
   rows, cut rounds) take together; default 0.1.
 - org.jacop.lp.largeRootSeconds: their time without a time limit, in
   seconds; default 30.
+- org.jacop.lp.largeGuideColumns: under -f the root solution of a
+  relaxation large by its rows guides the decisions only when it has at
+  least this many columns; default 10000.
 - org.jacop.lp.sparseCost: the work of the sparse simplex in units of
   a dense tableau entry; default 1.
 - org.jacop.lp.keepBases: keep the basis of each level of the branch

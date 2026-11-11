@@ -1675,6 +1675,30 @@ public class LinearRelaxation extends Constraint
     return large;
   }
 
+  // a large relaxation removed after its root solve, which did not bound the objective
+  private boolean largeDropped;
+
+  /**
+   * Returns whether the relaxation is large and was removed after its root solve, whose bound did
+   * not cut the domain of the objective.
+   *
+   * @return whether the large relaxation was removed
+   */
+  public boolean largeDropped() {
+    return largeDropped;
+  }
+
+  // whether the root bound cuts the domain of the objective, whose bound before the root solve is
+  // given
+  private boolean boundsObjective(long domainBound) {
+    if (objective == null || Double.isNaN(rootBound)) {
+      return false;
+    }
+    return maximize
+        ? Math.floor(rootBound + 1e-6) < domainBound
+        : Math.ceil(rootBound - 1e-6) > domainBound;
+  }
+
   /**
    * Returns whether the relaxation is large by its rows: over org.jacop.lp.sparseMaxRows (25,000)
    * of them, as MIP models with a row for each pair of their 0/1 columns are, not only by its
@@ -1945,11 +1969,20 @@ public class LinearRelaxation extends Constraint
     long pivots = pivots();
     long work = lp.work();
     boolean first = calls == 0;
+    // the bound of the objective's domain before the first solve, which the root bound must cut
+    long domainBound = objective == null ? 0 : maximize ? objective.max() : objective.min();
     long started = System.nanoTime();
     try {
       solveAndPropagate(store);
       if (first) {
         rememberRootBounds();
+        if (large && !boundsObjective(domainBound)) {
+          // a large relaxation is solved at the root only; one whose bound does not cut the
+          // objective's domain has nothing left to give the search, and only slows it down when
+          // woken (cable-tree-wiring A073, bound -198: LCG under -f made half the conflicts)
+          largeDropped = true;
+          removeConstraint();
+        }
       }
     } finally {
       solveNanos += System.nanoTime() - started;

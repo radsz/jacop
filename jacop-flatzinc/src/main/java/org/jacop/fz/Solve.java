@@ -675,7 +675,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n%%%mzn-stat: lpColumns="
             + r.columns()
             + "\n%%%mzn-stat: lpLarge="
-            + r.large()
+            + (r.largeDropped() ? "dropped" : r.large())
             + "\n%%%mzn-stat: lpPivotWork="
             + r.pivotWork()
             + "\n%%%mzn-stat: lpSimplexRows="

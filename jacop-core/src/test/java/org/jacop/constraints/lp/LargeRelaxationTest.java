@@ -35,6 +35,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XgteqC;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -181,6 +182,23 @@ class LargeRelaxationTest {
       guided += guide && r.solutionColumns() > 0 ? 1 : 0;
     }
     assertThat(guided).isPositive();
+  }
+
+  @Test
+  void relaxationThatDoesNotCutTheObjectiveIsDropped() {
+    for (int run = 0; run < 10; run++) {
+      long expected = new Model(run).optimum(null);
+      LinearRelaxation.sparseMaxRows = 3;
+      Model m = new Model(run);
+      // the objective's domain starts at the optimum, which no relaxation bound can pass
+      m.store.impose(new XgteqC(m.cost, (int) expected));
+      LinearRelaxation r = LinearRelaxation.of(m.store, m.cost, false);
+      m.store.impose(r);
+      long got = m.optimum(null);
+      LinearRelaxation.sparseMaxRows = savedCap;
+      assertThat(got).as("run %d", run).isEqualTo(expected);
+      assertThat(r.largeDropped()).as("run %d", run).isTrue();
+    }
   }
 
   @Test
