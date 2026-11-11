@@ -896,13 +896,49 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     nodes++;
     boolean consistent = store.consistency();
     if (consistencyListener != null) {
+      boolean propagated = consistent;
       consistent = consistencyListener.executeAfterConsistency(consistent);
+      if (SubproblemCensus.ON && propagated && !consistent) {
+        SubproblemCensus.of("dfs").cut();
+      }
     }
     if (!consistent) {
       wrongDecisions++;
       failedDecision(decision);
       return false;
     }
+    if (SubproblemCensus.ON) {
+      return labelCensus(firstVariable);
+    }
+    return labelNode(firstVariable);
+  }
+
+  /** The rest of {@link #label(int)} with the subproblem census around it. */
+  private boolean labelCensus(int firstVariable) {
+    SubproblemCensus census = SubproblemCensus.of("dfs");
+    if (!census.ready()) {
+      census.init(store, null, null, optimize && costVariable instanceof IntVar v ? v : null);
+    }
+    boolean repeated = census.enter(0);
+    boolean result = false;
+    try {
+      if (repeated && SubproblemCensus.PRUNE) {
+        // the census's check: fail the node, keeping the store's levels as labelNode does
+        return false;
+      }
+      result = labelNode(firstVariable);
+      return result;
+    } finally {
+      if (result || timeOutOccured || childSearchTimedOut) {
+        census.cut();
+      }
+      census.exit(optimize && cost != null ? costValue - 1 : Integer.MAX_VALUE);
+    }
+  }
+
+  /** The part of {@link #label(int)} after the node's propagation succeeded. */
+  private boolean labelNode(int firstVariable) {
+    boolean consistent;
     if (lastSubtreeListener != null && openRightBranches == 0 && exitChildListener == null) {
       lastSubtreeListener.run();
     }
@@ -940,6 +976,9 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     }
 
     if (shouldExitAfterLeftChild(fdv, val, choice, consistent)) {
+      if (SubproblemCensus.ON) {
+        SubproblemCensus.of("dfs").cut();
+      }
       store.removeLevel(depth);
       store.setLevel(--depth);
       depthExcludePaths--;

@@ -84,6 +84,7 @@ import org.jacop.lcg.Mirrored;
 import org.jacop.lcg.MirroredChoice;
 import org.jacop.lcg.PbModel;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SubproblemCensus;
 import org.jacop.search.lns.AdaptiveLns;
 
 /**
@@ -2146,6 +2147,16 @@ public final class LcgSolver implements ExternalPropagator {
 
   // ------------------------------------------------------------------------------- literals
 
+  /** The clauses given by {@link #addClause}, kept for the subproblem census. */
+  private final List<IntVar[][]> censusClauses = new ArrayList<>();
+
+  /** Takes the model for the subproblem census before constraints become clauses. */
+  private void censusInit() {
+    if (SubproblemCensus.ON) {
+      SubproblemCensus.of("lcg").init(store, null, censusClauses, clauseObjective);
+    }
+  }
+
   private int newLiteral(int i, int kind, int value) {
     int d;
     if (numFree > 0) {
@@ -2560,6 +2571,7 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private int solve(int... assumed) {
+    censusInit();
     encodeGraphs();
     startProof();
     if (rootFailed) {
@@ -2604,6 +2616,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public int minimize(IntVar objective) {
     clauseObjective = objective;
+    censusInit();
     encodeGraphs();
     this.objective = trail.id(objective);
     best = null;
@@ -3684,6 +3697,9 @@ public final class LcgSolver implements ExternalPropagator {
    * @param negative variables of which one may be 0
    */
   public void addClause(IntVar[] positive, IntVar[] negative) {
+    if (SubproblemCensus.ON) {
+      censusClauses.add(new IntVar[][] {positive.clone(), negative.clone()});
+    }
     if (proof != null) {
       proofClauses.add(new IntVar[][] {positive.clone(), negative.clone()});
     }
@@ -4157,6 +4173,15 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyBacktrack(int level) {
+    if (SubproblemCensus.ON) {
+      long bound = boundObjective();
+      SubproblemCensus.of("lcg")
+          .backjump(
+              store.level - baseLevel,
+              level,
+              sat.conflicts != backtrackConflicts,
+              bound >= Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) (bound - 1));
+    }
     if (sat.conflicts != backtrackConflicts) {
       // a conflict led here: its last decision was on decisionVar
       backtrackConflicts = sat.conflicts;
@@ -5261,6 +5286,9 @@ public final class LcgSolver implements ExternalPropagator {
    */
   @Override
   public int decide() {
+    if (SubproblemCensus.ON) {
+      SubproblemCensus.of("lcg").enter(store.level - baseLevel);
+    }
     if (branching == Branching.AUTO
         && best == null
         && !activityBranching
