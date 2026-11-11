@@ -2624,9 +2624,13 @@ public final class CdclSolver {
         }
         trailQueuePush(trailSize);
         updateTargetAndBest();
+        int conflictLevel = decisionLevel;
         int btLevel = analyze();
         if (chrono && learntSize > 1 && decisionLevel - btLevel > chronoLimit) {
           btLevel = decisionLevel - 1;
+        }
+        if (estimating) {
+          estimateConflict(conflictLevel, btLevel);
         }
         backtrack(btLevel);
         learnClause();
@@ -3151,6 +3155,72 @@ public final class CdclSolver {
     walking = on;
   }
 
+  // ------------------------------------------- tree-size estimate (log only, see setEstimating)
+
+  private boolean estimating;
+
+  /**
+   * Weighted-backtrack sums of the conflicts while {@link #setEstimating} is on: the share of the
+   * decision tree under each conflict (2^-depth, Kilby, Slaney, Thiébaux and Walsh, AAAI 2006),
+   * under the level each backjump returns to (2^-(level+1)), and under each learnt clause (2^-LBD:
+   * the clause excludes the assignments that falsify it, which fix about LBD levels).
+   */
+  public double treeDepthWeight;
+
+  /** See {@link #treeDepthWeight}. */
+  public double treeJumpWeight;
+
+  /** See {@link #treeDepthWeight}. */
+  public double treeLbdWeight;
+
+  /** The sum of the depths of the conflicts while estimating, for their mean. */
+  public long treeDepthSum;
+
+  /** The conflicts counted while estimating. */
+  public long treeConflicts;
+
+  /**
+   * Turns on (and resets) or off the weighted-backtrack sums of the conflicts ({@link
+   * #treeDepthWeight}), which only record and change no decision of the search.
+   *
+   * @param on whether to record them
+   */
+  public void setEstimating(boolean on) {
+    estimating = on;
+    if (on) {
+      treeDepthWeight = 0;
+      treeJumpWeight = 0;
+      treeLbdWeight = 0;
+      treeDepthSum = 0;
+      treeConflicts = 0;
+      treeHalf = null;
+      treeMark = Long.MAX_VALUE;
+    }
+  }
+
+  private void estimateConflict(int conflictLevel, int btLevel) {
+    int top = assumptionsOnOneLevel ? Math.min(1, assumptions.length) : assumptions.length;
+    int depth = Math.max(1, conflictLevel - top);
+    int jump = Math.max(1, btLevel + 1 - top);
+    treeDepthWeight += Math.scalb(1.0, -Math.min(depth, 1000));
+    treeJumpWeight += Math.scalb(1.0, -Math.min(jump, 1000));
+    treeDepthSum += depth;
+    treeConflicts++;
+    if (treeHalf == null && work() >= treeMark) {
+      treeHalf =
+          new double[] {treeDepthWeight, treeJumpWeight, treeLbdWeight, treeConflicts, work()};
+    }
+  }
+
+  /** The work at which the sums are copied into {@link #treeHalf}, for their rate over the rest. */
+  public long treeMark = Long.MAX_VALUE;
+
+  /**
+   * The depth, jump and LBD sums, the conflicts and the work at the first conflict after {@link
+   * #treeMark}, or null before it.
+   */
+  public double[] treeHalf;
+
   private void learnClause() {
     int lbd;
     if (learntSize == 1) {
@@ -3183,6 +3253,9 @@ public final class CdclSolver {
         dimacs[i] = toDimacs(learnt[i]);
       }
       external.notifyLearnt(dimacs, lbd);
+    }
+    if (estimating) {
+      treeLbdWeight += Math.scalb(1.0, -Math.min(lbd, 1000));
     }
     lbdSum += lbd;
     emaFastBeta *= 1 - 0.03;

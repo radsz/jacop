@@ -2701,6 +2701,9 @@ public final class LcgSolver implements ExternalPropagator {
       if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
         return result;
       }
+      if ("bnb".equals(TREE_ESTIMATE)) {
+        return afterCores();
+      }
     }
     double share = coreShare;
     if (CORE_SKIP && workEnd != Long.MAX_VALUE && coreSearch.lowerBound < root[objective].min()) {
@@ -2924,6 +2927,17 @@ public final class LcgSolver implements ExternalPropagator {
     } else {
       sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
     }
+    long startWork = sat.work();
+    long startNanos = System.nanoTime();
+    long startConflicts = sat.conflicts;
+    long startBest = bestObjective();
+    if (TREE_ESTIMATE != null) {
+      sat.setEstimating(true);
+      if (sat.workLimit() != Long.MAX_VALUE) {
+        sat.treeMark = startWork + (sat.workLimit() - startWork) / 2;
+      }
+      treeSolutions = new long[] {0, -1, -1, Long.MAX_VALUE};
+    }
     coreMode = true; // a solution ends the call of the solver without a clause
     try {
       while (true) {
@@ -2941,8 +2955,63 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } finally {
       coreMode = false;
+      if (TREE_ESTIMATE != null) {
+        recordTreeEstimate(startWork, startNanos, startConflicts, startBest);
+      }
       endPhase(deadline);
     }
+  }
+
+  // -Djacop.lcg.treeEstimate=log records a tree-size estimate of the branch and bound before the
+  // core-guided phase (treeEstimate, a statistic) and changes nothing; =bnb also leaves out the
+  // core-guided phase after it, so the run's time to proof is that of branch and bound alone
+  static final String TREE_ESTIMATE = System.getProperty("jacop.lcg.treeEstimate");
+
+  // the improving solutions of the branch and bound before the core-guided phase: their number,
+  // the work of the first and of the last, and the best objective at the half-way mark
+  private long[] treeSolutions;
+
+  /**
+   * The tree-size estimate of the branch and bound before the core-guided phase, as key=value
+   * pairs, or null (see {@link #TREE_ESTIMATE}).
+   */
+  public String treeEstimate;
+
+  private void recordTreeEstimate(
+      long startWork, long startNanos, long startConflicts, long startBest) {
+    double[] half = sat.treeHalf;
+    long lower = root[objective].min();
+    if (coreSearch != null) {
+      lower = Math.max(lower, coreSearch.lowerBound);
+    }
+    StringBuilder s = new StringBuilder();
+    s.append("work=").append(sat.work() - startWork);
+    s.append(";limit=").append(sat.workLimit() - startWork);
+    s.append(";ms=").append((System.nanoTime() - startNanos) / 1_000_000L);
+    s.append(";conflicts=").append(sat.conflicts - startConflicts);
+    s.append(";counted=").append(sat.treeConflicts);
+    s.append(";depthSum=").append(sat.treeDepthSum);
+    s.append(";depthW=").append(sat.treeDepthWeight);
+    s.append(";jumpW=").append(sat.treeJumpWeight);
+    s.append(";lbdW=").append(sat.treeLbdWeight);
+    if (half != null) {
+      s.append(";halfDepthW=").append(half[0]);
+      s.append(";halfJumpW=").append(half[1]);
+      s.append(";halfLbdW=").append(half[2]);
+      s.append(";halfConflicts=").append((long) half[3]);
+      s.append(";halfWork=").append((long) half[4] - startWork);
+    }
+    s.append(";startBest=").append(startBest);
+    s.append(";best=").append(bestObjective());
+    s.append(";lower=").append(lower);
+    s.append(";workEnd=").append(workEnd - startWork);
+    s.append(";solutions=").append(treeSolutions[0]);
+    s.append(";firstWork=").append(treeSolutions[1] < 0 ? -1 : treeSolutions[1] - startWork);
+    s.append(";lastWork=").append(treeSolutions[2] < 0 ? -1 : treeSolutions[2] - startWork);
+    s.append(";halfBest=").append(treeSolutions[3]);
+    treeEstimate = s.toString();
+    sat.setEstimating(false);
+    treeSolutions = null;
   }
 
   /**
@@ -5623,6 +5692,14 @@ public final class LcgSolver implements ExternalPropagator {
       return true;
     }
     if (improving) {
+      if (treeSolutions != null) {
+        treeSolutions[0]++;
+        long w = sat.work();
+        treeSolutions[treeSolutions[0] == 1 ? 1 : 2] = w;
+        if (w <= sat.treeMark) {
+          treeSolutions[3] = solution[objective];
+        }
+      }
       improvedInRun = true;
       best = solution;
       phase = solution;
