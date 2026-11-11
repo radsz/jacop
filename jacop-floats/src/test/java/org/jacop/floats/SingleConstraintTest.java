@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
@@ -509,6 +510,33 @@ class SingleConstraintTest {
     }
     for (double x : new double[] {-61315.44894204959, 41.553635841197824, 9939.357064796095}) {
       assertThat(groundInverse(AtanPeqR::new, x, Math.atan(x))).as("atan %s", x).isTrue();
+    }
+  }
+
+  /**
+   * A result bound at atan(x) keeps x: tan of the bound misses x by up to a few ulps (tan(atan(2))
+   * is 1.9999999999999996), since tan multiplies the rounding of the bound by 1 + x^2, and the
+   * solution (2, atan(2)) of XeqP and AtanPeqR was removed (FloatPropagationFuzzTest).
+   */
+  @Test
+  void testAtanResultBoundKeepsItsArgument() {
+    Random random = new Random(5);
+    for (int k = 0; k < 2000; k++) {
+      double x = k == 0 ? 2 : (2 * random.nextDouble() - 1) * Math.pow(10, random.nextInt(9) - 3);
+      double y = Math.atan(x);
+      Store store = new Store();
+      FloatVar p = new FloatVar(store, "p", x - 1, x + 1);
+      FloatVar r = new FloatVar(store, "r", -2, y);
+      store.impose(new AtanPeqR(p, r));
+      assertThat(store.consistency()).as("atan %s", x).isTrue();
+      assertThat(p.max()).as("p max for r <= atan(%s)", x).isGreaterThanOrEqualTo(x);
+
+      store = new Store();
+      p = new FloatVar(store, "p", x - 1, x + 1);
+      r = new FloatVar(store, "r", y, 2);
+      store.impose(new AtanPeqR(p, r));
+      assertThat(store.consistency()).as("atan %s", x).isTrue();
+      assertThat(p.min()).as("p min for r >= atan(%s)", x).isLessThanOrEqualTo(x);
     }
   }
 
