@@ -2852,6 +2852,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             ? ""
             : "\n%%%mzn-stat: lcgCoreLpSolves="
                 + core.lpSolves
+                + "\n%%%mzn-stat: lcgCoreLpTime="
+                + core.lpNanos / 1e9
+                + "\n%%%mzn-stat: lcgCoreLpWork="
+                + core.lpWorkUsed()
                 + "\n%%%mzn-stat: lcgCoreLpRaised="
                 + core.lpRaised
                 + "\n%%%mzn-stat: lcgCoreLpBound="

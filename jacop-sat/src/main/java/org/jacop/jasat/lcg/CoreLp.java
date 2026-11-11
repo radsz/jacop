@@ -48,6 +48,7 @@ import org.jacop.jalp.RevisedDualSimplex;
 final class CoreLp {
 
   private static final double INF = Double.POSITIVE_INFINITY;
+  private static final int PIVOT_STEP = 200; // the pivots between two looks at the deadline
 
   private final Map<Object, Integer> index = new HashMap<>();
   private final List<double[]> bounds = new ArrayList<>();
@@ -57,6 +58,9 @@ final class CoreLp {
 
   /** The pivots of the last solve. */
   long pivots;
+
+  /** The work of the last solve, as {@link RevisedDualSimplex#work()}. */
+  long work;
 
   /** The status of the last solve. */
   int status = -1;
@@ -117,14 +121,18 @@ final class CoreLp {
   }
 
   /**
-   * Minimizes a column and returns a safe lower bound of it, or negative infinity when the solve
-   * does not end optimal or no finite bound follows from its duals.
+   * Minimizes a column and returns a safe lower bound of it, or negative infinity when no finite
+   * bound follows from the duals. A solve stopped by a limit still gives the bound of its duals,
+   * which the dual simplex keeps feasible as it goes.
    *
    * @param objective the column minimized
    * @param pivotLimit the most pivots
+   * @param workLimit the most work, as {@link RevisedDualSimplex#work()}
+   * @param deadline the {@link System#nanoTime()} after which the solve stops, a safety net for a
+   *     wrong estimate of the work
    * @return the bound
    */
-  double minimize(int objective, int pivotLimit) {
+  double minimize(int objective, int pivotLimit, long workLimit, long deadline) {
     int m = rowColumns.size();
     int n = bounds.size();
     double[] lo = new double[m];
@@ -151,9 +159,15 @@ final class CoreLp {
       }
       lp.setBounds(j, b[0], b[1]);
     }
-    status = lp.solve(pivotLimit);
+    do {
+      status = lp.solve((int) Math.min(PIVOT_STEP, pivotLimit - lp.pivots()));
+    } while (status == RevisedDualSimplex.LIMIT
+        && lp.pivots() < pivotLimit
+        && lp.work() < workLimit
+        && System.nanoTime() < deadline);
     pivots = lp.pivots();
-    if (status != RevisedDualSimplex.OPTIMAL) {
+    work = lp.work();
+    if (status != RevisedDualSimplex.OPTIMAL && status != RevisedDualSimplex.LIMIT) {
       return Double.NEGATIVE_INFINITY;
     }
     return safeBound(lp.duals(), cost, lo, hi);

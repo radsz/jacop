@@ -171,6 +171,9 @@ public final class CoreSearch {
   /** Statistics: linear programs over the cores solved ({@code jacop.lcg.coreLp}). */
   public long lpSolves;
 
+  /** Statistics: the time spent on those linear programs, in nanoseconds. */
+  public long lpNanos;
+
   /** Statistics: times the bound of the linear program over the cores was above the lower bound. */
   public long lpRaised;
 
@@ -196,7 +199,13 @@ public final class CoreSearch {
   // the most pivots of that linear program
   private static final int LP_PIVOTS = Integer.getInteger("jacop.lcg.coreLpPivots", 20_000);
   private final List<int[]> coreLits = new ArrayList<>(); // the cores, as soft literals
+  // the most of the phase's time those linear programs may take, as a fraction
+  private static final double LP_SHARE = lpShare();
+  // the work of the simplex (updates of a dense tableau entry) per unit of the solver's work
+  private static final long LP_WORK = Long.getLong("jacop.lcg.coreLpWork", 500);
   private int lpCores; // the cores when the last linear program was solved
+  private long phaseWork; // the solver's work in the runs of the phase
+  private long lpWork; // the work of the linear programs, in the units of the solver's work
   private final long constant; // the objective's constant
 
   // the solver's work when the first call of the solver started (-1 before), and the bound then
@@ -512,9 +521,16 @@ public final class CoreSearch {
       // the rate of the lower bound counts only the phase's own work, not branch and bound between
       startWork += sat.work() - runEnd;
     }
+    long runStart = sat.work();
     int result = search(phaseLimit, callLimit);
     if (result == CdclSolver.UNKNOWN && lp && proof == null && coreLits.size() > lpCores) {
-      result = lpBound();
+      phaseWork += sat.work() - runStart;
+      long budget = (long) (LP_SHARE * phaseWork) - lpWork;
+      if (budget > 0) {
+        long start = System.nanoTime();
+        result = lpBound(budget, start + 2 * budget / LcgSolver.WORK_PER_MS * 1_000_000);
+        lpNanos += System.nanoTime() - start;
+      }
     }
     runEnd = sat.work();
     if (result != CdclSolver.UNKNOWN) {
@@ -1275,7 +1291,7 @@ public final class CoreSearch {
    * @return {@link CdclSolver#UNKNOWN}, or as {@link #run} when the bound leaves no solution better
    *     than the best one
    */
-  private int lpBound() {
+  private int lpBound(long work, long deadline) {
     lpCores = coreLits.size();
     LinearRelaxation relaxation = lcg.relaxation();
     if (relaxation == null) {
@@ -1363,7 +1379,8 @@ public final class CoreSearch {
         lowerBound,
         Double.POSITIVE_INFINITY);
     lpSolves++;
-    double z = lp.minimize(obj, LP_PIVOTS);
+    double z = lp.minimize(obj, LP_PIVOTS, work * LP_WORK, deadline);
+    lpWork += lp.work / LP_WORK;
     if (!(z > Long.MIN_VALUE && z < Long.MAX_VALUE)) {
       return CdclSolver.UNKNOWN;
     }
@@ -1383,6 +1400,20 @@ public final class CoreSearch {
     }
     lcg.reportBound(bound);
     return lcg.boundObjective() <= bound ? CdclSolver.SAT : CdclSolver.UNKNOWN;
+  }
+
+  /**
+   * Returns the work of the linear programs over the cores, in the units of the solver's work.
+   *
+   * @return the work
+   */
+  public long lpWorkUsed() {
+    return lpWork;
+  }
+
+  private static double lpShare() {
+    String share = System.getProperty("jacop.lcg.coreLpShare");
+    return share == null ? 0.1 : Double.parseDouble(share);
   }
 
   private static int softColumn(CoreLp lp, int lit) {

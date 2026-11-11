@@ -511,6 +511,11 @@ Core-guided phase (free search, --lcg -f):
   relaxation; off under a proof); default false.
 - jacop.lcg.coreLpPivots: the most pivots of that linear program;
   default 20000.
+- jacop.lcg.coreLpShare: the most of the core phase's work those linear
+  programs may take, as a fraction; a solve stopped by it keeps the
+  bound of its duals; default 0.1.
+- jacop.lcg.coreLpWork: the work of the simplex per unit of the
+  solver's work, for that share; default 500.
 - jacop.lcg.workPerMs: the solver work per millisecond of a time limit,
   from which the phases take their shares, so that a run repeats
   with the same limit whatever the load of the machine; default 2000.
