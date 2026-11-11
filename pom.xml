@@ -396,6 +396,7 @@ setup to run configuration. -->
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
+                                <include>**/PortfolioOneParseTest.java</include>
                                 <!-- a few upTo30sec instances for built-ins no upTo5sec instance uses -->
                                 <include>**/MinizincBasedUpTo30SecondsSampleTest.java</include>
                             </includes>
@@ -610,6 +611,7 @@ setup to run configuration. -->
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
+                                <include>**/PortfolioOneParseTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                             </includes>
                             <excludes>
@@ -819,6 +821,7 @@ setup to run configuration. -->
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
+                                <include>**/PortfolioOneParseTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
@@ -1004,6 +1007,7 @@ setup to run configuration. -->
                                 <include>**/MinizincFreeSearchTest.java</include>
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
+                                <include>**/PortfolioOneParseTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
