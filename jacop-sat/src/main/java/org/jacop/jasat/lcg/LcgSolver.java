@@ -445,6 +445,7 @@ public final class LcgSolver implements ExternalPropagator {
   private static final double CORE_NO_SOLUTION =
       Double.parseDouble(System.getProperty("jacop.lcg.coreNoSolution", "0.33"));
   private double coreShare;
+  private boolean coreLp = CoreSearch.CORE_LP;
   private long coreBudget;
   private long coreCallLimit;
   private double coreDelayShare;
@@ -2613,6 +2614,9 @@ public final class LcgSolver implements ExternalPropagator {
       startProof();
     }
     coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
+    if (coreSearch != null) {
+      coreSearch.lp = coreLp;
+    }
     int result;
     // a conflict limit set before bounds the core-guided phase and branch and bound
     conflictCap = sat.conflictLimit();
@@ -3060,6 +3064,18 @@ public final class LcgSolver implements ExternalPropagator {
    * @param conflicts the conflicts it may take when there is no deadline
    * @param callLimit the conflicts one call of the solver may take before it stops
    */
+  /**
+   * Sets whether, after each run of the core-guided phase that found new cores, a linear program
+   * over the model's relaxation and the cores bounds the objective ({@code jacop.lcg.coreLp}, off
+   * by default). It needs a {@link LinearRelaxation} among the store's constraints, and is off
+   * under a proof.
+   *
+   * @param on whether the cores go to a linear program
+   */
+  public void setCoreLp(boolean on) {
+    coreLp = on;
+  }
+
   public void setCoreSearch(double share, long conflicts, long callLimit) {
     coreShare = share;
     coreBudget = Math.max(1, conflicts);
@@ -3126,6 +3142,16 @@ public final class LcgSolver implements ExternalPropagator {
   /** The conflict limit set before {@link #minimize}, which the core-guided phase keeps. */
   long conflictCap() {
     return conflictCap;
+  }
+
+  /** The linear relaxation of the model among the store's constraints, or null. */
+  LinearRelaxation relaxation() {
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof LinearRelaxation r) {
+        return r;
+      }
+    }
+    return null;
   }
 
   /** The index of a variable of the store, or -1 when it is not one of the solver's variables. */

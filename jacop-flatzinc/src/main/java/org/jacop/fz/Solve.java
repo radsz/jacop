@@ -2847,7 +2847,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "\n%%%mzn-stat: lcgConsistencyCalls="
         + store.numberConsistencyCalls
         + "\n%%%mzn-stat: lcgCoreBound="
-        + (minimize ? core.lowerBound : -core.lowerBound);
+        + (minimize ? core.lowerBound : -core.lowerBound)
+        + (core.lpSolves == 0
+            ? ""
+            : "\n%%%mzn-stat: lcgCoreLpSolves="
+                + core.lpSolves
+                + "\n%%%mzn-stat: lcgCoreLpRaised="
+                + core.lpRaised
+                + "\n%%%mzn-stat: lcgCoreLpBound="
+                + (core.lpBound == Long.MIN_VALUE
+                    ? "none"
+                    : minimize ? core.lpBound : -core.lpBound));
   }
 
   /**

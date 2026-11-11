@@ -110,6 +110,7 @@ import org.jacop.constraints.cumulative.Cumulatives;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.knapsack.Knapsack;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.NetworkFlow;
 import org.jacop.constraints.netflow.simplex.Node;
@@ -4647,6 +4648,92 @@ class LcgSolverTest {
       stats[0] += solver.coreSearch().amoGroups;
       stats[1] += solver.coreSearch().expandedTerms;
       stats[2] += solver.coreSearch().proved ? 1 : 0;
+    }
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
+  }
+
+  @Test
+  void coresInTheLinearProgramKeepTheOptimum() {
+    // jacop.lcg.coreLp: after a run of the core-guided phase, a linear program over the model's
+    // relaxation, the soft literals linked to their variables, the cores and the reformulated
+    // objective bounds the objective. Its bound must never cut off the optimum
+    long solves = 0;
+    for (int seed = 0; seed < 300; seed++) {
+      Integer reference = coveringOptimum(seed, -1, null);
+      Integer off = coveringOptimum(seed, 0, null);
+      double[] stats = new double[3];
+      Integer on = coveringOptimum(seed, 1, stats);
+      assertThat(off).as("seed %d", seed).isEqualTo(reference);
+      assertThat(on).as("seed %d", seed).isEqualTo(reference);
+      if (stats[0] > 0 && stats[2] != reference) {
+        // the linear program's bound holds for every solution better than the best one then
+        assertThat(stats[1]).as("seed %d", seed).isLessThanOrEqualTo(reference);
+      }
+      solves += (long) stats[0];
+    }
+    assertThat(solves).isPositive();
+  }
+
+  /**
+   * The optimum of a random covering model: by depth-first search (mode -1), or by lazy clause
+   * generation with a linear relaxation and the core-guided phase in short calls, without (0) or
+   * with (1) the cores in a linear program; stats gets the linear programs solved, their largest
+   * bound and the best solution's objective then.
+   */
+  private static Integer coveringOptimum(int seed, int mode, double[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    // odd seeds: 0/1 variables in rows of three that need one or two of them, as in a vertex cover
+    // of triangles, whose relaxation is half-integral; even seeds: small integers with holes
+    boolean binary = seed % 2 == 1;
+    int n = (binary ? 14 : 10) + rnd.nextInt(6);
+    int max = binary ? 1 : 3;
+    IntVar[] x = new IntVar[n];
+    int[] w = new int[n + 1];
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, max);
+      if (!binary && rnd.nextInt(4) == 0) {
+        x[i].domain.subtract(1 + rnd.nextInt(2)); // holes, which merge levels of a term
+      }
+      w[i] = 1 + rnd.nextInt(9);
+      sum += max * w[i];
+    }
+    for (int c = 0; c < (binary ? 2 * n : 8); c++) {
+      int k = binary ? 3 : 4;
+      IntVar[] vs = new IntVar[k];
+      int[] ws = new int[k];
+      for (int j = 0; j < k; j++) {
+        vs[j] = x[rnd.nextInt(n)];
+        ws[j] = binary ? 1 : 1 + rnd.nextInt(3);
+      }
+      store.impose(new LinearInt(vs, ws, ">=", binary ? 1 + rnd.nextInt(2) : 3 + rnd.nextInt(6)));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, sum);
+    IntVar[] terms = Arrays.copyOf(x, n + 1);
+    terms[n] = cost;
+    w[n] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    if (mode < 0) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    store.impose(LinearRelaxation.of(store, cost, false));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    // a budget of a few conflicts: the phase stops with cores and no proof, and the linear program
+    // follows
+    solver.setCoreSearch(1, 3 + seed % 5, 2);
+    solver.setCoreLp(mode == 1);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    if (stats != null && solver.coreSearch() != null) {
+      stats[0] = solver.coreSearch().lpSolves;
+      stats[1] = solver.coreSearch().lpValue;
+      stats[2] = solver.coreSearch().lpIncumbent;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }

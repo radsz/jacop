@@ -504,6 +504,13 @@ Core-guided phase (free search, --lcg -f):
   starts from the activity before it; default true.
 - jacop.lcg.coreAnySolution: the old test, any best solution counts,
   also one of branch and bound before the phase; default false.
+- jacop.lcg.coreLp: after each run of the core phase that found new
+  cores, a linear program over the rows of the model's linear
+  relaxation, the soft literals linked to their variables, the cores
+  and the reformulated objective bounds the objective (needs the LP
+  relaxation; off under a proof); default false.
+- jacop.lcg.coreLpPivots: the most pivots of that linear program;
+  default 20000.
 - jacop.lcg.workPerMs: the solver work per millisecond of a time limit,
   from which the phases take their shares, so that a run repeats
   with the same limit whatever the load of the machine; default 2000.

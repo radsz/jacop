@@ -81,6 +81,9 @@ public final class CoreSearch {
     final int count;
     boolean expanded; // its successor is soft already
     boolean hard; // true in every solution better than the best one
+    int[] group; // for a group: the soft literals it is the conjunction of; else null
+    int[]
+        value; // for -[x = v] of an expanded term: the term, x, v and the indicator's c; else null
 
     Soft(int lit, long weight, int term, int level, Totalizer totalizer, int count) {
       this.lit = lit;
@@ -165,8 +168,36 @@ public final class CoreSearch {
   /** The objective's lower bound proved by the cores. */
   public long lowerBound;
 
+  /** Statistics: linear programs over the cores solved ({@code jacop.lcg.coreLp}). */
+  public long lpSolves;
+
+  /** Statistics: times the bound of the linear program over the cores was above the lower bound. */
+  public long lpRaised;
+
+  /** The best bound of the linear program over the cores, or {@link Long#MIN_VALUE}. */
+  public long lpBound = Long.MIN_VALUE;
+
+  /**
+   * The largest bound of the linear program over the cores before rounding, and the best solution's
+   * objective then ({@link Long#MAX_VALUE} without one): a bound above the optimum is right only
+   * when that solution is optimal.
+   */
+  public double lpValue = Double.NEGATIVE_INFINITY;
+
+  /** See {@link #lpValue}. */
+  public long lpIncumbent = Long.MAX_VALUE;
+
   /** Whether the phase proved its best solution optimal, or that there is none. */
   public boolean proved;
+
+  // the cores as rows of a linear program with the model's rows, after each run (off by default)
+  static final boolean CORE_LP = Boolean.getBoolean("jacop.lcg.coreLp");
+  boolean lp = CORE_LP; // whether the cores go to a linear program (set by LcgSolver)
+  // the most pivots of that linear program
+  private static final int LP_PIVOTS = Integer.getInteger("jacop.lcg.coreLpPivots", 20_000);
+  private final List<int[]> coreLits = new ArrayList<>(); // the cores, as soft literals
+  private int lpCores; // the cores when the last linear program was solved
+  private final long constant; // the objective's constant
 
   // the solver's work when the first call of the solver started (-1 before), and the bound then
   private long startWork = -1;
@@ -203,6 +234,7 @@ public final class CoreSearch {
     }
     offset = sum;
     lowerBound = sum;
+    this.constant = constant;
   }
 
   /**
@@ -481,6 +513,9 @@ public final class CoreSearch {
       startWork += sat.work() - runEnd;
     }
     int result = search(phaseLimit, callLimit);
+    if (result == CdclSolver.UNKNOWN && lp && proof == null && coreLits.size() > lpCores) {
+      result = lpBound();
+    }
     runEnd = sat.work();
     if (result != CdclSolver.UNKNOWN) {
       proved = true;
@@ -714,6 +749,9 @@ public final class CoreSearch {
           if (owner.get(k) == s) {
             Soft value = new Soft(lits.get(k), s.weight, -1, 0, null, 0);
             value.expanded = true; // nothing follows it
+            if (lp) {
+              value.value = valueOf(s.term, lits.get(k));
+            }
             addSoft(value);
           }
         }
@@ -750,6 +788,10 @@ public final class CoreSearch {
       }
       Soft group = new Soft(z, m, -1, 0, null, 0);
       group.expanded = true; // nothing follows it
+      group.group = Arrays.copyOfRange(all, 1, all.length);
+      for (int j = 0; j < group.group.length; j++) {
+        group.group[j] = -group.group[j];
+      }
       addSoft(group);
       lowerBound += m * (clique.size() - 1);
       amoGroups++;
@@ -1179,6 +1221,9 @@ public final class CoreSearch {
         }
       }
     }
+    if (lp) {
+      coreLits.add(lits.clone());
+    }
     // one of the core's literals holds in every solution; the solver's cores are in the proof
     if (!(bound ? sat.addClause(lits) : lcg.addProvedClause(lits))) {
       return false;
@@ -1191,6 +1236,299 @@ public final class CoreSearch {
       }
     }
     return !bound || boundObjective();
+  }
+
+  /** The key of a soft literal's column in {@link #lpBound}. */
+  private record SoftColumn(int lit) {}
+
+  /** The key of the column {@code [x = v]} in {@link #lpBound}. */
+  private record ValueColumn(int variable, int value) {}
+
+  /** The key of the objective's column in {@link #lpBound}. */
+  private static final Object OBJECTIVE_COLUMN = new Object();
+
+  /** The term, the variable x, the value v of the literal -[x = v], and the indicator's value. */
+  private int[] valueOf(int t, int lit) {
+    ValueIndicator indicator = indicatorOf(lcg.variable(termVar[t]));
+    int x = lcg.index(indicator.variable());
+    for (var e = lcg.rootDomain(x).valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      if (lcg.eqLiteral(x, v) == -lit) {
+        return new int[] {t, x, v, indicator.value()};
+      }
+    }
+    throw new IllegalStateException(lit + " is not a value literal of term " + t);
+  }
+
+  /**
+   * Bounds the objective with a linear program over the rows of the model's relaxation and the
+   * phase's cores ({@code jacop.lcg.coreLp}). The soft literals are 0/1 columns linked to the
+   * variables they stand for: the levels of a term by the order encoding of its variable, the
+   * outputs of a totalizer by rows that make each the count of its inputs, a group by the rows of a
+   * conjunction, and a value literal by the columns {@code [x = u]} of its variable. Each core is
+   * the row that one of its literals holds, and the reformulated objective of the cores (as in
+   * Morgado et al., "Core-guided MaxSAT with soft cardinality constraints", CP 2014) is the row
+   * {@code objective - sum of the soft literals' weights >= lower bound}. A rise of the bound
+   * becomes the clause that the objective is at least it. Not under a proof, whose steps the linear
+   * program does not give.
+   *
+   * @return {@link CdclSolver#UNKNOWN}, or as {@link #run} when the bound leaves no solution better
+   *     than the best one
+   */
+  private int lpBound() {
+    lpCores = coreLits.size();
+    LinearRelaxation relaxation = lcg.relaxation();
+    if (relaxation == null) {
+      return CdclSolver.UNKNOWN;
+    }
+    IntVar objectiveVar = lcg.variable(objective);
+    CoreLp lp = new CoreLp();
+    int obj = lp.column(OBJECTIVE_COLUMN, objectiveVar.min(), objectiveVar.max());
+    // the model's rows
+    LinearRelaxation.Rows rows = relaxation.rowsNow();
+    int[] col = new int[rows.columns().length];
+    for (int j = 0; j < col.length; j++) {
+      col[j] = lp.column(rows.columns()[j], rows.lower()[j], rows.upper()[j]);
+    }
+    for (int i = 0; i < rows.rowColumns().length; i++) {
+      int[] cs = rows.rowColumns()[i];
+      double[] ws = new double[cs.length];
+      int[] js = new int[cs.length];
+      for (int k = 0; k < cs.length; k++) {
+        js[k] = col[cs[k]];
+        ws[k] = rows.rowWeights()[i][k];
+      }
+      long lo = rows.rowLo()[i];
+      long hi = rows.rowHi()[i];
+      lp.row(
+          js,
+          ws,
+          lo == Long.MIN_VALUE ? Double.NEGATIVE_INFINITY : lo,
+          hi == Long.MAX_VALUE ? Double.POSITIVE_INFINITY : hi);
+    }
+    // the objective's definition: objective = constant + sum of weight * term
+    int n = termVar.length;
+    int[] terms = new int[n + 1];
+    double[] weights = new double[n + 1];
+    terms[0] = obj;
+    weights[0] = 1;
+    for (int t = 0; t < n; t++) {
+      IntVar x = lcg.variable(termVar[t]);
+      terms[t + 1] = lp.column(x, x.min(), x.max());
+      weights[t + 1] = termUp[t] ? -termWeight[t] : termWeight[t];
+    }
+    lp.row(terms, weights, constant, constant);
+    boolean root = sat.decisionLevel() == 0;
+    Map<Totalizer, Map<Integer, Integer>> outputs = new HashMap<>();
+    for (Soft s : softs) {
+      int v = root ? sat.value(s.lit) : 0;
+      lp.column(new SoftColumn(s.lit), v > 0 ? 1 : 0, v < 0 ? 0 : 1);
+      if (s.totalizer != null) {
+        outputs.computeIfAbsent(s.totalizer, k -> new HashMap<>()).put(s.count, s.lit);
+      }
+    }
+    termRows(lp);
+    Set<Integer> valued = new HashSet<>();
+    for (Soft s : softs) {
+      if (s.totalizer != null) {
+        totalizerRows(lp, s, outputs.get(s.totalizer).get(s.count + 1));
+      } else if (s.group != null) {
+        groupRows(lp, s);
+      } else if (s.value != null) {
+        valueRows(lp, s, valued.add(s.value[1]));
+      }
+    }
+    for (int[] core : coreLits) {
+      int[] js = new int[core.length];
+      double[] ones = new double[core.length];
+      for (int k = 0; k < core.length; k++) {
+        js[k] = softColumn(lp, core[k]);
+        ones[k] = 1;
+      }
+      lp.row(js, ones, 1, Double.POSITIVE_INFINITY);
+    }
+    List<Integer> js = new ArrayList<>();
+    List<Double> ws = new ArrayList<>();
+    js.add(obj);
+    ws.add(1.0);
+    for (Soft s : softs) {
+      if (s.weight > 0) {
+        js.add(softColumn(lp, s.lit));
+        ws.add((double) -s.weight);
+      }
+    }
+    lp.row(
+        js.stream().mapToInt(Integer::intValue).toArray(),
+        ws.stream().mapToDouble(Double::doubleValue).toArray(),
+        lowerBound,
+        Double.POSITIVE_INFINITY);
+    lpSolves++;
+    double z = lp.minimize(obj, LP_PIVOTS);
+    if (!(z > Long.MIN_VALUE && z < Long.MAX_VALUE)) {
+      return CdclSolver.UNKNOWN;
+    }
+    if (z > lpValue) {
+      lpValue = z;
+      lpIncumbent = lcg.boundObjective();
+    }
+    long bound = (long) Math.ceil(z);
+    if (bound <= Math.max(lowerBound, objectiveVar.min())) {
+      return CdclSolver.UNKNOWN;
+    }
+    lpRaised++;
+    lpBound = Math.max(lpBound, bound);
+    if (bound > objectiveVar.max() || !sat.addClause(lcg.geLiteral(objective, (int) bound))) {
+      // no solution better than the best one, if there is one
+      return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
+    }
+    lcg.reportBound(bound);
+    return lcg.boundObjective() <= bound ? CdclSolver.SAT : CdclSolver.UNKNOWN;
+  }
+
+  private static int softColumn(CoreLp lp, int lit) {
+    return lp.column(new SoftColumn(lit), 0, 1);
+  }
+
+  /**
+   * The order encoding of each term's variable over its soft levels: with y the distance of the
+   * variable from its bound and s_1, s_2, ... the literals [y >= l_1], [y >= l_2], ..., {@code y >=
+   * sum (l_i - l_{i-1}) s_i}, {@code y <= l_1 - 1 + sum (l_{i+1} - l_i) s_i} and {@code s_i >=
+   * s_{i+1}}; a level proved holds.
+   */
+  private void termRows(CoreLp lp) {
+    Map<Integer, List<Soft>> byTerm = new HashMap<>();
+    for (Soft s : softs) {
+      if (s.term >= 0) {
+        byTerm.computeIfAbsent(s.term, k -> new ArrayList<>()).add(s);
+      }
+    }
+    for (Map.Entry<Integer, List<Soft>> e : byTerm.entrySet()) {
+      int t = e.getKey();
+      List<Soft> levels = e.getValue();
+      levels.sort((a, b) -> Integer.compare(a.level, b.level));
+      IntVar x = lcg.variable(termVar[t]);
+      int xc = lp.column(x, x.min(), x.max());
+      // y = sign * x + shift
+      double sign = termUp[t] ? 1 : -1;
+      double shift = termUp[t] ? -termBase[t] : termBase[t];
+      int k = levels.size();
+      int[] js = new int[k + 1];
+      double[] up = new double[k + 1];
+      double[] down = new double[k + 1];
+      js[0] = xc;
+      up[0] = sign;
+      down[0] = sign;
+      int previous = 0;
+      for (int i = 0; i < k; i++) {
+        Soft s = levels.get(i);
+        js[i + 1] = softColumn(lp, s.lit);
+        up[i + 1] = -(s.level - previous);
+        previous = s.level;
+        int next = i + 1 < k ? levels.get(i + 1).level : termSpan[t] + 1;
+        down[i + 1] = -(next - s.level);
+        if (s.level <= termProven[t]) {
+          lp.column(new SoftColumn(s.lit), 1, 1);
+        }
+        if (i + 1 < k) {
+          lp.row(
+              new int[] {js[i + 1], softColumn(lp, levels.get(i + 1).lit)},
+              new double[] {1, -1},
+              0,
+              Double.POSITIVE_INFINITY);
+        }
+      }
+      lp.row(js, up, -shift, Double.POSITIVE_INFINITY);
+      lp.row(js, down, Double.NEGATIVE_INFINITY, levels.get(0).level - 1 - shift);
+    }
+  }
+
+  /** Output j of a totalizer over n inputs is their count's {@code [>= j]}. */
+  private void totalizerRows(CoreLp lp, Soft s, Integer next) {
+    int[] in = s.totalizer.inputs;
+    int n = in.length;
+    int j = s.count;
+    int[] js = new int[n + 1];
+    double[] at = new double[n + 1];
+    double[] over = new double[n + 1];
+    js[0] = softColumn(lp, s.lit);
+    at[0] = j;
+    over[0] = n - j + 1;
+    for (int k = 0; k < n; k++) {
+      js[k + 1] = softColumn(lp, in[k]);
+      at[k + 1] = -1;
+      over[k + 1] = -1;
+    }
+    lp.row(js, at, Double.NEGATIVE_INFINITY, 0); // j o_j <= count
+    lp.row(js, over, 1 - j, Double.POSITIVE_INFINITY); // count >= j makes o_j true
+    if (next != null) {
+      lp.row(
+          new int[] {js[0], softColumn(lp, next)},
+          new double[] {1, -1},
+          0,
+          Double.POSITIVE_INFINITY);
+    }
+  }
+
+  /** A group is the conjunction of its members, and at most one of them is false. */
+  private void groupRows(CoreLp lp, Soft s) {
+    int[] members = s.group;
+    int k = members.length;
+    int z = softColumn(lp, s.lit);
+    int[] js = new int[k + 1];
+    double[] and = new double[k + 1];
+    int[] ms = new int[k];
+    double[] ones = new double[k];
+    js[0] = z;
+    and[0] = 1;
+    for (int i = 0; i < k; i++) {
+      int m = softColumn(lp, members[i]);
+      lp.row(new int[] {z, m}, new double[] {1, -1}, Double.NEGATIVE_INFINITY, 0);
+      js[i + 1] = m;
+      and[i + 1] = -1;
+      ms[i] = m;
+      ones[i] = 1;
+    }
+    lp.row(js, and, -(k - 1), Double.POSITIVE_INFINITY);
+    lp.row(ms, ones, k - 1, Double.POSITIVE_INFINITY);
+  }
+
+  /**
+   * The literal -[x = v] of an expanded term b = [x = c]: the columns [x = u] of the values of x
+   * sum to 1 and to x when weighted by u, the literal is {@code 1 - [x = v]} and b is {@code [x =
+   * c]}.
+   */
+  private void valueRows(CoreLp lp, Soft s, boolean first) {
+    int t = s.value[0];
+    int xi = s.value[1];
+    IntVar x = lcg.variable(xi);
+    int xc = lp.column(x, x.min(), x.max());
+    if (first) {
+      // the first value literal of x: its value columns
+      IntDomain dom = lcg.rootDomain(xi);
+      int size = dom.getSize();
+      int[] js = new int[size];
+      double[] ones = new double[size];
+      int[] withX = new int[size + 1];
+      double[] values = new double[size + 1];
+      int k = 0;
+      for (var e = dom.valueEnumeration(); e.hasMoreElements(); k++) {
+        int u = e.nextElement();
+        js[k] = lp.column(new ValueColumn(xi, u), 0, x.dom().contains(u) ? 1 : 0);
+        ones[k] = 1;
+        withX[k] = js[k];
+        values[k] = -u;
+      }
+      withX[size] = xc;
+      values[size] = 1;
+      lp.row(js, ones, 1, 1);
+      lp.row(withX, values, 0, 0);
+    }
+    int e = lp.column(new ValueColumn(xi, s.value[2]), 0, 1);
+    lp.row(new int[] {softColumn(lp, s.lit), e}, new double[] {1, 1}, 1, 1);
+    IntVar b = lcg.variable(termVar[t]);
+    int bc = lp.column(b, b.min(), b.max());
+    int ec = lp.column(new ValueColumn(xi, s.value[3]), 0, 1);
+    lp.row(new int[] {bc, ec}, new double[] {1, -1}, 0, 0);
   }
 
   /** Adds the clause that the objective is at least the lower bound. */

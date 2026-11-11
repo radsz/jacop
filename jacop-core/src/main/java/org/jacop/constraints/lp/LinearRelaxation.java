@@ -1586,6 +1586,68 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * The rows of a relaxation and the bounds of its columns at one moment, for a solver that adds
+   * rows of its own (the cores of the core-guided phase of lazy clause generation).
+   *
+   * @param columns the columns: the variables, and {@link LpColumn} for the auxiliary ones
+   * @param lower the lower bound of each column
+   * @param upper the upper bound of each column
+   * @param rowColumns the columns of each row
+   * @param rowWeights the coefficients of each row
+   * @param rowLo the lower side of each row, {@link Long#MIN_VALUE} when it has none
+   * @param rowHi the upper side of each row, {@link Long#MAX_VALUE} when it has none
+   */
+  public record Rows(
+      IntVar[] columns,
+      int[] lower,
+      int[] upper,
+      int[][] rowColumns,
+      long[][] rowWeights,
+      long[] rowLo,
+      long[] rowHi) {}
+
+  /**
+   * Returns the rows of the relaxation, its cuts among them, and the current bounds of its columns.
+   *
+   * @return the rows
+   */
+  public Rows rowsNow() {
+    int n = x.length;
+    int[] lower = new int[n];
+    int[] upper = new int[n];
+    for (int j = 0; j < n; j++) {
+      if (lpOnly[j]) {
+        LpColumn c = (LpColumn) x[j];
+        lower[j] = c.lower();
+        upper[j] = c.upper();
+      } else {
+        lower[j] = x[j].min();
+        upper[j] = x[j].max();
+      }
+    }
+    int m = 0;
+    for (int[] cs : rowColumns) {
+      m += cs == null ? 0 : 1;
+    }
+    int[][] cs = new int[m][];
+    long[][] ws = new long[m][];
+    long[] lo = new long[m];
+    long[] hi = new long[m];
+    int r = 0;
+    for (int i = 0; i < rowColumns.length; i++) {
+      if (rowColumns[i] == null) {
+        continue;
+      }
+      cs[r] = rowColumns[i].clone();
+      ws[r] = rowWeights[i].clone();
+      lo[r] = hasLo[i] ? rowLo[i] : Long.MIN_VALUE;
+      hi[r] = hasHi[i] ? rowHi[i] : Long.MAX_VALUE;
+      r++;
+    }
+    return new Rows(x.clone(), lower, upper, cs, ws, lo, hi);
+  }
+
+  /**
    * Sets the most simplex pivots per propagation.
    *
    * @param limit the limit

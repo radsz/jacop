@@ -4131,6 +4131,22 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. -Djacop.lcg.coreLp=true (off by default) adds the cores of the core
+     phase of lazy clause generation to a linear program with the rows of
+     the model's LP relaxation, after each run of the phase that found
+     new cores. The soft literals become 0/1 columns linked to the
+     variables they stand for (order encoding of the term levels, the
+     totalizer outputs as counts of their inputs, groups as conjunctions,
+     value literals through the columns [x = u]); each core is a row, and
+     so is the reformulated objective of OLL (Morgado, Dodaro and
+     Marques-Silva, "Core-guided MaxSAT with soft cardinality
+     constraints", CP 2014). A bound above the cores' lower bound and the
+     objective's minimum becomes a clause. The bound is computed from the
+     duals of the simplex in the safe way of Neumaier and Shcherbina
+     ("Safe bounds in linear and mixed-integer linear programming",
+     Mathematical Programming 99, 2004), so rounding cannot cut off a
+     solution. Statistics lcgCoreLpSolves, lcgCoreLpRaised, lcgCoreLpBound.
+
 Version 4.11
 =============
 
