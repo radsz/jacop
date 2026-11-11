@@ -4131,6 +4131,38 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. Symmetry breaking in fzn-jacop (org.jacop.fz.SymmetryBreaking) now
+     handles set variables and the value symmetries hidden in MiniZinc's
+     encoding of set comprehensions.
+     - A set variable is a vertex of the model graph coloured by its
+       domain, joined to one vertex per undecided element (Puget,
+       "Automatic detection of variable and value symmetries", CP 2005),
+       so symmetries may exchange set variables. The set variables a
+       symmetry moves get Booleans "e not in s" (ChannelBoolSet), which
+       take part in the lex-leader constraints (Crawford, Ginsberg, Luks
+       and Roy, "Symmetry-breaking predicates for search problems", KR
+       1996). Set variables at the front of the lex-leader order that
+       the group permutes in every way are ordered by one lex chain
+       (Flener et al., "Breaking row and column symmetries in matrix
+       models", CP 2002). The two operands of set_union, set_intersect,
+       set_symdiff, set_eq, set_ne and jacop_disjoint can be exchanged,
+       and a chain of set unions whose intermediate sets are used
+       nowhere else is one n-ary union.
+     - When the plain value spaces give no value symmetry, a second try
+       puts set variables into the space of their elements (membership
+       and the set operations keep holding after the elements are
+       renamed), joins groups of variables whose values overlap, and
+       lets the generators move the other variables of a space with its
+       values while fixing its variables of the search annotation, which
+       get the value precedence chains (Law and Lee, "Global constraints
+       for integer and set value precedence", CP 2004). This finds the
+       interchangeable teams of 2026 workforce-alloc, flattened from
+       {t | t in Team where exists(...)} into a variable with domain
+       {0, t}, a singleton set and a chain of unions per team.
+     Monomatch n3 (UNSAT) and workforce-alloc 202, 24_56 and 71 are now
+     proved within 240 s. -Dorg.jacop.fz.symmetrySets=false and
+     -Dorg.jacop.fz.symmetryEncoded=false turn the two parts off.
+
 Version 4.11
 =============
 
