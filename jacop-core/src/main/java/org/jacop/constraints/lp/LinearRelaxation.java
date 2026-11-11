@@ -605,6 +605,36 @@ public class LinearRelaxation extends Constraint
   /** Statistics: separations of capacity cuts in search. */
   public long capacitySeparations;
 
+  // the cuts separated in search keep a short period only while they move the bound: a separation
+  // whose cuts leave the objective bound of the re-solve where it was counts as one that finds
+  // none, so the period doubles, as violated cuts that do not tighten only make each solve dearer
+  // (Hall cuts in search lost pigment20a's and cable-tree-wiring A022's optima to that cost)
+  private static final boolean SEARCH_CUT_GATE =
+      !"false".equals(System.getProperty("org.jacop.lp.searchCutGate"));
+
+  /** Statistics: separations in search whose cuts moved the bound or made the LP infeasible. */
+  public long searchSeparationsMoved;
+
+  // energy cuts of the cumulative resources also in search, under the same period and gate as the
+  // capacity cuts; they use the bounds of the first solve, so they hold globally (off by default)
+  private static final boolean ENERGY_SEARCH =
+      "true".equals(System.getProperty("org.jacop.lp.energySearch"));
+  private boolean energySearch = ENERGY_SEARCH;
+  private int energyPeriod = 4;
+  private int energyWaited;
+  // the column of each start of each energy separation (-1 when not a column), and the bounds of
+  // the columns at the first solve
+  private int[][] energyColumns;
+  private long[] energyLo;
+  private long[] energyHi;
+  private final Set<List<Long>> energySeen = new HashSet<>();
+
+  /** Statistics: energy cuts added in search. */
+  public long energySearchCuts;
+
+  /** Statistics: separations of energy cuts in search. */
+  public long energySeparations;
+
   /** Statistics: the objective bound after the capacity cuts, before the MIR cuts, or NaN. */
   public double capacityBound = Double.NaN;
 
@@ -2102,6 +2132,16 @@ public class LinearRelaxation extends Constraint
       hallWaited = 0;
       status = searchHallCuts(limit);
     }
+    if (status == LpSolver.OPTIMAL
+        && energySearch
+        && energyColumns != null
+        && energyColumns.length > 0
+        && calls > 1
+        && !restarting
+        && ++energyWaited >= energyPeriod) {
+      energyWaited = 0;
+      status = searchEnergyCuts(limit);
+    }
     lastSolveLevel = store.level;
     if (jump) {
       jumpSolves++;
@@ -3193,7 +3233,9 @@ public class LinearRelaxation extends Constraint
       lo[j] = x[j].min();
       hi[j] = x[j].max();
     }
-    int[][] energyColumns = new int[energy.size()][];
+    energyColumns = new int[energy.size()][];
+    energyLo = lo;
+    energyHi = hi;
     for (int k = 0; k < energy.size(); k++) {
       IntVar[] starts = energy.get(k).starts();
       energyColumns[k] = new int[starts.length];
@@ -3546,12 +3588,83 @@ public class LinearRelaxation extends Constraint
       hallPeriod = Math.min(2 * hallPeriod, CAPACITY_MAX_PERIOD);
       return LpSolver.OPTIMAL;
     }
-    hallPeriod = Math.max(1, hallPeriod / 2);
     int first = rows();
+    double before = lp.value(0);
     addCuts(chosen);
     alldiffSearchCuts += chosen.size();
     keepCapacityForms(first, chosen.size());
-    return solvePool(limit);
+    int status = solvePool(limit);
+    hallPeriod = nextPeriod(hallPeriod, moved(status, before));
+    return status;
+  }
+
+  // whether the cuts just added moved the objective bound of the re-solve or made it infeasible;
+  // without the gate (org.jacop.lp.searchCutGate=false) any violated cut counts
+  private boolean moved(int status, double before) {
+    boolean moved =
+        status == LpSolver.INFEASIBLE
+            || status == LpSolver.OPTIMAL
+                && Math.abs(lp.value(0) - before) > 1e-6 * (1 + Math.abs(before));
+    if (moved) {
+      searchSeparationsMoved++;
+    }
+    return moved || !SEARCH_CUT_GATE;
+  }
+
+  // the period of a separation in search after one that found cuts: halved when they moved the
+  // bound, doubled (up to CAPACITY_MAX_PERIOD) when they did not
+  private static int nextPeriod(int period, boolean moved) {
+    return moved ? Math.max(1, period / 2) : Math.min(2 * period, CAPACITY_MAX_PERIOD);
+  }
+
+  /**
+   * Sets whether energy cuts are also separated in search ({@code org.jacop.lp.energySearch}, off
+   * by default), for tests.
+   *
+   * @param on whether they are
+   */
+  void setEnergySearch(boolean on) {
+    energySearch = on;
+  }
+
+  // energy cuts from the solution of an optimal solve in search, over the bounds of the first
+  // solve: the violated ones go into the simplex and the pool, and the relaxation is solved again
+  private int searchEnergyCuts(int limit) {
+    energySeparations++;
+    int n = lp.columns();
+    double[] value = new double[n];
+    for (int j = 0; j < n; j++) {
+      value[j] = lp.value(j);
+    }
+    List<MirCut> found = new ArrayList<>();
+    for (int k = 0; k < energy.size(); k++) {
+      found.addAll(
+          energy.get(k).separate(energyColumns[k], value, energyLo, energyHi, CUTS_PER_ROUND));
+    }
+    found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
+    List<MirCut> chosen = new ArrayList<>();
+    for (MirCut row : found) {
+      long m = (long) lp.rows() + chosen.size() + 1;
+      if (chosen.size() >= CAPACITY_SEARCH_CUTS
+          || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
+        break;
+      }
+      if (energySeen.add(key(row))) {
+        chosen.add(row);
+      }
+    }
+    if (chosen.isEmpty()) {
+      energyPeriod = Math.min(2 * energyPeriod, CAPACITY_MAX_PERIOD);
+      return LpSolver.OPTIMAL;
+    }
+    int first = rows();
+    double before = lp.value(0);
+    addCuts(chosen);
+    energySearchCuts += chosen.size();
+    keepCapacityForms(first, chosen.size());
+    int status = solvePool(limit);
+    energyPeriod = nextPeriod(energyPeriod, moved(status, before));
+    return status;
   }
 
   // the Hall cut as a row sum w x <= rhs over the columns of the variables of its constraint
@@ -3619,12 +3732,14 @@ public class LinearRelaxation extends Constraint
       capacityPeriod = Math.min(2 * capacityPeriod, CAPACITY_MAX_PERIOD);
       return LpSolver.OPTIMAL;
     }
-    capacityPeriod = Math.max(1, capacityPeriod / 2);
     int first = rows();
+    double before = lp.value(0);
     addCuts(chosen);
     capacitySearchCuts += chosen.size();
     keepCapacityForms(first, chosen.size());
-    return solvePool(limit);
+    int status = solvePool(limit);
+    capacityPeriod = nextPeriod(capacityPeriod, moved(status, before));
+    return status;
   }
 
   // the cut as a row sum w x <= rhs over the columns, or null when an arc is not a column
