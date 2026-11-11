@@ -320,6 +320,7 @@ setup to run configuration. -->
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/SequenceStretchTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SequenceMddTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
                                 <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -527,6 +528,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SequenceMddTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
                                 <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -725,6 +727,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SequenceMddTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
                                 <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>
@@ -921,6 +924,7 @@ setup to run configuration. -->
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
                                 <include>**/CircuitCostTest.java</include>
+                                <include>**/SequenceMddTest.java</include>
                                 <include>**/CostAssignmentTest.java</include>
                                 <include>**/SymmetricAlldifferentTest.java</include>
                                 <include>**/SubcircuitCostTest.java</include>

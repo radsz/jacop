@@ -4131,6 +4131,25 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. New constraint SequenceMdd: a relaxed multivalued decision diagram over
+     the order in which a circuit visits its nodes, with arrival and
+     departure times (in[j] >= out[i] + travel[i][j] on the arc i -> j,
+     out[j] >= in[j] + delta[j]) and optionally a sum of arc costs, after
+     Cire and van Hoeve, Multivalued Decision Diagrams for Sequencing
+     Problems, Operations Research 61(6):1411-1428, 2013. Each call compiles
+     the diagram top-down (width 64, nodes with the same visited set merged
+     exactly, the costliest or latest merged beyond the width) and bottom-up
+     (latest departures, least cost to the end); it removes successor values
+     on no path, bounds the arrival and departure times and the cost, and
+     the return time to the depot. The FlatZinc front end posts it as a
+     redundant constraint on circuit(succ) or circuit(pred) with time chains
+     arr[succ[i]] = dep[i] + time[i, succ[i]] (or the predecessor form of
+     tsptw) on circuits of up to 32 nodes. MiniZinc Challenge tsptw
+     n20w160.001 and n20w140.005 are proved in 7 s under the model's search
+     (not proved in 240 s before). -Dorg.jacop.fz.sequenceMdd=false turns
+     it off; org.jacop.fz.sequenceMddWidth and org.jacop.fz.sequenceMddNodes
+     set the width and the largest circuit.
+
 Version 4.11
 =============
 
