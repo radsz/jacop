@@ -60,6 +60,7 @@ import org.jacop.lcg.Explainable;
 import org.jacop.lcg.ImpliedClauses;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
+import org.jacop.util.VarIntMap;
 
 /**
  * Alldistinct constraint assures that all FDVs have different values.
@@ -175,6 +176,20 @@ public class Alldistinct extends Constraint
   private IntVar[] pendingVariables;
   private int pendingSize;
 
+  // The domains read into domainBits or adjacency are kept between executions: a variable is read
+  // again when it is stale (reported by queueVariable, or changed at a level that was removed) or
+  // when its size differs from readSize, the size it was read with.
+  private final boolean[] stale;
+  private final int[] readSize;
+  private final VarIntMap index = new VarIntMap();
+
+  // The variables reported by queueVariable with the level of the report, so that they are read
+  // again when the level is removed; loggedAt is the level of the last report, or -1.
+  private int[] logVar = new int[16];
+  private int[] logLevel = new int[16];
+  private int logSize;
+  private final int[] loggedAt;
+
   // failure (inconsistency) discovered during imposition
   private boolean impositionFailure;
 
@@ -271,6 +286,15 @@ public class Alldistinct extends Constraint
     freeVariables = new int[n];
     pendingVariables = new IntVar[Math.max(4, n)];
 
+    stale = new boolean[n];
+    Arrays.fill(stale, true);
+    readSize = new int[n];
+    loggedAt = new int[n];
+    Arrays.fill(loggedAt, -1);
+    for (int i = 0; i < n; i++) {
+      index.put(this.list[i], i);
+    }
+
     setScope(list);
   }
 
@@ -321,10 +345,44 @@ public class Alldistinct extends Constraint
   @Override
   public void removeLevel(int level) {
     pendingSize = 0;
+    while (logSize > 0 && logLevel[logSize - 1] >= level) {
+      int i = logVar[--logSize];
+      loggedAt[i] = -1;
+      stale[i] = true;
+    }
+  }
+
+  /** It marks variable i as changed at level and logs it for the removal of the level. */
+  private void changed(int level, int i) {
+    stale[i] = true;
+    if (loggedAt[i] != level) {
+      if (logSize == logVar.length) {
+        logVar = Arrays.copyOf(logVar, 2 * logSize);
+        logLevel = Arrays.copyOf(logLevel, 2 * logSize);
+      }
+      logVar[logSize] = i;
+      logLevel[logSize++] = level;
+      loggedAt[i] = level;
+    }
+  }
+
+  /** It tells whether the domain of variable i has to be read again, and marks it read. */
+  private boolean needsRead(int i) {
+    int size = list[i].getSize();
+    if (stale[i] || size != readSize[i]) {
+      stale[i] = false;
+      readSize[i] = size;
+      return true;
+    }
+    return false;
   }
 
   @Override
   public void queueVariable(int level, Var v) {
+    int i = index.get(v);
+    if (i != VarIntMap.ABSENT) {
+      changed(level, i);
+    }
     if (pendingSize == pendingVariables.length) {
       pendingVariables = Arrays.copyOf(pendingVariables, 2 * pendingSize);
     }
@@ -513,7 +571,9 @@ public class Alldistinct extends Constraint
 
     for (int j = 0; j < notGroundedNo; j++) {
       int i = position[j];
-      buildAdjacency(i);
+      if (needsRead(i)) {
+        buildAdjacency(i);
+      }
       int a = varMatch[i];
       if (a < 0 || !list[i].domain.contains(values[a])) {
         if (a >= 0) {
@@ -724,7 +784,9 @@ public class Alldistinct extends Constraint
     int noFree = 0;
     for (int j = 0; j < notGroundedNo; j++) {
       int i = position[j];
-      readBits(i);
+      if (needsRead(i)) {
+        readBits(i);
+      }
       int a = varMatch[i];
       if (a < 0 || (domainBits[i * words + (a >>> 6)] & (1L << a)) == 0) {
         if (a >= 0) {
