@@ -136,6 +136,18 @@ public class LateCount extends Constraint
   private final int[] position;
   private final int[] smallest;
 
+  // the on time processing the last linear relaxation gives each position of order, and of the
+  // bound before filtering: that processing, the sorted free weights with their prefix sums and
+  // the count of Moore and Hodgson
+  private final long[] taken;
+  private final long[] baseTaken;
+  private final int[] baseSorted;
+  private final long[] prefix;
+  private int lastCount;
+  private int lastFree;
+  private int baseCount;
+  private int baseFree;
+
   // own reasons under lazy clause generation, on unless -Dorg.jacop.lateCount.reasons=false
   static final boolean REASONS = !"false".equals(System.getProperty("org.jacop.lateCount.reasons"));
 
@@ -277,6 +289,10 @@ public class LateCount extends Constraint
     this.lazy = new long[4 * Math.max(1, n)];
     this.position = new int[n];
     this.smallest = new int[n];
+    this.taken = new long[n];
+    this.baseTaken = new long[n];
+    this.baseSorted = new int[n];
+    this.prefix = new long[n + 1];
     this.lo = new long[n];
     this.hi = new long[n];
     this.low = new long[n];
@@ -317,6 +333,9 @@ public class LateCount extends Constraint
         throw Store.failException;
       }
       long bound = sure + relaxed;
+      if (!uniform) {
+        keepBase();
+      }
       if (bound > late.max()) {
         throw Store.failException;
       }
@@ -347,12 +366,16 @@ public class LateCount extends Constraint
         IntVar s = starts[i];
         // with unit weights only a task the bound takes on time can raise it when made late, and
         // only a late one when made on time
-        if ((weights != null || kept[k])
+        // with equal weights only a task the bound takes on time can raise it when made late, and
+        // only a late one when made on time; with other weights, a task the linear relaxation
+        // leaves late (on time) does not change it when made late (on time), and the smallest
+        // weights follow from the ones of the bound
+        if ((!uniform || kept[k])
             && bound + weight(i) > max
-            && sure + weight(i) + relaxed(origin, k, false) > max) {
+            && sure + weight(i) + late(origin, k, kept, false) > max) {
           s.domain.inMax(store.level, s, (int) lastOnTime(i));
-        } else if (weights != null || !kept[k]) {
-          if (sure + (long) relaxed(origin, k, true) > max) {
+        } else if (!uniform || !kept[k]) {
+          if (sure + late(origin, k, kept, true) > max) {
             if (lastOnTime(i) >= IntDomain.MAX_INT) {
               throw Store.failException;
             }
@@ -520,6 +543,46 @@ public class LateCount extends Constraint
     return weights == null ? 1 : weights[i];
   }
 
+  // the bound of relaxed(origin, k, onTime) as far as filtering needs it: when the linear
+  // relaxation of the bound already has k late (on time) and Moore and Hodgson agrees, the linear
+  // bound stays and the count changes by the weight of k, so only the smallest weights can raise it
+  private long late(long origin, int k, boolean[] kept, boolean onTime) {
+    if (!uniform && eff[k] > 0 && kept[k] == onTime) {
+      if (onTime && baseTaken[k] == eff[k] && baseCount < baseFree) {
+        return smallestWithout(k, baseCount);
+      }
+      if (!onTime && baseTaken[k] == 0 && baseCount >= 1) {
+        return smallestWithout(k, baseCount - 1);
+      }
+    }
+    return relaxed(origin, k, onTime);
+  }
+
+  // the bound's free weights, its count of Moore and Hodgson and the processing its linear
+  // relaxation takes on time
+  private void keepBase() {
+    baseCount = lastCount;
+    baseFree = lastFree;
+    System.arraycopy(smallest, 0, baseSorted, 0, baseFree);
+    prefix[0] = 0;
+    for (int j = 0; j < baseFree; j++) {
+      prefix[j + 1] = prefix[j] + baseSorted[j];
+    }
+    System.arraycopy(taken, 0, baseTaken, 0, size);
+  }
+
+  // the sum of the c smallest free weights of the bound without the one of position k
+  private long smallestWithout(int k, int c) {
+    if (c == 0) {
+      return 0;
+    }
+    int w = weights[order[k]];
+    if (w > baseSorted[c - 1]) {
+      return prefix[c];
+    }
+    return prefix[c] - w + baseSorted[c];
+  }
+
   /**
    * The bound on the weight of the late free tasks from origin on, as {@link #lateOf}: the count of
    * Moore and Hodgson with unit weights, else the larger of the smallest weights of that many free
@@ -527,6 +590,7 @@ public class LateCount extends Constraint
    */
   private int relaxed(long origin, int special, boolean specialOnTime) {
     int count = lateOf(origin, special, specialOnTime);
+    lastCount = count;
     if (weights == null || count == IMPOSSIBLE) {
       return count;
     }
@@ -537,6 +601,7 @@ public class LateCount extends Constraint
         smallest[m++] = weights[order[k]];
       }
     }
+    lastFree = m;
     long fewest;
     if (uniform) {
       fewest = (long) count * (m > 0 ? smallest[0] : 0);
@@ -562,6 +627,7 @@ public class LateCount extends Constraint
     int m = 0;
     double total = 0;
     for (int k = 0; k < size; k++) {
+      taken[k] = 0;
       if (!forced[k] && k != special && eff[k] > 0) {
         position[k] = m;
         ratioOrder[m++] = k;
@@ -588,6 +654,7 @@ public class LateCount extends Constraint
         continue;
       }
       add(1, 0, m - 1, position[k], m - 1, -z);
+      taken[k] = z;
       onTime += (double) w * z / eff[k];
     }
     double lateWeight = total - onTime;
