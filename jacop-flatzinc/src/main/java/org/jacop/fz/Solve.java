@@ -4552,7 +4552,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 + nf.format(freeSearch.getProbeFailures())
             : "")
         + lnsStatistics(freeLns)
-        + localSearchStatistics();
+        + localSearchStatistics()
+        + (lcg != null
+            ? "\n%%%mzn-stat: lcgConflicts="
+                + nf.format(lcg.sat().conflicts)
+                + (lcg.sat().localVisits > 0
+                    ? "\n%%%mzn-stat: lcgLocalVisits="
+                        + nf.format(lcg.sat().localVisits)
+                        + "\n%%%mzn-stat: lcgLocalAssigned="
+                        + nf.format(lcg.sat().localAssigned)
+                    : "")
+            : "");
   }
 
   /**

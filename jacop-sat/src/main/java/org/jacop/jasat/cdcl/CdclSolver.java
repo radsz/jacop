@@ -86,6 +86,8 @@ public final class CdclSolver {
   private static final int DELETED = 2;
   private static final int USED = 4;
   private static final int VIVIFIED = 32;
+  // the clause's watches are in localWatches (deferred propagation of the local tier)
+  private static final int IN_LOCAL = 64;
   private static final int TIER_SHIFT = 3;
   private static final int TIER_MASK = 3 << TIER_SHIFT;
   private static final int LBD_SHIFT = 8;
@@ -170,6 +172,22 @@ public final class CdclSolver {
 
   private int[][] watches = new int[0][];
   private int[] watchSize = new int[0];
+  // Deferred propagation of local-tier learnt clauses (core-first unit propagation, Oh 2016;
+  // COMiniSatPS): 0 off, 1 the local tier is visited only when the other clauses reach a fixpoint,
+  // 2 only when the external propagator does too. Their watches are kept apart, and a clause moves
+  // between the two kinds of list at a reduction of the database.
+  private int deferLocal = Integer.getInteger("jacop.jasat.deferLocal", 0);
+  private int[][] localWatches = new int[0][];
+  private int[] localWatchSize = new int[0];
+  // the next trail position whose local-tier watches are due
+  private int qheadLocal;
+  // qheadLocal when each level was opened, as qheadLim
+  private int[] qheadLocalLim = new int[16];
+
+  /** Watch visits of local-tier clauses in deferred mode, and the literals they assigned. */
+  public long localVisits;
+
+  public long localAssigned;
   private int[][] binWatches = new int[0][];
   private int[] binSize = new int[0];
   private boolean ok = true;
@@ -390,6 +408,8 @@ public final class CdclSolver {
       observed = Arrays.copyOf(observed, c);
       watches = Arrays.copyOf(watches, 2 * c);
       watchSize = Arrays.copyOf(watchSize, 2 * c);
+      localWatches = Arrays.copyOf(localWatches, 2 * c);
+      localWatchSize = Arrays.copyOf(localWatchSize, 2 * c);
       binWatches = Arrays.copyOf(binWatches, 2 * c);
       binSize = Arrays.copyOf(binSize, 2 * c);
     }
@@ -409,6 +429,7 @@ public final class CdclSolver {
     // a literal gets its watch lists when a clause first watches it: under LCG most literals are
     // atoms in no clause, and four small arrays each filled a 3 GB heap on a 4096-variable alldiff
     Arrays.fill(watches, 2 * numVars, 2 * n, NO_WATCHES);
+    Arrays.fill(localWatches, 2 * numVars, 2 * n, NO_WATCHES);
     Arrays.fill(binWatches, 2 * numVars, 2 * n, NO_WATCHES);
     for (int v = numVars; v < n; v++) {
       order.insert(v);
@@ -895,7 +916,10 @@ public final class CdclSolver {
     mem[ref + SIZE] = size;
     int tier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : TIER_LOCAL;
     mem[ref + META] =
-        (isLearnt ? LEARNT_FLAG : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
+        (isLearnt ? LEARNT_FLAG : 0)
+            | (tier << TIER_SHIFT)
+            | (Math.min(lbd, MAX_LBD) << LBD_SHIFT)
+            | (deferLocal > 0 && isLearnt && tier == TIER_LOCAL ? IN_LOCAL : 0);
     mem[ref + ACT] = Float.floatToRawIntBits(0f);
     mem[ref + POS] = 2;
     System.arraycopy(lits, 0, mem, ref + HEADER, size);
@@ -904,6 +928,10 @@ public final class CdclSolver {
   }
 
   private void addWatch(int lit, int blocker, int ref) {
+    if ((mem[ref + META] & IN_LOCAL) != 0) {
+      addLocalWatch(lit, blocker, ref);
+      return;
+    }
     int[] ws = watches[lit];
     int n = watchSize[lit];
     if (n + 2 > ws.length) {
@@ -913,6 +941,18 @@ public final class CdclSolver {
     ws[n] = blocker;
     ws[n + 1] = ref;
     watchSize[lit] = n + 2;
+  }
+
+  private void addLocalWatch(int lit, int blocker, int ref) {
+    int[] ws = localWatches[lit];
+    int n = localWatchSize[lit];
+    if (n + 2 > ws.length) {
+      ws = Arrays.copyOf(ws, Math.max(4, 2 * ws.length));
+      localWatches[lit] = ws;
+    }
+    ws[n] = blocker;
+    ws[n + 1] = ref;
+    localWatchSize[lit] = n + 2;
   }
 
   private void attach(int ref) {
@@ -981,8 +1021,10 @@ public final class CdclSolver {
     if (decisionLevel >= trailLim.length) {
       trailLim = Arrays.copyOf(trailLim, 2 * decisionLevel + 2);
       qheadLim = Arrays.copyOf(qheadLim, trailLim.length);
+      qheadLocalLim = Arrays.copyOf(qheadLocalLim, trailLim.length);
     }
     qheadLim[decisionLevel] = qhead;
+    qheadLocalLim[decisionLevel] = qheadLocal;
     trailLim[decisionLevel++] = trailSize;
     if (notifying) {
       external.notifyNewDecisionLevel();
@@ -1027,6 +1069,8 @@ public final class CdclSolver {
     }
     trailSize = kept;
     qhead = Math.min(start, qheadLim[target]);
+    // as qhead: literals visited after the level was opened implied at the undone levels only
+    qheadLocal = Math.min(qheadLocal, Math.min(start, qheadLocalLim[target]));
     decisionLevel = target;
     if (rwasted > 0) {
       releaseReasons();
@@ -1043,6 +1087,129 @@ public final class CdclSolver {
   // ----------------------------------------------------------------------------- propagation
 
   private int propagate() {
+    return propagate(true);
+  }
+
+  /**
+   * Unit propagation to a fixpoint.
+   *
+   * @param withLocal in deferred mode, whether the local tier is propagated too (once the other
+   *     clauses are at a fixpoint); without deferral every clause is
+   * @return a conflict, or NO_CONFLICT
+   */
+  private int propagate(boolean withLocal) {
+    if (deferLocal == 0) {
+      return propagateMain();
+    }
+    while (true) {
+      int c = propagateMain();
+      if (c != NO_CONFLICT || !withLocal || qheadLocal >= trailSize) {
+        return c;
+      }
+      c = propagateLocal();
+      if (c != NO_CONFLICT || qhead >= trailSize) {
+        return c;
+      }
+    }
+  }
+
+  /**
+   * Visits the local-tier watches of the trail literals from qheadLocal, and stops after the first
+   * literal whose visits assign something, so that the other clauses run first again.
+   */
+  private int propagateLocal() {
+    final byte[] localVals = this.vals;
+    final int[] localMem = this.mem;
+    int before = trailSize;
+    while (qheadLocal < trailSize && trailSize == before) {
+      int falseLit = trail[qheadLocal++] ^ 1;
+      int[] ws = localWatches[falseLit];
+      int n = localWatchSize[falseLit];
+      int i = 0;
+      int j = 0;
+      int conflict = NO_CONFLICT;
+      localVisits += n >> 1;
+      while (i < n) {
+        int blocker = ws[i];
+        int ref = ws[i + 1];
+        i += 2;
+        if (localVals[blocker] > 0) {
+          ws[j++] = blocker;
+          ws[j++] = ref;
+          continue;
+        }
+        int lits = ref + HEADER;
+        if (localMem[lits] == falseLit) {
+          localMem[lits] = localMem[lits + 1];
+          localMem[lits + 1] = falseLit;
+        }
+        int first = localMem[lits];
+        int fv = localVals[first];
+        if (first != blocker && fv > 0) {
+          ws[j++] = first;
+          ws[j++] = ref;
+          continue;
+        }
+        int size = localMem[ref + SIZE];
+        int pos = localMem[ref + POS];
+        int found = -1;
+        for (int k = pos; k < size; k++) {
+          if (localVals[localMem[lits + k]] >= 0) {
+            found = k;
+            break;
+          }
+        }
+        if (found < 0) {
+          for (int k = 2; k < pos; k++) {
+            if (localVals[localMem[lits + k]] >= 0) {
+              found = k;
+              break;
+            }
+          }
+        }
+        if (found >= 0) {
+          localMem[ref + POS] = found;
+          int w = localMem[lits + found];
+          localMem[lits + 1] = w;
+          localMem[lits + found] = falseLit;
+          // a clause in a local list is IN_LOCAL, so w gets a local watch: never this list, as w
+          // is not false
+          addWatch(w, first, ref);
+          continue;
+        }
+        ws[j++] = first;
+        ws[j++] = ref;
+        if (fv < 0) {
+          conflict = ref;
+          break;
+        }
+        localAssigned++;
+        if (chrono) {
+          int lvl = 0;
+          for (int k = 1; k < size; k++) {
+            lvl = Math.max(lvl, level[localMem[lits + k] >> 1]);
+          }
+          assignAt(first, ref, lvl);
+        } else {
+          assign(first, ref);
+        }
+      }
+      if (conflict != NO_CONFLICT) {
+        while (i < n) {
+          ws[j++] = ws[i++];
+        }
+        localWatchSize[falseLit] = j;
+        qhead = trailSize;
+        qheadLocal = trailSize;
+        conflictRef = conflict;
+        return conflict;
+      }
+      localWatchSize[falseLit] = j;
+    }
+    return NO_CONFLICT;
+  }
+
+  private int propagateMain() {
     if (lowWatchedDue) {
       lowWatchedDue = false;
       int c = propagateLowWatched();
@@ -2456,12 +2623,17 @@ public final class CdclSolver {
   }
 
   private void removeWatch(int lit, int ref) {
-    int[] ws = watches[lit];
-    int n = watchSize[lit];
+    boolean local = (mem[ref + META] & IN_LOCAL) != 0;
+    int[] ws = local ? localWatches[lit] : watches[lit];
+    int n = local ? localWatchSize[lit] : watchSize[lit];
     for (int i = 0; i < n; i += 2) {
       if (ws[i + 1] == ref) {
         System.arraycopy(ws, i + 2, ws, i, n - i - 2);
-        watchSize[lit] = n - 2;
+        if (local) {
+          localWatchSize[lit] = n - 2;
+        } else {
+          watchSize[lit] = n - 2;
+        }
         return;
       }
     }
@@ -2761,7 +2933,7 @@ public final class CdclSolver {
    */
   private int propagateAll() {
     for (int rounds = 1; ; rounds++) {
-      int confl = propagate();
+      int confl = propagate(deferLocal == 1 || external == null);
       if (confl != NO_CONFLICT || external == null) {
         return confl;
       }
@@ -2803,6 +2975,15 @@ public final class CdclSolver {
           lit = external.propagate();
         }
         if (lit == 0) {
+          if (deferLocal == 2 && qheadLocal < trailSize) {
+            // the external propagator is at a fixpoint too: now the local tier
+            confl = propagate(true);
+            if (confl != NO_CONFLICT || notified >= trailSize) {
+              return confl;
+            }
+            // the local tier assigned literals: the external propagator sees them next
+            continue;
+          }
           return NO_CONFLICT;
         }
         implied = toLit(lit);
@@ -3397,6 +3578,7 @@ public final class CdclSolver {
     boolean[] gone = e.eliminated();
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
+    Arrays.fill(localWatchSize, 0);
     Arrays.fill(binSize, 0);
     if (sat) {
       keepLearnts(gone);
@@ -3720,20 +3902,95 @@ public final class CdclSolver {
     numLearnts = filterDeleted(learnts, numLearnts);
     if (wasted > memSize / 2) {
       compact();
+    } else {
+      for (int lit = 0; lit < 2 * numVars; lit++) {
+        int[] ws = watches[lit];
+        int n = watchSize[lit];
+        int j = 0;
+        for (int i = 0; i < n; i += 2) {
+          int ref = ws[i + 1];
+          if ((mem[ref + META] & DELETED) == 0) {
+            ws[j++] = ws[i];
+            ws[j++] = ref;
+          }
+        }
+        watchSize[lit] = j;
+        if (localWatchSize[lit] > 0) {
+          localWatchSize[lit] = dropDeleted(localWatches[lit], localWatchSize[lit], false);
+        }
+      }
+    }
+    if (deferLocal > 0) {
+      replaceLocal();
+    }
+  }
+
+  /** Drops the watches of deleted clauses from a list, remapped by compact when remap is set. */
+  private int dropDeleted(int[] ws, int n, boolean remap) {
+    int j = 0;
+    for (int i = 0; i < n; i += 2) {
+      int ref = ws[i + 1];
+      if ((mem[ref + META] & DELETED) == 0) {
+        ws[j++] = ws[i];
+        ws[j++] = remap ? mem[ref + ACT] : ref;
+      }
+    }
+    return j;
+  }
+
+  /**
+   * Moves each learnt clause to the watch lists of its tier: local-tier clauses to the local lists,
+   * promoted ones back. Only at a full fixpoint, so that no move skips a due visit.
+   */
+  private void replaceLocal() {
+    if (qhead != trailSize || qheadLocal != trailSize) {
+      return;
+    }
+    boolean moved = false;
+    for (int i = 0; i < numLearnts; i++) {
+      int ref = learnts[i];
+      int meta = mem[ref + META];
+      boolean local = tierOf(meta) == TIER_LOCAL;
+      if (local != ((meta & IN_LOCAL) != 0)) {
+        mem[ref + META] = local ? meta | IN_LOCAL : meta & ~IN_LOCAL;
+        moved = true;
+      }
+    }
+    if (!moved) {
       return;
     }
     for (int lit = 0; lit < 2 * numVars; lit++) {
       int[] ws = watches[lit];
       int n = watchSize[lit];
+      int[] ls = localWatches[lit];
+      int ln = localWatchSize[lit];
       int j = 0;
       for (int i = 0; i < n; i += 2) {
-        int ref = ws[i + 1];
-        if ((mem[ref + META] & DELETED) == 0) {
+        if ((mem[ws[i + 1] + META] & IN_LOCAL) != 0) {
+          addLocalWatch(lit, ws[i], ws[i + 1]);
+        } else {
           ws[j++] = ws[i];
-          ws[j++] = ref;
+          ws[j++] = ws[i + 1];
         }
       }
       watchSize[lit] = j;
+      // ls is the list as it was before the moves above, which only appended to it
+      int lj = 0;
+      int[] cur = localWatches[lit];
+      for (int i = 0; i < ln; i += 2) {
+        int ref = ls[i + 1];
+        int blocker = ls[i];
+        if ((mem[ref + META] & IN_LOCAL) == 0) {
+          addWatch(lit, blocker, ref);
+        } else {
+          cur[lj++] = blocker;
+          cur[lj++] = ref;
+        }
+      }
+      // the entries appended by the moves follow the kept ones
+      int appended = localWatchSize[lit] - ln;
+      System.arraycopy(cur, ln, cur, lj, appended);
+      localWatchSize[lit] = lj + appended;
     }
   }
 
@@ -3787,6 +4044,9 @@ public final class CdclSolver {
         }
       }
       watchSize[lit] = j;
+      if (localWatchSize[lit] > 0) {
+        localWatchSize[lit] = dropDeleted(localWatches[lit], localWatchSize[lit], true);
+      }
     }
     int j = 0;
     for (int i = 0; i < numLowWatched; i += 3) {
@@ -3821,8 +4081,12 @@ public final class CdclSolver {
     if (!ok || hasPending) {
       return;
     }
-    if (qhead != trailSize) {
+    if (qhead != trailSize || (deferLocal > 0 && qheadLocal != trailSize)) {
       throw new IllegalStateException("fixpoint with " + (trailSize - qhead) + " literals queued");
+    }
+    for (int l = 0; l < 2 * numVars; l++) {
+      checkWatchList(l, watches[l], watchSize[l], 0);
+      checkWatchList(l, localWatches[l], localWatchSize[l], IN_LOCAL);
     }
     for (int i = 0; i < trailSize; i++) {
       int lit = trail[i];
@@ -3877,12 +4141,36 @@ public final class CdclSolver {
     }
   }
 
+  /** Every watch in a list is of a live clause of that kind of list, on one of its first two. */
+  private void checkWatchList(int lit, int[] ws, int n, int kind) {
+    for (int i = 0; i < n; i += 2) {
+      int ref = ws[i + 1];
+      int meta = mem[ref + META];
+      if ((meta & DELETED) == 0
+          && ((meta & IN_LOCAL) != kind
+              || (mem[ref + HEADER] != lit && mem[ref + HEADER + 1] != lit))) {
+        throw new IllegalStateException(
+            "watch of "
+                + toDimacs(lit)
+                + " on "
+                + clauseText(mem, ref + HEADER, mem[ref + SIZE])
+                + " in the "
+                + (kind == 0 ? "main" : "local")
+                + " list, meta "
+                + (meta & 255));
+      }
+    }
+  }
+
   private void checkWatched(int ref) {
     for (int k = 0; k < 2; k++) {
       int w = mem[ref + HEADER + k];
       boolean found = false;
-      for (int i = 0; i < watchSize[w] && !found; i += 2) {
-        found = watches[w][i + 1] == ref;
+      boolean local = (mem[ref + META] & IN_LOCAL) != 0;
+      int[] ws = local ? localWatches[w] : watches[w];
+      int n = local ? localWatchSize[w] : watchSize[w];
+      for (int i = 0; i < n && !found; i += 2) {
+        found = ws[i + 1] == ref;
       }
       if (!found) {
         throw new IllegalStateException(
