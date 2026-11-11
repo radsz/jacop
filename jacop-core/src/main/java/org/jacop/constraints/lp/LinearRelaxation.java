@@ -1413,7 +1413,8 @@ public class LinearRelaxation extends Constraint
   // limit. The store x warehouse form of the 2026 warehouse model (olal41: 116,974 rows after the
   // pair cliques, 24,151 columns) had no relaxation over the caps; the root solve takes 4,078
   // pivots and 9 s, and its bound, 38,467, is the bound CP-SAT proves (38,413)
-  private static final boolean LARGE = !"false".equals(System.getProperty("org.jacop.lp.large"));
+  private static final boolean LARGE_MODE =
+      !Boolean.FALSE.toString().equals(System.getProperty("org.jacop.lp.large"));
   private static final int LARGE_MAX_ROWS =
       Integer.getInteger("org.jacop.lp.largeMaxRows", 1_000_000);
   private static final int LARGE_MAX_COLUMNS =
@@ -1429,7 +1430,7 @@ public class LinearRelaxation extends Constraint
       Double.parseDouble(System.getProperty("org.jacop.lp.largeRootShare", "0.1"));
 
   private static boolean largeTakes(List<LinearForm> forms) {
-    if (!LARGE || forms.size() > LARGE_MAX_ROWS) {
+    if (!LARGE_MODE || forms.size() > LARGE_MAX_ROWS) {
       return false;
     }
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -1970,7 +1971,10 @@ public class LinearRelaxation extends Constraint
     long work = lp.work();
     boolean first = calls == 0;
     // the bound of the objective's domain before the first solve, which the root bound must cut
-    long domainBound = objective == null ? 0 : maximize ? objective.max() : objective.min();
+    long domainBound = 0;
+    if (objective != null) {
+      domainBound = maximize ? objective.max() : objective.min();
+    }
     long started = System.nanoTime();
     try {
       solveAndPropagate(store);

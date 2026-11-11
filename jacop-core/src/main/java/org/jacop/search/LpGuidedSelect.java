@@ -190,30 +190,39 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
       order = candidates();
     }
     for (int j : order) {
-      IntVar x = lp.column(j);
-      IntVar decided = x;
-      int at = 1;
-      if (x instanceof LpColumn c) {
-        decided = c.variable();
-        at = c.value();
-        if (decided.singleton() || !decided.domain.contains(at)) {
-          continue;
-        }
-      } else if (x.singleton() || x.min() != 0 || x.max() != 1) {
-        continue;
+      IntVar decided = orderedDecision(j);
+      if (decided != null) {
+        fromLp = true;
+        lpDecisions++;
+        return decided;
       }
-      double v = lp.solutionValue(j);
-      boolean isFractional = v > EPSILON && v < 1 - EPSILON;
-      if (isFractional && v < 0.5 && decided != x) {
-        continue;
-      }
-      fromLp = true;
-      value = !isFractional || v >= 0.5 ? at : 0;
-      lpDecisions++;
-      return decided;
     }
     fromLp = false;
     return fallback == null ? null : fallback.getChoiceVariable(index);
+  }
+
+  // the variable of column j to decide, with its value in value, or null when the column gives no
+  // decision: decided, not 0/1, or a value column below one half
+  private IntVar orderedDecision(int j) {
+    IntVar x = lp.column(j);
+    IntVar decided = x;
+    int at = 1;
+    if (x instanceof LpColumn c) {
+      decided = c.variable();
+      at = c.value();
+      if (decided.singleton() || !decided.domain.contains(at)) {
+        return null;
+      }
+    } else if (x.singleton() || x.min() != 0 || x.max() != 1) {
+      return null;
+    }
+    double v = lp.solutionValue(j);
+    boolean isFractional = v > EPSILON && v < 1 - EPSILON;
+    if (isFractional && v < 0.5 && decided != x) {
+      return null;
+    }
+    value = !isFractional || v >= 0.5 ? at : 0;
+    return decided;
   }
 
   // the columns that can give a decision, fractional ones by score and index, then those at 1
