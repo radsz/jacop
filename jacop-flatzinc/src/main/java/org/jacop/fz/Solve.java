@@ -2470,7 +2470,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // root probing of the 0/1 variables: facts only, the model stays as it is
       long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
       if (!"none".equals(LCG_PROBE_LP)) {
-        lcg.keepProbeConflicts(1_000_000);
+        lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
       }
       boolean feasible = lcg.probeRoot((long) (LCG_PROBE * left * 1_000_000L));
       printProbeStatistics();
