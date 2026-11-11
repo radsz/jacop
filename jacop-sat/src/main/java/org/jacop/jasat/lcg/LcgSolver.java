@@ -2825,6 +2825,23 @@ public final class LcgSolver implements ExternalPropagator {
   private List<int[]> probeConflictValues;
   private int probeConflictCap;
 
+  // when (System.nanoTime()) the next run of the search from the root probes it first, or 0
+  private long delayedProbeAt;
+  private long delayedProbeBudget;
+
+  /**
+   * Probes the root ({@link #probeRoot}) at the start of the first run of the search from the root
+   * after a time, between runs of branch and bound, so that instances solved before it do not pay
+   * for probing. A satisfaction search is one run and is not probed.
+   *
+   * @param atNanos the {@link System#nanoTime()} after which the next run probes first
+   * @param budgetNanos the time probing may take
+   */
+  public void setDelayedProbe(long atNanos, long budgetNanos) {
+    delayedProbeAt = atNanos == 0 ? 1 : atNanos;
+    delayedProbeBudget = budgetNanos;
+  }
+
   /**
    * Keeps the conflicts that the next {@link #probeRoot} finds between values of 0/1 variables: x =
    * a and y = b cannot hold together because probing x = a implied y = 1 - b. They are the edges of
@@ -2961,6 +2978,14 @@ public final class LcgSolver implements ExternalPropagator {
     startProof();
     if (rootFailed) {
       return CdclSolver.UNSAT;
+    }
+    if (delayedProbeAt != 0 && assumed.length == 0 && System.nanoTime() >= delayedProbeAt) {
+      // the search has run for a while without an answer: probe the root, now with the learnt
+      // clauses and the bound of the best solution
+      delayedProbeAt = 0;
+      if (!probeRoot(delayedProbeBudget)) {
+        return CdclSolver.UNSAT;
+      }
     }
     solution = null;
     exchangeShared();

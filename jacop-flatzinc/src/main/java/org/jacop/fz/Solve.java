@@ -2049,6 +2049,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private static final double LCG_PROBE =
       Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
 
+  // -Djacop.lcg.probe.delay=share: probe between runs of the search from the root, once this share
+  // of the time limit has passed, instead of before the search
+  private static final double LCG_PROBE_DELAY =
+      Double.parseDouble(System.getProperty("jacop.lcg.probe.delay", "0"));
+
   // -Djacop.lcg.probe.only=true: stop after root probing, to measure its reach
   private static final boolean LCG_PROBE_ONLY = Boolean.getBoolean("jacop.lcg.probe.only");
 
@@ -2456,7 +2461,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         options.getTimeOut() > 0
             ? options.getTimeOut()
             : Long.parseLong(options.freeConfig("lcg-core-time", "60000")));
-    if (LCG_PROBE > 0) {
+    if (LCG_PROBE > 0 && LCG_PROBE_DELAY > 0) {
+      long limit = options.getTimeOut() > 0 ? options.getTimeOut() : 60_000L;
+      lcg.setDelayedProbe(
+          System.nanoTime() + (long) (LCG_PROBE_DELAY * limit * 1_000_000L),
+          (long) (LCG_PROBE * limit * 1_000_000L));
+    } else if (LCG_PROBE > 0) {
       // root probing of the 0/1 variables: facts only, the model stays as it is
       long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
       if (!"none".equals(LCG_PROBE_LP)) {
@@ -2478,6 +2488,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    if (LCG_PROBE > 0 && LCG_PROBE_DELAY > 0 && lcg.probePasses > 0) {
+      printProbeStatistics();
+    }
     if (slowCheck != null) {
       slowCheck.interrupt();
     }
