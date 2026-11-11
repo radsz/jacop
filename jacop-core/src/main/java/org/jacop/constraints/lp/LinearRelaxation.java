@@ -1244,6 +1244,18 @@ public class LinearRelaxation extends Constraint
     return r.rows() < 2 ? null : r;
   }
 
+  /**
+   * Returns the rows of this relaxation over the variables of the model: the given rows and the
+   * further rows tried at the first solve.
+   *
+   * @return the rows, a new list
+   */
+  public List<LinearForm> allRows() {
+    List<LinearForm> all = new ArrayList<>(forms);
+    all.addAll(extraForms);
+    return all;
+  }
+
   // the constraints of the variables in the store and of the named ones, such as Boolean
   // variables, which have no store index
   static Set<Constraint> constraintsOf(Store store) {
