@@ -2042,6 +2042,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return null;
   }
 
+  // -Djacop.lcg.probe=share: root probing of the 0/1 variables before LCG search, for at most
+  // this share of the time left (0, the default, is off)
+  private static final double LCG_PROBE =
+      Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
+
+  // -Djacop.lcg.probe.only=true: stop after root probing, to measure its reach
+  private static final boolean LCG_PROBE_ONLY = Boolean.getBoolean("jacop.lcg.probe.only");
+
+  private void printProbeStatistics() {
+    if (!options.getStatistics()) {
+      return;
+    }
+    IO.print(
+        "%%%mzn-stat: lcgProbeBooleans="
+            + lcg.probeBooleans
+            + "\n%%%mzn-stat: lcgProbeProbes="
+            + lcg.probeProbes
+            + "\n%%%mzn-stat: lcgProbeFailed="
+            + lcg.probeFailed
+            + "\n%%%mzn-stat: lcgProbeLifted="
+            + lcg.probeLifted
+            + "\n%%%mzn-stat: lcgProbeFixedBooleans="
+            + lcg.probeFixedBooleans
+            + "\n%%%mzn-stat: lcgProbeEquivalences="
+            + lcg.probeEquivalences
+            + "\n%%%mzn-stat: lcgProbeExclusions="
+            + lcg.probeExclusions
+            + "\n%%%mzn-stat: lcgProbePasses="
+            + lcg.probePasses
+            + "\n%%%mzn-stat: lcgProbeTime="
+            + lcg.probeNanos / 1e9
+            + "\n%%%mzn-stat: lcgProbeExhausted="
+            + lcg.probeExhausted
+            + "\n");
+  }
+
   /**
    * Solves with lazy clause generation: JaSAT searches, the store's constraints propagate and
    * explain their prunings. Solutions are printed when found, with the domains fixed to them.
@@ -2336,6 +2372,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         options.getTimeOut() > 0
             ? options.getTimeOut()
             : Long.parseLong(options.freeConfig("lcg-core-time", "60000")));
+    if (LCG_PROBE > 0) {
+      // root probing of the 0/1 variables: facts only, the model stays as it is
+      long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
+      boolean feasible = lcg.probeRoot((long) (LCG_PROBE * left * 1_000_000L));
+      printProbeStatistics();
+      if (!feasible) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+      if (LCG_PROBE_ONLY) {
+        lcgStatus = CdclSolver.UNKNOWN;
+        return false;
+      }
+    }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (slowCheck != null) {

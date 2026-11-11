@@ -2546,6 +2546,211 @@ public final class LcgSolver implements ExternalPropagator {
     return sat;
   }
 
+  // ------------------------------------------------------------------------ root probing
+
+  /** Statistics of {@link #probeRoot}: 0/1 variables not fixed when probing started. */
+  public long probeBooleans;
+
+  /** Statistics of {@link #probeRoot}: literals probed. */
+  public long probeProbes;
+
+  /** Statistics of {@link #probeRoot}: failed literals, whose negation became a root fact. */
+  public long probeFailed;
+
+  /** Statistics of {@link #probeRoot}: atoms both values of a 0/1 variable imply (root facts). */
+  public long probeLifted;
+
+  /** Statistics of {@link #probeRoot}: 0/1 variables fixed at the root by probing. */
+  public long probeFixedBooleans;
+
+  /** Statistics of {@link #probeRoot}: pairs of 0/1 variables found equal or opposite. */
+  public long probeEquivalences;
+
+  /** Statistics of {@link #probeRoot}: implications x = 1 -> y = 0 between 0/1 variables. */
+  public long probeExclusions;
+
+  /** Statistics of {@link #probeRoot}: passes over the 0/1 variables. */
+  public long probePasses;
+
+  /** Statistics of {@link #probeRoot}: nanoseconds spent. */
+  public long probeNanos;
+
+  /** Statistics of {@link #probeRoot}: whether the budget stopped probing before its fixpoint. */
+  public boolean probeExhausted;
+
+  // an atom of a probe's consequences, decoded at once since transient literals are reused
+  private record Atom(int var, int kind, int value, boolean holds) {
+    Atom negated() {
+      return new Atom(var, kind, value, !holds);
+    }
+  }
+
+  private Atom atom(int lit) {
+    int d = Math.abs(lit);
+    int i = litVar[d];
+    return i < 0 ? null : new Atom(i, litKind[d], litValue[d], lit > 0);
+  }
+
+  // the value a 0/1 variable takes when an atom of it holds, or -1 when the atom is not of one
+  private int booleanValue(Atom a) {
+    if (!isBoolean(a.var)) {
+      return -1;
+    }
+    // [x >= 1] or [x = v] for v in {0, 1}
+    int v = a.kind == GE_KIND ? 1 : a.value;
+    return a.holds ? v : 1 - v;
+  }
+
+  private boolean isBoolean(int i) {
+    return i >= 0 && i < vars.length && vars[i] != null && root[i].min() == 0 && root[i].max() == 1;
+  }
+
+  private int literalOf(Atom a) {
+    int d = a.kind == GE_KIND ? geLit(a.var, a.value) : eqVar(a.var, a.value);
+    return a.holds ? d : -d;
+  }
+
+  private Set<Atom> consequences(int[] implied) {
+    Set<Atom> atoms = new HashSet<>(implied.length * 2);
+    for (int l : implied) {
+      Atom a = atom(l);
+      if (a != null) {
+        atoms.add(a);
+      }
+    }
+    return atoms;
+  }
+
+  /**
+   * Failed-literal probing of the 0/1 variables at the root, which only adds facts: each value of
+   * each 0/1 variable not fixed yet is assumed in turn and propagated, by the clauses and the
+   * store's constraints. A value that fails is removed at the root; an atom that both values imply
+   * holds at the root (lifting). The model itself is not changed. Pairs of 0/1 variables found
+   * equal or opposite, and implications x = 1 -> y = 0 (the edges of at-most-one cliques), are
+   * counted. Passes repeat while a pass adds facts and the budget lasts.
+   *
+   * <p>Failed literals and lifting are the classic SAT probing techniques: J. W. Freeman,
+   * Improvements to propositional satisfiability search algorithms, PhD thesis, University of
+   * Pennsylvania, 1995; I. Lynce and J. Marques-Silva, Probing-based preprocessing techniques for
+   * propositional satisfiability, ICTAI 2003; and for mixed integer programs M. W. P. Savelsbergh,
+   * Preprocessing and probing techniques for mixed integer programming problems, ORSA Journal on
+   * Computing 6(4), 1994.
+   *
+   * @param budgetNanos the time probing may take
+   * @return false when probing proved that the constraints have no solution
+   */
+  public boolean probeRoot(long budgetNanos) {
+    long start = System.nanoTime();
+    long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
+    end = Math.min(end, sat.deadline());
+    if (rootFailed || proof != null) {
+      return !rootFailed;
+    }
+    encodeGraphs();
+    List<Integer> candidates = new ArrayList<>();
+    for (int i = 0; i < vars.length; i++) {
+      if (isBoolean(i) && !vars[i].singleton()) {
+        candidates.add(i);
+      }
+    }
+    probeBooleans = candidates.size();
+    boolean changed = true;
+    try {
+      while (changed && !rootFailed) {
+        changed = false;
+        probePasses++;
+        for (int i : candidates) {
+          if (System.nanoTime() > end) {
+            probeExhausted = true;
+            return !rootFailed;
+          }
+          int one = geLit(i, 1);
+          if (sat.value(one) != 0) {
+            continue;
+          }
+          probeProbes++;
+          int[] upImplied = probe(one);
+          if (!sat.isOk()) {
+            rootFailed = true;
+            return false;
+          }
+          if (upImplied == null) {
+            probeFailed++;
+            changed = true;
+            if (!sat.addClause(-one)) {
+              rootFailed = true;
+              return false;
+            }
+            continue;
+          }
+          if (upImplied.length == 0 && sat.value(one) != 0) {
+            continue;
+          }
+          Set<Atom> up = consequences(upImplied);
+          probeProbes++;
+          int[] downImplied = probe(-one);
+          if (!sat.isOk()) {
+            rootFailed = true;
+            return false;
+          }
+          if (downImplied == null) {
+            probeFailed++;
+            changed = true;
+            if (!sat.addClause(one)) {
+              rootFailed = true;
+              return false;
+            }
+            continue;
+          }
+          if (upImplied.length == 0 && downImplied.length == 0) {
+            // the deadline stopped the root's propagation
+            continue;
+          }
+          List<Atom> lifted = new ArrayList<>();
+          for (int l : downImplied) {
+            Atom a = atom(l);
+            if (a == null) {
+              continue;
+            }
+            if (up.contains(a)) {
+              lifted.add(a);
+            }
+            int b = booleanValue(a);
+            if (b >= 0 && a.var > i && up.contains(a.negated())) {
+              // x = 0 -> y = b and x = 1 -> y = 1 - b: y equals x or its negation
+              probeEquivalences++;
+            }
+          }
+          for (Atom a : up) {
+            if (booleanValue(a) == 0 && a.var > i) {
+              probeExclusions++;
+            }
+          }
+          for (Atom a : lifted) {
+            int lit = literalOf(a);
+            if (sat.value(lit) > 0) {
+              continue;
+            }
+            probeLifted++;
+            changed = true;
+            if (!sat.addClause(lit)) {
+              rootFailed = true;
+              return false;
+            }
+          }
+        }
+      }
+      return !rootFailed;
+    } finally {
+      probeNanos += System.nanoTime() - start;
+      for (int i : candidates) {
+        if (sat.value(geLit(i, 1)) != 0) {
+          probeFixedBooleans++;
+        }
+      }
+    }
+  }
+
   /**
    * Solves the store's constraints.
    *
