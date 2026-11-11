@@ -137,6 +137,13 @@ public final class CdclSolver {
   private int[] trailPos = new int[0];
   private int trailSize;
   private int qhead;
+  // two-cluster propagation (prototype): 0 off, 1 B after the A fixpoint, 2 B after the A and the
+  // external propagator's fixpoint
+  static final int SPLIT = Integer.getInteger("jacop.jasat.split", 0);
+  private int qheadB;
+  private boolean deferB;
+  private int[][] watchesB = new int[0][];
+  private int[] watchSizeB = new int[0];
   private int[] trailLim = new int[16];
   // qhead when each level was opened: the external search may open a level before propagating
   // (units asserted again by a backtrack), and those literals are propagated again after a
@@ -390,6 +397,8 @@ public final class CdclSolver {
       observed = Arrays.copyOf(observed, c);
       watches = Arrays.copyOf(watches, 2 * c);
       watchSize = Arrays.copyOf(watchSize, 2 * c);
+      watchesB = Arrays.copyOf(watchesB, 2 * c);
+      watchSizeB = Arrays.copyOf(watchSizeB, 2 * c);
       binWatches = Arrays.copyOf(binWatches, 2 * c);
       binSize = Arrays.copyOf(binSize, 2 * c);
     }
@@ -409,6 +418,7 @@ public final class CdclSolver {
     // a literal gets its watch lists when a clause first watches it: under LCG most literals are
     // atoms in no clause, and four small arrays each filled a 3 GB heap on a 4096-variable alldiff
     Arrays.fill(watches, 2 * numVars, 2 * n, NO_WATCHES);
+    Arrays.fill(watchesB, 2 * numVars, 2 * n, NO_WATCHES);
     Arrays.fill(binWatches, 2 * numVars, 2 * n, NO_WATCHES);
     for (int v = numVars; v < n; v++) {
       order.insert(v);
@@ -915,11 +925,37 @@ public final class CdclSolver {
     watchSize[lit] = n + 2;
   }
 
+  private void addWatchB(int lit, int blocker, int ref) {
+    int[] ws = watchesB[lit];
+    int n = watchSizeB[lit];
+    if (n + 2 > ws.length) {
+      ws = Arrays.copyOf(ws, Math.max(4, 2 * ws.length));
+      watchesB[lit] = ws;
+    }
+    ws[n] = blocker;
+    ws[n + 1] = ref;
+    watchSizeB[lit] = n + 2;
+  }
+
+  /** True for the clauses of cluster B: learnt clauses of the local tier, with the split on. */
+  private boolean inB(int ref) {
+    int meta = mem[ref + META];
+    return SPLIT != 0 && (meta & LEARNT_FLAG) != 0 && tierOf(meta) == TIER_LOCAL;
+  }
+
+  private void addWatchAny(int lit, int blocker, int ref) {
+    if (inB(ref)) {
+      addWatchB(lit, blocker, ref);
+    } else {
+      addWatch(lit, blocker, ref);
+    }
+  }
+
   private void attach(int ref) {
     int l0 = mem[ref + HEADER];
     int l1 = mem[ref + HEADER + 1];
-    addWatch(l0, l1, ref);
-    addWatch(l1, l0, ref);
+    addWatchAny(l0, l1, ref);
+    addWatchAny(l1, l0, ref);
   }
 
   private void addBinary(int a, int b) {
@@ -1027,6 +1063,7 @@ public final class CdclSolver {
     }
     trailSize = kept;
     qhead = Math.min(start, qheadLim[target]);
+    qheadB = Math.min(qheadB, qhead);
     decisionLevel = target;
     if (rwasted > 0) {
       releaseReasons();
@@ -1042,7 +1079,132 @@ public final class CdclSolver {
 
   // ----------------------------------------------------------------------------- propagation
 
+  /**
+   * Unit propagation to a fixpoint over all clauses. With the two-cluster split
+   * (-Djacop.jasat.split=1|2) the local-tier learnt clauses (cluster B) have their own watch lists,
+   * visited only once the other clauses (cluster A) are at a fixpoint; with split=2 inside
+   * propagateAll they wait for the external propagator's fixpoint too.
+   */
   private int propagate() {
+    int c = propagateA();
+    if (c != NO_CONFLICT || SPLIT == 0 || deferB) {
+      return c;
+    }
+    return propagateBLoop();
+  }
+
+  /** Visits cluster B for the queued literals, returning to cluster A whenever B assigns. */
+  private int propagateBLoop() {
+    while (qheadB < trailSize) {
+      int c = propagateB();
+      if (c != NO_CONFLICT) {
+        return c;
+      }
+      if (qhead < trailSize) {
+        c = propagateA();
+        if (c != NO_CONFLICT) {
+          return c;
+        }
+      }
+    }
+    return NO_CONFLICT;
+  }
+
+  /** Visits the B watch lists of queued literals until one of them assigns something. */
+  private int propagateB() {
+    final byte[] localVals = this.vals;
+    final int[] localMem = this.mem;
+    int conflict = NO_CONFLICT;
+    while (qheadB < trailSize) {
+      int falseLit = trail[qheadB++] ^ 1;
+      int before = trailSize;
+      int[] ws = watchesB[falseLit];
+      int n = watchSizeB[falseLit];
+      int i = 0;
+      int j = 0;
+      while (i < n) {
+        int blocker = ws[i];
+        int ref = ws[i + 1];
+        i += 2;
+        int bv = localVals[blocker];
+        if (bv > 0) {
+          ws[j++] = blocker;
+          ws[j++] = ref;
+          continue;
+        }
+        int lits = ref + HEADER;
+        if (localMem[lits] == falseLit) {
+          localMem[lits] = localMem[lits + 1];
+          localMem[lits + 1] = falseLit;
+        }
+        int first = localMem[lits];
+        int fv = localVals[first];
+        if (first != blocker && fv > 0) {
+          ws[j++] = first;
+          ws[j++] = ref;
+          continue;
+        }
+        int size = localMem[ref + SIZE];
+        int pos = localMem[ref + POS];
+        int k = pos;
+        int found = -1;
+        for (; k < size; k++) {
+          if (localVals[localMem[lits + k]] >= 0) {
+            found = k;
+            break;
+          }
+        }
+        if (found < 0) {
+          for (k = 2; k < pos; k++) {
+            if (localVals[localMem[lits + k]] >= 0) {
+              found = k;
+              break;
+            }
+          }
+        }
+        if (found >= 0) {
+          localMem[ref + POS] = found;
+          int w = localMem[lits + found];
+          localMem[lits + 1] = w;
+          localMem[lits + found] = falseLit;
+          addWatchB(w, first, ref);
+          continue;
+        }
+        ws[j++] = first;
+        ws[j++] = ref;
+        if (fv < 0) {
+          conflict = ref;
+          break;
+        }
+        if (chrono) {
+          int lvl = 0;
+          for (k = 1; k < size; k++) {
+            lvl = Math.max(lvl, level[localMem[lits + k] >> 1]);
+          }
+          assignAt(first, ref, lvl);
+        } else {
+          assign(first, ref);
+        }
+      }
+      if (conflict != NO_CONFLICT) {
+        while (i < n) {
+          ws[j++] = ws[i++];
+        }
+        watchSizeB[falseLit] = j;
+        qhead = trailSize;
+        qheadB = trailSize;
+        conflictRef = conflict;
+        return conflict;
+      }
+      watchSizeB[falseLit] = j;
+      if (trailSize != before) {
+        return NO_CONFLICT;
+      }
+    }
+    return NO_CONFLICT;
+  }
+
+  private int propagateA() {
     if (lowWatchedDue) {
       lowWatchedDue = false;
       int c = propagateLowWatched();
@@ -1065,6 +1227,7 @@ public final class CdclSolver {
         }
         if (ov < 0) {
           qhead = trailSize;
+          qheadB = trailSize;
           conflictRef = BINARY_CONFLICT;
           conflictLit0 = other;
           conflictLit1 = falseLit;
@@ -1150,6 +1313,7 @@ public final class CdclSolver {
         }
         watchSize[falseLit] = j;
         qhead = trailSize;
+        qheadB = trailSize;
         conflictRef = conflict;
         return conflict;
       }
@@ -1221,6 +1385,7 @@ public final class CdclSolver {
     numLowWatched = j;
     if (conflict != NO_CONFLICT) {
       qhead = trailSize;
+      qheadB = trailSize;
     }
     return conflict;
   }
@@ -1261,7 +1426,7 @@ public final class CdclSolver {
           mem[lits + w] = l;
           mem[lits + k] = falseLit;
           removeWatch(falseLit, ref);
-          addWatch(l, mem[lits + 1 - w], ref);
+          addWatchAny(l, mem[lits + 1 - w], ref);
           break;
         }
       }
@@ -2465,6 +2630,15 @@ public final class CdclSolver {
         return;
       }
     }
+    ws = watchesB[lit];
+    n = watchSizeB[lit];
+    for (int i = 0; i < n; i += 2) {
+      if (ws[i + 1] == ref) {
+        System.arraycopy(ws, i + 2, ws, i, n - i - 2);
+        watchSizeB[lit] = n - 2;
+        return;
+      }
+    }
   }
 
   private void setPending(int[] lits, int size, boolean attached) {
@@ -2760,6 +2934,18 @@ public final class CdclSolver {
    *     found unsatisfiable
    */
   private int propagateAll() {
+    if (SPLIT != 2 || external == null) {
+      return propagateAllRounds();
+    }
+    deferB = true;
+    try {
+      return propagateAllRounds();
+    } finally {
+      deferB = false;
+    }
+  }
+
+  private int propagateAllRounds() {
     for (int rounds = 1; ; rounds++) {
       int confl = propagate();
       if (confl != NO_CONFLICT || external == null) {
@@ -2803,6 +2989,16 @@ public final class CdclSolver {
           lit = external.propagate();
         }
         if (lit == 0) {
+          if (deferB && qheadB < trailSize) {
+            int before = trailSize;
+            confl = propagateBLoop();
+            if (confl != NO_CONFLICT) {
+              return confl;
+            }
+            if (trailSize != before) {
+              continue;
+            }
+          }
           return NO_CONFLICT;
         }
         implied = toLit(lit);
@@ -2922,6 +3118,7 @@ public final class CdclSolver {
     }
     backtrack(top);
     qhead = trailSize;
+    qheadB = trailSize;
     conflictRef = ref == BINARY ? BINARY_CONFLICT : ref;
     conflictLit0 = c[0];
     conflictLit1 = c[1];
@@ -3397,6 +3594,7 @@ public final class CdclSolver {
     boolean[] gone = e.eliminated();
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
+    Arrays.fill(watchSizeB, 0);
     Arrays.fill(binSize, 0);
     if (sat) {
       keepLearnts(gone);
@@ -3720,20 +3918,61 @@ public final class CdclSolver {
     numLearnts = filterDeleted(learnts, numLearnts);
     if (wasted > memSize / 2) {
       compact();
-      return;
+    } else {
+      for (int lit = 0; lit < 2 * numVars; lit++) {
+        int[] ws = watches[lit];
+        int n = watchSize[lit];
+        int j = 0;
+        for (int i = 0; i < n; i += 2) {
+          int ref = ws[i + 1];
+          if ((mem[ref + META] & DELETED) == 0) {
+            ws[j++] = ws[i];
+            ws[j++] = ref;
+          }
+        }
+        watchSize[lit] = j;
+      }
     }
+    if (SPLIT != 0) {
+      repartition();
+    }
+  }
+
+  /**
+   * Drops deleted clauses from the B watch lists (after compact, references are already remapped
+   * there) and moves each watch to the list of its clause's current tier.
+   */
+  private void repartition() {
     for (int lit = 0; lit < 2 * numVars; lit++) {
       int[] ws = watches[lit];
       int n = watchSize[lit];
       int j = 0;
       for (int i = 0; i < n; i += 2) {
         int ref = ws[i + 1];
-        if ((mem[ref + META] & DELETED) == 0) {
+        if (inB(ref)) {
+          addWatchB(lit, ws[i], ref);
+        } else {
           ws[j++] = ws[i];
           ws[j++] = ref;
         }
       }
       watchSize[lit] = j;
+      ws = watchesB[lit];
+      n = watchSizeB[lit];
+      j = 0;
+      for (int i = 0; i < n; i += 2) {
+        int ref = ws[i + 1];
+        if ((mem[ref + META] & DELETED) != 0) {
+          continue;
+        }
+        if (inB(ref)) {
+          ws[j++] = ws[i];
+          ws[j++] = ref;
+        } else {
+          addWatch(lit, ws[i], ref);
+        }
+      }
+      watchSizeB[lit] = j;
     }
   }
 
@@ -3787,6 +4026,17 @@ public final class CdclSolver {
         }
       }
       watchSize[lit] = j;
+      ws = watchesB[lit];
+      n = watchSizeB[lit];
+      j = 0;
+      for (int i = 0; i < n; i += 2) {
+        int ref = ws[i + 1];
+        if ((mem[ref + META] & DELETED) == 0) {
+          ws[j++] = ws[i];
+          ws[j++] = mem[ref + ACT];
+        }
+      }
+      watchSizeB[lit] = j;
     }
     int j = 0;
     for (int i = 0; i < numLowWatched; i += 3) {
@@ -3823,6 +4073,10 @@ public final class CdclSolver {
     }
     if (qhead != trailSize) {
       throw new IllegalStateException("fixpoint with " + (trailSize - qhead) + " literals queued");
+    }
+    if (SPLIT != 0 && qheadB != trailSize) {
+      throw new IllegalStateException(
+          "fixpoint with " + (trailSize - qheadB) + " literals queued for B");
     }
     for (int i = 0; i < trailSize; i++) {
       int lit = trail[i];
@@ -3883,6 +4137,9 @@ public final class CdclSolver {
       boolean found = false;
       for (int i = 0; i < watchSize[w] && !found; i += 2) {
         found = watches[w][i + 1] == ref;
+      }
+      for (int i = 0; i < watchSizeB[w] && !found; i += 2) {
+        found = watchesB[w][i + 1] == ref;
       }
       if (!found) {
         throw new IllegalStateException(
