@@ -2700,6 +2700,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.constraintClauses
             + "\n%%%mzn-stat: lcgPureClauses="
             + lcg.pureClauses
+            + "\n%%%mzn-stat: lcgMinSkipped="
+            + lcg.sat().minSkipped
+            + "\n%%%mzn-stat: lcgMinGroups="
+            + lcg.minimisationStatistics()
             + "\n%%%mzn-stat: lcgImpliedClauses="
             + lcg.impliedClauses
             + "\n%%%mzn-stat: lcgSatVariables="

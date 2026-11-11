@@ -5213,6 +5213,49 @@ public final class LcgSolver implements ExternalPropagator {
    * Returns the reason of a literal: the conflict clause just returned by {@link #propagate}, or
    * the explanation of the atom pushed as that literal, computed now.
    */
+  /**
+   * The minimisation statistics per reason group, as "Class:requests:removals" items, or an empty
+   * string when they are not kept.
+   *
+   * @return the statistics
+   */
+  public String minimisationStatistics() {
+    StringBuilder b = new StringBuilder();
+    for (int g = 0; g < reasonGroupNames.size() && g < 63; g++) {
+      if (sat.minRequests[g] > 0) {
+        b.append(b.length() == 0 ? "" : ",")
+            .append(reasonGroupNames.get(g))
+            .append(':')
+            .append(sat.minRequests[g])
+            .append(':')
+            .append(sat.minSuccesses[g]);
+      }
+    }
+    return b.toString();
+  }
+
+  /** The names of the reason groups of {@link #reasonGroup}, in group order. */
+  public final List<String> reasonGroupNames = new ArrayList<>();
+
+  private final Map<String, Integer> reasonGroups = new HashMap<>();
+
+  @Override
+  public int reasonGroup(int lit) {
+    if (pushedReason != null && pushedReason[0] == lit) {
+      return -1;
+    }
+    int e = propagated[Math.abs(lit)];
+    Object c = trail.reason(e);
+    String name = c == null ? "none" : c.getClass().getSimpleName();
+    Integer g = reasonGroups.get(name);
+    if (g == null) {
+      g = reasonGroupNames.size();
+      reasonGroups.put(name, g);
+      reasonGroupNames.add(name);
+    }
+    return g;
+  }
+
   @Override
   public int[] reason(int lit) {
     if (pushedReason != null && pushedReason[0] == lit) {

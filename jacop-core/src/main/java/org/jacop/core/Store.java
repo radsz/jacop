@@ -1085,8 +1085,26 @@ public class Store {
 
     checkImposeAllowed();
     rec(c);
-    c.impose(this);
+    if (DEMOTED.contains(c.getClass().getSimpleName())) {
+      c.impose(this, DEMOTE_QUEUE);
+    } else {
+      c.impose(this);
+    }
   }
+
+  /**
+   * Simple class names of constraints that {@link #impose(Constraint)} puts in queue {@link
+   * #DEMOTE_QUEUE} instead of their own queue (property {@code jacop.store.demote}, comma
+   * separated; empty by default). An experiment knob for scheduling propagators whose pruning
+   * rarely enters LCG proofs after the others.
+   */
+  static final Set<String> DEMOTED =
+      Arrays.stream(System.getProperty("jacop.store.demote", "").split(","))
+          .filter(n -> !n.isEmpty())
+          .collect(java.util.stream.Collectors.toUnmodifiableSet());
+
+  /** Queue used for the classes of {@link #DEMOTED} (property {@code jacop.store.demoteQueue}). */
+  static final int DEMOTE_QUEUE = Integer.getInteger("jacop.store.demoteQueue", 4);
 
   /**
    * This function imposes a constraint to a store. The constraint is scheduled for evaluation for
@@ -1119,7 +1137,11 @@ public class Store {
 
     checkImposeAllowed();
     rec(c);
-    c.impose(this);
+    if (DEMOTED.contains(c.getClass().getSimpleName())) {
+      c.impose(this, DEMOTE_QUEUE);
+    } else {
+      c.impose(this);
+    }
 
     if (!consistency()) {
       throw failException;

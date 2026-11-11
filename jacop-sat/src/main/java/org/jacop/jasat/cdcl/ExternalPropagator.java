@@ -189,6 +189,17 @@ public interface ExternalPropagator {
   }
 
   /**
+   * A small number naming the kind of propagator that would explain an implied literal, used to
+   * keep statistics of lazy explanations per kind; -1 when unknown.
+   *
+   * @param lit the implied literal (DIMACS)
+   * @return the group, or -1
+   */
+  default int reasonGroup(int lit) {
+    return -1;
+  }
+
+  /**
    * Returns the reason of a literal returned by {@link #propagate}. The solver asks for it right
    * away when the literal is false (a conflict), and otherwise only when conflict analysis needs
    * it, at any time while the literal stays assigned.

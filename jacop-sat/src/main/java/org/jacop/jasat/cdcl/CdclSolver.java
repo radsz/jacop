@@ -1885,10 +1885,74 @@ public final class CdclSolver {
    * minimisation.
    */
   private boolean redundant(int p, int abstractLevels) {
-    return antecedentsRemovable(p >> 1, abstractLevels, 0);
+    if (MIN_LAZY == 0) {
+      return antecedentsRemovable(p >> 1, abstractLevels, 0);
+    }
+    minAskedSize = 0;
+    boolean removed = antecedentsRemovable(p >> 1, abstractLevels, 0);
+    for (int i = 0; i < minAskedSize; i++) {
+      int g = minAsked[i];
+      minRequests[g]++;
+      if (removed) {
+        minSuccesses[g]++;
+      }
+    }
+    return removed;
   }
 
+  /**
+   * Lazy explanations asked by clause minimisation, {@code jacop.jasat.minLazy}: 0 = all (no
+   * statistics), 1 = all with statistics per reason group, 2 = none (a lazily explained literal is
+   * not removable), 3 = gate: a group is asked only while its requests still lead to a removal at
+   * least {@code jacop.jasat.minGate} percent of the time (after 200 requests; every 64th request
+   * is let through to keep the rate fresh).
+   */
+  static final int MIN_LAZY = Integer.getInteger("jacop.jasat.minLazy", 0);
+
+  static final int MIN_GATE = Integer.getInteger("jacop.jasat.minGate", 20);
+
+  /** Statistics per reason group: minimisation requests, and those whose literal was removed. */
+  public long[] minRequests = new long[64];
+
+  public long[] minSuccesses = new long[64];
+
+  /** Statistics: lazy explanations minimisation skipped by {@code jacop.jasat.minLazy}. */
+  public long minSkipped;
+
+  private int[] minAsked = new int[64];
+
+  private int minAskedSize;
+
+  private boolean minimisationMayAsk(int v) {
+    if (MIN_LAZY == 2) {
+      minSkipped++;
+      return false;
+    }
+    int lit = vals[2 * v] > 0 ? 2 * v : 2 * v + 1;
+    int g = external.reasonGroup(toDimacs(lit));
+    if (g < 0 || g >= 63) {
+      g = 63;
+    }
+    if (MIN_LAZY == 3) {
+      long n = minRequests[g];
+      if (n >= 200 && minSuccesses[g] * 100 < MIN_GATE * n && ((minGateTick++) & 63) != 0) {
+        minSkipped++;
+        return false;
+      }
+    }
+    if (minAskedSize == minAsked.length) {
+      minAsked = Arrays.copyOf(minAsked, 2 * minAskedSize);
+    }
+    minAsked[minAskedSize++] = g;
+    return true;
+  }
+
+  private int minGateTick;
+
   private boolean antecedentsRemovable(int v, int abstractLevels, int depth) {
+    if (MIN_LAZY != 0 && reason[v] == EXTERNAL_REASON && !minimisationMayAsk(v)) {
+      return false;
+    }
     int r = reasonRef(v);
     if (r == UNIT_REASON) {
       return true;
