@@ -341,6 +341,75 @@ class SymmetryBreakingFlatzincTest {
     assertTrue(broken > trials / 3, "broken " + broken);
   }
 
+  /**
+   * Schreier-Sims cuts (org.jacop.fz.symmetry.schreierSims=on) keep the lexicographically smallest
+   * (or largest) solution the other symmetry breaking constraints keep, so the random models of the
+   * tests above stay satisfiable or unsatisfiable and keep their optimum, with LCG reasons checked.
+   */
+  @Test
+  void schreierSimsCutsKeepSatisfiabilityAndOptimum() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 17));
+    int trials = Integer.getInteger("symmetry.trials", 300) / 2;
+    int cut = 0;
+    String old = System.setProperty("org.jacop.fz.symmetry.schreierSims", "on");
+    System.setProperty("jacop.lcg.check", "true");
+    try {
+      for (int trial = 0; trial < trials; trial++) {
+        boolean optimise = random.nextBoolean();
+        int kind = trial % 3;
+        String model =
+            switch (kind) {
+              case 0 -> randomModel(random, optimise);
+              case 1 -> randomValueModel(random, optimise);
+              default -> randomMatrixModel(random, optimise);
+            };
+        String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+        // LCG rejects some variable-symmetric models (array_int_maximum) that CP refutes
+        String lcgOff =
+            kind == 0 ? FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg") : off;
+        String what = "trial " + trial + "\n" + model;
+        String[][] arms = {
+          {"--search-statistics", "--presolve", "check"},
+          {"--search-statistics", "--lcg", "--symmetry", "on"},
+          {"--search-statistics", "-f", "--symmetry", "on"},
+          {"largest", "--search-statistics", "--lcg", "--symmetry", "on"},
+        };
+        for (String[] arm : arms) {
+          boolean largest = arm[0].equals("largest");
+          String[] options = largest ? Arrays.copyOfRange(arm, 1, arm.length) : arm;
+          if (kind == 0 && options[1].equals("-f")) {
+            continue;
+          }
+          String base = options[1].equals("--presolve") ? off : lcgOff;
+          String on;
+          try {
+            on = FlatzincTestRunner.run(tmp, largest ? largestFirst(model) : model, options);
+          } catch (RuntimeException e) {
+            throw new AssertionError(what + "\n" + String.join(" ", arm), e);
+          }
+          String why = what + "\n" + String.join(" ", arm) + "\n" + on;
+          boolean unsat = base.contains("=====UNSATISFIABLE=====");
+          assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), why);
+          if (optimise && !unsat) {
+            assertEquals(objective(base, "obj"), objective(on, "obj"), why);
+          }
+          Matcher m = Pattern.compile("symmetrySchreierSimsCuts=(\\d+)").matcher(on);
+          if (m.find() && Integer.parseInt(m.group(1)) > 0) {
+            cut++;
+          }
+        }
+      }
+    } finally {
+      System.clearProperty("jacop.lcg.check");
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.symmetry.schreierSims");
+      } else {
+        System.setProperty("org.jacop.fz.symmetry.schreierSims", old);
+      }
+    }
+    assertTrue(cut > 0, "cuts posted in " + cut);
+  }
+
   @Test
   void interchangeableValuesNeedEveryPermutationFixingTheRest() {
     // the symmetric group of 4 points, from a 4-cycle and a swap
