@@ -2783,6 +2783,10 @@ public final class LcgSolver implements ExternalPropagator {
     if (sat.value(one) != 0) {
       return NOTHING;
     }
+    if (probeConflicts != null) {
+      recordConflicts(i, 1, up);
+      recordConflicts(i, 0, consequences(downImplied));
+    }
     List<Atom> lifted = new ArrayList<>();
     for (int l : downImplied) {
       Atom a = atom(l);
@@ -2803,6 +2807,54 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     return addLifted(lifted);
+  }
+
+  // the conflicts (x = value, y = 1 - b) of the implications x = value -> y = b found by a probe
+  private void recordConflicts(int i, int value, Set<Atom> implied) {
+    for (Atom a : implied) {
+      int b = booleanValue(a);
+      if (b >= 0 && a.var != i && probeConflicts.size() < probeConflictCap) {
+        probeConflicts.add(new IntVar[] {vars[i], vars[a.var]});
+        probeConflictValues.add(new int[] {value, 1 - b});
+      }
+    }
+  }
+
+  // the conflicts between values of 0/1 variables that probing found, when they are kept
+  private List<IntVar[]> probeConflicts;
+  private List<int[]> probeConflictValues;
+  private int probeConflictCap;
+
+  /**
+   * Keeps the conflicts that the next {@link #probeRoot} finds between values of 0/1 variables: x =
+   * a and y = b cannot hold together because probing x = a implied y = 1 - b. They are the edges of
+   * the at-most-one cliques (and, two by two, the equivalences) that the linear relaxation can use
+   * as clique rows.
+   *
+   * @param cap the most conflicts kept
+   */
+  public void keepProbeConflicts(int cap) {
+    probeConflicts = new ArrayList<>();
+    probeConflictValues = new ArrayList<>();
+    probeConflictCap = cap;
+  }
+
+  /**
+   * Returns the conflicts kept by {@link #keepProbeConflicts}.
+   *
+   * @return pairs of 0/1 variables
+   */
+  public List<IntVar[]> probeConflicts() {
+    return probeConflicts == null ? List.of() : probeConflicts;
+  }
+
+  /**
+   * Returns the values of the conflicts of {@link #probeConflicts}, at the same positions.
+   *
+   * @return pairs of values, each 0 or 1
+   */
+  public List<int[]> probeConflictValues() {
+    return probeConflictValues == null ? List.of() : probeConflictValues;
   }
 
   // probes each value of a variable with a small domain

@@ -550,6 +550,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         maximize = k == 2;
       }
     }
+    lpObjective = objective;
+    lpMaximize = maximize;
     long start = timer.getCpuTime();
     TableCliques.Result cliques = null;
     if (options.proof() != null) {
@@ -2050,6 +2052,78 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // -Djacop.lcg.probe.only=true: stop after root probing, to measure its reach
   private static final boolean LCG_PROBE_ONLY = Boolean.getBoolean("jacop.lcg.probe.only");
 
+  // -Djacop.lcg.probe.lp=none|facts|cliques, with probe.only: the root bound of a relaxation built
+  // again after probing, on the probed domains (facts) and also with the conflicts that probing
+  // found as rows that PairCliques merges into cliques (cliques)
+  // the objective of the relaxation imposed with --lp, and its sense
+  private IntVar lpObjective;
+  private boolean lpMaximize;
+
+  private static final String LCG_PROBE_LP = System.getProperty("jacop.lcg.probe.lp", "none");
+
+  // measures the root bound of a relaxation built after probing (probe.only runs)
+  private void probedRootBound() {
+    IntVar objective = lpObjective;
+    if (objective == null || objective.singleton()) {
+      return;
+    }
+    double before = linearRelaxation == null ? Double.NaN : linearRelaxation.rootBound;
+    List<LinearForm> rows = new ArrayList<>();
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      rows.add(clauseRow(clause[0], clause[1]));
+    }
+    int conflictRows = 0;
+    if ("cliques".equals(LCG_PROBE_LP)) {
+      List<IntVar[]> pairs = lcg.probeConflicts();
+      List<int[]> values = lcg.probeConflictValues();
+      for (int k = 0; k < pairs.size(); k++) {
+        IntVar x = pairs.get(k)[0];
+        IntVar y = pairs.get(k)[1];
+        if (x.singleton() || y.singleton()) {
+          continue;
+        }
+        // x = a and y = b not together: [x = a] + [y = b] <= 1, with [x = 0] as 1 - x
+        int a = values.get(k)[0];
+        int b = values.get(k)[1];
+        long c = 1 - (a == 0 ? 1 : 0) - (b == 0 ? 1 : 0);
+        rows.add(
+            new LinearForm(
+                new IntVar[] {x, y},
+                new long[] {a == 1 ? 1 : -1, b == 1 ? 1 : -1},
+                c,
+                LinearForm.LE));
+        conflictRows++;
+      }
+    }
+    long start = System.nanoTime();
+    LinearRelaxation probed =
+        LinearRelaxation.of(
+            store, objective, lpMaximize, rows, List.of(), splitSums(), options.lpSimplex());
+    double after = Double.NaN;
+    boolean infeasible = false;
+    if (probed != null) {
+      store.impose(probed);
+      infeasible = !store.consistency();
+      after = probed.rootBound;
+    }
+    IO.print(
+        "%%%mzn-stat: lcgProbeLpBefore="
+            + before
+            + "\n%%%mzn-stat: lcgProbeLpAfter="
+            + after
+            + "\n%%%mzn-stat: lcgProbeLpInfeasible="
+            + infeasible
+            + "\n%%%mzn-stat: lcgProbeLpConflictRows="
+            + conflictRows
+            + "\n%%%mzn-stat: lcgProbeLpPairCliques="
+            + (probed == null ? 0 : probed.pairCliques)
+            + "\n%%%mzn-stat: lcgProbeLpRows="
+            + (probed == null ? 0 : probed.rows())
+            + "\n%%%mzn-stat: lcgProbeLpTime="
+            + (System.nanoTime() - start) / 1e9
+            + "\n");
+  }
+
   private void printProbeStatistics() {
     if (!options.getStatistics()) {
       return;
@@ -2385,8 +2459,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (LCG_PROBE > 0) {
       // root probing of the 0/1 variables: facts only, the model stays as it is
       long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
+      if (!"none".equals(LCG_PROBE_LP)) {
+        lcg.keepProbeConflicts(1_000_000);
+      }
       boolean feasible = lcg.probeRoot((long) (LCG_PROBE * left * 1_000_000L));
       printProbeStatistics();
+      if (feasible && LCG_PROBE_ONLY && !"none".equals(LCG_PROBE_LP)) {
+        probedRootBound();
+      }
       if (!feasible) {
         lcgStatus = CdclSolver.UNSAT;
         return false;
