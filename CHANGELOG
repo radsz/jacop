@@ -4131,6 +4131,14 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. GlobalCardinality (MiniZinc global_cardinality and count with
+     ::domain) keeps the value lists of its variables between executions
+     and builds again only the lists of the variables that changed (or
+     whose level was removed), instead of every list at every execution.
+     Pruning and search are unchanged; on the 2026 warehouse instances,
+     where the lists took about 60 % of the run, fixed search explores
+     1.1x to 4.2x more nodes in 600 s.
+
 Version 4.11
 =============
 
