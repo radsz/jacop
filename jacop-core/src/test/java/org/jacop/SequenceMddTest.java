@@ -41,6 +41,9 @@ import java.util.Random;
 import org.jacop.constraints.SequenceMdd;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.SimpleSelect;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -275,6 +278,135 @@ public class SequenceMddTest {
     Random r = new Random(31);
     for (int t = 0; t < TRIALS; t++) {
       check(random(r), t % 2 == 1, 1 + r.nextInt(3), false, t % 3 == 0 ? 0 : 1);
+    }
+  }
+
+  // the relation on a complete assignment, written independently of the constraint
+  private static boolean holds(Instance p, boolean pred, int[] x, int[] in, int[] out) {
+    int n = p.n;
+    int[] succ = new int[n];
+    Arrays.fill(succ, -1);
+    for (int i = 0; i < n; i++) {
+      int v = x[i] - 1;
+      if (pred) {
+        if (succ[v] >= 0) {
+          return false;
+        }
+        succ[v] = i;
+      } else {
+        succ[i] = v;
+      }
+    }
+    boolean[] seen = new boolean[n];
+    int i = 0;
+    for (int k = 0; k < n; k++) {
+      if (succ[i] < 0 || seen[i]) {
+        return false;
+      }
+      seen[i] = true;
+      int j = succ[i];
+      if (p.travel[i][j] != SequenceMdd.NONE && in[j] < out[i] + p.travel[i][j]) {
+        return false;
+      }
+      i = j;
+    }
+    if (i != 0) {
+      return false;
+    }
+    for (int j = 0; j < n; j++) {
+      if (p.delta[j] != SequenceMdd.NONE && out[j] < in[j] + p.delta[j]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private static int bruteCount(Instance p, boolean pred, int[] x, int[] in, int[] out, int k) {
+    int n = p.n;
+    if (k == 3 * n) {
+      return holds(p, pred, x, in, out) ? 1 : 0;
+    }
+    int[] a = k < n ? x : k < 2 * n ? in : out;
+    int j = k % n;
+    int lo = k < n ? 1 : k < 2 * n ? p.inWin[j][0] : p.outWin[j][0];
+    int hi = k < n ? n : k < 2 * n ? p.inWin[j][1] : p.outWin[j][1];
+    int c = 0;
+    for (int v = lo; v <= hi; v++) {
+      a[j] = v;
+      c += bruteCount(p, pred, x, in, out, k + 1);
+    }
+    return c;
+  }
+
+  // the constraint alone is a checker: a search over all its variables finds exactly the
+  // assignments of the relation, also with narrow diagrams whose calls back off
+  @Test
+  public void searchFindsExactlyTheRelation() {
+    Random r = new Random(37);
+    for (int t = 0; t < TRIALS / 4; t++) {
+      int n = 3 + r.nextInt(2);
+      int[][] travel = new int[n][n];
+      int[] delta = new int[n];
+      int[][] inWin = new int[n][2];
+      int[][] outWin = new int[n][2];
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          travel[i][j] = r.nextInt(6) == 0 ? SequenceMdd.NONE : r.nextInt(4);
+        }
+        delta[i] = r.nextInt(5) == 0 ? SequenceMdd.NONE : r.nextInt(3);
+        inWin[i][0] = r.nextInt(8);
+        inWin[i][1] = inWin[i][0] + r.nextInt(2);
+        outWin[i][0] = r.nextInt(8);
+        outWin[i][1] = outWin[i][0] + r.nextInt(2);
+      }
+      delta[0] = SequenceMdd.NONE;
+      Instance p = new Instance(n, travel, delta, inWin, outWin, new int[n][n]);
+      boolean pred = t % 2 == 0;
+      int expected = bruteCount(p, pred, new int[n], new int[n], new int[n], 0);
+      Store store = new Store();
+      IntVar[] vars = new IntVar[3 * n];
+      IntVar[] arcs = new IntVar[n];
+      IntVar[] in = new IntVar[n];
+      IntVar[] out = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        arcs[i] = new IntVar(store, "x" + i, 1, n);
+        in[i] = new IntVar(store, "in" + i, inWin[i][0], inWin[i][1]);
+        out[i] = new IntVar(store, "out" + i, outWin[i][0], outWin[i][1]);
+        vars[i] = arcs[i];
+        vars[n + i] = in[i];
+        vars[2 * n + i] = out[i];
+      }
+      SequenceMdd c = new SequenceMdd(arcs, pred, 1, in, out, travel, delta, 0, 1 + r.nextInt(2));
+      store.impose(c);
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      int found = 0;
+      if (store.consistency()) {
+        search.labeling(store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+        found = search.getSolutionListener().solutionsNo();
+      }
+      assertEquals(expected, found, "solutions of instance " + t + ", " + (pred ? "pred" : "succ"));
+      for (int k = 0; k < 20; k++) {
+        int[] xs = new int[n];
+        int[] ins = new int[n];
+        int[] outs = new int[n];
+        Store ground = new Store();
+        IntVar[] gx = new IntVar[n];
+        IntVar[] gin = new IntVar[n];
+        IntVar[] gout = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          xs[i] = 1 + r.nextInt(n);
+          ins[i] = inWin[i][0] + r.nextInt(inWin[i][1] - inWin[i][0] + 1);
+          outs[i] = outWin[i][0] + r.nextInt(outWin[i][1] - outWin[i][0] + 1);
+          gx[i] = new IntVar(ground, xs[i], xs[i]);
+          gin[i] = new IntVar(ground, ins[i], ins[i]);
+          gout[i] = new IntVar(ground, outs[i], outs[i]);
+        }
+        SequenceMdd g = new SequenceMdd(gx, pred, 1, gin, gout, travel, delta, 0, 2);
+        assertEquals(holds(p, pred, xs, ins, outs), g.satisfied(), "satisfied() of instance " + t);
+      }
     }
   }
 }

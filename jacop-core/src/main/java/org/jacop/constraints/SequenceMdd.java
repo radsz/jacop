@@ -51,10 +51,10 @@ import org.jacop.core.Var;
  * <p>The circuit is given by its successor variables ({@code arcs[i] = offset + j} for the arc i to
  * j) or by its predecessor variables ({@code arcs[j] = offset + i} for the same arc). Each node j
  * has an arrival time {@code in[j]} and a departure time {@code out[j]}; the circuit's arc i to j
- * implies {@code in[j] >= out[i] + travel[i][j]}, and each node {@code out[j] >= in[j] + delta[j]}.
- * {@link #NONE} as a travel time or a delta says the model links the two times by nothing (a depot
- * left at time 0, the arc from one vehicle's end to the next vehicle's start). The time windows are
- * the current bounds of the time variables, read at each call.
+ * implies {@code in[j] >= out[i] + travel[i][j]}, and each node but the start {@code out[j] >=
+ * in[j] + delta[j]}. {@link #NONE} as a travel time or a delta says the model links the two times
+ * by nothing (a depot left at time 0, the arc from one vehicle's end to the next vehicle's start).
+ * The time windows are the current bounds of the time variables, read at each call.
  *
  * <p>Each call compiles the diagram top-down from {@code start}, one layer per position, as Cire
  * and van Hoeve (Multivalued Decision Diagrams for Sequencing Problems, Operations Research
@@ -377,7 +377,7 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     }
     // a call that pruned nothing makes the next ones skip, 1, 3, 7, ... up to MAX_SKIP calls; the
     // constraint is redundant, so a skipped call only delays its pruning to a later call
-    if (store.level > rootLevel && skip > 0) {
+    if (store.level > rootLevel && skip > 0 && !groundArcs()) {
       skip--;
       return;
     }
@@ -738,6 +738,16 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     return c;
   }
 
+  // a call with every arc fixed is never skipped, so the constraint checks a fixed circuit
+  private boolean groundArcs() {
+    for (IntVar a : arcs) {
+      if (!a.singleton()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   public boolean satisfied() {
     for (Var v : arguments()) {
@@ -745,7 +755,45 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
         return false;
       }
     }
-    return true;
+    long total = 0;
+    int i = start;
+    for (int k = 0; k < n; k++) {
+      int j = pred ? successorOf(i) : arcs[i].value() - offset;
+      if (j < 0 || j >= n || k < n - 1 && j == start) {
+        return false;
+      }
+      int tr = travel[i][j];
+      if (tr != NONE
+          && in[j] != null
+          && out[i] != null
+          && in[j].value() < (long) out[i].value() + tr) {
+        return false;
+      }
+      total += arcCost(i, j);
+      i = j;
+    }
+    if (i != start) {
+      return false;
+    }
+    for (int j = 0; j < n; j++) {
+      if (delta[j] != NONE
+          && in[j] != null
+          && out[j] != null
+          && out[j].value() < (long) in[j].value() + delta[j]) {
+        return false;
+      }
+    }
+    return cost == null || cost.value() >= total + costOffset;
+  }
+
+  // the successor of i given by predecessor variables, or -1
+  private int successorOf(int i) {
+    for (int j = 0; j < n; j++) {
+      if (arcs[j].value() - offset == i) {
+        return j;
+      }
+    }
+    return -1;
   }
 
   @Override
