@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.function.ObjIntConsumer;
 import java.util.regex.Pattern;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -785,12 +786,24 @@ final class Portfolio {
 
       @Override
       public void impose(Store store) {
+        synchronized (lock) {
+          imports++;
+        }
+        values(
+            (x, v) -> {
+              if (!x.singleton() && x.domain.contains(v)) {
+                x.domain.inValue(store.level, x, v);
+              }
+            });
+      }
+
+      @Override
+      public void values(ObjIntConsumer<IntVar> action) {
         String[] n;
         int[] values;
         synchronized (lock) {
           n = bestNames;
           values = bestValues;
-          imports++;
         }
         if (n == null) {
           return;
@@ -803,10 +816,8 @@ final class Portfolio {
           }
         }
         for (int i = 0; i < vars.length; i++) {
-          IntVar x = vars[i];
-          int v = values[i];
-          if (x != null && v != UNKNOWN && !x.singleton() && x.domain.contains(v)) {
-            x.domain.inValue(store.level, x, v);
+          if (vars[i] != null && values[i] != UNKNOWN) {
+            action.accept(vars[i], values[i]);
           }
         }
       }

@@ -84,6 +84,7 @@ import org.jacop.lcg.Mirrored;
 import org.jacop.lcg.MirroredChoice;
 import org.jacop.lcg.PbModel;
 import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.free.SharedSolution;
 import org.jacop.search.lns.AdaptiveLns;
 
 /**
@@ -424,6 +425,9 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: probes of dichotomic bound search. */
   public long bisectProbes;
 
+  /** Statistics: solutions found elsewhere whose values activity branching took up. */
+  public long sharedPhases;
+
   /** Statistics: probes of dichotomic bound search that proved their half empty. */
   public long bisectRaised;
 
@@ -464,6 +468,9 @@ public final class LcgSolver implements ExternalPropagator {
   // the objective value of the best solution found outside this solver, and the last one imported
   private IntSupplier sharedBound;
   private int importedBound = Integer.MAX_VALUE;
+
+  // the best solution found elsewhere, whose values activity branching takes up with its bound
+  private SharedSolution sharedPhase;
   // a shared bound at or below the objective's smallest value: no better solution exists
   private boolean sharedBoundUnreachable;
 
@@ -4642,6 +4649,19 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Makes activity branching prefer the values of the best solution found outside this solver
+   * whenever it takes up that solution's bound (see {@link #setSharedBound}) and the solution is
+   * better than its own: the search goes on near that solution, as it does near its own best
+   * (solution-guided search, Beck 2007; CP-SAT's workers take the best solution as their hint in
+   * the same way). The values are only preferred; the bound clause excludes the solution itself.
+   *
+   * @param solution the best solution found elsewhere, with the bound's objective value
+   */
+  public void setSharedPhase(SharedSolution solution) {
+    sharedPhase = solution;
+  }
+
+  /**
    * Gives values that activity branching prefers until the first solution of this solver, for
    * example those of a solution found by local search.
    *
@@ -4885,6 +4905,30 @@ public final class LcgSolver implements ExternalPropagator {
       // the literal first, so that its linking clauses come before the bound
       int lit = geLit(objective, localShared);
       structural.add(new int[] {-lit}); // objective <= shared - 1
+      if (sharedPhase != null) {
+        takeSharedPhase();
+      }
+    }
+  }
+
+  /** Prefers the values of the shared solution, keeping the preferred values of other variables. */
+  private void takeSharedPhase() {
+    int[] p = new int[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      p[i] = phase != null && i < phase.length ? phase[i] : vars[i] == null ? 0 : vars[i].min();
+    }
+    boolean[] taken = {false};
+    sharedPhase.values(
+        (x, v) -> {
+          int i = index(x);
+          if (i >= 0 && i < p.length) {
+            p[i] = v;
+            taken[0] = true;
+          }
+        });
+    if (taken[0]) {
+      phase = p;
+      sharedPhases++;
     }
   }
 
