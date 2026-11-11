@@ -540,6 +540,33 @@ class SingleConstraintTest {
     }
   }
 
+  /**
+   * A result bound at acos(x) keeps x: cos of the bound misses x by an ulp (cos(acos(0)) is
+   * 6.1e-17), and the solution (0, -0.06, -0.0, acos(-0.0)) of PmulQeqR and AcosPeqR was removed
+   * (FloatPropagationFuzzTest).
+   */
+  @Test
+  void testAcosResultBoundKeepsItsArgument() {
+    Random random = new Random(7);
+    for (int k = 0; k < 2000; k++) {
+      double x = k == 0 ? 0 : k == 1 ? -0.0 : 2 * random.nextDouble() - 1;
+      double y = Math.acos(x);
+      Store store = new Store();
+      FloatVar p = new FloatVar(store, "p", -1, 1);
+      FloatVar r = new FloatVar(store, "r", y, 4);
+      store.impose(new AcosPeqR(p, r));
+      assertThat(store.consistency()).as("acos %s", x).isTrue();
+      assertThat(p.max()).as("p max for r >= acos(%s)", x).isGreaterThanOrEqualTo(x);
+
+      store = new Store();
+      p = new FloatVar(store, "p", -1, 1);
+      r = new FloatVar(store, "r", -1, y);
+      store.impose(new AcosPeqR(p, r));
+      assertThat(store.consistency()).as("acos %s", x).isTrue();
+      assertThat(p.min()).as("p min for r <= acos(%s)", x).isLessThanOrEqualTo(x);
+    }
+  }
+
   @Test
   void testAtanToStringKeepsArgumentOrder() {
     Store store = new Store();
