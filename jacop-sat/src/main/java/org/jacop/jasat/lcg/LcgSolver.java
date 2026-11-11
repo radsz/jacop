@@ -2551,6 +2551,13 @@ public final class LcgSolver implements ExternalPropagator {
   // -Djacop.lcg.probe.domain: the largest domain whose values root probing tries one by one
   private static final int PROBE_MAX_DOMAIN = Integer.getInteger("jacop.lcg.probe.domain", 64);
 
+  // -Djacop.lcg.probe.barren: the share of its budget after which probing that found no fact stops
+  private static final double PROBE_BARREN =
+      Double.parseDouble(System.getProperty("jacop.lcg.probe.barren", "0.25"));
+
+  /** Statistics of {@link #probeRoot}: whether it stopped early for finding no fact. */
+  public boolean probeBarren;
+
   /** Statistics of {@link #probeRoot}: 0/1 variables not fixed when probing started. */
   public long probeBooleans;
 
@@ -2707,8 +2714,14 @@ public final class LcgSolver implements ExternalPropagator {
         probePasses++;
         for (List<Integer> group : List.of(booleans, valued)) {
           for (int i : group) {
-            if (System.nanoTime() > end) {
+            long now = System.nanoTime();
+            if (now > end) {
               probeExhausted = true;
+              return true;
+            }
+            if (probeFailed + probeLifted == 0 && now - start > PROBE_BARREN * (end - start)) {
+              // a share of the budget gave nothing: the rest would most likely give nothing too
+              probeBarren = true;
               return true;
             }
             int outcome = isBoolean(i) ? probeBoolean(i) : probeValues(i, end);

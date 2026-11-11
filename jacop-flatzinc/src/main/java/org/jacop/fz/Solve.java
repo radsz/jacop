@@ -2083,6 +2083,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.probeNanos / 1e9
             + "\n%%%mzn-stat: lcgProbeExhausted="
             + lcg.probeExhausted
+            + "\n%%%mzn-stat: lcgProbeBarren="
+            + lcg.probeBarren
             + "\n");
   }
 
