@@ -318,6 +318,34 @@ class SingleConstraintTest {
     assertThat(b.value()).isZero();
   }
 
+  /**
+   * Two sums x + x whose results miss each other by two ulps fail at once: r - x did not narrow x
+   * by itself, so x lost an ulp per pass and the node took about 10^14 passes to fail
+   * (FloatPropagationFuzzTest "PplusQeqR x+x & PplusQeqR x+x" with xseed 59).
+   */
+  @Test
+  void testTwiceTheSameVariableReachesItsFixpointAtOnce() {
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10),
+        () -> {
+          Store store = new Store();
+          FloatVar x = new FloatVar(store, "x", -0.2985134456065404, -0.14925672280327026);
+          FloatVar r1 = new FloatVar(store, "r1", -0.4477701684098105, -0.2985134456065405);
+          FloatVar r2 = new FloatVar(store, "r2", -0.597026891213081, -0.4477701684098107);
+          store.impose(new PplusQeqR(x, x, r1));
+          store.impose(new PplusQeqR(x, x, r2));
+          assertThat(store.consistency()).isFalse();
+        });
+
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -10, 10);
+    FloatVar r = new FloatVar(store, "r", 3, 5);
+    store.impose(new PplusQeqR(x, x, r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isCloseTo(1.5, offset(1e-12));
+    assertThat(x.max()).isCloseTo(2.5, offset(1e-12));
+  }
+
   @Test
   void testMultiplicationWithProductSameAsFactor() {
     // p * q = p was propagated as q = 1, which loses p = 0 with any q
