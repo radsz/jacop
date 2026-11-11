@@ -2809,17 +2809,21 @@ public class LinearRelaxation extends Constraint
     IntVar[] vars = new IntVar[size];
     long[] w = new long[size];
     long[] neg = new long[size];
+    // the lower inequality is negated, and the negation of Long.MIN_VALUE is itself: a multiplier
+    // of -2^40 on a weight of 2^23 kept the sign of that weight and made an invalid inequality
+    boolean negates = g.hasLower() && lower != Long.MIN_VALUE;
     for (int k = 0, m = 0; k < columns.length; k++) {
       int j = columns[k];
       if (coef[k] != 0 && !lpOnly[j]) {
         vars[m] = x[j];
         w[m] = coef[k];
+        negates &= coef[k] != Long.MIN_VALUE;
         neg[m++] = -coef[k];
       }
     }
     return new LinearForm[] {
       g.hasUpper() ? new LinearForm(vars, w, upper, LinearForm.LE) : null,
-      g.hasLower() ? new LinearForm(vars, neg, -lower, LinearForm.LE) : null
+      negates ? new LinearForm(vars, neg, -lower, LinearForm.LE) : null
     };
   }
 
