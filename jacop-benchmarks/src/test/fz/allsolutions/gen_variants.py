@@ -2,6 +2,7 @@
 hi + d (d in -1..1, never below lo), from seed 11 on constants of constraints move by one too,
 from seed 68 on lower bounds move by -1..1 as well and so do the values of constant arrays,
 from seed 141 on a comparison of a constraint line may change into another (<=, <, >=, >, =, !=),
+from seed 171 on one side constraint (forall, exists, sum or a comparison, never a global) may be dropped,
 flattened with JaCoP's and MiniZinc's std library.
 Usage: MZN=minizinc MZN_SOLVER_PATH=... gen_variants.py SEED COUNT OUTDIR, then run
 AllSolutionsSuite with -Dsuite.roots=gen=OUTDIR (see decomposition/README.md)."""
@@ -48,6 +49,14 @@ for k in range(count * 3):
             return f' {rnd.choice(ops)} ' if rnd.random() < 0.3 else mt.group(0)
         new = '\n'.join(re.sub(r' (<=|>=|!=|<|>|=) ', swap, l) if l.startswith('constraint') else l
                         for l in new.split('\n'))
+    if seed >= 171 and rnd.random() < 0.5:
+        # from seed 171 on, drop one side constraint so the global meets looser contexts
+        lines = new.split('\n')
+        side = [i for i, l in enumerate(lines)
+                if l.rstrip().endswith(';') and re.match(r'constraint\s+(forall|exists|sum\b|[a-z]\w*\s*(\[|<|>|=|!|\+|-|\*))', l)]
+        if len(side) > 0:
+            del lines[rnd.choice(side)]
+            new = '\n'.join(lines)
     if new == src:
         continue
     name = f'{m}_s{seed}_{k}'
