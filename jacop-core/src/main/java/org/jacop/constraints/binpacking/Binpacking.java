@@ -483,7 +483,7 @@ public class Binpacking extends Constraint
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
-  private IntervalDomain collectChangedDomains() {
+  private IntervalDomain collectChangedDomains(int level) {
     IntervalDomain d = new IntervalDomain();
     while (!binQueue.isEmpty()) {
       Iterator<IntVar> it = binQueue.iterator();
@@ -496,6 +496,16 @@ public class Binpacking extends Constraint
       Iterator<IntVar> it = itemQueue.iterator();
       IntVar v = it.next();
       it.remove();
+      // a bin changes only when an item leaves it or is fixed in it; the bins an item may still
+      // take, and took before, are at the fixpoint of their rules already
+      IntDomain removed = v.dom().recentDomainPruning(level);
+      if (!removed.isEmpty()) {
+        d.addDom(removed);
+        if (v.singleton()) {
+          d.addDom(v.dom());
+        }
+        continue;
+      }
       IntDomain pd = v.dom().getPreviousDomain();
       if (pd != null) {
         d.addDom(pd);
@@ -677,7 +687,7 @@ public class Binpacking extends Constraint
   public void consistency(Store store) {
     applyPackAllRule(store);
     todo.clear();
-    IntervalDomain d = collectChangedDomains();
+    IntervalDomain d = collectChangedDomains(store.level);
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
       if (i >= 0 && i < load.length) {
