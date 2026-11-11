@@ -2063,8 +2063,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.probeFailed
             + "\n%%%mzn-stat: lcgProbeLifted="
             + lcg.probeLifted
+            + "\n%%%mzn-stat: lcgProbeFixedBefore="
+            + lcg.probeFixedBefore
             + "\n%%%mzn-stat: lcgProbeFixedBooleans="
             + lcg.probeFixedBooleans
+            + "\n%%%mzn-stat: lcgProbeValueVariables="
+            + lcg.probeValueVariables
+            + "\n%%%mzn-stat: lcgProbeValues="
+            + lcg.probeValues
+            + "\n%%%mzn-stat: lcgProbeValuesRemoved="
+            + lcg.probeValuesRemoved
             + "\n%%%mzn-stat: lcgProbeEquivalences="
             + lcg.probeEquivalences
             + "\n%%%mzn-stat: lcgProbeExclusions="
