@@ -43,6 +43,7 @@ import java.util.NoSuchElementException;
 import java.util.Random;
 import java.util.TreeSet;
 import org.jacop.constraints.XneqC;
+import org.jacop.core.AffineView;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Interval;
@@ -930,6 +931,50 @@ class IntDomainTest {
     store.impose(new XneqC(x, 100));
     assertThat(store.consistency()).isTrue();
     assertThat(x.dom()).hasToString("{0..10}");
+  }
+
+  @Test
+  void cachedSizeFollowsChangesAndBacktracking() {
+    // IntVar keeps the size of its domain once counted; holes (ANY), bound changes and
+    // backtracking must each make it count again, for every domain class
+    Store store = new Store();
+    IntDomain[] domains = {
+      new IntervalDomain(0, 200), new SmallDenseDomain(0, 50), new IntervalDomain(-1000, 1000)
+    };
+    for (IntDomain d : domains) {
+      IntVar x = new IntVar(store, "x" + d.getSize(), d);
+      int n = x.getSize();
+      store.setLevel(store.level + 1);
+      x.domain.inComplement(store.level, x, 10);
+      assertThat(x.getSize()).isEqualTo(n - 1);
+      x.domain.in(store.level, x, 5, 40);
+      assertThat(x.getSize()).isEqualTo(35);
+      store.setLevel(store.level + 1);
+      x.domain.inComplement(store.level, x, 20);
+      assertThat(x.getSize()).isEqualTo(34);
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+      assertThat(x.getSize()).isEqualTo(35);
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+      assertThat(x.getSize()).isEqualTo(n).isEqualTo(x.dom().getSize());
+    }
+  }
+
+  @Test
+  void viewSizeFollowsItsBase() {
+    // a view gets no events of its own: its size must come from the base, not from a cached count
+    Store store = new Store();
+    IntVar base = new IntVar(store, "base", 0, 100);
+    IntVar view = new AffineView(store, "view", base, 3, 1);
+    assertThat(view.getSize()).isEqualTo(101);
+    store.setLevel(store.level + 1);
+    base.domain.in(store.level, base, 10, 20);
+    base.domain.inComplement(store.level, base, 15);
+    assertThat(view.getSize()).isEqualTo(10);
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    assertThat(view.getSize()).isEqualTo(101);
   }
 
   @Test

@@ -32,6 +32,7 @@
 package org.jacop.jasat.lcg;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -499,8 +500,7 @@ public final class CoreSearch {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       threshold = maxWeightBelow(Long.MAX_VALUE);
-      startWork = sat.work();
-      startBound = lowerBound;
+      start(sat.work());
     }
     while (true) {
       if (!relaxTrueAtRoot()) {
@@ -908,15 +908,93 @@ public final class CoreSearch {
    * seconds of work (see {@link LcgSolver#WORK_PER_MS}); for example when each core of two terms
    * with large domains raises it by 1. Branch and bound then gets the time. The rate is taken since
    * the start, not over the last seconds, so that a few slow cores near the optimum do not end the
-   * phase.
+   * phase. Once a share {@link #STALL} of the run's work after the phase's start is done, the same
+   * test is also made at the rate over the second half of the phase's work: a bound that rose fast
+   * at first, often from a far initial bound, and then stalls does not keep the phase to the end.
    */
   private boolean tooSlow() {
     // only once the phase has a solution of its own: a poor one from branch and bound before it
     // would stop the phase before its strata find better ones
-    return sat.work() - startWork >= RATE_WINDOW
-        && stratumSolutions > 0
-        && lcg.bestObjective() != Long.MAX_VALUE
-        && !rising();
+    boolean ready =
+        sat.work() - startWork >= RATE_WINDOW
+            && stratumSolutions > 0
+            && lcg.bestObjective() != Long.MAX_VALUE;
+    if (STALL > 0) {
+      sample(sat.work());
+    }
+    if (!ready) {
+      return false;
+    }
+    if (!rising()) {
+      return true;
+    }
+    if (STALL > 0 && stalled(sat.work(), lcg.workEnd(), lcg.boundObjective())) {
+      stallStops++;
+      return true;
+    }
+    return false;
+  }
+
+  /** Statistics: the phases ended because the bound stalled over their second half. */
+  public long stallStops;
+
+  // the share of the run's work after the phase's start before the bound's rate over the second
+  // half of the phase is tested, 0 never; 0.1: work-task-variation 2025 seed-8 proves its optimum
+  // after a stall of 20 s that a test from the start would end, community-detection 2026 and
+  // javarouting trip_7_2 stall for good after 12 s and 330 s
+  static final double STALL = Double.parseDouble(System.getProperty("jacop.lcg.coreStall", "0.1"));
+
+  // the solver's work and the lower bound at each test of the phase's rate, and the last sample at
+  // or before the half of the phase's work (whose point only moves forward)
+  private long[] sampleWork = new long[16];
+  private long[] sampleBound = new long[16];
+  private int samples;
+  private int half;
+
+  /** Starts the phase's rates at the given work of the solver and the lower bound now. */
+  void start(long work) {
+    startWork = work;
+    startBound = lowerBound;
+  }
+
+  /** Records the given work of the solver and the lower bound now for {@link #stalled}. */
+  void sample(long work) {
+    if (samples == sampleWork.length) {
+      sampleWork = Arrays.copyOf(sampleWork, 2 * samples);
+      sampleBound = Arrays.copyOf(sampleBound, 2 * samples);
+    }
+    sampleWork[samples] = work;
+    sampleBound[samples] = lowerBound;
+    samples++;
+  }
+
+  /**
+   * Whether the lower bound, at three times its rate over the second half of the phase's work,
+   * would not meet the best solution before the end of the run; false before a share {@link #STALL}
+   * of the run's work after the phase's start is done, and without an end of the run. The calls
+   * come with work that never decreases.
+   *
+   * @param now the solver's work now
+   * @param end the solver's work at the end of the run, Long.MAX_VALUE without one
+   * @param best the objective of the best solution
+   * @return whether the bound stalled
+   */
+  boolean stalled(long now, long end, long best) {
+    if (end == Long.MAX_VALUE || now - startWork < STALL * (end - startWork)) {
+      return false;
+    }
+    long from = now - (now - startWork) / 2;
+    while (half + 1 < samples && sampleWork[half + 1] <= from) {
+      half++;
+    }
+    long w = startWork;
+    long b = startBound;
+    if (samples > 0 && sampleWork[half] <= from) {
+      w = sampleWork[half];
+      b = sampleBound[half];
+    }
+    double rate = (double) (lowerBound - b) / Math.max(1, now - w);
+    return RATE_SLACK * rate * (end - now) < best - lowerBound;
   }
 
   /**
