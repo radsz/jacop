@@ -2604,8 +2604,62 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        printLcgUse(lcg);
       }
     }
+  }
+
+  /**
+   * Prints, with the system property {@code jacop.lcg.use}, per constraint class the atoms LCG
+   * pushed, the reasons built for them by the part of the analysis that asked (analysis,
+   * minimisation, shrinking, other) with those of minimisation and shrinking that removed literals,
+   * the milliseconds explaining, the failures explained and the average atoms of a reason; then the
+   * milliseconds of propagation.
+   */
+  private void printLcgUse(LcgSolver solver) {
+    if (!Boolean.getBoolean("jacop.lcg.use")) {
+      return;
+    }
+    StringBuilder out = new StringBuilder();
+    for (Map.Entry<String, long[]> e : solver.useStatistics().entrySet()) {
+      long[] n = e.getValue();
+      long built =
+          n[LcgSolver.USE_BUILT]
+              + n[LcgSolver.USE_BUILT + 1]
+              + n[LcgSolver.USE_BUILT + 2]
+              + n[LcgSolver.USE_BUILT + 3];
+      out.append("%% lcg-use ")
+          .append(e.getKey())
+          .append(": pushed=")
+          .append(n[LcgSolver.USE_PUSHED])
+          .append(" analysis=")
+          .append(n[LcgSolver.USE_BUILT])
+          .append(" minimise=")
+          .append(n[LcgSolver.USE_USED])
+          .append('/')
+          .append(n[LcgSolver.USE_BUILT + 1])
+          .append(" shrink=")
+          .append(n[LcgSolver.USE_USED + 1])
+          .append('/')
+          .append(n[LcgSolver.USE_BUILT + 2])
+          .append(" other=")
+          .append(n[LcgSolver.USE_BUILT + 3])
+          .append(" reasonMs=")
+          .append(n[LcgSolver.USE_NANOS] / 1_000_000)
+          .append(" failures=")
+          .append(n[LcgSolver.USE_FAILURES])
+          .append(" failureMs=")
+          .append(n[LcgSolver.USE_FAILURES + 1] / 1_000_000)
+          .append(" avgAtoms=")
+          .append(nf.format(built == 0 ? 0 : (double) n[LcgSolver.USE_ATOMS] / built))
+          .append('\n');
+    }
+    out.append("%% lcg-use-time: propagateMs=")
+        .append(solver.propagateNanos() / 1_000_000)
+        .append(" conflicts=")
+        .append(solver.sat().conflicts)
+        .append('\n');
+    IO.print(out.toString());
   }
 
   /**
@@ -3901,6 +3955,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
+          printLcgUse(slowLcg);
         }
       }
       return;

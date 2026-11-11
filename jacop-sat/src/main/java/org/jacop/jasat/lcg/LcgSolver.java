@@ -230,6 +230,41 @@ public final class LcgSolver implements ExternalPropagator {
   private ExplanationChecker checker;
   private final Map<String, long[]> explanationCounts = new TreeMap<>();
 
+  // the system property jacop.lcg.use: count per constraint class the atoms it pushed, the reasons
+  // built for them by the part of the analysis that asked, whether those of minimisation and
+  // shrinking were used, and the time spent explaining; a measurement that changes no search
+  private final boolean useCounts = Boolean.getBoolean("jacop.lcg.use");
+  private final Map<Class<?>, long[]> useByClass = new IdentityHashMap<>();
+  // per solver variable, the counts of the class whose reason was last built for it
+  private long[][] useOfReason = new long[0][];
+  // nanoseconds in store consistency inside propagate, with useCounts
+  private long propagateNanos;
+
+  /** Index of the atoms a class pushed in {@link #useStatistics}. */
+  public static final int USE_PUSHED = 0;
+
+  /** Index of the reasons built, by context from {@link #USE_BUILT}, in {@link #useStatistics}. */
+  public static final int USE_BUILT = 1;
+
+  /** Index of the minimisation reasons used, then the shrink ones, in {@link #useStatistics}. */
+  public static final int USE_USED = 5;
+
+  /** Index of the nanoseconds spent building reasons in {@link #useStatistics}. */
+  public static final int USE_NANOS = 7;
+
+  /** Index of the failures explained, then their nanoseconds, in {@link #useStatistics}. */
+  public static final int USE_FAILURES = 8;
+
+  /** Index of the atoms in the reasons built in {@link #useStatistics}. */
+  public static final int USE_ATOMS = 10;
+
+  private static final int USE_SIZE = 11;
+
+  private long[] useOf(Constraint c) {
+    return useByClass.computeIfAbsent(
+        c == null ? Void.class : c.getClass(), k -> new long[USE_SIZE]);
+  }
+
   // every this many explanations one is minimised (see ExplanationChecker#minimise), 0 for none
   private final int minimality = Integer.getInteger("jacop.lcg.minimality", 0);
   private ExplanationMinimality minimiser;
@@ -543,6 +578,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (minimality > 0) {
       minimiser = new ExplanationMinimality(trail);
     }
+    sat.setReasonOutcomes(useCounts);
     if (!"off".equals(linearMode)) {
       linear =
           new LinearConflict(
@@ -4905,6 +4941,9 @@ public final class LcgSolver implements ExternalPropagator {
           atomLiterals++;
         }
         atomsPropagated++;
+        if (useCounts) {
+          useOf(trail.reason(e))[USE_PUSHED]++;
+        }
         return lit;
       }
       if (numPending == 0 && !store.hasPendingConstraints()) {
@@ -4930,14 +4969,25 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
       numPending = 0;
-      if (!store.consistency()) {
+      long start = useCounts ? System.nanoTime() : 0;
+      boolean consistent = store.consistency();
+      if (useCounts) {
+        propagateNanos += System.nanoTime() - start;
+      }
+      if (!consistent) {
         constraintConflicts++;
         EntryList atoms = failureAtoms;
         atoms.clear();
         if (linear != null) {
           learnLinear(linear.analyse(store.recentlyFailedConstraint, store.level));
         }
+        long failStart = useCounts ? System.nanoTime() : 0;
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
+        if (useCounts) {
+          long[] use = useOf(store.recentlyFailedConstraint);
+          use[USE_FAILURES]++;
+          use[USE_FAILURES + 1] += System.nanoTime() - failStart;
+        }
         if (PROOF_TRACE && proof != null) {
           proof.comment((own ? "failure " : "generic failure ") + store.recentlyFailedConstraint);
         }
@@ -5059,6 +5109,62 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public Map<String, long[]> minimalityStatistics() {
     return minimalityCounts;
+  }
+
+  private void countReason(int lit, int e, int atoms, long nanos) {
+    long[] use = useOf(trail.reason(e));
+    use[USE_BUILT + sat.reasonContext()]++;
+    use[USE_NANOS] += nanos;
+    use[USE_ATOMS] += atoms;
+    int v = Math.abs(lit);
+    if (v >= useOfReason.length) {
+      useOfReason = Arrays.copyOf(useOfReason, Math.max(v + 1, 2 * useOfReason.length));
+    }
+    useOfReason[v] = use;
+  }
+
+  @Override
+  public void reasonOutcome(int lit, boolean used) {
+    int v = Math.abs(lit);
+    long[] use = v < useOfReason.length ? useOfReason[v] : null;
+    if (use != null && used) {
+      use[USE_USED + sat.reasonContext() - CdclSolver.REASON_MINIMISE]++;
+    }
+  }
+
+  /**
+   * Returns, with the system property {@code jacop.lcg.use}, per constraint class (simple name,
+   * "none" for atoms of solver literals) the counts at the {@code USE_} indices: atoms pushed;
+   * reasons built in analysis, minimisation, shrinking and otherwise; minimisation and shrink
+   * reasons that removed literals; nanoseconds building reasons; failures explained and their
+   * nanoseconds; atoms in the reasons built.
+   *
+   * @return the counts per class, empty without the property
+   */
+  public Map<String, long[]> useStatistics() {
+    Map<String, long[]> out = new TreeMap<>();
+    for (Map.Entry<Class<?>, long[]> en : useByClass.entrySet()) {
+      out.merge(
+          en.getKey() == Void.class ? "none" : en.getKey().getSimpleName(),
+          en.getValue().clone(),
+          (a, b) -> {
+            for (int k = 0; k < a.length; k++) {
+              a[k] += b[k];
+            }
+            return a;
+          });
+    }
+    return out;
+  }
+
+  /**
+   * Returns the nanoseconds spent in store consistency inside propagation, with the system property
+   * {@code jacop.lcg.use}.
+   *
+   * @return the nanoseconds, 0 without the property
+   */
+  public long propagateNanos() {
+    return propagateNanos;
   }
 
   /**
@@ -5227,6 +5333,7 @@ public final class LcgSolver implements ExternalPropagator {
     EntryList reason = reasonEntries;
     reason.clear();
     liftBefore = sat.trailPosition(lit);
+    long start = useCounts ? System.nanoTime() : 0;
     int extra;
     try {
       extra = explainEntry(e, reason);
@@ -5235,6 +5342,9 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } finally {
       liftBefore = Integer.MAX_VALUE;
+    }
+    if (useCounts) {
+      countReason(lit, e, reason.size(), System.nanoTime() - start);
     }
     int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
     clause[0] = lit;

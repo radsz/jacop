@@ -808,6 +808,49 @@ public final class CdclSolver {
     externalReasonKeep = Math.max(2, size);
   }
 
+  /** Context of a reason asked for by conflict analysis: the reason is resolved on. */
+  public static final int REASON_ANALYSIS = 0;
+
+  /** Context of a reason asked for by recursive minimisation of the learnt clause. */
+  public static final int REASON_MINIMISE = 1;
+
+  /** Context of a reason asked for by shrinking a level of the learnt clause to its UIP. */
+  public static final int REASON_SHRINK = 2;
+
+  /** Context of any other reason: a conflict, assumptions, a proof of a root fact. */
+  public static final int REASON_OTHER = 3;
+
+  // the part of the analysis that asks for external reasons, for reasonContext()
+  private int reasonContext = REASON_OTHER;
+
+  // whether the external propagator is told which minimisation and shrink reasons were used
+  private boolean reasonOutcomes;
+
+  // the external literals whose reasons one shrink step asked for, for their outcome
+  private int[] shrinkAsked = new int[16];
+  private int numShrinkAsked;
+
+  /**
+   * Tells the external propagator, through {@link ExternalPropagator#reasonOutcome}, whether each
+   * reason asked for by minimisation or shrinking removed literals of the learnt clause. A
+   * measurement: it changes no search.
+   *
+   * @param on whether to report the outcomes
+   */
+  public void setReasonOutcomes(boolean on) {
+    reasonOutcomes = on;
+  }
+
+  /**
+   * Returns what the solver asks an external reason for while it asks: one of {@link
+   * #REASON_ANALYSIS}, {@link #REASON_MINIMISE}, {@link #REASON_SHRINK} and {@link #REASON_OTHER}.
+   *
+   * @return the context of the reason being asked for
+   */
+  public int reasonContext() {
+    return reasonContext;
+  }
+
   /**
    * Passes each clause learnt from now on that has at most the given size and LBD to the external
    * propagator's {@link ExternalPropagator#notifyLearnt}, for other solvers to import.
@@ -1596,7 +1639,9 @@ public final class CdclSolver {
         }
       }
       p = trail[index--];
+      reasonContext = REASON_ANALYSIS;
       ref = reasonRef(p >> 1);
+      reasonContext = REASON_OTHER;
       seen[p >> 1] = 0;
       pathCount--;
       if (notifying) {
@@ -1617,6 +1662,7 @@ public final class CdclSolver {
       abstractLevels |= 1 << (level[learnt[i] >> 1] & 31);
     }
     int j = 1;
+    reasonContext = REASON_MINIMISE;
     for (int i = 1; i < learntSize; i++) {
       int v = learnt[i] >> 1;
       if (reason[v] == NO_REASON || !redundant(learnt[i], abstractLevels)) {
@@ -1625,8 +1671,10 @@ public final class CdclSolver {
     }
     learntSize = j;
     if (shrink && learntSize > 2) {
+      reasonContext = REASON_SHRINK;
       shrinkLearnt();
     }
+    reasonContext = REASON_OTHER;
     if (notifying && learntSize > 1) {
       minimizeExternally();
     }
@@ -1785,7 +1833,11 @@ public final class CdclSolver {
       while (start > 0 && (int) (shrinkKeys[start - 1] >>> 32) == lvl) {
         start--;
       }
+      numShrinkAsked = 0;
       int uip = end - start > 1 ? blockUip(lvl, start, end) : -1;
+      for (int k = 0; k < numShrinkAsked; k++) {
+        external.reasonOutcome(toDimacs(shrinkAsked[k]), uip >= 0);
+      }
       if (uip >= 0) {
         learnt[j++] = uip ^ 1;
       } else {
@@ -1819,6 +1871,12 @@ public final class CdclSolver {
       }
       if (--open == 0) {
         return t;
+      }
+      if (reasonOutcomes && reason[v] == EXTERNAL_REASON) {
+        if (numShrinkAsked == shrinkAsked.length) {
+          shrinkAsked = Arrays.copyOf(shrinkAsked, 2 * numShrinkAsked);
+        }
+        shrinkAsked[numShrinkAsked++] = t;
       }
       int r = reasonRef(v);
       if (r == NO_REASON || r == UNIT_REASON) {
@@ -1889,6 +1947,16 @@ public final class CdclSolver {
   }
 
   private boolean antecedentsRemovable(int v, int abstractLevels, int depth) {
+    if (reasonOutcomes && reason[v] == EXTERNAL_REASON) {
+      int lit = vals[2 * v] > 0 ? 2 * v : 2 * v + 1;
+      boolean removable = antecedentsRemovableAsked(v, abstractLevels, depth);
+      external.reasonOutcome(toDimacs(lit), removable);
+      return removable;
+    }
+    return antecedentsRemovableAsked(v, abstractLevels, depth);
+  }
+
+  private boolean antecedentsRemovableAsked(int v, int abstractLevels, int depth) {
     int r = reasonRef(v);
     if (r == UNIT_REASON) {
       return true;
