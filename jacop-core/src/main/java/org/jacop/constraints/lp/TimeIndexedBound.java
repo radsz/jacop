@@ -109,7 +109,9 @@ public final class TimeIndexedBound extends Constraint
   private static final long ALLOWANCE =
       Long.getLong("org.jacop.lp.timeIndexed.allowance", 1000L) * 1_000_000L;
 
-  // the time of one solve at most, in milliseconds
+  // the time of one solve at most, in milliseconds: the first, at the root, and the later ones
+  private static final long FIRST_MS = Long.getLong("org.jacop.lp.timeIndexed.firstMs", 10_000L);
+
   private static final long SOLVE_MS = Long.getLong("org.jacop.lp.timeIndexed.solveMs", 3000L);
 
   // the pivots between two checks of the time
@@ -405,7 +407,7 @@ public final class TimeIndexedBound extends Constraint
     precedences(p, lo, hi, widths, buckets);
     lastColumns = p.columns();
     lastRows = p.rowLo.size();
-    return p.bound(maximize);
+    return p.bound(maximize, solvedOnce ? SOLVE_MS : FIRST_MS);
   }
 
   // the smallest bucket width that keeps the columns and window nonzeros of a resource in the caps
@@ -652,6 +654,9 @@ public final class TimeIndexedBound extends Constraint
     for (int k = 0; k < xs.length; k++) {
       int j = index.get(xs[k]);
       long w = sign * ws[k];
+      if (w == 0) {
+        continue;
+      }
       long limit;
       try {
         limit = Math.addExact(parts[k], room);
@@ -736,7 +741,7 @@ public final class TimeIndexedBound extends Constraint
     }
 
     // the exact bound of the program in the minimized direction (column 0, negated when maximizing)
-    long bound(boolean maximize) {
+    long bound(boolean maximize, long millis) {
       int m = rowLo.size();
       int n = columns();
       int[][] cs = rowCols.toArray(new int[0][]);
@@ -754,7 +759,7 @@ public final class TimeIndexedBound extends Constraint
         lp.setBounds(j, colLo.get(j), colHi.get(j));
       }
       // in slices of pivots, until the time of one solve is up
-      long deadline = System.nanoTime() + SOLVE_MS * 1_000_000L;
+      long deadline = System.nanoTime() + millis * 1_000_000L;
       int status = RevisedDualSimplex.LIMIT;
       for (int done = 0; done < PIVOTS && status == RevisedDualSimplex.LIMIT; done += SLICE) {
         status = lp.solve(SLICE);
