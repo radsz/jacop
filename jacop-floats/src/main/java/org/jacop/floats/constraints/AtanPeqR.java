@@ -71,12 +71,15 @@ public class AtanPeqR extends TanPeqR {
 
       p.domain.in(
           store.level, p, FloatDomain.down(Math.atan(q.min())), FloatDomain.up(Math.atan(q.max())));
+      // tan multiplies the rounding of a bound by 1 + q^2 (tan(atan(2)) is 1.9999999999999996),
+      // so it is taken one step outside the bound, at which the preimage covers every q whose
+      // rounded atan is the bound
+      double pMin = FloatDomain.down(p.min());
+      double pMax = FloatDomain.up(p.max());
       double qMin =
-          p.min() <= -FloatDomain.PI / 2
-              ? -FloatDomain.MAX_FLOAT
-              : FloatDomain.down(Math.tan(p.min()));
+          pMin <= -FloatDomain.PI / 2 ? -FloatDomain.MAX_FLOAT : FloatDomain.down(Math.tan(pMin));
       double qMax =
-          p.max() >= FloatDomain.PI / 2 ? FloatDomain.MAX_FLOAT : FloatDomain.up(Math.tan(p.max()));
+          pMax >= FloatDomain.PI / 2 ? FloatDomain.MAX_FLOAT : FloatDomain.up(Math.tan(pMax));
       q.domain.in(store.level, q, qMin, qMax);
       // with p and q the same variable, atan(x) = x shrinks the bounds towards 0 by about x^3 per
       // pass, so the loop would not reach a fixpoint in any reasonable time; search splits instead

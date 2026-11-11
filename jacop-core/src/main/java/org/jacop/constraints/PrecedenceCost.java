@@ -160,13 +160,12 @@ public class PrecedenceCost extends Constraint
   private final long[] flowOut;
   private final long[] pointBuffer;
 
-  // the box of the last solve of propagation, its bound, and the maximum of the cost last filtered
-  // with; an explanation solves again and invalidates the flow
+  // the box of the last solve of propagation and its bound; an explanation solves again and
+  // invalidates the flow
   private final long[] solvedLo;
   private final long[] solvedHi;
   private long solvedBound;
   private boolean graphValid;
-  private long filteredMax;
 
   // the certificates of the last propagation: of the bound of the cost, and per task 2 * i (its
   // lower bound) and 2 * i + 1 (its upper bound), so an explanation needs no solve
@@ -853,11 +852,9 @@ public class PrecedenceCost extends Constraint
       long bound;
       if (graphValid && insideSolvedBox()) {
         // the optimum of a larger box is in this one, so it is still optimal and the flow of that
-        // solve still certifies the bound and the reduced costs
+        // solve still certifies the bound and the reduced costs; that solve may be of a node that
+        // failed on it, or its filtering undone by backtracking, so both are done again
         bound = solvedBound;
-        if (cost.max() == filteredMax) {
-          return;
-        }
       } else {
         if (!close()) {
           throw Store.failException;
@@ -876,7 +873,6 @@ public class PrecedenceCost extends Constraint
         costReason = certificate(-1, 0, Long.MIN_VALUE, bound, 0);
         cost.domain.inMin(store.level, cost, (int) bound);
       }
-      filteredMax = cost.max();
       changed = filter(store, bound);
     } while (changed);
   }

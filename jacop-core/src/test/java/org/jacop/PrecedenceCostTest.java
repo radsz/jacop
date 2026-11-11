@@ -104,6 +104,37 @@ class PrecedenceCostTest {
     assertFalse(store.consistency());
   }
 
+  /**
+   * A node whose box costs more than the maximum fails again after backtracking: the solve of the
+   * failed node was kept as the last one, and the same box later took its bound without comparing
+   * it with the maximum (LcgFuzzTest seed 6444962 with holes, where CostRegular fixed the starts at
+   * once and depth-first search accepted a schedule of cost 13 under a maximum of 12).
+   */
+  @Test
+  void failsAgainOnTheBoxOfAFailedNode() {
+    Store store = new Store();
+    IntVar[] s = {
+      new IntVar(store, "s0", 0, 2), new IntVar(store, "s1", 0, 4), new IntVar(store, "s2", 0, 4)
+    };
+    IntVar cost = new IntVar(store, "cost", 0, 12);
+    store.impose(
+        new PrecedenceCost(
+            s,
+            new int[][] {{0, 2, 0}},
+            new int[][] {{0, 3, 1, 2}, {1, 2, 2, 0}, {2, 3, 2, 0}},
+            cost));
+    assertTrue(store.consistency());
+    for (int node = 0; node < 2; node++) {
+      store.setLevel(store.level + 1);
+      for (IntVar x : s) {
+        x.domain.in(store.level, x, 0, 0);
+      }
+      assertFalse(store.consistency(), "node " + node);
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
+  }
+
   @Test
   void rejectsBadArguments() {
     Store store = new Store();
