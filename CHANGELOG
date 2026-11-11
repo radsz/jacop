@@ -4131,6 +4131,19 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. Large linear relaxations. A relaxation of an optimisation model over
+     the size caps of the sparse simplex (25,000 rows or 30,000 columns),
+     which was dropped, is kept up to 1,000,000 rows and 250,000 columns:
+     it is solved at the root only, its root solves (first solve, trial of
+     further rows, cut rounds) share a tenth of the time limit instead of a
+     pivot budget of about ten pivots, it is not solved again in search,
+     and under -f its root solution guides the decisions when it is large
+     by its rows. On the store x warehouse MIP form of the 2026 warehouse
+     model (117,000 rows after pair cliques; JaLP solves its root LP in
+     9.7 s, HiGHS 1.15.1 in 9.3 s), 600 s fixed search: olal41 71,811 ->
+     47,050, olil4 58,139 -> 38,354, oly20 705,184 -> 177,745.
+     -Dorg.jacop.lp.large=false keeps the old behaviour; see properties.txt.
+
 Version 4.11
 =============
 
