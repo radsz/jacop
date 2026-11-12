@@ -214,6 +214,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private static final boolean LP_GUIDE_ROOT =
       Boolean.parseBoolean(System.getProperty("jacop.lcg.lpGuideRoot", Boolean.TRUE.toString()));
 
+  // under -f the root solution of a relaxation large by its rows guides the search only when it has
+  // at least this many columns (-Dorg.jacop.lp.largeGuideColumns)
+  private static final int LARGE_GUIDE_COLUMNS =
+      Integer.getInteger("org.jacop.lp.largeGuideColumns", 10_000);
+
   // the clique rows of binary tables in the linear relaxation (-Dorg.jacop.lp.tableCliques=false
   // turns them off)
   private static final boolean TABLE_CLIQUES =
@@ -587,6 +592,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               options.lpSimplex());
     }
     if (linearRelaxation != null) {
+      linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
     }
     if (options.searchStatistics()) {
@@ -668,6 +674,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.solveNanos / 1e9
             + "\n%%%mzn-stat: lpColumns="
             + r.columns()
+            + "\n%%%mzn-stat: lpLarge="
+            + (r.largeDropped() ? "dropped" : r.large())
             + "\n%%%mzn-stat: lpPivotWork="
             + r.pivotWork()
             + "\n%%%mzn-stat: lpSimplexRows="
@@ -2197,14 +2205,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // it in 60 s. Under -f also on when the relaxation has the subtour elimination cuts of trees,
     // whose root solution is often the optimum (surface-based-tsp berlin52: -f finds it in 2 s with
     // them, in 13-50 s without); in fixed search the activity runs it guides slowed berlin52 down
-    // (149 s instead of 60 s)
+    // (149 s instead of 60 s). Under -f also on for a relaxation large by its rows, which is solved
+    // at the root only (the store x warehouse MIP form of the 2026 warehouse olal41: 45,340 in
+    // 240 s with it, 65,651 without the relaxation); not for one large by its columns only
+    // (rcpsp-wet-diverse j60_19_6, 682 rows and 140,186 columns: no solution with it in 240 s),
+    // nor for one with few columns (triangular 2015-2024, 36k-101k rows over 408-782 columns:
+    // worse on 4 of 7 in 600 s with it, better on 2)
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
                 || "auto".equals(lpBranching)
                     && (linearRelaxation.simplexValueColumns() > 0
-                        || free && linearRelaxation.treeConstraints() > 0));
+                        || free && linearRelaxation.treeConstraints() > 0
+                        || free
+                            && linearRelaxation.largeByRows()
+                            && linearRelaxation.columns() >= LARGE_GUIDE_COLUMNS));
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);

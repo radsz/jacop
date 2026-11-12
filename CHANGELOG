@@ -4131,7 +4131,26 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
-241. The default search branches on set variables in input order, smallest
+241. Large linear relaxations. A relaxation of an optimisation model over
+     the size caps of the sparse simplex (25,000 rows or 30,000 columns),
+     which was dropped, is kept up to 1,000,000 rows and 250,000 columns:
+     it is solved at the root only, its root solves (first solve, trial of
+     further rows, cut rounds) share a tenth of the time limit instead of a
+     pivot budget of about ten pivots, and it is not solved again in
+     search. Under -f its root solution guides the decisions when it is
+     large by its rows and has at least 10,000 columns (the guide lost on
+     triangular, 36,000-101,000 rows over 408-782 columns). A large
+     relaxation whose root bound does not cut the domain of the objective
+     is removed after its root solve: woken in search for nothing, it
+     halved the conflicts of LCG under -f on cable-tree-wiring A073 (bound
+     -198), which then found no solution in 600 s. On the store x
+     warehouse MIP form of the 2026 warehouse model (117,000 rows after
+     pair cliques; JaLP solves its root LP in 9.7 s, HiGHS 1.15.1 in
+     9.3 s), 600 s fixed search: olal41 71,811 -> 47,050, olil4 58,139 ->
+     38,354, oly20 705,184 -> 177,745. -Dorg.jacop.lp.large=false keeps
+     the old behaviour; see properties.txt.
+
+242. The default search branches on set variables in input order, smallest
      element in first, as JaCoP 4 did: free search (-f, or a model
      without search annotation) picked the set with the largest failure
      count and degree, and the branching that LCG free search alternates
