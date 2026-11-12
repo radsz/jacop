@@ -4234,6 +4234,16 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+249. VarIntMap, the map from variables to positions that LexOrder, LexChain,
+     LinearBool, GlobalCardinality, Nooverlap, ExtensionalSupportStr and
+     the restart nogoods of free search use, hashed a variable by its store
+     index. Boolean variables are not in the store's array and all have
+     index -1, so every boolean started probing from the same slot and a
+     lookup scanned all the booleans of the map. They are now hashed by
+     their name. The symmetry breaking LexOrder of still-life-wastage 13
+     (1,369 positions over booleans) spent 15-20 % of the search in this
+     scan; it now solves in 43 s instead of 54 s with the same nodes.
+
 Version 4.11
 =============
 
