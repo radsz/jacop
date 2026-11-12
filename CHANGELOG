@@ -4234,6 +4234,14 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+248. LazyBitSetDomain, for domains of 65,536 values or more, keeps its holes
+   as sorted intervals and found the interval of a value by binary search
+   on every query. It now tries the interval found last and the next one
+   first. A time table sweep probes the starts of each task in increasing
+   order, mostly in already removed ranges, so the binary search took 30 %
+   of the time of largescheduling instance-1600-2 with free search; that
+   instance now explores 1.6-1.8x more nodes in 240 s. Pruning is the same.
+
 Version 4.11
 =============
 
