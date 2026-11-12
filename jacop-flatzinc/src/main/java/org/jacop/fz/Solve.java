@@ -72,6 +72,7 @@ import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -223,6 +224,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the clique rows of binary tables in the linear relaxation (-Dorg.jacop.lp.tableCliques=false
   // turns them off)
+  // the time-indexed bound of the cumulative resources (TimeIndexedBound), off by default
+  private static final boolean TIME_INDEXED = Boolean.getBoolean("org.jacop.lp.timeIndexed");
+
+  private TimeIndexedBound timeIndexedBound;
+
   private static final boolean TABLE_CLIQUES =
       !"false".equals(System.getProperty("org.jacop.lp.tableCliques"));
   // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
@@ -648,6 +654,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (linearRelaxation != null) {
       linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
+      if (TIME_INDEXED && objective != null) {
+        timeIndexedBound =
+            TimeIndexedBound.of(store, objective, maximize, linearRelaxation.allRows());
+        if (timeIndexedBound != null) {
+          store.impose(timeIndexedBound);
+        }
+      }
     }
     if (options.searchStatistics()) {
       IO.println(
@@ -734,6 +747,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
       return;
+    }
+    TimeIndexedBound t = timeIndexedBound;
+    if (t != null) {
+      IO.println(
+          "%%%mzn-stat: tiSolves="
+              + t.solves
+              + "\n%%%mzn-stat: tiBound="
+              + t.bestBound
+              + "\n%%%mzn-stat: tiColumns="
+              + t.lastColumns
+              + "\n%%%mzn-stat: tiRows="
+              + t.lastRows
+              + "\n%%%mzn-stat: tiTime="
+              + t.seconds);
     }
     IO.println(
         "%%%mzn-stat: lpCalls="

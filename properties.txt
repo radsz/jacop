@@ -715,6 +715,18 @@ Cuts:
   root, for an objective; a model with them also takes all its other
   rows into the relaxation; default true.
 - org.jacop.lp.treeRounds: their rounds; default 200.
+- org.jacop.lp.timeIndexed: the time-indexed bound of cumulative and
+  disjunctive resources (TimeIndexedBound); default false.
+- org.jacop.lp.timeIndexed.columns, org.jacop.lp.timeIndexed.nonzeros:
+  the most time columns and window and precedence nonzeros; default
+  20000 and 500000.
+- org.jacop.lp.timeIndexed.share, org.jacop.lp.timeIndexed.allowance:
+  the share of the run time for its solves and the time allowed beyond
+  it; default 0.2 and 1000 ms.
+- org.jacop.lp.timeIndexed.firstMs, org.jacop.lp.timeIndexed.solveMs,
+  org.jacop.lp.timeIndexed.pivots: the time limit of the first and of
+  later solves and the most pivots of one solve; default 10000 ms,
+  3000 ms and 50000.
 
 Row pool and lazy rows:
 
