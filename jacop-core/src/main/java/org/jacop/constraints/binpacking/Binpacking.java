@@ -674,16 +674,9 @@ public class Binpacking extends Constraint
         }
       }
       binSize[i] = size;
-      // the candidates in the order of item, by decreasing weight, as the rules expect
-      for (int a = 1; a < candidatesLength; a++) {
-        int k = found[a];
-        int c = a - 1;
-        while (c >= 0 && found[c] > k) {
-          found[c + 1] = found[c];
-          c--;
-        }
-        found[c + 1] = k;
-      }
+      // the candidates in the order of item, by decreasing weight, as the rules expect; the scan
+      // above meets them mostly in reverse order, so an insertion sort would be quadratic here
+      Arrays.sort(found, 0, candidatesLength);
       for (int c = 0; c < candidatesLength; c++) {
         BinItem itemEl = item[found[c]];
         weights[c] = itemEl.weight();
