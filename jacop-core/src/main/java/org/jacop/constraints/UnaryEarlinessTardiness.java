@@ -1629,7 +1629,8 @@ public class UnaryEarlinessTardiness extends Constraint
       }
       for (int j = 0; j < mc.jobs; j++) {
         int i = mc.task[j];
-        if (seen[i] && owner[i] != m) {
+        if (seen[i] && owner[i] != m || owner[i] < 0) {
+          // a task no machine owns is bounded outside the machines, at its best start
           continue;
         }
         long p = durations[i];

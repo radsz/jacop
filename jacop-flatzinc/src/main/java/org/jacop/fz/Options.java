@@ -189,6 +189,8 @@ public class Options {
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                set-heuristic=input|afc (set variables: input order (default) or largest
+                accumulated failure count and degree),
                 scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),

@@ -133,6 +133,10 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
   // the number of constraint arguments each variable occurs in
   private final Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
 
+  // the weights of the late tasks in LateCount: -Dorg.jacop.fz.lateCount.weights=false counts them
+  private static final boolean WEIGHTS =
+      !OFF.equalsIgnoreCase(System.getProperty("org.jacop.fz.lateCount.weights"));
+
   // the dominance rule of LateCount where it is safe: -Dorg.jacop.fz.lateCount.dominance=false
   private static final boolean DOMINANCE =
       !OFF.equalsIgnoreCase(System.getProperty("org.jacop.fz.lateCount.dominance"));
@@ -796,7 +800,17 @@ public class WeightedCompletionDetector implements ParserTreeConstants {
         new LinearInt(list, coefficients, "==", (int) constant).setDegreeWeight(0));
     boolean dominance =
         DOMINANCE && count == n && dominanceSafe(resource, a, x, sign, threshold, term, d);
-    LateCount lc = new LateCount(starts, d, due, z, dominance);
+    // the weights of the counted tasks; a task the sum does not count is never late (due MAX)
+    int[] weight = new int[n];
+    boolean ones = true;
+    for (int t = 0; t < n; t++) {
+      weight[t] = taken[t] ? (int) Math.min(Integer.MAX_VALUE, (long) sign * a[term[t]]) : 0;
+      ones &= !taken[t] || weight[t] == 1;
+    }
+    LateCount lc =
+        dominance || ones || !WEIGHTS
+            ? new LateCount(starts, d, due, z, dominance)
+            : new LateCount(starts, d, due, weight, z);
     lc.setDegreeWeight(0);
     if (support.options.debug()) {
       FzConsole.println("% redundant " + lc);

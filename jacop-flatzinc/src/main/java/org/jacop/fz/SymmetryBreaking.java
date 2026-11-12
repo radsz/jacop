@@ -45,6 +45,7 @@ import java.util.function.Function;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.SeqPrecedeChain;
+import org.jacop.constraints.XlteqY;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -79,12 +80,24 @@ import org.jacop.presolve.GraphAutomorphisms;
  * that a generator does not move are left out, and so are those where the earlier positions, when
  * equal, already make the two variables equal.
  *
+ * <p>The generators alone leave orbits of the whole group unordered (the lex-leader constraint of
+ * the 3-cycle (x0 x1 x2) keeps x0 <= x1 but not x0 <= x2), so Schreier-Sims cuts {@code x_b <= x_j}
+ * over the orbits of the stabilizer chain are posted as well where the other constraints do not
+ * already imply them (Liberti and Ostrowski, J. Global Optim. 60, 2014; Salvagnin, CPAIOR 2018),
+ * see {@link #schreierSims}.
+ *
  * <p>A model with an argument that is not understood is left as it is.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
 final class SymmetryBreaking implements ParserTreeConstants {
+
+  /** The most Schreier-Sims cuts posted. */
+  static final int MAX_CUTS = 100_000;
+
+  /** The largest orbit size times generators walked to find the symmetry of a cut. */
+  static final long MAX_TREE_WORK = 10_000_000L;
 
   /** Graphs with more vertices are not searched. */
   static final int MAX_VERTICES = 2_000_000;
@@ -110,10 +123,23 @@ final class SymmetryBreaking implements ParserTreeConstants {
       boolean complete,
       String skipped,
       int precedences,
-      int orbitopes) {
+      int orbitopes,
+      int cuts,
+      int impliedCuts) {
 
     Outcome(int vertices, int generators, int constraints, boolean complete, String skipped) {
       this(vertices, generators, constraints, complete, skipped, 0, 0);
+    }
+
+    Outcome(
+        int vertices,
+        int generators,
+        int constraints,
+        boolean complete,
+        String skipped,
+        int precedences,
+        int orbitopes) {
+      this(vertices, generators, constraints, complete, skipped, precedences, orbitopes, 0, 0);
     }
   }
 
@@ -379,6 +405,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private final Map<Atom[], String> constantArrays = new IdentityHashMap<>();
   private final Map<Contents, String> contentKeys = new HashMap<>();
 
+  // Schreier-Sims cuts: "on" posts them, "count" only counts them, "off" skips them
+  private final String schreierSims =
+      System.getProperty("org.jacop.fz.symmetry.schreierSims", "on");
+
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;
     this.dictionary = dictionary;
@@ -601,9 +631,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
     int orbitopes = 0;
     int posted = values.posted();
     boolean descending = largest && values.posted() == 0;
+    // x <= y pairs the posted constraints compare first, which Schreier-Sims cuts need not repeat
+    List<IntVar[]> implied = new ArrayList<>();
     for (IntVar[][] columns : orbitopes(generators, varAt, rankAt)) {
       if (descending) {
         Collections.reverse(Arrays.asList(columns));
+      }
+      for (int c = 0; c + 1 < columns.length; c++) {
+        implied.add(new IntVar[] {columns[c][0], columns[c + 1][0]});
       }
       LexChain chain = new LexChain(columns);
       chain.setDegreeWeight(0);
@@ -651,6 +686,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       IntVar[] x = xs.toArray(new IntVar[0]);
       IntVar[] y = ys.toArray(new IntVar[0]);
+      implied.add(descending ? new IntVar[] {y[0], x[0]} : new IntVar[] {x[0], y[0]});
       LexOrder lex = descending ? new LexOrder(y, x, false) : new LexOrder(x, y, false);
       // added constraints do not change the static degrees that variable selections read
       lex.setDegreeWeight(0);
@@ -665,6 +701,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
       note(descending ? "lex>" : "lex<", x, y);
       posted++;
     }
+    int[] cuts =
+        schreierSims.equals("off")
+            ? new int[2]
+            : schreierSims(
+                result.generators(), varAt, rankAt, descending, implied, schreierSims.equals("on"));
+    posted += cuts[0] > 0 && schreierSims.equals("on") ? cuts[0] : 0;
     return new Outcome(
         n,
         moving,
@@ -672,7 +714,219 @@ final class SymmetryBreaking implements ParserTreeConstants {
         result.complete() && values.complete(),
         null,
         values.posted(),
-        orbitopes);
+        orbitopes,
+        cuts[0],
+        cuts[1]);
+  }
+
+  /**
+   * Posts the Schreier-Sims cuts of the variable symmetries (Liberti and Ostrowski,
+   * "Stabilizer-based symmetry breaking constraints for mathematical programs", J. Global Optim.
+   * 60, 2014; Salvagnin, "Symmetry breaking inequalities from the Schreier-Sims table", CPAIOR
+   * 2018, LNCS 10848). Each generator fixes every variable ranked before the first variable b it
+   * moves, so the generators whose first moved variable is ranked at or after b generate a group
+   * H_b that fixes them all. The lexicographically smallest solution x of its orbit then has x_b <=
+   * x_j for every j of the orbit of b under H_b: the symmetric solution that brings x_j to b is
+   * equal to x before b. The same solution satisfies every lex-leader constraint, lex chain and
+   * value precedence posted, so the cuts keep it. Cuts the posted constraints already imply through
+   * their first positions are left out.
+   *
+   * @return the cuts posted (or counted when post is false) and those left out as implied.
+   */
+  private int[] schreierSims(
+      List<GraphAutomorphisms.Permutation> generators,
+      IntVar[] varAt,
+      int[] rankAt,
+      boolean descending,
+      List<IntVar[]> implied,
+      boolean post) {
+    // the generators by the rank of the first variable they move
+    TreeMap<Integer, List<GraphAutomorphisms.Permutation>> byFirst = new TreeMap<>();
+    Map<Integer, Integer> baseAt = new HashMap<>();
+    for (GraphAutomorphisms.Permutation g : generators) {
+      int first = -1;
+      for (int v : g.points()) {
+        if (varAt[v] != null
+            && varAt[g.image(v)] != null
+            && (first < 0 || rankAt[v] < rankAt[first])) {
+          first = v;
+        }
+      }
+      if (first >= 0) {
+        byFirst.computeIfAbsent(rankAt[first], r -> new ArrayList<>()).add(g);
+        baseAt.put(rankAt[first], first);
+      }
+    }
+    if (byFirst.isEmpty()) {
+      return new int[2];
+    }
+    // the edges from a variable to those the posted constraints keep at least as large (at most as
+    // large when descending), through the first positions they compare
+    Map<IntVar, List<IntVar>> above = new IdentityHashMap<>();
+    for (IntVar[] e : implied) {
+      IntVar from = descending ? e[1] : e[0];
+      above.computeIfAbsent(from, k -> new ArrayList<>()).add(descending ? e[0] : e[1]);
+    }
+    // orbits by union-find over the variable vertices, from the deepest level up
+    Map<Integer, Integer> parent = new HashMap<>();
+    Map<Integer, List<Integer>> members = new HashMap<>();
+    int posted = 0;
+    int skipped = 0;
+    // the generators of the levels seen, which fix every variable ranked before the current one
+    List<GraphAutomorphisms.Permutation> below = new ArrayList<>();
+    Map<GraphAutomorphisms.Permutation, IntVar[][]> moveOf = new IdentityHashMap<>();
+    for (Map.Entry<Integer, List<GraphAutomorphisms.Permutation>> level :
+        byFirst.descendingMap().entrySet()) {
+      below.addAll(level.getValue());
+      for (GraphAutomorphisms.Permutation g : level.getValue()) {
+        int[] points = g.points();
+        for (int i = 0; i < points.length; i++) {
+          if (varAt[points[i]] != null && varAt[g.images()[i]] != null) {
+            join(parent, members, points[i], g.images()[i]);
+          }
+        }
+      }
+      int b = baseAt.get(level.getKey());
+      List<Integer> orbit = members.get(rootOf(parent, b));
+      if (orbit == null) {
+        continue;
+      }
+      Set<IntVar> reach = reachable(above, varAt[b]);
+      Map<Integer, Object[]> tree = null;
+      for (int j : orbit) {
+        if (j == b) {
+          continue;
+        }
+        checkTime();
+        if (reach.contains(varAt[j])) {
+          skipped++;
+          continue;
+        }
+        if (posted >= MAX_CUTS) {
+          return new int[] {posted, skipped};
+        }
+        posted++;
+        above.computeIfAbsent(varAt[b], k -> new ArrayList<>()).add(varAt[j]);
+        if (post) {
+          IntVar lo = descending ? varAt[j] : varAt[b];
+          IntVar hi = descending ? varAt[b] : varAt[j];
+          XlteqY cut = new XlteqY(lo, hi);
+          store.impose(cut);
+          if (tree == null) {
+            tree = schreierTree(b, below, varAt, orbit.size());
+          }
+          canonicalizer.cut(cut, lo, hi, word(tree, j, varAt, moveOf));
+          note("ss", new IntVar[] {lo, hi});
+        }
+      }
+    }
+    return new int[] {posted, skipped};
+  }
+
+  /**
+   * The Schreier tree of b: each variable vertex of its orbit with the vertex it is reached from
+   * and the generator that maps that vertex onto it; null when the orbit is too large to walk.
+   */
+  private Map<Integer, Object[]> schreierTree(
+      int b, List<GraphAutomorphisms.Permutation> generators, IntVar[] varAt, int size) {
+    if ((long) size * generators.size() > MAX_TREE_WORK) {
+      return null;
+    }
+    Map<Integer, Object[]> tree = new HashMap<>();
+    tree.put(b, new Object[] {b, null});
+    List<Integer> queue = new ArrayList<>(List.of(b));
+    for (int head = 0; head < queue.size(); head++) {
+      int w = queue.get(head);
+      for (GraphAutomorphisms.Permutation g : generators) {
+        int u = g.image(w);
+        if (u != w && varAt[u] != null && !tree.containsKey(u)) {
+          tree.put(u, new Object[] {w, g});
+          queue.add(u);
+        }
+      }
+    }
+    return tree;
+  }
+
+  /**
+   * The symmetry that brings the value of j onto b, as the moves of generators in the order the
+   * canonicalizer applies them; null when one of them is not known.
+   */
+  private static List<IntVar[][]> word(
+      Map<Integer, Object[]> tree,
+      int j,
+      IntVar[] varAt,
+      Map<GraphAutomorphisms.Permutation, IntVar[][]> moveOf) {
+    if (tree == null || !tree.containsKey(j)) {
+      return null;
+    }
+    List<IntVar[][]> moves = new ArrayList<>();
+    int v = j;
+    while (tree.get(v)[1] != null) {
+      GraphAutomorphisms.Permutation g = (GraphAutomorphisms.Permutation) tree.get(v)[1];
+      IntVar[][] m =
+          moveOf.computeIfAbsent(
+              g,
+              k -> {
+                Optional<IntVar[]> from = moves(k, varAt, true);
+                Optional<IntVar[]> to = moves(k, varAt, false);
+                return from.isPresent() && to.isPresent()
+                    ? new IntVar[][] {from.get(), to.get()}
+                    : new IntVar[0][];
+              });
+      if (m.length == 0) {
+        return null;
+      }
+      moves.add(m);
+      v = (Integer) tree.get(v)[0];
+    }
+    return moves;
+  }
+
+  /** The vertices reached from x along the edges. */
+  private static Set<IntVar> reachable(Map<IntVar, List<IntVar>> edges, IntVar x) {
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> stack = new ArrayList<>(List.of(x));
+    while (!stack.isEmpty()) {
+      IntVar v = stack.remove(stack.size() - 1);
+      for (IntVar w : edges.getOrDefault(v, List.of())) {
+        if (seen.add(w)) {
+          stack.add(w);
+        }
+      }
+    }
+    return seen;
+  }
+
+  private static int rootOf(Map<Integer, Integer> parent, int v) {
+    Integer p = parent.get(v);
+    while (p != null && p != v) {
+      v = p;
+      p = parent.get(v);
+    }
+    return v;
+  }
+
+  private static void join(
+      Map<Integer, Integer> parent, Map<Integer, List<Integer>> members, int a, int b) {
+    int ra = rootOf(parent, a);
+    int rb = rootOf(parent, b);
+    if (ra == rb) {
+      return;
+    }
+    List<Integer> ma = members.computeIfAbsent(ra, k -> new ArrayList<>(List.of(k)));
+    List<Integer> mb = members.computeIfAbsent(rb, k -> new ArrayList<>(List.of(k)));
+    if (ma.size() < mb.size()) {
+      int t = ra;
+      ra = rb;
+      rb = t;
+      List<Integer> mt = ma;
+      ma = mb;
+      mb = mt;
+    }
+    ma.addAll(mb);
+    members.remove(rb);
+    parent.put(rb, ra);
   }
 
   /**
