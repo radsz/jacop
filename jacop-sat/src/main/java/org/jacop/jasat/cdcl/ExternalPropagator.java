@@ -201,15 +201,6 @@ public interface ExternalPropagator {
   }
 
   /**
-   * Tells whether the reason of a literal, asked for by minimisation or shrinking of a learnt
-   * clause (see {@link CdclSolver#setReasonOutcomes}), removed literals of that clause.
-   *
-   * @param lit the literal whose reason was asked for
-   * @param used whether the clause was shortened with it
-   */
-  default void reasonOutcome(int lit, boolean used) {}
-
-  /**
    * Returns a clause to add.
    *
    * @return the clause, or null when there is none
