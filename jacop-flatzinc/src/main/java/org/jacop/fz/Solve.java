@@ -66,6 +66,8 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.FeasibilityPump;
@@ -504,6 +506,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       imposeLinearRelaxation(node);
     }
 
+    if (DecompositionBound.on() && opt.proof() == null) {
+      decompositionBound(node);
+    }
+
     if (opt.debug()) {
       failStatistics = new FailConstraintsStatistics(store);
     }
@@ -534,6 +540,50 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           "%% Error: Not recognized structure of solve statement; compilation aborted");
     }
   }
+
+  /**
+   * Bounds the objective at the root by the decomposition bound of the model, when it has blocks
+   * linked by counting and linear constraints ({@code -Dorg.jacop.fz.decomposition=true}).
+   *
+   * @param node the solve item.
+   */
+  private void decompositionBound(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
+      return;
+    }
+    IntVar objective =
+        switch (expr.getType()) {
+          case 0 -> dictionary.getVariable(expr.getIdent());
+          case 1 -> {
+            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+            yield a == null ? null : a[expr.getIndex()];
+          }
+          default -> null;
+        };
+    if (objective == null) {
+      return;
+    }
+    boolean maximize = k == 2;
+    long timeOut = options.getTimeOut();
+    DecompositionBound.Outcome o =
+        DecompositionBound.run(
+            store, sat.collectedClauses(), objective, maximize, List.of(), timeOut);
+    if (o == null) {
+      return;
+    }
+    decomposition = o;
+    if (o.certified()) {
+      int bound = (int) Math.clamp(o.bound(), Integer.MIN_VALUE + 1L, Integer.MAX_VALUE - 1L);
+      store.impose(maximize ? new XlteqC(objective, bound) : new XgteqC(objective, bound));
+    }
+  }
+
+  // what the decomposition bound did, for the statistics
+  private DecompositionBound.Outcome decomposition;
 
   /**
    * Imposes the linear relaxation of the linear constraints of the store as a propagator (--lp),
@@ -655,8 +705,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return new LinearForm(vars, weights, 1L - negative.length, LinearForm.GE);
   }
 
+  /** Prints what the decomposition bound did. */
+  private void printDecompositionStatistics() {
+    DecompositionBound.Outcome o = decomposition;
+    if (o == null || !options.searchStatistics()) {
+      return;
+    }
+    IO.println(
+        "%%%mzn-stat: dbBlocks="
+            + o.blocks()
+            + "\n%%%mzn-stat: dbRows="
+            + o.rows()
+            + "\n%%%mzn-stat: dbIterations="
+            + o.iterations()
+            + "\n%%%mzn-stat: dbColumns="
+            + o.columns()
+            + "\n%%%mzn-stat: dbBound="
+            + (o.certified() ? Long.toString(o.bound()) : "none")
+            + "\n%%%mzn-stat: dbPricingTimeOuts="
+            + o.pricingTimeOuts()
+            + "\n%%%mzn-stat: dbTime="
+            + o.millis() / 1000.0);
+  }
+
   /** Prints the counts of the linear relaxation (--lp). */
   private void printLinearRelaxationStatistics() {
+    printDecompositionStatistics();
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
       return;
@@ -742,6 +816,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.alldiffSearchCuts
             + "\n%%%mzn-stat: lpAlldiffSeparations="
             + r.alldiffSeparations
+            + "\n%%%mzn-stat: lpEnergySearchCuts="
+            + r.energySearchCuts
+            + "\n%%%mzn-stat: lpEnergySeparations="
+            + r.energySeparations
+            + "\n%%%mzn-stat: lpSearchSeparationsMoved="
+            + r.searchSeparationsMoved
             + "\n%%%mzn-stat: lpTreeCuts="
             + r.treeCuts
             + "\n%%%mzn-stat: lpTreeBound="
@@ -2882,6 +2962,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.clockStops
         + "\n%%%mzn-stat: lcgCoreSkips="
         + lcg.coreSkips
+        + "\n%%%mzn-stat: lcgCoreProbeSkips="
+        + lcg.probeSkips
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="

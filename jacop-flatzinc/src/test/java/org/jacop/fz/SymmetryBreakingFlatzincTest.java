@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.IntUnaryOperator;
+import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -135,6 +136,55 @@ class SymmetryBreakingFlatzincTest {
       } else {
         System.setProperty("org.jacop.fz.symmetryTime", time);
       }
+    }
+  }
+
+  @Test
+  void theTimeEndingAtAnyCheckLeavesTheModelSolved() throws IOException {
+    // the time given ran out while the Schreier-Sims cuts were posted, where its check was not
+    // caught, and the solver stopped with SymmetryBreaking$OutOfTime (steelmillslab,
+    // skill-allocation, ptv and others with -f on a loaded machine); the time now ends at each
+    // check in turn, on a model whose cuts are implied and on one (a 6-cycle) that gets 3 cuts
+    String[] models = {
+      """
+      array [1..5] of var 1..5: x :: output_array([1..5]);
+      constraint jacop_alldiff(x);
+      solve satisfy;
+      """,
+      """
+      array [1..6] of var 1..3: x :: output_array([1..6]);
+      constraint int_ne(x[1], x[2]);
+      constraint int_ne(x[2], x[3]);
+      constraint int_ne(x[3], x[4]);
+      constraint int_ne(x[4], x[5]);
+      constraint int_ne(x[5], x[6]);
+      constraint int_ne(x[6], x[1]);
+      solve satisfy;
+      """
+    };
+    LongSupplier clock = SymmetryBreaking.clock;
+    try {
+      for (String model : models) {
+        long[] calls = {0};
+        SymmetryBreaking.clock =
+            () -> {
+              calls[0]++;
+              return 0;
+            };
+        String all = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+        assertTrue(all.contains("symmetrySearchComplete=true"), all);
+        long checks = calls[0];
+        assertTrue(checks > 2, all);
+        for (long k = 0; k <= checks; k++) {
+          long[] left = {k};
+          SymmetryBreaking.clock = () -> left[0]-- > 0 ? 0 : Long.MAX_VALUE / 2;
+          String out =
+              FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+          assertTrue(out.contains("----------"), "time out at check " + k + "\n" + out);
+        }
+      }
+    } finally {
+      SymmetryBreaking.clock = clock;
     }
   }
 
