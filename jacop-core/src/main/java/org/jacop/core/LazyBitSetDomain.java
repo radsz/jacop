@@ -89,6 +89,9 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
    */
   private int[] ranges;
 
+  /** The interval index findHint returned last, a hint only: it may be out of date. */
+  private int lastFind;
+
   /** Set when an enumeration may hold the bits array, which then must be copied before a change. */
   private boolean bitsShared;
 
@@ -149,7 +152,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       if (ranges == null) {
         return true;
       }
-      int i = find(ranges, value);
+      int i = findHint(value);
       return i < ranges.length >>> 1 && ranges[2 * i] <= value;
     }
     int index = value - base;
@@ -168,7 +171,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       if (ranges == null) {
         return value;
       }
-      int i = find(ranges, value);
+      int i = findHint(value);
       if (i == ranges.length >>> 1) {
         return maxBound + 1;
       }
@@ -201,7 +204,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       if (ranges == null) {
         return value;
       }
-      int i = find(ranges, value);
+      int i = findHint(value);
       if (i < ranges.length >>> 1 && ranges[2 * i] <= value) {
         return value;
       }
@@ -236,7 +239,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       }
       int result = 0;
       int n = ranges.length >>> 1;
-      for (int i = find(ranges, lo); i < n && ranges[2 * i] <= hi; i++) {
+      for (int i = findHint(lo); i < n && ranges[2 * i] <= hi; i++) {
         result += Math.min(hi, ranges[2 * i + 1]) - Math.max(lo, ranges[2 * i]) + 1;
       }
       return result;
@@ -255,6 +258,29 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       result += Long.bitCount(bits[i]);
     }
     return result + Long.bitCount(bits[lastWord] & lastMask);
+  }
+
+  /**
+   * The index of the first interval of the holes' intervals whose end is at least value, or their
+   * count. It tries the interval found last and the next one first: the time tables probe the
+   * starts of a task in increasing order, many times in the same intervals.
+   */
+  private int findHint(int value) {
+    int[] r = ranges;
+    int n = r.length >>> 1;
+    int h = lastFind;
+    if (h <= n) {
+      if ((h == n || r[2 * h + 1] >= value) && (h == 0 || r[2 * h - 1] < value)) {
+        return h;
+      }
+      if (h < n && r[2 * h + 1] < value && (h + 1 == n || r[2 * h + 3] >= value)) {
+        lastFind = h + 1;
+        return h + 1;
+      }
+    }
+    h = find(r, value);
+    lastFind = h;
+    return h;
   }
 
   /** The index of the first interval of ranges whose end is at least value, or the count. */
@@ -1231,7 +1257,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
 
   private int endOfRun(int value) {
     if (bits == null) {
-      return ranges == null ? maxBound : Math.min(maxBound, ranges[2 * find(ranges, value) + 1]);
+      return ranges == null ? maxBound : Math.min(maxBound, ranges[2 * findHint(value) + 1]);
     }
     int index = value - base;
     int word = index >>> 6;
