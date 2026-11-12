@@ -74,14 +74,13 @@ public final class CdclSolver {
   // reason of a literal the external propagator implied, asked for only when analysis needs it
   private static final int EXTERNAL_REASON = Integer.MIN_VALUE + 1;
 
-  // clause header
+  // clause header: three ints, the saved search position shares META with the flags and the LBD
   private static final int SIZE = 0;
   private static final int META = 1;
   private static final int ACT = 2;
-  private static final int POS = 3;
-  private static final int HEADER = 4;
+  private static final int HEADER = 3;
 
-  // META bits; LBD in the bits from LBD_SHIFT
+  // META bits; LBD in the bits from LBD_SHIFT, the saved search position from POS_SHIFT
   private static final int LEARNT_FLAG = 1;
   private static final int DELETED = 2;
   private static final int USED = 4;
@@ -90,6 +89,11 @@ public final class CdclSolver {
   private static final int TIER_MASK = 3 << TIER_SHIFT;
   private static final int LBD_SHIFT = 8;
   private static final int MAX_LBD = 255;
+  private static final int POS_SHIFT = 16;
+  private static final int MAX_POS = 0xFFFF;
+  private static final int NOT_POS = (1 << POS_SHIFT) - 1;
+  // META of a fresh clause: the search for a replacement watch starts at the third literal
+  private static final int POS_START = 2 << POS_SHIFT;
 
   private static final int TIER_CORE = 0;
   private static final int TIER_MID = 1;
@@ -895,9 +899,11 @@ public final class CdclSolver {
     mem[ref + SIZE] = size;
     int tier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : TIER_LOCAL;
     mem[ref + META] =
-        (isLearnt ? LEARNT_FLAG : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
+        (isLearnt ? LEARNT_FLAG : 0)
+            | (tier << TIER_SHIFT)
+            | (Math.min(lbd, MAX_LBD) << LBD_SHIFT)
+            | POS_START;
     mem[ref + ACT] = Float.floatToRawIntBits(0f);
-    mem[ref + POS] = 2;
     System.arraycopy(lits, 0, mem, ref + HEADER, size);
     memSize += need;
     return ref;
@@ -953,7 +959,7 @@ public final class CdclSolver {
   }
 
   private static int lbdOf(int meta) {
-    return meta >>> LBD_SHIFT;
+    return (meta >>> LBD_SHIFT) & MAX_LBD;
   }
 
   private static int tierOf(int meta) {
@@ -1103,7 +1109,8 @@ public final class CdclSolver {
           continue;
         }
         int size = localMem[ref + SIZE];
-        int pos = localMem[ref + POS];
+        int meta = localMem[ref + META];
+        int pos = meta >>> POS_SHIFT;
         int k = pos;
         int found = -1;
         for (; k < size; k++) {
@@ -1121,7 +1128,10 @@ public final class CdclSolver {
           }
         }
         if (found >= 0) {
-          localMem[ref + POS] = found;
+          // a position past 16 bits (clauses over 65,535 literals) keeps the old start
+          if (found <= MAX_POS) {
+            localMem[ref + META] = (meta & NOT_POS) | (found << POS_SHIFT);
+          }
           int w = localMem[lits + found];
           localMem[lits + 1] = w;
           localMem[lits + found] = falseLit;
@@ -1350,7 +1360,7 @@ public final class CdclSolver {
       int lbd = computeLbd(mem, ref + HEADER, mem[ref + SIZE]);
       if (lbd < lbdOf(meta)) {
         int newTier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : tier;
-        meta = (meta & ((1 << LBD_SHIFT) - 1) & ~TIER_MASK) | (newTier << TIER_SHIFT);
+        meta = (meta & ~(MAX_LBD << LBD_SHIFT) & ~TIER_MASK) | (newTier << TIER_SHIFT);
         meta |= lbd << LBD_SHIFT;
       }
     }
@@ -2451,7 +2461,7 @@ public final class CdclSolver {
     int[] c = Arrays.copyOfRange(mem, lits, lits + mem[ref + SIZE]);
     orderForWatches(c);
     System.arraycopy(c, 0, mem, lits, c.length);
-    mem[ref + POS] = 2;
+    mem[ref + META] = (mem[ref + META] & NOT_POS) | POS_START;
     attach(ref);
   }
 
@@ -3460,7 +3470,7 @@ public final class CdclSolver {
       int[] c = Arrays.copyOfRange(mem, lits, lits + size);
       orderForWatches(c);
       System.arraycopy(c, 0, mem, lits, size);
-      mem[ref + POS] = 2;
+      mem[ref + META] = (mem[ref + META] & NOT_POS) | POS_START;
       attach(ref);
     }
     int j = 0;
@@ -3709,7 +3719,10 @@ public final class CdclSolver {
     }
     purge();
     simplifyAssigns = trailSize;
-    simplifyProps = propagations + memSize - wasted + 2L * numVars;
+    // the arena counted with one more int per clause, as with the earlier four-int header, so the
+    // simplification schedule (and the search) stays as it was
+    simplifyProps =
+        propagations + memSize - wasted + (long) numOriginals + numLearnts + 2L * numVars;
   }
 
   /**
