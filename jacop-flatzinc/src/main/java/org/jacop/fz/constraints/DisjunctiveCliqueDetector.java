@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.InterDistance;
+import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.UnaryTransition;
 import org.jacop.core.IntVar;
@@ -47,6 +48,7 @@ import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 import org.jacop.presolve.DisjunctiveCliques;
+import org.jacop.presolve.InferredCumulatives;
 
 /**
  * It finds sets of tasks that can never overlap and posts a {@link CumulativeUnary} on each of them
@@ -73,6 +75,14 @@ import org.jacop.presolve.DisjunctiveCliques;
  * <p>Setting the system property {@code org.jacop.fz.disjunctiveCliques} to false turns the
  * detection off.
  *
+ * <p>With the system property {@code org.jacop.fz.inferredCumulatives} set to true (off by default)
+ * it also posts the redundant cumulatives that {@link InferredCumulatives} infers by lifting covers
+ * of the cumulatives with fixed capacities and the disjoint pairs (Sidorov, "On Inferring
+ * Cumulative Constraints", CP 2026). {@code org.jacop.fz.inferredCumulatives.covers} (100) and
+ * {@code org.jacop.fz.inferredCumulatives.out} (5) are the paper's N_cover and N_out; {@code
+ * org.jacop.fz.inferredCumulatives.disjoint} (true) also lifts over the pairs of tasks that the
+ * precedences and disjunctions keep apart, which the paper does not.
+ *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
@@ -88,6 +98,11 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
   private final Map<IntVar, List<Implied>> implied = new IdentityHashMap<>();
 
   private final List<IntVar[]> clauses = new ArrayList<>();
+
+  // the cumulatives with a fixed capacity: tasks, least uses and capacity
+  private record Row(int[] tasks, int[] use, int capacity) {}
+
+  private final List<Row> rows = new ArrayList<>();
 
   /**
    * It creates a detector reading variables through the given support.
@@ -105,6 +120,15 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
    */
   public static boolean enabled() {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.disjunctiveCliques"));
+  }
+
+  /**
+   * It tells if the inference of redundant cumulatives is on.
+   *
+   * @return true if the system property org.jacop.fz.inferredCumulatives is true.
+   */
+  public static boolean inferredEnabled() {
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.inferredCumulatives", "false"));
   }
 
   /**
@@ -140,7 +164,12 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
               + (System.nanoTime() - start) / 1_000_000
               + " ms");
     }
-    post(found);
+    if (enabled()) {
+      post(found);
+    }
+    if (inferredEnabled()) {
+      infer(found);
+    }
   }
 
   private void collect(ASTConstElem node) {
@@ -196,6 +225,9 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
         tasks[n] = t;
         use[n++] = r[i].min();
       }
+    }
+    if (n > 1 && aVar(node, 3).singleton()) {
+      rows.add(new Row(Arrays.copyOf(tasks, n), Arrays.copyOf(use, n), capacity));
     }
     boolean unary = n > 1;
     for (int i = 0; i < n; i++) {
@@ -305,6 +337,115 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
       support.delayedConstraints.add(unary);
       support.unaryResources.add(new IntVar[][] {s, d});
     }
+  }
+
+  // posts the cumulatives inferred by lifting covers of the resources (Sidorov, CP 2026)
+  private void infer(List<int[]> found) {
+    long start = System.nanoTime();
+    int n = cliques.size();
+    if (rows.isEmpty() || n < 2 || n > InferredCumulatives.DEFAULT_MAX_TASKS) {
+      return;
+    }
+    int[] duration = new int[n];
+    for (int t = 0; t < n; t++) {
+      duration[t] = cliques.minDuration(t);
+    }
+    InferredCumulatives inference = new InferredCumulatives(duration);
+    for (Row row : rows) {
+      inference.resource(row.tasks, row.use, row.capacity);
+    }
+    if (!"false".equals(System.getProperty("org.jacop.fz.inferredCumulatives.disjoint"))) {
+      inference.disjoint(cliques.disjoint());
+    }
+    int covers = Integer.getInteger("org.jacop.fz.inferredCumulatives.covers", 100);
+    int out = Integer.getInteger("org.jacop.fz.inferredCumulatives.out", 5);
+    // a unary resource inside a clique posted above adds nothing
+    List<long[]> posted = new ArrayList<>();
+    if (enabled()) {
+      for (int[] clique : found) {
+        long[] set = new long[(n + 63) >>> 6];
+        for (int t : clique) {
+          set[t >>> 6] |= 1L << t;
+        }
+        posted.add(set);
+      }
+    }
+    List<InferredCumulatives.Inferred> inferred =
+        inference.infer(covers, out, inf -> !inf.unary() || !within(inf.tasks(), posted));
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% inferred cumulatives: "
+              + rows.size()
+              + " resources, "
+              + n
+              + " tasks, "
+              + inference.covers()
+              + " covers, "
+              + inference.lifted()
+              + " lifted, "
+              + inference.dominated()
+              + " dominated, "
+              + inferred.size()
+              + " posted, "
+              + (System.nanoTime() - start) / 1_000_000
+              + " ms");
+    }
+    Map<Integer, IntVar> constants = new HashMap<>();
+    for (InferredCumulatives.Inferred inf : inferred) {
+      int[] tasks = inf.tasks();
+      IntVar[] s = new IntVar[tasks.length];
+      IntVar[] d = new IntVar[tasks.length];
+      IntVar[] r = new IntVar[tasks.length];
+      for (int k = 0; k < tasks.length; k++) {
+        int t = tasks[k];
+        s[k] = cliques.start(t);
+        IntVar dv = cliques.durationVar(t);
+        d[k] = dv != null ? dv : constant(constants, cliques.minDuration(t));
+        r[k] = constant(constants, inf.use()[k]);
+      }
+      IntVar limit = constant(constants, inf.capacity());
+      Constraint c =
+          inf.unary()
+              ? new CumulativeUnary(s, d, r, limit, true)
+              : GlobalConstraints.configureCumulative(new Cumulative(s, d, r, limit));
+      // redundant, so degree-based variable selections see the degrees of the model
+      c.setDegreeWeight(0);
+      if (support.options.debug()) {
+        FzConsole.println(
+            "% inferred cumulative of "
+                + tasks.length
+                + " tasks, capacity "
+                + inf.capacity()
+                + ", uses "
+                + Arrays.toString(inf.use())
+                + ", capacity bound "
+                + String.format("%.1f", inf.bound()));
+      }
+      support.implied(() -> support.delayedConstraints.add(c));
+      if (inf.unary()) {
+        support.unaryResources.add(new IntVar[][] {s, d});
+      }
+    }
+  }
+
+  private IntVar constant(Map<Integer, IntVar> constants, int v) {
+    return constants.computeIfAbsent(v, k -> new IntVar(support.store, k, k));
+  }
+
+  private static boolean within(int[] tasks, List<long[]> sets) {
+    for (long[] set : sets) {
+      boolean all = true;
+      for (int t : tasks) {
+        if ((set[t >>> 6] & (1L << t)) == 0) {
+          all = false;
+          break;
+        }
+      }
+      if (all) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** The common fixed length of the tasks, or 0 if they differ or one is not fixed. */

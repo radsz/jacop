@@ -336,6 +336,7 @@ setup to run configuration. -->
                                 <include>**/RedundantConstraintsTest.java</include>
                                 <include>**/BooleanProductsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
@@ -542,6 +543,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
@@ -743,6 +745,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
@@ -942,6 +945,7 @@ setup to run configuration. -->
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
+                                <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
