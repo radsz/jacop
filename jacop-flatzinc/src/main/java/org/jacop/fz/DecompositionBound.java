@@ -795,10 +795,11 @@ final class DecompositionBound {
     long improved = start;
     while (System.currentTimeMillis() < deadline) {
       long now = System.currentTimeMillis();
-      // a bound no better than the root's after a quarter of the time, or one that has not risen
-      // for a quarter of the time, is not worth the rest of it
+      // a bound that has not risen for a quarter of the time, or that is no better than the
+      // root's after half of it, is not worth the rest of the time
       long quarter = Math.max(PATIENCE_MS, budget / 4);
-      if (iterations > 0 && now - start > quarter && (best <= root || now - improved > quarter)) {
+      if (iterations > 0
+          && (now - improved > quarter || now - start > 2 * quarter && best <= root)) {
         break;
       }
       iterations++;
