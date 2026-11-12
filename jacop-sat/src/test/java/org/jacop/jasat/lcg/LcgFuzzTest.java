@@ -233,6 +233,18 @@ class LcgFuzzTest {
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
 
+  // seconds for the reference search of one model; a model it cannot solve in time is skipped
+  private static final int REFERENCE_SECONDS = Integer.getInteger("lcg.fuzz.referenceSeconds", 60);
+
+  /** The reference search ran out of time; the model is skipped. */
+  private static final class ReferenceTimeout extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    ReferenceTimeout() {
+      super(null, null, false, false);
+    }
+  }
+
   /** A random model; built twice from the same seed, once for each solver. */
   private static final class Model {
     final Store store = new Store();
@@ -1068,14 +1080,17 @@ class LcgFuzzTest {
           IntVar end = rnd.nextBoolean() ? one() : intVar("mk", 0, 6);
           // durations or heights vary, not both: the reference search enumerates them
           boolean variableDurations = rnd.nextBoolean();
+          IntVar[] ed = variableDurations ? chain("ed", 3, 0, 2) : constants(3, 1, 2);
+          IntVar[] eh =
+              !variableDurations && rnd.nextBoolean() ? chain("eh", 3, 0, 2) : constants(3, 1, 2);
+          IntVar limit = constant(1 + rnd.nextInt(2));
+          // the rule only adds to the cumulative of a model (it checks the capacity once fixed):
+          // alone, the reference search enumerates every point before it finds an overload
+          Cumulative cumulative = new Cumulative(s, ed, eh, limit);
+          posted.add(cumulative.toString());
+          store.impose(cumulative);
           yield new EnergyPrecedence(
-              s,
-              variableDurations ? chain("ed", 3, 0, 2) : constants(3, 1, 2),
-              !variableDurations && rnd.nextBoolean() ? chain("eh", 3, 0, 2) : constants(3, 1, 2),
-              constant(1 + rnd.nextInt(2)),
-              s,
-              new IntVar[] {end, end, end},
-              new int[] {2, 2, 2});
+              s, ed, eh, limit, s, new IntVar[] {end, end, end}, new int[] {2, 2, 2});
         }
         case 78, 79 -> recentGlobal();
         case 63 -> {
@@ -1215,12 +1230,18 @@ class LcgFuzzTest {
     }
     DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
     search.setPrintInfo(false);
+    search.setTimeOut(REFERENCE_SECONDS);
     SimpleSelect<IntVar> select =
         new SimpleSelect<>(model.decisionVars(), null, new IndomainMin<>());
     boolean found =
         model.objective == null
             ? search.labeling(model.store, select)
             : search.labeling(model.store, select, model.objective);
+    if (search.timeOutOccured) {
+      // a constraint that propagates little, such as Knapsack before its dynamic program has
+      // earned its first run, can leave depth-first search an exhaustive tree
+      throw new ReferenceTimeout();
+    }
     if (!found) {
       return null;
     }
@@ -1727,6 +1748,7 @@ class LcgFuzzTest {
     long bisectProbes = 0;
     long probes = 0;
     long probeFacts = 0;
+    int referenceTimeouts = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected;
@@ -1734,6 +1756,10 @@ class LcgFuzzTest {
         expected = reference(new Model(seed));
       } catch (FailException _) {
         // a constraint failed when it was imposed (machines outside a domain with holes)
+        continue;
+      } catch (ReferenceTimeout _) {
+        System.out.println("lcg fuzz: seed " + seed + " skipped, the reference search timed out");
+        referenceTimeouts++;
         continue;
       }
       Model model = new Model(seed);
@@ -1789,8 +1815,16 @@ class LcgFuzzTest {
     if (RUNS >= 1000) {
       System.out.printf(
           "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
-              + " %d lower-bound runs (%d raised the bound), %d bisection probes%n",
-          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised, bisectProbes);
+              + " %d lower-bound runs (%d raised the bound), %d bisection probes,"
+              + " %d reference timeouts%n",
+          RUNS,
+          sat,
+          unsat,
+          checked,
+          lowerBoundRuns,
+          lowerBoundRaised,
+          bisectProbes,
+          referenceTimeouts);
       System.out.printf("  root probing: %d probes, %d facts%n", probes, probeFacts);
       statistics.forEach(
           (k, v) ->
