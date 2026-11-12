@@ -283,6 +283,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/AlldistinctIncrementalTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -480,6 +481,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/AlldistinctIncrementalTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -678,6 +680,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/AlldistinctIncrementalTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -876,6 +879,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/AlldistinctIncrementalTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
