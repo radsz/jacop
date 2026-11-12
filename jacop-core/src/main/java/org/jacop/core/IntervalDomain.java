@@ -82,6 +82,7 @@ public class IntervalDomain extends IntDomain {
     result.stamp = storeLevel;
     result.previousDomain = this;
     result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.wakeCounts = wakeCounts;
     result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
     ((IntVar) v).domain = result;
   }
@@ -743,6 +744,7 @@ public class IntervalDomain extends IntDomain {
 
     cloned.modelConstraints = modelConstraints;
     cloned.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    cloned.wakeCounts = wakeCounts;
 
     cloned.searchConstraintsCloned = searchConstraintsCloned;
 
@@ -2609,6 +2611,7 @@ public class IntervalDomain extends IntDomain {
       result.stamp = storeLevel;
       result.previousDomain = stamp == storeLevel ? previousDomain : this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+      result.wakeCounts = wakeCounts;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((IntVar) v).domain = result;
 
@@ -3671,6 +3674,7 @@ public class IntervalDomain extends IntDomain {
       result.stamp = storeLevel;
       result.previousDomain = stamp == storeLevel ? previousDomain : this;
       result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+      result.wakeCounts = wakeCounts;
       result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
       ((IntVar) v).domain = result;
 

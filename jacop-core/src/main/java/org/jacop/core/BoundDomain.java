@@ -61,6 +61,7 @@ class BoundDomain extends IntDomain {
     result.stamp = storeLevel;
     result.previousDomain = this;
     result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.wakeCounts = wakeCounts;
     result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
     ((IntVar) v).domain = result;
   }
@@ -213,6 +214,7 @@ class BoundDomain extends IntDomain {
 
     cloned.modelConstraints = modelConstraints;
     cloned.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    cloned.wakeCounts = wakeCounts;
 
     cloned.searchConstraintsCloned = searchConstraintsCloned;
 

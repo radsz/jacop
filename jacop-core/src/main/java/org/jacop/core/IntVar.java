@@ -146,6 +146,7 @@ public class IntVar extends Var {
     dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
+    dom.packWakeCounts();
 
     if (ASSERTS_ENABLED && name.lastIndexOf(" ") != -1) {
       throw new IllegalStateException(String.valueOf("Name can not contain space character"));
@@ -211,6 +212,7 @@ public class IntVar extends Var {
     wider.searchConstraints = domain.searchConstraints;
     wider.modelConstraints = domain.modelConstraints;
     wider.modelConstraintsToEvaluate = domain.modelConstraintsToEvaluate;
+    wider.wakeCounts = domain.wakeCounts;
     wider.searchConstraintsToEvaluate = domain.searchConstraintsToEvaluate;
     wider.searchConstraintsCloned = domain.searchConstraintsCloned;
     wider.previousDomain = domain.previousDomain;

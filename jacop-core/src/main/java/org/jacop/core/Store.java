@@ -657,7 +657,7 @@ public class Store {
     }
     Set<Constraint> result = Collections.newSetFromMap(new LinkedHashMap<>());
     for (int value = 0; value < 2; value++) {
-      result.addAll(Arrays.asList(watches.constraints[value]).subList(0, watches.size[value]));
+      result.addAll(Arrays.asList(watches.constraints(value)).subList(0, watches.size(value)));
     }
     return new ArrayList<>(result);
   }
@@ -677,12 +677,24 @@ public class Store {
       return;
     }
     ValueWatches watches = v.valueWatches;
-    for (int i = watches.size[value] - 1; i >= 0; i--) {
-      Constraint c = watches.constraints[value][i];
+    Constraint[] constraints;
+    int[] tags;
+    int size;
+    if (value == 0) {
+      constraints = watches.constraints0;
+      tags = watches.tags0;
+      size = watches.size0;
+    } else {
+      constraints = watches.constraints1;
+      tags = watches.tags1;
+      size = watches.size1;
+    }
+    for (int i = size - 1; i >= 0; i--) {
+      Constraint c = constraints[i];
       if (c.isEntailed()) {
         continue;
       }
-      if (c.valueWatchFired(level, v, watches.tags[value][i]) && currentConstraint != c) {
+      if (c.valueWatchFired(level, v, tags[i]) && currentConstraint != c) {
         addChanged(c);
       }
     }
@@ -712,6 +724,18 @@ public class Store {
   }
 
   private void queueModelConstraintsForVariable(Domain vdomain, Var v, int pruningEvent) {
+    long counts = vdomain.wakeCounts;
+    if (counts != -1L) {
+      Constraint[][] modelConstraints = vdomain.modelConstraints;
+      for (int j : vdomain.getEventsInclusion(pruningEvent)) {
+        Constraint[] addedConstraints = modelConstraints[j];
+        int n = (int) (counts >>> (Domain.WAKE_COUNT_BITS * j)) & Domain.WAKE_COUNT_MAX;
+        for (int i = n - 1; i >= 0; i--) {
+          queueModelConstraint(vdomain, v, addedConstraints[i]);
+        }
+      }
+      return;
+    }
     for (int j : vdomain.getEventsInclusion(pruningEvent)) {
       Constraint[] addedConstraints = vdomain.modelConstraints[j];
       for (int i = vdomain.modelConstraintsToEvaluate[j] - 1; i >= 0; i--) {

@@ -321,9 +321,11 @@ public abstract class Var implements Backtrackable {
     }
     List<Constraint> result = new ArrayList<>();
     for (int value = 0; value < 2; value++) {
-      for (int i = 0; i < watches.size[value]; i++) {
-        Constraint c = watches.constraints[value][i];
-        if (!c.isEntailed() && c.countsValueWatch(value, watches.tags[value][i])) {
+      Constraint[] constraints = watches.constraints(value);
+      int[] tags = watches.tags(value);
+      for (int i = 0; i < watches.size(value); i++) {
+        Constraint c = constraints[i];
+        if (!c.isEntailed() && c.countsValueWatch(value, tags[i])) {
           result.add(c);
         }
       }

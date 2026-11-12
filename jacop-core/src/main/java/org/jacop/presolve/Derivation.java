@@ -1265,6 +1265,7 @@ public final class Derivation implements VarMap {
       if (d.modelConstraints != null) {
         d.modelConstraints = new Constraint[d.modelConstraints.length][];
         d.modelConstraintsToEvaluate = new int[d.modelConstraintsToEvaluate.length];
+        d.packWakeCounts();
       }
       d.searchConstraints = new ArrayList<>();
       d.searchConstraintsToEvaluate = 0;

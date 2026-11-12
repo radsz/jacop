@@ -124,6 +124,7 @@ public class BooleanVar extends IntVar {
     dom.searchConstraints = new ArrayList<>();
     dom.modelConstraints = new Constraint[IntDomain.eventsInclusion.length][];
     dom.modelConstraintsToEvaluate = new int[IntDomain.eventsInclusion.length];
+    dom.packWakeCounts();
     id = name;
     domain = dom;
     domain.stamp = 0;

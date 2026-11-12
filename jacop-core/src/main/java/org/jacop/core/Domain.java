@@ -72,6 +72,43 @@ public abstract class Domain {
    */
   public int[] modelConstraintsToEvaluate;
 
+  /** The number of bits of one count in {@link #wakeCounts}. */
+  static final int WAKE_COUNT_BITS = 12;
+
+  /** The largest count that {@link #wakeCounts} holds. */
+  static final int WAKE_COUNT_MAX = (1 << WAKE_COUNT_BITS) - 1;
+
+  /**
+   * The counts of modelConstraintsToEvaluate packed in one long, {@link #WAKE_COUNT_BITS} bits per
+   * pruning event, so that waking the constraints of a changed variable reads them from the domain
+   * itself instead of from the array object. It is -1 when the counts are not packed: a count is
+   * larger than {@link #WAKE_COUNT_MAX}, there are more pruning events than fit, or the domain
+   * class does not keep it (then the array is read). When it is not -1 it equals the array.
+   */
+  public long wakeCounts = -1L;
+
+  /**
+   * Sets {@link #wakeCounts} from modelConstraintsToEvaluate. Every change of the counts of an
+   * integer domain calls it.
+   */
+  public final void packWakeCounts() {
+    int[] counts = modelConstraintsToEvaluate;
+    if (counts == null || counts.length * WAKE_COUNT_BITS > 63) {
+      wakeCounts = -1L;
+      return;
+    }
+    long packed = 0;
+    for (int i = 0; i < counts.length; i++) {
+      int n = counts[i];
+      if (n < 0 || n > WAKE_COUNT_MAX) {
+        wakeCounts = -1L;
+        return;
+      }
+      packed |= (long) n << (WAKE_COUNT_BITS * i);
+    }
+    wakeCounts = packed;
+  }
+
   /** It specifies constraints which are attached to current domain. */
   public List<Constraint> searchConstraints;
 

@@ -43,23 +43,64 @@ import org.jacop.constraints.Constraint;
  */
 final class ValueWatches {
 
-  /** The watching constraints, for value 0 and value 1. */
-  final Constraint[][] constraints = {new Constraint[2], new Constraint[2]};
+  /*
+   * One field per watched value instead of arrays indexed by the value: a fired watch reads the
+   * list straight from this object, without first reading an inner array object (a pointer hop
+   * and a bounds check fewer per access).
+   */
 
-  /** The tags of the watches. */
-  final int[][] tags = {new int[2], new int[2]};
+  /** The watching constraints of value 0. */
+  Constraint[] constraints0 = new Constraint[2];
 
-  /** The number of watches for each value. */
-  final int[] size = new int[2];
+  /** The watching constraints of value 1. */
+  Constraint[] constraints1 = new Constraint[2];
+
+  /** The tags of the watches of value 0. */
+  int[] tags0 = new int[2];
+
+  /** The tags of the watches of value 1. */
+  int[] tags1 = new int[2];
+
+  /** The number of watches of value 0. */
+  int size0;
+
+  /** The number of watches of value 1. */
+  int size1;
 
   void add(int value, Constraint c, int tag) {
-    int n = size[value];
-    if (n == constraints[value].length) {
-      constraints[value] = Arrays.copyOf(constraints[value], 2 * n);
-      tags[value] = Arrays.copyOf(tags[value], 2 * n);
+    if (value == 0) {
+      int n = size0;
+      if (n == constraints0.length) {
+        constraints0 = Arrays.copyOf(constraints0, 2 * n);
+        tags0 = Arrays.copyOf(tags0, 2 * n);
+      }
+      constraints0[n] = c;
+      tags0[n] = tag;
+      size0 = n + 1;
+    } else {
+      int n = size1;
+      if (n == constraints1.length) {
+        constraints1 = Arrays.copyOf(constraints1, 2 * n);
+        tags1 = Arrays.copyOf(tags1, 2 * n);
+      }
+      constraints1[n] = c;
+      tags1[n] = tag;
+      size1 = n + 1;
     }
-    constraints[value][n] = c;
-    tags[value][n] = tag;
-    size[value] = n + 1;
+  }
+
+  /** Returns the watching constraints of a value, the first {@link #size(int)} entries are used. */
+  Constraint[] constraints(int value) {
+    return value == 0 ? constraints0 : constraints1;
+  }
+
+  /** Returns the tags of the watches of a value. */
+  int[] tags(int value) {
+    return value == 0 ? tags0 : tags1;
+  }
+
+  /** Returns the number of watches of a value. */
+  int size(int value) {
+    return value == 0 ? size0 : size1;
   }
 }

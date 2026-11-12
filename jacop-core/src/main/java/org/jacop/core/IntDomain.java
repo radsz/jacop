@@ -1349,6 +1349,7 @@ public abstract class IntDomain extends Domain {
       modelConstraintsToEvaluate = ownedModelConstraintsToEvaluate;
     }
     modelConstraintsToEvaluate[pruningEvent] += delta;
+    packWakeCounts();
   }
 
   /**
@@ -1482,6 +1483,7 @@ public abstract class IntDomain extends Domain {
     result.stamp = storeLevel;
     result.previousDomain = this;
     result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.wakeCounts = wakeCounts;
     result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
     ((IntVar) v).domain = result;
     return result;
@@ -1504,6 +1506,7 @@ public abstract class IntDomain extends Domain {
     result.stamp = storeLevel;
     result.previousDomain = this;
     result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.wakeCounts = wakeCounts;
     result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
     ((IntVar) v).domain = result;
     return result;

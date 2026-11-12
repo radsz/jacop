@@ -451,6 +451,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
       searchConstraintsToEvaluate = (int) (flags >>> 1);
       modelConstraints = (Constraint[][]) from.getObject(entry, 1);
       modelConstraintsToEvaluate = (int[]) from.getObject(entry, 2);
+      packWakeCounts();
       searchConstraints = (List<Constraint>) from.getObject(entry, 3);
     } else {
       if (bitsShared) {
@@ -1576,6 +1577,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
     IntervalDomain result = toIntervalDomain();
     result.modelConstraints = modelConstraints;
     result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.wakeCounts = wakeCounts;
     result.searchConstraints = searchConstraints;
     result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
     result.searchConstraintsCloned = searchConstraintsCloned;
