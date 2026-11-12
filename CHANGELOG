@@ -4234,6 +4234,16 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. New org.jacop.core.TimeStampInt, a TimeStamp specialised for int
+     values (int arrays, no Integer boxing), replaces TimeStamp<Integer>
+     in all 41 places that used it (AbstractBoolVector, BoolClause,
+     AbstractChannel, LexOrder, MinOfSums, SumWeight, Alldistinct,
+     AbstractMinMax, the cumulatives, InputOrderSelect, ...). Search is
+     unchanged. With --lcg off and fixed search at 240 s, the 20
+     instances that use it most are 1.6 % faster in nodes per second
+     (road-cons road_11 4-5 %, zephyrus 3-4 %); a base against base
+     round on the same instances varies by about 1 %.
+
 Version 4.11
 =============
 
