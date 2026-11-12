@@ -66,6 +66,16 @@ public class Parser {
     // another parser: the items are only read, not translated
     private boolean parseOnly;
 
+    // a name is repeated at every use of it (and a constraint name at every constraint): one
+    // String per name, not one per token, keeps the parse tree of the largest models a third
+    // smaller (ma-path-finding, rcpsp-wet-diverse); cleared once the model is read
+    private final java.util.HashMap<String, String> names = new java.util.HashMap<String, String>();
+
+    String name(Token t) {
+	String known = names.putIfAbsent(t.image, t.image);
+	return known == null ? t.image : known;
+    }
+
     void setOptions(Options opt) {
 	options = opt;
     }
@@ -114,6 +124,7 @@ public class Parser {
      * @throws ParseException as model does
      */
     void build(SimpleNode model) throws ParseException {
+	solver.shareModelTree();
 	cc.setOptions(options);
 	cg.setOptions(options);
 	solver.startTimer();
@@ -346,6 +357,7 @@ void model() #model:
     model_end()
     <EOF>
 	{
+	    names.clear();
 	    if (!parseOnly) {
 		modelRead(jjtThis);
 	    }
@@ -430,7 +442,7 @@ void var_decl_item() #VarDeclItem:
 {
     <VAR> non_array_ti_expr_tail() <COLON> t=ident_anns() [ <ASGN> non_array_flat_expr() ] //var_decl_item2()
  	{ 
-	    jjtThis.setKind(0); jjtThis.setId(t.image); 
+	    jjtThis.setKind(0); jjtThis.setId(name(t)); 
 	    if (!parseOnly) {
 		cg.generateVariables(jjtThis, dict, store);
 	    }
@@ -439,7 +451,7 @@ void var_decl_item() #VarDeclItem:
 
    | non_array_ti_expr_tail() <COLON> t=ident_anns() <ASGN> non_array_flat_expr() 
 	 { jjtThis.setKind(1); 
-	   jjtThis.setId(t.image);
+	   jjtThis.setId(name(t));
 	   if (!parseOnly) {
 	       cg.generateParameters(jjtThis, dict);
 	   }
@@ -480,7 +492,7 @@ void array_decl_tail(ASTVarDeclItem v) :
 	 {v.setKind(2); }
      )
 
-  	{v.setId(t.image);}
+  	{v.setId(name(t));}
 }
 
 // array_decl_tail2:
@@ -528,7 +540,7 @@ void constraint_elem() #ConstElem:
 //     (
 //     LOOKAHEAD(2)
     t =<IDENT> <LP> flat_exprs() <RP>  	
-     {jjtThis.setName(t.image);
+     {jjtThis.setName(name(t));
      }
     // new flatzinc does not support variable as constraint any longer
     // can be deleted
@@ -766,7 +778,7 @@ void ann_expr() #AnnExpr:
 
  LOOKAHEAD(2)
  t = <IDENT> <LP> ann_exprs() <RP> 
-     { jjtThis.setIdent(t.image); }
+     { jjtThis.setIdent(name(t)); }
 |  flat_expr() 
 
 }
@@ -847,7 +859,7 @@ void scalar_flat_expr() #ScalarFlatExpr:
 	  jjtThis.setInt(aa.getIndex());
 	}
     | t = <IDENT> 
-	{ jjtThis.setType(2); jjtThis.setIdent(t.image); }
+	{ jjtThis.setType(2); jjtThis.setIdent(name(t)); }
     | t = bool_literal() 
 	{ jjtThis.setType(1); 
 	  int val = Boolean.parseBoolean(t.image)==true?1:0;
@@ -894,7 +906,7 @@ void variable_expr() #VariableExpr:
 {
     LOOKAHEAD(2)
 	aa = array_access_expr() {jjtThis.setArrayAccess(aa); }
-    |   t=<IDENT> {jjtThis.setIdent(t.image);}
+    |   t=<IDENT> {jjtThis.setIdent(name(t));}
 }
 
 // solve_expr:
@@ -912,7 +924,7 @@ void solve_expr() #SolveExpr:
 	{jjtThis.setType(1); jjtThis.setIdent(aa.getIdent()); jjtThis.setIndex(aa.getIndex()); }
 	| LOOKAHEAD(2) <IDENT> <LP> flat_exprs() <RP> 
 	| t = <IDENT> 
-	{jjtThis.setType(0); jjtThis.setIdent(t.image); }
+	{jjtThis.setType(0); jjtThis.setIdent(name(t)); }
 }
 
 // array_access_expr:
@@ -924,7 +936,7 @@ ArrayAccess array_access_expr() :
     int index;}
 {
     t=<IDENT> <LBOX> index=int_index_expr() <RBOX>
-	{ ident = t.image; }
+	{ ident = name(t); }
     { return new ArrayAccess(ident, index); }
 }
 
@@ -938,7 +950,7 @@ int int_index_expr() :
 }
 {
     t=<IDENT>  // need to make a look-up in a dictionary
-	{ String ident = t.image; 
+	{ String ident = name(t); 
 	  i = dict.getInt(ident);	   
 	  return i;
 	}
@@ -1041,7 +1053,7 @@ void annotation() #Annotation:
 {
 	 LOOKAHEAD(5) 
 	 t=<IDENT> <LP> annotation() (<COMMA> annotation() )* <RP>
-	 {jjtThis.setId(t.image); }
+	 {jjtThis.setId(name(t)); }
        | 
 	 LOOKAHEAD(2)  // addition to accept seq_search and priority_search
      	 <LBOX> annotation() (<COMMA> annotation() )* <RBOX> 

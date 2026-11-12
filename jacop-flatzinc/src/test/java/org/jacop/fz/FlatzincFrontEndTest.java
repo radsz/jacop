@@ -33,6 +33,9 @@ package org.jacop.fz;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1161,6 +1164,55 @@ class FlatzincFrontEndTest {
     late.startedEarlier(19_000);
     String out = runInThisJvm(late, fzn);
     assertFalse(out.contains("free search without learning"), out);
+  }
+
+  @Test
+  void theParseTreeIsReleasedBeforeTheSearch() throws IOException, ParseException {
+    // the parser keeps the root of the parse tree on its stack while the search runs, so the
+    // variable and constraint items stayed live: 29 % of the heap of nside EASY_200_50
+    Path fzn = tmp.resolve("release.fzn");
+    Files.writeString(
+        fzn,
+        "var 0..9: x :: output_var;\nvar 0..9: y;\nconstraint int_lt(x, y);\nsolve minimize y;\n",
+        StandardCharsets.UTF_8);
+    Options opt = new Options(new String[] {"-t", "10000", fzn.toString()});
+    PrintStream originalOut = System.out;
+    try (PrintStream capture =
+            new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+      SimpleNode root = (SimpleNode) parser.jjtree.rootNode();
+      int kept = 0;
+      for (int i = 0; i < root.jjtGetNumChildren(); i++) {
+        SimpleNode item = (SimpleNode) root.jjtGetChild(i);
+        if (item != null) {
+          assertEquals(ParserTreeConstants.JJTMODELEND, item.getId());
+          kept++;
+        } else {
+          assertNull(item);
+        }
+      }
+      assertEquals(1, kept, "only the solve item is kept");
+      assertNotNull(parser.getStore());
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  @Test
+  void aNameReadTwiceIsOneString() {
+    // one String per occurrence of a name made a third of the parse tree of ma-path-finding
+    // ins_g32_p20_a10 (950 MB of strings for 12 million name uses), which died at 4 GB while
+    // posting
+    Parser parser = new Parser(new java.io.StringReader(""));
+    Token first = new Token();
+    first.image = new String("X_INTRODUCED_7_".toCharArray());
+    Token second = new Token();
+    second.image = new String("X_INTRODUCED_7_".toCharArray());
+    assertSame(parser.name(first), parser.name(second));
   }
 
   @Test
