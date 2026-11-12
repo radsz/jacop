@@ -4131,6 +4131,30 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. TimeIndexedBound, a dual bound of the objective from a time-indexed
+     linear relaxation of the cumulative and disjunctive resources
+     (Pritsker, Watters and Wolfe, "Multiproject scheduling with limited
+     resources: a zero-one programming approach", Management Science
+     16(1), 1969), with interval-indexed buckets where the horizon is
+     long (Queyranne and Schulz, "Polyhedral approaches to machine
+     scheduling", TU Berlin report 408, 1994) and aggregated precedence
+     rows over cumulative columns (Christofides, Alvarez-Valdes and
+     Tamarit, "Project scheduling with resource constraints: a branch
+     and bound approach", EJOR 29(3), 1987). It takes the rows of the
+     linear relaxation and the bounds at the root, is solved by the
+     revised dual simplex, and turns the duals (or a Farkas ray) into an
+     exact Lagrangian bound on big integers, so the bound is safe
+     whatever the floating-point error. It is solved again when the
+     objective limit drops or the root bounds change, within a share of
+     the run time and backing off after solves that prove nothing new.
+     Lazy clause generation explains the bound by the objective limit
+     and the root bounds the solve assumed. Off by default; FlatZinc:
+     -Dorg.jacop.lp.timeIndexed=true. On 39 MiniZinc Challenge instances
+     with cumulative that the relaxation reaches (240 s, model search)
+     the bound rises on 17 and falls on none: cargo challenge07 4 to
+     168 (best 328), ihtc-2024 i03 230 to 5338 (best 10660), racp
+     j60_48 617 to 638.
+
 Version 4.11
 =============
 
