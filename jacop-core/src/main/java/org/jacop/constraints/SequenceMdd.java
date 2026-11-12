@@ -31,9 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.LinkedHashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
@@ -43,6 +41,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * A relaxed multivalued decision diagram over the order in which a circuit visits its nodes, with
@@ -74,7 +75,8 @@ import org.jacop.core.Var;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyable<SequenceMdd> {
+public class SequenceMdd extends Constraint
+    implements SatisfiedPresent, Copyable<SequenceMdd>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -142,14 +144,25 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
   // the largest sort key of a candidate, so that key * candidates + index fits in a long
   private static final long MAX_KEY = 1L << 40;
 
+  /**
+   * The largest circuit whose pruning lazy clause generation explains by replaying the constraint
+   * ({@code -Djacop.sequenceMdd.replayNodes}, 32 by default); a larger one gives the generic reason
+   * at once. Each replay compiles the whole diagram again, which on circuits of 40 to 60 nodes cost
+   * more than the shorter reasons saved.
+   */
+  private static final int REPLAY_NODES = Integer.getInteger("jacop.sequenceMdd.replayNodes", 32);
+
   private int rootLevel = -1;
   private int skip;
   private int backoff;
   private boolean pruned;
 
-  // layer arrays, allocated at the first call: masks and per-key earliest departures
+  // layer arrays, allocated at the first call: masks, per-last earliest departures and least costs
+  // (INF for the nodes outside lastMask)
   private long[][][] allMask;
   private long[][][] someMask;
+  private long[][][] lastMask;
+  private long[][] nodeHash;
   private long[][][] time;
   // the least cost of the paths into each (node, last)
   private long[][][] top;
@@ -157,12 +170,43 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
   // target[k][u][j]: index in layer k + 1 of the arc from node u of layer k labelled j, or -1
   private int[][][] target;
 
-  // candidates of the next layer
+  // candidates of the next layer, found by the hash of their visited set in an open-addressing
+  // table
   private long[][] candAll;
   private long[][] candSome;
+  private long[][] candLast;
+  private long[] candHash;
   private long[][] candTime;
   private long[][] candTop;
   private int[] candToNode;
+  private long[] order;
+  private int[] table;
+  private int[] tableStamp;
+  private int stamp;
+  private long[] zobrist;
+
+  // the arcs of the current domains: outMask[i] the successors of i, inMask[j] the predecessors of
+  // j
+  private long[][] outMask;
+  // the bounds of the times at the start of the call
+  private long[] loIn;
+  private long[] hiIn;
+  private long[] loOut;
+  private long[] hiOut;
+  private long[][] inMask;
+
+  // backward pass
+  private long[][] latest;
+  private long[][] prev;
+  private long[][] bottom;
+  private long[][] prevBottom;
+  private long[] minIn;
+  private long[] minOut;
+  private long[] maxIn;
+  private long[] maxOut;
+  private long[] leave;
+  private long[] rest;
+  private boolean[] support;
 
   /**
    * It creates the constraint.
@@ -437,14 +481,14 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
 
   // the earliest arrival at j after leaving i at t, or INF when the window of j is missed
   private long arrival(int i, int j, long t) {
-    long a = lo(in[j]);
+    long a = loIn[j];
     int d = travel[i][j];
     if (d != NONE && t > NEG) {
       a =
           Math.max(
               a, stepTravel == null || stepTravel[i][j] == null ? t + d : stepArrival(i, j, t));
     }
-    return a > hi(in[j]) ? INF : a;
+    return a > hiIn[j] ? INF : a;
   }
 
   // the travel time from i to j when i is left at t
@@ -461,7 +505,7 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
   private long stepArrival(int i, int j, long t) {
     int[] row = stepTravel[i][j];
     long[] best = stepBest[i][j];
-    long latest = hi(out[i]);
+    long latest = hiOut[i];
     long a = t + travelAt(i, j, t);
     long s = t < 0 ? 0 : t / stepLength + 1;
     for (; s < row.length && s * stepLength <= latest && best[(int) s] < a; s++) {
@@ -477,7 +521,7 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
   // the latest departure from i, at most the latest one, that arrives at j by x, or NEG when none
   private long stepLatest(int i, int j, long x) {
     int[] row = stepTravel[i][j];
-    long latest = hi(out[i]);
+    long latest = hiOut[i];
     long beyond = (long) row.length * stepLength;
     long d0 = Math.min(x - travel[i][j], latest);
     if (d0 >= beyond) {
@@ -495,11 +539,11 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
 
   // the earliest departure from j after arriving at a, or INF when the window of j is missed
   private long departure(int j, long a) {
-    long t = lo(out[j]);
+    long t = loOut[j];
     if (delta[j] != NONE && a > NEG) {
       t = Math.max(t, a + delta[j]);
     }
-    return t > hi(out[j]) ? INF : t;
+    return t > hiOut[j] ? INF : t;
   }
 
   private long arcCost(int i, int j) {
@@ -509,35 +553,103 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
   private void allocate() {
     allMask = new long[n][width][words];
     someMask = new long[n][width][words];
+    lastMask = new long[n][width][words];
+    nodeHash = new long[n][width];
     time = new long[n][width][n];
     top = new long[n][width][n];
+    for (int k = 0; k < n; k++) {
+      for (int u = 0; u < width; u++) {
+        Arrays.fill(time[k][u], INF);
+        Arrays.fill(top[k][u], INF);
+      }
+    }
     count = new int[n];
     target = new int[n][width][n];
     int cands = width * n;
-    candAll = new long[cands][];
-    candSome = new long[cands][];
-    candTime = new long[cands][];
-    candTop = new long[cands][];
+    candAll = new long[cands][words];
+    candSome = new long[cands][words];
+    candLast = new long[cands][words];
+    candHash = new long[cands];
+    candTime = new long[cands][n];
+    candTop = new long[cands][n];
+    for (int c = 0; c < cands; c++) {
+      Arrays.fill(candTime[c], INF);
+      Arrays.fill(candTop[c], INF);
+    }
     candToNode = new int[cands];
+    order = new long[cands];
+    int size = Integer.highestOneBit(Math.max(2 * cands - 1, 1)) << 1;
+    table = new int[size];
+    tableStamp = new int[size];
+    zobrist = new long[n];
+    long z = 0x9E3779B97F4A7C15L;
+    for (int j = 0; j < n; j++) {
+      z += 0x9E3779B97F4A7C15L;
+      zobrist[j] = mix(z);
+    }
+    loIn = new long[n];
+    hiIn = new long[n];
+    loOut = new long[n];
+    hiOut = new long[n];
+    outMask = new long[n][words];
+    inMask = new long[n][words];
+    latest = new long[width][n];
+    prev = new long[width][n];
+    bottom = new long[width][n];
+    prevBottom = new long[width][n];
+    minIn = new long[n];
+    minOut = new long[n];
+    maxIn = new long[n];
+    maxOut = new long[n];
+    leave = new long[n];
+    rest = new long[n];
+    support = new boolean[n * n];
   }
 
-  private static final class MaskKey {
-    final long[] mask;
-    final int hash;
+  // a 64-bit finaliser (Stafford's variant 13 of the MurmurHash3 mixer)
+  private static long mix(long z) {
+    z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+    z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+    return z ^ (z >>> 31);
+  }
 
-    MaskKey(long[] mask) {
-      this.mask = mask;
-      this.hash = Arrays.hashCode(mask);
+  // the arcs the circuit may use now, as masks of successors and of predecessors
+  private void arcMasks() {
+    for (int j = 0; j < n; j++) {
+      loIn[j] = lo(in[j]);
+      hiIn[j] = hi(in[j]);
+      loOut[j] = lo(out[j]);
+      hiOut[j] = hi(out[j]);
     }
-
-    @Override
-    public boolean equals(Object o) {
-      return o instanceof MaskKey k && Arrays.equals(mask, k.mask);
+    for (int i = 0; i < n; i++) {
+      Arrays.fill(outMask[i], 0L);
+      Arrays.fill(inMask[i], 0L);
     }
+    for (int x = 0; x < n; x++) {
+      IntDomain d = arcs[x].domain;
+      for (int y = 0; y < n; y++) {
+        if (d.contains(offset + y)) {
+          int i = pred ? y : x;
+          int j = pred ? x : y;
+          set(outMask[i], j);
+          set(inMask[j], i);
+        }
+      }
+    }
+  }
 
-    @Override
-    public int hashCode() {
-      return hash;
+  // clears the last nodes of a diagram node, so that its times and costs are all INF
+  private void clearNode(int k, int u) {
+    long[] lm = lastMask[k][u];
+    long[] t = time[k][u];
+    long[] p = top[k][u];
+    for (int w = 0; w < words; w++) {
+      for (long bits = lm[w]; bits != 0; bits &= bits - 1) {
+        int i = (w << 6) + Long.numberOfTrailingZeros(bits);
+        t[i] = INF;
+        p[i] = INF;
+      }
+      lm[w] = 0L;
     }
   }
 
@@ -558,84 +670,84 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     if (allMask == null) {
       allocate();
     }
+    arcMasks();
     // layer 0: the start
     count[0] = 1;
+    clearNode(0, 0);
     Arrays.fill(allMask[0][0], 0L);
     Arrays.fill(someMask[0][0], 0L);
     set(allMask[0][0], start);
     set(someMask[0][0], start);
-    Arrays.fill(time[0][0], INF);
-    long t0 = lo(out[start]);
-    if (t0 > hi(out[start])) {
+    long t0 = loOut[start];
+    if (t0 > hiOut[start]) {
       throw Store.failException;
     }
+    set(lastMask[0][0], start);
     time[0][0][start] = t0;
-    Arrays.fill(top[0][0], INF);
     top[0][0][start] = 0;
+    nodeHash[0][0] = zobrist[start];
 
-    Map<MaskKey, Integer> index = new HashMap<>();
-    long[] order = new long[width * n];
+    int startWord = start >>> 6;
+    long startBit = 1L << start;
     for (int k = 0; k + 1 < n; k++) {
-      index.clear();
+      if (++stamp == 0) {
+        Arrays.fill(tableStamp, 0);
+        stamp = 1;
+      }
       int cands = 0;
       for (int u = 0; u < count[k]; u++) {
         int[] tgt = target[k][u];
         Arrays.fill(tgt, -1);
         long[] all = allMask[k][u];
         long[] some = someMask[k][u];
+        long[] lm = lastMask[k][u];
         boolean full = bitCount(some) == k + 1;
+        long h = nodeHash[k][u];
         long[] tu = time[k][u];
         long[] cu = top[k][u];
-        for (int i = 0; i < n; i++) {
-          long t = tu[i];
-          if (t == INF) {
-            continue;
-          }
-          for (int j = 0; j < n; j++) {
-            if (j == start || get(all, j) || full && get(some, j) || !arc(i, j)) {
-              continue;
-            }
-            long a = arrival(i, j, t);
-            if (a == INF) {
-              continue;
-            }
-            long d = departure(j, a);
-            if (d == INF) {
-              continue;
-            }
-            int c = tgt[j];
-            if (c < 0) {
-              long[] na = Arrays.copyOf(all, words);
-              set(na, j);
-              MaskKey key = new MaskKey(na);
-              Integer old = index.get(key);
-              if (old == null) {
-                c = cands++;
-                index.put(key, c);
-                candAll[c] = na;
-                long[] ns = candSome[c] == null ? new long[words] : candSome[c];
-                System.arraycopy(some, 0, ns, 0, words);
-                set(ns, j);
-                candSome[c] = ns;
-                if (candTime[c] == null) {
-                  candTime[c] = new long[n];
-                  candTop[c] = new long[n];
-                }
-                Arrays.fill(candTime[c], INF);
-                Arrays.fill(candTop[c], INF);
-              } else {
-                c = old;
-                orInto(candSome[c], some);
-                set(candSome[c], j);
+        for (int wi = 0; wi < words; wi++) {
+          for (long lastBits = lm[wi]; lastBits != 0; lastBits &= lastBits - 1) {
+            int i = (wi << 6) + Long.numberOfTrailingZeros(lastBits);
+            long t = tu[i];
+            long[] om = outMask[i];
+            for (int wj = 0; wj < words; wj++) {
+              long next = om[wj] & ~all[wj];
+              if (full) {
+                next &= ~some[wj];
               }
-              tgt[j] = c;
-            }
-            if (d < candTime[c][j]) {
-              candTime[c][j] = d;
-            }
-            long nc = cu[i] + arcCost(i, j);
-            if (nc < candTop[c][j]) {
-              candTop[c][j] = nc;
+              if (wj == startWord) {
+                next &= ~startBit;
+              }
+              for (; next != 0; next &= next - 1) {
+                int j = (wj << 6) + Long.numberOfTrailingZeros(next);
+                long a = arrival(i, j, t);
+                if (a == INF) {
+                  continue;
+                }
+                long d = departure(j, a);
+                if (d == INF) {
+                  continue;
+                }
+                int c = tgt[j];
+                if (c < 0) {
+                  c = candidate(h ^ zobrist[j], all, some, j, cands);
+                  if (c == cands) {
+                    cands++;
+                  }
+                  tgt[j] = c;
+                }
+                long[] ct = candTime[c];
+                if (d < ct[j]) {
+                  if (ct[j] == INF) {
+                    set(candLast[c], j);
+                  }
+                  ct[j] = d;
+                }
+                long nc = cu[i] + arcCost(i, j);
+                if (nc < candTop[c][j]) {
+                  candTop[c][j] = nc;
+                }
+              }
             }
           }
         }
@@ -643,7 +755,7 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
       if (cands == 0) {
         throw Store.failException;
       }
-      select(k + 1, cands, order);
+      select(k + 1, cands);
       for (int u = 0; u < count[k]; u++) {
         int[] tgt = target[k][u];
         for (int j = 0; j < n; j++) {
@@ -659,15 +771,57 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     skip = backoff;
   }
 
+  // the candidate with the visited set all + j, found in the table of the layer or added as number
+  // fresh; the some set of an existing one is extended by some + j
+  private int candidate(long hash, long[] all, long[] some, int j, int fresh) {
+    int mask = table.length - 1;
+    int jw = j >>> 6;
+    long jb = 1L << j;
+    for (int s = (int) mix(hash) & mask; ; s = (s + 1) & mask) {
+      if (tableStamp[s] != stamp) {
+        tableStamp[s] = stamp;
+        table[s] = fresh;
+        long[] na = candAll[fresh];
+        long[] ns = candSome[fresh];
+        System.arraycopy(all, 0, na, 0, words);
+        System.arraycopy(some, 0, ns, 0, words);
+        na[jw] |= jb;
+        ns[jw] |= jb;
+        candHash[fresh] = hash;
+        return fresh;
+      }
+      int c = table[s];
+      if (candHash[c] == hash && sameWith(candAll[c], all, jw, jb)) {
+        orInto(candSome[c], some);
+        candSome[c][jw] |= jb;
+        return c;
+      }
+    }
+  }
+
+  // whether mask equals all with the bit jb of word jw set
+  private boolean sameWith(long[] mask, long[] all, int jw, long jb) {
+    for (int w = 0; w < words; w++) {
+      if (mask[w] != (w == jw ? all[w] | jb : all[w])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   // copies the candidates of layer k into its nodes, merging the latest ones beyond the width
-  private void select(int k, int cands, long[] order) {
+  private void select(int k, int cands) {
     if (cands > width) {
       // sorted by the least time (or cost) of each candidate, then by its index
       for (int c = 0; c < cands; c++) {
         long m = INF;
         // with a cost, merge the nodes of the most expensive paths, else of the latest ones
-        for (long t : costs != null ? candTop[c] : candTime[c]) {
-          m = Math.min(m, t);
+        long[] key = costs != null ? candTop[c] : candTime[c];
+        long[] cl = candLast[c];
+        for (int w = 0; w < words; w++) {
+          for (long bits = cl[w]; bits != 0; bits &= bits - 1) {
+            m = Math.min(m, key[(w << 6) + Long.numberOfTrailingZeros(bits)]);
+          }
         }
         order[c] = Math.clamp(m, 0, MAX_KEY) * (width * n) + c;
       }
@@ -682,49 +836,76 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
       int c = (int) (order[r] % (width * n));
       int u = Math.min(r, width - 1);
       candToNode[c] = u;
+      long[] cl = candLast[c];
+      long[] ct = candTime[c];
+      long[] cp = candTop[c];
+      long[] t = time[k][u];
+      long[] p = top[k][u];
       if (r <= u) {
+        clearNode(k, u);
         System.arraycopy(candAll[c], 0, allMask[k][u], 0, words);
         System.arraycopy(candSome[c], 0, someMask[k][u], 0, words);
-        System.arraycopy(candTime[c], 0, time[k][u], 0, n);
-        System.arraycopy(candTop[c], 0, top[k][u], 0, n);
+        System.arraycopy(cl, 0, lastMask[k][u], 0, words);
+        nodeHash[k][u] = candHash[c];
       } else {
         long[] a = allMask[k][u];
         long[] s = someMask[k][u];
-        long[] t = time[k][u];
+        long[] lm = lastMask[k][u];
         for (int w = 0; w < words; w++) {
           a[w] &= candAll[c][w];
           s[w] |= candSome[c][w];
-        }
-        long[] p = top[k][u];
-        for (int j = 0; j < n; j++) {
-          t[j] = Math.min(t[j], candTime[c][j]);
-          p[j] = Math.min(p[j], candTop[c][j]);
+          lm[w] |= cl[w];
         }
       }
+      // takes the times and costs of the candidate and leaves its arrays at INF for the next layer
+      for (int w = 0; w < words; w++) {
+        for (long bits = cl[w]; bits != 0; bits &= bits - 1) {
+          int j = (w << 6) + Long.numberOfTrailingZeros(bits);
+          t[j] = Math.min(t[j], ct[j]);
+          p[j] = Math.min(p[j], cp[j]);
+          ct[j] = INF;
+          cp[j] = INF;
+        }
+        cl[w] = 0L;
+      }
+    }
+    if (cands > width) {
+      // the merged node's visited set shrank; hash it again
+      long[] a = allMask[k][width - 1];
+      long h = 0;
+      for (int w = 0; w < words; w++) {
+        for (long bits = a[w]; bits != 0; bits &= bits - 1) {
+          h ^= zobrist[(w << 6) + Long.numberOfTrailingZeros(bits)];
+        }
+      }
+      nodeHash[k][width - 1] = h;
     }
     count[k] = nodes;
   }
 
-  // the latest departure from i after which j is reached and left by l, or NEG when none
-  private long latestDeparture(int i, int j, long l) {
-    long loIn = lo(in[j]);
-    long hiIn = hi(in[j]);
-    if (loIn > hiIn) {
+  // the latest arrival at j after which j is left by l, or NEG when none; the start is not left
+  private long arrivalLimit(int j, long l) {
+    long earliest = loIn[j];
+    long x = hiIn[j];
+    if (earliest > x) {
       return NEG;
     }
-    long x = hiIn;
     if (j != start) {
-      if (lo(out[j]) > l) {
+      if (loOut[j] > l) {
         return NEG;
       }
       if (delta[j] != NONE) {
-        if (loIn + delta[j] > l) {
+        if (earliest + delta[j] > l) {
           return NEG;
         }
         x = Math.min(x, l - delta[j]);
       }
     }
-    // the closing arc: only the arrival counts
+    return x;
+  }
+
+  // the latest departure from i that arrives at j by x
+  private long departureLimit(int i, int j, long x) {
     int tr = travel[i][j];
     if (tr == NONE) {
       return INF;
@@ -735,41 +916,47 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     return x >= INF ? INF : x - tr;
   }
 
+  // the latest departure from i after which j is reached and left by l, or NEG when none
+  private long latestDeparture(int i, int j, long l) {
+    long x = arrivalLimit(j, l);
+    return x == NEG ? NEG : departureLimit(i, j, x);
+  }
+
   // backward pass: the latest departure of each (node, last) that still reaches the closing arc;
   // keeps the arcs between an earliest and a latest time that meet, then prunes
   private void prune(Store store) {
     int last = n - 1;
-    long[][] latest = new long[width][n];
-    long[][] prev = new long[width][n];
+    long[][] latest = this.latest;
+    long[][] prev = this.prev;
     // the least cost from each (node, last) to the end of the circuit
-    long[][] bottom = new long[width][n];
-    long[][] prevBottom = new long[width][n];
+    long[][] bottom = this.bottom;
+    long[][] prevBottom = this.prevBottom;
     long budget = cost == null ? INF : cost.max() - costOffset;
-    long[] minIn = new long[n];
-    long[] minOut = new long[n];
-    long[] maxIn = new long[n];
-    long[] maxOut = new long[n];
     Arrays.fill(minIn, INF);
     Arrays.fill(minOut, INF);
     Arrays.fill(maxIn, NEG);
     Arrays.fill(maxOut, NEG);
-    boolean[] support = new boolean[n * n];
+    Arrays.fill(support, false);
     long closing = INF;
     for (int u = 0; u < count[last]; u++) {
       long[] tu = time[last][u];
-      Arrays.fill(latest[u], NEG);
-      for (int i = 0; i < n; i++) {
-        if (tu[i] == INF || !arc(i, start)) {
-          continue;
-        }
-        long l = Math.min(hi(out[i]), latestDeparture(i, start, INF));
-        long b = arcCost(i, start);
-        if (tu[i] <= l && top[last][u][i] + b <= budget) {
-          latest[u][i] = l;
-          bottom[u][i] = b;
-          support[i * n + start] = true;
-          closing = Math.min(closing, arrival(i, start, tu[i]));
-          note(i, tu[i], l, minOut, maxIn, maxOut);
+      long[] lm = lastMask[last][u];
+      for (int w = 0; w < words; w++) {
+        for (long bits = lm[w]; bits != 0; bits &= bits - 1) {
+          int i = (w << 6) + Long.numberOfTrailingZeros(bits);
+          latest[u][i] = NEG;
+          if (!get(outMask[i], start)) {
+            continue;
+          }
+          long l = Math.min(hiOut[i], latestDeparture(i, start, INF));
+          long b = arcCost(i, start);
+          if (tu[i] <= l && top[last][u][i] + b <= budget) {
+            latest[u][i] = l;
+            bottom[u][i] = b;
+            support[i * n + start] = true;
+            closing = Math.min(closing, arrival(i, start, tu[i]));
+            note(i, tu[i], l, minOut, maxIn, maxOut);
+          }
         }
       }
     }
@@ -780,47 +967,65 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
       for (int u = 0; u < count[k]; u++) {
         long[] tu = time[k][u];
         long[] cu = top[k][u];
+        long[] lm = lastMask[k][u];
         int[] tgt = target[k][u];
         long[] lu = prev[u];
         long[] bu = prevBottom[u];
-        Arrays.fill(lu, NEG);
-        for (int i = 0; i < n; i++) {
-          long t = tu[i];
-          if (t == INF) {
+        for (int w = 0; w < words; w++) {
+          for (long bits = lm[w]; bits != 0; bits &= bits - 1) {
+            int i = (w << 6) + Long.numberOfTrailingZeros(bits);
+            leave[i] = NEG;
+            rest[i] = INF;
+          }
+        }
+        for (int j = 0; j < n; j++) {
+          int v = tgt[j];
+          if (v < 0 || latest[v][j] == NEG) {
             continue;
           }
-          long best = NEG;
-          long cheapest = INF;
-          for (int j = 0; j < n; j++) {
-            int v = tgt[j];
-            if (v < 0 || latest[v][j] == NEG || !arc(i, j)) {
-              continue;
-            }
-            long l = latestDeparture(i, j, latest[v][j]);
-            if (l < t) {
-              continue;
-            }
-            long b = arcCost(i, j) + bottom[v][j];
-            if (cu[i] + b > budget) {
-              continue;
-            }
-            long a = arrival(i, j, t);
-            long d = departure(j, a);
-            if (a == INF || d == INF) {
-              continue;
-            }
-            best = Math.max(best, l);
-            cheapest = Math.min(cheapest, b);
-            support[i * n + j] = true;
-            minIn[j] = Math.min(minIn[j], a);
-            minOut[j] = Math.min(minOut[j], d);
+          long x = arrivalLimit(j, latest[v][j]);
+          if (x == NEG) {
+            continue;
           }
-          best = Math.min(best, hi(out[i]));
-          if (best >= t) {
-            lu[i] = best;
-            bu[i] = cheapest;
-            if (k > 0) {
-              note(i, t, best, minOut, maxIn, maxOut);
+          long below = bottom[v][j];
+          long[] im = inMask[j];
+          for (int w = 0; w < words; w++) {
+            for (long bits = lm[w] & im[w]; bits != 0; bits &= bits - 1) {
+              int i = (w << 6) + Long.numberOfTrailingZeros(bits);
+              long t = tu[i];
+              long l = departureLimit(i, j, x);
+              if (l < t) {
+                continue;
+              }
+              long b = arcCost(i, j) + below;
+              if (cu[i] + b > budget) {
+                continue;
+              }
+              long a = arrival(i, j, t);
+              long d = departure(j, a);
+              if (a == INF || d == INF) {
+                continue;
+              }
+              leave[i] = Math.max(leave[i], l);
+              rest[i] = Math.min(rest[i], b);
+              support[i * n + j] = true;
+              minIn[j] = Math.min(minIn[j], a);
+              minOut[j] = Math.min(minOut[j], d);
+            }
+          }
+        }
+        for (int w = 0; w < words; w++) {
+          for (long bits = lm[w]; bits != 0; bits &= bits - 1) {
+            int i = (w << 6) + Long.numberOfTrailingZeros(bits);
+            long t = tu[i];
+            long bst = Math.min(leave[i], hiOut[i]);
+            lu[i] = NEG;
+            if (bst >= t) {
+              lu[i] = bst;
+              bu[i] = rest[i];
+              if (k > 0) {
+                note(i, t, bst, minOut, maxIn, maxOut);
+              }
             }
           }
         }
@@ -841,12 +1046,16 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     }
     // successor values on no path
     for (int i = 0; i < n; i++) {
-      for (int j = 0; j < n; j++) {
-        if (i != j && !support[i * n + j] && arc(i, j)) {
-          IntVar x = pred ? arcs[j] : arcs[i];
-          int value = offset + (pred ? i : j);
-          x.domain.inComplement(store.level, x, value);
-          pruned = true;
+      long[] om = outMask[i];
+      for (int w = 0; w < words; w++) {
+        for (long bits = om[w]; bits != 0; bits &= bits - 1) {
+          int j = (w << 6) + Long.numberOfTrailingZeros(bits);
+          if (i != j && !support[i * n + j]) {
+            IntVar x = pred ? arcs[j] : arcs[i];
+            int value = offset + (pred ? i : j);
+            x.domain.inComplement(store.level, x, value);
+            pruned = true;
+          }
         }
       }
     }
@@ -865,7 +1074,7 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
   private void note(int j, long t, long l, long[] minOut, long[] maxIn, long[] maxOut) {
     minOut[j] = Math.min(minOut[j], t);
     maxOut[j] = Math.max(maxOut[j], l);
-    long a = hi(in[j]);
+    long a = hiIn[j];
     if (delta[j] != NONE) {
       a = Math.min(a, l - delta[j]);
     }
@@ -918,6 +1127,26 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
       if (!a.singleton()) {
         return false;
       }
+    }
+    return true;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (n <= REPLAY_NODES) {
+      return false;
+    }
+    trail.genericReason(entry, out);
+    return true;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (n <= REPLAY_NODES) {
+      return false;
+    }
+    for (Var v : arguments()) {
+      trail.atomsBefore(v, trail.size(), out);
     }
     return true;
   }
