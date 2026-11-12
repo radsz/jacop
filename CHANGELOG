@@ -4234,7 +4234,38 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
-247. Decomposition bound (off by default, -Dorg.jacop.fz.decomposition=true).
+248. Inferred redundant cumulatives (on by default;
+     -Dorg.jacop.fz.inferredCumulatives=false turns them off), after A. Sidorov, On Inferring Cumulative
+     Constraints, CP 2026 (arXiv 2602.15635). At each time point a
+     cumulative is a knapsack inequality over the tasks that run then; a
+     cover of these inequalities (tasks that cannot all run together) is
+     lifted by sequential lifting (M. W. Padberg, A note on zero-one
+     programming, Operations Research 23, 1975) to sum(pi_i) <= pi_0 over
+     more tasks, which holds at every time point and is posted as
+     Cumulative(starts, durations, pi, pi_0), or CumulativeUnary when
+     pi_0 = 1. Covers of 2 and 3 tasks and of the longest and shortest
+     tasks per resource use are lifted over all fixed-capacity cumulatives
+     together and over the pairs of tasks that precedences or disjunctions
+     keep apart (the conflict graph of org.jacop.fz.disjunctiveCliques,
+     Sidorov, Marijnissen and Demirovic, CP 2025); the five
+     with the largest capacity bound sum(d_i * pi_i) / pi_0 that no input
+     cumulative dominates are posted, and only when that bound exceeds the
+     capacity bound of every input cumulative and clique
+     (.useful=false posts them anyway; those mostly add propagation and
+     slowed LCG). org.jacop.presolve.InferredCumulatives does the inference
+     on its own. On rcpsp 2013 instance 13 one inferred cumulative of 18
+     tasks with capacity 3 has capacity bound 78, the optimum: model search
+     proves it in 0.6 s instead of 6.8 s, -f in 0.7 s instead of 47 s.
+     test-scheduling t30m20r3-20 is proved in 0.7 s (open after 600 s
+     without). 31 of 100 cumulative instances get one; on them, at 240 s,
+     model search solves 24 instead of 23 and -f 28 as before in 327 s
+     instead of 365 s, with no instance lost (also at 600 s). On by
+     default after a round with the default jar: of the 240 wide-set
+     instances 21 run the inference (at most 1 s, largescheduling) and 4
+     get an inferred cumulative; on the 31 instances, model search 24
+     solved instead of 23, -f 28 as before in 282 s instead of 354 s.
+
+249. Decomposition bound (off by default, -Dorg.jacop.fz.decomposition=true).
      Before search, the FlatZinc front end looks for blocks of variables
      that only counting (CountValuesBounds) and linear constraints link,
      as in the connected-component detection of Gamrath and Luebbecke
@@ -4255,7 +4286,7 @@ Version 5.0 (unreleased)
      The statistics are dbBlocks, dbRows, dbIterations, dbColumns,
      dbBound, dbPricingTimeOuts and dbTime.
 
-248. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
+250. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
      the travel time on the arc i -> j when i is left in step s (time
      out[i] / stepLength), and waiting is allowed, so the arrival is the
      earliest t' + travel(t') over the departures t' still possible
@@ -4272,7 +4303,7 @@ Version 5.0 (unreleased)
      17,579; -f 16,358 -> 14,962). -Dorg.jacop.fz.sequenceMdd=false turns
      it off.
 
-249. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
+251. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
      the bins an item left or was fixed in, read from the values the item
      lost at the current level, instead of every bin of the item's previous
      domain, and keeps for each bin the items that may still be in it, so
@@ -4282,7 +4313,7 @@ Version 5.0 (unreleased)
      2025 ihtc-2024-marte instances, where Binpacking took about half of
      the run, fixed search explores 1.06x to 5.9x more nodes in 600 s.
 
-250. Cuts in search keep their period only while they move the bound.
+252. Cuts in search keep their period only while they move the bound.
      The capacity cuts of item 187 and the Hall cuts of item 215 were
      separated more often whenever a violated cut was found, even when
      adding it left the objective of the re-solved LP where it was; now
@@ -4311,7 +4342,7 @@ Version 5.0 (unreleased)
      Hall and energy cuts in search stay off by default: they leave the
      dual bounds where they were.
 
-251. JaLP no longer cycles on LPs with large costs or huge artificial
+253. JaLP no longer cycles on LPs with large costs or huge artificial
      bounds. A reduced cost past the dual tolerance (1e-9) but within
      1e-14 of the sizes of its terms is taken as zero: with costs near
      1e7 such values are a few units in the last place and took either
@@ -4329,7 +4360,7 @@ Version 5.0 (unreleased)
      rows swapped forever). Both reproducers solve in 113 and 1,818
      pivots, before they ran until the pivot limit.
 
-252. TSP edge elimination: before search, a pure symmetric travelling
+254. TSP edge elimination: before search, a pure symmetric travelling
      salesman model (one circuit with no fixed successor, the minimised
      objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
      the arcs that are in no optimal tour, proved from the distances alone

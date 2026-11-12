@@ -339,6 +339,13 @@ unless stated otherwise):
   (half-)reified difference constraints.
 - org.jacop.fz.disjunctiveCliques: CumulativeUnary on sets of tasks
   that can never overlap (Sidorov, Marijnissen, Demirovic, CP 2025).
+- org.jacop.fz.inferredCumulatives: redundant cumulatives lifted from
+  covers of the cumulatives with a fixed capacity and from the tasks
+  that can never overlap (Sidorov, CP 2026); default true.
+  org.jacop.fz.inferredCumulatives.covers: covers lifted, default 100;
+  .out: cumulatives posted, default 5; .disjoint=false lifts over the
+  cumulatives only; .useful=false also posts those whose capacity
+  bound does not exceed that of an input cumulative or clique.
 - org.jacop.fz.elementTable: element constraints over constant arrays
   that share one index variable become one table.
 - org.jacop.fz.energyPrecedence: EnergyPrecedence on cumulatives
