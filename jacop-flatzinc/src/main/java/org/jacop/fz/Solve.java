@@ -2417,6 +2417,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else if (worker != null && costVar != null) {
       lcg.setSharedBound(worker::sharedBound);
     }
+    if (worker != null
+        && costVar != null
+        && !"0".equals(options.freeConfig("lcg-shared-phase", "1"))) {
+      lcg.setSharedPhase(worker.sharedSolution(dictionary::getVariable));
+    }
     if (worker != null) {
       worker.onStop(lcg::stop);
       shareClauses(worker);
@@ -3200,7 +3205,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "\n%%%mzn-stat: lcgClausesImported="
         + lcg.clausesImported
         + "\n%%%mzn-stat: lcgClausesSkipped="
-        + lcg.clausesSkipped;
+        + lcg.clausesSkipped
+        + "\n%%%mzn-stat: lcgSharedPhases="
+        + lcg.sharedPhases;
   }
 
   private String coreStatistics() {

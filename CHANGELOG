@@ -4560,7 +4560,19 @@ Version 5.0 (unreleased)
      and workforce-alloc 71 with free search. -Dorg.jacop.fz.symmetrySets=false and
      -Dorg.jacop.fz.symmetryEncoded=false turn the two parts off.
 
-266. Root probing under --lcg, off by default (-Djacop.lcg.probe=share of
+266. fzn-jacop -p reads the model once: the portfolio parses the file into
+     one syntax tree and each thread builds its own store from it, instead
+     of every thread reading and translating the file. LCG threads of -p
+     also take the values of a better solution shared by another thread as
+     their phases when they import its bound (solution-guided search, Beck,
+     "Solution-guided multi-point constructive search for job shop
+     scheduling", JAIR 29, 2007). At 240 s with -f -p 4, two rounds each,
+     the 62 instances of the wide-quick set score 64.7 against 59.3 pair
+     points (26 better, 6 worse) and the 65 instances of the 2026 Challenge
+     gap set 66.2 against 61.8 (36 better, 32 worse). --free-config
+     portfolio-one-parse=0 and lcg-shared-phase=0 turn the two parts off.
+
+267. Root probing under --lcg, off by default (-Djacop.lcg.probe=share of
    the time left, for example 0.02). It only adds facts: each value of each
    0/1 variable, then each value of each domain of at most 64 values
    (-Djacop.lcg.probe.domain), is assumed and propagated by the clauses and
@@ -4587,7 +4599,7 @@ Version 5.0 (unreleased)
    once that share of the time limit has passed. LcgSolver.probeRoot is the
    API; one LcgFuzzTest run in four probes before solving.
 
-267. LcgSolver.release attaches again, also above the root level, the
+268. LcgSolver.release attaches again, also above the root level, the
    constraints that became clauses: removeConstraint only marks them
    entailed there, and the mark stayed (Store.clearEntailed), so early
    root probing lost the regular constraints of handball19 (elitserien
