@@ -75,12 +75,14 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainMiddle;
 import org.jacop.search.IndomainMin;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SmallestDomain;
+import org.jacop.search.SplitSelect;
 
 /**
  * A root bound on the objective from a Dantzig-Wolfe decomposition of the model into blocks that
@@ -168,6 +170,9 @@ final class DecompositionBound {
   private static final int MAX_BLOCKS = 2000;
 
   private static final int MAX_ROWS = 20_000;
+
+  // the time, in milliseconds, the bound may take at least before it gives up for lack of progress
+  private static final long PATIENCE_MS = 5000;
 
   // the weight of the best multipliers in the duals that the pricing problems get
   private static final double SMOOTHING =
@@ -784,7 +789,18 @@ final class DecompositionBound {
     // combination of the centre and the master's duals, which damps their oscillation
     double[] centre = null;
     double alpha = SMOOTHING;
+    // the bound of the objective at the root, in the minimized cost
+    long root = maximize ? -objectiveHi : objectiveLo;
+    long budget = deadline - start;
+    long improved = start;
     while (System.currentTimeMillis() < deadline) {
+      long now = System.currentTimeMillis();
+      // a bound no better than the root's after a quarter of the time, or one that has not risen
+      // for a quarter of the time, is not worth the rest of it
+      long quarter = Math.max(PATIENCE_MS, budget / 4);
+      if (iterations > 0 && now - start > quarter && (best <= root || now - improved > quarter)) {
+        break;
+      }
       iterations++;
       double[] price = y;
       if (iterations > 1) {
@@ -891,6 +907,7 @@ final class DecompositionBound {
           best = bound;
           certified = true;
           centre = price;
+          improved = System.currentTimeMillis();
           if (!maximize ? best >= objectiveHi : -best <= objectiveLo) {
             break;
           }
@@ -1213,7 +1230,16 @@ final class DecompositionBound {
     listener.searchAll(true);
     label.setSolutionListener(listener);
     try {
-      label.labeling(store, new SimpleSelect<>(array, new SmallestDomain<>(), new IndomainMin<>()));
+      // a large domain is split, so that the depth of the search stays its logarithm
+      boolean large = false;
+      for (IntVar x : array) {
+        large |= x.getSize() > 64;
+      }
+      SelectChoicePoint<IntVar> select =
+          large
+              ? new SplitSelect<>(array, new SmallestDomain<>(), new IndomainMiddle<>())
+              : new SimpleSelect<>(array, new SmallestDomain<>(), new IndomainMin<>());
+      label.labeling(store, select);
     } finally {
       for (Constraint c : posted) {
         c.removeConstraint();
