@@ -90,7 +90,22 @@ public class TableScopeMerger implements ParserTreeConstants {
     return replaced;
   }
 
-  private record Table(SimpleNode node, IntVar[] vars) {}
+  private record Table(SimpleNode node, IntVar[] vars) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Table(SimpleNode n, IntVar[] v) && node == n && Arrays.equals(vars, v);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * System.identityHashCode(node) + Arrays.hashCode(vars);
+    }
+
+    @Override
+    public String toString() {
+      return "Table[node=" + node + ", vars=" + Arrays.toString(vars) + "]";
+    }
+  }
 
   /**
    * It scans the constraint items of the model and merges the tables over the same variables.

@@ -82,7 +82,7 @@ final class TableReformulation {
   record Unary(int column, int[] values) {
     @Override
     public boolean equals(Object o) {
-      return o instanceof Unary u && column == u.column && Arrays.equals(values, u.values);
+      return o instanceof Unary(int c, int[] v) && column == c && Arrays.equals(values, v);
     }
 
     @Override
@@ -107,11 +107,11 @@ final class TableReformulation {
   record Binary(int from, int to, int[][] pairs, boolean identity) {
     @Override
     public boolean equals(Object o) {
-      return o instanceof Binary b
-          && from == b.from
-          && to == b.to
-          && identity == b.identity
-          && Arrays.deepEquals(pairs, b.pairs);
+      return o instanceof Binary(int f, int t, int[][] p, boolean i)
+          && from == f
+          && to == t
+          && identity == i
+          && Arrays.deepEquals(pairs, p);
     }
 
     @Override
@@ -136,11 +136,11 @@ final class TableReformulation {
   record Result(List<Unary> unary, List<Binary> binary, int[] rest, int[][] restRows) {
     @Override
     public boolean equals(Object o) {
-      return o instanceof Result r
-          && unary.equals(r.unary)
-          && binary.equals(r.binary)
-          && Arrays.equals(rest, r.rest)
-          && Arrays.deepEquals(restRows, r.restRows);
+      return o instanceof Result(List<Unary> u, List<Binary> b, int[] r, int[][] rr)
+          && unary.equals(u)
+          && binary.equals(b)
+          && Arrays.equals(rest, r)
+          && Arrays.deepEquals(restRows, rr);
     }
 
     @Override
