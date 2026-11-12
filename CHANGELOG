@@ -4131,7 +4131,23 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
-241. LateCount bounds a weighted sum of late tasks (1|r_j|sum w_j U_j)
+241. Symmetry breaking in the FlatZinc front end also posts Schreier-Sims
+     cuts x_b <= x_j: for each variable b that a generator moves first in
+     the lex-leader order, every j in the orbit of b under the generators
+     that fix all variables before b (Liberti and Ostrowski, "Stabilizer-
+     based symmetry breaking constraints for mathematical programs",
+     J. Global Optim. 60, 2014; Salvagnin, "Symmetry breaking inequalities
+     from the Schreier-Sims table", CPAIOR 2018, LNCS 10848). The
+     lexicographically smallest (or largest) solution of each orbit
+     satisfies them, so they keep what the lex-leader constraints, lex
+     chains and value precedence keep. Cuts already implied by the first
+     positions of the posted constraints are left out, which is nearly all
+     of them: of the 345 MiniZinc Challenge instances where symmetry
+     breaking fires, 29 get any. zephyrus_15_10 is proved in 1.6 s instead
+     of not at all in 600 s. -Dorg.jacop.fz.symmetry.schreierSims=off turns
+     them off; --search-statistics prints symmetrySchreierSimsCuts.
+
+242. LateCount bounds a weighted sum of late tasks (1|r_j|sum w_j U_j)
      with new LateCount(starts, durations, due, weights, late). The lower
      bound of late is the larger of two bounds. The first is the sum of
      the c smallest weights of the undecided tasks, where c is the
@@ -4162,7 +4178,7 @@ Version 5.0 (unreleased)
      - -f: 36 -> 58 optima, mean time 263 -> 27 s, 11 objectives better
        and 1 worse.
 
-242. New constraint SequenceMdd: a relaxed multivalued decision diagram over
+243. New constraint SequenceMdd: a relaxed multivalued decision diagram over
      the order in which a circuit visits its nodes, with arrival and
      departure times (in[j] >= out[i] + travel[i][j] on the arc i -> j,
      out[j] >= in[j] + delta[j]) and optionally a sum of arc costs, after
@@ -4181,7 +4197,7 @@ Version 5.0 (unreleased)
      it off; org.jacop.fz.sequenceMddWidth and org.jacop.fz.sequenceMddNodes
      set the width and the largest circuit.
 
-243. GlobalCardinality (MiniZinc global_cardinality and count with
+244. GlobalCardinality (MiniZinc global_cardinality and count with
      ::domain) keeps the value lists of its variables between executions
      and builds again only the lists of the variables that changed (or
      whose level was removed), instead of every list at every execution.
@@ -4189,7 +4205,7 @@ Version 5.0 (unreleased)
      where the lists took about 60 % of the run, fixed search explores
      1.1x to 4.2x more nodes in 600 s.
 
-244. Large linear relaxations. A relaxation of an optimisation model over
+245. Large linear relaxations. A relaxation of an optimisation model over
      the size caps of the sparse simplex (25,000 rows or 30,000 columns),
      which was dropped, is kept up to 1,000,000 rows and 250,000 columns:
      it is solved at the root only, its root solves (first solve, trial of
@@ -4208,7 +4224,7 @@ Version 5.0 (unreleased)
      38,354, oly20 705,184 -> 177,745. -Dorg.jacop.lp.large=false keeps
      the old behaviour; see properties.txt.
 
-245. The default search branches on set variables in input order, smallest
+246. The default search branches on set variables in input order, smallest
      element in first, as JaCoP 4 did: free search (-f, or a model
      without search annotation) picked the set with the largest failure
      count and degree, and the branching that LCG free search alternates
