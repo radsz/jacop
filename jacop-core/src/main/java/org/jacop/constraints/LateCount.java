@@ -374,13 +374,11 @@ public class LateCount extends Constraint
             && bound + weight(i) > max
             && sure + weight(i) + late(origin, k, kept, false) > max) {
           s.domain.inMax(store.level, s, (int) lastOnTime(i));
-        } else if (!uniform || !kept[k]) {
-          if (sure + late(origin, k, kept, true) > max) {
-            if (lastOnTime(i) >= IntDomain.MAX_INT) {
-              throw Store.failException;
-            }
-            s.domain.inMin(store.level, s, (int) (lastOnTime(i) + 1));
+        } else if ((!uniform || !kept[k]) && sure + late(origin, k, kept, true) > max) {
+          if (lastOnTime(i) >= IntDomain.MAX_INT) {
+            throw Store.failException;
           }
+          s.domain.inMin(store.level, s, (int) (lastOnTime(i) + 1));
         }
       }
       // also after a change of late, which may be one of the starts
@@ -613,7 +611,7 @@ public class LateCount extends Constraint
       }
     }
     long best = uniform ? fewest : Math.max(fewest, linearLate(special));
-    return (int) Math.min(best, IMPOSSIBLE - 1);
+    return (int) Math.min(best, IMPOSSIBLE - 1L);
   }
 
   /**
@@ -641,7 +639,7 @@ public class LateCount extends Constraint
     }
     build(1, 0, m - 1, m);
     sortByRatio(m);
-    double onTime = 0;
+    double onTimeWeight = 0;
     for (int j = 0; j < m; j++) {
       int k = ratioOrder[j];
       int w = weights[order[k]];
@@ -655,9 +653,9 @@ public class LateCount extends Constraint
       }
       add(1, 0, m - 1, position[k], m - 1, -z);
       taken[k] = z;
-      onTime += (double) w * z / eff[k];
+      onTimeWeight += (double) w * z / eff[k];
     }
-    double lateWeight = total - onTime;
+    double lateWeight = total - onTimeWeight;
     return (long) Math.ceil(lateWeight - 1e-6 * Math.max(1, lateWeight));
   }
 
@@ -741,7 +739,7 @@ public class LateCount extends Constraint
   }
 
   private boolean smallerRatio(int k, int l) {
-    return (long) weights[order[k]] * eff[l] < (long) weights[order[l]] * eff[k];
+    return weights[order[k]] * eff[l] < weights[order[l]] * eff[k];
   }
 
   /**
