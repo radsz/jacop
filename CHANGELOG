@@ -4249,12 +4249,17 @@ Version 5.0 (unreleased)
      keep apart (the conflict graph of org.jacop.fz.disjunctiveCliques,
      Sidorov, Marijnissen and Demirovic, CP 2025); the five
      with the largest capacity bound sum(d_i * pi_i) / pi_0 that no input
-     cumulative dominates are posted. org.jacop.presolve.InferredCumulatives
-     does the inference on its own. On rcpsp 2013 instance 13 one inferred
-     cumulative of 18 tasks with capacity 3 has capacity bound 78, the
-     optimum: model search proves it in 0.9 s instead of 8.7 s, -f in 0.9 s
-     instead of 45 s. 65 of 100 cumulative instances get one (13 of the 34
-     cumulative instances of the wide set).
+     cumulative dominates are posted, and only when that bound exceeds the
+     capacity bound of every input cumulative and clique
+     (.useful=false posts them anyway; those mostly add propagation and
+     slowed LCG). org.jacop.presolve.InferredCumulatives does the inference
+     on its own. On rcpsp 2013 instance 13 one inferred cumulative of 18
+     tasks with capacity 3 has capacity bound 78, the optimum: model search
+     proves it in 0.6 s instead of 6.8 s, -f in 0.7 s instead of 47 s.
+     test-scheduling t30m20r3-20 is proved in 0.7 s (open after 600 s
+     without). 31 of 100 cumulative instances get one; on them, at 240 s,
+     model search solves 24 instead of 23 and -f 28 as before in 327 s
+     instead of 365 s, with no instance lost (also at 600 s).
 
 Version 4.11
 =============

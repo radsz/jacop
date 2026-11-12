@@ -81,7 +81,9 @@ import org.jacop.presolve.InferredCumulatives;
  * Cumulative Constraints", CP 2026). {@code org.jacop.fz.inferredCumulatives.covers} (100) and
  * {@code org.jacop.fz.inferredCumulatives.out} (5) are the paper's N_cover and N_out; {@code
  * org.jacop.fz.inferredCumulatives.disjoint} (true) also lifts over the pairs of tasks that the
- * precedences and disjunctions keep apart, which the paper does not.
+ * precedences and disjunctions keep apart, which the paper does not. {@code
+ * org.jacop.fz.inferredCumulatives.useful} (true) posts only those whose capacity bound {@code
+ * sum(d_i * pi_i) / pi_0} exceeds that of every input cumulative and clique found.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -100,7 +102,20 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
   private final List<IntVar[]> clauses = new ArrayList<>();
 
   // the cumulatives with a fixed capacity: tasks, least uses and capacity
-  private record Row(int[] tasks, int[] use, int capacity) {}
+  private static final String FALSE = "false";
+
+  // a cumulative with a fixed capacity, as rows over the task indices; compared by identity
+  private static final class Row {
+    final int[] tasks;
+    final int[] use;
+    final int capacity;
+
+    Row(int[] tasks, int[] use, int capacity) {
+      this.tasks = tasks;
+      this.use = use;
+      this.capacity = capacity;
+    }
+  }
 
   private final List<Row> rows = new ArrayList<>();
 
@@ -119,7 +134,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
    * @return false if the system property org.jacop.fz.disjunctiveCliques is false.
    */
   public static boolean enabled() {
-    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.disjunctiveCliques"));
+    return !FALSE.equalsIgnoreCase(System.getProperty("org.jacop.fz.disjunctiveCliques"));
   }
 
   /**
@@ -128,7 +143,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
    * @return true if the system property org.jacop.fz.inferredCumulatives is true.
    */
   public static boolean inferredEnabled() {
-    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.inferredCumulatives", "false"));
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.inferredCumulatives", FALSE));
   }
 
   /**
@@ -318,7 +333,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
       Constraint unary;
       if (setups) {
         unary = new UnaryTransition(s, d, tt);
-      } else if (length > 1 && !"false".equals(GlobalConstraints.interDistanceMode())) {
+      } else if (length > 1 && !FALSE.equals(GlobalConstraints.interDistanceMode())) {
         unary = new InterDistance(s, length);
       } else {
         unary = new CumulativeUnary(s, d, r, one, true);
@@ -354,7 +369,7 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
     for (Row row : rows) {
       inference.resource(row.tasks, row.use, row.capacity);
     }
-    if (!"false".equals(System.getProperty("org.jacop.fz.inferredCumulatives.disjoint"))) {
+    if (!FALSE.equals(System.getProperty("org.jacop.fz.inferredCumulatives.disjoint"))) {
       inference.disjoint(cliques.disjoint());
     }
     int covers = Integer.getInteger("org.jacop.fz.inferredCumulatives.covers", 100);
@@ -370,8 +385,19 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
         posted.add(set);
       }
     }
+    // only inequalities whose capacity bound exceeds that of every input cumulative and clique
+    // found: the others mostly add propagation, which slowed LCG (rcpsp-max psp_d_244 needed 3x
+    // the conflicts); .useful=false posts them all
+    double inputBound =
+        !FALSE.equals(System.getProperty("org.jacop.fz.inferredCumulatives.useful"))
+            ? inputBound(duration, found)
+            : Double.NEGATIVE_INFINITY;
     List<InferredCumulatives.Inferred> inferred =
-        inference.infer(covers, out, inf -> !inf.unary() || !within(inf.tasks(), posted));
+        inference.infer(
+            covers,
+            out,
+            inf ->
+                (!inf.unary() || !within(inf.tasks(), posted)) && inf.bound() > inputBound + 1e-9);
     if (support.options.debug()) {
       FzConsole.println(
           "% inferred cumulatives: "
@@ -426,6 +452,26 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
         support.unaryResources.add(new IntVar[][] {s, d});
       }
     }
+  }
+
+  /** The largest capacity bound of an input cumulative or of a clique found. */
+  private double inputBound(int[] duration, List<int[]> found) {
+    double best = 0;
+    for (Row row : rows) {
+      double energy = 0;
+      for (int k = 0; k < row.tasks.length; k++) {
+        energy += (double) duration[row.tasks[k]] * Math.min(row.use[k], row.capacity);
+      }
+      best = Math.max(best, energy / row.capacity);
+    }
+    for (int[] clique : found) {
+      double sum = 0;
+      for (int t : clique) {
+        sum += duration[t];
+      }
+      best = Math.max(best, sum);
+    }
+    return best;
   }
 
   private IntVar constant(Map<Integer, IntVar> constants, int v) {

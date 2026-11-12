@@ -350,7 +350,10 @@ class DisjunctiveCliqueFlatzincTest {
   @Test
   void inferredCumulativesKeepAllSolutions() throws IOException {
     String property = "org.jacop.fz.inferredCumulatives";
+    String useful = property + ".useful";
     System.setProperty(property, "true");
+    // post every inference, not only those with a better capacity bound, to check them all
+    System.setProperty(useful, "false");
     try {
       Random random = new Random(29);
       int inferred = 0;
@@ -366,6 +369,7 @@ class DisjunctiveCliqueFlatzincTest {
       assertTrue(inferred > trials / 20, "inferred " + inferred);
     } finally {
       System.clearProperty(property);
+      System.clearProperty(useful);
     }
   }
 
