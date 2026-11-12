@@ -80,6 +80,12 @@ import org.jacop.presolve.GraphAutomorphisms;
  * that a generator does not move are left out, and so are those where the earlier positions, when
  * equal, already make the two variables equal.
  *
+ * <p>The generators alone leave orbits of the whole group unordered (the lex-leader constraint of
+ * the 3-cycle (x0 x1 x2) keeps x0 <= x1 but not x0 <= x2), so Schreier-Sims cuts {@code x_b <= x_j}
+ * over the orbits of the stabilizer chain are posted as well where the other constraints do not
+ * already imply them (Liberti and Ostrowski, J. Global Optim. 60, 2014; Salvagnin, CPAIOR 2018),
+ * see {@link #schreierSims}.
+ *
  * <p>A model with an argument that is not understood is left as it is.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
@@ -401,7 +407,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   // Schreier-Sims cuts: "on" posts them, "count" only counts them, "off" skips them
   private final String schreierSims =
-      System.getProperty("org.jacop.fz.symmetry.schreierSims", "off");
+      System.getProperty("org.jacop.fz.symmetry.schreierSims", "on");
 
   SymmetryBreaking(Store store, Tables dictionary) {
     this.store = store;

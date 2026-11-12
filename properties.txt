@@ -183,6 +183,11 @@ Solver modes (defaults of command line options):
   on, as the FlatZinc test suites do; by default symmetries are broken
   with or without presolve (see --symmetry).
 
+- org.jacop.fz.symmetry.schreierSims: =on posts Schreier-Sims cuts
+  x_b <= x_j over the orbits of the stabilizer chain of the variable
+  symmetries, where the lex-leader constraints do not imply them; =count
+  only counts them (symmetrySchreierSimsCuts); =off skips them; default on.
+
 - org.jacop.fz.symmetryTime: the most time, in milliseconds, of the
   automorphism search of symmetry detection (also at most 1/20 of the
   time left); default 1000.

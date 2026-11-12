@@ -4131,6 +4131,22 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. Symmetry breaking in the FlatZinc front end also posts Schreier-Sims
+     cuts x_b <= x_j: for each variable b that a generator moves first in
+     the lex-leader order, every j in the orbit of b under the generators
+     that fix all variables before b (Liberti and Ostrowski, "Stabilizer-
+     based symmetry breaking constraints for mathematical programs",
+     J. Global Optim. 60, 2014; Salvagnin, "Symmetry breaking inequalities
+     from the Schreier-Sims table", CPAIOR 2018, LNCS 10848). The
+     lexicographically smallest (or largest) solution of each orbit
+     satisfies them, so they keep what the lex-leader constraints, lex
+     chains and value precedence keep. Cuts already implied by the first
+     positions of the posted constraints are left out, which is nearly all
+     of them: of the 345 MiniZinc Challenge instances where symmetry
+     breaking fires, 29 get any. zephyrus_15_10 is proved in 1.6 s instead
+     of not at all in 600 s. -Dorg.jacop.fz.symmetry.schreierSims=off turns
+     them off; --search-statistics prints symmetrySchreierSimsCuts.
+
 Version 4.11
 =============
 
