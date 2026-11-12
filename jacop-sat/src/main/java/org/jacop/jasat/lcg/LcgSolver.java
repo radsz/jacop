@@ -5487,6 +5487,9 @@ public final class LcgSolver implements ExternalPropagator {
         activity[k] *= 1e-100;
       }
       activityInc *= 1e-100;
+      heap.rescaled();
+      wide.rescaled();
+      lateHeap.rescaled();
     }
     heapOf(i).increased(i);
   }

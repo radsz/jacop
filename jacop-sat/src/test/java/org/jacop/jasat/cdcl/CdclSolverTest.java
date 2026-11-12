@@ -911,4 +911,130 @@ class CdclSolverTest {
       assertEquals(in.size(), count, "run " + run);
     }
   }
+
+  // the heap before activities moved into its entries: the order a VarHeap must reproduce exactly
+  private static final class ArrayHeap {
+    final int[] heap;
+    final int[] index;
+    final double[] activity;
+    int size;
+
+    ArrayHeap(int n, double[] activity) {
+      heap = new int[n];
+      index = new int[n];
+      java.util.Arrays.fill(index, -1);
+      this.activity = activity;
+    }
+
+    void insert(int v) {
+      if (index[v] < 0) {
+        index[v] = size;
+        heap[size++] = v;
+        up(index[v]);
+      }
+    }
+
+    void increased(int v) {
+      if (index[v] >= 0) {
+        up(index[v]);
+      }
+    }
+
+    void remove(int v) {
+      int i = index[v];
+      if (i >= 0) {
+        index[v] = -1;
+        int last = heap[--size];
+        if (i < size) {
+          heap[i] = last;
+          index[last] = i;
+          up(i);
+          down(index[last]);
+        }
+      }
+    }
+
+    void up(int i) {
+      int v = heap[i];
+      while (i > 0 && activity[heap[(i - 1) >> 1]] < activity[v]) {
+        heap[i] = heap[(i - 1) >> 1];
+        index[heap[i]] = i;
+        i = (i - 1) >> 1;
+      }
+      heap[i] = v;
+      index[v] = i;
+    }
+
+    void down(int i) {
+      int v = heap[i];
+      while (2 * i + 1 < size) {
+        int child = 2 * i + 1;
+        if (child + 1 < size && activity[heap[child + 1]] > activity[heap[child]]) {
+          child++;
+        }
+        if (activity[heap[child]] <= activity[v]) {
+          break;
+        }
+        heap[i] = heap[child];
+        index[heap[i]] = i;
+        i = child;
+      }
+      heap[i] = v;
+      index[v] = i;
+    }
+  }
+
+  @Test
+  void varHeapOrdersAsTheActivities() {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 100; run++) {
+      int n = 1 + rnd.nextInt(60);
+      double[] activity = new double[n];
+      VarHeap heap = new VarHeap();
+      heap.grow(n, activity);
+      ArrayHeap ref = new ArrayHeap(n, activity);
+      for (int v = 0; v < n; v++) {
+        // values a few ulps apart share the key in the heap entry, so ties are decided exactly
+        activity[v] = rnd.nextInt(4) == 0 ? 0 : 1 + rnd.nextInt(3) * Math.ulp(1.0);
+        heap.insert(v);
+        ref.insert(v);
+      }
+      double inc = 1;
+      for (int step = 0; step < 20 * n; step++) {
+        int v = rnd.nextInt(n);
+        switch (rnd.nextInt(4)) {
+          case 0 -> {
+            heap.remove(v);
+            ref.remove(v);
+          }
+          case 1 -> {
+            heap.insert(v);
+            ref.insert(v);
+          }
+          default -> {
+            inc /= 0.95;
+            activity[v] += rnd.nextBoolean() ? inc : Math.ulp(activity[v]);
+            if (activity[v] > 1e3) {
+              for (int k = 0; k < n; k++) {
+                activity[k] *= 1e-3;
+              }
+              inc *= 1e-3;
+              heap.rescaled();
+            }
+            heap.increased(v);
+            ref.increased(v);
+          }
+        }
+        assertEquals(ref.size == 0, heap.isEmpty(), "run " + run);
+        if (ref.size > 0) {
+          assertEquals(ref.heap[0], heap.max(), "run " + run + " step " + step);
+        }
+      }
+      while (!heap.isEmpty()) {
+        assertEquals(ref.heap[0], heap.removeMax(), "run " + run);
+        ref.remove(ref.heap[0]);
+      }
+      assertEquals(0, ref.size);
+    }
+  }
 }

@@ -1305,6 +1305,7 @@ public final class CdclSolver {
         activity[i] *= 1e-100;
       }
       varInc *= 1e-100;
+      order.rescaled();
     }
     order.increased(v);
   }
