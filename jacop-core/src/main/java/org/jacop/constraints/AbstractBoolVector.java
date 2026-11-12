@@ -41,7 +41,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 
 /**
  * Abstract base for vector boolean constraints (OrBoolVector, AndBoolVector). Provides shared
@@ -65,7 +65,7 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
   List<Constraint> constraints;
 
   /** Tracks first unprocessed position (backtrackable). */
-  protected TimeStamp<Integer> position;
+  protected TimeStampInt position;
 
   /**
    * Constructs a vector boolean constraint.
@@ -159,7 +159,7 @@ public abstract class AbstractBoolVector extends PrimitiveConstraint {
     // created there would be emptied on backtracking while the constraint is still nested. A
     // stamp emptied by backtracking (first included at a search level) is made again.
     if (position == null || position.pointer4Last < 0) {
-      position = new TimeStamp<>(store, 0);
+      position = new TimeStampInt(store, 0);
     }
   }
 

@@ -34,7 +34,7 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PgtC;
@@ -58,7 +58,7 @@ import org.jacop.search.SimpleSelect;
  */
 public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
-  final TimeStamp<Integer> roundRobinIndex;
+  final TimeStampInt roundRobinIndex;
 
   /**
    * It specifies if the left branch (values smaller or equal to the value selected) are first
@@ -79,7 +79,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, null);
 
-    roundRobinIndex = new TimeStamp<>(store, 0);
+    roundRobinIndex = new TimeStampInt(store, 0);
   }
 
   /**
@@ -101,7 +101,7 @@ public class SplitSelectFloat<T extends Var> extends SimpleSelect<T> {
 
     super(variables, varSelect, tieBreakerVarSelect, null);
 
-    roundRobinIndex = new TimeStamp<>(store, 0);
+    roundRobinIndex = new TimeStampInt(store, 0);
   }
 
   @Override

@@ -41,7 +41,7 @@ import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -57,7 +57,7 @@ abstract class AbstractChannel extends Constraint
   final int n;
   final Item[] item;
   final Map<Integer, IntVar> valueMap = new HashMap<>();
-  TimeStamp<Integer> position;
+  TimeStampInt position;
 
   AbstractChannel(int numberId, IntVar x, IntVar[] bs, int[] value, String constraintName) {
     checkInputForNullness(new String[] {"x", "bs"}, new Object[] {x}, bs);
@@ -210,7 +210,7 @@ abstract class AbstractChannel extends Constraint
   @Override
   public void impose(Store store) {
     super.impose(store);
-    position = new TimeStamp<>(store, 0);
+    position = new TimeStampInt(store, 0);
   }
 
   /**
