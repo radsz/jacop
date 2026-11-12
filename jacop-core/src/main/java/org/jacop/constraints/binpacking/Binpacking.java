@@ -301,9 +301,11 @@ public class Binpacking extends Constraint
     this.binCandidateWeights = new int[item.length];
     this.binOtherWeights = new int[item.length];
     this.binCandidateItems = new int[item.length];
+    this.binCandidateMarks = new long[(item.length + 63) >>> 6];
     this.binItems = binIndex(item, load.length, minBin);
     this.binSize =
         binItems == null ? null : Arrays.stream(binItems).mapToInt(b -> b.length).toArray();
+    this.binLive = binSize == null ? null : binSize.clone();
 
     // with card variables the items of weight 0 are counted, so their bins are in the scope
     Stream<Var> scope =
@@ -529,6 +531,8 @@ public class Binpacking extends Constraint
 
   private final int[] binCandidateItems;
 
+  private final long[] binCandidateMarks;
+
   // the most (item, bin) pairs kept in binItems; above it processBin scans all items
   private static final long BIN_INDEX_LIMIT = 4_000_000L;
 
@@ -542,6 +546,13 @@ public class Binpacking extends Constraint
   private final int[][] binItems;
 
   private final int[] binSize;
+
+  /**
+   * For each bin, the items found in it at its last processing: a hint only. When more than half of
+   * the items may be in the bin, scanning all items in order is cheaper than the list, which is
+   * then kept as it is (a superset is allowed).
+   */
+  private final int[] binLive;
 
   private int[] removedBin = new int[16];
 
@@ -637,7 +648,8 @@ public class Binpacking extends Constraint
     long localRequired = 0;
     long possible = 0;
     int binIdx = i + minBinNumber;
-    if (binItems == null) {
+    int found = 0;
+    if (binItems == null || 2 * binLive[i] > item.length) {
       for (BinItem itemEl : item) {
         IntVar b = itemEl.bin();
         if (b.min() <= binIdx && b.max() >= binIdx && b.dom().contains(binIdx)) {
@@ -648,12 +660,16 @@ public class Binpacking extends Constraint
             weights[candidatesLength] = itemEl.weight();
             localCandidates[candidatesLength++] = itemEl;
           }
+          found++;
         }
+      }
+      if (binLive != null) {
+        binLive[i] = found;
       }
     } else {
       int[] list = binItems[i];
       int size = binSize[i];
-      int[] found = binCandidateItems;
+      int[] candidateItems = binCandidateItems;
       for (int p = size - 1; p >= 0; p--) {
         int k = list[p];
         IntVar b = item[k].bin();
@@ -663,7 +679,7 @@ public class Binpacking extends Constraint
           if (b.singleton()) {
             localRequired += w;
           } else {
-            found[candidatesLength++] = k;
+            candidateItems[candidatesLength++] = k;
           }
         } else {
           // the item left the bin: it goes after the end until this level is removed
@@ -674,13 +690,32 @@ public class Binpacking extends Constraint
         }
       }
       binSize[i] = size;
-      // the candidates in the order of item, by decreasing weight, as the rules expect; the scan
-      // above meets them mostly in reverse order, so an insertion sort would be quadratic here
-      Arrays.sort(found, 0, candidatesLength);
-      for (int c = 0; c < candidatesLength; c++) {
-        BinItem itemEl = item[found[c]];
-        weights[c] = itemEl.weight();
-        localCandidates[c] = itemEl;
+      binLive[i] = size;
+      // the candidates in the order of item, by decreasing weight, as the rules expect: sorted
+      // when they are few, read from a bit set over all items when there are many of them
+      long[] mark = binCandidateMarks;
+      if (candidatesLength <= mark.length) {
+        Arrays.sort(candidateItems, 0, candidatesLength);
+        for (int c = 0; c < candidatesLength; c++) {
+          BinItem itemEl = item[candidateItems[c]];
+          weights[c] = itemEl.weight();
+          localCandidates[c] = itemEl;
+        }
+      } else {
+        for (int c = 0; c < candidatesLength; c++) {
+          mark[candidateItems[c] >>> 6] |= 1L << candidateItems[c];
+        }
+        int c = 0;
+        for (int word = 0; word < mark.length; word++) {
+          long bits = mark[word];
+          mark[word] = 0;
+          while (bits != 0) {
+            BinItem itemEl = item[(word << 6) + Long.numberOfTrailingZeros(bits)];
+            bits &= bits - 1;
+            weights[c] = itemEl.weight();
+            localCandidates[c++] = itemEl;
+          }
+        }
       }
     }
     load[i].domain.in(store.level, load[i], clamp(localRequired), clamp(possible));
