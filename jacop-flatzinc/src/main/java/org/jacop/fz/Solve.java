@@ -568,7 +568,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clauses.add(clauseRow(clause[0], clause[1]));
         }
       }
-      if (options.lcg() && LCG_PROBE > 0 && LCG_PROBE_EARLY) {
+      // only for a model that LCG solves, with its sets mirrored as LCG search has them: the
+      // explanations of a set constraint name the atoms of the mirror, and without them a
+      // failure of ElementSet had the empty explanation and refuted harmony 2024 canon
+      if (options.lcg() && lcgProbe > 0 && lcgProbeEarly && lcgUnsupported(objective) == null) {
+        mirrorSetVariables();
         List<LinearForm> conflicts = probeBeforeRelaxation();
         if (objective != null) {
           clauses.addAll(conflicts);
@@ -2006,11 +2010,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // whether mirrorSetVariables ran: early probing mirrors the sets before LCG search does
+  private boolean setsMirrored;
+
   /**
    * Mirrors every set variable by integer variables, the membership of its elements and its
    * cardinality, whose atoms stand for the set in the explanations of the set constraints.
    */
   private void mirrorSetVariables() {
+    if (setsMirrored) {
+      return;
+    }
+    setsMirrored = true;
     List<SetVar> sets = new ArrayList<>();
     // sets whose constraints a reformulation replaced need no literals
     Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
@@ -2052,16 +2063,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // -Djacop.lcg.probe=share: root probing of the 0/1 variables before LCG search, for at most
   // this share of the time left (0, the default, is off)
-  private static final double LCG_PROBE =
-      Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
+  private final double lcgProbe = Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
 
   // -Djacop.lcg.probe.delay=share: probe between runs of the search from the root, once this share
   // of the time limit has passed, instead of before the search
-  private static final double LCG_PROBE_DELAY =
+  private final double lcgProbeDelay =
       Double.parseDouble(System.getProperty("jacop.lcg.probe.delay", "0"));
 
   // -Djacop.lcg.probe.only=true: stop after root probing, to measure its reach
-  private static final boolean LCG_PROBE_ONLY = Boolean.getBoolean("jacop.lcg.probe.only");
+  private final boolean lcgProbeOnly = Boolean.getBoolean("jacop.lcg.probe.only");
 
   // -Djacop.lcg.probe.lp=none|facts|cliques, with probe.only: the root bound of a relaxation built
   // again after probing, on the probed domains (facts) and also with the conflicts that probing
@@ -2070,7 +2080,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private IntVar lpObjective;
   private boolean lpMaximize;
 
-  private static final String LCG_PROBE_LP = System.getProperty("jacop.lcg.probe.lp", "none");
+  private final String lcgProbeLp = System.getProperty("jacop.lcg.probe.lp", "none");
 
   // measures the root bound of a relaxation built after probing (probe.only runs)
   private void probedRootBound() {
@@ -2084,7 +2094,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       rows.add(clauseRow(clause[0], clause[1]));
     }
     int conflictRows = 0;
-    if ("cliques".equals(LCG_PROBE_LP)) {
+    if ("cliques".equals(lcgProbeLp)) {
       List<LinearForm> conflicts = conflictRows(lcg);
       rows.addAll(conflicts);
       conflictRows = conflicts.size();
@@ -2146,7 +2156,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // -Djacop.lcg.probe.early=true: probe the root before the linear relaxation is built, with a
   // solver of its own, so that the relaxation has the probed domains and the conflicts that probing
   // found as rows, merged into cliques (PairCliques); the search's solver does not probe again
-  private static final boolean LCG_PROBE_EARLY = Boolean.getBoolean("jacop.lcg.probe.early");
+  private final boolean lcgProbeEarly = Boolean.getBoolean("jacop.lcg.probe.early");
 
   // the solver of early probing, for its statistics, and whether probing refuted the root
   private LcgSolver earlyProber;
@@ -2154,8 +2164,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Probes the root with a solver of its own, before the linear relaxation is built (see {@link
-   * #LCG_PROBE_EARLY}). The solver is released after probing; the facts stay in the store's
-   * domains.
+   * #lcgProbeEarly}). The solver is released after probing; the facts stay in the store's domains.
    *
    * @return the conflicts as rows, for the relaxation
    */
@@ -2169,7 +2178,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
     long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
-    probeRefuted = !early.probeRoot((long) (LCG_PROBE * left * 1_000_000L));
+    probeRefuted = !early.probeRoot((long) (lcgProbe * left * 1_000_000L));
     List<LinearForm> rows = probeRefuted ? List.of() : conflictRows(early);
     early.release();
     earlyProber = early;
@@ -2515,38 +2524,38 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgStatus = CdclSolver.UNSAT;
         return false;
       }
-      if (LCG_PROBE_ONLY) {
+      if (lcgProbeOnly) {
         lcgStatus = CdclSolver.UNKNOWN;
         return false;
       }
-    } else if (LCG_PROBE > 0 && LCG_PROBE_DELAY > 0) {
+    } else if (lcgProbe > 0 && lcgProbeDelay > 0) {
       long limit = options.getTimeOut() > 0 ? options.getTimeOut() : 60_000L;
       lcg.setDelayedProbe(
-          System.nanoTime() + (long) (LCG_PROBE_DELAY * limit * 1_000_000L),
-          (long) (LCG_PROBE * limit * 1_000_000L));
-    } else if (LCG_PROBE > 0) {
+          System.nanoTime() + (long) (lcgProbeDelay * limit * 1_000_000L),
+          (long) (lcgProbe * limit * 1_000_000L));
+    } else if (lcgProbe > 0) {
       // root probing of the 0/1 variables: facts only, the model stays as it is
       long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
-      if (!"none".equals(LCG_PROBE_LP)) {
+      if (!"none".equals(lcgProbeLp)) {
         lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
       }
-      boolean feasible = lcg.probeRoot((long) (LCG_PROBE * left * 1_000_000L));
+      boolean feasible = lcg.probeRoot((long) (lcgProbe * left * 1_000_000L));
       printProbeStatistics(lcg);
-      if (feasible && LCG_PROBE_ONLY && !"none".equals(LCG_PROBE_LP)) {
+      if (feasible && lcgProbeOnly && !"none".equals(lcgProbeLp)) {
         probedRootBound();
       }
       if (!feasible) {
         lcgStatus = CdclSolver.UNSAT;
         return false;
       }
-      if (LCG_PROBE_ONLY) {
+      if (lcgProbeOnly) {
         lcgStatus = CdclSolver.UNKNOWN;
         return false;
       }
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
-    if (LCG_PROBE > 0 && LCG_PROBE_DELAY > 0 && lcg.probePasses > 0) {
+    if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
       printProbeStatistics(lcg);
     }
     if (slowCheck != null) {
