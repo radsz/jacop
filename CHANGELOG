@@ -4234,7 +4234,20 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
-247. fzn-jacop and the MiniZinc Challenge image start the JVM with
+247. LCG free search (--lcg -f) skips the core-guided phase after branch
+     and bound when the phase's probe (its first 2 % of the time) stopped
+     without a solution of its own and branch and bound found one: the
+     rest of the phase stopped the same way after a third of its time
+     and only delayed branch and bound. At 600 s on 29 instances, two
+     seeds each: fast-food ff58 is proved in 24 s instead of 95 s,
+     gt-sort n9 in 57 s instead of 323 s, city-position 5-06 in 48 s
+     instead of 322 s, and city-position 7-04 (no proof before) in
+     104 s. The probe still runs, so models where cores close the gap
+     at once (proteindesign, ptv, spot5, celar, work-task-variation)
+     keep their proofs. -Djacop.lcg.coreProbeSkip=false restores the old
+     behaviour; see properties.txt.
+
+248. fzn-jacop and the MiniZinc Challenge image start the JVM with
      -XX:+UseTransparentHugePages on Linux: the heap is backed by 2 MB
      pages, which cuts the TLB misses of JaCoP's randomly read clause
      arena, watch lists and domains. The same search takes about 5 % less
@@ -4247,7 +4260,7 @@ Version 5.0 (unreleased)
      -XX:+UseCompactObjectHeaders was measured again and is not set: no
      gain, and an AOT cache made without it is rejected.
 
-248. Fix: when the time given to symmetry breaking ran out while the
+249. Fix: when the time given to symmetry breaking ran out while the
      Schreier-Sims cuts were posted (on by default since 241), the check
      was not caught and the solver stopped with SymmetryBreaking$OutOfTime
      before search, printing no solution. The cuts posted so far are now
@@ -4257,7 +4270,7 @@ Version 5.0 (unreleased)
      oocsp_racks, rcpsp-wet-diverse j30_27_5-4 and whirlpool d29 (some
      runs).
 
-249. Inferred redundant cumulatives (on by default;
+250. Inferred redundant cumulatives (on by default;
      -Dorg.jacop.fz.inferredCumulatives=false turns them off), after A. Sidorov, On Inferring Cumulative
      Constraints, CP 2026 (arXiv 2602.15635). At each time point a
      cumulative is a knapsack inequality over the tasks that run then; a
@@ -4288,7 +4301,7 @@ Version 5.0 (unreleased)
      get an inferred cumulative; on the 31 instances, model search 24
      solved instead of 23, -f 28 as before in 282 s instead of 354 s.
 
-250. Decomposition bound (off by default, -Dorg.jacop.fz.decomposition=true).
+251. Decomposition bound (off by default, -Dorg.jacop.fz.decomposition=true).
      Before search, the FlatZinc front end looks for blocks of variables
      that only counting (CountValuesBounds) and linear constraints link,
      as in the connected-component detection of Gamrath and Luebbecke
@@ -4309,7 +4322,7 @@ Version 5.0 (unreleased)
      The statistics are dbBlocks, dbRows, dbIterations, dbColumns,
      dbBound, dbPricingTimeOuts and dbTime.
 
-251. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
+252. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
      the travel time on the arc i -> j when i is left in step s (time
      out[i] / stepLength), and waiting is allowed, so the arrival is the
      earliest t' + travel(t') over the departures t' still possible
@@ -4326,7 +4339,7 @@ Version 5.0 (unreleased)
      17,579; -f 16,358 -> 14,962). -Dorg.jacop.fz.sequenceMdd=false turns
      it off.
 
-252. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
+253. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
      the bins an item left or was fixed in, read from the values the item
      lost at the current level, instead of every bin of the item's previous
      domain, and keeps for each bin the items that may still be in it, so
@@ -4336,7 +4349,7 @@ Version 5.0 (unreleased)
      2025 ihtc-2024-marte instances, where Binpacking took about half of
      the run, fixed search explores 1.06x to 5.9x more nodes in 600 s.
 
-253. Cuts in search keep their period only while they move the bound.
+254. Cuts in search keep their period only while they move the bound.
      The capacity cuts of item 187 and the Hall cuts of item 215 were
      separated more often whenever a violated cut was found, even when
      adding it left the objective of the re-solved LP where it was; now
@@ -4365,7 +4378,7 @@ Version 5.0 (unreleased)
      Hall and energy cuts in search stay off by default: they leave the
      dual bounds where they were.
 
-254. JaLP no longer cycles on LPs with large costs or huge artificial
+255. JaLP no longer cycles on LPs with large costs or huge artificial
      bounds. A reduced cost past the dual tolerance (1e-9) but within
      1e-14 of the sizes of its terms is taken as zero: with costs near
      1e7 such values are a few units in the last place and took either
@@ -4383,7 +4396,7 @@ Version 5.0 (unreleased)
      rows swapped forever). Both reproducers solve in 113 and 1,818
      pivots, before they ran until the pivot limit.
 
-255. TSP edge elimination: before search, a pure symmetric travelling
+256. TSP edge elimination: before search, a pure symmetric travelling
      salesman model (one circuit with no fixed successor, the minimised
      objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
      the arcs that are in no optimal tour, proved from the distances alone
