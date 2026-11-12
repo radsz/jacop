@@ -35,6 +35,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.PriorityQueue;
 import java.util.Set;
 
@@ -108,6 +109,33 @@ public final class InferredCumulatives {
      */
     public boolean unary() {
       return capacity == 1;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Inferred other
+          && capacity == other.capacity
+          && Double.compare(bound, other.bound) == 0
+          && Arrays.equals(tasks, other.tasks)
+          && Arrays.equals(use, other.use);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(Arrays.hashCode(tasks), Arrays.hashCode(use), capacity, bound);
+    }
+
+    @Override
+    public String toString() {
+      return "Inferred[tasks="
+          + Arrays.toString(tasks)
+          + ", use="
+          + Arrays.toString(use)
+          + ", capacity="
+          + capacity
+          + ", bound="
+          + bound
+          + "]";
     }
   }
 
@@ -222,13 +250,30 @@ public final class InferredCumulatives {
   }
 
   // a cover with its capacity bound
-  private record Cover(int[] tasks, double bound) {}
+  private record Cover(int[] tasks, double bound) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Cover other
+          && Arrays.equals(tasks, other.tasks)
+          && Double.compare(bound, other.bound) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Arrays.hashCode(tasks) + Double.hashCode(bound);
+    }
+
+    @Override
+    public String toString() {
+      return "Cover" + Arrays.toString(tasks) + " " + bound;
+    }
+  }
 
   // an int array as a key of a hash set
   private record Key(int[] a) {
     @Override
     public boolean equals(Object o) {
-      return o instanceof Key k && Arrays.equals(a, k.a);
+      return o instanceof Key(int[] b) && Arrays.equals(a, b);
     }
 
     @Override
@@ -277,68 +322,25 @@ public final class InferredCumulatives {
     List<Integer> skipSizes = new ArrayList<>();
     Set<Key> seen = new HashSet<>();
     List<Inferred> found = new ArrayList<>();
-    for (Cover c : covers) {
-      if (work >= workLimit) {
-        break;
-      }
-      if (skipped(c.tasks, skipSets, skipSizes)) {
-        continue;
-      }
-      int[] pi = lift(c.tasks);
-      if (pi == null) {
-        continue;
-      }
-      coversLifted++;
-      int pi0 = c.tasks.length - 1;
-      long[] unit = new long[(n + 63) >>> 6];
-      for (int t = 0; t < n; t++) {
-        if (pi[t] == 1) {
-          unit[t >>> 6] |= 1L << t;
+    for (int ci = 0; ci < covers.size() && work < workLimit; ci++) {
+      Cover c = covers.get(ci);
+      int[] pi = skipped(c.tasks, skipSets, skipSizes) ? new int[0] : lift(c.tasks);
+      if (pi.length > 0) {
+        coversLifted++;
+        long[] unit = new long[(n + 63) >>> 6];
+        for (int t = 0; t < n; t++) {
+          if (pi[t] == 1) {
+            unit[t >>> 6] |= 1L << t;
+          }
         }
-      }
-      skipSets.add(unit);
-      skipSizes.add(c.tasks.length);
-
-      // divide by the greatest common divisor
-      int g = pi0;
-      for (int t = 0; t < n && g > 1; t++) {
-        if (pi[t] > 0) {
-          g = gcd(g, pi[t]);
+        skipSets.add(unit);
+        skipSizes.add(c.tasks.length);
+        Inferred inf = inferred(pi, c.tasks.length - 1);
+        if (inf != null
+            && seen.add(new Key(concat(inf.tasks, inf.use, inf.capacity)))
+            && (keep == null || keep.test(inf))) {
+          found.add(inf);
         }
-      }
-      long sum = 0;
-      int size = 0;
-      for (int t = 0; t < n; t++) {
-        pi[t] /= g;
-        if (pi[t] > 0) {
-          sum += pi[t];
-          size++;
-        }
-      }
-      pi0 /= g;
-      // two tasks give a pair that the resources or the disjoint pairs already keep apart
-      if (size < 3 || sum <= pi0 || dominatedByRow(pi, pi0)) {
-        dominated++;
-        continue;
-      }
-      int[] tasks = new int[size];
-      int[] use = new int[size];
-      long energy = 0;
-      int k = 0;
-      for (int t = 0; t < n; t++) {
-        if (pi[t] > 0) {
-          tasks[k] = t;
-          use[k++] = pi[t];
-          energy += (long) duration[t] * pi[t];
-        }
-      }
-      Key key = new Key(concat(tasks, use, pi0));
-      if (!seen.add(key)) {
-        continue;
-      }
-      Inferred inf = new Inferred(tasks, use, pi0, (double) energy / pi0);
-      if (keep == null || keep.test(inf)) {
-        found.add(inf);
       }
     }
     found.sort(Comparator.comparingDouble((Inferred i) -> -i.bound));
@@ -349,6 +351,45 @@ public final class InferredCumulatives {
       result.add(i);
     }
     return result;
+  }
+
+  // the lifted inequality divided by its gcd, or null when it is too small or dominated by a row
+  private Inferred inferred(int[] pi, int coverPi0) {
+    int pi0 = coverPi0;
+    // divide by the greatest common divisor
+    int g = pi0;
+    for (int t = 0; t < n && g > 1; t++) {
+      if (pi[t] > 0) {
+        g = gcd(g, pi[t]);
+      }
+    }
+    long sum = 0;
+    int size = 0;
+    for (int t = 0; t < n; t++) {
+      pi[t] /= g;
+      if (pi[t] > 0) {
+        sum += pi[t];
+        size++;
+      }
+    }
+    pi0 /= g;
+    // two tasks give a pair that the resources or the disjoint pairs already keep apart
+    if (size < 3 || sum <= pi0 || dominatedByRow(pi, pi0)) {
+      dominated++;
+      return null;
+    }
+    int[] tasks = new int[size];
+    int[] use = new int[size];
+    long energy = 0;
+    int k = 0;
+    for (int t = 0; t < n; t++) {
+      if (pi[t] > 0) {
+        tasks[k] = t;
+        use[k++] = pi[t];
+        energy += (long) duration[t] * pi[t];
+      }
+    }
+    return new Inferred(tasks, use, pi0, (double) energy / pi0);
   }
 
   private static int[] concat(int[] a, int[] b, int c) {
@@ -580,11 +621,11 @@ public final class InferredCumulatives {
   // ------------------------------------------------------------------------------------------
   // lifting (Algorithm 2)
 
-  // the lifted coefficients of the cover inequality x(C) <= |C| - 1, or null if C is no cover
+  // the lifted coefficients of the cover inequality x(C) <= |C| - 1, or empty if C is no cover
   private int[] lift(int[] cover) {
     int pi0 = cover.length - 1;
     if (!isCover(cover)) {
-      return null;
+      return new int[0];
     }
     int[] pi = new int[n];
     boolean[] inCover = new boolean[n];
@@ -694,7 +735,7 @@ public final class InferredCumulatives {
     }
     Search s = new Search(it, val, upper, greedy);
     s.dfs(0, 0, cap.clone(), new int[count]);
-    work += s.nodes * (long) (m + count);
+    work += s.nodes * (m + count);
     return s.complete ? s.best : upper;
   }
 
@@ -721,7 +762,7 @@ public final class InferredCumulatives {
         continue;
       }
       used.sort((x, y) -> Long.compare((long) y[0] * x[1], (long) x[0] * y[1]));
-      double left = cap[r];
+      double left = (double) cap[r];
       double frac = 0;
       for (int[] u : used) {
         if (u[1] <= left) {
