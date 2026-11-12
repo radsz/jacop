@@ -76,6 +76,21 @@ public class Parser {
 	return known == null ? t.image : known;
     }
 
+    // a declaration is read once, when its variable, parameter or array is made; only the
+    // declarations of a variable as another one (var int: x = y) are read again, by symmetry
+    // breaking. The rest of the declarations, with their annotations and array literals, were a
+    // sixth of the heap of rcpsp-wet-diverse j90_48_4 (2.4 million declarations) while it was posted
+    private static void releaseDeclaration(ASTVarDeclItem item) {
+	int n = item.jjtGetNumChildren();
+	if (item.getKind() == 0 && n >= 2 && item.jjtGetChild(n - 1) instanceof ASTScalarFlatExpr) {
+	    int type = ((ASTScalarFlatExpr) item.jjtGetChild(n - 1)).getType();
+	    if (type == 2 || type == 3) {
+		return;
+	    }
+	}
+	item.removeChildren();
+    }
+
     void setOptions(Options opt) {
 	options = opt;
     }
@@ -444,9 +459,9 @@ void var_decl_item() #VarDeclItem:
  	{ 
 	    jjtThis.setKind(0); jjtThis.setId(name(t)); 
 	    if (!parseOnly) {
-		cg.generateVariables(jjtThis, dict, store);
+	        cg.generateVariables(jjtThis, dict, store);
+	        releaseDeclaration(jjtThis);
 	    }
-	    // jjtThis.removeChildren();
 	}
 
    | non_array_ti_expr_tail() <COLON> t=ident_anns() <ASGN> non_array_flat_expr() 
@@ -454,16 +469,16 @@ void var_decl_item() #VarDeclItem:
 	   jjtThis.setId(name(t));
 	   if (!parseOnly) {
 	       cg.generateParameters(jjtThis, dict);
+	       releaseDeclaration(jjtThis);
 	   }
-	   // jjtThis.removeChildren();
 	 }
 
    | <ARRAY> <LBOX> t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> <RBOX> <OF> array_decl_tail(jjtThis)
 	  {   jjtThis.setIndexes(intLiteral(t1), intLiteral(t2)); 
 	      if (!parseOnly) {
-		  cg.generateArray(jjtThis, dict, store);
+	          cg.generateArray(jjtThis, dict, store);
+	          releaseDeclaration(jjtThis);
 	      }
-	      // jjtThis.removeChildren();
 	  }
 }
 

@@ -1203,6 +1203,29 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void aDeclarationKeepsItsPartsOnlyWhenItIsAnAlias() throws ParseException {
+    // a declaration is read once, when its variable is made; only var int: y = x is read again,
+    // by symmetry breaking. The others held their annotations and array literals while the model
+    // was posted: a sixth of the heap of rcpsp-wet-diverse j90_48_4
+    Parser parser =
+        new Parser(
+            new java.io.StringReader(
+                "var 0..9: x :: output_var;\nvar 0..9: y = x;\n"
+                    + "array [1..2] of var int: a :: output_array([1..2]) = [x, y];\n"));
+    Options opt = new Options(new String[] {"model.fzn"});
+    parser.setOptions(opt);
+    parser.cc.setOptions(opt);
+    parser.cg.setOptions(opt);
+    parser.var_decl_items();
+    SimpleNode items = (SimpleNode) parser.jjtree.popNode();
+    assertEquals(3, items.jjtGetNumChildren());
+    assertEquals(0, items.jjtGetChild(0).jjtGetNumChildren(), "x");
+    assertTrue(items.jjtGetChild(1).jjtGetNumChildren() >= 2, "y = x");
+    assertEquals(0, items.jjtGetChild(2).jjtGetNumChildren(), "a");
+    assertNotNull(parser.dict.getVariableArray("a"));
+  }
+
+  @Test
   void aNameReadTwiceIsOneString() {
     // one String per occurrence of a name made a third of the parse tree of ma-path-finding
     // ins_g32_p20_a10 (950 MB of strings for 12 million name uses), which died at 4 GB while
@@ -1253,8 +1276,15 @@ class FlatzincFrontEndTest {
       System.setOut(capture);
       Parser parser = new Parser(input);
       parser.setOptions(opt);
-      parser.model();
-      SimpleNode tree = (SimpleNode) parser.jjtree.rootNode();
+      parser.cc.setOptions(opt);
+      // the items only: model() releases them before the search
+      parser.pred_decl_items();
+      parser.var_decl_items();
+      parser.constraint_items();
+      SimpleNode tree = new SimpleNode(ParserTreeConstants.JJTMODEL);
+      Node constraints = parser.jjtree.popNode();
+      tree.jjtAddChild(parser.jjtree.popNode(), 0);
+      tree.jjtAddChild(constraints, 1);
       opt.startedEarlier(120_000);
       Support support = parser.cc.support;
       assertThrows(ModelTimeOut.class, () -> new PartialCopyDetector(support).detect(tree));
