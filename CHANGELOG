@@ -4131,6 +4131,37 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. LateCount bounds a weighted sum of late tasks (1|r_j|sum w_j U_j)
+     with new LateCount(starts, durations, due, weights, late). The lower
+     bound of late is the larger of two bounds. The first is the sum of
+     the c smallest weights of the undecided tasks, where c is the
+     number of late tasks of Moore-Hodgson on the relaxed problem. The
+     second is a linear relaxation: each task may be on time for part of
+     its processing, within the capacity of every due-date prefix. These
+     capacities are nested, so they form a polymatroid and the greedy
+     order by weight per unit of processing is optimal (Lawler and
+     Moore, "A functional equation and its application to resource
+     allocation and sequencing problems", Management Science 16(1),
+     1969; Edmonds, "Submodular functions, matroids, and certain
+     polyhedra", 1970). Each step of the greedy takes the smallest slack
+     of the suffix in a segment tree with lazy addition.
+     A task is filtered late or on time without solving the relaxation
+     again where the answer cannot change. That is the case when
+     Moore-Hodgson already puts the task late and the relaxation gives
+     it no on-time processing, or when Moore-Hodgson keeps it on time
+     and the relaxation gives it all of its processing. The new bound
+     then comes from prefix sums of the smallest weights. Under --lcg,
+     the weighted bound explains its pruning like the count.
+     The FlatZinc front end now passes the weights of the objective to
+     the LateCount it detects. Before, it counted the late tasks.
+     -Dorg.jacop.fz.lateCount.weights=false counts them again. Paired
+     runs at 600 s on 60 generated weighted instances (osolpro
+     benchmarks/scheduling-bounds, lcw), counting against weights:
+     - model search: 12 -> 33 optima, mean time 481 -> 284 s, 39
+       objectives better and 2 worse;
+     - -f: 36 -> 58 optima, mean time 263 -> 27 s, 11 objectives better
+       and 1 worse.
+
 Version 4.11
 =============
 
