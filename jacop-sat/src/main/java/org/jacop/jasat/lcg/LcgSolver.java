@@ -2546,6 +2546,420 @@ public final class LcgSolver implements ExternalPropagator {
     return sat;
   }
 
+  // ------------------------------------------------------------------------ root probing
+
+  // -Djacop.lcg.probe.domain: the largest domain whose values root probing tries one by one
+  private static final int PROBE_MAX_DOMAIN = Integer.getInteger("jacop.lcg.probe.domain", 64);
+
+  // -Djacop.lcg.probe.barren: the share of its budget after which probing that found no fact stops
+  private static final double PROBE_BARREN =
+      Double.parseDouble(System.getProperty("jacop.lcg.probe.barren", "0.25"));
+
+  /** Statistics of {@link #probeRoot}: whether it stopped early for finding no fact. */
+  public boolean probeBarren;
+
+  /** Statistics of {@link #probeRoot}: 0/1 variables not fixed when probing started. */
+  public long probeBooleans;
+
+  /** Statistics of {@link #probeRoot}: 0/1 variables the root's propagation fixed before it. */
+  public long probeFixedBefore;
+
+  /** Statistics of {@link #probeRoot}: other variables whose values it probes (small domains). */
+  public long probeValueVariables;
+
+  /** Statistics of {@link #probeRoot}: the values of those variables when probing started. */
+  public long probeValues;
+
+  /** Statistics of {@link #probeRoot}: literals probed. */
+  public long probeProbes;
+
+  /** Statistics of {@link #probeRoot}: failed literals, whose negation became a root fact. */
+  public long probeFailed;
+
+  /**
+   * Statistics of {@link #probeRoot}: atoms that every value of a variable implies (root facts).
+   */
+  public long probeLifted;
+
+  /** Statistics of {@link #probeRoot}: 0/1 variables fixed at the root by probing. */
+  public long probeFixedBooleans;
+
+  /** Statistics of {@link #probeRoot}: values removed from the small domains by probing. */
+  public long probeValuesRemoved;
+
+  /** Statistics of {@link #probeRoot}: pairs of 0/1 variables found equal or opposite. */
+  public long probeEquivalences;
+
+  /** Statistics of {@link #probeRoot}: implications x = 1 -> y = 0 between 0/1 variables. */
+  public long probeExclusions;
+
+  /** Statistics of {@link #probeRoot}: passes over the variables. */
+  public long probePasses;
+
+  /** Statistics of {@link #probeRoot}: nanoseconds spent. */
+  public long probeNanos;
+
+  /** Statistics of {@link #probeRoot}: whether the budget stopped probing before its fixpoint. */
+  public boolean probeExhausted;
+
+  // an atom of a probe's consequences, decoded at once since transient literals are reused
+  private record Atom(int var, int kind, int value, boolean holds) {
+    Atom negated() {
+      return new Atom(var, kind, value, !holds);
+    }
+  }
+
+  private Atom atom(int lit) {
+    int d = Math.abs(lit);
+    int i = litVar[d];
+    return i < 0 ? null : new Atom(i, litKind[d], litValue[d], lit > 0);
+  }
+
+  // the value a 0/1 variable takes when an atom of it holds, or -1 when the atom is not of one
+  private int booleanValue(Atom a) {
+    if (!isBoolean(a.var)) {
+      return -1;
+    }
+    // [x >= 1] or [x = v] for v in {0, 1}
+    int v = a.kind == GE_KIND ? 1 : a.value;
+    return a.holds ? v : 1 - v;
+  }
+
+  private boolean isBoolean(int i) {
+    return i >= 0 && i < vars.length && vars[i] != null && root[i].min() == 0 && root[i].max() == 1;
+  }
+
+  // whether the store's domains imply an atom already
+  private boolean entailed(Atom a) {
+    IntDomain d = vars[a.var].dom();
+    if (a.kind == GE_KIND) {
+      return a.holds ? d.min() >= a.value : d.max() < a.value;
+    }
+    return a.holds ? d.singleton(a.value) : !d.contains(a.value);
+  }
+
+  private int literalOf(Atom a) {
+    int d = a.kind == GE_KIND ? geLit(a.var, a.value) : eqVar(a.var, a.value);
+    return a.holds ? d : -d;
+  }
+
+  private Set<Atom> consequences(int[] implied) {
+    Set<Atom> atoms = new HashSet<>(implied.length * 2);
+    for (int l : implied) {
+      Atom a = atom(l);
+      if (a != null) {
+        atoms.add(a);
+      }
+    }
+    return atoms;
+  }
+
+  // the outcome of probing one variable
+  private static final int REFUTED = -1;
+  private static final int NOTHING = 0;
+  private static final int FACTS = 1;
+
+  /**
+   * Failed-literal probing at the root, which only adds facts: each value of each 0/1 variable,
+   * then each value of each variable with a small domain, is assumed in turn and propagated by the
+   * clauses and the store's constraints. A value that fails is removed at the root; an atom that
+   * every value of a variable implies holds at the root (lifting). The model itself is not changed.
+   * Pairs of 0/1 variables found equal or opposite, and implications x = 1 -> y = 0 (the edges of
+   * at-most-one cliques), are counted. Passes repeat while a pass adds facts and the budget lasts.
+   *
+   * <p>Failed literals and lifting are the classic SAT probing techniques: J. W. Freeman,
+   * Improvements to propositional satisfiability search algorithms, PhD thesis, University of
+   * Pennsylvania, 1995; I. Lynce and J. Marques-Silva, Probing-based preprocessing techniques for
+   * propositional satisfiability, ICTAI 2003; for mixed integer programs M. W. P. Savelsbergh,
+   * Preprocessing and probing techniques for mixed integer programming problems, ORSA Journal on
+   * Computing 6(4), 1994. Probing every value of a variable is singleton consistency at the root:
+   * R. Debruyne and C. Bessière, Some practicable filtering techniques for the constraint
+   * satisfaction problem, IJCAI 1997.
+   *
+   * @param budgetNanos the time probing may take
+   * @return false when probing proved that the constraints have no solution
+   */
+  public boolean probeRoot(long budgetNanos) {
+    long start = System.nanoTime();
+    long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
+    end = Math.min(end, sat.deadline());
+    if (rootFailed || proof != null) {
+      return !rootFailed;
+    }
+    encodeGraphs();
+    // the clauses added since the solver was made (graphs, collected clauses) propagate first, so
+    // that only what probing adds is counted
+    if (!propagateRoot()) {
+      rootFailed = true;
+      return false;
+    }
+    List<Integer> booleans = new ArrayList<>();
+    List<Integer> valued = new ArrayList<>();
+    for (int i = 0; i < vars.length; i++) {
+      if (isBoolean(i) && vars[i].singleton()) {
+        probeFixedBefore++;
+      } else if (isBoolean(i)) {
+        booleans.add(i);
+      } else if (vars[i] != null && !vars[i].singleton() && vars[i].getSize() <= PROBE_MAX_DOMAIN) {
+        valued.add(i);
+        probeValues += vars[i].getSize();
+      }
+    }
+    probeBooleans = booleans.size();
+    probeValueVariables = valued.size();
+    try {
+      boolean changed = true;
+      while (changed) {
+        changed = false;
+        probePasses++;
+        for (List<Integer> group : List.of(booleans, valued)) {
+          for (int i : group) {
+            long now = System.nanoTime();
+            if (now > end) {
+              probeExhausted = true;
+              return true;
+            }
+            if (probeFailed + probeLifted == 0 && now - start > PROBE_BARREN * (end - start)) {
+              // a share of the budget gave nothing: the rest would most likely give nothing too
+              probeBarren = true;
+              return true;
+            }
+            int outcome = isBoolean(i) ? probeBoolean(i) : probeValues(i, end);
+            if (outcome == REFUTED) {
+              rootFailed = true;
+              return false;
+            }
+            changed |= outcome == FACTS;
+          }
+        }
+      }
+      return true;
+    } finally {
+      probeNanos += System.nanoTime() - start;
+      if (!rootFailed && !propagateRoot()) {
+        rootFailed = true;
+      }
+      for (int i : booleans) {
+        if (vars[i].singleton() || sat.value(geLit(i, 1)) != 0) {
+          probeFixedBooleans++;
+        }
+      }
+      long left = 0;
+      for (int i : valued) {
+        left += vars[i].getSize();
+      }
+      probeValuesRemoved = probeValues - left;
+    }
+  }
+
+  // probes both values of a 0/1 variable
+  private int probeBoolean(int i) {
+    int one = geLit(i, 1);
+    if (vars[i].singleton() || sat.value(one) != 0) {
+      return NOTHING;
+    }
+    probeProbes++;
+    int[] upImplied = probe(one);
+    if (!sat.isOk()) {
+      return REFUTED;
+    }
+    if (upImplied == null) {
+      probeFailed++;
+      return sat.addClause(-one) ? FACTS : REFUTED;
+    }
+    if (sat.value(one) != 0) {
+      return NOTHING;
+    }
+    Set<Atom> up = consequences(upImplied);
+    probeProbes++;
+    int[] downImplied = probe(-one);
+    if (!sat.isOk()) {
+      return REFUTED;
+    }
+    if (downImplied == null) {
+      probeFailed++;
+      return sat.addClause(one) ? FACTS : REFUTED;
+    }
+    if (sat.value(one) != 0) {
+      return NOTHING;
+    }
+    if (probeConflicts != null) {
+      recordConflicts(i, 1, up);
+      recordConflicts(i, 0, consequences(downImplied));
+    }
+    List<Atom> lifted = new ArrayList<>();
+    for (int l : downImplied) {
+      Atom a = atom(l);
+      if (a == null) {
+        continue;
+      }
+      if (up.contains(a)) {
+        lifted.add(a);
+      }
+      if (booleanValue(a) >= 0 && a.var > i && up.contains(a.negated())) {
+        // x = 0 -> y = b and x = 1 -> y = 1 - b: y equals x or its negation
+        probeEquivalences++;
+      }
+    }
+    for (Atom a : up) {
+      if (a.var > i && booleanValue(a) == 0) {
+        probeExclusions++;
+      }
+    }
+    return addLifted(lifted);
+  }
+
+  // the conflicts (x = value, y = 1 - b) of the implications x = value -> y = b found by a probe
+  private void recordConflicts(int i, int value, Set<Atom> implied) {
+    for (Atom a : implied) {
+      int b = booleanValue(a);
+      if (b >= 0 && a.var != i && probeConflicts.size() < probeConflictCap) {
+        probeConflicts.add(new IntVar[] {vars[i], vars[a.var]});
+        probeConflictValues.add(new int[] {value, 1 - b});
+      }
+    }
+  }
+
+  // the conflicts between values of 0/1 variables that probing found, when they are kept
+  private List<IntVar[]> probeConflicts;
+  private List<int[]> probeConflictValues;
+  private int probeConflictCap;
+
+  // when (System.nanoTime()) the next run of the search from the root probes it first, or 0
+  private long delayedProbeAt;
+  private long delayedProbeBudget;
+
+  /**
+   * Probes the root ({@link #probeRoot}) at the start of the first run of the search from the root
+   * after a time, between runs of branch and bound, so that instances solved before it do not pay
+   * for probing. A satisfaction search is one run and is not probed.
+   *
+   * @param atNanos the {@link System#nanoTime()} after which the next run probes first
+   * @param budgetNanos the time probing may take
+   */
+  public void setDelayedProbe(long atNanos, long budgetNanos) {
+    delayedProbeAt = atNanos == 0 ? 1 : atNanos;
+    delayedProbeBudget = budgetNanos;
+  }
+
+  /**
+   * Keeps the conflicts that the next {@link #probeRoot} finds between values of 0/1 variables: x =
+   * a and y = b cannot hold together because probing x = a implied y = 1 - b. They are the edges of
+   * the at-most-one cliques (and, two by two, the equivalences) that the linear relaxation can use
+   * as clique rows.
+   *
+   * @param cap the most conflicts kept
+   */
+  public void keepProbeConflicts(int cap) {
+    probeConflicts = new ArrayList<>();
+    probeConflictValues = new ArrayList<>();
+    probeConflictCap = cap;
+  }
+
+  /**
+   * Returns the conflicts kept by {@link #keepProbeConflicts}.
+   *
+   * @return pairs of 0/1 variables
+   */
+  public List<IntVar[]> probeConflicts() {
+    return probeConflicts == null ? List.of() : probeConflicts;
+  }
+
+  /**
+   * Returns the values of the conflicts of {@link #probeConflicts}, at the same positions.
+   *
+   * @return pairs of values, each 0 or 1
+   */
+  public List<int[]> probeConflictValues() {
+    return probeConflictValues == null ? List.of() : probeConflictValues;
+  }
+
+  // probes each value of a variable with a small domain
+  private int probeValues(int i, long end) {
+    int outcome = NOTHING;
+    Set<Atom> common = null;
+    boolean complete = true;
+    for (ValueEnumeration e = vars[i].dom().cloneLight().valueEnumeration();
+        e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      if (!vars[i].dom().contains(v)) {
+        continue;
+      }
+      if (vars[i].singleton() || System.nanoTime() > end) {
+        complete = false;
+        break;
+      }
+      int lit = eqVar(i, v);
+      if (sat.value(lit) != 0) {
+        complete &= sat.value(lit) < 0;
+        continue;
+      }
+      probeProbes++;
+      int[] implied = probe(lit);
+      if (!sat.isOk()) {
+        return REFUTED;
+      }
+      if (implied == null) {
+        probeFailed++;
+        if (!sat.addClause(-lit)) {
+          return REFUTED;
+        }
+        outcome = FACTS;
+        continue;
+      }
+      if (sat.value(lit) != 0) {
+        complete = false;
+        continue;
+      }
+      Set<Atom> atoms = consequences(implied);
+      if (common == null) {
+        common = atoms;
+      } else {
+        common.retainAll(atoms);
+      }
+    }
+    if (complete && common != null && !common.isEmpty()) {
+      int lifted = addLifted(new ArrayList<>(common));
+      if (lifted != NOTHING) {
+        return lifted;
+      }
+    }
+    return outcome;
+  }
+
+  private int addLifted(List<Atom> lifted) {
+    int outcome = NOTHING;
+    for (Atom a : lifted) {
+      if (entailed(a)) {
+        continue;
+      }
+      int lit = literalOf(a);
+      if (sat.value(lit) > 0) {
+        continue;
+      }
+      probeLifted++;
+      outcome = FACTS;
+      if (!sat.addClause(lit)) {
+        return REFUTED;
+      }
+    }
+    return outcome;
+  }
+
+  // propagates the root, with the store's constraints, by probing an atom not decided yet
+  private boolean propagateRoot() {
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] != null && !vars[i].singleton()) {
+        int lit = geLit(i, vars[i].max());
+        if (sat.value(lit) == 0) {
+          probe(lit);
+          return sat.isOk();
+        }
+      }
+    }
+    return sat.isOk();
+  }
+
   /**
    * Solves the store's constraints.
    *
@@ -2564,6 +2978,14 @@ public final class LcgSolver implements ExternalPropagator {
     startProof();
     if (rootFailed) {
       return CdclSolver.UNSAT;
+    }
+    if (delayedProbeAt != 0 && assumed.length == 0 && System.nanoTime() >= delayedProbeAt) {
+      // the search has run for a while without an answer: probe the root, now with the learnt
+      // clauses and the bound of the best solution
+      delayedProbeAt = 0;
+      if (!probeRoot(delayedProbeBudget)) {
+        return CdclSolver.UNSAT;
+      }
     }
     solution = null;
     exchangeShared();
@@ -4675,6 +5097,8 @@ public final class LcgSolver implements ExternalPropagator {
     encodedGraphs.clear();
     // search without learning needs the propagators of the constraints that became clauses
     for (Constraint c : encodedConstraints) {
+      // removeConstraint only marked it as entailed above the root
+      store.clearEntailed(c);
       c.impose(store);
     }
     encodedConstraints.clear();

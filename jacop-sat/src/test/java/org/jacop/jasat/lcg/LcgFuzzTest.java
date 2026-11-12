@@ -1746,6 +1746,8 @@ class LcgFuzzTest {
     long lowerBoundRuns = 0;
     long lowerBoundRaised = 0;
     long bisectProbes = 0;
+    long probes = 0;
+    long probeFacts = 0;
     int referenceTimeouts = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
@@ -1770,7 +1772,15 @@ class LcgFuzzTest {
         // reasons of up to 1 to 3 literals stay as clauses
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
         annotate(solver, model, seed);
-        status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
+        // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT
+        boolean refuted = seed % 4 == 3 && !solver.probeRoot(Long.MAX_VALUE);
+        probes += solver.probeProbes;
+        probeFacts += solver.probeFailed + solver.probeLifted;
+        if (refuted) {
+          status = CdclSolver.UNSAT;
+        } else {
+          status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
+        }
         checked += solver.checker().checked;
         lowerBoundRuns += solver.lowerBoundRuns;
         lowerBoundRaised += solver.lowerBoundRaised;
@@ -1815,6 +1825,7 @@ class LcgFuzzTest {
           lowerBoundRaised,
           bisectProbes,
           referenceTimeouts);
+      System.out.printf("  root probing: %d probes, %d facts%n", probes, probeFacts);
       statistics.forEach(
           (k, v) ->
               System.out.printf(
