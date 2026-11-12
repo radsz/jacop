@@ -4234,6 +4234,12 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. JaSAT (CdclSolver) keeps the decision level, reason, trail position
+     and analysis mark of a SAT variable in one 16-byte record instead of
+     four arrays, so an assignment writes one cache line and conflict
+     analysis reads one line per variable, as Kissat and CaDiCaL do. Same
+     search; pure SAT runs (CdclMain) are about 3 % faster.
+
 Version 4.11
 =============
 
