@@ -340,7 +340,56 @@ public class Diffn extends Nooverlap {
       dffWidth[i] = Math.min(partialCommonArea(k, window[i], 0), width);
       dffHeight[i] = Math.min(partialCommonArea(k, window[i], 1), height);
     }
-    return dffs().packingFails(width, height, dffWidth, dffHeight, m);
+    if (packedBefore(k, width, height, m)) {
+      // the same items in the same window could be packed as far as the functions tell
+      return false;
+    }
+    if (dffs().packingFails(width, height, dffWidth, dffHeight, m)) {
+      return true;
+    }
+    rememberPacked(k, width, height, m);
+    return false;
+  }
+
+  /**
+   * The window and item sizes of the last test of the dual feasible functions for each rectangle
+   * that did not fail: width, height, then the width and height of each item. The test is a
+   * function of these sizes only, and a rectangle is often examined again because a rectangle
+   * outside its window changed, with the same sizes.
+   */
+  private int[][] lastPacked;
+
+  private boolean packedBefore(int k, int width, int height, int m) {
+    if (lastPacked == null) {
+      return false;
+    }
+    int[] last = lastPacked[k];
+    if (last == null || last.length != 2 * m + 2 || last[0] != width || last[1] != height) {
+      return false;
+    }
+    for (int i = 0; i < m; i++) {
+      if (last[2 * i + 2] != dffWidth[i] || last[2 * i + 3] != dffHeight[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private void rememberPacked(int k, int width, int height, int m) {
+    if (lastPacked == null) {
+      lastPacked = new int[rectangle.length][];
+    }
+    int[] last = lastPacked[k];
+    if (last == null || last.length != 2 * m + 2) {
+      last = new int[2 * m + 2];
+      lastPacked[k] = last;
+    }
+    last[0] = width;
+    last[1] = height;
+    for (int i = 0; i < m; i++) {
+      last[2 * i + 2] = dffWidth[i];
+      last[2 * i + 3] = dffHeight[i];
+    }
   }
 
   /**
