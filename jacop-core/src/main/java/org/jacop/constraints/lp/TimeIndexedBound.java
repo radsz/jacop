@@ -38,6 +38,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
@@ -126,7 +127,35 @@ public final class TimeIndexedBound extends Constraint
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** A cumulative resource: the starts, least durations and usages of its tasks, its capacity. */
-  public record Resource(IntVar[] starts, long[] dur, long[] use, IntVar cap) {}
+  public record Resource(IntVar[] starts, long[] dur, long[] use, IntVar cap) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Resource r
+          && Arrays.equals(starts, r.starts)
+          && Arrays.equals(dur, r.dur)
+          && Arrays.equals(use, r.use)
+          && Objects.equals(cap, r.cap);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(Arrays.hashCode(starts), Arrays.hashCode(dur), Arrays.hashCode(use), cap);
+    }
+
+    @Override
+    public String toString() {
+      return "Resource[starts="
+          + Arrays.toString(starts)
+          + ", dur="
+          + Arrays.toString(dur)
+          + ", use="
+          + Arrays.toString(use)
+          + ", cap="
+          + cap
+          + "]";
+    }
+  }
 
   private final IntVar objective;
   private final boolean maximize;
@@ -144,7 +173,27 @@ public final class TimeIndexedBound extends Constraint
   private int rootLevel = -1;
 
   /** A solve: the objective bound it assumed, the bound it gave, the root bounds it used. */
-  private record Solve(long assumed, long bound, long[] lo, long[] hi) {}
+  private record Solve(long assumed, long bound, long[] lo, long[] hi) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Solve v
+          && assumed == v.assumed
+          && bound == v.bound
+          && Arrays.equals(lo, v.lo)
+          && Arrays.equals(hi, v.hi);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(assumed, bound, Arrays.hashCode(lo), Arrays.hashCode(hi));
+    }
+
+    @Override
+    public String toString() {
+      return "Solve[assumed=" + assumed + ", bound=" + bound + "]";
+    }
+  }
 
   // the solves that proved something, the last one current
   private final List<Solve> proved = new ArrayList<>();
