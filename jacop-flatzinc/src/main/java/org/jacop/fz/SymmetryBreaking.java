@@ -797,7 +797,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         if (j == b) {
           continue;
         }
-        checkTime();
+        if (cutsOutOfTime()) {
+          // the cuts posted so far stay valid; the time left belongs to the search
+          return new int[] {posted, skipped};
+        }
         if (reach.contains(varAt[j])) {
           skipped++;
           continue;
@@ -967,6 +970,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
       p = parent.get(v);
     }
     return v;
+  }
+
+  /**
+   * Test hook: when true, the Schreier-Sims cuts find their time up before posting any cut, as when
+   * the time given runs out after the automorphism search.
+   */
+  static volatile boolean cutsTimeUpForTest;
+
+  private boolean cutsOutOfTime() {
+    return cutsTimeUpForTest || System.nanoTime() > deadline;
   }
 
   private void checkTime() {

@@ -341,6 +341,33 @@ class SymmetryBreakingFlatzincTest {
     assertTrue(broken > trials / 3, "broken " + broken);
   }
 
+  @Test
+  void schreierSimsCutsStopWhenTheTimeIsUp() throws IOException {
+    // the time given to symmetry breaking ran out while the Schreier-Sims cuts were posted, and
+    // the time-out escaped as an exception that ended the run (develop-5.0 after #585, under load)
+    String model =
+        """
+        array [1..6] of var 1..3: x :: output_array([1..6]);
+        constraint int_ne(x[1], x[2]);
+        constraint int_ne(x[2], x[3]);
+        constraint int_ne(x[3], x[4]);
+        constraint int_ne(x[4], x[5]);
+        constraint int_ne(x[5], x[6]);
+        constraint int_ne(x[6], x[1]);
+        solve satisfy;
+        """;
+    String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+    assertTrue(on.contains("symmetrySchreierSimsCuts=3"), on);
+    SymmetryBreaking.cutsTimeUpForTest = true;
+    try {
+      String out = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+      assertTrue(out.contains("symmetrySchreierSimsCuts=0"), out);
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      SymmetryBreaking.cutsTimeUpForTest = false;
+    }
+  }
+
   /**
    * Schreier-Sims cuts (org.jacop.fz.symmetry.schreierSims=on) keep the lexicographically smallest
    * (or largest) solution the other symmetry breaking constraints keep, so the random models of the
