@@ -359,8 +359,18 @@ public class Diffn extends Nooverlap {
    */
   private int[][] lastPacked;
 
+  /**
+   * Whether the constraint keeps the events of unchanged compulsory parts and the windows that
+   * passed the dual feasible functions; a test reference turns it off to recompute everything.
+   *
+   * @return true.
+   */
+  boolean reusesWork() {
+    return true;
+  }
+
   private boolean packedBefore(int k, int width, int height, int m) {
-    if (lastPacked == null) {
+    if (lastPacked == null || !reusesWork()) {
       return false;
     }
     int[] last = lastPacked[k];
@@ -777,7 +787,8 @@ public class Diffn extends Nooverlap {
       // the events of a rectangle whose compulsory parts are as at the previous build are kept;
       // few rectangles change between two builds
       int k = 5 * i;
-      if (addWithin[dim][i] != null
+      if (reusesWork()
+          && addWithin[dim][i] != null
           && sig[k] == min
           && sig[k + 1] == max
           && sig[k + 2] == lMin
