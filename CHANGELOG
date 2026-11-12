@@ -4256,6 +4256,243 @@ Version 5.0 (unreleased)
      -Dorg.jacop.fz.tableReformulation=false turns it off; see
      properties.txt.
 
+248. New org.jacop.core.TimeStampInt, a TimeStamp specialised for int
+     values (int arrays, no Integer boxing), replaces TimeStamp<Integer>
+     in all 41 places that used it (AbstractBoolVector, BoolClause,
+     AbstractChannel, LexOrder, MinOfSums, SumWeight, Alldistinct,
+     AbstractMinMax, the cumulatives, InputOrderSelect, ...). Search is
+     unchanged. With --lcg off and fixed search at 240 s, the 20
+     instances that use it most are 1.6 % faster in nodes per second
+     (road-cons road_11 4-5 %, zephyrus 3-4 %); a base against base
+     round on the same instances varies by about 1 %.
+
+249. TimeIndexedBound, a dual bound of the objective from a time-indexed
+     linear relaxation of the cumulative and disjunctive resources
+     (Pritsker, Watters and Wolfe, "Multiproject scheduling with limited
+     resources: a zero-one programming approach", Management Science
+     16(1), 1969), with interval-indexed buckets where the horizon is
+     long (Queyranne and Schulz, "Polyhedral approaches to machine
+     scheduling", TU Berlin report 408, 1994) and aggregated precedence
+     rows over cumulative columns (Christofides, Alvarez-Valdes and
+     Tamarit, "Project scheduling with resource constraints: a branch
+     and bound approach", EJOR 29(3), 1987). It takes the rows of the
+     linear relaxation and the bounds at the root, is solved by the
+     revised dual simplex, and turns the duals (or a Farkas ray) into an
+     exact Lagrangian bound on big integers, so the bound is safe
+     whatever the floating-point error. It is solved again when the
+     objective limit drops or the root bounds change, within a share of
+     the run time and backing off after solves that prove nothing new.
+     Lazy clause generation explains the bound by the objective limit
+     and the root bounds the solve assumed. Off by default; FlatZinc:
+     -Dorg.jacop.lp.timeIndexed=true. On 39 MiniZinc Challenge instances
+     with cumulative that the relaxation reaches (600 s, model search)
+     the bound rises on 16 and falls on none: cargo challenge07 4 to
+     168 (best 328), ihtc-2024 i03 230 to 5338 (best 10660), racp
+     j60_29 963 to 978; solved counts do not change.
+
+250. LazyBitSetDomain, for domains of 65,536 values or more, keeps its holes
+     as sorted intervals and found the interval of a value by binary search
+     on every query. It now tries the interval found last and the next one
+     first. A time table sweep probes the starts of each task in increasing
+     order, mostly in already removed ranges, so the binary search took 30 %
+     of the time of largescheduling instance-1600-2 with free search; that
+     instance now explores 1.6-1.8x more nodes in 240 s. Pruning is the same.
+
+251. The domain trail of the variables with more than 64 values
+     (LazyBitSetDomain) keeps each entry in the space its kind needs: a
+     saved word of the bit set takes 24 bytes instead of 56 and the state
+     saved at the first change of a level 48 bytes instead of 56. Entries
+     are of variable length in an int and an object stream, both still
+     grown in segments without copying. Search is unchanged. The live heap
+     at its peak drops on deep searches over wide domains: debruijn_binary
+     03_08 3.17 GB -> 0.86 GB (solved in 4.5 s at -Xmx2G; it ran out of
+     memory at -Xmx3G before) and 17 % faster, 04_06 806 MB -> 423 MB.
+     Elsewhere the speed is unchanged (identical search, 11 wide-set
+     instances, 6 runs each: 1.003 against 0.997 between two base runs).
+
+252. LCG free search (--lcg -f) skips the core-guided phase after branch
+     and bound when the phase's probe (its first 2 % of the time) stopped
+     without a solution of its own and branch and bound found one: the
+     rest of the phase stopped the same way after a third of its time
+     and only delayed branch and bound. At 600 s on 29 instances, two
+     seeds each: fast-food ff58 is proved in 24 s instead of 95 s,
+     gt-sort n9 in 57 s instead of 323 s, city-position 5-06 in 48 s
+     instead of 322 s, and city-position 7-04 (no proof before) in
+     104 s. The probe still runs, so models where cores close the gap
+     at once (proteindesign, ptv, spot5, celar, work-task-variation)
+     keep their proofs. -Djacop.lcg.coreProbeSkip=false restores the old
+     behaviour; see properties.txt.
+
+253. fzn-jacop and the MiniZinc Challenge image start the JVM with
+     -XX:+UseTransparentHugePages on Linux: the heap is backed by 2 MB
+     pages, which cuts the TLB misses of JaCoP's randomly read clause
+     arena, watch lists and domains. The same search takes about 5 % less
+     time (32 wide-set instances, 6 paired reps, every rep 0.93-0.96x;
+     a copy of the same jar 0.99-1.01x), and wide-quick at 240 s solves
+     the same instances 7 % faster in wall time in both modes, with about
+     4 % more peak memory. The kernel must have transparent huge pages in
+     madvise or always mode; otherwise the JVM runs as before. The option
+     exists only in the Linux JVM, so the launcher adds it only there.
+     -XX:+UseCompactObjectHeaders was measured again and is not set: no
+     gain, and an AOT cache made without it is rejected.
+
+254. Fix: when the time given to symmetry breaking ran out while the
+     Schreier-Sims cuts were posted (on by default since 241), the check
+     was not caught and the solver stopped with SymmetryBreaking$OutOfTime
+     before search, printing no solution. The cuts posted so far are now
+     kept, as when MAX_CUTS is reached. Seen with -f on a loaded machine:
+     steelmillslab bench_19_6 and skill-allocation 5d_1 (every run),
+     cryptanalysis kb128, ptv 20_3b and 20_2b, word-equations 03,
+     oocsp_racks, rcpsp-wet-diverse j30_27_5-4 and whirlpool d29 (some
+     runs).
+
+255. Inferred redundant cumulatives (on by default;
+     -Dorg.jacop.fz.inferredCumulatives=false turns them off), after A. Sidorov, On Inferring Cumulative
+     Constraints, CP 2026 (arXiv 2602.15635). At each time point a
+     cumulative is a knapsack inequality over the tasks that run then; a
+     cover of these inequalities (tasks that cannot all run together) is
+     lifted by sequential lifting (M. W. Padberg, A note on zero-one
+     programming, Operations Research 23, 1975) to sum(pi_i) <= pi_0 over
+     more tasks, which holds at every time point and is posted as
+     Cumulative(starts, durations, pi, pi_0), or CumulativeUnary when
+     pi_0 = 1. Covers of 2 and 3 tasks and of the longest and shortest
+     tasks per resource use are lifted over all fixed-capacity cumulatives
+     together and over the pairs of tasks that precedences or disjunctions
+     keep apart (the conflict graph of org.jacop.fz.disjunctiveCliques,
+     Sidorov, Marijnissen and Demirovic, CP 2025); the five
+     with the largest capacity bound sum(d_i * pi_i) / pi_0 that no input
+     cumulative dominates are posted, and only when that bound exceeds the
+     capacity bound of every input cumulative and clique
+     (.useful=false posts them anyway; those mostly add propagation and
+     slowed LCG). org.jacop.presolve.InferredCumulatives does the inference
+     on its own. On rcpsp 2013 instance 13 one inferred cumulative of 18
+     tasks with capacity 3 has capacity bound 78, the optimum: model search
+     proves it in 0.6 s instead of 6.8 s, -f in 0.7 s instead of 47 s.
+     test-scheduling t30m20r3-20 is proved in 0.7 s (open after 600 s
+     without). 31 of 100 cumulative instances get one; on them, at 240 s,
+     model search solves 24 instead of 23 and -f 28 as before in 327 s
+     instead of 365 s, with no instance lost (also at 600 s). On by
+     default after a round with the default jar: of the 240 wide-set
+     instances 21 run the inference (at most 1 s, largescheduling) and 4
+     get an inferred cumulative; on the 31 instances, model search 24
+     solved instead of 23, -f 28 as before in 282 s instead of 354 s.
+
+256. Decomposition bound (off by default, -Dorg.jacop.fz.decomposition=true).
+     Before search, the FlatZinc front end looks for blocks of variables
+     that only counting (CountValuesBounds) and linear constraints link,
+     as in the connected-component detection of Gamrath and Luebbecke
+     (SEA 2010): a worker's shift sequence, a person's roster. It bounds
+     the objective by the Lagrangian relaxation of the linking rows
+     (Geoffrion, Mathematical Programming Study 2, 1974), with column
+     generation: a JaLP master over the blocks' solutions found so far,
+     with Wentges' smoothing of the duals, and for each block a pricing
+     problem, its own constraints with the reduced cost as objective,
+     solved by the solver itself as in Ha, Quimper and Rousseau (CP 2015):
+     by branch and bound in the store, or, for a block it cannot finish
+     there, by lazy clause generation in a copy of the block. Each bound is
+     certified in integer arithmetic from duals rounded to multiples of
+     1/K, so it holds whatever the simplex's accuracy, and the best one
+     bounds the objective at the root. physician-scheduling instance10
+     (MiniZinc Challenge 2021): root bound 1245 -> 2980 = the optimum in
+     about 7 s; work-task-variation (2025) has no root bound and gets one.
+     The statistics are dbBlocks, dbRows, dbIterations, dbColumns,
+     dbBound, dbPricingTimeOuts and dbTime.
+
+257. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
+     the travel time on the arc i -> j when i is left in step s (time
+     out[i] / stepLength), and waiting is allowed, so the arrival is the
+     earliest t' + travel(t') over the departures t' still possible
+     (an extension of Cire and van Hoeve, Operations Research 61(6),
+     2013). The FlatZinc front end also detects
+     tours given by an inverse pair (jacop_assignment) whose order is
+     proved by a position array, with the travel time read from a table
+     over (predecessor, departure step), as in the MiniZinc Challenge
+     tdtsp model. On the 15 tdtsp instances of 2015, 2017 and 2026, 600 s:
+     the ten proved instances are proved 1.1x-2.9x faster under the
+     model's search and 1.1x-10x faster with -f, and the five 20-node
+     instances end with higher lower bounds and, where the model names
+     the objective, better solutions (2026 inst_20_56_00 22,450 ->
+     17,579; -f 16,358 -> 14,962). -Dorg.jacop.fz.sequenceMdd=false turns
+     it off.
+
+258. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
+     the bins an item left or was fixed in, read from the values the item
+     lost at the current level, instead of every bin of the item's previous
+     domain, and keeps for each bin the items that may still be in it, so
+     that a bin is no longer processed by a scan of all items (the list is
+     restored when a level is removed; a bin that more than half of the
+     items may still be in is scanned in full). Pruning is unchanged. On the
+     2025 ihtc-2024-marte instances, where Binpacking took about half of
+     the run, fixed search explores 1.06x to 5.9x more nodes in 600 s.
+
+259. Cuts in search keep their period only while they move the bound.
+     The capacity cuts of item 187 and the Hall cuts of item 215 were
+     separated more often whenever a violated cut was found, even when
+     adding it left the objective of the re-solved LP where it was; now
+     the period halves only when the cuts change the LP objective (by more
+     than 1e-6 relative) or make the LP infeasible, and doubles (up to
+     1024) otherwise. -Dorg.jacop.lp.searchCutGate=false restores the old
+     rule. The energy cuts of item 181 can also be separated in search,
+     from the current LP values over the bounds of the first solve (so
+     they hold for the whole search), under the same period and gate, up
+     to 10 cuts per separation, with -Dorg.jacop.lp.energySearch=true;
+     off by default. Statistics lpSearchSeparationsMoved,
+     lpEnergySearchCuts and lpEnergySeparations. Check
+     (LinearRelaxationTest): random scheduling models keep their optimum
+     with energy cuts in search, also under LCG with the explanation
+     checker. Measured (base and candidate in the same round, 2 jobs
+     each): in default mode search cuts fire on 5 of the 240 wide
+     instances, all routing; on these and 8 vrp/vrplc instances at 600 s,
+     separations fall by about half, solved 4 to 4 by default and with
+     -f, objectives 2 better and 2 worse by default and 4 better and none
+     worse with -f, dual bounds equal by default and 2 higher and 2 lower
+     with -f. Wide-quick at 240 s: 44 to 44 solved,
+     2 families better, none worse. With Hall and energy cuts in search
+     on, 97 topic instances at 240 s: 30 to 30 solved (default), 44 to 47
+     (-f), and cable-tree-wiring A022 ends as without them (the same
+     objective by default, optimal in 112 s instead of 100 s with -f).
+     Hall and energy cuts in search stay off by default: they leave the
+     dual bounds where they were.
+
+260. JaLP no longer cycles on LPs with large costs or huge artificial
+     bounds. A reduced cost past the dual tolerance (1e-9) but within
+     1e-14 of the sizes of its terms is taken as zero: with costs near
+     1e7 such values are a few units in the last place and took either
+     sign as the basis changed, so the dual simplex flipped two parallel
+     columns to an artificial bound and back without end and the primal
+     simplex let two columns enter in turn after every refactorization
+     (Dantzig-Wolfe master LPs of work-task-variation, osolpro
+     benchmarks/decomposition-bounds). Both simplexes also keep hashes of
+     their last 32 bases: after 20 pivots back to one of them the dual
+     simplex leaves the row out and, if any row is still outside its
+     bounds on fresh factors at the end, stops at LIMIT rather than
+     return a point outside a row; the primal simplex hands over to the
+     dual one. That ends a cycle of the exact LP fuzzer at LIMIT (seed
+     36935: free columns at bounds of 1e12, the slacks of two parallel
+     rows swapped forever). Both reproducers solve in 113 and 1,818
+     pivots, before they ran until the pivot limit.
+
+261. TSP edge elimination: before search, a pure symmetric travelling
+     salesman model (one circuit with no fixed successor, the minimised
+     objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
+     the arcs that are in no optimal tour, proved from the distances alone
+     with the 2-opt compatibility of Jonker and Volgenant ("Nonoptimal
+     edges for the symmetric traveling salesman problem", Operations
+     Research 32(4), 1984) and the close point and main edge elimination
+     of Hougardy and Schroeder ("Edge elimination in TSP instances",
+     WG 2014; see also Cook, Helsgaun, Hougardy and Schroeder, "Local
+     elimination in the traveling salesman problem", Mathematical
+     Programming Computation, 2024). The rules use strict improvements,
+     so every optimal tour stays and no triangle inequality is needed.
+     It leaves 5 to 12 arcs per city on 42 TSPLIB instances in 0.1 to
+     0.6 s. At 600 s it proves 16 optima instead of 14 with the model's
+     search (proof time geomean 0.43) and 31 instead of 29 in the TSP
+     mode with -f (0.69); with plain -f it proves 25 instead of 27
+     (0.72 on the instances both prove; 24 instead of 22 at 240 s).
+     org.jacop.constraints.TspEdgeElimination; FlatZinc in
+     GiantTourDetector; System property org.jacop.fz.tspElimination=false
+     turns it off, org.jacop.fz.tspEliminationMs (default 2000) limits it.
+
 Version 4.11
 =============
 

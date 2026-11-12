@@ -57,7 +57,7 @@ import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 
@@ -342,7 +342,7 @@ public class Geost extends Constraint
   LinkedHashSet<Var> variableQueue;
 
   /** It stores the position of the last variable grounded in the previous level. */
-  TimeStamp<Integer> lastLevelLastVar;
+  TimeStampInt lastLevelLastVar;
 
   /** It contains all the objects which have been updated in the previous levels. */
   ArrayList<GeostObject> objectList;
@@ -359,7 +359,7 @@ public class Geost extends Constraint
    * It stores the index of the first object which have changed at current level. It allows to
    * inform the external constraints about objects being changed due to backtracking.
    */
-  TimeStamp<Integer> setStart;
+  TimeStampInt setStart;
 
   /** It contains objects that need to be checked in the next sweep. */
   LinkedHashSet<GeostObject> objectQueue;
@@ -1728,14 +1728,14 @@ public class Geost extends Constraint
 
     this.store = store;
 
-    lastLevelLastVar = new TimeStamp<>(store, store.level);
+    lastLevelLastVar = new TimeStampInt(store, store.level);
     lastLevelLastVar.update(-1);
 
     genInternalConstraints();
 
     store.registerRemoveLevelLateListener(this);
 
-    setStart = new TimeStamp<>(store, store.level);
+    setStart = new TimeStampInt(store, store.level);
     setStart.update(0);
 
     objectList = new ArrayList<>();

@@ -319,7 +319,8 @@ public class Constraints implements ParserTreeConstants {
         new RoutesDetector(support, false).detect(astTree);
       }
 
-      if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {
+      if ((DisjunctiveCliqueDetector.enabled() || DisjunctiveCliqueDetector.inferredEnabled())
+          && options.proof() == null) {
         // the unary resources it adds explain by rules a proof's unit propagation does not reach
         new DisjunctiveCliqueDetector(support).detect(astTree);
       }
