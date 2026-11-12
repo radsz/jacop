@@ -4244,12 +4244,13 @@ Version 5.0 (unreleased)
      (Dantzig-Wolfe master LPs of work-task-variation, osolpro
      benchmarks/decomposition-bounds). Both simplexes also keep hashes of
      their last 32 bases: after 20 pivots back to one of them the dual
-     simplex leaves the row out as round-off, checked again on fresh
-     factors at the end, and the primal simplex hands over to the dual
-     one. That ends a cycle of the exact LP fuzzer (seed 36935: free
-     columns at bounds of 1e12, the slacks of two parallel rows swapped
-     forever). Both reproducers solve in 113 and 1,818 pivots, before
-     they ran until the pivot limit.
+     simplex leaves the row out and, if any row is still outside its
+     bounds on fresh factors at the end, stops at LIMIT rather than
+     return a point outside a row; the primal simplex hands over to the
+     dual one. That ends a cycle of the exact LP fuzzer at LIMIT (seed
+     36935: free columns at bounds of 1e12, the slacks of two parallel
+     rows swapped forever). Both reproducers solve in 113 and 1,818
+     pivots, before they ran until the pivot limit.
 
 Version 4.11
 =============
