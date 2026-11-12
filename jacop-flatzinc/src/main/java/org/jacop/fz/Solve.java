@@ -764,7 +764,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n%%%mzn-stat: dbPricingTimeOuts="
             + o.pricingTimeOuts()
             + "\n%%%mzn-stat: dbTime="
-            + o.millis() / 1000.0);
+            + o.millis() / 1000.0
+            + (o.primal() == null
+                ? ""
+                : "\n%%%mzn-stat: dbPrimal="
+                    + (o.primal().feasible() ? Long.toString(o.primal().cost()) : "none")
+                    + "\n%%%mzn-stat: dbPrimalTime="
+                    + o.primal().millis() / 1000.0));
   }
 
   /** Prints the counts of the linear relaxation (--lp). */
@@ -2400,6 +2406,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (pumped != null) {
       lcg.setPhase(pumped.vars, pumped.values);
     }
+    DecompositionBound.Primal columns =
+        decomposition == null || !options.freeSearch() ? null : decomposition.primal();
+    if (columns != null && !columns.feasible()) {
+      lcg.setPhase(columns.vars(), columns.values());
+    }
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2421,6 +2432,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && costVar != null
         && !"0".equals(options.freeConfig("lcg-shared-phase", "1"))) {
       lcg.setSharedPhase(worker.sharedSolution(dictionary::getVariable));
+    }
+    if (columns != null && columns.feasible()) {
+      // an integer solution of the restricted master of the decomposition bound
+      lcg.setPhase(columns.vars(), columns.values());
     }
     if (worker != null) {
       worker.onStop(lcg::stop);

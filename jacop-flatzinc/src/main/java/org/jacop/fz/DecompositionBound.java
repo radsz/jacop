@@ -181,6 +181,13 @@ final class DecompositionBound {
   // the multipliers are rounded to multiples of 2^-SCALE at most
   private static final int SCALE = 20;
 
+  /** Whether an assignment of the blocks is built from the columns, as a hint for search. */
+  private static final boolean PRIMAL =
+      !"false".equals(System.getProperty("org.jacop.fz.decomposition.primal"));
+
+  /** The milliseconds of the search for an integer solution of the restricted master. */
+  private static final long PRIMAL_MS = Long.getLong("org.jacop.fz.decomposition.primalMs", 1000L);
+
   /** What the bound did. */
   record Outcome(
       int blocks,
@@ -190,7 +197,15 @@ final class DecompositionBound {
       boolean certified,
       long bound,
       long millis,
-      int pricingTimeOuts) {}
+      int pricingTimeOuts,
+      Primal primal) {}
+
+  /**
+   * An assignment of the blocks' variables from the columns: those of an integer solution of the
+   * restricted master when one was found, else the column of largest weight in the master's last
+   * solution of each block; its cost is that of the columns when they satisfy the linking rows.
+   */
+  record Primal(IntVar[] vars, int[] values, boolean feasible, long cost, long millis) {}
 
   /** A linking row: lo &le; &Sigma; terms &le; hi, its terms by block. */
   static final class Row {
@@ -230,7 +245,7 @@ final class DecompositionBound {
   }
 
   /** A column: its block, its cost, its row activities (row index to value). */
-  record Column(int block, long cost, Map<Integer, Long> activity) {}
+  record Column(int block, long cost, Map<Integer, Long> activity, int[] values) {}
 
   private final Store store;
   private final List<Row> rows;
@@ -766,7 +781,7 @@ final class DecompositionBound {
   private Outcome generate(long start, long deadline, boolean maximize) {
     int m = rows.size();
     int nb = blocks.size();
-    List<Column> columns = new ArrayList<>();
+    List<Column> columns = pool;
     Set<String> seen = new LinkedHashSet<>();
     long best = Long.MIN_VALUE;
     boolean certified = false;
@@ -807,6 +822,7 @@ final class DecompositionBound {
         }
         y = duals[0];
         mu = duals[1];
+        weights = duals[2];
         price = y;
         if (centre != null && alpha > 0) {
           price = new double[m];
@@ -933,20 +949,221 @@ final class DecompositionBound {
     if (certified) {
       bound = maximize ? -best : best;
     }
+    long millis = System.currentTimeMillis() - start;
+    Primal primal = PRIMAL ? primal(maximize) : null;
     return new Outcome(
-        nb,
-        m,
-        iterations,
-        columns.size(),
-        certified,
-        bound,
-        System.currentTimeMillis() - start,
-        timeOuts);
+        nb, m, iterations, columns.size(), certified, bound, millis, timeOuts, primal);
   }
+
+  // the columns of column generation and their weights in the last solution of the master
+  private final List<Column> pool = new ArrayList<>();
+  private double[] weights = new double[0];
 
   // the bounds of the objective at the root, set by the caller
   long objectiveLo = Long.MIN_VALUE;
   long objectiveHi = Long.MAX_VALUE;
+
+  /**
+   * Builds an assignment of the blocks' variables from the columns: an integer solution of the
+   * restricted master (one column per block, the linking rows, the least cost) found by lazy clause
+   * generation within {@link #PRIMAL_MS}, starting from the column of largest weight in the
+   * master's last solution; that column of each block when there is none. This is the restricted
+   * master heuristic of column generation (price and branch), as in C. Joncour, S. Michel, R.
+   * Sadykov, D. Sverdlov and F. Vanderbeck, Column generation based primal heuristics, Electronic
+   * Notes in Discrete Mathematics 36 (2010) 695-702.
+   */
+  private Primal primal(boolean maximize) {
+    long start = System.currentTimeMillis();
+    int nb = blocks.size();
+    int m = rows.size();
+    if (pool.isEmpty()) {
+      return null;
+    }
+    double big = 1;
+    for (Column c : pool) {
+      big = Math.max(big, 1 + 2 * Math.abs((double) c.cost()));
+    }
+    double[][] last = master(pool, big);
+    if (last.length == 3) {
+      weights = last[2];
+    }
+    // the column of largest weight of each block
+    int[] heaviest = new int[nb];
+    Arrays.fill(heaviest, -1);
+    List<List<Integer>> byBlock = new ArrayList<>();
+    for (int b = 0; b < nb; b++) {
+      byBlock.add(new ArrayList<>());
+    }
+    for (int j = 0; j < pool.size(); j++) {
+      int b = pool.get(j).block();
+      byBlock.get(b).add(j);
+      double wj = j < weights.length ? weights[j] : 0;
+      if (heaviest[b] < 0 || wj > (heaviest[b] < weights.length ? weights[heaviest[b]] : 0)) {
+        heaviest[b] = j;
+      }
+    }
+    for (int b = 0; b < nb; b++) {
+      if (heaviest[b] < 0) {
+        return null;
+      }
+    }
+    if (TRACE) {
+      double lpCost = constant;
+      int integral = 0;
+      for (int j = 0; j < pool.size() && j < weights.length; j++) {
+        lpCost += weights[j] * pool.get(j).cost();
+      }
+      for (int b = 0; b < nb; b++) {
+        if (heaviest[b] < weights.length && weights[heaviest[b]] > 0.99) {
+          integral++;
+        }
+      }
+      System.err.println(
+          "% decomposition: master cost "
+              + lpCost
+              + ", blocks with a column at 1: "
+              + integral
+              + " of "
+              + nb);
+    }
+    int[] chosen = heaviest.clone();
+    boolean feasible = false;
+    long cost = 0;
+    try {
+      Store s = new Store();
+      BooleanVar[] z = new BooleanVar[pool.size()];
+      for (int j = 0; j < z.length; j++) {
+        z[j] = new BooleanVar(s);
+      }
+      for (int b = 0; b < nb; b++) {
+        List<Integer> js = byBlock.get(b);
+        IntVar[] xs = new IntVar[js.size()];
+        int[] ones = new int[js.size()];
+        for (int i = 0; i < xs.length; i++) {
+          xs[i] = z[js.get(i)];
+          ones[i] = 1;
+        }
+        s.impose(new LinearInt(xs, ones, "==", 1));
+      }
+      List<List<IntVar>> rowVars = new ArrayList<>();
+      List<List<Integer>> rowWeights = new ArrayList<>();
+      for (int r = 0; r < m; r++) {
+        rowVars.add(new ArrayList<>());
+        rowWeights.add(new ArrayList<>());
+      }
+      for (int j = 0; j < z.length; j++) {
+        for (Map.Entry<Integer, Long> e : pool.get(j).activity().entrySet()) {
+          rowVars.get(e.getKey()).add(z[j]);
+          rowWeights.get(e.getKey()).add(Math.toIntExact(e.getValue()));
+        }
+      }
+      for (int r = 0; r < m; r++) {
+        Row row = rows.get(r);
+        IntVar[] xs = rowVars.get(r).toArray(new IntVar[0]);
+        int[] ws = rowWeights.get(r).stream().mapToInt(Integer::intValue).toArray();
+        if (xs.length == 0) {
+          // no column touches the row
+          if (row.hasLo && row.lo > 0 || row.hasHi && row.hi < 0) {
+            throw new ArithmeticException("an empty row of the restricted master is violated");
+          }
+          continue;
+        }
+        if (row.hasLo && row.hasHi && row.lo == row.hi) {
+          s.impose(new LinearInt(xs, ws, "==", Math.toIntExact(row.lo)));
+        } else {
+          if (row.hasLo) {
+            s.impose(new LinearInt(xs, ws, ">=", Math.toIntExact(row.lo)));
+          }
+          if (row.hasHi) {
+            s.impose(new LinearInt(xs, ws, "<=", Math.toIntExact(row.hi)));
+          }
+        }
+      }
+      long lo = 0;
+      long hi = 0;
+      for (int b = 0; b < nb; b++) {
+        long bl = Long.MAX_VALUE;
+        long bh = Long.MIN_VALUE;
+        for (int j : byBlock.get(b)) {
+          bl = Math.min(bl, pool.get(j).cost());
+          bh = Math.max(bh, pool.get(j).cost());
+        }
+        lo += bl;
+        hi += bh;
+      }
+      IntVar total = new IntVar(s, Math.toIntExact(lo), Math.toIntExact(hi));
+      IntVar[] xs = new IntVar[z.length + 1];
+      int[] ws = new int[z.length + 1];
+      for (int j = 0; j < z.length; j++) {
+        xs[j] = z[j];
+        ws[j] = Math.toIntExact(pool.get(j).cost());
+      }
+      xs[z.length] = total;
+      ws[z.length] = -1;
+      s.impose(new LinearInt(xs, ws, "==", 0));
+      if (!s.consistency()) {
+        throw new ArithmeticException("the restricted master has no solution");
+      }
+      LcgSolver solver = new LcgSolver(s);
+      int[] phase = new int[z.length];
+      for (int b = 0; b < nb; b++) {
+        phase[heaviest[b]] = 1;
+      }
+      solver.setPhase(z, phase);
+      long left = PRIMAL_MS;
+      solver.sat().setDeadline(System.nanoTime() + left * 1_000_000L);
+      solver.setTimeLimit(left);
+      int[] found = new int[nb];
+      boolean[] any = {false};
+      long[] best = {Long.MAX_VALUE};
+      solver.onSolution(
+          () -> {
+            any[0] = true;
+            best[0] = total.value();
+            for (int j = 0; j < z.length; j++) {
+              if (z[j].value() == 1) {
+                found[pool.get(j).block()] = j;
+              }
+            }
+          });
+      solver.minimize(total);
+      if (any[0]) {
+        System.arraycopy(found, 0, chosen, 0, nb);
+        feasible = true;
+        cost = best[0] + constant;
+      }
+    } catch (ArithmeticException | IllegalArgumentException e) {
+      if (TRACE) {
+        System.err.println("% decomposition: no restricted master: " + e.getMessage());
+      }
+    }
+    List<IntVar> vars = new ArrayList<>();
+    List<Integer> values = new ArrayList<>();
+    for (int b = 0; b < nb; b++) {
+      Column c = pool.get(chosen[b]);
+      Block block = blocks.get(b);
+      for (int i = 0; i < block.vars.size(); i++) {
+        vars.add(block.vars.get(i));
+        values.add(c.values()[i]);
+      }
+    }
+    if (TRACE) {
+      System.err.println(
+          "% decomposition: primal "
+              + (feasible ? "restricted master cost " + cost : "heaviest columns")
+              + " over "
+              + vars.size()
+              + " variables in "
+              + (System.currentTimeMillis() - start)
+              + " ms");
+    }
+    return new Primal(
+        vars.toArray(new IntVar[0]),
+        values.stream().mapToInt(Integer::intValue).toArray(),
+        feasible,
+        maximize ? -cost : cost,
+        System.currentTimeMillis() - start);
+  }
 
   // the scale K = 2^s of the multipliers: as fine as the magnitudes allow
   private long scale(double[] y) {
@@ -1084,7 +1301,11 @@ final class DecompositionBound {
         return new double[0][];
       }
     }
-    return new double[][] {y, mu};
+    double[] x = new double[columns.size()];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = lp.value(i);
+    }
+    return new double[][] {y, mu, x};
   }
 
   private static final class Pricing {
@@ -1211,7 +1432,7 @@ final class DecompositionBound {
             if (value < rc.best) {
               rc.best = value;
               Column c = column(b, block, IntVar::value);
-              found.put(c.toString(), c);
+              found.put(c.cost() + ":" + c.activity() + ":" + Arrays.toString(c.values()), c);
             }
             return false;
           }
@@ -1513,7 +1734,11 @@ final class DecompositionBound {
       }
     }
     activity.values().removeIf(v -> v == 0);
-    return new Column(b, cost, activity);
+    int[] values = new int[block.vars.size()];
+    for (int i = 0; i < values.length; i++) {
+      values[i] = value.applyAsInt(block.vars.get(i));
+    }
+    return new Column(b, cost, activity, values);
   }
 
   /**
