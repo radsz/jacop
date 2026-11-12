@@ -33,10 +33,8 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -251,18 +249,34 @@ final class TableReformulation {
   private static int[][] code(int[][] table, int[][] values) {
     int n = table[0].length;
     int[][] rows = new int[table.length][n];
+    int[] column = new int[table.length];
     for (int c = 0; c < n; c++) {
-      Map<Integer, Integer> index = new HashMap<>();
-      for (int[] row : table) {
-        index.putIfAbsent(row[c], 0);
-      }
-      int[] sorted = index.keySet().stream().mapToInt(Integer::intValue).sorted().toArray();
-      for (int v = 0; v < sorted.length; v++) {
-        index.put(sorted[v], v);
-      }
-      values[c] = sorted;
       for (int r = 0; r < table.length; r++) {
-        rows[r][c] = index.get(table[r][c]);
+        column[r] = table[r][c];
+      }
+      int[] sorted = column.clone();
+      Arrays.sort(sorted);
+      int k = 0;
+      for (int r = 0; r < sorted.length; r++) {
+        if (r == 0 || sorted[r] != sorted[k - 1]) {
+          sorted[k++] = sorted[r];
+        }
+      }
+      sorted = Arrays.copyOf(sorted, k);
+      values[c] = sorted;
+      long range = (long) sorted[k - 1] - sorted[0];
+      if (range < 4L * table.length + 1024) {
+        int[] index = new int[(int) range + 1];
+        for (int v = 0; v < k; v++) {
+          index[sorted[v] - sorted[0]] = v;
+        }
+        for (int r = 0; r < table.length; r++) {
+          rows[r][c] = index[column[r] - sorted[0]];
+        }
+      } else {
+        for (int r = 0; r < table.length; r++) {
+          rows[r][c] = Arrays.binarySearch(sorted, column[r]);
+        }
       }
     }
     Set<Key> seen = new HashSet<>();
