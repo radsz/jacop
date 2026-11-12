@@ -95,10 +95,6 @@ public final class FailStat {
 
   static final Map<String, long[]> byClass = new HashMap<>();
 
-  // LRU of recently failed constraints
-  static final Constraint[] lru = new Constraint[64];
-  static int lruSize;
-
   // oracle/record
   static int[] rec = new int[1 << 16];
   static int recSize;
@@ -161,18 +157,59 @@ public final class FailStat {
 
   /** LCG: a propagateAll window starts. */
   public static void lcgWindowStart() {
+    if (!lcgSeen) {
+      lcgSeen = true;
+      owner = Thread.currentThread();
+    }
+    if (!mine()) {
+      return;
+    }
+    if (closePending) {
+      closePending = false;
+      close(true);
+    }
     lcgOpen = true;
     open();
   }
 
   /** LCG: the window ends, with or without a conflict. */
   public static void lcgWindowEnd(boolean conflict) {
-    close(conflict);
+    if (!mine()) {
+      return;
+    }
+    if (conflict && ON) {
+      closePending = true; // closed after the conflict analysis marked the cone
+    } else {
+      close(conflict);
+    }
     lcgOpen = false;
   }
 
+  static boolean closePending;
+
+  /** LCG: a constraint whose explanation is used in the conflict analysis of this window. */
+  public static void cone(Object reason) {
+    if (reason instanceof Constraint c && Thread.currentThread() == owner) {
+      c.fsCone = windowIndex;
+    }
+  }
+
+  static Constraint[] winLog = new Constraint[1024];
+  static long[] winNanos = new long[1024];
+  static int winLogSize;
+  static long coneProp;
+  static long nonConeProp;
+  static long coneCalls;
+  static long nonConeCalls;
+
   static void open() {
+    if (closePending) {
+      closePending = false;
+      close(true);
+    }
     windowIndex++;
+    pending = false;
+    winLogSize = 0;
     if (windowIndex == 0) {
       t0 = System.nanoTime();
     } else if (windowIndex == MAXW) {
@@ -190,6 +227,25 @@ public final class FailStat {
   static void close(boolean failed) {
     if (!ON) {
       return;
+    }
+    if (failed && lcgSeen) {
+      for (int i = 0; i < winLogSize; i++) {
+        if (winLog[i].fsCone == windowIndex) {
+          coneProp += winNanos[i];
+          coneCalls++;
+        } else {
+          nonConeProp += winNanos[i];
+          nonConeCalls++;
+        }
+      }
+    }
+    if (pending) {
+      if (failed) {
+        commitPending();
+      } else {
+        probeFails++;
+      }
+      pending = false;
     }
     long wall = System.nanoTime() - winStartWall;
     long prop = cumProp - winStartProp;
@@ -211,7 +267,7 @@ public final class FailStat {
 
   /** Store.consistency() starts; opens a window unless an LCG window is open. */
   static boolean consistencyStart() {
-    if (lcgOpen) {
+    if (lcgOpen || !mine()) {
       return false;
     }
     open();
@@ -226,12 +282,18 @@ public final class FailStat {
 
   /** A constraint is put into a queue. */
   static void enqueued(Constraint c) {
+    if (Thread.currentThread() != owner) {
+      return;
+    }
     c.fsQueuedCalls = cumCalls;
     c.fsQueuedProp = cumProp;
   }
 
   /** A propagator call finished (normally or by failure). */
   static void called(Constraint c, long nanos, int q) {
+    if (Thread.currentThread() != owner) {
+      return;
+    }
     if (q == 8) {
       frontRuns++;
     }
@@ -241,6 +303,14 @@ public final class FailStat {
   static void called(Constraint c, long nanos) {
     cumCalls++;
     cumProp += nanos;
+    if (ON) {
+      if (winLogSize == winLog.length) {
+        winLog = Arrays.copyOf(winLog, winLogSize * 2);
+        winNanos = Arrays.copyOf(winNanos, winLogSize * 2);
+      }
+      winLog[winLogSize] = c;
+      winNanos[winLogSize++] = nanos;
+    }
     if (c.fsWindow == windowIndex) {
       c.fsRuns++;
     } else {
@@ -250,70 +320,44 @@ public final class FailStat {
   }
 
   /** The constraint failed; called after {@link #called}. */
-  static void failed(Constraint c, long nanos, int queue) {
-    winFailed = true;
-    fails++;
-    if (queue == 8) {
-      frontFails++;
-    }
-    fingerprint = fingerprint * 31 + windowIndex;
-    if (RECORD != null) {
-      if (recSize + 2 > rec.length) {
-        rec = Arrays.copyOf(rec, rec.length * 2);
+  static void failed(Store store, Constraint c, long nanos, int queue) {
+    if (mine()) {
+      fails++;
+      if (queue == 8) {
+        frontFails++;
       }
-      rec[recSize++] = (int) windowIndex;
-      rec[recSize++] = c.fsSerial;
-    }
-    if (ON) {
-      failByConstraint++;
-      long cb = cumCalls - 1 - winStartCalls;
-      long pb = cumProp - nanos - winStartProp;
-      callsBefore += cb;
-      propBefore += pb;
-      failCallNanos += nanos;
-      if (cb == 0) {
-        firstCall++;
+      fingerprint = fingerprint * 31 + windowIndex;
+      if (RECORD != null) {
+        if (recSize + 2 > rec.length) {
+          rec = Arrays.copyOf(rec, rec.length * 2);
+        }
+        rec[recSize++] = (int) windowIndex;
+        rec[recSize++] = c.fsSerial;
       }
-      boolean atStart = c.fsQueuedCalls <= winStartCalls;
-      long qp = Math.max(c.fsQueuedProp, winStartProp);
-      long w = cumProp - nanos - qp;
-      waitProp += w;
-      if (atStart) {
-        queuedAtStart++;
-        waitPropAtStart += w;
-      }
-      if (c.fsRuns > 1) {
-        ranBefore++;
-      }
-      int q = Math.min(queue, 7);
-      queueFails[q]++;
-      queueBefore[q] += pb;
-      String k = c.getClass().getSimpleName();
-      long[] a = byClass.computeIfAbsent(k, x -> new long[6]);
-      a[0]++;
-      a[1] += pb;
-      a[2] += nanos;
-      a[3] += w;
-      a[4] += atStart ? 1 : 0;
-      if (lruSize > 0 && lru[0] == c) {
-        sameAsLast++;
-        a[5]++;
-      }
-      for (int i = 0; i < lruSize; i++) {
-        if (lru[i] == c) {
-          if (i < 8) {
-            inLast8++;
+      if (ON && !winFailed) {
+        pending = true;
+        pCb = cumCalls - 1 - winStartCalls;
+        pPb = cumProp - nanos - winStartProp;
+        pNanos = nanos;
+        pAtStart = c.fsQueuedCalls <= winStartCalls;
+        pW = cumProp - nanos - Math.max(c.fsQueuedProp, winStartProp);
+        pRan = c.fsRuns > 1;
+        pQ = Math.min(queue, 7);
+        pClass = c.getClass().getSimpleName();
+        pRank = -1;
+        for (int i = 0; i < store.fsLruSize; i++) {
+          if (store.fsLru[i] == c) {
+            pRank = i;
+            break;
           }
-          if (i < 32) {
-            inLast32++;
-          }
-          break;
         }
       }
+      winFailed = true;
     }
-    // LRU update
+    // LRU update, per store
+    Constraint[] lru = store.fsLru;
     int pos = -1;
-    for (int i = 0; i < lruSize; i++) {
+    for (int i = 0; i < store.fsLruSize; i++) {
       if (lru[i] == c) {
         pos = i;
         break;
@@ -321,22 +365,81 @@ public final class FailStat {
     }
     Constraint evicted = null;
     if (pos < 0) {
-      if (lruSize < lru.length) {
-        lruSize++;
+      if (store.fsLruSize < lru.length) {
+        store.fsLruSize++;
       }
-      pos = lruSize - 1;
+      pos = store.fsLruSize - 1;
       evicted = lru[pos];
     }
     System.arraycopy(lru, 0, lru, 1, pos);
     lru[0] = c;
     if (FRONT > 0) {
       c.fsHot = true;
-      if (FRONT < lruSize) {
+      if (FRONT < store.fsLruSize) {
         lru[FRONT].fsHot = false;
       }
       if (evicted != null) {
         evicted.fsHot = false;
       }
+    }
+  }
+
+  static boolean pending;
+  static long pCb;
+  static long pPb;
+  static long pNanos;
+  static boolean pAtStart;
+  static long pW;
+  static boolean pRan;
+  static int pQ;
+  static String pClass;
+  static int pRank;
+  static long probeFails; // constraint failures in windows that did not end in a conflict
+
+  static Thread owner;
+  static boolean lcgSeen;
+
+  static boolean mine() {
+    Thread t = Thread.currentThread();
+    if (owner == null) {
+      owner = t;
+    }
+    return owner == t;
+  }
+
+  static void commitPending() {
+    failByConstraint++;
+    callsBefore += pCb;
+    propBefore += pPb;
+    failCallNanos += pNanos;
+    if (pCb == 0) {
+      firstCall++;
+    }
+    waitProp += pW;
+    if (pAtStart) {
+      queuedAtStart++;
+      waitPropAtStart += pW;
+    }
+    if (pRan) {
+      ranBefore++;
+    }
+    queueFails[pQ]++;
+    queueBefore[pQ] += pPb;
+    long[] a = byClass.computeIfAbsent(pClass, x -> new long[6]);
+    a[0]++;
+    a[1] += pPb;
+    a[2] += pNanos;
+    a[3] += pW;
+    a[4] += pAtStart ? 1 : 0;
+    if (pRank == 0) {
+      sameAsLast++;
+      a[5]++;
+    }
+    if (pRank >= 0 && pRank < 8) {
+      inLast8++;
+    }
+    if (pRank >= 0 && pRank < 32) {
+      inLast32++;
     }
   }
 
@@ -412,6 +515,11 @@ public final class FailStat {
       kv(sb, "failWindows", failWindows);
       kv(sb, "failByConstraint", failByConstraint);
       kv(sb, "failByClause", failByClause);
+      kv(sb, "probeFails", probeFails);
+      kv(sb, "coneProp", coneProp);
+      kv(sb, "nonConeProp", nonConeProp);
+      kv(sb, "coneCalls", coneCalls);
+      kv(sb, "nonConeCalls", nonConeCalls);
       kv(sb, "wallAll", wallAll);
       kv(sb, "wallFail", wallFail);
       kv(sb, "propAll", propAll);

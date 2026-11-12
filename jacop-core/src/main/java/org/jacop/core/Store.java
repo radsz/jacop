@@ -542,13 +542,51 @@ public class Store {
     changed[c.getQueueIndex()].add(c);
   }
 
+  /** FailStat prototype: recently failed constraints, most recent first. */
+  Constraint[] fsLru = new Constraint[64];
+
+  int fsLruSize;
+
   /** FailStat prototype: the front queue of hot constraints (bit 31). */
   private final ConstraintQueue front = new ConstraintQueue(this, 31);
 
+  /** FailStat prototype: per cost class, hot constraints run first in their class (bits 24..). */
+  private final ConstraintQueue[] hotQ = new ConstraintQueue[8];
+
+  {
+    for (int i = 0; i < hotQ.length; i++) {
+      hotQ[i] = new ConstraintQueue(this, 24 + i);
+    }
+  }
+
+  private static final int HOT_MASK = 0xFF << 24;
+
   /** FailStat prototype: queue a constraint, hot ones to the front queue. */
   private void enqueue(Constraint c, int queueIndex) {
+    int m = c.queueMembership(this);
+    if (FailStat.FRONT_MODE == 1) {
+      if (queueIndex < currentQueue) {
+        currentQueue = queueIndex;
+      }
+      if (c.fsHot) {
+        if ((m & ~HOT_MASK) != 0) {
+          return;
+        }
+        if (hotQ[queueIndex].add(c) && FailStat.ON) {
+          FailStat.enqueued(c);
+        }
+      } else {
+        if ((m & HOT_MASK) != 0) {
+          return;
+        }
+        if (changed[queueIndex].add(c) && FailStat.ON) {
+          FailStat.enqueued(c);
+        }
+      }
+      return;
+    }
     if (c.fsHot) {
-      if ((c.queueMembership(this) & ~(1 << 31)) != 0) {
+      if ((m & ~(1 << 31)) != 0) {
         return; // already waiting in its own queue
       }
       if (front.add(c) && FailStat.ON) {
@@ -556,7 +594,7 @@ public class Store {
       }
       return;
     }
-    if ((c.queueMembership(this) & (1 << 31)) != 0) {
+    if ((m & (1 << 31)) != 0) {
       return; // already waiting in the front queue
     }
     if (queueIndex < currentQueue) {
@@ -822,6 +860,9 @@ public class Store {
     }
     if (FailStat.ANY) {
       front.clear();
+      for (ConstraintQueue h : hotQ) {
+        h.clear();
+      }
     }
   }
 
@@ -937,6 +978,13 @@ public class Store {
     if (FailStat.ANY && !front.isEmpty()) {
       return true;
     }
+    if (FailStat.FRONT_MODE == 1) {
+      for (int i = currentQueue; i < queueNo; i++) {
+        if (!hotQ[i].isEmpty()) {
+          return true;
+        }
+      }
+    }
     for (int i = currentQueue; i < queueNo; i++) {
       if (!changed[i].isEmpty()) {
         return true;
@@ -1042,6 +1090,22 @@ public class Store {
         if (!front.isEmpty()) {
           c = front.poll();
           q = 8;
+        } else if (FailStat.FRONT_MODE == 1) {
+          while (currentQueue < queueNo
+              && changed[currentQueue].isEmpty()
+              && hotQ[currentQueue].isEmpty()) {
+            currentQueue++;
+          }
+          if (currentQueue >= queueNo) {
+            break;
+          }
+          if (!hotQ[currentQueue].isEmpty()) {
+            q = 8;
+            c = hotQ[currentQueue].poll();
+          } else {
+            q = currentQueue;
+            c = changed[currentQueue].poll();
+          }
         } else {
           while (currentQueue < queueNo && changed[currentQueue].isEmpty()) {
             currentQueue++;
@@ -1097,7 +1161,7 @@ public class Store {
       if (q == 9) {
         FailStat.oracleFailFirst++;
       }
-      FailStat.failed(c, d, q);
+      FailStat.failed(this, c, d, q);
       throw e;
     }
     FailStat.called(c, FailStat.ON ? System.nanoTime() - t0 : 0, q);

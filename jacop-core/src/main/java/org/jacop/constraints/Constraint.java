@@ -171,6 +171,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** FailStat prototype: runs in window fsWindow. */
   public int fsRuns;
 
+  /** FailStat prototype: window whose conflict analysis used this constraint's explanation. */
+  public long fsCone = -1;
+
   /** FailStat prototype: goes to the front queue when woken. */
   public boolean fsHot;
 

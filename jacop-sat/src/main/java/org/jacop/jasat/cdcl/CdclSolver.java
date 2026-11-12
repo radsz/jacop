@@ -2623,6 +2623,7 @@ public final class CdclSolver {
       }
       int confl = propagateAll();
       if (org.jacop.core.FailStat.ANY) {
+        // a conflict window is closed by the next window start, after its analysis
         org.jacop.core.FailStat.lcgWindowEnd(confl != NO_CONFLICT);
       }
       if (!ok) {

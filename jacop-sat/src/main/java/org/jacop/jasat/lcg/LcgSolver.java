@@ -4967,6 +4967,9 @@ public final class LcgSolver implements ExternalPropagator {
         if (linear != null) {
           learnLinear(linear.analyse(store.recentlyFailedConstraint, store.level));
         }
+        if (org.jacop.core.FailStat.ON) {
+          org.jacop.core.FailStat.cone(store.recentlyFailedConstraint);
+        }
         boolean own = trail.explainFailure(store.recentlyFailedConstraint, atoms);
         if (PROOF_TRACE && proof != null) {
           proof.comment((own ? "failure " : "generic failure ") + store.recentlyFailedConstraint);
@@ -5251,6 +5254,9 @@ public final class LcgSolver implements ExternalPropagator {
       return r;
     }
     int e = propagated[Math.abs(lit)];
+    if (org.jacop.core.FailStat.ON) {
+      org.jacop.core.FailStat.cone(trail.reason(e));
+    }
     if (linear != null && linear.usable(trail.reason(e))) {
       noteOrigin(lit, trail.reason(e));
     }
