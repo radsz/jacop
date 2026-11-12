@@ -4131,6 +4131,16 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. The default search branches on set variables in input order, smallest
+     element in first, as JaCoP 4 did: free search (-f, or a model
+     without search annotation) picked the set with the largest failure
+     count and degree, and the branching that LCG free search alternates
+     with left the sets out. gardner_dinner (35 triples of 15 guests, no
+     annotation) is solved again in 266 nodes without LCG and 2,242 with
+     it; 5.0 found no solution in 30 s. --free-config set-heuristic=afc
+     restores the old choice. org.jacop.msc declares --symmetry, so
+     minizinc --solver org.jacop --symmetry off model.mzn works.
+
 Version 4.11
 =============
 
