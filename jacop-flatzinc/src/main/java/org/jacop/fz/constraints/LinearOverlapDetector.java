@@ -57,7 +57,8 @@ import org.jacop.fz.SimpleNode;
  * takes the largest common proportional sub-sum it shares with another row, and the factoring
  * repeats while it finds one. The sub-sum must have at least {@code
  * org.jacop.fz.linearOverlap.minSize} (4) terms. Rows {@code int_lin_eq}, {@code int_lin_le},
- * {@code int_lin_ne} and their reified and half-reified forms take part. Off by default, {@code
+ * {@code int_lin_ne} take part, and their reified and half-reified forms with {@code
+ * -Dorg.jacop.fz.linearOverlap.reified=true}. Off by default, {@code
  * -Dorg.jacop.fz.linearOverlap=true} turns it on.
  *
  * <p>Reference: L. Perron, F. Didier, CP-SAT, Google OR-Tools 9.15 ({@code
@@ -76,11 +77,16 @@ public class LinearOverlapDetector implements ParserTreeConstants {
   /** At most this many terms visited while looking for partners, so large models stay cheap. */
   static final long WORK_LIMIT = Long.getLong("org.jacop.fz.linearOverlap.work", 50_000_000L);
 
-  private static final Set<String> ROWS =
+  /**
+   * Whether reified and half-reified rows take part too ({@code
+   * org.jacop.fz.linearOverlap.reified}, false): their sums are mostly not propagated until the
+   * literal is fixed, and the bounds of the new variables cost propagation at every node
+   * (pattern-set-mining-k1 and bnn-planner, same trees, 3 to 4 times slower).
+   */
+  private static final Set<String> PLAIN = Set.of("int_lin_eq", "int_lin_le", "int_lin_ne");
+
+  private static final Set<String> HALF_OR_REIFIED =
       Set.of(
-          "int_lin_eq",
-          "int_lin_le",
-          "int_lin_ne",
           "int_lin_eq_reif",
           "int_lin_le_reif",
           "int_lin_ne_reif",
@@ -153,12 +159,18 @@ public class LinearOverlapDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    // reified and half-reified sums are mostly not propagated until their literal is fixed, while
+    // the bounds of the new variables cost propagation at every node: pattern-set-mining-k1 and
+    // bnn-planner make the same trees 3 to 4 times slower with them
+    boolean reified = Boolean.getBoolean("org.jacop.fz.linearOverlap.reified");
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM && ROWS.contains(((ASTConstElem) item).getName())) {
+          if (item.getId() == JJTCONSTELEM
+              && (PLAIN.contains(((ASTConstElem) item).getName())
+                  || reified && HALF_OR_REIFIED.contains(((ASTConstElem) item).getName()))) {
             collect(item);
           }
         }

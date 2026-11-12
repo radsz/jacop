@@ -210,12 +210,14 @@ class LinearOverlapFlatzincTest {
     String[] args = Arrays.copyOf(options, options.length + 1);
     args[options.length] = fzn.toString();
     System.setProperty(PROPERTY, Boolean.toString(factoring));
+    System.setProperty(PROPERTY + ".reified", "true");
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
       new Fz2jacop().callMain(args);
     } finally {
       System.setOut(originalOut);
       System.clearProperty(PROPERTY);
+      System.clearProperty(PROPERTY + ".reified");
     }
     return buffer.toString(StandardCharsets.UTF_8);
   }
