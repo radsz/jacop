@@ -4234,6 +4234,16 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
+     the bins an item left or was fixed in, read from the values the item
+     lost at the current level, instead of every bin of the item's previous
+     domain, and keeps for each bin the items that may still be in it, so
+     that a bin is no longer processed by a scan of all items (the list is
+     restored when a level is removed; a bin that more than half of the
+     items may still be in is scanned in full). Pruning is unchanged. On the
+     2025 ihtc-2024-marte instances, where Binpacking took about half of
+     the run, fixed search explores 1.06x to 5.9x more nodes in 600 s.
+
 Version 4.11
 =============
 
