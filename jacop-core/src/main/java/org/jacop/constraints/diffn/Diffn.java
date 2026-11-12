@@ -88,6 +88,14 @@ public class Diffn extends Nooverlap {
   private final Event[][] addOutside = new Event[2][];
   private final Event[][] subtractOutside = new Event[2][];
   private final int[][] partEst = new int[2][];
+
+  /**
+   * For each dimension and rectangle, the compulsory part, the minimal length in the other
+   * dimension and the compulsory part there (lst, ect, lMin, oLst, oEct) from which its events were
+   * built.
+   */
+  private final int[][] partSignature = new int[2][];
+
   private final int[][] partLct = new int[2][];
   private Event[] sweepEvents;
   private static final Comparator<Event> EVENT_ORDER =
@@ -697,6 +705,11 @@ public class Diffn extends Nooverlap {
       partLct[dim] = new int[n];
     }
     long[] keys = parts[dim];
+    int[] sig = partSignature[dim];
+    if (sig == null) {
+      sig = new int[5 * n];
+      partSignature[dim] = sig;
+    }
     int m = 0;
     for (int i = 0; i < n; i++) {
       Rectangle rr = rectangle[i];
@@ -708,6 +721,26 @@ public class Diffn extends Nooverlap {
       }
       int oMin = rr.lst(otherDim);
       int oMax = rr.ect(otherDim);
+      partEst[dim][i] = rr.est(otherDim);
+      partLct[dim][i] = rr.lct(otherDim);
+      keys[m++] = partKey(min, PROFILE_ADD, i);
+      keys[m++] = partKey(max, PROFILE_SUBTRACT, i);
+      // the events of a rectangle whose compulsory parts are as at the previous build are kept;
+      // few rectangles change between two builds
+      int k = 5 * i;
+      if (addWithin[dim][i] != null
+          && sig[k] == min
+          && sig[k + 1] == max
+          && sig[k + 2] == lMin
+          && sig[k + 3] == oMin
+          && sig[k + 4] == oMax) {
+        continue;
+      }
+      sig[k] = min;
+      sig[k + 1] = max;
+      sig[k + 2] = lMin;
+      sig[k + 3] = oMin;
+      sig[k + 4] = oMax;
       Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
       addWithin[dim][i] = new Event(PROFILE_ADD, rr, min, lMin, block);
       subtractWithin[dim][i] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
@@ -716,10 +749,6 @@ public class Diffn extends Nooverlap {
       addOutside[dim][i] = block == null ? null : new Event(PROFILE_ADD, rr, min, 0, block);
       subtractOutside[dim][i] =
           block == null ? null : new Event(PROFILE_SUBTRACT, rr, max, 0, block);
-      partEst[dim][i] = rr.est(otherDim);
-      partLct[dim][i] = rr.lct(otherDim);
-      keys[m++] = partKey(min, PROFILE_ADD, i);
-      keys[m++] = partKey(max, PROFILE_SUBTRACT, i);
     }
     Arrays.sort(keys, 0, m);
     partCount[dim] = m;
