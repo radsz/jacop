@@ -568,6 +568,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           clauses.add(clauseRow(clause[0], clause[1]));
         }
       }
+      if (options.lcg() && LCG_PROBE > 0 && LCG_PROBE_EARLY) {
+        List<LinearForm> conflicts = probeBeforeRelaxation();
+        if (objective != null) {
+          clauses.addAll(conflicts);
+        }
+      }
       // the cliques and the convex hulls of the tables, over columns of their values that the
       // relaxation alone has; only for an objective, whose bound they raise. They are tried at the
       // first solve with a share of the size cap of their own: table-layout has 172 rows of its
@@ -2079,26 +2085,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     int conflictRows = 0;
     if ("cliques".equals(LCG_PROBE_LP)) {
-      List<IntVar[]> pairs = lcg.probeConflicts();
-      List<int[]> values = lcg.probeConflictValues();
-      for (int k = 0; k < pairs.size(); k++) {
-        IntVar x = pairs.get(k)[0];
-        IntVar y = pairs.get(k)[1];
-        if (x.singleton() || y.singleton()) {
-          continue;
-        }
-        // x = a and y = b not together: [x = a] + [y = b] <= 1, with [x = 0] as 1 - x
-        int a = values.get(k)[0];
-        int b = values.get(k)[1];
-        long c = 1 - (a == 0 ? 1 : 0) - (b == 0 ? 1 : 0);
-        rows.add(
-            new LinearForm(
-                new IntVar[] {x, y},
-                new long[] {a == 1 ? 1 : -1, b == 1 ? 1 : -1},
-                c,
-                LinearForm.LE));
-        conflictRows++;
-      }
+      List<LinearForm> conflicts = conflictRows(lcg);
+      rows.addAll(conflicts);
+      conflictRows = conflicts.size();
     }
     long start = System.nanoTime();
     LinearRelaxation probed =
@@ -2129,7 +2118,65 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n");
   }
 
-  private void printProbeStatistics() {
+  // the conflicts x = a, y = b that probing found, as rows [x = a] + [y = b] <= 1 ([x = 0] as 1 -
+  // x)
+  private static List<LinearForm> conflictRows(LcgSolver solver) {
+    List<LinearForm> rows = new ArrayList<>();
+    List<IntVar[]> pairs = solver.probeConflicts();
+    List<int[]> values = solver.probeConflictValues();
+    for (int k = 0; k < pairs.size(); k++) {
+      IntVar x = pairs.get(k)[0];
+      IntVar y = pairs.get(k)[1];
+      if (x.singleton() || y.singleton()) {
+        continue;
+      }
+      int a = values.get(k)[0];
+      int b = values.get(k)[1];
+      long c = 1L - (a == 0 ? 1 : 0) - (b == 0 ? 1 : 0);
+      rows.add(
+          new LinearForm(
+              new IntVar[] {x, y},
+              new long[] {a == 1 ? 1 : -1, b == 1 ? 1 : -1},
+              c,
+              LinearForm.LE));
+    }
+    return rows;
+  }
+
+  // -Djacop.lcg.probe.early=true: probe the root before the linear relaxation is built, with a
+  // solver of its own, so that the relaxation has the probed domains and the conflicts that probing
+  // found as rows, merged into cliques (PairCliques); the search's solver does not probe again
+  private static final boolean LCG_PROBE_EARLY = Boolean.getBoolean("jacop.lcg.probe.early");
+
+  // the solver of early probing, for its statistics, and whether probing refuted the root
+  private LcgSolver earlyProber;
+  private boolean probeRefuted;
+
+  /**
+   * Probes the root with a solver of its own, before the linear relaxation is built (see {@link
+   * #LCG_PROBE_EARLY}). The solver is released after probing; the facts stay in the store's
+   * domains.
+   *
+   * @return the conflicts as rows, for the relaxation
+   */
+  private List<LinearForm> probeBeforeRelaxation() {
+    LcgSolver early = new LcgSolver(store);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      early.addClause(clause[0], clause[1]);
+    }
+    if (options.getTimeOut() > 0) {
+      early.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+    }
+    early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
+    long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
+    probeRefuted = !early.probeRoot((long) (LCG_PROBE * left * 1_000_000L));
+    List<LinearForm> rows = probeRefuted ? List.of() : conflictRows(early);
+    early.release();
+    earlyProber = early;
+    return rows;
+  }
+
+  private void printProbeStatistics(LcgSolver lcg) {
     if (!options.getStatistics()) {
       return;
     }
@@ -2461,7 +2508,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         options.getTimeOut() > 0
             ? options.getTimeOut()
             : Long.parseLong(options.freeConfig("lcg-core-time", "60000")));
-    if (LCG_PROBE > 0 && LCG_PROBE_DELAY > 0) {
+    if (earlyProber != null) {
+      printProbeStatistics(earlyProber);
+      earlyProber = null;
+      if (probeRefuted) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+      if (LCG_PROBE_ONLY) {
+        lcgStatus = CdclSolver.UNKNOWN;
+        return false;
+      }
+    } else if (LCG_PROBE > 0 && LCG_PROBE_DELAY > 0) {
       long limit = options.getTimeOut() > 0 ? options.getTimeOut() : 60_000L;
       lcg.setDelayedProbe(
           System.nanoTime() + (long) (LCG_PROBE_DELAY * limit * 1_000_000L),
@@ -2473,7 +2531,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
       }
       boolean feasible = lcg.probeRoot((long) (LCG_PROBE * left * 1_000_000L));
-      printProbeStatistics();
+      printProbeStatistics(lcg);
       if (feasible && LCG_PROBE_ONLY && !"none".equals(LCG_PROBE_LP)) {
         probedRootBound();
       }
@@ -2489,7 +2547,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (LCG_PROBE > 0 && LCG_PROBE_DELAY > 0 && lcg.probePasses > 0) {
-      printProbeStatistics();
+      printProbeStatistics(lcg);
     }
     if (slowCheck != null) {
       slowCheck.interrupt();
