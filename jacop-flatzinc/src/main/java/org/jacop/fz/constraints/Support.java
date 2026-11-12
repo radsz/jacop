@@ -142,6 +142,10 @@ public class Support implements ParserTreeConstants {
   static final int ALLDIFF_SUM_MIN_VARIABLES = 3;
   static final int ALLDIFF_SUM_MAX_VARIABLES = 64;
   final ArrayList<Constraint> delayedConstraints = new ArrayList<>();
+
+  /** The tables that {@link TableScopeMerger} intersected, by their constraint node. */
+  final Map<SimpleNode, int[]> mergedTables = new IdentityHashMap<>();
+
   final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   final BinPackingCliqueDetector binPackingCliques = new BinPackingCliqueDetector(this);

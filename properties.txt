@@ -339,6 +339,13 @@ unless stated otherwise):
   (half-)reified difference constraints.
 - org.jacop.fz.disjunctiveCliques: CumulativeUnary on sets of tasks
   that can never overlap (Sidorov, Marijnissen, Demirovic, CP 2025).
+- org.jacop.fz.inferredCumulatives: redundant cumulatives lifted from
+  covers of the cumulatives with a fixed capacity and from the tasks
+  that can never overlap (Sidorov, CP 2026); default true.
+  org.jacop.fz.inferredCumulatives.covers: covers lifted, default 100;
+  .out: cumulatives posted, default 5; .disjoint=false lifts over the
+  cumulatives only; .useful=false also posts those whose capacity
+  bound does not exceed that of an input cumulative or clique.
 - org.jacop.fz.elementTable: element constraints over constant arrays
   that share one index variable become one table.
 - org.jacop.fz.energyPrecedence: EnergyPrecedence on cumulatives
@@ -350,6 +357,14 @@ unless stated otherwise):
   for the subtour, blossom and comb cuts of the LP; default false.
   Use it for a pure TSP.
 - org.jacop.fz.tspArcs: the most arcs of such a tour; default 40000.
+- org.jacop.fz.tspElimination: TSP edge elimination (Jonker and
+  Volgenant; Hougardy and Schroeder) on a pure symmetric travelling
+  salesman model: removes the successors that are in no optimal tour
+  before search; default true. It needs the length to be minimized as
+  the sum of symmetric arc costs, with no other constraint on the
+  successors.
+- org.jacop.fz.tspEliminationMs: the most milliseconds of that edge
+  elimination; default 2000.
 - org.jacop.fz.routes: Routes for vehicle routes written as 0/1 arc
   variables.
 - org.jacop.fz.increasingSum: IncreasingSum on sums over ordered
@@ -405,6 +420,19 @@ unless stated otherwise):
 - org.jacop.fz.tableCoverGroups, org.jacop.fz.tableCoverTuples: the
   fewest groups and the most tuples of such a cover; default 3 and
   200000.
+- org.jacop.fz.tableReformulation: exact reformulation of positive
+  tables at posting: free columns become unary domains (a Cartesian
+  table only unary ones), a column determined by another (functional
+  dependency, tables of 3 or more columns) becomes a binary table or an
+  equality, tables over the same variables are intersected, and short
+  tables drop columns of stars or of one value; default true, off
+  under --proof.
+- org.jacop.fz.tableReformulation.fd: false keeps the functional
+  dependencies in the tables; default true.
+- org.jacop.fz.tableReformulation.work: tables whose rows times
+  columns squared exceed it are left as they are; default 50000000.
+- org.jacop.fz.tableMerge.rows: groups of tables over the same
+  variables with more rows in all are not intersected; default 2000000.
 - org.jacop.fz.weightedCompletion: WeightedCompletion on weighted sums
   of completion times on a unary resource.
 - org.jacop.fz.weightedCompletion.parallel: the same detection on
@@ -500,6 +528,9 @@ Core-guided phase (free search, --lcg -f):
   cores' lower bound; default 0.1.
 - jacop.lcg.coreSkip: skip the core-guided phase when its probe's
   rate cannot raise the bound to the root bound; default true.
+- jacop.lcg.coreProbeSkip: skip the rest of the core-guided phase
+  when its probe stopped without a solution of its own and branch and
+  bound found one; default true.
 - jacop.lcg.coreNoSolution: the core phase gives its time to branch
   and bound when it has no solution of its own by this share of its
   time, 0 turns it off; default 0.33.
@@ -697,6 +728,18 @@ Cuts:
   root, for an objective; a model with them also takes all its other
   rows into the relaxation; default true.
 - org.jacop.lp.treeRounds: their rounds; default 200.
+- org.jacop.lp.timeIndexed: the time-indexed bound of cumulative and
+  disjunctive resources (TimeIndexedBound); default false.
+- org.jacop.lp.timeIndexed.columns, org.jacop.lp.timeIndexed.nonzeros:
+  the most time columns and window and precedence nonzeros; default
+  20000 and 500000.
+- org.jacop.lp.timeIndexed.share, org.jacop.lp.timeIndexed.allowance:
+  the share of the run time for its solves and the time allowed beyond
+  it; default 0.2 and 1000 ms.
+- org.jacop.lp.timeIndexed.firstMs, org.jacop.lp.timeIndexed.solveMs,
+  org.jacop.lp.timeIndexed.pivots: the time limit of the first and of
+  later solves and the most pivots of one solve; default 10000 ms,
+  3000 ms and 50000.
 
 Row pool and lazy rows:
 
@@ -829,6 +872,34 @@ JaLP sparse simplex:
   each presolve to standard error; default false.
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
   comma separated list of primal and reobjective; default empty.
+
+Decomposition bound:
+====================
+
+- org.jacop.fz.decomposition: before search, bound the objective by a
+  Dantzig-Wolfe decomposition of the model into blocks linked by
+  counting (CountValuesBounds) and linear constraints, with column
+  generation over a JaLP master and pricing problems solved in the
+  store or, for hard blocks, in a copy with lazy clause generation; the
+  bound is certified in integer arithmetic. Default false.
+- org.jacop.fz.decomposition.share: the share of the time limit (-t) the
+  bound may take; default 0.2.
+- org.jacop.fz.decomposition.ms: the time, in milliseconds, it may take
+  without a time limit; default 60000.
+- org.jacop.fz.decomposition.priceMs: the time, in milliseconds, of one
+  pricing problem at most; default 2000.
+- org.jacop.fz.decomposition.storeMs: the time, in milliseconds, of a
+  pricing search in the store before a block that can be copied goes to
+  lazy clause generation; default 300.
+- org.jacop.fz.decomposition.pivots: the pivots of each simplex of one
+  master solve at most; default 20000.
+- org.jacop.fz.decomposition.smoothing: the weight of the best
+  multipliers in the duals the pricing problems get (Wentges
+  smoothing); default 0.5.
+- org.jacop.fz.decomposition.large: the variables of a block at least,
+  of which there must be two; default 10.
+- org.jacop.fz.decomposition.trace: print the blocks and every column
+  generation iteration to standard error; default false.
 
 Debugging:
 ==========
