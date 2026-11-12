@@ -109,6 +109,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // boolean variables, which have no store index, by the order they were first seen
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
 
+  // one mark per entry, shared by the explanations that mark entries (see entryMark), and the
+  // value of the latest mark
+  private int[] entryMarks = new int[0];
+  private int entryMark;
+
   /**
    * Creates the trail and starts recording the changes of every integer variable of the store. The
    * current domains are the facts the atoms are relative to.
@@ -485,6 +490,39 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       setShadow(i, x.dom());
     }
     numStale = 0;
+  }
+
+  /**
+   * Starts a new mark of the entries before a position, for an explanation that keeps one flag per
+   * entry: entry e is marked when {@code entryMarks()[e]} equals the returned value. The array is
+   * shared by all explanations of this trail, so that one array as long as the trail serves them
+   * all instead of one per constraint. A mark is valid until the next call, so an explanation must
+   * not start another explanation that marks entries while it uses its own.
+   *
+   * @param position the number of entries that can be marked
+   * @return the value of the new mark
+   */
+  public int newEntryMark(int position) {
+    if (entryMarks.length < position) {
+      int length = Math.max(Math.max(position, 256), 2 * entryMarks.length);
+      entryMarks = Arrays.copyOf(entryMarks, length);
+    }
+    entryMark++;
+    if (entryMark == Integer.MAX_VALUE) {
+      Arrays.fill(entryMarks, 0);
+      entryMark = 1;
+    }
+    return entryMark;
+  }
+
+  /**
+   * Returns the marks of the entries, valid for the value the latest {@link #newEntryMark} returned
+   * and for the entries before its position.
+   *
+   * @return the marks
+   */
+  public int[] entryMarks() {
+    return entryMarks;
   }
 
   /**
