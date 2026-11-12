@@ -2671,6 +2671,14 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public long coreSkips;
 
+  // -Djacop.lcg.coreProbeSkip=false: the core-guided phase runs after branch and bound also when
+  // its probe stopped without a solution of its own
+  private boolean coreProbeSkip =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreProbeSkip", Boolean.TRUE.toString()));
+
+  /** Statistics: core-guided phases skipped as their probe found no solution of its own. */
+  public long probeSkips;
+
   private int minimizeWithCores() {
     long millis = timeLimitMillis;
     if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
@@ -2691,15 +2699,24 @@ public final class LcgSolver implements ExternalPropagator {
         return result;
       }
     } else if (coreDelayShare > 0) {
+      boolean probeWithoutSolution = false;
       if (coreProbeShare > 0) {
+        long stops = coreSearch.noSolutionStops;
         result = runCores(coreProbeShare, coreDelayBudget, false);
         if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
           return result;
         }
+        probeWithoutSolution = coreSearch.noSolutionStops > stops;
       }
       result = minimizeBeforeCores();
       if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
         return result;
+      }
+      if (coreProbeSkip && probeWithoutSolution && best != null) {
+        // the probe found no solution of its own while branch and bound did: the rest of the phase
+        // stops the same way after a third of its work and gives the time back
+        probeSkips++;
+        return afterCores();
       }
     }
     double share = coreShare;
@@ -3086,6 +3103,19 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public void setCoresWithoutSolutionOnly(boolean only) {
     coresWithoutSolutionOnly = only;
+  }
+
+  /**
+   * Sets whether the core-guided phase of {@link #minimize} is skipped after branch and bound when
+   * its probe ({@link #setCoreDelay}) stopped without a solution of its own and branch and bound
+   * found one. The rest of the phase would stop the same way after a third of its time: on
+   * fast-food, gt-sort and city-position it only delayed branch and bound. On by default ({@code
+   * -Djacop.lcg.coreProbeSkip}).
+   *
+   * @param skip true to skip the phase after such a probe
+   */
+  public void setCoreProbeSkip(boolean skip) {
+    coreProbeSkip = skip;
   }
 
   public void setCoreDelay(double share, long conflicts, double probe) {

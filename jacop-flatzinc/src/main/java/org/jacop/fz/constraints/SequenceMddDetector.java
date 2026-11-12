@@ -94,6 +94,37 @@ public class SequenceMddDetector implements ParserTreeConstants {
   // the equations of unit coefficients with three or more terms, candidates for a cost
   private final List<Linear> sums = new ArrayList<>();
 
+  // the linear constraints of four unit terms, by each of their variables
+  private final Map<IntVar, List<Linear>> linears4 = new IdentityHashMap<>();
+
+  // q = t div length, by t
+  private final Map<IntVar, List<Division>> divisions = new IdentityHashMap<>();
+
+  // the tables of three variables, by their first variable
+  private final Map<IntVar, List<Table>> tables = new IdentityHashMap<>();
+
+  // u - v = c of two variables
+  private final Map<IntVar, List<Difference>> differences = new IdentityHashMap<>();
+
+  // the pairs of inverse arrays (assignment), candidates for a circuit with positions
+  private final List<Circuit[]> assignments = new ArrayList<>();
+
+  private record Division(IntVar quotient, int length) {}
+
+  // a table over (vars[0], vars[1], vars[2]) with flattened tuples
+  private static final class Table {
+    final IntVar[] vars;
+    final int[] tuples;
+
+    Table(IntVar[] vars, int[] tuples) {
+      this.vars = vars;
+      this.tuples = tuples;
+    }
+  }
+
+  // u - v = c
+  private record Difference(IntVar v, long c) {}
+
   // a circuit's variables and the value that stands for node 0
   private static final class Circuit {
     final IntVar[] x;
@@ -168,6 +199,59 @@ public class SequenceMddDetector implements ParserTreeConstants {
         post(c);
       }
     }
+    for (Circuit[] pair : assignments) {
+      for (Circuit c : pair) {
+        if (c.x.length >= 3 && c.x.length <= MAX_NODES && ordered(c) && post(c)) {
+          break;
+        }
+      }
+    }
+  }
+
+  /*
+   * Inverse arrays form a single circuit when positions increase along it: position[x[i]] =
+   * position[i] + 1 (or position[i] = position[x[i]] + 1) for all nodes i but one, so every cycle
+   * goes through that node.
+   */
+  private boolean ordered(Circuit c) {
+    int n = c.x.length;
+    IntVar[] position = null;
+    int missing = 0;
+    for (int i = 0; i < n; i++) {
+      boolean ok = false;
+      for (Element e : elements.getOrDefault(c.x[i], List.of())) {
+        if (e.vars == null || position != null && !sameTimes(position, e.vars)) {
+          continue;
+        }
+        int own = c.offset + i - e.first;
+        if (own < 0 || own >= e.vars.length) {
+          continue;
+        }
+        IntVar p = e.vars[own];
+        if (difference(e.value, p) == 1 || difference(p, e.value) == 1) {
+          position = e.vars;
+          ok = true;
+          break;
+        }
+      }
+      if (!ok && ++missing > 1) {
+        return false;
+      }
+    }
+    return position != null;
+  }
+
+  // c when u - v = c is a constraint or u and v are fixed, else Long.MIN_VALUE
+  private long difference(IntVar u, IntVar v) {
+    if (u.singleton() && v.singleton()) {
+      return (long) u.value() - v.value();
+    }
+    for (Difference d : differences.getOrDefault(u, List.of())) {
+      if (d.v == v) {
+        return d.c;
+      }
+    }
+    return Long.MIN_VALUE;
   }
 
   private void collect(ASTConstElem node) {
@@ -183,6 +267,32 @@ public class SequenceMddDetector implements ParserTreeConstants {
       case "jacop_array_var_int_element_nonshifted" ->
           varElement(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
       case "int_lin_eq", "int_lin_le" -> linear(node);
+      case "jacop_assignment" -> {
+        IntVar[] a = support.getVarArray(child(node, 0));
+        IntVar[] b = support.getVarArray(child(node, 1));
+        int oa = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+        int ob = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3));
+        if (a.length == b.length) {
+          assignments.add(new Circuit[] {new Circuit(b, ob), new Circuit(a, oa)});
+        }
+      }
+      case "int_div" -> {
+        IntVar t = var(node, 0);
+        ASTScalarFlatExpr d = (ASTScalarFlatExpr) node.jjtGetChild(1);
+        IntVar divisor = support.getVariable(d);
+        if (divisor.singleton() && divisor.value() > 0) {
+          divisions
+              .computeIfAbsent(t, k -> new ArrayList<>())
+              .add(new Division(var(node, 2), divisor.value()));
+        }
+      }
+      case "jacop_table_int", "table_int" -> {
+        IntVar[] vars = support.getVarArray(child(node, 0));
+        int[] tuples = support.getIntArray(child(node, 1));
+        if (vars.length == 3 && tuples != null && tuples.length % 3 == 0) {
+          tables.computeIfAbsent(vars[0], k -> new ArrayList<>()).add(new Table(vars, tuples));
+        }
+      }
       case "int_max" -> {
         IntVar a = var(node, 0);
         IntVar b = var(node, 1);
@@ -263,11 +373,17 @@ public class SequenceMddDetector implements ParserTreeConstants {
       edge(pos, neg, -(long) rhs);
       if (equation) {
         edge(neg, pos, rhs);
+        differences.computeIfAbsent(pos, k -> new ArrayList<>()).add(new Difference(neg, rhs));
       }
     } else if (x.length == 3) {
       Linear l = new Linear(a, x, rhs, equation);
       for (IntVar v : x) {
         linears.computeIfAbsent(v, k -> new ArrayList<>()).add(l);
+      }
+    } else if (x.length == 4) {
+      Linear l = new Linear(a, x, rhs, equation);
+      for (IntVar v : x) {
+        linears4.computeIfAbsent(v, k -> new ArrayList<>()).add(l);
       }
     }
     if (equation && x.length >= 3) {
@@ -288,6 +404,9 @@ public class SequenceMddDetector implements ParserTreeConstants {
     int[] row;
     int rowFirst;
     long shift;
+    // time-dependent part: steps[v - rowFirst][s] added to row, steps of stepLength
+    int[][] steps;
+    int stepLength;
   }
 
   private Timed timed(IntVar x) {
@@ -305,6 +424,12 @@ public class SequenceMddDetector implements ParserTreeConstants {
         }
         for (Linear l : linears.getOrDefault(w.value, List.of())) {
           Timed t = match(l, w, z);
+          if (t != null) {
+            return t;
+          }
+        }
+        for (Linear l : linears4.getOrDefault(w.value, List.of())) {
+          Timed t = matchSteps(x, l, w, z);
           if (t != null) {
             return t;
           }
@@ -361,7 +486,94 @@ public class SequenceMddDetector implements ParserTreeConstants {
     return t;
   }
 
-  private void post(Circuit c) {
+  /*
+   * own >= w + z + travel, where travel = table(x, z div length) (a time-dependent travel after the
+   * predecessor's time z): own - w - z - travel <= rhs.
+   */
+  private Timed matchSteps(IntVar x, Linear l, Element w, Element z) {
+    if (l.equation) {
+      return null;
+    }
+    IntVar own = null;
+    IntVar extra = null;
+    for (int k = 0; k < 4; k++) {
+      IntVar v = l.x[k];
+      if (v == w.value || v == z.value) {
+        if (l.a[k] != 1) {
+          return null;
+        }
+      } else if (l.a[k] == -1 && own == null) {
+        own = v;
+      } else if (l.a[k] == 1 && extra == null) {
+        extra = v;
+      } else {
+        return null;
+      }
+    }
+    if (own == null || extra == null) {
+      return null;
+    }
+    for (Division d : divisions.getOrDefault(z.value, List.of())) {
+      for (Table t : tables.getOrDefault(x, List.of())) {
+        if (t.vars[1] != d.quotient || t.vars[2] != extra) {
+          continue;
+        }
+        int[][] steps = steps(t.tuples, w.first, w.constants.length);
+        if (steps == null) {
+          continue;
+        }
+        Timed r = new Timed();
+        r.pred = true;
+        r.times = z.vars;
+        r.timesFirst = z.first;
+        r.own = own;
+        r.row = w.constants;
+        r.rowFirst = w.first;
+        r.shift = -l.rhs;
+        r.steps = steps;
+        r.stepLength = d.length;
+        return r;
+      }
+    }
+    return null;
+  }
+
+  // the travel of each value (from first) and step; a pair outside the table cannot be used
+  private static int[][] steps(int[] tuples, int first, int values) {
+    int maxStep = -1;
+    for (int k = 0; k < tuples.length; k += 3) {
+      if (tuples[k + 1] < 0) {
+        return null;
+      }
+      maxStep = Math.max(maxStep, tuples[k + 1]);
+    }
+    if (maxStep < 0 || maxStep > 1 << 16) {
+      return null;
+    }
+    int[][] steps = new int[values][maxStep + 1];
+    for (int[] row : steps) {
+      Arrays.fill(row, UNREACHABLE);
+    }
+    boolean[][] seen = new boolean[values][maxStep + 1];
+    for (int k = 0; k < tuples.length; k += 3) {
+      int v = tuples[k] - first;
+      int s = tuples[k + 1];
+      if (v < 0 || v >= values) {
+        continue;
+      }
+      if (seen[v][s] || tuples[k + 2] < Integer.MIN_VALUE / 8 || tuples[k + 2] > UNREACHABLE) {
+        return null;
+      }
+      seen[v][s] = true;
+      steps[v][s] = tuples[k + 2];
+    }
+    return steps;
+  }
+
+  // a travel time that no time window allows
+  private static final int UNREACHABLE = Integer.MAX_VALUE / 8;
+
+  private boolean post(Circuit c) {
     int n = c.x.length;
     IntVar[] in = new IntVar[n];
     IntVar[] out = new IntVar[n];
@@ -372,13 +584,21 @@ public class SequenceMddDetector implements ParserTreeConstants {
     Boolean pred = null;
     IntVar[] times = null;
     int found = 0;
+    int[][][] stepTravel = new int[n][n][];
+    int stepLength = 0;
     for (int i = 0; i < n; i++) {
       Timed t = timed(c.x[i]);
       if (t == null) {
         continue;
       }
       if (pred != null && (pred != t.pred || !sameTimes(times, t.times))) {
-        return;
+        return false;
+      }
+      if (t.steps != null) {
+        if (stepLength != 0 && stepLength != t.stepLength) {
+          return false;
+        }
+        stepLength = t.stepLength;
       }
       pred = t.pred;
       times = t.times;
@@ -392,30 +612,39 @@ public class SequenceMddDetector implements ParserTreeConstants {
         }
         long d = t.row[ri] + t.shift;
         if (d < Integer.MIN_VALUE / 4 || d > Integer.MAX_VALUE / 4) {
-          return;
+          return false;
+        }
+        int[] row = null;
+        if (t.steps != null) {
+          row = new int[t.steps[ri].length];
+          for (int s = 0; s < row.length; s++) {
+            long e = t.steps[ri][s] >= UNREACHABLE ? UNREACHABLE : d + t.steps[ri][s];
+            row[s] = (int) Math.max(Integer.MIN_VALUE / 4, Math.min(UNREACHABLE, e));
+          }
         }
         IntVar other = t.times[ti];
         if (t.pred) {
           // arc j -> i: own (in[i]) >= times[j] (out[j]) + d
           if (!setOnce(out, j, other)) {
-            return;
+            return false;
           }
           travel[j][i] = (int) d;
+          stepTravel[j][i] = row;
         } else {
           // arc i -> j: times[j] (in[j]) >= own (out[i]) + d
           if (!setOnce(in, j, other)) {
-            return;
+            return false;
           }
           travel[i][j] = (int) d;
         }
       }
       if (!(t.pred ? setOnce(in, i, t.own) : setOnce(out, i, t.own))) {
-        return;
+        return false;
       }
       found++;
     }
     if (pred == null || 2 * found < n) {
-      return;
+      return false;
     }
     int[] delta = new int[n];
     int start = -1;
@@ -435,28 +664,42 @@ public class SequenceMddDetector implements ParserTreeConstants {
     if (start < 0) {
       start = 0;
     }
-    Cost cost = cost(c, pred);
+    Cost cost = stepLength > 0 ? null : cost(c, pred);
+    if (stepLength > 0) {
+      // arcs with constant travel take it at every step
+      for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+          if (stepTravel[i][j] == null && travel[i][j] != SequenceMdd.NONE) {
+            stepTravel[i][j] = new int[] {travel[i][j]};
+          }
+        }
+      }
+    }
     SequenceMdd mdd =
-        cost == null
-            ? new SequenceMdd(c.x, pred, c.offset, in, out, travel, delta, start, WIDTH)
-            : new SequenceMdd(
-                c.x,
-                pred,
-                c.offset,
-                in,
-                out,
-                travel,
-                delta,
-                start,
-                WIDTH,
-                cost.costs,
-                cost.cost,
-                cost.offset);
+        stepLength > 0
+            ? new SequenceMdd(
+                c.x, pred, c.offset, in, out, stepTravel, stepLength, delta, start, WIDTH)
+            : cost == null
+                ? new SequenceMdd(c.x, pred, c.offset, in, out, travel, delta, start, WIDTH)
+                : new SequenceMdd(
+                    c.x,
+                    pred,
+                    c.offset,
+                    in,
+                    out,
+                    travel,
+                    delta,
+                    start,
+                    WIDTH,
+                    cost.costs,
+                    cost.cost,
+                    cost.offset);
     mdd.setDegreeWeight(0);
     if (support.options.debug()) {
       FzConsole.println("% redundant " + mdd);
     }
     support.delayedConstraints.add(mdd);
+    return true;
   }
 
   // cost = sum of arc costs + offset

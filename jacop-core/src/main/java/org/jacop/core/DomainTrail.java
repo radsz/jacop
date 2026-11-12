@@ -30,6 +30,8 @@
 
 package org.jacop.core;
 
+import java.util.Arrays;
+
 /**
  * One trail shared by the domains of a store that are changed in place ({@link LazyBitSetDomain}).
  * A domain pushes an entry before its first change at a level, and the store pops the entries of a
@@ -39,9 +41,14 @@ package org.jacop.core;
  * restoring a sequential walk over memory, where a trail per domain would touch a separate array
  * per changed variable.
  *
- * <p>An entry has {@link #INTS_PER_ENTRY} ints (a kind and the level, then values chosen by the
- * domain), one long and {@link #OBJECTS_PER_ENTRY} objects (the domain, then objects chosen by the
- * domain).
+ * <p>Entries take only the space their kind needs. They are kept in two streams: an int stream and
+ * an object stream. A word entry, the most frequent kind, saves one long word of a domain and is
+ * five ints (the old stamp of the word, the word as two ints, the level and the word index) and one
+ * object (the domain): 24 bytes. Any other entry is a kind chosen by the domain with a number of
+ * ints and objects: its ints are the position of its objects, its own ints, the level and a tag
+ * holding the kind and the two counts; its objects are the domain and its own objects. Each entry
+ * ends with its level and its tag, so the trail is popped from its end without an index of the
+ * entries.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
@@ -52,161 +59,269 @@ public final class DomainTrail {
   interface Entry {
 
     /**
-     * Restores the state saved in an entry, which is being popped.
+     * Restores a word saved by {@link DomainTrail#pushWord}, whose entry is being popped.
+     *
+     * @param word the index of the word.
+     * @param stamp the int saved with the word.
+     * @param value the saved word.
+     */
+    void undoWord(int word, int stamp, long value);
+
+    /**
+     * Restores the state saved in an entry pushed by {@link DomainTrail#push}, which is being
+     * popped.
      *
      * @param trail the trail.
-     * @param entry the index of the entry.
+     * @param entry the entry.
+     * @param kind the kind of the entry.
      */
-    void undo(DomainTrail trail, int entry);
+    void undo(DomainTrail trail, int entry, int kind);
   }
 
-  /** The number of ints of an entry. */
-  static final int INTS_PER_ENTRY = 8;
+  /** The number of ints of a word entry. */
+  static final int WORD_INTS = 5;
 
-  /** The number of objects of an entry. */
-  static final int OBJECTS_PER_ENTRY = 4;
+  /** The ints an entry other than a word entry adds to its own: objects position, level, tag. */
+  static final int EXTRA_INTS = 3;
 
-  /** The log of the number of entries of the first segment. */
-  private static final int FIRST_SHIFT = 8;
+  /** The largest number of ints or objects of an entry, other than the domain. */
+  static final int MAX_FIELDS = 0xFF;
 
-  /** The number of entries of the first segment; segment s has FIRST << s entries. */
+  /** The log of the length of the first segment of each stream. */
+  private static final int FIRST_SHIFT = 10;
+
+  /** The length of the first segment of each stream; segment s has length FIRST << s. */
   private static final int FIRST = 1 << FIRST_SHIFT;
 
-  /** The number of segments; the last one has 2^27 entries, so its ints still fit an array. */
-  private static final int SEGMENTS = 20;
+  /**
+   * The number of segments of each stream: the last one has 2^30 elements, and the position of
+   * every element of a stream still fits an int.
+   */
+  private static final int SEGMENTS = 21;
+
+  private static final int[] NO_INTS = {};
+
+  private static final Object[] NO_OBJECTS = {};
 
   /**
-   * The entries are kept in segments of doubling size, so the trail grows without copying: on a
-   * deep search the trail can hold millions of entries, and copying them into ever larger arrays
-   * touches twice the memory they need.
+   * The int stream, in segments of doubling length, so the trail grows without copying: on a deep
+   * search the trail can hold millions of entries, and copying them into ever larger arrays touches
+   * twice the memory they need. An entry never spans two segments; the end of a segment that an
+   * entry does not fit is left unused.
    */
   private final int[][] ints = new int[SEGMENTS][];
 
-  /** Per entry: a value of the domain. */
-  private final long[][] longs = new long[SEGMENTS][];
+  /** The length used in each int segment below the current one. */
+  private final int[] intsUsed = new int[SEGMENTS];
 
-  /** Per entry: the domain, then the domain's objects. */
+  /** The object stream, kept as the int stream. */
   private final Object[][] objects = new Object[SEGMENTS][];
 
-  private int size;
+  /** The length used in each object segment below the current one. */
+  private final int[] objectsUsed = new int[SEGMENTS];
 
-  /** The number of entries the allocated segments hold. */
-  private int capacity;
+  /** The current int segment, -1 before the first push. */
+  private int intSegment = -1;
+
+  /** The current int segment, ints[intSegment]. */
+  private int[] intCurrent = NO_INTS;
+
+  /** The length used in the current int segment. */
+  private int intTop;
+
+  /** The position in the int stream of the first element of the current int segment. */
+  private int intBase;
+
+  private int objectSegment = -1;
+
+  private Object[] objectCurrent = NO_OBJECTS;
+
+  private int objectTop;
+
+  private int objectBase;
 
   /**
-   * Pushes an entry; the caller fills in its values.
+   * Pushes a word entry, which saves one long of a domain with an int.
    *
    * @param domain the domain the entry belongs to.
-   * @param kind the kind of the entry, read back by the domain.
+   * @param word the index of the word, at least 0.
    * @param level the level the entry belongs to.
-   * @return the index of the entry.
+   * @param stamp the int saved with the word.
+   * @param value the saved word.
    */
-  int push(Entry domain, int kind, int level) {
-    if (size == capacity) {
-      grow();
+  void pushWord(Entry domain, int word, int level, int stamp, long value) {
+    int[] in = intCurrent;
+    int p = intTop;
+    if (p + WORD_INTS > in.length) {
+      in = nextIntSegment();
+      p = 0;
     }
-    int entry = size++;
-    int s = segment(entry);
-    int i = offset(entry, s);
-    int[] in = ints[s];
-    in[i * INTS_PER_ENTRY] = kind;
-    in[i * INTS_PER_ENTRY + 1] = level;
-    objects[s][i * OBJECTS_PER_ENTRY] = domain;
-    return entry;
+    in[p] = stamp;
+    in[p + 1] = (int) value;
+    in[p + 2] = (int) (value >>> 32);
+    in[p + 3] = level;
+    in[p + 4] = word;
+    intTop = p + WORD_INTS;
+    Object[] ob = objectCurrent;
+    int q = objectTop;
+    if (q == ob.length) {
+      ob = nextObjectSegment();
+      q = 0;
+    }
+    ob[q] = domain;
+    objectTop = q + 1;
   }
 
-  private void grow() {
-    int s = segment(capacity);
+  /**
+   * Pushes an entry of a kind chosen by the domain; the caller fills in its ints and objects.
+   *
+   * @param domain the domain the entry belongs to.
+   * @param kind the kind of the entry, from -32768 to -1, given back to the domain.
+   * @param level the level the entry belongs to.
+   * @param intCount the number of ints of the entry, at most {@link #MAX_FIELDS}.
+   * @param objectCount the number of objects of the entry besides the domain, at most {@link
+   *     #MAX_FIELDS}.
+   * @return the entry, its position in the int stream.
+   */
+  int push(Entry domain, int kind, int level, int intCount, int objectCount) {
+    int length = intCount + EXTRA_INTS;
+    int[] in = intCurrent;
+    int p = intTop;
+    if (p + length > in.length) {
+      in = nextIntSegment();
+      p = 0;
+    }
+    Object[] ob = objectCurrent;
+    int q = objectTop;
+    if (q + objectCount + 1 > ob.length) {
+      ob = nextObjectSegment();
+      q = 0;
+    }
+    in[p] = objectBase + q;
+    in[p + length - 2] = level;
+    in[p + length - 1] = kind << 16 | intCount << 8 | objectCount;
+    ob[q] = domain;
+    intTop = p + length;
+    objectTop = q + objectCount + 1;
+    return intBase + p;
+  }
+
+  private int[] nextIntSegment() {
+    if (intSegment >= 0) {
+      intsUsed[intSegment] = intTop;
+    }
+    int s = ++intSegment;
     if (s >= SEGMENTS) {
+      intSegment--;
       throw new IllegalStateException("Trail too large");
     }
-    int n = FIRST << s;
-    ints[s] = new int[n * INTS_PER_ENTRY];
-    longs[s] = new long[n];
-    objects[s] = new Object[n * OBJECTS_PER_ENTRY];
-    capacity += n;
+    if (ints[s] == null) {
+      ints[s] = new int[FIRST << s];
+    }
+    intCurrent = ints[s];
+    intTop = 0;
+    intBase = start(s);
+    return intCurrent;
+  }
+
+  private Object[] nextObjectSegment() {
+    if (objectSegment >= 0) {
+      objectsUsed[objectSegment] = objectTop;
+    }
+    int s = ++objectSegment;
+    if (s >= SEGMENTS) {
+      objectSegment--;
+      throw new IllegalStateException("Trail too large");
+    }
+    if (objects[s] == null) {
+      objects[s] = new Object[FIRST << s];
+    }
+    objectCurrent = objects[s];
+    objectTop = 0;
+    objectBase = start(s);
+    return objectCurrent;
+  }
+
+  /** The position in a stream of the first element of segment s. */
+  private static int start(int s) {
+    return (FIRST << s) - FIRST;
   }
 
   /**
-   * The segment of an entry: segment s holds entries FIRST * (2^s - 1) to FIRST * (2^(s+1) - 1).
+   * The segment of a position in a stream: segment s holds positions FIRST * (2^s - 1) to FIRST *
+   * (2^(s+1) - 1) - 1.
    */
-  private static int segment(int entry) {
-    return 31 - FIRST_SHIFT - Integer.numberOfLeadingZeros(entry + FIRST);
-  }
-
-  /** The position of an entry in its segment. */
-  private static int offset(int entry, int segment) {
-    return entry + FIRST - (FIRST << segment);
+  private static int segment(int position) {
+    return 31 - FIRST_SHIFT - Integer.numberOfLeadingZeros(position + FIRST);
   }
 
   /**
-   * Returns an int of an entry.
+   * Returns an int of an entry pushed by {@link #push}.
    *
-   * @param entry the index of the entry.
-   * @param k the index of the int, 0 for the kind and 1 for the level.
+   * @param entry the entry.
+   * @param k the index of the int, below the int count of the entry.
    * @return the int.
    */
   int getInt(int entry, int k) {
+    int i = entry - intBase;
+    if (i >= 0) {
+      // the entries just pushed and those being popped are in the current segment
+      return intCurrent[i + 1 + k];
+    }
     int s = segment(entry);
-    return ints[s][offset(entry, s) * INTS_PER_ENTRY + k];
+    return ints[s][entry - start(s) + 1 + k];
   }
 
   /**
-   * Sets an int of an entry.
+   * Sets an int of an entry pushed by {@link #push}.
    *
-   * @param entry the index of the entry.
-   * @param k the index of the int, at least 2.
+   * @param entry the entry.
+   * @param k the index of the int, below the int count of the entry.
    * @param value the int.
    */
   void setInt(int entry, int k, int value) {
+    int i = entry - intBase;
+    if (i >= 0) {
+      intCurrent[i + 1 + k] = value;
+      return;
+    }
     int s = segment(entry);
-    ints[s][offset(entry, s) * INTS_PER_ENTRY + k] = value;
+    ints[s][entry - start(s) + 1 + k] = value;
   }
 
   /**
-   * Returns the long of an entry.
+   * Returns an object of an entry pushed by {@link #push}.
    *
-   * @param entry the index of the entry.
-   * @return the long.
-   */
-  long getLong(int entry) {
-    int s = segment(entry);
-    return longs[s][offset(entry, s)];
-  }
-
-  /**
-   * Sets the long of an entry.
-   *
-   * @param entry the index of the entry.
-   * @param value the long.
-   */
-  void setLong(int entry, long value) {
-    int s = segment(entry);
-    longs[s][offset(entry, s)] = value;
-  }
-
-  /**
-   * Returns an object of an entry.
-   *
-   * @param entry the index of the entry.
-   * @param k the index of the object, 0 for the domain.
+   * @param entry the entry.
+   * @param k the index of the object, 0 for the domain and 1 to the object count for the others.
    * @return the object.
    */
   Object getObject(int entry, int k) {
-    int s = segment(entry);
-    return objects[s][offset(entry, s) * OBJECTS_PER_ENTRY + k];
+    int position = getInt(entry, -1) + k;
+    int i = position - objectBase;
+    if (i >= 0) {
+      return objectCurrent[i];
+    }
+    int t = segment(position);
+    return objects[t][position - start(t)];
   }
 
   /**
-   * Sets an object of an entry.
+   * Sets an object of an entry pushed by {@link #push}.
    *
-   * @param entry the index of the entry.
-   * @param k the index of the object, at least 1.
+   * @param entry the entry.
+   * @param k the index of the object, from 1 to the object count.
    * @param value the object.
    */
   void setObject(int entry, int k, Object value) {
-    int s = segment(entry);
-    objects[s][offset(entry, s) * OBJECTS_PER_ENTRY + k] = value;
+    int position = getInt(entry, -1) + k;
+    int i = position - objectBase;
+    if (i >= 0) {
+      objectCurrent[i] = value;
+      return;
+    }
+    int t = segment(position);
+    objects[t][position - start(t)] = value;
   }
 
   /**
@@ -217,36 +332,117 @@ public final class DomainTrail {
   void removeLevel(int level) {
     // kept small so that it inlines into the store's backtracking, which most stores do without
     // ever pushing an entry
-    if (size > 0) {
+    if (intTop != 0 || intSegment > 0) {
       pop(level);
     }
   }
 
   private void pop(int level) {
-    while (size > 0) {
-      int entry = size - 1;
-      int s = segment(entry);
-      int i = offset(entry, s);
-      if (ints[s][i * INTS_PER_ENTRY + 1] < level) {
+    while (true) {
+      if (intTop == 0) {
+        if (intSegment <= 0) {
+          return;
+        }
+        previousIntSegment();
+      }
+      int[] in = intCurrent;
+      int p = intTop;
+      if (in[p - 2] < level) {
         return;
       }
-      size = entry;
-      Object[] in = objects[s];
-      int o = i * OBJECTS_PER_ENTRY;
-      ((Entry) in[o]).undo(this, entry);
-      in[o] = null;
-      in[o + 1] = null;
-      in[o + 2] = null;
-      in[o + 3] = null;
+      if (objectTop == 0) {
+        previousObjectSegment();
+      }
+      Object[] ob = objectCurrent;
+      int q = objectTop;
+      int tag = in[p - 1];
+      if (tag >= 0) {
+        intTop = p - WORD_INTS;
+        objectTop = q - 1;
+        Entry domain = (Entry) ob[q - 1];
+        ob[q - 1] = null;
+        domain.undoWord(tag, in[p - 5], word(in, p));
+      } else {
+        int start = p - ((tag >>> 8) & 0xFF) - EXTRA_INTS;
+        int first = q - (tag & 0xFF) - 1;
+        intTop = start;
+        objectTop = first;
+        ((Entry) ob[first]).undo(this, intBase + start, tag >> 16);
+        Arrays.fill(ob, first, q, null);
+      }
+    }
+  }
+
+  /** The word of the word entry ending at position p of the int segment in. */
+  private static long word(int[] in, int p) {
+    return (long) in[p - 3] << 32 | (in[p - 4] & 0xFFFFFFFFL);
+  }
+
+  private void previousIntSegment() {
+    int s = --intSegment;
+    intCurrent = ints[s];
+    intTop = intsUsed[s];
+    intBase = start(s);
+  }
+
+  private void previousObjectSegment() {
+    int s = --objectSegment;
+    objectCurrent = objects[s];
+    objectTop = objectsUsed[s];
+    objectBase = start(s);
+  }
+
+  /**
+   * Writes into words the words saved by the word entries of a domain pushed after a given entry,
+   * the oldest last, so each word ends as it was when that entry was pushed.
+   *
+   * @param domain the domain.
+   * @param after the entry, pushed by {@link #push}.
+   * @param words the words of the domain, indexed by word.
+   */
+  void savedWords(Entry domain, int after, long[] words) {
+    int s = intSegment;
+    int p = intTop;
+    int t = objectSegment;
+    int q = objectTop;
+    while (true) {
+      if (p == 0) {
+        if (s <= 0) {
+          return;
+        }
+        s--;
+        p = intsUsed[s];
+      }
+      if (q == 0) {
+        t--;
+        q = objectsUsed[t];
+      }
+      int[] in = s == intSegment ? intCurrent : ints[s];
+      int tag = in[p - 1];
+      int start;
+      if (tag >= 0) {
+        start = p - WORD_INTS;
+        if (objects[t][q - 1] == domain) {
+          words[tag] = word(in, p);
+        }
+        q--;
+      } else {
+        start = p - ((tag >>> 8) & 0xFF) - EXTRA_INTS;
+        q -= (tag & 0xFF) + 1;
+      }
+      if (start(s) + start <= after) {
+        return;
+      }
+      p = start;
     }
   }
 
   /**
-   * Returns the number of entries.
+   * Returns whether the trail has no entries.
    *
-   * @return the number of entries on the trail.
+   * @return true if no entry is on the trail.
    */
-  int size() {
-    return size;
+  boolean isEmpty() {
+    return intTop == 0 && intSegment <= 0;
   }
 }
