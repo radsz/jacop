@@ -46,7 +46,7 @@ import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 
 /**
  * Time-table propagation of several cumulative resources used by the same tasks, as in the
@@ -103,7 +103,7 @@ public class MultiCumulative extends Constraint implements Copyable<MultiCumulat
   private final int[] startExcluded;
   private final boolean[] startConsidered;
   private final int[] activeMap;
-  private final TimeStamp<Integer> activePnt;
+  private final TimeStampInt activePnt;
 
   /**
    * It creates a multi-resource cumulative constraint.
@@ -212,7 +212,7 @@ public class MultiCumulative extends Constraint implements Copyable<MultiCumulat
 
     setScope(Stream.concat(Arrays.stream(starts), Arrays.stream(limits)));
 
-    activePnt = new TimeStamp<>(limits[0].getStore(), 0);
+    activePnt = new TimeStampInt(limits[0].getStore(), 0);
   }
 
   @Override

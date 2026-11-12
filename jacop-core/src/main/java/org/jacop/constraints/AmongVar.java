@@ -52,7 +52,7 @@ import org.jacop.core.MutableDomain;
 import org.jacop.core.MutableDomainValue;
 import org.jacop.core.MutableVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 
 /**
@@ -101,9 +101,9 @@ public class AmongVar extends Constraint
   private MutableVar lbS;
   private MutableVar futureLbS;
   // Time stamps
-  private TimeStamp<Integer> lb0Ts;
-  private TimeStamp<Integer> ub0Ts;
-  private TimeStamp<Integer> yGrounded;
+  private TimeStampInt lb0Ts;
+  private TimeStampInt ub0Ts;
+  private TimeStampInt yGrounded;
 
   // Scratch space of consistency, kept between calls so that the counting allocates nothing.
   // lbOfValue and ubOfValue hold lb[v] and ub[v] at v - valueOffset, valid where valueStamp is
@@ -1272,10 +1272,10 @@ public class AmongVar extends Constraint
     lbOutside = new int[listOfX.length];
     lbOutsideValue = new int[listOfX.length];
 
-    lb0Ts = new TimeStamp<>(store, 0);
-    ub0Ts = new TimeStamp<>(store, listOfX.length);
+    lb0Ts = new TimeStampInt(store, 0);
+    ub0Ts = new TimeStampInt(store, listOfX.length);
 
-    yGrounded = new TimeStamp<>(store, 0);
+    yGrounded = new TimeStampInt(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
 
