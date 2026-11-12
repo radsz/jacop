@@ -4234,6 +4234,27 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+244. TSP edge elimination: before search, a pure symmetric travelling
+     salesman model (one circuit with no fixed successor, the minimised
+     objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
+     the arcs that are in no optimal tour, proved from the distances alone
+     with the 2-opt compatibility of Jonker and Volgenant ("Nonoptimal
+     edges for the symmetric traveling salesman problem", Operations
+     Research 32(4), 1984) and the close point and main edge elimination
+     of Hougardy and Schroeder ("Edge elimination in TSP instances",
+     WG 2014; see also Cook, Helsgaun, Hougardy and Schroeder, "Local
+     elimination in the traveling salesman problem", Mathematical
+     Programming Computation, 2024). The rules use strict improvements,
+     so every optimal tour stays and no triangle inequality is needed.
+     It leaves 5 to 12 arcs per city on 42 TSPLIB instances in 0.1 to
+     0.6 s. At 600 s it proves 16 optima instead of 14 with the model's
+     search (proof time geomean 0.43) and 31 instead of 29 in the TSP
+     mode with -f (0.69); with plain -f it proves 25 instead of 27
+     (0.72 on the instances both prove; 24 instead of 22 at 240 s).
+     org.jacop.constraints.TspEdgeElimination; FlatZinc in
+     GiantTourDetector; System property org.jacop.fz.tspElimination=false
+     turns it off, org.jacop.fz.tspEliminationMs (default 2000) limits it.
+
 Version 4.11
 =============
 
