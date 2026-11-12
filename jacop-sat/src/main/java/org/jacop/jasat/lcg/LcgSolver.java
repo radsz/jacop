@@ -189,10 +189,10 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: solver variables that are not atoms, such as outputs of encodings. */
   public long auxiliaryVariables;
 
-  // per DIMACS variable: its variable's trail id, kind and value
-  private int[] litVar = new int[16];
-  private byte[] litKind = new byte[16];
-  private int[] litValue = new int[16];
+  // per DIMACS variable d, read together when a literal is decoded: at 2d its variable's trail id
+  // shifted left by one with the kind in the low bit (-1 when d is not an atom), at 2d + 1 its
+  // value
+  private int[] atoms = new int[32];
   // semantic minimisation: learnt literals sorted by variable, and those removed
   private long[] minimizeKeys = new long[16];
   private boolean[] minimizeRemoved = new boolean[16];
@@ -718,16 +718,16 @@ public final class LcgSolver implements ExternalPropagator {
 
   // the OPB name of a solver variable
   private String proofName(int dimacsVar) {
-    int i = litVar[dimacsVar];
+    int i = atomVar(dimacsVar);
     if (i < 0) {
       if (proofAuxiliaries.get(dimacsVar)) {
         return "y" + dimacsVar;
       }
       throw new IllegalStateException("an auxiliary variable in a proof");
     }
-    return litKind[dimacsVar] == GE_KIND
-        ? OpbEncoder.ge(i, litValue[dimacsVar])
-        : OpbEncoder.eq(i, litValue[dimacsVar]);
+    return atomKind(dimacsVar) == GE_KIND
+        ? OpbEncoder.ge(i, atomValue(dimacsVar))
+        : OpbEncoder.eq(i, atomValue(dimacsVar));
   }
 
   /**
@@ -2155,11 +2155,8 @@ public final class LcgSolver implements ExternalPropagator {
       d = sat.newVariables(1);
       sat.observe(d);
     }
-    if (d >= litVar.length) {
-      int n = 2 * d;
-      litVar = Arrays.copyOf(litVar, n);
-      litKind = Arrays.copyOf(litKind, n);
-      litValue = Arrays.copyOf(litValue, n);
+    if (2 * d >= atoms.length) {
+      atoms = Arrays.copyOf(atoms, 4 * d);
     }
     if (d >= transientLit.length) {
       transientLit = Arrays.copyOf(transientLit, 2 * d);
@@ -2167,9 +2164,8 @@ public final class LcgSolver implements ExternalPropagator {
     if (d < atomUse.length) {
       atomUse[d] = 0;
     }
-    litVar[d] = i;
-    litKind[d] = (byte) kind;
-    litValue[d] = value;
+    atoms[2 * d] = i << 1 | kind;
+    atoms[2 * d + 1] = value;
     return d;
   }
 
@@ -2177,13 +2173,10 @@ public final class LcgSolver implements ExternalPropagator {
   int newAuxiliary() {
     int d = sat.newVariables(1);
     auxiliaryVariables++;
-    if (d >= litVar.length) {
-      int n = 2 * d;
-      litVar = Arrays.copyOf(litVar, n);
-      litKind = Arrays.copyOf(litKind, n);
-      litValue = Arrays.copyOf(litValue, n);
+    if (2 * d >= atoms.length) {
+      atoms = Arrays.copyOf(atoms, 4 * d);
     }
-    litVar[d] = -1;
+    atoms[2 * d] = -1;
     return d;
   }
 
@@ -2275,10 +2268,10 @@ public final class LcgSolver implements ExternalPropagator {
   private void keep(int lit) {
     int d = Math.abs(lit);
     if (d < transientLit.length && transientLit[d]) {
-      if (litKind[d] == EQ_KIND) {
-        linkEq(litVar[d], litValue[d], d);
+      if (atomKind(d) == EQ_KIND) {
+        linkEq(atomVar(d), atomValue(d), d);
       } else {
-        link(litVar[d], litValue[d], d);
+        link(atomVar(d), atomValue(d), d);
       }
     }
   }
@@ -2291,7 +2284,7 @@ public final class LcgSolver implements ExternalPropagator {
         continue;
       }
       transientLit[d] = false;
-      (litKind[d] == EQ_KIND ? eq : ge)[litVar[d]].remove(litValue[d]);
+      (atomKind(d) == EQ_KIND ? eq : ge)[atomVar(d)].remove(atomValue(d));
       sat.retire(d);
       if (numFree == free.length) {
         free = Arrays.copyOf(free, 2 * numFree);
@@ -3151,10 +3144,10 @@ public final class LcgSolver implements ExternalPropagator {
   /** Whether literal lit of variable i's atoms holds when the variable takes value v. */
   boolean holds(int lit, int i, int v) {
     int d = Math.abs(lit);
-    if (litVar[d] != i) {
+    if (atomVar(d) != i) {
       throw new IllegalArgumentException(lit + " is not an atom of variable " + i);
     }
-    boolean atom = litKind[d] == GE_KIND ? v >= litValue[d] : v == litValue[d];
+    boolean atom = atomKind(d) == GE_KIND ? v >= atomValue(d) : v == atomValue(d);
     return atom == lit > 0;
   }
 
@@ -4098,11 +4091,11 @@ public final class LcgSolver implements ExternalPropagator {
   @Override
   public void notifyLearntLiteral(int lit) {
     int dimacsVar = Math.abs(lit);
-    if (litVar[dimacsVar] < 0) {
+    if (atomVar(dimacsVar) < 0) {
       return; // not an atom
     }
     if (branching != Branching.LITERALS) {
-      bump(litVar[dimacsVar]);
+      bump(atomVar(dimacsVar));
     }
     if (dimacsVar < atomUse.length && atomUse[dimacsVar] == 1) {
       atomUse[dimacsVar] = 2;
@@ -4113,8 +4106,8 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyAnalysedLiteral(int var) {
-    if (var < litVar.length && litVar[var] >= 0 && branching != Branching.LITERALS) {
-      int i = litVar[var];
+    if (2 * var < atoms.length && atomVar(var) >= 0 && branching != Branching.LITERALS) {
+      int i = atomVar(var);
       if (bumpedAt[i] != sat.conflicts) {
         bump(i); // each integer variable once per conflict, learnt ones not again
       }
@@ -4396,7 +4389,7 @@ public final class LcgSolver implements ExternalPropagator {
       minimizeRemoved = new boolean[2 * size];
     }
     for (int k = 0; k < size; k++) {
-      minimizeKeys[k] = (long) litVar[Math.abs(clause[k])] << 32 | k;
+      minimizeKeys[k] = (long) atomVar(Math.abs(clause[k])) << 32 | k;
       minimizeRemoved[k] = false;
     }
     Arrays.sort(minimizeKeys, 0, size);
@@ -4413,7 +4406,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       for (int a = from; a < to; a++) {
         int i = (int) minimizeKeys[a];
-        if (i == 0 || litVar[Math.abs(clause[i])] < 0) {
+        if (i == 0 || atomVar(Math.abs(clause[i])) < 0) {
           continue; // the asserting literal stays, and so do literals that are not atoms
         }
         for (int b = from; b < to; b++) {
@@ -4454,23 +4447,23 @@ public final class LcgSolver implements ExternalPropagator {
       int i = (int) minimizeKeys[a];
       int l = clause[i];
       int d = Math.abs(l);
-      if (litKind[d] == GE_KIND) {
-        if (l > 0 && (lo < 0 || litValue[d] < litValue[Math.abs(clause[lo])])) {
+      if (atomKind(d) == GE_KIND) {
+        if (l > 0 && (lo < 0 || atomValue(d) < atomValue(Math.abs(clause[lo])))) {
           lo = i;
-        } else if (l < 0 && (hi < 0 || litValue[d] > litValue[Math.abs(clause[hi])])) {
+        } else if (l < 0 && (hi < 0 || atomValue(d) > atomValue(Math.abs(clause[hi])))) {
           hi = i;
         }
       } else if (l < 0) {
         holes++;
-        holeMin = Math.min(holeMin, litValue[d]);
-        holeMax = Math.max(holeMax, litValue[d]);
+        holeMin = Math.min(holeMin, atomValue(d));
+        holeMax = Math.max(holeMax, atomValue(d));
       }
     }
     // the weakest bounds go when they imply a hole: [x >= v] that x != w for w < v
-    if (lo > 0 && holeMin < litValue[Math.abs(clause[lo])]) {
+    if (lo > 0 && holeMin < atomValue(Math.abs(clause[lo]))) {
       minimizeRemoved[lo] = true;
     }
-    if (hi > 0 && holeMax >= litValue[Math.abs(clause[hi])]) {
+    if (hi > 0 && holeMax >= atomValue(Math.abs(clause[hi]))) {
       minimizeRemoved[hi] = true;
     }
     int removed = (lo > 0 && minimizeRemoved[lo] ? 1 : 0) + (hi > 0 && minimizeRemoved[hi] ? 1 : 0);
@@ -4482,15 +4475,15 @@ public final class LcgSolver implements ExternalPropagator {
       int l = clause[i];
       int d = Math.abs(l);
       boolean drop;
-      if (litKind[d] == GE_KIND) {
+      if (atomKind(d) == GE_KIND) {
         // implies the weakest bound of its side, or the hole the weakest one implies
         drop = true;
       } else if (l > 0) {
-        long v = litValue[d];
+        long v = atomValue(d);
         // x = v implies the weakest bound of a side it is on, or a hole at another value
         drop =
-            lo >= 0 && v >= litValue[Math.abs(clause[lo])]
-                || hi >= 0 && v < litValue[Math.abs(clause[hi])]
+            lo >= 0 && v >= atomValue(Math.abs(clause[lo]))
+                || hi >= 0 && v < atomValue(Math.abs(clause[hi]))
                 || holes > 1
                 || holes == 1 && holeMin != v;
       } else {
@@ -4508,24 +4501,24 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean implies(int a, int b) {
     int va = Math.abs(a);
     int vb = Math.abs(b);
-    boolean aEq = litKind[va] == EQ_KIND;
-    boolean bEq = litKind[vb] == EQ_KIND;
+    boolean aEq = atomKind(va) == EQ_KIND;
+    boolean bEq = atomKind(vb) == EQ_KIND;
     if (aEq && a < 0) {
       return false; // x != v implies no other atom's literal on x
     }
-    long aLo = a > 0 ? litValue[va] : Long.MIN_VALUE;
-    long aHi = aEq || a < 0 ? litValue[va] - (aEq ? 0L : 1L) : Long.MAX_VALUE;
+    long aLo = a > 0 ? atomValue(va) : Long.MIN_VALUE;
+    long aHi = aEq || a < 0 ? atomValue(va) - (aEq ? 0L : 1L) : Long.MAX_VALUE;
     if (bEq && b < 0) {
-      return litValue[vb] < aLo || litValue[vb] > aHi;
+      return atomValue(vb) < aLo || atomValue(vb) > aHi;
     }
-    long bLo = b > 0 ? litValue[vb] : Long.MIN_VALUE;
-    long bHi = bEq || b < 0 ? litValue[vb] - (bEq ? 0L : 1L) : Long.MAX_VALUE;
+    long bLo = b > 0 ? atomValue(vb) : Long.MIN_VALUE;
+    long bHi = bEq || b < 0 ? atomValue(vb) - (bEq ? 0L : 1L) : Long.MAX_VALUE;
     return bLo <= aLo && aHi <= bHi;
   }
 
   @Override
   public int integerVariable(int aVar) {
-    return semanticUip && aVar < litVar.length ? litVar[aVar] : -1;
+    return semanticUip && 2 * aVar < atoms.length ? atomVar(aVar) : -1;
   }
 
   /**
@@ -4535,13 +4528,13 @@ public final class LcgSolver implements ExternalPropagator {
    */
   @Override
   public int semanticUip(int[] lits, int size) {
-    int i = litVar[Math.abs(lits[0])];
+    int i = atomVar(Math.abs(lits[0]));
     long lo = Long.MIN_VALUE;
     long hi = Long.MAX_VALUE;
     for (int k = 0; k < size; k++) {
       int d = Math.abs(lits[k]);
-      long v = litValue[d];
-      if (litKind[d] == GE_KIND) {
+      long v = atomValue(d);
+      if (atomKind(d) == GE_KIND) {
         if (lits[k] > 0) {
           lo = Math.max(lo, v);
         } else {
@@ -4556,16 +4549,16 @@ public final class LcgSolver implements ExternalPropagator {
       moved = false;
       for (int k = 0; k < size; k++) {
         int d = Math.abs(lits[k]);
-        if (litKind[d] == EQ_KIND && lits[k] < 0 && (litValue[d] == lo || litValue[d] == hi)) {
-          lo += litValue[d] == lo ? 1 : 0;
-          hi -= litValue[d] == hi ? 1 : 0;
+        if (atomKind(d) == EQ_KIND && lits[k] < 0 && (atomValue(d) == lo || atomValue(d) == hi)) {
+          lo += atomValue(d) == lo ? 1 : 0;
+          hi -= atomValue(d) == hi ? 1 : 0;
           moved = true;
         }
       }
     }
     for (int k = 0; k < size; k++) {
       int d = Math.abs(lits[k]);
-      if (litKind[d] == EQ_KIND && lits[k] < 0 && lo < litValue[d] && litValue[d] < hi) {
+      if (atomKind(d) == EQ_KIND && lits[k] < 0 && lo < atomValue(d) && atomValue(d) < hi) {
         return 0; // a hole inside the interval
       }
     }
@@ -4718,13 +4711,13 @@ public final class LcgSolver implements ExternalPropagator {
     c[1] = lbd;
     for (int k = 0; k < clause.length; k++) {
       int d = Math.abs(clause[k]);
-      int i = d < litVar.length ? litVar[d] : -1;
+      int i = 2 * d < atoms.length ? atomVar(d) : -1;
       if (i < 0 || sharedId[i] < 0) {
         return; // an auxiliary literal or a variable of this store only
       }
       c[2 + 3 * k] = sharedId[i];
-      c[3 + 3 * k] = litKind[d] + (clause[k] < 0 ? SharedClauses.NEGATED : 0);
-      c[4 + 3 * k] = litValue[d];
+      c[3 + 3 * k] = atomKind(d) + (clause[k] < 0 ? SharedClauses.NEGATED : 0);
+      c[4 + 3 * k] = atomValue(d);
     }
     exportBatch.add(c);
     clausesExported++;
@@ -4916,7 +4909,7 @@ public final class LcgSolver implements ExternalPropagator {
         try {
           apply(lit);
         } catch (FailException _) {
-          IntVar x = vars[litVar[Math.abs(lit)]];
+          IntVar x = vars[atomVar(Math.abs(lit))];
           EntryList atoms = failureAtoms;
           atoms.clear();
           trail.atomsBefore(x, trail.size(), atoms);
@@ -5185,6 +5178,21 @@ public final class LcgSolver implements ExternalPropagator {
     return stamp;
   }
 
+  // the trail id of the variable of solver variable d, negative when d is not an atom
+  private int atomVar(int d) {
+    return atoms[2 * d] >> 1;
+  }
+
+  // GE_KIND or EQ_KIND of atom d
+  private int atomKind(int d) {
+    return atoms[2 * d] & 1;
+  }
+
+  // the value of atom d
+  private int atomValue(int d) {
+    return atoms[2 * d + 1];
+  }
+
   // a literal the solver has true, or 0 when it has assigned nothing
   private int trueAtom() {
     int n = sat.trailSize();
@@ -5193,10 +5201,10 @@ public final class LcgSolver implements ExternalPropagator {
 
   private void apply(int lit) {
     int dimacsVar = Math.abs(lit);
-    IntVar x = vars[litVar[dimacsVar]];
-    int v = litValue[dimacsVar];
+    IntVar x = vars[atomVar(dimacsVar)];
+    int v = atomValue(dimacsVar);
     store.currentConstraint = null;
-    if (litKind[dimacsVar] == GE_KIND) {
+    if (atomKind(dimacsVar) == GE_KIND) {
       if (lit > 0) {
         x.domain.inMin(store.level, x, v);
       } else {
