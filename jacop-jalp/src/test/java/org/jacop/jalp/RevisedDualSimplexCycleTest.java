@@ -47,9 +47,11 @@ import org.junit.jupiter.api.Timeout;
  * either sign as the basis changed, so the dual simplex flipped two parallel columns to an
  * artificial bound and back at every check of its reduced costs, and the primal simplex let two
  * columns enter in turn after every refactorization. Each is solved with the round-off taken as
- * zero, and without that, by the guard against pivots back to recent bases alone. The third is a
- * small LP of the exact fuzzer where round-off of free columns at artificial bounds of 1e12 left a
- * row outside its bounds and the dual simplex swapped the slacks of two parallel rows forever.
+ * zero, and without that, by the guard against pivots back to recent bases alone (which may end at
+ * LIMIT). The third is a small LP of the exact fuzzer where round-off of free columns at artificial
+ * bounds of 1e12 left a row outside its bounds and the dual simplex swapped the slacks of two
+ * parallel rows forever; it now ends at LIMIT, as rows are still outside once the guard left the
+ * cycling one out.
  */
 class RevisedDualSimplexCycleTest {
 
@@ -71,9 +73,18 @@ class RevisedDualSimplexCycleTest {
     lp.setExact(true);
     lp.setRoundOff(roundOff);
     int status = primal ? lp.solvePrimal(LIMIT) : lp.solve(LIMIT);
-    assertThat(status).isEqualTo(RevisedDualSimplex.OPTIMAL);
-    assertThat(lp.objective() + p.costConstant).isCloseTo(optimum, within(1e-6 * optimum));
     assertThat(lp.pivots()).isLessThan(5_000);
+    if (roundOff > 0) {
+      assertThat(status).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.cycleLimits()).isZero();
+    }
+    if (status == RevisedDualSimplex.OPTIMAL) {
+      assertThat(lp.objective() + p.costConstant).isCloseTo(optimum, within(1e-6 * optimum));
+    } else {
+      // the guard alone: OPTIMAL, or LIMIT when a row is still outside after it left rows out
+      assertThat(status).isEqualTo(RevisedDualSimplex.LIMIT);
+      assertThat(lp.cycleLimits()).isEqualTo(1);
+    }
   }
 
   @Test
@@ -128,13 +139,17 @@ class RevisedDualSimplexCycleTest {
       lp.setBounds(j, lo[j], hi[j]);
     }
     assertThat(lp.solve(LIMIT)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
-    // a cut that leaves the problem unbounded (x1 and x5 are still free)
+    // a cut that leaves the problem unbounded (x1 and x5 are still free): the guard leaves the
+    // cycling row out, and as rows are still outside on fresh factors the answer is LIMIT, not a
+    // point outside them
     lp.addRows(
         new int[][] {{0, 3, 10}},
         new double[][] {{4, -4, -2}},
         new double[] {-15},
         new double[] {-13});
-    assertThat(lp.solve(LIMIT)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+    assertThat(lp.solve(LIMIT)).isEqualTo(RevisedDualSimplex.LIMIT);
     assertThat(lp.pivots()).isLessThan(1_000);
+    assertThat(lp.cycleRowsLeft()).isPositive();
+    assertThat(lp.cycleLimits()).isEqualTo(1);
   }
 }

@@ -1191,6 +1191,8 @@ public final class RevisedDualSimplex {
     }
     skipped[r] = true;
     skippedRows++;
+    guard.leftRow = true;
+    guard.rowsLeft++;
     // no row of the basis inverse, so no proof of infeasibility
     clear(rho, rhoIdx, rhoLen);
     rhoLen = 0;
@@ -1211,12 +1213,18 @@ public final class RevisedDualSimplex {
     private int repeats;
     private long hash;
     private long hashedAt = -1;
+    // rows left out since the last answer, and over the life of this simplex: rows left out and
+    // solves that ended at their limit because one of them was still outside on fresh factors
+    private boolean leftRow;
+    private long rowsLeft;
+    private long endsAtLimit;
 
     void reset() {
       next = 0;
       count = 0;
       repeats = 0;
       hashedAt = -1;
+      leftRow = false;
     }
 
     boolean cycling() {
@@ -1274,6 +1282,15 @@ public final class RevisedDualSimplex {
     z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
     z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
     return z ^ (z >>> 31);
+  }
+
+  // rows the cycle guard left out, and solves ended at their limit because of one (tests, stats)
+  long cycleRowsLeft() {
+    return guard.rowsLeft;
+  }
+
+  long cycleLimits() {
+    return guard.endsAtLimit;
   }
 
   // the relative size of reduced costs taken as round-off; 0 turns this off (tests of CycleGuard)
@@ -1350,7 +1367,8 @@ public final class RevisedDualSimplex {
    * infeasibility on fresh factors either; then their violation is round-off and the solve ends as
    * if they held (two equal rows and free columns at artificial bounds of 1e12: the basic slack of
    * one row off by 2e-5, the combination of the rows 0 over every column). A row with a proof stops
-   * the solve at its limit (false).
+   * the solve at its limit (false), and so does any row still outside after {@link CycleGuard} left
+   * rows out in this answer.
    */
   private boolean skippedRowsHold() {
     clearSkipped();
@@ -1358,6 +1376,15 @@ public final class RevisedDualSimplex {
     for (int r = leavingRow(); r >= 0; r = leavingRow()) {
       rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
       if (proofHolds(r)) {
+        clearSkipped();
+        return false;
+      }
+      if (guard.leftRow) {
+        // a row is still outside after the cycle guard left rows out: that may be a real cycle,
+        // not round-off, so no answer rather than a point outside a row (fuzzer seed 36935, the
+        // case the guard was made for, ends here: rows off by 2.4e-5 and 6e-6 next to free
+        // columns at 1e12, where the size of the terms says nothing about the LU's round-off)
+        guard.endsAtLimit++;
         clearSkipped();
         return false;
       }
