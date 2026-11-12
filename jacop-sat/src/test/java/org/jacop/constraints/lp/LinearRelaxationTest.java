@@ -2197,6 +2197,41 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Energy cuts separated in search as well as at the root keep the optimum of the random total
+   * completion time models under depth-first search and under lazy clause generation with the
+   * explanation checker on: the cuts use the bounds of the first solve, so they hold globally.
+   */
+  @Test
+  void energyCutsInSearchKeepTheOptimumOfScheduling() {
+    long checked = 0;
+    long separations = 0;
+    for (int run = 0; run < 12; run++) {
+      long expected = new Completion(run).optimum();
+
+      Completion dfs = new Completion(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      r.setEnergySearch(true);
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      separations += r.energySeparations;
+
+      Completion lcg = new Completion(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      l.setEnergySearch(true);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+      separations += l.energySeparations;
+    }
+    assertThat(separations).isPositive();
+    assertThat(checked).isPositive();
+  }
+
+  /**
    * A random scheduling model: tasks with release dates, durations and usages on one cumulative
    * resource, and the sum of their completion times, a linear row, minimized.
    */
