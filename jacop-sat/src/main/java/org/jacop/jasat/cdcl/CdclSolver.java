@@ -2618,7 +2618,13 @@ public final class CdclSolver {
       return UNSAT;
     }
     while (true) {
+      if (org.jacop.core.FailStat.ANY) {
+        org.jacop.core.FailStat.lcgWindowStart();
+      }
       int confl = propagateAll();
+      if (org.jacop.core.FailStat.ANY) {
+        org.jacop.core.FailStat.lcgWindowEnd(confl != NO_CONFLICT);
+      }
       if (!ok) {
         return UNSAT;
       }

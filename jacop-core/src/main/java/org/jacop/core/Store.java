@@ -530,11 +530,41 @@ public class Store {
 
     propagationHasOccurred = true;
 
+    if (FailStat.ANY) {
+      enqueue(c, c.getQueueIndex());
+      return;
+    }
+
     if (c.getQueueIndex() < currentQueue) {
       currentQueue = c.getQueueIndex();
     }
 
     changed[c.getQueueIndex()].add(c);
+  }
+
+  /** FailStat prototype: the front queue of hot constraints (bit 31). */
+  private final ConstraintQueue front = new ConstraintQueue(this, 31);
+
+  /** FailStat prototype: queue a constraint, hot ones to the front queue. */
+  private void enqueue(Constraint c, int queueIndex) {
+    if (c.fsHot) {
+      if ((c.queueMembership(this) & ~(1 << 31)) != 0) {
+        return; // already waiting in its own queue
+      }
+      if (front.add(c) && FailStat.ON) {
+        FailStat.enqueued(c);
+      }
+      return;
+    }
+    if ((c.queueMembership(this) & (1 << 31)) != 0) {
+      return; // already waiting in the front queue
+    }
+    if (queueIndex < currentQueue) {
+      currentQueue = queueIndex;
+    }
+    if (changed[queueIndex].add(c) && FailStat.ON) {
+      FailStat.enqueued(c);
+    }
   }
 
   /**
@@ -736,6 +766,10 @@ public class Store {
     // the constraint whose pruning wakes the variable is told about the change but not queued again
     if (c != currentConstraint) {
       // addChanged(c) without setting propagationHasOccurred, which addChanged(Var...) did
+      if (FailStat.ANY) {
+        enqueue(c, c.getQueueIndex());
+        return;
+      }
       int queueIndex = c.getQueueIndex();
       if (queueIndex < currentQueue) {
         currentQueue = queueIndex;
@@ -785,6 +819,9 @@ public class Store {
 
     while (currentQueue < queueNo) {
       changed[currentQueue++].clear();
+    }
+    if (FailStat.ANY) {
+      front.clear();
     }
   }
 
@@ -897,6 +934,9 @@ public class Store {
    * @return true if some constraint waits for its consistency function.
    */
   public boolean hasPendingConstraints() {
+    if (FailStat.ANY && !front.isEmpty()) {
+      return true;
+    }
     for (int i = currentQueue; i < queueNo; i++) {
       if (!changed[i].isEmpty()) {
         return true;
@@ -931,6 +971,10 @@ public class Store {
 
     if (this.sparseSetSize > 0 && this.sparseSet == null) {
       sparseSet = new SparseSet(sparseSetSize);
+    }
+
+    if (FailStat.ANY) {
+      return consistencyInstrumented();
     }
 
     try {
@@ -969,6 +1013,94 @@ public class Store {
 
     currentConstraint = null;
     return true;
+  }
+
+  /** FailStat prototype: the propagation loop with measurement, front queue and oracle. */
+  private boolean consistencyInstrumented() {
+    boolean outer = FailStat.consistencyStart();
+    Constraint oracleHot = null;
+    boolean failed = false;
+    try {
+      if (outer && FailStat.ORACLE != null) {
+        Constraint t = FailStat.bySerial(FailStat.oracleTarget());
+        if (t != null && !t.isEntailed()) {
+          if (t.queueMembership(this) != 0) {
+            FailStat.oracleRuns++;
+            currentConstraint = t;
+            numberConsistencyCalls++;
+            runOne(t, 9);
+          }
+          if (!t.fsHot) {
+            t.fsHot = true;
+            oracleHot = t;
+          }
+        }
+      }
+      while (true) {
+        Constraint c;
+        int q;
+        if (!front.isEmpty()) {
+          c = front.poll();
+          q = 8;
+        } else {
+          while (currentQueue < queueNo && changed[currentQueue].isEmpty()) {
+            currentQueue++;
+          }
+          if (currentQueue >= queueNo) {
+            break;
+          }
+          q = currentQueue;
+          c = changed[currentQueue].poll();
+        }
+        if (consistencyDeadline > 0 && consistencyDeadlinePassed()) {
+          currentConstraint = null;
+          throw failException;
+        }
+        currentConstraint = c;
+        if (c.firstRunAt() < 0) {
+          startFirstRun(c);
+        }
+        numberConsistencyCalls++;
+        c.countConsistencyCall();
+        long changesBefore = domainChanges;
+        runOne(c, q);
+        if (variableActivityManagement) {
+          updateActivities(c);
+          variablesPrunned.clear();
+        }
+        if (returnAfterPruning && domainChanges != changesBefore) {
+          currentConstraint = null;
+          return true;
+        }
+      }
+    } catch (FailException _) {
+      failed = true;
+      handleConsistencyFailure();
+      return false;
+    } finally {
+      if (oracleHot != null) {
+        oracleHot.fsHot = false;
+      }
+      FailStat.consistencyEnd(outer, failed);
+    }
+    currentConstraint = null;
+    return true;
+  }
+
+  private void runOne(Constraint c, int q) {
+    long t0 = FailStat.ON ? System.nanoTime() : 0;
+    try {
+      c.consistency(this);
+    } catch (FailException e) {
+      long d = FailStat.ON ? System.nanoTime() - t0 : 0;
+      FailStat.called(c, d, q);
+      if (q == 9) {
+        FailStat.oracleFailFirst++;
+      }
+      FailStat.failed(c, d, q);
+      throw e;
+    }
+    FailStat.called(c, FailStat.ON ? System.nanoTime() - t0 : 0, q);
   }
 
   /**

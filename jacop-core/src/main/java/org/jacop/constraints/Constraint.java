@@ -155,6 +155,25 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
   private long consistencyCalls;
 
+  // FailStat measurement prototype (not for merging)
+  /** Creation serial, FailStat prototype. */
+  public final int fsSerial = org.jacop.core.FailStat.register(this);
+
+  /** FailStat prototype: cumulative call count when last queued. */
+  public long fsQueuedCalls;
+
+  /** FailStat prototype: cumulative propagation nanos when last queued. */
+  public long fsQueuedProp;
+
+  /** FailStat prototype: window of the runs counted in fsRuns. */
+  public long fsWindow = -1;
+
+  /** FailStat prototype: runs in window fsWindow. */
+  public int fsRuns;
+
+  /** FailStat prototype: goes to the front queue when woken. */
+  public boolean fsHot;
+
   /** The store whose propagation queues {@link #queueMembership} refers to. */
   private Store queueOwner;
 
