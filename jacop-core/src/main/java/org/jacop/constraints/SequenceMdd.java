@@ -121,6 +121,18 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
   /** The constant part of the cost. */
   public final long costOffset;
 
+  /**
+   * Time-dependent travel, or null: {@code stepTravel[i][j][s]} is the travel time from i to j when
+   * i is left at a time t with {@code t / stepLength == s}; null rows use {@link #travel}.
+   */
+  public final int[][][] stepTravel;
+
+  /** The length of a step of {@link #stepTravel}. */
+  public final int stepLength;
+
+  // stepBest[i][j][s]: the least s' * stepLength + stepTravel[i][j][s'] over s' >= s
+  private final long[][][] stepBest;
+
   private final int n;
   private final int words;
 
@@ -175,7 +187,76 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
       int[] delta,
       int start,
       int width) {
-    this(arcs, pred, offset, in, out, travel, delta, start, width, null, null, 0);
+    this(arcs, pred, offset, in, out, travel, delta, start, width, null, null, 0, null, 0);
+  }
+
+  /**
+   * It creates the constraint with time-dependent travel: the arc i to j implies {@code in[j] >=
+   * out[i] + stepTravel[i][j][out[i] / stepLength]}; i may be left later than its earliest time
+   * when that arrives earlier. A departure after the last step uses the least travel time of the
+   * arc. A null {@code stepTravel[i][j]} says the model links the two times by nothing.
+   *
+   * @param arcs successor variables, or predecessor variables when pred is true.
+   * @param pred whether arcs are predecessor variables.
+   * @param offset the value of arcs that stands for node 0.
+   * @param in the arrival time of each node, null for none.
+   * @param out the departure time of each node, null for none.
+   * @param stepTravel stepTravel[i][j][s], the travel time from i to j when i is left in step s.
+   * @param stepLength the length of a step, at least 1.
+   * @param delta delta[j], the least time from in[j] to out[j], or NONE.
+   * @param start the node the diagram starts from (the depot).
+   * @param width the largest number of diagram nodes in a layer, at least 1.
+   */
+  public SequenceMdd(
+      IntVar[] arcs,
+      boolean pred,
+      int offset,
+      IntVar[] in,
+      IntVar[] out,
+      int[][][] stepTravel,
+      int stepLength,
+      int[] delta,
+      int start,
+      int width) {
+    this(
+        arcs,
+        pred,
+        offset,
+        in,
+        out,
+        leastTravel(stepTravel, arcs.length),
+        delta,
+        start,
+        width,
+        null,
+        null,
+        0,
+        stepTravel,
+        stepLength);
+  }
+
+  private static int[][] leastTravel(int[][][] stepTravel, int size) {
+    if (stepTravel == null || stepTravel.length != size) {
+      throw new IllegalArgumentException("SequenceMdd needs a step travel row per node");
+    }
+    int[][] least = new int[size][size];
+    for (int i = 0; i < size; i++) {
+      if (stepTravel[i] == null || stepTravel[i].length != size) {
+        throw new IllegalArgumentException("SequenceMdd needs " + size + " step travels per row");
+      }
+      for (int j = 0; j < size; j++) {
+        int[] row = stepTravel[i][j];
+        int m = NONE;
+        if (row != null && row.length > 0) {
+          m = Integer.MAX_VALUE;
+          for (int v : row) {
+            m = Math.min(m, v);
+          }
+        }
+        least[i][j] = m;
+      }
+    }
+    return least;
   }
 
   /**
@@ -209,6 +290,25 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
       int[][] costs,
       IntVar cost,
       long costOffset) {
+    this(
+        arcs, pred, offset, in, out, travel, delta, start, width, costs, cost, costOffset, null, 0);
+  }
+
+  private SequenceMdd(
+      IntVar[] arcs,
+      boolean pred,
+      int offset,
+      IntVar[] in,
+      IntVar[] out,
+      int[][] travel,
+      int[] delta,
+      int start,
+      int width,
+      int[][] costs,
+      IntVar cost,
+      long costOffset,
+      int[][][] stepTravel,
+      int stepLength) {
     checkInputForNullness("arcs", arcs);
     if (in == null || out == null || travel == null || delta == null) {
       throw new IllegalArgumentException("SequenceMdd needs travel times and deltas");
@@ -259,6 +359,32 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     }
     this.cost = cost;
     this.costOffset = costOffset;
+    if (stepTravel != null && stepLength < 1) {
+      throw new IllegalArgumentException("SequenceMdd needs a step length of at least 1");
+    }
+    this.stepLength = stepLength;
+    if (stepTravel != null) {
+      this.stepTravel = new int[size][size][];
+      this.stepBest = new long[size][size][];
+      for (int i = 0; i < size; i++) {
+        for (int j = 0; j < size; j++) {
+          int[] row = stepTravel[i][j];
+          if (row == null) {
+            continue;
+          }
+          this.stepTravel[i][j] = Arrays.copyOf(row, row.length);
+          long[] best = new long[row.length + 1];
+          best[row.length] = INF;
+          for (int k = row.length - 1; k >= 0; k--) {
+            best[k] = Math.min(best[k + 1], (long) k * stepLength + row[k]);
+          }
+          this.stepBest[i][j] = best;
+        }
+      }
+    } else {
+      this.stepTravel = null;
+      this.stepBest = null;
+    }
     this.n = size;
     this.words = (size + 63) >>> 6;
     this.queueIndex = 4;
@@ -314,9 +440,57 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     long a = lo(in[j]);
     int d = travel[i][j];
     if (d != NONE && t > NEG) {
-      a = Math.max(a, t + d);
+      a =
+          Math.max(
+              a, stepTravel == null || stepTravel[i][j] == null ? t + d : stepArrival(i, j, t));
     }
     return a > hi(in[j]) ? INF : a;
+  }
+
+  // the travel time from i to j when i is left at t
+  private long travelAt(int i, int j, long t) {
+    int[] row = stepTravel == null ? null : stepTravel[i][j];
+    if (row == null) {
+      return travel[i][j];
+    }
+    long s = t < 0 ? 0 : t / stepLength;
+    return s < row.length ? row[(int) s] : travel[i][j];
+  }
+
+  // the earliest arrival at j over the departures from i at t or later, up to the latest one
+  private long stepArrival(int i, int j, long t) {
+    int[] row = stepTravel[i][j];
+    long[] best = stepBest[i][j];
+    long latest = hi(out[i]);
+    long a = t + travelAt(i, j, t);
+    long s = t < 0 ? 0 : t / stepLength + 1;
+    for (; s < row.length && s * stepLength <= latest && best[(int) s] < a; s++) {
+      a = Math.min(a, s * stepLength + row[(int) s]);
+    }
+    long beyond = (long) row.length * stepLength;
+    if (beyond > t && beyond <= latest) {
+      a = Math.min(a, beyond + travel[i][j]);
+    }
+    return a;
+  }
+
+  // the latest departure from i, at most the latest one, that arrives at j by x, or NEG when none
+  private long stepLatest(int i, int j, long x) {
+    int[] row = stepTravel[i][j];
+    long latest = hi(out[i]);
+    long beyond = (long) row.length * stepLength;
+    long d0 = Math.min(x - travel[i][j], latest);
+    if (d0 >= beyond) {
+      return d0;
+    }
+    for (int s = row.length - 1; s >= 0; s--) {
+      long first = (long) s * stepLength;
+      long d = Math.min(Math.min(first + stepLength - 1, x - row[s]), latest);
+      if (d >= first) {
+        return d;
+      }
+    }
+    return NEG;
   }
 
   // the earliest departure from j after arriving at a, or INF when the window of j is missed
@@ -538,27 +712,27 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
     if (loIn > hiIn) {
       return NEG;
     }
-    long d = INF;
-    int tr = travel[i][j];
-    if (tr != NONE) {
-      d = hiIn - tr;
-    }
-    if (j == start) {
-      // the closing arc: only the arrival counts
-      return d;
-    }
-    if (lo(out[j]) > l) {
-      return NEG;
-    }
-    if (delta[j] != NONE) {
-      if (loIn + delta[j] > l) {
+    long x = hiIn;
+    if (j != start) {
+      if (lo(out[j]) > l) {
         return NEG;
       }
-      if (tr != NONE) {
-        d = Math.min(d, l - delta[j] - tr);
+      if (delta[j] != NONE) {
+        if (loIn + delta[j] > l) {
+          return NEG;
+        }
+        x = Math.min(x, l - delta[j]);
       }
     }
-    return d;
+    // the closing arc: only the arrival counts
+    int tr = travel[i][j];
+    if (tr == NONE) {
+      return INF;
+    }
+    if (stepTravel != null && stepTravel[i][j] != null) {
+      return x >= INF ? INF : stepLatest(i, j, x);
+    }
+    return x >= INF ? INF : x - tr;
   }
 
   // backward pass: the latest departure of each (node, last) that still reaches the closing arc;
@@ -766,7 +940,7 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
       if (tr != NONE
           && in[j] != null
           && out[i] != null
-          && in[j].value() < (long) out[i].value() + tr) {
+          && in[j].value() < out[i].value() + travelAt(i, j, out[i].value())) {
         return false;
       }
       total += arcCost(i, j);
@@ -824,7 +998,9 @@ public class SequenceMdd extends Constraint implements SatisfiedPresent, Copyabl
         width,
         costs,
         cost == null ? null : map.get(cost),
-        costOffset);
+        costOffset,
+        stepTravel,
+        stepLength);
   }
 
   private static IntVar[] mapNullable(VarMap map, IntVar[] vars) {
