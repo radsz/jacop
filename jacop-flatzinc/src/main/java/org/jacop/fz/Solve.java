@@ -2179,7 +2179,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
     long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
     probeRefuted = !early.probeRoot((long) (lcgProbe * left * 1_000_000L));
-    List<LinearForm> rows = probeRefuted ? List.of() : conflictRows(early);
+    List<LinearForm> rows =
+        probeRefuted
+            ? List.of()
+            : ConflictCliques.rows(early.probeConflicts(), early.probeConflictValues(), 50_000);
     early.release();
     earlyProber = early;
     return rows;
