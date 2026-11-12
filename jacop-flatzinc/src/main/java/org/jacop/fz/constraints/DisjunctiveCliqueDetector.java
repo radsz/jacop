@@ -75,13 +75,13 @@ import org.jacop.presolve.InferredCumulatives;
  * <p>Setting the system property {@code org.jacop.fz.disjunctiveCliques} to false turns the
  * detection off.
  *
- * <p>With the system property {@code org.jacop.fz.inferredCumulatives} set to true (off by default)
- * it also posts the redundant cumulatives that {@link InferredCumulatives} infers by lifting covers
- * of the cumulatives with fixed capacities and the disjoint pairs (Sidorov, "On Inferring
- * Cumulative Constraints", CP 2026). {@code org.jacop.fz.inferredCumulatives.covers} (100) and
- * {@code org.jacop.fz.inferredCumulatives.out} (5) are the paper's N_cover and N_out; {@code
- * org.jacop.fz.inferredCumulatives.disjoint} (true) also lifts over the pairs of tasks that the
- * precedences and disjunctions keep apart, which the paper does not. {@code
+ * <p>With the system property {@code org.jacop.fz.inferredCumulatives} not set to false (on by
+ * default) it also posts the redundant cumulatives that {@link InferredCumulatives} infers by
+ * lifting covers of the cumulatives with fixed capacities and the disjoint pairs (Sidorov, "On
+ * Inferring Cumulative Constraints", CP 2026). {@code org.jacop.fz.inferredCumulatives.covers}
+ * (100) and {@code org.jacop.fz.inferredCumulatives.out} (5) are the paper's N_cover and N_out;
+ * {@code org.jacop.fz.inferredCumulatives.disjoint} (true) also lifts over the pairs of tasks that
+ * the precedences and disjunctions keep apart, which the paper does not. {@code
  * org.jacop.fz.inferredCumulatives.useful} (true) posts only those whose capacity bound {@code
  * sum(d_i * pi_i) / pi_0} exceeds that of every input cumulative and clique found.
  *
@@ -140,10 +140,10 @@ public class DisjunctiveCliqueDetector implements ParserTreeConstants {
   /**
    * It tells if the inference of redundant cumulatives is on.
    *
-   * @return true if the system property org.jacop.fz.inferredCumulatives is true.
+   * @return false if the system property org.jacop.fz.inferredCumulatives is false.
    */
   public static boolean inferredEnabled() {
-    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.inferredCumulatives", FALSE));
+    return !FALSE.equalsIgnoreCase(System.getProperty("org.jacop.fz.inferredCumulatives"));
   }
 
   /**

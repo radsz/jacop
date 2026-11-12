@@ -4234,8 +4234,8 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
-247. Inferred redundant cumulatives (-Dorg.jacop.fz.inferredCumulatives=true,
-     off by default), after A. Sidorov, On Inferring Cumulative
+247. Inferred redundant cumulatives (on by default;
+     -Dorg.jacop.fz.inferredCumulatives=false turns them off), after A. Sidorov, On Inferring Cumulative
      Constraints, CP 2026 (arXiv 2602.15635). At each time point a
      cumulative is a knapsack inequality over the tasks that run then; a
      cover of these inequalities (tasks that cannot all run together) is
@@ -4259,7 +4259,11 @@ Version 5.0 (unreleased)
      test-scheduling t30m20r3-20 is proved in 0.7 s (open after 600 s
      without). 31 of 100 cumulative instances get one; on them, at 240 s,
      model search solves 24 instead of 23 and -f 28 as before in 327 s
-     instead of 365 s, with no instance lost (also at 600 s).
+     instead of 365 s, with no instance lost (also at 600 s). On by
+     default after a round with the default jar: of the 240 wide-set
+     instances 21 run the inference (at most 1 s, largescheduling) and 4
+     get an inferred cumulative; on the 31 instances, model search 24
+     solved instead of 23, -f 28 as before in 282 s instead of 354 s.
 
 Version 4.11
 =============
