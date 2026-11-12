@@ -4249,8 +4249,11 @@ Version 5.0 (unreleased)
      (7 wide-set instances; XCSP AircraftLanding, CarSequencing,
      ChampionsLeague, DC-skinny, FAPP, Nonogram, Ortholatin, Pentominoes,
      SportsScheduling, Subisomorphism, WordSquare). On 55 of them at
-     240 s: -f 29 -> 31 solved, default 27 -> 28, times 0.91-0.95 on the
-     instances both solve; FAPP-aux-01, -20 and -test01 are proved.
+     600 s: default 29 -> 30 solved, geomean time 0.88 on the 28 both
+     solve; -f on the 27 optimisation ones 12 -> 13 solved. FAPP-aux-20
+     is proved (base runs out of memory), SportsScheduling-dummy-14 is
+     solved in 48 s, CarSequencing-table-75/80 4-8x faster;
+     CarSequencing-table-90-02 is no longer solved in 600 s.
      -Dorg.jacop.fz.tableReformulation=false turns it off; see
      properties.txt.
 
