@@ -4560,6 +4560,21 @@ Version 5.0 (unreleased)
      and workforce-alloc 71 with free search. -Dorg.jacop.fz.symmetrySets=false and
      -Dorg.jacop.fz.symmetryEncoded=false turn the two parts off.
 
+266. SequenceMdd compiles its diagram without allocating: the arcs of the
+     current domains are read once per call into bit masks, each diagram
+     node keeps a mask of the last nodes of its paths, and the nodes of the
+     next layer are found by a Zobrist hash of their visited sets in an
+     open-addressing table instead of a HashMap of copied masks. The time
+     bounds are read once per call. The diagram, the pruning and the search
+     trees are unchanged; at 600 s over the 21 tsptw, stochastic-vrp and
+     tdtsp instances it proves, the time to proof is 0.87x (geometric mean),
+     tsptw n20w180.004 293.6 s -> 152.7 s. Above 32 nodes
+     (-Djacop.sequenceMdd.replayNodes) lazy clause generation takes the
+     generic reason instead of replaying the constraint, whose replays cost
+     83 % of its time on 60-node circuits. The FlatZinc limit of 32 nodes
+     stays: on vrplc (40 to 60 nodes) the diagram leaves the search tree as
+     large as before, so it cannot pay for itself there.
+
 Version 4.11
 =============
 

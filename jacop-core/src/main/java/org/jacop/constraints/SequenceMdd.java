@@ -70,7 +70,13 @@ import org.jacop.lcg.Explainable;
  * depot, often the objective.
  *
  * <p>The pruning depends only on the current domains of the variables, so the generic reason of
- * lazy clause generation explains it.
+ * lazy clause generation explains it; circuits of at most {@code -Djacop.sequenceMdd.replayNodes}
+ * (32) nodes are explained by replaying the constraint instead.
+ *
+ * <p>A call allocates nothing: the arcs of the current domains are read into bit masks, each
+ * diagram node keeps a mask of the last nodes of its paths, and the nodes of the next layer are
+ * found by a Zobrist hash of their visited sets (Zobrist, A new hashing method with application for
+ * game playing, Technical Report 88, University of Wisconsin, 1970).
  *
  * @author Radoslaw Szymanek
  * @version 5.0
