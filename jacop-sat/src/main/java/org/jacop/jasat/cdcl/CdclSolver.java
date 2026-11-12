@@ -100,12 +100,14 @@ public final class CdclSolver {
   // --- variables and assignment
   private int numVars;
   private byte[] vals = new byte[0];
-  // per variable v, one record of VREC ints at v << 2: level, reason and trail position, so an
-  // assignment writes one cache line and conflict analysis reads one line per variable
-  // (Kissat's struct assigned); slot 3 is padding that keeps a record inside one line
+  // per variable v, one record of VREC ints at v << 2: its decision level, reason, trail position
+  // and the seen mark of conflict analysis and minimisation (0 or 1). An assignment writes one
+  // cache line, and analysis reads one line per variable instead of one per array (as Kissat's
+  // struct assigned and CaDiCaL's Var). 16 bytes keep a record inside one line.
   private static final int LEVEL = 0;
   private static final int REASON = 1;
   private static final int TPOS = 2;
+  private static final int SEEN = 3;
   private static final int VREC = 4;
   private int[] vdata = new int[0];
   private byte[] savedSign = new byte[0];
@@ -126,7 +128,6 @@ public final class CdclSolver {
   private int chronoLimit = 100;
   private int targetAssigned;
   private double[] activity = new double[0];
-  private byte[] seen = new byte[0];
 
   /** Whether the analysed variables besides the learnt ones go to the external propagator. */
   private boolean analysedNotify;
@@ -383,7 +384,6 @@ public final class CdclSolver {
       targetSign = Arrays.copyOf(targetSign, c);
       bestSign = Arrays.copyOf(bestSign, c);
       activity = Arrays.copyOf(activity, c);
-      seen = Arrays.copyOf(seen, c);
       analysedMark = Arrays.copyOf(analysedMark, c);
       trail = Arrays.copyOf(trail, c);
       shrinkMark = Arrays.copyOf(shrinkMark, c);
@@ -1609,7 +1609,8 @@ public final class CdclSolver {
           pathCount += analyzeLit(mem[lits + k]);
         }
       }
-      while (seen[trail[index] >> 1] == 0 || litLevel(trail[index]) != decisionLevel) {
+      while (vdata[(trail[index] >> 1) << 2 | SEEN] == 0
+          || litLevel(trail[index]) != decisionLevel) {
         index--;
       }
       if (notifying && pathCount >= 2 && groupsOpen == 1 && ungroupedOpen == 0) {
@@ -1621,7 +1622,7 @@ public final class CdclSolver {
       }
       p = trail[index--];
       ref = reasonRef(p >> 1);
-      seen[p >> 1] = 0;
+      vdata[(p >> 1) << 2 | SEEN] = 0;
       pathCount--;
       if (notifying) {
         closeFrontier(p >> 1);
@@ -1656,9 +1657,9 @@ public final class CdclSolver {
     }
 
     for (int i = 0; i < toClearSize; i++) {
-      seen[toClear[i]] = 0;
+      vdata[toClear[i] << 2 | SEEN] = 0;
     }
-    seen[learnt[0] >> 1] = 0;
+    vdata[(learnt[0] >> 1) << 2 | SEEN] = 0;
     learntLiterals += learntSize;
     if (notifying) {
       for (int i = 0; i < learntSize; i++) {
@@ -1747,7 +1748,7 @@ public final class CdclSolver {
     int n = 0;
     for (int t = index; n < open; t--) {
       int v = trail[t] >> 1;
-      if (seen[v] != 0 && varLevel(v) == decisionLevel) {
+      if (vdata[v << 2 | SEEN] != 0 && varLevel(v) == decisionLevel) {
         frontier[n++] = toDimacs(trail[t]);
       }
     }
@@ -1761,7 +1762,7 @@ public final class CdclSolver {
     }
     for (int k = 0; k < n; k++) {
       int v = Math.abs(frontier[k]) - 1;
-      seen[v] = 0;
+      vdata[v << 2 | SEEN] = 0;
       closeFrontier(v);
     }
     semanticUips++;
@@ -1878,16 +1879,16 @@ public final class CdclSolver {
       shrinkMark[v] = shrinkStamp;
       return 1;
     }
-    return l == 0 || seen[v] != 0 ? 0 : Integer.MIN_VALUE / 2;
+    return l == 0 || vdata[v << 2 | SEEN] != 0 ? 0 : Integer.MIN_VALUE / 2;
   }
 
   /** Marks the variable of a reason literal; returns 1 when it is at the conflict level. */
   private int analyzeLit(int q) {
     int v = q >> 1;
-    if (seen[v] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
+    if (vdata[v << 2 | SEEN] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
       return 0;
     }
-    seen[v] = 1;
+    vdata[v << 2 | SEEN] = 1;
     markClear(v);
     bumpVar(v);
     if (varLevel(v) >= decisionLevel) {
@@ -1933,7 +1934,7 @@ public final class CdclSolver {
 
   private boolean removable(int q, int abstractLevels, int depth) {
     int v = q >> 1;
-    if (seen[v] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
+    if (vdata[v << 2 | SEEN] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
       return true;
     }
     if (poisonMark[v] == poisonStamp
@@ -1943,7 +1944,7 @@ public final class CdclSolver {
       return false;
     }
     if (antecedentsRemovable(v, abstractLevels, depth)) {
-      seen[v] = 1;
+      vdata[v << 2 | SEEN] = 1;
       markClear(v);
       return true;
     }
@@ -2026,7 +2027,7 @@ public final class CdclSolver {
 
   private void markFinal(int q) {
     if (litLevel(q) > 0) {
-      seen[q >> 1] = 1;
+      vdata[(q >> 1) << 2 | SEEN] = 1;
     }
   }
 
@@ -2039,7 +2040,7 @@ public final class CdclSolver {
   private int collectFinal(int[] out, int n) {
     for (int i = trailSize - 1; i >= trailLim[0]; i--) {
       int x = trail[i] >> 1;
-      if (seen[x] == 0) {
+      if (vdata[x << 2 | SEEN] == 0) {
         continue;
       }
       int r = reasonRef(x);
@@ -2054,7 +2055,7 @@ public final class CdclSolver {
           markFinal(m[off + HEADER + k]);
         }
       }
-      seen[x] = 0;
+      vdata[x << 2 | SEEN] = 0;
     }
     return n;
   }
