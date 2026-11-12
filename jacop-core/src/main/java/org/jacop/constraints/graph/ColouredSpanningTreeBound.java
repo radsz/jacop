@@ -304,6 +304,15 @@ public class ColouredSpanningTreeBound extends Constraint
       return;
     }
 
+    // the filtering removes and selects edges, and the store does not run the constraint again for
+    // its own pruning: the edges it selected may close a cycle, pass a colour limit or the cost
+    do {
+      store.propagationHasOccurred = false;
+      propagate(store);
+    } while (store.propagationHasOccurred);
+  }
+
+  private void propagate(Store store) {
     int k = contract();
     long selectedWeight = contractedWeight;
     if (k > 1) {

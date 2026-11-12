@@ -400,6 +400,57 @@ class UnaryEarlinessTardinessTest {
     assertTrue(prunings > 0, "the filtering never pruned");
   }
 
+  /**
+   * The subgradient search keeps the bound below the minimum when tasks on a machine are owned by
+   * none: their starts were read from the flow of the machine, which ignores their multipliers, so
+   * a violated precedence stayed violated, the multipliers grew to about 4 * 10^14 and the bound
+   * overflowed above the maximum, failing a node whose minimum is 34
+   * (lagrangianBoundStaysBelowTheMinimum with xseed 929, instance 458).
+   */
+  @Test
+  void subgradientFollowsTheTasksNoMachineOwns() {
+    Problem q =
+        new Problem(
+            5,
+            new int[] {1, 3, 2, 2, 2},
+            new int[][] {{0, 1, 2, 3, 4}},
+            new int[] {0, -1, 0, 0, -1},
+            new int[][] {
+              {0, -1, 2, 0},
+              {0, 1, 1, 2},
+              {2, -2, 2, 3},
+              {2, 0, 3, 4},
+              {3, 9, 4, 0},
+              {3, 5, 0, 2},
+              {4, -2, 0, 2}
+            },
+            new int[] {2, 1, 0, 5, 6},
+            new int[] {8, 5, 3, 10, 11});
+    int[][] precedences = {{0, 4, 0}, {1, 3, 2}, {1, 4, 4}, {2, 3, 1}, {2, 4, 3}};
+    int[] optimum = {2, 3, 0, 9, 7};
+    assertTrue(q.feasible(optimum) && precedencesHold(precedences, optimum));
+    assertEquals(34, q.cost(optimum));
+    for (int max : new int[] {34, 36, 100}) {
+      Store store = new Store();
+      IntVar[] s = new IntVar[q.n];
+      for (int i = 0; i < q.n; i++) {
+        s[i] = new IntVar(store, "s" + i, q.lo[i], q.hi[i]);
+      }
+      IntVar c = new IntVar(store, "c", 0, max);
+      UnaryEarlinessTardiness et =
+          new UnaryEarlinessTardiness(s, q.p, q.machines, q.owner, q.terms, precedences, c);
+      store.impose(et);
+      assertTrue(store.consistency(), "max " + max);
+      for (int i = 0; i < q.n; i++) {
+        assertTrue(s[i].domain.contains(optimum[i]), "max " + max + " s" + i);
+      }
+      for (long l : et.multipliers()) {
+        assertTrue(
+            l < 1_000_000, "max " + max + " multipliers " + Arrays.toString(et.multipliers()));
+      }
+    }
+  }
+
   // random precedences {i, j, d} between tasks i < j
   private static int[][] randomPrecedences(Random r, Problem q) {
     List<int[]> list = new ArrayList<>();
