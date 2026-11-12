@@ -4516,6 +4516,14 @@ Version 5.0 (unreleased)
      GiantTourDetector; System property org.jacop.fz.tspElimination=false
      turns it off, org.jacop.fz.tspEliminationMs (default 2000) limits it.
 
+247. The LCG explanation of a table (HybridTable) breaks ties between
+     columns that kill a tuple at the same cost by the narrowest bounds
+     of the column, not by the lowest column index, so the learnt clause
+     no longer depends on the order of the table's columns. On the 28
+     XCSP Charlotte and Fortress instances 21 are solved in 240 s instead
+     of 16, and 22 instead of 18 in 600 s (Fortress2-05, -08, -09 and -10
+     in 3 to 27 s instead of the time limit).
+
 Version 4.11
 =============
 
