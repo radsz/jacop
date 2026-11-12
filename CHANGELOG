@@ -4234,7 +4234,25 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
-244. TSP edge elimination: before search, a pure symmetric travelling
+247. JaLP no longer cycles on LPs with large costs or huge artificial
+     bounds. A reduced cost past the dual tolerance (1e-9) but within
+     1e-14 of the sizes of its terms is taken as zero: with costs near
+     1e7 such values are a few units in the last place and took either
+     sign as the basis changed, so the dual simplex flipped two parallel
+     columns to an artificial bound and back without end and the primal
+     simplex let two columns enter in turn after every refactorization
+     (Dantzig-Wolfe master LPs of work-task-variation, osolpro
+     benchmarks/decomposition-bounds). Both simplexes also keep hashes of
+     their last 32 bases: after 20 pivots back to one of them the dual
+     simplex leaves the row out and, if any row is still outside its
+     bounds on fresh factors at the end, stops at LIMIT rather than
+     return a point outside a row; the primal simplex hands over to the
+     dual one. That ends a cycle of the exact LP fuzzer at LIMIT (seed
+     36935: free columns at bounds of 1e12, the slacks of two parallel
+     rows swapped forever). Both reproducers solve in 113 and 1,818
+     pivots, before they ran until the pivot limit.
+
+248. TSP edge elimination: before search, a pure symmetric travelling
      salesman model (one circuit with no fixed successor, the minimised
      objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
      the arcs that are in no optimal tour, proved from the distances alone
