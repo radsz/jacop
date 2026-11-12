@@ -716,15 +716,16 @@ public final class InferredCumulatives {
     if (count == 0) {
       return 0;
     }
-    Integer[] boxed = new Integer[count];
+    // largest coefficient first, then by task; packed into longs to sort without boxing
+    long[] keys = new long[count];
     for (int k = 0; k < count; k++) {
-      boxed[k] = items[k];
+      keys[k] = ((long) (Integer.MAX_VALUE - pi[items[k]]) << 32) | items[k];
     }
-    Arrays.sort(boxed, Comparator.comparingInt((Integer c) -> -pi[c]).thenComparingInt(c -> c));
+    Arrays.sort(keys);
     int[] it = new int[count];
     int[] val = new int[count];
     for (int k = 0; k < count; k++) {
-      it[k] = boxed[k];
+      it[k] = (int) keys[k];
       val[k] = pi[it[k]];
     }
     int upper = (int) Math.min(pi0, rootBound(it, val, cap));
