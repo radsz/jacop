@@ -317,10 +317,7 @@ final class DecompositionBound {
     Map<IntVar, Constraint> defining = new IdentityHashMap<>();
     Constraint definition = null;
     for (Constraint c : all) {
-      if (c instanceof BoolClause) {
-        continue;
-      }
-      LinearForm f = LinearForms.of(c);
+      LinearForm f = c instanceof BoolClause ? null : LinearForms.of(c);
       if (f == null || f.relation() != LinearForm.EQ) {
         continue;
       }
@@ -436,7 +433,12 @@ final class DecompositionBound {
       Map<Var, Integer> size = sizes(parent);
       List<Integer> top = new ArrayList<>(size.values());
       top.sort(Collections.reverseOrder());
-      int second = top.size() > 1 ? top.get(1) : top.isEmpty() ? 0 : top.get(0);
+      int second = 0;
+      if (top.size() > 1) {
+        second = top.get(1);
+      } else if (!top.isEmpty()) {
+        second = top.get(0);
+      }
       int threshold = Math.max(large(), second / 4);
       boolean changed = false;
       for (Constraint c : candidates) {
@@ -547,15 +549,14 @@ final class DecompositionBound {
       Integer b = null;
       boolean inside = true;
       for (Var v : c.arguments()) {
-        if (v.singleton()) {
-          continue;
+        if (!v.singleton()) {
+          Integer vb = parent.containsKey(v) ? blockOf.get(find(parent, v)) : null;
+          if (vb == null || b != null && !b.equals(vb)) {
+            inside = false;
+            break;
+          }
+          b = vb;
         }
-        Integer vb = parent.containsKey(v) ? blockOf.get(find(parent, v)) : null;
-        if (vb == null || b != null && !b.equals(vb)) {
-          inside = false;
-          break;
-        }
-        b = vb;
       }
       if (inside && b != null) {
         blocks.get(b).own.add(c);
@@ -611,7 +612,7 @@ final class DecompositionBound {
       for (Map.Entry<Integer, List<Object[]>> e : rows.get(ri).terms.entrySet()) {
         Block b = blocks.get(e.getKey());
         for (Object[] t : e.getValue()) {
-          if ((Boolean) t[2]) {
+          if (Boolean.TRUE.equals(t[2])) {
             b.counted.add(new long[] {ri, (Long) t[1]});
             b.countedVars.add((IntVar) t[0]);
           } else {
@@ -669,16 +670,6 @@ final class DecompositionBound {
         }
       }
     }
-  }
-
-  private static int free(IntVar[] vars) {
-    int n = 0;
-    for (IntVar v : vars) {
-      if (!v.singleton()) {
-        n++;
-      }
-    }
-    return n;
   }
 
   private static int indexOf(IntVar[] vars, IntVar v) {
@@ -811,7 +802,7 @@ final class DecompositionBound {
           big = Math.max(big, 1 + 2 * Math.abs((double) c.cost()));
         }
         double[][] duals = master(columns, big);
-        if (duals == null) {
+        if (duals.length == 0) {
           break;
         }
         y = duals[0];
@@ -847,7 +838,7 @@ final class DecompositionBound {
             lk = Math.addExact(lk, Math.multiplyExact(yk[r], side));
           }
         }
-      } catch (ArithmeticException e) {
+      } catch (ArithmeticException _) {
         break;
       }
       int added = 0;
@@ -881,14 +872,14 @@ final class DecompositionBound {
         } else {
           try {
             lk = Math.addExact(lk, least);
-          } catch (ArithmeticException e) {
+          } catch (ArithmeticException _) {
             exact = false;
           }
         }
         for (Column c : p.columns) {
           String key = c.block() + ":" + c.cost() + ":" + c.activity();
           // reduced cost below the block's convexity dual: improves the master
-          double reduced = c.cost();
+          double reduced = (double) c.cost();
           for (Map.Entry<Integer, Long> e : c.activity().entrySet()) {
             reduced -= y[e.getKey()] * e.getValue();
           }
@@ -909,7 +900,7 @@ final class DecompositionBound {
           certified = true;
           centre = price;
           improved = System.currentTimeMillis();
-          if (!maximize ? best >= objectiveHi : -best <= objectiveLo) {
+          if (maximize ? -best <= objectiveLo : best >= objectiveHi) {
             break;
           }
         }
@@ -938,7 +929,10 @@ final class DecompositionBound {
         alpha = SMOOTHING;
       }
     }
-    long bound = !certified ? 0 : maximize ? -best : best;
+    long bound = 0;
+    if (certified) {
+      bound = maximize ? -best : best;
+    }
     return new Outcome(
         nb,
         m,
@@ -1000,8 +994,8 @@ final class DecompositionBound {
   }
 
   /**
-   * The master LP over the columns, with artificial columns of cost {@code big} for every row; null
-   * if JaLP gives no duals.
+   * The master LP over the columns, with artificial columns of cost {@code big} for every row; an
+   * empty array if JaLP gives no duals.
    */
   private double[][] master(List<Column> columns, double big) {
     int m = rows.size();
@@ -1080,14 +1074,14 @@ final class DecompositionBound {
       }
     }
     if (status == RevisedDualSimplex.INFEASIBLE || status == RevisedDualSimplex.UNBOUNDED) {
-      return null;
+      return new double[0][];
     }
     double[] d = lp.duals();
     double[] y = Arrays.copyOf(d, m);
     double[] mu = Arrays.copyOfRange(d, m, nr);
     for (double v : d) {
       if (!Double.isFinite(v)) {
-        return null;
+        return new double[0][];
       }
     }
     return new double[][] {y, mu};
@@ -1155,12 +1149,12 @@ final class DecompositionBound {
       vc[i] = valued.get(cvars[i]);
     }
     if (block.copy && block.copyable) {
-      Pricing p = priceCopy(b, block, k, cvars, w, vc, deadline);
+      Pricing p = priceCopy(b, block, cvars, w, vc, deadline);
       if (block.copyable) {
         return p;
       }
     }
-    Pricing result = priceInStore(b, block, k, cvars, w, vc, deadline);
+    Pricing result = priceInStore(b, block, cvars, w, vc, deadline);
     if (result != null
         && !result.complete
         && block.copyable
@@ -1168,7 +1162,7 @@ final class DecompositionBound {
       // the search in the store ran out of time: the block's pricing problems go to a copy with
       // lazy clause generation from now on
       block.copy = true;
-      Pricing p = priceCopy(b, block, k, cvars, w, vc, deadline);
+      Pricing p = priceCopy(b, block, cvars, w, vc, deadline);
       if (block.copyable) {
         p.columns.addAll(result.columns);
         return p;
@@ -1179,13 +1173,7 @@ final class DecompositionBound {
 
   /** Minimizes the reduced cost of block b by branch and bound in the store. */
   private Pricing priceInStore(
-      int b,
-      Block block,
-      long k,
-      IntVar[] cvars,
-      long[] w,
-      Map<Integer, Long>[] vc,
-      long deadline) {
+      int b, Block block, IntVar[] cvars, long[] w, Map<Integer, Long>[] vc, long deadline) {
     List<IntVar> branch = branchOrder(block);
     Pricing result = new Pricing();
     ReducedCost rc = new ReducedCost(cvars, w, vc);
@@ -1375,13 +1363,7 @@ final class DecompositionBound {
    * as not copyable, and returns null, when one of its constraints or variables cannot be copied.
    */
   private Pricing priceCopy(
-      int b,
-      Block block,
-      long k,
-      IntVar[] cvars,
-      long[] w,
-      Map<Integer, Long>[] vc,
-      long deadline) {
+      int b, Block block, IntVar[] cvars, long[] w, Map<Integer, Long>[] vc, long deadline) {
     if (!block.probed) {
       probe(block, deadline);
       if (!block.copyable) {
