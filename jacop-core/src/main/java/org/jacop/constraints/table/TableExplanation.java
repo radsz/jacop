@@ -115,8 +115,10 @@ final class TableExplanation {
   private int reqCount;
   private int altCount;
 
-  // Entries in the reason have chosen[entry] == call.
-  private int[] chosen = new int[256];
+  // Entries in the reason have chosen[entry] == mark. The array is the trail's, shared by all
+  // explanations (AtomicTrail.newEntryMark), so the memory is one trail length, not one per table.
+  private int[] chosen;
+  private int mark;
 
   private long[] candidates;
 
@@ -217,7 +219,6 @@ final class TableExplanation {
     if (call == Integer.MAX_VALUE) {
       call = 1;
       Arrays.fill(built, 0);
-      Arrays.fill(chosen, 0);
       Arrays.fill(columnChosen, 0);
       for (int[] stamp : valueStamp) {
         if (stamp != null) {
@@ -225,9 +226,8 @@ final class TableExplanation {
         }
       }
     }
-    if (chosen.length < position) {
-      chosen = Arrays.copyOf(chosen, Math.max(position, 2 * chosen.length));
-    }
+    mark = trail.newEntryMark(position);
+    chosen = trail.entryMarks();
   }
 
   /**
@@ -348,7 +348,7 @@ final class TableExplanation {
 
   private boolean anyChosen(int q) {
     for (int k = reqStart[q]; k < reqStart[q + 1]; k++) {
-      if (chosen[alt[k]] == call) {
+      if (chosen[alt[k]] == mark) {
         return true;
       }
     }
@@ -356,7 +356,7 @@ final class TableExplanation {
   }
 
   private void choose(int e, EntryList out) {
-    chosen[e] = call;
+    chosen[e] = mark;
     out.add(e);
     IntVar y = trail.variable(e);
     for (int j = 0; j < table.x.length; j++) {
