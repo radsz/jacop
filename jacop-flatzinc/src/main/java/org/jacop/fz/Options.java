@@ -238,6 +238,8 @@ public class Options {
                 gives way to free search without learning, default 50; 0 = off),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
+                lcg-slow-exclude=on|off (the time of implied constraints, the LP relaxation
+                and the time-indexed bound is left out of the rate of lcg-slow-rate, default on),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),

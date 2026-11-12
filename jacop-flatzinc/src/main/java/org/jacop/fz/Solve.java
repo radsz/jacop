@@ -2533,6 +2533,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcgStart = System.nanoTime();
     long wait = (long) (at * options.getRemainingTimeOut());
     LcgSolver solver = lcg;
+    // the implied constraints that raise bounds (inferred cumulatives, the LP relaxation, the
+    // time-indexed bound) slow every node; their time is left out of the rate, which is meant to
+    // tell a search that learns too little from one that only propagates more. With them, rcpsp
+    // 2013/15 gave way at 31 s of 240 and its bound stayed at 187 instead of 274
+    boolean exclude = "on".equals(options.freeConfig("lcg-slow-exclude", "on"));
+    if (exclude) {
+      for (Constraint c : store.impliedConstraints()) {
+        store.timeConstraint(c);
+      }
+      if (linearRelaxation != null) {
+        store.timeConstraint(linearRelaxation);
+      }
+      if (timeIndexedBound != null) {
+        store.timeConstraint(timeIndexedBound);
+      }
+    }
+    long timedStart = store.timedNanos();
     if (wait <= 0) {
       // lcg-slow-at=0: free search without learning from the start, after LCG's root propagation
       lcgSlow = true;
@@ -2547,7 +2564,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 // LCG gives way only with a solution to hand over: without one, the check is
                 // made again until LCG has one or is no longer slow. cutstock type16 TEST9
                 // found its first solution with LCG at 37 s and none without
-                while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
+                while (solver.sat().conflicts
+                    < rate
+                        * (System.nanoTime() - lcgStart - (store.timedNanos() - timedStart))
+                        / 1e9) {
                   if (tooLateForFreeSearch()) {
                     return;
                   }

@@ -155,6 +155,9 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
 
   private long consistencyCalls;
 
+  // the store adds the time of this constraint's consistency calls to Store#timedNanos
+  private boolean timed;
+
   /** The store whose propagation queues {@link #queueMembership} refers to. */
   private Store queueOwner;
 
@@ -503,6 +506,25 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** Counts a consistency call of the store for the constraint; only the store calls it. */
   public final void countConsistencyCall() {
     consistencyCalls++;
+  }
+
+  /**
+   * Tells whether the store measures the time of this constraint's consistency calls, see {@link
+   * Store#timeConstraint(Constraint)}.
+   *
+   * @return true when the time goes to {@link Store#timedNanos()}.
+   */
+  public final boolean timed() {
+    return timed;
+  }
+
+  /**
+   * Sets whether the store measures the time of this constraint's consistency calls.
+   *
+   * @param on true to add their time to {@link Store#timedNanos()}.
+   */
+  public final void setTimed(boolean on) {
+    timed = on;
   }
 
   /**

@@ -43,6 +43,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.RemoveLevelLate;
 import org.jacop.api.Stateful;
@@ -949,7 +950,11 @@ public class Store {
           numberConsistencyCalls++;
           currentConstraint.countConsistencyCall();
           long changesBefore = domainChanges;
-          currentConstraint.consistency(this);
+          if (currentConstraint.timed()) {
+            timedConsistency(currentConstraint);
+          } else {
+            currentConstraint.consistency(this);
+          }
           if (variableActivityManagement) {
             updateActivities(currentConstraint);
             variablesPrunned.clear();
@@ -1664,6 +1669,49 @@ public class Store {
       implied = marked;
     }
     marked.add(c);
+  }
+
+  // nanoseconds in the consistency calls of the timed constraints, see timeConstraint
+  private final AtomicLong timedNanos = new AtomicLong();
+
+  private void timedConsistency(Constraint c) {
+    long start = System.nanoTime();
+    try {
+      c.consistency(this);
+    } finally {
+      timedNanos.addAndGet(System.nanoTime() - start);
+    }
+  }
+
+  /**
+   * Measures the time of a constraint's consistency calls from now on, which {@link #timedNanos()}
+   * sums over all constraints measured. LCG free search leaves it out of its rate of conflicts: an
+   * implied constraint that raises bounds, such as an LP relaxation or an inferred cumulative,
+   * slows every node but is not what that rate is meant to measure.
+   *
+   * @param c the constraint.
+   */
+  public void timeConstraint(Constraint c) {
+    c.setTimed(true);
+  }
+
+  /**
+   * Gives the time spent in the consistency calls of the constraints given to {@link
+   * #timeConstraint(Constraint)}. Any thread may read it.
+   *
+   * @return nanoseconds since the store was made.
+   */
+  public long timedNanos() {
+    return timedNanos.get();
+  }
+
+  /**
+   * Gives the constraints marked as implied by the others, see {@link #markImplied(Constraint)}.
+   *
+   * @return the constraints, empty when there are none; the set is the store's own.
+   */
+  public Set<Constraint> impliedConstraints() {
+    return implied == null ? Collections.emptySet() : Collections.unmodifiableSet(implied);
   }
 
   /**
