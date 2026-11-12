@@ -512,6 +512,28 @@ Core-guided phase (free search, --lcg -f):
 - jacop.lcg.clockSlack: a phase also stops at this many times its
   share of the time left; default 1.5.
 
+Root probing (off by default):
+
+- jacop.lcg.probe: root probing before LCG search, for at most this
+  share of the time left; default 0 (off).
+- jacop.lcg.probe.early: probe before the linear relaxation is built,
+  with a solver of its own, so that --lp has the probed domains and the
+  clique rows of the probing conflicts; default false.
+- jacop.lcg.probe.delay: probe between runs of branch and bound, once
+  this share of the time limit has passed, instead of before the
+  search; default 0 (before the search).
+- jacop.lcg.probe.domain: also probe each value of the other variables
+  with at most this many values; default 64.
+- jacop.lcg.probe.barren: stop when this share of the budget found no
+  fact; default 0.25.
+- jacop.lcg.probe.conflicts: the most probing conflicts kept for the
+  clique rows; default 100000.
+- jacop.lcg.probe.only: stop after probing and print its statistics, to
+  measure its reach; default false.
+- jacop.lcg.probe.lp: with probe.only, the root bound of a relaxation
+  built again after probing: none, facts (probed domains) or cliques
+  (also the conflicts as rows); default none.
+
 Literals and clauses:
 
 - jacop.lcg.literalBudget: the solver variables in use above which a

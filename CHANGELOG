@@ -4131,6 +4131,31 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. Root probing under --lcg, off by default (-Djacop.lcg.probe=share of
+   the time left, for example 0.02). It only adds facts: each value of each
+   0/1 variable, then each value of each domain of at most 64 values
+   (-Djacop.lcg.probe.domain), is assumed and propagated by the clauses and
+   the constraints; a value that fails is removed at the root (failed
+   literals, J. W. Freeman, PhD thesis, University of Pennsylvania, 1995),
+   and an atom that every value of a variable implies holds at the root
+   (lifting, I. Lynce and J. Marques-Silva, ICTAI 2003; M. W. P.
+   Savelsbergh, ORSA Journal on Computing 6(4), 1994). Probing every value
+   is singleton consistency at the root (R. Debruyne and C. Bessiere,
+   IJCAI 1997). Passes repeat while they add facts, and probing stops when
+   a quarter of its budget found nothing (-Djacop.lcg.probe.barren). With
+   -Djacop.lcg.probe.early=true it runs before the linear relaxation is
+   built, so that --lp has the probed domains and, as clique rows, greedy
+   maximal cliques of the conflicts x = a, y = b that probing found (A.
+   Atamturk, G. L. Nemhauser and M. W. P. Savelsbergh, Conflict graphs in
+   solving integer programming problems, EJOR 121(1), 2000). On the
+   wide-quick set at 240 s it raises the root bound of 20 of 43
+   optimisation instances with a relaxation (cable-tree A031 747 to 1089,
+   spot5 28 0 to 167503, stripboard 25 to 40), with the same number solved;
+   the probing time costs a few seconds on easy instances.
+   -Djacop.lcg.probe.delay probes between runs of branch and bound instead,
+   once that share of the time limit has passed. LcgSolver.probeRoot is the
+   API; one LcgFuzzTest run in four probes before solving.
+
 Version 4.11
 =============
 
