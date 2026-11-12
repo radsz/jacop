@@ -4234,7 +4234,18 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
-247. Cuts in search keep their period only while they move the bound.
+
+247. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
+     the bins an item left or was fixed in, read from the values the item
+     lost at the current level, instead of every bin of the item's previous
+     domain, and keeps for each bin the items that may still be in it, so
+     that a bin is no longer processed by a scan of all items (the list is
+     restored when a level is removed; a bin that more than half of the
+     items may still be in is scanned in full). Pruning is unchanged. On the
+     2025 ihtc-2024-marte instances, where Binpacking took about half of
+     the run, fixed search explores 1.06x to 5.9x more nodes in 600 s.
+
+248. Cuts in search keep their period only while they move the bound.
      The capacity cuts of item 187 and the Hall cuts of item 215 were
      separated more often whenever a violated cut was found, even when
      adding it left the objective of the re-solved LP where it was; now
@@ -4263,7 +4274,7 @@ Version 5.0 (unreleased)
      Hall and energy cuts in search stay off by default: they leave the
      dual bounds where they were.
 
-248. JaLP no longer cycles on LPs with large costs or huge artificial
+249. JaLP no longer cycles on LPs with large costs or huge artificial
      bounds. A reduced cost past the dual tolerance (1e-9) but within
      1e-14 of the sizes of its terms is taken as zero: with costs near
      1e7 such values are a few units in the last place and took either
@@ -4281,7 +4292,7 @@ Version 5.0 (unreleased)
      rows swapped forever). Both reproducers solve in 113 and 1,818
      pivots, before they ran until the pivot limit.
 
-249. TSP edge elimination: before search, a pure symmetric travelling
+250. TSP edge elimination: before search, a pure symmetric travelling
      salesman model (one circuit with no fixed successor, the minimised
      objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
      the arcs that are in no optimal tour, proved from the distances alone

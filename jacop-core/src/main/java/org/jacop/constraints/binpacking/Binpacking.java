@@ -300,6 +300,12 @@ public class Binpacking extends Constraint
     this.binCandidates = new BinItem[item.length];
     this.binCandidateWeights = new int[item.length];
     this.binOtherWeights = new int[item.length];
+    this.binCandidateItems = new int[item.length];
+    this.binCandidateMarks = new long[(item.length + 63) >>> 6];
+    this.binItems = binIndex(item, load.length, minBin);
+    this.binSize =
+        binItems == null ? null : Arrays.stream(binItems).mapToInt(b -> b.length).toArray();
+    this.binLive = binSize == null ? null : binSize.clone();
 
     // with card variables the items of weight 0 are counted, so their bins are in the scope
     Stream<Var> scope =
@@ -483,7 +489,7 @@ public class Binpacking extends Constraint
   }
 
   /** Collects changed bin/item indices into an IntervalDomain for propagation. */
-  private IntervalDomain collectChangedDomains() {
+  private IntervalDomain collectChangedDomains(int level) {
     IntervalDomain d = new IntervalDomain();
     while (!binQueue.isEmpty()) {
       Iterator<IntVar> it = binQueue.iterator();
@@ -496,6 +502,16 @@ public class Binpacking extends Constraint
       Iterator<IntVar> it = itemQueue.iterator();
       IntVar v = it.next();
       it.remove();
+      // a bin changes only when an item leaves it or is fixed in it; the bins an item may still
+      // take, and took before, are at the fixpoint of their rules already
+      IntDomain removed = v.dom().recentDomainPruning(level);
+      if (!removed.isEmpty()) {
+        d.addDom(removed);
+        if (v.singleton()) {
+          d.addDom(v.dom());
+        }
+        continue;
+      }
       IntDomain pd = v.dom().getPreviousDomain();
       if (pd != null) {
         d.addDom(pd);
@@ -512,6 +528,72 @@ public class Binpacking extends Constraint
   private final int[] binCandidateWeights;
 
   private final int[] binOtherWeights;
+
+  private final int[] binCandidateItems;
+
+  private final long[] binCandidateMarks;
+
+  // the most (item, bin) pairs kept in binItems; above it processBin scans all items
+  private static final long BIN_INDEX_LIMIT = 4_000_000L;
+
+  /**
+   * For each bin, the items (indexes of item) that may still be in it: binItems[i][0 ..
+   * binSize[i]), in any order. processBin drops the items that can no longer be in the bin, moving
+   * them after the end, and logs each drop with its level in removedBin and removedLevel, so that
+   * removing the level takes them back. The list may hold items that left the bin since, but never
+   * misses one that can be in it. Null when there are too many pairs.
+   */
+  private final int[][] binItems;
+
+  private final int[] binSize;
+
+  /**
+   * For each bin, the items found in it at its last processing: a hint only. When more than half of
+   * the items may be in the bin, scanning all items in order is cheaper than the list, which is
+   * then kept as it is (a superset is allowed).
+   */
+  private final int[] binLive;
+
+  private int[] removedBin = new int[16];
+
+  private int[] removedLevel = new int[16];
+
+  private int removedSize;
+
+  /** The items whose domain holds each bin, or null if there are more than BIN_INDEX_LIMIT. */
+  private static int[][] binIndex(BinItem[] item, int bins, int minBin) {
+    long pairs = 0;
+    int[] count = new int[bins];
+    for (BinItem it : item) {
+      IntDomain d = it.bin().dom();
+      int from = Math.max(d.min() - minBin, 0);
+      int to = Math.min(d.max() - minBin, bins - 1);
+      for (int i = from; i <= to; i++) {
+        if (d.contains(i + minBin)) {
+          count[i]++;
+          if (++pairs > BIN_INDEX_LIMIT) {
+            return null;
+          }
+        }
+      }
+    }
+    int[][] index = new int[bins][];
+    for (int i = 0; i < bins; i++) {
+      index[i] = new int[count[i]];
+      count[i] = 0;
+    }
+    for (int k = 0; k < item.length; k++) {
+      IntDomain d = item[k].bin().dom();
+      int from = Math.max(d.min() - minBin, 0);
+      int to = Math.min(d.max() - minBin, bins - 1);
+      for (int i = from; i <= to; i++) {
+        if (d.contains(i + minBin)) {
+          index[i][count[i]++] = k;
+        }
+      }
+    }
+    return index;
+  }
 
   /** Bins to be (re)processed in the current consistency call, indexed from 0. */
   private final BitSet todo = new BitSet();
@@ -544,6 +626,15 @@ public class Binpacking extends Constraint
     b.domain.inValue(store.level, b, binIdx);
   }
 
+  private void logRemoval(int bin, int level) {
+    if (removedSize == removedBin.length) {
+      removedBin = Arrays.copyOf(removedBin, 2 * removedSize);
+      removedLevel = Arrays.copyOf(removedLevel, 2 * removedSize);
+    }
+    removedBin[removedSize] = bin;
+    removedLevel[removedSize++] = level;
+  }
+
   /** Processes one bin index: load maintenance, tightening, elimination/commitment. */
   private void processBin(Store store, int i) {
     if (i < 0 || i >= load.length) {
@@ -557,15 +648,73 @@ public class Binpacking extends Constraint
     long localRequired = 0;
     long possible = 0;
     int binIdx = i + minBinNumber;
-    for (BinItem itemEl : item) {
-      IntVar b = itemEl.bin();
-      if (b.min() <= binIdx && b.max() >= binIdx && b.dom().contains(binIdx)) {
-        possible += itemEl.weight();
-        if (b.singleton()) {
-          localRequired += itemEl.weight();
+    int found = 0;
+    if (binItems == null || 2 * binLive[i] > item.length) {
+      for (BinItem itemEl : item) {
+        IntVar b = itemEl.bin();
+        if (b.min() <= binIdx && b.max() >= binIdx && b.dom().contains(binIdx)) {
+          possible += itemEl.weight();
+          if (b.singleton()) {
+            localRequired += itemEl.weight();
+          } else {
+            weights[candidatesLength] = itemEl.weight();
+            localCandidates[candidatesLength++] = itemEl;
+          }
+          found++;
+        }
+      }
+      if (binLive != null) {
+        binLive[i] = found;
+      }
+    } else {
+      int[] list = binItems[i];
+      int size = binSize[i];
+      int[] candidateItems = binCandidateItems;
+      for (int p = size - 1; p >= 0; p--) {
+        int k = list[p];
+        IntVar b = item[k].bin();
+        if (b.min() <= binIdx && b.max() >= binIdx && b.dom().contains(binIdx)) {
+          int w = item[k].weight();
+          possible += w;
+          if (b.singleton()) {
+            localRequired += w;
+          } else {
+            candidateItems[candidatesLength++] = k;
+          }
         } else {
-          weights[candidatesLength] = itemEl.weight();
-          localCandidates[candidatesLength++] = itemEl;
+          // the item left the bin: it goes after the end until this level is removed
+          size--;
+          list[p] = list[size];
+          list[size] = k;
+          logRemoval(i, store.level);
+        }
+      }
+      binSize[i] = size;
+      binLive[i] = size;
+      // the candidates in the order of item, by decreasing weight, as the rules expect: sorted
+      // when they are few, read from a bit set over all items when there are many of them
+      long[] mark = binCandidateMarks;
+      if (candidatesLength <= mark.length) {
+        Arrays.sort(candidateItems, 0, candidatesLength);
+        for (int c = 0; c < candidatesLength; c++) {
+          BinItem itemEl = item[candidateItems[c]];
+          weights[c] = itemEl.weight();
+          localCandidates[c] = itemEl;
+        }
+      } else {
+        for (int c = 0; c < candidatesLength; c++) {
+          mark[candidateItems[c] >>> 6] |= 1L << candidateItems[c];
+        }
+        int c = 0;
+        for (int word = 0; word < mark.length; word++) {
+          long bits = mark[word];
+          mark[word] = 0;
+          while (bits != 0) {
+            BinItem itemEl = item[(word << 6) + Long.numberOfTrailingZeros(bits)];
+            bits &= bits - 1;
+            weights[c] = itemEl.weight();
+            localCandidates[c++] = itemEl;
+          }
         }
       }
     }
@@ -677,7 +826,7 @@ public class Binpacking extends Constraint
   public void consistency(Store store) {
     applyPackAllRule(store);
     todo.clear();
-    IntervalDomain d = collectChangedDomains();
+    IntervalDomain d = collectChangedDomains(store.level);
     for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
       int i = e.nextElement() - minBinNumber;
       if (i >= 0 && i < load.length) {
@@ -1464,6 +1613,9 @@ public class Binpacking extends Constraint
   public void removeLevel(int level) {
     itemQueue.clear();
     binQueue.clear();
+    while (removedSize > 0 && removedLevel[removedSize - 1] >= level) {
+      binSize[removedBin[--removedSize]]++;
+    }
   }
 
   @Override
