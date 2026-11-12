@@ -47,6 +47,7 @@ import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XneqY;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -54,6 +55,9 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.presolve.GraphAutomorphisms;
+import org.jacop.set.constraints.ChannelBoolSet;
+import org.jacop.set.core.SetDomain;
+import org.jacop.set.core.SetVar;
 
 /**
  * Detects variable symmetries of a FlatZinc model and breaks them with lex-leader constraints.
@@ -69,8 +73,12 @@ import org.jacop.presolve.GraphAutomorphisms;
  * tasks of a cumulative, the items of a bin packing, the two sides of {@code int_eq} or {@code
  * int_plus}. Every other argument keeps its position. Variables fixed at the root are constants; a
  * constraint that is then the same as another is left out, and equal items of one array are one
- * vertex with their number in its colour. Float and set variables get a colour each, so no symmetry
- * moves them.
+ * vertex with their number in its colour. Float variables get a colour each, so no symmetry moves
+ * them. A set variable is a vertex coloured by its domain, joined to one vertex for each element of
+ * its upper bound that is not in its lower bound, coloured by the element; a symmetry that maps one
+ * set variable to another maps the element vertices of the same element onto each other, so the
+ * Booleans {@code e in s} (posted by {@link ChannelBoolSet} for the set variables a symmetry moves)
+ * take part in the lex-leader constraints like integer variables.
  *
  * <p>For each generator {@code g} found by {@link GraphAutomorphisms} the constraint {@code X <=lex
  * g(X)} is posted, with {@code X} the variables in one fixed order: those of the search annotation
@@ -99,6 +107,29 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   /** The largest orbit size times generators walked to find the symmetry of a cut. */
   static final long MAX_TREE_WORK = 10_000_000L;
+
+  /**
+   * Whether set variables may be moved by symmetries (org.jacop.fz.symmetrySets, default true), in
+   * models whose search annotation branches on set variables. Without it every set variable has a
+   * colour of its own.
+   */
+  static final boolean SETS = !"false".equals(System.getProperty("org.jacop.fz.symmetrySets"));
+
+  /**
+   * The most element vertices that set variables add to the graph; the set variables met after that
+   * keep a colour of their own.
+   */
+  static final int MAX_SET_ELEMENTS = 200_000;
+
+  /**
+   * Whether value symmetries are also looked for in spaces joined through set variables and shared
+   * values, when the plain value spaces give none (org.jacop.fz.symmetryEncoded, default true).
+   */
+  static final boolean ENCODED =
+      !"false".equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
+
+  /** The n-ary union that a chain of binary unions stands for: {@code s = union(xs)}. */
+  static final String UNION_N = "jacop_symmetry_union";
 
   /** Graphs with more vertices are not searched. */
   static final int MAX_VERTICES = 2_000_000;
@@ -272,6 +303,23 @@ final class SymmetryBreaking implements ParserTreeConstants {
     SPECS.put("bool_clause", Spec.grouped(new int[] {0}, new int[] {1}));
     SPECS.put("bool_clause_reif", Spec.grouped(new int[] {0}, new int[] {1}));
     SPECS.put("bool_clause_imp", Spec.grouped(new int[] {0}, new int[] {1}));
+    // set operations whose two operands can be exchanged
+    for (String s :
+        new String[] {
+          "set_union",
+          "set_intersect",
+          "set_symdiff",
+          "set_eq",
+          "set_ne",
+          "set_eq_reif",
+          "set_ne_reif",
+          "set_eq_imp",
+          "set_ne_imp",
+          "jacop_disjoint"
+        }) {
+      SPECS.put(s, Spec.sym(0, 1));
+    }
+    SPECS.put(UNION_N, Spec.grouped(new int[] {0}));
     SPECS.put("jacop_cumulative", Spec.grouped(new int[] {0, 1, 2}));
     SPECS.put("jacop_diff2_strict", Spec.grouped(new int[] {0, 1, 2, 3}));
     SPECS.put("jacop_bin_packing", Spec.grouped(new int[] {0, 2}));
@@ -394,6 +442,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private boolean largest;
   // whether the search is free search (-f), which does not follow the search annotation
   private boolean free;
+  // whether set variables are vertices of the variable graph that symmetries may move
+  private boolean setsMove;
   // the constraints posted, as their kind and variables, for added()
   private final List<String> postedKinds = new ArrayList<>();
   private final List<IntVar[][]> postedVariables = new ArrayList<>();
@@ -448,6 +498,20 @@ final class SymmetryBreaking implements ParserTreeConstants {
       s.append(';');
     }
     return s.toString();
+  }
+
+  /**
+   * Lets the symmetries of the variable graph move set variables, with {@link #SETS}, when the
+   * search annotation branches on set variables. In a search on integers alone the symmetries they
+   * reveal slowed the search down (2023 valve-network), so every set variable then keeps a colour
+   * of its own.
+   *
+   * @param sets true when the search annotation branches on set variables.
+   * @return this.
+   */
+  SymmetryBreaking branchesOnSets(boolean sets) {
+    this.setsMove = SETS && sets;
+    return this;
   }
 
   /**
@@ -576,6 +640,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
 
     ValueOutcome values = breakValueSymmetries(items, goal, minimize, ranked, maxNanos / 2);
+    if (values.posted() == 0 && ENCODED && !(free && minimize && largestLoad(items, goal))) {
+      Set<IntVar> annotated = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (Var v : order) {
+        if (v instanceof IntVar iv) {
+          annotated.add(iv);
+        }
+      }
+      values = breakEncodedValueSymmetries(items, goal, ranked, annotated, maxNanos / 2);
+    }
     if (!values.first().isEmpty()) {
       List<IntVar> reordered = new ArrayList<>(values.first());
       Set<IntVar> front = Collections.newSetFromMap(new IdentityHashMap<>());
@@ -590,7 +663,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
     Graph graph = new Graph(goal, null);
     try {
-      for (Item item : items) {
+      // a chain of set unions is one n-ary union, whose operands can be exchanged
+      for (Item item : setsMove ? flattenUnions(items) : items) {
         checkTime();
         graph.addConstraint(item);
       }
@@ -604,30 +678,52 @@ final class SymmetryBreaking implements ParserTreeConstants {
       return new Outcome(n, 0, values.posted(), true, "graph too large", values.posted(), 0);
     }
 
-    // the position of each variable in the lex-leader order
-    Map<IntVar, Integer> rank = new IdentityHashMap<>();
-    for (IntVar v : ranked) {
-      if (graph.varVertices.containsKey(v)) {
-        rank.putIfAbsent(v, rank.size());
+    // the vertices of the variables, and of the elements of set variables, in the lex-leader
+    // order: those of the search annotation first, then the integer variables as the model first
+    // uses them, then the elements of the other set variables
+    List<Integer> rankedVertices = new ArrayList<>();
+    boolean[] isRanked = new boolean[n];
+    for (Var v : order) {
+      if (v instanceof IntVar iv) {
+        rankVertex(graph.varVertices.get(iv), rankedVertices, isRanked);
+      } else if (v instanceof SetVar sv && graph.elementVertices.containsKey(sv)) {
+        for (int e : graph.elementVertices.get(sv)) {
+          rankVertex(e, rankedVertices, isRanked);
+        }
       }
     }
+    for (IntVar v : ranked) {
+      rankVertex(graph.varVertices.get(v), rankedVertices, isRanked);
+    }
     for (IntVar v : graph.vars) {
-      rank.putIfAbsent(v, rank.size());
+      rankVertex(graph.varVertices.get(v), rankedVertices, isRanked);
+    }
+    for (SetVar sv : graph.sets) {
+      for (int e : graph.elementVertices.get(sv)) {
+        rankVertex(e, rankedVertices, isRanked);
+      }
     }
     // the variables are the base of the search, in the lex-leader order
-    int[] base = new int[rank.size()];
-    rank.forEach((x, r) -> base[r] = graph.varVertices.getOrDefault(x, 0));
+    int[] base = rankedVertices.stream().mapToInt(Integer::intValue).toArray();
     long left = Math.max(0, deadline - clock.getAsLong());
     GraphAutomorphisms.Result result =
         new GraphAutomorphisms(graph.colors(), graph.adjacency(), base).generators(MAX_WORK, left);
 
     IntVar[] varAt = new IntVar[n];
     int[] rankAt = new int[n];
-    graph.varVertices.forEach(
-        (x, v) -> {
-          varAt[v] = x;
-          rankAt[v] = rank.getOrDefault(x, 0);
-        });
+    for (int r = 0; r < base.length; r++) {
+      rankAt[base[r]] = r;
+    }
+    graph.varVertices.forEach((x, v) -> varAt[v] = x);
+    // the set variables that a generator moves get their Booleans
+    for (GraphAutomorphisms.Permutation g : result.generators()) {
+      for (int v : g.points()) {
+        SetVar s = graph.setOfElement.get(v);
+        if (s != null && varAt[v] == null) {
+          channel(s, graph.elementVertices.get(s), varAt);
+        }
+      }
+    }
 
     // interchangeable columns of variables are ordered by one lex chain
     List<GraphAutomorphisms.Permutation> generators = new ArrayList<>(result.generators());
@@ -636,6 +732,21 @@ final class SymmetryBreaking implements ParserTreeConstants {
     boolean descending = largest && values.posted() == 0;
     // x <= y pairs the posted constraints compare first, which Schreier-Sims cuts need not repeat
     List<IntVar[]> implied = new ArrayList<>();
+    for (IntVar[][] columns : interchangeableSets(result.generators(), base, graph, varAt)) {
+      if (descending) {
+        Collections.reverse(Arrays.asList(columns));
+      }
+      for (int c = 0; c + 1 < columns.length; c++) {
+        implied.add(new IntVar[] {columns[c][0], columns[c + 1][0]});
+      }
+      LexChain chain = new LexChain(columns);
+      chain.setDegreeWeight(0);
+      store.impose(chain);
+      canonicalizer.chain(chain, columns);
+      note("chain", columns);
+      orbitopes++;
+      posted++;
+    }
     for (IntVar[][] columns : orbitopes(generators, varAt, rankAt)) {
       if (descending) {
         Collections.reverse(Arrays.asList(columns));
@@ -935,6 +1046,129 @@ final class SymmetryBreaking implements ParserTreeConstants {
     parent.put(rb, ra);
   }
 
+  /** The most variables at the front of the lex-leader order whose permutations are examined. */
+  static final int MAX_PREFIX = 64;
+
+  /**
+   * Set variables at the front of the lex-leader order that the symmetries permute in every way, as
+   * columns of a lex chain in that order: each column is the Booleans of one set variable.
+   *
+   * <p>The variables are the blocks of the order (a set variable is the block of its element
+   * vertices). The shortest prefix of blocks that every generator maps onto itself is found; if it
+   * starts with a set variable and the group permutes a class of its blocks in every way while
+   * fixing the other blocks of the prefix (checked on the permutations the generators make of the
+   * prefix's blocks), then for two blocks {@code a} before {@code b} of the class the group holds a
+   * symmetry that exchanges them and fixes the rest of the prefix, whose lex-leader constraint on
+   * the prefix is {@code a <=lex b}. These are lex-leader constraints of the same order as those of
+   * the generators, so they may be posted together.
+   */
+  private static List<IntVar[][]> interchangeableSets(
+      List<GraphAutomorphisms.Permutation> generators, int[] base, Graph graph, IntVar[] varAt) {
+    if (generators.isEmpty() || base.length == 0) {
+      return List.of();
+    }
+    // the blocks of the order and the block of each vertex
+    Map<Integer, Integer> blockOf = new HashMap<>();
+    List<int[]> blocks = new ArrayList<>();
+    for (int v : base) {
+      if (blockOf.containsKey(v)) {
+        continue;
+      }
+      SetVar s = graph.setOfElement.get(v);
+      int[] block = s == null ? new int[] {v} : graph.elementVertices.get(s);
+      for (int w : block) {
+        blockOf.put(w, blocks.size());
+      }
+      blocks.add(block);
+      if (blocks.size() > 4 * MAX_PREFIX) {
+        break;
+      }
+    }
+    if (graph.setOfElement.get(blocks.get(0)[0]) == null) {
+      return List.of();
+    }
+    // the shortest prefix that every generator maps onto itself
+    int end = 1;
+    boolean grown = true;
+    while (grown) {
+      grown = false;
+      for (GraphAutomorphisms.Permutation g : generators) {
+        for (int b = 0; b < end; b++) {
+          Integer image = blockOf.get(g.image(blocks.get(b)[0]));
+          if (image == null || image >= MAX_PREFIX) {
+            return List.of();
+          }
+          if (image >= end) {
+            end = image + 1;
+            grown = true;
+          }
+        }
+      }
+    }
+    List<int[]> perms = new ArrayList<>();
+    for (GraphAutomorphisms.Permutation g : generators) {
+      int[] p = new int[end];
+      for (int b = 0; b < end; b++) {
+        p[b] = blockOf.get(g.image(blocks.get(b)[0]));
+      }
+      perms.add(p);
+    }
+    List<IntVar[][]> found = new ArrayList<>();
+    for (int[] c : symmetricClasses(perms, end)) {
+      IntVar[][] columns = new IntVar[c.length][];
+      for (int i = 0; i < c.length; i++) {
+        int[] block = blocks.get(c[i]);
+        if (graph.setOfElement.get(block[0]) == null) {
+          columns = null;
+          break;
+        }
+        columns[i] = new IntVar[block.length];
+        for (int k = 0; k < block.length; k++) {
+          columns[i][k] = varAt[block[k]];
+        }
+      }
+      if (columns != null && columns.length > 1 && columns[0].length > 0) {
+        found.add(columns);
+      }
+    }
+    return found;
+  }
+
+  private static void rankVertex(Integer v, List<Integer> ranked, boolean[] isRanked) {
+    if (v != null && !isRanked[v]) {
+      isRanked[v] = true;
+      ranked.add(v);
+    }
+  }
+
+  /**
+   * Posts {@code e in s <-> b} for the elements {@code e} of the upper bound of {@code s} and
+   * records {@code not b} as the variable of the element's vertex.
+   */
+  private void channel(SetVar s, int[] elementVertices, IntVar[] varAt) {
+    SetDomain d = s.dom();
+    int min = d.lub().min();
+    int max = d.lub().max();
+    IntVar[] b = new IntVar[max - min + 1];
+    int k = 0;
+    for (int e = min; e <= max; e++) {
+      if (d.glb().contains(e)) {
+        b[e - min] = new BooleanVar(store, 1, 1);
+      } else if (!d.lub().contains(e)) {
+        b[e - min] = new BooleanVar(store, 0, 0);
+      } else {
+        b[e - min] = new BooleanVar(store);
+        // the lex-leader order takes e not in s before e in s, so that the sets with the
+        // smallest elements come first, as the set searches that include the smallest element
+        // first meet them
+        BooleanVar out = new BooleanVar(store);
+        store.impose(new XneqY(b[e - min], out));
+        varAt[elementVertices[k++]] = out;
+      }
+    }
+    store.impose(new ChannelBoolSet(b, s, min));
+  }
+
   /**
    * The variables a generator moves (from) or their images (to); the other vertices it moves stand
    * for constraints and constants. Empty when it maps a variable onto a vertex that is not one.
@@ -1074,6 +1308,47 @@ final class SymmetryBreaking implements ParserTreeConstants {
     IntDomain values;
     boolean sameDomain = true;
     long pairs;
+    // the variables whose values the precedence chains order, null for all of them
+    List<IntVar> anchors;
+
+    List<IntVar> anchors() {
+      return anchors == null ? vars : anchors;
+    }
+  }
+
+  /**
+   * Value specs of set constraints, used only for the encoded spaces, where a set variable belongs
+   * to the space of its elements: membership, the set operations and the comparisons other than the
+   * lexicographic ones hold after a permutation of the values is applied to the elements of every
+   * set. {@code set_card} keeps its set in place and uses the cardinality as a number.
+   */
+  private static final Map<String, ValueSpec> SET_VALUE_SPECS = new HashMap<>();
+
+  static {
+    for (String s : new String[] {"set_in", "set_in_reif", "set_in_imp"}) {
+      SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
+    }
+    for (String s : new String[] {"set_union", "set_intersect", "set_diff", "set_symdiff"}) {
+      SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1, 2));
+    }
+    for (String s : new String[] {"set_eq", "set_ne", "set_subset", "set_superset"}) {
+      SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + "_reif", ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + "_imp", ValueSpec.of(0, 1));
+    }
+    SET_VALUE_SPECS.put("jacop_disjoint", ValueSpec.of(0, 1));
+    SET_VALUE_SPECS.put(UNION_N, ValueSpec.of(0, 1));
+  }
+
+  /** The value spec of a constraint, with the set specs in the encoded spaces. */
+  private static ValueSpec valueSpec(Item item, boolean encoded) {
+    if (encoded) {
+      ValueSpec spec = SET_VALUE_SPECS.get(item.name());
+      if (spec != null) {
+        return spec.shared()[spec.shared().length - 1] < item.args().length ? spec : null;
+      }
+    }
+    return valueSpec(item);
   }
 
   /**
@@ -1261,12 +1536,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
         spaceOf.keySet().retainAll(space.vars);
         spaceOf.replaceAll((x, k) -> 0);
         spaces = new ArrayList<>(List.of(space));
-        return breakValueSymmetries(kept, objective, ranked, spaces, spaceOf, maxNanos);
+        return breakValueSymmetries(kept, objective, spaces, spaceOf, null, maxNanos);
       }
       spaces = new ArrayList<>();
     }
     Map<IntVar, Integer> spaceOf = valueSpaces(items, objective, ranked, spaces);
-    return breakValueSymmetries(items, objective, ranked, spaces, spaceOf, maxNanos);
+    return breakValueSymmetries(items, objective, spaces, spaceOf, null, maxNanos);
   }
 
   /**
@@ -1357,15 +1632,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private ValueOutcome breakValueSymmetries(
       List<Item> items,
       IntVar objective,
-      List<IntVar> ranked,
       List<Space> spaces,
       Map<IntVar, Integer> spaceOf,
+      Map<SetVar, Integer> setSpaceOf,
       long maxNanos) {
     if (spaces.isEmpty()) {
       return new ValueOutcome(List.of(), 0, true);
     }
     Graph graph = new Graph(objective, spaceOf);
     graph.spaces = spaces;
+    graph.setSpaceOf = setSpaceOf;
     try {
       for (Item item : items) {
         checkTime();
@@ -1381,7 +1657,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // the base: the variables of the spaces, then the values of each space
     List<Integer> base = new ArrayList<>();
     for (Space s : spaces) {
-      for (IntVar x : s.vars) {
+      for (IntVar x : s.anchors()) {
         base.add(graph.varVertex(x));
       }
     }
@@ -1403,7 +1679,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
     boolean[] fixedVertex = new boolean[graph.size()];
     for (Space s : spaces) {
-      for (IntVar x : s.vars) {
+      for (IntVar x : s.anchors()) {
         fixedVertex[graph.varVertex(x)] = true;
       }
     }
@@ -1445,7 +1721,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if (classes.isEmpty()) {
         continue;
       }
-      IntVar[] xs = spaces.get(k).vars.toArray(new IntVar[0]);
+      IntVar[] xs = spaces.get(k).anchors().toArray(new IntVar[0]);
       for (int[] c : classes) {
         int[] chain = Arrays.stream(c).map(i -> values[i]).sorted().toArray();
         SeqPrecedeChain precede = new SeqPrecedeChain(xs, chain);
@@ -1455,9 +1731,312 @@ final class SymmetryBreaking implements ParserTreeConstants {
         note("precede" + Arrays.toString(chain), xs);
         posted++;
       }
-      first.addAll(spaces.get(k).vars);
+      first.addAll(spaces.get(k).anchors());
     }
     return new ValueOutcome(first, posted, result.complete());
+  }
+
+  /**
+   * Value symmetries of encoded models, tried when the plain value spaces give none.
+   *
+   * <p>A MiniZinc model that collects values in a set, such as {@code {t | t in T where
+   * exists(...)}}, is flattened into one variable per value {@code t} with domain {@code {0, t}}, a
+   * set variable per value and a chain of binary unions; the value {@code t} then sits in a
+   * different variable for each value, so no plain value space holds them all. Here a set variable
+   * belongs to the space of its elements (through membership and the set operations, {@link
+   * #SET_VALUE_SPECS}), groups of variables whose values overlap are one space, and a chain of
+   * unions is one n-ary union. Generators may now move the other variables of a space with its
+   * values: the base lists only the anchors, the space's variables of the search annotation (all
+   * its variables if none is), then the values, so the generators found at the values' levels fix
+   * the anchors and permute the values, and the precedence chains order the anchors only. A value
+   * permutation that such a generator makes, with the variables it moves, maps solutions to
+   * solutions, so the chain keeps a solution of every orbit.
+   */
+  private ValueOutcome breakEncodedValueSymmetries(
+      List<Item> items,
+      IntVar objective,
+      List<IntVar> ranked,
+      Set<IntVar> annotated,
+      long maxNanos) {
+    boolean anySet = false;
+    for (Item item : items) {
+      if (SET_VALUE_SPECS.containsKey(item.name())) {
+        anySet = true;
+        break;
+      }
+    }
+    if (!anySet) {
+      return new ValueOutcome(List.of(), 0, true);
+    }
+    List<Item> flat = flattenUnions(items);
+    List<Space> spaces = new ArrayList<>();
+    Map<SetVar, Integer> setSpaceOf = new IdentityHashMap<>();
+    Map<IntVar, Integer> spaceOf = encodedSpaces(flat, objective, ranked, spaces, setSpaceOf);
+    if (spaces.isEmpty() || setSpaceOf.isEmpty()) {
+      return new ValueOutcome(List.of(), 0, true);
+    }
+    for (Space space : spaces) {
+      List<IntVar> anchors = new ArrayList<>();
+      for (IntVar x : space.vars) {
+        if (annotated.contains(x)) {
+          anchors.add(x);
+        }
+      }
+      space.anchors = anchors.isEmpty() ? null : anchors;
+    }
+    return breakValueSymmetries(flat, objective, spaces, spaceOf, setSpaceOf, maxNanos);
+  }
+
+  /**
+   * The items with each chain of binary set unions {@code u1 = x1 union x2, u2 = u1 union x3, ...}
+   * whose intermediate results are used nowhere else replaced by one n-ary union.
+   */
+  private static List<Item> flattenUnions(List<Item> items) {
+    Map<Var, Integer> uses = new IdentityHashMap<>();
+    Map<Var, Item> unionOf = new IdentityHashMap<>();
+    Set<Var> unionOperands = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Item item : items) {
+      for (Atom[] arg : item.args()) {
+        for (Atom a : arg) {
+          Var v = a.aVar() != null ? a.aVar() : a.other();
+          if (v != null) {
+            uses.merge(v, 1, Integer::sum);
+          }
+        }
+      }
+      if (item.name().equals("set_union") && item.args().length == 3) {
+        Var r = item.args()[2][0].other();
+        if (r != null) {
+          unionOf.put(r, item);
+        }
+        for (int a = 0; a < 2; a++) {
+          if (item.args()[a][0].other() != null) {
+            unionOperands.add(item.args()[a][0].other());
+          }
+        }
+      }
+    }
+    // a union whose result is only an operand of one other union is inlined there
+    Set<Item> inlined = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Map.Entry<Var, Item> e : unionOf.entrySet()) {
+      if (uses.getOrDefault(e.getKey(), 0) == 2 && unionOperands.contains(e.getKey())) {
+        inlined.add(e.getValue());
+      }
+    }
+    if (inlined.isEmpty()) {
+      return items;
+    }
+    List<Item> out = new ArrayList<>();
+    for (Item item : items) {
+      if (inlined.contains(item)) {
+        continue;
+      }
+      if (!item.name().equals("set_union")
+          || item.args().length != 3
+          || item.args()[2][0].other() == null
+          || unionOf.get(item.args()[2][0].other()) != item) {
+        out.add(item);
+        continue;
+      }
+      List<Atom> operands = new ArrayList<>();
+      collect(item.args()[0][0], unionOf, inlined, operands);
+      collect(item.args()[1][0], unionOf, inlined, operands);
+      out.add(
+          new Item(
+              UNION_N,
+              new Atom[][] {operands.toArray(new Atom[0]), item.args()[2]},
+              new boolean[] {true, false}));
+    }
+    return out;
+  }
+
+  private static void collect(Atom a, Map<Var, Item> unionOf, Set<Item> inlined, List<Atom> out) {
+    Item u = a.other() == null ? null : unionOf.get(a.other());
+    if (u != null && inlined.contains(u)) {
+      collect(u.args()[0][0], unionOf, inlined, out);
+      collect(u.args()[1][0], unionOf, inlined, out);
+    } else {
+      out.add(a);
+    }
+  }
+
+  /**
+   * The encoded value spaces: integer and set variables joined by constraints that only compare
+   * their values (set constraints by {@link #SET_VALUE_SPECS}), then groups whose values overlap
+   * joined into one space. A group with a variable used as a number, a Boolean, the objective, or a
+   * constant other than an integer among the values, is not a space.
+   */
+  private static Map<IntVar, Integer> encodedSpaces(
+      List<Item> items,
+      IntVar objective,
+      List<IntVar> ranked,
+      List<Space> spaces,
+      Map<SetVar, Integer> setSpaceOf) {
+    Map<Var, Var> parent = new IdentityHashMap<>();
+    Set<Var> numeric = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (objective != null) {
+      numeric.add(objective);
+    }
+    List<SetVar> setOrder = new ArrayList<>();
+    for (Item item : items) {
+      ValueSpec spec = valueSpec(item, true);
+      boolean card = item.name().equals("set_card") && item.args().length == 2;
+      boolean[] shared = new boolean[item.args().length];
+      if (spec != null) {
+        for (int a : spec.shared()) {
+          shared[a] = true;
+        }
+      }
+      Var first = null;
+      boolean foreign = false;
+      for (int a = 0; a < item.args().length; a++) {
+        for (Atom atom : item.args()[a]) {
+          Var x = atom.aVar() != null ? atom.aVar() : atom.other();
+          if (x == null) {
+            foreign |= shared[a] && !atom.isInt();
+            continue;
+          }
+          if (parent.putIfAbsent(x, x) == null && x instanceof SetVar sv) {
+            setOrder.add(sv);
+          }
+          if (card && a == 0) {
+            // the cardinality of a set does not change when its elements are renamed
+            continue;
+          }
+          if (!shared[a]
+              || x instanceof BooleanVar
+              || !(x instanceof IntVar || x instanceof SetVar)) {
+            numeric.add(x);
+          }
+          if (!shared[a]) {
+            continue;
+          }
+          if (first == null) {
+            first = x;
+          } else {
+            unionVar(parent, first, x);
+          }
+        }
+      }
+      if (foreign && first != null) {
+        numeric.add(first);
+      }
+    }
+    Map<Var, Boolean> rootNumeric = new IdentityHashMap<>();
+    parent
+        .keySet()
+        .forEach(
+            x -> rootNumeric.merge(rootVar(parent, x), numeric.contains(x), Boolean::logicalOr));
+    // the values of each group, and groups that share a value joined
+    Map<Var, IntDomain> rootValues = new IdentityHashMap<>();
+    List<Var> members = new ArrayList<>(ranked);
+    members.addAll(setOrder);
+    for (Var x : members) {
+      if (!parent.containsKey(x) || !Boolean.FALSE.equals(rootNumeric.get(rootVar(parent, x)))) {
+        continue;
+      }
+      IntDomain d = x instanceof SetVar sv ? sv.dom().lub() : ((IntVar) x).dom();
+      if (d.getSize() > MAX_VALUES) {
+        rootNumeric.put(rootVar(parent, x), true);
+        continue;
+      }
+      rootValues.merge(rootVar(parent, x), d, IntDomain::union);
+    }
+    Map<Integer, Var> owner = new HashMap<>();
+    for (Map.Entry<Var, IntDomain> e : new ArrayList<>(rootValues.entrySet())) {
+      if (Boolean.TRUE.equals(rootNumeric.get(e.getKey()))) {
+        continue;
+      }
+      for (ValueEnumeration en = e.getValue().valueEnumeration(); en.hasMoreElements(); ) {
+        Var other = owner.putIfAbsent(en.nextElement(), e.getKey());
+        if (other != null) {
+          unionVar(parent, other, e.getKey());
+        }
+      }
+    }
+    // the spaces, with their variables in the lex-leader order
+    Map<Var, Space> spaceOfRoot = new IdentityHashMap<>();
+    List<Space> created = new ArrayList<>();
+    Map<Space, List<SetVar>> setsOf = new IdentityHashMap<>();
+    for (Var x : members) {
+      if (!parent.containsKey(x) || !Boolean.FALSE.equals(rootNumeric.get(rootVar(parent, x)))) {
+        continue;
+      }
+      // a group joined by shared values: numeric if any part of it is
+      Var root = rootVar(parent, x);
+      Space space =
+          spaceOfRoot.computeIfAbsent(
+              root,
+              r -> {
+                Space sp = new Space();
+                created.add(sp);
+                return sp;
+              });
+      IntDomain d = x instanceof SetVar sv ? sv.dom().lub() : ((IntVar) x).dom();
+      space.values = space.values == null ? d : space.values.union(d);
+      if (x instanceof IntVar iv) {
+        if (!space.vars.isEmpty() && !space.vars.get(0).dom().eq(iv.dom())) {
+          space.sameDomain = false;
+        }
+        space.vars.add(iv);
+        space.pairs += iv.getSize();
+      } else {
+        setsOf.computeIfAbsent(space, k -> new ArrayList<>()).add((SetVar) x);
+      }
+    }
+    Map<IntVar, Integer> spaceOf = new IdentityHashMap<>();
+    for (Space s : created) {
+      if (s.vars.isEmpty()
+          || !setsOf.containsKey(s)
+          || anyNumeric(s, setsOf.get(s), parent, rootNumeric)
+          || s.values.getSize() < 2
+          || s.values.getSize() > MAX_VALUES
+          || (!s.sameDomain && s.pairs > MAX_DOMAIN_EDGES)) {
+        continue;
+      }
+      // the domains of the set variables differ from those of the integers: edges, not colours
+      s.sameDomain = false;
+      for (IntVar x : s.vars) {
+        spaceOf.put(x, spaces.size());
+      }
+      for (SetVar x : setsOf.get(s)) {
+        setSpaceOf.put(x, spaces.size());
+      }
+      spaces.add(s);
+    }
+    return spaceOf;
+  }
+
+  private static boolean anyNumeric(
+      Space s, List<SetVar> sets, Map<Var, Var> parent, Map<Var, Boolean> rootNumeric) {
+    for (IntVar x : s.vars) {
+      if (!Boolean.FALSE.equals(rootNumeric.get(rootVar(parent, x)))) {
+        return true;
+      }
+    }
+    for (SetVar x : sets) {
+      if (!Boolean.FALSE.equals(rootNumeric.get(rootVar(parent, x)))) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static Var rootVar(Map<Var, Var> parent, Var x) {
+    Var p = parent.get(x);
+    while (p != x) {
+      x = p;
+      p = parent.get(x);
+    }
+    return x;
+  }
+
+  private static void unionVar(Map<Var, Var> parent, Var a, Var b) {
+    Var ra = rootVar(parent, a);
+    Var rb = rootVar(parent, b);
+    if (ra != rb) {
+      parent.put(rb, ra);
+    }
   }
 
   private static int[] identity(int n) {
@@ -1918,10 +2497,18 @@ final class SymmetryBreaking implements ParserTreeConstants {
     private int[][] adjacency = new int[64][];
     private int[] degree = new int[64];
     final Map<IntVar, Integer> varVertices = new IdentityHashMap<>();
+    // the encoded spaces: the space of each set variable in one, and set constraints have specs
+    Map<SetVar, Integer> setSpaceOf;
     private final Map<Var, Integer> otherVertex = new IdentityHashMap<>();
     private final Map<Long, Integer> valueVertex = new HashMap<>();
     private final Set<String> distinct = new HashSet<>();
     final List<IntVar> vars = new ArrayList<>();
+    // the element vertices of each set variable, in increasing order of the elements
+    final Map<SetVar, int[]> elementVertices = new IdentityHashMap<>();
+    final Map<Integer, SetVar> setOfElement = new HashMap<>();
+    // the set variables with element vertices, in the order the graph met them
+    final List<SetVar> sets = new ArrayList<>();
+    private int setElements;
 
     Graph(IntVar objective, Map<IntVar, Integer> spaceOf) {
       this.objective = objective;
@@ -1975,6 +2562,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
             Integer s = spaceOf.get(atom.aVar());
             return s == null ? -1 : s;
           }
+          if (setSpaceOf != null && atom.other() instanceof SetVar sv) {
+            Integer s = setSpaceOf.get(sv);
+            return s == null ? -1 : s;
+          }
         }
       }
       return -1;
@@ -1985,7 +2576,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       Atom[][] args = item.args();
       boolean[] array = item.array();
       int arity = args.length;
-      ValueSpec valueSpec = spaceOf == null ? null : valueSpec(item);
+      ValueSpec valueSpec = spaceOf == null ? null : valueSpec(item, setSpaceOf != null);
       int space = space(item, valueSpec);
       int indexed = -1;
       int offset = 0;
@@ -2198,8 +2789,58 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if (atom.space() >= 0) {
         return valueVertex(atom.space(), atom.value());
       }
+      if (setSpaceOf != null && atom.other() instanceof SetVar s && setSpaceOf.containsKey(s)) {
+        return otherVertex.computeIfAbsent(s, v -> setInSpace(s, setSpaceOf.get(s)));
+      }
+      if (atom.other() instanceof SetVar s && spaceOf == null && setsMove) {
+        Integer v = otherVertex.get(s);
+        if (v != null) {
+          return v;
+        }
+        SetDomain d = s.dom();
+        int free = d.lub().getSize() - d.glb().getSize();
+        if (setElements + free <= MAX_SET_ELEMENTS) {
+          setElements += free;
+          v = vertex("S|" + d.glb() + "|" + d.lub() + "|" + d.card());
+          otherVertex.put(s, v);
+          int[] elements = new int[free];
+          int k = 0;
+          for (ValueEnumeration e = d.lub().valueEnumeration(); e.hasMoreElements(); ) {
+            int value = e.nextElement();
+            if (!d.glb().contains(value)) {
+              int w = vertex("E|" + value);
+              edge(v, w);
+              elements[k++] = w;
+              setOfElement.put(w, s);
+            }
+          }
+          elementVertices.put(s, elements);
+          sets.add(s);
+          return v;
+        }
+      }
       // a float or set variable is kept in place: a colour of its own
       return otherVertex.computeIfAbsent(atom.other(), v -> vertex("u|" + otherVertex.size()));
+    }
+
+    /**
+     * The vertex of a set variable of a space, joined to the values of its upper bound; a value of
+     * its lower bound through a vertex of its own.
+     */
+    private int setInSpace(SetVar s, int space) {
+      SetDomain d = s.dom();
+      int v = vertex("T|" + space + "|" + d.card());
+      for (ValueEnumeration e = d.lub().valueEnumeration(); e.hasMoreElements(); ) {
+        int value = e.nextElement();
+        if (d.glb().contains(value)) {
+          int g = vertex("t|glb");
+          edge(v, g);
+          edge(g, valueVertex(space, value));
+        } else {
+          edge(v, valueVertex(space, value));
+        }
+      }
+      return v;
     }
 
     /**

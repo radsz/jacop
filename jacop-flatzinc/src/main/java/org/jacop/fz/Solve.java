@@ -397,6 +397,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     SymmetryBreaking.Outcome o =
         symmetry
             .keepLargest(largestFirst(item))
+            .branchesOnSets(branchesOnSets(item))
             .freeSearch(opt.freeSearch())
             .run(
                 astTree,
@@ -431,6 +432,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  /** Whether the search annotation, or one of those it sequences, branches on set variables. */
+  private static boolean branchesOnSets(SimpleNode node) {
+    if (node instanceof ASTAnnotation a && SET_SEARCH.equals(a.getAnnId())) {
+      return true;
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (branchesOnSets((SimpleNode) node.jjtGetChild(i))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Whether the first value choice of the search annotation tries the largest values first. */

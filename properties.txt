@@ -192,6 +192,16 @@ Solver modes (defaults of command line options):
   automorphism search of symmetry detection (also at most 1/20 of the
   time left); default 1000.
 
+- org.jacop.fz.symmetrySets: =false keeps every set variable in place
+  in symmetry detection (a colour of its own), as before; by default
+  symmetries may exchange set variables when the search annotation
+  branches on set variables. Default true.
+
+- org.jacop.fz.symmetryEncoded: =false turns off the second search for
+  value symmetries, through set variables and overlapping value
+  groups, that runs when the plain value spaces give none. Default
+  true.
+
 - fz_system_timer: if =true use System.nanoTime instead of ManagementFactory
   timer for threads, otherwise use thread time.
 
