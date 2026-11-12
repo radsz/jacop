@@ -1068,14 +1068,17 @@ class LcgFuzzTest {
           IntVar end = rnd.nextBoolean() ? one() : intVar("mk", 0, 6);
           // durations or heights vary, not both: the reference search enumerates them
           boolean variableDurations = rnd.nextBoolean();
+          IntVar[] ed = variableDurations ? chain("ed", 3, 0, 2) : constants(3, 1, 2);
+          IntVar[] eh =
+              !variableDurations && rnd.nextBoolean() ? chain("eh", 3, 0, 2) : constants(3, 1, 2);
+          IntVar limit = constant(1 + rnd.nextInt(2));
+          // the rule only adds to the cumulative of a model (it checks the capacity once fixed):
+          // alone, the reference search enumerates every point before it finds an overload
+          Cumulative cumulative = new Cumulative(s, ed, eh, limit);
+          posted.add(cumulative.toString());
+          store.impose(cumulative);
           yield new EnergyPrecedence(
-              s,
-              variableDurations ? chain("ed", 3, 0, 2) : constants(3, 1, 2),
-              !variableDurations && rnd.nextBoolean() ? chain("eh", 3, 0, 2) : constants(3, 1, 2),
-              constant(1 + rnd.nextInt(2)),
-              s,
-              new IntVar[] {end, end, end},
-              new int[] {2, 2, 2});
+              s, ed, eh, limit, s, new IntVar[] {end, end, end}, new int[] {2, 2, 2});
         }
         case 78, 79 -> recentGlobal();
         case 63 -> {
