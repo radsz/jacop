@@ -4234,6 +4234,23 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
+     the travel time on the arc i -> j when i is left in step s (time
+     out[i] / stepLength), and waiting is allowed, so the arrival is the
+     earliest t' + travel(t') over the departures t' still possible
+     (an extension of Cire and van Hoeve, Operations Research 61(6),
+     2013). The FlatZinc front end also detects
+     tours given by an inverse pair (jacop_assignment) whose order is
+     proved by a position array, with the travel time read from a table
+     over (predecessor, departure step), as in the MiniZinc Challenge
+     tdtsp model. On the 15 tdtsp instances of 2015, 2017 and 2026, 600 s:
+     the ten proved instances are proved 1.1x-2.9x faster under the
+     model's search and 1.1x-10x faster with -f, and the five 20-node
+     instances end with higher lower bounds and, where the model names
+     the objective, better solutions (2026 inst_20_56_00 22,450 ->
+     17,579; -f 16,358 -> 14,962). -Dorg.jacop.fz.sequenceMdd=false turns
+     it off.
+
 Version 4.11
 =============
 
