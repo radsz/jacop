@@ -4234,6 +4234,18 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. The domain trail of the variables with more than 64 values
+     (LazyBitSetDomain) keeps each entry in the space its kind needs: a
+     saved word of the bit set takes 24 bytes instead of 56 and the state
+     saved at the first change of a level 48 bytes instead of 56. Entries
+     are of variable length in an int and an object stream, both still
+     grown in segments without copying. Search is unchanged. The live heap
+     at its peak drops on deep searches over wide domains: debruijn_binary
+     03_08 3.17 GB -> 0.86 GB (solved in 4.5 s at -Xmx2G; it ran out of
+     memory at -Xmx3G before) and 17 % faster, 04_06 806 MB -> 423 MB.
+     Elsewhere the speed is unchanged (identical search, 11 wide-set
+     instances, 6 runs each: 1.003 against 0.997 between two base runs).
+
 Version 4.11
 =============
 
