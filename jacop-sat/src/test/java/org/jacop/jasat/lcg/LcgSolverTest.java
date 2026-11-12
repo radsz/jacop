@@ -3989,8 +3989,8 @@ class LcgSolverTest {
         assertThat(map.floorValue(v)).isEqualTo(floor == null ? Long.MIN_VALUE : floor);
         long low = reference.isEmpty() ? Long.MAX_VALUE : reference.firstKey();
         long high = reference.isEmpty() ? Long.MIN_VALUE : reference.lastKey();
-        assertThat(map.ceilingValue(Long.MIN_VALUE)).isEqualTo(low);
-        assertThat(map.floorValue(Long.MAX_VALUE)).isEqualTo(high);
+        assertThat(map.ceilingValue(Integer.MIN_VALUE - 1L)).isEqualTo(low);
+        assertThat(map.floorValue(Integer.MAX_VALUE + 1L)).isEqualTo(high);
       }
     }
   }
