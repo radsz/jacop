@@ -2759,6 +2759,9 @@ public final class CdclSolver {
       if (workLimit != Long.MAX_VALUE && work() >= workLimit) {
         return UNKNOWN;
       }
+      if (decisionLevel == assumptionLevels && external != null) {
+        external.notifyTopDecision(toDimacs(next));
+      }
       newSearchLevel();
       assign(next, NO_REASON);
     }

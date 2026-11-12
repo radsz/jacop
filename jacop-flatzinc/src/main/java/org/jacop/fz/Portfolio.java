@@ -51,6 +51,7 @@ import java.util.regex.Pattern;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.jasat.lcg.SharedClauses;
+import org.jacop.jasat.lcg.SharedTree;
 import org.jacop.search.free.SharedSolution;
 
 /**
@@ -106,6 +107,15 @@ final class Portfolio {
   /** The most threads the portfolio uses: the options given and each setting above. */
   static final int MAX_THREADS = CONFIGS.length + 1;
 
+  /**
+   * The setting of the threads that divide one search tree (option {@code --free-config
+   * portfolio-split=<threads>}): LCG free search as branch and bound, each thread under the cube of
+   * the tree it took; see {@link SharedTree}.
+   */
+  static final String[] SPLIT_SETTING = {
+    "lcg-split", LCG, "on", "-f", FREE_CONFIG, "lcg-split=1,lcg-core=0,lcg-lb=0"
+  };
+
   /** The name of the thread of {@link #boundSetting}. */
   static final String BOUND_THREAD = "lcg-bisect";
 
@@ -131,6 +141,8 @@ final class Portfolio {
   private final List<Worker> workers = new ArrayList<>();
   // learnt clauses and root bounds of the LCG threads
   private final SharedClauses sharedClauses = new SharedClauses();
+  // the search tree the threads of SPLIT_SETTING divide among themselves
+  private final SharedTree sharedTree = new SharedTree();
   private final Object lock = new Object();
   // where the portfolio prints: stdout as it was when the portfolio started
   private PrintStream stdout;
@@ -243,12 +255,24 @@ final class Portfolio {
     int threads = Math.min(options.threads(), MAX_THREADS);
     boolean satisfaction = isSatisfaction(readModel(options));
     SimpleNode model = "0".equals(options.freeConfig("portfolio-one-parse", "1")) ? null : parse();
-    workers.add(new Worker("given", arguments(base, List.of(), false)));
+    // the threads that divide one search tree, in place of the last settings
+    int split = Math.min(threads, Integer.parseInt(options.freeConfig("portfolio-split", "0")));
+    if (split < 2) {
+      split = 0;
+    }
+    List<String> splitFlags = Arrays.asList(SPLIT_SETTING).subList(1, SPLIT_SETTING.length);
+    if (split < threads) {
+      workers.add(new Worker("given", arguments(base, List.of(), false)));
+    }
     String given = search(options.lcg(), options.freeSearch(), options.freeConfig, satisfaction);
     double bisect = Double.parseDouble(options.freeConfig("portfolio-bisect", "0"));
-    for (String[] config : settings(given, threads - 1, satisfaction, bisect)) {
+    int others = Math.max(0, threads - 1 - split);
+    for (String[] config : settings(given, others, satisfaction, bisect)) {
       List<String> flags = Arrays.asList(config).subList(1, config.length);
       workers.add(new Worker(config[0], arguments(base, flags, true)));
+    }
+    for (int k = 0; k < split; k++) {
+      workers.add(new Worker(SPLIT_SETTING[0] + k, arguments(base, splitFlags, true)));
     }
     String file = args[args.length - 1];
     synchronized (lock) {
@@ -352,6 +376,17 @@ final class Portfolio {
           }
           if (imports > 0) {
             s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+          }
+          if (sharedTree.joined() > 0) {
+            s.append("%%%mzn-stat: portfolioSplitThreads=")
+                .append(sharedTree.joined())
+                .append("\n%%%mzn-stat: portfolioSplits=")
+                .append(sharedTree.splits())
+                .append("\n%%%mzn-stat: portfolioCubesClosed=")
+                .append(sharedTree.closedCubes())
+                .append("\n%%%mzn-stat: portfolioSplitWaitMillis=")
+                .append(sharedTree.waitedMillis())
+                .append('\n');
           }
           if (sharedClauses.size() > 0) {
             s.append("%%%mzn-stat: portfolioSharedClauses=")
@@ -724,6 +759,10 @@ final class Portfolio {
      *
      * @return the clauses
      */
+    SharedTree sharedTree() {
+      return sharedTree;
+    }
+
     SharedClauses sharedClauses() {
       return sharedClauses;
     }

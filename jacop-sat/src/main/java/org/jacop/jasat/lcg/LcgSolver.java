@@ -491,6 +491,22 @@ public final class LcgSolver implements ExternalPropagator {
   // per variable its number in the shared clauses (-1: not shared), and the reverse
   private int[] sharedId;
   private int[] sharedLocal;
+  // the search tree divided with other solvers (search splitting), or null
+  private SharedTree tree;
+  // the cube this solver solves under, and the atom it keeps after a split it asked for
+  private int[] cube;
+  private int[] splitAtom;
+  private volatile boolean stopRequested;
+
+  /** Statistics: cubes of the shared tree this solver took, gave away by splits, and closed. */
+  public long treeCubes;
+
+  /** Statistics: the cubes this solver gave away by splitting its own. */
+  public long treeSplits;
+
+  /** Statistics: the cubes this solver closed. */
+  public long treeClosed;
+
   // the root bounds last published
   private int[] publishedMin;
   private int[] publishedMax;
@@ -2973,7 +2989,7 @@ public final class LcgSolver implements ExternalPropagator {
    * @return {@link CdclSolver#SAT}, {@link CdclSolver#UNSAT} or {@link CdclSolver#UNKNOWN}
    */
   public int solve() {
-    int result = solve(new int[0]);
+    int result = tree != null ? solveInTree() : solve(new int[0]);
     if (objective < 0) {
       finishProof(result, false);
     }
@@ -3046,7 +3062,9 @@ public final class LcgSolver implements ExternalPropagator {
     // a conflict limit set before bounds the core-guided phase and branch and bound
     conflictCap = sat.conflictLimit();
     try {
-      if (bisectGap > 0 && proof == null) {
+      if (tree != null) {
+        result = solveInTree();
+      } else if (bisectGap > 0 && proof == null) {
         result = minimizeByBisection();
       } else if (coreSearch != null) {
         result = minimizeWithCores();
@@ -5182,6 +5200,149 @@ public final class LcgSolver implements ExternalPropagator {
     sat.setLearntExport(size, lbd);
   }
 
+  /**
+   * Divides the search with the other solvers of a shared tree instead of searching the whole tree:
+   * {@link #solve} and {@link #minimize} (as plain branch and bound, without the core-guided phase,
+   * lower-bound runs, bisection or neighbourhoods) solve the cubes this solver takes, and split its
+   * cube when another solver waits. Needs {@link #setSharedClauses} first, for the names of the
+   * variables; the tree refuses a solver whose added constraints differ from the others'.
+   *
+   * @param shared the tree
+   * @param added the constraints the store adds to the shared model, as for {@link
+   *     #setSharedClauses}
+   * @return whether this solver takes part
+   */
+  public boolean setSharedTree(SharedTree shared, String added) {
+    if (sharedId == null || proof != null || !shared.join(added)) {
+      return false;
+    }
+    tree = shared;
+    return true;
+  }
+
+  /**
+   * Solves the cubes of the shared tree until the tree is complete: UNSAT when every cube is closed
+   * (no solution, or none better than the best one, own or shared), SAT for a solution of a
+   * satisfaction problem, UNKNOWN on a stop or the time-out.
+   */
+  private int solveInTree() {
+    while (true) {
+      int[] taken = tree.take(() -> stopRequested || System.nanoTime() > sat.deadline());
+      if (taken == null) {
+        return tree.isComplete() ? CdclSolver.UNSAT : CdclSolver.UNKNOWN;
+      }
+      treeCubes++;
+      cube = taken;
+      boolean open = true;
+      try {
+        int result = solveCube();
+        if (result == CdclSolver.UNSAT) {
+          tree.closed(cube);
+          treeClosed++;
+          open = false;
+        } else if (result == CdclSolver.SAT) {
+          tree.closed(cube);
+          open = false;
+          tree.complete();
+          return result;
+        } else if (result == UNSAT_ALL) {
+          tree.closed(cube);
+          open = false;
+          tree.complete();
+          return CdclSolver.UNSAT;
+        } else {
+          return result;
+        }
+      } finally {
+        if (open) {
+          tree.release(cube);
+        }
+        cube = null;
+      }
+    }
+  }
+
+  // the result of solveCube when the whole tree has no solution, not only the cube
+  private static final int UNSAT_ALL = -100;
+
+  /** Solves under {@link #cube}, extending it after each split, until it is closed or stopped. */
+  private int solveCube() {
+    while (true) {
+      int[] assumed = cubeLiterals(cube);
+      if (assumed == null) {
+        return CdclSolver.UNSAT; // an atom of the cube is false at the root
+      }
+      splitAtom = null;
+      int result = solve(assumed);
+      if (result == CdclSolver.UNSAT) {
+        return !sat.isOk() || sat.failedAssumptions().length == 0 ? UNSAT_ALL : result;
+      }
+      if (result == CdclSolver.SAT) {
+        return result;
+      }
+      if (sharedBoundUnreachable) {
+        return UNSAT_ALL; // no solution beats the shared bound at all
+      }
+      if (splitAtom == null || stopRequested || System.nanoTime() > sat.deadline()) {
+        return result;
+      }
+      cube = SharedTree.extend(cube, splitAtom[0], splitAtom[1], splitAtom[2]);
+    }
+  }
+
+  /** The cube's atoms as this solver's literals, or null when one of them is false at the root. */
+  private int[] cubeLiterals(int[] c) {
+    int[] lits = new int[c.length / 3];
+    int size = 0;
+    for (int k = 0; k < c.length; k += 3) {
+      int id = c[k];
+      int i = id < sharedLocal.length ? sharedLocal[id] : -1;
+      boolean negated = c[k + 1] >= SharedClauses.NEGATED;
+      int kind = c[k + 1] % SharedClauses.NEGATED;
+      int v = c[k + 2];
+      if (i < 0) {
+        throw new IllegalStateException("a cube on a variable this solver does not have");
+      }
+      IntDomain r = root[i];
+      boolean atRootTrue;
+      boolean atRootFalse;
+      if (kind == SharedClauses.GE) {
+        atRootTrue = v <= r.min();
+        atRootFalse = v > r.max();
+      } else {
+        atRootFalse = !r.contains(v);
+        atRootTrue = r.singleton(v);
+      }
+      if (atRootTrue || atRootFalse) {
+        if (atRootTrue == negated) {
+          return null;
+        }
+        continue;
+      }
+      int d = kind == SharedClauses.GE ? geVar(i, v) : eqVar(i, v);
+      lits[size++] = negated ? -d : d;
+    }
+    return Arrays.copyOf(lits, size);
+  }
+
+  @Override
+  public void notifyTopDecision(int lit) {
+    if (tree == null || cube == null || splitAtom != null || !tree.wantsSplit()) {
+      return;
+    }
+    int d = Math.abs(lit);
+    int i = d < litVar.length ? litVar[d] : -1;
+    if (i < 0 || sharedId[i] < 0) {
+      return; // an auxiliary literal or a variable of this store only: no split this time
+    }
+    int kind = litKind[d] + (lit < 0 ? SharedClauses.NEGATED : 0);
+    int negatedKind = litKind[d] + (lit < 0 ? 0 : SharedClauses.NEGATED);
+    tree.split(SharedTree.extend(cube, sharedId[i], negatedKind, litValue[d]));
+    treeSplits++;
+    splitAtom = new int[] {sharedId[i], kind, litValue[d]};
+    sat.interrupt();
+  }
+
   @Override
   public void notifyLearnt(int[] clause, int lbd) {
     if (shared == null) {
@@ -5300,6 +5461,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Stops {@link #solve} and {@link #minimize}, also when called from another thread. */
   public void stop() {
+    stopRequested = true;
     sat.cancel();
   }
 

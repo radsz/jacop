@@ -3291,6 +3291,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     lcg.setSharedClauses(worker.sharedClauses(), added, names::get, size, lbd);
+    if ("1".equals(options.freeConfig("lcg-split", "0"))
+        && !lcg.setSharedTree(worker.sharedTree(), added)) {
+      FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
+    }
   }
 
   // the probes of dichotomic bound search (lcg-bisect), when it ran
