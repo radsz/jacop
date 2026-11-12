@@ -1674,7 +1674,10 @@ class GlobalConstraints implements ParserTreeConstants {
   void gen_jacop_table_int(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int size = v.length;
-    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] tbl = support.mergedTables.remove(node);
+    if (tbl == null) {
+      tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    }
 
     int[][] t = filterFeasibleTuples(tbl, v, size);
     if (t.length == 0) {
@@ -1755,12 +1758,55 @@ class GlobalConstraints implements ParserTreeConstants {
         return;
       }
     }
+    if (TableReformulation.enabled() && support.options.proof() == null) {
+      // a column of stars only is free, a column of one value fixes its variable
+      int[] keep = new int[nv.length];
+      int k = 0;
+      for (int c = 0; c < nv.length; c++) {
+        int value = kept.get(0)[c];
+        boolean same = true;
+        for (int[] row : kept) {
+          same &= row[c] == value;
+        }
+        if (!same) {
+          keep[k++] = c;
+        } else if (value != star) {
+          nv[c].domain.in(store.level, nv[c], value, value);
+        }
+      }
+      if (k < nv.length) {
+        IntVar[] rv = new IntVar[k];
+        List<int[]> rows = new ArrayList<>(kept.size());
+        for (int c = 0; c < k; c++) {
+          rv[c] = nv[keep[c]];
+        }
+        for (int[] row : kept) {
+          int[] r = new int[k];
+          for (int c = 0; c < k; c++) {
+            r[c] = row[keep[c]];
+          }
+          rows.add(r);
+        }
+        if (k == 0) {
+          return;
+        }
+        nv = rv;
+        kept = rows;
+      }
+    }
     if (nv.length == 1) {
       IntervalDomain d = new IntervalDomain();
+      boolean any = false;
       for (int[] row : kept) {
-        d.unionAdapt(row[0], row[0]);
+        if (row[0] == star) {
+          any = true;
+        } else {
+          d.unionAdapt(row[0], row[0]);
+        }
       }
-      nv[0].domain.in(store.level, nv[0], d);
+      if (!any) {
+        nv[0].domain.in(store.level, nv[0], d);
+      }
       return;
     }
     support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
@@ -2020,6 +2066,58 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void poseTableBySize(IntVar[] v, int[][] t) {
+    if (v.length >= 2 && TableReformulation.enabled() && support.options.proof() == null) {
+      TableReformulation.Result parts = TableReformulation.reformulate(t);
+      if (parts != null) {
+        poseReformulatedTable(v, parts);
+        return;
+      }
+    }
+    poseTableBySizePlain(v, t);
+  }
+
+  // the parts of an exactly reformulated table: unary domains, binary tables, the rest
+  private void poseReformulatedTable(IntVar[] v, TableReformulation.Result parts) {
+    for (TableReformulation.Unary u : parts.unary()) {
+      IntervalDomain d = new IntervalDomain();
+      for (int value : u.values()) {
+        d.unionAdapt(value, value);
+      }
+      IntVar x = v[u.column()];
+      x.domain.in(store.level, x, d);
+    }
+    for (TableReformulation.Binary b : parts.binary()) {
+      IntVar x = v[b.from()];
+      IntVar y = v[b.to()];
+      if (b.identity()) {
+        support.pose(new XeqY(x, y));
+      } else {
+        support.pose(new HybridTable(new IntVar[] {x, y}, b.pairs()));
+      }
+    }
+    int[] rest = parts.rest();
+    if (rest.length >= 2) {
+      IntVar[] rv = new IntVar[rest.length];
+      for (int c = 0; c < rest.length; c++) {
+        rv[c] = v[rest[c]];
+      }
+      poseTableBySizePlain(rv, parts.restRows());
+    }
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% table reformulation: arity "
+              + v.length
+              + " -> "
+              + rest.length
+              + ", "
+              + parts.unary().size()
+              + " unary, "
+              + parts.binary().size()
+              + " binary");
+    }
+  }
+
+  private void poseTableBySizePlain(IntVar[] v, int[][] t) {
     // Merging the tuples that differ in one column only (-Djacop.table=star into *, or =sets into
     // sets of values) shrinks the tables that MiniZinc expanded from short tables, but it measured
     // slower overall on the FlatZinc benchmarks, so it is off by default.

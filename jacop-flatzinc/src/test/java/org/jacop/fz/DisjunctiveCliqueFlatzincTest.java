@@ -347,6 +347,32 @@ class DisjunctiveCliqueFlatzincTest {
     assertTrue(detected > trials / 10, "detected " + detected);
   }
 
+  @Test
+  void inferredCumulativesKeepAllSolutions() throws IOException {
+    String property = "org.jacop.fz.inferredCumulatives";
+    String useful = property + ".useful";
+    System.setProperty(property, "true");
+    // post every inference, not only those with a better capacity bound, to check them all
+    System.setProperty(useful, "false");
+    try {
+      Random random = new Random(29);
+      int inferred = 0;
+      int trials = Integer.getInteger("disjunctiveCliques.trials", 400);
+      for (int trial = 0; trial < trials; trial++) {
+        Model model = randomModel(random);
+        String out = run(model.fzn(), "-a", "-debug");
+        if (out.contains("% inferred cumulative of")) {
+          inferred++;
+        }
+        assertEquals(model.bruteForce(), solutions(out), "trial " + trial + "\n" + model.fzn());
+      }
+      assertTrue(inferred > trials / 20, "inferred " + inferred);
+    } finally {
+      System.clearProperty(property);
+      System.clearProperty(useful);
+    }
+  }
+
   /**
    * A machine with sequence-dependent setup times: s[j] >= s[i] + d[i] + t[i][j] \/ s[i] >= s[j] +
    * d[j] + t[j][i] for every pair, as disjunctions in the encodings above or as one {@code

@@ -45,7 +45,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -80,8 +80,8 @@ public class ChannelOrder extends Constraint
   private final Map<Var, int[]> itemsOf = new IdentityHashMap<>();
 
   // items below lo have t < min(x), so x <= t is false; items from hi on have t >= max(x)
-  private TimeStamp<Integer> lo;
-  private TimeStamp<Integer> hi;
+  private TimeStampInt lo;
+  private TimeStampInt hi;
 
   // 0/1 variables changed since the last consistency call; consistency appends its own changes
   private final List<Var> queue = new ArrayList<>();
@@ -146,8 +146,8 @@ public class ChannelOrder extends Constraint
 
   @Override
   public void impose(Store store) {
-    lo = new TimeStamp<>(store, 0);
-    hi = new TimeStamp<>(store, t.length);
+    lo = new TimeStampInt(store, 0);
+    hi = new TimeStampInt(store, t.length);
     super.impose(store);
   }
 

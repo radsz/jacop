@@ -46,7 +46,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 
 /*
  * CumulativePrimary implements the cumulative constraint using time tabling
@@ -116,7 +116,7 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
   private int releaseCount;
   private final int[] startExcluded;
   private final int[] activeMap;
-  private final TimeStamp<Integer> activePnt;
+  private final TimeStampInt activePnt;
 
   /*
    * It creates a cumulative constraint.
@@ -185,7 +185,7 @@ class CumulativePrimary extends Constraint implements Copyable<CumulativePrimary
 
     setScope(Stream.concat(Arrays.stream(starts), Stream.of(limit)));
 
-    activePnt = new TimeStamp<>(limit.getStore(), 0);
+    activePnt = new TimeStampInt(limit.getStore(), 0);
   }
 
   /*
