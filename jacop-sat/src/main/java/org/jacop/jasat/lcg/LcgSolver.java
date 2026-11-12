@@ -5067,6 +5067,8 @@ public final class LcgSolver implements ExternalPropagator {
     encodedGraphs.clear();
     // search without learning needs the propagators of the constraints that became clauses
     for (Constraint c : encodedConstraints) {
+      // removeConstraint only marked it as entailed above the root
+      store.clearEntailed(c);
       c.impose(store);
     }
     encodedConstraints.clear();
