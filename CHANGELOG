@@ -4560,6 +4560,18 @@ Version 5.0 (unreleased)
      and workforce-alloc 71 with free search. -Dorg.jacop.fz.symmetrySets=false and
      -Dorg.jacop.fz.symmetryEncoded=false turn the two parts off.
 
+266. fzn-jacop -p reads the model once: the portfolio parses the file into
+     one syntax tree and each thread builds its own store from it, instead
+     of every thread reading and translating the file. LCG threads of -p
+     also take the values of a better solution shared by another thread as
+     their phases when they import its bound (solution-guided search, Beck,
+     "Solution-guided multi-point constructive search for job shop
+     scheduling", JAIR 29, 2007). At 240 s with -f -p 4, two rounds each,
+     the 62 instances of the wide-quick set score 64.7 against 59.3 pair
+     points (26 better, 6 worse) and the 65 instances of the 2026 Challenge
+     gap set 66.2 against 61.8 (36 better, 32 worse). --free-config
+     portfolio-one-parse=0 and lcg-shared-phase=0 turn the two parts off.
+
 Version 4.11
 =============
 
