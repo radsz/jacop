@@ -4250,10 +4250,9 @@ Version 5.0 (unreleased)
      ChampionsLeague, DC-skinny, FAPP, Nonogram, Ortholatin, Pentominoes,
      SportsScheduling, Subisomorphism, WordSquare). On 55 of them at
      600 s: default 29 -> 30 solved, geomean time 0.88 on the 28 both
-     solve; -f on the 27 optimisation ones 12 -> 13 solved. FAPP-aux-20
-     is proved (base runs out of memory), SportsScheduling-dummy-14 is
-     solved in 48 s, CarSequencing-table-75/80 4-8x faster;
-     CarSequencing-table-90-02 is no longer solved in 600 s.
+     solve (0.998 without CarSequencing, whose single-seed differences
+     are seed spread); -f on the 27 optimisation ones 12 -> 13 solved.
+     FAPP-aux-20 is proved instead of running out of memory.
      -Dorg.jacop.fz.tableReformulation=false turns it off; see
      properties.txt.
 
