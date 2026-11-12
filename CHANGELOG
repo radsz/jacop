@@ -4234,6 +4234,27 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. Decomposition bound (off by default, -Dorg.jacop.fz.decomposition=true).
+     Before search, the FlatZinc front end looks for blocks of variables
+     that only counting (CountValuesBounds) and linear constraints link,
+     as in the connected-component detection of Gamrath and Luebbecke
+     (SEA 2010): a worker's shift sequence, a person's roster. It bounds
+     the objective by the Lagrangian relaxation of the linking rows
+     (Geoffrion, Mathematical Programming Study 2, 1974), with column
+     generation: a JaLP master over the blocks' solutions found so far,
+     with Wentges' smoothing of the duals, and for each block a pricing
+     problem, its own constraints with the reduced cost as objective,
+     solved by the solver itself as in Ha, Quimper and Rousseau (CP 2015):
+     by branch and bound in the store, or, for a block it cannot finish
+     there, by lazy clause generation in a copy of the block. Each bound is
+     certified in integer arithmetic from duals rounded to multiples of
+     1/K, so it holds whatever the simplex's accuracy, and the best one
+     bounds the objective at the root. physician-scheduling instance10
+     (MiniZinc Challenge 2021): root bound 1245 -> 2980 = the optimum in
+     about 7 s; work-task-variation (2025) has no root bound and gets one.
+     The statistics are dbBlocks, dbRows, dbIterations, dbColumns,
+     dbBound, dbPricingTimeOuts and dbTime.
+
 Version 4.11
 =============
 
