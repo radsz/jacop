@@ -597,9 +597,14 @@ public class Diffn extends Nooverlap {
       Rectangle r = rectangle[i];
       BitSet o = overlapping[i].value();
 
-      if (!o.isEmpty() && mustExamine(PROFILE_PASS, i, o)) {
-        sweepPruning(r, o, 0);
-        sweepPruning(r, o, 1);
+      if (o.isEmpty()) {
+        continue;
+      }
+      if (mustSweep(i, o, X)) {
+        sweepPruning(r, o, X);
+      }
+      if (mustSweep(i, o, Y)) {
+        sweepPruning(r, o, Y);
       }
     }
   }
