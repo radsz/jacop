@@ -125,9 +125,9 @@ public final class DominanceNogoods {
       String skipped) {}
 
   private static final long BUDGET = Long.getLong("jacop.dominance.budget", 50_000_000L);
+  private static final long TIME = Long.getLong("jacop.dominance.time", 1000L) * 1_000_000L;
   private static final int MAX_DOMAIN = Integer.getInteger("jacop.dominance.domain", 16);
   private static final int MAX_FOLLOWERS = 64;
-  private static final int MAX_DEPTH = 32;
   private static final long UNDEFINED = Long.MIN_VALUE;
   private static final long MAX_NOGOODS = Long.getLong("jacop.dominance.nogoods", 200_000L);
 
@@ -169,6 +169,8 @@ public final class DominanceNogoods {
   private long[] oldValue;
   private long[] newValue;
   private int movedX;
+  private int[] rank;
+  private final java.util.PriorityQueue<Long> queue = new java.util.PriorityQueue<>();
   private int movedY;
   private long work;
 
@@ -205,6 +207,7 @@ public final class DominanceNogoods {
     if (objective == null || objective.singleton()) {
       return new Outcome(0, 0, 0, 0, 0, true, "no objective");
     }
+    long deadline = System.nanoTime() + TIME;
     List<Var> all = Derivation.variables(store);
     List<Constraint> live = new ArrayList<>();
     for (Constraint c : Derivation.constraints(store, all)) {
@@ -219,6 +222,7 @@ public final class DominanceNogoods {
     }
     obj = o;
     definitions();
+    ranks();
     if (definition[obj] < 0) {
       return new Outcome(0, 0, 0, 0, 0, true, "objective not defined by a linear equality");
     }
@@ -240,9 +244,14 @@ public final class DominanceNogoods {
     // nogoods on one variable
     List<int[]> removals = new ArrayList<>();
     boolean[][] dominated = new boolean[vars.size()][];
+    boolean complete = true;
     for (int v = 0; v < vars.size(); v++) {
       if (!candidate[v] || !reaches[v]) {
         continue;
+      }
+      if ((v & 63) == 0 && System.nanoTime() > deadline) {
+        complete = false;
+        break;
       }
       int[] d = values(vars.get(v));
       for (int i = 0; i < d.length; i++) {
@@ -270,10 +279,9 @@ public final class DominanceNogoods {
     long nogoods = 0;
     int pairs = 0;
     int imposed = 0;
-    boolean complete = true;
     List<Constraint> posted = new ArrayList<>();
     outer:
-    for (int c : order) {
+    for (int c : complete ? order : new Integer[0]) {
       int[] scope = scope(c);
       for (int i = 0; i < scope.length; i++) {
         int x = scope[i];
@@ -289,7 +297,9 @@ public final class DominanceNogoods {
           if (!seen.add(key)) {
             continue;
           }
-          if (work > BUDGET || nogoods >= MAX_NOGOODS) {
+          if (work > BUDGET
+              || nogoods >= MAX_NOGOODS
+              || (checked & 63) == 0 && System.nanoTime() > deadline) {
             complete = false;
             break outer;
           }
@@ -409,25 +419,24 @@ public final class DominanceNogoods {
     if (y >= 0) {
       set(y, ya, yb);
     }
-    // the followers reached from the changed variables, each computed from its inputs
-    for (int k = 0; k < touched.size(); k++) {
-      int v = touched.get(k);
-      if (delta[v] == 0) {
-        continue;
+    // the followers reached from the changed variables, by rank, so that the changed inputs of a
+    // follower are computed before it
+    queue.clear();
+    discover(x);
+    if (y >= 0) {
+      discover(y);
+    }
+    int followers = 0;
+    while (!queue.isEmpty()) {
+      int z = (int) (queue.poll() & 0xffffffffL);
+      if (!compute(z)) {
+        return false;
       }
-      for (int c : varCons[v]) {
-        work++;
-        int z = -1;
-        if (relation[c] == EQ) {
-          z = definedBy(c);
-        } else if (valueOf[c] != null && valIn[c] == v) {
-          z = valOut[c];
+      if (delta[z] != 0) {
+        if (++followers > MAX_FOLLOWERS) {
+          return false;
         }
-        if (z >= 0 && state[z] == 0) {
-          if (touched.size() >= MAX_FOLLOWERS || !compute(z, 0)) {
-            return false;
-          }
-        }
+        discover(z);
       }
     }
     long d = delta[obj];
@@ -458,27 +467,30 @@ public final class DominanceNogoods {
     touched.add(v);
   }
 
-  /**
-   * Computes the change of u: from its definition, by value or linear, inputs first; a variable
-   * with no definition and not moved does not change. False if the change cannot be computed.
-   */
-  private boolean compute(int u, int depth) {
-    if (state[u] == 2) {
-      return true;
+  /** Queues the followers defined from v. */
+  private void discover(int v) {
+    for (int c : varCons[v]) {
+      work++;
+      int z = -1;
+      if (relation[c] == EQ) {
+        z = definedBy(c);
+      } else if (valueOf[c] != null && valIn[c] == v && valueDefinition[valOut[c]] == c) {
+        z = valOut[c];
+      }
+      if (z >= 0 && state[z] == 0) {
+        state[z] = 1;
+        touched.add(z);
+        queue.add(((long) rank[z] << 32) | z);
+      }
     }
-    if (state[u] == 1 || depth > MAX_DEPTH) {
-      // a cycle of definitions, or too deep to follow
-      return false;
-    }
-    state[u] = 1;
-    touched.add(u);
+  }
+
+  /** Computes the change of the follower u from its definition, whose inputs are final. */
+  private boolean compute(int u) {
     work++;
     if (valueDefinition[u] >= 0) {
       int c = valueDefinition[u];
       int in = valIn[c];
-      if (!compute(in, depth + 1)) {
-        return false;
-      }
       if (delta[in] != 0) {
         if (!known[in]) {
           return false;
@@ -493,15 +505,12 @@ public final class DominanceNogoods {
         newValue[u] = to;
         known[u] = true;
       }
-    } else if (definition[u] >= 0) {
+    } else {
       int c = definition[u];
       long sum = 0;
       for (int k = 0; k < linVars[c].length; k++) {
         int w = linVars[c][k];
         if (w != u) {
-          if (!compute(w, depth + 1)) {
-            return false;
-          }
           sum += linWeights[c][k] * delta[w];
         }
       }
@@ -510,6 +519,60 @@ public final class DominanceNogoods {
     }
     state[u] = 2;
     return true;
+  }
+
+  /**
+   * Ranks the defined variables: one more than the largest rank of their inputs, 0 for others. A
+   * definition on a cycle of definitions is dropped.
+   */
+  private void ranks() {
+    rank = new int[vars.size()];
+    int[] mark = new int[vars.size()];
+    for (int v = 0; v < vars.size(); v++) {
+      rank(v, mark, 0);
+    }
+  }
+
+  private int rank(int v, int[] mark, int depth) {
+    if (mark[v] == 2) {
+      return rank[v];
+    }
+    if (mark[v] == 1 || depth > 2000) {
+      return -1;
+    }
+    int[] inputs = inputs(v);
+    if (inputs.length == 0) {
+      mark[v] = 2;
+      rank[v] = 0;
+      return 0;
+    }
+    mark[v] = 1;
+    int r = 0;
+    for (int u : inputs) {
+      int ru = rank(u, mark, depth + 1);
+      if (ru < 0) {
+        // v closes a cycle, or the chain is too long: v is no longer defined
+        definition[v] = -1;
+        valueDefinition[v] = -1;
+        r = -1;
+        break;
+      }
+      r = Math.max(r, ru + 1);
+    }
+    mark[v] = 2;
+    rank[v] = Math.max(r, 0);
+    return rank[v];
+  }
+
+  private int[] inputs(int v) {
+    if (valueDefinition[v] >= 0) {
+      return new int[] {valIn[valueDefinition[v]]};
+    }
+    if (definition[v] >= 0) {
+      int c = definition[v];
+      return Arrays.stream(linVars[c]).filter(u -> u != v).toArray();
+    }
+    return new int[0];
   }
 
   private int definedBy(int c) {
