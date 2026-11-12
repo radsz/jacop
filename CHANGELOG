@@ -4234,6 +4234,19 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. fzn-jacop and the MiniZinc Challenge image start the JVM with
+     -XX:+UseTransparentHugePages on Linux: the heap is backed by 2 MB
+     pages, which cuts the TLB misses of JaCoP's randomly read clause
+     arena, watch lists and domains. The same search takes about 5 % less
+     time (32 wide-set instances, 6 paired reps, every rep 0.93-0.96x;
+     a copy of the same jar 0.99-1.01x), and wide-quick at 240 s solves
+     the same instances 7 % faster in wall time in both modes, with about
+     4 % more peak memory. The kernel must have transparent huge pages in
+     madvise or always mode; otherwise the JVM runs as before. The option
+     exists only in the Linux JVM, so the launcher adds it only there.
+     -XX:+UseCompactObjectHeaders was measured again and is not set: no
+     gain, and an AOT cache made without it is rejected.
+
 Version 4.11
 =============
 
