@@ -4131,7 +4131,110 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
-241. Cuts in search keep their period only while they move the bound.
+241. Symmetry breaking in the FlatZinc front end also posts Schreier-Sims
+     cuts x_b <= x_j: for each variable b that a generator moves first in
+     the lex-leader order, every j in the orbit of b under the generators
+     that fix all variables before b (Liberti and Ostrowski, "Stabilizer-
+     based symmetry breaking constraints for mathematical programs",
+     J. Global Optim. 60, 2014; Salvagnin, "Symmetry breaking inequalities
+     from the Schreier-Sims table", CPAIOR 2018, LNCS 10848). The
+     lexicographically smallest (or largest) solution of each orbit
+     satisfies them, so they keep what the lex-leader constraints, lex
+     chains and value precedence keep. Cuts already implied by the first
+     positions of the posted constraints are left out, which is nearly all
+     of them: of the 345 MiniZinc Challenge instances where symmetry
+     breaking fires, 29 get any. zephyrus_15_10 is proved in 1.6 s instead
+     of not at all in 600 s. -Dorg.jacop.fz.symmetry.schreierSims=off turns
+     them off; --search-statistics prints symmetrySchreierSimsCuts.
+
+242. LateCount bounds a weighted sum of late tasks (1|r_j|sum w_j U_j)
+     with new LateCount(starts, durations, due, weights, late). The lower
+     bound of late is the larger of two bounds. The first is the sum of
+     the c smallest weights of the undecided tasks, where c is the
+     number of late tasks of Moore-Hodgson on the relaxed problem. The
+     second is a linear relaxation: each task may be on time for part of
+     its processing, within the capacity of every due-date prefix. These
+     capacities are nested, so they form a polymatroid and the greedy
+     order by weight per unit of processing is optimal (Lawler and
+     Moore, "A functional equation and its application to resource
+     allocation and sequencing problems", Management Science 16(1),
+     1969; Edmonds, "Submodular functions, matroids, and certain
+     polyhedra", 1970). Each step of the greedy takes the smallest slack
+     of the suffix in a segment tree with lazy addition.
+     A task is filtered late or on time without solving the relaxation
+     again where the answer cannot change. That is the case when
+     Moore-Hodgson already puts the task late and the relaxation gives
+     it no on-time processing, or when Moore-Hodgson keeps it on time
+     and the relaxation gives it all of its processing. The new bound
+     then comes from prefix sums of the smallest weights. Under --lcg,
+     the weighted bound explains its pruning like the count.
+     The FlatZinc front end now passes the weights of the objective to
+     the LateCount it detects. Before, it counted the late tasks.
+     -Dorg.jacop.fz.lateCount.weights=false counts them again. Paired
+     runs at 600 s on 60 generated weighted instances (osolpro
+     benchmarks/scheduling-bounds, lcw), counting against weights:
+     - model search: 12 -> 33 optima, mean time 481 -> 284 s, 39
+       objectives better and 2 worse;
+     - -f: 36 -> 58 optima, mean time 263 -> 27 s, 11 objectives better
+       and 1 worse.
+
+243. New constraint SequenceMdd: a relaxed multivalued decision diagram over
+     the order in which a circuit visits its nodes, with arrival and
+     departure times (in[j] >= out[i] + travel[i][j] on the arc i -> j,
+     out[j] >= in[j] + delta[j]) and optionally a sum of arc costs, after
+     Cire and van Hoeve, Multivalued Decision Diagrams for Sequencing
+     Problems, Operations Research 61(6):1411-1428, 2013. Each call compiles
+     the diagram top-down (width 64, nodes with the same visited set merged
+     exactly, the costliest or latest merged beyond the width) and bottom-up
+     (latest departures, least cost to the end); it removes successor values
+     on no path, bounds the arrival and departure times and the cost, and
+     the return time to the depot. The FlatZinc front end posts it as a
+     redundant constraint on circuit(succ) or circuit(pred) with time chains
+     arr[succ[i]] = dep[i] + time[i, succ[i]] (or the predecessor form of
+     tsptw) on circuits of up to 32 nodes. MiniZinc Challenge tsptw
+     n20w160.001 and n20w140.005 are proved in 7 s under the model's search
+     (not proved in 240 s before). -Dorg.jacop.fz.sequenceMdd=false turns
+     it off; org.jacop.fz.sequenceMddWidth and org.jacop.fz.sequenceMddNodes
+     set the width and the largest circuit.
+
+244. GlobalCardinality (MiniZinc global_cardinality and count with
+     ::domain) keeps the value lists of its variables between executions
+     and builds again only the lists of the variables that changed (or
+     whose level was removed), instead of every list at every execution.
+     Pruning and search are unchanged; on the 2026 warehouse instances,
+     where the lists took about 60 % of the run, fixed search explores
+     1.1x to 4.2x more nodes in 600 s.
+
+245. Large linear relaxations. A relaxation of an optimisation model over
+     the size caps of the sparse simplex (25,000 rows or 30,000 columns),
+     which was dropped, is kept up to 1,000,000 rows and 250,000 columns:
+     it is solved at the root only, its root solves (first solve, trial of
+     further rows, cut rounds) share a tenth of the time limit instead of a
+     pivot budget of about ten pivots, and it is not solved again in
+     search. Under -f its root solution guides the decisions when it is
+     large by its rows and has at least 10,000 columns (the guide lost on
+     triangular, 36,000-101,000 rows over 408-782 columns). A large
+     relaxation whose root bound does not cut the domain of the objective
+     is removed after its root solve: woken in search for nothing, it
+     halved the conflicts of LCG under -f on cable-tree-wiring A073 (bound
+     -198), which then found no solution in 600 s. On the store x
+     warehouse MIP form of the 2026 warehouse model (117,000 rows after
+     pair cliques; JaLP solves its root LP in 9.7 s, HiGHS 1.15.1 in
+     9.3 s), 600 s fixed search: olal41 71,811 -> 47,050, olil4 58,139 ->
+     38,354, oly20 705,184 -> 177,745. -Dorg.jacop.lp.large=false keeps
+     the old behaviour; see properties.txt.
+
+246. The default search branches on set variables in input order, smallest
+     element in first, as JaCoP 4 did: free search (-f, or a model
+     without search annotation) picked the set with the largest failure
+     count and degree, and the branching that LCG free search alternates
+     with left the sets out. gardner_dinner (35 triples of 15 guests, no
+     annotation) is solved again in 266 nodes without LCG and 2,242 with
+     it; 5.0 found no solution in 30 s. --free-config set-heuristic=afc
+     restores the old choice. org.jacop.msc declares --symmetry, so
+     minizinc --solver org.jacop --symmetry off model.mzn works.
+
+247. Cuts in search keep their period only while they move the bound.
      The capacity cuts of item 187 and the Hall cuts of item 215 were
      separated more often whenever a violated cut was found, even when
      adding it left the objective of the re-solved LP where it was; now

@@ -537,6 +537,70 @@ class GlobalCardinalityTest {
   }
 
   @Test
+  void globalCardinalityIsDomainConsistentAfterBacktracking() {
+    // A random walk that goes down with a decision or backtracks one or more levels; the value
+    // lists kept between executions must follow both, so after every step every value of every
+    // counted variable has a support.
+    Random random = new Random(17);
+    for (int trial = 0; trial < 1500; trial++) {
+      Model model = countValuesModel(random).withoutSide();
+      Store store = new Store();
+      IntVar[] pool = pool(store, model);
+      imposeGlobalCardinality(store, pool, model);
+      if (!store.consistency()) {
+        continue;
+      }
+      int n = model.x().length;
+      for (int step = 0; step < 12; step++) {
+        if (store.level > 0 && random.nextInt(3) == 0) {
+          int target = random.nextInt(store.level);
+          while (store.level > target) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        }
+        store.setLevel(store.level + 1);
+        boolean failed = false;
+        for (int d = 1 + random.nextInt(2); d > 0 && !failed; d--) {
+          IntVar v = pool[random.nextInt(pool.length)];
+          if (v.singleton()) {
+            continue;
+          }
+          int value = v.min() + random.nextInt(v.max() - v.min() + 1);
+          try {
+            if (random.nextBoolean()) {
+              v.domain.inComplement(store.level, v, value);
+            } else if (v.domain.contains(value)) {
+              v.domain.in(store.level, v, value, value);
+            }
+          } catch (org.jacop.core.FailException _) {
+            failed = true;
+          }
+        }
+        if (failed || !store.consistency()) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          continue;
+        }
+        int[][] relaxed = new int[pool.length][];
+        for (int i = 0; i < pool.length; i++) {
+          relaxed[i] = i < n ? values(pool[i]) : range(pool[i].min(), pool[i].max());
+        }
+        Model after = new Model(relaxed, model.x(), model.counters(), model.values(), new int[0][]);
+        Set<List<Integer>> solutions = bruteForce(after);
+        for (int i = 0; i < n; i++) {
+          for (int value : relaxed[i]) {
+            int variable = i;
+            assertThat(solutions.stream().anyMatch(t -> t.get(variable) == value))
+                .as("trial %d step %d %s: value %d of p%d", trial, step, after, value, i)
+                .isTrue();
+          }
+        }
+      }
+    }
+  }
+
+  @Test
   void globalCardinalityRemainsCorrectWhenSearchedTwice() {
     Random random = new Random(16);
     for (int trial = 0; trial < 500; trial++) {
