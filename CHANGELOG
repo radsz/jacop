@@ -4131,6 +4131,35 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
+241. Cuts in search keep their period only while they move the bound.
+     The capacity cuts of item 187 and the Hall cuts of item 215 were
+     separated more often whenever a violated cut was found, even when
+     adding it left the objective of the re-solved LP where it was; now
+     the period halves only when the cuts change the LP objective (by more
+     than 1e-6 relative) or make the LP infeasible, and doubles (up to
+     1024) otherwise. -Dorg.jacop.lp.searchCutGate=false restores the old
+     rule. The energy cuts of item 181 can also be separated in search,
+     from the current LP values over the bounds of the first solve (so
+     they hold for the whole search), under the same period and gate, up
+     to 10 cuts per separation, with -Dorg.jacop.lp.energySearch=true;
+     off by default. Statistics lpSearchSeparationsMoved,
+     lpEnergySearchCuts and lpEnergySeparations. Check
+     (LinearRelaxationTest): random scheduling models keep their optimum
+     with energy cuts in search, also under LCG with the explanation
+     checker. Measured (base and candidate in the same round, 2 jobs
+     each): in default mode search cuts fire on 5 of the 240 wide
+     instances, all routing; on these and 8 vrp/vrplc instances at 600 s,
+     separations fall by about half, solved 4 to 4 by default and with
+     -f, objectives 2 better and 2 worse by default and 4 better and none
+     worse with -f, dual bounds equal by default and 2 higher and 2 lower
+     with -f. Wide-quick at 240 s: 44 to 44 solved,
+     2 families better, none worse. With Hall and energy cuts in search
+     on, 97 topic instances at 240 s: 30 to 30 solved (default), 44 to 47
+     (-f), and cable-tree-wiring A022 ends as without them (the same
+     objective by default, optimal in 112 s instead of 100 s with -f).
+     Hall and energy cuts in search stay off by default: they leave the
+     dual bounds where they were.
+
 Version 4.11
 =============
 
