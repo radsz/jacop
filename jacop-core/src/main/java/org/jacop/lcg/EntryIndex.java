@@ -30,8 +30,6 @@
 
 package org.jacop.lcg;
 
-import java.util.Arrays;
-
 /**
  * The {@code !=} entries of an {@link AtomicTrail} by variable and value: an open-addressing table
  * with linear probing whose size follows the entries on the trail, so whether a value was removed
@@ -44,29 +42,37 @@ final class EntryIndex {
 
   private static final int EMPTY = -1;
 
-  private long[] keys = new long[16];
-  private int[] entries = new int[16];
+  // slot p at 2p (the key) and 2p + 1 (the entry, EMPTY when free), so a probe reads one line
+  private long[] table = newTable(16);
   private int size;
 
-  EntryIndex() {
-    Arrays.fill(entries, EMPTY);
+  EntryIndex() {}
+
+  private static long[] newTable(int slots) {
+    long[] t = new long[2 * slots];
+    for (int p = 1; p < t.length; p += 2) {
+      t[p] = EMPTY;
+    }
+    return t;
   }
 
   private static long key(int variable, int value) {
     return ((long) variable << 32) | (value & 0xffffffffL);
   }
 
-  private int home(long key) {
-    return (int) ((key * 0x9E3779B97F4A7C15L) >>> 32) & (keys.length - 1);
+  // the home slot of a key in a table of mask + 1 slots
+  private static int home(long key, int mask) {
+    return (int) ((key * 0x9E3779B97F4A7C15L) >>> 32) & mask;
   }
 
   /** Returns the entry of a variable's value, or -1 when there is none. */
   int get(int variable, int value) {
     long k = key(variable, value);
-    int mask = keys.length - 1;
-    for (int p = home(k); entries[p] != EMPTY; p = (p + 1) & mask) {
-      if (keys[p] == k) {
-        return entries[p];
+    long[] t = table;
+    int mask = (t.length >>> 1) - 1;
+    for (int p = home(k, mask); t[2 * p + 1] != EMPTY; p = (p + 1) & mask) {
+      if (t[2 * p] == k) {
+        return (int) t[2 * p + 1];
       }
     }
     return EMPTY;
@@ -74,58 +80,57 @@ final class EntryIndex {
 
   /** Records the entry of a variable's value, replacing the one recorded before. */
   void put(int variable, int value, int entry) {
-    if (2 * (size + 1) > keys.length) {
+    if (4 * (size + 1) > table.length) {
       grow();
     }
     long k = key(variable, value);
-    int mask = keys.length - 1;
-    int p = home(k);
-    while (entries[p] != EMPTY) {
-      if (keys[p] == k) {
-        entries[p] = entry;
+    long[] t = table;
+    int mask = (t.length >>> 1) - 1;
+    int p = home(k, mask);
+    while (t[2 * p + 1] != EMPTY) {
+      if (t[2 * p] == k) {
+        t[2 * p + 1] = entry;
         return;
       }
       p = (p + 1) & mask;
     }
-    keys[p] = k;
-    entries[p] = entry;
+    t[2 * p] = k;
+    t[2 * p + 1] = entry;
     size++;
   }
 
   /** Forgets the entry of a variable's value. */
   void remove(int variable, int value) {
     long k = key(variable, value);
-    int mask = keys.length - 1;
-    int p = home(k);
-    while (entries[p] != EMPTY && keys[p] != k) {
+    long[] t = table;
+    int mask = (t.length >>> 1) - 1;
+    int p = home(k, mask);
+    while (t[2 * p + 1] != EMPTY && t[2 * p] != k) {
       p = (p + 1) & mask;
     }
-    if (entries[p] == EMPTY) {
+    if (t[2 * p + 1] == EMPTY) {
       return;
     }
     size--;
     // shifts back the entries after the hole that may sit there, so no probe stops early
-    for (int j = (p + 1) & mask; entries[j] != EMPTY; j = (j + 1) & mask) {
-      int h = home(keys[j]);
+    for (int j = (p + 1) & mask; t[2 * j + 1] != EMPTY; j = (j + 1) & mask) {
+      int h = home(t[2 * j], mask);
       if (((j - h) & mask) >= ((j - p) & mask)) {
-        keys[p] = keys[j];
-        entries[p] = entries[j];
+        t[2 * p] = t[2 * j];
+        t[2 * p + 1] = t[2 * j + 1];
         p = j;
       }
     }
-    entries[p] = EMPTY;
+    t[2 * p + 1] = EMPTY;
   }
 
   private void grow() {
-    long[] oldKeys = keys;
-    int[] oldEntries = entries;
-    keys = new long[2 * oldKeys.length];
-    entries = new int[2 * oldKeys.length];
-    Arrays.fill(entries, EMPTY);
+    long[] old = table;
+    table = newTable(old.length);
     size = 0;
-    for (int p = 0; p < oldKeys.length; p++) {
-      if (oldEntries[p] != EMPTY) {
-        put((int) (oldKeys[p] >>> 32), (int) oldKeys[p], oldEntries[p]);
+    for (int p = 0; p < old.length; p += 2) {
+      if (old[p + 1] != EMPTY) {
+        put((int) (old[p] >>> 32), (int) old[p], (int) old[p + 1]);
       }
     }
   }
