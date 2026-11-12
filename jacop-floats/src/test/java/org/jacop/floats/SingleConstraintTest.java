@@ -595,6 +595,39 @@ class SingleConstraintTest {
     }
   }
 
+  /**
+   * A result bound at exp(x) or ln(x) keeps x: the inverse of a rounded bound misses x by more than
+   * an ulp, since exp multiplies the rounding of its argument by the argument, and a result at most
+   * ln(291702.1017107711) cut 291702.1017107711 from the argument of LnPeqR (random checks, 26% of
+   * the arguments of ln and 0.3% of those of exp were cut).
+   */
+  @Test
+  void testExpAndLnResultBoundsKeepTheirArgument() {
+    Random random = new Random(11);
+    for (int k = 0; k < 2000; k++) {
+      double x = k == 0 ? 291702.1017107711 : Math.pow(10, 16 * random.nextDouble() - 8);
+      double y = Math.log(x);
+      for (boolean below : new boolean[] {true, false}) {
+        Store store = new Store();
+        FloatVar p = new FloatVar(store, "p", x / 2, 2 * x);
+        FloatVar r = below ? new FloatVar(store, "r", -50, y) : new FloatVar(store, "r", y, 50);
+        store.impose(new LnPeqR(p, r));
+        assertThat(store.consistency()).as("ln %s", x).isTrue();
+        assertThat(p.min()).as("ln %s below %s", x, below).isLessThanOrEqualTo(x);
+        assertThat(p.max()).as("ln %s below %s", x, below).isGreaterThanOrEqualTo(x);
+
+        store = new Store();
+        p = new FloatVar(store, "p", y - 1, y + 1);
+        double e = Math.exp(y);
+        r = below ? new FloatVar(store, "r", 0, e) : new FloatVar(store, "r", e, 1e9);
+        store.impose(new ExpPeqR(p, r));
+        assertThat(store.consistency()).as("exp %s", y).isTrue();
+        assertThat(p.min()).as("exp %s below %s", y, below).isLessThanOrEqualTo(y);
+        assertThat(p.max()).as("exp %s below %s", y, below).isGreaterThanOrEqualTo(y);
+      }
+    }
+  }
+
   @Test
   void testAtanToStringKeepsArgumentOrder() {
     Store store = new Store();
