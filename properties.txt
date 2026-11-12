@@ -96,6 +96,12 @@ Constraints (core):
   the best origin, with the processing before it relaxed, instead of
   from the earliest start of all; default true.
 
+- org.jacop.lateCount.reasons: under --lcg, LateCount explains its
+  pruning with the bounds its relaxation reads (late tasks, on time
+  tasks, minima lowered towards their root values as far as the bound
+  still holds, the maximum of late) instead of every atom of its
+  variables; default true.
+
 - org.jacop.unaryEarlinessTardiness.blocks: the most blocks of time
   slots of a machine in the assignment bound of
   UnaryEarlinessTardiness; slots are grouped into blocks of equal
@@ -489,6 +495,11 @@ Core-guided phase (free search, --lcg -f):
 - jacop.lcg.coreNoSolution: the core phase gives its time to branch
   and bound when it has no solution of its own by this share of its
   time, 0 turns it off; default 0.33.
+- jacop.lcg.coreStall: the share of the run's work after the core
+  phase's start from which the phase also gives its time to branch and
+  bound when its bound, at three times its rate over the second half
+  of the phase, would not meet the best solution; 0 turns it off;
+  default 0.1.
 - jacop.lcg.coreRestore: after the core phase, branch and bound
   starts from the activity before it; default true.
 - jacop.lcg.coreAnySolution: the old test, any best solution counts,

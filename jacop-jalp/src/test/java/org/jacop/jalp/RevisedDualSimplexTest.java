@@ -31,6 +31,7 @@
 package org.jacop.jalp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.offset;
 
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -1053,5 +1054,187 @@ class RevisedDualSimplexTest {
     }
     assertThat(restored).isGreaterThan(60);
     assertThat(withRows).isGreaterThan(20);
+  }
+
+  @Test
+  void columnsWithoutCostAreNotPulledToUnboundedByThePerturbation() {
+    // min x1 with x1 >= 1 and x0 - x3 >= 0; x0 and x3 free, x2 <= 2, none of them with a cost:
+    // the optimum is 1, but the perturbed costs pulled x2 (in no row) and the ray of x0 and x3
+    // past every artificial bound, and the answer was UNBOUNDED (found by the exact LP fuzzer,
+    // osolpro benchmarks/jalp-allsolutions)
+    for (boolean exact : new boolean[] {false, true}) {
+      for (boolean presolve : new boolean[] {false, true}) {
+        RevisedDualSimplex lp =
+            new RevisedDualSimplex(
+                new int[][] {{1}, {0, 3}},
+                new double[][] {{1}, {1, -1}},
+                new double[] {1, 0},
+                new double[] {INF, INF},
+                new double[] {0, 1, 0, 0},
+                true);
+        lp.setExact(exact);
+        lp.setPresolve(presolve);
+        lp.setBounds(0, -INF, INF);
+        lp.setBounds(1, 0, 5);
+        lp.setBounds(2, -INF, 2);
+        lp.setBounds(3, -INF, INF);
+        String what = "exact " + exact + " presolve " + presolve;
+        assertThat(lp.solve(1000)).as(what).isEqualTo(RevisedDualSimplex.OPTIMAL);
+        assertThat(lp.objective()).as(what).isEqualTo(1.0);
+        assertThat(lp.value(0) - lp.value(3)).as(what).isGreaterThanOrEqualTo(-1e-9);
+      }
+    }
+  }
+
+  @Test
+  void anUnboundedAnswerLeavesNoHugeValuesForTheNextSolve() {
+    // min 3 x0 - 3 x1 - 2 x2 with 8 x1 >= -7, 4 x0 + 4 x1 + 3 x2 >= 0, x0 free, x1 <= 2, x2 >= 2
+    // is unbounded; the artificial bounds grew to 1e14 and stayed. After the cut
+    // -2 x0 + 5 x2 in [-2, 0] the optimum is 5 at x0 = 5, but the basic values, differences of
+    // numbers of 1e14, gave 4.93 at x0 = 4.977, which breaks the cut by 0.047 (found by the exact
+    // LP fuzzer, osolpro benchmarks/jalp-allsolutions)
+    for (boolean exact : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{1}, {0, 1, 2}},
+              new double[][] {{8}, {4, 4, 3}},
+              new double[] {-7, 0},
+              new double[] {INF, INF},
+              new double[] {3, -3, -2},
+              true);
+      lp.setExact(exact);
+      lp.setBounds(0, -INF, INF);
+      lp.setBounds(1, -INF, 2);
+      lp.setBounds(2, 2, INF);
+      assertThat(lp.solve(100_000)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+      lp.addRows(
+          new int[][] {{0, 2}}, new double[][] {{-2, 5}}, new double[] {-2}, new double[] {0});
+      assertThat(lp.solve(100_000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).as("exact " + exact).isCloseTo(5.0, offset(1e-9));
+      assertThat(lp.value(0)).as("exact " + exact).isCloseTo(5.0, offset(1e-9));
+    }
+  }
+
+  @Test
+  void anExactPrimalSolveWithALimitOfOnePivotEnds() {
+    // after a new objective, solvePrimal(1) with the exact clean-up: each call perturbed the costs
+    // again, found the optimum and took its one step removing the perturbation, and the answer was
+    // LIMIT forever (found by the exact LP fuzzer, osolpro benchmarks/jalp-allsolutions)
+    double[] lo = {4, 2, -1, -4, 1, 0, -2};
+    double[] hi = {9, 6, -1, -3, 1, 0, 5};
+    for (boolean scale : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {{0, 3, 4, 6}},
+              new double[][] {{4, 1, 3, -8}},
+              new double[] {3},
+              new double[] {3},
+              new double[] {1, 1, 1, 1, 1, 1, 1},
+              scale);
+      lp.setExact(true);
+      for (int j = 0; j < lo.length; j++) {
+        lp.setBounds(j, lo[j], hi[j]);
+      }
+      assertThat(lp.solve(1000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      lp.setCost(new double[] {-4, 0, 0, 4, -3, -5, 5});
+      int status = RevisedDualSimplex.LIMIT;
+      for (int call = 0; call < 1000 && status == RevisedDualSimplex.LIMIT; call++) {
+        status = lp.solvePrimal(1);
+      }
+      assertThat(status).as("scale " + scale).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      assertThat(lp.objective()).as("scale " + scale).isCloseTo(-35.0, offset(1e-9));
+    }
+  }
+
+  @Test
+  void primalSolvesWithALimitOfAFewPivotsEnd() {
+    // solvePrimal called again and again with a limit of one to three pivots, as a caller that
+    // budgets its work would: with the exact clean-up each call perturbed the costs again and
+    // ended removing the perturbation, and on an infeasible problem each call made primal phase 1
+    // pivots that undid the dual simplex the last one handed over to; both answered LIMIT forever
+    // (found by the exact LP fuzzer, osolpro benchmarks/jalp-allsolutions)
+    Random rnd = new Random(13);
+    int runs = Integer.getInteger("jalp.test.runs", 3000) / 10;
+    int[] counts = new int[4];
+    for (int run = 0; run < runs; run++) {
+      int m = 2 + rnd.nextInt(10);
+      int n = 2 + rnd.nextInt(12);
+      Lp p = new Lp(rnd, m, n, 0.4, 0);
+      for (int j = 0; j < n; j++) {
+        p.lo[j] = -5.0 + rnd.nextInt(5);
+        p.hi[j] = p.lo[j] + rnd.nextInt(6);
+      }
+      RevisedDualSimplex lp = p.simplex(true);
+      lp.setExact(rnd.nextBoolean());
+      lp.solve(1_000_000);
+      double[] c = new double[n];
+      for (int j = 0; j < n; j++) {
+        c[j] = rnd.nextInt(11) - 5.0;
+      }
+      p.cost = c;
+      lp.setCost(c);
+      int limit = 1 + rnd.nextInt(3);
+      int status = RevisedDualSimplex.LIMIT;
+      for (int call = 0; call < 100_000 && status == RevisedDualSimplex.LIMIT; call++) {
+        status = lp.solvePrimal(limit);
+      }
+      String what = "run " + run + " limit " + limit;
+      assertThat(status).as(what).isNotEqualTo(RevisedDualSimplex.LIMIT);
+      RevisedDualSimplex fresh = p.simplex(true);
+      assertThat(fresh.solve(1_000_000)).as(what).isEqualTo(status);
+      if (status == RevisedDualSimplex.OPTIMAL) {
+        assertThat(lp.objective())
+            .as(what)
+            .isCloseTo(fresh.objective(), offset(1e-6 * (1 + Math.abs(fresh.objective()))));
+      }
+      counts[status]++;
+    }
+    // 22 optimal and 278 infeasible of 300
+    assertThat(counts[RevisedDualSimplex.OPTIMAL]).isGreaterThan(runs / 20);
+    assertThat(counts[RevisedDualSimplex.INFEASIBLE]).isGreaterThan(runs / 2);
+  }
+
+  @Test
+  void solvesWithALimitOfOnePivotEndWhenARowIsLeftOut() {
+    // an unbounded problem with equal and opposite equations (rows 1 and 2, 4 and 5, 6 and 7): at
+    // artificial bounds of 1e12 a row has no proof on fresh factors and is left out as round-off;
+    // that took the one step of the limit, the rows left out are taken back at the next call, and
+    // solve(1) answered LIMIT forever (found by the exact LP fuzzer, osolpro
+    // benchmarks/jalp-allsolutions)
+    for (boolean scale : new boolean[] {false, true}) {
+      RevisedDualSimplex lp =
+          new RevisedDualSimplex(
+              new int[][] {
+                {1, 3, 4, 7, 9}, {0, 1, 2, 3, 6}, {0, 1, 2, 3, 6}, {7}, {0, 4, 6, 8, 9},
+                {0, 4, 6, 8, 9}, {1, 6, 9}, {1, 6, 9}, {5, 6}, {0, 1, 4, 6, 7, 8}
+              },
+              new double[][] {
+                {2, -3, -7, -9, -3},
+                {9, 1, 5, 3, -4},
+                {-27, -3, -15, -9, 12},
+                {5},
+                {1, 3, 7, -1, 14},
+                {-1, -3, -7, 1, -14},
+                {9, 9, 18},
+                {18, 18, 36},
+                {8, 2},
+                {-7, 8, -5, 9, 8, -4}
+              },
+              new double[] {55, 5, -15, 1, 8, -8, -25, -50, 50, 15},
+              new double[] {55, 5, -15, INF, 8, -8, -25, -50, 50, 15},
+              new double[] {2, -1, 4, 1, 5, 5, 4, -1, -1, 8},
+              scale);
+      lp.setPresolve(false);
+      double[] lo = {-INF, -INF, 2, -INF, -4, -INF, 1, -INF, -1, -5};
+      double[] hi = {INF, 1, INF, INF, INF, 6, INF, INF, INF, -1};
+      for (int j = 0; j < lo.length; j++) {
+        lp.setBounds(j, lo[j], hi[j]);
+      }
+      int status = RevisedDualSimplex.LIMIT;
+      for (int call = 0; call < 10_000 && status == RevisedDualSimplex.LIMIT; call++) {
+        status = lp.solve(1);
+      }
+      assertThat(status).as("scale " + scale).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+    }
   }
 }
