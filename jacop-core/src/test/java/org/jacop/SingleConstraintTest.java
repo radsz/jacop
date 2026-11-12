@@ -9198,6 +9198,39 @@ class SingleConstraintTest extends TestHelper {
     assertThat(hinted).isGreaterThan(50);
   }
 
+  /**
+   * A coloured spanning tree reaches its fixpoint: after edge 0 was removed, the filtering removed
+   * edge 1 and selected edges 2 and 3, a tree of weight 6 under a cost of at most 4, and the
+   * constraint was not run again on its own pruning, so search took the tree as a solution
+   * (LcgFuzzTest seed 8765006 with holes).
+   */
+  @Test
+  void colouredSpanningTreeFailsOnTheEdgesItsFilteringSelects() {
+    Store store = new Store();
+    IntVar[] es = new IntVar[4];
+    for (int e = 0; e < es.length; e++) {
+      es[e] = new IntVar(store, "e" + e, 0, 1);
+    }
+    IntVar cost = new IntVar(store, "cost", 1, 1);
+    cost.addDom(3, 4);
+    store.impose(
+        new ColouredSpanningTreeBound(
+            3,
+            new int[] {2, 2, 0, 0},
+            new int[] {0, 1, 1, 2},
+            new int[] {0, 2, 3, 3},
+            new int[] {1, 1, -1, 0},
+            new int[] {1, 1},
+            es,
+            cost,
+            0));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    es[0].domain.in(store.level, es[0], 0, 0);
+    // without edge 0 every tree weighs at least 5
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static int root(int[] parent, int v) {
     while (parent[v] != v) {
       v = parent[v];

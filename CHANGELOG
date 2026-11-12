@@ -4150,6 +4150,16 @@ Version 5.0 (unreleased)
      38,354, oly20 705,184 -> 177,745. -Dorg.jacop.lp.large=false keeps
      the old behaviour; see properties.txt.
 
+242. The default search branches on set variables in input order, smallest
+     element in first, as JaCoP 4 did: free search (-f, or a model
+     without search annotation) picked the set with the largest failure
+     count and degree, and the branching that LCG free search alternates
+     with left the sets out. gardner_dinner (35 triples of 15 guests, no
+     annotation) is solved again in 266 nodes without LCG and 2,242 with
+     it; 5.0 found no solution in 30 s. --free-config set-heuristic=afc
+     restores the old choice. org.jacop.msc declares --symmetry, so
+     minizinc --solver org.jacop --symmetry off model.mzn works.
+
 Version 4.11
 =============
 
