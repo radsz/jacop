@@ -2570,7 +2570,10 @@ public final class CdclSolver {
 
   private int watchScore(int l) {
     int v = vals[l];
-    return v > 0 ? Integer.MAX_VALUE : v == 0 ? Integer.MAX_VALUE - 1 : litLevel(l);
+    if (v > 0) {
+      return Integer.MAX_VALUE;
+    }
+    return v == 0 ? Integer.MAX_VALUE - 1 : litLevel(l);
   }
 
   /**
