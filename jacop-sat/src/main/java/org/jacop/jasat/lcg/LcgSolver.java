@@ -2671,6 +2671,13 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public long coreSkips;
 
+  // skip the core-guided phase when its probe stopped without a solution of its own
+  private static final boolean CORE_PROBE_SKIP =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreProbeSkip", Boolean.FALSE.toString()));
+
+  /** Statistics: core-guided phases skipped as their probe found no solution of its own. */
+  public long probeSkips;
+
   private int minimizeWithCores() {
     long millis = timeLimitMillis;
     if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
@@ -2691,15 +2698,24 @@ public final class LcgSolver implements ExternalPropagator {
         return result;
       }
     } else if (coreDelayShare > 0) {
+      boolean probeWithoutSolution = false;
       if (coreProbeShare > 0) {
+        long stops = coreSearch.noSolutionStops;
         result = runCores(coreProbeShare, coreDelayBudget, false);
         if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
           return result;
         }
+        probeWithoutSolution = coreSearch.noSolutionStops > stops;
       }
       result = minimizeBeforeCores();
       if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
         return result;
+      }
+      if (CORE_PROBE_SKIP && probeWithoutSolution && best != null) {
+        // the probe found no solution of its own while branch and bound did: the rest of the phase
+        // stops the same way after a third of its work and gives the time back
+        probeSkips++;
+        return afterCores();
       }
     }
     double share = coreShare;
