@@ -4578,7 +4578,7 @@ Version 5.0 (unreleased)
    Atamturk, G. L. Nemhauser and M. W. P. Savelsbergh, Conflict graphs in
    solving integer programming problems, EJOR 121(1), 2000). On the
    wide set at 600 s it raises the root LP bound of 76 of 179 optimisation
-   instances with a relaxation (3 looser) and the final dual bound of 27
+   instances with a relaxation (4 looser) and the final dual bound of 27
    (1 looser), for example cable-tree A041 -50 to 255400, spot5 28 0 to
    168610, physician-scheduling 1245 to 1745; it solves 167 against 166
    instances, and 189 against 191 with -f, the probing seconds costing
