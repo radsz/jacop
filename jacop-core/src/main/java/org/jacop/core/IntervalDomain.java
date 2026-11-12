@@ -78,11 +78,6 @@ public class IntervalDomain extends IntDomain {
     a[2 * i + 1] = max;
   }
 
-  private static void put(int[] a, int i, Interval iv) {
-    a[2 * i] = iv.min();
-    a[2 * i + 1] = iv.max();
-  }
-
   private static void move(int[] dst, int i, int[] src, int j) {
     dst[2 * i] = src[2 * j];
     dst[2 * i + 1] = src[2 * j + 1];
@@ -987,7 +982,6 @@ public class IntervalDomain extends IntDomain {
     }
 
     int iMin = bounds[2 * m];
-    int iMax = bounds[2 * m + 1];
     if (value >= iMin - 1) {
       return value + 1;
     } else {
@@ -4064,7 +4058,6 @@ public class IntervalDomain extends IntDomain {
       return value;
     }
 
-    int iMin = bounds[2 * m];
     int iMax = bounds[2 * m + 1];
     if (iMax >= value) {
       return value - 1;

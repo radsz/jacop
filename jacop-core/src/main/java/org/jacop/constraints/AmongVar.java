@@ -908,18 +908,16 @@ public class AmongVar extends Constraint
                 IntervalDomain snapshot = lbVubV;
                 for (int k = 0; k < snapshot.size; k++) {
                   Interval a = snapshot.getInterval(k);
-                  {
-                    max = Math.min(weight + a.max(), ub0);
-                    min = Math.max(lbTmp + a.min(), lb0);
+                  max = Math.min(weight + a.max(), ub0);
+                  min = Math.max(lbTmp + a.min(), lb0);
 
-                    if (min <= max) {
-                      lbVubV = (IntervalDomain) lbVubV.union(min, max);
-                      if (DEBUG_ALL && a != null) {
-                        log.debug(" >>>> {} + [{}, {}] = [{}, {} ]", a, lbTmp, weight, min, max);
-                      }
-                    } else if (DEBUG_ALL && a != null) {
-                      log.debug(" >>>> {} + [{}, {}] = NOTHING", a, lbTmp, weight);
+                  if (min <= max) {
+                    lbVubV = (IntervalDomain) lbVubV.union(min, max);
+                    if (DEBUG_ALL) {
+                      log.debug(" >>>> {} + [{}, {}] = [{}, {} ]", a, lbTmp, weight, min, max);
                     }
+                  } else if (DEBUG_ALL) {
+                    log.debug(" >>>> {} + [{}, {}] = NOTHING", a, lbTmp, weight);
                   }
                 }
               }
