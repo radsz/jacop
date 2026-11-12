@@ -3983,6 +3983,14 @@ class LcgSolverTest {
         assertThat(map.lower(v)).isEqualTo(lower == null ? LiteralMap.NONE : reference.get(lower));
         assertThat(map.higher(v))
             .isEqualTo(higher == null ? LiteralMap.NONE : reference.get(higher));
+        Integer ceiling = reference.ceilingKey(v);
+        Integer floor = reference.floorKey(v);
+        assertThat(map.ceilingValue(v)).isEqualTo(ceiling == null ? Long.MAX_VALUE : ceiling);
+        assertThat(map.floorValue(v)).isEqualTo(floor == null ? Long.MIN_VALUE : floor);
+        long low = reference.isEmpty() ? Long.MAX_VALUE : reference.firstKey();
+        long high = reference.isEmpty() ? Long.MIN_VALUE : reference.lastKey();
+        assertThat(map.ceilingValue(Long.MIN_VALUE)).isEqualTo(low);
+        assertThat(map.floorValue(Long.MAX_VALUE)).isEqualTo(high);
       }
     }
   }

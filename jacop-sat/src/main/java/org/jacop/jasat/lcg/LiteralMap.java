@@ -34,11 +34,11 @@ package org.jacop.jasat.lcg;
 import java.util.Arrays;
 
 /**
- * The literals of one variable by value: sorted values with their DIMACS variables, in two int
- * arrays. Literals are created far less often than looked up, so an insertion moves the tail. Once
- * the values fill a sixteenth of a root domain of at most {@link #DENSE_SPAN} values, the map is
- * indexed by value instead, with a bit set of the values present for {@link #lower} and {@link
- * #higher}.
+ * The literals of one variable by value: sorted values with their DIMACS variables, each pair in
+ * one long (the value in the high half), so a lookup reads one array. Literals are created far less
+ * often than looked up, so an insertion moves the tail. Once the values fill a sixteenth of a root
+ * domain of at most {@link #DENSE_SPAN} values, the map is indexed by value instead, with a bit set
+ * of the values present for {@link #lower} and {@link #higher}.
  */
 final class LiteralMap {
 
@@ -53,12 +53,14 @@ final class LiteralMap {
 
   private static final int MIN_DENSE_SIZE = 8;
 
+  // entries up to this many are scanned instead of binary searched
+  private static final int SCAN = 8;
+
   private final int min;
   private final long span;
 
-  // sorted form
-  private int[] values = new int[4];
-  private int[] literals = new int[4];
+  // sorted form: value v with DIMACS variable l as (long) v << 32 | l, ordered by value
+  private long[] entries = new long[4];
   private int size;
 
   // indexed form, null while sorted: the DIMACS variable of value min + k at k, and k in present
@@ -71,14 +73,38 @@ final class LiteralMap {
     this.span = (long) max - min + 1;
   }
 
+  private static int valueOf(long entry) {
+    return (int) (entry >> 32);
+  }
+
+  private static int literalOf(long entry) {
+    return (int) entry;
+  }
+
+  // the position of the first entry whose value is at least v
+  private int lowerBound(int v) {
+    long key = (long) v << 32;
+    long[] e = entries;
+    int n = size;
+    if (n <= SCAN) {
+      int k = 0;
+      while (k < n && e[k] < key) {
+        k++;
+      }
+      return k;
+    }
+    int k = Arrays.binarySearch(e, 0, n, key);
+    return k >= 0 ? k : -k - 1; // never found: literals are positive
+  }
+
   /** Returns the DIMACS variable of value v, or {@link #NONE}. */
   int get(int v) {
     if (byValue != null) {
       long k = (long) v - min;
       return k >= 0 && k < span ? byValue[(int) k] : NONE;
     }
-    int k = Arrays.binarySearch(values, 0, size, v);
-    return k >= 0 ? literals[k] : NONE;
+    int k = lowerBound(v);
+    return k < size && valueOf(entries[k]) == v ? literalOf(entries[k]) : NONE;
   }
 
   /** Returns the DIMACS variable of the largest value below v, or {@link #NONE}. */
@@ -98,9 +124,8 @@ final class LiteralMap {
       }
       return byValue[(w << 6) + 63 - Long.numberOfLeadingZeros(word)];
     }
-    int k = Arrays.binarySearch(values, 0, size, v);
-    int below = (k >= 0 ? k : -k - 1) - 1;
-    return below >= 0 ? literals[below] : NONE;
+    int below = lowerBound(v) - 1;
+    return below >= 0 ? literalOf(entries[below]) : NONE;
   }
 
   /** Returns the DIMACS variable of the smallest value above v, or {@link #NONE}. */
@@ -120,9 +145,11 @@ final class LiteralMap {
       }
       return byValue[(w << 6) + Long.numberOfTrailingZeros(word)];
     }
-    int k = Arrays.binarySearch(values, 0, size, v);
-    int above = k >= 0 ? k + 1 : -k - 1;
-    return above < size ? literals[above] : NONE;
+    int above = lowerBound(v);
+    if (above < size && valueOf(entries[above]) == v) {
+      above++;
+    }
+    return above < size ? literalOf(entries[above]) : NONE;
   }
 
   /** Returns the smallest value at least v, or {@link Long#MAX_VALUE} when there is none. */
@@ -145,9 +172,8 @@ final class LiteralMap {
     if (v > Integer.MAX_VALUE) {
       return Long.MAX_VALUE;
     }
-    int k = Arrays.binarySearch(values, 0, size, (int) Math.max(v, Integer.MIN_VALUE));
-    k = k >= 0 ? k : -k - 1;
-    return k < size ? values[k] : Long.MAX_VALUE;
+    int k = lowerBound((int) Math.max(v, Integer.MIN_VALUE));
+    return k < size ? valueOf(entries[k]) : Long.MAX_VALUE;
   }
 
   /** Returns the largest value at most v, or {@link Long#MIN_VALUE} when there is none. */
@@ -170,9 +196,12 @@ final class LiteralMap {
     if (v < Integer.MIN_VALUE) {
       return Long.MIN_VALUE;
     }
-    int k = Arrays.binarySearch(values, 0, size, (int) Math.min(v, Integer.MAX_VALUE));
-    int at = k >= 0 ? k : -k - 2;
-    return at >= 0 ? values[at] : Long.MIN_VALUE;
+    int w = (int) Math.min(v, Integer.MAX_VALUE);
+    int at = lowerBound(w);
+    if (at == size || valueOf(entries[at]) != w) {
+      at--;
+    }
+    return at >= 0 ? valueOf(entries[at]) : Long.MIN_VALUE;
   }
 
   /** Adds value v of the root domain, which must be absent, with its DIMACS variable (positive). */
@@ -183,20 +212,17 @@ final class LiteralMap {
       present[k >>> 6] |= 1L << k;
       return;
     }
-    if (size == values.length) {
+    if (size == entries.length) {
       if (size >= MIN_DENSE_SIZE && span <= DENSE_SPAN && span <= (long) DENSITY * size) {
         index();
         put(v, literal);
         return;
       }
-      values = Arrays.copyOf(values, 2 * size);
-      literals = Arrays.copyOf(literals, 2 * size);
+      entries = Arrays.copyOf(entries, 2 * size);
     }
-    int k = -Arrays.binarySearch(values, 0, size, v) - 1;
-    System.arraycopy(values, k, values, k + 1, size - k);
-    System.arraycopy(literals, k, literals, k + 1, size - k);
-    values[k] = v;
-    literals[k] = literal;
+    int k = lowerBound(v);
+    System.arraycopy(entries, k, entries, k + 1, size - k);
+    entries[k] = (long) v << 32 | literal;
     size++;
   }
 
@@ -208,10 +234,9 @@ final class LiteralMap {
       present[k >>> 6] &= ~(1L << k);
       return;
     }
-    int k = Arrays.binarySearch(values, 0, size, v);
+    int k = lowerBound(v);
     size--;
-    System.arraycopy(values, k + 1, values, k, size - k);
-    System.arraycopy(literals, k + 1, literals, k, size - k);
+    System.arraycopy(entries, k + 1, entries, k, size - k);
   }
 
   /** Moves the entries to the indexed form. */
@@ -219,11 +244,10 @@ final class LiteralMap {
     byValue = new int[(int) span];
     present = new long[(int) ((span + 63) >>> 6)];
     for (int i = 0; i < size; i++) {
-      int k = values[i] - min;
-      byValue[k] = literals[i];
+      int k = valueOf(entries[i]) - min;
+      byValue[k] = literalOf(entries[i]);
       present[k >>> 6] |= 1L << k;
     }
-    values = null;
-    literals = null;
+    entries = null;
   }
 }
