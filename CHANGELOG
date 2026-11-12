@@ -4605,6 +4605,18 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
+269. Diffn (and Diff2, Nooverlap) does less repeated work with the same
+   pruning. The profile sweep of a rectangle runs per dimension, only when
+   that rectangle or a compulsory part in that dimension changed since its
+   last sweep; the events of compulsory parts that did not change are kept
+   between builds; and the area check skips the dual feasible functions
+   for a window whose rectangle sizes passed them the last time. On 81
+   instances posting Diffn (carpet-cutting, cargo, accap, code-generator,
+   stripboard, pillars-and-planks, rectangle-packing, perfect_square,
+   workforce-alloc, ...) at 240 s with the default search the solutions
+   are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
+   up to 1.48x nodes).
+
 Version 4.11
 =============
 
