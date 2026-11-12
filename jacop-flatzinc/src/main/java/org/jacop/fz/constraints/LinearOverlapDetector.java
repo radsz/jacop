@@ -373,6 +373,9 @@ public class LinearOverlapDetector implements ParserTreeConstants {
     coefficients[base.length] = -1;
     vars[base.length] = z;
     linear.poseLinearEquality(coefficients, vars, 0);
+    // as a block sum of a split linear constraint: the linear relaxation substitutes z back, so it
+    // keeps the rows of the model, and z is a defined variable, not searched
+    support.dictionary.addSplitSum(z);
 
     LinkedHashSet<Integer> zOcc = new LinkedHashSet<>();
     for (int m = 0; m < members.size(); m++) {
