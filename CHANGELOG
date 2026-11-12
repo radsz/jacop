@@ -4234,6 +4234,28 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. Inferred redundant cumulatives (-Dorg.jacop.fz.inferredCumulatives=true,
+     off by default), after A. Sidorov, On Inferring Cumulative
+     Constraints, CP 2026 (arXiv 2602.15635). At each time point a
+     cumulative is a knapsack inequality over the tasks that run then; a
+     cover of these inequalities (tasks that cannot all run together) is
+     lifted by sequential lifting (M. W. Padberg, A note on zero-one
+     programming, Operations Research 23, 1975) to sum(pi_i) <= pi_0 over
+     more tasks, which holds at every time point and is posted as
+     Cumulative(starts, durations, pi, pi_0), or CumulativeUnary when
+     pi_0 = 1. Covers of 2 and 3 tasks and of the longest and shortest
+     tasks per resource use are lifted over all fixed-capacity cumulatives
+     together and over the pairs of tasks that precedences or disjunctions
+     keep apart (the conflict graph of org.jacop.fz.disjunctiveCliques,
+     Sidorov, Marijnissen and Demirovic, CP 2025); the five
+     with the largest capacity bound sum(d_i * pi_i) / pi_0 that no input
+     cumulative dominates are posted. org.jacop.presolve.InferredCumulatives
+     does the inference on its own. On rcpsp 2013 instance 13 one inferred
+     cumulative of 18 tasks with capacity 3 has capacity bound 78, the
+     optimum: model search proves it in 0.9 s instead of 8.7 s, -f in 0.9 s
+     instead of 45 s. 65 of 100 cumulative instances get one (13 of the 34
+     cumulative instances of the wide set).
+
 Version 4.11
 =============
 
