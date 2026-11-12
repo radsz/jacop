@@ -95,8 +95,9 @@ import org.jacop.set.core.SetVar;
 final class SymmetryBreaking implements ParserTreeConstants {
 
   /**
-   * Whether set variables may be moved by symmetries (org.jacop.fz.symmetrySets, default true).
-   * Without it every set variable has a colour of its own.
+   * Whether set variables may be moved by symmetries (org.jacop.fz.symmetrySets, default true), in
+   * models whose search annotation branches on set variables. Without it every set variable has a
+   * colour of its own.
    */
   static final boolean SETS = !"false".equals(System.getProperty("org.jacop.fz.symmetrySets"));
 
@@ -412,6 +413,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private boolean largest;
   // whether the search is free search (-f), which does not follow the search annotation
   private boolean free;
+  // whether set variables are vertices of the variable graph that symmetries may move
+  private boolean setsMove;
   // the constraints posted, as their kind and variables, for added()
   private final List<String> postedKinds = new ArrayList<>();
   private final List<IntVar[][]> postedVariables = new ArrayList<>();
@@ -462,6 +465,20 @@ final class SymmetryBreaking implements ParserTreeConstants {
       s.append(';');
     }
     return s.toString();
+  }
+
+  /**
+   * Lets the symmetries of the variable graph move set variables, with {@link #SETS}, when the
+   * search annotation branches on set variables. In a search on integers alone the symmetries they
+   * reveal slowed the search down (2023 valve-network), so every set variable then keeps a colour
+   * of its own.
+   *
+   * @param sets true when the search annotation branches on set variables.
+   * @return this.
+   */
+  SymmetryBreaking branchesOnSets(boolean sets) {
+    this.setsMove = SETS && sets;
+    return this;
   }
 
   /**
@@ -614,7 +631,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     Graph graph = new Graph(goal, null);
     try {
       // a chain of set unions is one n-ary union, whose operands can be exchanged
-      for (Item item : SETS ? flattenUnions(items) : items) {
+      for (Item item : setsMove ? flattenUnions(items) : items) {
         checkTime();
         graph.addConstraint(item);
       }
@@ -2508,7 +2525,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if (setSpaceOf != null && atom.other() instanceof SetVar s && setSpaceOf.containsKey(s)) {
         return otherVertex.computeIfAbsent(s, v -> setInSpace(s, setSpaceOf.get(s)));
       }
-      if (atom.other() instanceof SetVar s && spaceOf == null && SETS) {
+      if (atom.other() instanceof SetVar s && spaceOf == null && setsMove) {
         Integer v = otherVertex.get(s);
         if (v != null) {
           return v;

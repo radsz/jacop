@@ -189,7 +189,8 @@ Solver modes (defaults of command line options):
 
 - org.jacop.fz.symmetrySets: =false keeps every set variable in place
   in symmetry detection (a colour of its own), as before; by default
-  symmetries may exchange set variables. Default true.
+  symmetries may exchange set variables when the search annotation
+  branches on set variables. Default true.
 
 - org.jacop.fz.symmetryEncoded: =false turns off the second search for
   value symmetries, through set variables and overlapping value
