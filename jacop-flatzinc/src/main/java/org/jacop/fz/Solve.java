@@ -816,6 +816,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.alldiffSearchCuts
             + "\n%%%mzn-stat: lpAlldiffSeparations="
             + r.alldiffSeparations
+            + "\n%%%mzn-stat: lpEnergySearchCuts="
+            + r.energySearchCuts
+            + "\n%%%mzn-stat: lpEnergySeparations="
+            + r.energySeparations
+            + "\n%%%mzn-stat: lpSearchSeparationsMoved="
+            + r.searchSeparationsMoved
             + "\n%%%mzn-stat: lpTreeCuts="
             + r.treeCuts
             + "\n%%%mzn-stat: lpTreeBound="

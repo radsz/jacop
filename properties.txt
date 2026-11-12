@@ -350,6 +350,14 @@ unless stated otherwise):
   for the subtour, blossom and comb cuts of the LP; default false.
   Use it for a pure TSP.
 - org.jacop.fz.tspArcs: the most arcs of such a tour; default 40000.
+- org.jacop.fz.tspElimination: TSP edge elimination (Jonker and
+  Volgenant; Hougardy and Schroeder) on a pure symmetric travelling
+  salesman model: removes the successors that are in no optimal tour
+  before search; default true. It needs the length to be minimized as
+  the sum of symmetric arc costs, with no other constraint on the
+  successors.
+- org.jacop.fz.tspEliminationMs: the most milliseconds of that edge
+  elimination; default 2000.
 - org.jacop.fz.routes: Routes for vehicle routes written as 0/1 arc
   variables.
 - org.jacop.fz.increasingSum: IncreasingSum on sums over ordered
