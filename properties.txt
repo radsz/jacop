@@ -838,6 +838,34 @@ JaLP sparse simplex:
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
   comma separated list of primal and reobjective; default empty.
 
+Decomposition bound:
+====================
+
+- org.jacop.fz.decomposition: before search, bound the objective by a
+  Dantzig-Wolfe decomposition of the model into blocks linked by
+  counting (CountValuesBounds) and linear constraints, with column
+  generation over a JaLP master and pricing problems solved in the
+  store or, for hard blocks, in a copy with lazy clause generation; the
+  bound is certified in integer arithmetic. Default false.
+- org.jacop.fz.decomposition.share: the share of the time limit (-t) the
+  bound may take; default 0.2.
+- org.jacop.fz.decomposition.ms: the time, in milliseconds, it may take
+  without a time limit; default 60000.
+- org.jacop.fz.decomposition.priceMs: the time, in milliseconds, of one
+  pricing problem at most; default 2000.
+- org.jacop.fz.decomposition.storeMs: the time, in milliseconds, of a
+  pricing search in the store before a block that can be copied goes to
+  lazy clause generation; default 300.
+- org.jacop.fz.decomposition.pivots: the pivots of each simplex of one
+  master solve at most; default 20000.
+- org.jacop.fz.decomposition.smoothing: the weight of the best
+  multipliers in the duals the pricing problems get (Wentges
+  smoothing); default 0.5.
+- org.jacop.fz.decomposition.large: the variables of a block at least,
+  of which there must be two; default 10.
+- org.jacop.fz.decomposition.trace: print the blocks and every column
+  generation iteration to standard error; default false.
+
 Debugging:
 ==========
 - jacop.lcg.check: check every LCG explanation (ExplanationChecker);

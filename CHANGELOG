@@ -4234,7 +4234,28 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
-247. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
+247. Decomposition bound (off by default, -Dorg.jacop.fz.decomposition=true).
+     Before search, the FlatZinc front end looks for blocks of variables
+     that only counting (CountValuesBounds) and linear constraints link,
+     as in the connected-component detection of Gamrath and Luebbecke
+     (SEA 2010): a worker's shift sequence, a person's roster. It bounds
+     the objective by the Lagrangian relaxation of the linking rows
+     (Geoffrion, Mathematical Programming Study 2, 1974), with column
+     generation: a JaLP master over the blocks' solutions found so far,
+     with Wentges' smoothing of the duals, and for each block a pricing
+     problem, its own constraints with the reduced cost as objective,
+     solved by the solver itself as in Ha, Quimper and Rousseau (CP 2015):
+     by branch and bound in the store, or, for a block it cannot finish
+     there, by lazy clause generation in a copy of the block. Each bound is
+     certified in integer arithmetic from duals rounded to multiples of
+     1/K, so it holds whatever the simplex's accuracy, and the best one
+     bounds the objective at the root. physician-scheduling instance10
+     (MiniZinc Challenge 2021): root bound 1245 -> 2980 = the optimum in
+     about 7 s; work-task-variation (2025) has no root bound and gets one.
+     The statistics are dbBlocks, dbRows, dbIterations, dbColumns,
+     dbBound, dbPricingTimeOuts and dbTime.
+
+248. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
      the travel time on the arc i -> j when i is left in step s (time
      out[i] / stepLength), and waiting is allowed, so the arrival is the
      earliest t' + travel(t') over the departures t' still possible
@@ -4251,7 +4272,7 @@ Version 5.0 (unreleased)
      17,579; -f 16,358 -> 14,962). -Dorg.jacop.fz.sequenceMdd=false turns
      it off.
 
-248. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
+249. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
      the bins an item left or was fixed in, read from the values the item
      lost at the current level, instead of every bin of the item's previous
      domain, and keeps for each bin the items that may still be in it, so
@@ -4261,7 +4282,7 @@ Version 5.0 (unreleased)
      2025 ihtc-2024-marte instances, where Binpacking took about half of
      the run, fixed search explores 1.06x to 5.9x more nodes in 600 s.
 
-249. Cuts in search keep their period only while they move the bound.
+250. Cuts in search keep their period only while they move the bound.
      The capacity cuts of item 187 and the Hall cuts of item 215 were
      separated more often whenever a violated cut was found, even when
      adding it left the objective of the re-solved LP where it was; now
@@ -4290,7 +4311,7 @@ Version 5.0 (unreleased)
      Hall and energy cuts in search stay off by default: they leave the
      dual bounds where they were.
 
-250. JaLP no longer cycles on LPs with large costs or huge artificial
+251. JaLP no longer cycles on LPs with large costs or huge artificial
      bounds. A reduced cost past the dual tolerance (1e-9) but within
      1e-14 of the sizes of its terms is taken as zero: with costs near
      1e7 such values are a few units in the last place and took either
@@ -4308,7 +4329,7 @@ Version 5.0 (unreleased)
      rows swapped forever). Both reproducers solve in 113 and 1,818
      pivots, before they ran until the pivot limit.
 
-251. TSP edge elimination: before search, a pure symmetric travelling
+252. TSP edge elimination: before search, a pure symmetric travelling
      salesman model (one circuit with no fixed successor, the minimised
      objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
      the arcs that are in no optimal tour, proved from the distances alone
