@@ -4234,6 +4234,31 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. The FlatZinc front end reformulates positive tables exactly when it
+     posts them. A free column (the table is the product of the other
+     columns and the values of the column) becomes a unary domain, so a
+     Cartesian table becomes unary domains only; a column that a single
+     other column determines (functional dependency, Cambazard and
+     O'Sullivan, Reformulating Positive Table Constraints Using
+     Functional Dependencies, CP 2008, LNCS 5202) is split off as a binary
+     table, or an equality when the columns are equal; tables over the
+     same variables are intersected into one; short tables drop columns
+     of stars only or of one value. The parts share at most one variable,
+     so propagation is as strong as on the table, and LCG explanations
+     name fewer variables. 120 of 392 table instances checked change
+     (7 wide-set instances; XCSP AircraftLanding, CarSequencing,
+     ChampionsLeague, DC-skinny, FAPP, Nonogram, Ortholatin, Pentominoes,
+     SportsScheduling, Subisomorphism, WordSquare). On 55 of them at
+     240 s: -f 29 -> 31 solved, default 27 -> 28, times 0.91-0.95 on the
+     instances both solve; FAPP-aux-01, -20 and -test01 are proved.
+     -Dorg.jacop.fz.tableReformulation=false turns it off; see
+     properties.txt.
+
+248. Bug fix: when the symmetry deadline passed while Schreier-Sims cuts
+     were posted, the FlatZinc front end stopped with an uncaught
+     SymmetryBreaking$OutOfTime (seen on physician-scheduling under load).
+     The cuts posted so far are kept and solving goes on.
+
 Version 4.11
 =============
 
