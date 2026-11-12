@@ -4572,6 +4572,39 @@ Version 5.0 (unreleased)
      gap set 66.2 against 61.8 (36 better, 32 worse). --free-config
      portfolio-one-parse=0 and lcg-shared-phase=0 turn the two parts off.
 
+267. Root probing under --lcg, off by default (-Djacop.lcg.probe=share of
+   the time left, for example 0.02). It only adds facts: each value of each
+   0/1 variable, then each value of each domain of at most 64 values
+   (-Djacop.lcg.probe.domain), is assumed and propagated by the clauses and
+   the constraints; a value that fails is removed at the root (failed
+   literals, J. W. Freeman, PhD thesis, University of Pennsylvania, 1995),
+   and an atom that every value of a variable implies holds at the root
+   (lifting, I. Lynce and J. Marques-Silva, ICTAI 2003; M. W. P.
+   Savelsbergh, ORSA Journal on Computing 6(4), 1994). Probing every value
+   is singleton consistency at the root (R. Debruyne and C. Bessiere,
+   IJCAI 1997). Passes repeat while they add facts, and probing stops when
+   a quarter of its budget found nothing (-Djacop.lcg.probe.barren). With
+   -Djacop.lcg.probe.early=true it runs before the linear relaxation is
+   built, so that --lp has the probed domains and, as clique rows, greedy
+   maximal cliques of the conflicts x = a, y = b that probing found (A.
+   Atamturk, G. L. Nemhauser and M. W. P. Savelsbergh, Conflict graphs in
+   solving integer programming problems, EJOR 121(1), 2000). On the
+   wide set at 600 s it raises the root LP bound of 76 of 179 optimisation
+   instances with a relaxation (4 looser) and the final dual bound of 27
+   (1 looser), for example cable-tree A041 -50 to 255400, spot5 28 0 to
+   168610, physician-scheduling 1245 to 1745; it solves 167 against 166
+   instances, and 189 against 191 with -f, the probing seconds costing
+   time on easy instances.
+   -Djacop.lcg.probe.delay probes between runs of branch and bound instead,
+   once that share of the time limit has passed. LcgSolver.probeRoot is the
+   API; one LcgFuzzTest run in four probes before solving.
+
+268. LcgSolver.release attaches again, also above the root level, the
+   constraints that became clauses: removeConstraint only marks them
+   entailed there, and the mark stayed (Store.clearEntailed), so early
+   root probing lost the regular constraints of handball19 (elitserien
+   2014) and reported the objective 0 as optimal against the optimum 3.
+
 Version 4.11
 =============
 
