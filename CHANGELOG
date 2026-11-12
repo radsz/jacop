@@ -4234,8 +4234,24 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. SequenceMdd takes time-dependent travel times: stepTravel[i][j][s] is
+     the travel time on the arc i -> j when i is left in step s (time
+     out[i] / stepLength), and waiting is allowed, so the arrival is the
+     earliest t' + travel(t') over the departures t' still possible
+     (an extension of Cire and van Hoeve, Operations Research 61(6),
+     2013). The FlatZinc front end also detects
+     tours given by an inverse pair (jacop_assignment) whose order is
+     proved by a position array, with the travel time read from a table
+     over (predecessor, departure step), as in the MiniZinc Challenge
+     tdtsp model. On the 15 tdtsp instances of 2015, 2017 and 2026, 600 s:
+     the ten proved instances are proved 1.1x-2.9x faster under the
+     model's search and 1.1x-10x faster with -f, and the five 20-node
+     instances end with higher lower bounds and, where the model names
+     the objective, better solutions (2026 inst_20_56_00 22,450 ->
+     17,579; -f 16,358 -> 14,962). -Dorg.jacop.fz.sequenceMdd=false turns
+     it off.
 
-247. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
+248. Binpacking (MiniZinc bin_packing_load and its variants) wakes only
      the bins an item left or was fixed in, read from the values the item
      lost at the current level, instead of every bin of the item's previous
      domain, and keeps for each bin the items that may still be in it, so
@@ -4245,7 +4261,7 @@ Version 5.0 (unreleased)
      2025 ihtc-2024-marte instances, where Binpacking took about half of
      the run, fixed search explores 1.06x to 5.9x more nodes in 600 s.
 
-248. Cuts in search keep their period only while they move the bound.
+249. Cuts in search keep their period only while they move the bound.
      The capacity cuts of item 187 and the Hall cuts of item 215 were
      separated more often whenever a violated cut was found, even when
      adding it left the objective of the re-solved LP where it was; now
@@ -4274,7 +4290,7 @@ Version 5.0 (unreleased)
      Hall and energy cuts in search stay off by default: they leave the
      dual bounds where they were.
 
-249. JaLP no longer cycles on LPs with large costs or huge artificial
+250. JaLP no longer cycles on LPs with large costs or huge artificial
      bounds. A reduced cost past the dual tolerance (1e-9) but within
      1e-14 of the sizes of its terms is taken as zero: with costs near
      1e7 such values are a few units in the last place and took either
@@ -4292,7 +4308,7 @@ Version 5.0 (unreleased)
      rows swapped forever). Both reproducers solve in 113 and 1,818
      pivots, before they ran until the pivot limit.
 
-250. TSP edge elimination: before search, a pure symmetric travelling
+251. TSP edge elimination: before search, a pure symmetric travelling
      salesman model (one circuit with no fixed successor, the minimised
      objective only in obj = sum(i) cost[x[i]] + c, symmetric costs) loses
      the arcs that are in no optimal tour, proved from the distances alone
