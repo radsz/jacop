@@ -283,7 +283,9 @@ public class Options {
                 routes of two-index vrp models, default 1),
                 lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
                 default 1), lns-kinds=<kind>+<kind>... (the neighbourhoods used, of random, graph,
-                propagation, objective, constraints, scheduling, packing, routes, related; default all),
+                propagation, objective, constraints, scheduling, packing, routes, related, blocks;
+                default all), lns-blocks=0|1 (whole blocks of the decomposition bound as
+                neighbourhoods, default 1),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);

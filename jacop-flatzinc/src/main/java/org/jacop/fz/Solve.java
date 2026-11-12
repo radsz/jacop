@@ -2635,6 +2635,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
+      if (columns != null && "1".equals(options.freeConfig("lns-blocks", "1"))) {
+        // the blocks of the decomposition bound, those far from integral in its master first
+        lns.addGroups(columns.blocks(), columns.fractionality());
+      }
       lcg.setLns(
           lns,
           Double.parseDouble(options.freeConfig("lns-share", "3")),

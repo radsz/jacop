@@ -203,9 +203,18 @@ final class DecompositionBound {
   /**
    * An assignment of the blocks' variables from the columns: those of an integer solution of the
    * restricted master when one was found, else the column of largest weight in the master's last
-   * solution of each block; its cost is that of the columns when they satisfy the linking rows.
+   * solution of each block; its cost is that of the columns when they satisfy the linking rows. The
+   * blocks' variables and, for each block, how far its heaviest column is from 1 in the master
+   * (plus 0.1) guide the {@code BLOCKS} neighbourhood of large neighbourhood search.
    */
-  record Primal(IntVar[] vars, int[] values, boolean feasible, long cost, long millis) {}
+  record Primal(
+      IntVar[] vars,
+      int[] values,
+      boolean feasible,
+      long cost,
+      long millis,
+      IntVar[][] blocks,
+      double[] fractionality) {}
 
   /** A linking row: lo &le; &Sigma; terms &le; hi, its terms by block. */
   static final class Row {
@@ -1139,6 +1148,13 @@ final class DecompositionBound {
     }
     List<IntVar> vars = new ArrayList<>();
     List<Integer> values = new ArrayList<>();
+    IntVar[][] blockVars = new IntVar[nb][];
+    double[] fractionality = new double[nb];
+    for (int b = 0; b < nb; b++) {
+      blockVars[b] = blocks.get(b).vars.toArray(new IntVar[0]);
+      double w = heaviest[b] < weights.length ? weights[heaviest[b]] : 0;
+      fractionality[b] = Math.max(0, 1 - w) + 0.1;
+    }
     for (int b = 0; b < nb; b++) {
       Column c = pool.get(chosen[b]);
       Block block = blocks.get(b);
@@ -1162,7 +1178,9 @@ final class DecompositionBound {
         values.stream().mapToInt(Integer::intValue).toArray(),
         feasible,
         maximize ? -cost : cost,
-        System.currentTimeMillis() - start);
+        System.currentTimeMillis() - start,
+        blockVars,
+        fractionality);
   }
 
   // the scale K = 2^s of the multipliers: as fine as the magnitudes allow
