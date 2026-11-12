@@ -30,6 +30,7 @@
 
 package org.jacop.fz;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -46,6 +47,9 @@ import java.util.Set;
 import java.util.function.IntUnaryOperator;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.presolve.GraphAutomorphisms;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -1274,5 +1278,31 @@ class SymmetryBreakingFlatzincTest {
 
   private static String bv(IntUnaryOperator bs, int i) {
     return "b" + bs.applyAsInt(i);
+  }
+
+  /**
+   * The automorphism search can use up the whole symmetry time on a loaded machine; the
+   * Schreier-Sims cuts after it then stop with the cuts posted so far, they do not throw out of the
+   * front end (2024 graph-clear planar_n20_seed2022_15 under -f with 3 runs at a time gave no
+   * answer at all).
+   */
+  @Test
+  void schreierSimsCutsStopAtTheDeadline() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 5);
+    }
+    SymmetryBreaking symmetry = new SymmetryBreaking(store, new Tables(store));
+    symmetry.deadline(System.nanoTime() - 1);
+    List<GraphAutomorphisms.Permutation> generators =
+        List.of(
+            new GraphAutomorphisms.Permutation(new int[] {0, 1}, new int[] {1, 0}),
+            new GraphAutomorphisms.Permutation(new int[] {1, 2}, new int[] {2, 1}));
+    int[] cuts =
+        assertDoesNotThrow(
+            () ->
+                symmetry.schreierSims(generators, x, new int[] {0, 1, 2}, false, List.of(), true));
+    assertEquals(0, cuts[0]);
   }
 }

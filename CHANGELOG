@@ -4234,6 +4234,13 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. Symmetry breaking no longer ends a run without an answer when the
+     automorphism search uses up the symmetry time (org.jacop.fz.
+     symmetryTime, 1 s): the Schreier-Sims cuts after it threw the
+     time-out out of the front end. On a loaded machine (3 runs at a
+     time) the 2024 graph-clear instance planar_n20_seed2022_15 gave no
+     answer under -f; the cuts now stop with those posted so far.
+
 Version 4.11
 =============
 

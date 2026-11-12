@@ -733,7 +733,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    *
    * @return the cuts posted (or counted when post is false) and those left out as implied.
    */
-  private int[] schreierSims(
+  int[] schreierSims(
       List<GraphAutomorphisms.Permutation> generators,
       IntVar[] varAt,
       int[] rankAt,
@@ -797,7 +797,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
         if (j == b) {
           continue;
         }
-        checkTime();
+        if (System.nanoTime() > deadline) {
+          // the automorphism search used up the time: keep the cuts posted so far, each one is
+          // valid on its own, and leave the model's solving to go on
+          return new int[] {posted, skipped};
+        }
         if (reach.contains(varAt[j])) {
           skipped++;
           continue;
@@ -967,6 +971,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
       p = parent.get(v);
     }
     return v;
+  }
+
+  /**
+   * Sets the time, in System.nanoTime(), after which the symmetry detection stops.
+   *
+   * @param nanos the deadline.
+   */
+  void deadline(long nanos) {
+    deadline = nanos;
   }
 
   private void checkTime() {
