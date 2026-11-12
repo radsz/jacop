@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
@@ -263,6 +264,11 @@ public class Constraints implements ParserTreeConstants {
       // before any constraint propagates: bounds propagation creeps round a negative cycle
       if (DifferenceBoundsDetector.enabled() && support.options.proof() == null) {
         new DifferenceBoundsDetector(support).detect(astTree);
+      }
+
+      // common sub-sums of linear constraints become variables; --proof encodes the rows as given
+      if (LinearOverlapDetector.enabled() && options.proof() == null) {
+        new LinearOverlapDetector(support).detect(astTree);
       }
 
       if (!"false".equals(AlldiffChannels.rule())) {
