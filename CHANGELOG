@@ -4234,6 +4234,19 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+248. LCG free search (--lcg -f) skips the core-guided phase after branch
+     and bound when the phase's probe (its first 2 % of the time) stopped
+     without a solution of its own and branch and bound found one: the
+     rest of the phase stopped the same way after a third of its time
+     and only delayed branch and bound. At 600 s on 29 instances, two
+     seeds each: fast-food ff58 is proved in 24 s instead of 95 s,
+     gt-sort n9 in 57 s instead of 323 s, city-position 5-06 in 48 s
+     instead of 322 s, and city-position 7-04 (no proof before) in
+     104 s. The probe still runs, so models where cores close the gap
+     at once (proteindesign, ptv, spot5, celar, work-task-variation)
+     keep their proofs. -Djacop.lcg.coreProbeSkip=false restores the old
+     behaviour; see properties.txt.
+
 Version 4.11
 =============
 

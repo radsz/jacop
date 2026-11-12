@@ -500,6 +500,9 @@ Core-guided phase (free search, --lcg -f):
   cores' lower bound; default 0.1.
 - jacop.lcg.coreSkip: skip the core-guided phase when its probe's
   rate cannot raise the bound to the root bound; default true.
+- jacop.lcg.coreProbeSkip: skip the rest of the core-guided phase
+  when its probe stopped without a solution of its own and branch and
+  bound found one; default true.
 - jacop.lcg.coreNoSolution: the core phase gives its time to branch
   and bound when it has no solution of its own by this share of its
   time, 0 turns it off; default 0.33.
