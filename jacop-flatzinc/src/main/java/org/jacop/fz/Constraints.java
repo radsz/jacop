@@ -66,6 +66,7 @@ import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
+import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
@@ -286,6 +287,11 @@ public class Constraints implements ParserTreeConstants {
       // its cost constraints are redundant, with bounds a proof does not derive
       if (CircuitCostDetector.enabled() && options.proof() == null) {
         new CircuitCostDetector(support).detect(astTree);
+      }
+
+      // a relaxed decision diagram over a circuit whose arcs carry times
+      if (SequenceMddDetector.enabled() && options.proof() == null) {
+        new SequenceMddDetector(support).detect(astTree);
       }
 
       // a redundant Routes over 0/1 arcs, whose rules a proof does not derive

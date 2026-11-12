@@ -36,6 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -46,6 +47,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.util.VarIntMap;
 
 /**
  * GlobalCardinality constraint: for each i, the number of variables of list equal to values[i] lies
@@ -81,7 +83,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class GlobalCardinality extends Constraint
-    implements SatisfiedPresent, Copyable<GlobalCardinality>, Explainable {
+    implements SatisfiedPresent, Copyable<GlobalCardinality>, Explainable, Stateful {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -128,13 +130,38 @@ public class GlobalCardinality extends Constraint
   private final int[] next;
   private final int[] prev;
 
-  // the values (indexes) each variable that is not fixed can take, m for an uncounted value, and
-  // the reverse lists; a fixed variable has no values and is not in the flow
+  // the values (indexes) each variable that is not fixed can take, m for an uncounted value, in
+  // adj[adjStart[i] .. adjEnd[i]), and the reverse lists; a fixed variable has no values and is not
+  // in the flow. Each variable has room for its values from adjStart[i] to adjStart[i + 1].
   private final int[] adjStart;
+  private final int[] adjEnd;
   private int[] adj;
   private final int[] revStart;
   private int[] rev;
   private final int[] revFill;
+
+  // the domain size each value list was built for, and the value index (m if uncounted) of each
+  // variable fixed when its list was built, or -1
+  private final int[] builtSize;
+  private final int[] fixedTo;
+  private boolean laidOut;
+  private boolean revValid;
+
+  // the variables whose value lists have to be built again
+  private final boolean[] dirty;
+  private final int[] dirtyList;
+  private int dirtyCount;
+
+  // the positions of each variable in list: the first one, then a chain through nextSame
+  private final VarIntMap position = new VarIntMap();
+  private final int[] nextSame;
+
+  // the variables reported by queueVariable, with the level of the report, to build their lists
+  // again when the level is removed; loggedAt is the level of the last report of a variable, or -1
+  private int[] logVar = new int[16];
+  private int[] logLevel = new int[16];
+  private int logSize;
+  private final int[] loggedAt;
 
   // number of variables fixed to each value and number of variables not fixed that can take it
   private final int[] fixed;
@@ -278,7 +305,26 @@ public class GlobalCardinality extends Constraint
     next = new int[n];
     prev = new int[n];
     adjStart = new int[n + 1];
-    adj = new int[Math.max(4, n)];
+    adjEnd = new int[n];
+    adj = new int[0];
+    builtSize = new int[n];
+    fixedTo = new int[n];
+    dirty = new boolean[n];
+    dirtyList = new int[n];
+    loggedAt = new int[n];
+    Arrays.fill(loggedAt, -1);
+    nextSame = new int[n];
+    for (int i = 0; i < n; i++) {
+      int first = position.get(this.list[i]);
+      if (first == VarIntMap.ABSENT) {
+        position.put(this.list[i], i);
+        nextSame[i] = -1;
+      } else {
+        // later occurrences of a variable are chained after its first one
+        nextSame[i] = nextSame[first];
+        nextSame[first] = i;
+      }
+    }
     revStart = new int[m + 2];
     rev = new int[Math.max(4, n)];
     revFill = new int[m + 1];
@@ -365,73 +411,187 @@ public class GlobalCardinality extends Constraint
     return changed;
   }
 
-  /** It builds the value lists of the variables, their reverse lists and the value counts. */
+  /**
+   * It brings the value lists of the variables and the value counts up to date. Only the lists of
+   * the variables that changed since they were built are built again: those reported by
+   * queueVariable, those whose level was removed and, as a safeguard, those whose domain size
+   * differs from the size the list was built for.
+   */
   private void buildAdjacency() {
-    Arrays.fill(fixed, 0);
-    Arrays.fill(possible, 0);
+    if (!laidOut) {
+      layOut();
+      return;
+    }
+    for (int i = 0; i < n; i++) {
+      if (!dirty[i] && list[i].getSize() != builtSize[i]) {
+        markDirty(i);
+      }
+    }
+    if (dirtyCount == 0) {
+      return;
+    }
+    revValid = false;
+    for (int k = 0; k < dirtyCount; k++) {
+      int i = dirtyList[k];
+      if (!rebuild(i)) {
+        // a domain grew beyond the room of its list
+        layOut();
+        return;
+      }
+      dirty[i] = false;
+    }
+    dirtyCount = 0;
+  }
+
+  /** It gives every variable room for its current values and builds all value lists. */
+  private void layOut() {
+    for (int k = 0; k < dirtyCount; k++) {
+      dirty[dirtyList[k]] = false;
+    }
+    dirtyCount = 0;
     int size = 0;
     for (int i = 0; i < n; i++) {
       adjStart[i] = size;
-      IntDomain d = list[i].dom();
-      if (d.singleton()) {
-        int a = index(d.min());
-        fixed[a < 0 ? m : a]++;
-        if (varMatch[i] >= 0) {
-          match(i, -1);
-        }
-        continue;
-      }
-      int domainSize = d.getSize();
-      int inValues = 0;
-      if (domainSize <= m) {
-        for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
-          int a = index(e.nextElement());
-          if (a >= 0) {
-            size = add(size, a);
-            inValues++;
-          }
-        }
-      } else {
-        int from = lowerIndex(d.min());
-        int to = lowerIndex(d.max() + 1L);
-        for (int a = from; a < to; a++) {
-          if (d.contains(values[a])) {
-            size = add(size, a);
-            inValues++;
-          }
-        }
-      }
-      if (inValues < domainSize) {
-        size = add(size, m);
-      }
+      size += room(list[i].getSize());
     }
     adjStart[n] = size;
+    if (adj.length < size) {
+      adj = new int[size];
+    }
+    Arrays.fill(fixed, 0);
+    Arrays.fill(possible, 0);
+    Arrays.fill(fixedTo, -1);
+    for (int i = 0; i < n; i++) {
+      adjEnd[i] = adjStart[i];
+      rebuild(i);
+    }
+    laidOut = true;
+    revValid = false;
+  }
 
-    // reverse lists: the variables that can take each value
+  /**
+   * The room of a variable with the given domain size: its counted values and the uncounted one.
+   */
+  private int room(int domainSize) {
+    return Math.min(domainSize, m) + 1;
+  }
+
+  /**
+   * It builds the value list of variable i and updates the value counts, or tells, changing
+   * nothing, that its domain does not fit in its room.
+   */
+  private boolean rebuild(int i) {
+    IntDomain d = list[i].dom();
+    int domainSize = d.getSize();
+    if (room(domainSize) > adjStart[i + 1] - adjStart[i]) {
+      return false;
+    }
+    // the old contribution of the variable to the counts
+    if (fixedTo[i] >= 0) {
+      fixed[fixedTo[i]]--;
+      fixedTo[i] = -1;
+    } else {
+      for (int k = adjStart[i]; k < adjEnd[i]; k++) {
+        possible[adj[k]]--;
+      }
+    }
+    builtSize[i] = domainSize;
+    int size = adjStart[i];
+    if (d.singleton()) {
+      int a = index(d.min());
+      fixedTo[i] = a < 0 ? m : a;
+      fixed[fixedTo[i]]++;
+      adjEnd[i] = size;
+      if (varMatch[i] >= 0) {
+        match(i, -1);
+      }
+      return true;
+    }
+    int inValues = 0;
+    if (domainSize <= m) {
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int a = index(e.nextElement());
+        if (a >= 0) {
+          adj[size++] = a;
+          possible[a]++;
+          inValues++;
+        }
+      }
+    } else {
+      int from = lowerIndex(d.min());
+      int to = lowerIndex(d.max() + 1L);
+      for (int a = from; a < to; a++) {
+        if (d.contains(values[a])) {
+          adj[size++] = a;
+          possible[a]++;
+          inValues++;
+        }
+      }
+    }
+    if (inValues < domainSize) {
+      adj[size++] = m;
+      possible[m]++;
+    }
+    adjEnd[i] = size;
+    return true;
+  }
+
+  /** It builds the reverse lists: the variables that can take each value. */
+  private void buildReverse() {
+    int size = 0;
+    for (int a = 0; a <= m; a++) {
+      revStart[a] = size;
+      revFill[a] = size;
+      size += possible[a];
+    }
+    revStart[m + 1] = size;
     if (rev.length < size) {
       rev = new int[Math.max(size, 2 * rev.length)];
     }
-    int start = 0;
-    for (int a = 0; a <= m; a++) {
-      revStart[a] = start;
-      revFill[a] = start;
-      start += possible[a];
-    }
-    revStart[m + 1] = start;
     for (int i = 0; i < n; i++) {
-      for (int k = adjStart[i]; k < adjStart[i + 1]; k++) {
+      for (int k = adjStart[i]; k < adjEnd[i]; k++) {
         rev[revFill[adj[k]]++] = i;
+      }
+    }
+    revValid = true;
+  }
+
+  private void markDirty(int i) {
+    if (!dirty[i]) {
+      dirty[i] = true;
+      dirtyList[dirtyCount++] = i;
+    }
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    int first = position.get(v);
+    if (first == VarIntMap.ABSENT) {
+      // a counter
+      return;
+    }
+    for (int i = first; i >= 0; i = nextSame[i]) {
+      markDirty(i);
+      if (loggedAt[i] != level) {
+        // the list has to be built again when this level is removed
+        if (logSize == logVar.length) {
+          logVar = Arrays.copyOf(logVar, 2 * logSize);
+          logLevel = Arrays.copyOf(logLevel, 2 * logSize);
+        }
+        logVar[logSize] = i;
+        logLevel[logSize++] = level;
+        loggedAt[i] = level;
       }
     }
   }
 
-  private int add(int size, int a) {
-    if (size == adj.length) {
-      adj = Arrays.copyOf(adj, 2 * size);
+  @Override
+  public void removeLevel(int level) {
+    while (logSize > 0 && logLevel[logSize - 1] >= level) {
+      int i = logVar[--logSize];
+      loggedAt[i] = -1;
+      markDirty(i);
     }
-    adj[size] = a;
-    possible[a]++;
-    return size + 1;
   }
 
   /** It returns the index of value v, or -1 if v is not counted. */
@@ -525,7 +685,7 @@ public class GlobalCardinality extends Constraint
   }
 
   private boolean canTake(int i, int a) {
-    int end = adjStart[i + 1];
+    int end = adjEnd[i];
     if (a == m) {
       // the uncounted values come last
       return end > adjStart[i] && adj[end - 1] == m;
@@ -557,12 +717,15 @@ public class GlobalCardinality extends Constraint
       }
     }
     for (int i = 0; i < n; i++) {
-      if (varMatch[i] < 0 && adjStart[i] < adjStart[i + 1] && !augmentVariable(i)) {
+      if (varMatch[i] < 0 && adjStart[i] < adjEnd[i] && !augmentVariable(i)) {
         return false;
       }
     }
     for (int a = 0; a < m; a++) {
       while (flow[a] < capLow[a]) {
+        if (!revValid) {
+          buildReverse();
+        }
         if (!augmentValue(a)) {
           return false;
         }
@@ -583,7 +746,7 @@ public class GlobalCardinality extends Constraint
     visited[start] = generation;
     while (qHead < qTail) {
       int i = queue[qHead++];
-      for (int k = adjStart[i]; k < adjStart[i + 1]; k++) {
+      for (int k = adjStart[i]; k < adjEnd[i]; k++) {
         int a = adj[k];
         int node = n + a;
         if (a == varMatch[i] || visited[node] == generation) {
@@ -673,7 +836,7 @@ public class GlobalCardinality extends Constraint
       valueAdjStart[a] = size;
       generation++;
       for (int i = head[a]; i >= 0; i = next[i]) {
-        for (int k = adjStart[i]; k < adjStart[i + 1]; k++) {
+        for (int k = adjStart[i]; k < adjEnd[i]; k++) {
           int b = adj[k];
           if (b != a && visited[b] != generation) {
             visited[b] = generation;
@@ -778,7 +941,7 @@ public class GlobalCardinality extends Constraint
       int ci = component[matched];
       boolean inComponent = false;
       int outside = 0;
-      for (int k = adjStart[i]; k < adjStart[i + 1]; k++) {
+      for (int k = adjStart[i]; k < adjEnd[i]; k++) {
         int a = adj[k];
         if (a != matched) {
           if (component[a] == ci) {
@@ -804,7 +967,7 @@ public class GlobalCardinality extends Constraint
       int removed = -1;
       IntervalDomain removedValues = null;
       boolean removeUncounted = false;
-      for (int k = adjStart[i]; k < adjStart[i + 1]; k++) {
+      for (int k = adjStart[i]; k < adjEnd[i]; k++) {
         int a = adj[k];
         if (a == matched || component[a] == ci) {
           continue;
