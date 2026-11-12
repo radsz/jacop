@@ -72,7 +72,7 @@ public final class VarIntMap {
   // Boolean variables are not in the store's array and all have index -1: they are hashed by their
   // name, which is as deterministic, or they would all probe from one slot and a lookup would scan
   // every boolean of the map.
-  private static int slot(Var v, int mask) {
+  static int slot(Var v, int mask) {
     int key = v.index();
     if (key < 0) {
       String id = v.id();
