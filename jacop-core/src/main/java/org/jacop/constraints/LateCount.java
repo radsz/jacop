@@ -123,6 +123,31 @@ public class LateCount extends Constraint
   private final long[] low;
   private final long[] root;
 
+  // the weight of each task, null when all are 1; uniform when all are equal
+  private final int[] weights;
+  private final boolean uniform;
+
+  // the linear relaxation of weighted tasks: the free tasks by weight per unit of processing, a
+  // segment tree of the slack of the nested due dates with its pending additions, the index of each
+  // position of order among the free tasks, and the weights of the free tasks for the smallest ones
+  private final int[] ratioOrder;
+  private final long[] slack;
+  private final long[] lazy;
+  private final int[] position;
+  private final int[] smallest;
+
+  // the on time processing the last linear relaxation gives each position of order, and of the
+  // bound before filtering: that processing, the sorted free weights with their prefix sums and
+  // the count of Moore and Hodgson
+  private final long[] taken;
+  private final long[] baseTaken;
+  private final int[] baseSorted;
+  private final long[] prefix;
+  private int lastCount;
+  private int lastFree;
+  private int baseCount;
+  private int baseFree;
+
   // own reasons under lazy clause generation, on unless -Dorg.jacop.lateCount.reasons=false
   static final boolean REASONS = !"false".equals(System.getProperty("org.jacop.lateCount.reasons"));
 
@@ -146,7 +171,7 @@ public class LateCount extends Constraint
    * @param late the bound on the number of late tasks.
    */
   public LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late) {
-    this(starts, durations, dues, late, null);
+    this(starts, durations, dues, null, late, null);
   }
 
   /**
@@ -168,7 +193,7 @@ public class LateCount extends Constraint
    * @param dominance true to enforce the dominance rule.
    */
   public LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late, boolean dominance) {
-    this(starts, durations, dues, late, dominance ? releases(starts) : null);
+    this(starts, durations, dues, null, late, dominance ? releases(starts) : null);
   }
 
   private static int[] releases(IntVar[] starts) {
@@ -182,7 +207,46 @@ public class LateCount extends Constraint
     return r;
   }
 
-  private LateCount(IntVar[] starts, int[] durations, int[] dues, IntVar late, int[] releases) {
+  /**
+   * It constructs a weighted late count constraint on a unary resource: late bounds the sum of the
+   * weights of the late tasks (1|r_j|sum w_j U_j). With different weights the bound is the larger
+   * of the linear relaxation of the on time tasks (a knapsack over the nested due dates, which
+   * greedy by weight per unit of processing solves, as the constraints form a polymatroid) and the
+   * smallest weights of as many tasks as Moore and Hodgson finds late. Without release dates the
+   * weighted problem is already NP-hard (it contains knapsack; E. L. Lawler and J. M. Moore, "A
+   * functional equation and its application to resource allocation and sequencing problems",
+   * Management Science 16(1), 1969, solve it by dynamic programming in pseudo-polynomial time). The
+   * greedy algorithm is optimal over a polymatroid (J. Edmonds, "Submodular functions, matroids,
+   * and certain polyhedra", Combinatorial Structures and their Applications, 1970); here every task
+   * takes the least slack of the due dates from its own on, kept in a segment tree.
+   *
+   * @param starts the start of each task.
+   * @param durations the duration of each task, at least 0.
+   * @param dues the due date of each task: it is late if its start plus duration exceeds it.
+   * @param weights the weight of each task, at least 0.
+   * @param late the bound on the weight of the late tasks.
+   */
+  public LateCount(IntVar[] starts, int[] durations, int[] dues, int[] weights, IntVar late) {
+    this(starts, durations, dues, checkedWeights(weights, starts), late, null);
+  }
+
+  // the weights, null when all are 1
+  private static int[] checkedWeights(int[] weights, IntVar[] starts) {
+    if (weights == null || starts == null || weights.length != starts.length) {
+      throw new IllegalArgumentException("LateCount needs one weight per task.");
+    }
+    boolean ones = true;
+    for (int w : weights) {
+      if (w < 0) {
+        throw new IllegalArgumentException("LateCount needs weights of at least 0.");
+      }
+      ones &= w == 1;
+    }
+    return ones ? null : Arrays.copyOf(weights, weights.length);
+  }
+
+  private LateCount(
+      IntVar[] starts, int[] durations, int[] dues, int[] weights, IntVar late, int[] releases) {
 
     if (starts == null
         || durations == null
@@ -214,6 +278,21 @@ public class LateCount extends Constraint
     this.onTime = new boolean[n];
     this.key = new long[n];
     this.eff = new long[n];
+    this.weights = weights;
+    boolean same = true;
+    for (int i = 1; weights != null && i < n; i++) {
+      same &= weights[i] == weights[0];
+    }
+    this.uniform = same;
+    this.ratioOrder = new int[n];
+    this.slack = new long[4 * Math.max(1, n)];
+    this.lazy = new long[4 * Math.max(1, n)];
+    this.position = new int[n];
+    this.smallest = new int[n];
+    this.taken = new long[n];
+    this.baseTaken = new long[n];
+    this.baseSorted = new int[n];
+    this.prefix = new long[n + 1];
     this.lo = new long[n];
     this.hi = new long[n];
     this.low = new long[n];
@@ -246,27 +325,33 @@ public class LateCount extends Constraint
         lo[i] = starts[i].min();
         hi[i] = starts[i].max();
       }
-      int sure = prepare();
+      long sure = prepare();
       long theta = bestOrigin();
       long origin = theta;
-      int relaxed = lateOf(theta, -1, false);
+      int relaxed = relaxed(theta, -1, false);
       if (relaxed == IMPOSSIBLE) {
         throw Store.failException;
       }
-      int bound = sure + relaxed;
+      long bound = sure + relaxed;
+      if (!uniform) {
+        keepBase();
+      }
       if (bound > late.max()) {
         throw Store.failException;
       }
       if (bound > late.min()) {
-        late.domain.inMin(store.level, late, bound);
+        late.domain.inMin(store.level, late, (int) bound);
       }
 
       int max = late.max();
       // tasks without duration do not use the machine: on time is always possible
-      if (bound == max) {
+      {
         for (int i = 0; i < n; i++) {
           IntVar s = starts[i];
-          if (durations[i] == 0 && s.min() <= lastOnTime(i) && s.max() > lastOnTime(i)) {
+          if (durations[i] == 0
+              && bound + weight(i) > max
+              && s.min() <= lastOnTime(i)
+              && s.max() > lastOnTime(i)) {
             s.domain.inMax(store.level, s, (int) lastOnTime(i));
           }
         }
@@ -279,19 +364,21 @@ public class LateCount extends Constraint
         }
         int i = order[k];
         IntVar s = starts[i];
-        if (kept[k]) {
-          // taken on time by the bound: forcing it late adds one
-          if (bound == max && sure + 1 + lateOf(origin, k, false) > max) {
-            s.domain.inMax(store.level, s, (int) lastOnTime(i));
+        // with unit weights only a task the bound takes on time can raise it when made late, and
+        // only a late one when made on time
+        // with equal weights only a task the bound takes on time can raise it when made late, and
+        // only a late one when made on time; with other weights, a task the linear relaxation
+        // leaves late (on time) does not change it when made late (on time), and the smallest
+        // weights follow from the ones of the bound
+        if ((!uniform || kept[k])
+            && bound + weight(i) > max
+            && sure + weight(i) + late(origin, k, kept, false) > max) {
+          s.domain.inMax(store.level, s, (int) lastOnTime(i));
+        } else if ((!uniform || !kept[k]) && sure + late(origin, k, kept, true) > max) {
+          if (lastOnTime(i) >= IntDomain.MAX_INT) {
+            throw Store.failException;
           }
-        } else {
-          // late in the bound: forcing it on time can only raise it
-          if (sure + (long) lateOf(origin, k, true) > max) {
-            if (lastOnTime(i) >= IntDomain.MAX_INT) {
-              throw Store.failException;
-            }
-            s.domain.inMin(store.level, s, (int) (lastOnTime(i) + 1));
-          }
+          s.domain.inMin(store.level, s, (int) (lastOnTime(i) + 1));
         }
       }
       // also after a change of late, which may be one of the starts
@@ -306,12 +393,12 @@ public class LateCount extends Constraint
    *
    * @return the number of tasks that must be late.
    */
-  private int prepare() {
-    int sure = 0;
+  private long prepare() {
+    long sure = 0;
     size = 0;
     for (int i = 0; i < n; i++) {
       if (lo[i] > lastOnTime(i)) {
-        sure++;
+        sure += weight(i);
       } else if (durations[i] > 0) {
         key[size++] = ((long) dues[i] << 24) | i;
       }
@@ -341,7 +428,7 @@ public class LateCount extends Constraint
         if (seen(k, t)) {
           continue;
         }
-        int value = lateOf(t, -1, false);
+        int value = relaxed(t, -1, false);
         if (value > relaxed) {
           relaxed = value;
           theta = t;
@@ -448,6 +535,211 @@ public class LateCount extends Constraint
         throw Store.failException;
       }
     }
+  }
+
+  private long weight(int i) {
+    return weights == null ? 1 : weights[i];
+  }
+
+  // the bound of relaxed(origin, k, onTime) as far as filtering needs it: when the linear
+  // relaxation of the bound already has k late (on time) and Moore and Hodgson agrees, the linear
+  // bound stays and the count changes by the weight of k, so only the smallest weights can raise it
+  private long late(long origin, int k, boolean[] kept, boolean onTime) {
+    if (!uniform && eff[k] > 0 && kept[k] == onTime) {
+      if (onTime && baseTaken[k] == eff[k] && baseCount < baseFree) {
+        return smallestWithout(k, baseCount);
+      }
+      if (!onTime && baseTaken[k] == 0 && baseCount >= 1) {
+        return smallestWithout(k, baseCount - 1);
+      }
+    }
+    return relaxed(origin, k, onTime);
+  }
+
+  // the bound's free weights, its count of Moore and Hodgson and the processing its linear
+  // relaxation takes on time
+  private void keepBase() {
+    baseCount = lastCount;
+    baseFree = lastFree;
+    System.arraycopy(smallest, 0, baseSorted, 0, baseFree);
+    prefix[0] = 0;
+    for (int j = 0; j < baseFree; j++) {
+      prefix[j + 1] = prefix[j] + baseSorted[j];
+    }
+    System.arraycopy(taken, 0, baseTaken, 0, size);
+  }
+
+  // the sum of the c smallest free weights of the bound without the one of position k
+  private long smallestWithout(int k, int c) {
+    if (c == 0) {
+      return 0;
+    }
+    int w = weights[order[k]];
+    if (w > baseSorted[c - 1]) {
+      return prefix[c];
+    }
+    return prefix[c] - w + baseSorted[c];
+  }
+
+  /**
+   * The bound on the weight of the late free tasks from origin on, as {@link #lateOf}: the count of
+   * Moore and Hodgson with unit weights, else the larger of the smallest weights of that many free
+   * tasks and the linear relaxation.
+   */
+  private int relaxed(long origin, int special, boolean specialOnTime) {
+    int count = lateOf(origin, special, specialOnTime);
+    lastCount = count;
+    if (weights == null || count == IMPOSSIBLE) {
+      return count;
+    }
+    // the free tasks Moore and Hodgson schedules (onTime is set for those it keeps)
+    int m = 0;
+    for (int k = 0; k < size; k++) {
+      if (!forced[k] && k != special && eff[k] > 0) {
+        smallest[m++] = weights[order[k]];
+      }
+    }
+    lastFree = m;
+    long fewest;
+    if (uniform) {
+      fewest = (long) count * (m > 0 ? smallest[0] : 0);
+    } else {
+      Arrays.sort(smallest, 0, m);
+      fewest = 0;
+      for (int j = 0; j < count; j++) {
+        fewest += smallest[j];
+      }
+    }
+    long best = uniform ? fewest : Math.max(fewest, linearLate(special));
+    return (int) Math.min(best, IMPOSSIBLE - 1L);
+  }
+
+  /**
+   * The linear relaxation of the weight of the late free tasks: the on time processing z of the
+   * free tasks in order of due dates must fit before each of their due dates (as left by the forced
+   * tasks, see {@link #lateOf}); the nested constraints with z between 0 and the processing form a
+   * polymatroid, so taking the tasks by weight per unit of processing, each as far as the least
+   * slack from its due date on allows, maximises the weight on time.
+   */
+  private long linearLate(int special) {
+    int m = 0;
+    double total = 0;
+    for (int k = 0; k < size; k++) {
+      taken[k] = 0;
+      if (!forced[k] && k != special && eff[k] > 0) {
+        position[k] = m;
+        ratioOrder[m++] = k;
+        total += weights[order[k]];
+      } else {
+        position[k] = -1;
+      }
+    }
+    if (m == 0) {
+      return 0;
+    }
+    build(1, 0, m - 1, m);
+    sortByRatio(m);
+    double onTimeWeight = 0;
+    for (int j = 0; j < m; j++) {
+      int k = ratioOrder[j];
+      int w = weights[order[k]];
+      if (w == 0) {
+        break;
+      }
+      long room = minimum(1, 0, m - 1, position[k], m - 1);
+      long z = Math.min(eff[k], room);
+      if (z <= 0) {
+        continue;
+      }
+      add(1, 0, m - 1, position[k], m - 1, -z);
+      taken[k] = z;
+      onTimeWeight += (double) w * z / eff[k];
+    }
+    double lateWeight = total - onTimeWeight;
+    return (long) Math.ceil(lateWeight - 1e-6 * Math.max(1, lateWeight));
+  }
+
+  // the slack of the due dates of the free tasks, by their index among them
+  private void build(int node, int left, int right, int m) {
+    lazy[node] = 0;
+    if (left == right) {
+      slack[node] = dueOfFree(left);
+      return;
+    }
+    int mid = (left + right) >>> 1;
+    build(2 * node, left, mid, m);
+    build(2 * node + 1, mid + 1, right, m);
+    slack[node] = Math.min(slack[2 * node], slack[2 * node + 1]);
+  }
+
+  private long dueOfFree(int index) {
+    return due[ratioOrder[index]];
+  }
+
+  private long minimum(int node, int left, int right, int from, int to) {
+    if (to < left || right < from) {
+      return Long.MAX_VALUE;
+    }
+    if (from <= left && right <= to) {
+      return slack[node];
+    }
+    int mid = (left + right) >>> 1;
+    return lazy[node]
+        + Math.min(
+            minimum(2 * node, left, mid, from, to),
+            minimum(2 * node + 1, mid + 1, right, from, to));
+  }
+
+  private void add(int node, int left, int right, int from, int to, long value) {
+    if (to < left || right < from) {
+      return;
+    }
+    if (from <= left && right <= to) {
+      slack[node] += value;
+      lazy[node] += value;
+      return;
+    }
+    int mid = (left + right) >>> 1;
+    add(2 * node, left, mid, from, to, value);
+    add(2 * node + 1, mid + 1, right, from, to, value);
+    slack[node] = lazy[node] + Math.min(slack[2 * node], slack[2 * node + 1]);
+  }
+
+  // the free tasks by weight per unit of processing, largest first (a heap sort, without boxing)
+  private void sortByRatio(int m) {
+    for (int start = m / 2 - 1; start >= 0; start--) {
+      sift(start, m);
+    }
+    for (int end = m - 1; end > 0; end--) {
+      int t = ratioOrder[0];
+      ratioOrder[0] = ratioOrder[end];
+      ratioOrder[end] = t;
+      sift(0, end);
+    }
+  }
+
+  // a min-heap on the ratio, so that the sort leaves the largest first
+  private void sift(int root, int end) {
+    int c = root;
+    while (true) {
+      int l = 2 * c + 1;
+      if (l >= end) {
+        return;
+      }
+      int r = l + 1;
+      int lower = r < end && smallerRatio(ratioOrder[r], ratioOrder[l]) ? r : l;
+      if (!smallerRatio(ratioOrder[lower], ratioOrder[c])) {
+        return;
+      }
+      int t = ratioOrder[c];
+      ratioOrder[c] = ratioOrder[lower];
+      ratioOrder[lower] = t;
+      c = lower;
+    }
+  }
+
+  private boolean smallerRatio(int k, int l) {
+    return weights[order[k]] * eff[l] < weights[order[l]] * eff[k];
   }
 
   /**
@@ -721,9 +1013,9 @@ public class LateCount extends Constraint
       hi[task] = Math.min(hi[task], lastOnTime(task));
     }
     long max = trail.maxBefore(late, position);
-    int sure = prepare();
+    long sure = prepare();
     long theta = bestOrigin();
-    if (!follows(what, sure, lateOf(theta, -1, false), v, max)) {
+    if (!follows(what, sure, relaxed(theta, -1, false), v, max)) {
       return false;
     }
     for (int k = 0; k < size; k++) {
@@ -765,10 +1057,10 @@ public class LateCount extends Constraint
       int i = order[k];
       lo[i] = low[i] - (long) Math.floor(fraction * (low[i] - root[i]));
     }
-    return lateOf(theta, -1, false);
+    return relaxed(theta, -1, false);
   }
 
-  private static boolean follows(int what, int sure, int relaxed, long v, long max) {
+  private static boolean follows(int what, long sure, int relaxed, long v, long max) {
     if (relaxed == IMPOSSIBLE) {
       return true;
     }
@@ -783,7 +1075,7 @@ public class LateCount extends Constraint
 
   @Override
   public boolean satisfied() {
-    int count = 0;
+    long count = 0;
     for (IntVar s : starts) {
       if (!s.singleton()) {
         return false;
@@ -791,7 +1083,7 @@ public class LateCount extends Constraint
     }
     for (int i = 0; i < n; i++) {
       if (starts[i].value() > lastOnTime(i)) {
-        count++;
+        count += weight(i);
       }
       for (int j = i + 1; j < n; j++) {
         if (durations[i] > 0
@@ -822,6 +1114,9 @@ public class LateCount extends Constraint
     if (releases != null) {
       result.append(", dominance");
     }
+    if (weights != null) {
+      result.append(", weights ").append(Arrays.toString(weights));
+    }
     result.append(")");
 
     return result.toString();
@@ -829,6 +1124,6 @@ public class LateCount extends Constraint
 
   @Override
   public LateCount copy(VarMap map) {
-    return new LateCount(map.get(starts), durations, dues, map.get(late), releases);
+    return new LateCount(map.get(starts), durations, dues, weights, map.get(late), releases);
   }
 }

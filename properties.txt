@@ -408,6 +408,9 @@ unless stated otherwise):
 - org.jacop.fz.lateCount.dominance: the dominance rule of Baptiste,
   Peridy and Pinson in the detected LateCount, where nothing else
   constrains the tasks; default true.
+- org.jacop.fz.lateCount.weights: the detected LateCount bounds the
+  weighted sum of the late tasks (1|r_j|sum w_j U_j) with the weights
+  of the objective instead of counting the late tasks; default true.
 - org.jacop.fz.xorSystem: XorSystem (Gauss-Jordan over GF(2)) for the
   parity constraints.
 - jacop.fz.xorSystemRows, jacop.fz.xorSystemCells: the largest XOR
