@@ -231,6 +231,7 @@ setup to run configuration. -->
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
+                                <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
@@ -438,6 +439,7 @@ setup to run configuration. -->
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
+                                <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
@@ -646,6 +648,7 @@ setup to run configuration. -->
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
+                                <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
@@ -854,6 +857,7 @@ setup to run configuration. -->
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
+                                <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
@@ -1429,6 +1433,7 @@ setup to run configuration. -->
                         <include>**/DomainOperationsBruteForceTest.java</include>
                         <include>**/FloatDomainOperationsTest.java</include>
                         <include>**/LazyBitSetDomainTest.java</include>
+                        <include>**/VarIntMapTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
                         <include>**/SetSupersetTest.java</include>
                         <include>**/SingleConstraintTest.java</include>
