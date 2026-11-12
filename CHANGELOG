@@ -4131,7 +4131,15 @@ Version 5.0 (unreleased)
      labels of the other levels and the bound of p. FlatZinc: prob_mdd
      in jacop_prob.mzn.
 
-241. Large linear relaxations. A relaxation of an optimisation model over
+241. GlobalCardinality (MiniZinc global_cardinality and count with
+     ::domain) keeps the value lists of its variables between executions
+     and builds again only the lists of the variables that changed (or
+     whose level was removed), instead of every list at every execution.
+     Pruning and search are unchanged; on the 2026 warehouse instances,
+     where the lists took about 60 % of the run, fixed search explores
+     1.1x to 4.2x more nodes in 600 s.
+
+242. Large linear relaxations. A relaxation of an optimisation model over
      the size caps of the sparse simplex (25,000 rows or 30,000 columns),
      which was dropped, is kept up to 1,000,000 rows and 250,000 columns:
      it is solved at the root only, its root solves (first solve, trial of
@@ -4150,7 +4158,7 @@ Version 5.0 (unreleased)
      38,354, oly20 705,184 -> 177,745. -Dorg.jacop.lp.large=false keeps
      the old behaviour; see properties.txt.
 
-242. The default search branches on set variables in input order, smallest
+243. The default search branches on set variables in input order, smallest
      element in first, as JaCoP 4 did: free search (-f, or a model
      without search annotation) picked the set with the largest failure
      count and degree, and the branching that LCG free search alternates
