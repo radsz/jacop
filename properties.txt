@@ -420,6 +420,19 @@ unless stated otherwise):
 - org.jacop.fz.tableCoverGroups, org.jacop.fz.tableCoverTuples: the
   fewest groups and the most tuples of such a cover; default 3 and
   200000.
+- org.jacop.fz.tableReformulation: exact reformulation of positive
+  tables at posting: free columns become unary domains (a Cartesian
+  table only unary ones), a column determined by another (functional
+  dependency, tables of 3 or more columns) becomes a binary table or an
+  equality, tables over the same variables are intersected, and short
+  tables drop columns of stars or of one value; default true, off
+  under --proof.
+- org.jacop.fz.tableReformulation.fd: false keeps the functional
+  dependencies in the tables; default true.
+- org.jacop.fz.tableReformulation.work: tables whose rows times
+  columns squared exceed it are left as they are; default 50000000.
+- org.jacop.fz.tableMerge.rows: groups of tables over the same
+  variables with more rows in all are not intersected; default 2000000.
 - org.jacop.fz.weightedCompletion: WeightedCompletion on weighted sums
   of completion times on a unary resource.
 - org.jacop.fz.weightedCompletion.parallel: the same detection on

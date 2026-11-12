@@ -71,6 +71,7 @@ import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.TableCoverDetector;
+import org.jacop.fz.constraints.TableScopeMerger;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -201,6 +202,16 @@ public class Constraints implements ParserTreeConstants {
         if (!elements.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(elements.replaced());
+        }
+      }
+
+      // the tables over the same variables become one, before the parts of each are posted
+      if (TableScopeMerger.enabled() && options.proof() == null) {
+        TableScopeMerger tables = new TableScopeMerger(support);
+        tables.detect(astTree);
+        if (!tables.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(tables.replaced());
         }
       }
 
