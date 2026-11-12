@@ -50,7 +50,7 @@ import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
@@ -150,7 +150,7 @@ public class Alldistinct extends Constraint
 
   // Variables (indexes) on positions 0..notGrounded-1 are not yet processed as grounded.
   private final int[] position;
-  private TimeStamp<Integer> notGrounded;
+  private TimeStampInt notGrounded;
 
   // Adjacency lists (value indexes) of not grounded variables, rebuilt at each execution.
   private final int[][] adjacency;
@@ -289,7 +289,7 @@ public class Alldistinct extends Constraint
 
     super.impose(store);
 
-    notGrounded = new TimeStamp<>(store, list.length);
+    notGrounded = new TimeStampInt(store, list.length);
 
     // the initial maximum matching needs to be computed, failure is reported by consistency
     if (words > 0) {

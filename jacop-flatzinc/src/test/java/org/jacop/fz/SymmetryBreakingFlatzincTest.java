@@ -44,6 +44,7 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.IntUnaryOperator;
+import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -135,6 +136,55 @@ class SymmetryBreakingFlatzincTest {
       } else {
         System.setProperty("org.jacop.fz.symmetryTime", time);
       }
+    }
+  }
+
+  @Test
+  void theTimeEndingAtAnyCheckLeavesTheModelSolved() throws IOException {
+    // the time given ran out while the Schreier-Sims cuts were posted, where its check was not
+    // caught, and the solver stopped with SymmetryBreaking$OutOfTime (steelmillslab,
+    // skill-allocation, ptv and others with -f on a loaded machine); the time now ends at each
+    // check in turn, on a model whose cuts are implied and on one (a 6-cycle) that gets 3 cuts
+    String[] models = {
+      """
+      array [1..5] of var 1..5: x :: output_array([1..5]);
+      constraint jacop_alldiff(x);
+      solve satisfy;
+      """,
+      """
+      array [1..6] of var 1..3: x :: output_array([1..6]);
+      constraint int_ne(x[1], x[2]);
+      constraint int_ne(x[2], x[3]);
+      constraint int_ne(x[3], x[4]);
+      constraint int_ne(x[4], x[5]);
+      constraint int_ne(x[5], x[6]);
+      constraint int_ne(x[6], x[1]);
+      solve satisfy;
+      """
+    };
+    LongSupplier clock = SymmetryBreaking.clock;
+    try {
+      for (String model : models) {
+        long[] calls = {0};
+        SymmetryBreaking.clock =
+            () -> {
+              calls[0]++;
+              return 0;
+            };
+        String all = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+        assertTrue(all.contains("symmetrySearchComplete=true"), all);
+        long checks = calls[0];
+        assertTrue(checks > 2, all);
+        for (long k = 0; k <= checks; k++) {
+          long[] left = {k};
+          SymmetryBreaking.clock = () -> left[0]-- > 0 ? 0 : Long.MAX_VALUE / 2;
+          String out =
+              FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
+          assertTrue(out.contains("----------"), "time out at check " + k + "\n" + out);
+        }
+      }
+    } finally {
+      SymmetryBreaking.clock = clock;
     }
   }
 
@@ -339,6 +389,287 @@ class SymmetryBreakingFlatzincTest {
       }
     }
     assertTrue(broken > trials / 3, "broken " + broken);
+  }
+
+  /**
+   * Schreier-Sims cuts (org.jacop.fz.symmetry.schreierSims=on) keep the lexicographically smallest
+   * (or largest) solution the other symmetry breaking constraints keep, so the random models of the
+   * tests above stay satisfiable or unsatisfiable and keep their optimum, with LCG reasons checked.
+   */
+  @Test
+  void schreierSimsCutsKeepSatisfiabilityAndOptimum() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 17));
+    int trials = Integer.getInteger("symmetry.trials", 300) / 2;
+    int cut = 0;
+    String old = System.setProperty("org.jacop.fz.symmetry.schreierSims", "on");
+    System.setProperty("jacop.lcg.check", "true");
+    try {
+      for (int trial = 0; trial < trials; trial++) {
+        boolean optimise = random.nextBoolean();
+        int kind = trial % 3;
+        String model =
+            switch (kind) {
+              case 0 -> randomModel(random, optimise);
+              case 1 -> randomValueModel(random, optimise);
+              default -> randomMatrixModel(random, optimise);
+            };
+        String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+        // LCG rejects some variable-symmetric models (array_int_maximum) that CP refutes
+        String lcgOff =
+            kind == 0 ? FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg") : off;
+        String what = "trial " + trial + "\n" + model;
+        String[][] arms = {
+          {"--search-statistics", "--presolve", "check"},
+          {"--search-statistics", "--lcg", "--symmetry", "on"},
+          {"--search-statistics", "-f", "--symmetry", "on"},
+          {"largest", "--search-statistics", "--lcg", "--symmetry", "on"},
+        };
+        for (String[] arm : arms) {
+          boolean largest = arm[0].equals("largest");
+          String[] options = largest ? Arrays.copyOfRange(arm, 1, arm.length) : arm;
+          if (kind == 0 && options[1].equals("-f")) {
+            continue;
+          }
+          String base = options[1].equals("--presolve") ? off : lcgOff;
+          String on;
+          try {
+            on = FlatzincTestRunner.run(tmp, largest ? largestFirst(model) : model, options);
+          } catch (RuntimeException e) {
+            throw new AssertionError(what + "\n" + String.join(" ", arm), e);
+          }
+          String why = what + "\n" + String.join(" ", arm) + "\n" + on;
+          boolean unsat = base.contains("=====UNSATISFIABLE=====");
+          assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), why);
+          if (optimise && !unsat) {
+            assertEquals(objective(base, "obj"), objective(on, "obj"), why);
+          }
+          Matcher m = Pattern.compile("symmetrySchreierSimsCuts=(\\d+)").matcher(on);
+          if (m.find() && Integer.parseInt(m.group(1)) > 0) {
+            cut++;
+          }
+        }
+      }
+    } finally {
+      System.clearProperty("jacop.lcg.check");
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.symmetry.schreierSims");
+      } else {
+        System.setProperty("org.jacop.fz.symmetry.schreierSims", old);
+      }
+    }
+    assertTrue(cut > 0, "cuts posted in " + cut);
+  }
+
+  @Test
+  void randomSetModelsKeepSatisfiabilityAndOptimum() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 17));
+    int trials = Integer.getInteger("symmetry.trials", 300) / 2;
+    int broken = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      boolean optimise = random.nextBoolean();
+      String model = randomSetModel(random, optimise);
+      String what = "trial " + trial + "\n" + model;
+      String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      boolean unsat = off.contains("=====UNSATISFIABLE=====");
+      for (String[] options :
+          new String[][] {
+            {"--search-statistics", "--symmetry", "on"},
+            {"--search-statistics", "--symmetry", "on", "-f"},
+            {"--search-statistics", "--symmetry", "on", "--lcg"},
+          }) {
+        String on = FlatzincTestRunner.run(tmp, model, options);
+        String why = what + "\n" + String.join(" ", options) + "\n" + on;
+        assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), why);
+        if (optimise && !unsat) {
+          assertEquals(objective(off, "obj"), objective(on, "obj"), why);
+        }
+        if (options.length == 3 && generators(on) > 0) {
+          broken++;
+        }
+      }
+    }
+    assertTrue(broken > trials / 4, "broken " + broken);
+  }
+
+  /**
+   * Set variables s0.. over 1..n, interchangeable unless some of them are given elements: their
+   * cardinalities, the cardinalities of their pairwise intersections, pairwise difference, and the
+   * cardinality of their union (a chain of binary unions) as the objective.
+   */
+  private static String randomSetModel(Random random, boolean optimise) {
+    int n = 3 + random.nextInt(3);
+    int k = 3 + random.nextInt(3);
+    StringBuilder m = new StringBuilder();
+    for (int i = 0; i < k; i++) {
+      m.append("var set of 1..").append(n).append(": s").append(i).append(";\n");
+    }
+    StringBuilder c = new StringBuilder();
+    int card = 1 + random.nextInt(n - 1);
+    boolean fixedCard = random.nextInt(3) > 0;
+    boolean bounded = random.nextInt(4) > 0;
+    boolean different = random.nextBoolean();
+    for (int i = 0; i < k; i++) {
+      m.append("var 0..").append(n).append(": c").append(i).append(";\n");
+      c.append("constraint set_card(s").append(i).append(",c").append(i).append(");\n");
+      if (fixedCard) {
+        c.append("constraint int_eq(c").append(i).append(",").append(card).append(");\n");
+      }
+    }
+    int meet = random.nextInt(2);
+    for (int i = 0; i < k; i++) {
+      for (int j = i + 1; j < k; j++) {
+        String v = "i" + i + "_" + j;
+        m.append("var set of 1..").append(n).append(": ").append(v).append(";\n");
+        m.append("var 0..").append(n).append(": d").append(v).append(";\n");
+        c.append("constraint set_intersect(s").append(i).append(",s").append(j).append(",");
+        c.append(v).append(");\n");
+        c.append("constraint set_card(").append(v).append(",d").append(v).append(");\n");
+        if (bounded) {
+          c.append("constraint int_le(d").append(v).append(",").append(meet).append(");\n");
+        }
+        if (different) {
+          c.append("constraint set_ne(s").append(i).append(",s").append(j).append(");\n");
+        }
+      }
+    }
+    // some sets get an element of their own, which leaves them out of the symmetry
+    for (int i = 0; i < k; i++) {
+      if (random.nextInt(6) == 0) {
+        c.append("constraint set_in(").append(1 + random.nextInt(n)).append(",s").append(i);
+        c.append(");\n");
+      }
+    }
+    // the union of the sets, as a chain
+    String prev = "s0";
+    for (int i = 1; i < k; i++) {
+      String u = "u" + i;
+      m.append("var set of 1..").append(n).append(": ").append(u).append(";\n");
+      c.append("constraint set_union(").append(prev).append(",s").append(i).append(",");
+      c.append(u).append(");\n");
+      prev = u;
+    }
+    m.append("var 0..").append(n).append(": obj :: output_var;\n");
+    c.append("constraint set_card(").append(prev).append(",obj);\n");
+    StringBuilder sets = new StringBuilder("[");
+    for (int i = 0; i < k; i++) {
+      sets.append(i > 0 ? "," : "").append("s").append(i);
+    }
+    sets.append("]");
+    String goal = optimise ? (random.nextBoolean() ? "minimize obj" : "maximize obj") : "satisfy";
+    return m.toString()
+        + c
+        + "solve :: set_search("
+        + sets
+        + ", input_order, indomain_min, complete) "
+        + goal
+        + ";\n";
+  }
+
+  @Test
+  void randomEncodedValueModelsKeepSatisfiabilityAndOptimum() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 19));
+    int trials = Integer.getInteger("symmetry.trials", 300) / 2;
+    int broken = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      boolean optimise = random.nextInt(3) > 0;
+      String model = randomEncodedModel(random, optimise);
+      String what = "trial " + trial + "\n" + model;
+      String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      boolean unsat = off.contains("=====UNSATISFIABLE=====");
+      for (String[] options :
+          new String[][] {
+            {"--search-statistics", "--symmetry", "on"},
+            {"--search-statistics", "--symmetry", "on", "-f"},
+            {"--search-statistics", "--symmetry", "on", "--lcg"},
+          }) {
+        String on = FlatzincTestRunner.run(tmp, model, options);
+        String why = what + "\n" + String.join(" ", options) + "\n" + on;
+        assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), why);
+        if (optimise && !unsat) {
+          assertEquals(objective(off, "obj"), objective(on, "obj"), why);
+        }
+        if (options.length == 3 && precedences(on) > 0) {
+          broken++;
+        }
+      }
+    }
+    assertTrue(broken > trials / 4, "broken " + broken);
+  }
+
+  /**
+   * Tasks x0.. assigned to teams 1..m, with the used teams collected in a set as MiniZinc flattens
+   * {@code {t | t in 1..m where exists(i)(x[i] = t)}}: a variable u_t in {0, t}, a singleton set
+   * variable per team and a chain of unions. Some teams are incompatible with some tasks, the same
+   * for all teams of one class; some tasks conflict. The objective is the number of teams used.
+   */
+  private static String randomEncodedModel(Random random, boolean optimise) {
+    int n = 3 + random.nextInt(4);
+    int m = 3 + random.nextInt(3);
+    // the class of each team: teams of a class are interchangeable
+    int[] cls = new int[m + 1];
+    for (int t = 1; t <= m; t++) {
+      cls[t] = random.nextInt(2);
+    }
+    StringBuilder v = new StringBuilder();
+    StringBuilder c = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      v.append("var 1..").append(m).append(": x").append(i).append(" :: output_var;\n");
+      int banned = random.nextInt(3);
+      for (int t = 1; t <= m; t++) {
+        String b = "b" + i + "_" + t;
+        v.append("var bool: ").append(b).append(";\n");
+        c.append("constraint int_eq_reif(x").append(i).append(",").append(t).append(",");
+        c.append(b).append(");\n");
+        if (banned < 2 && cls[t] == banned && random.nextInt(4) == 0) {
+          c.append("constraint int_ne(x").append(i).append(",").append(t).append(");\n");
+        }
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (random.nextInt(3) == 0) {
+          c.append("constraint int_ne(x").append(i).append(",x").append(j).append(");\n");
+        }
+      }
+    }
+    for (int t = 1; t <= m; t++) {
+      StringBuilder bs = new StringBuilder("[");
+      for (int i = 0; i < n; i++) {
+        bs.append(i > 0 ? "," : "").append("b").append(i).append("_").append(t);
+      }
+      bs.append("]");
+      v.append("var bool: used").append(t).append(";\n");
+      v.append("var {0,").append(t).append("}: u").append(t).append(";\n");
+      v.append("var bool: in").append(t).append(";\n");
+      v.append("var set of ").append(t).append("..").append(t).append(": z").append(t);
+      v.append(";\n");
+      c.append("constraint bool_clause_reif(").append(bs).append(",[],used").append(t);
+      c.append(");\n");
+      c.append("constraint int_eq_reif(u").append(t).append(",").append(t).append(",used");
+      c.append(t).append(");\n");
+      c.append("constraint set_in_reif(u").append(t).append(",z").append(t).append(",in");
+      c.append(t).append(");\n");
+      c.append("constraint bool_eq(in").append(t).append(",used").append(t).append(");\n");
+    }
+    String prev = "z1";
+    for (int t = 2; t <= m; t++) {
+      v.append("var set of 1..").append(m).append(": w").append(t).append(";\n");
+      c.append("constraint set_union(").append(prev).append(",z").append(t).append(",w");
+      c.append(t).append(");\n");
+      prev = "w" + t;
+    }
+    v.append("var 0..").append(m).append(": obj :: output_var;\n");
+    c.append("constraint set_card(").append(prev).append(",obj);\n");
+    if (!optimise) {
+      c.append("constraint int_le(obj,").append(1 + random.nextInt(m)).append(");\n");
+    }
+    return v.toString()
+        + c
+        + "solve :: int_search(["
+        + xs(n)
+        + "], input_order, indomain_min, complete) "
+        + (optimise ? "minimize obj" : "satisfy")
+        + ";\n";
   }
 
   @Test

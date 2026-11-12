@@ -32,18 +32,23 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.TspEdgeElimination;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ASTSolveExpr;
+import org.jacop.fz.ASTSolveKind;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
@@ -93,13 +98,29 @@ import org.jacop.fz.SimpleNode;
  * with free search and 3.4 % with the model's search without it). Each LP solve costs time, so at
  * short time limits the solutions found on tours of more than about 120 cities can be worse.
  *
+ * <p>For a pure symmetric TSP the detector also removes, before search, the arcs that are in no
+ * optimal tour ({@link org.jacop.constraints.TspEdgeElimination}: Jonker and Volgenant's 2-opt
+ * compatibility and Hougardy and Schroeder's close point and main edge elimination), whether or not
+ * org.jacop.fz.tsp is set. Pure means: the minimised objective occurs only in one row {@code obj =
+ * sum(i) d[i] + c}, each successor x[i] occurs only in the circuit and in one element {@code d[i] =
+ * cost[x[i]]} over a constant array, each d[i] only in its element and the row, and the arcs and
+ * their costs are symmetric. The rules use strict improvements, so every optimal tour stays and the
+ * removal is sound with all solutions requested for an optimisation; side constraints on the tour,
+ * fixed successors or asymmetric costs turn it off. System property
+ * org.jacop.fz.tspElimination=false turns it off; org.jacop.fz.tspEliminationMs (default 2000)
+ * limits its time.
+ *
  * <p>All the constraints of the model stay. System property org.jacop.fz.giantTour=false turns the
  * detection off; org.jacop.fz.routes=false turns it off with the other routes.
  *
  * <p>References: P. Kilby and P. Shaw, Vehicle Routing, in Handbook of Constraint Programming,
  * Elsevier, 2006 (the giant-tour model); J. Lysgaard, A. N. Letchford and R. W. Eglese, A new
  * branch-and-cut algorithm for the capacitated vehicle routing problem, Mathematical Programming
- * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts); G. Dantzig, R. Fulkerson
+ * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts); R. Jonker and T.
+ * Volgenant, Nonoptimal edges for the symmetric traveling salesman problem, Operations Research
+ * 32(4), 1984, S. Hougardy and R. T. Schroeder, Edge elimination in TSP instances, WG 2014, and W.
+ * Cook, K. Helsgaun, S. Hougardy and R. T. Schroeder, Local elimination in the traveling salesman
+ * problem, Mathematical Programming Computation, 2024 (edge elimination); G. Dantzig, R. Fulkerson
  * and S. Johnson, Solution of a large-scale traveling-salesman problem, Operations Research 2(4),
  * 1954 (the subtour elimination relaxation); M. W. Padberg and M. R. Rao, Odd minimum cut-sets and
  * b-matchings, Mathematics of Operations Research 7(1), 1982, and M. Grötschel and M. W. Padberg,
@@ -123,9 +144,21 @@ public class GiantTourDetector implements ParserTreeConstants {
   // the most elements over a constant array read for one node
   private static final int MAX_COSTS = 4;
 
+  // the most milliseconds of the edge elimination
+  private static final long ELIMINATION_MS = Long.getLong("org.jacop.fz.tspEliminationMs", 2_000L);
+
   private final Support support;
 
   private final List<Tour> tours = new ArrayList<>();
+
+  // the number of constraints each variable occurs in
+  private final Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
+
+  // the int_lin_eq constraints
+  private final List<ASTConstElem> equations = new ArrayList<>();
+
+  // the variable minimized, null when the model maximizes or is a satisfaction problem
+  private IntVar minimized;
 
   private static final class Tour {
     final IntVar[] x;
@@ -203,9 +236,14 @@ public class GiantTourDetector implements ParserTreeConstants {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
+            for (int a = 0; a < item.jjtGetNumChildren(); a++) {
+              PartialCopyDetector.countVariables(support, child(item, a), occurrences);
+            }
             collect((ASTConstElem) item);
           }
         }
+      } else if (node.getId() == JJTMODELEND && node.jjtGetNumChildren() > 0) {
+        objective(child(node, 0));
       }
     }
     for (Tour t : tours) {
@@ -230,7 +268,10 @@ public class GiantTourDetector implements ParserTreeConstants {
       case "array_var_int_element" -> element(node, support.getVarArray(child(node, 1)), null, 1);
       case "jacop_array_var_int_element_nonshifted" ->
           element(node, support.getVarArray(child(node, 1)), null, support.getInt(scalar(node, 3)));
-      case "int_lin_eq" -> row(node, true);
+      case "int_lin_eq" -> {
+        equations.add(node);
+        row(node, true);
+      }
       case "int_lin_le" -> row(node, false);
       default -> {
         // not part of a giant tour
@@ -315,6 +356,9 @@ public class GiantTourDetector implements ParserTreeConstants {
     }
     // a travelling salesman tour: its first node is the depot, both start and end of one route
     boolean tsp = fixedCount == 0;
+    if (tsp && !"false".equals(System.getProperty("org.jacop.fz.tspElimination"))) {
+      eliminateEdges(x, offset);
+    }
     if (tsp && !Boolean.getBoolean("org.jacop.fz.tsp")) {
       return;
     }
@@ -517,6 +561,191 @@ public class GiantTourDetector implements ParserTreeConstants {
     }
     support.delayedConstraints.addAll(posted);
     support.dictionary.addAuxiliaryVariables(literals);
+  }
+
+  // the variable of minimize in the solve item
+  private void objective(SimpleNode item) {
+    SimpleNode last = child(item, item.jjtGetNumChildren() - 1);
+    if (last instanceof ASTSolveKind kind
+        && "minimize".equals(kind.getKind())
+        && last.jjtGetNumChildren() > 0
+        && child(kind, 0) instanceof ASTSolveExpr expr) {
+      if (expr.getType() == 0) {
+        minimized = support.dictionary.getVariable(expr.getIdent());
+      } else if (expr.getType() == 1) {
+        IntVar[] array = support.dictionary.getVariableArray(expr.getIdent());
+        minimized =
+            array != null && expr.getIndex() >= 0 && expr.getIndex() < array.length
+                ? array[expr.getIndex()]
+                : null;
+      }
+    }
+  }
+
+  /*
+   * Edge elimination (TspEdgeElimination) for a pure symmetric travelling salesman problem: the
+   * model minimizes obj = sum(i) c[i][x[i]] + constant, where each x[i] occurs only in the circuit
+   * and in its cost element, each cost only in its element and in that sum, and obj in no other
+   * constraint. The arcs i -> j left by the domains of x[i] and of its cost must be symmetric and
+   * have symmetric costs. Missing edges get a length larger than any tour, so that no improving
+   * move uses one. The removed successors are in no optimal tour; every optimal tour stays, so the
+   * optimum is kept, while the tours that are not optimal can go.
+   */
+  private void eliminateEdges(IntVar[] x, int offset) {
+    int n = x.length;
+    IntVar obj = minimized;
+    if (n < 5 || obj == null || occurrences.getOrDefault(obj, 0) != 1) {
+      return;
+    }
+    Set<IntVar> aliased = Collections.newSetFromMap(new IdentityHashMap<>());
+    aliased.addAll(support.dictionary.aliasTable.keySet());
+    aliased.addAll(support.dictionary.aliasTable.values());
+    IntVar[] cost = new IntVar[n];
+    Element[] element = new Element[n];
+    Map<IntVar, Integer> node = new IdentityHashMap<>();
+    for (int v = 0; v < n; v++) {
+      List<Element> es = elements.get(x[v]);
+      if (es == null
+          || es.size() != 1
+          || es.get(0).values == null
+          || occurrences.getOrDefault(x[v], 0) != 2
+          || aliased.contains(x[v])) {
+        return;
+      }
+      element[v] = es.get(0);
+      cost[v] = element[v].value;
+      if (cost[v] == obj
+          || cost[v].singleton()
+          || occurrences.getOrDefault(cost[v], 0) != 2
+          || aliased.contains(cost[v])
+          || node.put(cost[v], v) != null) {
+        return;
+      }
+    }
+    // obj = sum(v) cost[v] + constant
+    long constant = 0;
+    boolean found = false;
+    for (ASTConstElem eq : equations) {
+      IntVar[] vs = support.getVarArray(child(eq, 1));
+      if (vs == null || Arrays.stream(vs).noneMatch(v -> v == obj)) {
+        continue;
+      }
+      int[] a = support.getIntArray(child(eq, 0));
+      ASTScalarFlatExpr r = scalar(eq, 2);
+      IntVar rv = support.getVariable(r);
+      if (found || a == null || a.length != vs.length || !rv.singleton()) {
+        return;
+      }
+      found = true;
+      int sign = 0;
+      for (int k = 0; k < vs.length; k++) {
+        if (vs[k] == obj) {
+          sign = -a[k];
+        }
+      }
+      if (sign != 1 && sign != -1) {
+        return;
+      }
+      boolean[] seen = new boolean[n];
+      int costs = 0;
+      long rhs = rv.value();
+      for (int k = 0; k < vs.length; k++) {
+        if (vs[k] == obj) {
+          if (a[k] != -sign) {
+            return;
+          }
+        } else if (vs[k].singleton()) {
+          rhs -= (long) a[k] * vs[k].value();
+        } else {
+          Integer v = node.get(vs[k]);
+          if (v == null || seen[v] || a[k] != sign) {
+            return;
+          }
+          seen[v] = true;
+          costs++;
+        }
+      }
+      if (costs != n) {
+        return;
+      }
+      // sign * (sum cost - obj) = rhs
+      constant = -sign * rhs;
+    }
+    if (!found) {
+      return;
+    }
+    // the arcs and their costs
+    boolean[][] arcs = new boolean[n][n];
+    long[][] d = new long[n][n];
+    long maxAbs = 0;
+    long least = constant;
+    for (int v = 0; v < n; v++) {
+      Element e = element[v];
+      long low = Long.MAX_VALUE;
+      for (int w = 0; w < n; w++) {
+        int index = w + offset - e.first;
+        if (w == v
+            || !x[v].domain.contains(w + offset)
+            || index < 0
+            || index >= e.values.length
+            || !cost[v].domain.contains(e.values[index])) {
+          continue;
+        }
+        arcs[v][w] = true;
+        d[v][w] = e.values[index];
+        maxAbs = Math.max(maxAbs, Math.abs(d[v][w]));
+        low = Math.min(low, d[v][w]);
+      }
+      if (low == Long.MAX_VALUE) {
+        return;
+      }
+      least += low;
+    }
+    // a lower bound of obj above the least tour could make a longer tour optimal
+    if (obj.min() > least) {
+      return;
+    }
+    long big = 2L * n * maxAbs + 1;
+    if (big > (1L << 40)) {
+      return;
+    }
+    int edges = 0;
+    for (int v = 0; v < n; v++) {
+      for (int w = v + 1; w < n; w++) {
+        if (arcs[v][w] != arcs[w][v] || (arcs[v][w] && d[v][w] != d[w][v])) {
+          return;
+        }
+        if (!arcs[v][w]) {
+          d[v][w] = big;
+          d[w][v] = big;
+        } else {
+          edges++;
+        }
+      }
+    }
+    boolean[][] keep = new boolean[n][];
+    for (int v = 0; v < n; v++) {
+      keep[v] = arcs[v].clone();
+    }
+    long start = System.nanoTime();
+    int removed = TspEdgeElimination.eliminate(d, keep, start + ELIMINATION_MS * 1_000_000L);
+    for (int v = 0; v < n; v++) {
+      for (int w = 0; w < n; w++) {
+        if (arcs[v][w] && !keep[v][w]) {
+          x[v].domain.inComplement(support.store.level, x[v], w + offset);
+        }
+      }
+    }
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% TSP edge elimination: "
+              + removed
+              + " of "
+              + edges
+              + " edges removed in "
+              + (System.nanoTime() - start) / 1_000_000
+              + " ms");
+    }
   }
 
   // the degree rows of the depot of a travelling salesman tour and b[0,j] <-> x[0] = j; false when

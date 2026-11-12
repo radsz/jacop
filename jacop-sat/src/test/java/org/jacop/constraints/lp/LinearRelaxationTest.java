@@ -266,39 +266,69 @@ class LinearRelaxationTest {
     long restarts = 0;
     long rootPruned = 0;
     for (int run = 0; run < RUNS; run++) {
-      long[] expected = search(new Model(run));
-      Model model = new Model(run);
-      if (model.objective == null) {
-        continue;
+      LinearRelaxation r = restarts(run, simplex);
+      if (r != null) {
+        restarts += r.restartSolves;
+        rootPruned += r.rootPrunings;
       }
-      model.simplex = simplex;
-      LinearRelaxation r = model.relaxation();
-      IntVar cost = model.cost();
-      IntVar[] vars = Arrays.copyOf(model.x, model.x.length + 1);
-      vars[model.x.length] = cost;
-      long best = Long.MIN_VALUE;
-      while (model.store.consistency()) {
-        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
-        search.setPrintInfo(false);
-        search.setAssignSolution(false);
-        search.getSolutionListener().recordSolutions(true);
-        if (!search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()))) {
-          break;
-        }
-        best = search.getSolution()[model.x.length].valueEnumeration().nextElement();
-        if (best == cost.min()) {
-          break;
-        }
-        // a restart: the bound of the cost tightens at the root level
-        cost.domain.inMax(model.store.level, cost, (int) best - 1);
-      }
-      assertThat(new long[] {best == Long.MIN_VALUE ? 0 : 1, best})
-          .as("seed %d", run)
-          .isEqualTo(expected);
-      restarts += r.restartSolves;
-      rootPruned += r.rootPrunings;
     }
     return new long[] {restarts, rootPruned};
+  }
+
+  // the restarts of one model, checked against depth-first search; its relaxation, or null without
+  // an objective
+  private static LinearRelaxation restarts(long run, LinearRelaxation.Simplex simplex) {
+    long[] expected = search(new Model(run));
+    Model model = new Model(run);
+    if (model.objective == null) {
+      return null;
+    }
+    model.simplex = simplex;
+    LinearRelaxation r = model.relaxation();
+    IntVar cost = model.cost();
+    IntVar[] vars = Arrays.copyOf(model.x, model.x.length + 1);
+    vars[model.x.length] = cost;
+    long best = Long.MIN_VALUE;
+    while (model.store.consistency()) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.setAssignSolution(false);
+      search.getSolutionListener().recordSolutions(true);
+      if (!search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()))) {
+        break;
+      }
+      best = search.getSolution()[model.x.length].valueEnumeration().nextElement();
+      if (best == cost.min()) {
+        break;
+      }
+      // a restart: the bound of the cost tightens at the root level
+      cost.domain.inMax(model.store.level, cost, (int) best - 1);
+    }
+    assertThat(new long[] {best == Long.MIN_VALUE ? 0 : 1, best})
+        .as("seed %d", run)
+        .isEqualTo(expected);
+    return r;
+  }
+
+  /**
+   * A combination at the long minimum keeps its sign when negated: the multiplier -2^40 of a cut
+   * with the weight 2^23 gave -2^63, whose negation is itself, so the lower inequality of the root
+   * reduced costs held that weight with the wrong sign. At a restart it removed the optimum (-9
+   * instead of -12), and under lazy clause generation it was the reason of x5 >= 1 from obj >= 7
+   * although x5 = -2, obj = 8 is a solution (seed 94 of the tests rotated by 18).
+   */
+  @Test
+  void aLowerInequalityAtTheLongMinimumIsNotNegated() {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    try {
+      for (boolean on : new boolean[] {false, true}) {
+        LinearRelaxation.restartSolvesOn = on;
+        restarts(18_000_148L, LinearRelaxation.Simplex.DENSE);
+      }
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+    }
+    lazyClauseGeneration(18_000_148L, new TreeMap<>(), LinearRelaxation.Simplex.DENSE);
   }
 
   @Test
@@ -2163,6 +2193,41 @@ class LinearRelaxationTest {
       checked += solver.checker().checked;
     }
     assertThat(raised).isGreaterThan(3);
+    assertThat(checked).isPositive();
+  }
+
+  /**
+   * Energy cuts separated in search as well as at the root keep the optimum of the random total
+   * completion time models under depth-first search and under lazy clause generation with the
+   * explanation checker on: the cuts use the bounds of the first solve, so they hold globally.
+   */
+  @Test
+  void energyCutsInSearchKeepTheOptimumOfScheduling() {
+    long checked = 0;
+    long separations = 0;
+    for (int run = 0; run < 12; run++) {
+      long expected = new Completion(run).optimum();
+
+      Completion dfs = new Completion(run);
+      LinearRelaxation r = LinearRelaxation.of(dfs.store, dfs.cost, false);
+      assertThat(r).as("seed %d", run).isNotNull();
+      r.setEnergySearch(true);
+      dfs.store.impose(r);
+      assertThat(dfs.optimum()).as("seed %d", run).isEqualTo(expected);
+      separations += r.energySeparations;
+
+      Completion lcg = new Completion(run);
+      LinearRelaxation l = LinearRelaxation.of(lcg.store, lcg.cost, false);
+      l.setEnergySearch(true);
+      lcg.store.impose(l);
+      LcgSolver solver = new LcgSolver(lcg.store);
+      solver.setChecking(true);
+      assertThat(solver.minimize(lcg.cost)).as("seed %d", run).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(lcg.cost)).as("seed %d", run).isEqualTo(expected);
+      checked += solver.checker().checked;
+      separations += l.energySeparations;
+    }
+    assertThat(separations).isPositive();
     assertThat(checked).isPositive();
   }
 

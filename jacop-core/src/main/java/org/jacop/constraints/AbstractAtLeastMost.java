@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 
 /**
  * Abstract base for AtLeast and AtMost constraints. Both count occurrences of a given value in a
@@ -62,9 +62,9 @@ public abstract class AbstractAtLeastMost extends PrimitiveConstraint {
   /** Whether this constraint is used in a reified context. */
   boolean reified = true;
 
-  private TimeStamp<Integer> position;
+  private TimeStampInt position;
 
-  private TimeStamp<Integer> equal;
+  private TimeStampInt equal;
 
   /**
    * Constructs the constraint.
@@ -100,8 +100,8 @@ public abstract class AbstractAtLeastMost extends PrimitiveConstraint {
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
-    equal = new TimeStamp<>(store, 0);
+    position = new TimeStampInt(store, 0);
+    equal = new TimeStampInt(store, 0);
   }
 
   @Override

@@ -4810,6 +4810,50 @@ class LcgSolverTest {
   }
 
   /**
+   * When the probe of the core-guided phase stops without a solution of its own and branch and
+   * bound after it finds one, the rest of the phase is skipped: it would stop the same way after a
+   * third of its time (fast-food, gt-sort and city-position spent minutes on it before branch and
+   * bound proved the optimum).
+   */
+  @Test
+  void corePhaseSkippedWhenItsProbeFoundNoSolution() {
+    // skip = true runs with the default
+    for (boolean skip : new boolean[] {true, false}) {
+      // the pigeons of corePhaseWithoutItsOwnSolutionStopsAfterAThird: the first core is too hard
+      Store store = new Store();
+      int n = 12;
+      IntVar[] p = new IntVar[n];
+      BooleanVar[] c = new BooleanVar[n];
+      for (int i = 0; i < n; i++) {
+        p[i] = new IntVar(store, "p" + i, 0, n - 1);
+        c[i] = new BooleanVar(store, "c" + i);
+        store.impose(new Reified(new XeqC(p[i], 0), c[i]));
+        for (int j = 0; j < i; j++) {
+          store.impose(new Or(new XneqY(p[j], p[i]), new XeqC(p[i], 0)));
+        }
+      }
+      IntVar obj = new IntVar(store, "obj", 0, n);
+      store.impose(new SumBool(c, "==", obj));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(p, null, new IndomainMin<>()), true);
+      solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+      solver.setCoreDelay(0.05, 1_000_000, 0.05);
+      if (!skip) {
+        solver.setCoreProbeSkip(false);
+      }
+      // shares as work, not as time, so that the probe's share does not depend on the machine
+      solver.setTimeLimit(200);
+      solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
+      solver.minimize(obj);
+      assertThat(solver.coreSearch().stratumSolutions).isZero();
+      assertThat(solver.probeSkips).isEqualTo(skip ? 1 : 0);
+      // with the skip, the probe is the only core-guided run that stops without a solution
+      assertThat(solver.coreSearch().noSolutionStops).isEqualTo(skip ? 1 : 2);
+      assertThat(solver.value(obj)).isEqualTo(1);
+    }
+  }
+
+  /**
    * Under fixed search the core-guided phase runs only when branch and bound under the annotation
    * found no solution in its share of the time (setCoresWithoutSolutionOnly): with one, branch and
    * bound keeps the time and proves the optimum without a core.

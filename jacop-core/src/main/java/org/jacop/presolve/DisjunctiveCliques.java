@@ -106,6 +106,9 @@ public final class DisjunctiveCliques {
 
   private long work;
 
+  // the conflict graph of the last call of cliques()
+  private long[][] disjoint;
+
   /** It creates a detector with the default limits. */
   public DisjunctiveCliques() {
     this(DEFAULT_MAX_TASKS, DEFAULT_MAX_CLIQUES);
@@ -342,6 +345,7 @@ public final class DisjunctiveCliques {
     if (precedences > 0) {
       orderByPrecedences(g);
     }
+    disjoint = g.adj;
     for (int[] u : unaries) {
       for (int i : u) {
         for (int j : u) {
@@ -363,6 +367,16 @@ public final class DisjunctiveCliques {
       }
     }
     return result;
+  }
+
+  /**
+   * It returns the pairs of tasks that can never overlap, as found by the last call of {@link
+   * #cliques()}: bit j of row i is set when tasks i and j are disjoint.
+   *
+   * @return the adjacency rows of the conflict graph, or null if cliques() did not build it.
+   */
+  public long[][] disjoint() {
+    return disjoint;
   }
 
   // adds the edges of the tasks ordered by the longest paths of the difference constraints

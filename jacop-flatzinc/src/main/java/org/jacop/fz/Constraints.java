@@ -66,10 +66,12 @@ import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
+import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.TableCoverDetector;
+import org.jacop.fz.constraints.TableScopeMerger;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -203,6 +205,16 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // the tables over the same variables become one, before the parts of each are posted
+      if (TableScopeMerger.enabled() && options.proof() == null) {
+        TableScopeMerger tables = new TableScopeMerger(support);
+        tables.detect(astTree);
+        if (!tables.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(tables.replaced());
+        }
+      }
+
       // the membership clauses replace set unions, which --proof encodes as they are
       if (SetUnionDetector.enabled() && options.proof() == null) {
         SetUnionDetector unions = new SetUnionDetector(support);
@@ -288,6 +300,11 @@ public class Constraints implements ParserTreeConstants {
         new CircuitCostDetector(support).detect(astTree);
       }
 
+      // a relaxed decision diagram over a circuit whose arcs carry times
+      if (SequenceMddDetector.enabled() && options.proof() == null) {
+        new SequenceMddDetector(support).detect(astTree);
+      }
+
       // a redundant Routes over 0/1 arcs, whose rules a proof does not derive
       if (RoutesDetector.enabled() && options.proof() == null) {
         new RoutesDetector(support).detect(astTree);
@@ -302,7 +319,8 @@ public class Constraints implements ParserTreeConstants {
         new RoutesDetector(support, false).detect(astTree);
       }
 
-      if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {
+      if ((DisjunctiveCliqueDetector.enabled() || DisjunctiveCliqueDetector.inferredEnabled())
+          && options.proof() == null) {
         // the unary resources it adds explain by rules a proof's unit propagation does not reach
         new DisjunctiveCliqueDetector(support).detect(astTree);
       }
