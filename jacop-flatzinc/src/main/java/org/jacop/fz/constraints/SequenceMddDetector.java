@@ -94,7 +94,16 @@ public class SequenceMddDetector implements ParserTreeConstants {
   // the equations of unit coefficients with three or more terms, candidates for a cost
   private final List<Linear> sums = new ArrayList<>();
 
-  private record Circuit(IntVar[] x, int offset) {}
+  // a circuit's variables and the value that stands for node 0
+  private static final class Circuit {
+    final IntVar[] x;
+    final int offset;
+
+    Circuit(IntVar[] x, int offset) {
+      this.x = x;
+      this.offset = offset;
+    }
+  }
 
   // value = array[index - first] (constants when vars is null)
   private static final class Element {
