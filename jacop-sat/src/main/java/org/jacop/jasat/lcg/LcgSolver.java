@@ -49,7 +49,6 @@ import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
@@ -4830,29 +4829,6 @@ public final class LcgSolver implements ExternalPropagator {
     sat.cancel();
   }
 
-  // asked at each decision while set; stops the search when it answers true
-  private BooleanSupplier workCheck;
-
-  /**
-   * Sets a check made in the search's own thread at each decision, which stops the search when it
-   * answers true; the check is then removed. A check that reads only the solver's work and counts
-   * stops a run at the same point whatever the load of the machine.
-   *
-   * @param check the check, or null for none
-   */
-  public void setWorkCheck(BooleanSupplier check) {
-    workCheck = check;
-  }
-
-  /**
-   * Returns the solver's work per millisecond of a time limit (see {@link #setTimeLimit}).
-   *
-   * @return the work per millisecond
-   */
-  public static long workPerMillisecond() {
-    return WORK_PER_MS;
-  }
-
   @Override
   public int[] externalClause() {
     if (structural.isEmpty()
@@ -5285,10 +5261,6 @@ public final class LcgSolver implements ExternalPropagator {
    */
   @Override
   public int decide() {
-    if (workCheck != null && workCheck.getAsBoolean()) {
-      workCheck = null;
-      stop();
-    }
     if (branching == Branching.AUTO
         && best == null
         && !activityBranching

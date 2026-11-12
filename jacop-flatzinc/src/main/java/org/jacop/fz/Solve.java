@@ -54,7 +54,6 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
@@ -2419,10 +2418,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       solver.stop();
       return null;
     }
-    if (!"time".equals(options.freeConfig("lcg-slow-clock", "work"))) {
-      slowLcgWorkCheck(solver, rate, wait);
-      return null;
-    }
     return Thread.ofVirtual()
         .start(
             () -> {
@@ -2448,51 +2443,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               }
             });
   }
-
-  /**
-   * The check of {@link #slowLcgCheck} counted in the solver's work ({@link
-   * LcgSolver#workPerMillisecond} per millisecond) instead of the clock, and made by the search's
-   * own thread at its decisions, so that a run gives way at the same point whatever the load of the
-   * machine: from the work of {@code wait} milliseconds on, a search with fewer conflicts than
-   * {@code rate} per second of work gives way once it has a solution, and is no longer checked once
-   * it is not slow. The free configuration {@code lcg-slow-clock=time} restores the check by the
-   * clock.
-   */
-  private void slowLcgWorkCheck(LcgSolver solver, double rate, long wait) {
-    long perMs = LcgSolver.workPerMillisecond();
-    long start = solver.sat().work();
-    long from = start + wait * perMs;
-    double perWork = rate / (1000.0 * perMs);
-    solver.setWorkCheck(
-        new BooleanSupplier() {
-          private boolean off;
-
-          @Override
-          public boolean getAsBoolean() {
-            if (off) {
-              return false;
-            }
-            long work = solver.sat().work();
-            if (work < from) {
-              return false;
-            }
-            if (solver.sat().conflicts >= perWork * (work - start) || tooLateForFreeSearch()) {
-              off = true;
-              solver.setWorkCheck(null);
-              return false;
-            }
-            if (solutionFound) {
-              lcgSlow = true;
-              lcgSlowWork = work - start;
-              return true;
-            }
-            return false;
-          }
-        });
-  }
-
-  // the work of LCG free search when it gave way, for the statistics
-  private long lcgSlowWork = -1;
 
   /**
    * Goes on with free search without learning after LCG free search was stopped as too slow. The
@@ -4010,9 +3960,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
-          if (lcgSlowWork >= 0) {
-            IO.println("%%%mzn-stat: lcgSlowWork=" + lcgSlowWork);
-          }
         }
       }
       return;
