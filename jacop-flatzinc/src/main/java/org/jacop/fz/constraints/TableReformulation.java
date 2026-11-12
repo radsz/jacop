@@ -71,6 +71,10 @@ final class TableReformulation {
 
   static final long MAX_WORK = Long.getLong("org.jacop.fz.tableReformulation.work", 50_000_000L);
 
+  /** False leaves the functional dependencies in the table (only free columns are dropped). */
+  static final boolean DEPENDENCIES =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.tableReformulation.fd"));
+
   /**
    * A unary part: the variable of the column takes one of the values.
    *
@@ -213,7 +217,7 @@ final class TableReformulation {
           changed = true;
         }
       }
-      for (int i = 0; i < n && m >= 3; i++) {
+      for (int i = 0; i < n && m >= 3 && DEPENDENCIES; i++) {
         for (int j = 0; j < n && m >= 3 && active[i]; j++) {
           if (i != j && active[j] && dependent(rows, i, j, values[i].length)) {
             binary.add(pairs(rows, i, j, values));
