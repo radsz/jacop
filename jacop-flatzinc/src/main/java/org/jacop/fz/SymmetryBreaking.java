@@ -42,6 +42,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.function.LongSupplier;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.SeqPrecedeChain;
@@ -385,7 +386,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   private final Store store;
   private final Tables dictionary;
-  // when the time given to run ends (System.nanoTime)
+  // the clock of the time given, in nanoseconds; tests replace it to end the time at every check
+  static LongSupplier clock = System::nanoTime;
+  // when the time given to run ends (clock)
   private long deadline = Long.MAX_VALUE;
   // whether the lex-leader keeps the largest solution of an orbit instead of the smallest
   private boolean largest;
@@ -542,7 +545,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       SimpleNode astTree, IntVar objective, boolean minimize, List<Var> order, long maxNanos) {
     IntVar goal = objective != null && !objective.singleton() ? objective : null;
     // reading the model and building its graphs count in the time given, as the search does
-    deadline = System.nanoTime() + maxNanos;
+    deadline = clock.getAsLong() + maxNanos;
     List<Item> items;
     try {
       items = parse(astTree);
@@ -614,7 +617,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // the variables are the base of the search, in the lex-leader order
     int[] base = new int[rank.size()];
     rank.forEach((x, r) -> base[r] = graph.varVertices.getOrDefault(x, 0));
-    long left = Math.max(0, deadline - System.nanoTime());
+    long left = Math.max(0, deadline - clock.getAsLong());
     GraphAutomorphisms.Result result =
         new GraphAutomorphisms(graph.colors(), graph.adjacency(), base).generators(MAX_WORK, left);
 
@@ -797,7 +800,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         if (j == b) {
           continue;
         }
-        checkTime();
+        if (outOfTime()) {
+          // the cuts posted so far are each implied by the lex-leader order, as with MAX_CUTS
+          return new int[] {posted, skipped};
+        }
         if (reach.contains(varAt[j])) {
           skipped++;
           continue;
@@ -969,8 +975,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
     return v;
   }
 
+  private boolean outOfTime() {
+    return clock.getAsLong() > deadline;
+  }
+
   private void checkTime() {
-    if (System.nanoTime() > deadline) {
+    if (outOfTime()) {
       throw new OutOfTime();
     }
   }
@@ -1389,7 +1399,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
                 graph.colors(),
                 graph.adjacency(),
                 base.stream().mapToInt(Integer::intValue).toArray())
-            .generators(MAX_WORK, Math.min(maxNanos, Math.max(0, deadline - System.nanoTime())));
+            .generators(MAX_WORK, Math.min(maxNanos, Math.max(0, deadline - clock.getAsLong())));
 
     boolean[] fixedVertex = new boolean[graph.size()];
     for (Space s : spaces) {
