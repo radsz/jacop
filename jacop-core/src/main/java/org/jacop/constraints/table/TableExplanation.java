@@ -234,7 +234,9 @@ final class TableExplanation {
    * Shows tuple t dead, adding to {@code out} the entries this needs that are not in it yet: the
    * explained column first, which most candidates of a scan already rule out, then the columns with
    * entries in the reason, where the tuple may be dead for free, and only then every column and
-   * restriction between columns for the cheapest way.
+   * restriction between columns for the cheapest way. Among columns that cost the same, the one
+   * with the narrowest bounds before the position is chosen, not the first one, so the reason does
+   * not depend on the order of the table's columns.
    *
    * @return false when the tuple is alive
    */
@@ -266,9 +268,15 @@ final class TableExplanation {
       if (status == FREE) {
         return true;
       }
-      if (status > 0 && cost() < best) {
-        best = cost();
-        bestColumn = j;
+      if (status > 0) {
+        int c = cost();
+        // a tie goes to the column with the narrower bounds: its atoms are the ones most likely to
+        // kill the tuples still to come, and they make a smaller learnt clause
+        if (c < best
+            || c == best && j < arity && bestColumn < arity && span(j) < span(bestColumn)) {
+          best = c;
+          bestColumn = j;
+        }
       }
     }
     if (bestColumn == -2) {
@@ -613,6 +621,11 @@ final class TableExplanation {
 
   // ---------------------------------------------------------------------------------------------
   // Column snapshots.
+
+  /** The span of column j's bounds before the position. */
+  private long span(int j) {
+    return (long) high(j) - low(j);
+  }
 
   private IntDomain root(int j) {
     snapshot(j);
