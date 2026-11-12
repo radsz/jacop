@@ -74,8 +74,13 @@ public class AcosPeqR extends CosPeqR {
           p,
           FloatDomain.down(Math.acos(Math.min(q.max(), 1.0))),
           FloatDomain.up(Math.acos(Math.max(q.min(), -1.0))));
+      // the bounds of p are roundings of acos, so cos of a bound misses its preimage by an ulp
+      // (cos(acos(0)) is 6.1e-17): cos is taken one step outside each bound
       q.domain.in(
-          store.level, q, FloatDomain.down(Math.cos(p.max())), FloatDomain.up(Math.cos(p.min())));
+          store.level,
+          q,
+          FloatDomain.down(Math.cos(FloatDomain.up(p.max()))),
+          FloatDomain.up(Math.cos(FloatDomain.down(p.min()))));
     } while (store.propagationHasOccurred);
   }
 

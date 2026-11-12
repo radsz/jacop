@@ -39,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 import java.util.function.BiFunction;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
@@ -317,6 +318,34 @@ class SingleConstraintTest {
     assertThat(b.value()).isZero();
   }
 
+  /**
+   * Two sums x + x whose results miss each other by two ulps fail at once: r - x did not narrow x
+   * by itself, so x lost an ulp per pass and the node took about 10^14 passes to fail
+   * (FloatPropagationFuzzTest "PplusQeqR x+x & PplusQeqR x+x" with xseed 59).
+   */
+  @Test
+  void testTwiceTheSameVariableReachesItsFixpointAtOnce() {
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10),
+        () -> {
+          Store store = new Store();
+          FloatVar x = new FloatVar(store, "x", -0.2985134456065404, -0.14925672280327026);
+          FloatVar r1 = new FloatVar(store, "r1", -0.4477701684098105, -0.2985134456065405);
+          FloatVar r2 = new FloatVar(store, "r2", -0.597026891213081, -0.4477701684098107);
+          store.impose(new PplusQeqR(x, x, r1));
+          store.impose(new PplusQeqR(x, x, r2));
+          assertThat(store.consistency()).isFalse();
+        });
+
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -10, 10);
+    FloatVar r = new FloatVar(store, "r", 3, 5);
+    store.impose(new PplusQeqR(x, x, r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isCloseTo(1.5, offset(1e-12));
+    assertThat(x.max()).isCloseTo(2.5, offset(1e-12));
+  }
+
   @Test
   void testMultiplicationWithProductSameAsFactor() {
     // p * q = p was propagated as q = 1, which loses p = 0 with any q
@@ -509,6 +538,60 @@ class SingleConstraintTest {
     }
     for (double x : new double[] {-61315.44894204959, 41.553635841197824, 9939.357064796095}) {
       assertThat(groundInverse(AtanPeqR::new, x, Math.atan(x))).as("atan %s", x).isTrue();
+    }
+  }
+
+  /**
+   * A result bound at atan(x) keeps x: tan of the bound misses x by up to a few ulps (tan(atan(2))
+   * is 1.9999999999999996), since tan multiplies the rounding of the bound by 1 + x^2, and the
+   * solution (2, atan(2)) of XeqP and AtanPeqR was removed (FloatPropagationFuzzTest).
+   */
+  @Test
+  void testAtanResultBoundKeepsItsArgument() {
+    Random random = new Random(5);
+    for (int k = 0; k < 2000; k++) {
+      double x = k == 0 ? 2 : (2 * random.nextDouble() - 1) * Math.pow(10, random.nextInt(9) - 3);
+      double y = Math.atan(x);
+      Store store = new Store();
+      FloatVar p = new FloatVar(store, "p", x - 1, x + 1);
+      FloatVar r = new FloatVar(store, "r", -2, y);
+      store.impose(new AtanPeqR(p, r));
+      assertThat(store.consistency()).as("atan %s", x).isTrue();
+      assertThat(p.max()).as("p max for r <= atan(%s)", x).isGreaterThanOrEqualTo(x);
+
+      store = new Store();
+      p = new FloatVar(store, "p", x - 1, x + 1);
+      r = new FloatVar(store, "r", y, 2);
+      store.impose(new AtanPeqR(p, r));
+      assertThat(store.consistency()).as("atan %s", x).isTrue();
+      assertThat(p.min()).as("p min for r >= atan(%s)", x).isLessThanOrEqualTo(x);
+    }
+  }
+
+  /**
+   * A result bound at acos(x) keeps x: cos of the bound misses x by an ulp (cos(acos(0)) is
+   * 6.1e-17), and the solution (0, -0.06, -0.0, acos(-0.0)) of PmulQeqR and AcosPeqR was removed
+   * (FloatPropagationFuzzTest).
+   */
+  @Test
+  void testAcosResultBoundKeepsItsArgument() {
+    Random random = new Random(7);
+    for (int k = 0; k < 2000; k++) {
+      double x = k == 0 ? 0 : k == 1 ? -0.0 : 2 * random.nextDouble() - 1;
+      double y = Math.acos(x);
+      Store store = new Store();
+      FloatVar p = new FloatVar(store, "p", -1, 1);
+      FloatVar r = new FloatVar(store, "r", y, 4);
+      store.impose(new AcosPeqR(p, r));
+      assertThat(store.consistency()).as("acos %s", x).isTrue();
+      assertThat(p.max()).as("p max for r >= acos(%s)", x).isGreaterThanOrEqualTo(x);
+
+      store = new Store();
+      p = new FloatVar(store, "p", -1, 1);
+      r = new FloatVar(store, "r", -1, y);
+      store.impose(new AcosPeqR(p, r));
+      assertThat(store.consistency()).as("acos %s", x).isTrue();
+      assertThat(p.min()).as("p min for r <= acos(%s)", x).isLessThanOrEqualTo(x);
     }
   }
 
