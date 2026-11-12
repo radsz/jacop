@@ -98,13 +98,29 @@ import org.jacop.fz.SimpleNode;
  * with free search and 3.4 % with the model's search without it). Each LP solve costs time, so at
  * short time limits the solutions found on tours of more than about 120 cities can be worse.
  *
+ * <p>For a pure symmetric TSP the detector also removes, before search, the arcs that are in no
+ * optimal tour ({@link org.jacop.constraints.TspEdgeElimination}: Jonker and Volgenant's 2-opt
+ * compatibility and Hougardy and Schroeder's close point and main edge elimination), whether or not
+ * org.jacop.fz.tsp is set. Pure means: the minimised objective occurs only in one row {@code obj =
+ * sum(i) d[i] + c}, each successor x[i] occurs only in the circuit and in one element {@code d[i] =
+ * cost[x[i]]} over a constant array, each d[i] only in its element and the row, and the arcs and
+ * their costs are symmetric. The rules use strict improvements, so every optimal tour stays and the
+ * removal is sound with all solutions requested for an optimisation; side constraints on the tour,
+ * fixed successors or asymmetric costs turn it off. System property
+ * org.jacop.fz.tspElimination=false turns it off; org.jacop.fz.tspEliminationMs (default 2000)
+ * limits its time.
+ *
  * <p>All the constraints of the model stay. System property org.jacop.fz.giantTour=false turns the
  * detection off; org.jacop.fz.routes=false turns it off with the other routes.
  *
  * <p>References: P. Kilby and P. Shaw, Vehicle Routing, in Handbook of Constraint Programming,
  * Elsevier, 2006 (the giant-tour model); J. Lysgaard, A. N. Letchford and R. W. Eglese, A new
  * branch-and-cut algorithm for the capacitated vehicle routing problem, Mathematical Programming
- * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts); G. Dantzig, R. Fulkerson
+ * 100(2), 2004 (the two-index relaxation and its rounded capacity cuts); R. Jonker and T.
+ * Volgenant, Nonoptimal edges for the symmetric traveling salesman problem, Operations Research
+ * 32(4), 1984, S. Hougardy and R. T. Schroeder, Edge elimination in TSP instances, WG 2014, and W.
+ * Cook, K. Helsgaun, S. Hougardy and R. T. Schroeder, Local elimination in the traveling salesman
+ * problem, Mathematical Programming Computation, 2024 (edge elimination); G. Dantzig, R. Fulkerson
  * and S. Johnson, Solution of a large-scale traveling-salesman problem, Operations Research 2(4),
  * 1954 (the subtour elimination relaxation); M. W. Padberg and M. R. Rao, Odd minimum cut-sets and
  * b-matchings, Mathematics of Operations Research 7(1), 1982, and M. Grötschel and M. W. Padberg,
