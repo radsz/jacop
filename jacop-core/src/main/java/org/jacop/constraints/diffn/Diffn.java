@@ -764,10 +764,8 @@ public class Diffn extends Nooverlap {
       partLct[dim] = new int[n];
     }
     long[] keys = parts[dim];
-    int[] sig = partSignature[dim];
-    if (sig == null) {
-      sig = new int[5 * n];
-      partSignature[dim] = sig;
+    if (partSignature[dim] == null) {
+      partSignature[dim] = new int[5 * n];
     }
     int m = 0;
     for (int i = 0; i < n; i++) {
@@ -778,41 +776,48 @@ public class Diffn extends Nooverlap {
       if (min >= max || lMin <= 0) {
         continue;
       }
-      int oMin = rr.lst(otherDim);
-      int oMax = rr.ect(otherDim);
       partEst[dim][i] = rr.est(otherDim);
       partLct[dim][i] = rr.lct(otherDim);
       keys[m++] = partKey(min, PROFILE_ADD, i);
       keys[m++] = partKey(max, PROFILE_SUBTRACT, i);
-      // the events of a rectangle whose compulsory parts are as at the previous build are kept;
-      // few rectangles change between two builds
-      int k = 5 * i;
-      if (reusesWork()
-          && addWithin[dim][i] != null
-          && sig[k] == min
-          && sig[k + 1] == max
-          && sig[k + 2] == lMin
-          && sig[k + 3] == oMin
-          && sig[k + 4] == oMax) {
-        continue;
-      }
-      sig[k] = min;
-      sig[k + 1] = max;
-      sig[k + 2] = lMin;
-      sig[k + 3] = oMin;
-      sig[k + 4] = oMax;
-      Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
-      addWithin[dim][i] = new Event(PROFILE_ADD, rr, min, lMin, block);
-      subtractWithin[dim][i] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
-      // a rectangle reaching outside the swept one adds no height, only its compulsory part as a
-      // block
-      addOutside[dim][i] = block == null ? null : new Event(PROFILE_ADD, rr, min, 0, block);
-      subtractOutside[dim][i] =
-          block == null ? null : new Event(PROFILE_SUBTRACT, rr, max, 0, block);
+      refreshPartEvents(rr, i, dim, otherDim, min, max, lMin);
     }
     Arrays.sort(keys, 0, m);
     partCount[dim] = m;
     partsStamp[dim] = store.domainChanges();
+  }
+
+  /**
+   * Creates the profile events of rectangle i in dimension dim unless its compulsory parts are as
+   * at the previous build; few rectangles change between two builds.
+   */
+  private void refreshPartEvents(
+      Rectangle rr, int i, int dim, int otherDim, int min, int max, int lMin) {
+    int oMin = rr.lst(otherDim);
+    int oMax = rr.ect(otherDim);
+    int[] sig = partSignature[dim];
+    int k = 5 * i;
+    if (reusesWork()
+        && addWithin[dim][i] != null
+        && sig[k] == min
+        && sig[k + 1] == max
+        && sig[k + 2] == lMin
+        && sig[k + 3] == oMin
+        && sig[k + 4] == oMax) {
+      return;
+    }
+    sig[k] = min;
+    sig[k + 1] = max;
+    sig[k + 2] = lMin;
+    sig[k + 3] = oMin;
+    sig[k + 4] = oMax;
+    Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
+    addWithin[dim][i] = new Event(PROFILE_ADD, rr, min, lMin, block);
+    subtractWithin[dim][i] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
+    // a rectangle reaching outside the swept one adds no height, only its compulsory part as a
+    // block
+    addOutside[dim][i] = block == null ? null : new Event(PROFILE_ADD, rr, min, 0, block);
+    subtractOutside[dim][i] = block == null ? null : new Event(PROFILE_SUBTRACT, rr, max, 0, block);
   }
 
   /** buildSweepEvents from the rectangles that r may overlap only. */
