@@ -2158,6 +2158,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // found as rows, merged into cliques (PairCliques); the search's solver does not probe again
   private final boolean lcgProbeEarly = Boolean.getBoolean("jacop.lcg.probe.early");
 
+  // -Djacop.lcg.probe.implications=n: keep up to n implications x = a -> y = b between 0/1
+  // variables that root probing finds, whose contrapositive it did not find, as binary clauses of
+  // the search's solver (0, the default, keeps none)
+  private final int lcgProbeImplications = Integer.getInteger("jacop.lcg.probe.implications", 0);
+
+  // the implications of early probing as clauses, for the search's solver
+  private List<IntVar[][]> earlyImplications = List.of();
+
   // the solver of early probing, for its statistics, and whether probing refuted the root
   private LcgSolver earlyProber;
   private boolean probeRefuted;
@@ -2177,12 +2185,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       early.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
     }
     early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
+    if (lcgProbeImplications > 0) {
+      early.keepProbeImplications(lcgProbeImplications);
+    }
     long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
     probeRefuted = !early.probeRoot((long) (lcgProbe * left * 1_000_000L));
     List<LinearForm> rows =
         probeRefuted
             ? List.of()
             : ConflictCliques.rows(early.probeConflicts(), early.probeConflictValues(), 50_000);
+    if (!probeRefuted) {
+      earlyImplications = early.probeImplicationClauses();
+    }
     early.release();
     earlyProber = early;
     return rows;
@@ -2223,6 +2237,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.probeExhausted
             + "\n%%%mzn-stat: lcgProbeBarren="
             + lcg.probeBarren
+            + "\n%%%mzn-stat: lcgProbeImplicationsFound="
+            + lcg.probeImplicationsFound
+            + "\n%%%mzn-stat: lcgProbeImplicationsBothWays="
+            + lcg.probeImplicationsBothWays
+            + "\n%%%mzn-stat: lcgProbeImplicationsKept="
+            + lcg.probeImplicationsKept
             + "\n");
   }
 
@@ -2527,6 +2547,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgStatus = CdclSolver.UNSAT;
         return false;
       }
+      for (IntVar[][] clause : earlyImplications) {
+        lcg.addClause(clause[0], clause[1]);
+      }
+      earlyImplications = List.of();
       if (lcgProbeOnly) {
         lcgStatus = CdclSolver.UNKNOWN;
         return false;
@@ -2542,7 +2566,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (!"none".equals(lcgProbeLp)) {
         lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
       }
+      if (lcgProbeImplications > 0) {
+        lcg.keepProbeImplications(lcgProbeImplications);
+      }
       boolean feasible = lcg.probeRoot((long) (lcgProbe * left * 1_000_000L));
+      if (feasible) {
+        for (IntVar[][] clause : lcg.probeImplicationClauses()) {
+          lcg.addClause(clause[0], clause[1]);
+        }
+      }
       printProbeStatistics(lcg);
       if (feasible && lcgProbeOnly && !"none".equals(lcgProbeLp)) {
         probedRootBound();

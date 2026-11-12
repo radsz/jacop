@@ -1720,6 +1720,7 @@ class LcgFuzzTest {
     long bisectProbes = 0;
     long probes = 0;
     long probeFacts = 0;
+    long implicationClauses = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected;
@@ -1740,7 +1741,17 @@ class LcgFuzzTest {
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
         annotate(solver, model, seed);
         // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT
+        // and one in eight of all keeps the implications it finds as binary clauses
+        if (seed % 8 == 7) {
+          solver.keepProbeImplications(1000);
+        }
         boolean refuted = seed % 4 == 3 && !solver.probeRoot(Long.MAX_VALUE);
+        if (!refuted) {
+          for (IntVar[][] clause : solver.probeImplicationClauses()) {
+            solver.addClause(clause[0], clause[1]);
+          }
+          implicationClauses += solver.probeImplicationsKept;
+        }
         probes += solver.probeProbes;
         probeFacts += solver.probeFailed + solver.probeLifted;
         if (refuted) {
@@ -1784,7 +1795,9 @@ class LcgFuzzTest {
           "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
               + " %d lower-bound runs (%d raised the bound), %d bisection probes%n",
           RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised, bisectProbes);
-      System.out.printf("  root probing: %d probes, %d facts%n", probes, probeFacts);
+      System.out.printf(
+          "  root probing: %d probes, %d facts, %d implication clauses%n",
+          probes, probeFacts, implicationClauses);
       statistics.forEach(
           (k, v) ->
               System.out.printf(

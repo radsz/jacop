@@ -2783,9 +2783,15 @@ public final class LcgSolver implements ExternalPropagator {
     if (sat.value(one) != 0) {
       return NOTHING;
     }
+    Set<Atom> down = null;
     if (probeConflicts != null) {
+      down = consequences(downImplied);
       recordConflicts(i, 1, up);
-      recordConflicts(i, 0, consequences(downImplied));
+      recordConflicts(i, 0, down);
+    }
+    if (probeImplications != null) {
+      recordImplications(i, 1, up);
+      recordImplications(i, 0, down != null ? down : consequences(downImplied));
     }
     List<Atom> lifted = new ArrayList<>();
     for (int l : downImplied) {
@@ -2818,6 +2824,105 @@ public final class LcgSolver implements ExternalPropagator {
         probeConflictValues.add(new int[] {value, 1 - b});
       }
     }
+  }
+
+  // the implications x = value -> y = b between 0/1 variables that a probe found, when they are
+  // kept, as pairs of codes 2 * variable + value
+  private void recordImplications(int i, int value, Set<Atom> implied) {
+    for (Atom a : implied) {
+      int b = booleanValue(a);
+      if (b >= 0 && a.var != i && probeImplications.size() < probeImplicationRecordCap) {
+        probeImplications.add(implicationKey(2 * i + value, 2 * a.var + b));
+      }
+    }
+  }
+
+  private static long implicationKey(int premise, int conclusion) {
+    return ((long) premise << 32) | (conclusion & 0xffffffffL);
+  }
+
+  // the implications found by probing, in the order found; null when they are not kept
+  private Set<Long> probeImplications;
+  private int probeImplicationCap;
+  private int probeImplicationRecordCap;
+
+  /** Statistics of {@link #probeImplicationClauses}: implications recorded by probing. */
+  public long probeImplicationsFound;
+
+  /**
+   * Statistics of {@link #probeImplicationClauses}: implications whose contrapositive probing also
+   * found, so that propagation already has both directions and no clause is needed.
+   */
+  public long probeImplicationsBothWays;
+
+  /** Statistics of {@link #probeImplicationClauses}: implications kept as binary clauses. */
+  public long probeImplicationsKept;
+
+  /**
+   * Keeps the implications x = a -> y = b between 0/1 variables that the next {@link #probeRoot}
+   * finds, for {@link #probeImplicationClauses}.
+   *
+   * @param cap the most implications returned as clauses
+   */
+  public void keepProbeImplications(int cap) {
+    probeImplications = new LinkedHashSet<>();
+    probeImplicationCap = cap;
+    // the contrapositive test needs the implications of both sides, so more are recorded than kept
+    probeImplicationRecordCap = (int) Math.min(Integer.MAX_VALUE - 8L, 20L * cap);
+  }
+
+  /**
+   * Returns the implications x = a -> y = b between 0/1 variables found by the last {@link
+   * #probeRoot}, as binary clauses (x != a or y = b), when they were kept ({@link
+   * #keepProbeImplications}). Only implications whose contrapositive y = 1 - b -> x = 1 - a probing
+   * did not find are returned: propagation derives x = a -> y = b, since probing found it, but not
+   * always the other direction, which the clause adds. Probing proved each implication at the root,
+   * so the clauses are consequences of the constraints and the root facts.
+   *
+   * <p>Keeping the implications of probing as binary clauses follows CP-SAT's probing (L. Perron,
+   * F. Didier, S. Gay, The CP-SAT-LP solver, CP 2023) and the binary implication graph of SAT
+   * preprocessing: I. Lynce and J. Marques-Silva, Probing-based preprocessing techniques for
+   * propositional satisfiability, ICTAI 2003; M. Heule, M. Järvisalo, A. Biere, Efficient CNF
+   * simplification based on binary implication graphs, SAT 2011.
+   *
+   * @return clauses as pairs {positive variables, negative variables}
+   */
+  public List<IntVar[][]> probeImplicationClauses() {
+    List<IntVar[][]> clauses = new ArrayList<>();
+    if (probeImplications == null) {
+      return clauses;
+    }
+    probeImplicationsFound = probeImplications.size();
+    Set<Long> added = new HashSet<>();
+    for (long key : probeImplications) {
+      int p = (int) (key >>> 32);
+      int q = (int) key;
+      // the contrapositive: not q -> not p
+      if (probeImplications.contains(implicationKey(q ^ 1, p ^ 1))) {
+        probeImplicationsBothWays++;
+        continue;
+      }
+      if (clauses.size() >= probeImplicationCap
+          || fixedBoolean(p >> 1)
+          || fixedBoolean(q >> 1)
+          || !added.add(implicationKey(Math.min(p ^ 1, q), Math.max(p ^ 1, q)))) {
+        continue;
+      }
+      // not p or q: a literal x = 1 is positive, x = 0 negative
+      List<IntVar> positive = new ArrayList<>(2);
+      List<IntVar> negative = new ArrayList<>(2);
+      for (int lit : new int[] {p ^ 1, q}) {
+        ((lit & 1) == 1 ? positive : negative).add(vars[lit >> 1]);
+      }
+      clauses.add(
+          new IntVar[][] {positive.toArray(new IntVar[0]), negative.toArray(new IntVar[0])});
+    }
+    probeImplicationsKept = clauses.size();
+    return clauses;
+  }
+
+  private boolean fixedBoolean(int i) {
+    return vars[i].singleton() || sat.value(geLit(i, 1)) != 0;
   }
 
   // the conflicts between values of 0/1 variables that probing found, when they are kept
