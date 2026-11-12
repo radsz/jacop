@@ -134,6 +134,10 @@ final class DualReductions implements Rule {
   private int fixed;
   private int tightened;
   private DominatedColumns columns;
+  // when set, the reductions are reported here instead of applied: variable, new min, new max
+  private List<Object[]> collected;
+  // constraints that are not imposed, so their satisfied() cannot be asked
+  private Set<Constraint> unimposed = Set.of();
 
   /**
    * Prepares dual reductions.
@@ -246,7 +250,7 @@ final class DualReductions implements Rule {
     }
     List<Constraint> live = new ArrayList<>(constraints.size());
     for (Constraint c : constraints) {
-      if (!(c instanceof SatisfiedPresent s && s.satisfied())) {
+      if (unimposed.contains(c) || !(c instanceof SatisfiedPresent s && s.satisfied())) {
         live.add(c);
       }
     }
@@ -373,7 +377,35 @@ final class DualReductions implements Rule {
     return false;
   }
 
+  /**
+   * Reports the reductions of one round instead of applying them.
+   *
+   * @param sink the list that receives {variable, new minimum, new maximum} for each reduction.
+   */
+  void collectInto(List<Object[]> sink) {
+    this.collected = sink;
+  }
+
+  /**
+   * Names constraints of the problem that are not imposed in the store, which lock their variables
+   * whatever the domains.
+   *
+   * @param constraints the constraints.
+   */
+  void unimposed(Set<Constraint> constraints) {
+    this.unimposed = constraints;
+  }
+
   private boolean restrict(int level, IntVar v, int min, int max) {
+    if (collected != null) {
+      collected.add(new Object[] {v, min, max});
+      if (min == max) {
+        fixed++;
+      } else {
+        tightened++;
+      }
+      return true;
+    }
     v.domain.in(level, v, min, max);
     if (v.singleton()) {
       fixed++;

@@ -53,6 +53,7 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
@@ -60,6 +61,7 @@ import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -83,6 +85,7 @@ import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.Mirrored;
 import org.jacop.lcg.MirroredChoice;
 import org.jacop.lcg.PbModel;
+import org.jacop.presolve.RestartDualReductions;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.lns.AdaptiveLns;
 
@@ -2567,6 +2570,11 @@ public final class LcgSolver implements ExternalPropagator {
     }
     solution = null;
     exchangeShared();
+    // a search under assumptions (the objective bound of most optimisation phases) restarts at
+    // their level, so the root is presolved again between the calls too
+    if (restartDual > 0 && store.level == baseLevel) {
+      dualAtRestart();
+    }
     // clauses propagate between constraints: each consistency() returns after a pruning constraint
     store.setReturnAfterPruning(!fullFixpoint);
     int result;
@@ -3714,6 +3722,7 @@ public final class LcgSolver implements ExternalPropagator {
    * @param negative variables of which one may be 0
    */
   public void addClause(IntVar[] positive, IntVar[] negative) {
+    modelClauses.add(new BoolClause(positive.clone(), negative.clone()));
     if (proof != null) {
       proofClauses.add(new IntVar[][] {positive.clone(), negative.clone()});
     }
@@ -4370,8 +4379,118 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  // dual reductions at restarts, see setRestartDual
+  private double restartDual;
+  private int rootAtDual;
+  private final List<Constraint> modelClauses = new ArrayList<>();
+  private boolean dualDue;
+  private int dualMisses;
+  private long dualStart;
+  private static final double DUAL_TIME_SHARE = 0.02;
+
+  /** The restarts at which the dual reductions ran. */
+  public long dualRestarts;
+
+  /** The variables the dual reductions at restarts fixed. */
+  public long dualFixed;
+
+  /** The variables whose domain the dual reductions at restarts narrowed without fixing them. */
+  public long dualTightened;
+
+  /** The variables the first dual reductions, before the search, fixed or narrowed. */
+  public long dualFirst;
+
+  /** The time the dual reductions at restarts took, in nanoseconds. */
+  public long dualTime;
+
+  /**
+   * Runs the dual reductions of presolve (dual fixing and dual bound strengthening, see {@link
+   * RestartDualReductions}) again at a restart once the root literals learnt since the last time
+   * number at least a share of the integer variables: a constraint the learnt root domains satisfy
+   * no longer locks its variables, so more of them can move to the bound every constraint and the
+   * objective allow (inprocessing; Järvisalo, Heule and Biere, Inprocessing rules, IJCAR 2012). The
+   * reductions keep an optimum but not every solution, so the caller sets this only for a search
+   * for one solution or an optimum. They are left out under a proof, which cannot state them, and
+   * with shared clauses or bounds, which other workers would take as implied. Off (0) by default.
+   *
+   * @param factor the share of the integer variables, 0 for none.
+   */
+  public void setRestartDual(double factor) {
+    this.restartDual = factor;
+  }
+
+  private void dualAtRestart() {
+    if (proof != null || shared != null || failed || rootFailed) {
+      return;
+    }
+    if (restartPresolveVariables < 0) {
+      restartPresolveVariables = 0;
+      for (int i = 0; i < store.size(); i++) {
+        if (store.vars[i] instanceof IntVar) {
+          restartPresolveVariables++;
+        }
+      }
+    }
+    int localRoot = sat.rootAssignments();
+    long start = System.nanoTime();
+    if (dualRestarts == 0) {
+      dualStart = start;
+    } else if (localRoot - rootAtDual
+            < restartDual * Math.max(1, restartPresolveVariables) * (1L << dualMisses)
+        || dualTime > DUAL_TIME_SHARE * (start - dualStart)) {
+      // a run that found nothing doubles the root facts the next one waits for, and the runs
+      // take at most a small share of the time
+      return;
+    }
+    rootAtDual = localRoot;
+    dualRestarts++;
+    // the constraints that became clauses of the solver lock their variables as before
+    List<Constraint> outside = new ArrayList<>(encodedGraphs);
+    outside.addAll(encodedConstraints);
+    outside.addAll(modelClauses);
+    IntVar cost = objective >= 0 ? vars[objective] : null;
+    List<RestartDualReductions.Reduction> reductions;
+    try {
+      reductions =
+          RestartDualReductions.compute(
+              store,
+              // the linear relaxation and the learnt sums are implied, so they lock nothing
+              c ->
+                  c instanceof LinearRelaxation
+                      || c instanceof TimeIndexedBound
+                      || c instanceof LearntLinear,
+              outside,
+              cost);
+    } finally {
+      dualTime += System.nanoTime() - start;
+    }
+    dualMisses = reductions.isEmpty() ? Math.min(dualMisses + 1, 20) : 0;
+    for (RestartDualReductions.Reduction r : reductions) {
+      IntVar x = r.variable();
+      int i = trail.id(x);
+      if (i < 0 || i >= vars.length || vars[i] != x) {
+        continue;
+      }
+      if (dualRestarts == 1) {
+        dualFirst++;
+      }
+      if (r.min() == r.max()) {
+        dualFixed++;
+      } else {
+        dualTightened++;
+      }
+      if (r.min() > x.min()) {
+        structural.add(new int[] {geLit(i, r.min())}); // x >= min
+      }
+      if (r.max() < x.max()) {
+        structural.add(new int[] {-geLit(i, r.max() + 1)}); // x <= max
+      }
+    }
+  }
+
   @Override
   public void notifyRestart() {
+    System.err.println("notifyRestart " + store.level + " " + baseLevel + " " + restartDual);
     // a restart under assumptions keeps their level, whose bounds hold only under them
     if (store.level == baseLevel) {
       deleteLpSteps();
@@ -4381,6 +4500,9 @@ public final class LcgSolver implements ExternalPropagator {
       if (restartPresolve > 0) {
         presolveAtRestart();
       }
+      // the reductions need the root at a fixpoint of the store and the solver: the next
+      // propagation at the root runs them
+      dualDue = restartDual > 0;
       exchangeShared();
     }
     boolean improved = improvedInRun;
@@ -4938,6 +5060,10 @@ public final class LcgSolver implements ExternalPropagator {
         return lit;
       }
       if (numPending == 0 && !store.hasPendingConstraints()) {
+        if (dualDue && sat.decisionLevel() == 0 && store.level == baseLevel) {
+          dualDue = false;
+          dualAtRestart();
+        }
         return 0;
       }
       int from = trail.size();

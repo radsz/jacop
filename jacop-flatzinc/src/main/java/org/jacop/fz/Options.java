@@ -116,6 +116,8 @@ public class Options {
   double presolveAbort = Derivation.DEFAULT_ABORT_FACTOR;
   long presolveTime = -1;
   double presolveRestart;
+  double presolveRestartDual =
+      Double.parseDouble(System.getProperty("jacop.presolve.restartDual", "0"));
   boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
   Probing.Mode probe =
       Objects.requireNonNullElse(
@@ -367,6 +369,10 @@ public class Options {
                 the root facts learnt since the last time number this share of the integer
                 variables (SCIP's restartfac is 0.025): constraints the root satisfies are left
                 out. Default 0 (off); independent of --presolve
+            --presolve-restart-dual <value> under --lcg, run the dual reductions of presolve
+                (dual fixing, dual bound strengthening) on the root again at a restart once the
+                root facts learnt since the last time number this share of the integer
+                variables; only for one solution or an optimum. Default 0 (off)
             --presolve-time <ms> time the rounds of presolve rules may take (default a
                 twentieth of the time limit, unlimited without one)
             --presolve-tabling replace small groups of constraints by the tables of their
@@ -446,6 +452,7 @@ public class Options {
       case "--presolve-abort" -> i = handlePresolveAbort(args, i);
       case "--presolve-time" -> i = handlePresolveTime(args, i);
       case "--presolve-restart" -> i = handlePresolveRestart(args, i);
+      case "--presolve-restart-dual" -> i = handlePresolveRestartDual(args, i);
       case "--presolve-tabling" -> i = handlePresolveTabling(i);
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
@@ -687,6 +694,16 @@ public class Options {
       presolveTime = t;
     } else {
       System.err.println("%% Presolve time must be at least 0; " + t + " ignored");
+    }
+    return i + 1;
+  }
+
+  private int handlePresolveRestartDual(String[] args, int i) {
+    double f = Double.parseDouble(args[++i]);
+    if (f >= 0) {
+      presolveRestartDual = f;
+    } else {
+      System.err.println("%% Presolve restart dual factor must be at least 0; " + f + " ignored");
     }
     return i + 1;
   }
@@ -1272,6 +1289,17 @@ public class Options {
    */
   public double presolveRestart() {
     return presolveRestart;
+  }
+
+  /**
+   * It defines when lazy clause generation runs the dual reductions of presolve on the root again
+   * at a restart (--presolve-restart-dual).
+   *
+   * @return the share of the integer variables learnt as root facts since the last time, 0 (off) by
+   *     default
+   */
+  public double presolveRestartDual() {
+    return presolveRestartDual;
   }
 
   /**

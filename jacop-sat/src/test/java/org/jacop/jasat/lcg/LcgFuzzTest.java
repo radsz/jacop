@@ -223,7 +223,8 @@ import org.junit.jupiter.api.Test;
  * profile) and the first seed by {@code lcg.fuzz.seed} (default 1). A failure names the seed, which
  * rebuilds the same model. With {@code lcg.fuzz.holes=true} every variable, auxiliary ones too,
  * gets up to two holes inside its domain, for the reasons of bounds that skip holes; a model that
- * fails while its constraints are imposed is skipped.
+ * fails while its constraints are imposed is skipped. With {@code lcg.fuzz.dual=<factor>} the
+ * solver runs the dual reductions of presolve at restarts ({@link LcgSolver#setRestartDual}).
  */
 class LcgFuzzTest {
 
@@ -232,6 +233,9 @@ class LcgFuzzTest {
   private static final int SEED = Integer.getInteger("lcg.fuzz.seed", 1);
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
+
+  // the dual reductions at restarts (LcgSolver.setRestartDual), off unless set
+  private static final double DUAL = Double.parseDouble(System.getProperty("lcg.fuzz.dual", "0"));
 
   /** A random model; built twice from the same seed, once for each solver. */
   private static final class Model {
@@ -1743,6 +1747,7 @@ class LcgFuzzTest {
         solver.setChecking(true);
         // reasons of up to 1 to 3 literals stay as clauses
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        solver.setRestartDual(DUAL);
         annotate(solver, model, seed);
         status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
         checked += solver.checker().checked;

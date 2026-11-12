@@ -2208,6 +2208,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     lcg.setRestartPresolve(options.presolveRestart());
+    // dual reductions keep an optimum or a solution, not every solution; with an objective, -a
+    // only prints the improving solutions
+    boolean oneOrOptimum =
+        costVar != null || !options.getAll() && options.getNumberSolutions() <= 1;
+    if (oneOrOptimum && dictionary.onRestart == null) {
+      lcg.setRestartDual(options.presolveRestartDual());
+    }
     // the hints of constraints first; a solution of local search replaces them
     Hint constraintHint = constraintHints();
     if (constraintHint != null) {
@@ -2883,6 +2890,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.represolves
             + "\n%%%mzn-stat: lcgRepresolveEntailed="
             + lcg.represolveEntailed
+            + "\n%%%mzn-stat: lcgDualRestarts="
+            + lcg.dualRestarts
+            + "\n%%%mzn-stat: lcgDualFixed="
+            + lcg.dualFixed
+            + "\n%%%mzn-stat: lcgDualTightened="
+            + lcg.dualTightened
+            + "\n%%%mzn-stat: lcgDualFirst="
+            + lcg.dualFirst
+            + "\n%%%mzn-stat: lcgDualTime="
+            + nf.format(lcg.dualTime / 1e9)
             + "\n%%%mzn-stat: lcgAnnotationDecisions="
             + lcg.annotationDecisions
             + "\n%%%mzn-stat: lcgGuideDecisions="

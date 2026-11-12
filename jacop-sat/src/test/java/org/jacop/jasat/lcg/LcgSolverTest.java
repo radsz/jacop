@@ -595,6 +595,64 @@ class LcgSolverTest {
   }
 
   /**
+   * The dual reductions at restarts and between the calls of the solver keep the optimum: random
+   * weighted sums of variables with sparse random inequalities and disequalities, where some
+   * variables are free to move towards a better objective once the learnt root bounds satisfy the
+   * constraints that held them, solved with and without the reductions.
+   */
+  @Test
+  void restartDualKeepsTheOptimum() {
+    Random rnd = new Random(31);
+    long reductions = 0;
+    for (int instance = 0; instance < 40; instance++) {
+      long seed = rnd.nextLong();
+      int[] optimum = new int[2];
+      int[] status = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 10;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 6);
+        }
+        for (int c = 0; c < 5; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(2) == 0 ? 0 : r.nextInt(7) - 3;
+          }
+          store.impose(new LinearInt(x, a, "<=", r.nextInt(12)));
+        }
+        for (int c = 0; c < 4; c++) {
+          store.impose(new XneqY(x[r.nextInt(n)], x[r.nextInt(n)]));
+        }
+        IntVar cost = new IntVar(store, "cost", -10_000, 10_000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        int[] weights = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          weights[i] = r.nextInt(21) - 10;
+        }
+        weights[n] = -1;
+        store.impose(new LinearInt(terms, weights, "==", 0));
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setRestartDual(run == 0 ? 0 : 1e-9);
+        status[run] = solver.minimize(cost);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(cost);
+        }
+        if (run == 1) {
+          reductions += solver.dualFixed + solver.dualTightened;
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(reductions).isGreaterThan(0);
+  }
+
+  /**
    * Dichotomic bound search keeps the optimum, never reports a bound above it, and raises the bound
    * by proofs of its probes: the sum of pairwise different values with random linear side
    * constraints is minimised by plain branch and bound and by bisection down to a zero gap.
