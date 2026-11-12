@@ -4234,6 +4234,13 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
+247. The LCG explanations of table constraints (HybridTable) share one
+     array of entry marks per atom trail (AtomicTrail.newEntryMark)
+     instead of each keeping its own array as long as the trail. The
+     explanations and the search are unchanged; the peak heap of table
+     models with many tables drops, for example from 445 MB to 198 MB
+     live heap on work-task-variation seed-8 under -f at 60 s.
+
 Version 4.11
 =============
 
