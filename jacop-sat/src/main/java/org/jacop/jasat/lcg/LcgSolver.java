@@ -4915,7 +4915,11 @@ public final class LcgSolver implements ExternalPropagator {
   private void takeSharedPhase() {
     int[] p = new int[vars.length];
     for (int i = 0; i < vars.length; i++) {
-      p[i] = phase != null && i < phase.length ? phase[i] : vars[i] == null ? 0 : vars[i].min();
+      if (phase != null && i < phase.length) {
+        p[i] = phase[i];
+      } else if (vars[i] != null) {
+        p[i] = vars[i].min();
+      }
     }
     boolean[] taken = {false};
     sharedPhase.values(
