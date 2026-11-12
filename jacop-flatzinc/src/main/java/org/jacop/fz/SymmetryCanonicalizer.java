@@ -79,6 +79,10 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
   private final BitSet lexLargest = new BitSet();
   private final List<IntVar[]> moveFrom = new ArrayList<>();
   private final List<IntVar[]> moveTo = new ArrayList<>();
+  // Schreier-Sims cuts lo <= hi and the moves of the symmetry that maps them
+  private final List<IntVar> cutLo = new ArrayList<>();
+  private final List<IntVar> cutHi = new ArrayList<>();
+  private final List<List<IntVar[][]>> cutMoves = new ArrayList<>();
   // a constraint whose symmetry is not known, or moves values too: no canonical form
   private boolean incomplete;
 
@@ -94,6 +98,21 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
     constraints.add(c);
     precedenceVars.add(xs);
     precedenceValues.add(chain);
+  }
+
+  /**
+   * Records a Schreier-Sims cut lo <= hi and the symmetry that moves the value of hi onto the
+   * variable of lo, as moves applied in turn; null when the symmetry is not known.
+   */
+  void cut(Constraint c, IntVar lo, IntVar hi, List<IntVar[][]> moves) {
+    constraints.add(c);
+    if (moves == null) {
+      incomplete = true;
+      return;
+    }
+    cutLo.add(lo);
+    cutHi.add(hi);
+    cutMoves.add(moves);
   }
 
   /**
@@ -142,6 +161,14 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
         }
         for (int k = 0; k < lexX.size(); k++) {
           changed |= descend(k, values);
+        }
+        for (int k = 0; k < cutLo.size(); k++) {
+          if (value(cutLo.get(k), values) > value(cutHi.get(k), values)) {
+            for (IntVar[][] m : cutMoves.get(k)) {
+              move(m[0], m[1], values);
+            }
+            changed = true;
+          }
         }
         if (!changed) {
           return true;
@@ -249,8 +276,12 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
     if (lexLargest.get(k) ? cmp >= 0 : cmp <= 0) {
       return false;
     }
-    IntVar[] from = moveFrom.get(k);
-    IntVar[] to = moveTo.get(k);
+    move(moveFrom.get(k), moveTo.get(k), values);
+    return true;
+  }
+
+  // replaces s by s o g, g given by the variables it moves and their images
+  private void move(IntVar[] from, IntVar[] to, int[] values) {
     int[] image = new int[from.length];
     for (int j = 0; j < from.length; j++) {
       image[j] = value(to[j], values);
@@ -263,6 +294,5 @@ final class SymmetryCanonicalizer implements LocalSearch.Canonicalizer {
         throw new MissingVariable();
       }
     }
-    return true;
   }
 }
