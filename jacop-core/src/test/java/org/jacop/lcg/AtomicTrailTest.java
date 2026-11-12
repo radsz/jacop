@@ -575,11 +575,6 @@ class AtomicTrailTest {
   }
 
   /**
-   * A start pushed past a compulsory part across a range whose values are all out already: the
-   * reason is the compulsory part, not one removal per value (carpet-cutting had cumulative reasons
-   * of 300 to 600 atoms this way).
-   */
-  /**
    * The entry marks are one array per trail, shared by the table explanations: each new mark covers
    * the position asked for and differs from every earlier mark, so stale flags of another
    * explanation never count.
@@ -589,18 +584,23 @@ class AtomicTrailTest {
     AtomicTrail trail = new AtomicTrail(new Store());
     int first = trail.newEntryMark(10);
     int[] marks = trail.entryMarks();
-    assertThat(marks.length).isGreaterThanOrEqualTo(10);
+    assertThat(marks).hasSizeGreaterThanOrEqualTo(10);
     marks[3] = first;
     int second = trail.newEntryMark(5);
     assertThat(second).isNotEqualTo(first);
     assertThat(trail.entryMarks()).isSameAs(marks);
     assertThat(trail.entryMarks()[3]).isNotEqualTo(second);
     int third = trail.newEntryMark(5000);
-    assertThat(trail.entryMarks().length).isGreaterThanOrEqualTo(5000);
+    assertThat(trail.entryMarks()).hasSizeGreaterThanOrEqualTo(5000);
     assertThat(trail.entryMarks()[3]).isEqualTo(first).isNotEqualTo(third);
     trail.detach();
   }
 
+  /**
+   * A start pushed past a compulsory part across a range whose values are all out already: the
+   * reason is the compulsory part, not one removal per value (carpet-cutting had cumulative reasons
+   * of 300 to 600 atoms this way).
+   */
   @Test
   void rootDomainOfAVariableCreatedLaterGrowsTheArrays() {
     // root[slot(x)] read the array before slot(x) grew it: an index out of bounds
