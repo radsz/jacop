@@ -79,6 +79,12 @@ public final class RevisedDualSimplex {
   /** The dual feasibility tolerance. */
   public static final double DUAL_TOL = 1e-9;
 
+  // a reduced cost within this much of the size of its terms is round-off (about 45 units in the
+  // last place), and the reduced costs up to ROUNDOFF_SCAN are checked for it
+  private static final double ROUNDOFF = 1e-14;
+  private static final double ROUNDOFF_SCAN = 1e-6;
+  private double roundOff = ROUNDOFF;
+
   /** The smallest pivot the ratio test accepts. */
   public static final double PIVOT_TOL = 1e-9;
 
@@ -435,6 +441,7 @@ public final class RevisedDualSimplex {
     savedHi = null;
     boundsPerturbed = false;
     perturbed = o.perturbed;
+    roundOff = o.roundOff;
     seed = o.seed;
     exact = o.exact;
     cleaning = o.cleaning;
@@ -944,6 +951,10 @@ public final class RevisedDualSimplex {
    * @return {@link #OPTIMAL}, {@link #INFEASIBLE}, {@link #UNBOUNDED} or {@link #LIMIT}
    */
   public int solve(int limit) {
+    if (ended) {
+      // a new answer: the bases of the solves that the limit cut off before count no more
+      guard.reset();
+    }
     shrinkArtificial();
     int status = dualSolve(limit);
     ended = status != LIMIT;
@@ -1083,6 +1094,20 @@ public final class RevisedDualSimplex {
         infeasibleRow = r;
         return INFEASIBLE;
       }
+      if (guard.repeats(p, q)) {
+        // the pivot goes back to a basis of the last few again and again: the row is outside its
+        // bounds by round-off of huge values (free columns at artificial bounds of 1e12, parallel
+        // rows: their two slacks swapped forever), so it is left out like a row without a proof,
+        // and checked again on fresh factors at the end; as there, no step of the limit (with a
+        // limit of one pivot the row came back at the next call)
+        clearTouched();
+        skipped[r] = true;
+        skippedRows++;
+        if (limit < Integer.MAX_VALUE) {
+          limit++;
+        }
+        continue;
+      }
       clear(alphaQ, alphaIdx, alphaLen);
       alphaLen = lu.ftran(rhs, rhsIdx, columnInto(q, rhs, rhsIdx), alphaQ, alphaIdx, true);
       double fromRow = alphaRow[q];
@@ -1158,6 +1183,75 @@ public final class RevisedDualSimplex {
       }
     }
     return LIMIT;
+  }
+
+  // bases seen in the last pivots of a solve (by hash), and how many pivots went back to one
+  private static final int CYCLE_WINDOW = 32;
+  private static final int CYCLE_REPEATS = 20;
+  private final CycleGuard guard = new CycleGuard();
+
+  /**
+   * Detects a simplex that goes round the same few bases: a hash of the set of basic columns (a sum
+   * of a mixed hash per column, taken again after each factorization, which may replace columns)
+   * for each of the last {@link #CYCLE_WINDOW} pivots. A pivot back to one of them counts; {@link
+   * #CYCLE_REPEATS} of them in a solve, each with its own window, are a cycle. The pivots of a
+   * solve that makes progress, with costs or bounds perturbed, do not come back to a basis.
+   */
+  private final class CycleGuard {
+    private final long[] recent = new long[CYCLE_WINDOW];
+    private int next;
+    private int count;
+    private int repeats;
+    private long hash;
+    private long hashedAt = -1;
+
+    void reset() {
+      next = 0;
+      count = 0;
+      repeats = 0;
+      hashedAt = -1;
+    }
+
+    // whether pivoting q in for p goes back to a recent basis for the CYCLE_REPEATS-th time; the
+    // pivot is taken as made
+    boolean repeats(int p, int q) {
+      if (hashedAt != factorizations) {
+        hashedAt = factorizations;
+        hash = 0;
+        for (int k = 0; k < m; k++) {
+          hash += mix(basis[k]);
+        }
+        ops += m;
+      }
+      long h = hash - mix(p) + mix(q);
+      boolean seen = false;
+      for (int k = 0; k < Math.min(count, CYCLE_WINDOW); k++) {
+        seen |= recent[k] == h;
+      }
+      if (seen && ++repeats >= CYCLE_REPEATS) {
+        repeats = 0;
+        count = 0;
+        return true;
+      }
+      hash = h;
+      recent[next] = h;
+      next = (next + 1) % CYCLE_WINDOW;
+      count++;
+      return false;
+    }
+  }
+
+  // a 64-bit mix of a column index (the finaliser of SplitMix64)
+  private static long mix(int j) {
+    long z = (j + 1) * 0x9E3779B97F4A7C15L;
+    z = (z ^ (z >>> 30)) * 0xBF58476D1CE4E5B9L;
+    z = (z ^ (z >>> 27)) * 0x94D049BB133111EBL;
+    return z ^ (z >>> 31);
+  }
+
+  // the relative size of reduced costs taken as round-off; 0 turns this off (tests of CycleGuard)
+  void setRoundOff(double r) {
+    roundOff = r;
   }
 
   // true when the solves with the updated factors cost more per pivot than a fresh factorization
@@ -2221,11 +2315,34 @@ public final class RevisedDualSimplex {
       for (int e = 0; e < colLen[j]; e++) {
         s -= y[ci[e]] * cv[e];
       }
-      d[j] = s;
+      d[j] = Math.abs(s) > DUAL_TOL && Math.abs(s) <= ROUNDOFF_SCAN && isRoundOff(j, s, y) ? 0 : s;
     }
     for (int i = 0; i < m; i++) {
-      d[n + i] = row[n + i] >= 0 ? 0 : cost[n + i] + y[i];
+      double s = row[n + i] >= 0 ? 0 : cost[n + i] + y[i];
+      boolean noise =
+          Math.abs(s) > DUAL_TOL
+              && Math.abs(s) <= roundOff * (Math.abs(cost[n + i]) + Math.abs(y[i]));
+      d[n + i] = noise ? 0 : s;
     }
+  }
+
+  /**
+   * Whether the reduced cost s of structural column j, past the dual tolerance, is round-off of its
+   * sum {@code c_j - y a_j}: within ROUNDOFF of the sum of the sizes of its terms. With costs near
+   * 1e7 the dual tolerance of 1e-9 is a few units in the last place, and such a reduced cost takes
+   * either sign as the basis changes: the dual simplex flipped two parallel columns of a master LP
+   * to their artificial bounds and back at every check of its reduced costs, and the primal simplex
+   * let two of them enter in turn after every refactorization, both without end.
+   */
+  private boolean isRoundOff(int j, double s, double[] y) {
+    double size = Math.abs(cost[j]);
+    int[] ci = colIdx[j];
+    double[] cv = colVal[j];
+    for (int e = 0; e < colLen[j]; e++) {
+      size += Math.abs(y[ci[e]] * cv[e]);
+    }
+    ops += colLen[j];
+    return Math.abs(s) <= roundOff * size;
   }
 
   /**
@@ -2706,6 +2823,9 @@ public final class RevisedDualSimplex {
   public int solvePrimal(int limit) {
     flushReduced();
     shrinkArtificial();
+    if (ended) {
+      guard.reset();
+    }
     ended = false;
     if (dualPending) {
       // the last call handed over to the dual simplex and stopped at its limit: the dual simplex
@@ -2907,6 +3027,11 @@ public final class RevisedDualSimplex {
         continue;
       }
       int p = basis[r];
+      if (guard.repeats(p, q)) {
+        // round the same few bases (two columns entering in turn on reduced costs that only
+        // fresh factors show): the dual simplex goes on from this basis
+        return DUAL;
+      }
       rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
       pivotRow();
       double fromRow = alphaRow[q];
