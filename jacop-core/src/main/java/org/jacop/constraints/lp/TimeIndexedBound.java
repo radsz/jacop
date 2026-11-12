@@ -142,7 +142,6 @@ public final class TimeIndexedBound extends Constraint
   private long[] rootLo;
   private long[] rootHi;
   private int rootLevel = -1;
-  private boolean rootChanged;
 
   /** A solve: the objective bound it assumed, the bound it gave, the root bounds it used. */
   private record Solve(long assumed, long bound, long[] lo, long[] hi) {}
@@ -150,8 +149,15 @@ public final class TimeIndexedBound extends Constraint
   // the solves that proved something, the last one current
   private final List<Solve> proved = new ArrayList<>();
   private Solve current;
-  private long lastAssumed = Long.MAX_VALUE;
   private boolean solvedOnce;
+
+  // re-solves back off: an event is a new objective limit or changed root bounds, and after k
+  // solves in a row that proved nothing new the next solve waits for 2^k events (with LCG free
+  // search the root is visited at every restart and the limit drops at every solution: cargo
+  // challenge12 made 379 solves in 240 s, 45 s, for no better bound than the first ones)
+  private long seenLimit = Long.MAX_VALUE;
+  private int events;
+  private int idle;
   private final long created = System.nanoTime();
   private long spent;
 
@@ -283,12 +289,18 @@ public final class TimeIndexedBound extends Constraint
   public void consistency(Store store) {
     if (rootLevel < 0 || store.level <= rootLevel) {
       // the root, or back at it after a restart: the bounds there
-      rootChanged = rootLevel >= 0;
       rootLevel = rootLevel < 0 ? store.level : rootLevel;
-      captureRoot();
+      if (captureRoot()) {
+        events++;
+      }
     }
     long limit = objectiveLimit();
-    if ((limit < lastAssumed || rootChanged) && mayResolve()) {
+    if (limit < seenLimit) {
+      seenLimit = limit;
+      events++;
+    }
+    if (events >= 1 << Math.min(idle, 12) && mayResolve()) {
+      events = 0;
       long t0 = System.nanoTime();
       long b = solve(limit);
       long dt = System.nanoTime() - t0;
@@ -296,11 +308,16 @@ public final class TimeIndexedBound extends Constraint
       seconds += dt / 1e9;
       solves++;
       solvedOnce = true;
-      rootChanged = false;
-      lastAssumed = limit;
+      boolean better = b != Long.MIN_VALUE && (current == null || b > current.bound());
+      idle = better ? 0 : idle + 1;
       if (b != Long.MIN_VALUE) {
-        current = new Solve(limit, b, rootLo, rootHi);
-        proved.add(current);
+        // a weaker solve (cut short by its time limit) leaves the stronger one current: that one
+        // assumed a looser objective limit and looser root bounds, so it still holds
+        Solve solve = new Solve(limit, b, rootLo, rootHi);
+        proved.add(solve);
+        if (current == null || b >= current.bound()) {
+          current = solve;
+        }
         if (b != Long.MAX_VALUE) {
           long v = maximize ? -b : b;
           bestBound = maximize ? Math.min(bestBound, v) : Math.max(bestBound, v);
@@ -330,13 +347,24 @@ public final class TimeIndexedBound extends Constraint
     return spent <= ALLOWANCE + SHARE * (System.nanoTime() - created);
   }
 
-  private void captureRoot() {
+  // captures the root bounds and returns whether they differ from the last capture
+  private boolean captureRoot() {
+    if (rootLo != null) {
+      boolean same = true;
+      for (int j = 0; j < vars.length && same; j++) {
+        same = rootLo[j] == vars[j].min() && rootHi[j] == vars[j].max();
+      }
+      if (same) {
+        return false;
+      }
+    }
     rootLo = new long[vars.length];
     rootHi = new long[vars.length];
     for (int j = 0; j < vars.length; j++) {
       rootLo[j] = vars[j].min();
       rootHi[j] = vars[j].max();
     }
+    return true;
   }
 
   // ---- the program
