@@ -4257,11 +4257,6 @@ Version 5.0 (unreleased)
      -Dorg.jacop.fz.tableReformulation=false turns it off; see
      properties.txt.
 
-248. Bug fix: when the symmetry deadline passed while Schreier-Sims cuts
-     were posted, the FlatZinc front end stopped with an uncaught
-     SymmetryBreaking$OutOfTime (seen on physician-scheduling under load).
-     The cuts posted so far are kept and solving goes on.
-
 Version 4.11
 =============
 

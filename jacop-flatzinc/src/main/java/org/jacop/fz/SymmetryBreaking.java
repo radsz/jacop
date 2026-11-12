@@ -797,10 +797,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
         if (j == b) {
           continue;
         }
-        if (System.nanoTime() > deadline) {
-          // the cuts posted so far break symmetries on their own; the others are left out
-          return new int[] {posted, skipped};
-        }
+        checkTime();
         if (reach.contains(varAt[j])) {
           skipped++;
           continue;
