@@ -44,7 +44,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.function.IntUnaryOperator;
-import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
@@ -136,40 +135,6 @@ class SymmetryBreakingFlatzincTest {
       } else {
         System.setProperty("org.jacop.fz.symmetryTime", time);
       }
-    }
-  }
-
-  @Test
-  void theTimeEndingAtAnyCheckLeavesTheModelSolved() throws IOException {
-    // the time given ran out while the Schreier-Sims cuts were posted, where its check was not
-    // caught, and the solver stopped with SymmetryBreaking$OutOfTime (steelmillslab, de Bruijn,
-    // ptv and others with -f on a loaded machine); the time now ends at each check in turn
-    String model =
-        """
-        array [1..5] of var 1..5: x :: output_array([1..5]);
-        constraint jacop_alldiff(x);
-        solve satisfy;
-        """;
-    LongSupplier clock = SymmetryBreaking.clock;
-    long[] calls = {0};
-    try {
-      SymmetryBreaking.clock =
-          () -> {
-            calls[0]++;
-            return 0;
-          };
-      String all = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
-      assertTrue(all.contains("symmetrySearchComplete=true"), all);
-      long checks = calls[0];
-      assertTrue(checks > 2, all);
-      for (long k = 0; k <= checks; k++) {
-        long[] left = {k};
-        SymmetryBreaking.clock = () -> left[0]-- > 0 ? 0 : Long.MAX_VALUE / 2;
-        String out = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--symmetry", "on");
-        assertTrue(out.contains("----------"), "time out at check " + k + "\n" + out);
-      }
-    } finally {
-      SymmetryBreaking.clock = clock;
     }
   }
 

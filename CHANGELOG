@@ -4234,15 +4234,6 @@ Version 5.0 (unreleased)
      restores the old choice. org.jacop.msc declares --symmetry, so
      minizinc --solver org.jacop --symmetry off model.mzn works.
 
-247. Fix: when the time given to symmetry breaking ran out while the
-     Schreier-Sims cuts were posted (on by default since 241), the check
-     was not caught and the solver stopped with SymmetryBreaking$OutOfTime
-     before search, printing no solution. The cuts posted so far are now
-     kept, as when MAX_CUTS is reached. With -f at 240 s on wide-quick
-     (3 jobs) this happened in 21 of 272 runs on 7 instances
-     (steelmillslab bench_19_6 and skill-allocation 5d_1 every time,
-     cryptanalysis, ptv, word-equations, oocsp_racks sometimes).
-
 Version 4.11
 =============
 
