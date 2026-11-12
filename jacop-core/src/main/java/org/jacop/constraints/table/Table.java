@@ -222,7 +222,7 @@ public class Table extends AbstractTable {
   void filterDomains() {
 
     noNoGround = 0;
-    long[] wrds = rbs.words.value();
+    long[] wrds = rbs.words();
     for (int i = 0; i < x.length; i++) {
       IntVar xi = x[i];
       boolean xiSingleton = xi.singleton();

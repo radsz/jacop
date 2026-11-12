@@ -27,25 +27,24 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses/.
  */
-
 package org.jacop.constraints.table;
 
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
 
 /**
- * ReversibleSparseBitSet implements the main data structure for table constraint.
+ * ReversibleSparseBitSet implements the main data structure for table constraint. The words are
+ * trailed one by one in a {@link TrailedTupleSet}, at most once per search level, instead of
+ * copying the whole word array at each change.
  *
  * @author Krzysztof Kuchcinski
  * @version 5.0
  */
 public class ReversibleSparseBitSet {
 
-  TimeStamp<long[]> words;
-  private int[] index;
-  private TimeStamp<Integer> limit;
-  private long[] mask;
+  private Store store;
+
+  private TrailedTupleSet set;
 
   /** Creates an empty reversible sparse bit set. */
   public ReversibleSparseBitSet() {}
@@ -80,35 +79,21 @@ public class ReversibleSparseBitSet {
    * @param w the long array representing the bit set
    */
   void init(Store store, long[] w) {
-    int n = w.length;
-
+    this.store = store;
+    // the set of w.length * 64 tuples has w.length words, which are then replaced by w
+    set = new TrailedTupleSet(w.length * 64, 0);
+    System.arraycopy(w, 0, set.state, 0, w.length);
     // The non-zero words come first, so that a set without tuples is empty (limit -1).
-    index = new int[n];
-    int front = 0;
-    int back = n - 1;
-    for (int i = 0; i < n; i++) {
-      if (w[i] != 0L) {
-        index[front++] = i;
-      } else {
-        index[back--] = i;
-      }
-    }
-
-    limit = new TimeStamp<>(store, front - 1);
-
-    words = new TimeStamp<>(store, w);
-
-    mask = new long[n];
+    set.rebuildIndex();
+    set.recordOn(store);
   }
 
-  private long[] setBit(int n, long[] a) {
+  private void setBit(int n, long[] a) {
 
     int l = n % 64;
     int m = n / 64;
 
     a[m] |= 1L << l;
-
-    return a;
   }
 
   private boolean validTuple(IntVar[] x, int[] t) {
@@ -124,75 +109,43 @@ public class ReversibleSparseBitSet {
     return true;
   }
 
+  /**
+   * The current words of the bit set; word w is element w. The array is changed in place, so it is
+   * read, not kept, across changes of the set.
+   */
+  long[] words() {
+    return set.state;
+  }
+
   boolean isEmpty() {
-    return limit.value() == -1;
+    return set.isEmpty();
   }
 
   void clearMask() {
-    for (int i = 0; i < limit.value() + 1; i++) {
-      int offset = index[i];
-      mask[offset] = 0;
-    }
+    set.clearMask();
   }
 
   void reverseMask() {
-    for (int i = 0; i < limit.value() + 1; i++) {
-      int offset = index[i];
-      mask[offset] = ~mask[offset];
-    }
+    set.reverseMask();
   }
 
   void addToMask(long[] m) {
-    for (int i = 0; i < limit.value() + 1; i++) {
-      int offset = index[i];
-      mask[offset] = mask[offset] | m[offset];
-    }
+    set.addToMask(m);
   }
 
   void intersectWithMask() {
-
-    int n = limit.value();
-    long[] wrds = words.value();
-    long[] ws = new long[wrds.length];
-    boolean update = false;
-    System.arraycopy(wrds, 0, ws, 0, wrds.length);
-    int l = n;
-
-    for (int i = n; i >= 0; i--) {
-      int offset = index[i];
-      long wOriginal = ws[offset];
-      long w = wOriginal;
-
-      w &= mask[offset];
-
-      if (w != wOriginal) {
-        ws[offset] = w;
-        update = true;
-        if (w == 0) {
-          index[i] = index[l];
-          index[l] = offset;
-          l--;
-        }
-      }
-    }
-
-    if (update) {
-      words.update(ws);
-      if (l < n) {
-        limit.update(l);
-      }
-    }
+    set.newEpochIfNeeded(store.level);
+    set.intersectWithMask();
   }
 
   int intersectIndex(long[] m) {
 
-    long[] wrds = words.value();
-    for (int i = 0; i < limit.value() + 1; i++) {
+    long[] wrds = set.state;
+    int[] index = set.index;
+    int limit = set.limit();
+    for (int i = 0; i <= limit; i++) {
       int offset = index[i];
-      long w = wrds[offset];
-
-      w &= m[offset];
-      if (w != 0) {
+      if ((wrds[offset] & m[offset]) != 0) {
         return offset;
       }
     }
@@ -208,8 +161,10 @@ public class ReversibleSparseBitSet {
   public String toString() {
     StringBuilder s = new StringBuilder("words: ");
 
-    long[] wrds = words.value();
-    int n = limit.value() + 1;
+    long[] wrds = set.state;
+    int[] index = set.index;
+    long[] mask = set.mask;
+    int n = set.limit() + 1;
     s.append("limit = ").append(n - 1).append("\n");
     for (int i = 0; i < n; i++) {
       int offset = index[i];
