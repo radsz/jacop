@@ -47,6 +47,9 @@ COPY --from=build /dist/mzn-lib/ /entry_data/mzn-lib/
 # is often a full second. The cache is made with the runtime JVM of this image and the classpath of
 # fzn-exec, or the JVM rejects it. JVM warnings (such as a rejected cache) go to stderr, never into
 # the FlatZinc output on stdout.
+# -XX:+UseTransparentHugePages backs the heap with 2 MB pages where the host kernel allows it
+# (madvise or always), about 5 % less solving time on the same search (osolpro
+# benchmarks/narrow-types); on a host without them the JVM runs as before.
 # The training models are mounted from the build stage, so they never become part of the image.
 RUN --mount=type=bind,from=build,source=/dist/aot-training,target=/aot-training \
     java -Xmx2G -Xss100M -XX:AOTCacheOutput=/jacop/jacop.aot -cp "/jacop/jacop.jar:/jacop/lib/*" \
@@ -55,7 +58,7 @@ RUN --mount=type=bind,from=build,source=/dist/aot-training,target=/aot-training 
   && chmod a+r /jacop/jacop.aot \
   && printf '%s\n' \
     '#!/bin/bash' \
-    'exec java -server -Xmx10G -Xss100M -XX:AOTCache=/jacop/jacop.aot \' \
+    'exec java -server -Xmx10G -Xss100M -XX:+UseTransparentHugePages -XX:AOTCache=/jacop/jacop.aot \' \
     '  -Xlog:disable -Xlog:all=warning:stderr \' \
     '  -cp "/jacop/jacop.jar:/jacop/lib/*" org.jacop.fz.Fz2jacop -cs "$@"' \
     > /entry_data/fzn-exec \

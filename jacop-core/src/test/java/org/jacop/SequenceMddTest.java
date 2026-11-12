@@ -60,7 +60,64 @@ public class SequenceMddTest {
   private static final int OFFSET = 3;
 
   private record Instance(
-      int n, int[][] travel, int[] delta, int[][] inWin, int[][] outWin, int[][] costs) {}
+      int n,
+      int[][] travel,
+      int[] delta,
+      int[][] inWin,
+      int[][] outWin,
+      int[][] costs,
+      int[][][] steps) {
+
+    Instance(int n, int[][] travel, int[] delta, int[][] inWin, int[][] outWin, int[][] costs) {
+      this(n, travel, delta, inWin, outWin, costs, null);
+    }
+
+    // the travel time from i to j when i is left at t
+    long at(int i, int j, long t) {
+      if (steps == null) {
+        return travel[i][j];
+      }
+      int[] row = steps[i][j];
+      long s = t / STEP;
+      return s < row.length ? row[(int) s] : travel[i][j];
+    }
+
+    // the earliest arrival at j over the departures from i in [t, latest]
+    long arrive(int i, int j, long t, long latest) {
+      long a = t + at(i, j, t);
+      if (steps != null) {
+        for (long u = t + 1; u <= latest; u++) {
+          a = Math.min(a, u + at(i, j, u));
+        }
+      }
+      return a;
+    }
+  }
+
+  private static final int STEP = 5;
+
+  // time-dependent travel: 4 steps of 5, a NONE arc now and then; travel = the least step
+  private static Instance timeDependent(Random r) {
+    Instance p = random(r);
+    int n = p.n;
+    int[][][] steps = new int[n][n][];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (p.travel[i][j] == SequenceMdd.NONE) {
+          continue;
+        }
+        int[] row = new int[4];
+        int m = Integer.MAX_VALUE;
+        for (int k = 0; k < row.length; k++) {
+          row[k] = r.nextInt(12);
+          m = Math.min(m, row[k]);
+        }
+        steps[i][j] = row;
+        p.travel[i][j] = m;
+      }
+    }
+    return new Instance(n, p.travel, p.delta, p.inWin, p.outWin, p.costs, steps);
+  }
 
   private static Instance random(Random r) {
     int n = 3 + r.nextInt(4);
@@ -112,7 +169,7 @@ public class SequenceMddTest {
         c += p.costs[last][j];
         long a = p.inWin[j][0];
         if (p.travel[last][j] != SequenceMdd.NONE) {
-          a = Math.max(a, t + p.travel[last][j]);
+          a = Math.max(a, p.arrive(last, j, t, p.outWin[last][1]));
         }
         if (a > p.inWin[j][1]) {
           ok = false;
@@ -194,7 +251,9 @@ public class SequenceMddTest {
       out[i] = new IntVar(store, "out" + i, p.outWin[i][0], p.outWin[i][1]);
     }
     IntVar cost = null;
-    if (costMode < 0) {
+    if (p.steps != null) {
+      store.impose(new SequenceMdd(arcs, pred, 1, in, out, p.steps, STEP, p.delta, 0, width));
+    } else if (costMode < 0) {
       store.impose(new SequenceMdd(arcs, pred, 1, in, out, p.travel, p.delta, 0, width));
     } else {
       long hi = costMode == 1 && least != Long.MAX_VALUE ? least + OFFSET : 10_000;
@@ -274,6 +333,22 @@ public class SequenceMddTest {
   }
 
   @Test
+  public void exactDiagramWithTimeDependentTravel() {
+    Random r = new Random(41);
+    for (int t = 0; t < TRIALS; t++) {
+      check(timeDependent(r), t % 2 == 0, 1000, true, -1);
+    }
+  }
+
+  @Test
+  public void narrowDiagramWithTimeDependentTravelIsARelaxation() {
+    Random r = new Random(43);
+    for (int t = 0; t < TRIALS; t++) {
+      check(timeDependent(r), t % 2 == 1, 1 + r.nextInt(3), false, -1);
+    }
+  }
+
+  @Test
   public void narrowDiagramWithCostsIsARelaxation() {
     Random r = new Random(31);
     for (int t = 0; t < TRIALS; t++) {
@@ -305,7 +380,7 @@ public class SequenceMddTest {
       }
       seen[i] = true;
       int j = succ[i];
-      if (p.travel[i][j] != SequenceMdd.NONE && in[j] < out[i] + p.travel[i][j]) {
+      if (p.travel[i][j] != SequenceMdd.NONE && in[j] < out[i] + p.at(i, j, out[i])) {
         return false;
       }
       i = j;
@@ -360,7 +435,19 @@ public class SequenceMddTest {
         outWin[i][1] = outWin[i][0] + r.nextInt(2);
       }
       delta[0] = SequenceMdd.NONE;
-      Instance p = new Instance(n, travel, delta, inWin, outWin, new int[n][n]);
+      int[][][] steps = null;
+      if (t % 3 == 0) {
+        steps = new int[n][n][];
+        for (int i = 0; i < n; i++) {
+          for (int j = 0; j < n; j++) {
+            if (travel[i][j] != SequenceMdd.NONE) {
+              steps[i][j] = new int[] {r.nextInt(5), r.nextInt(5)};
+              travel[i][j] = Math.min(steps[i][j][0], steps[i][j][1]);
+            }
+          }
+        }
+      }
+      Instance p = new Instance(n, travel, delta, inWin, outWin, new int[n][n], steps);
       boolean pred = t % 2 == 0;
       int expected = bruteCount(p, pred, new int[n], new int[n], new int[n], 0);
       Store store = new Store();
@@ -376,7 +463,11 @@ public class SequenceMddTest {
         vars[n + i] = in[i];
         vars[2 * n + i] = out[i];
       }
-      SequenceMdd c = new SequenceMdd(arcs, pred, 1, in, out, travel, delta, 0, 1 + r.nextInt(2));
+      int w = 1 + r.nextInt(2);
+      SequenceMdd c =
+          steps == null
+              ? new SequenceMdd(arcs, pred, 1, in, out, travel, delta, 0, w)
+              : new SequenceMdd(arcs, pred, 1, in, out, steps, STEP, delta, 0, w);
       store.impose(c);
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
@@ -404,7 +495,10 @@ public class SequenceMddTest {
           gin[i] = new IntVar(ground, ins[i], ins[i]);
           gout[i] = new IntVar(ground, outs[i], outs[i]);
         }
-        SequenceMdd g = new SequenceMdd(gx, pred, 1, gin, gout, travel, delta, 0, 2);
+        SequenceMdd g =
+            steps == null
+                ? new SequenceMdd(gx, pred, 1, gin, gout, travel, delta, 0, 2)
+                : new SequenceMdd(gx, pred, 1, gin, gout, steps, STEP, delta, 0, 2);
         assertEquals(holds(p, pred, xs, ins, outs), g.satisfied(), "satisfied() of instance " + t);
       }
     }
