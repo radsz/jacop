@@ -40,7 +40,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -77,7 +77,7 @@ public class MinOfSums extends Constraint
   final IntVar m;
 
   // the terms from position on can reach m's high; the terms before it are above it
-  private TimeStamp<Integer> position;
+  private TimeStampInt position;
 
   /**
    * It constructs the minimum of sums.
@@ -119,7 +119,7 @@ public class MinOfSums extends Constraint
   @Override
   public void impose(Store store) {
     super.impose(store);
-    position = new TimeStamp<>(store, 0);
+    position = new TimeStampInt(store, 0);
   }
 
   private void swap(int i, int j) {

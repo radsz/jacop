@@ -52,7 +52,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
@@ -88,7 +88,7 @@ public class Alldifferent extends Constraint
   protected IntVar[] list;
 
   protected Map<IntVar, Integer> positionMapping;
-  protected TimeStamp<Integer> grounded;
+  protected TimeStampInt grounded;
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
   // Empty set swapped with variableQueue while grounded variables are processed, so no set is
@@ -411,7 +411,7 @@ public class Alldifferent extends Constraint
       initMatching();
     }
     super.impose(store);
-    grounded = new TimeStamp<>(store, 0);
+    grounded = new TimeStampInt(store, 0);
   }
 
   /** Allocates the matching when the values span a range small enough for arrays. */

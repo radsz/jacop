@@ -52,7 +52,7 @@ import org.jacop.constraints.Linearizations;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -122,7 +122,7 @@ public class Knapsack extends Constraint
   private Map<IntVar, TreeLeaf> variableLeafMapping;
 
   /** The current position of the critical item in the tree. */
-  private TimeStamp<Integer> positionOfCriticalItem;
+  private TimeStampInt positionOfCriticalItem;
 
   /**
    * It stores all the leaves of the knapsack tree in one array. The leaves are sorted from the most
@@ -891,7 +891,7 @@ public class Knapsack extends Constraint
 
     if (knapsackCapacity.max() >= tree.alreadyUsedCapacity) {
       tree.updateCritical(knapsackCapacity.max() - tree.alreadyUsedCapacity);
-      positionOfCriticalItem = new TimeStamp<>(store, tree.criticalLeaf.positionInTheTree);
+      positionOfCriticalItem = new TimeStampInt(store, tree.criticalLeaf.positionInTheTree);
     } else {
       impositionFailure = true;
     }
