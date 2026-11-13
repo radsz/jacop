@@ -2787,6 +2787,12 @@ public final class CdclSolver {
    * @return a conflict (as {@link #propagate}), or NO_CONFLICT; ok is false when the formula is
    *     found unsatisfiable
    */
+  private static final int ROUND_CLOCK_MASK =
+      Integer.getInteger("jacop.jasat.roundClockMask", 1023);
+
+  // propagateAll reads the clock every CLOCK_ROUNDS + 1 rounds of the external propagator
+  private static final int CLOCK_ROUNDS = 63;
+
   private int propagateAll() {
     for (int rounds = 1; ; rounds++) {
       int confl = propagate();
@@ -2794,8 +2800,11 @@ public final class CdclSolver {
         return confl;
       }
       // an external propagator can take many rounds to reach a fixpoint (bounds that creep by one
-      // value at a time between constraints), so the clock is read here too, not only per decision
-      if ((rounds & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+      // value at a time between constraints), so the clock is read here too, not only per decision.
+      // A round can be slow: on vrp-submission toy_D (arrival times up to 460,588) under the
+      // core-guided probe 1,024 rounds took minutes, the probe kept the whole -t 600 s run and
+      // found no solution, which branch and bound finds in 0.2 s
+      if ((rounds & CLOCK_ROUNDS) == 0 && (interrupted || System.nanoTime() > deadline)) {
         outOfTime = true;
         return NO_CONFLICT;
       }
