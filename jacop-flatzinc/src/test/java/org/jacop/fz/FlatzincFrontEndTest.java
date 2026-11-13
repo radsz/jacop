@@ -1210,8 +1210,11 @@ class FlatzincFrontEndTest {
     Parser parser =
         new Parser(
             new java.io.StringReader(
-                "var 0..9: x :: output_var;\nvar 0..9: y = x;\n"
-                    + "array [1..2] of var int: a :: output_array([1..2]) = [x, y];\n"));
+                """
+                var 0..9: x :: output_var;
+                var 0..9: y = x;
+                array [1..2] of var int: a :: output_array([1..2]) = [x, y];
+                """));
     Options opt = new Options(new String[] {"model.fzn"});
     parser.setOptions(opt);
     parser.cc.setOptions(opt);

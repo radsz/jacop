@@ -247,11 +247,10 @@ class SingleConstraintTest extends TestHelper {
     Constraint small = new XplusYeqZ(x, x, z);
     assertThat(small.arguments()).containsExactly(x, z);
     assertThat(small.arguments()).isEqualTo(new LinkedHashSet<>(List.of(x, z)));
-    assertThat(small.arguments().hashCode())
-        .isEqualTo(new LinkedHashSet<>(List.of(x, z)).hashCode());
-    assertThat(small.arguments().contains(y)).isFalse();
-    assertThatThrownBy(() -> small.arguments().add(y))
-        .isInstanceOf(UnsupportedOperationException.class);
+    Set<Var> smallScope = small.arguments();
+    assertThat(smallScope).hasSameHashCodeAs(new LinkedHashSet<>(List.of(x, z)));
+    assertThat(smallScope).doesNotContain(y);
+    assertThatThrownBy(() -> smallScope.add(y)).isInstanceOf(UnsupportedOperationException.class);
     IntVar[] many = new IntVar[12];
     for (int i = 0; i < many.length; i++) {
       many[i] = i % 3 == 0 ? w : new IntVar(store, "m" + i, 0, 1);
@@ -260,7 +259,8 @@ class SingleConstraintTest extends TestHelper {
     LinkedHashSet<Var> expected = new LinkedHashSet<>(Arrays.asList(many));
     expected.add(y);
     assertThat(large.arguments()).containsExactlyInAnyOrderElementsOf(expected);
-    assertThatThrownBy(() -> large.arguments().remove(w))
+    Set<Var> largeScope = large.arguments();
+    assertThatThrownBy(() -> largeScope.remove(w))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
