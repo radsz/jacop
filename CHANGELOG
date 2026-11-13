@@ -4605,6 +4605,15 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
+269. The CDCL solver reads the clock every 64 rounds of the LCG
+   propagator's fixpoint instead of every 1,024. Rounds of a fixpoint
+   with creeping bounds can be slow: on vrp-submission toy_D and
+   D_3v_25l_w_reload (2021, arrival times up to 460,588) the core-guided
+   probe ran minutes past its share and kept the whole -f run at 600 s
+   without a solution, ending past -t. Now toy_D proves its optimum 107
+   in 38 s and D_3v_25l_w_reload proves 146 (best known 207) under -f
+   at 600 s; wide-quick at 240 s is unchanged in both modes.
+
 Version 4.11
 =============
 
