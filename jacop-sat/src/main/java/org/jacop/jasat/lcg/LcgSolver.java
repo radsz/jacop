@@ -3128,6 +3128,10 @@ public final class LcgSolver implements ExternalPropagator {
   private static final double BOUND_DIVE_SHARE =
       Double.parseDouble(System.getProperty("jacop.lcg.boundDive", "0.002"));
 
+  // -Djacop.lcg.boundDiveConflicts=<n>: the most conflicts of that search
+  private static final long BOUND_DIVE_CONFLICTS =
+      Long.getLong("jacop.lcg.boundDiveConflicts", 1000);
+
   /** Statistics: searches for a solution at the objective's root bound before the cores. */
   public long boundDives;
 
@@ -3144,7 +3148,13 @@ public final class LcgSolver implements ExternalPropagator {
   private int diveAtRootBound() {
     long deadline = sat.deadline();
     boundDives++;
+    double[] saved = activity.clone();
+    double savedInc = activityInc;
+    int[] savedTarget = targetValue == null ? null : targetValue.clone();
+    boolean[] savedTargetSet = targetSet == null ? null : targetSet.clone();
+    int savedTargetTrail = targetTrail;
     setPhaseLimits(BOUND_DIVE_SHARE, deadline);
+    sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + BOUND_DIVE_CONFLICTS));
     coreMode = true; // a solution ends the call of the solver without a clause
     try {
       solve(-geLit(objective, root[objective].min() + 1));
@@ -3156,6 +3166,19 @@ public final class LcgSolver implements ExternalPropagator {
       boundDiveSolutions++;
       return CdclSolver.SAT;
     }
+    // without a solution the schedule goes on from the activity and target phases before the
+    // search, which bumped the variables of conflicts under its assumption: vrplc9_5_10_s2 (2023)
+    // took 85 s instead of 28 s with them, work-task-variation seed-8 lost its proof in 240 s
+    System.arraycopy(saved, 0, activity, 0, Math.min(saved.length, activity.length));
+    activityInc = savedInc;
+    if (savedTarget != null && targetValue != null && savedTarget.length == targetValue.length) {
+      System.arraycopy(savedTarget, 0, targetValue, 0, savedTarget.length);
+      System.arraycopy(savedTargetSet, 0, targetSet, 0, savedTargetSet.length);
+      targetTrail = savedTargetTrail;
+    }
+    rebuildHeap(heap);
+    rebuildHeap(wide);
+    rebuildHeap(lateHeap);
     return CdclSolver.UNKNOWN;
   }
 
