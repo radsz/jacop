@@ -4766,6 +4766,13 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
+278. JaSAT (CdclSolver) clause headers take three ints instead of four: the
+   saved position of the search for a new watch moves into the free high
+   16 bits of the flags word, so a clause of three literals takes 6 ints
+   instead of 7. Same search (the simplification schedule still
+   counts the old header size); pure SAT runs (CdclMain) are about 2 %
+   faster.
+
 Version 4.11
 =============
 
