@@ -1305,6 +1305,40 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void aReleasedItemKeptElsewhereDoesNotReachTheOtherItems() {
+    // the linear overlap rewrites kept constraint nodes by identity during the search; through
+    // their parent they reached every constraint item: 21 % of the heap of ma-path-finding
+    // ins_g24_p20_a10 and nside HARD_2000_500
+    SimpleNode root = new SimpleNode(ParserTreeConstants.JJTMODEL);
+    SimpleNode items = new SimpleNode(ParserTreeConstants.JJTCONSTRAINTITEMS);
+    SimpleNode end = new SimpleNode(ParserTreeConstants.JJTMODELEND);
+    SimpleNode solve = new SimpleNode(ParserTreeConstants.JJTSOLVEITEM);
+    SimpleNode kept = new SimpleNode(ParserTreeConstants.JJTCONSTRAINT);
+    SimpleNode other = new SimpleNode(ParserTreeConstants.JJTCONSTRAINT);
+    link(root, items, 0);
+    link(root, end, 1);
+    link(end, solve, 0);
+    link(items, kept, 0);
+    link(items, other, 1);
+
+    Solve.releaseAllBut(solve);
+
+    assertNull(root.jjtGetChild(0));
+    assertSame(end, root.jjtGetChild(1));
+    assertSame(solve, end.jjtGetChild(0));
+    // kept still reaches its item list, but the list no longer holds the other items
+    assertSame(items, kept.jjtGetParent());
+    for (int i = 0; i < items.jjtGetNumChildren(); i++) {
+      assertNull(items.jjtGetChild(i));
+    }
+  }
+
+  private static void link(SimpleNode parent, SimpleNode child, int i) {
+    parent.jjtAddChild(child, i);
+    child.jjtSetParent(parent);
+  }
+
+  @Test
   void aNameReadTwiceIsOneString() {
     // one String per occurrence of a name made a third of the parse tree of ma-path-finding
     // ins_g32_p20_a10 (950 MB of strings for 12 million name uses), which died at 4 GB while

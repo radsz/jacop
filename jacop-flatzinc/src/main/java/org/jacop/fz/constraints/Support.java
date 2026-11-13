@@ -151,6 +151,14 @@ public class Support implements ParserTreeConstants {
    */
   final Map<SimpleNode, LinearOverlapDetector.Rewrite> linearRewrites = new IdentityHashMap<>();
 
+  /**
+   * Drops the rewrites of the linear constraints once the constraints are generated. Their keys are
+   * nodes of the parse tree, which reach the whole tree through their parents.
+   */
+  public void releaseLinearRewrites() {
+    linearRewrites.clear();
+  }
+
   final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   final BinPackingCliqueDetector binPackingCliques = new BinPackingCliqueDetector(this);
