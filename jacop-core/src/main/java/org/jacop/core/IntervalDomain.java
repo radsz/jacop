@@ -287,6 +287,167 @@ public class IntervalDomain extends IntDomain {
     v.domainHasChanged(effective.singleton() ? GROUND : boundEvent);
   }
 
+  /**
+   * Returns the intervals of a domain as {min0, max0, min1, max1, ...}: the array of an
+   * IntervalDomain itself, or a new array for any other representation.
+   */
+  private static int[] boundsOf(IntDomain domain) {
+    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
+      return ((IntervalDomain) domain).bounds;
+    }
+    int n = domain.noIntervals();
+    int[] result = new int[2 * n];
+    for (int i = 0; i < n; i++) {
+      result[2 * i] = domain.leftElement(i);
+      result[2 * i + 1] = domain.rightElement(i);
+    }
+    return result;
+  }
+
+  /**
+   * Finds the first interval of a that no interval of b shifted by shift contains whole.
+   *
+   * @return its position, or aSize if each interval of a is inside an interval of b + shift
+   */
+  private static int firstNotCovered(int[] a, int aSize, int[] b, int bSize, int shift) {
+    int j = 0;
+    for (int i = 0; i < aSize; i++) {
+      // the only interval of b that can contain interval i is the first one ending at or after it
+      while (j < bSize && b[2 * j + 1] + shift < a[2 * i + 1]) {
+        j++;
+      }
+      if (j == bSize || b[2 * j] + shift > a[2 * i]) {
+        return i;
+      }
+    }
+    return aSize;
+  }
+
+  /**
+   * Writes the intersection of the intervals i..aSize-1 of a with the intervals of b shifted by
+   * shift to out after its first i intervals (out already holds the intervals 0..i-1 of a).
+   *
+   * @return the number of intervals in out
+   */
+  private static int intersectInto(
+      int[] a, int i, int aSize, int[] b, int bSize, int shift, int[] out) {
+    int k = i;
+    int j = 0;
+    while (i < aSize && j < bSize) {
+      int aMax = a[2 * i + 1];
+      int bMax = b[2 * j + 1] + shift;
+      int lo = Math.max(a[2 * i], b[2 * j] + shift);
+      int hi = Math.min(aMax, bMax);
+      if (lo <= hi) {
+        out[2 * k] = lo;
+        out[2 * k + 1] = hi;
+        k++;
+      }
+      if (aMax <= bMax) {
+        i++;
+      }
+      if (bMax <= aMax) {
+        j++;
+      }
+    }
+    return k;
+  }
+
+  /**
+   * Appends to result the values of lo..hi that are in no interval of b, looking at the intervals
+   * of b from position j on.
+   *
+   * @return the position of the first interval of b that may still meet values above hi
+   */
+  private static int subtractFrom(
+      IntervalDomain result, int lo, int hi, int[] b, int bSize, int j) {
+    while (j < bSize && b[2 * j + 1] < lo) {
+      j++;
+    }
+    int from = lo;
+    for (; j < bSize && b[2 * j] <= hi; j++) {
+      if (b[2 * j] > from) {
+        result.appendInterval(from, b[2 * j] - 1);
+      }
+      if (b[2 * j + 1] >= hi) {
+        return j;
+      }
+      from = b[2 * j + 1] + 1;
+    }
+    result.appendInterval(from, hi);
+    return j;
+  }
+
+  /**
+   * Intersects this domain with domain shifted by shift.
+   *
+   * @return the intersection, possibly empty, or null if it removes nothing from this domain
+   */
+  private IntervalDomain narrowedBy(IntDomain domain, int shift) {
+    int inputSize = domain.noIntervals();
+    int[] input = boundsOf(domain);
+    int first = firstNotCovered(bounds, size, input, inputSize, shift);
+    if (first == size) {
+      return null;
+    }
+    int[] copy = new int[2 * (size + inputSize + ALLOCATION_MARGIN)];
+    System.arraycopy(bounds, 0, copy, 0, 2 * first);
+    return new IntervalDomain(
+        copy, intersectInto(bounds, first, size, input, inputSize, shift, copy));
+  }
+
+  /**
+   * Computes the event of narrowing this domain to the given intervals.
+   *
+   * @param narrowed the new intervals, at least one
+   * @param boundEvents true for MIN_EVENT and MAX_EVENT, false for BOUND
+   * @return GROUND, a bound event or ANY
+   */
+  private int narrowingEvent(IntervalDomain narrowed, boolean boundEvents) {
+    int newMin = narrowed.bounds[0];
+    int newMax = narrowed.bounds[2 * narrowed.size - 1];
+    if (newMin == newMax) {
+      return GROUND;
+    }
+    boolean minChanged = newMin > bounds[0];
+    boolean maxChanged = newMax < bounds[2 * size - 1];
+    if (!minChanged && !maxChanged) {
+      return ANY;
+    }
+    return boundEvents ? boundEvent(minChanged, maxChanged) : BOUND;
+  }
+
+  /**
+   * Installs a small dense intersection of this domain on the variable, unless it removes nothing.
+   */
+  private void inSmallDense(int storeLevel, Var v, SmallDenseDomain result) {
+
+    if (result.isEmpty()) {
+      throw Store.failException;
+    }
+
+    // the result is a subset of this domain, nothing is removed if it has as many values
+    if (result.getSize() == getSize()) {
+      return;
+    }
+
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(result.checkInvariants()));
+    }
+
+    final int returnedEvent = computeChangeEvent(result);
+
+    result.modelConstraints = modelConstraints;
+    result.searchConstraints = searchConstraints;
+    result.stamp = storeLevel;
+    result.previousDomain = stamp == storeLevel ? previousDomain : this;
+    result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
+    result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
+    ((IntVar) v).domain = result;
+
+    v.domainHasChanged(returnedEvent);
+  }
+
   /** Empty constructor, does not initialize anything. */
   public IntervalDomain() {
     this(0);
@@ -1090,95 +1251,15 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.isSparseRepresentation()) {
       return intersectFromSparse(domain);
-    } else {
-
-      IntervalDomain temp = new IntervalDomain(size);
-
-      int pointer1 = 0;
-      int pointer2 = 0;
-
-      int size1 = size;
-
-      if (size1 == 0 || domain.noIntervals() == 0) {
-        return temp;
-      }
-
-      int interval1Min = bounds[2 * pointer1];
-      int interval1Max = bounds[2 * pointer1 + 1];
-      int interval2Min = domain.leftElement(pointer2);
-      int interval2Max = domain.rightElement(pointer2);
-
-      while (true) {
-        if (interval1Max < interval2Min) {
-          pointer1++;
-          if (pointer1 < size1) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        } else if (interval2Max < interval1Min) {
-          pointer2++;
-          if (pointer2 < domain.noIntervals()) {
-            interval2Min = domain.leftElement(pointer2);
-            interval2Max = domain.rightElement(pointer2);
-          } else {
-            break;
-          }
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        if (interval1Min <= interval2Min) {
-
-          if (interval1Max <= interval2Max) {
-
-            temp.unionAdapt(interval2Min, interval1Max);
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          } else {
-            temp.unionAdapt(interval2Min, interval2Max);
-            pointer2++;
-            if (pointer2 < domain.noIntervals()) {
-              interval2Min = domain.leftElement(pointer2);
-              interval2Max = domain.rightElement(pointer2);
-            } else {
-              break;
-            }
-          }
-
-        } else {
-          // interval1.max >= interval2.min
-          // interval2.max >= interval1.min
-          // interval1.min > interval2.min
-          if (interval2Max <= interval1Max) {
-            temp.unionAdapt(interval1Min, interval2Max);
-            pointer2++;
-            if (pointer2 < domain.noIntervals()) {
-              interval2Min = domain.leftElement(pointer2);
-              interval2Max = domain.rightElement(pointer2);
-            } else {
-              break;
-            }
-          } else {
-            temp.unionAdapt(interval1Min, interval1Max);
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      return temp;
     }
+
+    int inputSize = domain.noIntervals();
+    if (size == 0 || inputSize == 0) {
+      return new IntervalDomain(size);
+    }
+    int[] result = new int[2 * (size + inputSize)];
+    int out = intersectInto(bounds, 0, size, boundsOf(domain), inputSize, 0, result);
+    return new IntervalDomain(result, out);
   }
 
   @Override
@@ -1533,170 +1614,25 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.isSparseRepresentation()) {
       return subtractFromSparse(domain);
-    } else {
-
-      if (domain.noIntervals() == 0) {
-        return cloneLight();
-      }
-
-      IntervalDomain result = new IntervalDomain();
-
-      result.bounds = new int[2 * (size + 1 + ALLOCATION_MARGIN)];
-
-      int i1 = 0;
-      int i2 = 0;
-
-      int currentDomain1Min = bounds[2 * i1];
-      int currentDomain1Max = bounds[2 * i1 + 1];
-      int currentDomain2Min = domain.leftElement(i2);
-      int currentDomain2Max = domain.rightElement(i2);
-
-      boolean minIncluded = false;
-
-      int max2 = domain.noIntervals();
-
-      while (true) {
-
-        if (currentDomain1Max < currentDomain2Min) {
-          result.appendInterval(currentDomain1Min, currentDomain1Max);
-          i1++;
-          if (i1 == size) {
-            break;
-          }
-          currentDomain1Min = bounds[2 * i1];
-          currentDomain1Max = bounds[2 * i1 + 1];
-          minIncluded = false;
-          continue;
-        }
-
-        if (currentDomain2Max < currentDomain1Min) {
-          i2++;
-          if (i2 == max2) {
-            break;
-          }
-          currentDomain2Min = domain.leftElement(i2);
-          currentDomain2Max = domain.rightElement(i2);
-          continue;
-        }
-
-        if (currentDomain1Min >= currentDomain2Min) {
-
-          if (currentDomain1Max <= currentDomain2Max) {
-            // Skip current interval of i1 completely
-            i1++;
-            if (i1 == size) {
-              break;
-            }
-            currentDomain1Min = bounds[2 * i1];
-            currentDomain1Max = bounds[2 * i1 + 1];
-            minIncluded = false;
-          } else {
-
-            // interval of dom2 ends before interval of dom1 ends
-            // currentDomain2.max+1 .. currentDomain1.max
-            // BUT next currentdomain2.min needs to be larger than
-            // currentDomain1.max
-
-            int oldMax = currentDomain2Max;
-            i2++;
-            if (i2 != max2) {
-              currentDomain2Min = domain.leftElement(i2);
-              currentDomain2Max = domain.rightElement(i2);
-            }
-
-            if (i2 == max2 || currentDomain2Min > currentDomain1Max) {
-              result.appendInterval(oldMax + 1, currentDomain1Max);
-              i1++;
-              if (i1 == size) {
-                break;
-              }
-              currentDomain1Min = bounds[2 * i1];
-              currentDomain1Max = bounds[2 * i1 + 1];
-              minIncluded = false;
-
-              if (i2 == max2) {
-                break;
-              }
-            } else {
-
-              result.appendInterval(oldMax + 1, currentDomain2Min - 1);
-              minIncluded = true;
-            }
-          }
-
-        } else { // currentDomain1.min < currentDomain2.min)
-
-          if (currentDomain1Max <= currentDomain2Max) {
-
-            if (!minIncluded) {
-              if (currentDomain1Max >= currentDomain2Min) {
-                result.appendInterval(currentDomain1Min, currentDomain2Min - 1);
-              } else {
-                result.appendInterval(currentDomain1Min, currentDomain1Max);
-              }
-            }
-
-            i1++;
-            if (i1 == size) {
-              break;
-            }
-            currentDomain1Min = bounds[2 * i1];
-            currentDomain1Max = bounds[2 * i1 + 1];
-            minIncluded = false;
-          } else {
-
-            // interval of dom2 ends before interval of dom1 ends
-            // currentDomain2.max+1 .. currentDomain1.max
-            // BUT next currentdomain2.min needs to be larger than
-            // currentDomain1.max
-
-            if (!minIncluded) {
-              result.appendInterval(currentDomain1Min, currentDomain2Min - 1);
-              minIncluded = true;
-            }
-
-            int oldMax = currentDomain2Max;
-            i2++;
-            if (i2 != max2) {
-              currentDomain2Min = domain.leftElement(i2);
-              currentDomain2Max = domain.rightElement(i2);
-            }
-
-            if (i2 == max2 || currentDomain2Min > currentDomain1Max) {
-              result.appendInterval(oldMax + 1, currentDomain1Max);
-              i1++;
-              if (i1 == size) {
-                break;
-              }
-              currentDomain1Min = bounds[2 * i1];
-              currentDomain1Max = bounds[2 * i1 + 1];
-              minIncluded = false;
-
-              if (i2 == max2) {
-                break;
-              }
-            } else {
-
-              result.appendInterval(oldMax + 1, currentDomain2Min - 1);
-            }
-          }
-        }
-      }
-
-      while (i1 < size) {
-        result.appendInterval(bounds[2 * i1], bounds[2 * i1 + 1]);
-        i1++;
-      }
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-      }
-
-      return result;
     }
+
+    int inputSize = domain.noIntervals();
+    if (inputSize == 0) {
+      return cloneLight();
+    }
+
+    int[] input = boundsOf(domain);
+    IntervalDomain result = new IntervalDomain(size + inputSize + ALLOCATION_MARGIN);
+    int j = 0;
+    for (int i = 0; i < size; i++) {
+      j = subtractFrom(result, bounds[2 * i], bounds[2 * i + 1], input, inputSize, j);
+    }
+
+    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(result.checkInvariants()));
+    }
+
+    return result;
   }
 
   @Override
@@ -2466,424 +2402,7 @@ public class IntervalDomain extends IntDomain {
 
   @Override
   public void in(int storeLevel, Var v, IntDomain domain) {
-
-    if (domain.domainId() == LAZY_BIT_SET_DOMAIN_ID) {
-      inRuns(storeLevel, v, domain, 0);
-      return;
-    }
-
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
-    }
-
-    if (ASSERTS_ENABLED && this.stamp > storeLevel) {
-      throw new IllegalStateException("Assertion failed");
-    }
-
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain input = (IntervalDomain) domain;
-
-      if (ASSERTS_ENABLED && input.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(input.checkInvariants()));
-      }
-
-      if (input.size == 0) {
-        throw failException;
-      }
-
-      if (ASSERTS_ENABLED && size == 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-
-      int pointer1 = 0;
-      int pointer2 = 0;
-
-      int[] inputIntervals = input.bounds;
-      int inputSize = input.size;
-      // Chance for no event
-      while (pointer2 < inputSize && inputIntervals[2 * pointer2 + 1] < bounds[2 * pointer1]) {
-        pointer2++;
-      }
-
-      if (pointer2 == inputSize) {
-        throw failException;
-      }
-
-      // traverse within while loop until certain that change will occur
-      while (bounds[2 * pointer1] >= inputIntervals[2 * pointer2]
-          && bounds[2 * pointer1 + 1] <= inputIntervals[2 * pointer2 + 1]
-          && ++pointer1 < size) {
-
-        while (bounds[2 * pointer1 + 1] > inputIntervals[2 * pointer2 + 1]) {
-          pointer2++;
-          if (pointer2 >= inputSize) {
-            break;
-          }
-        }
-
-        if (pointer2 == inputSize) {
-          break;
-        }
-      }
-
-      // no change
-      if (pointer1 == size) {
-        return;
-      }
-
-      int[] copy = new int[2 * (size + inputSize + ALLOCATION_MARGIN)];
-      int out = 0;
-
-      for (int t = 0; t < pointer1; t++) {
-        move(copy, out++, bounds, t);
-      }
-
-      pointer2 = 0;
-
-      int interval1Min = bounds[2 * pointer1];
-      int interval1Max = bounds[2 * pointer1 + 1];
-      int interval2Min = inputIntervals[2 * pointer2];
-      int interval2Max = inputIntervals[2 * pointer2 + 1];
-
-      while (true) {
-
-        if (interval1Max < interval2Min) {
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        } else if (interval2Max < interval1Min) {
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[2 * pointer2];
-            interval2Max = inputIntervals[2 * pointer2 + 1];
-          } else {
-            break;
-          }
-        } else if (interval1Min <= interval2Min) {
-
-          if (interval1Max <= interval2Max) {
-            put(copy, out++, interval2Min, interval1Max);
-
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          } else {
-            move(copy, out++, inputIntervals, pointer2);
-            pointer2++;
-
-            if (pointer2 < inputSize) {
-              interval2Min = inputIntervals[2 * pointer2];
-              interval2Max = inputIntervals[2 * pointer2 + 1];
-            } else {
-              break;
-            }
-          }
-
-        } else {
-
-          if (interval2Max <= interval1Max) {
-            put(copy, out++, interval1Min, interval2Max);
-
-            if (interval2Max >= interval1Max) {
-              pointer1++;
-              if (pointer1 < size) {
-                interval1Min = bounds[2 * pointer1];
-                interval1Max = bounds[2 * pointer1 + 1];
-              } else {
-                break;
-              }
-            }
-
-            pointer2++;
-            if (pointer2 < inputSize) {
-              interval2Min = inputIntervals[2 * pointer2];
-              interval2Max = inputIntervals[2 * pointer2 + 1];
-            } else {
-              break;
-            }
-          } else {
-            move(copy, out++, bounds, pointer1);
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      if (out == 0) {
-        throw failException;
-      }
-
-      int returnedEvent = ANY;
-      if (out == 1 && copy[0] == copy[1]) {
-        returnedEvent = GROUND;
-      } else if (copy[0] > min() || copy[2 * (out - 1) + 1] < max()) {
-        returnedEvent = boundEvent(copy[0] > min(), copy[2 * (out - 1) + 1] < max());
-      }
-
-      IntervalDomain result = null;
-      if (stamp == storeLevel) {
-        bounds = copy;
-        size = out;
-      } else {
-        result = new IntervalDomain(copy, out);
-        installResultDomain(result, storeLevel, v);
-      }
-
-      IntervalDomain effective = stamp == storeLevel ? this : result;
-      if (ASSERTS_ENABLED && effective.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(effective.checkInvariants()));
-      }
-
-      v.domainHasChanged(returnedEvent);
-      return;
-    }
-
-    if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      if (domain.isEmpty()) {
-        throw failException;
-      }
-
-      if (ASSERTS_ENABLED && size == 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-
-      in(storeLevel, v, domain.min(), domain.max());
-
-      return;
-    }
-
-    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-
-      SmallDenseDomain input = (SmallDenseDomain) domain;
-
-      SmallDenseDomain result = input.intersect(this, 0);
-
-      if (result.isEmpty()) {
-        throw Store.failException;
-      }
-
-      if (result.eq(this)) {
-        return;
-      }
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-      }
-
-      final int returnedEvent = computeChangeEvent(result);
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = stamp == storeLevel ? previousDomain : this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
-
-      if (ASSERTS_ENABLED && !result.eq(this.intersect(input.toIntervalDomain()))) {
-        throw new IllegalStateException(
-            String.valueOf("In function improperly implemented." + result + "d " + input));
-      }
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-
-      v.domainHasChanged(returnedEvent);
-      return;
-    }
-
-    // Dense intersection using two-pointer traversal over intervals.
-    // Handles both sparse and non-sparse representations uniformly.
-    if (domain.getSize() == 0) {
-      throw failException;
-    }
-
-    if (ASSERTS_ENABLED && size == 0) {
-      throw new IllegalStateException("Assertion failed");
-    }
-
-    int pointer1 = 0;
-    int pointer2 = 0;
-
-    int inputSize = domain.noIntervals();
-
-    // Chance for no event
-    while (pointer2 < inputSize && domain.rightElement(pointer2) < bounds[2 * pointer1]) {
-      pointer2++;
-    }
-
-    if (pointer2 == inputSize) {
-      throw failException;
-    }
-
-    // traverse within while loop until certain that change will occur
-    while (bounds[2 * pointer1] >= domain.leftElement(pointer2)
-        && bounds[2 * pointer1 + 1] <= domain.rightElement(pointer2)
-        && ++pointer1 < size) {
-
-      while (bounds[2 * pointer1 + 1] > domain.rightElement(pointer2)) {
-        pointer2++;
-        if (pointer2 >= inputSize) {
-          break;
-        }
-      }
-
-      if (pointer2 == inputSize) {
-        break;
-      }
-    }
-
-    // no change
-    if (pointer1 == size) {
-      return;
-    }
-
-    IntervalDomain result = new IntervalDomain(this.size);
-    int temp = 0;
-    // add all common intervals to result as indicated by progress of
-    // the previous loop
-    while (temp < pointer1) {
-      result.appendInterval(bounds[2 * temp], bounds[2 * temp + 1]);
-      temp++;
-    }
-
-    pointer2 = 0;
-
-    int interval1Min = bounds[2 * pointer1];
-    int interval1Max = bounds[2 * pointer1 + 1];
-    int interval2Min = domain.leftElement(pointer2);
-    int interval2Max = domain.rightElement(pointer2);
-
-    while (true) {
-
-      if (interval1Max < interval2Min) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1Min = bounds[2 * pointer1];
-          interval1Max = bounds[2 * pointer1 + 1];
-        } else {
-          break;
-        }
-      } else if (interval2Max < interval1Min) {
-        pointer2++;
-        if (pointer2 < inputSize) {
-          interval2Min = domain.leftElement(pointer2);
-          interval2Max = domain.rightElement(pointer2);
-        } else {
-          break;
-        }
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      if (interval1Min <= interval2Min) {
-
-        if (interval1Max <= interval2Max) {
-          result.appendInterval(interval2Min, interval1Max);
-
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        } else {
-          result.appendInterval(interval2Min, interval2Max);
-          pointer2++;
-
-          if (pointer2 < inputSize) {
-            interval2Min = domain.leftElement(pointer2);
-            interval2Max = domain.rightElement(pointer2);
-          } else {
-            break;
-          }
-        }
-
-      } else {
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        if (interval2Max <= interval1Max) {
-
-          result.appendInterval(interval1Min, interval2Max);
-
-          if (interval2Max == interval1Max) {
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          }
-
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = domain.leftElement(pointer2);
-            interval2Max = domain.rightElement(pointer2);
-          } else {
-            break;
-          }
-
-        } else {
-          result.appendInterval(bounds[2 * pointer1], bounds[2 * pointer1 + 1]);
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        }
-      }
-    }
-
-    if (result.isEmpty()) {
-      throw failException;
-    }
-
-    int returnedEvent = computeChangeEvent(result);
-
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
-    }
-    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-    }
-
-    if (stamp == storeLevel) {
-      adoptIntervalsFrom(result);
-    } else {
-      if (ASSERTS_ENABLED && stamp >= storeLevel) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      installResultDomain(result, storeLevel, v);
-    }
-
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
-    }
-
-    v.domainHasChanged(returnedEvent);
+    inShift(storeLevel, v, domain, 0);
   }
 
   @Override
@@ -3557,236 +3076,7 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException("Assertion failed");
     }
 
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain input = (IntervalDomain) domain;
-
-      if (input.size == 0) {
-        throw failException;
-      }
-
-      if (ASSERTS_ENABLED && size == 0) {
-        throw new IllegalStateException("Assertion failed");
-      }
-
-      int pointer1 = 0;
-      int pointer2 = 0;
-      int inputSize = input.size;
-
-      int[] inputIntervals = input.bounds;
-
-      // Chance for no event
-      // traverse within while loop until certain that change will occur
-
-      while (pointer2 < inputSize
-          && inputIntervals[2 * pointer2 + 1] + shift < bounds[2 * pointer1]) {
-        pointer2++;
-      }
-
-      if (pointer2 == inputSize) {
-        throw failException;
-      }
-
-      while (bounds[2 * pointer1] >= inputIntervals[2 * pointer2] + shift
-          && bounds[2 * pointer1 + 1] <= inputIntervals[2 * pointer2 + 1] + shift
-          && ++pointer1 < size) {
-
-        while (bounds[2 * pointer1 + 1] > inputIntervals[2 * pointer2 + 1] + shift) {
-          pointer2++;
-          if (pointer2 >= input.size) {
-            break;
-          }
-        }
-
-        if (pointer2 == input.size) {
-          break;
-        }
-      }
-
-      // no change
-      if (pointer1 == size) {
-        return;
-      }
-
-      IntervalDomain result = new IntervalDomain(size);
-      pointer2 = 0;
-
-      // add all common intervals to result as indicated by progress of
-      // the previous loop
-      while (pointer2 < pointer1) {
-        result.appendInterval(bounds[2 * pointer2], bounds[2 * pointer2 + 1]);
-        pointer2++;
-      }
-
-      pointer2 = 0;
-
-      int interval1Min = bounds[2 * pointer1];
-      int interval1Max = bounds[2 * pointer1 + 1];
-      int interval2Min = inputIntervals[2 * pointer2] + shift;
-      int interval2Max = inputIntervals[2 * pointer2 + 1] + shift;
-      while (true) {
-
-        if (interval1Max < interval2Min) {
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        } else if (interval2Max < interval1Min) {
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[2 * pointer2] + shift;
-            interval2Max = inputIntervals[2 * pointer2 + 1] + shift;
-          } else {
-            break;
-          }
-        } else
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        if (interval1Min <= interval2Min) {
-
-          if (interval1Max <= interval2Max) {
-            result.appendInterval(interval2Min, interval1Max);
-
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          } else {
-            result.appendInterval(
-                inputIntervals[2 * pointer2] + shift, inputIntervals[2 * pointer2 + 1] + shift);
-
-            pointer2++;
-
-            if (pointer2 < inputSize) {
-              interval2Min = inputIntervals[2 * pointer2] + shift;
-              interval2Max = inputIntervals[2 * pointer2 + 1] + shift;
-            } else {
-              break;
-            }
-          }
-
-        } else {
-          // interval1Max >= interval2Min
-          // interval2Max >= interval1Min
-          // interval1Min > interval2Min
-          if (interval2Max <= interval1Max) {
-            result.appendInterval(interval1Min, interval2Max);
-
-            if (interval2Max >= interval1Max) {
-              pointer1++;
-              if (pointer1 < size) {
-                // shift has been removed.
-                interval1Min = bounds[2 * pointer1];
-                interval1Max = bounds[2 * pointer1 + 1];
-              } else {
-                break;
-              }
-            }
-
-            pointer2++;
-            if (pointer2 < inputSize) {
-              interval2Min = inputIntervals[2 * pointer2] + shift;
-              interval2Max = inputIntervals[2 * pointer2 + 1] + shift;
-            } else {
-              break;
-            }
-          } else {
-            result.appendInterval(bounds[2 * pointer1], bounds[2 * pointer1 + 1]);
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      if (result.isEmpty()) {
-        throw failException;
-      }
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-      }
-
-      final int returnedEvent = computeChangeEvent(result);
-
-      if (stamp == storeLevel) {
-        adoptIntervalsFrom(result);
-      } else {
-        if (ASSERTS_ENABLED && stamp >= storeLevel) {
-          throw new IllegalStateException("Assertion failed");
-        }
-        installResultDomain(result, storeLevel, v);
-      }
-
-      v.domainHasChanged(returnedEvent);
-      return;
-    }
-
-    if (domain.domainId() == BOUND_DOMAIN_ID) {
-
-      if (domain.isEmpty()) {
-        throw failException;
-      }
-
-      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
-      return;
-    }
-
-    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
-
-      SmallDenseDomain input = (SmallDenseDomain) domain;
-
-      SmallDenseDomain result = input.intersect(this, -shift);
-      result.shift(shift);
-
-      if (result.isEmpty()) {
-        throw Store.failException;
-      }
-
-      // the result is a subset of this domain, nothing is removed if it has as many values
-      if (result.getSize() == getSize()) {
-        return;
-      }
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-      }
-
-      result.modelConstraints = modelConstraints;
-      result.searchConstraints = searchConstraints;
-      result.stamp = storeLevel;
-      result.previousDomain = stamp == storeLevel ? previousDomain : this;
-      result.modelConstraintsToEvaluate = modelConstraintsToEvaluate;
-      result.searchConstraintsToEvaluate = searchConstraintsToEvaluate;
-      ((IntVar) v).domain = result;
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-
-      final int returnedEvent = computeChangeEvent(result);
-      v.domainHasChanged(returnedEvent);
-      return;
-    }
-
-    // Dense intersection with shift using two-pointer traversal over intervals.
-    if (domain.getSize() == 0) {
+    if (domain.isEmpty()) {
       throw failException;
     }
 
@@ -3794,172 +3084,28 @@ public class IntervalDomain extends IntDomain {
       throw new IllegalStateException("Assertion failed");
     }
 
-    int pointer1 = 0;
-    int pointer2 = 0;
-
-    int inputSize = domain.noIntervals();
-
-    // Chance for no event
-    while (pointer2 < inputSize && domain.rightElement(pointer2) + shift < bounds[2 * pointer1]) {
-      pointer2++;
+    if (domain.domainId() == BOUND_DOMAIN_ID) {
+      in(storeLevel, v, domain.min() + shift, domain.max() + shift);
+      return;
     }
 
-    if (pointer2 == inputSize) {
-      throw failException;
+    if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
+      SmallDenseDomain result = ((SmallDenseDomain) domain).intersect(this, -shift);
+      result.shift(shift);
+      inSmallDense(storeLevel, v, result);
+      return;
     }
 
-    // traverse within while loop until certain that change will occur
-    while (bounds[2 * pointer1] >= domain.leftElement(pointer2) + shift
-        && bounds[2 * pointer1 + 1] <= domain.rightElement(pointer2) + shift
-        && ++pointer1 < size) {
-
-      while (bounds[2 * pointer1 + 1] > domain.rightElement(pointer2) + shift) {
-        pointer2++;
-        if (pointer2 >= inputSize) {
-          break;
-        }
-      }
-
-      if (pointer2 == inputSize) {
-        break;
-      }
-    }
-
+    IntervalDomain result = narrowedBy(domain, shift);
     // no change
-    if (pointer1 == size) {
+    if (result == null) {
       return;
     }
-
-    IntervalDomain result = new IntervalDomain(this.size);
-    int temp = 0;
-    // add all common intervals to result as indicated by progress of
-    // the previous loop
-    while (temp < pointer1) {
-      result.appendInterval(bounds[2 * temp], bounds[2 * temp + 1]);
-      temp++;
-    }
-
-    pointer2 = 0;
-
-    int interval1Min = bounds[2 * pointer1];
-    int interval1Max = bounds[2 * pointer1 + 1];
-    int interval2Min = domain.leftElement(pointer2) + shift;
-    int interval2Max = domain.rightElement(pointer2) + shift;
-
-    while (true) {
-
-      if (interval1Max < interval2Min) {
-        pointer1++;
-        if (pointer1 < size) {
-          interval1Min = bounds[2 * pointer1];
-          interval1Max = bounds[2 * pointer1 + 1];
-        } else {
-          break;
-        }
-      } else if (interval2Max < interval1Min) {
-        pointer2++;
-        if (pointer2 < inputSize) {
-          interval2Min = domain.leftElement(pointer2) + shift;
-          interval2Max = domain.rightElement(pointer2) + shift;
-        } else {
-          break;
-        }
-      } else
-      // interval1Max >= interval2Min
-      // interval2Max >= interval1Min
-      if (interval1Min <= interval2Min) {
-
-        if (interval1Max <= interval2Max) {
-          result.appendInterval(interval2Min, interval1Max);
-
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        } else {
-          result.appendInterval(interval2Min, interval2Max);
-          pointer2++;
-
-          if (pointer2 < inputSize) {
-            interval2Min = domain.leftElement(pointer2) + shift;
-            interval2Max = domain.rightElement(pointer2) + shift;
-          } else {
-            break;
-          }
-        }
-
-      } else {
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        // interval1Min > interval2Min
-        if (interval2Max <= interval1Max) {
-          result.appendInterval(interval1Min, interval2Max);
-
-          if (interval2Max == interval1Max) {
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          }
-
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = domain.leftElement(pointer2) + shift;
-            interval2Max = domain.rightElement(pointer2) + shift;
-          } else {
-            break;
-          }
-        } else {
-          result.appendInterval(bounds[2 * pointer1], bounds[2 * pointer1 + 1]);
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        }
-      }
-    }
-
-    if (result.isEmpty()) {
+    if (result.size == 0) {
       throw failException;
     }
 
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
-    }
-    if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-    }
-
-    // the result is a subset of this domain, nothing is removed if it has as many values
-    if (result.getSize() == getSize()) {
-      return;
-    }
-
-    int returnedEvent = computeChangeEvent(result);
-
-    if (stamp == storeLevel) {
-      adoptIntervalsFrom(result);
-    } else {
-      if (ASSERTS_ENABLED && stamp >= storeLevel) {
-        throw new IllegalStateException("Assertion failed");
-      }
-      installResultDomain(result, storeLevel, v);
-    }
-
-    if (ASSERTS_ENABLED && checkInvariants() != null) {
-      throw new IllegalStateException(String.valueOf(checkInvariants()));
-    }
-
-    v.domainHasChanged(returnedEvent);
+    installArrayResult(result.bounds, result.size, storeLevel, v, narrowingEvent(result, true));
   }
 
   @Override
@@ -4292,176 +3438,6 @@ public class IntervalDomain extends IntDomain {
       return NONE;
     }
 
-    if (domain.domainId() == INTERVAL_DOMAIN_ID) {
-
-      IntervalDomain input = (IntervalDomain) domain;
-
-      if (ASSERTS_ENABLED && input.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(input.checkInvariants()));
-      }
-
-      if (input.size == 0) {
-        size = 0;
-        return GROUND;
-      }
-
-      int pointer1 = 0;
-      int pointer2 = 0;
-
-      int[] inputIntervals = input.bounds;
-      int inputSize = input.size;
-      // Chance for no event
-      while (pointer2 < inputSize && inputIntervals[2 * pointer2 + 1] < bounds[2 * pointer1]) {
-        pointer2++;
-      }
-
-      if (pointer2 == inputSize) {
-        size = 0;
-        return GROUND;
-      }
-
-      // traverse within while loop until certain that change will occur
-      while (bounds[2 * pointer1] >= inputIntervals[2 * pointer2]
-          && bounds[2 * pointer1 + 1] <= inputIntervals[2 * pointer2 + 1]
-          && ++pointer1 < size) {
-
-        while (bounds[2 * pointer1 + 1] > inputIntervals[2 * pointer2 + 1]) {
-          pointer2++;
-          if (pointer2 >= inputSize) {
-            break;
-          }
-        }
-
-        if (pointer2 == inputSize) {
-          break;
-        }
-      }
-
-      // no change
-      if (pointer1 == size) {
-        return NONE;
-      }
-
-      IntervalDomain result = new IntervalDomain(this.size);
-      int temp = 0;
-      // add all common intervals to result as indicated by progress of
-      // the previous loop
-      while (temp < pointer1) {
-        result.appendInterval(bounds[2 * temp], bounds[2 * temp + 1]);
-        temp++;
-      }
-
-      pointer2 = 0;
-
-      int interval1Min = bounds[2 * pointer1];
-      int interval1Max = bounds[2 * pointer1 + 1];
-      int interval2Min = inputIntervals[2 * pointer2];
-      int interval2Max = inputIntervals[2 * pointer2 + 1];
-
-      while (true) {
-
-        if (interval1Max < interval2Min) {
-          pointer1++;
-          if (pointer1 < size) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        } else if (interval2Max < interval1Min) {
-          pointer2++;
-          if (pointer2 < inputSize) {
-            interval2Min = inputIntervals[2 * pointer2];
-            interval2Max = inputIntervals[2 * pointer2 + 1];
-          } else {
-            break;
-          }
-        } else
-        // interval1Max >= interval2Min
-        // interval2Max >= interval1Min
-        if (interval1Min <= interval2Min) {
-
-          if (interval1Max <= interval2Max) {
-            result.appendInterval(interval2Min, interval1Max);
-
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          } else {
-            result.appendInterval(inputIntervals[2 * pointer2], inputIntervals[2 * pointer2 + 1]);
-            pointer2++;
-
-            if (pointer2 < inputSize) {
-              interval2Min = inputIntervals[2 * pointer2];
-              interval2Max = inputIntervals[2 * pointer2 + 1];
-            } else {
-              break;
-            }
-          }
-
-        } else {
-          // interval1Max >= interval2Min
-          // interval2Max >= interval1Min
-          // interval1Min > interval2Min
-          if (interval2Max <= interval1Max) {
-            result.appendInterval(interval1Min, interval2Max);
-
-            if (interval2Max >= interval1Max) {
-              pointer1++;
-              if (pointer1 < size) {
-                interval1Min = bounds[2 * pointer1];
-                interval1Max = bounds[2 * pointer1 + 1];
-              } else {
-                break;
-              }
-            }
-
-            pointer2++;
-            if (pointer2 < inputSize) {
-              interval2Min = inputIntervals[2 * pointer2];
-              interval2Max = inputIntervals[2 * pointer2 + 1];
-            } else {
-              break;
-            }
-          } else {
-            result.appendInterval(bounds[2 * pointer1], bounds[2 * pointer1 + 1]);
-            pointer1++;
-            if (pointer1 < size) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      if (result.isEmpty()) {
-        size = 0;
-        return GROUND;
-      }
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-      if (ASSERTS_ENABLED && result.checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(result.checkInvariants()));
-      }
-
-      int returnedEvent = computeEvent(result);
-      adoptIntervalsFrom(result);
-
-      if (ASSERTS_ENABLED && checkInvariants() != null) {
-        throw new IllegalStateException(String.valueOf(checkInvariants()));
-      }
-
-      return returnedEvent;
-    }
-
     if (domain.domainId() == SMALL_DENSE_DOMAIN_ID) {
 
       SmallDenseDomain input = (SmallDenseDomain) domain;
@@ -4554,10 +3530,30 @@ public class IntervalDomain extends IntDomain {
       return intersectAdapt(domain.min(), domain.max());
     }
 
-    // any other representation is converted to intervals
-    IntervalDomain input = new IntervalDomain();
-    input.addDom(domain);
-    return intersectAdapt(input);
+    if (domain.isEmpty()) {
+      size = 0;
+      return GROUND;
+    }
+
+    IntervalDomain result = narrowedBy(domain, 0);
+    // no change
+    if (result == null) {
+      return NONE;
+    }
+    if (result.size == 0) {
+      size = 0;
+      return GROUND;
+    }
+
+    int returnedEvent = narrowingEvent(result, false);
+    bounds = result.bounds;
+    size = result.size;
+
+    if (ASSERTS_ENABLED && checkInvariants() != null) {
+      throw new IllegalStateException(String.valueOf(checkInvariants()));
+    }
+
+    return returnedEvent;
   }
 
   @Override
@@ -4665,94 +3661,22 @@ public class IntervalDomain extends IntDomain {
 
     if (domain.isSparseRepresentation()) {
       return sizeOfIntersectionSparse(domain);
-    } else {
-
-      int temp = 0;
-
-      int pointer1 = 0;
-      int pointer2 = 0;
-
-      int size1 = size;
-
-      if (size1 == 0 || domain.noIntervals() == 0) {
-        return 0;
-      }
-
-      int interval1Min = bounds[2 * pointer1];
-      int interval1Max = bounds[2 * pointer1 + 1];
-      int interval2Min = domain.leftElement(pointer2);
-      int interval2Max = domain.rightElement(pointer2);
-
-      while (true) {
-        if (interval1Max < interval2Min) {
-          pointer1++;
-          if (pointer1 < size1) {
-            interval1Min = bounds[2 * pointer1];
-            interval1Max = bounds[2 * pointer1 + 1];
-          } else {
-            break;
-          }
-        } else if (interval2Max < interval1Min) {
-          pointer2++;
-          if (pointer2 < domain.noIntervals()) {
-            interval2Min = domain.leftElement(pointer2);
-            interval2Max = domain.rightElement(pointer2);
-          } else {
-            break;
-          }
-        } else
-        // interval1.max >= interval2.min
-        // interval2.max >= interval1.min
-        if (interval1Min <= interval2Min) {
-
-          if (interval1Max <= interval2Max) {
-            temp += interval1Max - interval2Min + 1;
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          } else {
-            temp += interval2Max - interval2Min + 1;
-            pointer2++;
-            if (pointer2 < domain.noIntervals()) {
-              interval2Min = domain.leftElement(pointer2);
-              interval2Max = domain.rightElement(pointer2);
-            } else {
-              break;
-            }
-          }
-
-        } else {
-          // interval1.max >= interval2.min
-          // interval2.max >= interval1.min
-          // interval1.min > interval2.min
-          if (interval2Max <= interval1Max) {
-            temp += interval2Max - interval1Min + 1;
-            pointer2++;
-            if (pointer2 < domain.noIntervals()) {
-              interval2Min = domain.leftElement(pointer2);
-              interval2Max = domain.rightElement(pointer2);
-            } else {
-              break;
-            }
-          } else {
-            temp += interval1Max - interval1Min + 1;
-            pointer1++;
-            if (pointer1 < size1) {
-              interval1Min = bounds[2 * pointer1];
-              interval1Max = bounds[2 * pointer1 + 1];
-            } else {
-              break;
-            }
-          }
-        }
-      }
-
-      return temp;
     }
+
+    int inputSize = domain.noIntervals();
+    int[] input = boundsOf(domain);
+    int count = 0;
+    int i = 0;
+    int j = 0;
+    while (i < size && j < inputSize) {
+      int lo = Math.max(bounds[2 * i], input[2 * j]);
+      int hi = Math.min(bounds[2 * i + 1], input[2 * j + 1]);
+      count += Math.max(0, hi - lo + 1);
+      int step = Integer.compare(bounds[2 * i + 1], input[2 * j + 1]);
+      i += step <= 0 ? 1 : 0;
+      j += step >= 0 ? 1 : 0;
+    }
+    return count;
   }
 
   @Override

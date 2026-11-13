@@ -153,7 +153,7 @@ public class Fz2jacop {
     parser.setOptions(opt);
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
-    if (opt.getStatistics()) {
+    if (printsAtShutdown(opt)) {
       Runtime.getRuntime().addShutdownHook(t);
     }
 
@@ -176,6 +176,18 @@ public class Fz2jacop {
         watch.cancel();
       }
     }
+  }
+
+  /**
+   * Whether the run prints its last solution and statistics when the JVM is shut down before it
+   * ends. A thread of a portfolio does not: it would print its own solution, which need not be the
+   * best one, after the portfolio's answer; the portfolio prints the best solution itself.
+   *
+   * @param opt the options of the run
+   * @return true with statistics, outside a portfolio
+   */
+  static boolean printsAtShutdown(Options opt) {
+    return opt.getStatistics() && opt.portfolioWorker() == null;
   }
 
   // what the watchdog prints when the run overruns its time-out

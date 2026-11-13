@@ -31,7 +31,9 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -112,5 +114,19 @@ class PortfolioSettingsTest {
         lcgFree,
         Portfolio.search(
             List.of("--lcg", "on", "-f", "--free-config", "portfolio-bisect=0.1"), false));
+  }
+
+  // ptv pax_period_20_3b, -s --search-statistics -a -p 4: a thread still searching when the JVM
+  // exited printed its own, worse solution and its statistics after the portfolio's optimum
+  @Test
+  void onlyThePortfolioPrintsAtShutdown() {
+    Options given =
+        new Options(new String[] {"-s", "--search-statistics", "-a", "-p", "4", "m.fzn"});
+    assertTrue(Fz2jacop.printsAtShutdown(given));
+    // a thread keeps --search-statistics, which turns statistics on
+    Options thread = new Options(new String[] {"--search-statistics", "m.fzn"});
+    assertTrue(thread.getStatistics());
+    thread.portfolioWorker = new Portfolio(given).new Worker("lcg", List.of());
+    assertFalse(Fz2jacop.printsAtShutdown(thread));
   }
 }
