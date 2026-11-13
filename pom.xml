@@ -360,6 +360,7 @@ setup to run configuration. -->
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -578,6 +579,7 @@ setup to run configuration. -->
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -792,6 +794,7 @@ setup to run configuration. -->
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -1004,6 +1007,7 @@ setup to run configuration. -->
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
