@@ -437,6 +437,10 @@ unless stated otherwise):
   default 200.
 - org.jacop.fz.linearOverlap.work: the most terms visited while
   looking for shared sub-sums; default 50000000.
+- org.jacop.fz.booleanProducts: a product z = x * b with b a 0/1
+  variable (int_times) is posted as b -> z = x, z <= max(x) * b and
+  z >= min(x) * b instead of XmulYeqZ (Glover 1975): short LCG reasons,
+  and rows for the linear relaxation; default false, off under --proof.
 - org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
 - org.jacop.fz.tableCover: TableCover on tables over groups of the
   variables of an all different (tilings); default true without LCG

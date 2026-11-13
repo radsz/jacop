@@ -28,6 +28,8 @@ package org.jacop.fz.constraints;
 import java.util.Arrays;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.XdivYeqZ;
@@ -217,12 +219,73 @@ class OperationConstraints implements ParserTreeConstants {
       }
     } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0)) {
       v3.domain.inValue(store.level, v3, 0);
+    } else if (booleanProductsEnabled()
+        && support.options.proof() == null
+        && booleanProduct(v1, v2, v3)) {
+      return;
     } else {
       if (PRODUCT_DOMAINS) {
         restrictToProducts(v1, v2, v3);
       }
       support.pose(new XmulYeqZ(v1, v2, v3));
     }
+  }
+
+  /**
+   * Whether a product with a 0/1 factor is written as linear constraints, the system property
+   * {@code org.jacop.fz.booleanProducts} (default false).
+   */
+  static boolean booleanProductsEnabled() {
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.booleanProducts", "false"));
+  }
+
+  /**
+   * Posts z = x * b, with b a 0/1 variable and x not one, as
+   *
+   * <pre>
+   *   b -&gt; z = x,   z &lt;= max(x) * b,   z &gt;= min(x) * b
+   * </pre>
+   *
+   * instead of {@link XmulYeqZ}: for b = 0 the inequalities fix z to 0, for b = 1 the implication
+   * makes z equal to x, so the solutions are those of the product. The constraints propagate both
+   * ways (z != 0 sets b, z outside the domain of x clears it), have short reasons under lazy clause
+   * generation, and the two inequalities are the rows of the linear relaxation of the product (F.
+   * Glover, Improved linear integer programming formulations of nonlinear integer problems,
+   * Management Science 22(4), 1975; G. P. McCormick, Computability of global solutions to
+   * factorable nonconvex programs, Mathematical Programming 10, 1976), which sees no row for an
+   * XmulYeqZ. It is the presolve rule {@code org.jacop.presolve.BooleanProducts} applied when the
+   * constraint is posted, so that it does not need {@code --presolve}.
+   *
+   * @return false when neither factor alone is a 0/1 variable, or a factor is the result
+   */
+  private boolean booleanProduct(IntVar v1, IntVar v2, IntVar v3) {
+    IntVar b;
+    IntVar x;
+    if (isZeroOne(v1) && !isZeroOne(v2)) {
+      b = v1;
+      x = v2;
+    } else if (isZeroOne(v2) && !isZeroOne(v1)) {
+      b = v2;
+      x = v1;
+    } else {
+      return false;
+    }
+    if (b.singleton() || x == v3 || b == v3) {
+      return false;
+    }
+    if (support.options.debug()) {
+      System.out.println("% boolean product " + v3.id() + " = " + x.id() + " * " + b.id());
+    }
+    support.pose(new Implies(b, new XeqY(x, v3)));
+    support.pose(
+        new LinearInt(new IntVar[] {v3, b}, new int[] {1, -x.max()}, "<=", 0).setDegreeWeight(0));
+    support.pose(
+        new LinearInt(new IntVar[] {v3, b}, new int[] {1, -x.min()}, ">=", 0).setDegreeWeight(0));
+    return true;
+  }
+
+  private static boolean isZeroOne(IntVar v) {
+    return v.min() >= 0 && v.max() <= 1;
   }
 
   /** Whether int_times restricts its result to the products of the factors' domains. */
