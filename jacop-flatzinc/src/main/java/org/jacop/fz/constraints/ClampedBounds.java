@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -89,7 +90,7 @@ public final class ClampedBounds {
   private final List<long[]> coefficients = new ArrayList<>();
   private final List<int[]> rowVars = new ArrayList<>();
   private final List<long[]> rhs = new ArrayList<>();
-  private final List<Boolean> equal = new ArrayList<>();
+  private final BitSet equal = new BitSet();
 
   // the narrowed variables, by id, and how they occur
   private final List<Integer> clamped = new ArrayList<>();
@@ -194,7 +195,7 @@ public final class ClampedBounds {
           return false;
         }
       }
-    } catch (RuntimeException e) {
+    } catch (RuntimeException _) {
       // a form this reading does not cover: the constraint counts as an occurrence of any kind
       return false;
     }
@@ -208,7 +209,7 @@ public final class ClampedBounds {
     coefficients.add(c);
     rowVars.add(ix);
     rhs.add(new long[] {b});
-    equal.add(eq);
+    equal.set(coefficients.size() - 1, eq);
   }
 
   // every variable a constraint names, also through arrays; more than it uses is safe
@@ -416,7 +417,7 @@ public final class ClampedBounds {
   // saturating sum of two values within [-INF, INF]
   static long add(long a, long b) {
     long s = a + b; // no overflow: both are at most INF = Long.MAX_VALUE / 4 in magnitude
-    return Math.max(-INF, Math.min(INF, s));
+    return Math.clamp(s, -INF, INF);
   }
 
   // saturating product
@@ -427,20 +428,20 @@ public final class ClampedBounds {
     long p;
     try {
       p = Math.multiplyExact(a, b);
-    } catch (ArithmeticException e) {
+    } catch (ArithmeticException _) {
       return (a > 0) == (b > 0) ? INF : -INF;
     }
     if (Math.abs(a) >= INF || Math.abs(b) >= INF) {
       return (a > 0) == (b > 0) ? INF : -INF;
     }
-    return Math.max(-INF, Math.min(INF, p));
+    return Math.clamp(p, -INF, INF);
   }
 
   private static long termMin(long c, long lo, long hi) {
-    return c >= 0 ? multiply(c, lo) : multiply(c, hi);
+    return multiply(c, c >= 0 ? lo : hi);
   }
 
   private static long termMax(long c, long lo, long hi) {
-    return c >= 0 ? multiply(c, hi) : multiply(c, lo);
+    return multiply(c, c >= 0 ? hi : lo);
   }
 }
