@@ -318,6 +318,18 @@ public class LinearRelaxation extends Constraint
   /** Statistics: the objective bound of the first optimal solve after the cuts, or NaN. */
   public double cutBound = Double.NaN;
 
+  /** Statistics: the simplex solves of the root bound tightening (OBBT). */
+  public long obbtSolves;
+
+  /** Statistics: the bounds the root bound tightening (OBBT) tightened. */
+  public long obbtTightened;
+
+  /** Statistics: the columns the root bound tightening (OBBT) considered. */
+  public long obbtCandidates;
+
+  /** Statistics: the nanoseconds the root bound tightening (OBBT) took. */
+  public long obbtNanos;
+
   /** Statistics: cuts added. */
   public long cuts;
 
@@ -1706,6 +1718,9 @@ public class LinearRelaxation extends Constraint
     if (millis > 0) {
       largeRootNanos = (long) (millis * 1e6 * LARGE_ROOT_SHARE);
     }
+    if (millis > 0) {
+      obbtBudget = Math.min(obbtBudget, (long) (millis * 1e6 * OBBT_SHARE));
+    }
   }
 
   /**
@@ -2020,6 +2035,9 @@ public class LinearRelaxation extends Constraint
     long started = System.nanoTime();
     try {
       solveAndPropagate(store);
+      if (first && obbt && !large && rowSource == null) {
+        tightenBounds(store);
+      }
       if (first) {
         rememberRootBounds();
         if (large && !boundsObjective(domainBound)) {
@@ -2589,6 +2607,192 @@ public class LinearRelaxation extends Constraint
   // pivots, past the time limit of the whole run); the limit only binds on such relaxations
   private static final long SPARSE_ROOT_NANOS =
       (long) (Double.parseDouble(System.getProperty("org.jacop.lp.sparseRootSeconds", "3")) * 1e9);
+
+  // the root bound tightening by the relaxation (optimization-based bound tightening, OBBT;
+  // Gleixner, Berthold, Mueller and Weltge, J. Global Optimization 67, 2017): each column is
+  // minimized and maximized over the rows, and the dual values of each optimum combine the rows
+  // into an inequality that bounds the column, made exact and propagated like the other deductions
+  private boolean obbt = Boolean.getBoolean("org.jacop.lp.obbt");
+  // its share of the time limit of the run, and its most seconds
+  private static final double OBBT_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.obbtShare", "0.02"));
+  private long obbtBudget =
+      (long) (Double.parseDouble(System.getProperty("org.jacop.lp.obbtSeconds", "20")) * 1e9);
+  // the most pivots of one solve
+  private static final int OBBT_PIVOTS = Integer.getInteger("org.jacop.lp.obbtPivots", 2000);
+  // whether 0/1 columns are candidates too
+  private static final boolean OBBT_BOOLEANS = Boolean.getBoolean("org.jacop.lp.obbtBooleans");
+  // a value of an LP solution within this of a bound is at the bound
+  private static final double OBBT_EPS = 1e-6;
+
+  /**
+   * Sets whether the first solve is followed by the root bound tightening of the columns
+   * (org.jacop.lp.obbt, off by default).
+   *
+   * @param on whether to tighten the bounds at the root
+   */
+  public void setBoundTightening(boolean on) {
+    obbt = on;
+  }
+
+  /**
+   * Tightens the bounds of the columns at the root: minimizes and maximizes each column over the
+   * rows of the simplex on a simplex of its own, by the primal simplex from the basis of the solve
+   * before. A column whose value in an LP solution found so far is at its bound cannot move that
+   * bound and is skipped. The dual values of an optimum are combined into an exact inequality, as
+   * the objective's dual values are, so the bounds it gives hold and are explained by it.
+   */
+  private void tightenBounds(Store store) {
+    long start = System.nanoTime();
+    try {
+      int n = lp.columns();
+      List<Integer> in = new ArrayList<>();
+      for (int i = 0; i < rows(); i++) {
+        if (i < inLp.length && inLp[i]) {
+          boolean fits = true;
+          for (int j : rowColumns[i]) {
+            fits &= j < n;
+          }
+          if (fits) {
+            in.add(i);
+          }
+        }
+      }
+      int m = in.size();
+      if (m == 0) {
+        return;
+      }
+      int[][] cs = new int[m][];
+      double[][] ws = new double[m][];
+      double[] lo = new double[m];
+      double[] hi = new double[m];
+      for (int k = 0; k < m; k++) {
+        int i = in.get(k);
+        cs[k] = rowColumns[i];
+        ws[k] = new double[rowWeights[i].length];
+        for (int t = 0; t < ws[k].length; t++) {
+          ws[k][t] = rowWeights[i][t];
+        }
+        lo[k] = hasLo[i] ? rowLo[i] : Double.NEGATIVE_INFINITY;
+        hi[k] = hasHi[i] ? rowHi[i] : Double.POSITIVE_INFINITY;
+      }
+      Map<IntVar, Integer> columnOf = new IdentityHashMap<>();
+      List<Integer> candidates = new ArrayList<>();
+      for (int j = 0; j < n; j++) {
+        if (lpOnly[j]) {
+          continue;
+        }
+        columnOf.putIfAbsent(x[j], j);
+        if (x[j] != objective
+            && !x[j].singleton()
+            && (OBBT_BOOLEANS || (long) x[j].max() - x[j].min() > 1)) {
+          candidates.add(j);
+        }
+      }
+      obbtCandidates = candidates.size();
+      if (candidates.isEmpty()) {
+        return;
+      }
+      double[] cost = new double[n];
+      JalpSimplex s = new JalpSimplex(cs, ws, lo, hi, cost);
+      for (int j = 0; j < n; j++) {
+        setBounds(s, j);
+      }
+      if (s.solve(OBBT_PIVOTS) != LpSolver.OPTIMAL) {
+        return;
+      }
+      boolean[] doneLo = new boolean[n];
+      boolean[] doneHi = new boolean[n];
+      filter(s, candidates, doneLo, doneHi);
+      for (int j : candidates) {
+        for (int side = 0; side < 2; side++) {
+          boolean min = side == 0;
+          if ((min ? doneLo[j] : doneHi[j]) || x[j].singleton()) {
+            continue;
+          }
+          if (System.nanoTime() - start > obbtBudget) {
+            return;
+          }
+          cost[j] = min ? 1 : -1;
+          s.setCost(cost);
+          int status = s.solvePrimal(OBBT_PIVOTS);
+          cost[j] = 0;
+          obbtSolves++;
+          if (status != LpSolver.OPTIMAL) {
+            if (status == LpSolver.INFEASIBLE) {
+              return; // the bounds tightened so far leave no LP solution: the next solve proves it
+            }
+            continue;
+          }
+          filter(s, candidates, doneLo, doneHi);
+          double v = s.value(j);
+          if (min
+              ? Math.ceil(v - OBBT_EPS) <= x[j].min()
+              : Math.floor(v + OBBT_EPS) >= x[j].max()) {
+            continue; // the optimum does not move the bound
+          }
+          double[] y = s.duals();
+          double[] full = new double[rows()];
+          for (int k = 0; k < m; k++) {
+            full[in.get(k)] = y[k];
+          }
+          int before = deducedVar.size();
+          propagateCombination(store, full);
+          for (int d = before; d < deducedVar.size(); d++) {
+            Integer c = columnOf.get(deducedVar.get(d));
+            if (c != null) {
+              setBounds(s, c);
+            }
+          }
+          obbtTightened += deducedVar.size() - before;
+        }
+      }
+    } finally {
+      obbtNanos += System.nanoTime() - start;
+    }
+  }
+
+  // marks the bounds that a column's value in the current solution of s already reaches
+  private void filter(JalpSimplex s, List<Integer> candidates, boolean[] doneLo, boolean[] doneHi) {
+    for (int j : candidates) {
+      double v = s.value(j);
+      if (v <= x[j].min() + OBBT_EPS) {
+        doneLo[j] = true;
+      }
+      if (v >= x[j].max() - OBBT_EPS) {
+        doneHi[j] = true;
+      }
+    }
+  }
+
+  // propagates the exact combination of the rows by the multipliers y, at the largest scale whose
+  // inequalities fit
+  private void propagateCombination(Store store, double[] y) {
+    for (int s = 0; s < SCALES.length; s++) {
+      long[] lambda = scaled(y, SCALES[s]);
+      if (lambda == null) {
+        return;
+      }
+      int[][] facts = new int[2][];
+      long[][] used = new long[2][];
+      LinearForm[] localForms = certificate(lambda, facts, used);
+      if (localForms == null) {
+        continue;
+      }
+      boolean fits = true;
+      for (LinearForm f : localForms) {
+        fits &= f == null || fits(f);
+      }
+      if (fits || s == SCALES.length - 1) {
+        for (int k = 0; k < localForms.length; k++) {
+          if (localForms[k] != null) {
+            propagate(store, localForms[k], facts[k], certified(localForms[k], used[k], k == 0));
+          }
+        }
+        return;
+      }
+    }
+  }
 
   private long rootWork() {
     return objective == null ? ROOT_WORK : SPARSE_ROOT_WORK;

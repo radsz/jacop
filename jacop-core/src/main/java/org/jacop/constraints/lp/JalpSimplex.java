@@ -178,6 +178,27 @@ final class JalpSimplex implements LpSolver {
     return basis instanceof RevisedDualSimplex.Basis b && lp.restoreBasis(b);
   }
 
+  /**
+   * Replaces the objective, keeping the basis (see {@link RevisedDualSimplex#setCost(double[])}).
+   *
+   * @param c the new objective, minimized
+   */
+  void setCost(double[] c) {
+    lp.setCost(c);
+  }
+
+  /**
+   * Solves by the primal simplex from the current basis (see {@link
+   * RevisedDualSimplex#solvePrimal(int)}).
+   *
+   * @param limit the most pivots
+   * @return the status, an unbounded problem as a limit
+   */
+  int solvePrimal(int limit) {
+    int status = lp.solvePrimal(limit);
+    return status == RevisedDualSimplex.UNBOUNDED ? LIMIT : status;
+  }
+
   @Override
   public LpSolver copy() {
     return new JalpSimplex(lp.copy());

@@ -698,6 +698,39 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // what the decomposition bound did, for the statistics
   private DecompositionBound.Outcome decomposition;
 
+  // an experiment, not for use: the sums of the model are left to the linear relaxation alone,
+  // whose rows hold them (-Dorg.jacop.lp.only=true); the relaxation fails an assignment that
+  // breaks a row, so the solutions stay right, but it prunes only by its combinations of rows
+  private static final boolean LP_ONLY = Boolean.getBoolean("org.jacop.lp.only");
+  private long lpOnlyRemoved;
+
+  // removes the linear sum constraints (LinearInt, LinearIntDom, SumInt, SumWeight, SumBool,
+  // LinearBool) from the store; their rows are in the relaxation
+  private void removeLinearSums() {
+    Set<Constraint> all = new LinkedHashSet<>();
+    for (int i = 0; i < store.size(); i++) {
+      all.addAll(store.vars[i].dom().constraints());
+    }
+    for (Var v : store.variablesHashMap.values()) {
+      all.addAll(v.dom().constraints());
+    }
+    for (Constraint c : all) {
+      String k = c.getClass().getSimpleName();
+      if (k.equals("LinearInt")
+          || k.equals("LinearIntDom")
+          || k.equals("SumInt")
+          || k.equals("SumWeight")
+          || k.equals("SumBool")
+          || k.equals("LinearBool")) {
+        org.jacop.lcg.LinearForm f = org.jacop.constraints.LinearForms.of(c);
+        if (f != null && f.relation() != org.jacop.lcg.LinearForm.NE) {
+          c.removeConstraint();
+          lpOnlyRemoved++;
+        }
+      }
+    }
+  }
+
   /**
    * Imposes the linear relaxation of the linear constraints of the store as a propagator (--lp),
    * with the objective of the solve item.
@@ -773,6 +806,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (linearRelaxation != null) {
       linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
+      if (LP_ONLY && !linearRelaxation.large()) {
+        removeLinearSums();
+      }
       if (TIME_INDEXED && objective != null) {
         timeIndexedBound =
             TimeIndexedBound.of(store, objective, maximize, linearRelaxation.allRows());
@@ -918,6 +954,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.rootBound
             + "\n%%%mzn-stat: lpCuts="
             + r.cuts
+            + "\n%%%mzn-stat: lpObbtCandidates="
+            + r.obbtCandidates
+            + "\n%%%mzn-stat: lpObbtSolves="
+            + r.obbtSolves
+            + "\n%%%mzn-stat: lpObbtTightened="
+            + r.obbtTightened
+            + "\n%%%mzn-stat: lpObbtTime="
+            + r.obbtNanos / 1e9
+            + "\n%%%mzn-stat: lpOnlyRemoved="
+            + lpOnlyRemoved
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
             + "\n%%%mzn-stat: lpRestartSolves="

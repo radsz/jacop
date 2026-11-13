@@ -382,6 +382,53 @@ class LinearRelaxationTest {
    * bound of the integer objective.
    */
   @Test
+  void boundTighteningFixesAColumnTheRowsTogetherFix() {
+    // x + y = 10 and x - y = 2: bounds propagation of each row alone leaves x in 2..10, the rows
+    // together give x = 6 and y = 4
+    for (boolean on : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 100);
+      IntVar y = new IntVar(store, "y", 0, 100);
+      IntVar[] xy = {x, y};
+      store.impose(new LinearInt(xy, new int[] {1, 1}, "==", 10));
+      store.impose(new LinearInt(xy, new int[] {1, -1}, "==", 2));
+      LinearRelaxation r =
+          new LinearRelaxation(
+              List.of(
+                  new LinearForm(xy, new long[] {1, 1}, 10, LinearForm.EQ),
+                  new LinearForm(xy, new long[] {1, -1}, 2, LinearForm.EQ)),
+              null,
+              false);
+      r.setBoundTightening(on);
+      store.impose(r);
+      assertThat(store.consistency()).isTrue();
+      if (on) {
+        assertThat(x.singleton() && x.value() == 6).as("x %s", x).isTrue();
+        assertThat(y.singleton() && y.value() == 4).as("y %s", y).isTrue();
+        assertThat(r.obbtTightened).isPositive();
+      } else {
+        assertThat(x.singleton()).as("x %s", x).isFalse();
+      }
+    }
+  }
+
+  @Test
+  void boundTighteningKeepsTheSolutions() {
+    int tightened = 0;
+    for (int run = 0; run < RUNS / 3; run++) {
+      long[] expected = search(new Model(run));
+      Model model = new Model(run);
+      LinearRelaxation r = new LinearRelaxation(model.rows, model.objective, model.maximize);
+      r.setBoundTightening(true);
+      model.store.impose(r);
+      long[] actual = search(model);
+      assertThat(actual).as("seed %d", run).isEqualTo(expected);
+      tightened += r.obbtTightened > 0 ? 1 : 0;
+    }
+    assertThat(tightened).isPositive();
+  }
+
+  @Test
   void cutsOnJalpAboveTheTableauCapKeepTheOptimum() {
     int moved = 0;
     int back = 0;
