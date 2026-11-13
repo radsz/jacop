@@ -37,8 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import org.jacop.constraints.DifferenceCycles;
 import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.core.IntVar;
@@ -154,6 +156,77 @@ class DifferenceCyclesTest {
     assertEquals(1, checker.skipped);
     assertNull(new ExplanationMinimality(trail).minimise(cycles, -1, out));
     trail.detach();
+  }
+
+  @Test
+  void explainsALiteralWiderThanZeroOneByBothBounds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100);
+    IntVar y = new IntVar(store, "y", 0, 100);
+    IntVar k = new IntVar(store, "k", 0, 2);
+    AtomicTrail trail = new AtomicTrail(store);
+    // k == 1 -> x - y <= -1 and y - x <= -1, as the arcs of two elements indexed by k
+    DifferenceCycles cycles =
+        new DifferenceCycles(
+            new IntVar[] {x, y},
+            new IntVar[] {y, x},
+            new int[] {-1, -1},
+            new IntVar[] {k, k},
+            new int[] {1, 1});
+    store.impose(cycles);
+    assertTrue(store.consistency());
+    store.setLevel(1);
+    k.domain.inMin(1, k, 1);
+    assertTrue(store.consistency());
+    store.setLevel(2);
+    k.domain.inMax(2, k, 1);
+    assertFalse(store.consistency());
+    EntryList out = new EntryList();
+    assertTrue(cycles.explainFailure(trail, out));
+    // k is now within 0..1, but k >= 1 alone does not fix it to 1: k = 2 is still allowed by it
+    Set<Integer> entries = new HashSet<>();
+    for (int i = 0; i < out.size(); i++) {
+      assertEquals("k", trail.variable(out.get(i)).id());
+      entries.add(out.get(i));
+    }
+    assertEquals(2, entries.size());
+    trail.detach();
+  }
+
+  @Test
+  void failsOnACycleWhoseWeightDependsOnAnOffset() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100);
+    IntVar y = new IntVar(store, "y", 0, 100);
+    IntVar d = new IntVar(store, "d", 0, 10);
+    AtomicTrail trail = new AtomicTrail(store);
+    // y >= x + d, that is x - y <= 0 - d, and y - x <= 3
+    DifferenceCycles cycles =
+        new DifferenceCycles(
+            new IntVar[] {x, y},
+            new IntVar[] {y, x},
+            new int[] {0, 3},
+            new IntVar[] {null, null},
+            new int[] {1, 1},
+            new IntVar[] {d, null},
+            new int[] {1, 0});
+    assertEquals(1, cycles.offsetArcs());
+    store.impose(cycles);
+    assertTrue(store.consistency());
+    store.setLevel(1);
+    d.domain.inMin(1, d, 3);
+    assertTrue(store.consistency());
+    store.setLevel(2);
+    d.domain.inMin(2, d, 4);
+    assertFalse(store.consistency());
+    EntryList out = new EntryList();
+    assertTrue(cycles.explainFailure(trail, out));
+    assertEquals(1, out.size());
+    assertEquals("d", trail.variable(out.get(0)).id());
+    trail.detach();
+    store.removeLevel(2);
+    store.setLevel(1);
+    assertTrue(store.consistency());
   }
 
   @Test

@@ -73,6 +73,17 @@ import org.jacop.lcg.Explainable;
  * touch it. The first potential is computed for the arcs that always hold by Bellman-Ford with a
  * queue, with a cycle check of the parent pointers in the manner of Tarjan.
  *
+ * <p>An arc may also have an offset variable {@code o}: {@code x - y <= c - s * o} with {@code s =
+ * 1} or {@code -1}, as in {@code y >= x + d} with a variable duration d or a variable travel time.
+ * Its weight is then {@code c - min(o)} or {@code c + max(o)} at the current bounds, and a bound of
+ * o that moves re-inserts the arc. Such weights only decrease down a branch, so the potential stays
+ * feasible on backtracking, and the bound of o joins the reason of a cycle. A literal may also be
+ * any variable: the arc holds when the literal is fixed to its value, as the arcs {@code z = a[j]}
+ * of an element {@code z = a[k]} hold for {@code k = j}. Such a literal is explained by both of its
+ * bounds. These are the precedences with variable offsets of CP-SAT (Perron, Didier and Gay) and
+ * the global difference constraint propagation of Feydy, Schutt and Stuckey, here used for cycle
+ * detection only.
+ *
  * <p>Only the arcs inside a strongly connected component of the graph of all arcs can be on a
  * cycle, so the others are dropped when the constraint is built, as are the arcs of fixed variables
  * ({@link #conditionalArcs()} tells how many conditional arcs remain).
@@ -83,6 +94,11 @@ import org.jacop.lcg.Explainable;
  *   <li>S. Cotton and O. Maler, Fast and Flexible Difference Constraint Propagation for DPLL(T), in
  *       Theory and Applications of Satisfiability Testing (SAT 2006), LNCS 4121, Springer, 2006,
  *       pp. 170-183.
+ *   <li>T. Feydy, A. Schutt and P. J. Stuckey, Global Difference Constraint Propagation for Finite
+ *       Domain Solvers, in Principles and Practice of Declarative Programming (PPDP 2008), ACM,
+ *       2008, pp. 226-235.
+ *   <li>L. Perron, F. Didier and S. Gay, The CP-SAT-LP Solver, invited talk, in Principles and
+ *       Practice of Constraint Programming (CP 2023), LIPIcs 280, 2023, pp. 3:1-3:2.
  *   <li>G. Ramalingam, J. Song, L. Joskowicz and R. E. Miller, Solving Systems of Difference
  *       Constraints Incrementally, Algorithmica 23(3), 1999, pp. 261-275.
  *   <li>R. E. Tarjan, Shortest Paths, AT&amp;T Bell Laboratories technical memorandum, 1981; see
@@ -122,6 +138,8 @@ public class DifferenceCycles extends Constraint
   private final int[] cs;
   private final IntVar[] bs;
   private final int[] vs;
+  private final IntVar[] os;
+  private final int[] ss;
 
   // nodes
   private final IntVar[] node;
@@ -133,6 +151,8 @@ public class DifferenceCycles extends Constraint
   private final long[] weight;
   private final int[] lit;
   private final int[] value;
+  private final int[] off;
+  private final int[] offSign;
 
   // the arcs leaving each node: out[start[n] .. start[n + 1])
   private final int[] start;
@@ -143,6 +163,14 @@ public class DifferenceCycles extends Constraint
   private final int[] litStart;
   private final int[] arcsOf;
   private final Map<Var, Integer> literalIndex = new IdentityHashMap<>();
+
+  private final IntVar[] offset;
+  private final int[] offStart;
+  private final int[] arcsOfOffset;
+  private final Map<Var, Integer> offsetIndex = new IdentityHashMap<>();
+
+  // BOUND events when an arc has an offset or a literal that is not 0/1, else GROUND
+  private final boolean boundEvents;
 
   private final int conditional;
 
@@ -182,19 +210,46 @@ public class DifferenceCycles extends Constraint
    * @param y the variables with coefficient -1.
    * @param c the constants.
    * @param b the 0/1 variables of the conditional difference constraints, or null entries.
-   * @param v the values of b under which the difference constraints hold (0 or 1).
+   * @param v the values of b under which the difference constraints hold.
    */
   public DifferenceCycles(IntVar[] x, IntVar[] y, int[] c, IntVar[] b, int[] v) {
+    this(x, y, c, b, v, new IntVar[x.length], new int[x.length]);
+  }
+
+  /**
+   * It creates the constraint over difference constraints {@code x[i] - y[i] <= c[i] - s[i] *
+   * o[i]}, each of which holds always ({@code b[i] == null}) or when {@code b[i] == v[i]}. An
+   * offset variable {@code o[i]} (null for none) makes the weight of the arc depend on its bound:
+   * {@code c[i] - min(o[i])} for {@code s[i] = 1} and {@code c[i] + max(o[i])} for {@code s[i] =
+   * -1}, as in {@code y = x + d} with a variable duration d. A literal {@code b[i]} may be any
+   * variable: the arc holds once it is fixed to {@code v[i]}, as the arcs {@code z = a[j]} of an
+   * element {@code z = a[k]} hold for {@code k = j}.
+   *
+   * @param x the variables with coefficient 1.
+   * @param y the variables with coefficient -1.
+   * @param c the constants.
+   * @param b the variables of the conditional difference constraints, or null entries.
+   * @param v the values of b under which the difference constraints hold.
+   * @param o the offset variables, or null entries.
+   * @param s the signs of the offsets, 1 or -1 (ignored for a null offset).
+   */
+  public DifferenceCycles(
+      IntVar[] x, IntVar[] y, int[] c, IntVar[] b, int[] v, IntVar[] o, int[] s) {
     checkInputForNullness(new String[] {"x", "y"}, new Object[][] {x, y});
-    checkInputForNullness(new String[] {"c", "b", "v"}, new Object[] {c, b, v});
+    checkInputForNullness(new String[] {"c", "b", "v", "o", "s"}, new Object[] {c, b, v, o, s});
     int m = x.length;
-    if (y.length != m || c.length != m || b.length != m || v.length != m) {
+    if (y.length != m
+        || c.length != m
+        || b.length != m
+        || v.length != m
+        || o.length != m
+        || s.length != m) {
       throw new IllegalArgumentException("DifferenceCycles: the arrays have different lengths");
     }
     for (int i = 0; i < m; i++) {
-      if (b[i] != null && (b[i].min() < 0 || b[i].max() > 1 || (v[i] != 0 && v[i] != 1))) {
+      if (o[i] != null && s[i] != 1 && s[i] != -1) {
         throw new IllegalArgumentException(
-            "DifferenceCycles: " + b[i] + " is not 0/1 or " + v[i] + " is not 0 or 1");
+            "DifferenceCycles: the sign " + s[i] + " is not 1 or -1");
       }
     }
     this.numberId = idNumber.incrementAndGet();
@@ -204,6 +259,8 @@ public class DifferenceCycles extends Constraint
     this.cs = c;
     this.bs = b;
     this.vs = v;
+    this.os = o;
+    this.ss = s;
 
     // nodes and all arcs
     Map<IntVar, Integer> nodeIndex = new IdentityHashMap<>();
@@ -241,7 +298,11 @@ public class DifferenceCycles extends Constraint
     weight = new long[kept];
     lit = new int[kept];
     value = new int[kept];
+    off = new int[kept];
+    offSign = new int[kept];
     List<IntVar> literals = new ArrayList<>();
+    List<IntVar> offsets = new ArrayList<>();
+    boolean bounds = false;
     int k = 0;
     for (int i = 0; i < m; i++) {
       if (t[i] != h[i] && component[t[i]] == component[h[i]]) {
@@ -249,6 +310,20 @@ public class DifferenceCycles extends Constraint
         head[k] = h[i];
         weight[k] = c[i];
         value[k] = v[i];
+        if (o[i] == null) {
+          off[k] = -1;
+        } else {
+          bounds = true;
+          offSign[k] = s[i];
+          Integer l = offsetIndex.get(o[i]);
+          if (l == null) {
+            l = offsets.size();
+            offsetIndex.put(o[i], l);
+            offsets.add(o[i]);
+          }
+          off[k] = l;
+        }
+        bounds |= b[i] != null && (b[i].min() < 0 || b[i].max() > 1);
         if (b[i] == null) {
           lit[k] = -1;
         } else {
@@ -265,6 +340,8 @@ public class DifferenceCycles extends Constraint
     }
     node = nodes.toArray(new IntVar[0]);
     literal = literals.toArray(new IntVar[0]);
+    offset = offsets.toArray(new IntVar[0]);
+    boundEvents = bounds;
 
     start = new int[n + 1];
     out = new int[kept];
@@ -297,7 +374,42 @@ public class DifferenceCycles extends Constraint
       }
     }
 
-    setScope(literal);
+    int no = offset.length;
+    offStart = new int[no + 1];
+    int withOffset = 0;
+    for (int a = 0; a < kept; a++) {
+      if (off[a] >= 0) {
+        offStart[off[a] + 1]++;
+        withOffset++;
+      }
+    }
+    for (int l = 0; l < no; l++) {
+      offStart[l + 1] += offStart[l];
+    }
+    arcsOfOffset = new int[withOffset];
+    int[] ofill = Arrays.copyOf(offStart, no);
+    for (int a = 0; a < kept; a++) {
+      if (off[a] >= 0) {
+        arcsOfOffset[ofill[off[a]]++] = a;
+      }
+    }
+
+    List<IntVar> scope = new ArrayList<>(literals);
+    for (IntVar ov : offset) {
+      if (!literalIndex.containsKey(ov)) {
+        scope.add(ov);
+      }
+    }
+    setScope(scope.toArray(new IntVar[0]));
+  }
+
+  // the weight of arc a now: its constant less the bound of its offset
+  private long weightOf(int a) {
+    if (off[a] < 0) {
+      return weight[a];
+    }
+    IntVar o = offset[off[a]];
+    return offSign[a] > 0 ? weight[a] - o.min() : weight[a] + o.max();
   }
 
   private static int addNode(List<IntVar> nodes, IntVar v) {
@@ -313,6 +425,15 @@ public class DifferenceCycles extends Constraint
    */
   public int conditionalArcs() {
     return conditional;
+  }
+
+  /**
+   * It tells how many arcs with an offset variable can be on a cycle.
+   *
+   * @return the number of arcs with offsets inside strongly connected components.
+   */
+  public int offsetArcs() {
+    return arcsOfOffset.length;
   }
 
   /**
@@ -434,7 +555,9 @@ public class DifferenceCycles extends Constraint
       queued[u] = false;
       for (int e = start[u]; e < start[u + 1]; e++) {
         int a = out[e];
-        if (lit[a] >= 0) {
+        // an arc with an offset is left to the first consistency, so that a cycle found here
+        // needs no reason and does not depend on the bounds of the offsets when it is imposed
+        if (lit[a] >= 0 || off[a] >= 0) {
           continue;
         }
         int w = head[a];
@@ -488,7 +611,7 @@ public class DifferenceCycles extends Constraint
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.GROUND;
+    return boundEvents ? IntDomain.BOUND : IntDomain.GROUND;
   }
 
   @Override
@@ -528,23 +651,37 @@ public class DifferenceCycles extends Constraint
       first = false;
       queue.clear();
       queue.addAll(Arrays.asList(literal));
+      queue.addAll(Arrays.asList(offset));
     }
     // the arcs that hold now and may not be in the potential yet
     int[] arcs = new int[8];
     int na = 0;
     for (Var v : queue) {
       Integer l = literalIndex.get(v);
-      if (l == null) {
-        continue;
-      }
-      for (int i = litStart[l]; i < litStart[l + 1]; i++) {
-        int a = arcsOf[i];
-        if (!pending[a] && holds(a)) {
-          pending[a] = true;
-          if (na == arcs.length) {
-            arcs = Arrays.copyOf(arcs, 2 * na);
+      if (l != null) {
+        for (int i = litStart[l]; i < litStart[l + 1]; i++) {
+          int a = arcsOf[i];
+          if (!pending[a] && holds(a)) {
+            pending[a] = true;
+            if (na == arcs.length) {
+              arcs = Arrays.copyOf(arcs, 2 * na);
+            }
+            arcs[na++] = a;
           }
-          arcs[na++] = a;
+        }
+      }
+      // an offset that moved tightens its arcs
+      Integer k = offsetIndex.get(v);
+      if (k != null) {
+        for (int i = offStart[k]; i < offStart[k + 1]; i++) {
+          int a = arcsOfOffset[i];
+          if (!pending[a] && holds(a)) {
+            pending[a] = true;
+            if (na == arcs.length) {
+              arcs = Arrays.copyOf(arcs, 2 * na);
+            }
+            arcs[na++] = a;
+          }
         }
       }
     }
@@ -567,7 +704,7 @@ public class DifferenceCycles extends Constraint
   private void insert(int a) {
     int u = tail[a];
     int v = head[a];
-    long g = pi[u] + weight[a] - pi[v];
+    long g = pi[u] + weightOf(a) - pi[v];
     if (g >= 0) {
       return;
     }
@@ -586,7 +723,7 @@ public class DifferenceCycles extends Constraint
           if (done[w] || pending[arc] || !holds(arc)) {
             continue;
           }
-          long ng = ps + weight[arc] - pi[w];
+          long ng = ps + weightOf(arc) - pi[w];
           if (ng < gamma[w]) {
             if (w == u) {
               recordCycle(arc, a);
@@ -712,10 +849,21 @@ public class DifferenceCycles extends Constraint
       int a = cycle[i];
       if (lit[a] >= 0) {
         IntVar b = literal[lit[a]];
-        if (value[a] == 1) {
+        // whether one bound fixes the literal depends on its root domain, not on the current one
+        boolean zeroOne = trail.minBefore(b, 0) >= 0 && trail.maxBefore(b, 0) <= 1;
+        if (!zeroOne || value[a] == 1) {
           trail.addLowerBound(b, now, out);
-        } else {
+        }
+        if (!zeroOne || value[a] != 1) {
           trail.addUpperBound(b, now, out);
+        }
+      }
+      if (off[a] >= 0) {
+        IntVar o = offset[off[a]];
+        if (offSign[a] > 0) {
+          trail.addLowerBound(o, now, out);
+        } else {
+          trail.addUpperBound(o, now, out);
         }
       }
     }
@@ -732,10 +880,13 @@ public class DifferenceCycles extends Constraint
     List<Integer> c = new ArrayList<>();
     List<IntVar> b = new ArrayList<>();
     List<Integer> v = new ArrayList<>();
+    List<IntVar> o = new ArrayList<>();
+    List<Integer> sign = new ArrayList<>();
     for (int i = 0; i < xs.length; i++) {
       IntVar xi = map.get(xs[i]);
       IntVar yi = map.get(ys[i]);
       IntVar bi = bs[i] == null ? null : map.get(bs[i]);
+      IntVar oi = os[i] == null ? null : map.get(os[i]);
       if (xi == null || yi == null) {
         continue;
       }
@@ -743,18 +894,33 @@ public class DifferenceCycles extends Constraint
       if (bs[i] != null && bi == null && (!bs[i].singleton() || bs[i].value() != vs[i])) {
         continue;
       }
+      long ci = cs[i];
+      if (os[i] != null && oi == null) {
+        // an offset without a counterpart must be fixed, and its value joins the constant
+        if (!os[i].singleton()) {
+          continue;
+        }
+        ci -= (long) ss[i] * os[i].value();
+        if (ci < Integer.MIN_VALUE || ci > Integer.MAX_VALUE) {
+          continue;
+        }
+      }
       x.add(xi);
       y.add(yi);
-      c.add(cs[i]);
+      c.add((int) ci);
       b.add(bi);
       v.add(vs[i]);
+      o.add(oi);
+      sign.add(ss[i]);
     }
     return new DifferenceCycles(
         x.toArray(new IntVar[0]),
         y.toArray(new IntVar[0]),
         c.stream().mapToInt(Integer::intValue).toArray(),
         b.toArray(new IntVar[0]),
-        v.stream().mapToInt(Integer::intValue).toArray());
+        v.stream().mapToInt(Integer::intValue).toArray(),
+        o.toArray(new IntVar[0]),
+        sign.stream().mapToInt(Integer::intValue).toArray());
   }
 
   @Override

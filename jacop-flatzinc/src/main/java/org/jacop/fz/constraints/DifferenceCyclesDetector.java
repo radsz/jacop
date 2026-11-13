@@ -38,6 +38,7 @@ import java.util.Map;
 import org.jacop.constraints.DifferenceCycles;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
@@ -62,6 +63,14 @@ import org.jacop.fz.SimpleNode;
  */
 public class DifferenceCyclesDetector implements ParserTreeConstants {
 
+  // arcs whose weight is the bound of a third variable of a row, and the m >= x arcs of max and min
+  private static final boolean OFFSETS =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.differenceOffsets"));
+
+  // arcs of the elements y = a[index] over arrays of variables, conditional on the index
+  private static final boolean ELEMENTS =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.differenceElements"));
+
   private final Support support;
 
   private final List<IntVar> xs = new ArrayList<>();
@@ -69,6 +78,8 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
   private final List<Integer> cs = new ArrayList<>();
   private final List<IntVar> bs = new ArrayList<>();
   private final List<Integer> vs = new ArrayList<>();
+  private final List<IntVar> os = new ArrayList<>();
+  private final List<Integer> ss = new ArrayList<>();
   private final Store scratch = new Store();
   private final Map<Integer, IntVar> constants = new HashMap<>();
 
@@ -99,30 +110,40 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
   public void detect(SimpleNode astTree) {
     long start = System.nanoTime();
     support.forEachConstraint(astTree, this::collect);
-    if (bs.stream().allMatch(b -> b == null)) {
+    if (bs.stream().allMatch(b -> b == null) && os.stream().allMatch(o -> o == null)) {
       return;
     }
     int m = xs.size();
     int[] c = new int[m];
     int[] v = new int[m];
+    int[] s = new int[m];
     for (int i = 0; i < m; i++) {
       c[i] = cs.get(i);
       v[i] = vs.get(i);
+      s[i] = ss.get(i);
     }
     DifferenceCycles cycles =
         new DifferenceCycles(
-            xs.toArray(new IntVar[0]), ys.toArray(new IntVar[0]), c, bs.toArray(new IntVar[0]), v);
+            xs.toArray(new IntVar[0]),
+            ys.toArray(new IntVar[0]),
+            c,
+            bs.toArray(new IntVar[0]),
+            v,
+            os.toArray(new IntVar[0]),
+            s);
     if (support.options.debug()) {
       FzConsole.println(
           "% difference cycles: "
               + m
               + " difference constraints, "
               + cycles.conditionalArcs()
-              + " conditional on cycles, "
+              + " conditional and "
+              + cycles.offsetArcs()
+              + " with offsets on cycles, "
               + (System.nanoTime() - start) / 1_000_000
               + " ms");
     }
-    if (cycles.conditionalArcs() == 0) {
+    if (cycles.conditionalArcs() == 0 && cycles.offsetArcs() == 0) {
       return;
     }
     // redundant, so degree-based variable selections see the degrees of the model
@@ -138,6 +159,30 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
       case "int_lin_le_reif" -> linear(node, aVar(node, 3), false, true);
       case "int_lin_eq_imp", "int_lin_eq_reif" -> linear(node, aVar(node, 3), true, false);
       case "int_le" -> difference(aVar(node, 0), aVar(node, 1), 0, null, 1);
+      case "int_max" -> {
+        if (OFFSETS) {
+          // m >= x and m >= y
+          difference(aVar(node, 0), aVar(node, 2), 0, null, 1);
+          difference(aVar(node, 1), aVar(node, 2), 0, null, 1);
+        }
+      }
+      case "int_min" -> {
+        if (OFFSETS) {
+          // m <= x and m <= y
+          difference(aVar(node, 2), aVar(node, 0), 0, null, 1);
+          difference(aVar(node, 2), aVar(node, 1), 0, null, 1);
+        }
+      }
+      case "array_var_int_element" -> {
+        if (ELEMENTS) {
+          element(node, 1);
+        }
+      }
+      case "jacop_array_var_int_element_nonshifted" -> {
+        if (ELEMENTS) {
+          element(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
+        }
+      }
       case "int_lt" -> difference(aVar(node, 0), aVar(node, 1), -1, null, 1);
       case "int_le_imp" -> difference(aVar(node, 0), aVar(node, 1), 0, aVar(node, 2), 1);
       case "int_lt_imp" -> difference(aVar(node, 0), aVar(node, 1), -1, aVar(node, 2), 1);
@@ -197,6 +242,10 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
   // k * x0 - k * x1 <= c (or = c) over two variables, conditional on literal when it is not null
   private void linear(ASTConstElem node, IntVar literal, boolean equation, boolean reified) {
     int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+    if (OFFSETS && literal == null && a != null && a.length == 3) {
+      offsetRow(node, a, equation);
+      return;
+    }
     if (a == null || a.length != 2 || a[0] != -a[1] || a[0] == 0 || a[0] == Integer.MIN_VALUE) {
       return;
     }
@@ -217,6 +266,113 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
       // false: k (plus - minus) >= c + 1, so minus - plus <= -ceil((c + 1) / k)
       difference(minus, plus, -Math.floorDiv(c + k, k), literal, 0);
     }
+  }
+
+  // a row a0 x0 + a1 x1 + a2 x2 <= c (or = c) of unit coefficients: for each pair of opposite
+  // coefficients, x - y <= c - s * z with the third variable z as the offset of the arc
+  private void offsetRow(ASTConstElem node, int[] a, boolean equation) {
+    for (int k : a) {
+      if (k != 1 && k != -1) {
+        return;
+      }
+    }
+    SimpleNode array = (SimpleNode) node.jjtGetChild(1);
+    IntVar[] x = vars(array, 3);
+    if (x == null) {
+      return;
+    }
+    long c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        if (i == j || a[i] != 1 || a[j] != -1) {
+          continue;
+        }
+        int r = 3 - i - j;
+        // x[i] - x[j] <= c - a[r] x[r]
+        offsetDifference(x[i], x[j], c, x[r], a[r]);
+        if (equation) {
+          // x[j] - x[i] <= -c + a[r] x[r]
+          offsetDifference(x[j], x[i], -c, x[r], -a[r]);
+        }
+      }
+    }
+  }
+
+  // x - y <= c - s * z
+  private void offsetDifference(IntVar x, IntVar y, long c, IntVar z, int s) {
+    if (z.singleton()) {
+      difference(x, y, c - (long) s * z.value(), null, 1);
+      return;
+    }
+    if (x == y
+        || x.singleton()
+        || y.singleton()
+        || c < Integer.MIN_VALUE
+        || c > Integer.MAX_VALUE) {
+      return;
+    }
+    xs.add(x);
+    ys.add(y);
+    cs.add((int) c);
+    bs.add(null);
+    vs.add(1);
+    os.add(z);
+    ss.add(s);
+  }
+
+  // y = a[index - first]: for each value j of the index, y - a[j] <= 0 and a[j] - y <= 0 hold
+  // when index == j
+  private void element(ASTConstElem node, int first) {
+    IntVar index = aVar(node, 0);
+    IntVar[] a = vars((SimpleNode) node.jjtGetChild(1), -1);
+    IntVar y = aVar(node, 2);
+    if (a == null || y.singleton()) {
+      return;
+    }
+    for (ValueEnumeration e = index.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      int j = e.nextElement();
+      int at = j - first;
+      if (at < 0 || at >= a.length) {
+        continue;
+      }
+      IntVar b = index.singleton() ? null : index;
+      conditional(y, a[at], 0, b, j);
+      conditional(a[at], y, 0, b, j);
+    }
+  }
+
+  // x - y <= c when literal == value, for a literal of any domain
+  private void conditional(IntVar x, IntVar y, long c, IntVar literal, int value) {
+    if (literal == null || literal.min() >= 0 && literal.max() <= 1) {
+      difference(x, y, c, literal, value);
+      return;
+    }
+    if (x == y || x.singleton() || y.singleton()) {
+      return;
+    }
+    xs.add(x);
+    ys.add(y);
+    cs.add((int) c);
+    bs.add(literal);
+    vs.add(value);
+    os.add(null);
+    ss.add(1);
+  }
+
+  // the variables of an array (of length n, or any length for n < 0), or null
+  private IntVar[] vars(SimpleNode array, int n) {
+    IntVar[] x;
+    if (array.getId() == JJTARRAYLITERAL) {
+      x = new IntVar[array.jjtGetNumChildren()];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = scalar(array, i);
+      }
+    } else if (array.getId() == JJTSCALARFLATEXPR && ((ASTScalarFlatExpr) array).getType() == 2) {
+      x = support.dictionary.getVariableArray(((ASTScalarFlatExpr) array).getIdent());
+    } else {
+      return null;
+    }
+    return x == null || n >= 0 && x.length != n ? null : x;
   }
 
   // x - y <= c when literal is null or literal == value
@@ -246,5 +402,7 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
     cs.add((int) c);
     bs.add(b);
     vs.add(value);
+    os.add(null);
+    ss.add(1);
   }
 }

@@ -4825,6 +4825,23 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+283. DifferenceCycles takes arcs x - y <= c - s * o whose weight depends on
+   the bound of an offset variable o (y >= x + d with a variable duration
+   or travel time), and literals of any domain: the arc holds when the
+   literal is fixed to its value. The FlatZinc front end adds the arcs of
+   three-variable unit rows (int_lin_le/eq over x, y and an offset), of
+   int_max/int_min (m >= x) and of array_var_int_element (z = a[j] when
+   the index is j), so cycles through element successors and variable
+   travel times, as in routing and cyclic scheduling, fail at once
+   instead of creeping by bounds propagation. On the MiniZinc Challenge
+   2023 yumi-static instance p_4_GG_GG_yumi_grid_setup_7_7, -f proves the
+   optimum 457 in 104 s instead of 232 s (CP-SAT 19 s). This is the
+   precedence reasoning with variable offsets of CP-SAT (Perron, Didier
+   and Gay, The CP-SAT-LP solver, CP 2023) and the global difference
+   constraint propagation of Feydy, Schutt and Stuckey (PPDP 2008), used
+   for cycle detection only. -Dorg.jacop.fz.differenceOffsets=false and
+   -Dorg.jacop.fz.differenceElements=false turn the new arcs off.
+
 Version 4.11
 =============
 
