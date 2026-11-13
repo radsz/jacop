@@ -429,6 +429,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   @Override
   public void removeLevelLate(int removedLevel) {
+    if (size > 0 && level[size - 1] >= removedLevel) {
+      epoch++;
+    }
     while (size > 0 && level[size - 1] >= removedLevel) {
       size--;
       IntVar x = entryVar[size];
@@ -464,6 +467,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // each of thousands of levels made the final backtrack of debruijn_binary 04_06 copy its runs
   // at every level (60 % of a 40 s run)
   private boolean deferring;
+
+  // the number of backtracks that removed entries
+  private int epoch;
   private boolean[] stale = new boolean[0];
   private IntVar[] staleVars = new IntVar[16];
   private int numStale;
@@ -523,6 +529,17 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public int[] entryMarks() {
     return entryMarks;
+  }
+
+  /**
+   * Returns how many times entries were removed from the trail. While it stays the same, the
+   * entries before any position stay the same too, so an explanation may keep what it computed for
+   * a position.
+   *
+   * @return the number of backtracks that removed entries
+   */
+  public int epoch() {
+    return epoch;
   }
 
   /**

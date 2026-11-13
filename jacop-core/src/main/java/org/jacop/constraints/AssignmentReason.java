@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -71,15 +72,25 @@ final class AssignmentReason {
   private final long[][] columnDuals;
   private final int[][] mates;
 
-  private final boolean[][] allowed;
-  private final long[][] weight;
+  // the arcs and weights of each direction, for the position solved last in that direction
+  private final boolean[][][] allowedOf;
+  private final long[][][] weightOf;
+  private final int[] solvedPosition = {-1, -1};
+  private final int[] solvedEpoch = new int[2];
+  private final boolean[] solvedOk = new boolean[2];
+  private final boolean[] changed;
+  // the entries citeRemoved cites for each direction and row, valid while citedValid
+  private final EntryList[][] cited;
+  private final boolean[][] citedValid;
+
+  private boolean[][] allowed;
+  private long[][] weight;
   private long[] u;
   private long[] v;
   private int[] p;
   private final int[] way;
   private final long[] minv;
   private final boolean[] used;
-  private final EntryList scratch = new EntryList();
 
   /**
    * Explanations for x forming an assignment of cost cost.
@@ -97,8 +108,16 @@ final class AssignmentReason {
     this.offset = offset;
     this.selfLoops = selfLoops;
     this.n = x.length;
-    allowed = new boolean[n][n];
-    weight = new long[n + 1][n + 1];
+    allowedOf = new boolean[2][n][n];
+    weightOf = new long[2][n + 1][n + 1];
+    changed = new boolean[n];
+    cited = new EntryList[2][n];
+    citedValid = new boolean[2][n];
+    for (EntryList[] rows : cited) {
+      for (int i = 0; i < n; i++) {
+        rows[i] = new EntryList();
+      }
+    }
     rowDuals = new long[2][n + 1];
     columnDuals = new long[2][n + 1];
     mates = new int[2][n + 1];
@@ -258,53 +277,82 @@ final class AssignmentReason {
   }
 
   // cites every arc that is not in the domains and whose reduced cost is negative, except those
-  // of row skip (the explained atom's row, whose arcs are dealt with apart)
+  // of row skip (the explained atom's row, whose arcs are dealt with apart); the entries of each
+  // row are kept until a solve in the same direction changes the arcs or the duals
   private void citeRemoved(AtomicTrail trail, int position, long sign, int skip, EntryList out) {
+    int s = sign > 0 ? 0 : 1;
+    EntryList[] rows = cited[s];
+    boolean[] valid = citedValid[s];
+    for (int i = 0; i < n; i++) {
+      if (valid[i]) {
+        continue;
+      }
+      EntryList row = rows[i];
+      row.clear();
+      for (int j = 0; j < n; j++) {
+        if (!allowed[i][j] && (selfLoops || i != j) && reduced(i, j, sign) < 0) {
+          trail.excludedBefore(x[i], j + offset, position, row);
+        }
+      }
+      valid[i] = true;
+    }
     for (int i = 0; i < n; i++) {
       if (i == skip) {
         continue;
       }
-      for (int j = 0; j < n; j++) {
-        if (!allowed[i][j] && (selfLoops || i != j) && reduced(i, j, sign) < 0) {
-          trail.excludedBefore(x[i], j + offset, position, out);
-        }
+      EntryList row = rows[i];
+      for (int k = 0, size = row.size(); k < size; k++) {
+        out.addFrom(row, k);
       }
     }
   }
 
   // the arcs in the domains just before the position; the optimal assignment of sign * cost over
-  // them and its duals; false when there is no assignment or the duals are not feasible. The duals
-  // and the matching of the previous solve in the same direction are repaired and only the rows
-  // that lost their arc are augmented, so a solve costs O(n^2) per such row instead of O(n^3).
+  // them and its duals; false when there is no assignment. The arcs, the duals and the matching of
+  // the previous solve in the same direction are kept: only the rows of the variables with an
+  // entry between the two positions are rebuilt and repaired, and only the rows that lost their
+  // arc are augmented, at O(n^2) each, instead of solving again in O(n^3). Explanations of one
+  // conflict come at nearby positions, so most of them change no row and solve nothing.
   private boolean solve(AtomicTrail trail, int position, long sign) {
-    for (int i = 0; i < n; i++) {
-      IntVar xi = x[i];
-      for (int j = 0; j < n; j++) {
-        int value = j + offset;
-        // a value in the domain now was in it before the position too
-        boolean in = (selfLoops || i != j) && xi.domain.contains(value);
-        if (!in && (selfLoops || i != j)) {
-          scratch.clear();
-          in = !trail.excludedBefore(xi, value, position, scratch);
-        }
-        allowed[i][j] = in;
-        weight[i + 1][j + 1] = in ? sign * costs[i][j] : BIG;
-      }
-    }
     int s = sign > 0 ? 0 : 1;
     u = rowDuals[s];
     v = columnDuals[s];
     p = mates[s];
+    allowed = allowedOf[s];
+    weight = weightOf[s];
+    // after a backtrack every row is rebuilt, but the duals still warm-start the solve
+    boolean full = solvedPosition[s] < 0 || solvedEpoch[s] != trail.epoch();
     for (int k = 1; k <= n; k++) {
       if (Math.abs(u[k]) > DRIFT_LIMIT || Math.abs(v[k]) > DRIFT_LIMIT) {
         Arrays.fill(u, 0);
         Arrays.fill(v, 0);
         Arrays.fill(p, 0);
+        full = true;
         break;
       }
     }
-    // the tightest feasible row duals for the column duals; a matched arc stays only while tight
+    int from = Math.min(position, solvedPosition[s]);
+    int to = Math.max(position, solvedPosition[s]);
+    boolean any = false;
+    for (int i = 0; i < n; i++) {
+      changed[i] = full || trail.lastEntry(x[i], to) >= from;
+      any |= changed[i];
+    }
+    solvedPosition[s] = position;
+    solvedEpoch[s] = trail.epoch();
+    if (!any) {
+      return solvedOk[s];
+    }
+    for (int i = 0; i < n; i++) {
+      if (changed[i]) {
+        row(trail, i, position, sign);
+      }
+    }
+    // the tightest feasible duals of the rebuilt rows; a matched arc stays only while tight
     for (int i = 1; i <= n; i++) {
+      if (!changed[i - 1]) {
+        continue;
+      }
       long min = Long.MAX_VALUE;
       long[] w = weight[i];
       for (int j = 1; j <= n; j++) {
@@ -316,7 +364,7 @@ final class AssignmentReason {
     Arrays.fill(matched, false);
     for (int j = 1; j <= n; j++) {
       int r = p[j];
-      if (r != 0 && weight[r][j] - u[r] - v[j] != 0) {
+      if (r != 0 && changed[r - 1] && weight[r][j] - u[r] - v[j] != 0) {
         p[j] = 0;
       } else if (r != 0) {
         matched[r] = true;
@@ -329,6 +377,12 @@ final class AssignmentReason {
       }
     }
     int[] rows = Arrays.copyOf(way, free);
+    // a rebuilt row changes its own reduced costs; an augmentation changes the column duals
+    for (int i = 0; i < n; i++) {
+      if (free > 0 || changed[i]) {
+        citedValid[s][i] = false;
+      }
+    }
     // Hungarian method with potentials, rows 1..n, columns 1..n, p[j] the row of column j
     p[0] = 0;
     for (int i : rows) {
@@ -372,12 +426,39 @@ final class AssignmentReason {
     }
     p[0] = 0;
     v[0] = 0;
-    // every row is matched to an arc of the domains, and the duals are feasible on those arcs
+    // every row is matched to an arc of the domains; the duals are feasible on every arc
+    solvedOk[s] = true;
     for (int j = 1; j <= n; j++) {
       if (!allowed[p[j] - 1][j - 1]) {
-        return false;
+        solvedOk[s] = false;
       }
     }
+    assert dualsFeasible(sign) : "negative reduced cost";
+    return solvedOk[s];
+  }
+
+  // the arcs of row i in the domains just before the position, and their weights
+  private void row(AtomicTrail trail, int i, int position, long sign) {
+    IntVar xi = x[i];
+    IntDomain root = trail.rootDomain(xi);
+    // the bounds before the position, looked up once per row; a value inside them was in the
+    // domain unless it is not in the root domain or an NE entry removed it
+    int lo = trail.minBefore(xi, position);
+    int hi = trail.maxBefore(xi, position);
+    for (int j = 0; j < n; j++) {
+      int value = j + offset;
+      boolean in =
+          (selfLoops || i != j)
+              && value >= lo
+              && value <= hi
+              && root.contains(value)
+              && trail.notEqualEntry(xi, value, position) < 0;
+      allowed[i][j] = in;
+      weight[i + 1][j + 1] = in ? sign * costs[i][j] : BIG;
+    }
+  }
+
+  private boolean dualsFeasible(long sign) {
     for (int i = 0; i < n; i++) {
       for (int j = 0; j < n; j++) {
         if (allowed[i][j] && reduced(i, j, sign) < 0) {
