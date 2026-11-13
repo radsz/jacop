@@ -155,6 +155,9 @@ final class Portfolio {
   private boolean complete;
   // the answer has been printed, by run() or at shutdown
   private boolean printed;
+  // the factor the threads divided the objective by (ObjectiveScaling)
+  private long objectiveScale = 1;
+
   // the best solution and bound of all threads, for --gap and the objectiveBound statistic
   private ObjectiveGap gap;
   // a thread's bound holds only for the restarts of relax and reconstruct or on_restart
@@ -390,9 +393,10 @@ final class Portfolio {
     out.flush();
   }
 
-  // the cost variable is the negated objective under maximisation
-  private int objective(int cost) {
-    return maximisation ? -cost : cost;
+  // the cost variable is the negated objective under maximisation, and it may hold the objective
+  // divided by a scale (ObjectiveScaling)
+  private long objective(int cost) {
+    return (maximisation ? -(long) cost : cost) * objectiveScale;
   }
 
   /**
@@ -620,6 +624,7 @@ final class Portfolio {
               options.gap(),
               maximise,
               options.searchStatistics() ? line -> printBound(out, line) : null);
+      gap.scale(objectiveScale);
     }
     return gap;
   }
@@ -717,6 +722,21 @@ final class Portfolio {
      */
     void solution(String text, Integer cost, boolean maximise, String[] names, int[] values) {
       Portfolio.this.solution(this, text, cost, maximise, names, values);
+    }
+
+    /**
+     * Sets the factor the objective was divided by in the model of the threads (ObjectiveScaling),
+     * which every thread finds the same.
+     *
+     * @param factor the factor
+     */
+    void objectiveScale(long factor) {
+      synchronized (lock) {
+        objectiveScale = factor;
+        if (gap != null) {
+          gap.scale(factor);
+        }
+      }
     }
 
     /**

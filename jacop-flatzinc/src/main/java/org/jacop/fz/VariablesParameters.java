@@ -410,6 +410,7 @@ public class VariablesParameters implements ParserTreeConstants {
         aVar.domain.inValue(store.level, aVar, initVal);
       } else {
         IntVar initVar = getScalarFlatExpr_var(store, node, initChild);
+        table.noteDeclaredEquality(aVar, initVar);
         pose(store, new XeqY(aVar, initVar));
       }
     }
