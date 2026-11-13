@@ -4259,6 +4259,9 @@ public final class LcgSolver implements ExternalPropagator {
         graphConstraintsEncoded++;
       } else if (clauseCandidate(c) && encodeAsClauses(c)) {
         constraintsAsClauses++;
+      } else if (defaultCounter(c) && encodeAsCounter(c)) {
+        defaultCounters++;
+        constraintsAsClauses++;
       } else {
         propagatorLeft = true;
         if (c instanceof ImpliedClauses i && !rootFailed) {
@@ -4345,6 +4348,47 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Whether small counting constraints over 0/1 terms outside a reification (sums of 0/1 variables,
+   * counts of a value, the counts of global_cardinality) become unary counters by default, {@code
+   * jacop.lcg.counters} (true unless set to false). A propagator explains a count by the literals
+   * of the variables only, so every learnt clause restates whole counts; the counter's literals
+   * {@code [sum of the first i terms >= j]} let learnt clauses state partial counts, as the
+   * auxiliary variables of a SAT encoding do (Abio and Stuckey, Conflict directed lazy
+   * decomposition, CP 2012; Abio, Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, To encode
+   * or to propagate? The best choice for each constraint in SAT, CP 2013). On the XCSP
+   * EFPA-4-5-4-11 the proof takes 0.81 million conflicts instead of 2.6 million.
+   */
+  static final boolean COUNTERS =
+      !"false".equals(System.getProperty("jacop.lcg.counters")) && !"all".equals(CLAUSE_CLASSES);
+
+  /** The most clauses of one such counting constraint, {@code jacop.lcg.counters.limit}. */
+  static final int COUNTERS_LIMIT = Integer.getInteger("jacop.lcg.counters.limit", 4000);
+
+  /** The classes whose small instances become counters by default ({@link #COUNTERS}). */
+  private static final java.util.Set<String> DEFAULT_COUNTER_CLASSES =
+      java.util.Set.of(
+          "SumBool",
+          "LinearBool",
+          "Count",
+          "CountBounds",
+          "CountValues",
+          "CountValuesBounds",
+          "AtMost",
+          "AtLeast");
+
+  private ClauseEncoder counterEncoder;
+
+  /** Statistics: counting constraints that became unary counters by default. */
+  public long defaultCounters;
+
+  private boolean defaultCounter(Constraint c) {
+    return COUNTERS
+        && DEFAULT_COUNTER_CLASSES.contains(c.getClass().getSimpleName())
+        && !CLAUSE_SET.contains(c.getClass().getSimpleName())
+        && argumentsFit(c);
+  }
+
+  /**
    * The variables of the objective's definition (the objective and the terms of a linear form over
    * it), or an empty set. A constraint over them stays a propagator: the core-guided phase and the
    * LP read the definitions of the objective's terms from the store, such as {@code b <=> x = c} of
@@ -4352,7 +4396,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private java.util.Set<IntVar> objectiveTerms() {
     java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-    if (clauseObjective == null || "none".equals(CLAUSE_CLASSES)) {
+    if (clauseObjective == null || "none".equals(CLAUSE_CLASSES) && !COUNTERS) {
       return terms;
     }
     terms.add(clauseObjective);
@@ -4404,6 +4448,11 @@ public final class LcgSolver implements ExternalPropagator {
             || counterOnly(c))) {
       return false;
     }
+    return argumentsFit(c);
+  }
+
+  // the variables of a constraint the encoder may take: no objective term, small enough domains
+  private boolean argumentsFit(Constraint c) {
     int arity = 0;
     int wide = 0;
     for (org.jacop.core.Var v : c.arguments()) {
@@ -4427,33 +4476,44 @@ public final class LcgSolver implements ExternalPropagator {
 
   private boolean encodeAsClauses(Constraint c) {
     if (clauseEncoder == null) {
-      clauseEncoder =
-          new ClauseEncoder(
-              new ClauseEncoder.Literals() {
-                @Override
-                public int atLeast(IntVar x, int v) {
-                  return geLit(trail.id(x), v);
-                }
-
-                @Override
-                public int valueLiteral(IntVar x, int v) {
-                  return eqVar(trail.id(x), v);
-                }
-
-                @Override
-                public int auxiliary() {
-                  return newAuxiliary();
-                }
-
-                @Override
-                public IntDomain root(IntVar x) {
-                  return x.dom();
-                }
-              },
-              CLAUSE_LIMIT,
-              CLAUSE_COUNTER);
+      clauseEncoder = new ClauseEncoder(encoderLiterals(), CLAUSE_LIMIT, CLAUSE_COUNTER);
     }
-    List<int[]> cs = clauseEncoder.encode(c, counterOnly(c));
+    return addEncoded(c, clauseEncoder.encode(c, counterOnly(c)));
+  }
+
+  private boolean encodeAsCounter(Constraint c) {
+    if (counterEncoder == null) {
+      counterEncoder = new ClauseEncoder(encoderLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
+    }
+    return addEncoded(c, counterEncoder.encode(c, true));
+  }
+
+  private ClauseEncoder.Literals encoderLiterals() {
+    return new ClauseEncoder.Literals() {
+      @Override
+      public int atLeast(IntVar x, int v) {
+        return geLit(trail.id(x), v);
+      }
+
+      @Override
+      public int valueLiteral(IntVar x, int v) {
+        return eqVar(trail.id(x), v);
+      }
+
+      @Override
+      public int auxiliary() {
+        return newAuxiliary();
+      }
+
+      @Override
+      public IntDomain root(IntVar x) {
+        return x.dom();
+      }
+    };
+  }
+
+  // gives the clauses of an encoded constraint to the solver and takes the constraint out
+  private boolean addEncoded(Constraint c, List<int[]> cs) {
     if (CLAUSE_DEBUG) {
       String s = c.toString();
       System.out.println(

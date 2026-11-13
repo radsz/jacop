@@ -834,7 +834,33 @@ final class ClauseEncoder implements PbModel {
       int[] up,
       boolean closed,
       IntVar rest) {
-    throw REJECTED;
+    if (rest != null) {
+      throw REJECTED;
+    }
+    IntVar[] none = new IntVar[0];
+    for (int k = 0; k < values.length; k++) {
+      if (counters[k] != null) {
+        PbModel.count(this, x, values[k], new IntVar[] {counters[k]}, LinearForm.EQ, 0);
+      } else if (low[k] == up[k]) {
+        PbModel.count(this, x, values[k], none, LinearForm.EQ, low[k]);
+      } else {
+        if (low[k] > 0) {
+          PbModel.count(this, x, values[k], none, LinearForm.GE, low[k]);
+        }
+        if (up[k] < x.length) {
+          PbModel.count(this, x, values[k], none, LinearForm.LE, up[k]);
+        }
+      }
+    }
+    if (closed) {
+      for (IntVar xi : x) {
+        String[] some = new String[values.length];
+        for (int k = 0; k < values.length; k++) {
+          some[k] = equalTo(xi, values[k]);
+        }
+        clause(some);
+      }
+    }
   }
 
   @Override
