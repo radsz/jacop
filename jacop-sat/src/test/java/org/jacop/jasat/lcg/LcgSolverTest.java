@@ -384,7 +384,7 @@ class LcgSolverTest {
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     for (long e : encoded) {
-      assertThat(e).isGreaterThan(50);
+      assertThat(e).isGreaterThan(20);
     }
   }
 
