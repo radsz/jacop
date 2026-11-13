@@ -161,6 +161,14 @@ public interface ExternalPropagator {
   }
 
   /**
+   * Notifies the first decision below the assumptions (or at the root without them), just before it
+   * is assigned.
+   *
+   * @param lit the decision literal
+   */
+  default void notifyTopDecision(int lit) {}
+
+  /**
    * Suggests the next decision.
    *
    * @return an unassigned literal, or 0 to leave the decision to the solver

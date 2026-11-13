@@ -76,6 +76,7 @@ import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
@@ -129,6 +130,7 @@ import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Same;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
@@ -139,6 +141,8 @@ import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SymmetricGCC;
+import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XdivYeqZ;
@@ -7589,6 +7593,58 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void hybridTablesOverTheSameTuplesShareThemWithoutChangingTheSolutions() {
+    // A chain of tables over the same tuples, each with its own domains, posted once with tables
+    // of their own and once with tables that share the tuples and bit-sets of the first one,
+    // including tuples with a restriction between columns that each table expands at imposition.
+    Random random = new Random(7);
+    for (int trial = 0; trial < 60; trial++) {
+      int n = 2 + random.nextInt(3);
+      int span = 2 + random.nextInt(5);
+      List<Restriction[]> rows = new ArrayList<>();
+      int count = 1 + random.nextInt(12);
+      for (int k = 0; k < count; k++) {
+        if (random.nextInt(4) == 0) {
+          rows.add(
+              new Restriction[] {
+                Restriction.le(random.nextInt(span)),
+                Restriction.column(Restriction.Relation.GE, 0, random.nextInt(3) - 1)
+              });
+        } else {
+          rows.add(
+              new Restriction[] {
+                Restriction.eq(random.nextInt(span)), Restriction.eq(random.nextInt(span))
+              });
+        }
+      }
+      Restriction[][] tuples = rows.toArray(new Restriction[0][]);
+      int[][] domains = new int[n + 1][];
+      for (int i = 0; i <= n; i++) {
+        domains[i] = random.ints(span, 0, span).distinct().toArray();
+      }
+      long[] solutions = new long[2];
+      for (int shared = 0; shared < 2; shared++) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n + 1];
+        for (int i = 0; i <= n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        HybridTable first = new HybridTable(new IntVar[] {x[0], x[1]}, tuples);
+        store.impose(first);
+        for (int i = 1; i < n; i++) {
+          IntVar[] pair = {x[i], x[i + 1]};
+          store.impose(shared == 1 ? new HybridTable(pair, first) : new HybridTable(pair, tuples));
+        }
+        solutions[shared] = noOfAllSolutionsNoRecord(store, x);
+      }
+      assertThat(solutions[1]).as("trial " + trial).isEqualTo(solutions[0]);
+    }
+  }
+
+  @Test
   void hybridTableRepeatsTheFirstFilteringAfterBacktrackingAboveIt() {
     // The first consistency at level 1 filtered every column and was undone by the backtrack. The
     // next call, with only x0 changed, took the old filtering as done: x0 = 1 kept no support and
@@ -9062,6 +9118,88 @@ class SingleConstraintTest extends TestHelper {
       reasons.put(trail.variable(e), vars);
     }
     return reasons;
+  }
+
+  /**
+   * Under LCG, SymmetricGCC, CardinalityMatrix, Same and UsedBy explain their atoms by the cuts of
+   * their flow networks, not by replay or the generic reason.
+   */
+  @Test
+  void catalogCardinalityExplainsItsAtoms() {
+    // two items using two of three resources each, the third resource used once: x00 = 0 makes
+    // item 0 use resources 1 and 2, so item 1 cannot use resource 2
+    Store store = new Store();
+    IntVar[][] x = new IntVar[2][3];
+    for (int r = 0; r < 2; r++) {
+      for (int c = 0; c < 3; c++) {
+        x[r][c] = new IntVar(store, "x" + r + c, 0, 1);
+      }
+    }
+    IntVar[] rows = {new IntVar(store, "r0", 2, 2), new IntVar(store, "r1", 2, 2)};
+    IntVar[] cols = {
+      new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2), new IntVar(store, "c2", 0, 1)
+    };
+    SymmetricGCC symmetric = new SymmetricGCC(x, rows, cols);
+    store.impose(symmetric);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    x[0][0].domain.in(store.level, x[0][0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[1][2].max()).isZero();
+    Map<IntVar, List<IntVar>> reasons = ownReasons(trail, symmetric);
+    assertThat(reasons.get(x[0][1])).containsExactly(x[0][0]);
+    assertThat(reasons).containsKey(x[1][2]);
+    trail.detach();
+
+    // value 1 once in every row and column of a 2 x 2 matrix over 1..2: a = 2 fixes the others
+    Store store1 = new Store();
+    IntVar[][] m = new IntVar[2][2];
+    for (int r = 0; r < 2; r++) {
+      for (int c = 0; c < 2; c++) {
+        m[r][c] = new IntVar(store1, "m" + r + c, 1, 2);
+      }
+    }
+    IntVar[][] counts = new IntVar[2][];
+    IntVar[][] colCounts = new IntVar[2][];
+    for (int i = 0; i < 2; i++) {
+      counts[i] = new IntVar[] {new IntVar(store1, "rc" + i, 1, 1)};
+      colCounts[i] = new IntVar[] {new IntVar(store1, "cc" + i, 1, 1)};
+    }
+    CardinalityMatrix matrix = new CardinalityMatrix(m, new int[] {1}, counts, colCounts);
+    store1.impose(matrix);
+    assertThat(store1.consistency()).isTrue();
+    AtomicTrail trail1 = new AtomicTrail(store1);
+    store1.setLevel(store1.level + 1);
+    m[0][0].domain.in(store1.level, m[0][0], 2, 2);
+    assertThat(store1.consistency()).isTrue();
+    assertThat(m[1][1].value()).isEqualTo(2);
+    assertThat(ownReasons(trail1, matrix)).isNotEmpty();
+    trail1.detach();
+
+    // same([a, b], [c, d]) with a = 1 and b = 2 leaves c and d in 1..2; used_by with y = [c]
+    for (boolean subset : new boolean[] {false, true}) {
+      Store store2 = new Store();
+      IntVar a = new IntVar(store2, "a", 1, 3);
+      IntVar b = new IntVar(store2, "b", 1, 3);
+      IntVar c = new IntVar(store2, "c", 1, 3);
+      IntVar d = new IntVar(store2, "d", 1, 3);
+      Constraint same =
+          subset
+              ? new UsedBy(new IntVar[] {a, b}, new IntVar[] {c})
+              : new Same(new IntVar[] {a, b}, new IntVar[] {c, d});
+      store2.impose(same);
+      assertThat(store2.consistency()).isTrue();
+      AtomicTrail trail2 = new AtomicTrail(store2);
+      store2.setLevel(store2.level + 1);
+      a.domain.in(store2.level, a, 1, 1);
+      b.domain.in(store2.level, b, 2, 2);
+      assertThat(store2.consistency()).isTrue();
+      assertThat(c.max()).isEqualTo(2);
+      Map<IntVar, List<IntVar>> own = ownReasons(trail2, same);
+      assertThat(own.get(c)).containsOnly(a, b);
+      trail2.detach();
+    }
   }
 
   /**

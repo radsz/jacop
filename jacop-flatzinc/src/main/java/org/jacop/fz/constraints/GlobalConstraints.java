@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -196,6 +197,39 @@ class GlobalConstraints implements ParserTreeConstants {
 
   // the tasks of the cumulative constraints read so far, see taskKey
   private final Set<List<IntVar>> cumulativeTasks = new HashSet<>();
+
+  // Tables over at most TableCliques.MAX_ARITY variables with the same tuples (after the filtering
+  // by the domains) share one tuple array, the reformulation of the table and, through the first
+  // HybridTable posted for them, the bit-sets built from the tuples. Models such as CrazyFrog post
+  // one large binary table on a thousand pairs of variables.
+  private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
+  private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
+  private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
+
+  /** The tuples of a table, compared by content. */
+  private record TableTuples(int[][] tuples, int hash) {
+    TableTuples(int[][] tuples) {
+      this(tuples, Arrays.deepHashCode(tuples));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof TableTuples(int[][] otherTuples, int otherHash)
+          && otherHash == hash
+          && Arrays.deepEquals(otherTuples, tuples);
+    }
+
+    @Override
+    public String toString() {
+      return "TableTuples[tuples=" + Arrays.deepToString(tuples) + ", hash=" + hash + "]";
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+  }
+
   boolean useDisjunctions;
   boolean useCumulativeUnary;
   ArrayList<Pair> duplicates;
@@ -1782,6 +1816,8 @@ class GlobalConstraints implements ParserTreeConstants {
       poseTableWithUniqueVars(v, t, vu);
     } else {
       if (v.length <= TableCliques.MAX_ARITY) {
+        t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
+        tableByTuples.putIfAbsent(t, null);
         support.dictionary.addTable(v, t);
       }
       poseTableBySize(v, t);
@@ -2149,7 +2185,15 @@ class GlobalConstraints implements ParserTreeConstants {
 
   private void poseTableBySize(IntVar[] v, int[][] t) {
     if (v.length >= 2 && TableReformulation.enabled() && support.options.proof() == null) {
-      TableReformulation.Result parts = TableReformulation.reformulate(t);
+      TableReformulation.Result parts;
+      if (tableByTuples.containsKey(t)) {
+        if (!reformulations.containsKey(t)) {
+          reformulations.put(t, TableReformulation.reformulate(t));
+        }
+        parts = reformulations.get(t);
+      } else {
+        parts = TableReformulation.reformulate(t);
+      }
       if (parts != null) {
         poseReformulatedTable(v, parts);
         return;
@@ -2208,6 +2252,11 @@ class GlobalConstraints implements ParserTreeConstants {
         "plain".equals(mode) ? null : TableCompressor.compress(v, t, "sets".equals(mode));
     if (compressed != null && compressed.length < t.length) {
       support.pose(new HybridTable(v, compressed));
+    } else if (tableByTuples.containsKey(t)) {
+      HybridTable same = tableByTuples.get(t);
+      HybridTable table = same == null ? new HybridTable(v, t) : new HybridTable(v, same);
+      tableByTuples.put(t, table);
+      support.pose(table);
     } else {
       support.pose(new HybridTable(v, t));
     }

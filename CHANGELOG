@@ -4605,7 +4605,10 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
-269. With the decomposition bound on (-Dorg.jacop.fz.decomposition=true)
+269. Linear overlap factoring at FlatZinc posting, on by default
+     (-Dorg.jacop.fz.linearOverlap=false turns it off), after the presolve rule
+
+270. With the decomposition bound on (-Dorg.jacop.fz.decomposition=true)
    free search (-f) starts from the columns of its master and searches
    its blocks as a neighbourhood of large neighbourhood search. At the
    end of column generation the restricted master (one column per block,
@@ -4625,7 +4628,7 @@ Version 5.0 (unreleased)
    2980, proved in 18 s instead of 34-180 s (median of 3 at 240 s).
    Results: osolpro benchmarks/decomposition-primal.
 
-270. Automatic dominance breaking at presolve (off by default,
+271. Automatic dominance breaking at presolve (off by default,
    -Dorg.jacop.fz.dominance=true), after J. H. M. Lee and A. Z. Zhong,
    Automatic Generation of Dominance Breaking Nogoods for a Class of
    Constraint Optimization Problems, IJCAI 2020, 1192-1200, and Exploiting
@@ -4651,7 +4654,7 @@ Version 5.0 (unreleased)
    and six spot5 instances, with no worse result; the presolve takes at
    most 0.9 s.
 
-271. Linear overlap factoring at FlatZinc posting, off by default
+272. Linear overlap factoring at FlatZinc posting, off by default
      (-Dorg.jacop.fz.linearOverlap=true), after the presolve rule
      FindBigHorizontalLinearOverlap of OR-Tools CP-SAT (CpModelPresolver,
      9.15; the rule has no separate publication). When two or more
@@ -4671,8 +4674,10 @@ Version 5.0 (unreleased)
      instead of 39 (kitchen 2026 and javarouting trip_7_2 proved) with
      0.959x; vaccine v857 2.2x, harmony canon 1.5x and blocks-world 16-4-83
      1.5x faster, network_50 and roster-shifts-bool slower (other trees).
+     It does not fire on the other 188 wide-set instances, which are
+     unchanged.
 
-272. The CDCL solver reads the clock every 64 rounds of the LCG
+273. The CDCL solver reads the clock every 64 rounds of the LCG
    propagator's fixpoint instead of every 1,024. Rounds of a fixpoint
    with creeping bounds can be slow: on vrp-submission toy_D and
    D_3v_25l_w_reload (2021, arrival times up to 460,588) the core-guided
@@ -4681,7 +4686,7 @@ Version 5.0 (unreleased)
    in 38 s and D_3v_25l_w_reload proves 146 (best known 207) under -f
    at 600 s; wide-quick at 240 s is unchanged in both modes.
 
-273. SequenceMdd compiles its diagram without allocating: the arcs of the
+274. SequenceMdd compiles its diagram without allocating: the arcs of the
      current domains are read once per call into bit masks, each diagram
      node keeps a mask of the last nodes of its paths, and the nodes of the
      next layer are found by a Zobrist hash of their visited sets in an
@@ -4697,7 +4702,7 @@ Version 5.0 (unreleased)
      stays: on vrplc (40 to 60 nodes) the diagram leaves the search tree as
      large as before, so it cannot pay for itself there.
 
-274. Three cardinality constraints of the Global Constraint Catalog, all
+275. Three cardinality constraints of the Global Constraint Catalog, all
      propagated with a feasible flow (lower and upper arc bounds) whose
      residual strongly connected components give the values that some
      solution uses:
@@ -4730,7 +4735,7 @@ Version 5.0 (unreleased)
      never changed the sequence of solutions of the model search and
      only slowed it down (vrp, amaze).
 
-275. Memory of the FlatZinc front end and of constraint scopes, found by an
+276. Memory of the FlatZinc front end and of constraint scopes, found by an
    object-level heap census of the largest models: the parse tree is
    released before the search (the parser held it for the whole run, 29 %
    of the heap of nside EASY_200_50; a portfolio building from one shared
@@ -4743,7 +4748,7 @@ Version 5.0 (unreleased)
    ma-path-finding g32_p20_a10 under -f now reaches the search within 4 GB
    and rcpsp-wet-diverse j90_48_4 is read and posted.
 
-276. IntervalDomain keeps its intervals in one int array (min and max of
+277. IntervalDomain keeps its intervals in one int array (min and max of
      interval i at 2i and 2i+1) instead of an array of Interval objects,
      so walking a domain reads one array and the domain operations
      allocate no Interval. The public field intervals is removed: use
@@ -4754,7 +4759,7 @@ Version 5.0 (unreleased)
      candidate side by side: +1.9 % nodes/s on average (cgt +4.6 %,
      monomatch +4.1 %, liner +3.8 %), base against itself +0.1 %.
 
-277. Diffn (and Diff2, Nooverlap) does less repeated work with the same
+278. Diffn (and Diff2, Nooverlap) does less repeated work with the same
    pruning. The profile sweep of a rectangle runs per dimension, only when
    that rectangle or a compulsory part in that dimension changed since its
    last sweep; the events of compulsory parts that did not change are kept
@@ -4766,12 +4771,84 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
-278. JaSAT (CdclSolver) clause headers take three ints instead of four: the
+279. JaSAT (CdclSolver) clause headers take three ints instead of four: the
    saved position of the search for a new watch moves into the free high
    16 bits of the flags word, so a clause of three literals takes 6 ints
    instead of 7. Same search (the simplification schedule still
    counts the old header size); pure SAT runs (CdclMain) are about 2 %
    faster.
+
+280. A domain declared beyond JaCoP's integer range, which the FlatZinc
+   front end narrows to the range, no longer blocks the claim of
+   optimality or unsatisfiability when the model shows the narrowing
+   harmless. The model's linear rows (int_lin_eq, int_lin_le, int_eq,
+   int_le, int_lt) are read as declared and their bounds propagated in
+   64-bit arithmetic, with the objective bounded by the best solution
+   (feasibility-based bound tightening: M. W. P. Savelsbergh, Preprocessing
+   and probing techniques for mixed integer programming problems, ORSA
+   Journal on Computing 6(4), 1994). A narrowed variable is harmless when
+   these bounds keep it in range, when it occurs in no constraint, or when
+   it occurs only in int_lin_le rows that the end of the range satisfies
+   (variable locks: T. Achterberg, Constraint Integer Programming, PhD
+   thesis, TU Berlin, 2007). 2021 connect 0086_02 (329 domains
+   0..1000000000) is now proved optimal in 15 s; before, the search
+   completed at the optimum and printed no ==========.
+
+281. LCG free search (-f) uses target phases in its activity runs before the
+   first solution: a decision on an integer variable takes the value that
+   variable had in the deepest assignment (longest SAT trail at a conflict)
+   reached since the last restart, as CaDiCaL does for Boolean variables
+   (A. Biere, M. Fleury, "Chasing Target Phases", Pragmatics of SAT 2020).
+   -Djacop.lcg.targetPhase=true|false turns it on or off in every mode, and
+   -Djacop.jasat.lubyUnit sets the Luby restart unit (default 512). On the
+   99 of 240 wide-set instances where it fires, at 600 s with -f, the same
+   75 are solved, 10 instances are better and 5 worse, 5 families better
+   and 1 worse, and the time geomean on instances solved by both is 0.972
+   (blocks-world 16-4-83 416 -> 113 s, community-detection Sampson 558 ->
+   191 s, workforce-alloc 202 131 -> 42 s; pure satisfaction losses on
+   monomatch n5 3.8 -> 10.3 s and oocsp racks 030 10 -> 16 s).
+
+282. Lazy clause generation explains the pruning of SymmetricGCC,
+     CardinalityMatrix, Same and UsedBy (entry 274) with their own reasons
+     instead of the generic one. The network is rebuilt from the domains
+     before the atom with the atom negated; it has no feasible flow, and
+     the set of nodes reachable from the source after the max flow is a
+     cut whose arcs break Hoffman's condition (the upper bounds leaving it
+     sum to less than the lower bounds entering it). The reason cites only
+     the bounds and removed values that give those arc bounds, after
+     G. Downing, T. Feydy and P. J. Stuckey, "Explaining flow-based
+     propagation", CPAIOR 2012, LNCS 7298, 146-162. LcgFuzzTest posts the
+     four constraints (600,000 runs with the explanation checker: clean).
+     With -Dorg.jacop.fz.symmetricGcc=true on the 76 instances where it
+     fires, at 240 s: the share of generic reasons falls from 4.6 % to
+     0.5 % (model search) and 6.3 % to 0.5 % (-f), the mean reason size
+     from 35 to 7 literals under -f, nodes/s +5.8 % under -f; at 600 s
+     the three vrp proofs of -f take 125-208 s instead of 147-500 s.
+
+283. The FlatZinc front end with -a and -cs (complementary search) labels
+   the output variables first and then completes the other variables
+   once, as without -cs. Before, -cs labelled every variable under -a and
+   printed an output solution again for each assignment of the variables
+   that are not output (for example 388 solutions for the 102 of the
+   mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
+
+284. Search splitting for -p (opt-in, --free-config portfolio-split=N):
+   N LCG threads of the portfolio divide one search tree in place of the
+   last N settings, while the other threads keep searching the whole tree.
+   A part of the tree is a cube of atoms [x >= v], [x = v] over FlatZinc
+   names, which a thread solves under assumptions in branch and bound; a
+   busy thread splits its cube on its first decision below the assumptions
+   when another waits, keeps the decision and gives away its negation
+   (CP-SAT's shared tree workers; C. Chu, C. Schulte and P. J. Stuckey,
+   CP 2009; Cube and Conquer, M. Heule et al., HVC 2011; E. Ehlers and
+   P. J. Stuckey, CPAIOR 2016). Learnt clauses hold without the
+   assumptions, so clause and bound sharing go on. On wide-quick at 240 s
+   with -f -p 4, two split threads beside two portfolio threads were
+   better in 4 families and worse in none in both of two rounds, with
+   optimality proofs about 5 % faster (geometric mean 0.94 and 0.95);
+   four split threads lost proofs that need core-guided or lower-bound
+   search (spot5 28) and were 17 % slower. ExternalPropagator gets
+   notifyTopDecision, called before each decision at the assumption level.
 
 Version 4.11
 =============

@@ -57,6 +57,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
@@ -115,6 +116,7 @@ import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.Same;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
@@ -128,7 +130,9 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.UnaryEarlinessTardiness;
+import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -500,7 +504,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(36)) {
+      return switch (rnd.nextInt(40)) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -629,8 +633,49 @@ class LcgFuzzTest {
                 new int[] {rnd.nextInt(5), rnd.nextInt(5), rnd.nextInt(5)},
                 new int[] {rnd.nextInt(4), 1 + rnd.nextInt(3), rnd.nextInt(4)},
                 intVar("wl", 0, 2 + rnd.nextInt(4)));
+        case 36 -> symmetricGcc();
+        case 37 -> cardinalityMatrix();
+        case 38 -> new Same(pick(x, 3), pick(x, 3));
+        case 39 -> new UsedBy(pick(x, 3), pick(x, 2));
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // a 2 x 2 or 2 x 3 matrix of the 0/1 variables and the variables, with counted rows and columns
+    private SymmetricGCC symmetricGcc() {
+      int m = 2 + rnd.nextInt(2);
+      IntVar[] both = new IntVar[b.length + x.length];
+      System.arraycopy(b, 0, both, 0, b.length);
+      System.arraycopy(x, 0, both, b.length, x.length);
+      IntVar[] cells = pick(both, 2 * m);
+      IntVar[][] matrix = {Arrays.copyOf(cells, m), Arrays.copyOfRange(cells, m, 2 * m)};
+      IntVar[] rows = {count(m), count(m)};
+      IntVar[] cols = new IntVar[m];
+      for (int c = 0; c < m; c++) {
+        cols[c] = count(2);
+      }
+      return new SymmetricGCC(matrix, rows, cols);
+    }
+
+    // a count from 0 to at most max, or one of the variables
+    private IntVar count(int max) {
+      return rnd.nextInt(3) == 0 ? one() : intVar("sc", rnd.nextInt(2), 1 + rnd.nextInt(max));
+    }
+
+    // a 2 x 2 matrix of the variables with the counts of one or two values in its rows and columns
+    private CardinalityMatrix cardinalityMatrix() {
+      IntVar[] cells = pick(x, 4);
+      IntVar[][] matrix = {{cells[0], cells[1]}, {cells[2], cells[3]}};
+      int[] values = rnd.nextBoolean() ? new int[] {1} : new int[] {0, 2};
+      IntVar[][] rows = new IntVar[2][values.length];
+      IntVar[][] cols = new IntVar[2][values.length];
+      for (int i = 0; i < 2; i++) {
+        for (int k = 0; k < values.length; k++) {
+          rows[i][k] = count(2);
+          cols[i][k] = count(2);
+        }
+      }
+      return new CardinalityMatrix(matrix, values, rows, cols);
     }
 
     // Values over 4 or 5 variables, some pairs of which other constraints force to differ, so that
