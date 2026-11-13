@@ -739,20 +739,8 @@ public class Tables {
         return null;
       }
     } else {
-      // a copy with the aliases: the stored array is also the array of an output_array, which must
-      // keep the declared variables (an integer of bool2int would print as its Boolean)
-      IntVar[] aliased = null;
       for (int i = 0; i < a.length; i++) {
-        IntVar v = getAlias(a[i]);
-        if (v != a[i]) {
-          if (aliased == null) {
-            aliased = a.clone();
-          }
-          aliased[i] = v;
-        }
-      }
-      if (aliased != null) {
-        return aliased;
+        a[i] = getAlias(a[i]);
       }
     }
     return a;
