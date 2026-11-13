@@ -38,6 +38,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -139,7 +140,10 @@ class AllSolutionsSuite {
   private final long maxDecomposedBytes = Long.getLong("suite.maxDecomposedBytes", 50_000_000L);
 
   private final Set<String> retry =
-      new HashSet<>(List.of(System.getProperty("suite.retry", "").split(",")));
+      new HashSet<>(
+          Arrays.stream(System.getProperty("suite.retry", "").split(","))
+              .filter(v -> !v.isEmpty())
+              .toList());
   private final Path statePath =
       Path.of(System.getProperty("suite.state", FZ + "decomposition/suite-state.tsv"));
   private final Path reportPath =
@@ -307,6 +311,9 @@ class AllSolutionsSuite {
     }
     if (retry.contains(p[5])) {
       return true;
+    }
+    if (retry.isEmpty()) {
+      return false;
     }
     for (String[] k : checks.values()) {
       if (k[1].equals(c.name) && k[2].equals(p[2]) && retry.contains(k[4])) {
