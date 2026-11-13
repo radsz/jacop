@@ -202,10 +202,10 @@ public class SequenceMdd extends Constraint
   private long[][] inMask;
 
   // backward pass
-  private long[][] latest;
-  private long[][] prev;
-  private long[][] bottom;
-  private long[][] prevBottom;
+  private long[][] latestBuf;
+  private long[][] prevBuf;
+  private long[][] bottomBuf;
+  private long[][] prevBottomBuf;
   private long[] minIn;
   private long[] minOut;
   private long[] maxIn;
@@ -511,14 +511,14 @@ public class SequenceMdd extends Constraint
   private long stepArrival(int i, int j, long t) {
     int[] row = stepTravel[i][j];
     long[] best = stepBest[i][j];
-    long latest = hiOut[i];
+    long last = hiOut[i];
     long a = t + travelAt(i, j, t);
     long s = t < 0 ? 0 : t / stepLength + 1;
-    for (; s < row.length && s * stepLength <= latest && best[(int) s] < a; s++) {
+    for (; s < row.length && s * stepLength <= last && best[(int) s] < a; s++) {
       a = Math.min(a, s * stepLength + row[(int) s]);
     }
     long beyond = (long) row.length * stepLength;
-    if (beyond > t && beyond <= latest) {
+    if (beyond > t && beyond <= last) {
       a = Math.min(a, beyond + travel[i][j]);
     }
     return a;
@@ -527,15 +527,15 @@ public class SequenceMdd extends Constraint
   // the latest departure from i, at most the latest one, that arrives at j by x, or NEG when none
   private long stepLatest(int i, int j, long x) {
     int[] row = stepTravel[i][j];
-    long latest = hiOut[i];
+    long last = hiOut[i];
     long beyond = (long) row.length * stepLength;
-    long d0 = Math.min(x - travel[i][j], latest);
+    long d0 = Math.min(x - travel[i][j], last);
     if (d0 >= beyond) {
       return d0;
     }
     for (int s = row.length - 1; s >= 0; s--) {
       long first = (long) s * stepLength;
-      long d = Math.min(Math.min(first + stepLength - 1, x - row[s]), latest);
+      long d = Math.min(Math.min(first + stepLength - 1, x - row[s]), last);
       if (d >= first) {
         return d;
       }
@@ -599,10 +599,10 @@ public class SequenceMdd extends Constraint
     hiOut = new long[n];
     outMask = new long[n][words];
     inMask = new long[n][words];
-    latest = new long[width][n];
-    prev = new long[width][n];
-    bottom = new long[width][n];
-    prevBottom = new long[width][n];
+    latestBuf = new long[width][n];
+    prevBuf = new long[width][n];
+    bottomBuf = new long[width][n];
+    prevBottomBuf = new long[width][n];
     minIn = new long[n];
     minOut = new long[n];
     maxIn = new long[n];
@@ -932,11 +932,11 @@ public class SequenceMdd extends Constraint
   // keeps the arcs between an earliest and a latest time that meet, then prunes
   private void prune(Store store) {
     int last = n - 1;
-    long[][] latest = this.latest;
-    long[][] prev = this.prev;
+    long[][] latest = latestBuf;
+    long[][] prev = prevBuf;
     // the least cost from each (node, last) to the end of the circuit
-    long[][] bottom = this.bottom;
-    long[][] prevBottom = this.prevBottom;
+    long[][] bottom = bottomBuf;
+    long[][] prevBottom = prevBottomBuf;
     long budget = cost == null ? INF : cost.max() - costOffset;
     Arrays.fill(minIn, INF);
     Arrays.fill(minOut, INF);
