@@ -49,6 +49,12 @@ import java.util.Random;
 final class DualSimplex implements LpSolver {
 
   private static final double PERTURBATION = 1e-7;
+  private static final double SHIFT_SCALE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.shiftScale", "10"));
+  private static final double SHIFT_POWER =
+      Double.parseDouble(System.getProperty("org.jacop.lp.shiftPower", "0.5"));
+  private static final boolean SLACK_SHIFT =
+      !"false".equals(System.getProperty("org.jacop.lp.slackShift"));
 
   // duals for the costs as given (true) or for the perturbed costs the simplex pivots with
   static final boolean GIVEN_DUALS = !"false".equals(System.getProperty("org.jacop.lp.givenDuals"));
@@ -787,6 +793,29 @@ final class DualSimplex implements LpSolver {
     row[q] = r;
     row[p] = -1;
     upper[p] = !toLower;
+    if (p >= n && SLACK_SHIFT && cost[p] == 0) {
+      // a slack has no cost, and no perturbation either: the cut rows and the rows of a
+      // relaxation whose objective is one column make many slacks enter with a reduced cost of
+      // zero, and the dual simplex then stalls on steps of zero length (thousands of pivots
+      // without a change of the objective on tank allocation, XCSP 2025). The slack's cost is
+      // shifted once, as it leaves the basis, by a perturbation in the direction that keeps its
+      // reduced cost dual feasible; a nonbasic column's cost moves only its own reduced cost
+      // in the units of the columns: the slack is a x, so a shift of its cost by delta moves the
+      // costs of the columns by delta a, and delta is taken relative to the largest weight of the
+      // row (the cut rows have weights up to 2^24)
+      double largest = 0;
+      for (double v : a[p - n]) {
+        largest = Math.max(largest, Math.abs(v));
+      }
+      double shift =
+          PERTURBATION
+              * (1 + ((p * 0x9E3779B97F4A7C15L) >>> 11) * 0x1.0p-53)
+              * SHIFT_SCALE
+              / Math.max(1, Math.pow(largest, SHIFT_POWER));
+      shift = upper[p] ? -shift : shift;
+      cost[p] = shift;
+      d[p] += shift;
+    }
     pivots++;
     totalPivots++;
   }
