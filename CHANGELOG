@@ -4825,6 +4825,21 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+283. The sum propagators do less work with the same pruning. SumInt over
+     more than three variables moves fixed variables behind the free ones
+     on the trail (as LinearInt does), its == case loops only until the
+     bounds stop moving, and SumInt and LinearInt skip a pruning pass when
+     the slack is at least the largest variability of a free term.
+     SumWeight skips the divisions for terms that cannot lose a value,
+     SumBool counts its bounds in one pass, LinearIntDom fuses the two
+     bitset passes of its backward sweep, and LinearExplanation finds the
+     trail entry of each term once instead of up to three times. On 27
+     instances posting sums that time out in 60 s, with a search order
+     independent of identity hash codes, nodes/s rise 1.4 % (soccer-
+     computational 1.25x, unit-commitment 1.13x, ihtc 1.05x); solved
+     instances run as fast as before. Search is unchanged except where the
+     new SumInt term order gives other LCG reasons (accap).
+
 Version 4.11
 =============
 
