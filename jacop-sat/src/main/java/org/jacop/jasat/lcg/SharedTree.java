@@ -46,9 +46,15 @@ import java.util.function.BooleanSupplier;
  * assumptions, at a restart or a new cube: it keeps the cube with the decision and gives away the
  * cube with its negation, as the shared tree workers of CP-SAT (Perron and Didier) and the dynamic
  * work sharing of Chu, Schulte and Stuckey (Confidence-based work stealing in parallel constraint
- * programming, CP 2009) do. The tree starts as the empty cube, so the union of the open and taken
- * cubes always covers what is not closed; when no cube is open or taken, the whole search is
- * complete.
+ * programming, CP 2009) do. Solving each cube under assumptions with one incremental CDCL solver
+ * that keeps its learnt clauses is the conquer phase of Cube and Conquer (M. Heule, O. Kullmann, S.
+ * Wieringa and A. Biere, Cube and conquer: guiding CDCL SAT solvers by lookaheads, HVC 2011);
+ * dividing the search of a solver with learning among threads that share nogoods follows E. Ehlers
+ * and P. J. Stuckey (Parallelizing constraint programming with learning, CPAIOR 2016), who also
+ * point out that disjoint parts cost optimisation its best solutions, which is why the portfolio
+ * mixes split threads with whole-tree ones. The tree starts as the empty cube, so the union of the
+ * open and taken cubes always covers what is not closed; when no cube is open or taken, the whole
+ * search is complete.
  *
  * <p>Since the assumptions are decisions, every clause a solver learns holds without them, so
  * clause sharing goes on as in a portfolio. The solvers must solve the same model: the same
