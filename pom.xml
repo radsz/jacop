@@ -218,6 +218,7 @@ setup to run configuration. -->
                                 <implicitGlobals.trials>150</implicitGlobals.trials>
                                 <diffn.skipping.trials>150</diffn.skipping.trials>
                                 <presolve.elimination.trials>300</presolve.elimination.trials>
+                                <presolve.dominance.trials>500</presolve.dominance.trials>
                                 <wakeup.trials>1000</wakeup.trials>
                                 <floats.fuzz.trials>100</floats.fuzz.trials>
                                 <floats.fuzz.opt.trials>3</floats.fuzz.opt.trials>
@@ -344,6 +345,7 @@ setup to run configuration. -->
                                 <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
+                                <include>**/DominanceNogoodsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
@@ -354,6 +356,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -561,6 +564,7 @@ setup to run configuration. -->
                                 <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
+                                <include>**/DominanceNogoodsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -570,6 +574,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -773,6 +778,7 @@ setup to run configuration. -->
                                 <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
+                                <include>**/DominanceNogoodsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -782,6 +788,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -983,6 +990,7 @@ setup to run configuration. -->
                                 <include>**/InferredCumulativesTest.java</include>
                                 <include>**/GraphAutomorphismsTest.java</include>
                                 <include>**/DualReductionsTest.java</include>
+                                <include>**/DominanceNogoodsTest.java</include>
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
@@ -992,6 +1000,7 @@ setup to run configuration. -->
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
