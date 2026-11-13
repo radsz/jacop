@@ -214,7 +214,50 @@ final class DecompositionBound {
       long cost,
       long millis,
       IntVar[][] blocks,
-      double[] fractionality) {}
+      double[] fractionality) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Primal p
+          && Arrays.equals(vars, p.vars)
+          && Arrays.equals(values, p.values)
+          && feasible == p.feasible
+          && cost == p.cost
+          && millis == p.millis
+          && Arrays.deepEquals(blocks, p.blocks)
+          && Arrays.equals(fractionality, p.fractionality);
+    }
+
+    @Override
+    public int hashCode() {
+      int h = Arrays.hashCode(vars);
+      h = 31 * h + Arrays.hashCode(values);
+      h = 31 * h + Boolean.hashCode(feasible);
+      h = 31 * h + Long.hashCode(cost);
+      h = 31 * h + Long.hashCode(millis);
+      h = 31 * h + Arrays.deepHashCode(blocks);
+      return 31 * h + Arrays.hashCode(fractionality);
+    }
+
+    @Override
+    public String toString() {
+      return "Primal[vars="
+          + vars.length
+          + ", values="
+          + Arrays.toString(values)
+          + ", feasible="
+          + feasible
+          + ", cost="
+          + cost
+          + ", millis="
+          + millis
+          + ", blocks="
+          + blocks.length
+          + ", fractionality="
+          + Arrays.toString(fractionality)
+          + "]";
+    }
+  }
 
   /** A linking row: lo &le; &Sigma; terms &le; hi, its terms by block. */
   static final class Row {
@@ -254,7 +297,37 @@ final class DecompositionBound {
   }
 
   /** A column: its block, its cost, its row activities (row index to value). */
-  record Column(int block, long cost, Map<Integer, Long> activity, int[] values) {}
+  record Column(int block, long cost, Map<Integer, Long> activity, int[] values) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Column c
+          && block == c.block
+          && cost == c.cost
+          && activity.equals(c.activity)
+          && Arrays.equals(values, c.values);
+    }
+
+    @Override
+    public int hashCode() {
+      int h = 31 * Integer.hashCode(block) + Long.hashCode(cost);
+      h = 31 * h + activity.hashCode();
+      return 31 * h + Arrays.hashCode(values);
+    }
+
+    @Override
+    public String toString() {
+      return "Column[block="
+          + block
+          + ", cost="
+          + cost
+          + ", activity="
+          + activity
+          + ", values="
+          + Arrays.toString(values)
+          + "]";
+    }
+  }
 
   private final Store store;
   private final List<Row> rows;
