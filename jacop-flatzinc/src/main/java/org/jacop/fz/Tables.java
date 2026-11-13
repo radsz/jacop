@@ -30,11 +30,13 @@
 
 package org.jacop.fz;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -155,6 +158,125 @@ public class Tables {
 
   void noteClampedDomain(ClampedDomain d) {
     clampedDomains.add(d);
+  }
+
+  // the domains of the variables as declared, by store index, when a domain was narrowed
+  private int[] declaredMin;
+  private int[] declaredMax;
+  // the declared bounds of the narrowed variables, beyond JaCoP's range
+  private final IdentityHashMap<IntVar, long[]> clampedDeclared = new IdentityHashMap<>();
+  // the reasoning that may show the narrowing harmless, or null
+  private ClampedBounds clampedBounds;
+
+  /**
+   * Records the domains of the variables as declared, before any constraint narrows them, when a
+   * declared domain was narrowed to JaCoP's integer range.
+   */
+  public void recordDeclaredDomains() {
+    if (clampedDomains.isEmpty()) {
+      return;
+    }
+    int n = store.size();
+    declaredMin = new int[n];
+    declaredMax = new int[n];
+    for (int i = 0; i < n; i++) {
+      if (store.vars[i] instanceof IntVar v) {
+        declaredMin[i] = v.min();
+        declaredMax[i] = v.max();
+      }
+    }
+    for (ClampedDomain d : clampedDomains) {
+      long[] b = declaredInterval(d.declared());
+      IntVar v = variableTable.get(d.ident());
+      if (v != null) {
+        clampedDeclared.put(v, b);
+      }
+      IntVar[] a = variableArrayTable.get(d.ident());
+      if (a != null) {
+        for (IntVar x : a) {
+          clampedDeclared.put(x, b);
+        }
+      }
+    }
+  }
+
+  private static long[] declaredInterval(String interval) {
+    int dots = interval.indexOf("..");
+    return new long[] {
+      saturated(new BigInteger(interval.substring(0, dots).trim())),
+      saturated(new BigInteger(interval.substring(dots + 2).trim()))
+    };
+  }
+
+  private static long saturated(BigInteger b) {
+    BigInteger inf = BigInteger.valueOf(ClampedBounds.INF);
+    return b.max(inf.negate()).min(inf).longValue();
+  }
+
+  /**
+   * The bounds of a variable as the model declares them: beyond JaCoP's range for a narrowed one,
+   * unbounded for one created after the declarations that is not a constant.
+   *
+   * @param v the variable
+   * @return {low, high}
+   */
+  long[] declaredBounds(IntVar v) {
+    long[] b = clampedDeclared.get(v);
+    if (b != null) {
+      return b;
+    }
+    int i = v.index();
+    if (declaredMin != null && i >= 0 && i < declaredMin.length && store.vars[i] == v) {
+      return new long[] {declaredMin[i], declaredMax[i]};
+    }
+    if (v.singleton() && constantTable.get(v.value()) == v) {
+      return new long[] {v.value(), v.value()};
+    }
+    return new long[] {-ClampedBounds.INF, ClampedBounds.INF};
+  }
+
+  /**
+   * The narrowed variables, as the constraints name them after aliases.
+   *
+   * @return the variables
+   */
+  public List<IntVar> narrowedVariables() {
+    List<IntVar> list = new ArrayList<>();
+    for (ClampedDomain d : clampedDomains) {
+      IntVar v = getVariable(d.ident());
+      if (v != null) {
+        list.add(v);
+      }
+      IntVar[] a = variableArrayTable.get(d.ident());
+      if (a != null) {
+        for (IntVar x : a) {
+          list.add(getAlias(x));
+        }
+      }
+    }
+    return list;
+  }
+
+  /**
+   * Sets the reasoning that may show the narrowing of declared domains harmless.
+   *
+   * @param bounds the reasoning
+   */
+  public void setClampedBounds(ClampedBounds bounds) {
+    clampedBounds = bounds;
+  }
+
+  /**
+   * Tells whether the narrowing cut off no solution whose objective is within the given bounds, by
+   * {@link ClampedBounds}.
+   *
+   * @param objective the variable of the objective, or null
+   * @param low the least value of the objective that matters
+   * @param high the largest value of the objective that matters
+   * @return true if it is shown harmless
+   */
+  boolean clampsHarmless(IntVar objective, long low, long high) {
+    return clampedBounds != null && clampedBounds.harmless(objective, low, high);
   }
 
   /**

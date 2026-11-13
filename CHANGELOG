@@ -4766,6 +4766,22 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
+278. A domain declared beyond JaCoP's integer range, which the FlatZinc
+   front end narrows to the range, no longer blocks the claim of
+   optimality or unsatisfiability when the model shows the narrowing
+   harmless. The model's linear rows (int_lin_eq, int_lin_le, int_eq,
+   int_le, int_lt) are read as declared and their bounds propagated in
+   64-bit arithmetic, with the objective bounded by the best solution
+   (feasibility-based bound tightening: M. W. P. Savelsbergh, Preprocessing
+   and probing techniques for mixed integer programming problems, ORSA
+   Journal on Computing 6(4), 1994). A narrowed variable is harmless when
+   these bounds keep it in range, when it occurs in no constraint, or when
+   it occurs only in int_lin_le rows that the end of the range satisfies
+   (variable locks: T. Achterberg, Constraint Integer Programming, PhD
+   thesis, TU Berlin, 2007). 2021 connect 0086_02 (329 domains
+   0..1000000000) is now proved optimal in 15 s; before, the search
+   completed at the optimum and printed no ==========.
+
 Version 4.11
 =============
 
