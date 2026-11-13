@@ -316,6 +316,66 @@ class CdclSolverTest {
     }
   }
 
+  /**
+   * Solves x1 or PH(4), the pigeonhole clauses each with x1 added, deciding x1 false, then 30 free
+   * variables, then the pigeonhole variables, in that order (a fixed search under LCG). Each
+   * conflict of the pigeonhole part backjumps to x1's level, and the free variables between are
+   * decided again after it, unless the solver backtracks one level instead.
+   */
+  private static long fixedOrderDecisions(int lazyChronoLimit) {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    int free = 30;
+    int holes = 4;
+    int first = free + 2; // the pigeonhole variables follow x1 and the free ones
+    int vars = first - 1 + (holes + 1) * holes;
+    s.ensureVars(vars);
+    for (int p = 0; p <= holes; p++) {
+      int[] c = new int[holes + 1];
+      c[holes] = 1;
+      for (int h = 0; h < holes; h++) {
+        c[h] = first + p * holes + h;
+      }
+      s.addClause(c);
+    }
+    for (int h = 0; h < holes; h++) {
+      for (int p = 0; p <= holes; p++) {
+        for (int q = p + 1; q <= holes; q++) {
+          s.addClause(1, -(first + p * holes + h), -(first + q * holes + h));
+        }
+      }
+    }
+    for (int v = 1; v <= vars; v++) {
+      s.observe(v);
+    }
+    s.setLazyChronoLimit(lazyChronoLimit);
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int decide() {
+            for (int v = 1; v <= vars; v++) {
+              if (s.value(v) == 0) {
+                return v >= first ? v : -v; // x1 and the free variables false
+              }
+            }
+            return 0;
+          }
+        });
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertTrue(s.modelValue(1), "x1 must be true: PH(4) is unsatisfiable");
+    return s.decisions;
+  }
+
+  @Test
+  void lazyChronologicalBacktrackingKeepsTheDecisionsBetween() {
+    long backjumping = fixedOrderDecisions(-1);
+    long lazy = fixedOrderDecisions(0);
+    assertTrue(
+        lazy * 2 < backjumping,
+        "decisions with one-level backtracking " + lazy + ", with backjumping " + backjumping);
+    assertTrue(fixedOrderDecisions(10) < backjumping, "a backjump of 31 levels is over 10");
+  }
+
   @Test
   void pigeonholeIsUnsatisfiable() {
     CdclSolver s = new CdclSolver();
