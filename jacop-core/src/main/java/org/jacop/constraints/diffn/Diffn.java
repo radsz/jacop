@@ -88,6 +88,14 @@ public class Diffn extends Nooverlap {
   private final Event[][] addOutside = new Event[2][];
   private final Event[][] subtractOutside = new Event[2][];
   private final int[][] partEst = new int[2][];
+
+  /**
+   * For each dimension and rectangle, the compulsory part, the minimal length in the other
+   * dimension and the compulsory part there (lst, ect, lMin, oLst, oEct) from which its events were
+   * built.
+   */
+  private final int[][] partSignature = new int[2][];
+
   private final int[][] partLct = new int[2][];
   private Event[] sweepEvents;
   private static final Comparator<Event> EVENT_ORDER =
@@ -332,7 +340,66 @@ public class Diffn extends Nooverlap {
       dffWidth[i] = Math.min(partialCommonArea(k, window[i], 0), width);
       dffHeight[i] = Math.min(partialCommonArea(k, window[i], 1), height);
     }
-    return dffs().packingFails(width, height, dffWidth, dffHeight, m);
+    if (packedBefore(k, width, height, m)) {
+      // the same items in the same window could be packed as far as the functions tell
+      return false;
+    }
+    if (dffs().packingFails(width, height, dffWidth, dffHeight, m)) {
+      return true;
+    }
+    rememberPacked(k, width, height, m);
+    return false;
+  }
+
+  /**
+   * The window and item sizes of the last test of the dual feasible functions for each rectangle
+   * that did not fail: width, height, then the width and height of each item. The test is a
+   * function of these sizes only, and a rectangle is often examined again because a rectangle
+   * outside its window changed, with the same sizes.
+   */
+  private int[][] lastPacked;
+
+  /**
+   * Whether the constraint keeps the events of unchanged compulsory parts and the windows that
+   * passed the dual feasible functions; a test reference turns it off to recompute everything.
+   *
+   * @return true.
+   */
+  boolean reusesWork() {
+    return true;
+  }
+
+  private boolean packedBefore(int k, int width, int height, int m) {
+    if (lastPacked == null || !reusesWork()) {
+      return false;
+    }
+    int[] last = lastPacked[k];
+    if (last == null || last.length != 2 * m + 2 || last[0] != width || last[1] != height) {
+      return false;
+    }
+    for (int i = 0; i < m; i++) {
+      if (last[2 * i + 2] != dffWidth[i] || last[2 * i + 3] != dffHeight[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private void rememberPacked(int k, int width, int height, int m) {
+    if (lastPacked == null) {
+      lastPacked = new int[rectangle.length][];
+    }
+    int[] last = lastPacked[k];
+    if (last == null || last.length != 2 * m + 2) {
+      last = new int[2 * m + 2];
+      lastPacked[k] = last;
+    }
+    last[0] = width;
+    last[1] = height;
+    for (int i = 0; i < m; i++) {
+      last[2 * i + 2] = dffWidth[i];
+      last[2 * i + 3] = dffHeight[i];
+    }
   }
 
   /**
@@ -597,9 +664,14 @@ public class Diffn extends Nooverlap {
       Rectangle r = rectangle[i];
       BitSet o = overlapping[i].value();
 
-      if (!o.isEmpty() && mustExamine(PROFILE_PASS, i, o)) {
-        sweepPruning(r, o, 0);
-        sweepPruning(r, o, 1);
+      if (o.isEmpty()) {
+        continue;
+      }
+      if (mustSweep(i, o, X)) {
+        sweepPruning(r, o, X);
+      }
+      if (mustSweep(i, o, Y)) {
+        sweepPruning(r, o, Y);
       }
     }
   }
@@ -692,6 +764,9 @@ public class Diffn extends Nooverlap {
       partLct[dim] = new int[n];
     }
     long[] keys = parts[dim];
+    if (partSignature[dim] == null) {
+      partSignature[dim] = new int[5 * n];
+    }
     int m = 0;
     for (int i = 0; i < n; i++) {
       Rectangle rr = rectangle[i];
@@ -701,24 +776,48 @@ public class Diffn extends Nooverlap {
       if (min >= max || lMin <= 0) {
         continue;
       }
-      int oMin = rr.lst(otherDim);
-      int oMax = rr.ect(otherDim);
-      Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
-      addWithin[dim][i] = new Event(PROFILE_ADD, rr, min, lMin, block);
-      subtractWithin[dim][i] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
-      // a rectangle reaching outside the swept one adds no height, only its compulsory part as a
-      // block
-      addOutside[dim][i] = block == null ? null : new Event(PROFILE_ADD, rr, min, 0, block);
-      subtractOutside[dim][i] =
-          block == null ? null : new Event(PROFILE_SUBTRACT, rr, max, 0, block);
       partEst[dim][i] = rr.est(otherDim);
       partLct[dim][i] = rr.lct(otherDim);
       keys[m++] = partKey(min, PROFILE_ADD, i);
       keys[m++] = partKey(max, PROFILE_SUBTRACT, i);
+      refreshPartEvents(rr, i, dim, otherDim, min, max, lMin);
     }
     Arrays.sort(keys, 0, m);
     partCount[dim] = m;
     partsStamp[dim] = store.domainChanges();
+  }
+
+  /**
+   * Creates the profile events of rectangle i in dimension dim unless its compulsory parts are as
+   * at the previous build; few rectangles change between two builds.
+   */
+  private void refreshPartEvents(
+      Rectangle rr, int i, int dim, int otherDim, int min, int max, int lMin) {
+    int oMin = rr.lst(otherDim);
+    int oMax = rr.ect(otherDim);
+    int[] sig = partSignature[dim];
+    int k = 5 * i;
+    if (reusesWork()
+        && addWithin[dim][i] != null
+        && sig[k] == min
+        && sig[k + 1] == max
+        && sig[k + 2] == lMin
+        && sig[k + 3] == oMin
+        && sig[k + 4] == oMax) {
+      return;
+    }
+    sig[k] = min;
+    sig[k + 1] = max;
+    sig[k + 2] = lMin;
+    sig[k + 3] = oMin;
+    sig[k + 4] = oMax;
+    Interval block = oMin < oMax ? new Interval(oMin, oMax) : null;
+    addWithin[dim][i] = new Event(PROFILE_ADD, rr, min, lMin, block);
+    subtractWithin[dim][i] = new Event(PROFILE_SUBTRACT, rr, max, -lMin, block);
+    // a rectangle reaching outside the swept one adds no height, only its compulsory part as a
+    // block
+    addOutside[dim][i] = block == null ? null : new Event(PROFILE_ADD, rr, min, 0, block);
+    subtractOutside[dim][i] = block == null ? null : new Event(PROFILE_SUBTRACT, rr, max, 0, block);
   }
 
   /** buildSweepEvents from the rectangles that r may overlap only. */
