@@ -31,6 +31,8 @@
 package org.jacop.constraints.geost;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -523,33 +525,117 @@ final class GeostExplanation {
     IntVar sv = other.shapeId;
     int sMin = trail.minBefore(sv, position);
     int sMax = trail.maxBefore(sv, position);
-    if (sMin != sMax) {
-      return commonFrames(trail, other, position, dims, sMin, sMax);
+    // the compulsory parts depend only on the object's bounds, shapes and dimensions: they are
+    // reused while those stay the same (within one conflict analysis, and across them)
+    int[] key = new int[2 * k + 4];
+    key[0] = indexOf(other);
+    key[1] = System.identityHashCode(dims);
+    for (int i = 0; i < k; i++) {
+      key[2 + 2 * i] = trail.minBefore(other.coords[i], position);
+      key[3 + 2 * i] = trail.maxBefore(other.coords[i], position);
     }
-    if (!validShape(sMin)) {
-      return null;
+    key[2 * k + 2] = sMin;
+    key[2 * k + 3] = sMax;
+    boolean holes = false;
+    EntryList scratch = new EntryList();
+    for (int s = sMin + 1; s < sMax && !holes; s++) {
+      scratch.clear();
+      holes = trail.excludedBefore(sv, s, position, scratch);
     }
-    List<long[][]> frames = new ArrayList<>();
-    for (Dbox b : geost.shapeRegister[sMin].boxes) {
-      long[][] frame = frame(trail, other, position, dims, b);
-      if (frame != null) {
-        frames.add(frame);
+    FrameKey fk = holes ? null : new FrameKey(key, dims);
+    if (fk != null) {
+      List<long[][]> cached = frameCache.get(fk);
+      if (cached != null) {
+        return cached;
       }
     }
+    List<long[][]> computed = computeFrames(trail, other, position, dims, sMin, sMax);
+    if (fk != null) {
+      if (frameCache.size() >= FRAME_CACHE) {
+        frameCache.clear();
+      }
+      frameCache.put(fk, computed);
+    }
+    return computed;
+  }
+
+  /** The most compulsory parts remembered. */
+  private static final int FRAME_CACHE = 1 << 14;
+
+  private final HashMap<FrameKey, List<long[][]>> frameCache = new HashMap<>();
+
+  // the bounds, shapes and dimensions of an object that its compulsory parts depend on
+  private static final class FrameKey {
+    private final int[] key;
+    private final boolean[] dims;
+    private final int hash;
+
+    FrameKey(int[] key, boolean[] dims) {
+      this.key = key;
+      this.dims = dims;
+      this.hash = Arrays.hashCode(key);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof FrameKey f && dims == f.dims && Arrays.equals(key, f.key);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+  }
+
+  private List<long[][]> computeFrames(
+      AtomicTrail trail, GeostObject other, int position, boolean[] dims, int sMin, int sMax) {
+    List<long[][]> frames = new ArrayList<>();
+    if (sMin == sMax) {
+      if (!validShape(sMin)) {
+        return null;
+      }
+      for (Dbox b : geost.shapeRegister[sMin].boxes) {
+        long[][] frame = frame(trail, other, position, dims, b);
+        if (frame != null) {
+          frames.add(frame);
+        }
+      }
+      if (geost.shapeRegister[sMin].boxes.size() == 1) {
+        return frames;
+      }
+    }
+    // the cells covered by the union of the boxes of every shape at every origin
+    List<long[][]> cells = compulsoryCells(trail, other, position, dims, sMin, sMax);
+    if (cells == null) {
+      return sMin == sMax ? frames : null;
+    }
+    frames.addAll(cells);
     return frames;
   }
 
-  /** The most boxes kept while intersecting the compulsory parts of several shapes. */
-  private static final int COMMON_LIMIT = 64;
+  /** The most cells tested for a compulsory part of an object of several boxes or shapes. */
+  private static final int CELL_LIMIT = 1024;
 
   /**
-   * The cells an object of several possible shapes covers whichever shape and origin it takes: the
-   * intersection over its shapes of the union of the compulsory parts of each shape's boxes (only
-   * parts of positive length), as {origin, length} per dimension.
+   * The cells that an object covers at every origin of its domain and with every shape it may take,
+   * in the selected dimensions, as unit boxes merged along runs of the first selected dimension
+   * ({origin, length} per dimension), or null when there are too many cells to test. A cell c is
+   * covered by shape s at every origin p in the box P when the box c - P lies in the union of the
+   * boxes of s.
    */
-  private List<long[][]> commonFrames(
+  private List<long[][]> compulsoryCells(
       AtomicTrail trail, GeostObject other, int position, boolean[] dims, int sMin, int sMax) {
-    List<long[][]> common = null;
+    long[] pMin = new long[k];
+    long[] pMax = new long[k];
+    long[] lo = new long[k];
+    long[] hi = new long[k];
+    for (int i = 0; i < k; i++) {
+      pMin[i] = trail.minBefore(other.coords[i], position);
+      pMax[i] = trail.maxBefore(other.coords[i], position);
+      lo[i] = Long.MIN_VALUE;
+      hi[i] = Long.MAX_VALUE;
+    }
+    List<List<long[][]>> shapes = new ArrayList<>();
     EntryList scratch = new EntryList();
     for (int s = sMin; s <= sMax; s++) {
       scratch.clear();
@@ -559,55 +645,110 @@ final class GeostExplanation {
       if (!validShape(s)) {
         return null;
       }
-      List<long[][]> own = new ArrayList<>();
-      for (Dbox b : geost.shapeRegister[s].boxes) {
-        long[][] frame = frame(trail, other, position, dims, b);
-        if (frame != null && positive(frame, dims)) {
-          own.add(frame);
-        }
-      }
-      if (common == null) {
-        common = own;
-      } else {
-        List<long[][]> next = new ArrayList<>();
-        for (long[][] a : common) {
-          for (long[][] b : own) {
-            long[][] c = new long[k][2];
-            boolean empty = false;
-            for (int i = 0; i < k && !empty; i++) {
-              if (!dims[i]) {
-                continue;
-              }
-              long lo = Math.max(a[i][0], b[i][0]);
-              long hi = Math.min(a[i][0] + a[i][1], b[i][0] + b[i][1]);
-              c[i][0] = lo;
-              c[i][1] = hi - lo;
-              empty = hi <= lo;
-            }
-            if (!empty) {
-              next.add(c);
-            }
+      Shape shape = geost.shapeRegister[s];
+      Dbox bb = shape.boundingBox();
+      List<long[][]> boxes = new ArrayList<>();
+      for (Dbox b : shape.boxes) {
+        long[][] box = new long[k][2];
+        boolean empty = false;
+        for (int i = 0; i < k; i++) {
+          if (dims[i]) {
+            box[i][0] = b.origin[i];
+            box[i][1] = (long) b.origin[i] + b.length[i] - 1;
+            empty |= b.length[i] <= 0;
+          } else {
+            box[i][0] = Long.MIN_VALUE / 4;
+            box[i][1] = Long.MAX_VALUE / 4;
           }
         }
-        if (next.size() > COMMON_LIMIT) {
+        if (!empty) {
+          boxes.add(box);
+        }
+      }
+      shapes.add(boxes);
+      for (int i = 0; i < k; i++) {
+        if (dims[i]) {
+          lo[i] = Math.max(lo[i], pMax[i] + bb.origin[i]);
+          hi[i] = Math.min(hi[i], pMin[i] + bb.origin[i] + bb.length[i] - 1);
+        }
+      }
+    }
+    long count = 1;
+    for (int i = 0; i < k; i++) {
+      if (dims[i]) {
+        if (hi[i] < lo[i]) {
+          return List.of();
+        }
+        count *= hi[i] - lo[i] + 1;
+        if (count > CELL_LIMIT) {
           return null;
         }
-        common = next;
-      }
-      if (common.isEmpty()) {
-        return common;
-      }
-    }
-    return common;
-  }
-
-  private boolean positive(long[][] frame, boolean[] dims) {
-    for (int i = 0; i < k; i++) {
-      if (dims[i] && frame[i][1] <= 0) {
-        return false;
+      } else {
+        lo[i] = 0;
+        hi[i] = 0;
       }
     }
-    return true;
+    List<long[][]> cells = new ArrayList<>();
+    long[] c = lo.clone();
+    long[][] offsets = new long[k][2];
+    int first = -1;
+    for (int i = 0; i < k && first < 0; i++) {
+      if (dims[i]) {
+        first = i;
+      }
+    }
+    long[][] run = null;
+    while (true) {
+      boolean all = true;
+      for (int t = 0; t < shapes.size() && all; t++) {
+        for (int i = 0; i < k; i++) {
+          if (dims[i]) {
+            offsets[i][0] = c[i] - pMax[i];
+            offsets[i][1] = c[i] - pMin[i];
+          } else {
+            offsets[i][0] = 0;
+            offsets[i][1] = 0;
+          }
+        }
+        budget = COVER_BUDGET;
+        all = covered(offsets, shapes.get(t), 0);
+      }
+      if (all) {
+        boolean adjacent = run != null && first >= 0 && run[first][0] + run[first][1] == c[first];
+        for (int i = 0; i < k && adjacent; i++) {
+          adjacent = i == first || !dims[i] || run[i][0] == c[i];
+        }
+        if (adjacent) {
+          run[first][1]++;
+        } else {
+          run = new long[k][2];
+          for (int i = 0; i < k; i++) {
+            run[i][0] = c[i];
+            run[i][1] = 1;
+          }
+          cells.add(run);
+        }
+      } else {
+        run = null;
+      }
+      // next cell, the first selected dimension fastest
+      int i = 0;
+      for (; i < k; i++) {
+        int d = (first + i) % k;
+        if (c[d] < hi[d]) {
+          c[d]++;
+          break;
+        }
+        c[d] = lo[d];
+      }
+      if (i == k) {
+        break;
+      }
+      if (i > 0) {
+        run = null;
+      }
+    }
+    return cells;
   }
 
   // the compulsory part of one box of an object, {origin, length} per dimension (length may be 0,
