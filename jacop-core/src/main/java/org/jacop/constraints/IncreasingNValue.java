@@ -40,6 +40,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * IncreasingNValue constraint: x[0] &le; x[1] &le; ... &le; x[n-1] and x takes exactly count
@@ -61,7 +64,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class IncreasingNValue extends Constraint
-    implements SatisfiedPresent, Copyable<IncreasingNValue> {
+    implements SatisfiedPresent, Copyable<IncreasingNValue>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -322,6 +325,57 @@ public class IncreasingNValue extends Constraint
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.ANY;
+  }
+
+  /**
+   * Explains the bounds the order gives, x[i] &gt;= v by x[i - 1] &gt;= v and x[i] &lt;= v by x[i +
+   * 1] &lt;= v, and the bounds 1..n of count, which need no reason. The values the counts remove
+   * have no reason of their own.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (repeated) {
+      return false;
+    }
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int v = trail.value(entry);
+    if (y == count) {
+      return kind == AtomicTrail.GE && v <= 1 || kind == AtomicTrail.LE && v >= n;
+    }
+    for (int i = 0; i < n; i++) {
+      if (x[i] != y) {
+        continue;
+      }
+      if (kind == AtomicTrail.GE && i > 0 && trail.minBefore(x[i - 1], entry) >= v) {
+        trail.addBoundReaching(x[i - 1], entry, true, v, out);
+        return true;
+      }
+      if (kind == AtomicTrail.LE && i < n - 1 && trail.maxBefore(x[i + 1], entry) <= v) {
+        trail.addBoundReaching(x[i + 1], entry, false, v, out);
+        return true;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  /** Explains a failure of the order: x[i - 1] above x[i] wherever they are. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (repeated) {
+      return false;
+    }
+    int now = trail.size();
+    for (int i = 1; i < n; i++) {
+      int low = trail.minBefore(x[i - 1], now);
+      if (low > trail.maxBefore(x[i], now)) {
+        trail.addBoundReaching(x[i - 1], now, true, low, out);
+        trail.addBoundReaching(x[i], now, false, low - 1, out);
+        return true;
+      }
+    }
+    return false;
   }
 
   @Override

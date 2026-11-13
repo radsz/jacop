@@ -37,9 +37,13 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.cumulative.UnaryExplanation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * InterDistance constraint: |x[i] - x[j]| &gt;= p for every pair i &lt; j. It models n tasks of the
@@ -60,7 +64,8 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class InterDistance extends Constraint implements SatisfiedPresent, Copyable<InterDistance> {
+public class InterDistance extends Constraint
+    implements SatisfiedPresent, Copyable<InterDistance>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -618,6 +623,112 @@ public class InterDistance extends Constraint implements SatisfiedPresent, Copya
       k = skip[k];
     }
     return k;
+  }
+
+  // the explanations of the bounds, as for a unary resource of tasks of length p; made on first use
+  private UnaryExplanation unary;
+
+  private UnaryExplanation unary() {
+    if (unary == null) {
+      unary = new UnaryExplanation(x, p);
+    }
+    return unary;
+  }
+
+  /**
+   * Explains a removed value v of x[j] by another task whose start interval lies within v - p +
+   * 1..v + p - 1, so that it is closer than p to v wherever it starts (its compulsory part); and a
+   * bound by the tasks that must run before (or after) x[j], as the detectable precedences, edge
+   * finding and not-first rules of a unary resource find them (see {@link UnaryExplanation}), or
+   * else by the bounds of the other tasks in which no schedule exists (see {@link BoxReason}).
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (p == 0 || repeated) {
+      return false;
+    }
+    if (trail.kind(entry) != AtomicTrail.NE) {
+      int mark = out.size();
+      if (unary().explain(trail, entry, out)) {
+        return true;
+      }
+      out.truncate(mark);
+      return boxReason().explain(trail, entry, out);
+    }
+    IntVar y = trail.variable(entry);
+    long v = trail.value(entry);
+    for (int i = 0; i < n; i++) {
+      if (x[i] != y
+          && trail.minBefore(x[i], entry) >= v - p + 1
+          && trail.maxBefore(x[i], entry) <= v + p - 1) {
+        trail.addBoundReaching(x[i], entry, true, v - p + 1, out);
+        trail.addBoundReaching(x[i], entry, false, v + p - 1, out);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Explains a failure by two tasks whose start intervals are closer than p wherever they start, or
+   * by a task the unary rules push past its latest start.
+   */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (p == 0 || repeated) {
+      return false;
+    }
+    int now = trail.size();
+    for (int i = 0; i < n; i++) {
+      long lo = trail.minBefore(x[i], now);
+      long hi = trail.maxBefore(x[i], now);
+      for (int j = i + 1; j < n; j++) {
+        // every start of x[j] is within p of every start of x[i]
+        long loJ = trail.minBefore(x[j], now);
+        long hiJ = trail.maxBefore(x[j], now);
+        if (hiJ - lo < p && hi - loJ < p) {
+          trail.addLowerBound(x[i], now, out);
+          trail.addUpperBound(x[i], now, out);
+          trail.addLowerBound(x[j], now, out);
+          trail.addUpperBound(x[j], now, out);
+          return true;
+        }
+      }
+    }
+    int mark = out.size();
+    if (unary().explainFailure(trail, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return boxReason().explainFailure(trail, out);
+  }
+
+  // the bounds without a schedule, for the bounds the unary rules do not reach; made on first use
+  private BoxReason boxReason;
+
+  private BoxReason boxReason() {
+    if (boxReason == null) {
+      boxReason =
+          new BoxReason(
+              x,
+              (boxLo, boxHi) -> {
+                for (int i = 0; i < n; i++) {
+                  if (boxLo[i] > boxHi[i]) {
+                    return true;
+                  }
+                  r[i] = boxLo[i];
+                  d[i] = boxHi[i] + p;
+                }
+                if (ect == null) {
+                  ect = new long[n][n + 1];
+                  lst = new long[n][n + 2];
+                }
+                return !lower();
+              },
+              64,
+              1L << 40);
+    }
+    return boxReason;
   }
 
   @Override

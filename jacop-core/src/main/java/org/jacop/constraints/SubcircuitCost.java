@@ -39,6 +39,9 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * SubcircuitCost constraint assures that the variables build a subcircuit and that cost is the sum
@@ -77,7 +80,7 @@ import org.jacop.core.Var;
  * @version 5.0
  */
 public class SubcircuitCost extends Constraint
-    implements SatisfiedPresent, Copyable<SubcircuitCost> {
+    implements SatisfiedPresent, Copyable<SubcircuitCost>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -305,6 +308,32 @@ public class SubcircuitCost extends Constraint
 
   void setMax(Store store, long max) {
     CostBounds.setMax(store, cost, max);
+  }
+
+  // the reduced cost explanations of the assignment relaxation, made on first use
+  private AssignmentReason assignmentReason;
+
+  private AssignmentReason assignmentReason() {
+    if (assignmentReason == null) {
+      assignmentReason = new AssignmentReason(list, costs, cost, offset, true);
+    }
+    return assignmentReason;
+  }
+
+  /**
+   * Explains a bound of the cost or a removed successor by the reduced costs of the minimum or
+   * maximum assignment over the domains just before the atom (see {@link AssignmentReason}).
+   * Pruning by the Steiner cycle bound has no reason of its own.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return assignmentReason().explain(trail, entry, out);
+  }
+
+  /** Explains a failure by an assignment bound beyond a bound of the cost. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return assignmentReason().explainFailure(trail, out);
   }
 
   @Override
