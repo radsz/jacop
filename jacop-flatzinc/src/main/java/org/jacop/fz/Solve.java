@@ -3210,6 +3210,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
             + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgUnkeptReasons="
+            + lcg.sat().unkeptReasons
+            + "\n%%%mzn-stat: lcgExpandedLiterals="
+            + lcg.sat().expandedLiterals
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
