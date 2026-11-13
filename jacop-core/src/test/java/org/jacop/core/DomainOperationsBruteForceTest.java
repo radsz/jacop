@@ -187,10 +187,8 @@ class DomainOperationsBruteForceTest {
   }
 
   /** The pruning operations of a variable's domain, followed by backtracking to the old domain. */
-  /**
-   * An IntervalDomain against affine views, which reach the paths that read the argument through
-   * leftElement and rightElement.
-   */
+  // an IntervalDomain against affine views, which reach the paths that read the argument through
+  // leftElement and rightElement
   @ParameterizedTest(name = "{0}")
   @MethodSource("kinds")
   void intervalDomainMatchesSetsWithAffineArguments(

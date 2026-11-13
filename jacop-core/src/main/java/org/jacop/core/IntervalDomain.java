@@ -325,12 +325,13 @@ public class IntervalDomain extends IntDomain {
 
   /**
    * Writes the intersection of the intervals i..aSize-1 of a with the intervals of b shifted by
-   * shift to out, starting at interval position k of out.
+   * shift to out after its first i intervals (out already holds the intervals 0..i-1 of a).
    *
    * @return the number of intervals in out
    */
   private static int intersectInto(
-      int[] a, int i, int aSize, int[] b, int bSize, int shift, int[] out, int k) {
+      int[] a, int i, int aSize, int[] b, int bSize, int shift, int[] out) {
+    int k = i;
     int j = 0;
     while (i < aSize && j < bSize) {
       int aMax = a[2 * i + 1];
@@ -392,7 +393,7 @@ public class IntervalDomain extends IntDomain {
     int[] copy = new int[2 * (size + inputSize + ALLOCATION_MARGIN)];
     System.arraycopy(bounds, 0, copy, 0, 2 * first);
     return new IntervalDomain(
-        copy, intersectInto(bounds, first, size, input, inputSize, shift, copy, first));
+        copy, intersectInto(bounds, first, size, input, inputSize, shift, copy));
   }
 
   /**
@@ -1257,7 +1258,7 @@ public class IntervalDomain extends IntDomain {
       return new IntervalDomain(size);
     }
     int[] result = new int[2 * (size + inputSize)];
-    int out = intersectInto(bounds, 0, size, boundsOf(domain), inputSize, 0, result, 0);
+    int out = intersectInto(bounds, 0, size, boundsOf(domain), inputSize, 0, result);
     return new IntervalDomain(result, out);
   }
 
@@ -3665,8 +3666,9 @@ public class IntervalDomain extends IntDomain {
     int inputSize = domain.noIntervals();
     int[] input = boundsOf(domain);
     int count = 0;
+    int i = 0;
     int j = 0;
-    for (int i = 0; i < size && j < inputSize; ) {
+    while (i < size && j < inputSize) {
       int lo = Math.max(bounds[2 * i], input[2 * j]);
       int hi = Math.min(bounds[2 * i + 1], input[2 * j + 1]);
       count += Math.max(0, hi - lo + 1);
