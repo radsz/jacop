@@ -218,6 +218,8 @@ public final class CdclSolver {
   private long conflictsAtRestart;
   private int lubyIndex;
   private long lubyLimit;
+  // conflicts of one unit of the Luby sequence in stable mode
+  private static final long LUBY_UNIT = Long.getLong("jacop.jasat.lubyUnit", 512L);
   private final int[] lbdQueue = new int[50];
   private int lbdQueueSize;
   private int lbdQueueHead;
@@ -3301,7 +3303,7 @@ public final class CdclSolver {
       lubyIndex = 0;
     }
     if (stable) {
-      lubyLimit = 512L * luby(++lubyIndex);
+      lubyLimit = LUBY_UNIT * luby(++lubyIndex);
     }
   }
 
