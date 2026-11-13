@@ -4507,7 +4507,7 @@ public final class LcgSolver implements ExternalPropagator {
   static final int TABLE_DOM = Integer.getInteger("jacop.lcg.tableClauses.dom", 64);
 
   /** The most tuples of such a table, {@code jacop.lcg.tableClauses.tuples}. */
-  static final int TABLE_TUPLES = Integer.getInteger("jacop.lcg.tableClauses.tuples", 1000);
+  static final int TABLE_TUPLES = Integer.getInteger("jacop.lcg.tableClauses.tuples", 100);
 
   /** Prints each table tried as clauses, {@code jacop.lcg.tableClauses.debug}. */
   static final boolean TABLE_DEBUG = Boolean.getBoolean("jacop.lcg.tableClauses.debug");
