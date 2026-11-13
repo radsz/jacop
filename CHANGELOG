@@ -4605,6 +4605,27 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
+269. Linear overlap factoring at FlatZinc posting, off by default
+     (-Dorg.jacop.fz.linearOverlap=true), after the presolve rule
+     FindBigHorizontalLinearOverlap of OR-Tools CP-SAT (CpModelPresolver,
+     9.15; the rule has no separate publication). When two or more
+     int_lin_eq, int_lin_le or int_lin_ne constraints contain the same
+     sub-sum sum(b_i * x_i) of at least 4 terms (.minSize), each times an
+     integer factor k, the sub-sum gets a new variable z = sum(b_i * x_i)
+     and every such row uses k * z instead, so the sum is propagated once
+     and its bounds are shared. The largest proportional overlap of each
+     row with another row is taken greedily (.maxOcc, .work bound the
+     search). z is a split sum, so the linear relaxation (--lp) and LCG
+     use the original rows. Reified and half-reified rows are left alone
+     (.reified=true includes them): there the shared sum is propagated at
+     every node while the reified rows are passive, which made
+     pattern-set-mining and bnn-planner 3-4x slower. Off under --proof.
+     It fires on 52 of the 240 wide-set instances. On those, at 600 s,
+     model search solves 38 as before with init+solve time 0.945x, -f 41
+     instead of 39 (kitchen 2026 and javarouting trip_7_2 proved) with
+     0.959x; vaccine v857 2.2x, harmony canon 1.5x and blocks-world 16-4-83
+     1.5x faster, network_50 and roster-shifts-bool slower (other trees).
+
 Version 4.11
 =============
 
