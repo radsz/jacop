@@ -64,11 +64,18 @@ final class AssignmentReason {
   private final boolean selfLoops;
   private final int n;
 
+  // the duals and the matching of each direction (index 0 minimum, 1 maximum) are kept from one
+  // explanation to the next, so that each solve only repairs them (warm start)
+  private static final long DRIFT_LIMIT = 1L << 56;
+  private final long[][] rowDuals;
+  private final long[][] columnDuals;
+  private final int[][] mates;
+
   private final boolean[][] allowed;
   private final long[][] weight;
-  private final long[] u;
-  private final long[] v;
-  private final int[] p;
+  private long[] u;
+  private long[] v;
+  private int[] p;
   private final int[] way;
   private final long[] minv;
   private final boolean[] used;
@@ -92,9 +99,9 @@ final class AssignmentReason {
     this.n = x.length;
     allowed = new boolean[n][n];
     weight = new long[n + 1][n + 1];
-    u = new long[n + 1];
-    v = new long[n + 1];
-    p = new int[n + 1];
+    rowDuals = new long[2][n + 1];
+    columnDuals = new long[2][n + 1];
+    mates = new int[2][n + 1];
     way = new int[n + 1];
     minv = new long[n + 1];
     used = new boolean[n + 1];
@@ -266,21 +273,65 @@ final class AssignmentReason {
   }
 
   // the arcs in the domains just before the position; the optimal assignment of sign * cost over
-  // them and its duals; false when there is no assignment or the duals are not feasible
+  // them and its duals; false when there is no assignment or the duals are not feasible. The duals
+  // and the matching of the previous solve in the same direction are repaired and only the rows
+  // that lost their arc are augmented, so a solve costs O(n^2) per such row instead of O(n^3).
   private boolean solve(AtomicTrail trail, int position, long sign) {
     for (int i = 0; i < n; i++) {
+      IntVar xi = x[i];
       for (int j = 0; j < n; j++) {
-        scratch.clear();
-        allowed[i][j] =
-            (selfLoops || i != j) && !trail.excludedBefore(x[i], j + offset, position, scratch);
-        weight[i + 1][j + 1] = allowed[i][j] ? sign * costs[i][j] : BIG;
+        int value = j + offset;
+        // a value in the domain now was in it before the position too
+        boolean in = (selfLoops || i != j) && xi.domain.contains(value);
+        if (!in && (selfLoops || i != j)) {
+          scratch.clear();
+          in = !trail.excludedBefore(xi, value, position, scratch);
+        }
+        allowed[i][j] = in;
+        weight[i + 1][j + 1] = in ? sign * costs[i][j] : BIG;
       }
     }
-    // Hungarian method with potentials, rows 1..n, columns 1..n, p[j] the row of column j
-    Arrays.fill(u, 0);
-    Arrays.fill(v, 0);
-    Arrays.fill(p, 0);
+    int s = sign > 0 ? 0 : 1;
+    u = rowDuals[s];
+    v = columnDuals[s];
+    p = mates[s];
+    for (int k = 1; k <= n; k++) {
+      if (Math.abs(u[k]) > DRIFT_LIMIT || Math.abs(v[k]) > DRIFT_LIMIT) {
+        Arrays.fill(u, 0);
+        Arrays.fill(v, 0);
+        Arrays.fill(p, 0);
+        break;
+      }
+    }
+    // the tightest feasible row duals for the column duals; a matched arc stays only while tight
     for (int i = 1; i <= n; i++) {
+      long min = Long.MAX_VALUE;
+      long[] w = weight[i];
+      for (int j = 1; j <= n; j++) {
+        min = Math.min(min, w[j] - v[j]);
+      }
+      u[i] = min;
+    }
+    boolean[] matched = used;
+    Arrays.fill(matched, false);
+    for (int j = 1; j <= n; j++) {
+      int r = p[j];
+      if (r != 0 && weight[r][j] - u[r] - v[j] != 0) {
+        p[j] = 0;
+      } else if (r != 0) {
+        matched[r] = true;
+      }
+    }
+    int free = 0;
+    for (int i = 1; i <= n; i++) {
+      if (!matched[i]) {
+        way[free++] = i;
+      }
+    }
+    int[] rows = Arrays.copyOf(way, free);
+    // Hungarian method with potentials, rows 1..n, columns 1..n, p[j] the row of column j
+    p[0] = 0;
+    for (int i : rows) {
       p[0] = i;
       int j0 = 0;
       Arrays.fill(minv, Long.MAX_VALUE);
@@ -319,6 +370,8 @@ final class AssignmentReason {
         j0 = j1;
       } while (j0 != 0);
     }
+    p[0] = 0;
+    v[0] = 0;
     // every row is matched to an arc of the domains, and the duals are feasible on those arcs
     for (int j = 1; j <= n; j++) {
       if (!allowed[p[j] - 1][j - 1]) {
