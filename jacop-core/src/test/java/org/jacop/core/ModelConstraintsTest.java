@@ -72,6 +72,29 @@ class ModelConstraintsTest {
           () -> new LazyBitSetDomain(0, 200));
 
   /**
+   * The hash tables of the owned constraint arrays are made with the first array long enough to
+   * have one: two tables per variable took 3 % of the live heap of the largest FlatZinc models,
+   * where most variables are in a few constraints.
+   */
+  @Test
+  void ownedArraysHaveTablesOnlyOnceOneIsLong() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1000);
+    for (int i = 0; i < 3; i++) {
+      store.impose(new XneqY(x, new IntVar(store, "y" + i, 0, 1000)));
+    }
+    IntDomain d = x.domain;
+    assertThat(d.ownedModelConstraints).isNotNull();
+    assertThat(d.ownedModelConstraintTables).isNull();
+    assertThat(d.ownedModelConstraintTableSizes).isNull();
+    for (int i = 3; i < 40; i++) {
+      store.impose(new XneqY(x, new IntVar(store, "y" + i, 0, 1000)));
+    }
+    assertThat(x.domain.ownedModelConstraintTables).isNotNull();
+    assertThat(x.domain.modelConstraintsToEvaluate[IntDomain.GROUND]).isEqualTo(40);
+  }
+
+  /**
    * Random sequences of imposing and removing constraints, entering levels and removing them. After
    * each step the attached constraints of every variable and event must equal a model kept with
    * sets, and none may be attached twice.

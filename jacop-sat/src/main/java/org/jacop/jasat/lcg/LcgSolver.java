@@ -605,7 +605,9 @@ public final class LcgSolver implements ExternalPropagator {
     for (IntVar x : all) {
       int i = trail.id(x);
       vars[i] = x;
-      root[i] = x.dom().cloneLight();
+      // the trail took the same root domain when it was made: one copy per variable, not two
+      IntDomain atTrail = trail.rootDomain(x);
+      root[i] = atTrail.eq(x.dom()) ? atTrail : x.dom().cloneLight();
       ge[i] = new LiteralMap(root[i].min(), root[i].max());
       eq[i] = new LiteralMap(root[i].min(), root[i].max());
       linked[i] = new LiteralMap(root[i].min(), root[i].max());
