@@ -4850,6 +4850,29 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
+285. Tables as clauses under LCG (experiment, off by default):
+   -Djacop.lcg.tableClauses=direct makes each HybridTable (no restrictions
+   between columns, at most 100 tuples, 64 values per column and 5000
+   clauses, .tuples/.dom/.limit) clauses of the SAT solver in place of
+   its propagator and TableExplanation, as regular and MDD constraints
+   already are. A table with two unfixed columns becomes the support
+   clauses of its values, [x = v] -> OR [y = w] over the w paired with v
+   (I. P. Gent, Arc consistency in SAT, ECAI 2002), with no new literal;
+   a larger one the support encoding with a literal per tuple
+   (F. Bacchus, GAC via unit propagation, CP 2007), which HybridTable
+   already wrote for proofs. Both give domain consistency by unit
+   propagation. "support" uses the second encoding for every table,
+   "binary" encodes only the two-column tables. Tables over the
+   objective's definition stay propagators, as in jacop.lcg.clauses: as
+   clauses they lost spot5, Fortress and HCPizza (s = 5 x tables) by up
+   to 8x. On 67 table instances (28 wide, 39 XCSP) at 600 s, each
+   configuration on its own core: default 52 = 52 solved, time 1.00,
+   nodes 0.98; -f 57 -> 58, time 1.04 (base against base repeat 1.01).
+   Robust gains (3 seeds and both modes): TSPTW 1.8-2x, pillars-and-planks
+   1.6-1.9x, code-generator 1.5x, IHTC, SchedulingOS, BeerJugs; losses
+   SportsScheduling-dummy, Eternity, PegSolitaire, Spot5-0412 (2-3x).
+   Statistics lcgTablesAsClauses, lcgTableClauses, lcgTableTupleLiterals.
+
 Version 4.11
 =============
 
