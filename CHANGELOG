@@ -4618,6 +4618,29 @@ Version 5.0 (unreleased)
    ma-path-finding g32_p20_a10 under -f now reaches the search within 4 GB
    and rcpsp-wet-diverse j90_48_4 is read and posted.
 
+270. IntervalDomain keeps its intervals in one int array (min and max of
+     interval i at 2i and 2i+1) instead of an array of Interval objects,
+     so walking a domain reads one array and the domain operations
+     allocate no Interval. The public field intervals is removed: use
+     domain.leftElement(i) and domain.rightElement(i), or getInterval(i)
+     where an Interval object is wanted. AffineDomain now overrides
+     leftElement and rightElement. Search is unchanged (same nodes and
+     solutions in fixed search); 60 s x 3 runs of 12 instances, base and
+     candidate side by side: +1.9 % nodes/s on average (cgt +4.6 %,
+     monomatch +4.1 %, liner +3.8 %), base against itself +0.1 %.
+
+271. Diffn (and Diff2, Nooverlap) does less repeated work with the same
+   pruning. The profile sweep of a rectangle runs per dimension, only when
+   that rectangle or a compulsory part in that dimension changed since its
+   last sweep; the events of compulsory parts that did not change are kept
+   between builds; and the area check skips the dual feasible functions
+   for a window whose rectangle sizes passed them the last time. On 81
+   instances posting Diffn (carpet-cutting, cargo, accap, code-generator,
+   stripboard, pillars-and-planks, rectangle-packing, perfect_square,
+   workforce-alloc, ...) at 240 s with the default search the solutions
+   are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
+   up to 1.48x nodes).
+
 Version 4.11
 =============
 

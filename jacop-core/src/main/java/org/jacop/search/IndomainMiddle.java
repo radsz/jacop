@@ -81,20 +81,20 @@ public class IndomainMiddle<T extends IntVar> implements Indomain<T> {
     }
     int iBefore = 0;
     int iAfter = domain.size - 1;
-    while (iBefore < domain.size && domain.intervals[iBefore].max() < middle) {
+    while (iBefore < domain.size && domain.rightElement(iBefore) < middle) {
       iBefore++;
     }
-    while (iAfter >= 0 && domain.intervals[iAfter].min() > middle) {
+    while (iAfter >= 0 && domain.leftElement(iAfter) > middle) {
       iAfter--;
     }
     if (iBefore > iAfter) {
-      return middle - domain.intervals[iAfter].max() > domain.intervals[iBefore].min() - middle
-          ? domain.intervals[iBefore].min()
-          : domain.intervals[iAfter].max();
+      return middle - domain.rightElement(iAfter) > domain.leftElement(iBefore) - middle
+          ? domain.leftElement(iBefore)
+          : domain.rightElement(iAfter);
     }
-    return middle - domain.intervals[iBefore].max() > domain.intervals[iAfter].min() - middle
-        ? domain.intervals[iAfter].min()
-        : domain.intervals[iBefore].max();
+    return middle - domain.rightElement(iBefore) > domain.leftElement(iAfter) - middle
+        ? domain.leftElement(iAfter)
+        : domain.rightElement(iBefore);
   }
 
   private int indomainGeneric(IntDomain dom) {
