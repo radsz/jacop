@@ -540,6 +540,26 @@ public final class ConstraintFncs {
     gc.gen_jacop_softgcc_var(n);
   }
 
+  /** Handles the jacop_same FlatZinc constraint. */
+  public void jacop_same(SimpleNode n) {
+    gc.gen_jacop_same(n, false);
+  }
+
+  /** Handles the jacop_used_by FlatZinc constraint. */
+  public void jacop_used_by(SimpleNode n) {
+    gc.gen_jacop_same(n, true);
+  }
+
+  /** Handles the jacop_symmetric_gcc FlatZinc constraint. */
+  public void jacop_symmetric_gcc(SimpleNode n) {
+    gc.gen_jacop_symmetric_gcc(n);
+  }
+
+  /** Handles the jacop_cardinality_matrix FlatZinc constraint. */
+  public void jacop_cardinality_matrix(SimpleNode n) {
+    gc.gen_jacop_cardinality_matrix(n);
+  }
+
   /** Handles the jacop_stocking_cost FlatZinc constraint. */
   public void jacop_stocking_cost(SimpleNode n) {
     gc.gen_jacop_stocking_cost(n);

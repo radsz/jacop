@@ -89,11 +89,11 @@ public class IndomainMedian<T extends IntVar> implements Indomain<T> {
 
   private static int medianFromIntervalDomain(IntervalDomain domain, int position) {
     for (int i = 0; i < domain.size; i++) {
-      int intervalSize = domain.intervals[i].max() - domain.intervals[i].min() + 1;
+      int intervalSize = domain.rightElement(i) - domain.leftElement(i) + 1;
       if (intervalSize <= position) {
         position -= intervalSize;
       } else {
-        return domain.intervals[i].min() + position;
+        return domain.leftElement(i) + position;
       }
     }
     if (ASSERTS_ENABLED) {

@@ -46,7 +46,6 @@ import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
@@ -478,16 +477,16 @@ public class Alldistinct extends Constraint
     } else if (dom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       IntervalDomain id = (IntervalDomain) dom;
       for (int k = 0; k < id.size; k++) {
-        Interval interval = id.intervals[k];
-        int max = interval.max();
+        int min = id.leftElement(k);
+        int max = id.rightElement(k);
         if (valueIndexOffset != null) {
-          for (int v = interval.min(); v <= max; v++) {
+          for (int v = min; v <= max; v++) {
             adj[d++] = valueIndexOffset[v - minValue];
           }
         } else {
           // consecutive values have consecutive indexes in the sorted union
-          int a = Arrays.binarySearch(values, interval.min());
-          for (int v = interval.min(); v <= max; v++) {
+          int a = Arrays.binarySearch(values, min);
+          for (int v = min; v <= max; v++) {
             adj[d++] = a++;
           }
         }
@@ -690,10 +689,10 @@ public class Alldistinct extends Constraint
     if (dom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       IntervalDomain id = (IntervalDomain) dom;
       for (int k = 0; k < id.size; k++) {
-        Interval interval = id.intervals[k];
+        int min = id.leftElement(k);
         // consecutive values have consecutive indexes in the sorted union
-        int a = valueIndex(interval.min());
-        for (int last = a + interval.max() - interval.min(); a <= last; a++) {
+        int a = valueIndex(min);
+        for (int last = a + id.rightElement(k) - min; a <= last; a++) {
           domainBits[base + (a >>> 6)] |= 1L << a;
         }
       }

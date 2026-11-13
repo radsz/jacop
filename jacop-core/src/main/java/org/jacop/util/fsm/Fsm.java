@@ -43,7 +43,6 @@ import java.util.function.Consumer;
 import java.util.function.IntConsumer;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.util.Mdd;
@@ -417,11 +416,8 @@ public class Fsm {
   /** Iterates over every value in the domain (all intervals) and invokes the consumer. */
   private void forEachValueInArc(IntervalDomain dom, IntConsumer withValue) {
     for (int h = 0; h < dom.size; h++) {
-      Interval inv = dom.intervals[h];
-      if (inv != null) {
-        for (int v = inv.min(); v <= inv.max(); v++) {
-          withValue.accept(v);
-        }
+      for (int v = dom.leftElement(h), max = dom.rightElement(h); v <= max; v++) {
+        withValue.accept(v);
       }
     }
   }

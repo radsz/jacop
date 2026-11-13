@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.TrailedInts;
@@ -391,8 +390,8 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
       IntervalDomain intervals = (IntervalDomain) domain;
       int matched = 0;
       for (int i = 0; i < intervals.size; i++) {
-        Interval interval = intervals.intervals[i];
-        matched += mayBeRange(lowerBound(interval.min()), upperBound(interval.max()));
+        matched +=
+            mayBeRange(lowerBound(intervals.leftElement(i)), upperBound(intervals.rightElement(i)));
       }
       return matched;
     }
