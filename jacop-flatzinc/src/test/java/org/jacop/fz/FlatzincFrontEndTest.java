@@ -33,6 +33,9 @@ package org.jacop.fz;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -1164,6 +1167,81 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void theParseTreeIsReleasedBeforeTheSearch() throws IOException, ParseException {
+    // the parser keeps the root of the parse tree on its stack while the search runs, so the
+    // variable and constraint items stayed live: 29 % of the heap of nside EASY_200_50
+    Path fzn = tmp.resolve("release.fzn");
+    Files.writeString(
+        fzn,
+        "var 0..9: x :: output_var;\nvar 0..9: y;\nconstraint int_lt(x, y);\nsolve minimize y;\n",
+        StandardCharsets.UTF_8);
+    Options opt = new Options(new String[] {"-t", "10000", fzn.toString()});
+    PrintStream originalOut = System.out;
+    try (PrintStream capture =
+            new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+      SimpleNode root = (SimpleNode) parser.jjtree.rootNode();
+      int kept = 0;
+      for (int i = 0; i < root.jjtGetNumChildren(); i++) {
+        SimpleNode item = (SimpleNode) root.jjtGetChild(i);
+        if (item != null) {
+          assertEquals(ParserTreeConstants.JJTMODELEND, item.getId());
+          kept++;
+        } else {
+          assertNull(item);
+        }
+      }
+      assertEquals(1, kept, "only the solve item is kept");
+      assertNotNull(parser.getStore());
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  @Test
+  void aDeclarationKeepsItsPartsOnlyWhenItIsAnAlias() throws ParseException {
+    // a declaration is read once, when its variable is made; only var int: y = x is read again,
+    // by symmetry breaking. The others held their annotations and array literals while the model
+    // was posted: a sixth of the heap of rcpsp-wet-diverse j90_48_4
+    Parser parser =
+        new Parser(
+            new java.io.StringReader(
+                """
+                var 0..9: x :: output_var;
+                var 0..9: y = x;
+                array [1..2] of var int: a :: output_array([1..2]) = [x, y];
+                """));
+    Options opt = new Options(new String[] {"model.fzn"});
+    parser.setOptions(opt);
+    parser.cc.setOptions(opt);
+    parser.cg.setOptions(opt);
+    parser.var_decl_items();
+    SimpleNode items = (SimpleNode) parser.jjtree.popNode();
+    assertEquals(3, items.jjtGetNumChildren());
+    assertEquals(0, items.jjtGetChild(0).jjtGetNumChildren(), "x");
+    assertTrue(items.jjtGetChild(1).jjtGetNumChildren() >= 2, "y = x");
+    assertEquals(0, items.jjtGetChild(2).jjtGetNumChildren(), "a");
+    assertNotNull(parser.dict.getVariableArray("a"));
+  }
+
+  @Test
+  void aNameReadTwiceIsOneString() {
+    // one String per occurrence of a name made a third of the parse tree of ma-path-finding
+    // ins_g32_p20_a10 (950 MB of strings for 12 million name uses), which died at 4 GB while
+    // posting
+    Parser parser = new Parser(new java.io.StringReader(""));
+    Token first = new Token();
+    first.image = new String("X_INTRODUCED_7_".toCharArray());
+    Token second = new Token();
+    second.image = new String("X_INTRODUCED_7_".toCharArray());
+    assertSame(parser.name(first), parser.name(second));
+  }
+
+  @Test
   void readingTheModelStopsAtTheTimeOut() throws IOException, ParseException {
     // the time-out was checked only while the constraints were posted, after the whole file was
     // read: rcpsp-wet-diverse j90_48_4 (470 MB) read for a minute and ended 18 s after -t 60 s
@@ -1201,8 +1279,15 @@ class FlatzincFrontEndTest {
       System.setOut(capture);
       Parser parser = new Parser(input);
       parser.setOptions(opt);
-      parser.model();
-      SimpleNode tree = (SimpleNode) parser.jjtree.rootNode();
+      parser.cc.setOptions(opt);
+      // the items only: model() releases them before the search
+      parser.pred_decl_items();
+      parser.var_decl_items();
+      parser.constraint_items();
+      SimpleNode tree = new SimpleNode(ParserTreeConstants.JJTMODEL);
+      Node constraints = parser.jjtree.popNode();
+      tree.jjtAddChild(parser.jjtree.popNode(), 0);
+      tree.jjtAddChild(constraints, 1);
       opt.startedEarlier(120_000);
       Support support = parser.cc.support;
       assertThrows(ModelTimeOut.class, () -> new PartialCopyDetector(support).detect(tree));

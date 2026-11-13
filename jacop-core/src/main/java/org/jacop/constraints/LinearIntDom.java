@@ -670,9 +670,8 @@ public class LinearIntDom extends LinearInt {
 
     outerloop:
     for (int k = 0; k < n; k++) {
-      Interval e = ((IntervalDomain) currentDom).intervals[k];
-      int eMin = e.min();
-      int eMax = e.max();
+      int eMin = ((IntervalDomain) currentDom).leftElement(k);
+      int eMax = ((IntervalDomain) currentDom).rightElement(k);
 
       for (int element = eMin; element <= eMax; element++) {
         if (processElement(element, w, lb, ub, partialSum, positive, index, newIndex)) {

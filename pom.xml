@@ -360,6 +360,7 @@ setup to run configuration. -->
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/CatalogCardinalityFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
@@ -575,6 +576,7 @@ setup to run configuration. -->
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/CatalogCardinalityFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
@@ -786,6 +788,7 @@ setup to run configuration. -->
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/CatalogCardinalityFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
@@ -995,6 +998,7 @@ setup to run configuration. -->
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
+                                <include>**/CatalogCardinalityFlatzincTest.java</include>
                                 <include>**/WeightedCompletionFlatzincTest.java</include>
                                 <include>**/SchedulingBoundsFlatzincTest.java</include>
                                 <include>**/KnapsackFlatzincTest.java</include>
