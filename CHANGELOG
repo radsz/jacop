@@ -4605,7 +4605,40 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
-269. Memory of the FlatZinc front end and of constraint scopes, found by an
+269. Three cardinality constraints of the Global Constraint Catalog, all
+     propagated with a feasible flow (lower and upper arc bounds) whose
+     residual strongly connected components give the values that some
+     solution uses:
+     - SymmetricGCC(x, rowCount, colCount): a 0/1 matrix x whose row r
+       has rowCount[r] ones and whose column c has colCount[c] ones
+       (symmetric_gcc / symmetric_cardinality of the catalog). Domain
+       consistent on the cells and bounds consistent on the counts, after
+       I. Kocjan and P. Kreuger, "Filtering methods for symmetric
+       cardinality constraint", CPAIOR 2004, LNCS 3011, 200-208, with
+       the flow model of J.-C. Régin, "Generalized arc consistency for
+       global cardinality constraint", AAAI 1996.
+     - CardinalityMatrix(x, values, rowCount, colCount): value values[k]
+       occurs rowCount[r][k] times in row r and colCount[c][k] times in
+       column c of x (colored_matrix of the catalog), with one such flow
+       per value linking rows and columns, after J.-C. Régin and C. Gomes,
+       "The cardinality matrix constraint", CP 2004, LNCS 3258, 572-587.
+     - Same(x, y) and UsedBy(x, y): y is a permutation of x, or a
+       sub-multiset of it, domain consistent with the flow network of N.
+       Beldiceanu, I. Katriel and S. Thiel, "Filtering algorithms for the
+       Same constraint", CPAIOR 2004, LNCS 3011, 65-79 (and the UsedBy
+       algorithm of their report MPI-I-2004-1-001).
+     The MiniZinc library of fzn-jacop defines same, used_by,
+     symmetric_gcc and cardinality_matrix with them (the row and column
+     sums and cardinalities are posted as well). With
+     -Dorg.jacop.fz.symmetricGcc=true the FlatZinc front end also finds
+     0/1 matrices whose rows and columns are bounded sums (as MiniZinc
+     flattens them) and posts a redundant SymmetricGCC; it is off by
+     default: on the 76 Challenge instances (vrp, solbat, amaze, kitchen,
+     roster-shifts-bool, ma-path-finding) where it fires, at 240 s, it
+     never changed the sequence of solutions of the model search and
+     only slowed it down (vrp, amaze).
+
+270. Memory of the FlatZinc front end and of constraint scopes, found by an
    object-level heap census of the largest models: the parse tree is
    released before the search (the parser held it for the whole run, 29 %
    of the heap of nside EASY_200_50; a portfolio building from one shared
@@ -4618,7 +4651,7 @@ Version 5.0 (unreleased)
    ma-path-finding g32_p20_a10 under -f now reaches the search within 4 GB
    and rcpsp-wet-diverse j90_48_4 is read and posted.
 
-270. IntervalDomain keeps its intervals in one int array (min and max of
+271. IntervalDomain keeps its intervals in one int array (min and max of
      interval i at 2i and 2i+1) instead of an array of Interval objects,
      so walking a domain reads one array and the domain operations
      allocate no Interval. The public field intervals is removed: use
@@ -4629,7 +4662,7 @@ Version 5.0 (unreleased)
      candidate side by side: +1.9 % nodes/s on average (cgt +4.6 %,
      monomatch +4.1 %, liner +3.8 %), base against itself +0.1 %.
 
-271. Diffn (and Diff2, Nooverlap) does less repeated work with the same
+272. Diffn (and Diff2, Nooverlap) does less repeated work with the same
    pruning. The profile sweep of a rectangle runs per dimension, only when
    that rectangle or a compulsory part in that dimension changed since its
    last sweep; the events of compulsory parts that did not change are kept
