@@ -44,6 +44,7 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -233,6 +234,35 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 @ExtendWith(SingleConstraintTest.TestWatcherExtension.class)
 @Slf4j
 class SingleConstraintTest extends TestHelper {
+
+  @Test
+  void scopeKeepsTheFirstOccurrenceOrderOfDistinctVariables() {
+    // the scope of a small constraint is an array instead of a LinkedHashSet (20 % of the heap of
+    // ma-path-finding ins_g32_p20_a10 while posting); it must stay the same set, in the same order
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 5);
+    IntVar y = new IntVar(store, "y", 0, 5);
+    IntVar z = new IntVar(store, "z", 0, 10);
+    IntVar w = new IntVar(store, "w", 0, 1);
+    Constraint small = new XplusYeqZ(x, x, z);
+    assertThat(small.arguments()).containsExactly(x, z);
+    assertThat(small.arguments()).isEqualTo(new LinkedHashSet<>(List.of(x, z)));
+    Set<Var> smallScope = small.arguments();
+    assertThat(smallScope).hasSameHashCodeAs(new LinkedHashSet<>(List.of(x, z)));
+    assertThat(smallScope).doesNotContain(y);
+    assertThatThrownBy(() -> smallScope.add(y)).isInstanceOf(UnsupportedOperationException.class);
+    IntVar[] many = new IntVar[12];
+    for (int i = 0; i < many.length; i++) {
+      many[i] = i % 3 == 0 ? w : new IntVar(store, "m" + i, 0, 1);
+    }
+    Constraint large = new SumBool(Arrays.copyOf(many, many.length, IntVar[].class), "<=", y);
+    LinkedHashSet<Var> expected = new LinkedHashSet<>(Arrays.asList(many));
+    expected.add(y);
+    assertThat(large.arguments()).containsExactlyInAnyOrderElementsOf(expected);
+    Set<Var> largeScope = large.arguments();
+    assertThatThrownBy(() -> largeScope.remove(w))
+        .isInstanceOf(UnsupportedOperationException.class);
+  }
 
   @Test
   void testAnonymousConstraint() {

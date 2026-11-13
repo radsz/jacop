@@ -195,6 +195,11 @@ class LinearConstraints implements ParserTreeConstants {
 
     int[] p1 = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] p2 = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    LinearOverlapDetector.Rewrite rewrite = support.linearRewrites.get(node);
+    if (rewrite != null) {
+      p1 = rewrite.coefficients();
+      p2 = rewrite.vars();
+    }
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     boolean p2Fixed = allConstants(p2);
     int s = 0;
@@ -485,6 +490,11 @@ class LinearConstraints implements ParserTreeConstants {
 
     int[] p1 = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] p2 = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    LinearOverlapDetector.Rewrite rewrite = support.linearRewrites.get(node);
+    if (rewrite != null) {
+      p1 = rewrite.coefficients();
+      p2 = rewrite.vars();
+    }
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
 
     Integer s = evaluateConstantLinearTerm(p1, p2);
@@ -550,6 +560,17 @@ class LinearConstraints implements ParserTreeConstants {
       IntVar sum = p2[pos];
       support.recordUnitSum(x, "==", sum);
     }
+  }
+
+  /**
+   * It posts sum(p1[i] * p2[i]) == p3 as int_lin_eq is posted.
+   *
+   * @param p1 the coefficients
+   * @param p2 the variables
+   * @param p3 the right-hand side
+   */
+  void poseLinearEquality(int[] p1, IntVar[] p2, int p3) {
+    int_lin_relationEq(p1, p2, p3, null, false);
   }
 
   private void int_lin_relationEq(int[] p1, IntVar[] p2, int p3, Integer s, boolean p2Fixed)
