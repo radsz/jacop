@@ -73,6 +73,13 @@ final class ClauseEncoder implements PbModel {
 
   private static final Rejected REJECTED = new Rejected();
 
+  /**
+   * The most clauses of one all different constraint, {@code jacop.lcg.alldiffClauses.limit}: 16384
+   * holds a permutation of 32 variables (pairwise exclusions of each value and one clause per
+   * value).
+   */
+  static final int ALLDIFF_LIMIT = Integer.getInteger("jacop.lcg.alldiffClauses.limit", 16384);
+
   /** What the encoder needs of the solver. */
   interface Literals {
     /** [x >= v] for v in (root min, root max]. */
@@ -817,7 +824,36 @@ final class ClauseEncoder implements PbModel {
 
   @Override
   public void allDifferent(IntVar[] x) {
-    throw REJECTED;
+    // the direct encoding: [x_i = v] -> not [x_j = v] for each value v and each pair of variables
+    // that may take it, and, for a permutation (as many values as variables), one of them takes v
+    // (as CP-SAT expands a permutation into exactly-one constraints)
+    java.util.TreeMap<Integer, List<String>> byValue = new java.util.TreeMap<>();
+    for (IntVar xi : x) {
+      for (org.jacop.core.ValueEnumeration e = lits.root(xi).valueEnumeration();
+          e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        byValue.computeIfAbsent(v, k -> new ArrayList<>()).add(equalTo(xi, v));
+      }
+    }
+    boolean permutation = byValue.size() == x.length;
+    long needed = permutation ? byValue.size() : 0;
+    for (List<String> l : byValue.values()) {
+      needed += (long) l.size() * (l.size() - 1) / 2;
+    }
+    if (needed > ALLDIFF_LIMIT) {
+      throw REJECTED;
+    }
+    currentLimit = (int) Math.max(currentLimit, clauses.size() + needed);
+    for (List<String> l : byValue.values()) {
+      for (int i = 0; i < l.size(); i++) {
+        for (int j = i + 1; j < l.size(); j++) {
+          clause(PbModel.not(l.get(i)), PbModel.not(l.get(j)));
+        }
+      }
+      if (permutation) {
+        clause(l.toArray(new String[0]));
+      }
+    }
   }
 
   @Override
