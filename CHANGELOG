@@ -4766,6 +4766,23 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
+278. Lazy clause generation explains the pruning of SymmetricGCC,
+     CardinalityMatrix, Same and UsedBy (entry 274) with their own reasons
+     instead of the generic one. The network is rebuilt from the domains
+     before the atom with the atom negated; it has no feasible flow, and
+     the set of nodes reachable from the source after the max flow is a
+     cut whose arcs break Hoffman's condition (the upper bounds leaving it
+     sum to less than the lower bounds entering it). The reason cites only
+     the bounds and removed values that give those arc bounds, after
+     G. Downing, T. Feydy and P. J. Stuckey, "Explaining flow-based
+     propagation", CPAIOR 2012, LNCS 7298, 146-162. LcgFuzzTest posts the
+     four constraints (600,000 runs with the explanation checker: clean).
+     With -Dorg.jacop.fz.symmetricGcc=true on the 76 instances where it
+     fires, at 240 s: the share of generic reasons falls from 4.6 % to
+     0.5 % (model search) and 6.3 % to 0.5 % (-f), the mean reason size
+     from 35 to 7 literals under -f, nodes/s +5.8 % under -f; at 600 s
+     the three vrp proofs of -f take 125-208 s instead of 147-500 s.
+
 Version 4.11
 =============
 
