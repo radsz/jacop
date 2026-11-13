@@ -4343,7 +4343,8 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private java.util.Set<IntVar> objectiveTerms() {
     java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-    if (clauseObjective == null || "none".equals(CLAUSE_CLASSES)) {
+    if (clauseObjective == null
+        || "none".equals(CLAUSE_CLASSES) && ("none".equals(tableMode) || !TABLE_OBJECTIVE_TERMS)) {
       return terms;
     }
     terms.add(clauseObjective);
@@ -4474,7 +4475,8 @@ public final class LcgSolver implements ExternalPropagator {
    * per tuple (Bacchus, CP 2007: unit propagation is domain consistent), or "direct", which writes
    * a table of two unfixed columns as the support clauses of its values instead, [x = v] implies
    * one of the values of y that a tuple pairs with v (Gent, ECAI 2002), with no literal per tuple,
-   * and the other tables as "support".
+   * and the other tables as "support"; "binary" writes only the tables of two unfixed columns, as
+   * "direct" does.
    */
   static final String TABLE_CLAUSES = System.getProperty("jacop.lcg.tableClauses", "none");
 
@@ -4489,6 +4491,14 @@ public final class LcgSolver implements ExternalPropagator {
   public void setTableClauses(String mode) {
     tableMode = mode;
   }
+
+  /**
+   * Whether a table over the objective's definition (see {@link #objectiveTerms}) keeps its
+   * propagator, {@code jacop.lcg.tableClauses.objectiveTerms} (default true): the core-guided phase
+   * and the LP read those definitions from the store.
+   */
+  static final boolean TABLE_OBJECTIVE_TERMS =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.tableClauses.objectiveTerms", "true"));
 
   /** The most clauses of one table, {@code jacop.lcg.tableClauses.limit}. */
   static final int TABLE_LIMIT = Integer.getInteger("jacop.lcg.tableClauses.limit", 5000);
@@ -4523,6 +4533,16 @@ public final class LcgSolver implements ExternalPropagator {
     return eqVar(i, v);
   }
 
+  private static String freeDomains(HybridTable t) {
+    StringBuilder b = new StringBuilder();
+    for (int k = 0; k < t.columnCount(); k++) {
+      if (!t.column(k).singleton()) {
+        b.append(t.column(k).getSize()).append(',');
+      }
+    }
+    return b.toString();
+  }
+
   private boolean encodeTable(HybridTable t) {
     int arity = t.columnCount();
     int tuples = t.tupleCount();
@@ -4534,7 +4554,9 @@ public final class LcgSolver implements ExternalPropagator {
     for (int k = 0; k < arity; k++) {
       IntVar x = t.column(k);
       if (!x.singleton()) {
-        if (trail.id(x) >= vars.length || x.getSize() > TABLE_DOM) {
+        if (trail.id(x) >= vars.length
+            || x.getSize() > TABLE_DOM
+            || TABLE_OBJECTIVE_TERMS && objectiveTerms.contains(x)) {
           return false;
         }
         free[nFree++] = k;
@@ -4545,7 +4567,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     List<int[]> cs;
     long aux = auxiliaryVariables;
-    if (nFree == 2 && "direct".equals(tableMode)) {
+    if (nFree > 2 && "binary".equals(tableMode)) {
+      return false;
+    }
+    if (nFree == 2 && !"support".equals(tableMode)) {
       cs = directTable(t, free[0], free[1]);
     } else {
       if (tableEncoder == null) {
@@ -4585,7 +4610,9 @@ public final class LcgSolver implements ExternalPropagator {
               + " free "
               + nFree
               + " tuples "
-              + tuples);
+              + tuples
+              + " doms "
+              + freeDomains(t));
     }
     if (cs == null) {
       return false;
