@@ -112,7 +112,8 @@ public final class CoreSearch {
   // run repeats), is measured once this much work was done (about two seconds), and may grow this
   // many times
   private static final long RATE_WINDOW = 2_000 * LcgSolver.WORK_PER_MS;
-  private static final double RATE_SLACK = 3;
+  private static final double RATE_SLACK =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreRateSlack", "3"));
 
   private final LcgSolver lcg;
   private final CdclSolver sat;

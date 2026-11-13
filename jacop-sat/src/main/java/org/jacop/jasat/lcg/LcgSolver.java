@@ -5972,8 +5972,13 @@ public final class LcgSolver implements ExternalPropagator {
     }
     IntVar x = vars[i];
     searchDecisions++;
-    if (phase != null && x.domain.contains(phase[i])) {
-      return assignLit(i, phase[i]);
+    int preferred = phase != null && x.domain.contains(phase[i]) ? phase[i] : Integer.MIN_VALUE;
+    int impact = impactValue(i, preferred);
+    if (impact != Integer.MIN_VALUE) {
+      return assignLit(i, impact);
+    }
+    if (preferred != Integer.MIN_VALUE) {
+      return assignLit(i, preferred);
     }
     if (phase == null
         && targetSet != null
@@ -6086,7 +6091,11 @@ public final class LcgSolver implements ExternalPropagator {
         return 0;
       }
       int value = annotation.getChoiceValue();
-      return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
+      if (!vars[i].domain.contains(value)) {
+        return 0;
+      }
+      int impact = impactValue(i, value);
+      return assignLit(i, impact != Integer.MIN_VALUE ? impact : value);
     }
     if (!(c instanceof LinearExplainable l)) {
       return 0;
@@ -6118,6 +6127,72 @@ public final class LcgSolver implements ExternalPropagator {
       case LinearForm.EQ -> d.contains(b) ? eqVar(i, b) : 0;
       default -> d.contains(b) ? -eqVar(i, b) : 0;
     };
+  }
+
+  // -Djacop.lcg.valueImpact=<n>: under free search, decisions on variables of at most n values
+  // take the value that leaves the objective the smallest lower bound (bound-impact value
+  // selection, Fages and Prud'homme 2017), ties to the value the search would take; 0 off
+  static final int VALUE_IMPACT = Integer.getInteger("jacop.lcg.valueImpact", 0);
+  // the most share of the time spent on those probes
+  static final double VALUE_IMPACT_TIME =
+      Double.parseDouble(System.getProperty("jacop.lcg.valueImpactTime", "0.25"));
+  private long impactStart = -1;
+  private long impactNanos;
+
+  /** Statistics: values tried by bound-impact value selection. */
+  public long impactProbes;
+
+  /**
+   * The value of an unfixed variable that leaves the objective the smallest lower bound after the
+   * store's propagation, among the values whose propagation does not fail; ties go to the given
+   * value. Integer.MIN_VALUE when bound-impact value selection is off, out of its share of the
+   * time, or not for this variable. The store is left as it was: each probe raises its level and
+   * removes it again, which also removes what the trail recorded.
+   */
+  private int impactValue(int i, int preferred) {
+    if (VALUE_IMPACT <= 0 || !freeSearch || objective < 0 || i == objective) {
+      return Integer.MIN_VALUE;
+    }
+    IntVar x = vars[i];
+    if (x.getSize() > VALUE_IMPACT || x.singleton()) {
+      return Integer.MIN_VALUE;
+    }
+    long now = System.nanoTime();
+    if (impactStart < 0) {
+      impactStart = now;
+    }
+    if (impactNanos > VALUE_IMPACT_TIME * (now - impactStart)) {
+      return Integer.MIN_VALUE;
+    }
+    IntVar cost = vars[objective];
+    int level = store.level;
+    boolean found = false;
+    int bestValue = 0;
+    int bestBound = 0;
+    for (ValueEnumeration e = x.dom().cloneLight().valueEnumeration(); e.hasMoreElements(); ) {
+      int value = e.nextElement();
+      impactProbes++;
+      store.setLevel(level + 1);
+      boolean consistent;
+      try {
+        x.domain.in(store.level, x, value, value);
+        consistent = store.consistency();
+      } catch (FailException _) {
+        consistent = false;
+      }
+      int bound = cost.min();
+      store.removeLevel(level + 1);
+      store.setLevel(level);
+      if (consistent
+          && (!found || bound < bestBound || (bound == bestBound && value == preferred))) {
+        found = true;
+        bestValue = value;
+        bestBound = bound;
+      }
+    }
+    store.recentlyFailedConstraint = null;
+    impactNanos += System.nanoTime() - now;
+    return found ? bestValue : Integer.MIN_VALUE;
   }
 
   /**
