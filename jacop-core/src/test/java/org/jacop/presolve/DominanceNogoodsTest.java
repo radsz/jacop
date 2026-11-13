@@ -143,15 +143,6 @@ class DominanceNogoodsTest {
       int[] nogoods = new int[1];
       Set<List<Integer>> found = solve(model, true, random.nextInt(), nogoods);
       String context = "trial " + trial + ", " + model;
-      if (found.isEmpty() != expected.isEmpty()
-          || (!expected.isEmpty() && !best(model, found).equals(best(model, expected)))) {
-        Store st = new Store();
-        IntVar[] xs = model.build(st);
-        st.consistency();
-        System.out.println("DEBUG " + Arrays.deepToString(model.domains()) + "\n" + st);
-        new DominanceNogoods(st, xs[xs.length - 1], !model.maximize()).run();
-        System.out.println("AFTER\n" + st + "\nexpected " + expected);
-      }
       assertThat(expected).as(context).containsAll(found);
       assertThat(found.isEmpty()).as(context).isEqualTo(expected.isEmpty());
       if (!expected.isEmpty()) {
