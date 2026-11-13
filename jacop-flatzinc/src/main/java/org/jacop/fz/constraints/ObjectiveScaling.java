@@ -70,12 +70,15 @@ import org.jacop.fz.Tables;
  * <p>The objective is scaled only when it, and every variable a declaration makes equal to it,
  * occurs in no constraint but the variable list of linear rows (int_lin_eq, int_lin_le, int_lin_ne,
  * also reified or implied), in no output array, and when the scaled domain fits JaCoP's range. The
- * model tree may be shared by the threads of a portfolio: its rows are rewritten once, under a lock
- * on the tree, and every thread scales its own variables.
+ * model tree may be shared by the threads of a portfolio: its rows are rewritten once, under a
+ * lock, and every thread scales its own variables.
  */
 public final class ObjectiveScaling {
 
   // the scale found for a model tree, so that the rows of a shared tree are rewritten once
+  // guards the rewriting of a model tree, which the threads of a portfolio may share
+  private static final Object LOCK = new Object();
+
   private static final Map<SimpleNode, Long> SCALES =
       Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -118,7 +121,7 @@ public final class ObjectiveScaling {
       // a proof derives the model as the FlatZinc file states it
       return 1;
     }
-    synchronized (model) {
+    synchronized (LOCK) {
       return new ObjectiveScaling(support, model).scale();
     }
   }

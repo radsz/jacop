@@ -66,6 +66,12 @@ final class ObjectiveGap {
    * @param maximise whether the cost variable is the negated objective
    * @param printer where the statistic lines of a better bound go, or null for nowhere
    */
+  ObjectiveGap(double gap, boolean maximise, Consumer<String> printer) {
+    this.gap = gap;
+    this.maximise = maximise;
+    this.printer = printer;
+  }
+
   /**
    * Sets the factor the cost variable's values are multiplied by in the printed bound, when the
    * variable holds the objective divided by it (ObjectiveScaling).
@@ -74,12 +80,6 @@ final class ObjectiveGap {
    */
   synchronized void scale(long factor) {
     scale = factor;
-  }
-
-  ObjectiveGap(double gap, boolean maximise, Consumer<String> printer) {
-    this.gap = gap;
-    this.maximise = maximise;
-    this.printer = printer;
   }
 
   /**
