@@ -852,7 +852,7 @@ public class Support implements ParserTreeConstants {
     // cost_regular constraints over the same word and automaton are filtered together;
     // org.jacop.fz.multiCostRegular=false keeps them apart, =lagrangian adds the relaxation
     String multiCost = System.getProperty("org.jacop.fz.multiCostRegular", "true");
-    if (!"false".equalsIgnoreCase(multiCost)) {
+    if (!DISABLED.equalsIgnoreCase(multiCost)) {
       List<Constraint> merged = MultiCostRegular.merge(delayedConstraints);
       if (merged != delayedConstraints) {
         delayedConstraints.clear();
@@ -942,7 +942,7 @@ public class Support implements ParserTreeConstants {
    */
   void poseOverlappingAlldiffs() {
     // --proof leaves out this redundant constraint, which it does not encode
-    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
+    if (DISABLED.equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
         || alldifferentLists.size() < 2
         || options.proof() != null) {
       return;
@@ -988,6 +988,9 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /** The value of a system property that turns a rule of the front end off. */
+  private static final String DISABLED = "false";
+
   /** Fewest variables of an all_different whose partitions by unit sums get an implied sum. */
   static final int PARTITION_SUMS_MIN_VARIABLES = 4;
 
@@ -1017,7 +1020,7 @@ public class Support implements ParserTreeConstants {
    */
   void posePartitionSums() {
     // --proof leaves out this redundant constraint, which it does not encode
-    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.partitionSums"))
+    if (DISABLED.equalsIgnoreCase(System.getProperty("org.jacop.fz.partitionSums"))
         || options.proof() != null
         || unitSums.isEmpty()
         || alldifferentLists.isEmpty()) {
@@ -1036,55 +1039,10 @@ public class Support implements ParserTreeConstants {
     Set<List<IntVar>> done = new HashSet<>();
     int lists = 0;
     for (IntVar[] a : alldifferentLists) {
-      if (a.length < PARTITION_SUMS_MIN_VARIABLES
-          || !done.add(List.of(a))
-          || lists++ >= PARTITION_SUMS_MAX_LISTS) {
-        continue;
-      }
-      Map<IntVar, Integer> index = new IdentityHashMap<>();
-      for (IntVar v : a) {
-        index.putIfAbsent(v, index.size());
-      }
-      if (index.size() != a.length) {
-        continue;
-      }
-      List<List<UnitSum>> partitions = partitionsBySums(a, index, equalities);
-      if (partitions.isEmpty()) {
-        continue;
-      }
-      long[] total = valueSumBounds(a);
-      if (total == null) {
-        continue;
-      }
-      if (options.debug()) {
-        FzConsole.println(
-            "% partition sums: "
-                + partitions.size()
-                + " partition(s) of an all_different of "
-                + a.length);
-      }
-      List<IntVar> union = new ArrayList<>();
-      List<IntVar> totals = new ArrayList<>();
-      for (List<UnitSum> p : partitions) {
-        IntVar[] s = p.stream().map(UnitSum::sum).toArray(IntVar[]::new);
-        IntVar t = totalVar(total[0], total[1]);
-        pose(new SumInt(s, "==", t));
-        implied.add(new UnitSum(List.of(s), "==", t));
-        union.addAll(List.of(s));
-        totals.add(t);
-      }
-      long unionLo = partitions.size() * total[0];
-      long unionHi = partitions.size() * total[1];
-      if (partitions.size() < 2 || unionLo < IntDomain.MIN_INT || unionHi > IntDomain.MAX_INT) {
-        continue;
-      }
-      // with a constant total, the sum of the totals is a constant too and needs no constraint
-      if (total[0] < total[1]) {
-        IntVar t = totalVar(unionLo, unionHi);
-        pose(new SumInt(totals, "==", t));
-        implied.add(new UnitSum(union, "==", t));
-      } else {
-        implied.add(new UnitSum(union, "==", dictionary.getConstant((int) unionLo)));
+      if (a.length >= PARTITION_SUMS_MIN_VARIABLES
+          && done.add(List.of(a))
+          && lists++ < PARTITION_SUMS_MAX_LISTS) {
+        partitionSums(a, equalities, implied);
       }
     }
     // only sums of different variables that are not all fixed, within the AlldiffSum size limits
@@ -1096,6 +1054,55 @@ public class Support implements ParserTreeConstants {
           && x.stream().anyMatch(v -> !v.singleton())) {
         unitSums.add(u);
       }
+    }
+  }
+
+  /**
+   * Posts the implied sums of the partitions of all_different(a) by the equalities and adds them to
+   * implied, as {@link #posePartitionSums()} describes.
+   */
+  private void partitionSums(IntVar[] a, List<UnitSum> equalities, List<UnitSum> implied) {
+    Map<IntVar, Integer> index = new IdentityHashMap<>();
+    for (IntVar v : a) {
+      index.putIfAbsent(v, index.size());
+    }
+    if (index.size() != a.length) {
+      return;
+    }
+    List<List<UnitSum>> partitions = partitionsBySums(a, index, equalities);
+    long[] total = valueSumBounds(a);
+    if (partitions.isEmpty() || total.length == 0) {
+      return;
+    }
+    if (options.debug()) {
+      FzConsole.println(
+          "% partition sums: "
+              + partitions.size()
+              + " partition(s) of an all_different of "
+              + a.length);
+    }
+    List<IntVar> union = new ArrayList<>();
+    List<IntVar> totals = new ArrayList<>();
+    for (List<UnitSum> p : partitions) {
+      IntVar[] s = p.stream().map(UnitSum::sum).toArray(IntVar[]::new);
+      IntVar t = totalVar(total[0], total[1]);
+      pose(new SumInt(s, "==", t));
+      implied.add(new UnitSum(List.of(s), "==", t));
+      union.addAll(List.of(s));
+      totals.add(t);
+    }
+    long unionLo = partitions.size() * total[0];
+    long unionHi = partitions.size() * total[1];
+    if (partitions.size() < 2 || unionLo < IntDomain.MIN_INT || unionHi > IntDomain.MAX_INT) {
+      return;
+    }
+    // with a constant total, the sum of the totals is a constant too and needs no constraint
+    if (total[0] < total[1]) {
+      IntVar t = totalVar(unionLo, unionHi);
+      pose(new SumInt(totals, "==", t));
+      implied.add(new UnitSum(union, "==", t));
+    } else {
+      implied.add(new UnitSum(union, "==", dictionary.getConstant((int) unionLo)));
     }
   }
 
@@ -1120,20 +1127,8 @@ public class Support implements ParserTreeConstants {
     List<BitSet> covered = new ArrayList<>();
     List<List<UnitSum>> layers = new ArrayList<>();
     for (UnitSum u : equalities) {
-      if (index.containsKey(u.sum())) {
-        continue;
-      }
-      BitSet b = new BitSet(a.length);
-      boolean inside = true;
-      for (IntVar v : u.x()) {
-        Integer i = index.get(v);
-        if (i == null || b.get(i)) {
-          inside = false;
-          break;
-        }
-        b.set(i);
-      }
-      if (!inside) {
+      BitSet b = block(u, a.length, index);
+      if (b == null) {
         continue;
       }
       int layer = 0;
@@ -1157,9 +1152,28 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * The positions in a of the summed variables of u, or null when the sum variable is in a or a
+   * summed variable is not (or occurs twice).
+   */
+  private static BitSet block(UnitSum u, int size, Map<IntVar, Integer> index) {
+    if (index.containsKey(u.sum())) {
+      return null;
+    }
+    BitSet b = new BitSet(size);
+    for (IntVar v : u.x()) {
+      Integer i = index.get(v);
+      if (i == null || b.get(i)) {
+        return null;
+      }
+      b.set(i);
+    }
+    return b;
+  }
+
+  /**
    * The smallest and the largest sum of a.length different values of the union of the domains of a,
-   * or null when the union has fewer values (the all_different fails on its own) or a bound does
-   * not fit in an int.
+   * or an empty array when the union has fewer values (the all_different fails on its own) or a
+   * bound does not fit in an int.
    */
   static long[] valueSumBounds(IntVar[] a) {
     IntDomain union = new IntervalDomain();
@@ -1168,7 +1182,7 @@ public class Support implements ParserTreeConstants {
     }
     int n = a.length;
     if (union.getSize() < n) {
-      return null;
+      return new long[0];
     }
     long lo = 0;
     int left = n;
@@ -1187,7 +1201,7 @@ public class Support implements ParserTreeConstants {
       left -= k;
     }
     if (lo < IntDomain.MIN_INT || hi > IntDomain.MAX_INT) {
-      return null;
+      return new long[0];
     }
     return new long[] {lo, hi};
   }
@@ -1223,7 +1237,7 @@ public class Support implements ParserTreeConstants {
    * off.
    */
   void poseAlldiffSums() {
-    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.alldiffSum"))
+    if (DISABLED.equalsIgnoreCase(System.getProperty("org.jacop.fz.alldiffSum"))
         || unitSums.isEmpty()) {
       return;
     }
