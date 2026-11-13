@@ -1221,6 +1221,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   private List<Item> parse(SimpleNode astTree) {
     List<Item> items = new ArrayList<>();
+    Set<SimpleNode> eliminated =
+        dictionary.tableElimination == null ? Set.of() : dictionary.tableElimination.replaced();
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTVARDECLITEMS) {
@@ -1235,11 +1237,27 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
+          if (item.getId() == JJTCONSTELEM && !eliminated.contains(item)) {
             checkTime();
             items.add(parse((ASTConstElem) item));
           }
         }
+      }
+    }
+    // the tables that joined the constraints of eliminated variables stand for them
+    if (dictionary.tableElimination != null) {
+      for (Map.Entry<IntVar[], int[][]> t : dictionary.tableElimination.tables()) {
+        checkTime();
+        Atom[] vars = Arrays.stream(t.getKey()).map(this::variable).toArray(Atom[]::new);
+        int[][] rows = t.getValue();
+        Atom[] values = new Atom[rows.length * vars.length];
+        for (int r = 0, k = 0; r < rows.length; r++) {
+          for (int value : rows[r]) {
+            values[k++] = intConstant(value);
+          }
+        }
+        items.add(
+            new Item("jacop_table_int", new Atom[][] {vars, values}, new boolean[] {true, true}));
       }
     }
     return items;

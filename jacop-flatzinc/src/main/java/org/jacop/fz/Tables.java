@@ -51,6 +51,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -108,6 +109,9 @@ public class Tables {
 
   // variables that no constraint uses any more, such as the sums merged into a minimum
   final ArrayList<Var> unusedVariables = new ArrayList<>();
+
+  /** The variables that table variable elimination joined out of the model, or null. */
+  TableVariableElimination tableElimination;
 
   // variables the detectors add for redundant constraints, which follow from the model's own: the
   // search of lazy clause generation branches on them last
