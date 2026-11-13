@@ -284,14 +284,14 @@ class IntensionTableFlatzincTest {
       String model = randomModel(random, true);
       String expected = optimum(run(model, "false", "--lcg", "off"));
       assertEquals(
-          expected, optimum(run(model, null, "--lcg", "on")), "trial " + trial + "\n" + model);
+          expected, optimum(run(model, "force", "--lcg", "on")), "trial " + trial + "\n" + model);
       assertEquals(
           expected,
-          optimum(run(model, null, "--lcg", "on", "-f")),
+          optimum(run(model, "force", "--lcg", "on", "-f")),
           "trial " + trial + " -f\n" + model);
       assertEquals(
           expected,
-          optimum(run(model, null, "--lcg", "off", "-f")),
+          optimum(run(model, "force", "--lcg", "off", "-f")),
           "trial " + trial + " cp\n" + model);
     }
   }
@@ -323,9 +323,9 @@ class IntensionTableFlatzincTest {
   }
 
   @Test
-  void acyclicGroupOfDomainConsistentConstraintsStays() throws IOException {
-    // x <= 3 \/ y >= 5: each part is domain consistent and the group has no cycle, so the
-    // constraints already prune what a table would
+  void groupWithoutDivisionOrModuloStays() throws IOException {
+    // x <= 3 \/ y >= 5: no division, modulo or variable-array element, so the group is posted as
+    // it is
     String model =
         """
         var 1..6: x:: output_var;

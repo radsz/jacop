@@ -141,7 +141,8 @@ public class IntensionTableDetector implements ParserTreeConstants {
 
   /**
    * It tells if the detection is forced on also when all solutions are searched for (property value
-   * {@code force}); solutions that differ only in internal variables then print once.
+   * {@code force}); solutions that differ only in internal variables then print once. Forced, it
+   * also tabulates groups without a division, modulo or variable-array element (for tests).
    *
    * @return true if the system property org.jacop.fz.intensionTable is force.
    */
@@ -300,7 +301,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
   }
 
   private void tabulate(List<Item> group, Set<IntVar> pinned) {
-    if (group.stream().noneMatch(IntensionTableDetector::weak)) {
+    if (!forced() && group.stream().noneMatch(IntensionTableDetector::weak)) {
       return;
     }
     // the variables of the group: outer ones first
