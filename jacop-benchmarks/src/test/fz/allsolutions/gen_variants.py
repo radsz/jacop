@@ -37,11 +37,15 @@ if seed >= 361 and os.path.exists(state):
     known = {m: 1.0 / (1 + min(cover.get(g, 0) for g in gs)) for m, gs in model_globals.items() if gs}
     top, low = max(known.values(), default=1.0), min(known.values(), default=1.0)
     # variants made before but never taken into the suite post no global either
-    made_before = set()
+    # (at least 20 of them, so that a model fixed after its first variants still gets picked)
+    generated = {}
     parent = os.path.dirname(os.path.abspath(out))
     for d in os.listdir(parent) if os.path.isdir(parent) else []:
         if os.path.isdir(f'{parent}/{d}'):
-            made_before.update(re.sub(r'_s\d+_\d+$', '', v) for v in os.listdir(f'{parent}/{d}'))
+            for v in os.listdir(f'{parent}/{d}'):
+                v = re.sub(r'_s\d+_\d+$', '', v)
+                generated[v] = generated.get(v, 0) + 1
+    made_before = {m for m, n in generated.items() if n >= 20}
     weights = [known.get(m, low if m in model_globals or m in made_before else top) for m in models]
 made = 0
 for k in range(count * 3):
