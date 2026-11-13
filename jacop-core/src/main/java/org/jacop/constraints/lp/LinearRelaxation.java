@@ -707,7 +707,8 @@ public class LinearRelaxation extends Constraint
   /**
    * Creates the relaxation of linear forms.
    *
-   * @param forms the rows; forms with relation {@code !=} are left out
+   * @param forms the rows; forms with relation {@code !=} and forms with fewer than two nonzero
+   *     weights (after merging duplicate variables) are left out, so the model must enforce them
    * @param objective the variable to minimize, or null for satisfaction
    * @param maximize whether the objective is maximized instead
    */
@@ -718,7 +719,8 @@ public class LinearRelaxation extends Constraint
   /**
    * Creates the relaxation of linear forms, solved by the given simplex.
    *
-   * @param forms the rows; forms with relation {@code !=} are left out
+   * @param forms the rows; forms with relation {@code !=} and forms with fewer than two nonzero
+   *     weights (after merging duplicate variables) are left out, so the model must enforce them
    * @param objective the variable to minimize, or null for satisfaction
    * @param maximize whether the objective is maximized instead
    * @param simplex the simplex
@@ -735,7 +737,8 @@ public class LinearRelaxation extends Constraint
    * infeasible, or are at most {@code org.jacop.lp.smallExtra} (100) rows; with lazy rows they are
    * rows like the others.
    *
-   * @param forms the rows; forms with relation {@code !=} are left out
+   * @param forms the rows; forms with relation {@code !=} and forms with fewer than two nonzero
+   *     weights (after merging duplicate variables) are left out, so the model must enforce them
    * @param extra the further rows
    * @param objective the variable to minimize, or null for satisfaction
    * @param maximize whether the objective is maximized instead
@@ -795,6 +798,8 @@ public class LinearRelaxation extends Constraint
         baseColumns = columns.size();
       }
       merged.values().removeIf(w -> w == 0);
+      // rows over fewer than two columns are left out (see the constructors); the model enforces
+      // them
       if (overflow || merged.size() < 2) {
         continue;
       }
