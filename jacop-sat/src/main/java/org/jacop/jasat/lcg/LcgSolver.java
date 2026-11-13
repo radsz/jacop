@@ -3448,12 +3448,23 @@ public final class LcgSolver implements ExternalPropagator {
     return CORE_ANY_SOLUTION ? best != null : coreSearch.stratumSolutions > 0;
   }
 
+  // -Djacop.lcg.coreExtendRecent=false: extensions measure the bound's rate since the phase's start
+  // only
+  private static final boolean CORE_EXTEND_RECENT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreExtendRecent", "true"));
+
   /**
    * Whether the core-guided run that just stopped gets another share of the time left before the
-   * given deadline, as {@link #runCores} describes.
+   * given deadline, as {@link #runCores} describes. The lower bound must also meet the best
+   * solution at its rate over the second half of the phase ({@link CoreSearch#closingRecently}):
+   * the rate since the start counts the fast rise from a far initial bound, and on chessboard3
+   * (2023, -f, 1200 s) gave a 426 s extension that raised the bound by 3 of the 13 it lacked.
    */
   private boolean extendCores(long deadline) {
     if (System.nanoTime() > deadline || !coreSearch.rose() || !coreSearch.closing(workEnd)) {
+      return false;
+    }
+    if (CORE_EXTEND_RECENT && !coreSearch.closingRecently(workEnd)) {
       return false;
     }
     return sat.work() >= sat.workLimit() || !coreSearch.exhausted() && coreSearch.halfWay();

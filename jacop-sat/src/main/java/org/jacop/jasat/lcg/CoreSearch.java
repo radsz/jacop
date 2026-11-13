@@ -971,8 +971,9 @@ public final class CoreSearch {
   /**
    * Whether the lower bound, at three times its rate over the second half of the phase's work,
    * would not meet the best solution before the end of the run; false before a share {@link #STALL}
-   * of the run's work after the phase's start is done, and without an end of the run. The calls
-   * come with work that never decreases.
+   * of the run's work after the phase's start is done, and without an end of the run. After {@link
+   * #DECAY_AFTER} of the phase's own work, a rate that is falling is projected with {@link
+   * #decayingReach} instead of linearly. The calls come with work that never decreases.
    *
    * @param now the solver's work now
    * @param end the solver's work at the end of the run, Long.MAX_VALUE without one
@@ -994,7 +995,66 @@ public final class CoreSearch {
       b = sampleBound[half];
     }
     double rate = (double) (lowerBound - b) / Math.max(1, now - w);
-    return RATE_SLACK * rate * (end - now) < best - lowerBound;
+    double reach = rate * (end - now);
+    boolean late = now - startWork >= DECAY_AFTER;
+    if (DECAY && late) {
+      reach = Math.min(reach, decayingReach(now, from, end));
+    }
+    return RATE_SLACK * reach < best - lowerBound;
+  }
+
+  // the phase's own work before a falling rate counts, 60 s at LcgSolver#WORK_PER_MS whatever the
+  // time limit: a bound that slows down early is often about to meet a solution of the cores' own
+  // (work-task-variation 2025 seed-8: the rate fell after 31 s of the phase's work, bound 215 with
+  // the best solution at 514, and 2 cores later the cores found and proved the optimum, 217)
+  static final long DECAY_AFTER =
+      Long.getLong("jacop.lcg.coreDecayAfterMs", 60_000L) * LcgSolver.WORK_PER_MS;
+
+  // -Djacop.lcg.coreDecay=false: the stall test projects the bound's rate over the second half of
+  // the phase linearly, also when that rate is falling
+  static final boolean DECAY =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreDecay", "true"));
+
+  /**
+   * How far the lower bound would still rise before the given end when its rate keeps falling as it
+   * fell between the two quarters of the second half of the phase's work: with rate r1 over the
+   * third quarter and r2 < r1 over the last, each further stretch of that length gives q = r2 / r1
+   * times what the one before gave, r2 L (q + q^2 + ...) = r2 L q / (1 - q) in all, capped at the
+   * stretches left before the end. Each core of a sum objective can cost more than the last: on
+   * chessboard3 (2023) the bound rose by 1 every 15 s, then 35 s, 60 s and 125 s, 13 below the
+   * optimum after 600 s of a 1200 s run, while the rate over the half was still a third of what
+   * reaching the optimum needed. Without a falling rate, the linear projection.
+   */
+  private double decayingReach(long now, long from, long end) {
+    long mid = now - (now - from) / 2;
+    long w0 = -1;
+    long b0 = 0;
+    long w1 = -1;
+    long b1 = 0;
+    for (int k = samples - 1; k >= 0; k--) {
+      if (w1 < 0 && sampleWork[k] <= mid) {
+        w1 = sampleWork[k];
+        b1 = sampleBound[k];
+      }
+      if (sampleWork[k] <= from) {
+        w0 = sampleWork[k];
+        b0 = sampleBound[k];
+        break;
+      }
+    }
+    if (w0 < 0 || w1 <= w0 || now <= w1) {
+      return Double.MAX_VALUE;
+    }
+    double r1 = (double) (b1 - b0) / (w1 - w0);
+    double r2 = (double) (lowerBound - b1) / (now - w1);
+    if (r1 <= 0 || r2 >= r1) {
+      return Double.MAX_VALUE;
+    }
+    double q = r2 / r1;
+    double stretch = now - w1;
+    double stretches = (end - now) / stretch;
+    // r2 L (q + q^2 + ... + q^n) over the n stretches left
+    return r2 * stretch * q * (1 - Math.pow(q, stretches)) / (1 - q);
   }
 
   /**
@@ -1011,6 +1071,35 @@ public final class CoreSearch {
     }
     long now = sat.work();
     double rate = (double) (lowerBound - startBound) / Math.max(1, now - startWork);
+    return rate * (end - now) >= best - lowerBound;
+  }
+
+  /**
+   * Whether the lower bound, at its rate per unit of work over the second half of the phase's work
+   * (see {@link #stalled}), would meet the best solution before the given end of the run. Unlike
+   * {@link #closing}, the rate leaves out the first half of the phase, where the bound often rises
+   * fast from a far initial bound before each core costs more and more.
+   *
+   * @param end the solver's work ({@link CdclSolver#work}) at the end of the run
+   * @return false when there is no solution yet
+   */
+  boolean closingRecently(long end) {
+    long best = lcg.boundObjective();
+    if (best == Long.MAX_VALUE || startWork < 0 || end == Long.MAX_VALUE) {
+      return false;
+    }
+    long now = sat.work();
+    long from = now - (now - startWork) / 2;
+    long w = startWork;
+    long b = startBound;
+    for (int k = samples - 1; k >= 0; k--) {
+      if (sampleWork[k] <= from) {
+        w = sampleWork[k];
+        b = sampleBound[k];
+        break;
+      }
+    }
+    double rate = (double) (lowerBound - b) / Math.max(1, now - w);
     return rate * (end - now) >= best - lowerBound;
   }
 
