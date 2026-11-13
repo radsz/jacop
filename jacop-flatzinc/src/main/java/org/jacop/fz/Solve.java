@@ -2579,6 +2579,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");
     // the assumptions of core-guided, neighbourhood and lower-bound runs on one decision level
     lcg.sat().setAssumptionsOnOneLevel(!"0".equals(options.freeConfig("lcg-assume-level", "1")));
+    // runs of the annotation (or the default branching) backtrack one level after a conflict
+    // instead of backjumping (see LcgSolver.setAnnotationChrono)
+    lcg.setAnnotationChrono(Integer.parseInt(options.freeConfig("lcg-chrono", "0")));
     if (free) {
       lcg.setBranching(branching);
       if (branching != LcgSolver.Branching.ACTIVITY) {
@@ -3210,6 +3213,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
             + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgChronoBacktracks="
+            + lcg.sat().lazyChronoBacktracks
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="

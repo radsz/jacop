@@ -1935,6 +1935,9 @@ class LcgFuzzTest {
           default -> new SplitSelect<>(vars, null, new IndomainMiddle<>());
         };
     solver.setAnnotation(select, kind == 3);
+    // the annotation's runs backtrack one level after a conflict (the default of the front end),
+    // or backjump; from the seed, so that the other choices of the seed stay as they were
+    solver.setAnnotationChrono(seed / 12 % 2 == 0 ? 0 : -1);
     solver.sat().setRestarts(kind != 1);
   }
 

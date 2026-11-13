@@ -411,6 +411,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int numAnnotationIndices;
   private static final int ANNOTATION_DONE = -1;
   private boolean annotationRun;
+  // the backjump length above which the runs of the annotation backtrack one level instead, see
+  // setAnnotationChrono; negative: never
+  private int annotationChrono = -1;
   // restarts under fixed search, see setFixedRestarts
   private FixedRestarts fixedRestarts = FixedRestarts.OFF;
   // restarts wait for the first solution
@@ -4117,6 +4120,29 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotationRun && branching == Branching.ALTERNATE) {
       activityBranching = true;
     }
+    applyAnnotationChrono();
+  }
+
+  /**
+   * Sets when the runs that follow the annotation (or the default branching of free search)
+   * backtrack one level after a conflict instead of backjumping ({@link
+   * CdclSolver#setLazyChronoLimit}). Such a run decides its variables in a fixed order, so after a
+   * backjump it takes again every decision between the backjump level and the conflict: on
+   * gardner_dinner, whose learnt clauses join the deepest level with one 17 to 66 levels up, 2,242
+   * decisions for 90 conflicts, against 266 nodes without learning and 175 decisions with one-level
+   * backtracking. Runs of activity branching or of the solver's own decisions keep backjumping,
+   * which reorders their decisions.
+   *
+   * @param limit the backjump length above which the annotation's runs backtrack one level, 0 for
+   *     always, or a negative number for never
+   */
+  public void setAnnotationChrono(int limit) {
+    annotationChrono = limit;
+    applyAnnotationChrono();
+  }
+
+  private void applyAnnotationChrono() {
+    sat.setLazyChronoLimit(annotation != null && annotationRun ? annotationChrono : -1);
   }
 
   /**
@@ -4282,6 +4308,7 @@ public final class LcgSolver implements ExternalPropagator {
       annotationRun = false;
       activityBranching = false;
       pureClauses = true;
+      applyAnnotationChrono();
     }
   }
 
@@ -4880,6 +4907,7 @@ public final class LcgSolver implements ExternalPropagator {
       annotationRun = runs % 3 == 0;
       activityBranching = runs % 3 != 1;
     }
+    applyAnnotationChrono();
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
     }

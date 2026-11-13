@@ -255,6 +255,9 @@ public class Options {
                 lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
                 neighbourhood and lower-bound runs on one decision level, kept at restarts;
                 0 gives each its own level, default 1),
+                lcg-chrono=<n> (with --lcg: runs that follow the search annotation, or the
+                default branching of free search, backtrack one level after a conflict
+                instead of a backjump over more than n levels; 0 always (default), -1 never),
                 lcg-bisect=<gap> (with --lcg and an objective: dichotomic probes of the
                 objective's bound, obj <= the middle of [lower bound, best - 1], until the
                 relative gap is at most this share of the best solution, then branch and bound;
