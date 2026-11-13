@@ -4825,6 +4825,26 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+283. The FlatZinc front end posts the sums implied by linear equalities
+   with unit coefficients that partition the variables of an
+   all_different. When sum(X_1) = s_1, ..., sum(X_k) = s_k split the
+   variables of all_different(A) into disjoint blocks (the rows, or the
+   columns, of a grid), s_1 + ... + s_k is the sum of the values of A,
+   which lies between the sums of the |A| smallest and |A| largest
+   values of the union of their domains (a constant for a permutation).
+   It posts that sum over the s_i, and over the union of several
+   partitions, and offers each to AlldiffSum, which then also sees that
+   the s_i are different when the model says so. A linear relaxation of
+   the all_different gives the same aggregation (H. P. Williams and
+   H. Yan, "Representations of the all_different predicate of
+   constraint satisfaction in integer programming", INFORMS Journal on
+   Computing 13(2), 2001). It fires on 32 XCSP 2023-2025 instances and
+   on no MiniZinc Challenge instance; at 600 s Heterosquare-fair-10
+   218 s -> 4 s, fair-15 and hard-20 solved in 10 s and 0.4 s
+   (unsolved before), AntimagicSquare-11/12 162 s -> 35 s and
+   122 s -> 10 s; 30 of the 32 solved instead of 28.
+   -Dorg.jacop.fz.partitionSums=false turns it off.
+
 Version 4.11
 =============
 
