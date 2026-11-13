@@ -322,6 +322,52 @@ class IntensionTableFlatzincTest {
     assertEquals(16, solutions(run(model, "false", "-a")).size());
   }
 
+  @Test
+  void acyclicGroupOfDomainConsistentConstraintsStays() throws IOException {
+    // x <= 3 \/ y >= 5: each part is domain consistent and the group has no cycle, so the
+    // constraints already prune what a table would
+    String model =
+        """
+        var 1..6: x:: output_var;
+        var 1..6: y:: output_var;
+        var bool: b1:: var_is_introduced :: is_defined_var;
+        var bool: b2:: var_is_introduced :: is_defined_var;
+        constraint int_le_reif(x,3,b1):: defines_var(b1);
+        constraint int_le_reif(5,y,b2):: defines_var(b2);
+        constraint bool_clause([b1,b2],[]);
+        solve satisfy;
+        """;
+    String out = run(model, null, "-debug");
+    assertTrue(out.contains("intension table detector: 0 tables"), out);
+    assertEquals(24, solutions(run(model, "false", "-a")).size());
+  }
+
+  @Test
+  void membershipInSetVariableIsNotTabulated() throws IOException {
+    // set_in on a set variable has no constant set: the constraint stays and pins its variable
+    String model =
+        """
+        var 1..6: x:: output_var;
+        var 1..6: y:: output_var;
+        var set of 0..5: s:: output_var;
+        var 0..5: m1:: var_is_introduced :: is_defined_var;
+        var 0..5: m2:: var_is_introduced :: is_defined_var;
+        var bool: b1:: var_is_introduced :: is_defined_var;
+        var bool: b2:: var_is_introduced :: is_defined_var;
+        constraint int_ne(x,y);
+        constraint int_mod(x,y,m1):: defines_var(m1);
+        constraint int_mod(y,x,m2):: defines_var(m2);
+        constraint int_eq_imp(m1,0,b1);
+        constraint int_eq_imp(m2,0,b2);
+        constraint bool_clause([b1,b2],[]);
+        constraint set_in(m1,s);
+        constraint set_card(s,1);
+        solve satisfy;
+        """;
+    assertEquals(
+        solutions(run(model, "false", "-a")), solutions(run(model, "force", "-a", "-debug")));
+  }
+
   private String run(String model, String property, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

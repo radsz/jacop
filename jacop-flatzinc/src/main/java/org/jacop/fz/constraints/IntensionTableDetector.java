@@ -70,11 +70,11 @@ import org.jacop.fz.SimpleNode;
  *   <li>a variable is internal when it is not output, not in the solve item and not aliased; the
  *       constraints that share an internal variable form one group, so a group holds every
  *       constraint of each of its internal variables;
- *   <li>a group with at least two constraints, at most {@value #MAX_ARITY} other (outer) variables
- *       and at least one constraint that does not propagate to domain consistency (a reification, a
- *       clause, a disjunction, a product, division, modulo, absolute value, minimum, maximum or
- *       element) is solved over its outer variables by a small search that computes functionally
- *       defined variables and branches on the others;
+ *   <li>a group with at least two constraints and at most {@value #MAX_ARITY} other (outer)
+ *       variables is solved over its outer variables, by a small search that computes functionally
+ *       defined variables and branches on the others, when one of its constraints is a division, a
+ *       modulo or an element over a variable array with two unfixed variables or more (these
+ *       propagate to bounds while their relations have holes all over the box);
  *   <li>the table of the outer tuples that extend to a solution of the group replaces the group,
  *       and its internal variables leave the default search.
  * </ol>
@@ -273,12 +273,34 @@ public class IntensionTableDetector implements ParserTreeConstants {
     }
   }
 
-  private void tabulate(List<Item> group, Set<IntVar> pinned) {
-    boolean weak = false;
-    for (Item it : group) {
-      weak |= it.op.weak;
+  /**
+   * Whether the constraint is a periodic operation (division, modulo) or an element over a variable
+   * array with two unfixed variables or more. JaCoP propagates these to bounds, and their relations
+   * have holes all over the box, so a table prunes far more. The other operations are left as they
+   * are: on the MiniZinc Challenge models tables of linear, comparison, reified, Boolean,
+   * constant-array element, product, absolute value, minimum and maximum groups pruned little more
+   * and made each node slower (fast-food, celar, maximum-dag, cable-tree-wiring, open-stacks).
+   */
+  private static boolean weak(Item it) {
+    if (it.vars.size() < 2) {
+      return false;
     }
-    if (!weak) {
+    return switch (it.op) {
+      case DIV, MOD -> true;
+      case ELEMENT -> {
+        for (int i = 1; i < it.terms.length - 1; i++) {
+          if (!it.terms[i].singleton()) {
+            yield true;
+          }
+        }
+        yield false;
+      }
+      default -> false;
+    };
+  }
+
+  private void tabulate(List<Item> group, Set<IntVar> pinned) {
+    if (group.stream().noneMatch(IntensionTableDetector::weak)) {
       return;
     }
     // the variables of the group: outer ones first
@@ -342,6 +364,11 @@ public class IntensionTableDetector implements ParserTreeConstants {
     if (rows.length == 0) {
       throw Store.failException;
     }
+    if (support.options.debug()) {
+      StringBuilder sig = new StringBuilder("% intension group: " + outer.size() + " outer,");
+      group.stream().map(it -> it.node.getName()).sorted().forEach(n -> sig.append(' ').append(n));
+      FzConsole.println(sig.append(", ").append(rows.length).append(" rows").toString());
+    }
     if (rows.length < space) {
       support.pose(new HybridTable(scope, rows));
       Collections.addAll(tabled, scope);
@@ -368,56 +395,50 @@ public class IntensionTableDetector implements ParserTreeConstants {
 
   /** The constraints the detector evaluates, with the place of their functionally defined value. */
   enum Op {
-    INT_EQ(false),
-    INT_NE(false),
-    INT_LE(false),
-    INT_LT(false),
-    INT_EQ_REIF(true),
-    INT_NE_REIF(true),
-    INT_LE_REIF(true),
-    INT_LT_REIF(true),
-    INT_EQ_IMP(true),
-    INT_NE_IMP(true),
-    INT_LE_IMP(true),
-    INT_LT_IMP(true),
-    LIN_EQ(false),
-    LIN_NE(false),
-    LIN_LE(false),
-    LIN_EQ_REIF(true),
-    LIN_NE_REIF(true),
-    LIN_LE_REIF(true),
-    LIN_EQ_IMP(true),
-    LIN_NE_IMP(true),
-    LIN_LE_IMP(true),
-    PLUS(false),
-    TIMES(true),
-    DIV(true),
-    MOD(true),
-    ABS(true),
-    MIN(true),
-    MAX(true),
-    BOOL2INT(false),
-    BOOL_NOT(false),
-    BOOL_EQ(false),
-    BOOL_EQ_REIF(true),
-    BOOL_XOR_REIF(true),
-    BOOL_AND_REIF(true),
-    BOOL_OR_REIF(true),
-    BOOL_LE(false),
-    BOOL_LT(false),
-    CLAUSE(true),
-    ARRAY_OR(true),
-    ARRAY_AND(true),
-    ELEMENT(true),
-    SET_IN(false),
-    SET_IN_REIF(true),
-    SET_IN_IMP(true);
-
-    final boolean weak;
-
-    Op(boolean weak) {
-      this.weak = weak;
-    }
+    INT_EQ,
+    INT_NE,
+    INT_LE,
+    INT_LT,
+    INT_EQ_REIF,
+    INT_NE_REIF,
+    INT_LE_REIF,
+    INT_LT_REIF,
+    INT_EQ_IMP,
+    INT_NE_IMP,
+    INT_LE_IMP,
+    INT_LT_IMP,
+    LIN_EQ,
+    LIN_NE,
+    LIN_LE,
+    LIN_EQ_REIF,
+    LIN_NE_REIF,
+    LIN_LE_REIF,
+    LIN_EQ_IMP,
+    LIN_NE_IMP,
+    LIN_LE_IMP,
+    PLUS,
+    TIMES,
+    DIV,
+    MOD,
+    ABS,
+    MIN,
+    MAX,
+    BOOL2INT,
+    BOOL_NOT,
+    BOOL_EQ,
+    BOOL_EQ_REIF,
+    BOOL_XOR_REIF,
+    BOOL_AND_REIF,
+    BOOL_OR_REIF,
+    BOOL_LE,
+    BOOL_LT,
+    CLAUSE,
+    ARRAY_OR,
+    ARRAY_AND,
+    ELEMENT,
+    SET_IN,
+    SET_IN_REIF,
+    SET_IN_IMP;
   }
 
   /**
@@ -486,6 +507,9 @@ public class IntensionTableDetector implements ParserTreeConstants {
           }
           case SET_IN, SET_IN_REIF, SET_IN_IMP -> {
             IntDomain set = s.getSetLiteral(node, 1);
+            if (set == null) {
+              yield null;
+            }
             IntVar x = s.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
             IntVar[] all =
                 op == Op.SET_IN
