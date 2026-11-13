@@ -230,6 +230,41 @@ class DifferenceCyclesTest {
   }
 
   @Test
+  void copiesKeepTheArcsOfVariablesFixedAfterTheConstraintWasBuilt() {
+    // LcgFuzzTest seed 7049418: x0 is fixed at the root after the constraint is built, so the
+    // explanation checker copies it over x0 = 1; a copy that dropped the arcs of x0 missed the
+    // cycle and reported a sound reason as wrong
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 4);
+    IntVar x2 = new IntVar(store, "x2", -1, 3);
+    IntVar x3 = new IntVar(store, "x3", 0, 3);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    DifferenceCycles cycles =
+        new DifferenceCycles(
+            new IntVar[] {x3, x0, x2, x0, x3},
+            new IntVar[] {x2, x2, x0, x3, x2},
+            new int[] {-2, 1, 1, -2, -1},
+            new IntVar[] {b1, x2, b0, b0, null},
+            new int[] {1, -1, 1, 1, 1},
+            new IntVar[] {null, x3, x0, null, x0},
+            new int[] {0, -1, 1, 0, -1});
+    x0.domain.in(0, x0, 1, 1);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(cycles);
+    assertTrue(store.consistency());
+    store.setLevel(1);
+    b0.domain.inMin(1, b0, 1);
+    assertFalse(store.consistency());
+    EntryList out = new EntryList();
+    assertTrue(cycles.explainFailure(trail, out));
+    ExplanationChecker checker = new ExplanationChecker(trail);
+    assertNull(checker.checkFailure(cycles, out));
+    assertEquals(0, checker.skipped);
+    trail.detach();
+  }
+
+  @Test
   void failsExactlyOnNegativeCyclesOfTheArcsThatHold() {
     Random r = new Random(20261106);
     int checks = 0;

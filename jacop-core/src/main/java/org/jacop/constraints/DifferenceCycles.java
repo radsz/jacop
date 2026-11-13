@@ -235,6 +235,21 @@ public class DifferenceCycles extends Constraint
    */
   public DifferenceCycles(
       IntVar[] x, IntVar[] y, int[] c, IntVar[] b, int[] v, IntVar[] o, int[] s) {
+    this(x, y, c, b, v, o, s, false);
+  }
+
+  // keepFixed keeps the arcs of fixed variables, so that a copy over narrower domains (the root of
+  // lazy clause generation, or the scratch store of the explanation checker) is as strong as the
+  // constraint it copies
+  private DifferenceCycles(
+      IntVar[] x,
+      IntVar[] y,
+      int[] c,
+      IntVar[] b,
+      int[] v,
+      IntVar[] o,
+      int[] s,
+      boolean keepFixed) {
     checkInputForNullness(new String[] {"x", "y"}, new Object[][] {x, y});
     checkInputForNullness(new String[] {"c", "b", "v", "o", "s"}, new Object[] {c, b, v, o, s});
     int m = x.length;
@@ -275,7 +290,7 @@ public class DifferenceCycles extends Constraint
     // a cycle through a fixed variable is bounds reasoning, which propagation does in one pass
     // along it; dropping its arcs only loses failures that come early anyway
     for (int i = 0; i < m; i++) {
-      if (x[i].singleton() || y[i].singleton()) {
+      if (!keepFixed && (x[i].singleton() || y[i].singleton())) {
         h[i] = t[i];
       }
     }
@@ -920,7 +935,8 @@ public class DifferenceCycles extends Constraint
         b.toArray(new IntVar[0]),
         v.stream().mapToInt(Integer::intValue).toArray(),
         o.toArray(new IntVar[0]),
-        sign.stream().mapToInt(Integer::intValue).toArray());
+        sign.stream().mapToInt(Integer::intValue).toArray(),
+        true);
   }
 
   @Override
