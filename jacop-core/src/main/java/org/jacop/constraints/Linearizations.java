@@ -132,6 +132,9 @@ public final class Linearizations {
         covering.put(x, m);
       }
     }
+    if (IMPLIED_VALUES) {
+      impliedValues(constraints, byVar, out);
+    }
     // value = list[index - offset] over an encoded index: value = sum list[v - offset] b_v
     for (Constraint c : constraints) {
       if (c.getClass() != ElementInteger.class) {
@@ -163,6 +166,62 @@ public final class Linearizations {
       }
     }
     return out;
+  }
+
+  // the clique rows that join the Booleans of ChannelImply (b_v -> x = v) with the Booleans b_v
+  // <-> x = v of the same variable
+  private static final boolean IMPLIED_VALUES =
+      !"false".equals(System.getProperty("org.jacop.lp.impliedValues"));
+
+  /**
+   * Adds, for each {@link ChannelImply} {@code b_v -> x = v} over a variable that also has Booleans
+   * {@code e_w <-> x = w} (from {@link #valueBooleans}), one clique row {@code sum b_v + sum e_w <=
+   * 1} over one Boolean per value (the equivalent one where a value has both), and {@code b_v <=
+   * e_v} where it has both. All of them hold because x takes one value. The row of the ChannelImply
+   * alone ({@code sum b_v <= 1}) misses the equivalent Booleans: on TankAllocation (XCSP 2025),
+   * where {@code b_tc -> x_t = c} says that tank t holds cargo c and {@code e_t <-> x_t = empty} is
+   * in the objective, the LP could fill every tank and leave it empty at once, and its bound was
+   * the total capacity (16,880) instead of the free capacity (1,799).
+   *
+   * @param constraints the constraints
+   * @param byVar the equivalent Booleans by variable and value, values outside the domain removed
+   * @param out the list the rows are added to
+   */
+  private static void impliedValues(
+      Collection<Constraint> constraints,
+      Map<IntVar, Map<Integer, IntVar>> byVar,
+      List<LinearForm> out) {
+    for (Constraint c : constraints) {
+      if (c.getClass() != ChannelImply.class) {
+        continue;
+      }
+      ChannelImply ch = (ChannelImply) c;
+      Map<Integer, IntVar> eq = byVar.get(ch.x);
+      if (eq == null || eq.isEmpty() || eq.containsValue(ch.x)) {
+        continue;
+      }
+      Map<Integer, IntVar> clique = new LinkedHashMap<>(eq);
+      boolean implied = false;
+      for (AbstractChannel.Item it : ch.item) {
+        if (!ch.x.domain.contains(it.value()) || it.b() == ch.x) {
+          continue;
+        }
+        IntVar e = eq.get(it.value());
+        if (e == null) {
+          if (clique.putIfAbsent(it.value(), it.b()) == null) {
+            implied = true;
+          }
+        } else if (e != it.b()) {
+          out.add(new LinearForm(new IntVar[] {it.b(), e}, new long[] {1, -1}, 0, LinearForm.LE));
+        }
+      }
+      if (implied && clique.size() >= 2) {
+        IntVar[] bs = clique.values().toArray(new IntVar[0]);
+        long[] ones = new long[bs.length];
+        Arrays.fill(ones, 1);
+        out.add(new LinearForm(bs, ones, 1, LinearForm.LE));
+      }
+    }
   }
 
   // value encodings over LP-only columns: on or off, the largest domain encoded, and the most
