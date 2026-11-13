@@ -335,13 +335,47 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (int i = 0; i < n; i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
 
-      if (node.getId() == JJTMODELEND) {
+      if (node != null && node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
         if (opt.symmetry()) {
           breakSymmetries(astTree, solveItem, opt);
         }
         search(solveItem, table, opt);
       }
+    }
+  }
+
+  // the parse tree is read by the other threads of a portfolio (Parser.build): it is kept whole
+  private boolean sharedModelTree;
+
+  /** Keeps the parse tree whole during the search, since other parsers build from it too. */
+  void shareModelTree() {
+    sharedModelTree = true;
+  }
+
+  /**
+   * Drops the parsed variable and constraint items of the model once the model is built and the
+   * search is about to start: the store holds what was built from them, and only the solve item is
+   * read from here on. The parser keeps the root of the parse tree on its stack for the whole
+   * search, so without this the parse tree stays live: 29 % of the heap of nside EASY_200_50 and
+   * most of the heap of the largest models.
+   *
+   * @param solveItem the solve item, whose branch of the parse tree is kept
+   */
+  private void releaseModelItems(SimpleNode solveItem) {
+    if (sharedModelTree) {
+      return;
+    }
+    Node kept = solveItem;
+    while (kept.jjtGetParent() instanceof SimpleNode parent) {
+      if (parent.children != null) {
+        for (int i = 0; i < parent.children.length; i++) {
+          if (parent.children[i] != kept) {
+            parent.children[i] = null;
+          }
+        }
+      }
+      kept = parent;
     }
   }
 
@@ -566,6 +600,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     output = table;
     solveSideComponents(node);
     ObjectivePresolve objective = objectiveRule(node);
+    // the last reader of the variable and constraint items
+    releaseModelItems(node);
     if (opt.presolve() != Options.Presolve.OFF) {
       presolve(node, objective);
       if (sat.collecting() && !opt.lcg()) {

@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
@@ -70,6 +71,7 @@ import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
+import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
 import org.jacop.fz.constraints.TableScopeMerger;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
@@ -265,6 +267,11 @@ public class Constraints implements ParserTreeConstants {
         new DifferenceBoundsDetector(support).detect(astTree);
       }
 
+      // common sub-sums of linear constraints become variables; --proof encodes the rows as given
+      if (LinearOverlapDetector.enabled() && options.proof() == null) {
+        new LinearOverlapDetector(support).detect(astTree);
+      }
+
       if (!"false".equals(AlldiffChannels.rule())) {
         support.alldiffChannels = AlldiffChannels.collect(support, astTree);
       }
@@ -378,6 +385,12 @@ public class Constraints implements ParserTreeConstants {
       // encode them
       if (ExactCoverDetector.enabled() && options.proof() == null) {
         new ExactCoverDetector(support).detect(astTree);
+      }
+
+      // flows over 0/1 matrices whose row and column sums are bounded, redundant and opt-in;
+      // --proof does not encode them
+      if (SymmetricGCCDetector.enabled() && options.proof() == null) {
+        new SymmetricGCCDetector(support).detect(astTree);
       }
 
       // tilings written as tables and an all different, redundant, by default without LCG (the

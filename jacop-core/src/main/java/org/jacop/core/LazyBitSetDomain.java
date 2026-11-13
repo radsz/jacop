@@ -1276,7 +1276,7 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
   @Override
   public Interval getInterval(int position) {
     if ((bits != null || ranges != null) && size != maxBound - minBound + 1) {
-      return intervals().intervals[position];
+      return intervals().getInterval(position);
     }
     int value = minBound;
     for (int i = 0; i < position; i++) {
@@ -1287,11 +1287,17 @@ public class LazyBitSetDomain extends IntDomain implements DomainTrail.Entry {
 
   @Override
   public int leftElement(int intervalNo) {
+    if ((bits != null || ranges != null) && size != maxBound - minBound + 1) {
+      return intervals().leftElement(intervalNo);
+    }
     return getInterval(intervalNo).min();
   }
 
   @Override
   public int rightElement(int intervalNo) {
+    if ((bits != null || ranges != null) && size != maxBound - minBound + 1) {
+      return intervals().rightElement(intervalNo);
+    }
     return getInterval(intervalNo).max();
   }
 
