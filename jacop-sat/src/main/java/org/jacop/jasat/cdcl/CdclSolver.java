@@ -3758,8 +3758,7 @@ public final class CdclSolver {
     simplifyAssigns = trailSize;
     // the arena counted with one more int per clause, as with the earlier four-int header, so the
     // simplification schedule (and the search) stays as it was
-    simplifyProps =
-        propagations + memSize - wasted + (long) numOriginals + numLearnts + 2L * numVars;
+    simplifyProps = propagations + memSize - wasted + numOriginals + numLearnts + 2L * numVars;
   }
 
   /**
