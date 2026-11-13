@@ -834,10 +834,24 @@ final class ClauseEncoder implements PbModel {
       int[] up,
       boolean closed,
       IntVar rest) {
-    if (rest != null) {
-      throw REJECTED;
-    }
     IntVar[] none = new IntVar[0];
+    if (rest != null) {
+      // r[i] holds when x[i] takes no counted value; rest counts them
+      String[] r = new String[x.length];
+      long[] a = new long[x.length];
+      for (int i = 0; i < x.length; i++) {
+        r[i] = auxiliary();
+        a[i] = 1;
+        String[] some = new String[values.length + 1];
+        some[0] = r[i];
+        for (int k = 0; k < values.length; k++) {
+          some[k + 1] = equalTo(x[i], values[k]);
+          clause(PbModel.not(r[i]), PbModel.not(some[k + 1]));
+        }
+        clause(some);
+      }
+      sum(r, a, new IntVar[] {rest}, new long[] {-1}, LinearForm.EQ, 0);
+    }
     for (int k = 0; k < values.length; k++) {
       if (counters[k] != null) {
         PbModel.count(this, x, values[k], new IntVar[] {counters[k]}, LinearForm.EQ, 0);
