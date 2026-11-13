@@ -29,6 +29,8 @@
  */
 package org.jacop.constraints;
 
+import org.jacop.core.IntVar;
+
 /**
  * A 0/1 matrix with bounds on its row and column sums: which cells must be 1, which must be 0 and
  * how far each sum can range in some matrix that respects all bounds. It is the flow network of the
@@ -141,6 +143,108 @@ final class DegreeFlow {
       for (int c = 0; c < m; c++) {
         colUp[c] = flow.maxFlowOn(colArc[c]);
         colLo[c] = flow.minFlowOn(colArc[c]);
+      }
+    }
+    return true;
+  }
+
+  /** How a reason cites the status of a cell in {@link #explain}. */
+  interface CellReason {
+    /**
+     * Cites that cell k is 0.
+     *
+     * @param k the cell, row-major
+     */
+    void zero(int k);
+
+    /**
+     * Cites that cell k is 1.
+     *
+     * @param k the cell, row-major
+     */
+    void one(int k);
+  }
+
+  /**
+   * Explains that no matrix is within the bounds, for lazy clause generation: builds the network,
+   * with an arc of flow 0 for every cell that is 0 and no bound on the arc back to the source (its
+   * bounds are implied), and when it has no feasible circulation cites what bounds the arcs across
+   * its cut: the counters' bounds below n or m and above 0, and the cells that are 0 on arcs
+   * leaving the cut or 1 on arcs entering it.
+   *
+   * @param n the number of rows
+   * @param m the number of columns
+   * @param cells the status of each cell, row-major: ZERO, ONE or FREE
+   * @param rowMin the least sum of each row, at least 0
+   * @param rowMax the largest sum of each row, at most m
+   * @param colMin the least sum of each column, at least 0
+   * @param colMax the largest sum of each column, at most n
+   * @param rows the counter of each row, whose bounds the reason cites
+   * @param cols the counter of each column
+   * @param reason the reason
+   * @param cellReason how the status of a cell is cited
+   * @return true when the network is infeasible and the reason is gathered
+   */
+  boolean explain(
+      int n,
+      int m,
+      int[] cells,
+      int[] rowMin,
+      int[] rowMax,
+      int[] colMin,
+      int[] colMax,
+      IntVar[] rows,
+      IntVar[] cols,
+      FlowReason reason,
+      CellReason cellReason) {
+    int source = n + m;
+    int sink = source + 1;
+    flow.reset(n + m + 2);
+    for (int r = 0; r < n; r++) {
+      if (rowMin[r] > rowMax[r]) {
+        return false;
+      }
+      flow.addArc(source, r, rowMin[r], rowMax[r]);
+    }
+    for (int c = 0; c < m; c++) {
+      if (colMin[c] > colMax[c]) {
+        return false;
+      }
+      flow.addArc(n + c, sink, colMin[c], colMax[c]);
+    }
+    for (int k = 0; k < n * m; k++) {
+      int status = cells[k];
+      flow.addArc(k / m, n + k % m, status == ONE ? 1 : 0, status == ZERO ? 0 : 1);
+    }
+    flow.addArc(sink, source, 0, BoundedFlow.INFINITE);
+    if (flow.solve() || !FlowReason.violated(flow)) {
+      return false;
+    }
+    boolean sourceIn = flow.inCut(source);
+    boolean sinkIn = flow.inCut(sink);
+    for (int r = 0; r < n; r++) {
+      boolean in = flow.inCut(r);
+      if (sourceIn && !in && rowMax[r] < m) {
+        reason.needUpper(rows[r], rowMax[r]);
+      } else if (!sourceIn && in && rowMin[r] > 0) {
+        reason.needLower(rows[r], rowMin[r]);
+      }
+    }
+    for (int c = 0; c < m; c++) {
+      boolean in = flow.inCut(n + c);
+      if (in && !sinkIn && colMax[c] < n) {
+        reason.needUpper(cols[c], colMax[c]);
+      } else if (!in && sinkIn && colMin[c] > 0) {
+        reason.needLower(cols[c], colMin[c]);
+      }
+    }
+    for (int k = 0; k < n * m; k++) {
+      boolean rowIn = flow.inCut(k / m);
+      boolean colIn = flow.inCut(n + k % m);
+      if (rowIn && !colIn && cells[k] == ZERO) {
+        cellReason.zero(k);
+      } else if (!rowIn && colIn && cells[k] == ONE) {
+        cellReason.one(k);
       }
     }
     return true;

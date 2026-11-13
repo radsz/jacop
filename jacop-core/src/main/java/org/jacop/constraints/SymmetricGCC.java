@@ -39,6 +39,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Symmetric cardinality (symmetric_gcc of the Global Constraint Catalog): a many-to-many assignment
@@ -56,6 +59,11 @@ import org.jacop.core.Store;
  * constraint", AAAI 1996). The matrix is thus domain consistent, and the counters are bounds
  * consistent: their new bounds are the least and largest flows on their arcs.
  *
+ * <p>For lazy clause generation an atom is explained by a cut of the same network built over the
+ * domains before it, with the atom negated: the bounds of the counters and the cells fixed to 0 or
+ * 1 that keep a set of nodes from passing the flow it must (G. Downing, T. Feydy and P. J. Stuckey,
+ * "Explaining flow-based propagation", CPAIOR 2012; see {@link FlowReason}).
+ *
  * <p>Separate sums on the rows and on the columns only see one side at a time; the network sees,
  * for example, that two items needing two resources each cannot share three resources that one
  * other item needs as well.
@@ -63,7 +71,8 @@ import org.jacop.core.Store;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class SymmetricGCC extends Constraint implements SatisfiedPresent, Copyable<SymmetricGCC> {
+public class SymmetricGCC extends Constraint
+    implements SatisfiedPresent, Copyable<SymmetricGCC>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -84,6 +93,7 @@ public class SymmetricGCC extends Constraint implements SatisfiedPresent, Copyab
   private final int[] rowMax;
   private final int[] colMin;
   private final int[] colMax;
+  private final CardinalityExplanation.Budget budget = new CardinalityExplanation.Budget();
 
   /**
    * It constructs a symmetric cardinality constraint.
@@ -234,6 +244,90 @@ public class SymmetricGCC extends Constraint implements SatisfiedPresent, Copyab
     appendArrayToString(result, colCount);
     result.append("])");
     return result.toString();
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return inScope(trail.variable(entry)) && explain(FlowReason.ofEntry(trail, entry, out));
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explain(new FlowReason(trail, trail.size(), out));
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
+  }
+
+  private boolean inScope(IntVar z) {
+    for (IntVar v : rowCount) {
+      if (v == z) {
+        return true;
+      }
+    }
+    for (IntVar v : colCount) {
+      if (v == z) {
+        return true;
+      }
+    }
+    for (IntVar[] row : x) {
+      for (IntVar v : row) {
+        if (v == z) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // the network of the domains before the reason's position, with its atom negated
+  private boolean explain(FlowReason reason) {
+    long started = System.nanoTime();
+    if (!budget.allows(started)) {
+      return false;
+    }
+    try {
+      int[] status = new int[n * m];
+      for (int k = 0; k < n * m; k++) {
+        IntVar v = x[k / m][k % m];
+        int lo = reason.min(v);
+        int hi = reason.max(v);
+        if (lo > 1 || hi < 0 || lo > hi) {
+          return false;
+        }
+        status[k] = lo >= 1 ? DegreeFlow.ONE : hi <= 0 ? DegreeFlow.ZERO : DegreeFlow.FREE;
+      }
+      int[] rLo = new int[n];
+      int[] rUp = new int[n];
+      for (int r = 0; r < n; r++) {
+        rLo[r] = Math.max(reason.min(rowCount[r]), 0);
+        rUp[r] = Math.min(reason.max(rowCount[r]), m);
+      }
+      int[] cLo = new int[m];
+      int[] cUp = new int[m];
+      for (int c = 0; c < m; c++) {
+        cLo[c] = Math.max(reason.min(colCount[c]), 0);
+        cUp[c] = Math.min(reason.max(colCount[c]), n);
+      }
+      DegreeFlow.CellReason cells =
+          new DegreeFlow.CellReason() {
+            @Override
+            public void zero(int k) {
+              reason.needUpper(x[k / m][k % m], 0);
+            }
+
+            @Override
+            public void one(int k) {
+              reason.needLower(x[k / m][k % m], 1);
+            }
+          };
+      return network.explain(n, m, status, rLo, rUp, cLo, cUp, rowCount, colCount, reason, cells)
+          && reason.finish();
+    } finally {
+      budget.spend(started);
+    }
   }
 
   @Override
