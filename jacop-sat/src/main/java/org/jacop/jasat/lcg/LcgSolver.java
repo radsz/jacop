@@ -3122,6 +3122,18 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: core-guided phases skipped as their probe found no solution of its own. */
   public long probeSkips;
 
+  // -Djacop.lcg.probeAfterBound=false: the core-guided probe runs before branch and bound also when
+  // the objective's root bound is above the cores' lower bound
+  private static final boolean PROBE_AFTER_BOUND =
+      Boolean.parseBoolean(
+          System.getProperty("jacop.lcg.probeAfterBound", Boolean.TRUE.toString()));
+
+  /**
+   * Statistics: core-guided probes run after branch and bound, as the objective's root bound was
+   * above the cores' lower bound.
+   */
+  public long boundFirstProbes;
+
   private int minimizeWithCores() {
     long millis = timeLimitMillis;
     if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
@@ -3143,6 +3155,21 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } else if (coreDelayShare > 0) {
       boolean probeWithoutSolution = false;
+      // the root bound of the objective (from the linear relaxation, say) is above the cores' lower
+      // bound: branch and bound goes before the probe, as a solution at that bound ends the search
+      // and the cores start below what is already proved
+      boolean boundFirst =
+          PROBE_AFTER_BOUND
+              && coreProbeShare > 0
+              && workEnd != Long.MAX_VALUE
+              && coreSearch.lowerBound < root[objective].min();
+      if (boundFirst) {
+        boundFirstProbes++;
+        result = minimizeBeforeCores();
+        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+          return result;
+        }
+      }
       if (coreProbeShare > 0) {
         long stops = coreSearch.noSolutionStops;
         result = runCores(coreProbeShare, coreDelayBudget, false);
@@ -3151,9 +3178,11 @@ public final class LcgSolver implements ExternalPropagator {
         }
         probeWithoutSolution = coreSearch.noSolutionStops > stops;
       }
-      result = minimizeBeforeCores();
-      if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
-        return result;
+      if (!boundFirst) {
+        result = minimizeBeforeCores();
+        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+          return result;
+        }
       }
       if (coreProbeSkip && probeWithoutSolution && best != null) {
         // the probe found no solution of its own while branch and bound did: the rest of the phase
