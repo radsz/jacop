@@ -214,9 +214,14 @@ class GlobalConstraints implements ParserTreeConstants {
 
     @Override
     public boolean equals(Object o) {
-      return o instanceof TableTuples other
-          && other.hash == hash
-          && Arrays.deepEquals(other.tuples, tuples);
+      return o instanceof TableTuples(int[][] otherTuples, int otherHash)
+          && otherHash == hash
+          && Arrays.deepEquals(otherTuples, tuples);
+    }
+
+    @Override
+    public String toString() {
+      return "TableTuples[tuples=" + Arrays.deepToString(tuples) + ", hash=" + hash + "]";
     }
 
     @Override
