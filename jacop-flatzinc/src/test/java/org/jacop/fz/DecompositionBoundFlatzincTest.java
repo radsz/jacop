@@ -168,6 +168,35 @@ class DecompositionBoundFlatzincTest {
     assertTrue(tight > 10, "tight " + tight);
   }
 
+  private static final Pattern PRIMAL = Pattern.compile("dbPrimal=(-?\\d+)");
+
+  /**
+   * Under free search the columns of the decomposition give the first values of search: the optimum
+   * stays, and the cost of the restricted master's integer solution, which satisfies every
+   * constraint of these models, is no better than the optimum.
+   */
+  @Test
+  void theColumnsGuideFreeSearch() throws IOException {
+    Random random = new Random(5);
+    int primal = 0;
+    for (int trial = 0; trial < 60; trial++) {
+      boolean maximize = random.nextBoolean();
+      String model = randomModel(random, maximize);
+      String reference = optimum(run(model, false, false, "-f"));
+      String out = run(model, true, trial % 2 == 1, "-f", "-s", "--search-statistics");
+      String context = "trial " + trial + "\n" + model + "\n" + out;
+      assertEquals(reference, optimum(out), context);
+      Matcher m = PRIMAL.matcher(out);
+      if (m.find() && !reference.equals("UNSATISFIABLE")) {
+        long cost = Long.parseLong(m.group(1));
+        long opt = Long.parseLong(reference);
+        assertTrue(maximize ? cost <= opt : cost >= opt, context);
+        primal++;
+      }
+    }
+    assertTrue(primal > 20, "primal " + primal);
+  }
+
   /** Two blocks of which the cheap assignments need the same value of a count of at most one. */
   @Test
   void theBoundIsAboveTheRootBound() throws IOException {
