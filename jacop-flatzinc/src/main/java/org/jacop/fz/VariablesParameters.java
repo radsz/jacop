@@ -384,7 +384,7 @@ public class VariablesParameters implements ParserTreeConstants {
     int min = dom.min();
     long bits = 0;
     for (int i = 0; i < dom.size; i++) {
-      for (int v = dom.intervals[i].min(); v <= dom.intervals[i].max(); v++) {
+      for (int v = dom.leftElement(i), max = dom.rightElement(i); v <= max; v++) {
         bits |= 1L << (63 - (v - min));
       }
     }

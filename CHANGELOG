@@ -4605,7 +4605,18 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
-269. Diffn (and Diff2, Nooverlap) does less repeated work with the same
+269. IntervalDomain keeps its intervals in one int array (min and max of
+     interval i at 2i and 2i+1) instead of an array of Interval objects,
+     so walking a domain reads one array and the domain operations
+     allocate no Interval. The public field intervals is removed: use
+     domain.leftElement(i) and domain.rightElement(i), or getInterval(i)
+     where an Interval object is wanted. AffineDomain now overrides
+     leftElement and rightElement. Search is unchanged (same nodes and
+     solutions in fixed search); 60 s x 3 runs of 12 instances, base and
+     candidate side by side: +1.9 % nodes/s on average (cgt +4.6 %,
+     monomatch +4.1 %, liner +3.8 %), base against itself +0.1 %.
+
+270. Diffn (and Diff2, Nooverlap) does less repeated work with the same
    pruning. The profile sweep of a rectangle runs per dimension, only when
    that rectangle or a compulsory part in that dimension changed since its
    last sweep; the events of compulsory parts that did not change are kept
