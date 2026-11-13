@@ -384,6 +384,20 @@ public final class LcgSolver implements ExternalPropagator {
   private int numPopped;
   // the values of the last solution, preferred in decisions
   private int[] phase;
+  // target phases of activity branching (CaDiCaL's target phases over integer values): the values
+  // of the variables fixed at the conflict with the longest SAT trail since the last restart, taken
+  // until the first solution gives its values. On under free search (-f) by default;
+  // -Djacop.lcg.targetPhase=true|false turns it on or off in every mode.
+  static final String TARGET_PHASE = System.getProperty("jacop.lcg.targetPhase");
+  private int[] targetValue;
+  private boolean[] targetSet;
+  private int targetTrail;
+
+  /** Statistics: snapshots of target phases (see {@code jacop.lcg.targetPhase}). */
+  public long targetSnapshots;
+
+  /** Statistics: activity decisions that took a target phase's value. */
+  public long targetDecisions;
 
   // the model's search annotation: used in every run, or in every other run when free
   private SelectChoicePoint<? extends Var> annotation;
@@ -4614,12 +4628,43 @@ public final class LcgSolver implements ExternalPropagator {
     reportBound(lower);
   }
 
+  // the values of the fixed variables when the SAT trail before the last decision is the longest
+  // since the last restart
+  private void saveTarget() {
+    int level = sat.decisionLevel();
+    if (level == 0) {
+      return;
+    }
+    int assigned = sat.trailSize();
+    if (assigned <= targetTrail) {
+      return;
+    }
+    targetTrail = assigned;
+    if (targetValue == null) {
+      targetValue = new int[vars.length];
+      targetSet = new boolean[vars.length];
+    }
+    targetSnapshots++;
+    for (int i = 0; i < targetValue.length; i++) {
+      IntVar x = vars[i];
+      if (x != null && x.singleton()) {
+        targetValue[i] = x.value();
+        targetSet[i] = true;
+      }
+    }
+  }
+
   @Override
   public void notifyBacktrack(int level) {
     if (sat.conflicts != backtrackConflicts) {
       // a conflict led here: its last decision was on decisionVar
       backtrackConflicts = sat.conflicts;
       conflictVar = decisionVar;
+      if (phase == null
+          && activityBranching
+          && (TARGET_PHASE == null ? freeSearch : Boolean.parseBoolean(TARGET_PHASE))) {
+        saveTarget();
+      }
     }
     trail.beginBacktrack();
     try {
@@ -4812,6 +4857,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       exchangeShared();
     }
+    targetTrail = 0;
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {
@@ -5928,6 +5974,14 @@ public final class LcgSolver implements ExternalPropagator {
     searchDecisions++;
     if (phase != null && x.domain.contains(phase[i])) {
       return assignLit(i, phase[i]);
+    }
+    if (phase == null
+        && targetSet != null
+        && i < targetSet.length
+        && targetSet[i]
+        && x.domain.contains(targetValue[i])) {
+      targetDecisions++;
+      return assignLit(i, targetValue[i]);
     }
     return switch (valueChoice) {
       case "max" -> geLit(i, x.max());

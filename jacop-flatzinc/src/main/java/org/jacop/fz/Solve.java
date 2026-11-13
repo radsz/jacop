@@ -3248,6 +3248,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + inputOrderCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
+            + "\n%%%mzn-stat: lcgTargetDecisions="
+            + lcg.targetDecisions
+            + "\n%%%mzn-stat: lcgTargetSnapshots="
+            + lcg.targetSnapshots
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="
@@ -4506,8 +4510,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     // With all solutions requested the default search also labels the output variables first:
     // labelling every variable would report a solution again for each assignment of variables
-    // that are not output, such as the Boolean of a half-reification.
-    boolean outputVarsOnly = !options.complementarySearch() && (label != null || options.getAll());
+    // that are not output, such as the Boolean of a half-reification. This holds for the
+    // complementary search (-cs) too, whose search over all variables would otherwise print the
+    // same output solution once per assignment of the other variables.
+    boolean outputVarsOnly = options.getAll() || (!options.complementarySearch() && label != null);
     if (outputVarsOnly) {
       searchVars.outputVars();
     }
@@ -4759,7 +4765,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && boolVars.length == 0
             && setVars.length == 0
             && floatVars.length == 0)
-        || options.complementarySearch()
+        || (options.complementarySearch() && !options.getAll())
         || options.freeSearch();
   }
 

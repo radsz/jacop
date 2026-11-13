@@ -153,6 +153,8 @@ final class Portfolio {
   private int running;
   private boolean finished;
   private boolean complete;
+  // the answer has been printed, by run() or at shutdown
+  private boolean printed;
   // the best solution and bound of all threads, for --gap and the objectiveBound statistic
   private ObjectiveGap gap;
   // a thread's bound holds only for the restarts of relax and reconstruct or on_restart
@@ -260,11 +262,23 @@ final class Portfolio {
       w.thread = t;
       t.start();
     }
+    // a run killed before it answers (SIGTERM) prints the best solution, as one thread does
+    Thread atShutdown = new Thread(() -> printResult(out, true, start), "jacop-portfolio-exit");
+    if (options.getStatistics()) {
+      Runtime.getRuntime().addShutdownHook(atShutdown);
+    }
     boolean timedOut = await(timeOutAt);
     for (Worker w : workers) {
       w.stop();
     }
     printResult(out, timedOut, start);
+    if (options.getStatistics()) {
+      try {
+        Runtime.getRuntime().removeShutdownHook(atShutdown);
+      } catch (IllegalStateException _) {
+        // the JVM is shutting down: the hook finds the answer printed
+      }
+    }
     // the threads stop within milliseconds in search, later when stopped while reading the model
     long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
     for (Worker w : workers) {
@@ -324,6 +338,10 @@ final class Portfolio {
   private void printResult(PrintStream out, boolean timedOut, long start) {
     StringBuilder s = new StringBuilder();
     synchronized (lock) {
+      if (printed) {
+        return;
+      }
+      printed = true;
       if (bestSolution != null) {
         if (!options.getAll()) {
           s.append(bestSolution);

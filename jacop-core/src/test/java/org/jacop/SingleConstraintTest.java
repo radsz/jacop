@@ -76,6 +76,7 @@ import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
@@ -129,6 +130,7 @@ import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Same;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
@@ -139,6 +141,8 @@ import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SymmetricGCC;
+import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.XdivYeqZ;
@@ -9062,6 +9066,88 @@ class SingleConstraintTest extends TestHelper {
       reasons.put(trail.variable(e), vars);
     }
     return reasons;
+  }
+
+  /**
+   * Under LCG, SymmetricGCC, CardinalityMatrix, Same and UsedBy explain their atoms by the cuts of
+   * their flow networks, not by replay or the generic reason.
+   */
+  @Test
+  void catalogCardinalityExplainsItsAtoms() {
+    // two items using two of three resources each, the third resource used once: x00 = 0 makes
+    // item 0 use resources 1 and 2, so item 1 cannot use resource 2
+    Store store = new Store();
+    IntVar[][] x = new IntVar[2][3];
+    for (int r = 0; r < 2; r++) {
+      for (int c = 0; c < 3; c++) {
+        x[r][c] = new IntVar(store, "x" + r + c, 0, 1);
+      }
+    }
+    IntVar[] rows = {new IntVar(store, "r0", 2, 2), new IntVar(store, "r1", 2, 2)};
+    IntVar[] cols = {
+      new IntVar(store, "c0", 0, 2), new IntVar(store, "c1", 0, 2), new IntVar(store, "c2", 0, 1)
+    };
+    SymmetricGCC symmetric = new SymmetricGCC(x, rows, cols);
+    store.impose(symmetric);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    x[0][0].domain.in(store.level, x[0][0], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[1][2].max()).isZero();
+    Map<IntVar, List<IntVar>> reasons = ownReasons(trail, symmetric);
+    assertThat(reasons.get(x[0][1])).containsExactly(x[0][0]);
+    assertThat(reasons).containsKey(x[1][2]);
+    trail.detach();
+
+    // value 1 once in every row and column of a 2 x 2 matrix over 1..2: a = 2 fixes the others
+    Store store1 = new Store();
+    IntVar[][] m = new IntVar[2][2];
+    for (int r = 0; r < 2; r++) {
+      for (int c = 0; c < 2; c++) {
+        m[r][c] = new IntVar(store1, "m" + r + c, 1, 2);
+      }
+    }
+    IntVar[][] counts = new IntVar[2][];
+    IntVar[][] colCounts = new IntVar[2][];
+    for (int i = 0; i < 2; i++) {
+      counts[i] = new IntVar[] {new IntVar(store1, "rc" + i, 1, 1)};
+      colCounts[i] = new IntVar[] {new IntVar(store1, "cc" + i, 1, 1)};
+    }
+    CardinalityMatrix matrix = new CardinalityMatrix(m, new int[] {1}, counts, colCounts);
+    store1.impose(matrix);
+    assertThat(store1.consistency()).isTrue();
+    AtomicTrail trail1 = new AtomicTrail(store1);
+    store1.setLevel(store1.level + 1);
+    m[0][0].domain.in(store1.level, m[0][0], 2, 2);
+    assertThat(store1.consistency()).isTrue();
+    assertThat(m[1][1].value()).isEqualTo(2);
+    assertThat(ownReasons(trail1, matrix)).isNotEmpty();
+    trail1.detach();
+
+    // same([a, b], [c, d]) with a = 1 and b = 2 leaves c and d in 1..2; used_by with y = [c]
+    for (boolean subset : new boolean[] {false, true}) {
+      Store store2 = new Store();
+      IntVar a = new IntVar(store2, "a", 1, 3);
+      IntVar b = new IntVar(store2, "b", 1, 3);
+      IntVar c = new IntVar(store2, "c", 1, 3);
+      IntVar d = new IntVar(store2, "d", 1, 3);
+      Constraint same =
+          subset
+              ? new UsedBy(new IntVar[] {a, b}, new IntVar[] {c})
+              : new Same(new IntVar[] {a, b}, new IntVar[] {c, d});
+      store2.impose(same);
+      assertThat(store2.consistency()).isTrue();
+      AtomicTrail trail2 = new AtomicTrail(store2);
+      store2.setLevel(store2.level + 1);
+      a.domain.in(store2.level, a, 1, 1);
+      b.domain.in(store2.level, b, 2, 2);
+      assertThat(store2.consistency()).isTrue();
+      assertThat(c.max()).isEqualTo(2);
+      Map<IntVar, List<IntVar>> own = ownReasons(trail2, same);
+      assertThat(own.get(c)).containsOnly(a, b);
+      trail2.detach();
+    }
   }
 
   /**

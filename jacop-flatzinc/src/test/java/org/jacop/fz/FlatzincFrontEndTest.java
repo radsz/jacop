@@ -50,6 +50,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -1447,6 +1448,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void complementarySearchPrintsEachOutputSolutionOnce() throws IOException {
+    // -cs labelled every variable, also under -a, so the output solutions with x < y, where the
+    // half-reified b may take both values, were printed twice (9 solutions instead of 6).
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        var bool: b;
+        constraint int_ne(x, y);
+        constraint int_lt_imp(x, y, b);
+        solve satisfy;
+        """;
+    for (String[] options : new String[][] {{"-a"}, {"-a", "-cs"}, {"-a", "-cs", "--lcg", "off"}}) {
+      String out = run(model, options)[0];
+      List<String> solutions =
+          Arrays.stream(out.split("----------\n"))
+              .map(String::strip)
+              .filter(s -> s.startsWith("x ="))
+              .toList();
+      assertEquals(6, solutions.size(), Arrays.toString(options) + "\n" + out);
+      assertEquals(6, new HashSet<>(solutions).size(), Arrays.toString(options) + "\n" + out);
+      assertTrue(out.contains("=========="), Arrays.toString(options) + "\n" + out);
+    }
+  }
+
+  @Test
   void circuitPostsAlldistinctUnderDomainAnnotation() throws IOException {
     // x1 and x2 take 3 and 4 between them (a Hall set), so x5 cannot be 3 or 4. Circuit alone
     // propagates all-different on fixed values only and needs two failed decisions on x5; the
@@ -2655,18 +2682,34 @@ class FlatzincFrontEndTest {
     model.append(
         "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
     model.append("solve minimize obj;\n");
+    // without linear overlap factoring, which would make the two long sums one
     String out =
-        run(
-            model.toString(),
-            "--lcg",
-            "-f",
-            "--search-statistics",
-            "--free-config",
-            "lcg-branching=activity")[0];
+        withoutLinearOverlap(
+            () ->
+                run(
+                    model.toString(),
+                    "--lcg",
+                    "-f",
+                    "--search-statistics",
+                    "--free-config",
+                    "lcg-branching=activity")[0]);
     assertTrue(out.strip().contains("=========="), out);
     String late = out.substring(out.indexOf("lcgLateVariables=") + 17);
     // obj, the objective, and the block sums of the two long constraints
     assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 10, out);
+  }
+
+  private interface Run {
+    String get() throws IOException;
+  }
+
+  private static String withoutLinearOverlap(Run run) throws IOException {
+    System.setProperty("org.jacop.fz.linearOverlap", "false");
+    try {
+      return run.get();
+    } finally {
+      System.clearProperty("org.jacop.fz.linearOverlap");
+    }
   }
 
   @Test
@@ -2691,7 +2734,8 @@ class FlatzincFrontEndTest {
     model.append(
         "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
     model.append("solve minimize obj;\n");
-    String out = run(model.toString(), "--lcg", "-f", "-debug")[0];
+    // without linear overlap factoring, which would make the two long sums one
+    String out = withoutLinearOverlap(() -> run(model.toString(), "--lcg", "-f", "-debug")[0]);
     // two sums of block sums, the inequality's and the objective's equation
     long sumsOfBlocks =
         out.lines().filter(l -> l.matches("% LinearInt\\d+ : LinearInt\\( \\[ _.*")).count();
