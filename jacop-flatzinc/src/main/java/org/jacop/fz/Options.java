@@ -384,7 +384,8 @@ public class Options {
                 domains)
             --presolve-probe-budget <ms> time probing may take (default 1000)
             -cs, --complementary-search - gathers all model, non-defined
-                 variables to create the final search
+                 variables to create the final search (with -a the output
+                 variables first, so each output solution is printed once)
             -i, --interval print intervals instead of values for floating variables
             --precision <value> defines precision for floating operations
                 overrides precision definition in search annotation.
