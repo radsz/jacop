@@ -4449,33 +4449,34 @@ public final class LcgSolver implements ExternalPropagator {
     return wide <= 1 && arity <= CLAUSE_BOOL_ARITY && (wide == 0 || arity > 2);
   }
 
+  /** The literals of this solver, as {@link ClauseEncoder} asks for them. */
+  private ClauseEncoder.Literals solverLiterals() {
+    return new ClauseEncoder.Literals() {
+      @Override
+      public int atLeast(IntVar x, int v) {
+        return geLit(trail.id(x), v);
+      }
+
+      @Override
+      public int valueLiteral(IntVar x, int v) {
+        return eqVar(trail.id(x), v);
+      }
+
+      @Override
+      public int auxiliary() {
+        return newAuxiliary();
+      }
+
+      @Override
+      public IntDomain root(IntVar x) {
+        return x.dom();
+      }
+    };
+  }
+
   private boolean encodeAsClauses(Constraint c) {
     if (clauseEncoder == null) {
-      clauseEncoder =
-          new ClauseEncoder(
-              new ClauseEncoder.Literals() {
-                @Override
-                public int atLeast(IntVar x, int v) {
-                  return geLit(trail.id(x), v);
-                }
-
-                @Override
-                public int valueLiteral(IntVar x, int v) {
-                  return eqVar(trail.id(x), v);
-                }
-
-                @Override
-                public int auxiliary() {
-                  return newAuxiliary();
-                }
-
-                @Override
-                public IntDomain root(IntVar x) {
-                  return x.dom();
-                }
-              },
-              CLAUSE_LIMIT,
-              CLAUSE_COUNTER);
+      clauseEncoder = new ClauseEncoder(solverLiterals(), CLAUSE_LIMIT, CLAUSE_COUNTER);
     }
     List<int[]> cs = clauseEncoder.encode(c, counterOnly(c));
     if (CLAUSE_DEBUG) {
@@ -4606,30 +4607,7 @@ public final class LcgSolver implements ExternalPropagator {
       cs = directTable(t, free[0], free[1]);
     } else {
       if (tableEncoder == null) {
-        tableEncoder =
-            new ClauseEncoder(
-                new ClauseEncoder.Literals() {
-                  @Override
-                  public int atLeast(IntVar x, int v) {
-                    return geLit(trail.id(x), v);
-                  }
-
-                  @Override
-                  public int valueLiteral(IntVar x, int v) {
-                    return eqVar(trail.id(x), v);
-                  }
-
-                  @Override
-                  public int auxiliary() {
-                    return newAuxiliary();
-                  }
-
-                  @Override
-                  public IntDomain root(IntVar x) {
-                    return x.dom();
-                  }
-                },
-                TABLE_LIMIT);
+        tableEncoder = new ClauseEncoder(solverLiterals(), TABLE_LIMIT);
       }
       cs = tableEncoder.encode(t);
     }
