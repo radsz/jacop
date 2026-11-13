@@ -3,6 +3,7 @@ hi + d (d in -1..1, never below lo), from seed 11 on constants of constraints mo
 from seed 68 on lower bounds move by -1..1 as well and so do the values of constant arrays,
 from seed 141 on a comparison of a constraint line may change into another (<=, <, >=, >, =, !=),
 from seed 171 on one side constraint (forall, exists, sum or a comparison, never a global) may be dropped,
+a variant whose global_cardinality cover repeats a value is skipped,
 flattened with JaCoP's and MiniZinc's std library.
 Usage: MZN=minizinc MZN_SOLVER_PATH=... gen_variants.py SEED COUNT OUTDIR, then run
 AllSolutionsSuite with -Dsuite.roots=gen=OUTDIR (see decomposition/README.md)."""
@@ -58,6 +59,11 @@ for k in range(count * 3):
             del lines[rnd.choice(side)]
             new = '\n'.join(lines)
     if new == src:
+        continue
+    # the cover of global_cardinality must keep distinct values: the std decomposition adds
+    # sum(counts) <= length(x), which only holds for a cover without repeats
+    if any(len(set(v)) < len(v) for v in
+           ([w.strip() for w in mt.group(1).split(',')] for mt in re.finditer(r'global_cardinality\w*\([^,]+,\s*\[([^]]*)\]', new))):
         continue
     name = f'{m}_s{seed}_{k}'
     d = f'{out}/{name}'
