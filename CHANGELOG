@@ -4605,6 +4605,26 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
+268. With the decomposition bound on (-Dorg.jacop.fz.decomposition=true)
+   free search (-f) starts from the columns of its master and searches
+   its blocks as a neighbourhood of large neighbourhood search. At the
+   end of column generation the restricted master (one column per block,
+   the linking rows, the least cost) is solved for at most a second
+   (-Dorg.jacop.fz.decomposition.primalMs, 1000) by lazy clause
+   generation, the restricted master heuristic of C. Joncour, S. Michel,
+   R. Sadykov, D. Sverdlov and F. Vanderbeck, Column generation based
+   primal heuristics, Electronic Notes in Discrete Mathematics 36 (2010)
+   695-702. Its solution, or else the column of largest weight in the
+   fractional master of each block, gives the first values of the
+   search. The new AdaptiveLns kind BLOCKS relaxes whole blocks, chosen
+   by roulette on how far their heaviest column is from 1, so the
+   fractional blocks first (--free-config lns-blocks=0 turns it off);
+   AdaptiveLns.addGroups gives the groups.
+   -Dorg.jacop.fz.decomposition.primal=false turns both off. On
+   physician-scheduling instance10 the first solution is the optimum
+   2980, proved in 18 s instead of 34-180 s (median of 3 at 240 s).
+   Results: osolpro benchmarks/decomposition-primal.
+
 Version 4.11
 =============
 

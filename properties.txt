@@ -932,6 +932,12 @@ Decomposition bound:
   of which there must be two; default 10.
 - org.jacop.fz.decomposition.trace: print the blocks and every column
   generation iteration to standard error; default false.
+- org.jacop.fz.decomposition.primal: under free search (-f), start from
+  the columns of the master (an integer solution of the restricted
+  master, else the heaviest column of each block) and give the blocks to
+  large neighbourhood search (kind BLOCKS); default true.
+- org.jacop.fz.decomposition.primalMs: the time, in milliseconds, of the
+  search for an integer solution of the restricted master; default 1000.
 
 Debugging:
 ==========
