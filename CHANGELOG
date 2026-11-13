@@ -4825,6 +4825,20 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+283. Large neighbourhood search under -f (free search with lazy clause
+   generation) fixes and relaxes the model's own decision variables again
+   on models where MiniZinc defines the integer copy of a Boolean by
+   bool2int(b, i) :: defines_var(i). The front end merges i into b, and
+   the defines_var annotation then marked b itself as defined, so b was
+   left out of the neighbourhoods. On speck-optimisation (2023)
+   very_hard_5 that left 1 of 12,213 variables to LNS, every
+   neighbourhood was the whole model and LNS made no progress; it now
+   works over 2,541 variables. 32 of the 187 optimisation instances of
+   the wide benchmark set get a different set of LNS variables. When
+   fewer than 16 variables are not defined by a constraint (a few roots
+   that define the rest by chains, as in pattern-set-mining), the
+   neighbourhoods take every variable, as they did when none was left.
+
 Version 4.11
 =============
 

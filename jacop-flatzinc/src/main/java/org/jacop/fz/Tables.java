@@ -423,6 +423,18 @@ public class Tables {
   }
 
   /**
+   * Returns whether the variable of the given identity was merged into another one as its alias, as
+   * the integer of {@code bool2int} is merged into its Boolean.
+   *
+   * @param ident the identity of the variable
+   * @return true when the identity names an alias of another variable
+   */
+  public boolean isAlias(String ident) {
+    IntVar v = variableTable.get(ident);
+    return v != null && aliasTable.containsKey(v);
+  }
+
+  /**
    * Returns the alias for a variable, or the variable itself if no alias exists.
    *
    * @param b the variable to look up

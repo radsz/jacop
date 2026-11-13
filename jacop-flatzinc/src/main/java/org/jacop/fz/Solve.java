@@ -2660,7 +2660,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SelectChoicePoint<IntVar> first = new SimpleSelect<>(constraintHint.vars, null, hinted);
       annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
-    lcg.setAnnotation(annotated, free);
+    lcg.setAnnotation(
+        free && Boolean.getBoolean("jacop.lcg.noAnnotation") ? null : annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
       // defined variables follow from the others: activity branches on them last. A defined 0/1
       // variable is the truth of a reified constraint, a literal CP-SAT's search branches on as on
@@ -3362,6 +3363,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
 
+  // the fewest variables not defined by a constraint that the neighbourhoods keep to; with fewer,
+  // nearly every variable is defined by a chain of constraints from a handful of roots (one bit of
+  // pattern-set-mining, two of ionosphere), and fixing them all or none is no neighbourhood: the
+  // neighbourhoods take every variable, as when none is independent
+  private static final int MIN_LNS_INDEPENDENT = 16;
+
   /**
    * The neighbourhoods of large neighbourhood search over the decision variables of the model, or
    * null when there is no integer objective or --free-config lns=0 turns it off.
@@ -3389,7 +3396,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           independent.add(x);
         }
       }
-      if (!independent.isEmpty()) {
+      if (independent.size() >= MIN_LNS_INDEPENDENT) {
         vars = new LinkedHashSet<>(independent);
       }
     }
