@@ -423,6 +423,20 @@ unless stated otherwise):
   membership clause per element.
 - org.jacop.fz.setUnion.min: the fewest singletons in a replaced
   chain; default 8.
+- org.jacop.fz.linearOverlap: linear overlap factoring at posting: a
+  sub-sum that several linear constraints share (times a factor each)
+  becomes a new variable, defined by one equality, and the constraints
+  use it in place of their terms; the linear relaxation substitutes it
+  back; default false, off under --proof.
+- org.jacop.fz.linearOverlap.minSize: the fewest terms of a factored
+  sub-sum; default 4.
+- org.jacop.fz.linearOverlap.reified: reified and half-reified linear
+  constraints take part too; default false.
+- org.jacop.fz.linearOverlap.maxOcc: variables in more linear
+  constraints are not used to find the constraints sharing a sub-sum;
+  default 200.
+- org.jacop.fz.linearOverlap.work: the most terms visited while
+  looking for shared sub-sums; default 50000000.
 - org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
 - org.jacop.fz.tableCover: TableCover on tables over groups of the
   variables of an all different (tilings); default true without LCG

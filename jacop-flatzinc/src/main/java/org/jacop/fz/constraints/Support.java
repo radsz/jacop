@@ -146,6 +146,11 @@ public class Support implements ParserTreeConstants {
   /** The tables that {@link TableScopeMerger} intersected, by their constraint node. */
   final Map<SimpleNode, int[]> mergedTables = new IdentityHashMap<>();
 
+  /**
+   * The linear constraints that {@link LinearOverlapDetector} rewrote, by their constraint node.
+   */
+  final Map<SimpleNode, LinearOverlapDetector.Rewrite> linearRewrites = new IdentityHashMap<>();
+
   final BinPackingCardinality binPackingCardinality = new BinPackingCardinality(this);
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   final BinPackingCliqueDetector binPackingCliques = new BinPackingCliqueDetector(this);
