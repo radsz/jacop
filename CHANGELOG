@@ -4605,7 +4605,33 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
-269. Linear overlap factoring at FlatZinc posting, off by default
+269. Automatic dominance breaking at presolve (off by default,
+   -Dorg.jacop.fz.dominance=true), after J. H. M. Lee and A. Z. Zhong,
+   Automatic Generation of Dominance Breaking Nogoods for a Class of
+   Constraint Optimization Problems, IJCAI 2020, 1192-1200, and Exploiting
+   Functional Constraints in Automatic Dominance Breaking for Constraint
+   Optimization, CP 2022, LIPIcs 235, 31:1-31:17 (JAIR 78, 2023).
+   org.jacop.presolve.DominanceNogoods looks, for every value of one
+   variable and every pair of values of two variables, for another
+   assignment of the same variables that keeps every constraint they
+   take part in satisfied and strictly improves the objective; such
+   assignments are nogoods, posted as removed values, clauses on 0/1
+   variables or tables of the allowed pairs. Linear rows, monotone
+   constraints, implications, reified linear rows and clauses are checked
+   by deltas; variables defined by linear equalities and by functional
+   constraints (b <-> x = c, element) follow the move. Only strict
+   improvements are used, so the nogoods keep every optimal solution
+   that symmetry breaking keeps. Budgets: 1 s, 200,000 nogoods, domains of
+   at most 16 values. It fires on 7 of the 187 optimisation instances of
+   the wide set and on 18 of 582 Challenge instances (trucking,
+   shortest_path, spot5, pattern-set-mining, table-layout, maximum-dag,
+   aircraft-disassembly, unit-commitment). On those 39 instances at 600 s
+   (default search) it solves trucking_13 in 3 s instead of not at all,
+   halves the nodes of trucking, and finds better solutions on trucking_10
+   and six spot5 instances, with no worse result; the presolve takes at
+   most 0.9 s.
+
+270. Linear overlap factoring at FlatZinc posting, off by default
      (-Dorg.jacop.fz.linearOverlap=true), after the presolve rule
      FindBigHorizontalLinearOverlap of OR-Tools CP-SAT (CpModelPresolver,
      9.15; the rule has no separate publication). When two or more
@@ -4626,7 +4652,7 @@ Version 5.0 (unreleased)
      0.959x; vaccine v857 2.2x, harmony canon 1.5x and blocks-world 16-4-83
      1.5x faster, network_50 and roster-shifts-bool slower (other trees).
 
-270. The CDCL solver reads the clock every 64 rounds of the LCG
+271. The CDCL solver reads the clock every 64 rounds of the LCG
    propagator's fixpoint instead of every 1,024. Rounds of a fixpoint
    with creeping bounds can be slow: on vrp-submission toy_D and
    D_3v_25l_w_reload (2021, arrival times up to 460,588) the core-guided
@@ -4635,7 +4661,7 @@ Version 5.0 (unreleased)
    in 38 s and D_3v_25l_w_reload proves 146 (best known 207) under -f
    at 600 s; wide-quick at 240 s is unchanged in both modes.
 
-271. SequenceMdd compiles its diagram without allocating: the arcs of the
+272. SequenceMdd compiles its diagram without allocating: the arcs of the
      current domains are read once per call into bit masks, each diagram
      node keeps a mask of the last nodes of its paths, and the nodes of the
      next layer are found by a Zobrist hash of their visited sets in an
@@ -4651,7 +4677,7 @@ Version 5.0 (unreleased)
      stays: on vrplc (40 to 60 nodes) the diagram leaves the search tree as
      large as before, so it cannot pay for itself there.
 
-272. Three cardinality constraints of the Global Constraint Catalog, all
+273. Three cardinality constraints of the Global Constraint Catalog, all
      propagated with a feasible flow (lower and upper arc bounds) whose
      residual strongly connected components give the values that some
      solution uses:
@@ -4684,7 +4710,7 @@ Version 5.0 (unreleased)
      never changed the sequence of solutions of the model search and
      only slowed it down (vrp, amaze).
 
-273. Memory of the FlatZinc front end and of constraint scopes, found by an
+274. Memory of the FlatZinc front end and of constraint scopes, found by an
    object-level heap census of the largest models: the parse tree is
    released before the search (the parser held it for the whole run, 29 %
    of the heap of nside EASY_200_50; a portfolio building from one shared
@@ -4697,7 +4723,7 @@ Version 5.0 (unreleased)
    ma-path-finding g32_p20_a10 under -f now reaches the search within 4 GB
    and rcpsp-wet-diverse j90_48_4 is read and posted.
 
-274. IntervalDomain keeps its intervals in one int array (min and max of
+275. IntervalDomain keeps its intervals in one int array (min and max of
      interval i at 2i and 2i+1) instead of an array of Interval objects,
      so walking a domain reads one array and the domain operations
      allocate no Interval. The public field intervals is removed: use
@@ -4708,7 +4734,7 @@ Version 5.0 (unreleased)
      candidate side by side: +1.9 % nodes/s on average (cgt +4.6 %,
      monomatch +4.1 %, liner +3.8 %), base against itself +0.1 %.
 
-275. Diffn (and Diff2, Nooverlap) does less repeated work with the same
+276. Diffn (and Diff2, Nooverlap) does less repeated work with the same
    pruning. The profile sweep of a rectangle runs per dimension, only when
    that rectangle or a compulsory part in that dimension changed since its
    last sweep; the events of compulsory parts that did not change are kept

@@ -96,6 +96,7 @@ import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.BooleanProducts;
 import org.jacop.presolve.CumulativeReductions;
 import org.jacop.presolve.Derivation;
+import org.jacop.presolve.DominanceNogoods;
 import org.jacop.presolve.Entry;
 import org.jacop.presolve.ImpliedConstraints;
 import org.jacop.presolve.ObjectivePresolve;
@@ -468,6 +469,58 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Imposes the automatic dominance breaking nogoods of {@link DominanceNogoods} (Lee and Zhong,
+   * IJCAI 2020; CP 2022) for an integer objective. They keep every optimum but drop solutions that
+   * are not optimal, so they are not used for satisfaction problems or with restart constraints.
+   */
+  private void dominanceNogoods(ASTSolveItem node) {
+    if (dictionary.onRestart != null
+        || !(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
+      return;
+    }
+    IntVar objective =
+        switch (expr.getType()) {
+          case 0 -> dictionary.getVariable(expr.getIdent());
+          case 1 -> {
+            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+            yield a == null ? null : a[expr.getIndex()];
+          }
+          default -> null;
+        };
+    if (objective == null) {
+      return;
+    }
+    long start = timer.getCpuTime();
+    DominanceNogoods.Outcome o =
+        new DominanceNogoods(store, objective, k == 1).run(sat.collectedClauses());
+    boolean ok = store.consistency();
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: dominanceTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat: dominanceRemoved="
+              + o.removed()
+              + "\n%%%mzn-stat: dominancePairs="
+              + o.pairs()
+              + "\n%%%mzn-stat: dominanceNogoods="
+              + o.nogoods()
+              + "\n%%%mzn-stat: dominanceChecked="
+              + o.checked()
+              + "\n%%%mzn-stat: dominanceComplete="
+              + o.complete()
+              + (o.skipped() != null ? "\n%% dominance: " + o.skipped() : "")
+              + "\n%%%mzn-stat-end");
+    }
+    if (!ok) {
+      throw Store.failException;
+    }
+  }
+
   /** Whether the search annotation, or one of those it sequences, branches on set variables. */
   private static boolean branchesOnSets(SimpleNode node) {
     if (node instanceof ASTAnnotation a && SET_SEARCH.equals(a.getAnnId())) {
@@ -556,6 +609,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     } else if (objective != null && store.consistency()) {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
+    }
+
+    if (Boolean.getBoolean("org.jacop.fz.dominance") && store.consistency()) {
+      dominanceNogoods(node);
     }
 
     if (opt.lp()) {
