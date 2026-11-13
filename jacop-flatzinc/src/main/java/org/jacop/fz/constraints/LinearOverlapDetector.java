@@ -58,8 +58,8 @@ import org.jacop.fz.SimpleNode;
  * repeats while it finds one. The sub-sum must have at least {@code
  * org.jacop.fz.linearOverlap.minSize} (4) terms. Rows {@code int_lin_eq}, {@code int_lin_le},
  * {@code int_lin_ne} take part, and their reified and half-reified forms with {@code
- * -Dorg.jacop.fz.linearOverlap.reified=true}. Off by default, {@code
- * -Dorg.jacop.fz.linearOverlap=true} turns it on.
+ * -Dorg.jacop.fz.linearOverlap.reified=true}. On by default, {@code
+ * -Dorg.jacop.fz.linearOverlap=false} turns it off.
  *
  * <p>Reference: L. Perron, F. Didier, CP-SAT, Google OR-Tools 9.15 ({@code
  * CpModelPresolver::FindBigHorizontalLinearOverlap}); the rule has no separate publication.
@@ -149,7 +149,7 @@ public class LinearOverlapDetector implements ParserTreeConstants {
    * @return true if the system property org.jacop.fz.linearOverlap is true.
    */
   public static boolean enabled() {
-    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.linearOverlap", "false"));
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.linearOverlap", "true"));
   }
 
   /**

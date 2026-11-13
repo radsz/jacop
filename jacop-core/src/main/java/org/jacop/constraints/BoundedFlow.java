@@ -75,6 +75,8 @@ final class BoundedFlow {
   private int[] queue = new int[8];
   private int[] excess = new int[8];
   private int halfArcs;
+  // whether the last solve failed for want of flow, so that level marks the side of a cut
+  private boolean cut;
 
   // strongly connected components of the residual graph of the circulation
   private int[] component = new int[8];
@@ -139,6 +141,7 @@ final class BoundedFlow {
     int s = nodes;
     int t = nodes + 1;
     int total = nodes + 2;
+    cut = false;
     ensureNodes(total);
     Arrays.fill(firstOut, 0, total, -1);
     Arrays.fill(excess, 0, total, 0);
@@ -165,6 +168,7 @@ final class BoundedFlow {
       }
     }
     if (maxFlow(s, t, total) < needed) {
+      cut = true;
       return false;
     }
     for (int a = 0; a < arcs; a++) {
@@ -172,6 +176,79 @@ final class BoundedFlow {
     }
     components();
     return true;
+  }
+
+  /**
+   * After a {@link #solve} that found no feasible circulation for want of flow, whether a node is
+   * on the source side of the minimum cut of the reduction. For that set X of nodes the upper
+   * bounds of the arcs leaving X add up to less than the lower bounds of the arcs entering it
+   * (Hoffman's circulation theorem), which is what makes the network infeasible.
+   *
+   * @param v a node
+   * @return true when v is in X
+   */
+  boolean inCut(int v) {
+    return level[v] >= 0;
+  }
+
+  /**
+   * Whether the last {@link #solve} failed for want of flow, so that {@link #inCut} tells a set
+   * violating Hoffman's condition; false after a success or after an arc with a lower bound above
+   * its upper bound.
+   *
+   * @return true when the cut is known
+   */
+  boolean hasCut() {
+    return cut;
+  }
+
+  /**
+   * The tail of an arc.
+   *
+   * @param a the arc
+   * @return its tail
+   */
+  int tail(int a) {
+    return from[a];
+  }
+
+  /**
+   * The head of an arc.
+   *
+   * @param a the arc
+   * @return its head
+   */
+  int head(int a) {
+    return to[a];
+  }
+
+  /**
+   * The number of arcs added since the last {@link #reset}.
+   *
+   * @return the number of arcs
+   */
+  int arcCount() {
+    return arcs;
+  }
+
+  /**
+   * The lower bound of an arc.
+   *
+   * @param a the arc
+   * @return its lower bound
+   */
+  int lower(int a) {
+    return lower[a];
+  }
+
+  /**
+   * The upper bound of an arc.
+   *
+   * @param a the arc
+   * @return its upper bound
+   */
+  int upper(int a) {
+    return upper[a];
   }
 
   /**

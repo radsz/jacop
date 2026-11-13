@@ -85,6 +85,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ObjectiveDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -3247,6 +3248,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + inputOrderCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
+            + "\n%%%mzn-stat: lcgTargetDecisions="
+            + lcg.targetDecisions
+            + "\n%%%mzn-stat: lcgTargetSnapshots="
+            + lcg.targetSnapshots
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="
@@ -4292,7 +4297,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%% =====INTERRUPTED=====");
       return;
     }
-    if (isComplete && relaxedSearchComplete() && !dictionary.domainsClamped()) {
+    if (isComplete && relaxedSearchComplete() && !clampedDomainsHideSolutions()) {
       IO.println("=====UNSATISFIABLE=====");
       writeUnsatToOutputFile();
       return;
@@ -4365,8 +4370,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * found is still the optimum of the model when only the objective was cut, on its worse side.
    */
   private boolean clampedDomainsKeepOptimum() {
-    return !dictionary.domainsClamped()
-        || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize);
+    if (!dictionary.domainsClamped()
+        || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize)) {
+      return true;
+    }
+    if (!(objectiveVariable instanceof IntVar objective)) {
+      return false;
+    }
+    // the solutions better than the best one must not lie beyond the narrowed domains
+    int best = bestPrintedCost.get();
+    if (best == Integer.MAX_VALUE) {
+      return dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+    }
+    if (best != clampCheckedCost) {
+      clampCheckedCost = best;
+      // the cost is the objective when minimising and its negation when maximising
+      clampHarmless =
+          minimize
+              ? dictionary.clampsHarmless(objective, -ClampedBounds.INF, (long) best - 1)
+              : dictionary.clampsHarmless(objective, -(long) best + 1, ClampedBounds.INF);
+    }
+    return clampHarmless;
+  }
+
+  // the best cost for which clampHarmless was computed
+  private int clampCheckedCost = Integer.MAX_VALUE;
+  private boolean clampHarmless;
+
+  /** Whether the narrowing of declared domains may hide a solution of a satisfaction problem. */
+  private boolean clampedDomainsHideSolutions() {
+    return dictionary.domainsClamped()
+        && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
   }
 
   private boolean isSearchComplete() {
@@ -4480,8 +4514,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     // With all solutions requested the default search also labels the output variables first:
     // labelling every variable would report a solution again for each assignment of variables
-    // that are not output, such as the Boolean of a half-reification.
-    boolean outputVarsOnly = !options.complementarySearch() && (label != null || options.getAll());
+    // that are not output, such as the Boolean of a half-reification. This holds for the
+    // complementary search (-cs) too, whose search over all variables would otherwise print the
+    // same output solution once per assignment of the other variables.
+    boolean outputVarsOnly = options.getAll() || (!options.complementarySearch() && label != null);
     if (outputVarsOnly) {
       searchVars.outputVars();
     }
@@ -4733,7 +4769,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && boolVars.length == 0
             && setVars.length == 0
             && floatVars.length == 0)
-        || options.complementarySearch()
+        || (options.complementarySearch() && !options.getAll())
         || options.freeSearch();
   }
 
