@@ -378,16 +378,33 @@ public class IntervalDomain extends IntDomain {
   }
 
   /**
-   * Computes the event of narrowing this domain to the intervals of copy.
+   * Intersects this domain with domain shifted by shift.
    *
-   * @param copy the new intervals
-   * @param out the number of new intervals, at least one
+   * @return the intersection, possibly empty, or null if it removes nothing from this domain
+   */
+  private IntervalDomain narrowedBy(IntDomain domain, int shift) {
+    int inputSize = domain.noIntervals();
+    int[] input = boundsOf(domain);
+    int first = firstNotCovered(bounds, size, input, inputSize, shift);
+    if (first == size) {
+      return null;
+    }
+    int[] copy = new int[2 * (size + inputSize + ALLOCATION_MARGIN)];
+    System.arraycopy(bounds, 0, copy, 0, 2 * first);
+    return new IntervalDomain(
+        copy, intersectInto(bounds, first, size, input, inputSize, shift, copy, first));
+  }
+
+  /**
+   * Computes the event of narrowing this domain to the given intervals.
+   *
+   * @param narrowed the new intervals, at least one
    * @param boundEvents true for MIN_EVENT and MAX_EVENT, false for BOUND
    * @return GROUND, a bound event or ANY
    */
-  private int narrowingEvent(int[] copy, int out, boolean boundEvents) {
-    int newMin = copy[0];
-    int newMax = copy[2 * out - 1];
+  private int narrowingEvent(IntervalDomain narrowed, boolean boundEvents) {
+    int newMin = narrowed.bounds[0];
+    int newMax = narrowed.bounds[2 * narrowed.size - 1];
     if (newMin == newMax) {
       return GROUND;
     }
@@ -3078,24 +3095,16 @@ public class IntervalDomain extends IntDomain {
       return;
     }
 
-    int inputSize = domain.noIntervals();
-    int[] input = boundsOf(domain);
-
-    int first = firstNotCovered(bounds, size, input, inputSize, shift);
+    IntervalDomain result = narrowedBy(domain, shift);
     // no change
-    if (first == size) {
+    if (result == null) {
       return;
     }
-
-    int[] copy = new int[2 * (size + inputSize + ALLOCATION_MARGIN)];
-    System.arraycopy(bounds, 0, copy, 0, 2 * first);
-    int out = intersectInto(bounds, first, size, input, inputSize, shift, copy, first);
-
-    if (out == 0) {
+    if (result.size == 0) {
       throw failException;
     }
 
-    installArrayResult(copy, out, storeLevel, v, narrowingEvent(copy, out, true));
+    installArrayResult(result.bounds, result.size, storeLevel, v, narrowingEvent(result, true));
   }
 
   @Override
@@ -3525,27 +3534,19 @@ public class IntervalDomain extends IntDomain {
       return GROUND;
     }
 
-    int inputSize = domain.noIntervals();
-    int[] input = boundsOf(domain);
-
-    int first = firstNotCovered(bounds, size, input, inputSize, 0);
+    IntervalDomain result = narrowedBy(domain, 0);
     // no change
-    if (first == size) {
+    if (result == null) {
       return NONE;
     }
-
-    int[] copy = new int[2 * (size + inputSize + ALLOCATION_MARGIN)];
-    System.arraycopy(bounds, 0, copy, 0, 2 * first);
-    int out = intersectInto(bounds, first, size, input, inputSize, 0, copy, first);
-
-    if (out == 0) {
+    if (result.size == 0) {
       size = 0;
       return GROUND;
     }
 
-    int returnedEvent = narrowingEvent(copy, out, false);
-    bounds = copy;
-    size = out;
+    int returnedEvent = narrowingEvent(result, false);
+    bounds = result.bounds;
+    size = result.size;
 
     if (ASSERTS_ENABLED && checkInvariants() != null) {
       throw new IllegalStateException(String.valueOf(checkInvariants()));
