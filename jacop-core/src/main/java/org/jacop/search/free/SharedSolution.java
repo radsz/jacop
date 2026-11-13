@@ -30,7 +30,9 @@
 
 package org.jacop.search.free;
 
+import java.util.function.ObjIntConsumer;
 import org.jacop.core.FailException;
+import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 
 /**
@@ -61,4 +63,12 @@ public interface SharedSolution {
    * @throws FailException when fixing a variable fails.
    */
   void impose(Store store);
+
+  /**
+   * Gives each variable of the store with a value in the solution, and that value, to the action.
+   * It gives nothing as long as there is no solution. It is called from the thread of the search.
+   *
+   * @param action takes a variable and its value
+   */
+  default void values(ObjIntConsumer<IntVar> action) {}
 }
