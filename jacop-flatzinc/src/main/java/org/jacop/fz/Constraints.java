@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
+import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
@@ -183,6 +184,7 @@ public class Constraints implements ParserTreeConstants {
       // disequalities that are part of a detected all-different constraint, and the constraints of
       // merged copies of partial function results
       Set<SimpleNode> replaced = Set.of();
+      Set<IntVar> tabled = Set.of();
       if (PartialCopyDetector.enabled()) {
         replaced = new PartialCopyDetector(support).detect(astTree);
         dictionary.removeAliasFromSearch();
@@ -195,6 +197,23 @@ public class Constraints implements ParserTreeConstants {
         } else {
           replaced = new HashSet<>(replaced);
           replaced.addAll(alldifferent.replaced());
+        }
+      }
+
+      // small expressions flattened into several constraints become the table of their solutions
+      // over the model's variables; solutions that differ only in internal variables would merge,
+      // so not when all solutions are searched for, and --proof does not encode tables
+      if (IntensionTableDetector.enabled()
+          && options.proof() == null
+          && (!manySolutions || IntensionTableDetector.forced())) {
+        IntensionTableDetector intensions = new IntensionTableDetector(support);
+        intensions.detect(astTree, replaced);
+        if (!intensions.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(intensions.replaced());
+          dictionary.removeFromDefaultSearch(intensions.unconstrained());
+          dictionary.unusedVariables.addAll(intensions.unconstrained());
+          tabled = intensions.tabled();
         }
       }
 
@@ -275,6 +294,7 @@ public class Constraints implements ParserTreeConstants {
 
       if (!"false".equals(AlldiffChannels.rule())) {
         support.alldiffChannels = AlldiffChannels.collect(support, astTree);
+        support.alldiffChannels.addAll(tabled);
       }
 
       int n = astTree.jjtGetNumChildren();
