@@ -9069,6 +9069,72 @@ class SingleConstraintTest extends TestHelper {
   }
 
   /**
+   * Under LCG, Geost explains a bound by the obstacles whose compulsory parts cover the swept
+   * region, not by replay or the generic reason: three unit squares on a line fixed at 0, 1 and 3
+   * push a fourth one to 2, its lower bound because of the squares at 0 and 1, its upper bound
+   * because of the square at 3.
+   */
+  @Test
+  void geostExplainsItsAtoms() {
+    Store store = new Store();
+    Shape square = new Shape(0, new int[] {0, 0}, new int[] {1, 1});
+    IntVar[] x = new IntVar[4];
+    IntVar[] y = new IntVar[4];
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {x[i], y[i]},
+              new IntVar(store, "s" + i, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    Geost geost =
+        new Geost(
+            objects,
+            List.<ExternalConstraint>of(new NonOverlapping(objects, new int[] {0, 1, 2})),
+            List.of(square));
+    store.impose(geost);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int i = 0; i < 4; i++) {
+      if (i < 3) {
+        x[i].domain.in(store.level, x[i], i == 2 ? 3 : i, i == 2 ? 3 : i);
+      }
+      y[i].domain.in(store.level, y[i], 0, 0);
+    }
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[3].singleton(2)).isTrue();
+    int explained = 0;
+    EntryList reason = new EntryList();
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) != geost || trail.variable(e) != x[3]) {
+        continue;
+      }
+      reason.clear();
+      assertThat(trail.explain(e, reason)).as(trail.atomString(e)).isTrue();
+      assertThat(trail.replayed()).as(trail.atomString(e)).isFalse();
+      List<IntVar> vars = new ArrayList<>();
+      for (int k = 0; k < reason.size(); k++) {
+        vars.add(trail.variable(reason.get(k)));
+      }
+      explained++;
+      if (trail.kind(e) == AtomicTrail.GE) {
+        assertThat(vars).doesNotContain(x[2]).contains(x[0], x[1]);
+      } else {
+        assertThat(vars).doesNotContain(x[0], x[1]).contains(x[2]);
+      }
+    }
+    assertThat(explained).isPositive();
+    trail.detach();
+  }
+
+  /**
    * Under LCG, SymmetricGCC, CardinalityMatrix, Same and UsedBy explain their atoms by the cuts of
    * their flow networks, not by replay or the generic reason.
    */

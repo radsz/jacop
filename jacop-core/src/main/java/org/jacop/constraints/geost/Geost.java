@@ -60,6 +60,9 @@ import org.jacop.core.Store;
 import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Geost constraint for handling geometric placement problems.
@@ -121,7 +124,13 @@ import org.jacop.core.Var;
 @Slf4j
 @SuppressWarnings("PointlessBooleanExpression")
 public class Geost extends Constraint
-    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<Geost> {
+    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<Geost>, Explainable {
+
+  // whether LCG explains pruning and failures by covering the swept region (else by replay)
+  static final boolean EXPLAIN = !"false".equals(System.getProperty("org.jacop.geost.reasons"));
+
+  // built when LCG first asks for a reason
+  private GeostExplanation explanation;
 
   /**
    * It specifies different debugging switches to print out diverse information about execution of
@@ -1938,6 +1947,28 @@ public class Geost extends Constraint
    *
    * @return an array list consisting of different statistics collected during search.
    */
+  /**
+   * Explains an atom by forbidden boxes covering the region it removes, see {@link
+   * GeostExplanation}.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return EXPLAIN && explanation().explain(trail, entry, out);
+  }
+
+  /** Explains a failure by an object none of whose shapes fits in its origin domain. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return EXPLAIN && explanation().explainFailure(trail, out);
+  }
+
+  private GeostExplanation explanation() {
+    if (explanation == null) {
+      explanation = GeostExplanation.of(this);
+    }
+    return explanation;
+  }
+
   public List<Long> getStatistics() {
 
     List<Long> stats = new ArrayList<>();
