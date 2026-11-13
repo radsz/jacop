@@ -802,7 +802,9 @@ final class DualSimplex implements LpSolver {
       // reduced cost dual feasible; a nonbasic column's cost moves only its own reduced cost
       // in the units of the columns: the slack is a x, so a shift of its cost by delta moves the
       // costs of the columns by delta a, and delta is taken relative to the largest weight of the
-      // row (the cut rows have weights up to 2^24)
+      // row (the cut rows have weights up to 2^24). Cost shifting as in A. Koberstein, "The dual
+      // simplex method, techniques for a fast and stable implementation", PhD thesis, Paderborn,
+      // 2005
       double largest = 0;
       for (double v : a[p - n]) {
         largest = Math.max(largest, Math.abs(v));

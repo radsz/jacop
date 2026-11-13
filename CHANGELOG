@@ -4825,6 +4825,34 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+283. The linear relaxation is much tighter on models with half-reified value
+     literals (MiniZinc int_eq_imp, JaCoP ChannelImply) beside reified ones
+     of the same variable, as XCSP 2025 TankAllocation1 (the cargo of each
+     tank, with x = empty reified for the objective). The half-reified
+     literals join the variable's value clique, sum b + e <= 1, and a
+     literal that doubles a reified one gets b <= e, as CP-SAT's presolve
+     detects half-reified value encodings (-Dorg.jacop.lp.impliedValues=false
+     turns this off): root bound 16880 -> 1799 on TankAllocation1-0000
+     (optimum 1619). The dense dual simplex no longer stalls in the cut
+     rounds: slacks have no cost and no perturbation, and the rows of cuts
+     made thousands of zero-length pivots up to the round's limit; a slack's
+     cost is now shifted as it leaves the basis, scaled by the root of its
+     row's largest weight so that the integer certificate of the duals keeps
+     the LP bound (cost shifting, A. Koberstein, "The dual simplex method,
+     techniques for a fast and stable implementation", PhD thesis,
+     Paderborn, 2005; -Dorg.jacop.lp.slackShift=false). The root cut rounds
+     go on after the first five while each moves the bound by 1 % of what
+     the rounds before it did (up to 50 rounds and 1 s more,
+     -Dorg.jacop.lp.cutRoundsMax, -Dorg.jacop.lp.cutExtraSeconds), and a
+     round of Gomory cuts over the slacks that stops at its pivot limit is
+     taken again with MIR cuts only. MIR cuts (H. Marchand and L. A.
+     Wolsey, "Aggregation and mixed integer rounding to solve MIPs",
+     Operations Research 49(3), 2001) are also separated in search from
+     the rows of the root, as the capacity cuts are, with a period that
+     halves when they move the bound (-Dorg.jacop.lp.mirSearch=false; new
+     statistics lpMirSearchCuts, lpMirSeparations, lpCutLimits). Cut bound
+     on TankAllocation1-0000 1768 -> 1676.
+
 Version 4.11
 =============
 
