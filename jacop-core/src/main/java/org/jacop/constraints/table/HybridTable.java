@@ -2238,6 +2238,33 @@ public class HybridTable extends Constraint
     return true;
   }
 
+  /**
+   * Whether the restriction of a tuple on a column accepts a value. A restriction between columns
+   * accepts every value here; {@link #hasColumnRestrictions} tells whether there is one.
+   *
+   * @param t the tuple
+   * @param column the column
+   * @param v the value
+   * @return true when the restriction accepts v
+   */
+  public boolean cellAccepts(int t, int column, int v) {
+    return cells[t * arity + column].accepts(v);
+  }
+
+  /**
+   * Whether some tuple restricts a column by another column.
+   *
+   * @return true when a restriction is between columns
+   */
+  public boolean hasColumnRestrictions() {
+    for (Restriction r : cells) {
+      if (r.isBinary()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private static long key(int column, int value) {
     return ((long) column << 32) | (value & 0xFFFFFFFFL);
   }
