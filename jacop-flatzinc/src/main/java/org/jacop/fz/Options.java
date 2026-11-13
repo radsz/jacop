@@ -262,6 +262,11 @@ public class Options {
                 portfolio-bisect=<gap> (with -p 2 or more and an objective: the second thread
                 runs lcg-bisect=<gap> and proves lower bounds for the others, in place of the
                 last thread of the default layout; e.g. 0.1; default 0 = off),
+                lcg-shared-phase=0|1 (with --lcg, -p 2 or more and an objective: 1 lets activity
+                branching prefer the values of a better solution of another thread when it takes
+                up its bound; default 1),
+                portfolio-one-parse=0|1 (with -p 2 or more: 1 reads the model once and every
+                thread builds its store from that reading; 0 lets each thread read it; default 1),
                 share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),

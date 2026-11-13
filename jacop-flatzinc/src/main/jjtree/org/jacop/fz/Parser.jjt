@@ -62,6 +62,10 @@ public class Parser {
     Solve solver = new Solve(store, cc.sat);
     Options options;
 
+    // true while parseModel reads a model that build turns into constraints later, maybe in
+    // another parser: the items are only read, not translated
+    private boolean parseOnly;
+
     void setOptions(Options opt) {
 	options = opt;
     }
@@ -80,6 +84,88 @@ public class Parser {
 
     Tables getTables() {
 	return dict;
+    }
+
+    /**
+     * Reads the model without translating it: the tree it returns is what {@link #build} turns into
+     * the store of any parser, so that the threads of a portfolio read the model once. The tree is
+     * not changed by build, which only reads it, so several parsers can build from it at the same
+     * time.
+     *
+     * @return the tree of the model
+     * @throws ParseException when the model is not FlatZinc
+     */
+    SimpleNode parseModel() throws ParseException {
+	parseOnly = true;
+	try {
+	    model();
+	} finally {
+	    parseOnly = false;
+	}
+	return (SimpleNode) jjtree.rootNode();
+    }
+
+    /**
+     * Translates a model read by {@link #parseModel} into this parser's store and solves it, as
+     * {@link #model} does while it reads a model: the items in the order of the model, then the
+     * constraints and the search.
+     *
+     * @param model the tree of the model
+     * @throws ParseException as model does
+     */
+    void build(SimpleNode model) throws ParseException {
+	cc.setOptions(options);
+	cg.setOptions(options);
+	solver.startTimer();
+	for (int i = 0; i < model.jjtGetNumChildren(); i++) {
+	    Node items = model.jjtGetChild(i);
+	    if (items instanceof ASTVarDeclItems) {
+		for (int j = 0; j < items.jjtGetNumChildren(); j++) {
+		    ASTVarDeclItem item = (ASTVarDeclItem) items.jjtGetChild(j);
+		    if (item.getKind() == 0) {
+			cg.generateVariables(item, dict, store);
+		    } else if (item.getKind() == 1) {
+			cg.generateParameters(item, dict);
+		    } else {
+			cg.generateArray(item, dict, store);
+		    }
+		    checkTimeOut();
+		}
+		variablesRead();
+	    } else if (items instanceof ASTConstraintItems) {
+		for (int j = 0; j < items.jjtGetNumChildren(); j++) {
+		    cc.generateAlias((SimpleNode) items.jjtGetChild(j));
+		    checkTimeOut();
+		}
+	    }
+	}
+	try {
+	    modelRead(model);
+	} catch (RuntimeException e) {
+	    throw e;
+	} catch (ParseException e) {
+	    throw e;
+	} catch (Error e) {
+	    throw e;
+	} catch (Throwable e) {
+	    // as the parser's own actions pass it on
+	    throw (Error) e;
+	}
+    }
+
+    private void variablesRead() {
+	dict.setNumberOfAllVariables(cg.numberBooleanVariables, cg.numberSetVariables, cg.numberFloatVariables);
+	if (dict.domainsClamped()) {
+	    System.err.println(dict.clampedDomainsWarning());
+	}
+    }
+
+    private void modelRead(SimpleNode model) throws Throwable {
+	dict.removeAliasFromSearch();
+	// generate constraints
+	cc.generateAllConstraints(model);
+	// search
+	solver.solveModel(model, dict, options);
     }
 
     // JaCoP integer variables and parameters are 32-bit, so a wider literal is rejected here
@@ -259,16 +345,10 @@ void model() #model:
     constraint_items()
     model_end()
     <EOF>
-	{//jjtThis.dump("");
-	    // print debug information
-	    // if (options.debug())
-	    // 	System.out.println(dict);
-	    dict.removeAliasFromSearch();
-	    
-	    // generate constraints
-	    cc.generateAllConstraints(jjtThis);
-	    // search
-	    solver.solveModel(jjtThis, dict, options);
+	{
+	    if (!parseOnly) {
+		modelRead(jjtThis);
+	    }
 	}
 }
 
@@ -291,12 +371,10 @@ void var_decl_items() #VarDeclItems:
     ( var_decl_item() <SC> { checkTimeOut(); } )*
  	{   //jjtThis.dump("");
 	    // jjtThis.removeChildren();
-	    dict.setNumberOfAllVariables(cg.numberBooleanVariables, cg.numberSetVariables, cg.numberFloatVariables);
-	    if (dict.domainsClamped()) {
-		System.err.println(dict.clampedDomainsWarning());
+	    if (!parseOnly) {
+		variablesRead();
 	    }
 	}
-//             	{ System.out.println(dict); }
 }
  
 // constraint_items: constraint_items constraint_item ';'
@@ -353,20 +431,26 @@ void var_decl_item() #VarDeclItem:
     <VAR> non_array_ti_expr_tail() <COLON> t=ident_anns() [ <ASGN> non_array_flat_expr() ] //var_decl_item2()
  	{ 
 	    jjtThis.setKind(0); jjtThis.setId(t.image); 
-	    cg.generateVariables(jjtThis, dict, store);
+	    if (!parseOnly) {
+		cg.generateVariables(jjtThis, dict, store);
+	    }
 	    // jjtThis.removeChildren();
 	}
 
    | non_array_ti_expr_tail() <COLON> t=ident_anns() <ASGN> non_array_flat_expr() 
 	 { jjtThis.setKind(1); 
 	   jjtThis.setId(t.image);
-	   cg.generateParameters(jjtThis, dict);
+	   if (!parseOnly) {
+	       cg.generateParameters(jjtThis, dict);
+	   }
 	   // jjtThis.removeChildren();
 	 }
 
    | <ARRAY> <LBOX> t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> <RBOX> <OF> array_decl_tail(jjtThis)
 	  {   jjtThis.setIndexes(intLiteral(t1), intLiteral(t2)); 
-	      cg.generateArray(jjtThis, dict, store);
+	      if (!parseOnly) {
+		  cg.generateArray(jjtThis, dict, store);
+	      }
 	      // jjtThis.removeChildren();
 	  }
 }
@@ -428,8 +512,9 @@ void constraint_item() #Constraint:
 {
     <CONSTRAINT> constraint_elem() annotations()
         {      // jjtThis.dump("");
-	    cc.generateAlias(jjtThis);
-	    // jjtThis.removeChildren();
+	    if (!parseOnly) {
+		cc.generateAlias(jjtThis);
+	    }
         }
 }
 

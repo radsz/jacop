@@ -5180,6 +5180,45 @@ class LcgSolverTest {
    * such a reason showed as wrong (2014 stochastic-vrp under --lcg). The optimum must match a
    * search with the degrees kept by Routes.
    */
+  /**
+   * A regular constraint that became clauses propagates again after the solver releases the store,
+   * also when the solver was built above the root level, where removing a constraint only marks it
+   * as entailed. Root probing with a solver of its own before the linear relaxation lost the
+   * regular constraints of handball19 (elitserien 2014) this way, and the search then reported the
+   * objective 0 as optimal against the optimum 3.
+   */
+  @Test
+  void releasedRegularPropagatesAboveTheRoot() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    // no two 1s in a row: state 0 after a 0, state 1 after a 1
+    Fsm fsm = new Fsm();
+    FsmState zero = new FsmState();
+    FsmState one = new FsmState();
+    fsm.allStates.add(zero);
+    fsm.allStates.add(one);
+    fsm.initState = zero;
+    fsm.finalStates.add(zero);
+    fsm.finalStates.add(one);
+    zero.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+    zero.addTransition(new FsmTransition(new IntervalDomain(1, 1), one));
+    one.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+    store.impose(new Regular(fsm, x));
+    store.setLevel(store.level + 1);
+    LcgSolver solver = new LcgSolver(store);
+    assertThat(solver.probeRoot(1_000_000_000L)).isTrue();
+    assertThat(solver.graphConstraintsEncoded).isOne();
+    solver.release();
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[0].domain.in(store.level, x[0], 1, 1);
+    x[1].domain.in(store.level, x[1], 1, 1);
+    assertThat(store.consistency()).isFalse();
+  }
+
   @Test
   void routesWithoutDegreesExplainsOnlyItsOwnFailures() {
     Random rnd = new Random(20261109L);
