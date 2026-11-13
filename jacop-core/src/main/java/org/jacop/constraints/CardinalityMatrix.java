@@ -39,6 +39,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Cardinality matrix (colored_matrix of the Global Constraint Catalog): in a matrix x of n rows and
@@ -61,11 +64,17 @@ import org.jacop.core.Store;
  * <p>The computations repeat until no domain changes, since fixing a cell to one value removes the
  * others.
  *
+ * <p>For lazy clause generation an atom is explained by a cut of the network of one value, built
+ * over the domains before the atom with the atom negated (G. Downing, T. Feydy and P. J. Stuckey,
+ * "Explaining flow-based propagation", CPAIOR 2012; see {@link FlowReason}): an atom of a count is
+ * explained by the network of its value, an atom of a cell by the first network that its negation
+ * makes infeasible.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 public class CardinalityMatrix extends Constraint
-    implements SatisfiedPresent, Copyable<CardinalityMatrix> {
+    implements SatisfiedPresent, Copyable<CardinalityMatrix>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -89,6 +98,7 @@ public class CardinalityMatrix extends Constraint
   private final int[] rowMax;
   private final int[] colMin;
   private final int[] colMax;
+  private final CardinalityExplanation.Budget budget = new CardinalityExplanation.Budget();
 
   /**
    * It constructs a cardinality matrix constraint.
@@ -265,6 +275,126 @@ public class CardinalityMatrix extends Constraint
       result.append(r == 0 ? "[" : ", [");
       appendArrayToString(result, matrix[r]);
       result.append(']');
+    }
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar z = trail.variable(entry);
+    FlowReason reason = FlowReason.ofEntry(trail, entry, out);
+    for (int k = 0; k < values.length; k++) {
+      for (int r = 0; r < n; r++) {
+        if (rowCount[r][k] == z) {
+          return explain(reason, k);
+        }
+      }
+      for (int c = 0; c < m; c++) {
+        if (colCount[c][k] == z) {
+          return explain(reason, k);
+        }
+      }
+    }
+    if (!isCell(z)) {
+      return false;
+    }
+    // x != a is most likely the network of a, which its negation x = a fills
+    int first = -1;
+    if (trail.kind(entry) == AtomicTrail.NE) {
+      for (int k = 0; k < values.length; k++) {
+        first = values[k] == trail.value(entry) ? k : first;
+      }
+    }
+    if (first >= 0 && explain(reason, first)) {
+      return true;
+    }
+    for (int k = 0; k < values.length; k++) {
+      reason.clear();
+      if (k != first && explain(reason, k)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    FlowReason reason = new FlowReason(trail, trail.size(), out);
+    for (int k = 0; k < values.length; k++) {
+      reason.clear();
+      if (explain(reason, k)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
+  }
+
+  private boolean isCell(IntVar z) {
+    for (IntVar[] row : x) {
+      for (IntVar v : row) {
+        if (v == z) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  // the network of value k over the domains before the reason's position, with its atom negated
+  private boolean explain(FlowReason reason, int k) {
+    long started = System.nanoTime();
+    if (!budget.allows(started)) {
+      return false;
+    }
+    try {
+      int value = values[k];
+      int[] status = new int[n * m];
+      for (int i = 0; i < n * m; i++) {
+        IntVar v = x[i / m][i % m];
+        if (!reason.contains(v, value)) {
+          status[i] = DegreeFlow.ZERO;
+        } else {
+          boolean fixed = reason.min(v) == value && reason.max(v) == value;
+          status[i] = fixed ? DegreeFlow.ONE : DegreeFlow.FREE;
+        }
+      }
+      IntVar[] rows = new IntVar[n];
+      int[] rLo = new int[n];
+      int[] rUp = new int[n];
+      for (int r = 0; r < n; r++) {
+        rows[r] = rowCount[r][k];
+        rLo[r] = Math.max(reason.min(rows[r]), 0);
+        rUp[r] = Math.min(reason.max(rows[r]), m);
+      }
+      IntVar[] cols = new IntVar[m];
+      int[] cLo = new int[m];
+      int[] cUp = new int[m];
+      for (int c = 0; c < m; c++) {
+        cols[c] = colCount[c][k];
+        cLo[c] = Math.max(reason.min(cols[c]), 0);
+        cUp[c] = Math.min(reason.max(cols[c]), n);
+      }
+      DegreeFlow.CellReason cells =
+          new DegreeFlow.CellReason() {
+            @Override
+            public void zero(int i) {
+              reason.exclude(x[i / m][i % m], value);
+            }
+
+            @Override
+            public void one(int i) {
+              reason.needLower(x[i / m][i % m], value);
+              reason.needUpper(x[i / m][i % m], value);
+            }
+          };
+      return network.explain(n, m, status, rLo, rUp, cLo, cUp, rows, cols, reason, cells)
+          && reason.finish();
+    } finally {
+      budget.spend(started);
     }
   }
 

@@ -32,12 +32,16 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeSet;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Common part of {@link Same} and {@link UsedBy}: the values of y are the values of x (Same) or a
@@ -53,10 +57,19 @@ import org.jacop.core.ValueEnumeration;
  * constraint is domain consistent. In UsedBy a variable of x that may stay out of the flow keeps
  * all its values.
  *
+ * <p>For lazy clause generation an atom is explained by a cut of the same network built over the
+ * domains before it, with the atom negated (G. Downing, T. Feydy and P. J. Stuckey, "Explaining
+ * flow-based propagation", CPAIOR 2012; see {@link FlowReason}): the values that the variables of x
+ * inside the cut cannot take outside it, and the values inside the cut that the variables of y
+ * outside it cannot take.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractSame extends Constraint implements SatisfiedPresent {
+public abstract class AbstractSame extends Constraint implements SatisfiedPresent, Explainable {
+
+  // the most values (over the ranges of all variables) an explanation reads
+  private static final long VALUE_LIMIT = 1 << 16;
 
   /** The first list. */
   final IntVar[] x;
@@ -69,6 +82,7 @@ public abstract class AbstractSame extends Constraint implements SatisfiedPresen
 
   private final BoundedFlow flow = new BoundedFlow();
   private final Map<Integer, Integer> valueNode = new HashMap<>();
+  private final CardinalityExplanation.Budget budget = new CardinalityExplanation.Budget();
 
   AbstractSame(IntVar[] x, IntVar[] y, boolean subset) {
     checkInputForNullness(new String[] {"x", "y"}, x, y);
@@ -199,6 +213,130 @@ public abstract class AbstractSame extends Constraint implements SatisfiedPresen
       }
     }
     return true;
+  }
+
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar z = trail.variable(entry);
+    boolean in = false;
+    for (IntVar v : x) {
+      in |= v == z;
+    }
+    for (IntVar v : y) {
+      in |= v == z;
+    }
+    return in && explain(FlowReason.ofEntry(trail, entry, out));
+  }
+
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explain(new FlowReason(trail, trail.size(), out));
+  }
+
+  @Override
+  public boolean checksReasons() {
+    return true;
+  }
+
+  // the network of the domains before the reason's position, with its atom negated: a node per
+  // value in the range of some variable, arcs of flow 0 for the values a variable's range holds
+  // but its domain does not
+  private boolean explain(FlowReason reason) {
+    long started = System.nanoTime();
+    if (!budget.allows(started)) {
+      return false;
+    }
+    try {
+      int n = x.length;
+      int p = y.length;
+      IntVar[] all = new IntVar[n + p];
+      System.arraycopy(x, 0, all, 0, n);
+      System.arraycopy(y, 0, all, n, p);
+      int[] lo = new int[n + p];
+      int[] hi = new int[n + p];
+      long range = 0;
+      for (int i = 0; i < n + p; i++) {
+        lo[i] = reason.min(all[i]);
+        hi[i] = reason.max(all[i]);
+        if (lo[i] > hi[i]) {
+          return false;
+        }
+        range += (long) hi[i] - lo[i] + 1;
+        if (range > VALUE_LIMIT) {
+          return false;
+        }
+      }
+      TreeSet<Integer> seen = new TreeSet<>();
+      for (int i = 0; i < n + p; i++) {
+        IntDomain root = reason.root(all[i]);
+        for (int v = lo[i]; v <= hi[i]; v++) {
+          if (root.contains(v)) {
+            seen.add(v);
+          }
+        }
+      }
+      int[] values = seen.stream().mapToInt(Integer::intValue).toArray();
+      int firstValue = 2 + n + p;
+      flow.reset(firstValue + values.length);
+      for (int i = 0; i < n; i++) {
+        flow.addArc(0, 2 + i, subset ? 0 : 1, 1);
+        for (int k = from(values, lo[i]); k < values.length && values[k] <= hi[i]; k++) {
+          flow.addArc(2 + i, firstValue + k, 0, reason.contains(x[i], values[k]) ? 1 : 0);
+        }
+      }
+      for (int j = 0; j < p; j++) {
+        int node = 2 + n + j;
+        for (int k = from(values, lo[n + j]); k < values.length && values[k] <= hi[n + j]; k++) {
+          flow.addArc(firstValue + k, node, 0, reason.contains(y[j], values[k]) ? 1 : 0);
+        }
+        flow.addArc(node, 1, 1, 1);
+      }
+      flow.addArc(1, 0, 0, BoundedFlow.INFINITE);
+      if (flow.solve() || !FlowReason.violated(flow)) {
+        return false;
+      }
+      for (int i = 0; i < n; i++) {
+        if (!flow.inCut(2 + i)) {
+          continue;
+        }
+        // x[i] takes no value outside its range, nor the values of it outside the cut
+        reason.needLower(x[i], lo[i]);
+        reason.needUpper(x[i], hi[i]);
+        for (int k = from(values, lo[i]); k < values.length && values[k] <= hi[i]; k++) {
+          if (!flow.inCut(firstValue + k) && !reason.contains(x[i], values[k])) {
+            reason.exclude(x[i], values[k]);
+          }
+        }
+      }
+      for (int j = 0; j < p; j++) {
+        if (flow.inCut(2 + n + j)) {
+          continue;
+        }
+        // y[j] takes none of the values in the cut
+        for (int k = 0; k < values.length; k++) {
+          if (!flow.inCut(firstValue + k)) {
+            continue;
+          }
+          int v = values[k];
+          if (v < lo[n + j]) {
+            reason.needLower(y[j], (long) v + 1);
+          } else if (v > hi[n + j]) {
+            reason.needUpper(y[j], (long) v - 1);
+          } else if (!reason.contains(y[j], v)) {
+            reason.exclude(y[j], v);
+          }
+        }
+      }
+      return reason.finish();
+    } finally {
+      budget.spend(started);
+    }
+  }
+
+  // the index of the first value at least v
+  private static int from(int[] values, int v) {
+    int k = Arrays.binarySearch(values, v);
+    return k >= 0 ? k : -k - 1;
   }
 
   String toString(String name) {
