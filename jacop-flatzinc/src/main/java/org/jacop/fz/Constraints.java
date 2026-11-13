@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
@@ -70,7 +71,9 @@ import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
+import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
+import org.jacop.fz.constraints.TableScopeMerger;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -204,6 +207,16 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // the tables over the same variables become one, before the parts of each are posted
+      if (TableScopeMerger.enabled() && options.proof() == null) {
+        TableScopeMerger tables = new TableScopeMerger(support);
+        tables.detect(astTree);
+        if (!tables.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(tables.replaced());
+        }
+      }
+
       // the membership clauses replace set unions, which --proof encodes as they are
       if (SetUnionDetector.enabled() && options.proof() == null) {
         SetUnionDetector unions = new SetUnionDetector(support);
@@ -252,6 +265,11 @@ public class Constraints implements ParserTreeConstants {
       // before any constraint propagates: bounds propagation creeps round a negative cycle
       if (DifferenceBoundsDetector.enabled() && support.options.proof() == null) {
         new DifferenceBoundsDetector(support).detect(astTree);
+      }
+
+      // common sub-sums of linear constraints become variables; --proof encodes the rows as given
+      if (LinearOverlapDetector.enabled() && options.proof() == null) {
+        new LinearOverlapDetector(support).detect(astTree);
       }
 
       if (!"false".equals(AlldiffChannels.rule())) {
@@ -308,7 +326,8 @@ public class Constraints implements ParserTreeConstants {
         new RoutesDetector(support, false).detect(astTree);
       }
 
-      if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {
+      if ((DisjunctiveCliqueDetector.enabled() || DisjunctiveCliqueDetector.inferredEnabled())
+          && options.proof() == null) {
         // the unary resources it adds explain by rules a proof's unit propagation does not reach
         new DisjunctiveCliqueDetector(support).detect(astTree);
       }
@@ -366,6 +385,12 @@ public class Constraints implements ParserTreeConstants {
       // encode them
       if (ExactCoverDetector.enabled() && options.proof() == null) {
         new ExactCoverDetector(support).detect(astTree);
+      }
+
+      // flows over 0/1 matrices whose row and column sums are bounded, redundant and opt-in;
+      // --proof does not encode them
+      if (SymmetricGCCDetector.enabled() && options.proof() == null) {
+        new SymmetricGCCDetector(support).detect(astTree);
       }
 
       // tilings written as tables and an all different, redundant, by default without LCG (the

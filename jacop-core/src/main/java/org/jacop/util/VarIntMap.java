@@ -68,10 +68,17 @@ public final class VarIntMap {
   }
 
   // the store index, unlike the identity hash, costs no header access and leaves the identity
-  // hashes
-  // of other objects, and so the iteration order of identity-based collections, unchanged
-  private static int slot(Var v, int mask) {
-    int h = v.index() * 0x9E3779B9;
+  // hashes of other objects, and so the iteration order of identity-based collections, unchanged.
+  // Boolean variables are not in the store's array and all have index -1: they are hashed by their
+  // name, which is as deterministic, or they would all probe from one slot and a lookup would scan
+  // every boolean of the map.
+  static int slot(Var v, int mask) {
+    int key = v.index();
+    if (key < 0) {
+      String id = v.id();
+      key = id == null ? 0 : id.hashCode();
+    }
+    int h = key * 0x9E3779B9;
     return (h ^ (h >>> 16)) & mask;
   }
 

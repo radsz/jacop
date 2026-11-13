@@ -46,6 +46,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.function.ObjIntConsumer;
 import java.util.regex.Pattern;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -241,6 +242,7 @@ final class Portfolio {
     List<String> base = baseArguments(args);
     int threads = Math.min(options.threads(), MAX_THREADS);
     boolean satisfaction = isSatisfaction(readModel(options));
+    SimpleNode model = "0".equals(options.freeConfig("portfolio-one-parse", "1")) ? null : parse();
     workers.add(new Worker("given", arguments(base, List.of(), false)));
     String given = search(options.lcg(), options.freeSearch(), options.freeConfig, satisfaction);
     double bisect = Double.parseDouble(options.freeConfig("portfolio-bisect", "0"));
@@ -253,7 +255,7 @@ final class Portfolio {
       running = workers.size();
     }
     for (Worker w : workers) {
-      Thread t = new Thread(() -> w.run(file), "jacop-portfolio-" + w.name);
+      Thread t = new Thread(() -> w.run(file, model), "jacop-portfolio-" + w.name);
       t.setDaemon(true);
       w.thread = t;
       t.start();
@@ -529,6 +531,22 @@ final class Portfolio {
         || key.startsWith("probe");
   }
 
+  /**
+   * Reads the model once for all threads, which build their stores from the tree it gives; it is
+   * about a third of their start-up, and one tree in place of one per thread saves its memory. A
+   * model that does not parse gives null, and each thread reads it again and reports the error as
+   * one thread does.
+   */
+  private SimpleNode parse() {
+    try (FileInputStream in = new FileInputStream(options.getFileName())) {
+      Parser parser = new Parser(in);
+      parser.setOptions(options);
+      return parser.parseModel();
+    } catch (IOException | ParseException | TokenMgrError | RuntimeException _) {
+      return null;
+    }
+  }
+
   private static String readModel(Options options) {
     try {
       return Files.readString(Path.of(options.getFileName()), StandardCharsets.ISO_8859_1);
@@ -635,7 +653,7 @@ final class Portfolio {
       this.args = args;
     }
 
-    private void run(String file) {
+    private void run(String file, SimpleNode model) {
       StatusCapture capture = new StatusCapture();
       CAPTURE.set(capture);
       boolean ran = false;
@@ -644,8 +662,12 @@ final class Portfolio {
         a.add(file);
         Options opt = new Options(a.toArray(new String[0]));
         opt.portfolioWorker = this;
-        try (FileInputStream in = opt.getFile()) {
-          ran = Fz2jacop.solveInPortfolio(opt, in) == 0;
+        if (model != null) {
+          ran = Fz2jacop.solveInPortfolio(opt, model) == 0;
+        } else {
+          try (FileInputStream in = opt.getFile()) {
+            ran = Fz2jacop.solveInPortfolio(opt, in) == 0;
+          }
         }
       } catch (IOException | RuntimeException e) {
         FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
@@ -764,12 +786,24 @@ final class Portfolio {
 
       @Override
       public void impose(Store store) {
+        synchronized (lock) {
+          imports++;
+        }
+        values(
+            (x, v) -> {
+              if (!x.singleton() && x.domain.contains(v)) {
+                x.domain.inValue(store.level, x, v);
+              }
+            });
+      }
+
+      @Override
+      public void values(ObjIntConsumer<IntVar> action) {
         String[] n;
         int[] values;
         synchronized (lock) {
           n = bestNames;
           values = bestValues;
-          imports++;
         }
         if (n == null) {
           return;
@@ -782,10 +816,8 @@ final class Portfolio {
           }
         }
         for (int i = 0; i < vars.length; i++) {
-          IntVar x = vars[i];
-          int v = values[i];
-          if (x != null && v != UNKNOWN && !x.singleton() && x.domain.contains(v)) {
-            x.domain.inValue(store.level, x, v);
+          if (vars[i] != null && values[i] != UNKNOWN) {
+            action.accept(vars[i], values[i]);
           }
         }
       }

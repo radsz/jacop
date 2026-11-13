@@ -154,7 +154,7 @@ public class SmallDenseDomain extends IntDomain {
   private int findFirstOverlappingInterval(IntervalDomain input, int shift) {
     int i = 0;
     for (; i < input.size; i++) {
-      if (input.intervals[i].max() + shift >= this.minBound) {
+      if (input.bounds[2 * i + 1] + shift >= this.minBound) {
         break;
       }
     }
@@ -176,20 +176,22 @@ public class SmallDenseDomain extends IntDomain {
 
     int i = startIndex + 1;
 
-    Interval next = null;
+    int nextMin = 0;
     for (; i < input.size; i++) {
-      next = input.intervals[i];
-      if (next.max() + shift > this.max) {
+      nextMin = input.bounds[2 * i];
+      int nextMax = input.bounds[2 * i + 1];
+      if (nextMax + shift > this.max) {
         break;
       }
-      inBits = inBits << (next.max() - input.intervals[i - 1].max());
-      inBits = inBits | SEQ_ARRAY[next.max() - next.min()];
+      inBits = inBits << (nextMax - input.bounds[2 * (i - 1) + 1]);
+      inBits = inBits | SEQ_ARRAY[nextMax - nextMin];
     }
 
-    inBits = inBits << Math.max(this.max - (input.intervals[i - 1].max() + shift), 0);
+    inBits = inBits << Math.max(this.max - (input.bounds[2 * (i - 1) + 1] + shift), 0);
 
-    if (i < input.size && next != null && next.min() + shift <= this.max) {
-      inBits = inBits | SEQ_ARRAY[this.max - (next.min() + shift)];
+    // i < input.size means the loop stopped at interval i, so nextMin is its minimum
+    if (i < input.size && nextMin + shift <= this.max) {
+      inBits = inBits | SEQ_ARRAY[this.max - (nextMin + shift)];
     }
 
     inBits = inBits << (this.minBound + 63 - this.max);
@@ -225,15 +227,16 @@ public class SmallDenseDomain extends IntDomain {
     long result = 0;
     int windowMax = minBound + 63;
     for (int i = 0; i < input.size; i++) {
-      Interval interval = input.intervals[i];
-      if (interval.max() < minBound) {
+      int intervalMin = input.bounds[2 * i];
+      int intervalMax = input.bounds[2 * i + 1];
+      if (intervalMax < minBound) {
         continue;
       }
-      if (interval.min() > windowMax) {
+      if (intervalMin > windowMax) {
         break;
       }
-      int low = Math.max(interval.min(), minBound) - minBound;
-      int high = Math.min(interval.max(), windowMax) - minBound;
+      int low = Math.max(intervalMin, minBound) - minBound;
+      int high = Math.min(intervalMax, windowMax) - minBound;
       result |= SEQ_ARRAY[high - low] << (63 - high);
     }
     return result;
@@ -653,7 +656,7 @@ public class SmallDenseDomain extends IntDomain {
       }
 
       for (int i = input.size - 1; i > 0; i--) {
-        if (isIntersecting(input.intervals[i - 1].max() + 1, input.intervals[i].min() - 1)) {
+        if (isIntersecting(input.bounds[2 * (i - 1) + 1] + 1, input.bounds[2 * i] - 1)) {
           if (ASSERTS_ENABLED && super.eq(domain)) {
             throw new IllegalStateException("Assertion failed");
           }
@@ -990,8 +993,9 @@ public class SmallDenseDomain extends IntDomain {
         throw Store.failException;
       }
 
-      Interval first = input.intervals[i];
-      int length = Math.min(first.max(), this.max) - Math.max(this.minBound, first.min());
+      int firstMin = input.bounds[2 * i];
+      int firstMax = input.bounds[2 * i + 1];
+      int length = Math.min(firstMax, this.max) - Math.max(this.minBound, firstMin);
 
       if (length == this.max - this.minBound) {
         return;
@@ -1157,9 +1161,9 @@ public class SmallDenseDomain extends IntDomain {
     if (i == input.size) {
       throw Store.failException;
     }
-    Interval first = input.intervals[i];
-    int length =
-        Math.min(first.max() + shift, this.max) - Math.max(this.minBound, first.min() + shift);
+    int firstMin = input.bounds[2 * i];
+    int firstMax = input.bounds[2 * i + 1];
+    int length = Math.min(firstMax + shift, this.max) - Math.max(this.minBound, firstMin + shift);
     if (length == this.max - this.minBound) {
       return;
     }
@@ -1226,9 +1230,9 @@ public class SmallDenseDomain extends IntDomain {
       return emptyDomain;
     }
 
-    Interval first = input.intervals[i];
-    int length =
-        Math.min(first.max() + shift, this.max) - Math.max(this.minBound, first.min() + shift);
+    int firstMin = input.bounds[2 * i];
+    int firstMax = input.bounds[2 * i + 1];
+    int length = Math.min(firstMax + shift, this.max) - Math.max(this.minBound, firstMin + shift);
 
     if (length == this.max - this.minBound) {
       return this.cloneLight();
@@ -2263,7 +2267,8 @@ public class SmallDenseDomain extends IntDomain {
       shift += zeros;
       rest = rest << zeros;
       int ones = Long.numberOfLeadingZeros(~rest);
-      result.intervals[i] = new Interval(minBound + shift, minBound + shift + ones - 1);
+      result.bounds[2 * i] = minBound + shift;
+      result.bounds[2 * i + 1] = minBound + shift + ones - 1;
       shift += ones;
       // a shift by 64 is a shift by 0 in Java, the last interval may end at the last bit
       rest = ones == 64 ? 0 : rest << ones;

@@ -4810,6 +4810,50 @@ class LcgSolverTest {
   }
 
   /**
+   * When the probe of the core-guided phase stops without a solution of its own and branch and
+   * bound after it finds one, the rest of the phase is skipped: it would stop the same way after a
+   * third of its time (fast-food, gt-sort and city-position spent minutes on it before branch and
+   * bound proved the optimum).
+   */
+  @Test
+  void corePhaseSkippedWhenItsProbeFoundNoSolution() {
+    // skip = true runs with the default
+    for (boolean skip : new boolean[] {true, false}) {
+      // the pigeons of corePhaseWithoutItsOwnSolutionStopsAfterAThird: the first core is too hard
+      Store store = new Store();
+      int n = 12;
+      IntVar[] p = new IntVar[n];
+      BooleanVar[] c = new BooleanVar[n];
+      for (int i = 0; i < n; i++) {
+        p[i] = new IntVar(store, "p" + i, 0, n - 1);
+        c[i] = new BooleanVar(store, "c" + i);
+        store.impose(new Reified(new XeqC(p[i], 0), c[i]));
+        for (int j = 0; j < i; j++) {
+          store.impose(new Or(new XneqY(p[j], p[i]), new XeqC(p[i], 0)));
+        }
+      }
+      IntVar obj = new IntVar(store, "obj", 0, n);
+      store.impose(new SumBool(c, "==", obj));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(p, null, new IndomainMin<>()), true);
+      solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+      solver.setCoreDelay(0.05, 1_000_000, 0.05);
+      if (!skip) {
+        solver.setCoreProbeSkip(false);
+      }
+      // shares as work, not as time, so that the probe's share does not depend on the machine
+      solver.setTimeLimit(200);
+      solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
+      solver.minimize(obj);
+      assertThat(solver.coreSearch().stratumSolutions).isZero();
+      assertThat(solver.probeSkips).isEqualTo(skip ? 1 : 0);
+      // with the skip, the probe is the only core-guided run that stops without a solution
+      assertThat(solver.coreSearch().noSolutionStops).isEqualTo(skip ? 1 : 2);
+      assertThat(solver.value(obj)).isEqualTo(1);
+    }
+  }
+
+  /**
    * Under fixed search the core-guided phase runs only when branch and bound under the annotation
    * found no solution in its share of the time (setCoresWithoutSolutionOnly): with one, branch and
    * bound keeps the time and proves the optimum without a core.
@@ -5136,6 +5180,45 @@ class LcgSolverTest {
    * such a reason showed as wrong (2014 stochastic-vrp under --lcg). The optimum must match a
    * search with the degrees kept by Routes.
    */
+  /**
+   * A regular constraint that became clauses propagates again after the solver releases the store,
+   * also when the solver was built above the root level, where removing a constraint only marks it
+   * as entailed. Root probing with a solver of its own before the linear relaxation lost the
+   * regular constraints of handball19 (elitserien 2014) this way, and the search then reported the
+   * objective 0 as optimal against the optimum 3.
+   */
+  @Test
+  void releasedRegularPropagatesAboveTheRoot() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    // no two 1s in a row: state 0 after a 0, state 1 after a 1
+    Fsm fsm = new Fsm();
+    FsmState zero = new FsmState();
+    FsmState one = new FsmState();
+    fsm.allStates.add(zero);
+    fsm.allStates.add(one);
+    fsm.initState = zero;
+    fsm.finalStates.add(zero);
+    fsm.finalStates.add(one);
+    zero.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+    zero.addTransition(new FsmTransition(new IntervalDomain(1, 1), one));
+    one.addTransition(new FsmTransition(new IntervalDomain(0, 0), zero));
+    store.impose(new Regular(fsm, x));
+    store.setLevel(store.level + 1);
+    LcgSolver solver = new LcgSolver(store);
+    assertThat(solver.probeRoot(1_000_000_000L)).isTrue();
+    assertThat(solver.graphConstraintsEncoded).isOne();
+    solver.release();
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    x[0].domain.in(store.level, x[0], 1, 1);
+    x[1].domain.in(store.level, x[1], 1, 1);
+    assertThat(store.consistency()).isFalse();
+  }
+
   @Test
   void routesWithoutDegreesExplainsOnlyItsOwnFailures() {
     Random rnd = new Random(20261109L);
