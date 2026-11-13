@@ -4253,6 +4253,7 @@ public final class LcgSolver implements ExternalPropagator {
         };
     boolean propagatorLeft = false;
     objectiveTerms = objectiveTerms();
+    permutationOnly = permutationOnlyVariables();
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
@@ -4423,7 +4424,53 @@ public final class LcgSolver implements ExternalPropagator {
    * searches trees of about the same size.
    */
   private boolean permutationCandidate(Constraint c) {
-    if (!ALLDIFF_CLAUSES || c.getClass() != Alldistinct.class) {
+    if (!ALLDIFF_CLAUSES || !isPermutation(c)) {
+      return false;
+    }
+    for (Var v : c.arguments()) {
+      if (!v.singleton() && !permutationOnly.contains(v)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** The variables whose only constraints are permutations, see {@link #permutationCandidate}. */
+  private java.util.Set<Var> permutationOnly = java.util.Set.of();
+
+  /**
+   * The unfixed variables of permutations that are in no other constraint of the store (the linear
+   * relaxation aside, which only relaxes the others).
+   */
+  private java.util.Set<Var> permutationOnlyVariables() {
+    if (!ALLDIFF_CLAUSES) {
+      return java.util.Set.of();
+    }
+    java.util.Set<Var> in = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    java.util.Set<Var> other = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof LinearRelaxation) {
+        continue;
+      }
+      boolean permutation = isPermutation(c);
+      for (Var v : c.arguments()) {
+        if (!v.singleton()) {
+          (permutation ? in : other).add(v);
+        }
+      }
+      if (PERMUTATION_DEBUG && !permutation) {
+        System.out.println("% permutation rule: other constraint " + c.getClass().getSimpleName());
+      }
+    }
+    in.removeAll(other);
+    return in;
+  }
+
+  static final boolean PERMUTATION_DEBUG = Boolean.getBoolean("jacop.lcg.alldiffClauses.debug");
+
+  /** Whether a constraint is a domain consistent all different over as many values as variables. */
+  private boolean isPermutation(Constraint c) {
+    if (c.getClass() != Alldistinct.class) {
       return false;
     }
     java.util.Set<Var> list = c.arguments();
