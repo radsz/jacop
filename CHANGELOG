@@ -4605,7 +4605,7 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
-268. With the decomposition bound on (-Dorg.jacop.fz.decomposition=true)
+269. With the decomposition bound on (-Dorg.jacop.fz.decomposition=true)
    free search (-f) starts from the columns of its master and searches
    its blocks as a neighbourhood of large neighbourhood search. At the
    end of column generation the restricted master (one column per block,
