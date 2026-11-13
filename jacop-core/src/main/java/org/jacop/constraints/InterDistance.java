@@ -71,6 +71,10 @@ public class InterDistance extends Constraint
 
   private static final long INF = Long.MAX_VALUE / 4;
 
+  // the explanations below are used with -Djacop.lcg.interDistanceReasons=true; off by default,
+  // since free search on train-scheduling trains12 was 1.7x slower with them in three runs
+  private static volatile boolean reasons = Boolean.getBoolean("jacop.lcg.interDistanceReasons");
+
   /** The start times. */
   final IntVar[] x;
 
@@ -636,6 +640,17 @@ public class InterDistance extends Constraint
   }
 
   /**
+   * Sets whether InterDistance explains its atoms for lazy clause generation with its own reasons
+   * (off unless -Djacop.lcg.interDistanceReasons=true); without, it gets the replayed or generic
+   * reason.
+   *
+   * @param on true to use its own reasons
+   */
+  public static void setExplanations(boolean on) {
+    reasons = on;
+  }
+
+  /**
    * Explains a removed value v of x[j] by another task whose start interval lies within v - p +
    * 1..v + p - 1, so that it is closer than p to v wherever it starts (its compulsory part); and a
    * bound by the tasks that must run before (or after) x[j], as the detectable precedences, edge
@@ -644,7 +659,7 @@ public class InterDistance extends Constraint
    */
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    if (p == 0 || repeated) {
+    if (!reasons || p == 0 || repeated) {
       return false;
     }
     if (trail.kind(entry) != AtomicTrail.NE) {
@@ -675,7 +690,7 @@ public class InterDistance extends Constraint
    */
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    if (p == 0 || repeated) {
+    if (!reasons || p == 0 || repeated) {
       return false;
     }
     int now = trail.size();

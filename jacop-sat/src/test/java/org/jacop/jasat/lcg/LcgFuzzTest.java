@@ -215,6 +215,8 @@ import org.jacop.search.SplitSelect;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -241,6 +243,19 @@ class LcgFuzzTest {
 
   // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
   private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
+
+  // the explanations that are off by default are checked too
+  @BeforeAll
+  static void explainAll() {
+    CircuitCost.setAssignmentReasons(true);
+    InterDistance.setExplanations(true);
+  }
+
+  @AfterAll
+  static void explainDefaults() {
+    CircuitCost.setAssignmentReasons(false);
+    InterDistance.setExplanations(false);
+  }
 
   private static int[] recentCases(String cases) {
     if (cases == null || cases.isBlank()) {

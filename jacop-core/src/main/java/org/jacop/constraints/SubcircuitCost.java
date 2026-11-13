@@ -322,18 +322,19 @@ public class SubcircuitCost extends Constraint
 
   /**
    * Explains a bound of the cost or a removed successor by the reduced costs of the minimum or
-   * maximum assignment over the domains just before the atom (see {@link AssignmentReason}).
-   * Pruning by the Steiner cycle bound has no reason of its own.
+   * maximum assignment over the domains just before the atom (see {@link AssignmentReason}), with
+   * -Djacop.lcg.assignmentReasons=true. Pruning by the Steiner cycle bound has no reason of its
+   * own.
    */
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return assignmentReason().explain(trail, entry, out);
+    return AssignmentReason.enabled && assignmentReason().explain(trail, entry, out);
   }
 
   /** Explains a failure by an assignment bound beyond a bound of the cost. */
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return assignmentReason().explainFailure(trail, out);
+    return AssignmentReason.enabled && assignmentReason().explainFailure(trail, out);
   }
 
   @Override

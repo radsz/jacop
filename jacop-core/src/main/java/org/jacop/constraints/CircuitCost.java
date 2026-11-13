@@ -339,19 +339,30 @@ public class CircuitCost extends Constraint
   }
 
   /**
+   * Sets whether CircuitCost and SubcircuitCost explain their atoms for lazy clause generation by
+   * reduced costs (off unless -Djacop.lcg.assignmentReasons=true); without, they get the replayed
+   * or generic reason.
+   *
+   * @param on true to use the reduced cost reasons
+   */
+  public static void setAssignmentReasons(boolean on) {
+    AssignmentReason.enabled = on;
+  }
+
+  /**
    * Explains a bound of the cost or a removed successor by the reduced costs of the minimum or
-   * maximum assignment over the domains just before the atom (see {@link AssignmentReason}).
-   * Pruning by the 1-tree has no reason of its own.
+   * maximum assignment over the domains just before the atom (see {@link AssignmentReason}), with
+   * -Djacop.lcg.assignmentReasons=true. Pruning by the 1-tree has no reason of its own.
    */
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return assignmentReason().explain(trail, entry, out);
+    return AssignmentReason.enabled && assignmentReason().explain(trail, entry, out);
   }
 
   /** Explains a failure by an assignment bound beyond a bound of the cost. */
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return assignmentReason().explainFailure(trail, out);
+    return AssignmentReason.enabled && assignmentReason().explainFailure(trail, out);
   }
 
   @Override

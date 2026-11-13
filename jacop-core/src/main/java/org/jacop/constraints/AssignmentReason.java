@@ -55,6 +55,14 @@ import org.jacop.lcg.EntryList;
  */
 final class AssignmentReason {
 
+  /**
+   * Whether CircuitCost and SubcircuitCost explain their atoms with this class
+   * (-Djacop.lcg.assignmentReasons=true). Off by default: the reasons are smaller and help free
+   * search on some instances (mario), but their cost slowed the search of the model's annotation by
+   * up to 1.5x (mario, vrplc) and free search on vrplc.
+   */
+  static volatile boolean enabled = Boolean.getBoolean("jacop.lcg.assignmentReasons");
+
   // far above any assignment cost of int arc costs, far below an overflow
   private static final long BIG = 1L << 50;
 

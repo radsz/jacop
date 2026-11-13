@@ -4795,6 +4795,47 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+281. Lazy clause generation explains the atoms of nine recent globals
+     with their own reasons instead of the replayed or generic one:
+     - MultiInterDistance, Spread, Deviation and StockingCost by the box of
+       bounds in which the pruned value has no solution, relaxed bound by
+       bound to the root while it stays infeasible (deletion filter, J. W.
+       Chinneck and E. W. Dravnieks, "Locating minimal infeasible
+       constraint sets in linear programs", ORSA J. on Computing 3(2),
+       1991); StockingCost checks the box with its greedy bound (V. R.
+       Houndji, P. Schaus, L. Wolsey and Y. Deville, "The StockingCost
+       constraint", CP 2014), and an upper bound at the due date needs no
+       reason;
+     - KnapsackDP by the reasons of Knapsack (KnapsackExplanation);
+     - IncreasingNValue by the neighbouring variable's bound for the order
+       (N. Beldiceanu, F. Hermenier, X. Lorca and T. Petit, "The
+       increasing nvalue constraint", CPAIOR 2010) and an empty reason for
+       the count's trivial bounds;
+     - InterDistance by the compulsory part of another task for a removed
+       value and by the detectable precedences, edge finding and not-first
+       rules of a unary resource for bounds (UnaryExplanation, after P.
+       Vilím, "Filtering algorithms for the unary resource constraint",
+       2008, and A. Schutt, "Improving scheduling by learning", 2011);
+     - CircuitCost and SubcircuitCost by the reduced costs of the minimum
+       (maximum) assignment over the domains before the atom: only the
+       removed arcs with a negative reduced cost are cited (F. Focacci, A.
+       Lodi and M. Milano, "Cost-based domain filtering", CP 1999). The
+       Hungarian method is warm-started from the duals of the previous
+       explanation and only the rows whose variables changed between the
+       two trail positions are rebuilt.
+     The explanations of InterDistance (-Djacop.lcg.interDistanceReasons=
+     true) and of CircuitCost and SubcircuitCost (-Djacop.lcg.
+     assignmentReasons=true) are off by default. Of the 29 Challenge
+     instances where these globals fire (mario, vrplc, train-scheduling,
+     rect-euler), at 240 s with both on: free search is 1.11x faster in
+     geomean over the 22 instances both prove (mario up to 1.6x), but
+     vrplc9_5_10_s3 and s2 free search and trains12 are slower, and the
+     model's search is 0.76x (mario, vrplc: same nodes, the cost of the
+     explanations). The other constraints never fire on these instances.
+     LcgFuzzTest has the property lcg.fuzz.recent to post these globals in
+     half of the constraints (1.2 million runs with the explanation
+     checker, with and without holes: clean).
+
 Version 4.11
 =============
 
