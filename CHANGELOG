@@ -4766,6 +4766,13 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
+278. The FlatZinc front end with -a and -cs (complementary search) labels
+   the output variables first and then completes the other variables
+   once, as without -cs. Before, -cs labelled every variable under -a and
+   printed an output solution again for each assignment of the variables
+   that are not output (for example 388 solutions for the 102 of the
+   mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
+
 Version 4.11
 =============
 

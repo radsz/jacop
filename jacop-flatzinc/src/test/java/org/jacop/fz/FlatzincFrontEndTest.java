@@ -50,6 +50,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -1369,6 +1370,32 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("----------"), out.lines().limit(5).toList().toString());
     assertTrue(!out.contains("=========="), "search reported complete after a time-out");
     assertTrue(out.contains("=====TIME-OUT====="), "no time-out reported");
+  }
+
+  @Test
+  void complementarySearchPrintsEachOutputSolutionOnce() throws IOException {
+    // -cs labelled every variable, also under -a, so the output solutions with x < y, where the
+    // half-reified b may take both values, were printed twice (9 solutions instead of 6).
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        var bool: b;
+        constraint int_ne(x, y);
+        constraint int_lt_imp(x, y, b);
+        solve satisfy;
+        """;
+    for (String[] options : new String[][] {{"-a"}, {"-a", "-cs"}, {"-a", "-cs", "--lcg", "off"}}) {
+      String out = run(model, options)[0];
+      List<String> solutions =
+          Arrays.stream(out.split("----------\n"))
+              .map(String::strip)
+              .filter(s -> s.startsWith("x ="))
+              .toList();
+      assertEquals(6, solutions.size(), Arrays.toString(options) + "\n" + out);
+      assertEquals(6, new HashSet<>(solutions).size(), Arrays.toString(options) + "\n" + out);
+      assertTrue(out.contains("=========="), Arrays.toString(options) + "\n" + out);
+    }
   }
 
   @Test
