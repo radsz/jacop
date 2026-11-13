@@ -4605,8 +4605,8 @@ Version 5.0 (unreleased)
    root probing lost the regular constraints of handball19 (elitserien
    2014) and reported the objective 0 as optimal against the optimum 3.
 
-269. Linear overlap factoring at FlatZinc posting, off by default
-     (-Dorg.jacop.fz.linearOverlap=true), after the presolve rule
+269. Linear overlap factoring at FlatZinc posting, on by default
+     (-Dorg.jacop.fz.linearOverlap=false turns it off), after the presolve rule
      FindBigHorizontalLinearOverlap of OR-Tools CP-SAT (CpModelPresolver,
      9.15; the rule has no separate publication). When two or more
      int_lin_eq, int_lin_le or int_lin_ne constraints contain the same
@@ -4625,6 +4625,8 @@ Version 5.0 (unreleased)
      instead of 39 (kitchen 2026 and javarouting trip_7_2 proved) with
      0.959x; vaccine v857 2.2x, harmony canon 1.5x and blocks-world 16-4-83
      1.5x faster, network_50 and roster-shifts-bool slower (other trees).
+     It does not fire on the other 188 wide-set instances, which are
+     unchanged.
 
 270. The CDCL solver reads the clock every 64 rounds of the LCG
    propagator's fixpoint instead of every 1,024. Rounds of a fixpoint

@@ -427,7 +427,7 @@ unless stated otherwise):
   sub-sum that several linear constraints share (times a factor each)
   becomes a new variable, defined by one equality, and the constraints
   use it in place of their terms; the linear relaxation substitutes it
-  back; default false, off under --proof.
+  back; default true, off under --proof.
 - org.jacop.fz.linearOverlap.minSize: the fewest terms of a factored
   sub-sum; default 4.
 - org.jacop.fz.linearOverlap.reified: reified and half-reified linear
