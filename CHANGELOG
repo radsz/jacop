@@ -4771,7 +4771,44 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
-279. Lazy clause generation explains the pruning of SymmetricGCC,
+279. JaSAT (CdclSolver) clause headers take three ints instead of four: the
+   saved position of the search for a new watch moves into the free high
+   16 bits of the flags word, so a clause of three literals takes 6 ints
+   instead of 7. Same search (the simplification schedule still
+   counts the old header size); pure SAT runs (CdclMain) are about 2 %
+   faster.
+
+280. A domain declared beyond JaCoP's integer range, which the FlatZinc
+   front end narrows to the range, no longer blocks the claim of
+   optimality or unsatisfiability when the model shows the narrowing
+   harmless. The model's linear rows (int_lin_eq, int_lin_le, int_eq,
+   int_le, int_lt) are read as declared and their bounds propagated in
+   64-bit arithmetic, with the objective bounded by the best solution
+   (feasibility-based bound tightening: M. W. P. Savelsbergh, Preprocessing
+   and probing techniques for mixed integer programming problems, ORSA
+   Journal on Computing 6(4), 1994). A narrowed variable is harmless when
+   these bounds keep it in range, when it occurs in no constraint, or when
+   it occurs only in int_lin_le rows that the end of the range satisfies
+   (variable locks: T. Achterberg, Constraint Integer Programming, PhD
+   thesis, TU Berlin, 2007). 2021 connect 0086_02 (329 domains
+   0..1000000000) is now proved optimal in 15 s; before, the search
+   completed at the optimum and printed no ==========.
+
+281. LCG free search (-f) uses target phases in its activity runs before the
+   first solution: a decision on an integer variable takes the value that
+   variable had in the deepest assignment (longest SAT trail at a conflict)
+   reached since the last restart, as CaDiCaL does for Boolean variables
+   (A. Biere, M. Fleury, "Chasing Target Phases", Pragmatics of SAT 2020).
+   -Djacop.lcg.targetPhase=true|false turns it on or off in every mode, and
+   -Djacop.jasat.lubyUnit sets the Luby restart unit (default 512). On the
+   99 of 240 wide-set instances where it fires, at 600 s with -f, the same
+   75 are solved, 10 instances are better and 5 worse, 5 families better
+   and 1 worse, and the time geomean on instances solved by both is 0.972
+   (blocks-world 16-4-83 416 -> 113 s, community-detection Sampson 558 ->
+   191 s, workforce-alloc 202 131 -> 42 s; pure satisfaction losses on
+   monomatch n5 3.8 -> 10.3 s and oocsp racks 030 10 -> 16 s).
+
+282. Lazy clause generation explains the pruning of SymmetricGCC,
      CardinalityMatrix, Same and UsedBy (entry 274) with their own reasons
      instead of the generic one. The network is rebuilt from the domains
      before the atom with the atom negated; it has no feasible flow, and
@@ -4788,14 +4825,32 @@ Version 5.0 (unreleased)
      from 35 to 7 literals under -f, nodes/s +5.8 % under -f; at 600 s
      the three vrp proofs of -f take 125-208 s instead of 147-500 s.
 
-280. The FlatZinc front end with -a and -cs (complementary search) labels
+283. The FlatZinc front end with -a and -cs (complementary search) labels
    the output variables first and then completes the other variables
    once, as without -cs. Before, -cs labelled every variable under -a and
    printed an output solution again for each assignment of the variables
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
-281. Lazy clause generation explains the atoms of nine recent globals
+284. Search splitting for -p (opt-in, --free-config portfolio-split=N):
+   N LCG threads of the portfolio divide one search tree in place of the
+   last N settings, while the other threads keep searching the whole tree.
+   A part of the tree is a cube of atoms [x >= v], [x = v] over FlatZinc
+   names, which a thread solves under assumptions in branch and bound; a
+   busy thread splits its cube on its first decision below the assumptions
+   when another waits, keeps the decision and gives away its negation
+   (CP-SAT's shared tree workers; C. Chu, C. Schulte and P. J. Stuckey,
+   CP 2009; Cube and Conquer, M. Heule et al., HVC 2011; E. Ehlers and
+   P. J. Stuckey, CPAIOR 2016). Learnt clauses hold without the
+   assumptions, so clause and bound sharing go on. On wide-quick at 240 s
+   with -f -p 4, two split threads beside two portfolio threads were
+   better in 4 families and worse in none in both of two rounds, with
+   optimality proofs about 5 % faster (geometric mean 0.94 and 0.95);
+   four split threads lost proofs that need core-guided or lower-bound
+   search (spot5 28) and were 17 % slower. ExternalPropagator gets
+   notifyTopDecision, called before each decision at the assumption level.
+
+285. Lazy clause generation explains the atoms of nine recent globals
      with their own reasons instead of the replayed or generic one:
      - MultiInterDistance, Spread, Deviation and StockingCost by the box of
        bounds in which the pruned value has no solution, relaxed bound by

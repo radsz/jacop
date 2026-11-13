@@ -7597,6 +7597,58 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void hybridTablesOverTheSameTuplesShareThemWithoutChangingTheSolutions() {
+    // A chain of tables over the same tuples, each with its own domains, posted once with tables
+    // of their own and once with tables that share the tuples and bit-sets of the first one,
+    // including tuples with a restriction between columns that each table expands at imposition.
+    Random random = new Random(7);
+    for (int trial = 0; trial < 60; trial++) {
+      int n = 2 + random.nextInt(3);
+      int span = 2 + random.nextInt(5);
+      List<Restriction[]> rows = new ArrayList<>();
+      int count = 1 + random.nextInt(12);
+      for (int k = 0; k < count; k++) {
+        if (random.nextInt(4) == 0) {
+          rows.add(
+              new Restriction[] {
+                Restriction.le(random.nextInt(span)),
+                Restriction.column(Restriction.Relation.GE, 0, random.nextInt(3) - 1)
+              });
+        } else {
+          rows.add(
+              new Restriction[] {
+                Restriction.eq(random.nextInt(span)), Restriction.eq(random.nextInt(span))
+              });
+        }
+      }
+      Restriction[][] tuples = rows.toArray(new Restriction[0][]);
+      int[][] domains = new int[n + 1][];
+      for (int i = 0; i <= n; i++) {
+        domains[i] = random.ints(span, 0, span).distinct().toArray();
+      }
+      long[] solutions = new long[2];
+      for (int shared = 0; shared < 2; shared++) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n + 1];
+        for (int i = 0; i <= n; i++) {
+          x[i] = new IntVar(store, "x" + i);
+          for (int v : domains[i]) {
+            x[i].addDom(v, v);
+          }
+        }
+        HybridTable first = new HybridTable(new IntVar[] {x[0], x[1]}, tuples);
+        store.impose(first);
+        for (int i = 1; i < n; i++) {
+          IntVar[] pair = {x[i], x[i + 1]};
+          store.impose(shared == 1 ? new HybridTable(pair, first) : new HybridTable(pair, tuples));
+        }
+        solutions[shared] = noOfAllSolutionsNoRecord(store, x);
+      }
+      assertThat(solutions[1]).as("trial " + trial).isEqualTo(solutions[0]);
+    }
+  }
+
+  @Test
   void hybridTableRepeatsTheFirstFilteringAfterBacktrackingAboveIt() {
     // The first consistency at level 1 filtered every column and was undone by the backtrack. The
     // next call, with only x0 changed, took the old filtering as done: x0 = 1 kept no support and
