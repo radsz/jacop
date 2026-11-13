@@ -2580,18 +2580,34 @@ class FlatzincFrontEndTest {
     model.append(
         "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
     model.append("solve minimize obj;\n");
+    // without linear overlap factoring, which would make the two long sums one
     String out =
-        run(
-            model.toString(),
-            "--lcg",
-            "-f",
-            "--search-statistics",
-            "--free-config",
-            "lcg-branching=activity")[0];
+        withoutLinearOverlap(
+            () ->
+                run(
+                    model.toString(),
+                    "--lcg",
+                    "-f",
+                    "--search-statistics",
+                    "--free-config",
+                    "lcg-branching=activity")[0]);
     assertTrue(out.strip().contains("=========="), out);
     String late = out.substring(out.indexOf("lcgLateVariables=") + 17);
     // obj, the objective, and the block sums of the two long constraints
     assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 10, out);
+  }
+
+  private interface Run {
+    String get() throws IOException;
+  }
+
+  private static String withoutLinearOverlap(Run run) throws IOException {
+    System.setProperty("org.jacop.fz.linearOverlap", "false");
+    try {
+      return run.get();
+    } finally {
+      System.clearProperty("org.jacop.fz.linearOverlap");
+    }
   }
 
   @Test
@@ -2616,7 +2632,8 @@ class FlatzincFrontEndTest {
     model.append(
         "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
     model.append("solve minimize obj;\n");
-    String out = run(model.toString(), "--lcg", "-f", "-debug")[0];
+    // without linear overlap factoring, which would make the two long sums one
+    String out = withoutLinearOverlap(() -> run(model.toString(), "--lcg", "-f", "-debug")[0]);
     // two sums of block sums, the inequality's and the objective's equation
     long sumsOfBlocks =
         out.lines().filter(l -> l.matches("% LinearInt\\d+ : LinearInt\\( \\[ _.*")).count();
