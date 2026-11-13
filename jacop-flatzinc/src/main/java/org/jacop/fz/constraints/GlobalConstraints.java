@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -51,6 +52,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
@@ -84,6 +86,7 @@ import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Same;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
@@ -97,13 +100,16 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.WeightedSubcircuits;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulCeqZ;
@@ -783,6 +789,82 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.parameterListForAlldistincts.add(v);
     support.alldifferentLists.add(v);
+  }
+
+  void gen_jacop_same(SimpleNode node, boolean usedBy) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    if (support.options.proof() == null) {
+      support.pose(usedBy ? new UsedBy(x, y) : new Same(x, y));
+      return;
+    }
+    // --proof: the counts of every value, whose encodings the proof has
+    if (!usedBy && x.length != y.length) {
+      throw Store.failException;
+    }
+    TreeSet<Integer> values = new java.util.TreeSet<>();
+    for (IntVar v : y) {
+      for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        values.add(e.nextElement());
+      }
+    }
+    for (int value : values) {
+      IntVar cx = new IntVar(store, 0, x.length);
+      IntVar cy = new IntVar(store, 0, y.length);
+      support.pose(new Count(x, cx, value));
+      support.pose(new Count(y, cy, value));
+      support.pose(usedBy ? new XgteqY(cx, cy) : new XeqY(cx, cy));
+    }
+    if (!usedBy) {
+      for (IntVar v : x) {
+        v.domain.in(store.level, v, setOf(values));
+      }
+    }
+  }
+
+  private static IntDomain setOf(Set<Integer> values) {
+    IntervalDomain d = new IntervalDomain();
+    for (int v : values) {
+      d.unionAdapt(v, v);
+    }
+    return d;
+  }
+
+  // the row and column sums are posted by the predicate; this adds the flow that links them
+  void gen_jacop_symmetric_gcc(SimpleNode node) {
+    IntVar[] flat = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int columns = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    IntVar[] rowCount = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] colCount = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    if (flat.length > 0 && support.options.proof() == null) {
+      support.pose(new SymmetricGCC(rows(flat, columns), rowCount, colCount));
+    }
+  }
+
+  // the cardinalities of the rows and columns are posted by the predicate; this adds the flows
+  void gen_jacop_cardinality_matrix(SimpleNode node) {
+    IntVar[] flat = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int columns = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] rowCount = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    IntVar[] colCount = support.getVarArray((SimpleNode) node.jjtGetChild(4));
+    if (flat.length > 0 && values.length > 0 && support.options.proof() == null) {
+      support.pose(
+          new CardinalityMatrix(
+              rows(flat, columns),
+              values,
+              rows(rowCount, values.length),
+              rows(colCount, values.length)));
+    }
+  }
+
+  // a row-major array as rows of the given length
+  private static IntVar[][] rows(IntVar[] flat, int columns) {
+    IntVar[][] result = new IntVar[columns == 0 ? 0 : flat.length / columns][];
+    for (int r = 0; r < result.length; r++) {
+      result[r] = Arrays.copyOfRange(flat, r * columns, r * columns + columns);
+    }
+    return result;
   }
 
   // the capacity and the cost sum are posted by the predicate; this only adds the cost reasoning

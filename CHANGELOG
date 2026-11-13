@@ -4625,6 +4625,147 @@ Version 5.0 (unreleased)
    2980, proved in 18 s instead of 34-180 s (median of 3 at 240 s).
    Results: osolpro benchmarks/decomposition-primal.
 
+270. Automatic dominance breaking at presolve (off by default,
+   -Dorg.jacop.fz.dominance=true), after J. H. M. Lee and A. Z. Zhong,
+   Automatic Generation of Dominance Breaking Nogoods for a Class of
+   Constraint Optimization Problems, IJCAI 2020, 1192-1200, and Exploiting
+   Functional Constraints in Automatic Dominance Breaking for Constraint
+   Optimization, CP 2022, LIPIcs 235, 31:1-31:17 (JAIR 78, 2023).
+   org.jacop.presolve.DominanceNogoods looks, for every value of one
+   variable and every pair of values of two variables, for another
+   assignment of the same variables that keeps every constraint they
+   take part in satisfied and strictly improves the objective; such
+   assignments are nogoods, posted as removed values, clauses on 0/1
+   variables or tables of the allowed pairs. Linear rows, monotone
+   constraints, implications, reified linear rows and clauses are checked
+   by deltas; variables defined by linear equalities and by functional
+   constraints (b <-> x = c, element) follow the move. Only strict
+   improvements are used, so the nogoods keep every optimal solution
+   that symmetry breaking keeps. Budgets: 1 s, 200,000 nogoods, domains of
+   at most 16 values. It fires on 7 of the 187 optimisation instances of
+   the wide set and on 18 of 582 Challenge instances (trucking,
+   shortest_path, spot5, pattern-set-mining, table-layout, maximum-dag,
+   aircraft-disassembly, unit-commitment). On those 39 instances at 600 s
+   (default search) it solves trucking_13 in 3 s instead of not at all,
+   halves the nodes of trucking, and finds better solutions on trucking_10
+   and six spot5 instances, with no worse result; the presolve takes at
+   most 0.9 s.
+
+271. Linear overlap factoring at FlatZinc posting, off by default
+     (-Dorg.jacop.fz.linearOverlap=true), after the presolve rule
+     FindBigHorizontalLinearOverlap of OR-Tools CP-SAT (CpModelPresolver,
+     9.15; the rule has no separate publication). When two or more
+     int_lin_eq, int_lin_le or int_lin_ne constraints contain the same
+     sub-sum sum(b_i * x_i) of at least 4 terms (.minSize), each times an
+     integer factor k, the sub-sum gets a new variable z = sum(b_i * x_i)
+     and every such row uses k * z instead, so the sum is propagated once
+     and its bounds are shared. The largest proportional overlap of each
+     row with another row is taken greedily (.maxOcc, .work bound the
+     search). z is a split sum, so the linear relaxation (--lp) and LCG
+     use the original rows. Reified and half-reified rows are left alone
+     (.reified=true includes them): there the shared sum is propagated at
+     every node while the reified rows are passive, which made
+     pattern-set-mining and bnn-planner 3-4x slower. Off under --proof.
+     It fires on 52 of the 240 wide-set instances. On those, at 600 s,
+     model search solves 38 as before with init+solve time 0.945x, -f 41
+     instead of 39 (kitchen 2026 and javarouting trip_7_2 proved) with
+     0.959x; vaccine v857 2.2x, harmony canon 1.5x and blocks-world 16-4-83
+     1.5x faster, network_50 and roster-shifts-bool slower (other trees).
+
+272. The CDCL solver reads the clock every 64 rounds of the LCG
+   propagator's fixpoint instead of every 1,024. Rounds of a fixpoint
+   with creeping bounds can be slow: on vrp-submission toy_D and
+   D_3v_25l_w_reload (2021, arrival times up to 460,588) the core-guided
+   probe ran minutes past its share and kept the whole -f run at 600 s
+   without a solution, ending past -t. Now toy_D proves its optimum 107
+   in 38 s and D_3v_25l_w_reload proves 146 (best known 207) under -f
+   at 600 s; wide-quick at 240 s is unchanged in both modes.
+
+273. SequenceMdd compiles its diagram without allocating: the arcs of the
+     current domains are read once per call into bit masks, each diagram
+     node keeps a mask of the last nodes of its paths, and the nodes of the
+     next layer are found by a Zobrist hash of their visited sets in an
+     open-addressing table instead of a HashMap of copied masks. The time
+     bounds are read once per call. The diagram, the pruning and the search
+     trees are unchanged; at 600 s over the 21 tsptw, stochastic-vrp and
+     tdtsp instances it proves, the time to proof is 0.87x with the search
+     annotation and 0.84x with free search (geometric means), tsptw
+     n20w180.004 293.6 s -> 152.7 s and 188.9 s -> 86.7 s. Above 32 nodes
+     (-Djacop.sequenceMdd.replayNodes) lazy clause generation takes the
+     generic reason instead of replaying the constraint, whose replays cost
+     83 % of its time on 60-node circuits. The FlatZinc limit of 32 nodes
+     stays: on vrplc (40 to 60 nodes) the diagram leaves the search tree as
+     large as before, so it cannot pay for itself there.
+
+274. Three cardinality constraints of the Global Constraint Catalog, all
+     propagated with a feasible flow (lower and upper arc bounds) whose
+     residual strongly connected components give the values that some
+     solution uses:
+     - SymmetricGCC(x, rowCount, colCount): a 0/1 matrix x whose row r
+       has rowCount[r] ones and whose column c has colCount[c] ones
+       (symmetric_gcc / symmetric_cardinality of the catalog). Domain
+       consistent on the cells and bounds consistent on the counts, after
+       I. Kocjan and P. Kreuger, "Filtering methods for symmetric
+       cardinality constraint", CPAIOR 2004, LNCS 3011, 200-208, with
+       the flow model of J.-C. Régin, "Generalized arc consistency for
+       global cardinality constraint", AAAI 1996.
+     - CardinalityMatrix(x, values, rowCount, colCount): value values[k]
+       occurs rowCount[r][k] times in row r and colCount[c][k] times in
+       column c of x (colored_matrix of the catalog), with one such flow
+       per value linking rows and columns, after J.-C. Régin and C. Gomes,
+       "The cardinality matrix constraint", CP 2004, LNCS 3258, 572-587.
+     - Same(x, y) and UsedBy(x, y): y is a permutation of x, or a
+       sub-multiset of it, domain consistent with the flow network of N.
+       Beldiceanu, I. Katriel and S. Thiel, "Filtering algorithms for the
+       Same constraint", CPAIOR 2004, LNCS 3011, 65-79 (and the UsedBy
+       algorithm of their report MPI-I-2004-1-001).
+     The MiniZinc library of fzn-jacop defines same, used_by,
+     symmetric_gcc and cardinality_matrix with them (the row and column
+     sums and cardinalities are posted as well). With
+     -Dorg.jacop.fz.symmetricGcc=true the FlatZinc front end also finds
+     0/1 matrices whose rows and columns are bounded sums (as MiniZinc
+     flattens them) and posts a redundant SymmetricGCC; it is off by
+     default: on the 76 Challenge instances (vrp, solbat, amaze, kitchen,
+     roster-shifts-bool, ma-path-finding) where it fires, at 240 s, it
+     never changed the sequence of solutions of the model search and
+     only slowed it down (vrp, amaze).
+
+275. Memory of the FlatZinc front end and of constraint scopes, found by an
+   object-level heap census of the largest models: the parse tree is
+   released before the search (the parser held it for the whole run, 29 %
+   of the heap of nside EASY_200_50; a portfolio building from one shared
+   tree keeps it), a name is one String for all its uses (950 -> 90 MB on
+   ma-path-finding g32_p20_a10), a declaration drops its annotations and
+   array literal once its variable is made, and a scope of up to 8
+   variables is an array instead of a LinkedHashSet (830 MB on
+   ma-path-finding g32_p20_a10). Live heap at the peak: rcpsp_max d
+   902 -> 502 MB, rcpsp-wet-diverse j60 1304 -> 853 MB, nside 584 -> 431 MB;
+   ma-path-finding g32_p20_a10 under -f now reaches the search within 4 GB
+   and rcpsp-wet-diverse j90_48_4 is read and posted.
+
+276. IntervalDomain keeps its intervals in one int array (min and max of
+     interval i at 2i and 2i+1) instead of an array of Interval objects,
+     so walking a domain reads one array and the domain operations
+     allocate no Interval. The public field intervals is removed: use
+     domain.leftElement(i) and domain.rightElement(i), or getInterval(i)
+     where an Interval object is wanted. AffineDomain now overrides
+     leftElement and rightElement. Search is unchanged (same nodes and
+     solutions in fixed search); 60 s x 3 runs of 12 instances, base and
+     candidate side by side: +1.9 % nodes/s on average (cgt +4.6 %,
+     monomatch +4.1 %, liner +3.8 %), base against itself +0.1 %.
+
+277. Diffn (and Diff2, Nooverlap) does less repeated work with the same
+   pruning. The profile sweep of a rectangle runs per dimension, only when
+   that rectangle or a compulsory part in that dimension changed since its
+   last sweep; the events of compulsory parts that did not change are kept
+   between builds; and the area check skips the dual feasible functions
+   for a window whose rectangle sizes passed them the last time. On 81
+   instances posting Diffn (carpet-cutting, cargo, accap, code-generator,
+   stripboard, pillars-and-planks, rectangle-packing, perfect_square,
+   workforce-alloc, ...) at 240 s with the default search the solutions
+   are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
+   up to 1.48x nodes).
+
 Version 4.11
 =============
 
