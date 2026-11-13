@@ -386,8 +386,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] phase;
   // target phases of activity branching (CaDiCaL's target phases over integer values): the values
   // of the variables fixed at the conflict with the longest SAT trail since the last restart, taken
-  // until the first solution gives its values; -Djacop.lcg.targetPhase=true
-  static final boolean TARGET_PHASE = Boolean.getBoolean("jacop.lcg.targetPhase");
+  // until the first solution gives its values. On under free search (-f) by default;
+  // -Djacop.lcg.targetPhase=true|false turns it on or off in every mode.
+  static final String TARGET_PHASE = System.getProperty("jacop.lcg.targetPhase");
   private int[] targetValue;
   private boolean[] targetSet;
   private int targetTrail;
@@ -4659,7 +4660,9 @@ public final class LcgSolver implements ExternalPropagator {
       // a conflict led here: its last decision was on decisionVar
       backtrackConflicts = sat.conflicts;
       conflictVar = decisionVar;
-      if (TARGET_PHASE && phase == null && activityBranching) {
+      if (phase == null
+          && activityBranching
+          && (TARGET_PHASE == null ? freeSearch : Boolean.parseBoolean(TARGET_PHASE))) {
         saveTarget();
       }
     }
