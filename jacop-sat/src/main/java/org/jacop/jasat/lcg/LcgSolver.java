@@ -6136,6 +6136,8 @@ public final class LcgSolver implements ExternalPropagator {
   // the most share of the time spent on those probes
   static final double VALUE_IMPACT_TIME =
       Double.parseDouble(System.getProperty("jacop.lcg.valueImpactTime", "0.25"));
+  // -Djacop.lcg.valueImpactFirst=true: also before the first solution, ahead of the target phase
+  static final boolean IMPACT_BEFORE_SOLUTION = Boolean.getBoolean("jacop.lcg.valueImpactFirst");
   private long impactStart = -1;
   private long impactNanos;
 
@@ -6150,7 +6152,11 @@ public final class LcgSolver implements ExternalPropagator {
    * removes it again, which also removes what the trail recorded.
    */
   private int impactValue(int i, int preferred) {
-    if (VALUE_IMPACT <= 0 || !freeSearch || objective < 0 || i == objective) {
+    if (VALUE_IMPACT <= 0
+        || !freeSearch
+        || objective < 0
+        || i == objective
+        || (best == null && !IMPACT_BEFORE_SOLUTION)) {
       return Integer.MIN_VALUE;
     }
     IntVar x = vars[i];
