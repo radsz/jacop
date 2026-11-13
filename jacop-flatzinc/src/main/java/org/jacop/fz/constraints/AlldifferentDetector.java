@@ -72,10 +72,12 @@ import org.jacop.fz.SimpleNode;
  * disjoint domains give {@code p != q} (shifted by the difference of the index bases), and an
  * equality {@code a*x - a*y = c} with c != 0 gives {@code x != y}. The positions of a sequence in a
  * permutation, as in Langford's problem written with element constraints, are all different only by
- * such implied disequalities. A clique of the model's own disequalities may use them; a clique of
- * implied disequalities alone is posted as well, unless the system property {@code
- * org.jacop.fz.alldifferentImplied} is {@code sum} (only recorded for the permutation sums of
- * {@link LinearSystemDetector}) or {@code false} (implied disequalities not collected).
+ * such implied disequalities. A clique of the model's own disequalities may use them. A clique of
+ * implied disequalities alone is by default only recorded for the permutation sums of {@link
+ * LinearSystemDetector}, not posted: the Alldiff over the element positions of LangfordBin made the
+ * solvable instances much slower (079 2 s to 63 s, 240 solved in 15 s to none in 240 s). The system
+ * property {@code org.jacop.fz.alldifferentImplied} set to {@code post} posts it as well, and
+ * {@code off} does not collect implied disequalities.
  *
  * <p>Each clique is recorded with its offsets in {@link Support#allDifferentOffsets}, where {@link
  * LinearSystemDetector} finds the cliques that are permutations of the union of their domains.
@@ -94,9 +96,9 @@ public class AlldifferentDetector implements ParserTreeConstants {
   /** The most pairs of elements compared over all arrays. */
   static final long MAX_ELEMENT_PAIRS = 2_000_000L;
 
-  // off, sum (cliques of implied disequalities only recorded) or post (posted too, the default)
-  private static final String IMPLIED =
-      System.getProperty("org.jacop.fz.alldifferentImplied", "post").toLowerCase();
+  // off, sum (cliques of implied disequalities only recorded, the default) or post (posted too)
+  private final String implied =
+      System.getProperty("org.jacop.fz.alldifferentImplied", "sum").toLowerCase();
 
   /** The fewest variables a clique must have to get an all-different constraint. */
   static final int MIN_CLIQUE_SIZE = 5;
@@ -228,7 +230,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
         }
       }
       case "int_lin_eq" -> {
-        if (!"off".equals(IMPLIED)) {
+        if (!"off".equals(implied)) {
           linearEquality(node);
         }
       }
@@ -255,7 +257,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
   }
 
   private void element(ASTConstElem node, int base) {
-    if ("off".equals(IMPLIED)) {
+    if ("off".equals(implied)) {
       return;
     }
     IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
@@ -419,7 +421,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
     if (!stated.containsAll(edges)) {
       impliedCliques++;
     }
-    if ("sum".equals(IMPLIED) && edges.stream().noneMatch(stated::contains)) {
+    if ("sum".equals(implied) && edges.stream().noneMatch(stated::contains)) {
       // a clique of implied disequalities only: recorded for the permutation sums, not posted
       covered.addAll(edges);
       record(clique.toArray(new int[0][]));

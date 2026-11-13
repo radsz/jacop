@@ -139,12 +139,20 @@ class PermutationSumFlatzincTest {
     int fired = 0;
     for (int trial = 0; trial < 150; trial++) {
       String fzn = randomModel(random);
-      String on = run(fzn, "-a", "-debug");
-      if (on.contains("alldifferent on")) {
-        fired++;
-      }
       Set<String> off = withProperties(() -> solutions(run(fzn, "-a")));
-      assertEquals(off, solutions(on), "trial " + trial + "\n" + fzn);
+      // the default: implied cliques only give permutation sums
+      assertEquals(off, solutions(run(fzn, "-a")), "trial " + trial + "\n" + fzn);
+      // the implied cliques posted as all-different constraints too
+      System.setProperty(IMPLIED, "post");
+      try {
+        String post = run(fzn, "-a", "-debug");
+        if (post.contains("alldifferent on")) {
+          fired++;
+        }
+        assertEquals(off, solutions(post), "post, trial " + trial + "\n" + fzn);
+      } finally {
+        System.clearProperty(IMPLIED);
+      }
     }
     assertTrue(fired > 20, "fired " + fired);
   }
