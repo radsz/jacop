@@ -4766,6 +4766,24 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
+278. Search splitting for -p (opt-in, --free-config portfolio-split=N):
+   N LCG threads of the portfolio divide one search tree in place of the
+   last N settings, while the other threads keep searching the whole tree.
+   A part of the tree is a cube of atoms [x >= v], [x = v] over FlatZinc
+   names, which a thread solves under assumptions in branch and bound; a
+   busy thread splits its cube on its first decision below the assumptions
+   when another waits, keeps the decision and gives away its negation
+   (CP-SAT's shared tree workers; C. Chu, C. Schulte and P. J. Stuckey,
+   CP 2009; Cube and Conquer, M. Heule et al., HVC 2011; E. Ehlers and
+   P. J. Stuckey, CPAIOR 2016). Learnt clauses hold without the
+   assumptions, so clause and bound sharing go on. On wide-quick at 240 s
+   with -f -p 4, two split threads beside two portfolio threads were
+   better in 4 families and worse in none in both of two rounds, with
+   optimality proofs about 5 % faster (geometric mean 0.94 and 0.95);
+   four split threads lost proofs that need core-guided or lower-bound
+   search (spot5 28) and were 17 % slower. ExternalPropagator gets
+   notifyTopDecision, called before each decision at the assumption level.
+
 Version 4.11
 =============
 
