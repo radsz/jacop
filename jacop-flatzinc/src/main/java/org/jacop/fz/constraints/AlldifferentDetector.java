@@ -67,6 +67,19 @@ import org.jacop.fz.SimpleNode;
  * disequalities on it that are not posted, so the static degrees that variable selections such as
  * most_constrained read are those of the model.
  *
+ * <p>Disequalities implied by other constraints are edges too, though they are not replaced: two
+ * elements {@code x[p] = y} and {@code x[q] = z} over the same array whose results y and z have
+ * disjoint domains give {@code p != q} (shifted by the difference of the index bases), and an
+ * equality {@code a*x - a*y = c} with c != 0 gives {@code x != y}. The positions of a sequence in a
+ * permutation, as in Langford's problem written with element constraints, are all different only by
+ * such implied disequalities. A clique of the model's own disequalities may use them; a clique of
+ * implied disequalities alone is posted as well, unless the system property {@code
+ * org.jacop.fz.alldifferentImplied} is {@code sum} (only recorded for the permutation sums of
+ * {@link LinearSystemDetector}) or {@code false} (implied disequalities not collected).
+ *
+ * <p>Each clique is recorded with its offsets in {@link Support#allDifferentOffsets}, where {@link
+ * LinearSystemDetector} finds the cliques that are permutations of the union of their domains.
+ *
  * <p>Setting the system property {@code org.jacop.fz.alldifferent} to false turns the detection
  * off.
  *
@@ -74,6 +87,16 @@ import org.jacop.fz.SimpleNode;
  * @version 5.0
  */
 public class AlldifferentDetector implements ParserTreeConstants {
+
+  /** The most elements over one array whose index pairs are compared. */
+  static final int MAX_ELEMENT_GROUP = 1000;
+
+  /** The most pairs of elements compared over all arrays. */
+  static final long MAX_ELEMENT_PAIRS = 2_000_000L;
+
+  // off, sum (cliques of implied disequalities only recorded) or post (posted too, the default)
+  private static final String IMPLIED =
+      System.getProperty("org.jacop.fz.alldifferentImplied", "post").toLowerCase();
 
   /** The fewest variables a clique must have to get an all-different constraint. */
   static final int MIN_CLIQUE_SIZE = 5;
@@ -101,6 +124,20 @@ public class AlldifferentDetector implements ParserTreeConstants {
   private final Map<Edge, List<SimpleNode>> sources = new HashMap<>();
 
   private final Set<SimpleNode> replaced = Collections.newSetFromMap(new IdentityHashMap<>());
+
+  // the pairs x - y != d stated by a disequality of the model, not only implied
+  private final Set<Edge> stated = new HashSet<>();
+
+  // the elements over each array: {index, base, result}, by the array's variables
+  private final Map<List<IntVar>, List<ElementUse>> elements = new LinkedHashMap<>();
+
+  private record ElementUse(IntVar index, int base, IntVar result) {}
+
+  /** Statistics: the implied disequalities collected. */
+  int impliedEdges;
+
+  /** Statistics: the cliques that use an implied disequality. */
+  int impliedCliques;
 
   private record Edge(int i, int j, int d) {
     static Edge of(int i, int j, int d) {
@@ -137,12 +174,21 @@ public class AlldifferentDetector implements ParserTreeConstants {
   public void detect(SimpleNode astTree) {
     long start = System.nanoTime();
     support.forEachConstraint(astTree, this::collect);
+    elementEdges();
     if (nodes.size() < MIN_CLIQUE_SIZE) {
       return;
     }
     List<int[][]> cliques = cliques();
     for (int[][] clique : cliques) {
       post(clique);
+    }
+    if (impliedEdges > 0 && (support.options.debug() || support.options.searchStatistics())) {
+      FzConsole.println(
+          "%%%mzn-stat: alldifferentImpliedEdges="
+              + impliedEdges
+              + "\n%%%mzn-stat: alldifferentImpliedCliques="
+              + impliedCliques
+              + "\n%%%mzn-stat-end");
     }
     if (support.options.debug()) {
       FzConsole.println(
@@ -153,6 +199,8 @@ public class AlldifferentDetector implements ParserTreeConstants {
               + " cliques, "
               + replaced.size()
               + " disequalities replaced, "
+              + impliedEdges
+              + " implied, "
               + (System.nanoTime() - start) / 1_000_000
               + " ms");
     }
@@ -179,20 +227,87 @@ public class AlldifferentDetector implements ParserTreeConstants {
           edge(x[0], x[1], c / a[0], node);
         }
       }
+      case "int_lin_eq" -> {
+        if (!"off".equals(IMPLIED)) {
+          linearEquality(node);
+        }
+      }
+      case "array_var_int_element", "array_var_bool_element" -> element(node, 1);
+      case "jacop_array_var_int_element_nonshifted", "jacop_array_var_bool_element_nonshifted" ->
+          element(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
       default -> {
         // not a disequality
       }
     }
   }
 
-  // x - y != d
+  // a * x0 - a * x1 = c with c != 0: x0 != x1
+  private void linearEquality(ASTConstElem node) {
+    int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+    if (a == null || a.length != 2 || a[0] != -a[1] || a[0] == 0) {
+      return;
+    }
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    if (x != null && x.length == 2 && c != 0) {
+      edge(x[0], x[1], 0, null);
+    }
+  }
+
+  private void element(ASTConstElem node, int base) {
+    if ("off".equals(IMPLIED)) {
+      return;
+    }
+    IntVar index = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    IntVar[] array = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    IntVar result = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+    if (index.singleton() || array == null || array.length < 2) {
+      return;
+    }
+    elements
+        .computeIfAbsent(Arrays.asList(array), k -> new ArrayList<>())
+        .add(new ElementUse(index, base, result));
+  }
+
+  // x[p] = y and x[q] = z with disjoint domains of y and z: p - base_p != q - base_q
+  private void elementEdges() {
+    long pairs = 0;
+    for (List<ElementUse> uses : elements.values()) {
+      if (uses.size() < 2 || uses.size() > MAX_ELEMENT_GROUP) {
+        continue;
+      }
+      pairs += (long) uses.size() * (uses.size() - 1) / 2;
+      if (pairs > MAX_ELEMENT_PAIRS) {
+        break;
+      }
+      for (int u = 0; u < uses.size(); u++) {
+        ElementUse e = uses.get(u);
+        for (int w = u + 1; w < uses.size(); w++) {
+          ElementUse f = uses.get(w);
+          if (!e.result().dom().isIntersecting(f.result().dom())) {
+            // the base difference fits an int: both bases index the same array
+            edge(e.index(), f.index(), e.base() - f.base(), null);
+          }
+        }
+      }
+    }
+    elements.clear();
+  }
+
+  // x - y != d, stated by source or, when source is null, implied by other constraints
   private void edge(IntVar x, IntVar y, int d, SimpleNode source) {
     if (x == y || x.singleton() || y.singleton()) {
       return;
     }
     int i = node(x);
     int j = node(y);
-    sources.computeIfAbsent(Edge.of(i, j, d), k -> new ArrayList<>()).add(source);
+    Edge edge = Edge.of(i, j, d);
+    if (source != null) {
+      sources.computeIfAbsent(edge, k -> new ArrayList<>()).add(source);
+      stated.add(edge);
+    } else {
+      impliedEdges++;
+    }
     adjacency.get(i).computeIfAbsent(j, k -> new TreeSet<>()).add(d);
     adjacency.get(j).computeIfAbsent(i, k -> new TreeSet<>()).add(-d);
   }
@@ -301,6 +416,15 @@ public class AlldifferentDetector implements ParserTreeConstants {
     if (2 * fresh < edges.size()) {
       return false;
     }
+    if (!stated.containsAll(edges)) {
+      impliedCliques++;
+    }
+    if ("sum".equals(IMPLIED) && edges.stream().noneMatch(stated::contains)) {
+      // a clique of implied disequalities only: recorded for the permutation sums, not posted
+      covered.addAll(edges);
+      record(clique.toArray(new int[0][]));
+      return false;
+    }
     covered.addAll(edges);
     if (!redundant) {
       for (Edge e : edges) {
@@ -343,5 +467,17 @@ public class AlldifferentDetector implements ParserTreeConstants {
     }
     support.delayedConstraints.add(new Alldiff(x).setDegreeWeight(0));
     support.detectedAlldifferentLists.add(x);
+    record(clique);
+  }
+
+  // the clique for the permutation sums: x[k] + o[k] are all different
+  private void record(int[][] clique) {
+    IntVar[] x = new IntVar[clique.length];
+    int[] o = new int[clique.length];
+    for (int k = 0; k < clique.length; k++) {
+      x[k] = nodes.get(clique[k][0]);
+      o[k] = clique[k][1];
+    }
+    support.allDifferentOffsets.add(new Support.Shifted(x, o));
   }
 }
