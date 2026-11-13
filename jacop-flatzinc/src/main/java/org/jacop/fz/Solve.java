@@ -2554,6 +2554,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       LcgSolver solver = lcg;
       lcg.onBound(
           lower -> {
+            lcgProgress = System.nanoTime();
             if (reportBound(lower)) {
               solver.stop();
             }
@@ -2831,6 +2832,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // set when LCG free search was stopped for making too few conflicts
   private volatile boolean lcgSlow;
+  // when LCG last printed a better solution or raised the bound (System.nanoTime)
+  private volatile long lcgProgress;
+  // the checks of LCG's speed that found it slow but let it go on, because it made progress
+  private volatile int lcgSlowDeferred;
   // the LCG solver free search took over from, for the statistics
   private LcgSolver slowLcg;
   private long lcgStart;
@@ -2868,10 +2873,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private Thread slowLcgCheck(Var costVar) {
     double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "50"));
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
+    double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
     lcgStart = System.nanoTime();
+    lcgProgress = lcgStart;
+    long stallNanos = (long) (stall * options.getTimeOut() * 1_000_000L);
     long wait = (long) (at * options.getRemainingTimeOut());
     LcgSolver solver = lcg;
     if (wait <= 0) {
@@ -2893,9 +2901,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     return;
                   }
                   if (solutionFound) {
-                    lcgSlow = true;
-                    solver.stop();
-                    return;
+                    if (System.nanoTime() - lcgProgress < stallNanos) {
+                      // few conflicts, but LCG still finds better solutions or raises the bound:
+                      // on ma-path-finding a dive assigns thousands of literals for one conflict,
+                      // and free search without learning on the same 650,000 variables is slower
+                      lcgSlowDeferred++;
+                    } else {
+                      lcgSlow = true;
+                      solver.stop();
+                      return;
+                    }
                   }
                   Thread.sleep(500);
                 }
@@ -3108,6 +3123,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcgSlowDeferred > 0) {
+          // LCG made too few conflicts but kept finding better solutions or bounds
+          IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
+        }
       }
     }
   }
@@ -4463,6 +4482,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
+          IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
         }
       }
       return;
@@ -5430,6 +5450,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     StringBuffer printBuffer = new StringBuffer();
     numberSolutions++;
     solutionFound = true;
+    lcgProgress = System.nanoTime();
     if (costVariable instanceof IntVar cost && cost.singleton()) {
       if (lcg != null) {
         lcgLastCost = cost.value();
