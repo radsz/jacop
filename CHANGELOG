@@ -4833,7 +4833,10 @@ Version 5.0 (unreleased)
    int_max/int_min (m >= x) and of array_var_int_element (z = a[j] when
    the index is j), so cycles through element successors and variable
    travel times, as in routing and cyclic scheduling, fail at once
-   instead of creeping by bounds propagation. On the MiniZinc Challenge
+   instead of creeping by bounds propagation. As before, the constraint
+   is posted only when a conditional arc lies on a cycle: offset arcs
+   alone (costas-array, road-cons, celar) cost more than they gained.
+   On the MiniZinc Challenge
    2023 yumi-static instance p_4_GG_GG_yumi_grid_setup_7_7, -f proves the
    optimum 457 in 104 s instead of 232 s (CP-SAT 19 s). This is the
    precedence reasoning with variable offsets of CP-SAT (Perron, Didier

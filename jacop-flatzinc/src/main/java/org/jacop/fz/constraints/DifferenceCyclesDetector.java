@@ -110,7 +110,7 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
   public void detect(SimpleNode astTree) {
     long start = System.nanoTime();
     support.forEachConstraint(astTree, this::collect);
-    if (bs.stream().allMatch(b -> b == null) && os.stream().allMatch(o -> o == null)) {
+    if (bs.stream().allMatch(b -> b == null)) {
       return;
     }
     int m = xs.size();
@@ -143,7 +143,10 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
               + (System.nanoTime() - start) / 1_000_000
               + " ms");
     }
-    if (cycles.conditionalArcs() == 0 && cycles.offsetArcs() == 0) {
+    // offset arcs alone are mostly the bounds reasoning that propagation does anyway: on cycles
+    // of unit rows without a literal (costas-array, road-cons, city-position, celar) the constraint
+    // cost more than it gained, so it is posted only with conditional arcs
+    if (cycles.conditionalArcs() == 0) {
       return;
     }
     // redundant, so degree-based variable selections see the degrees of the model
