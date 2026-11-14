@@ -50,6 +50,7 @@ import java.util.function.ToIntFunction;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -297,6 +298,18 @@ final class OpbEncoder implements PbModel {
       String lit = literal(r.b, true);
       return implied(lit, r.c, false)
           && (!(r instanceof Reified) || implied(negate(lit), r.c, true));
+    }
+    if (c instanceof ImpliesNot r) {
+      if (!isBoolean(r.b)) {
+        return false;
+      }
+      String lit = literal(r.b, false);
+      LinearForm inner = form(r.c);
+      if (inner != null) {
+        guarded(lit, inner);
+        return true;
+      }
+      return implied(lit, r.c, false);
     }
     if (c instanceof Not n && n.getClass() == Not.class) {
       return implied("1", n.negatedConstraint(), true);
