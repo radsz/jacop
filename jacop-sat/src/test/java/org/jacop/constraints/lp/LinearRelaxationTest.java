@@ -591,8 +591,9 @@ class LinearRelaxationTest {
             public boolean executeAfterSolution(
                 Search<IntVar> s, SelectChoicePoint<IntVar> select) {
               for (LinearForm f : model.rows) {
-                // rows with != are left out of the relaxation
-                if (f.relation() != LinearForm.NE && !holds(f)) {
+                // rows with != and rows over fewer than two variables are left out of the
+                // relaxation
+                if (f.relation() != LinearForm.NE && nonzeroColumns(f) >= 2 && !holds(f)) {
                   broken.add(f.toString());
                 }
               }
@@ -606,6 +607,41 @@ class LinearRelaxationTest {
       }
       assertThat(broken).as("seed %d", run).isEmpty();
     }
+  }
+
+  /**
+   * Rows with fewer than two nonzero weights are left out of the relaxation, as its constructors
+   * document: the model's own constraints enforce them. Seed rotation drew an objective row whose
+   * weights were all 0, so the row was {@code -obj = 0} and the relaxation alone accepted obj = -5.
+   */
+  @Test
+  void leavesOutRowsWithFewerThanTwoNonzeroWeights() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -2, 2);
+    IntVar y = new IntVar(store, "y", -2, 2);
+    IntVar obj = new IntVar(store, "obj", -5, 5);
+    LinearForm unary =
+        new LinearForm(new IntVar[] {x, y, obj}, new long[] {0, 0, -1}, 0, LinearForm.EQ);
+    LinearForm binary = new LinearForm(new IntVar[] {x, y}, new long[] {1, 1}, 1, LinearForm.GE);
+    assertThat(nonzeroColumns(unary)).isEqualTo(1);
+    store.impose(new LinearRelaxation(List.of(unary, binary), null, false));
+    store.setLevel(1);
+    store.impose(new XeqC(obj, -5));
+    assertThat(store.consistency()).as("the unary row is left out").isTrue();
+    store.removeLevel(1);
+    store.setLevel(1);
+    store.impose(new XeqC(x, -2));
+    store.impose(new XeqC(y, -2));
+    assertThat(store.consistency()).as("the binary row is kept").isFalse();
+  }
+
+  private static int nonzeroColumns(LinearForm f) {
+    Map<IntVar, Long> merged = new HashMap<>();
+    for (int k = 0; k < f.vars().length; k++) {
+      merged.merge(f.vars()[k], f.weights()[k], Long::sum);
+    }
+    merged.values().removeIf(w -> w == 0);
+    return merged.size();
   }
 
   private static boolean holds(LinearForm f) {
