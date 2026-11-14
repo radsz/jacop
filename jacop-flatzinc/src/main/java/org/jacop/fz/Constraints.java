@@ -40,6 +40,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -197,6 +198,8 @@ public class Constraints implements ParserTreeConstants {
       // merged copies of partial function results
       Set<SimpleNode> replaced = Set.of();
       Set<IntVar> tabled = Set.of();
+      // a search variable that became an alias is searched as its Boolean
+      dictionary.searchAliasTargets(binaryAliases);
       if (PartialCopyDetector.enabled()) {
         replaced = new PartialCopyDetector(support).detect(astTree);
         dictionary.removeAliasFromSearch();
@@ -662,9 +665,48 @@ public class Constraints implements ParserTreeConstants {
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
     IntVar b = support.getVariable(p3);
     IntVarAndValue xv = extractIntVarAndValue(p1, p2);
-    if (xv != null) {
-      support.addReified(xv.x, xv.v, b);
+    if (xv == null) {
+      return;
     }
+    if (BINARY_EQ_ALIAS && xv.v == 1 && binaryAlias(xv.x, b)) {
+      return;
+    }
+    support.addReified(xv.x, xv.v, b);
+  }
+
+  /**
+   * Whether int_eq_reif(x, 1, b) of a 0..1 variable x, which states x = b, makes x an alias of b,
+   * as bool2int(b, x) does. MiniZinc writes a Boolean grid used in sums as 0..1 integers channelled
+   * to Booleans this way (ma-path-finding: 141,000 of them), and each kept pair was two variables,
+   * their atoms and an equality. The system property {@code org.jacop.fz.binaryEqAlias} set to
+   * false keeps the equality.
+   */
+  static final boolean BINARY_EQ_ALIAS =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.binaryEqAlias"));
+
+  // the 0..1 integer variables that binaryAlias made aliases of Booleans
+  private final Set<IntVar> binaryAliases = new HashSet<>();
+
+  private boolean binaryAlias(IntVar x, IntVar b) {
+    if (!(b instanceof BooleanVar)
+        || x instanceof BooleanVar
+        || x.min() < 0
+        || x.max() > 1
+        || dictionary.aliasTable.containsKey(x)
+        || dictionary.isAliasTarget(x)
+        || dictionary.aliasTable.containsKey(b)) {
+      return false;
+    }
+    dictionary.addAlias(b, x);
+    binaryAliases.add(x);
+    if (x.singleton() || b.singleton()) {
+      x.domain.in(store.level, x, b.domain);
+      b.domain.in(store.level, b, x.domain);
+    }
+    if (debug) {
+      FzConsole.println("% Alias: " + b + " == " + x);
+    }
+    return true;
   }
 
   private void handleIntEqImp(SimpleNode node) {

@@ -868,6 +868,10 @@ class ComparisonConstraints implements ParserTreeConstants {
 
   boolean generateForEqC(IntVar v1, int i2, IntVar b) {
     if (v1.min() >= 0 && v1.max() <= 1) { // binary variables
+      if (v1 == b && i2 == 1) {
+        // b <-> b = 1, left of an int_eq_reif whose integer variable became an alias of b
+        return true;
+      }
       if (i2 == 0) {
         support.pose(new XneqY(v1, b));
         return true;

@@ -2499,9 +2499,55 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     // the pump dives in the store, before the solver takes it over
     Hint pumped = options.freeSearch() && ls == null ? pumpHint() : null;
+    if (Boolean.getBoolean("jacop.census")) {
+      store.consistency();
+      java.util.Map<String, int[]> census = new java.util.TreeMap<>();
+      for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+        int[] k = census.computeIfAbsent(c.getClass().getSimpleName(), z -> new int[3]);
+        k[0]++;
+        if (k[0] <= 3) {
+          System.out.println("%% sample " + c);
+        }
+        if (c instanceof org.jacop.api.SatisfiedPresent sp && sp.satisfied()) {
+          k[1]++;
+        }
+        boolean allFixed = true;
+        for (org.jacop.core.Var v : c.arguments()) {
+          if (!v.singleton()) {
+            allFixed = false;
+            break;
+          }
+        }
+        if (allFixed) {
+          k[2]++;
+        }
+      }
+      int vs = 0;
+      int fixed = 0;
+      int free0 = 0;
+      for (org.jacop.core.Var v : store.variablesHashMap.values()) {
+        vs++;
+        if (v.singleton()) {
+          fixed++;
+        } else if (v.dom().sizeConstraints() == 0) {
+          free0++;
+        }
+      }
+      System.out.println("%% census vars=" + vs + " fixed=" + fixed + " unconstrained=" + free0);
+      census.forEach(
+          (n, k) ->
+              System.out.println(
+                  "%% census " + n + " n=" + k[0] + " sat=" + k[1] + " ground=" + k[2]));
+    }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    // an integer variable that became an alias of a Boolean is in no constraint, unless it is an
+    // output, whose equality with the Boolean is posted
+    lcg.setUnusedVariables(
+        dictionary.aliasTable.keySet().stream()
+            .filter(x -> x.dom().sizeConstraints() == 0)
+            .toList());
     if (options.proof() != null) {
       try {
         lcg.setProof(
