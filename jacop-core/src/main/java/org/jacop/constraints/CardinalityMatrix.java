@@ -99,6 +99,8 @@ public class CardinalityMatrix extends Constraint
   private final int[] colMin;
   private final int[] colMax;
   private final CardinalityExplanation.Budget budget = new CardinalityExplanation.Budget();
+  // the distinct variables when one occurs in two places, else null
+  private final IntVar[] repeated;
 
   /**
    * It constructs a cardinality matrix constraint.
@@ -163,6 +165,7 @@ public class CardinalityMatrix extends Constraint
       scope.addAll(Arrays.asList(row));
     }
     setScope(scope.toArray(new IntVar[0]));
+    this.repeated = SymmetricGCC.repeated(scope);
   }
 
   @Override
@@ -175,9 +178,12 @@ public class CardinalityMatrix extends Constraint
     boolean changed = true;
     while (changed) {
       changed = false;
+      long before = repeated == null ? 0 : SymmetricGCC.size(repeated);
       for (int k = 0; k < values.length; k++) {
         changed |= propagate(store, k);
       }
+      // a variable in two places (a cell that is also a count) changes what the flows saw
+      changed |= repeated != null && SymmetricGCC.size(repeated) != before;
     }
   }
 

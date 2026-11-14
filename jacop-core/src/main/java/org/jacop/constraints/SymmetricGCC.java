@@ -31,7 +31,9 @@ package org.jacop.constraints;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -88,6 +90,8 @@ public class SymmetricGCC extends Constraint
   private final int n;
   private final int m;
   private final DegreeFlow network = new DegreeFlow();
+  // the distinct variables when one occurs in two places, else null
+  private final IntVar[] repeated;
   private final int[] cells;
   private final int[] rowMin;
   private final int[] rowMax;
@@ -135,6 +139,7 @@ public class SymmetricGCC extends Constraint
     scope.addAll(Arrays.asList(this.rowCount));
     scope.addAll(Arrays.asList(this.colCount));
     setScope(scope.toArray(new IntVar[0]));
+    this.repeated = repeated(scope);
   }
 
   @Override
@@ -160,6 +165,7 @@ public class SymmetricGCC extends Constraint
     boolean changed = true;
     while (changed) {
       changed = false;
+      long before = repeated == null ? 0 : size(repeated);
       for (int r = 0; r < n; r++) {
         for (int c = 0; c < m; c++) {
           IntVar v = x[r][c];
@@ -188,7 +194,34 @@ public class SymmetricGCC extends Constraint
       for (int c = 0; c < m; c++) {
         changed |= narrow(store, colCount[c], network.colLo[c], network.colUp[c]);
       }
+      // a variable in two places (a cell that is also a count) changes what the flow saw
+      changed |= repeated != null && size(repeated) != before;
     }
+  }
+
+  /**
+   * The distinct variables of a scope in which some variable occurs more than once, or null.
+   *
+   * @param scope the variables, with repetitions
+   * @return the distinct variables, or null when every variable occurs once
+   */
+  static IntVar[] repeated(List<IntVar> scope) {
+    Set<IntVar> distinct = new LinkedHashSet<>(scope);
+    return distinct.size() == scope.size() ? null : distinct.toArray(new IntVar[0]);
+  }
+
+  /**
+   * The sum of the domain sizes of the variables.
+   *
+   * @param vars the variables
+   * @return the sum of their domain sizes
+   */
+  static long size(IntVar[] vars) {
+    long size = 0;
+    for (IntVar v : vars) {
+      size += v.getSize();
+    }
+    return size;
   }
 
   // narrows a counter to [lo, up]; true if a hole made a bound move past what the flow saw
