@@ -32,6 +32,7 @@ package org.jacop.constraints.lp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 import org.jacop.constraints.LinearInt;
@@ -207,5 +208,44 @@ class LargeRelaxationTest {
     LinearRelaxation r = LinearRelaxation.of(m.store, m.cost, false);
     assertThat(r).isNotNull();
     assertThat(r.large()).isFalse();
+  }
+
+  // a set covering model: 40 Boolean columns, 3 covering rows and the cost row
+  private static LinearRelaxation coveringRelaxation(int seed, int weight) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 40;
+    BooleanVar[] x = new BooleanVar[n];
+    int[] costs = new int[n];
+    for (int j = 0; j < n; j++) {
+      x[j] = new BooleanVar(store, "x" + j);
+      costs[j] = 1 + rnd.nextInt(9);
+    }
+    for (int i = 0; i < 3; i++) {
+      List<IntVar> row = new ArrayList<>();
+      for (int j = 0; j < n; j++) {
+        if (rnd.nextInt(3) == 0 || j % 3 == i) {
+          row.add(x[j]);
+        }
+      }
+      int[] w = new int[row.size()];
+      Arrays.fill(w, 1);
+      w[0] = weight;
+      store.impose(new LinearInt(row.toArray(new IntVar[0]), w, ">=", 1));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 9 * n);
+    store.impose(new LinearInt(x, costs, "==", cost));
+    return LinearRelaxation.of(store, cost, false);
+  }
+
+  @Test
+  void setRowsOfCoveringModel() {
+    for (int seed = 0; seed < 5; seed++) {
+      LinearRelaxation r = coveringRelaxation(seed, 1);
+      assertThat(r).as("seed %d", seed).isNotNull();
+      assertThat(r.setRows()).as("seed %d", seed).isTrue();
+      // a weight other than one is not a set row
+      assertThat(coveringRelaxation(seed, 2).setRows()).as("seed %d", seed).isFalse();
+    }
   }
 }
