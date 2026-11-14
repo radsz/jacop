@@ -233,7 +233,9 @@ import org.junit.jupiter.api.Test;
  * gets up to two holes inside its domain, for the reasons of bounds that skip holes; a model that
  * fails while its constraints are imposed is skipped. With {@code lcg.fuzz.recent} set to a
  * comma-separated list of the cases of the globals added in 5.0, half of the constraints are drawn
- * from those cases, to test their explanations at volume.
+ * from those cases, to test their explanations at volume. With {@code lcg.fuzz.focus} set to a
+ * comma-separated list of the cases of {@code randomConstraint}, three constraints in four are
+ * drawn from those cases (the constraint audit checks one constraint's explanations this way).
  */
 class LcgFuzzTest {
 
@@ -245,6 +247,10 @@ class LcgFuzzTest {
 
   // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
   private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
+
+  // with lcg.fuzz.focus=64,65 (cases of randomConstraint), three constraints in four are drawn
+  // from those cases, to check the explanations of one constraint at volume
+  private static final int[] FOCUS = recentCases(System.getProperty("lcg.fuzz.focus"));
 
   // the explanations that are off by default are checked too
   @BeforeAll
@@ -950,7 +956,9 @@ class LcgFuzzTest {
       }
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(84)) {
+      int kind =
+          FOCUS != null && rnd.nextInt(4) > 0 ? FOCUS[rnd.nextInt(FOCUS.length)] : rnd.nextInt(84);
+      return switch (kind) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
