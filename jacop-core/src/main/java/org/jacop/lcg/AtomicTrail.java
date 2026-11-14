@@ -916,6 +916,39 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns the bound an entry of {@link #boundEntry} gives.
+   *
+   * @param x the variable
+   * @param e the entry, or -1 for the initial bound
+   * @param lower whether it is the lower bound
+   * @return the bound
+   */
+  int boundValue(IntVar x, int e, boolean lower) {
+    if (e >= 0) {
+      return value[e];
+    }
+    IntDomain r = rootOf(x);
+    return lower ? r.min() : r.max();
+  }
+
+  /**
+   * Does what {@link #addBoundWithin(IntVar, int, boolean, long, EntryList)} does for the bound
+   * entry {@link #boundEntry} found.
+   *
+   * @param x the variable
+   * @param e the entry of its bound, or -1 for the initial bound
+   * @param lower whether the lower bound is added
+   * @param room how far the bound may be weakened
+   * @param out where the entry is added
+   * @return how far the bound added is from the bound of e
+   */
+  long addEntryWithin(IntVar x, int e, boolean lower, long room, EntryList out) {
+    int now = boundValue(x, e, lower);
+    int used = addWeakest(x, e, lower, lower ? now - room : now + room, out);
+    return Math.abs((long) now - used);
+  }
+
+  /**
    * Returns a variable's minimum just before a trail position.
    *
    * @param x the variable
