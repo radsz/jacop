@@ -5432,6 +5432,28 @@ Version 5.0 (unreleased)
    ConsistencyChecker has AllDifferentLists cases (no wrong pruning over
    230,000 nodes; forward checking, so no consistency level is claimed).
 
+314. The FlatZinc front end removes the control b of a half-reified
+   constraint b -> C when b appears nowhere else but as a positive literal
+   of clauses, as bounded variable elimination does in SAT preprocessing
+   (Een and Biere, Effective preprocessing in SAT through variable and
+   clause elimination, SAT 2005) and as CP-SAT's presolve does with
+   enforcement literals (Perron, Didier and Gay, The CP-SAT-LP solver, CP
+   2023). When C is a literal x = t or x != t of a 0/1 variable x, b is
+   replaced by that literal in its clauses and b -> C is dropped. When b's
+   only clause is l \/ b, the clause is dropped and not l -> C is posted,
+   which for a positive literal l is the new constraint ImpliesNot(l, C) (l
+   = 0 => C) or XplusClteqZImpliedNot. Solve-item and output variables are
+   kept. On ma-path-finding g16_p10_a10 this removes 92,560 of the 186,511
+   variables and posts 96,846 instead of 140,792 constraints and 3,040
+   instead of 49,410 clauses. It fires on 90 of the 240 instances of the
+   wide benchmark set (MiniZinc Challenge 2008-2026); at 600 s it solves 68
+   of them as before (seat-moving sm-10-13-00 proved, cable-tree-wiring
+   A041 not within 600 s), time geomean 0.99 on the instances both solve;
+   with -f it solves 74 as before, 4 % faster in geomean (vrplc9_5_10_s2
+   112 -> 30 s, still-life-wastage 13 127 -> 83 s; steelmillslab bench_19_6
+   13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
+   is off under --proof and when all solutions are asked for.
+
 Version 4.11
 =============
 
