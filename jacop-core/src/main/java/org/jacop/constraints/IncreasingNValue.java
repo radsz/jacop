@@ -371,7 +371,7 @@ public class IncreasingNValue extends Constraint
       int low = trail.minBefore(x[i - 1], now);
       if (low > trail.maxBefore(x[i], now)) {
         trail.addBoundReaching(x[i - 1], now, true, low, out);
-        trail.addBoundReaching(x[i], now, false, low - 1, out);
+        trail.addBoundReaching(x[i], now, false, (long) low - 1, out);
         return true;
       }
     }
