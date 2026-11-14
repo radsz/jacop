@@ -444,6 +444,25 @@ unless stated otherwise):
   default 200.
 - org.jacop.fz.linearOverlap.work: the most terms visited while
   looking for shared sub-sums; default 50000000.
+- org.jacop.fz.costNetwork: CostNetworkBound on an objective that is a
+  sum of unary and binary cost tables (weighted constraint satisfaction:
+  frequency assignment, photograph selection, protein design); default
+  false, off under --proof.
+- org.jacop.cfn.rootMs, org.jacop.cfn.sweeps: the most milliseconds and
+  sweeps of the reparametrisation at the root; default 2000 and 1000.
+- org.jacop.cfn.maxDomain, org.jacop.cfn.maxEntries, org.jacop.cfn.nodes:
+  the largest domain of a network variable, the most table entries of
+  the network and the most nodes of the tabulation; default 1024,
+  12000000 and 40000000.
+- org.jacop.cfn.gate: post the bound only when its root bound is above
+  the objective's bound at the root after the linear relaxation; default
+  true.
+- org.jacop.cfn.prune: remove the values whose cost lifts the bound past
+  the objective's other bound; false keeps only the objective bound;
+  default true.
+- org.jacop.cfn.unaryOnly: build a network also when every cost is unary
+  (hard binary constraints only); default false.
+- org.jacop.cfn.dump=file: writes the network in the wcsp format.
 - org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
 - org.jacop.fz.tableCover: TableCover on tables over groups of the
   variables of an all different (tilings); default true without LCG

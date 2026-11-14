@@ -445,7 +445,21 @@ final class OpbEncoder implements PbModel {
     int y = id.applyAsInt(f.vars()[1]);
     IntDomain dx = root[x];
     IntDomain dy = root[y];
-    if (dx.singleton() || dy.singleton()) {
+    if (dx.singleton() != dy.singleton()) {
+      // the other variable is a constant k, so the free one equals c - b k: the sum alone is two
+      // bounds, and unit propagation does not see that this value is a hole of the free one
+      boolean xFixed = dx.singleton();
+      IntDomain d = xFixed ? dy : dx;
+      long k = xFixed ? dx.value() : dy.value();
+      long wFree = f.weights()[xFixed ? 1 : 0];
+      long wFixed = f.weights()[xFixed ? 0 : 1];
+      long v = (f.c() - wFixed * k) * wFree;
+      String value =
+          v < d.min() || v > d.max() || !d.contains((int) v) ? "0" : eq(xFixed ? y : x, (int) v);
+      implication("1", value);
+      return;
+    }
+    if (dx.singleton()) {
       return;
     }
     grow(2L * (dx.max() - dx.min()));

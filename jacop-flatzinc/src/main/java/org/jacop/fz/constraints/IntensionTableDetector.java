@@ -832,6 +832,15 @@ public class IntensionTableDetector implements ParserTreeConstants {
     // the value of the single unknown term i, FAIL if none fits, MANY if not defined by the others
     private long solve(Bound b, int i) {
       Item it = b.item;
+      if (it.op != Op.LIN_EQ) {
+        // the unknown variable also stands at another term (an alias, as bool2int(b, b)): the
+        // other terms do not give its value; check(b) tests the constraint once it is known
+        for (int k = 0; k < b.at.length; k++) {
+          if (k != i && b.at[k] >= 0 && b.at[k] == b.at[i]) {
+            return MANY;
+          }
+        }
+      }
       switch (it.op) {
         case INT_EQ, BOOL_EQ, BOOL2INT -> {
           return term(b, 1 - i);
