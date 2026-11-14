@@ -641,6 +641,38 @@ public class Tables {
         a -> Arrays.stream(a).filter(v -> !vars.contains(v)).toArray(n -> Arrays.copyOf(a, n)));
   }
 
+  /**
+   * The Booleans that stand in the search for the 0..1 integer variables made their aliases, so
+   * that default search orders them as it ordered those integer variables.
+   */
+  final Set<IntVar> searchedAsIntegers = new HashSet<>();
+
+  /** The 0..1 integer variables made aliases of Booleans by int_eq_reif(x, 1, b). */
+  final Set<IntVar> binaryEqAliases = new HashSet<>();
+
+  /**
+   * Replaces the 0..1 integer variables made aliases of Booleans by their Booleans in the search.
+   */
+  void searchAliasTargets(Set<IntVar> aliases) {
+    if (aliases.isEmpty()) {
+      return;
+    }
+    Set<Var> seen = new HashSet<>();
+    List<Var> search = new ArrayList<>(defaultSearchVariables.size());
+    for (Var v : defaultSearchVariables) {
+      Var w = v;
+      if (v instanceof IntVar x && aliases.contains(x)) {
+        w = aliasTable.get(x);
+        searchedAsIntegers.add((IntVar) w);
+      }
+      if (seen.add(w)) {
+        search.add(w);
+      }
+    }
+    defaultSearchVariables.clear();
+    defaultSearchVariables.addAll(search);
+  }
+
   /** Removes aliased variables from the search variable collection. */
   void removeAliasFromSearch() {
 

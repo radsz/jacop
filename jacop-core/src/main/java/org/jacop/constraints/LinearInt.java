@@ -837,7 +837,38 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
    */
   public boolean satisfiedNeq() {
     SumBounds bounds = computeSumBounds();
-    return bounds.sumMin > b || bounds.sumMax < b;
+    return bounds.sumMin > b || bounds.sumMax < b || freeTermsMissB();
+  }
+
+  /**
+   * Tells whether the free terms cannot make the sum b because the gcd of their weights does not
+   * divide b minus the fixed terms (for example -3 * x != 1 always holds). It reads bounds only, so
+   * the bound events that wake a reified sum keep it at fixpoint; {@link
+   * LinearForm#explainEntailed} explains it by the fixed terms.
+   */
+  private boolean freeTermsMissB() {
+    long g = 0;
+    long rest = b;
+    for (int i = 0; i < l; i++) {
+      if (x[i].singleton()) {
+        rest -= a[i] * x[i].value();
+      } else {
+        g = gcd(g, Math.abs(a[i]));
+        if (g == 1) {
+          return false;
+        }
+      }
+    }
+    return g > 1 && rest % g != 0;
+  }
+
+  private static long gcd(long p, long q) {
+    while (q != 0) {
+      long t = p % q;
+      p = q;
+      q = t;
+    }
+    return p;
   }
 
   /**

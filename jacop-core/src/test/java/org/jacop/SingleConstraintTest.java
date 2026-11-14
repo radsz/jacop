@@ -3086,6 +3086,34 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void reifiedLinearEntailedByGcdOfFreeWeights() {
+
+    // -x0 - 3 * x1 != -1 holds for x0 = 2 whatever x1 is, since 3 does not divide 1 - 2
+    // (found by ConsistencyChecker case ReifiedLinear)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -2, 3);
+    IntVar x1 = new IntVar(store, "x1", -2, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new Reified(new LinearInt(new IntVar[] {x0, x1}, new int[] {-1, -3}, "!=", -1), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isOne();
+    assertThat(b.min()).isZero();
+    store.setLevel(store.level + 1);
+    x0.domain.in(store.level, x0, 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.min()).isOne();
+
+    // 3 * y - 3 * z == -2 has no integer solution: the implication sets c to 0 at once
+    IntVar y = new IntVar(store, "y", -2, 3);
+    IntVar z = new IntVar(store, "z", -2, 3);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    store.impose(new Implies(c, new LinearInt(new IntVar[] {y, z}, new int[] {3, -3}, "==", -2)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+  }
+
+  @Test
   void testXplusCneqZCountsMatchBruteForce() {
 
     Random random = new Random(43);
@@ -5141,7 +5169,7 @@ class SingleConstraintTest extends TestHelper {
    */
   @Test
   void testAllDifferentListsMatchesDecomposition() {
-    for (long seed = 0; seed < 60; seed++) {
+    for (long seed = 0; seed < 120; seed++) {
       int[] counts = new int[2];
       for (int k = 0; k < 2; k++) {
         Random rnd = new Random(seed);
@@ -5162,14 +5190,28 @@ class SingleConstraintTest extends TestHelper {
             x[i][j] = rnd.nextInt(5) == 0 ? pool[rnd.nextInt(pool.length)] : pool[i * n + j];
           }
         }
+        // odd seeds: excepted tuples, which two rows may share
+        int[][] except = new int[seed % 2 == 0 ? 0 : 1 + rnd.nextInt(2)][n];
+        for (int[] t : except) {
+          for (int j = 0; j < n; j++) {
+            t[j] = rnd.nextInt(3);
+          }
+        }
         if (k == 0) {
-          store.impose(new AllDifferentLists(x));
+          store.impose(new AllDifferentLists(x, except));
         } else {
           for (int i = 0; i < m; i++) {
             for (int r = i + 1; r < m; r++) {
-              PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+              PrimitiveConstraint[] ne = new PrimitiveConstraint[n + except.length];
               for (int j = 0; j < n; j++) {
                 ne[j] = new XneqY(x[i][j], x[r][j]);
+              }
+              for (int e = 0; e < except.length; e++) {
+                PrimitiveConstraint[] eq = new PrimitiveConstraint[n];
+                for (int j = 0; j < n; j++) {
+                  eq[j] = new XeqC(x[i][j], except[e][j]);
+                }
+                ne[n + e] = new And(eq);
               }
               store.impose(new Or(ne));
             }

@@ -93,6 +93,61 @@ class MirCutTest {
     assertThat(made).isGreaterThan(1000);
   }
 
+  /**
+   * A cut scaled down to a smaller largest weight ({@link MirCut#capped}, the cuts made in search)
+   * still holds at every integer point of the row and keeps its weights within the cap.
+   */
+  @Test
+  void cappedCutsKeepEveryIntegerPointOfTheRow() {
+    Random rnd = new Random(13);
+    int scaled = 0;
+    for (int run = 0; run < 20000; run++) {
+      int n = 2 + rnd.nextInt(3);
+      long[] c = new long[n];
+      long[] lo = new long[n];
+      long[] hi = new long[n];
+      double[] value = new double[n];
+      for (int j = 0; j < n; j++) {
+        c[j] = rnd.nextInt(4) == 0 ? 0 : rnd.nextInt(2001) - 1000L;
+        lo[j] = rnd.nextInt(7) - 3L;
+        hi[j] = lo[j] + rnd.nextInt(5);
+        value[j] = lo[j] + rnd.nextDouble() * ((double) hi[j] - lo[j]);
+      }
+      long b = rnd.nextInt(3001) - 1500L;
+      MirCut full = MirCut.of(c, b, value, lo, hi);
+      if (full == null) {
+        continue;
+      }
+      long cap = 1L << (2 + rnd.nextInt(6));
+      MirCut cut = MirCut.capped(full, cap, value, lo, hi);
+      if (cut == null || cut == full) {
+        continue;
+      }
+      scaled++;
+      for (long w : cut.weights) {
+        assertThat(Math.abs(w)).as("run %d", run).isLessThanOrEqualTo(cap);
+      }
+      long[] p = lo.clone();
+      while (p != null) {
+        long row = 0;
+        for (int j = 0; j < n; j++) {
+          row += c[j] * p[j];
+        }
+        if (row <= b) {
+          long lhs = 0;
+          for (int k = 0; k < cut.columns.length; k++) {
+            lhs += cut.weights[k] * p[cut.columns[k]];
+          }
+          assertThat(lhs)
+              .as("run %d cut %s at %s", run, cut, java.util.Arrays.toString(p))
+              .isLessThanOrEqualTo(cut.rhs);
+        }
+        p = next(p, lo, hi);
+      }
+    }
+    assertThat(scaled).isGreaterThan(100);
+  }
+
   @Test
   void sparseRowGivesTheCutOfTheCompactRow() {
     Random rnd = new Random(5);

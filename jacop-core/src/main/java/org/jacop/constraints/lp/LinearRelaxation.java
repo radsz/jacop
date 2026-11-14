@@ -55,6 +55,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -303,6 +304,14 @@ public class LinearRelaxation extends Constraint
   /** Statistics: infeasible relaxations. */
   public long infeasible;
 
+  /**
+   * Statistics: infeasible relaxations whose rounded Farkas multipliers proved the infeasibility at
+   * no scale. Skipping the solves below such a solve was tried and lost: the subtree is then
+   * searched without the relaxation (the 60-item knapsack with search cuts of weights up to 2^24:
+   * 141 million nodes in 60 s after 5 unproven solves).
+   */
+  public long unproven;
+
   /** Statistics: failures proved by an exact combination. */
   public long failures;
 
@@ -329,6 +338,9 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
   public int pairCliques;
+
+  /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
+  public int tableClauses;
 
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
@@ -614,6 +626,18 @@ public class LinearRelaxation extends Constraint
   // knapsack of 60 items the LP ran 8 times less often and the search needed 7 times more nodes
   private static final boolean MIR_SEARCH = Boolean.getBoolean("org.jacop.lp.mirSearch");
   private static final int MIR_SEARCH_CUTS = Integer.getInteger("org.jacop.lp.mirSearchCuts", 10);
+  // the largest weight of a cut made in the cut rounds (see MirCut.capped), unlimited by default
+  // (-Dorg.jacop.lp.cutWeight=1048576 for 2^20): a cut row of weights near 2^24, with a right side
+  // near 10^10, gets Farkas multipliers of 10^-7 of the wrong sign from the dense tableau, which
+  // the integer certificate cannot use, so the infeasible solve proves nothing (smelt_4, MiniZinc
+  // Challenge 2014, -f: 56 of 57 infeasible solves; tank allocation: thousands in 60 s). 2^20
+  // removes them there, but on the 41 wide instances whose cuts it changes it was not faster at
+  // 240 s (-f 1.03, default 1.10 time on the solved ones, within the noise of two base runs)
+  private static final long ROOT_CUT_WEIGHT =
+      Long.getLong("org.jacop.lp.cutWeight", Long.MAX_VALUE);
+  // the largest weight of a cut made in search (see MirCut.capped)
+  private static final long MIR_SEARCH_WEIGHT =
+      Long.getLong("org.jacop.lp.mirSearchWeight", 1L << 16);
   private int mirPeriod = 4;
   private int mirWaited;
   // the rows of the first cut rounds, as aggregates, and the keys of the cuts chosen so far
@@ -625,6 +649,26 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: rounds of root cuts whose re-solve stopped at its pivot limit. */
   public long cutLimits;
+
+  // zero-half cuts in the cut rounds, from sets of tight rows whose sum is odd on the right side
+  // (ZeroHalfCuts), rounded with the MIR of divisor 2. Off by default
+  // (-Dorg.jacop.lp.zeroHalf=true):
+  // on the 240 wide instances they fire on 36 and raise the integer root bound of 10 (lower 2),
+  // but at 240 s on the 41 where the cuts change the solves were the same, 5-7 % slower, and the
+  // best solutions of 3 families worse: the extra rows cost each solve more than they prune. Not
+  // final, so that tests can switch it on
+  static boolean zeroHalfOn = Boolean.getBoolean("org.jacop.lp.zeroHalf");
+  // the most slack of a row the zero-half separator takes, the most rows, and the most sets
+  private static final double ZERO_HALF_SLACK = 0.1;
+  private static final int ZERO_HALF_ROWS = 2000;
+  private static final int ZERO_HALF_SETS = 50;
+  // the least efficacy of a zero-half cut: the dense sums of many rows the separator finds on
+  // tank allocation (XCSP 2025) are violated by 0.001 to 0.1 over their norm, and those below 0.02
+  // took the places of better MIR cuts (cut bound 1676 -> 1681) and made the LP numerically weak
+  private static final double ZERO_HALF_EFFICACY = 0.02;
+
+  /** Statistics: zero-half cuts added (in the cut rounds and in search). */
+  public long zeroHalfCuts;
 
   /** Statistics: MIR and Gomory cuts added in search. */
   public long mirSearchCuts;
@@ -878,6 +922,7 @@ public class LinearRelaxation extends Constraint
     int m = base;
     rowColumns = rc.subList(0, m).toArray(new int[0][]);
     rowWeights = rw.subList(0, m).toArray(new long[0][]);
+    setRows = setRows(m);
     rowLo = new long[m];
     rowHi = new long[m];
     hasLo = new boolean[m];
@@ -1130,6 +1175,34 @@ public class LinearRelaxation extends Constraint
     // the value encodings of the counting, all-different and element constraints come last: they
     // are tried at the first solve like the other rows, and kept only when they help
     List<LinearForm> ownTried = objective == null ? List.of() : new ArrayList<>(tried);
+    // the clauses of the tables over 0/1 variables, tried with the table rows: on Fortress (walls
+    // that enclose points of a grid) they make the relaxation the vertex cut LP, whose bound is the
+    // fewest walls; without them the tables gave the relaxation no row. A table whose variables
+    // are all in the given tried rows has its convex hull over tuple columns there (TableCliques),
+    // which implies each of its clauses: the clauses of the xor tables of DC only slowed the first
+    // solve and moved the search
+    int tableClauses = 0;
+    if (TABLE_CLAUSES && objective != null) {
+      List<LinearForm> clauseRows = new ArrayList<>();
+      Set<IntVar> inTried = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : tried) {
+        inTried.addAll(Arrays.asList(f.vars()));
+      }
+      for (Constraint c : constraints) {
+        if (c instanceof HybridTable h
+            && !h.arguments().stream()
+                .allMatch(v -> v.singleton() || v instanceof IntVar i && inTried.contains(i))) {
+          List<LinearForm> rows = h.clauseRows();
+          clauseRows.addAll(rows);
+        }
+      }
+      // more rows than the trial takes in proportion: DC-midori r14, 76,036 rows over the tables
+      // past the hull cap, never raised the bound and slowed its first solutions
+      if (clauseRows.size() <= MAX_TABLE_CLAUSES) {
+        ownTried.addAll(clauseRows);
+        tableClauses = clauseRows.size();
+      }
+    }
     List<LinearForm> triedRows = new ArrayList<>(valueRows.tried());
     triedRows.addAll(ownTried);
     // the sorting networks of the all-different permutations are tried like the value encodings,
@@ -1164,7 +1237,10 @@ public class LinearRelaxation extends Constraint
       auto = large;
     }
     if (auto
-        && (large || localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
+        && (large
+            || localForms.size() >= SPARSE_ROWS
+            || tableClauses >= SPARSE_ROWS
+            || tooLarge(localForms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
       // larger ones, also those over the dense size cap, which would get no relaxation at all
@@ -1209,6 +1285,7 @@ public class LinearRelaxation extends Constraint
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     r.pairCliques = pairCliques;
+    r.tableClauses = tableClauses;
     r.capacity = separations;
     r.energy = resources;
     r.hall = hall;
@@ -1474,6 +1551,14 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the most clause rows of tables over all tables; more give none
+  private static final int MAX_TABLE_CLAUSES =
+      Integer.getInteger("org.jacop.lp.tableClauseRowsMax", 10_000);
+
+  // the clause rows of tables over 0/1 variables (HybridTable.clauseRows)
+  private static final boolean TABLE_CLAUSES =
+      !"false".equals(System.getProperty("org.jacop.lp.tableClauseRows"));
 
   // the conflicts of pairs of 0/1 literals merged into clique rows
   private static final boolean PAIR_CLIQUES =
@@ -1946,6 +2031,60 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Returns whether the relaxation is a set partitioning, packing or covering model over 0/1
+   * columns: each row that does not hold the objective has weights of one sign and size one over
+   * columns whose domains are within 0..1 (fixed columns are constants), and there are at most
+   * org.jacop.lp.setRowsShare (0.1) rows per column. Its root solution is often almost integral,
+   * and its bound is often the optimum (the crew schedules of XCSP 2025 BusScheduling, 199 rows
+   * over 14,773 columns: root bound 28.5, optimum 29).
+   *
+   * @return whether every row of the relaxation is a set row over 0/1 columns
+   */
+  public boolean setRows() {
+    return setRows;
+  }
+
+  // whether the model's rows are set rows, decided when the relaxation is built: cuts come later
+  private final boolean setRows;
+
+  // whether the first m rows, the model's, are set rows over 0/1 columns
+  private boolean setRows(int m) {
+    if (m < 2 || m > x.length * SET_ROWS_SHARE) {
+      return false;
+    }
+    for (int i = 0; i < m; i++) {
+      int[] cs = rowColumns[i];
+      boolean holdsObjective =
+          objective != null && Arrays.stream(cs).anyMatch(j -> x[j] == objective);
+      if (!holdsObjective && !setRow(cs, rowWeights[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether a row has weights of one sign and size one over 0/1 columns; fixed columns are
+  // constants of the row
+  private boolean setRow(int[] cs, long[] ws) {
+    long sign = 0;
+    for (int k = 0; k < cs.length; k++) {
+      IntVar v = x[cs[k]];
+      if (!v.singleton()) {
+        if (sign == 0) {
+          sign = ws[k];
+        }
+        if (ws[k] != sign || Math.abs(ws[k]) != 1 || v.min() < 0 || v.max() > 1) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static final double SET_ROWS_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.setRowsShare", "0.1"));
+
+  /**
    * Returns the variable minimized, or null for satisfaction.
    *
    * @return the objective
@@ -2401,9 +2540,8 @@ public class LinearRelaxation extends Constraint
       if (beforeExtra != null
           && !keepEncodings
           && trees.isEmpty()
-          && extraHits >= EXTRA_LIMITS
-          && extraHits * 20 > calls
-          && calls >= 20L * EXTRA_LIMITS) {
+          && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
+              || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
       }
       return;
@@ -2446,6 +2584,7 @@ public class LinearRelaxation extends Constraint
     for (int s = 0; s < SCALES.length; s++) {
       long[] lambda = scaled(y, SCALES[s]);
       if (lambda == null) {
+        countUnproven(status);
         return;
       }
       int[][] facts = new int[2][];
@@ -2490,6 +2629,14 @@ public class LinearRelaxation extends Constraint
         // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
       }
       // the bounds reasoning on the form would overflow: try a smaller scale
+    }
+    countUnproven(status);
+  }
+
+  // an infeasible LP solve that ends without an integer certificate
+  private void countUnproven(int status) {
+    if (status == LpSolver.INFEASIBLE) {
+      unproven++;
     }
   }
 
@@ -3190,7 +3337,7 @@ public class LinearRelaxation extends Constraint
           break;
         }
       }
-      List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen);
+      List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen, ROOT_CUT_WEIGHT);
       if (chosen.isEmpty()) {
         break;
       }
@@ -4019,7 +4166,12 @@ public class LinearRelaxation extends Constraint
     mirSeparations++;
     int n = lp.columns();
     List<MirCut> found =
-        separateCuts(Arrays.copyOf(rootLo, n), Arrays.copyOf(rootHi, n), mirRows, mirSeen);
+        separateCuts(
+            Arrays.copyOf(rootLo, n),
+            Arrays.copyOf(rootHi, n),
+            mirRows,
+            mirSeen,
+            MIR_SEARCH_WEIGHT);
     List<MirCut> chosen =
         found.size() > MIR_SEARCH_CUTS ? found.subList(0, MIR_SEARCH_CUTS) : found;
     for (MirCut c : found.subList(chosen.size(), found.size())) {
@@ -4100,10 +4252,12 @@ public class LinearRelaxation extends Constraint
    * @param hi the global upper bounds by column, of the first solve
    * @param unitRows the rows that are not cuts, as aggregates
    * @param seen the cuts chosen in earlier rounds, as keys; the cuts chosen are added
+   * @param maxWeight the largest weight of a cut; larger cuts are scaled down ({@link
+   *     MirCut#capped})
    * @return the cuts chosen, most efficacious first
    */
   private List<MirCut> separateCuts(
-      long[] lo, long[] hi, Aggregate[] unitRows, Set<List<Long>> seen) {
+      long[] lo, long[] hi, Aggregate[] unitRows, Set<List<Long>> seen, long maxWeight) {
     int n = lp.columns();
     double[] value = new double[n];
     for (int j = 0; j < n; j++) {
@@ -4134,8 +4288,25 @@ public class LinearRelaxation extends Constraint
         mir(g, value, lo, hi, found);
       }
     }
+    Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (zeroHalfOn) {
+      zeroHalf(value, lo, hi, found, zeroHalf);
+    }
     for (Aggregate row : unitRows) {
       mir(row, value, lo, hi, found);
+    }
+    if (maxWeight < Long.MAX_VALUE) {
+      List<MirCut> small = new ArrayList<>(found.size());
+      for (MirCut c : found) {
+        MirCut d = MirCut.capped(c, maxWeight, value, lo, hi);
+        if (d != null) {
+          small.add(d);
+          if (d != c && zeroHalf.contains(c)) {
+            zeroHalf.add(d);
+          }
+        }
+      }
+      found = small;
     }
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
     List<MirCut> chosen = new ArrayList<>();
@@ -4153,9 +4324,127 @@ public class LinearRelaxation extends Constraint
       if (!seen.contains(key) && orthogonal(c, chosen)) {
         seen.add(key);
         chosen.add(c);
+        if (zeroHalf.contains(c)) {
+          zeroHalfCuts++;
+        }
       }
     }
     return chosen;
+  }
+
+  /**
+   * Adds the zero-half cuts of the rows in the simplex to found: each row that is tight within
+   * ZERO_HALF_SLACK on a side enters as {@code sum w x <= b} (the lower side negated), the
+   * separator picks sets of them (ZeroHalfCuts), and each set's exact sum is rounded with the MIR
+   * of divisor 2 over the global bounds, so the cut holds everywhere.
+   */
+  private void zeroHalf(
+      double[] value, long[] lo, long[] hi, List<MirCut> found, Set<MirCut> zeroHalf) {
+    int n = lp.columns();
+    int pool = rows();
+    double[] distance = new double[n];
+    for (int j = 0; j < n; j++) {
+      double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
+      distance[j] = Math.min(v - lo[j], hi[j] - v);
+    }
+    int maxLength = 100 + n / 20;
+    // each candidate is a pool row and the sign it enters with
+    List<int[]> candidates = new ArrayList<>();
+    List<Double> slacks = new ArrayList<>();
+    for (int i = 0; i < pool; i++) {
+      double act = zeroHalfActivity(i, maxLength, value);
+      if (Double.isNaN(act)) {
+        continue;
+      }
+      boolean equality = hasLo[i] && hasHi[i] && rowLo[i] == rowHi[i];
+      if (hasHi[i] && rowHi[i] - act <= ZERO_HALF_SLACK) {
+        candidates.add(new int[] {i, 1});
+        slacks.add(Math.max(0, rowHi[i] - act));
+      }
+      if (!equality && hasLo[i] && act - rowLo[i] <= ZERO_HALF_SLACK) {
+        candidates.add(new int[] {i, -1});
+        slacks.add(Math.max(0, act - rowLo[i]));
+      }
+    }
+    if (candidates.isEmpty()) {
+      return;
+    }
+    Integer[] order = new Integer[candidates.size()];
+    for (int k = 0; k < order.length; k++) {
+      order[k] = k;
+    }
+    Arrays.sort(
+        order, Comparator.comparingDouble((Integer k) -> slacks.get(k)).thenComparingInt(k -> k));
+    int r = Math.min(order.length, ZERO_HALF_ROWS);
+    int[][] columns = new int[r][];
+    long[][] weights = new long[r][];
+    boolean[] odd = new boolean[r];
+    double[] slack = new double[r];
+    int[][] picked = new int[r][];
+    for (int t = 0; t < r; t++) {
+      int[] cand = candidates.get(order[t]);
+      int i = cand[0];
+      picked[t] = cand;
+      columns[t] = rowColumns[i];
+      weights[t] = rowWeights[i];
+      slack[t] = slacks.get(order[t]);
+      // the parity of the right side with the odd columns at their nearer bound
+      long side = cand[1] > 0 ? rowHi[i] : -rowLo[i];
+      long parity = side & 1;
+      for (int k = 0; k < columns[t].length; k++) {
+        if ((weights[t][k] & 1) != 0) {
+          int j = columns[t][k];
+          double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
+          long bound = hi[j] - v < v - lo[j] ? hi[j] : lo[j];
+          parity ^= bound & 1;
+        }
+      }
+      odd[t] = parity != 0;
+    }
+    for (int[] set :
+        ZeroHalfCuts.separate(columns, weights, odd, slack, distance, ZERO_HALF_SETS)) {
+      long[] lambda = new long[pool];
+      for (int t : set) {
+        lambda[picked[t][0]] += picked[t][1];
+      }
+      MirCut c = zeroHalfCut(aggregate(lambda), value, lo, hi);
+      if (c != null && c.efficacy >= ZERO_HALF_EFFICACY) {
+        found.add(c);
+        zeroHalf.add(c);
+      }
+    }
+  }
+
+  // the zero-half cut of an aggregate: its MIR with divisor 2, or null
+  private static MirCut zeroHalfCut(Aggregate g, double[] value, long[] lo, long[] hi) {
+    if (g == null || !g.hasUpper() || g.columns().length == 0) {
+      return null;
+    }
+    long[] raw = MirCut.raw(g.columns(), g.coef(), g.upper(), value, lo, hi, 2);
+    if (raw == null) {
+      return null;
+    }
+    return MirCut.finish(
+        g.columns(), raw, raw[g.columns().length], value, lo, hi, MirCut.REDUCE_CUTS);
+  }
+
+  // the activity of pool row i at the LP solution, or NaN if the row cannot enter a zero-half cut:
+  // not in the LP, too long, without an odd weight or with a weight too large
+  private double zeroHalfActivity(int i, int maxLength, double[] value) {
+    int[] cs = rowColumns[i];
+    if (!inLp[i] || cs.length > maxLength) {
+      return Double.NaN;
+    }
+    long[] ws = rowWeights[i];
+    boolean anyOdd = false;
+    boolean small = true;
+    double act = 0;
+    for (int k = 0; k < cs.length; k++) {
+      anyOdd |= (ws[k] & 1) != 0;
+      small &= Math.abs(ws[k]) <= 1_000_000;
+      act += ws[k] * value[cs[k]];
+    }
+    return anyOdd && small ? act : Double.NaN;
   }
 
   // whether the cut is far enough from parallel to each of the cuts chosen

@@ -58,6 +58,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 
@@ -2051,6 +2052,30 @@ public class HybridTable extends Constraint
   }
 
   /**
+   * Returns the clause rows of a table over 0/1 variables ({@link TableClauses}): its prime
+   * implicates over the columns not fixed, for the linear relaxation. They hold within the current
+   * domains, so they are made at the root.
+   *
+   * @return the rows, empty when a column not fixed is not 0/1 or the table is too large
+   */
+  public List<LinearForm> clauseRows() {
+    if (getClass() != HybridTable.class) {
+      return List.of();
+    }
+    return TableClauses.of(
+        x,
+        tupleCount,
+        values -> {
+          for (int t = 0; t < tupleCount; t++) {
+            if (accepts(cells, t * arity, arity, values)) {
+              return true;
+            }
+          }
+          return false;
+        });
+  }
+
+  /**
    * The violation for local search: 0 when some hybrid tuple accepts the values, otherwise the
    * fewest columns that any hybrid tuple rejects, the Hamming distance from the values to the
    * table. A move that brings the values closer to a tuple lowers it, which a 0/1 violation would
@@ -2400,6 +2425,39 @@ public class HybridTable extends Constraint
    */
   public boolean cellAccepts(int t, int column, int v) {
     return cells[t * arity + column].accepts(v);
+  }
+
+  /**
+   * The tuples of values of a table whose every cell is one value, reduced to those valid on the
+   * current domains, without duplicates; null when a cell is not a single value.
+   *
+   * @return the valid tuples, or null
+   */
+  public int[][] validPlainTuples() {
+    List<int[]> out = new ArrayList<>();
+    java.util.Set<List<Integer>> seen = new java.util.HashSet<>();
+    for (int t = 0; t < tupleCount; t++) {
+      int[] v = new int[arity];
+      boolean valid = true;
+      for (int i = 0; i < arity; i++) {
+        Restriction r = cells[t * arity + i];
+        if (r.kind != Restriction.Kind.EQ) {
+          return null;
+        }
+        v[i] = r.value;
+        valid &= x[i].domain.contains(v[i]);
+      }
+      if (valid) {
+        List<Integer> key = new ArrayList<>(arity);
+        for (int a : v) {
+          key.add(a);
+        }
+        if (seen.add(key)) {
+          out.add(v);
+        }
+      }
+    }
+    return out.toArray(new int[0][]);
   }
 
   /**

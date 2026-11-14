@@ -223,6 +223,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // under -f the root solution of a relaxation large by its rows guides the search only when it has
   // at least this many columns (-Dorg.jacop.lp.largeGuideColumns)
+
+  // whether the search follows the relaxation's solution by default (lcg-lp-branching auto)
+  private static boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
+    if (r.simplexValueColumns() > 0) {
+      return true;
+    }
+    if (!free) {
+      return false;
+    }
+    return r.treeConstraints() > 0
+        || r.objective() != null && r.setRows()
+        || r.largeByRows() && r.columns() >= LARGE_GUIDE_COLUMNS;
+  }
+
   private static final int LARGE_GUIDE_COLUMNS =
       Integer.getInteger("org.jacop.lp.largeGuideColumns", 10_000);
 
@@ -815,6 +829,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: lpRows="
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat: lpTableClauses="
+              + (linearRelaxation == null ? 0 : linearRelaxation.tableClauses)
               + (cliques == null
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
@@ -924,6 +940,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.limits
             + "\n%%%mzn-stat: lpInfeasible="
             + r.infeasible
+            + "\n%%%mzn-stat: lpUnproven="
+            + r.unproven
             + "\n%%%mzn-stat: lpFailures="
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
@@ -954,6 +972,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
+            + "\n%%%mzn-stat: lpTableClauses="
+            + r.tableClauses
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootPrunings="
@@ -970,6 +990,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.capacityBound
             + "\n%%%mzn-stat: lpCutLimits="
             + r.cutLimits
+            + "\n%%%mzn-stat: lpZeroHalfCuts="
+            + r.zeroHalfCuts
             + "\n%%%mzn-stat: lpMirSearchCuts="
             + r.mirSearchCuts
             + "\n%%%mzn-stat: lpMirSeparations="
@@ -992,6 +1014,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.valueColumns
             + "\n%%%mzn-stat: lpSimplexValueColumns="
             + r.simplexValueColumns()
+            + "\n%%%mzn-stat: lpSetRows="
+            + r.setRows()
             + "\n%%%mzn-stat: lpFreeColumns="
             + r.freeColumns
             + "\n%%%mzn-stat: lpSimplexFreeColumns="
@@ -2526,6 +2550,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    // an integer variable that became an alias of a Boolean is in no constraint, unless it is an
+    // output, whose equality with the Boolean is posted
+    lcg.setUnusedVariables(
+        dictionary.binaryEqAliases.stream().filter(x -> x.dom().sizeConstraints() == 0).toList());
     if (options.proof() != null) {
       try {
         lcg.setProof(
@@ -2634,6 +2662,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      if (!LcgSolver.CHAIN_LIMIT_SET) {
+        // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
+        // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
+        // in the default search the changed learning lost on 5 families and won on none
+        lcg.setChainLimit(Integer.parseInt(options.freeConfig("lcg-chain-limit", "64")));
+      }
     }
     SelectChoicePoint<? extends Var> annotated =
         free && "none".equals(interleave) ? null : latticeFirst(annotationSelect(annotatedSearch));
@@ -2682,17 +2716,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // 240 s with it, 65,651 without the relaxation); not for one large by its columns only
     // (rcpsp-wet-diverse j60_19_6, 682 rows and 140,186 columns: no solution with it in 240 s),
     // nor for one with few columns (triangular 2015-2024, 36k-101k rows over 408-782 columns:
-    // worse on 4 of 7 in 600 s with it, better on 2)
+    // worse on 4 of 7 in 600 s with it, better on 2). Under -f also on for a set partitioning,
+    // packing or covering relaxation (LinearRelaxation.setRows) of an optimisation problem, whose
+    // root solution is almost integral: the crew schedules of XCSP 2025 BusScheduling c2 and r5a,
+    // 199 rows over 14,773 columns, prove their optima 29 and 28 in 16-41 s with it; without it c2
+    // is not proved in 600 s and r5a takes 306 s
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching)
-                    && (linearRelaxation.simplexValueColumns() > 0
-                        || free && linearRelaxation.treeConstraints() > 0
-                        || free
-                            && linearRelaxation.largeByRows()
-                            && linearRelaxation.columns() >= LARGE_GUIDE_COLUMNS));
+                || "auto".equals(lpBranching) && lpGuidedByDefault(linearRelaxation, free));
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -3332,6 +3365,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.permutationsAsClauses
             + "\n%%%mzn-stat: lcgTablesAsClauses="
             + lcg.tablesAsClauses
+            + "\n%%%mzn-stat: lcgCompressedTablesAsClauses="
+            + lcg.compressedTablesAsClauses
             + "\n%%%mzn-stat: lcgTableClauses="
             + lcg.tableClauses
             + "\n%%%mzn-stat: lcgTableTupleLiterals="
@@ -3344,6 +3379,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
             + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgUnkeptReasons="
+            + lcg.sat().unkeptReasons
+            + "\n%%%mzn-stat: lcgExpandedLiterals="
+            + lcg.sat().expandedLiterals
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
