@@ -254,6 +254,47 @@ class LinearizationsTest {
   }
 
   @Test
+  void impliedValuesJoinTheEquivalentBooleansInOneClique() {
+    // tank allocation (XCSP 2025): b_v -> x = v (int_eq_imp, ChannelImply) for the cargoes and
+    // e <-> x = 3 (int_eq_reif) for the empty tank; b3 -> x = 3 duplicates e
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    IntVar b3 = new IntVar(store, "b3", 0, 1);
+    IntVar e = new IntVar(store, "e", 0, 1);
+    List<Constraint> cs =
+        List.of(
+            new Reified(new XeqC(x, 3), e),
+            new ChannelImply(x, new IntVar[] {b0, b1, b3}, new int[] {0, 1, 3}));
+    List<LinearForm> made = Linearizations.encodings(cs);
+    assertThat(made)
+        .anySatisfy(
+            f -> {
+              assertThat(f.vars()).containsExactlyInAnyOrder(e, b0, b1);
+              assertThat(f.relation()).isEqualTo(LinearForm.LE);
+              assertThat(f.c()).isEqualTo(1);
+            })
+        .anySatisfy(
+            f -> {
+              assertThat(f.vars()).containsExactly(b3, e);
+              assertThat(f.weights()).containsExactly(1, -1);
+              assertThat(f.c()).isZero();
+            });
+    for (Constraint c : cs) {
+      store.impose(c);
+    }
+    IntVar[] scope = {x, b0, b1, b3, e};
+    List<long[]> all = solutions(store, scope);
+    assertThat(all).hasSize(7);
+    for (long[] solution : all) {
+      for (LinearForm f : made) {
+        assertThat(holds(f, scope, solution)).as("%s at %s", f, Arrays.toString(solution)).isTrue();
+      }
+    }
+  }
+
+  @Test
   void tableCliquesHoldForEverySolutionAndKeepThemAll() {
     Random rnd = new Random(11);
     int rows = 0;
