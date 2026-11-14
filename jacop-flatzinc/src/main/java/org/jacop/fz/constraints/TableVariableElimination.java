@@ -115,7 +115,7 @@ public class TableVariableElimination implements ParserTreeConstants {
   }
 
   /** One elimination: the variable and the two relations it was in. */
-  private record Step(IntVar var, Relation first, Relation second) {}
+  private record Step(IntVar variable, Relation first, Relation second) {}
 
   private final List<Relation> relations = new ArrayList<>();
 
@@ -257,14 +257,13 @@ public class TableVariableElimination implements ParserTreeConstants {
       IntVar y = queue.poll();
       queued.remove(y);
       List<Relation> in = live(y);
-      if (in.size() != 2
-          || occurrences.getOrDefault(y, 0) != 2
-          || y.singleton()
-          || frozenVars.contains(y)
-          || aliased.contains(y)) {
-        continue;
-      }
-      Relation r = join(in.get(0), in.get(1), y);
+      boolean candidate =
+          in.size() == 2
+              && occurrences.getOrDefault(y, 0) == 2
+              && !y.singleton()
+              && !frozenVars.contains(y)
+              && !aliased.contains(y);
+      Relation r = candidate ? join(in.get(0), in.get(1), y) : null;
       if (r == null) {
         continue;
       }
@@ -333,8 +332,9 @@ public class TableVariableElimination implements ParserTreeConstants {
     }
     Map<Row, int[]> out = new LinkedHashMap<>();
     int[] fromA = new int[a.scope.length];
-    for (int c = 0, k = 0; c < a.scope.length; c++) {
-      fromA[c] = c == ya ? -1 : k++;
+    int next = 0;
+    for (int c = 0; c < a.scope.length; c++) {
+      fromA[c] = c == ya ? -1 : next++;
     }
     for (int[] ra : a.rows) {
       List<int[]> match = byValue.get(ra[ya]);
@@ -533,18 +533,18 @@ public class TableVariableElimination implements ParserTreeConstants {
     Map<Var, Integer> values = new IdentityHashMap<>();
     for (int s = steps.size() - 1; s >= 0; s--) {
       Step step = steps.get(s);
-      Set<Integer> fromFirst = candidates(step.first(), step.var(), values);
+      Set<Integer> fromFirst = candidates(step.first(), step.variable(), values);
       Integer chosen = null;
-      for (int value : candidates(step.second(), step.var(), values)) {
+      for (int value : candidates(step.second(), step.variable(), values)) {
         if (fromFirst.contains(value) && (chosen == null || value < chosen)) {
           chosen = value;
         }
       }
       if (chosen == null) {
         // cannot happen for a solution of the joined relation; keep the smallest value
-        chosen = step.var().min();
+        chosen = step.variable().min();
       }
-      values.put(step.var(), chosen);
+      values.put(step.variable(), chosen);
     }
     return values;
   }

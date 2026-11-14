@@ -1251,8 +1251,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
         Atom[] vars = Arrays.stream(t.getKey()).map(this::variable).toArray(Atom[]::new);
         int[][] rows = t.getValue();
         Atom[] values = new Atom[rows.length * vars.length];
-        for (int r = 0, k = 0; r < rows.length; r++) {
-          for (int value : rows[r]) {
+        int k = 0;
+        for (int[] row : rows) {
+          for (int value : row) {
             values[k++] = intConstant(value);
           }
         }
