@@ -5653,6 +5653,7 @@ public final class LcgSolver implements ExternalPropagator {
         saveTarget();
       }
     }
+    heldFailure = null;
     trail.beginBacktrack();
     try {
       while (store.level > baseLevel + level) {
@@ -6642,6 +6643,17 @@ public final class LcgSolver implements ExternalPropagator {
    * store. A failure is returned as a false literal whose reason is the conflict clause, which the
    * solver takes as a conflict.
    */
+  // prototype -Djacop.lcg.pushBeforeConflict=true: a constraint failure first pushes the atoms of
+  // the fixpoint that are not in the solver yet, so that the conflict clause cites them instead of
+  // their explanations, and conflict analysis can stop at one of them
+  private static final boolean PUSH_BEFORE_CONFLICT =
+      Boolean.getBoolean("jacop.lcg.pushBeforeConflict");
+
+  private EntryList heldFailure;
+
+  /** Statistics: failures whose fixpoint atoms were pushed before the conflict. */
+  public long heldFailures;
+
   @Override
   public int propagate() {
     if (failed) {
@@ -6684,6 +6696,11 @@ public final class LcgSolver implements ExternalPropagator {
         }
         atomsPropagated++;
         return lit;
+      }
+      if (heldFailure != null) {
+        EntryList atoms = heldFailure;
+        heldFailure = null;
+        return conflict(atoms, 0);
       }
       if (numPending == 0 && !store.hasPendingConstraints()) {
         return 0;
@@ -6731,6 +6748,16 @@ public final class LcgSolver implements ExternalPropagator {
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
+        }
+        if (PUSH_BEFORE_CONFLICT && pushed < trail.size() && proof == null) {
+          heldFailures++;
+          EntryList held = new EntryList();
+          for (int k = 0; k < atoms.size(); k++) {
+            held.addFrom(atoms, k);
+          }
+          heldFailure = held;
+          numPending = 0;
+          continue;
         }
         return conflict(atoms, 0);
       }

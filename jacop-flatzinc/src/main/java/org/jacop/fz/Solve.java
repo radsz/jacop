@@ -3888,6 +3888,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.sat().propagations
         + "\n%%%mzn-stat: lcgConsistencyCalls="
         + store.numberConsistencyCalls
+        + "\n%%%mzn-stat: lcgHeldFailures="
+        + lcg.heldFailures
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
