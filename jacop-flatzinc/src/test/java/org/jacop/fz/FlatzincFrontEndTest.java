@@ -1615,12 +1615,14 @@ class FlatzincFrontEndTest {
     // positions without the all-different, which accepted 1 -> 3 -> 1 with 2 -> 3, so wide-set
     // tpp and mario proved optima better than the true ones.
     String fzn =
-        "var {3}: x1:: output_var;\n"
-            + "var {3}: x2:: output_var;\n"
-            + "var 1..3: x3:: output_var;\n"
-            + "array [1..3] of var int: x = [x1,x2,x3];\n"
-            + "constraint jacop_subcircuit(x);\n"
-            + "solve satisfy;\n";
+        """
+        var {3}: x1:: output_var;
+        var {3}: x2:: output_var;
+        var 1..3: x3:: output_var;
+        array [1..3] of var int: x = [x1,x2,x3];
+        constraint jacop_subcircuit(x);
+        solve satisfy;
+        """;
     String prefix = tmp.resolve("subcircuit").toString();
     String out = run(fzn, "--proof", prefix)[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
