@@ -58,6 +58,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 
@@ -2051,6 +2052,30 @@ public class HybridTable extends Constraint
   }
 
   /**
+   * Returns the clause rows of a table over 0/1 variables ({@link TableClauses}): its prime
+   * implicates over the columns not fixed, for the linear relaxation. They hold within the current
+   * domains, so they are made at the root.
+   *
+   * @return the rows, empty when a column not fixed is not 0/1 or the table is too large
+   */
+  public List<LinearForm> clauseRows() {
+    if (getClass() != HybridTable.class) {
+      return List.of();
+    }
+    return TableClauses.of(
+        x,
+        tupleCount,
+        values -> {
+          for (int t = 0; t < tupleCount; t++) {
+            if (accepts(cells, t * arity, arity, values)) {
+              return true;
+            }
+          }
+          return false;
+        });
+  }
+
+  /**
    * The violation for local search: 0 when some hybrid tuple accepts the values, otherwise the
    * fewest columns that any hybrid tuple rejects, the Hamming distance from the values to the
    * table. A move that brings the values closer to a tuple lowers it, which a 0/1 violation would
@@ -2387,6 +2412,33 @@ public class HybridTable extends Constraint
       }
     }
     return true;
+  }
+
+  /**
+   * Whether the restriction of a tuple on a column accepts a value. A restriction between columns
+   * accepts every value here; {@link #hasColumnRestrictions} tells whether there is one.
+   *
+   * @param t the tuple
+   * @param column the column
+   * @param v the value
+   * @return true when the restriction accepts v
+   */
+  public boolean cellAccepts(int t, int column, int v) {
+    return cells[t * arity + column].accepts(v);
+  }
+
+  /**
+   * Whether some tuple restricts a column by another column.
+   *
+   * @return true when a restriction is between columns
+   */
+  public boolean hasColumnRestrictions() {
+    for (Restriction r : cells) {
+      if (r.isBinary()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static long key(int column, int value) {

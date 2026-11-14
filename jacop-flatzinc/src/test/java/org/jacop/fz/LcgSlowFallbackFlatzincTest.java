@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -168,6 +169,34 @@ class LcgSlowFallbackFlatzincTest {
     }
     assertEquals(noTwoZerosOptimum(), cost, out);
     assertTrue(out.contains("=========="), out);
+  }
+
+  @Test
+  void slowLcgGoesOnWhileItMakesProgress() {
+    long s = 1_000_000_000L;
+    long none = Long.MIN_VALUE;
+    int noCost = Integer.MAX_VALUE;
+    // a bound raised inside the window keeps LCG, one raised before it does not
+    assertTrue(Solve.stillProgressing(100 * s, 10 * s, 0.01, 95 * s, 500, 500));
+    assertFalse(Solve.stillProgressing(100 * s, 10 * s, 0.01, 80 * s, 500, 500));
+    // the best cost fell by 1 % of itself over the window (ma-path-finding), or by less
+    // (unit-commitment improves by under 0.5 % in 30 s and gives way)
+    assertTrue(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, 500, 495));
+    assertFalse(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, 4_683_690, 4_661_990));
+    // a maximised cost is negated: -500 to -505 is a gain of 1 %
+    assertTrue(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, -500, -505));
+    // the first solution inside the window counts as progress, none at all does not
+    assertTrue(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, 700));
+    assertFalse(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, noCost));
+  }
+
+  @Test
+  void slowLcgKeptWhenTheWindowCoversTheRun() throws IOException {
+    // every check finds LCG slow (rate far above any solver), but the window is the whole time
+    // limit and the first solution counts as progress until it is that old: LCG never gives way
+    String out = run("lcg-slow-rate=1000000000,lcg-slow-at=0.01,lcg-slow-stall=1,lcg-slow-gain=0");
+    assertTrue(!out.contains("lcgSlowConflicts="), out);
+    checkOptimum(out);
   }
 
   @Test

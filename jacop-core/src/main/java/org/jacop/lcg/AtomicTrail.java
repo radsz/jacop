@@ -429,6 +429,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   @Override
   public void removeLevelLate(int removedLevel) {
+    if (size > 0 && level[size - 1] >= removedLevel) {
+      epoch++;
+    }
     while (size > 0 && level[size - 1] >= removedLevel) {
       size--;
       IntVar x = entryVar[size];
@@ -464,6 +467,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // each of thousands of levels made the final backtrack of debruijn_binary 04_06 copy its runs
   // at every level (60 % of a 40 s run)
   private boolean deferring;
+
+  // the number of backtracks that removed entries
+  private int epoch;
   private boolean[] stale = new boolean[0];
   private IntVar[] staleVars = new IntVar[16];
   private int numStale;
@@ -523,6 +529,17 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public int[] entryMarks() {
     return entryMarks;
+  }
+
+  /**
+   * Returns how many times entries were removed from the trail. While it stays the same, the
+   * entries before any position stay the same too, so an explanation may keep what it computed for
+   * a position.
+   *
+   * @return the number of backtracks that removed entries
+   */
+  public int epoch() {
+    return epoch;
   }
 
   /**
@@ -913,6 +930,39 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public int boundEntry(IntVar x, int position, boolean lower) {
     return latest(x, position, lower ? GE : LE);
+  }
+
+  /**
+   * Returns the bound an entry of {@link #boundEntry} gives.
+   *
+   * @param x the variable
+   * @param e the entry, or -1 for the initial bound
+   * @param lower whether it is the lower bound
+   * @return the bound
+   */
+  int boundValue(IntVar x, int e, boolean lower) {
+    if (e >= 0) {
+      return value[e];
+    }
+    IntDomain r = rootOf(x);
+    return lower ? r.min() : r.max();
+  }
+
+  /**
+   * Does what {@link #addBoundWithin(IntVar, int, boolean, long, EntryList)} does for the bound
+   * entry {@link #boundEntry} found.
+   *
+   * @param x the variable
+   * @param e the entry of its bound, or -1 for the initial bound
+   * @param lower whether the lower bound is added
+   * @param room how far the bound may be weakened
+   * @param out where the entry is added
+   * @return how far the bound added is from the bound of e
+   */
+  long addEntryWithin(IntVar x, int e, boolean lower, long room, EntryList out) {
+    int now = boundValue(x, e, lower);
+    int used = addWeakest(x, e, lower, lower ? now - room : now + room, out);
+    return Math.abs((long) now - used);
   }
 
   /**

@@ -142,6 +142,8 @@ public final class LinearExplanation {
     }
     long a = trail.value(entry);
     int mark = out.size();
+    // the entries of the bounds read, which the reason adds: each is searched for once
+    int[] entries = new int[vars.length];
     try {
       // weight * y <= rest on the upper side, >= rest on the lower side
       long rest = c;
@@ -150,12 +152,11 @@ public final class LinearExplanation {
           continue;
         }
         boolean low = upperSide == weights[i] > 0;
+        int e = trail.boundEntry(vars[i], entry, low);
+        entries[i] = e;
         rest =
             Math.subtractExact(
-                rest,
-                Math.multiplyExact(
-                    weights[i],
-                    low ? trail.minBefore(vars[i], entry) : trail.maxBefore(vars[i], entry)));
+                rest, Math.multiplyExact(weights[i], trail.boundValue(vars[i], e, low)));
       }
       // the implied bound of y: an upper bound when kind is LE, a lower bound when GE
       long bound =
@@ -181,7 +182,7 @@ public final class LinearExplanation {
           upperSide
               ? Math.subtractExact(Math.subtractExact(product, 1), rest)
               : Math.subtractExact(Math.subtractExact(rest, 1), product);
-      addLiftedBounds(trail, entry, vars, weights, own, merged, upperSide, slack, out);
+      addLiftedBounds(trail, entry, vars, weights, own, merged, upperSide, slack, entries, out);
       return true;
     } catch (ArithmeticException _) {
       out.truncate(mark);
@@ -295,10 +296,17 @@ public final class LinearExplanation {
     long smallest = 0;
     long largest = 0;
     long slack;
+    // the entries of the bounds read, which the reason adds: each is searched for once
+    int[] lowerEntries = new int[vars.length];
+    int[] upperEntries = new int[vars.length];
     try {
       for (int i = 0; i < vars.length; i++) {
-        long lo = Math.multiplyExact(weights[i], trail.minBefore(vars[i], now));
-        long hi = Math.multiplyExact(weights[i], trail.maxBefore(vars[i], now));
+        int le = trail.boundEntry(vars[i], now, true);
+        int ue = trail.boundEntry(vars[i], now, false);
+        lowerEntries[i] = le;
+        upperEntries[i] = ue;
+        long lo = Math.multiplyExact(weights[i], trail.boundValue(vars[i], le, true));
+        long hi = Math.multiplyExact(weights[i], trail.boundValue(vars[i], ue, false));
         smallest = Math.addExact(smallest, Math.min(lo, hi));
         largest = Math.addExact(largest, Math.max(lo, hi));
       }
@@ -319,7 +327,13 @@ public final class LinearExplanation {
           && greaterOrEqual
           && explainHoleFailure(trail, vars, weights, c, allWindows, out);
     }
-    addLiftedBounds(trail, now, vars, weights, -1, null, upperSide, slack, out);
+    // the side each term bounds: its lower bound on the upper side when its weight is positive
+    for (int i = 0; i < vars.length; i++) {
+      if (upperSide != weights[i] > 0) {
+        lowerEntries[i] = upperEntries[i];
+      }
+    }
+    addLiftedBounds(trail, now, vars, weights, -1, null, upperSide, slack, lowerEntries, out);
     return true;
   }
 
@@ -609,8 +623,29 @@ public final class LinearExplanation {
       boolean upperSide,
       long slack,
       EntryList out) {
+    addLiftedBounds(trail, position, vars, weights, skip, merged, upperSide, slack, null, out);
+  }
+
+  /**
+   * Does what {@link #addLiftedBounds(AtomicTrail, int, IntVar[], long[], int, IntVar, boolean,
+   * long, EntryList)} does; {@code entries}, when not null, holds the bound entries ({@link
+   * AtomicTrail#boundEntry}) of the terms at the position, on the side each term bounds, which the
+   * caller found already.
+   */
+  static void addLiftedBounds(
+      AtomicTrail trail,
+      int position,
+      IntVar[] vars,
+      long[] weights,
+      int skip,
+      IntVar merged,
+      boolean upperSide,
+      long slack,
+      int[] entries,
+      EntryList out) {
     long[] keys = null;
     long[] costs = null;
+    int[] found = entries;
     int n = 0;
     for (int i = 0; i < vars.length; i++) {
       if (i == skip || weights[i] == 0 || vars[i] == merged) {
@@ -618,18 +653,25 @@ public final class LinearExplanation {
       }
       long w = Math.abs(weights[i]);
       boolean lower = upperSide == weights[i] > 0;
+      int e = entries != null ? entries[i] : trail.boundEntry(vars[i], position, lower);
       if (w > slack) {
-        addBound(trail, vars[i], position, lower, out);
+        if (e >= 0) {
+          out.add(e);
+        }
         continue;
       }
-      long move = moveFromRoot(trail, vars[i], position, lower);
+      long move = moveFromRoot(trail, vars[i], e, lower);
       if (move == 0) {
         continue;
       }
       if (keys == null) {
         keys = new long[vars.length];
         costs = new long[vars.length];
+        if (found == null) {
+          found = new int[vars.length];
+        }
       }
+      found[i] = e;
       // the slack dropping the term takes; above the slack it can only be weakened
       costs[i] = move > slack / w ? Long.MAX_VALUE : w * move;
       keys[n++] = Math.min(costs[i], Integer.MAX_VALUE) << 32 | i;
@@ -655,28 +697,22 @@ public final class LinearExplanation {
       int i = (int) keys[j];
       long w = Math.abs(weights[i]);
       boolean lower = upperSide == weights[i] > 0;
+      int e = found[i];
       if (w > slack) {
-        addBound(trail, vars[i], position, lower, out);
+        if (e >= 0) {
+          out.add(e);
+        }
       } else {
-        slack -= w * trail.addBoundWithin(vars[i], position, lower, slack / w, out);
+        slack -= w * trail.addEntryWithin(vars[i], e, lower, slack / w, out);
       }
     }
   }
 
-  // how far a variable's lower (or upper) bound just before a position is from its initial one
-  private static long moveFromRoot(AtomicTrail trail, IntVar x, int position, boolean lower) {
+  // how far a variable's lower (or upper) bound, given by its bound entry, is from its initial one
+  private static long moveFromRoot(AtomicTrail trail, IntVar x, int e, boolean lower) {
     return lower
-        ? (long) trail.minBefore(x, position) - trail.rootDomain(x).min()
-        : (long) trail.rootDomain(x).max() - trail.maxBefore(x, position);
-  }
-
-  private static void addBound(
-      AtomicTrail trail, IntVar x, int position, boolean lower, EntryList out) {
-    if (lower) {
-      trail.addLowerBound(x, position, out);
-    } else {
-      trail.addUpperBound(x, position, out);
-    }
+        ? (long) trail.boundValue(x, e, lower) - trail.rootDomain(x).min()
+        : (long) trail.rootDomain(x).max() - trail.boundValue(x, e, lower);
   }
 
   // the bounds of the other occurrences that bound the side of the relation the entry comes from

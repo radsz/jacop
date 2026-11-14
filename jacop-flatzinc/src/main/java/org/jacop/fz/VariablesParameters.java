@@ -410,6 +410,7 @@ public class VariablesParameters implements ParserTreeConstants {
         aVar.domain.inValue(store.level, aVar, initVal);
       } else {
         IntVar initVar = getScalarFlatExpr_var(store, node, initChild);
+        table.noteDeclaredEquality(aVar, initVar);
         pose(store, new XeqY(aVar, initVar));
       }
     }
@@ -885,7 +886,9 @@ public class VariablesParameters implements ParserTreeConstants {
       boolean outputArray,
       OutputArrayAnnotation outArrayAnn) {
     table.addVariableArray(ident, array);
-    registerOutputArray(table, outputArray, outArrayAnn, array);
+    // the output keeps its own copy: Tables.getVariableArray writes the aliases into the stored
+    // array, and an integer of bool2int would then print as its Boolean
+    registerOutputArray(table, outputArray, outArrayAnn, array.clone());
   }
 
   private void registerSetArray(

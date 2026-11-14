@@ -60,6 +60,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -80,6 +81,7 @@ import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
@@ -90,6 +92,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -122,6 +125,7 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
@@ -135,6 +139,7 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.Sum;
@@ -2700,6 +2705,84 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void sumIntAndLinearIntReachTheirFixpointThroughDivesAndBacktracks() {
+    // SumInt ==: when sum.max falls into a hole of the sum's domain the pruning must run again;
+    // SumInt over more than three variables drops fixed terms on a trail; LinearInt and SumInt skip
+    // a
+    // pruning pass when no term can lose a value. After every decision and every backtrack the
+    // domains must be those a fresh store reaches from the same domains.
+    String[] relations = {"==", "<=", ">=", "!="};
+    Random random = new Random(61);
+    for (int trial = 0; trial < 1500; trial++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(4);
+      IntVar[] x = new IntVar[n + 1];
+      for (int i = 0; i <= n; i++) {
+        x[i] =
+            i < n
+                ? randomVar(store, "x" + i, -2, 4, random)
+                : randomVar(store, "s", -4, 12, random);
+      }
+      int[] w = new int[n + 1];
+      boolean weighted = random.nextBoolean();
+      for (int i = 0; i < n; i++) {
+        w[i] = weighted ? random.nextInt(7) - 3 : 1;
+      }
+      w[n] = -1;
+      String rel = relations[random.nextInt(relations.length)];
+      Function<IntVar[], Constraint> make =
+          v -> weighted ? new LinearInt(v, w, rel, 0) : new SumInt(Arrays.copyOf(v, n), rel, v[n]);
+      String instance =
+          "trial " + trial + " " + (weighted ? Arrays.toString(w) : "sum") + " " + rel;
+      store.impose(make.apply(x));
+      boolean consistent = store.consistency();
+      assertSameAsFreshStore(x, make, consistent, instance);
+      List<String> domainsAtLevel = new ArrayList<>();
+      while (consistent) {
+        domainsAtLevel.add(Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        IntVar v = free.get(random.nextInt(free.size()));
+        int[] values = valuesOf(v);
+        int value = values[random.nextInt(values.length)];
+        store.setLevel(store.level + 1);
+        switch (random.nextInt(3)) {
+          case 0 -> v.domain.inComplement(store.level, v, value);
+          case 1 -> v.domain.inMax(store.level, v, Math.max(value, v.min()));
+          default -> v.domain.inMin(store.level, v, Math.min(value, v.max()));
+        }
+        consistent = store.consistency();
+        assertSameAsFreshStore(x, make, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (store.level < domainsAtLevel.size()) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+      }
+    }
+  }
+
+  private static void assertSameAsFreshStore(
+      IntVar[] x, Function<IntVar[], Constraint> make, boolean consistent, String instance) {
+    Store fresh = new Store();
+    IntVar[] y = new IntVar[x.length];
+    for (int i = 0; i < x.length; i++) {
+      y[i] = new IntVar(fresh, x[i].id(), x[i].dom().cloneLight());
+    }
+    fresh.impose(make.apply(y));
+    boolean freshConsistent = fresh.consistency();
+    if (!consistent) {
+      return;
+    }
+    assertThat(freshConsistent).as(instance + " " + Arrays.toString(x)).isTrue();
+    assertThat(Arrays.toString(y)).as(instance + " not at fixpoint").isEqualTo(Arrays.toString(x));
+  }
+
+  @Test
   void networkFlowWithAWeightThatIsAnotherArcsFlowCountsMatchBruteForce() {
     // the weight of one arc is the flow of another: pruning the flow during the sensitivity
     // analysis left the arc cost behind its weight (AssertionError in Pruning.analyzeArc); and a
@@ -5035,6 +5118,67 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x1, x2);
 
     assertThat(noOfSolutions).isEqualTo(188640);
+  }
+
+  @Test
+  void testAllDifferentListsSolutionCount() {
+    Store store = new Store();
+    IntVar[][] x = new IntVar[4][2];
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 2);
+      }
+    }
+    store.impose(new AllDifferentLists(x));
+
+    // 4 different pairs out of the 9, in order: 9 * 8 * 7 * 6
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(3024);
+  }
+
+  /**
+   * AllDifferentLists keeps the solutions of its pairwise decomposition (a disjunction of
+   * disequalities for each pair of rows), on random rows with holes and repeated variables.
+   */
+  @Test
+  void testAllDifferentListsMatchesDecomposition() {
+    for (long seed = 0; seed < 60; seed++) {
+      int[] counts = new int[2];
+      for (int k = 0; k < 2; k++) {
+        Random rnd = new Random(seed);
+        Store store = new Store();
+        int m = 2 + rnd.nextInt(3);
+        int n = 1 + rnd.nextInt(3);
+        IntVar[] pool = new IntVar[m * n];
+        for (int q = 0; q < pool.length; q++) {
+          pool[q] = new IntVar(store, "v" + q, 0, 1 + rnd.nextInt(2));
+          if (rnd.nextInt(4) == 0) {
+            pool[q].domain.subtractAdapt(rnd.nextInt(2));
+            pool[q].refreshBounds();
+          }
+        }
+        IntVar[][] x = new IntVar[m][n];
+        for (int i = 0; i < m; i++) {
+          for (int j = 0; j < n; j++) {
+            x[i][j] = rnd.nextInt(5) == 0 ? pool[rnd.nextInt(pool.length)] : pool[i * n + j];
+          }
+        }
+        if (k == 0) {
+          store.impose(new AllDifferentLists(x));
+        } else {
+          for (int i = 0; i < m; i++) {
+            for (int r = i + 1; r < m; r++) {
+              PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+              for (int j = 0; j < n; j++) {
+                ne[j] = new XneqY(x[i][j], x[r][j]);
+              }
+              store.impose(new Or(ne));
+            }
+          }
+        }
+        counts[k] = store.consistency() ? noOfAllSolutions(store, pool) : 0;
+      }
+      assertThat(counts[0]).as("seed %d", seed).isEqualTo(counts[1]);
+    }
   }
 
   @Test
@@ -9121,6 +9265,198 @@ class SingleConstraintTest extends TestHelper {
   }
 
   /**
+   * A variable that is both a cell and a count of CardinalityMatrix or SymmetricGCC: narrowing it
+   * as a count changes the cells the flow saw, so the constraint must run its flows again. It
+   * stopped instead and left an assignment that breaks it (LcgFuzzTest seed 85884339 with holes: x2
+   * >= 2 fixed every variable and consistency held).
+   */
+  @Test
+  void cardinalityMatrixWithACountThatIsACell() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    x0.addDom(3, 3);
+    IntVar x2 = new IntVar(store, "x2", 1, 2);
+    IntVar x3 = new IntVar(store, "x3", -1, -1);
+    x3.addDom(2, 2);
+    IntVar x4 = new IntVar(store, "x4", -1, 4);
+    IntVar[] sc = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      sc[i] = new IntVar(store, "sc" + i, 0, 1);
+    }
+    store.impose(
+        new CardinalityMatrix(
+            new IntVar[][] {{x2, x4}, {x0, x3}},
+            new int[] {0, 2},
+            new IntVar[][] {{sc[0], x2}, {x0, sc[2]}},
+            new IntVar[][] {{x0, sc[1]}, {x0, sc[3]}}));
+    store.impose(new XgteqC(x2, 2));
+    // row 1 counts its 0s by x0, a cell of that row: x0 = 0 counts itself, x0 = 1 needs x3 = 0
+    assertThat(store.consistency()).isFalse();
+
+    // random matrices whose counts are partly their own cells: every solution against brute force
+    Random random = new Random(20261114);
+    for (int run = 0; run < 400; run++) {
+      boolean symmetric = random.nextBoolean();
+      Store s = new Store();
+      List<IntVar> pool = new ArrayList<>();
+      for (int i = 0; i < 4 + random.nextInt(2); i++) {
+        pool.add(
+            symmetric
+                ? new IntVar(s, "v" + i, 0, 1)
+                : new IntVar(s, "v" + i, random.nextInt(2) - 1, 1 + random.nextInt(2)));
+      }
+      int[] values =
+          symmetric ? new int[] {1} : random.nextBoolean() ? new int[] {1} : new int[] {0, 2};
+      IntVar[][] cells = new IntVar[2][2];
+      for (IntVar[] row : cells) {
+        for (int c = 0; c < 2; c++) {
+          row[c] = pool.get(random.nextInt(pool.size()));
+        }
+      }
+      IntVar[][] rows = new IntVar[2][values.length];
+      IntVar[][] cols = new IntVar[2][values.length];
+      for (IntVar[][] counts : new IntVar[][][] {rows, cols}) {
+        for (IntVar[] count : counts) {
+          for (int k = 0; k < values.length; k++) {
+            count[k] = pool.get(random.nextInt(pool.size()));
+          }
+        }
+      }
+      IntVar[] all = pool.toArray(new IntVar[0]);
+      Predicate<int[]> holds =
+          a -> {
+            for (int k = 0; k < values.length; k++) {
+              for (int i = 0; i < 2; i++) {
+                int inRow = 0;
+                int inCol = 0;
+                for (int j = 0; j < 2; j++) {
+                  inRow += a[pool.indexOf(cells[i][j])] == values[k] ? 1 : 0;
+                  inCol += a[pool.indexOf(cells[j][i])] == values[k] ? 1 : 0;
+                }
+                if (a[pool.indexOf(rows[i][k])] != inRow || a[pool.indexOf(cols[i][k])] != inCol) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          };
+      int expected = bruteForce(all, holds).size();
+      if (symmetric) {
+        s.impose(
+            new SymmetricGCC(
+                cells,
+                new IntVar[] {rows[0][0], rows[1][0]},
+                new IntVar[] {cols[0][0], cols[1][0]}));
+      } else {
+        s.impose(new CardinalityMatrix(cells, values, rows, cols));
+      }
+      int found = s.consistency() ? countSolutions(s, all, random) : 0;
+      assertThat(found).as("run %d", run).isEqualTo(expected);
+    }
+
+    // Same and UsedBy over variables that occur in both arrays
+    for (int run = 0; run < 400; run++) {
+      boolean subset = random.nextBoolean();
+      Store s = new Store();
+      List<IntVar> pool = new ArrayList<>();
+      for (int i = 0; i < 3 + random.nextInt(2); i++) {
+        pool.add(new IntVar(s, "v" + i, random.nextInt(2), 1 + random.nextInt(3)));
+      }
+      IntVar[] x = new IntVar[2 + random.nextInt(2)];
+      IntVar[] y = new IntVar[subset ? 1 + random.nextInt(x.length) : x.length];
+      for (IntVar[] array : new IntVar[][] {x, y}) {
+        for (int i = 0; i < array.length; i++) {
+          array[i] = pool.get(random.nextInt(pool.size()));
+        }
+      }
+      IntVar[] all = pool.toArray(new IntVar[0]);
+      Predicate<int[]> holds =
+          a -> {
+            Map<Integer, Integer> counts = new HashMap<>();
+            for (IntVar v : x) {
+              counts.merge(a[pool.indexOf(v)], 1, Integer::sum);
+            }
+            for (IntVar v : y) {
+              if (counts.merge(a[pool.indexOf(v)], -1, Integer::sum) < 0) {
+                return false;
+              }
+            }
+            return true;
+          };
+      int expected = bruteForce(all, holds).size();
+      s.impose(subset ? new UsedBy(x, y) : new Same(x, y));
+      int found = s.consistency() ? countSolutions(s, all, random) : 0;
+      assertThat(found).as("%s run %d", subset ? "UsedBy" : "Same", run).isEqualTo(expected);
+    }
+  }
+
+  /**
+   * Under LCG, Geost explains a bound by the obstacles whose compulsory parts cover the swept
+   * region, not by replay or the generic reason: three unit squares on a line fixed at 0, 1 and 3
+   * push a fourth one to 2, its lower bound because of the squares at 0 and 1, its upper bound
+   * because of the square at 3.
+   */
+  @Test
+  void geostExplainsItsAtoms() {
+    Store store = new Store();
+    Shape square = new Shape(0, new int[] {0, 0}, new int[] {1, 1});
+    IntVar[] x = new IntVar[4];
+    IntVar[] y = new IntVar[4];
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {x[i], y[i]},
+              new IntVar(store, "s" + i, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    Geost geost =
+        new Geost(
+            objects,
+            List.<ExternalConstraint>of(new NonOverlapping(objects, new int[] {0, 1, 2})),
+            List.of(square));
+    store.impose(geost);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int i = 0; i < 4; i++) {
+      if (i < 3) {
+        x[i].domain.in(store.level, x[i], i == 2 ? 3 : i, i == 2 ? 3 : i);
+      }
+      y[i].domain.in(store.level, y[i], 0, 0);
+    }
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[3].singleton(2)).isTrue();
+    int explained = 0;
+    EntryList reason = new EntryList();
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) != geost || trail.variable(e) != x[3]) {
+        continue;
+      }
+      reason.clear();
+      assertThat(trail.explain(e, reason)).as(trail.atomString(e)).isTrue();
+      assertThat(trail.replayed()).as(trail.atomString(e)).isFalse();
+      List<IntVar> vars = new ArrayList<>();
+      for (int k = 0; k < reason.size(); k++) {
+        vars.add(trail.variable(reason.get(k)));
+      }
+      explained++;
+      if (trail.kind(e) == AtomicTrail.GE) {
+        assertThat(vars).doesNotContain(x[2]).contains(x[0], x[1]);
+      } else {
+        assertThat(vars).doesNotContain(x[0], x[1]).contains(x[2]);
+      }
+    }
+    assertThat(explained).isPositive();
+    trail.detach();
+  }
+
+  /**
    * Under LCG, SymmetricGCC, CardinalityMatrix, Same and UsedBy explain their atoms by the cuts of
    * their flow networks, not by replay or the generic reason.
    */
@@ -9199,6 +9535,111 @@ class SingleConstraintTest extends TestHelper {
       Map<IntVar, List<IntVar>> own = ownReasons(trail2, same);
       assertThat(own.get(c)).containsOnly(a, b);
       trail2.detach();
+    }
+  }
+
+  // imposes c, raises the level, applies the change and propagates; returns the own reasons of c
+  private static Map<IntVar, List<IntVar>> reasonsAfter(
+      Store store, Constraint c, Runnable change) {
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    change.run();
+    assertThat(store.consistency()).isTrue();
+    Map<IntVar, List<IntVar>> reasons = ownReasons(trail, c);
+    trail.detach();
+    return reasons;
+  }
+
+  /**
+   * Under LCG, the globals added in 5.0 explain their atoms themselves: InterDistance by the
+   * compulsory parts and the unary rules, CircuitCost by the reduced costs of the assignment,
+   * Spread, Deviation, MultiInterDistance and StockingCost by boxes of bounds without solution, and
+   * IncreasingNValue by the order.
+   */
+  @Test
+  void recentGlobalsExplainTheirAtoms() {
+    CircuitCost.setAssignmentReasons(true);
+    InterDistance.setExplanations(true);
+    try {
+      // x0 in 5..6 with distance 3 takes 4..7 from x1 wherever it starts
+      Store s1 = new Store();
+      IntVar a0 = new IntVar(s1, "a0", 0, 10);
+      IntVar a1 = new IntVar(s1, "a1", 0, 10);
+      Map<IntVar, List<IntVar>> r1 =
+          reasonsAfter(
+              s1,
+              new InterDistance(new IntVar[] {a0, a1}, 3),
+              () -> a0.domain.in(s1.level, a0, 5, 6));
+      assertThat(a1.domain.contains(4) || a1.domain.contains(7)).isFalse();
+      assertThat(r1.get(a1)).containsOnly(a0);
+
+      // a circuit over 3 nodes has two directions; the cost bound excludes the expensive one
+      Store s2 = new Store();
+      IntVar[] next = {
+        new IntVar(s2, "n0", 1, 3), new IntVar(s2, "n1", 1, 3), new IntVar(s2, "n2", 1, 3)
+      };
+      IntVar tour = new IntVar(s2, "tour", 0, 100);
+      int[][] costs = {{0, 1, 9}, {9, 0, 1}, {1, 9, 0}};
+      Map<IntVar, List<IntVar>> r2 =
+          reasonsAfter(
+              s2, new CircuitCost(next, costs, tour), () -> tour.domain.in(s2.level, tour, 0, 10));
+      assertThat(next[0].value()).isEqualTo(2);
+      assertThat(r2.get(next[0])).containsOnly(tour);
+
+      // three values summing to 6 with a spread of at most 6: none can be 0 or 4
+      for (boolean squares : new boolean[] {true, false}) {
+        Store s3 = new Store();
+        IntVar[] y = {
+          new IntVar(s3, "y0", 0, 4), new IntVar(s3, "y1", 0, 4), new IntVar(s3, "y2", 0, 4)
+        };
+        IntVar d = new IntVar(s3, "d", 0, 100);
+        Constraint balance = squares ? new Spread(y, 6, d) : new Deviation(y, 6, d);
+        Map<IntVar, List<IntVar>> r3 =
+            reasonsAfter(s3, balance, () -> d.domain.in(s3.level, d, 0, squares ? 18 : 6));
+        assertThat(y[0].min()).isPositive();
+        assertThat(r3.get(y[0])).contains(d);
+      }
+
+      // three tasks of length 2 on two machines within 0..2: the third starts at 2 at the latest
+      Store s4 = new Store();
+      IntVar[] t = {
+        new IntVar(s4, "t0", 0, 0), new IntVar(s4, "t1", 0, 5), new IntVar(s4, "t2", 0, 5)
+      };
+      Map<IntVar, List<IntVar>> r4 =
+          reasonsAfter(
+              s4, new MultiInterDistance(t, 2, 2), () -> t[1].domain.in(s4.level, t[1], 0, 0));
+      assertThat(t[2].min()).isEqualTo(2);
+      // t0 starts at 0 from the start, so only t1 is cited
+      assertThat(r4.get(t[2])).containsOnly(t[1]);
+
+      // three orders due at 3, one per period, at most 2 periods of stock: produced at 1..3
+      Store s5 = new Store();
+      IntVar[] q = {
+        new IntVar(s5, "q0", 0, 3), new IntVar(s5, "q1", 0, 3), new IntVar(s5, "q2", 0, 3)
+      };
+      IntVar stock = new IntVar(s5, "stock", 0, 10);
+      Map<IntVar, List<IntVar>> r5 =
+          reasonsAfter(
+              s5,
+              new StockingCost(q, new int[] {3, 3, 3}, stock, 1),
+              () -> stock.domain.in(s5.level, stock, 0, 3));
+      assertThat(q[0].min()).isEqualTo(1);
+      assertThat(r5.get(q[0])).containsOnly(stock);
+
+      // an increasing sequence: x0 >= 2 raises x1 by x0 alone
+      Store s6 = new Store();
+      IntVar[] z = {new IntVar(s6, "z0", 0, 3), new IntVar(s6, "z1", 0, 3)};
+      Map<IntVar, List<IntVar>> r6 =
+          reasonsAfter(
+              s6,
+              new IncreasingNValue(z, new IntVar(s6, "nv", 1, 2)),
+              () -> z[0].domain.in(s6.level, z[0], 2, 3));
+      assertThat(r6.get(z[1])).containsExactly(z[0]);
+    } finally {
+      CircuitCost.setAssignmentReasons(false);
+      InterDistance.setExplanations(false);
     }
   }
 

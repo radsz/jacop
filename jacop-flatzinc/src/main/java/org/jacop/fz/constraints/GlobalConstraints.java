@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -631,7 +632,10 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   // under --proof a decomposition by positions, whose encoding unit propagation follows; the cut
-  // and dominance reasons of Subcircuit it does not
+  // and dominance reasons of Subcircuit it does not. The decomposition does not state that the
+  // successors differ, and --proof implies -b, which leaves out the implied Alldistinct, so the
+  // all-different is posted here: without it two nodes could share a successor (tpp and mario
+  // proved optima below the true ones).
   private void subcircuit(IntVar[] v) {
     if (support.options.proof() == null) {
       support.pose(new Subcircuit(v));
@@ -640,6 +644,7 @@ class GlobalConstraints implements ParserTreeConstants {
     for (Constraint c : Subcircuit.decomposition(store, v)) {
       support.pose(c);
     }
+    support.pose(new Alldiff(v));
   }
 
   // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
@@ -1789,12 +1794,21 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_table_int(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-    int size = v.length;
     int[] tbl = support.mergedTables.remove(node);
     if (tbl == null) {
       tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     }
+    poseTableRows(v, tbl);
+  }
 
+  /**
+   * It posts a positive table given by its rows flattened row by row, as jacop_table_int does.
+   *
+   * @param v the variables.
+   * @param tbl the rows, flattened row by row.
+   */
+  void poseTableRows(IntVar[] v, int[] tbl) {
+    int size = v.length;
     int[][] t = filterFeasibleTuples(tbl, v, size);
     if (t.length == 0) {
       // no tuple is allowed by the domains
@@ -2804,6 +2818,19 @@ class GlobalConstraints implements ParserTreeConstants {
     support.pose(new LexOrder(x, y, false));
   }
 
+  void gen_jacop_all_different_lists(SimpleNode node) {
+    IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int rows = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int n = rows == 0 ? 0 : a.length / rows;
+
+    // row i of the matrix is a[i * n .. i * n + n - 1]
+    IntVar[][] x = new IntVar[rows][n];
+    for (int i = 0; i < rows; i++) {
+      System.arraycopy(a, i * n, x[i], 0, n);
+    }
+    support.pose(new AllDifferentLists(x));
+  }
+
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
     IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int vectors = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -2963,6 +2990,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
+    support.binPackingPermutations.add(bin, cc, w, minBin);
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -2978,6 +3006,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, load, w, minBin));
     support.binPackingCliques.add(bin, load, w, minBin);
+    support.binPackingPermutations.add(bin, load, w, minBin);
   }
 
   void gen_jacop_float_maximum(SimpleNode node) {

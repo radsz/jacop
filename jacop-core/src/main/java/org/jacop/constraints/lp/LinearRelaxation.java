@@ -55,6 +55,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -330,6 +331,9 @@ public class LinearRelaxation extends Constraint
   /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
   public int pairCliques;
 
+  /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
+  public int tableClauses;
+
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
 
@@ -440,6 +444,13 @@ public class LinearRelaxation extends Constraint
   private static final boolean CUTS_ENABLED =
       !"false".equals(System.getProperty("org.jacop.lp.cuts"));
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
+  // rounds after the first CUT_ROUNDS, while each still moves the bound: at most this many rounds
+  // in all, within CUT_EXTRA_NANOS of the end of the first CUT_ROUNDS
+  private static final int CUT_ROUNDS_MAX = Integer.getInteger("org.jacop.lp.cutRoundsMax", 50);
+  private static final long CUT_EXTRA_NANOS =
+      (long) (Double.parseDouble(System.getProperty("org.jacop.lp.cutExtraSeconds", "1")) * 1e9);
+  // an extra round must move the bound by this share of what the rounds before it moved it
+  private static final double CUT_PROGRESS = 0.01;
   private static final int CUTS_PER_ROUND = Integer.getInteger("org.jacop.lp.cutsPerRound", 50);
   private static final int MAX_SOURCES = 100;
 
@@ -597,6 +608,34 @@ public class LinearRelaxation extends Constraint
     return trees.size();
   }
 
+  // MIR and Gomory cuts in search, like the capacity cuts: separated from the solution of an
+  // optimal solve every mirPeriod solves, over the bounds of the first solve, so that they hold
+  // globally; the period halves after a separation whose cuts move the bound and doubles otherwise
+  // (up to CAPACITY_MAX_PERIOD). The cuts go into the row pool and leave the simplex when they age.
+  // A model with a weak root relaxation that only branching tightens (tank allocation, XCSP 2025,
+  // where CP-SAT adds about 1,200 cuts in search) gets its bound from them. Off by default
+  // (-Dorg.jacop.lp.mirSearch=true): the separations take the work budget of the LP calls, so on a
+  // knapsack of 60 items the LP ran 8 times less often and the search needed 7 times more nodes
+  private static final boolean MIR_SEARCH = Boolean.getBoolean("org.jacop.lp.mirSearch");
+  private static final int MIR_SEARCH_CUTS = Integer.getInteger("org.jacop.lp.mirSearchCuts", 10);
+  private int mirPeriod = 4;
+  private int mirWaited;
+  // the rows of the first cut rounds, as aggregates, and the keys of the cuts chosen so far
+  private Aggregate[] mirRows;
+  private Set<List<Long>> mirSeen;
+  // the columns of the simplex the rows were taken over; another simplex (the extra rows dropped)
+  // ends the cuts in search
+  private int mirColumns;
+
+  /** Statistics: rounds of root cuts whose re-solve stopped at its pivot limit. */
+  public long cutLimits;
+
+  /** Statistics: MIR and Gomory cuts added in search. */
+  public long mirSearchCuts;
+
+  /** Statistics: separations of MIR and Gomory cuts in search. */
+  public long mirSeparations;
+
   // capacity and multistar cuts in search: separated from the solution of an optimal solve every
   // capacityPeriod solves, the period doubling (up to CAPACITY_MAX_PERIOD) after a separation that
   // finds no violated cut and halving after one that does. The cuts hold globally (root demands,
@@ -707,7 +746,8 @@ public class LinearRelaxation extends Constraint
   /**
    * Creates the relaxation of linear forms.
    *
-   * @param forms the rows; forms with relation {@code !=} are left out
+   * @param forms the rows; forms with relation {@code !=} and forms with fewer than two nonzero
+   *     weights (after merging duplicate variables) are left out, so the model must enforce them
    * @param objective the variable to minimize, or null for satisfaction
    * @param maximize whether the objective is maximized instead
    */
@@ -718,7 +758,8 @@ public class LinearRelaxation extends Constraint
   /**
    * Creates the relaxation of linear forms, solved by the given simplex.
    *
-   * @param forms the rows; forms with relation {@code !=} are left out
+   * @param forms the rows; forms with relation {@code !=} and forms with fewer than two nonzero
+   *     weights (after merging duplicate variables) are left out, so the model must enforce them
    * @param objective the variable to minimize, or null for satisfaction
    * @param maximize whether the objective is maximized instead
    * @param simplex the simplex
@@ -735,7 +776,8 @@ public class LinearRelaxation extends Constraint
    * infeasible, or are at most {@code org.jacop.lp.smallExtra} (100) rows; with lazy rows they are
    * rows like the others.
    *
-   * @param forms the rows; forms with relation {@code !=} are left out
+   * @param forms the rows; forms with relation {@code !=} and forms with fewer than two nonzero
+   *     weights (after merging duplicate variables) are left out, so the model must enforce them
    * @param extra the further rows
    * @param objective the variable to minimize, or null for satisfaction
    * @param maximize whether the objective is maximized instead
@@ -795,6 +837,8 @@ public class LinearRelaxation extends Constraint
         baseColumns = columns.size();
       }
       merged.values().removeIf(w -> w == 0);
+      // rows over fewer than two columns are left out (see the constructors); the model enforces
+      // them
       if (overflow || merged.size() < 2) {
         continue;
       }
@@ -838,6 +882,7 @@ public class LinearRelaxation extends Constraint
     int m = base;
     rowColumns = rc.subList(0, m).toArray(new int[0][]);
     rowWeights = rw.subList(0, m).toArray(new long[0][]);
+    setRows = setRows(m);
     rowLo = new long[m];
     rowHi = new long[m];
     hasLo = new boolean[m];
@@ -1090,6 +1135,34 @@ public class LinearRelaxation extends Constraint
     // the value encodings of the counting, all-different and element constraints come last: they
     // are tried at the first solve like the other rows, and kept only when they help
     List<LinearForm> ownTried = objective == null ? List.of() : new ArrayList<>(tried);
+    // the clauses of the tables over 0/1 variables, tried with the table rows: on Fortress (walls
+    // that enclose points of a grid) they make the relaxation the vertex cut LP, whose bound is the
+    // fewest walls; without them the tables gave the relaxation no row. A table whose variables
+    // are all in the given tried rows has its convex hull over tuple columns there (TableCliques),
+    // which implies each of its clauses: the clauses of the xor tables of DC only slowed the first
+    // solve and moved the search
+    int tableClauses = 0;
+    if (TABLE_CLAUSES && objective != null) {
+      List<LinearForm> clauseRows = new ArrayList<>();
+      Set<IntVar> inTried = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : tried) {
+        inTried.addAll(Arrays.asList(f.vars()));
+      }
+      for (Constraint c : constraints) {
+        if (c instanceof HybridTable h
+            && !h.arguments().stream()
+                .allMatch(v -> v.singleton() || v instanceof IntVar i && inTried.contains(i))) {
+          List<LinearForm> rows = h.clauseRows();
+          clauseRows.addAll(rows);
+        }
+      }
+      // more rows than the trial takes in proportion: DC-midori r14, 76,036 rows over the tables
+      // past the hull cap, never raised the bound and slowed its first solutions
+      if (clauseRows.size() <= MAX_TABLE_CLAUSES) {
+        ownTried.addAll(clauseRows);
+        tableClauses = clauseRows.size();
+      }
+    }
     List<LinearForm> triedRows = new ArrayList<>(valueRows.tried());
     triedRows.addAll(ownTried);
     // the sorting networks of the all-different permutations are tried like the value encodings,
@@ -1124,7 +1197,10 @@ public class LinearRelaxation extends Constraint
       auto = large;
     }
     if (auto
-        && (large || localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
+        && (large
+            || localForms.size() >= SPARSE_ROWS
+            || tableClauses >= SPARSE_ROWS
+            || tooLarge(localForms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
       // larger ones, also those over the dense size cap, which would get no relaxation at all
@@ -1169,6 +1245,7 @@ public class LinearRelaxation extends Constraint
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     r.pairCliques = pairCliques;
+    r.tableClauses = tableClauses;
     r.capacity = separations;
     r.energy = resources;
     r.hall = hall;
@@ -1434,6 +1511,14 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the most clause rows of tables over all tables; more give none
+  private static final int MAX_TABLE_CLAUSES =
+      Integer.getInteger("org.jacop.lp.tableClauseRowsMax", 10_000);
+
+  // the clause rows of tables over 0/1 variables (HybridTable.clauseRows)
+  private static final boolean TABLE_CLAUSES =
+      !"false".equals(System.getProperty("org.jacop.lp.tableClauseRows"));
 
   // the conflicts of pairs of 0/1 literals merged into clique rows
   private static final boolean PAIR_CLIQUES =
@@ -1906,6 +1991,60 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Returns whether the relaxation is a set partitioning, packing or covering model over 0/1
+   * columns: each row that does not hold the objective has weights of one sign and size one over
+   * columns whose domains are within 0..1 (fixed columns are constants), and there are at most
+   * org.jacop.lp.setRowsShare (0.1) rows per column. Its root solution is often almost integral,
+   * and its bound is often the optimum (the crew schedules of XCSP 2025 BusScheduling, 199 rows
+   * over 14,773 columns: root bound 28.5, optimum 29).
+   *
+   * @return whether every row of the relaxation is a set row over 0/1 columns
+   */
+  public boolean setRows() {
+    return setRows;
+  }
+
+  // whether the model's rows are set rows, decided when the relaxation is built: cuts come later
+  private final boolean setRows;
+
+  // whether the first m rows, the model's, are set rows over 0/1 columns
+  private boolean setRows(int m) {
+    if (m < 2 || m > x.length * SET_ROWS_SHARE) {
+      return false;
+    }
+    for (int i = 0; i < m; i++) {
+      int[] cs = rowColumns[i];
+      boolean holdsObjective =
+          objective != null && Arrays.stream(cs).anyMatch(j -> x[j] == objective);
+      if (!holdsObjective && !setRow(cs, rowWeights[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether a row has weights of one sign and size one over 0/1 columns; fixed columns are
+  // constants of the row
+  private boolean setRow(int[] cs, long[] ws) {
+    long sign = 0;
+    for (int k = 0; k < cs.length; k++) {
+      IntVar v = x[cs[k]];
+      if (!v.singleton()) {
+        if (sign == 0) {
+          sign = ws[k];
+        }
+        if (ws[k] != sign || Math.abs(ws[k]) != 1 || v.min() < 0 || v.max() > 1) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static final double SET_ROWS_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.setRowsShare", "0.1"));
+
+  /**
    * Returns the variable minimized, or null for satisfaction.
    *
    * @return the objective
@@ -2277,6 +2416,17 @@ public class LinearRelaxation extends Constraint
       status = cutRounds();
     }
     if (status == LpSolver.OPTIMAL
+        && MIR_SEARCH
+        && mirRows != null
+        && mirColumns == lp.columns()
+        && objective != null
+        && calls > 1
+        && !restarting
+        && ++mirWaited >= mirPeriod) {
+      mirWaited = 0;
+      status = searchMirCuts(limit);
+    }
+    if (status == LpSolver.OPTIMAL
         && CAPACITY_SEARCH
         && capacityColumns != null
         && capacityColumns.length > 0
@@ -2329,9 +2479,8 @@ public class LinearRelaxation extends Constraint
       if (beforeExtra != null
           && !keepEncodings
           && trees.isEmpty()
-          && extraHits >= EXTRA_LIMITS
-          && extraHits * 20 > calls
-          && calls >= 20L * EXTRA_LIMITS) {
+          && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
+              || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
       }
       return;
@@ -3096,10 +3245,28 @@ public class LinearRelaxation extends Constraint
       unitRows[i] = rowAggregate(i);
     }
     Set<List<Long>> seen = new HashSet<>();
+    if (!restarting) {
+      mirRows = unitRows;
+      mirSeen = seen;
+      mirColumns = n;
+    }
     int status = DualSimplex.OPTIMAL;
     long cutsBefore = cuts;
     boolean moved = !restarting && moveToSparse();
-    for (int round = 0; round < CUT_ROUNDS; round++) {
+    boolean slack = slackGomory;
+    double start = lp.value(0);
+    long extraDeadline = 0;
+    for (int round = 0; round < Math.max(CUT_ROUNDS, CUT_ROUNDS_MAX); round++) {
+      if (round >= CUT_ROUNDS) {
+        // further rounds only while the cuts still move the bound, and for a short time
+        long now = System.nanoTime();
+        if (extraDeadline == 0) {
+          extraDeadline = now + CUT_EXTRA_NANOS;
+        }
+        if (restarting || now > extraDeadline) {
+          break;
+        }
+      }
       List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen);
       if (chosen.isEmpty()) {
         break;
@@ -3120,6 +3287,21 @@ public class LinearRelaxation extends Constraint
         dropCuts(chosen.size(), kept, keptRows);
         break;
       }
+      if (status == LpSolver.LIMIT) {
+        cutLimits++;
+      }
+      if (status == LpSolver.LIMIT && slackGomory) {
+        // the Gomory cuts over the slacks can stall the simplex (degenerate pivots on tank
+        // allocation, XCSP 2025); the round is dropped and the next ones take the MIR of the
+        // aggregates instead
+        dropCuts(chosen.size(), kept, keptRows);
+        for (MirCut c : chosen) {
+          seen.remove(key(c));
+        }
+        status = LpSolver.OPTIMAL;
+        slackGomory = false;
+        continue;
+      }
       if (status != DualSimplex.OPTIMAL) {
         if (status == DualSimplex.LIMIT) {
           dropCuts(chosen.size(), kept, keptRows);
@@ -3127,7 +3309,12 @@ public class LinearRelaxation extends Constraint
         }
         break;
       }
+      double gain = Math.abs(lp.value(0) - before);
+      if (round >= CUT_ROUNDS - 1 && gain < CUT_PROGRESS * Math.abs(lp.value(0) - start)) {
+        break;
+      }
     }
+    slackGomory = slack;
     if (moved
         && status == DualSimplex.OPTIMAL
         && (cuts == cutsBefore
@@ -3900,6 +4087,31 @@ public class LinearRelaxation extends Constraint
       }
       capacityForms.add(new LinearForm(vars, rowWeights[i].clone(), rowHi[i], LinearForm.LE));
     }
+  }
+
+  // MIR and Gomory cuts from the solution of an optimal solve in search, over the bounds of the
+  // first solve: the most efficacious ones go into the simplex and the pool, and the relaxation is
+  // solved again with them
+  private int searchMirCuts(int limit) {
+    mirSeparations++;
+    int n = lp.columns();
+    List<MirCut> found =
+        separateCuts(Arrays.copyOf(rootLo, n), Arrays.copyOf(rootHi, n), mirRows, mirSeen);
+    List<MirCut> chosen =
+        found.size() > MIR_SEARCH_CUTS ? found.subList(0, MIR_SEARCH_CUTS) : found;
+    for (MirCut c : found.subList(chosen.size(), found.size())) {
+      mirSeen.remove(key(c));
+    }
+    if (chosen.isEmpty()) {
+      mirPeriod = Math.min(2 * mirPeriod, CAPACITY_MAX_PERIOD);
+      return LpSolver.OPTIMAL;
+    }
+    double before = lp.value(0);
+    addCuts(new ArrayList<>(chosen));
+    mirSearchCuts += chosen.size();
+    int status = solvePool(limit);
+    mirPeriod = nextPeriod(mirPeriod, moved(status, before));
+    return status;
   }
 
   // capacity and multistar cuts from the solution of an optimal solve in search: the violated
