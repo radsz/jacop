@@ -76,6 +76,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMax;
 import org.jacop.search.SmallestMin;
+import org.jacop.search.SmallestSpan;
 import org.jacop.search.SplitRandomSelect;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
@@ -854,6 +855,23 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * How {@code first_fail} breaks the ties between variables with the fewest values, the system
+   * property {@code org.jacop.fz.firstFailTie}: {@code span} (default) prefers the smallest max -
+   * min + 1 ({@link SmallestSpan}), {@code min} the smallest minimum, {@code none} the first in the
+   * annotation's order. The variable chosen always has the smallest domain, as {@code first_fail}
+   * asks; only the order among equally small domains changes, and only when they have holes.
+   */
+  static final String FIRST_FAIL_TIE = System.getProperty("org.jacop.fz.firstFailTie", "span");
+
+  private static ComparatorVariable<IntVar> firstFailTie() {
+    return switch (FIRST_FAIL_TIE) {
+      case "none" -> null;
+      case "min" -> new SmallestMin<>();
+      default -> new SmallestSpan<>();
+    };
+  }
+
+  /**
    * Gets the variable selection comparator for integer variables.
    *
    * @return the comparator for variable selection
@@ -866,7 +884,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return switch (varSelectionHeuristic) {
         case INPUT_ORDER -> new ComparatorsVar<>(null);
         case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
-        case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomain<>());
+        case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomain<>(), firstFailTie());
         case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new LargestDomain<>());
         case MOST_CONSTRAINED ->
             new ComparatorsVar<>(new SmallestDomain<>(), new MostConstrainedStatic<>());
