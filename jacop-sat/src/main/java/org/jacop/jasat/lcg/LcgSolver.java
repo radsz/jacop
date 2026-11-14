@@ -108,6 +108,9 @@ import org.jacop.search.lns.AdaptiveLns;
  */
 public final class LcgSolver implements ExternalPropagator {
 
+  // the value of a system property that turns an option off
+  private static final String FALSE = "false";
+
   private static final int GE_KIND = 0;
   private static final int EQ_KIND = 1;
 
@@ -146,7 +149,7 @@ public final class LcgSolver implements ExternalPropagator {
    * stay few, so a bound change no longer runs down a long chain of binary clauses.
    */
   private static final boolean RELEASE =
-      !"false".equals(System.getProperty("jacop.lcg.releaseLiterals"));
+      !FALSE.equals(System.getProperty("jacop.lcg.releaseLiterals"));
 
   // per DIMACS variable: true while a transient literal, in no clause and not linked
   private boolean[] transientLit = new boolean[16];
@@ -266,8 +269,7 @@ public final class LcgSolver implements ExternalPropagator {
   public long liftedLiterals;
 
   // cite a weaker existing literal for a lifted bound, unless -Djacop.lcg.liftLiterals=false
-  private final boolean liftLiterals =
-      !"false".equals(System.getProperty("jacop.lcg.liftLiterals"));
+  private final boolean liftLiterals = !FALSE.equals(System.getProperty("jacop.lcg.liftLiterals"));
 
   /** Statistics: distinct literals pushed as atoms. */
   public long atomLiterals;
@@ -353,22 +355,21 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean improvedInRun;
   private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
   // last-conflict branching, on unless -Djacop.lcg.lastConflict=false
-  private final boolean lastConflict =
-      !"false".equals(System.getProperty("jacop.lcg.lastConflict"));
+  private final boolean lastConflict = !FALSE.equals(System.getProperty("jacop.lcg.lastConflict"));
   private int decisionVar = -1; // the variable of the last activity decision
   private int conflictVar = -1; // the variable to branch on next, after a conflict
   private long backtrackConflicts;
   // semantic minimisation of learnt clauses, on unless -Djacop.lcg.semantic=false
-  private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
+  private final boolean semantic = !FALSE.equals(System.getProperty("jacop.lcg.semantic"));
   // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
-  private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
+  private final boolean semanticUip = !FALSE.equals(System.getProperty("jacop.lcg.semanticUip"));
   private final double[] activity;
   // the variables by activity; with Booleans first only the 0/1 ones, the others in wide, which
   // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search
   private final VarHeap heap = new VarHeap();
   private final VarHeap wide = new VarHeap();
   // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
-  private boolean split = !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
+  private boolean split = !FALSE.equals(System.getProperty("jacop.lcg.booleansFirst"));
   // whether the runs of activity branching take turns with and without Booleans first
   private boolean booleansFirstTurns;
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
@@ -456,7 +457,7 @@ public final class LcgSolver implements ExternalPropagator {
   // after the core phase, branch and bound starts from the activity before it, unless
   // -Djacop.lcg.coreRestore=false
   private static final boolean CORE_RESTORE =
-      !"false".equals(System.getProperty("jacop.lcg.coreRestore"));
+      !FALSE.equals(System.getProperty("jacop.lcg.coreRestore"));
   // the core phase gives its time to branch and bound when it has no solution of its own by this
   // share of
   // its time; 0 turns it off. With the restore it scored 21.3 against 14.7 and 24.3 against 12.7 on
@@ -4371,10 +4372,6 @@ public final class LcgSolver implements ExternalPropagator {
       } else if (clauseCandidate(c) && encodeAsClauses(c)) {
         constraintsAsClauses++;
       } else if (!LAZY_COUNTERS && defaultCounter(c) && encodeAsCounter(c)) {
-        if (COUNTERS_LOG) {
-          System.out.println(
-              "% counter " + c.getClass().getSimpleName() + " vars " + c.arguments().size());
-        }
         defaultCounters++;
         constraintsAsClauses++;
       } else {
@@ -4477,7 +4474,7 @@ public final class LcgSolver implements ExternalPropagator {
    * EFPA-4-5-4-11 the proof takes 0.81 million conflicts instead of 2.6 million.
    */
   static final boolean COUNTERS =
-      !"false".equals(System.getProperty("jacop.lcg.counters")) && !"all".equals(CLAUSE_CLASSES);
+      !FALSE.equals(System.getProperty("jacop.lcg.counters")) && !"all".equals(CLAUSE_CLASSES);
 
   /** The most clauses of one such counting constraint, {@code jacop.lcg.counters.limit}. */
   static final int COUNTERS_LIMIT = Integer.getInteger("jacop.lcg.counters.limit", 4000);
@@ -4489,8 +4486,6 @@ public final class LcgSolver implements ExternalPropagator {
                   "jacop.lcg.counters.classes",
                   "SumBool,LinearBool,Count,CountBounds,CountValues,CountValuesBounds,AtMost,AtLeast")
               .split(","));
-
-  private static final boolean COUNTERS_LOG = Boolean.getBoolean("jacop.lcg.counters.log");
 
   private ClauseEncoder counterEncoder;
 
@@ -4544,36 +4539,28 @@ public final class LcgSolver implements ExternalPropagator {
     Iterator<Map.Entry<Constraint, int[]>> it = lazyCounters.entrySet().iterator();
     while (it.hasNext()) {
       Map.Entry<Constraint, int[]> e = it.next();
-      Constraint c = e.getKey();
-      if (e.getValue()[0] < lazyUses) {
-        continue;
+      if (e.getValue()[0] >= lazyUses) {
+        it.remove();
+        decomposeCounter(e.getKey());
       }
-      it.remove();
-      if (c.isEntailed()) {
-        continue;
-      }
-      if (counterEncoder == null) {
-        counterEncoder = new ClauseEncoder(solverLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
-      }
-      List<int[]> cs = counterFits(c) ? counterEncoder.encode(c, true) : null;
-      if (cs == null) {
-        continue;
-      }
+    }
+  }
+
+  private void decomposeCounter(Constraint c) {
+    if (c.isEntailed() || !counterFits(c)) {
+      return;
+    }
+    if (counterEncoder == null) {
+      counterEncoder = new ClauseEncoder(solverLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
+    }
+    List<int[]> cs = counterEncoder.encode(c, true);
+    if (cs != null) {
       structural.addAll(cs);
       constraintClauses += cs.size();
       c.removeConstraint();
       encodedConstraints.add(c);
       lazyCountersEncoded++;
       defaultCounters++;
-      if (COUNTERS_LOG) {
-        System.out.println(
-            "% lazy counter "
-                + c.getClass().getSimpleName()
-                + " vars "
-                + c.arguments().size()
-                + " uses "
-                + e.getValue()[0]);
-      }
     }
   }
 
