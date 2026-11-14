@@ -3235,7 +3235,8 @@ public final class LcgSolver implements ExternalPropagator {
       if (boundDiveShare > 0
           && coreProbeShare > 0
           && workEnd != Long.MAX_VALUE
-          && coreSearch.lowerBound < root[objective].min()) {
+          && coreSearch.lowerBound < root[objective].min()
+          && root[objective].min() < root[objective].max()) {
         // the root bound of the objective (from the linear relaxation, say) is above the cores'
         // lower bound: a short search for a solution at that bound goes first, as such a solution
         // is optimal. The cores start below what is already proved: on nfc (Challenge 2022) the
