@@ -60,6 +60,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -5120,6 +5121,67 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void testAllDifferentListsSolutionCount() {
+    Store store = new Store();
+    IntVar[][] x = new IntVar[4][2];
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 2);
+      }
+    }
+    store.impose(new AllDifferentLists(x));
+
+    // 4 different pairs out of the 9, in order: 9 * 8 * 7 * 6
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(3024);
+  }
+
+  /**
+   * AllDifferentLists keeps the solutions of its pairwise decomposition (a disjunction of
+   * disequalities for each pair of rows), on random rows with holes and repeated variables.
+   */
+  @Test
+  void testAllDifferentListsMatchesDecomposition() {
+    for (long seed = 0; seed < 60; seed++) {
+      int[] counts = new int[2];
+      for (int k = 0; k < 2; k++) {
+        Random rnd = new Random(seed);
+        Store store = new Store();
+        int m = 2 + rnd.nextInt(3);
+        int n = 1 + rnd.nextInt(3);
+        IntVar[] pool = new IntVar[m * n];
+        for (int q = 0; q < pool.length; q++) {
+          pool[q] = new IntVar(store, "v" + q, 0, 1 + rnd.nextInt(2));
+          if (rnd.nextInt(4) == 0) {
+            pool[q].domain.subtractAdapt(rnd.nextInt(2));
+            pool[q].refreshBounds();
+          }
+        }
+        IntVar[][] x = new IntVar[m][n];
+        for (int i = 0; i < m; i++) {
+          for (int j = 0; j < n; j++) {
+            x[i][j] = rnd.nextInt(5) == 0 ? pool[rnd.nextInt(pool.length)] : pool[i * n + j];
+          }
+        }
+        if (k == 0) {
+          store.impose(new AllDifferentLists(x));
+        } else {
+          for (int i = 0; i < m; i++) {
+            for (int r = i + 1; r < m; r++) {
+              PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+              for (int j = 0; j < n; j++) {
+                ne[j] = new XneqY(x[i][j], x[r][j]);
+              }
+              store.impose(new Or(ne));
+            }
+          }
+        }
+        counts[k] = store.consistency() ? noOfAllSolutions(store, pool) : 0;
+      }
+      assertThat(counts[0]).as("seed %d", seed).isEqualTo(counts[1]);
+    }
+  }
+
+  @Test
   void testLexChainSolutionCount() {
 
     for (boolean strict : new boolean[] {true, false}) {
@@ -9200,6 +9262,132 @@ class SingleConstraintTest extends TestHelper {
       reasons.put(trail.variable(e), vars);
     }
     return reasons;
+  }
+
+  /**
+   * A variable that is both a cell and a count of CardinalityMatrix or SymmetricGCC: narrowing it
+   * as a count changes the cells the flow saw, so the constraint must run its flows again. It
+   * stopped instead and left an assignment that breaks it (LcgFuzzTest seed 85884339 with holes: x2
+   * >= 2 fixed every variable and consistency held).
+   */
+  @Test
+  void cardinalityMatrixWithACountThatIsACell() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 1);
+    x0.addDom(3, 3);
+    IntVar x2 = new IntVar(store, "x2", 1, 2);
+    IntVar x3 = new IntVar(store, "x3", -1, -1);
+    x3.addDom(2, 2);
+    IntVar x4 = new IntVar(store, "x4", -1, 4);
+    IntVar[] sc = new IntVar[4];
+    for (int i = 0; i < 4; i++) {
+      sc[i] = new IntVar(store, "sc" + i, 0, 1);
+    }
+    store.impose(
+        new CardinalityMatrix(
+            new IntVar[][] {{x2, x4}, {x0, x3}},
+            new int[] {0, 2},
+            new IntVar[][] {{sc[0], x2}, {x0, sc[2]}},
+            new IntVar[][] {{x0, sc[1]}, {x0, sc[3]}}));
+    store.impose(new XgteqC(x2, 2));
+    // row 1 counts its 0s by x0, a cell of that row: x0 = 0 counts itself, x0 = 1 needs x3 = 0
+    assertThat(store.consistency()).isFalse();
+
+    // random matrices whose counts are partly their own cells: every solution against brute force
+    Random random = new Random(20261114);
+    for (int run = 0; run < 400; run++) {
+      boolean symmetric = random.nextBoolean();
+      Store s = new Store();
+      List<IntVar> pool = new ArrayList<>();
+      for (int i = 0; i < 4 + random.nextInt(2); i++) {
+        pool.add(
+            symmetric
+                ? new IntVar(s, "v" + i, 0, 1)
+                : new IntVar(s, "v" + i, random.nextInt(2) - 1, 1 + random.nextInt(2)));
+      }
+      int[] values =
+          symmetric ? new int[] {1} : random.nextBoolean() ? new int[] {1} : new int[] {0, 2};
+      IntVar[][] cells = new IntVar[2][2];
+      for (IntVar[] row : cells) {
+        for (int c = 0; c < 2; c++) {
+          row[c] = pool.get(random.nextInt(pool.size()));
+        }
+      }
+      IntVar[][] rows = new IntVar[2][values.length];
+      IntVar[][] cols = new IntVar[2][values.length];
+      for (IntVar[][] counts : new IntVar[][][] {rows, cols}) {
+        for (IntVar[] count : counts) {
+          for (int k = 0; k < values.length; k++) {
+            count[k] = pool.get(random.nextInt(pool.size()));
+          }
+        }
+      }
+      IntVar[] all = pool.toArray(new IntVar[0]);
+      Predicate<int[]> holds =
+          a -> {
+            for (int k = 0; k < values.length; k++) {
+              for (int i = 0; i < 2; i++) {
+                int inRow = 0;
+                int inCol = 0;
+                for (int j = 0; j < 2; j++) {
+                  inRow += a[pool.indexOf(cells[i][j])] == values[k] ? 1 : 0;
+                  inCol += a[pool.indexOf(cells[j][i])] == values[k] ? 1 : 0;
+                }
+                if (a[pool.indexOf(rows[i][k])] != inRow || a[pool.indexOf(cols[i][k])] != inCol) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          };
+      int expected = bruteForce(all, holds).size();
+      if (symmetric) {
+        s.impose(
+            new SymmetricGCC(
+                cells,
+                new IntVar[] {rows[0][0], rows[1][0]},
+                new IntVar[] {cols[0][0], cols[1][0]}));
+      } else {
+        s.impose(new CardinalityMatrix(cells, values, rows, cols));
+      }
+      int found = s.consistency() ? countSolutions(s, all, random) : 0;
+      assertThat(found).as("run %d", run).isEqualTo(expected);
+    }
+
+    // Same and UsedBy over variables that occur in both arrays
+    for (int run = 0; run < 400; run++) {
+      boolean subset = random.nextBoolean();
+      Store s = new Store();
+      List<IntVar> pool = new ArrayList<>();
+      for (int i = 0; i < 3 + random.nextInt(2); i++) {
+        pool.add(new IntVar(s, "v" + i, random.nextInt(2), 1 + random.nextInt(3)));
+      }
+      IntVar[] x = new IntVar[2 + random.nextInt(2)];
+      IntVar[] y = new IntVar[subset ? 1 + random.nextInt(x.length) : x.length];
+      for (IntVar[] array : new IntVar[][] {x, y}) {
+        for (int i = 0; i < array.length; i++) {
+          array[i] = pool.get(random.nextInt(pool.size()));
+        }
+      }
+      IntVar[] all = pool.toArray(new IntVar[0]);
+      Predicate<int[]> holds =
+          a -> {
+            Map<Integer, Integer> counts = new HashMap<>();
+            for (IntVar v : x) {
+              counts.merge(a[pool.indexOf(v)], 1, Integer::sum);
+            }
+            for (IntVar v : y) {
+              if (counts.merge(a[pool.indexOf(v)], -1, Integer::sum) < 0) {
+                return false;
+              }
+            }
+            return true;
+          };
+      int expected = bruteForce(all, holds).size();
+      s.impose(subset ? new UsedBy(x, y) : new Same(x, y));
+      int found = s.consistency() ? countSolutions(s, all, random) : 0;
+      assertThat(found).as("%s run %d", subset ? "UsedBy" : "Same", run).isEqualTo(expected);
+    }
   }
 
   /**

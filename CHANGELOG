@@ -5152,7 +5152,20 @@ Version 5.0 (unreleased)
    open-stacks). -Djacop.lcg.alldiffClauses=false turns it off; statistic
    lcgPermutationsAsClauses.
 
-300. The target phases of LCG free search (entry 280) are reset at every
+300. The FlatZinc front end finds tilings of the cyclic group Z_n by
+   translation, A + B = Z_n, written as an all different over the n terms
+   (b + a) mod n, and posts the redundant exact cover over the
+   characteristic vector c of B: c counts the base variables per value
+   (CountValues), and every value is covered by exactly one c[v - a]
+   (E. M. Coven and A. Meyerowitz, J. Algebra 212, 1999; the SAT encoding
+   of G. Auricchio, L. Ferrarini, S. Gualandi, G. Lanzarotto and
+   L. Pernazza, CPAIOR 2022 and Constraints 29, 2024). The vector joins
+   the default search. XCSP 2025 TilingRythmicCanons with -f at 600 s:
+   12 of 14 solved, 3 without the cover, among them 1-18, 1-22 and 1-33
+   that no 2025 solver solved. It fires on no wide-set instance. Off
+   under --proof; org.jacop.fz.translationTiling=false turns it off.
+
+301. The target phases of LCG free search (entry 280) are reset at every
    restart to the values of the longest SAT trail at a conflict seen so far
    in the search, instead of being kept from the run before: the best
    rephasing of CaDiCaL (A. Biere, "CaDiCaL, Lingeling, Plingeling,
@@ -5167,7 +5180,7 @@ Version 5.0 (unreleased)
    proved in 600 s, workforce-alloc 202 55 -> 139 s).
    -Djacop.lcg.targetBest=N resets every N restarts, 0 never (default 1).
 
-301. Lazy clause generation adds unary (sequential) counters for small
+302. Lazy clause generation adds unary (sequential) counters for small
    counting constraints outside reification (SumBool, LinearBool, Count,
    CountBounds, CountValues, CountValuesBounds, AtMost, AtLeast) once
    they take part in conflicts. A propagator explains a count by the
@@ -5190,7 +5203,7 @@ Version 5.0 (unreleased)
    38 MiniZinc Challenge instances of the wide set where counters fire,
    35 = 35 solved, timing within noise.
 
-302. Lazy clause generation explains the pruning and failures of Geost
+303. Lazy clause generation explains the pruning and failures of Geost
    itself instead of replaying it (replay gave up and left 97 % of its
    reasons generic). A bound of a coordinate is explained by the region
    the sweep (Beldiceanu, Carlsson, Poder, Sadek and Truchet, "A Generic
@@ -5210,7 +5223,7 @@ Version 5.0 (unreleased)
    from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
    0.54 on those both solve), model search 19 as before (time 0.89).
 
-303. Under lazy clause generation a reified or implied In(x, dom) counts as
+304. Under lazy clause generation a reified or implied In(x, dom) counts as
    entailed only when the bounds of x lie in dom, not when every value
    left in x does. The full test needs a reason with every value removed
    between the bounds, which on the XCSP 2025 RollerSplat models (plan
@@ -5224,6 +5237,25 @@ Version 5.0 (unreleased)
    125-130), so the search is the same and about 4 % faster on RollerSplat.
    On the 40 wide-set instances with set_in_reif or set_in_imp, at 600 s,
    no family is worse with -f or with model search.
+
+305. New constraint AllDifferentLists(x): the rows of x are pairwise
+   different tuples, the allDifferent constraint over lists of XCSP3
+   (Boussemart, Lecoutre, Audemard and Piette, "XCSP3-core", arXiv
+   2009.00514, 2020). It hashes the fixed rows and the rows with one
+   variable left: two equal fixed rows fail, and a row with one variable
+   left loses the values that would make it equal a fixed row, which is
+   unit propagation on the pairwise decomposition for all pairs at once.
+   A call handles only the rows fixed since the last one. Under --lcg it
+   explains a removed value by the two rows and a failure by the two
+   equal rows. JaCoP's MiniZinc library defines
+   fzn_xcsp_all_different_lists with it, so the XCSP3 translations of
+   radsz/xcsp-competition no longer get the pairwise decomposition:
+   m(m-1)/2 disjunctions for m rows, 3.0M int_lin_ne_imp and 3.0M
+   Booleans (a 685 MB FlatZinc file, 4.7 GB to flatten) on XCSP 2025
+   LotteryDesign-32-6-6-2-1000. On the 12 LotteryDesign instances of
+   XCSP 2025 (the only ones of 2022-2025 with the constraint), -f, 600 s:
+   11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
+   the other 9 2-10x faster.
 
 Version 4.11
 =============
