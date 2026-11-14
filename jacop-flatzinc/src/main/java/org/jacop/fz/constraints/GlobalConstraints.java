@@ -2972,6 +2972,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
+    support.binPackingPermutations.add(bin, cc, w, minBin);
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -2987,6 +2988,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, load, w, minBin));
     support.binPackingCliques.add(bin, load, w, minBin);
+    support.binPackingPermutations.add(bin, load, w, minBin);
   }
 
   void gen_jacop_float_maximum(SimpleNode node) {
