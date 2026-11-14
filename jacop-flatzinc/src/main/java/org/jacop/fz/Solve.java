@@ -626,8 +626,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (sat.collecting() && !opt.lcg()) {
         postClausesToSat();
       }
-    } else if (objective != null && store.consistency()) {
-      imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
+    } else {
+      if (opt.presolveTabling()) {
+        tableInPlace();
+      }
+      if (objective != null && store.consistency()) {
+        imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
+      }
     }
 
     if (Boolean.getBoolean("org.jacop.fz.dominance") && store.consistency()) {
@@ -1255,6 +1260,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         store = d.child();
         presolve = d;
       }
+    }
+  }
+
+  /**
+   * Automatic tabulation without presolve (--tabling on): small groups of constraints whose own
+   * propagation is weaker than their table are replaced by the table in the loaded store. See
+   * {@link Tabling}.
+   */
+  private void tableInPlace() {
+    long start = timer.getCpuTime();
+    if (!store.consistency()) {
+      throw Store.failException;
+    }
+    Tabling tabling = new Tabling();
+    if (!tabling.applyInPlace(store) || !store.consistency()) {
+      throw Store.failException;
+    }
+    if (options.searchStatistics()) {
+      Tabling.Statistics t = tabling.statistics();
+      System.out.print(
+          "%%%mzn-stat: tablingTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat: presolveTables="
+              + t.tables()
+              + "\n%%%mzn-stat: presolveTabledConstraints="
+              + t.replaced()
+              + "\n%%%mzn-stat: presolveTableTuples="
+              + t.tuples()
+              + "\n%%%mzn-stat: presolveTablingNodes="
+              + t.nodes()
+              + "\n");
     }
   }
 

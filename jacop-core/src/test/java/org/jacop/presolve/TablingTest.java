@@ -49,6 +49,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -94,6 +95,45 @@ class TablingTest {
       }
     }
     assertThat(tabled).isGreaterThan(TRIALS / 10);
+  }
+
+  @Test
+  @Timeout(60)
+  void randomModelsHaveTheSameSolutionsTabledInPlace() {
+    Random random = new Random(20261114);
+    int tabled = 0;
+    for (int trial = 0; trial < TRIALS; trial++) {
+      long seed = random.nextLong();
+      List<List<Integer>> expected = solveDirectly(s -> randomModel(s, new Random(seed)));
+      Store s = new Store();
+      IntVar[] vars = randomModel(s, new Random(seed));
+      Tabling rule = new Tabling(trial % 2 == 0 ? ALWAYS : Tabling.Limits.DEFAULT);
+      List<List<Integer>> found = new ArrayList<>();
+      if (s.consistency() && rule.applyInPlace(s) && s.consistency()) {
+        search(s, vars, () -> found.add(values(vars)));
+      }
+      assertThat(found).as("trial %d", trial).containsExactlyInAnyOrderElementsOf(expected);
+      if (rule.statistics().tables() > 0) {
+        tabled++;
+      }
+    }
+    assertThat(tabled).isGreaterThan(TRIALS / 10);
+  }
+
+  @Test
+  void tablingInPlaceDetachesTheGroup() {
+    Store s = new Store();
+    IntVar x = new IntVar(s, "x", 0, 5);
+    IntVar y = new IntVar(s, "y", 0, 5);
+    IntVar t = new IntVar(s, "t", 0, 25);
+    s.impose(new XmulYeqZ(x, y, t));
+    s.impose(new XplusYeqZ(t, x, new IntVar(s, "z", 8, 8)));
+    Tabling rule = new Tabling();
+    assertThat(rule.applyInPlace(s)).isTrue();
+    assertThat(rule.statistics().tables()).isEqualTo(1);
+    assertThat(s.getConstraints()).hasSize(1).allMatch(c -> c instanceof HybridTable);
+    assertThat(s.consistency()).isTrue();
+    assertThat(x.dom().toIntArray()).containsExactly(2, 4);
   }
 
   @Test

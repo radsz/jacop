@@ -30,6 +30,7 @@
 
 package org.jacop.presolve;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -37,6 +38,7 @@ import java.util.Set;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 
 /**
  * Automatic tabulation (Akgün et al., CP 2018; Dekker et al., Constraints 2017), a presolve rule: a
@@ -147,6 +149,65 @@ public final class Tabling implements Rule {
       }
       replaced += g.constraints().size();
     }
+  }
+
+  /**
+   * Tabulates the store itself, without a derivation: each group's table is imposed in the store
+   * and the constraints of the group are detached from their variables. Only constraints attached
+   * to the domains of their variables take part (not those that only watch values or literals), so
+   * detaching removes them from propagation and from every component that collects the store's
+   * constraints through its variables. The store must be consistent, at the level search starts
+   * from: the detachment is undone if the store backtracks below it. The table is equivalent to its
+   * group, so every solution and the number of solutions are kept.
+   *
+   * @param store the store.
+   * @return false if a group has no solution, so the problem is infeasible.
+   */
+  public boolean applyInPlace(Store store) {
+    if (nodes >= limits.budget()) {
+      return true;
+    }
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<Constraint> attached = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      Var v = store.vars[i];
+      if (v == null) {
+        continue;
+      }
+      for (Constraint c : v.dom().constraints()) {
+        if (c != null && !c.isEntailed() && seen.add(c)) {
+          attached.add(c);
+        }
+      }
+    }
+    TableGroups pass = new TableGroups(attached, limits, tried, nodes);
+    List<TableGroups.Group> groups = pass.groups();
+    nodes = pass.nodes();
+    if (pass.infeasible()) {
+      return false;
+    }
+    for (TableGroups.Group g : groups) {
+      for (Constraint c : g.constraints()) {
+        for (Var v : c.arguments()) {
+          if (v.singleton()) {
+            // Var.removeConstraint leaves a fixed variable alone; the constraint must go from
+            // every list that collects the store's constraints
+            v.dom().removeModelConstraint(store.level, v, c);
+          } else {
+            v.removeConstraint(c);
+          }
+        }
+      }
+      replaced += g.constraints().size();
+      if (g.tuples() != null) {
+        HybridTable table = new HybridTable(g.scope(), g.tuples());
+        tried.add(table);
+        store.impose(table);
+        tables++;
+        tuples += g.tuples().length;
+      }
+    }
+    return true;
   }
 
   /**

@@ -116,7 +116,11 @@ public class Options {
   double presolveAbort = Derivation.DEFAULT_ABORT_FACTOR;
   long presolveTime = -1;
   double presolveRestart;
-  boolean presolveTabling = Boolean.getBoolean("jacop.presolve.tabling");
+  // --tabling: on with --presolve as a presolve rule, otherwise in the loaded store
+  boolean presolveTabling =
+      Boolean.parseBoolean(
+          System.getProperty(
+              "jacop.tabling", System.getProperty("jacop.presolve.tabling", "false")));
   Probing.Mode probe =
       Objects.requireNonNullElse(
           probeMode(System.getProperty("jacop.presolve.probe", "sac")), Probing.Mode.SAC);
@@ -380,8 +384,10 @@ public class Options {
                 out. Default 0 (off); independent of --presolve
             --presolve-time <ms> time the rounds of presolve rules may take (default a
                 twentieth of the time limit, unlimited without one)
-            --presolve-tabling replace small groups of constraints by the tables of their
-                solutions when presolving (default false)
+            --presolve-tabling the same as --tabling on
+            --tabling <value> replace small groups of constraints by the tables of their
+                solutions, "on" or "off" (default); with --presolve a presolve rule, otherwise
+                applied to the loaded model before search
             --presolve-probe <value> with --presolve, probe the root in the presolve rounds; one
                 of "off", "shave" (bound shaving and failed-literal probing of 0-1
                 variables), "sac" (default; as "shave", and every value of small
@@ -459,6 +465,7 @@ public class Options {
       case "--presolve-time" -> i = handlePresolveTime(args, i);
       case "--presolve-restart" -> i = handlePresolveRestart(args, i);
       case "--presolve-tabling" -> i = handlePresolveTabling(i);
+      case "--tabling" -> i = handleTabling(args, i);
       case "--presolve-probe" -> i = handleProbe(args, i);
       case "--presolve-probe-budget" -> i = handleProbeBudget(args, i);
       case "-n", "--num-solutions" -> i = handleNumSolutions(args, i);
@@ -715,6 +722,15 @@ public class Options {
 
   private int handlePresolveTabling(int i) {
     presolveTabling = true;
+    return i + 1;
+  }
+
+  private int handleTabling(String[] args, int i) {
+    switch (args[++i]) {
+      case "on" -> presolveTabling = true;
+      case "off" -> presolveTabling = false;
+      default -> System.err.println("%% Tabling mode " + args[i] + " not known; ignored");
+    }
     return i + 1;
   }
 
