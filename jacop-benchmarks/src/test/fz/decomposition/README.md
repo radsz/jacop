@@ -135,7 +135,10 @@ contains the global constraint with the fewest suite problems so far, at most `s
 problems per model directory and `suite.cap` (30) per constraint; a model directory is given up
 once one of its instances was too slow. Results are appended to `suite-state.tsv` as they come
 (a new run continues from there; `suite.retry=WRONG,ERROR` checks again), and `suite-coverage.md`
-is the per-constraint table of the suite.
+is the per-constraint table of the suite. Runs over generated variants (`allsolutions/gen_variants.py`)
+write one state file per batch of seeds, `gen-state/sFFFF-LLLL.tsv`, gzipped once the batch ends,
+and read the others with `suite.stateRead=src/test/fz/decomposition/suite-state.tsv,src/test/fz/decomposition/gen-state`;
+a single growing file passed 50 MB after 700 seeds.
 
 `allsolutions/` holds small models written for the constraints that no benchmark problem uses:
 `models/*.mzn`, flattened by `allsolutions/gen.sh` with JaCoP's library (`<m>/<m>.fzn`) and with

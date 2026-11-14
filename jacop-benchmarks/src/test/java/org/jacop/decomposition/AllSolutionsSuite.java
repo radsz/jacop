@@ -146,6 +146,11 @@ class AllSolutionsSuite {
               .toList());
   private final Path statePath =
       Path.of(System.getProperty("suite.state", FZ + "decomposition/suite-state.tsv"));
+  private final List<Path> stateRead =
+      Arrays.stream(System.getProperty("suite.stateRead", "").split(","))
+          .filter(v -> !v.isEmpty())
+          .map(Path::of)
+          .toList();
   private final Path reportPath =
       Path.of(System.getProperty("suite.report", FZ + "decomposition/suite-coverage.md"));
   private final Path twins =
@@ -203,6 +208,7 @@ class AllSolutionsSuite {
 
   private void readState() throws IOException {
     if (!Files.exists(statePath)) {
+      Files.createDirectories(statePath.toAbsolutePath().getParent());
       Files.writeString(
           statePath,
           "# All-solutions suite state, see AllSolutionsSuite. Tab-separated.\n"
@@ -210,7 +216,41 @@ class AllSolutionsSuite {
               + " date globals\n"
               + "# C problem sha check verdict status solutions millis date note\n");
     }
-    for (String line : Files.readAllLines(statePath)) {
+    List<Path> files = new ArrayList<>();
+    for (Path p : stateRead) {
+      if (Files.isDirectory(p)) {
+        try (Stream<Path> s = Files.list(p)) {
+          s.filter(f -> f.toString().endsWith(".tsv") || f.toString().endsWith(".tsv.gz"))
+              .sorted()
+              .forEach(files::add);
+        }
+      } else {
+        files.add(p);
+      }
+    }
+    files.removeIf(
+        f -> f.toAbsolutePath().normalize().equals(statePath.toAbsolutePath().normalize()));
+    files.add(statePath);
+    for (Path file : files) {
+      readStateFile(file);
+    }
+    for (String[] p : problems.values()) {
+      if ("COMPLETE".equals(p[5])) {
+        qualified(p);
+      }
+    }
+  }
+
+  private void readStateFile(Path file) throws IOException {
+    List<String> lines;
+    if (file.toString().endsWith(".gz")) {
+      try (InputStream in = new GZIPInputStream(Files.newInputStream(file))) {
+        lines = new String(in.readAllBytes(), StandardCharsets.UTF_8).lines().toList();
+      }
+    } else {
+      lines = Files.readAllLines(file);
+    }
+    for (String line : lines) {
       if (line.isBlank() || line.startsWith("#")) {
         continue;
       }
@@ -219,11 +259,6 @@ class AllSolutionsSuite {
         problems.put(f[1], f);
       } else if ("C".equals(f[0])) {
         checks.put(f[1] + "\t" + f[2] + "\t" + f[3], f);
-      }
-    }
-    for (String[] p : problems.values()) {
-      if ("COMPLETE".equals(p[5])) {
-        qualified(p);
       }
     }
   }

@@ -8,7 +8,7 @@ of less covered globals are picked more often,
 flattened with JaCoP's and MiniZinc's std library.
 Usage: MZN=minizinc MZN_SOLVER_PATH=... gen_variants.py SEED COUNT OUTDIR, then run
 AllSolutionsSuite with -Dsuite.roots=gen=OUTDIR (see decomposition/README.md)."""
-import os, random, re, subprocess, sys
+import gzip, os, random, re, subprocess, sys
 A = os.path.dirname(os.path.abspath(__file__))
 MZN = os.environ.get('MZN', 'minizinc')
 env = dict(os.environ)
@@ -20,10 +20,23 @@ dom = re.compile(r'(var (?:opt )?)(-?\d+)\.\.(-?\d+)')
 # from seed 361 on, a model is picked with weight 1 / (1 + problems of its least covered global)
 # in the suite state, so constraints with one or two models catch up
 weights = [1.0] * len(models)
-state = f'{A}/../decomposition/suite-state.tsv'
-if seed >= 361 and os.path.exists(state):
+# the state: suite-state.tsv and the generated-variant batches in gen-state/ (*.tsv, *.tsv.gz)
+D = f'{A}/../decomposition'
+states = [f'{D}/suite-state.tsv'] + sorted(
+    f'{D}/gen-state/{f}' for f in (os.listdir(f'{D}/gen-state') if os.path.isdir(f'{D}/gen-state') else [])
+    if f.endswith('.tsv') or f.endswith('.tsv.gz'))
+states = [f for f in states if os.path.exists(f)]
+
+
+def state_lines():
+    for f in states:
+        with (gzip.open(f, 'rt') if f.endswith('.gz') else open(f)) as h:
+            yield from h
+
+
+if seed >= 361 and states:
     model_globals, cover = {}, {}
-    for l in open(state):
+    for l in state_lines():
         f = l.rstrip('\n').split('\t')
         if f[0] != 'P' or len(f) < 13:
             continue
