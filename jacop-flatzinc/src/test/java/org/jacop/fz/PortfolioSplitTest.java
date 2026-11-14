@@ -99,6 +99,60 @@ class PortfolioSplitTest {
     }
   }
 
+  // a multi-knapsack of 24 items and 3 rows on which DFS split threads with the linear relaxation
+  // lost the optimum in 2 runs of 10: the relaxation took the level of its first cube for its root
+  private static final String MULTI_KNAPSACK =
+      "var 0..1: x0 :: output_var;\n"
+          + "var 0..1: x1 :: output_var;\n"
+          + "var 0..1: x2 :: output_var;\n"
+          + "var 0..1: x3 :: output_var;\n"
+          + "var 0..1: x4 :: output_var;\n"
+          + "var 0..1: x5 :: output_var;\n"
+          + "var 0..1: x6 :: output_var;\n"
+          + "var 0..1: x7 :: output_var;\n"
+          + "var 0..1: x8 :: output_var;\n"
+          + "var 0..1: x9 :: output_var;\n"
+          + "var 0..1: x10 :: output_var;\n"
+          + "var 0..1: x11 :: output_var;\n"
+          + "var 0..1: x12 :: output_var;\n"
+          + "var 0..1: x13 :: output_var;\n"
+          + "var 0..1: x14 :: output_var;\n"
+          + "var 0..1: x15 :: output_var;\n"
+          + "var 0..1: x16 :: output_var;\n"
+          + "var 0..1: x17 :: output_var;\n"
+          + "var 0..1: x18 :: output_var;\n"
+          + "var 0..1: x19 :: output_var;\n"
+          + "var 0..1: x20 :: output_var;\n"
+          + "var 0..1: x21 :: output_var;\n"
+          + "var 0..1: x22 :: output_var;\n"
+          + "var 0..1: x23 :: output_var;\n"
+          + "var -11051..0: cost :: output_var;\n"
+          + "constraint int_lin_le([828,151,453,411,114,529,219,597,497,183,277,737,296,422,745,550,257,747,732,425,283,867,519,237],[x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23],5538);\n"
+          + "constraint int_lin_le([91,744,817,549,196,522,781,777,475,758,959,255,73,833,903,598,529,783,880,839,273,607,230,970],[x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23],7221);\n"
+          + "constraint int_lin_le([765,771,161,308,214,342,145,51,371,883,66,701,924,312,348,581,848,838,611,171,248,979,349,440],[x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23],5713);\n"
+          + "constraint int_lin_eq([-828,-145,-447,-413,-133,-540,-206,-595,-501,-192,-280,-748,-314,-419,-755,-551,-237,-730,-721,-433,-267,-861,-517,-218,-1],[x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23,cost],0);\n"
+          + "solve :: int_search([x0,x1,x2,x3,x4,x5,x6,x7,x8,x9,x10,x11,x12,x13,x14,x15,x16,x17,x18,x19,x20,x21,x22,x23],input_order,indomain_min,complete) minimize cost;\n";
+
+  @Test
+  void dfsSplitThreadsFindTheOptimumOfOneThread() throws IOException {
+    Path fzn = write(MULTI_KNAPSACK);
+    Integer reference = objective(run("-t", "30000", "--lcg", "off", fzn.toString()));
+    assertEquals(-5622, reference);
+    String[][] layouts = {
+      {"-p", "4", "--free-config", "portfolio-dfs-split=4"},
+      {"-f", "-p", "4", "--free-config", "portfolio-dfs-split=2"},
+    };
+    for (int r = 0; r < 10; r++) {
+      for (String[] layout : layouts) {
+        String out = run(args(layout, fzn));
+        assertTrue(out.contains("=========="), String.join(" ", layout) + "\n" + out);
+        assertEquals(reference, objective(out), String.join(" ", layout) + "\n" + out);
+        assertTrue(
+            out.contains("portfolioDfsSplitThreads="), String.join(" ", layout) + "\n" + out);
+      }
+    }
+  }
+
   @Test
   void splitThreadsProveUnsatisfiability() throws IOException {
     // an odd sum of even terms, which bounds reasoning does not see before the last variable

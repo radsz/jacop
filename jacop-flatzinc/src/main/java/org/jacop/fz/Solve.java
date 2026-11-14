@@ -54,6 +54,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
@@ -4318,6 +4319,114 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * The work stealing of a portfolio thread with {@code --free-config dfs-split=1}: a {@link
+   * DfsSplit} on the portfolio's tree of depth-first searches, or null when the thread searches the
+   * whole tree (not in a portfolio, a search with its own exit listener such as LDS, or symmetry
+   * breaking that differs from the other threads').
+   */
+  private DfsSplit<T> dfsSplit(DepthFirstSearch<T> label, SelectChoicePoint<T> select) {
+    Portfolio.Worker worker = options.portfolioWorker();
+    if (worker == null
+        || !"1".equals(options.freeConfig("dfs-split", "0"))
+        || label.getExitChildListener() != null) {
+      return null;
+    }
+    Map<IntVar, String> names = new IdentityHashMap<>();
+    for (String name : dictionary.variableTable.keySet()) {
+      IntVar x = dictionary.getVariable(name);
+      if (x != null) {
+        names.putIfAbsent(x, name);
+      }
+    }
+    // the elements of arrays of variables declared in the model, in an order every thread shares
+    for (String name : new TreeSet<>(dictionary.variableArrayTable.keySet())) {
+      IntVar[] xs = dictionary.variableArrayTable.get(name);
+      for (int i = 0; i < xs.length; i++) {
+        if (xs[i] != null) {
+          names.putIfAbsent(xs[i], name + "[" + (i + 1) + "]");
+        }
+      }
+    }
+    String added = symmetry == null ? "" : symmetry.added(names::get);
+    org.jacop.jasat.lcg.SharedTree tree = worker.dfsTree();
+    if (added == null || !tree.join(added)) {
+      FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
+      return null;
+    }
+    Map<IntVar, Integer> ids = new IdentityHashMap<>();
+    int top = -1;
+    for (Map.Entry<IntVar, String> e : names.entrySet()) {
+      int id = worker.sharedClauses().id(e.getValue());
+      ids.put(e.getKey(), id);
+      top = Math.max(top, id);
+    }
+    IntVar[] byId = new IntVar[top + 1];
+    for (Map.Entry<IntVar, Integer> e : ids.entrySet()) {
+      byId[e.getValue()] = e.getKey();
+    }
+    return new DfsSplit<>(tree, select, store, ids, byId);
+  }
+
+  /**
+   * Depth-first search on the cubes of the portfolio's tree until the tree is complete; see {@link
+   * DfsSplit}. Returns whether this thread found a solution; on a stop or the time-out the search
+   * is marked as timed out, so that it does not claim to be complete.
+   */
+  private boolean executeSplitSearch(DepthFirstSearch<T> label, DfsSplit<T> split, Var costVar) {
+    Portfolio.Worker worker = options.portfolioWorker();
+    org.jacop.jasat.lcg.SharedTree tree = worker.dfsTree();
+    long deadline =
+        options.getTimeOut() > 0
+            ? System.currentTimeMillis() + options.getRemainingTimeOut()
+            : Long.MAX_VALUE;
+    label.setExitChildListener(split);
+    // the first consistency of a constraint imposed for the search is its root, as in a labeling
+    // without split, where it runs at the level the labeling starts from: the linear relaxation
+    // keeps root reduced costs and bounds from there, which the level of a cube would make wrong
+    // for the other cubes (a multi-knapsack lost its optimum in 2 runs of 10)
+    if (!store.consistency()) {
+      tree.complete();
+      return false;
+    }
+    boolean found = false;
+    while (true) {
+      int[] cube = tree.take(() -> worker.isStopped() || System.currentTimeMillis() > deadline);
+      if (cube == null) {
+        if (!tree.isComplete()) {
+          label.timeOutOccured = true;
+        }
+        return found;
+      }
+      boolean closed = false;
+      try {
+        boolean result = false;
+        if (split.impose(cube)) {
+          result =
+              costVar != null
+                  ? label.labeling(store, split, costVar)
+                  : label.labeling(store, split);
+        }
+        split.retract();
+        found |= result;
+        if (label.timeOutOccured || worker.isStopped()) {
+          label.timeOutOccured = true;
+          return found;
+        }
+        tree.closed(cube);
+        closed = true;
+        if (result && costVar == null) {
+          tree.complete(); // a solution of a satisfaction problem
+          return true;
+        }
+      } finally {
+        if (!closed) {
+          tree.release(cube);
+        }
+      }
+    }
+  }
+
   private boolean executeNonRestartSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
     if (options.debug()) {
@@ -4327,6 +4436,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     stopInPortfolio();
     importBoundInPortfolio(label, costVar);
+    DfsSplit<T> split = dfsSplit(label, select);
+    if (split != null) {
+      return executeSplitSearch(label, split, costVar);
+    }
     if (costVar instanceof IntVar cost) {
       // a node whose subtree is all that is left bounds the solutions not found yet
       label.setLastSubtreeListener(

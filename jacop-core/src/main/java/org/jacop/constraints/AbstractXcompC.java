@@ -69,6 +69,24 @@ public abstract class AbstractXcompC extends PrimitiveConstraint {
     setScope(x);
   }
 
+  /**
+   * Returns the variable compared.
+   *
+   * @return the variable x.
+   */
+  public IntVar variable() {
+    return x;
+  }
+
+  /**
+   * Returns the constant compared with.
+   *
+   * @return the constant c.
+   */
+  public int constant() {
+    return c;
+  }
+
   @Override
   protected int getDefaultNotConsistencyPruningEvent() {
     return Domain.NONE;
