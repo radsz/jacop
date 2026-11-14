@@ -64,9 +64,15 @@ import org.jacop.lcg.EntryList;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-final class UnaryExplanation {
+public final class UnaryExplanation {
 
-  private final TaskView[] tasks;
+  // the start, the use (null for tasks that always use 1 of a capacity of 1) and, for tasks of
+  // fixed duration, the duration of every task
+  private final IntVar[] starts;
+  private final IntVar[] uses;
+  private final IntVar[] durations;
+  private final int fixedDuration;
+  private final int n;
   private final IntVar limit;
 
   // the tasks in the time line of the explanation (reversed for an upper bound), just before the
@@ -95,8 +101,36 @@ final class UnaryExplanation {
   private static final int OVERLOAD = 3;
 
   UnaryExplanation(TaskView[] tasks, IntVar limit) {
-    this.tasks = tasks.clone();
+    this.n = tasks.length;
+    this.starts = new IntVar[n];
+    this.uses = new IntVar[n];
+    this.durations = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      starts[i] = tasks[i].start;
+      uses[i] = tasks[i].res;
+      durations[i] = tasks[i].dur;
+    }
+    this.fixedDuration = 0;
     this.limit = limit;
+  }
+
+  /**
+   * Explanations for tasks of one duration on a resource that runs one at a time, as
+   * inter_distance(starts, duration) states (no two starts closer than the duration).
+   *
+   * @param starts the start times
+   * @param duration the duration of every task, at least 1
+   */
+  public UnaryExplanation(IntVar[] starts, int duration) {
+    if (duration < 1) {
+      throw new IllegalArgumentException("UnaryExplanation needs a positive duration.");
+    }
+    this.n = starts.length;
+    this.starts = starts.clone();
+    this.uses = null;
+    this.durations = null;
+    this.fixedDuration = duration;
+    this.limit = null;
   }
 
   /**
@@ -107,13 +141,15 @@ final class UnaryExplanation {
    * @param out where the reason is added
    * @return false when no rule explains it; out may then hold entries to drop
    */
-  boolean explain(AtomicTrail trail, int entry, EntryList out) {
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     IntVar y = trail.variable(entry);
+    if (trail.kind(entry) == AtomicTrail.NE) {
+      return false;
+    }
     boolean lower = trail.kind(entry) == AtomicTrail.GE;
-    int n = tasks.length;
     int j = -1;
     for (int i = 0; i < n; i++) {
-      if (tasks[i].start == y) {
+      if (starts[i] == y) {
         if (j >= 0) {
           return false;
         }
@@ -123,9 +159,24 @@ final class UnaryExplanation {
     if (j < 0 || !load(trail, entry, j, lower)) {
       return false;
     }
+    if (explainBound(trail, entry, j, lower, trail.value(entry), out)) {
+      return true;
+    }
+    // the rules may give a bound short of the recorded one, which skipped the holes beyond it
+    int skipped = trail.skippedBound(entry);
+    if (skipped != trail.value(entry) && explainBound(trail, entry, j, lower, skipped, out)) {
+      trail.addSkippedHoles(entry, skipped, out);
+      return true;
+    }
+    return false;
+  }
+
+  // explains start(j) >= bound (or <= bound) after load
+  private boolean explainBound(
+      AtomicTrail trail, int entry, int j, boolean lower, int bound, EntryList out) {
     int pj = dur[j];
     // the bound in the time line of the explanation: j starts at v or later
-    long v = lower ? trail.value(entry) : -((long) trail.value(entry) + pj);
+    long v = lower ? bound : -((long) bound + pj);
     numBest = Integer.MAX_VALUE;
     bestV = v;
     detectable(j, v);
@@ -146,9 +197,9 @@ final class UnaryExplanation {
    * @param out where the reason is added
    * @return false when no rule explains a failure; out may then hold entries to drop
    */
-  boolean explainFailure(AtomicTrail trail, EntryList out) {
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
     int position = trail.size();
-    for (int j = 0; j < tasks.length; j++) {
+    for (int j = 0; j < n; j++) {
       for (boolean lower : new boolean[] {true, false}) {
         if (!load(trail, position, j, lower)) {
           continue;
@@ -184,7 +235,10 @@ final class UnaryExplanation {
    */
   boolean explainAbsent(AtomicTrail trail, int entry, int j, EntryList out) {
     // the least positive use of j, a fact of its initial domain
-    IntVar use = tasks[j].res;
+    if (uses == null) {
+      return false;
+    }
+    IntVar use = uses[j];
     int root = trail.rootDomain(use).max() > 0 ? trail.rootDomain(use).nextValue(0) : 0;
     if (root <= 0) {
       return false;
@@ -211,7 +265,7 @@ final class UnaryExplanation {
           int k = best[q];
           startAtLeast(trail, entry, k, true, bestA, out);
           startAtMost(trail, entry, k, true, bestB - dur[k], out);
-          trail.addLowerBound(tasks[k].res, entry, out);
+          trail.addLowerBound(uses[k], entry, out);
         }
         startAtLeast(trail, entry, j, true, bestA, out);
         startAtMost(trail, entry, j, true, bestB - dur[j], out);
@@ -230,7 +284,6 @@ final class UnaryExplanation {
    * decreasing earliest start, until a + p(Ω) + p(j) &gt; b for a = min(est(j), est of the last).
    */
   private void overload(int j) {
-    int n = tasks.length;
     int m = 0;
     for (int k = 0; k < n; k++) {
       if (k != j && usable[k]) {
@@ -278,7 +331,6 @@ final class UnaryExplanation {
 
   // as above, with task j using assumedUse (when positive) whatever its bound
   private boolean load(AtomicTrail trail, int entry, int j, boolean lower, int assumedUse) {
-    int n = tasks.length;
     if (est.length < n) {
       est = new int[n];
       lct = new int[n];
@@ -290,13 +342,17 @@ final class UnaryExplanation {
       picked = new int[n];
       best = new int[n];
     }
-    long limitMax = trail.maxBefore(limit, entry);
+    long limitMax = limit == null ? 1 : trail.maxBefore(limit, entry);
     long smallest = Long.MAX_VALUE;
     for (int i = 0; i < n; i++) {
-      TaskView t = tasks[i];
       // the durations are constant
-      int d = t.dur.min();
-      int r = i == j && assumedUse > 0 ? assumedUse : trail.minBefore(t.res, entry);
+      int d = durations == null ? fixedDuration : durations[i].min();
+      int r;
+      if (uses == null) {
+        r = 1;
+      } else {
+        r = i == j && assumedUse > 0 ? assumedUse : trail.minBefore(uses[i], entry);
+      }
       usable[i] = d > 0 && r > 0;
       if (!usable[i]) {
         if (i == j) {
@@ -306,8 +362,8 @@ final class UnaryExplanation {
       }
       smallest = Math.min(smallest, r);
       dur[i] = d;
-      int s = trail.minBefore(t.start, entry);
-      int e = trail.maxBefore(t.start, entry) + d;
+      int s = trail.minBefore(starts[i], entry);
+      int e = trail.maxBefore(starts[i], entry) + d;
       est[i] = lower ? s : -e;
       lct[i] = lower ? e : -s;
     }
@@ -335,7 +391,7 @@ final class UnaryExplanation {
   private void detectable(int j, long v) {
     long ectJ = (long) est[j] + dur[j];
     int m = 0;
-    for (int k = 0; k < tasks.length; k++) {
+    for (int k = 0; k < n; k++) {
       if (k != j && usable[k] && (long) lct[k] - dur[k] < ectJ) {
         order[m++] = k;
       }
@@ -394,7 +450,6 @@ final class UnaryExplanation {
    * c + p(Ω) + p(j) &gt; b still holds for c = min(a, est(j)); the bound is the earliest end of Ω.
    */
   private void edgeFinding(int j, long v) {
-    int n = tasks.length;
     int m = 0;
     for (int k = 0; k < n; k++) {
       if (k != j && usable[k]) {
@@ -447,7 +502,6 @@ final class UnaryExplanation {
    * cannot all run after j when c + p(j) + p(Ω) &gt; b for c = est(j); one of them runs first.
    */
   private void notFirst(int j, long v) {
-    int n = tasks.length;
     int m = 0;
     for (int k = 0; k < n; k++) {
       if (k != j && usable[k] && (long) est[k] + dur[k] >= v) {
@@ -496,16 +550,20 @@ final class UnaryExplanation {
           startAtMost(trail, entry, k, lower, bestB - dur[k], out);
         }
       }
-      trail.addLowerBound(tasks[k].res, entry, out);
+      if (uses != null) {
+        trail.addLowerBound(uses[k], entry, out);
+      }
     }
-    trail.addLowerBound(tasks[j].res, entry, out);
-    trail.addUpperBound(limit, entry, out);
+    if (uses != null) {
+      trail.addLowerBound(uses[j], entry, out);
+      trail.addUpperBound(limit, entry, out);
+    }
   }
 
   // cites start(i) >= x in the time line of the explanation; returns the start cited there
   private long startAtLeast(
       AtomicTrail trail, int entry, int i, boolean lower, long x, EntryList out) {
-    IntVar s = tasks[i].start;
+    IntVar s = starts[i];
     if (lower) {
       return trail.addBoundReaching(s, entry, true, x, out);
     }
@@ -516,7 +574,7 @@ final class UnaryExplanation {
   // cites start(i) <= x in the time line of the explanation
   private void startAtMost(
       AtomicTrail trail, int entry, int i, boolean lower, long x, EntryList out) {
-    IntVar s = tasks[i].start;
+    IntVar s = starts[i];
     if (lower) {
       trail.addBoundReaching(s, entry, false, x, out);
     } else {

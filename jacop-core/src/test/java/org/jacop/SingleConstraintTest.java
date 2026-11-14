@@ -80,6 +80,7 @@ import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.CircuitCost;
 import org.jacop.constraints.Conditional;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
@@ -90,6 +91,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Decreasing;
+import org.jacop.constraints.Deviation;
 import org.jacop.constraints.Diff2;
 import org.jacop.constraints.Disjoint;
 import org.jacop.constraints.DisjointConditional;
@@ -122,6 +124,7 @@ import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.MinSimple;
+import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.NoGood;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.Or;
@@ -135,6 +138,7 @@ import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
 import org.jacop.constraints.SoftGCC;
 import org.jacop.constraints.Spread;
+import org.jacop.constraints.StockingCost;
 import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.Sum;
@@ -2697,6 +2701,84 @@ class SingleConstraintTest extends TestHelper {
           .as("trial %d: sum %s %s %s", trial, Arrays.toString(list), rel, v[sumIndex])
           .isEqualTo(expected);
     }
+  }
+
+  @Test
+  void sumIntAndLinearIntReachTheirFixpointThroughDivesAndBacktracks() {
+    // SumInt ==: when sum.max falls into a hole of the sum's domain the pruning must run again;
+    // SumInt over more than three variables drops fixed terms on a trail; LinearInt and SumInt skip
+    // a
+    // pruning pass when no term can lose a value. After every decision and every backtrack the
+    // domains must be those a fresh store reaches from the same domains.
+    String[] relations = {"==", "<=", ">=", "!="};
+    Random random = new Random(61);
+    for (int trial = 0; trial < 1500; trial++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(4);
+      IntVar[] x = new IntVar[n + 1];
+      for (int i = 0; i <= n; i++) {
+        x[i] =
+            i < n
+                ? randomVar(store, "x" + i, -2, 4, random)
+                : randomVar(store, "s", -4, 12, random);
+      }
+      int[] w = new int[n + 1];
+      boolean weighted = random.nextBoolean();
+      for (int i = 0; i < n; i++) {
+        w[i] = weighted ? random.nextInt(7) - 3 : 1;
+      }
+      w[n] = -1;
+      String rel = relations[random.nextInt(relations.length)];
+      Function<IntVar[], Constraint> make =
+          v -> weighted ? new LinearInt(v, w, rel, 0) : new SumInt(Arrays.copyOf(v, n), rel, v[n]);
+      String instance =
+          "trial " + trial + " " + (weighted ? Arrays.toString(w) : "sum") + " " + rel;
+      store.impose(make.apply(x));
+      boolean consistent = store.consistency();
+      assertSameAsFreshStore(x, make, consistent, instance);
+      List<String> domainsAtLevel = new ArrayList<>();
+      while (consistent) {
+        domainsAtLevel.add(Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        IntVar v = free.get(random.nextInt(free.size()));
+        int[] values = valuesOf(v);
+        int value = values[random.nextInt(values.length)];
+        store.setLevel(store.level + 1);
+        switch (random.nextInt(3)) {
+          case 0 -> v.domain.inComplement(store.level, v, value);
+          case 1 -> v.domain.inMax(store.level, v, Math.max(value, v.min()));
+          default -> v.domain.inMin(store.level, v, Math.min(value, v.max()));
+        }
+        consistent = store.consistency();
+        assertSameAsFreshStore(x, make, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (store.level < domainsAtLevel.size()) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+      }
+    }
+  }
+
+  private static void assertSameAsFreshStore(
+      IntVar[] x, Function<IntVar[], Constraint> make, boolean consistent, String instance) {
+    Store fresh = new Store();
+    IntVar[] y = new IntVar[x.length];
+    for (int i = 0; i < x.length; i++) {
+      y[i] = new IntVar(fresh, x[i].id(), x[i].dom().cloneLight());
+    }
+    fresh.impose(make.apply(y));
+    boolean freshConsistent = fresh.consistency();
+    if (!consistent) {
+      return;
+    }
+    assertThat(freshConsistent).as(instance + " " + Arrays.toString(x)).isTrue();
+    assertThat(Arrays.toString(y)).as(instance + " not at fixpoint").isEqualTo(Arrays.toString(x));
   }
 
   @Test
@@ -9265,6 +9347,111 @@ class SingleConstraintTest extends TestHelper {
       Map<IntVar, List<IntVar>> own = ownReasons(trail2, same);
       assertThat(own.get(c)).containsOnly(a, b);
       trail2.detach();
+    }
+  }
+
+  // imposes c, raises the level, applies the change and propagates; returns the own reasons of c
+  private static Map<IntVar, List<IntVar>> reasonsAfter(
+      Store store, Constraint c, Runnable change) {
+    store.impose(c);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    change.run();
+    assertThat(store.consistency()).isTrue();
+    Map<IntVar, List<IntVar>> reasons = ownReasons(trail, c);
+    trail.detach();
+    return reasons;
+  }
+
+  /**
+   * Under LCG, the globals added in 5.0 explain their atoms themselves: InterDistance by the
+   * compulsory parts and the unary rules, CircuitCost by the reduced costs of the assignment,
+   * Spread, Deviation, MultiInterDistance and StockingCost by boxes of bounds without solution, and
+   * IncreasingNValue by the order.
+   */
+  @Test
+  void recentGlobalsExplainTheirAtoms() {
+    CircuitCost.setAssignmentReasons(true);
+    InterDistance.setExplanations(true);
+    try {
+      // x0 in 5..6 with distance 3 takes 4..7 from x1 wherever it starts
+      Store s1 = new Store();
+      IntVar a0 = new IntVar(s1, "a0", 0, 10);
+      IntVar a1 = new IntVar(s1, "a1", 0, 10);
+      Map<IntVar, List<IntVar>> r1 =
+          reasonsAfter(
+              s1,
+              new InterDistance(new IntVar[] {a0, a1}, 3),
+              () -> a0.domain.in(s1.level, a0, 5, 6));
+      assertThat(a1.domain.contains(4) || a1.domain.contains(7)).isFalse();
+      assertThat(r1.get(a1)).containsOnly(a0);
+
+      // a circuit over 3 nodes has two directions; the cost bound excludes the expensive one
+      Store s2 = new Store();
+      IntVar[] next = {
+        new IntVar(s2, "n0", 1, 3), new IntVar(s2, "n1", 1, 3), new IntVar(s2, "n2", 1, 3)
+      };
+      IntVar tour = new IntVar(s2, "tour", 0, 100);
+      int[][] costs = {{0, 1, 9}, {9, 0, 1}, {1, 9, 0}};
+      Map<IntVar, List<IntVar>> r2 =
+          reasonsAfter(
+              s2, new CircuitCost(next, costs, tour), () -> tour.domain.in(s2.level, tour, 0, 10));
+      assertThat(next[0].value()).isEqualTo(2);
+      assertThat(r2.get(next[0])).containsOnly(tour);
+
+      // three values summing to 6 with a spread of at most 6: none can be 0 or 4
+      for (boolean squares : new boolean[] {true, false}) {
+        Store s3 = new Store();
+        IntVar[] y = {
+          new IntVar(s3, "y0", 0, 4), new IntVar(s3, "y1", 0, 4), new IntVar(s3, "y2", 0, 4)
+        };
+        IntVar d = new IntVar(s3, "d", 0, 100);
+        Constraint balance = squares ? new Spread(y, 6, d) : new Deviation(y, 6, d);
+        Map<IntVar, List<IntVar>> r3 =
+            reasonsAfter(s3, balance, () -> d.domain.in(s3.level, d, 0, squares ? 18 : 6));
+        assertThat(y[0].min()).isPositive();
+        assertThat(r3.get(y[0])).contains(d);
+      }
+
+      // three tasks of length 2 on two machines within 0..2: the third starts at 2 at the latest
+      Store s4 = new Store();
+      IntVar[] t = {
+        new IntVar(s4, "t0", 0, 0), new IntVar(s4, "t1", 0, 5), new IntVar(s4, "t2", 0, 5)
+      };
+      Map<IntVar, List<IntVar>> r4 =
+          reasonsAfter(
+              s4, new MultiInterDistance(t, 2, 2), () -> t[1].domain.in(s4.level, t[1], 0, 0));
+      assertThat(t[2].min()).isEqualTo(2);
+      // t0 starts at 0 from the start, so only t1 is cited
+      assertThat(r4.get(t[2])).containsOnly(t[1]);
+
+      // three orders due at 3, one per period, at most 2 periods of stock: produced at 1..3
+      Store s5 = new Store();
+      IntVar[] q = {
+        new IntVar(s5, "q0", 0, 3), new IntVar(s5, "q1", 0, 3), new IntVar(s5, "q2", 0, 3)
+      };
+      IntVar stock = new IntVar(s5, "stock", 0, 10);
+      Map<IntVar, List<IntVar>> r5 =
+          reasonsAfter(
+              s5,
+              new StockingCost(q, new int[] {3, 3, 3}, stock, 1),
+              () -> stock.domain.in(s5.level, stock, 0, 3));
+      assertThat(q[0].min()).isEqualTo(1);
+      assertThat(r5.get(q[0])).containsOnly(stock);
+
+      // an increasing sequence: x0 >= 2 raises x1 by x0 alone
+      Store s6 = new Store();
+      IntVar[] z = {new IntVar(s6, "z0", 0, 3), new IntVar(s6, "z1", 0, 3)};
+      Map<IntVar, List<IntVar>> r6 =
+          reasonsAfter(
+              s6,
+              new IncreasingNValue(z, new IntVar(s6, "nv", 1, 2)),
+              () -> z[0].domain.in(s6.level, z[0], 2, 3));
+      assertThat(r6.get(z[1])).containsExactly(z[0]);
+    } finally {
+      CircuitCost.setAssignmentReasons(false);
+      InterDistance.setExplanations(false);
     }
   }
 
