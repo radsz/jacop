@@ -104,7 +104,17 @@ public class CountPartnersDetector {
   private final Map<Set<IntVar>, Group> groups = new LinkedHashMap<>();
 
   // a count (list, value, counter), read after the whole model is scanned
-  private record Count(IntVar[] x, int v, IntVar n) {}
+  private static final class Count {
+    final IntVar[] x;
+    final int v;
+    final IntVar n;
+
+    Count(IntVar[] x, int v, IntVar n) {
+      this.x = x;
+      this.v = v;
+      this.n = n;
+    }
+  }
 
   private final List<Count> counts = new ArrayList<>();
 
