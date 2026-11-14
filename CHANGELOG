@@ -5152,7 +5152,30 @@ Version 5.0 (unreleased)
    open-stacks). -Djacop.lcg.alldiffClauses=false turns it off; statistic
    lcgPermutationsAsClauses.
 
-299. Lazy clause generation explains the pruning and failures of Geost
+300. Lazy clause generation adds unary (sequential) counters for small
+   counting constraints outside reification (SumBool, LinearBool, Count,
+   CountBounds, CountValues, CountValuesBounds, AtMost, AtLeast) once
+   they take part in conflicts. A propagator explains a count by the
+   literals of its variables only, so every learnt clause restates a
+   whole count; the counter literals [first i terms sum to at least j]
+   let learnt clauses state partial counts, as the auxiliary variables
+   of a SAT encoding do (Sinz, Towards an optimal CNF encoding of Boolean
+   cardinality constraints, CP 2005; Abio, Nieuwenhuis, Oliveras,
+   Rodriguez-Carbonell and Stuckey, To encode or to propagate? The best
+   choice for each constraint in SAT, CP 2013). As in lazy decomposition
+   (Abio and Stuckey, Conflict directed lazy decomposition, CP 2012) a
+   constraint stays a propagator until it explained 100 conflicts
+   (-Djacop.lcg.counters.uses) and becomes clauses at the next restart;
+   -Djacop.lcg.counters=eager encodes them all before search,
+   -Djacop.lcg.counters=false turns this off. ClauseEncoder now encodes
+   CountValues and CountValuesBounds (global_cardinality) with the count
+   of the other values. On the XCSP 2025 EFPA instances with q >= 4 the
+   -f proofs and solutions take 0.36-0.59 of the time at 600 s
+   (EFPA-4-5-4-11 484 s to 263 s, 2.6 to 1.1 million conflicts); on the
+   38 MiniZinc Challenge instances of the wide set where counters fire,
+   35 = 35 solved, timing within noise.
+
+301. Lazy clause generation explains the pruning and failures of Geost
    itself instead of replaying it (replay gave up and left 97 % of its
    reasons generic). A bound of a coordinate is explained by the region
    the sweep (Beldiceanu, Carlsson, Poder, Sadek and Truchet, "A Generic

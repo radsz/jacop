@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -108,6 +109,9 @@ import org.jacop.search.lns.AdaptiveLns;
  */
 public final class LcgSolver implements ExternalPropagator {
 
+  // the value of a system property that turns an option off
+  private static final String FALSE = "false";
+
   private static final int GE_KIND = 0;
   private static final int EQ_KIND = 1;
 
@@ -146,7 +150,7 @@ public final class LcgSolver implements ExternalPropagator {
    * stay few, so a bound change no longer runs down a long chain of binary clauses.
    */
   private static final boolean RELEASE =
-      !"false".equals(System.getProperty("jacop.lcg.releaseLiterals"));
+      !FALSE.equals(System.getProperty("jacop.lcg.releaseLiterals"));
 
   // per DIMACS variable: true while a transient literal, in no clause and not linked
   private boolean[] transientLit = new boolean[16];
@@ -266,8 +270,7 @@ public final class LcgSolver implements ExternalPropagator {
   public long liftedLiterals;
 
   // cite a weaker existing literal for a lifted bound, unless -Djacop.lcg.liftLiterals=false
-  private final boolean liftLiterals =
-      !"false".equals(System.getProperty("jacop.lcg.liftLiterals"));
+  private final boolean liftLiterals = !FALSE.equals(System.getProperty("jacop.lcg.liftLiterals"));
 
   /** Statistics: distinct literals pushed as atoms. */
   public long atomLiterals;
@@ -353,22 +356,21 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean improvedInRun;
   private final String valueChoice = System.getProperty("jacop.lcg.value", "split");
   // last-conflict branching, on unless -Djacop.lcg.lastConflict=false
-  private final boolean lastConflict =
-      !"false".equals(System.getProperty("jacop.lcg.lastConflict"));
+  private final boolean lastConflict = !FALSE.equals(System.getProperty("jacop.lcg.lastConflict"));
   private int decisionVar = -1; // the variable of the last activity decision
   private int conflictVar = -1; // the variable to branch on next, after a conflict
   private long backtrackConflicts;
   // semantic minimisation of learnt clauses, on unless -Djacop.lcg.semantic=false
-  private final boolean semantic = !"false".equals(System.getProperty("jacop.lcg.semantic"));
+  private final boolean semantic = !FALSE.equals(System.getProperty("jacop.lcg.semantic"));
   // semantic UIPs in conflict analysis, on unless -Djacop.lcg.semanticUip=false
-  private final boolean semanticUip = !"false".equals(System.getProperty("jacop.lcg.semanticUip"));
+  private final boolean semanticUip = !FALSE.equals(System.getProperty("jacop.lcg.semanticUip"));
   private final double[] activity;
   // the variables by activity; with Booleans first only the 0/1 ones, the others in wide, which
   // is branched on only once every 0/1 variable is fixed, as in CP-SAT's default search
   private final VarHeap heap = new VarHeap();
   private final VarHeap wide = new VarHeap();
   // Booleans first unless -Djacop.lcg.booleansFirst=false, which keeps every variable in heap
-  private boolean split = !"false".equals(System.getProperty("jacop.lcg.booleansFirst"));
+  private boolean split = !FALSE.equals(System.getProperty("jacop.lcg.booleansFirst"));
   // whether the runs of activity branching take turns with and without Booleans first
   private boolean booleansFirstTurns;
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
@@ -456,7 +458,7 @@ public final class LcgSolver implements ExternalPropagator {
   // after the core phase, branch and bound starts from the activity before it, unless
   // -Djacop.lcg.coreRestore=false
   private static final boolean CORE_RESTORE =
-      !"false".equals(System.getProperty("jacop.lcg.coreRestore"));
+      !FALSE.equals(System.getProperty("jacop.lcg.coreRestore"));
   // the core phase gives its time to branch and bound when it has no solution of its own by this
   // share of
   // its time; 0 turns it off. With the restore it scored 21.3 against 14.7 and 24.3 against 12.7 on
@@ -4374,8 +4376,14 @@ public final class LcgSolver implements ExternalPropagator {
         if (c instanceof Alldistinct) {
           permutationsAsClauses++;
         }
+      } else if (!LAZY_COUNTERS && defaultCounter(c) && encodeAsCounter(c)) {
+        defaultCounters++;
+        constraintsAsClauses++;
       } else {
         propagatorLeft = true;
+        if (LAZY_COUNTERS && defaultCounter(c)) {
+          lazyCounters.put(c, new int[1]);
+        }
         if (c instanceof ImpliedClauses i && !rootFailed) {
           impliedClauses += i.impliedClauses(model);
         }
@@ -4460,6 +4468,118 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Whether small counting constraints over 0/1 terms outside a reification (sums of 0/1 variables,
+   * counts of a value, the counts of global_cardinality) become unary counters by default, {@code
+   * jacop.lcg.counters} (lazy unless set to eager or false). A propagator explains a count by the
+   * literals of the variables only, so every learnt clause restates whole counts; the counter's
+   * literals {@code [sum of the first i terms >= j]} let learnt clauses state partial counts, as
+   * the auxiliary variables of a SAT encoding do (Abio and Stuckey, Conflict directed lazy
+   * decomposition, CP 2012; Abio, Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, To encode
+   * or to propagate? The best choice for each constraint in SAT, CP 2013). On the XCSP
+   * EFPA-4-5-4-11 the proof takes 0.81 million conflicts instead of 2.6 million.
+   */
+  static final boolean COUNTERS =
+      !FALSE.equals(System.getProperty("jacop.lcg.counters")) && !"all".equals(CLAUSE_CLASSES);
+
+  /** The most clauses of one such counting constraint, {@code jacop.lcg.counters.limit}. */
+  static final int COUNTERS_LIMIT = Integer.getInteger("jacop.lcg.counters.limit", 4000);
+
+  /** The classes whose small instances become counters by default ({@link #COUNTERS}). */
+  private static final java.util.Set<String> DEFAULT_COUNTER_CLASSES =
+      java.util.Set.of(
+          System.getProperty(
+                  "jacop.lcg.counters.classes",
+                  "SumBool,LinearBool,Count,CountBounds,CountValues,CountValuesBounds,AtMost,AtLeast")
+              .split(","));
+
+  private ClauseEncoder counterEncoder;
+
+  /**
+   * Whether the counting constraints of {@link #COUNTERS} stay propagators until their explanations
+   * take part in {@link #LAZY_USES} conflicts, and become counters at the next restart (lazy
+   * decomposition, Abio and Stuckey, Conflict directed lazy decomposition, CP 2012). The default;
+   * {@code jacop.lcg.counters=eager} encodes them all before search. Eager counters slow down
+   * models whose counts rarely take part in conflicts (mondoku 12-12-8 9 s to 14 s, cryptanalysis
+   * kb128 obj11 28 s to 34 s), lazy ones keep their time.
+   */
+  static final boolean LAZY_COUNTERS = !"eager".equals(System.getProperty("jacop.lcg.counters"));
+
+  /** The explanations of a lazy counter after which it becomes clauses. */
+  static final int LAZY_USES = Integer.getInteger("jacop.lcg.counters.uses", 100);
+
+  // the lazy counters still propagators, with the number of their explanations, in the order of
+  // the store (constraints use identity hash codes, so the order does not depend on them)
+  private final Map<Constraint, int[]> lazyCounters = new java.util.LinkedHashMap<>();
+
+  /** Statistics: lazy counters that became clauses. */
+  public long lazyCountersEncoded;
+
+  private int lazyUses = LAZY_USES;
+
+  /**
+   * Sets the number of explanations after which a lazy counter becomes clauses ({@link
+   * #LAZY_COUNTERS}); before solving.
+   *
+   * @param uses the explanations, at least 1
+   */
+  public void setLazyCounterUses(int uses) {
+    lazyUses = Math.max(1, uses);
+  }
+
+  private void useCounter(Constraint c) {
+    if (!lazyCounters.isEmpty()) {
+      int[] uses = lazyCounters.get(c);
+      if (uses != null) {
+        uses[0]++;
+      }
+    }
+  }
+
+  // at a restart at the base level: the active lazy counters become clauses, added as structural
+  // clauses, and their propagators are removed at this level, below which search never goes
+  private void decomposeActiveCounters() {
+    if (proof != null || rootFailed || failed) {
+      return;
+    }
+    Iterator<Map.Entry<Constraint, int[]>> it = lazyCounters.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Constraint, int[]> e = it.next();
+      if (e.getValue()[0] >= lazyUses) {
+        it.remove();
+        decomposeCounter(e.getKey());
+      }
+    }
+  }
+
+  private void decomposeCounter(Constraint c) {
+    if (c.isEntailed() || !counterFits(c)) {
+      return;
+    }
+    if (counterEncoder == null) {
+      counterEncoder = new ClauseEncoder(solverLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
+    }
+    List<int[]> cs = counterEncoder.encode(c, true);
+    if (cs != null) {
+      structural.addAll(cs);
+      constraintClauses += cs.size();
+      c.removeConstraint();
+      encodedConstraints.add(c);
+      lazyCountersEncoded++;
+      defaultCounters++;
+    }
+  }
+
+  /** Statistics: counting constraints that became unary counters by default. */
+  public long defaultCounters;
+
+  private boolean defaultCounter(Constraint c) {
+    return COUNTERS
+        && DEFAULT_COUNTER_CLASSES.contains(c.getClass().getSimpleName())
+        && !CLAUSE_SET.contains(c.getClass().getSimpleName())
+        && argumentsFit(c);
+  }
+
+  /**
    * The variables of the objective's definition (the objective and the terms of a linear form over
    * it), or an empty set. A constraint over them stays a propagator: the core-guided phase and the
    * LP read the definitions of the objective's terms from the store, such as {@code b <=> x = c} of
@@ -4468,7 +4588,9 @@ public final class LcgSolver implements ExternalPropagator {
   private java.util.Set<IntVar> objectiveTerms() {
     java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     if (clauseObjective == null
-        || "none".equals(CLAUSE_CLASSES) && ("none".equals(tableMode) || !TABLE_OBJECTIVE_TERMS)) {
+        || "none".equals(CLAUSE_CLASSES)
+            && !COUNTERS
+            && ("none".equals(tableMode) || !TABLE_OBJECTIVE_TERMS)) {
       return terms;
     }
     terms.add(clauseObjective);
@@ -4604,6 +4726,11 @@ public final class LcgSolver implements ExternalPropagator {
             || counterOnly(c))) {
       return false;
     }
+    return argumentsFit(c);
+  }
+
+  // the variables of a constraint the encoder may take: no objective term, small enough domains
+  private boolean argumentsFit(Constraint c) {
     int arity = 0;
     int wide = 0;
     for (org.jacop.core.Var v : c.arguments()) {
@@ -4654,7 +4781,67 @@ public final class LcgSolver implements ExternalPropagator {
     if (clauseEncoder == null) {
       clauseEncoder = new ClauseEncoder(solverLiterals(), CLAUSE_LIMIT, CLAUSE_COUNTER);
     }
-    List<int[]> cs = clauseEncoder.encode(c, counterOnly(c));
+    return addEncoded(c, clauseEncoder.encode(c, counterOnly(c)));
+  }
+
+  private boolean encodeAsCounter(Constraint c) {
+    if (!counterFits(c)) {
+      return false;
+    }
+    if (counterEncoder == null) {
+      counterEncoder = new ClauseEncoder(solverLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
+    }
+    return addEncoded(c, counterEncoder.encode(c, true));
+  }
+
+  // a dry run of the counter encoding on literals that are only numbers: an encoding over the
+  // limit is rejected only after it made some literals, which would stay in the solver unused
+  // and change its search (EFPA-3-8-8-08: 8272 auxiliary variables and 24 % more conflicts)
+  private ClauseEncoder dryEncoder;
+
+  private final Map<IntVar, Map<Integer, Integer>> dryAtoms = new IdentityHashMap<>();
+
+  private int dryNext;
+
+  private boolean counterFits(Constraint c) {
+    if (dryEncoder == null) {
+      dryEncoder =
+          new ClauseEncoder(
+              new ClauseEncoder.Literals() {
+                @Override
+                public int atLeast(IntVar x, int v) {
+                  return dryAtoms
+                      .computeIfAbsent(x, k -> new HashMap<>())
+                      .computeIfAbsent(2 * v, k -> ++dryNext);
+                }
+
+                @Override
+                public int valueLiteral(IntVar x, int v) {
+                  return dryAtoms
+                      .computeIfAbsent(x, k -> new HashMap<>())
+                      .computeIfAbsent(2 * v + 1, k -> ++dryNext);
+                }
+
+                @Override
+                public int auxiliary() {
+                  return ++dryNext;
+                }
+
+                @Override
+                public IntDomain root(IntVar x) {
+                  return x.dom();
+                }
+              },
+              CLAUSE_LIMIT,
+              COUNTERS_LIMIT);
+    }
+    dryAtoms.clear();
+    dryNext = 0;
+    return dryEncoder.encode(c, true) != null;
+  }
+
+  // gives the clauses of an encoded constraint to the solver and takes the constraint out
+  private boolean addEncoded(Constraint c, List<int[]> cs) {
     if (CLAUSE_DEBUG) {
       String s = c.toString();
       System.out.println(
@@ -5255,6 +5442,9 @@ public final class LcgSolver implements ExternalPropagator {
       }
       if (restartPresolve > 0) {
         presolveAtRestart();
+      }
+      if (!lazyCounters.isEmpty()) {
+        decomposeActiveCounters();
       }
       exchangeShared();
     }
@@ -6042,6 +6232,7 @@ public final class LcgSolver implements ExternalPropagator {
           proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
         }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
+        useCounter(store.recentlyFailedConstraint);
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
@@ -6083,6 +6274,7 @@ public final class LcgSolver implements ExternalPropagator {
       genericDeferred.add(trail.reason(e));
     }
     count(trail.reason(e), own, out.size() - mark, 0);
+    useCounter(trail.reason(e));
     measure(trail.reason(e), own, e, out, mark);
     if (checker != null) {
       EntryList reason = new EntryList();
