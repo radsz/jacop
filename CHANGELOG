@@ -5258,6 +5258,31 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
+306. Under --lcg, a table that compresses to a few tuples of value sets
+   becomes clauses of the SAT solver in place of its propagator, as
+   CP-SAT does in presolve (cp_model_expand.cc: tuples are merged into
+   tuples of value sets first, then the compressed table is encoded).
+   A table of plain values whose valid tuples compress to at most 16
+   tuples of value sets, at least 4 times fewer than before, over
+   columns of at most 256 values each, is written as the support clauses
+   of its compressed form (Bacchus, "GAC via unit propagation", CP 2007),
+   or with two unfixed columns as the support clauses of their values
+   with no literal per tuple (Gent, "Arc consistency in SAT", ECAI 2002).
+   Unit propagation keeps the propagator's domain consistency. Frame
+   axioms of planning models such as the move tables of XCSP PegSolitaire
+   (140 tuples, 4-6 after compression) woke their propagator on every
+   literal of their columns while most calls pruned nothing; as clauses
+   only the watched literals are visited, 2.1x the conflicts per second.
+   On the 23 instances where it fires (11 of the 240 of the wide set and
+   the 12 PegSolitaireTable instances of XCSP 2025), 600 s, -f and
+   default: no instance lost, the solved ones 1.29x (-f) and 1.36x
+   (default) faster (geomean), PegSolitaireTable 3-3-0 327 -> 109 s,
+   0-3-0 189 -> 83 s, 2-2-0 15 -> 4 s, 1-4-0 8 -> 19 s.
+   Tables over the objective's definition keep their propagator.
+   -Djacop.lcg.tableClauses.compressed=false turns it off
+   (.tuples, .ratio, .dom and .input set the limits); statistic
+   lcgCompressedTablesAsClauses.
+
 Version 4.11
 =============
 

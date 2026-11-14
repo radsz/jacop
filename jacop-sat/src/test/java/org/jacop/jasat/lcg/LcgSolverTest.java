@@ -436,6 +436,97 @@ class LcgSolverTest {
   }
 
   @Test
+  void compressedTablesAsClausesAgreeWithBruteForce() {
+    // tables that are unions of one to three boxes of value sets, so they compress to a few
+    // tuples, written as the clauses of their compressed form
+    // (jacop.lcg.tableClauses.compressed) next to other constraints
+    Random rnd = new Random(89);
+    long encoded = 0;
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        IntVar[] scope = Arrays.copyOf(x, 2 + rnd.nextInt(3));
+        Collections.shuffle(Arrays.asList(scope), rnd);
+        Set<List<Integer>> rows = new LinkedHashSet<>();
+        for (int box = 1 + rnd.nextInt(3); box > 0; box--) {
+          int[][] sets = new int[scope.length][];
+          for (int k = 0; k < scope.length; k++) {
+            sets[k] = rnd.ints(1 + rnd.nextInt(3), -1, 6).distinct().toArray();
+          }
+          addProduct(rows, sets, new ArrayList<>());
+        }
+        int[][] tuples =
+            rows.stream()
+                .map(r -> r.stream().mapToInt(Integer::intValue).toArray())
+                .toArray(int[][]::new);
+        int[] position = new int[scope.length];
+        for (int k = 0; k < scope.length; k++) {
+          position[k] = Arrays.asList(x).indexOf(scope[k]);
+        }
+        relations.add(
+            new Relation(
+                new HybridTable(scope, tuples),
+                t ->
+                    Arrays.stream(tuples)
+                        .anyMatch(
+                            row ->
+                                IntStream.range(0, row.length)
+                                    .allMatch(k -> row[k] == t[position[k]]))));
+      }
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setCompressedTableClauses(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      encoded += solver.compressedTablesAsClauses;
+    }
+    assertThat(sat).isGreaterThan(50);
+    assertThat(unsat).isGreaterThan(50);
+    assertThat(encoded).isGreaterThan(50);
+  }
+
+  private static void addProduct(Set<List<Integer>> rows, int[][] sets, List<Integer> prefix) {
+    if (prefix.size() == sets.length) {
+      rows.add(new ArrayList<>(prefix));
+      return;
+    }
+    for (int v : sets[prefix.size()]) {
+      prefix.add(v);
+      addProduct(rows, sets, prefix);
+      prefix.remove(prefix.size() - 1);
+    }
+  }
+
+  @Test
   void largeAlldiffStaysWithinTheLiteralBudget() {
     // each value fixed removes it from every other variable: n * n / 2 removals on one branch,
     // which made a solver variable each and filled the heap on debruijn_binary_04_06 (n = 4096)
