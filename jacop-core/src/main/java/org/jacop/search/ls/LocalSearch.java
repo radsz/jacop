@@ -59,7 +59,6 @@ import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XplusClteqZImplied;
-import org.jacop.constraints.XplusClteqZImpliedNot;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -1980,21 +1979,15 @@ public final class LocalSearch {
     if (f != null) {
       return addRow(f, null, rows, varList);
     }
-    if (c instanceof XplusClteqZImpliedNot h) {
-      LinearForm row =
-          new LinearForm(new IntVar[] {h.x, h.z}, new long[] {1, -1}, -h.c, LinearForm.LE);
-      if (h.b.singleton()) {
-        return h.b.value() == 1 || addRow(row, null, rows, varList);
-      }
-      return addRow(row, new int[] {addVar(h.b, varList), 0}, rows, varList);
-    }
     if (c instanceof XplusClteqZImplied h) {
+      // b = on -> x + c <= z, on = 0 for XplusClteqZImpliedNot
+      int on = h.enforcingValue();
       LinearForm row =
           new LinearForm(new IntVar[] {h.x, h.z}, new long[] {1, -1}, -h.c, LinearForm.LE);
       if (h.b.singleton()) {
-        return h.b.value() == 0 || addRow(row, null, rows, varList);
+        return h.b.value() != on || addRow(row, null, rows, varList);
       }
-      return addRow(row, new int[] {addVar(h.b, varList), 1}, rows, varList);
+      return addRow(row, new int[] {addVar(h.b, varList), on}, rows, varList);
     }
     if (c instanceof ImpliesNot r) {
       LinearForm inner = LinearForms.of(r.c);

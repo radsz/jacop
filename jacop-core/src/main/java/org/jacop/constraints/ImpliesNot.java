@@ -31,19 +31,14 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
 import org.jacop.lcg.ReifiedExplanation;
-import org.jacop.util.QueueForward;
 
 /**
  * Constraint {@code b = 0 => c}: the implication {@link Implies} with a negated control literal.
@@ -58,11 +53,9 @@ import org.jacop.util.QueueForward;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class ImpliesNot extends AbstractReifiedConstraint implements Copyable<ImpliesNot> {
+public class ImpliesNot extends AbstractImplication implements Copyable<ImpliesNot>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  private final QueueForward<PrimitiveConstraint> queueForward;
 
   /**
    * It constructs the implication {@code b = 0 => c}.
@@ -72,69 +65,8 @@ public class ImpliesNot extends AbstractReifiedConstraint implements Copyable<Im
    */
   public ImpliesNot(IntVar b, PrimitiveConstraint c) {
 
-    super(b, c);
+    super(b, c, 0);
     numberId = idNumber.incrementAndGet();
-    setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
-    setConstraintScope(c);
-    queueForward = new QueueForward<>(c, arguments());
-    this.queueIndex = c.queueIndex;
-  }
-
-  @Override
-  public void consistency(Store store) {
-
-    if (c.satisfied()) {
-      removeConstraint();
-    } else if (c.notSatisfied()) {
-      b.domain.inValue(store.level, b, 1);
-      removeConstraint();
-    } else if (b.min() == 1) {
-      removeConstraint();
-    } else if (b.max() == 0) {
-      c.consistency(store);
-    }
-  }
-
-  @Override
-  public int getConsistencyPruningEvent(Var v) {
-    if (v != b
-        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))
-        && isSimpleNestedConstraintOver(v)) {
-      // as in Implies: c.notSatisfied() is decided before b is fixed, c.consistency() after
-      return Math.max(
-          IntDomain.GROUND,
-          Math.max(c.getConsistencyPruningEvent(v), c.getNestedPruningEvent(v, false)));
-    }
-    return super.getConsistencyPruningEvent(v);
-  }
-
-  @Override
-  public int getNestedPruningEvent(Var v, boolean mode) {
-    return super.getConsistencyPruningEvent(v);
-  }
-
-  @Override
-  protected int getNestedPropagationEvent(Var v) {
-    return isSimpleNestedConstraintOver(v) ? c.getConsistencyPruningEvent(v) : Domain.NONE;
-  }
-
-  @Override
-  public boolean notSatisfied() {
-    return b.max() == 0 && c.notSatisfied();
-  }
-
-  @Override
-  public void notConsistency(Store store) {
-
-    // b first: c may share b, and c.notConsistency() must see it fixed
-    b.domain.inValue(store.level, b, 0);
-    c.notConsistency(store);
-  }
-
-  @Override
-  public boolean satisfied() {
-
-    return (b.max() == 0 && c.satisfied()) || b.min() == 1;
   }
 
   @Override
@@ -144,18 +76,8 @@ public class ImpliesNot extends AbstractReifiedConstraint implements Copyable<Im
   }
 
   @Override
-  public void queueVariable(int level, Var variable) {
-    queueForward.queueForward(level, variable);
-  }
-
-  @Override
   public ImpliesNot copy(VarMap map) {
     return new ImpliesNot(map.get(b), Copyable.copyOf(c, map));
-  }
-
-  @Override
-  public boolean canCopy() {
-    return Copyable.canCopy(c);
   }
 
   // the nested constraint's explanations, when c does not share b

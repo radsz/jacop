@@ -31,15 +31,9 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
-import org.jacop.core.Domain;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.util.QueueForward;
 
 /**
  * Constraint b {@literal =>} c (implication or half-reification).
@@ -47,11 +41,9 @@ import org.jacop.util.QueueForward;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class Implies extends AbstractReifiedConstraint implements Copyable<Implies> {
+public class Implies extends AbstractImplication implements Copyable<Implies> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  private final QueueForward<PrimitiveConstraint> queueForward;
 
   /**
    * It constructs ifthen constraint.
@@ -61,86 +53,8 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
    */
   public Implies(IntVar b, PrimitiveConstraint c) {
 
-    super(b, c);
+    super(b, c, 1);
     numberId = idNumber.incrementAndGet();
-    setScope(Stream.concat(c.arguments().stream(), Stream.of(b)));
-    setConstraintScope(c);
-    queueForward = new QueueForward<>(c, arguments());
-    this.queueIndex = c.queueIndex;
-  }
-
-  @Override
-  public void consistency(Store store) {
-
-    if (c.satisfied()) {
-      removeConstraint();
-    } else if (c.notSatisfied()) {
-      b.domain.inValue(store.level, b, 0);
-      removeConstraint();
-    } else if (b.max() == 0) {
-      removeConstraint();
-    } else if (b.min() == 1) {
-      c.consistency(store);
-    }
-  }
-
-  @Override
-  public int getConsistencyPruningEvent(Var v) {
-    if (v != b
-        && (consistencyPruningEvents == null || !consistencyPruningEvents.containsKey(v))
-        && isSimpleNestedConstraintOver(v)) {
-      // consistency() needs c.notSatisfied() before b is fixed, decided on c's nested event for
-      // its negation, and c.consistency() after, on c's own consistency event; c's own event alone
-      // can be GROUND where deciding c.notSatisfied() needs BOUND (x >= 6 fails once x <= 5).
-      // c.satisfied() only removes the constraint early, so it does not need c's events for
-      // satisfaction, which can be ANY where c's are GROUND (XneqY).
-      return Math.max(
-          IntDomain.GROUND,
-          Math.max(c.getConsistencyPruningEvent(v), c.getNestedPruningEvent(v, false)));
-    }
-    return super.getConsistencyPruningEvent(v);
-  }
-
-  @Override
-  public int getNestedPruningEvent(Var v, boolean mode) {
-    // nested in Not or Reified, notConsistency() and satisfied() decide the outer constraint
-    return super.getConsistencyPruningEvent(v);
-  }
-
-  @Override
-  protected int getNestedPropagationEvent(Var v) {
-    // consistency() only ever runs c.consistency().
-    return isSimpleNestedConstraintOver(v) ? c.getConsistencyPruningEvent(v) : Domain.NONE;
-  }
-
-  @Override
-  public boolean notSatisfied() {
-    return b.min() == 1 && c.notSatisfied();
-  }
-
-  @Override
-  public void notConsistency(Store store) {
-
-    // b first: c may share b, and c.notConsistency() must see it fixed
-    b.domain.inValue(store.level, b, 1);
-    c.notConsistency(store);
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-  }
-
-  @Override
-  public void include(Store store) {
-    super.include(store);
-  }
-
-  @Override
-  public boolean satisfied() {
-
-    return (b.min() == 1 && c.satisfied()) || (b.max() == 0);
   }
 
   @Override
@@ -150,17 +64,7 @@ public class Implies extends AbstractReifiedConstraint implements Copyable<Impli
   }
 
   @Override
-  public void queueVariable(int level, Var variable) {
-    queueForward.queueForward(level, variable);
-  }
-
-  @Override
   public Implies copy(VarMap map) {
     return new Implies(map.get(b), Copyable.copyOf(c, map));
-  }
-
-  @Override
-  public boolean canCopy() {
-    return Copyable.canCopy(c);
   }
 }

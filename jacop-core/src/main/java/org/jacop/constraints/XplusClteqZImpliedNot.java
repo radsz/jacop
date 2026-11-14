@@ -29,19 +29,8 @@
  */
 package org.jacop.constraints;
 
-import java.util.concurrent.atomic.AtomicInteger;
-import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
-import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Store;
-import org.jacop.core.Var;
-import org.jacop.lcg.AtomicTrail;
-import org.jacop.lcg.EntryList;
-import org.jacop.lcg.Explainable;
-import org.jacop.lcg.PbEncodable;
-import org.jacop.lcg.PbModel;
-import org.jacop.lcg.ReifiedExplanation;
 
 /**
  * Constraint b = 0 =&gt; X + C{@literal <=} Z, where b is a 0/1 variable: {@link
@@ -55,22 +44,7 @@ import org.jacop.lcg.ReifiedExplanation;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XplusClteqZImpliedNot extends PrimitiveConstraint
-    implements Copyable<XplusClteqZImpliedNot>, Explainable, PbEncodable {
-
-  static final AtomicInteger idNumber = new AtomicInteger(0);
-
-  /** It specifies variable x. */
-  public final IntVar x;
-
-  /** It specifies constant c. */
-  public final int c;
-
-  /** It specifies variable z. */
-  public final IntVar z;
-
-  /** It specifies the 0/1 variable whose value 0 implies x + c &lt;= z. */
-  public final IntVar b;
+public class XplusClteqZImpliedNot extends XplusClteqZImplied {
 
   /**
    * It constructs constraint b = 0 =&gt; X + C{@literal <=} Z.
@@ -81,151 +55,11 @@ public class XplusClteqZImpliedNot extends PrimitiveConstraint
    * @param z variable z.
    */
   public XplusClteqZImpliedNot(IntVar b, IntVar x, int c, IntVar z) {
-
-    checkInputForNullness(new String[] {"b", "x", "z"}, new Object[] {b, x, z});
-    if (b.min() < 0 || b.max() > 1) {
-      throw new IllegalArgumentException(
-          "Variable b in XplusClteqZImpliedNot must be 0/1 but is " + b);
-    }
-
-    numberId = idNumber.incrementAndGet();
-
-    this.b = b;
-    this.x = x;
-    this.c = c;
-    this.z = z;
-
-    checkSumOverflow(x.min(), x.max(), c, c, z.min(), z.max());
-    setScope(b, x, z);
-  }
-
-  @Override
-  public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  protected int getDefaultNestedNotConsistencyPruningEvent() {
-    return IntDomain.BOUND;
-  }
-
-  @Override
-  public int getBoundPruningEvent(Var v) {
-    // consistency() reads both bounds of b, but only the minimum of x and the maximum of z
-    if (v == b || x == z) {
-      return IntDomain.BOUND;
-    }
-    return v == x ? IntDomain.MIN_EVENT : IntDomain.MAX_EVENT;
-  }
-
-  @Override
-  public void consistency(final Store store) {
-
-    if (x == z) {
-      // b = 0 => x + c <= x is b = 1 for c > 0 and true otherwise
-      if (c > 0) {
-        b.domain.inValue(store.level, b, 1);
-      }
-      removeConstraint();
-    } else if (b.min() == 1) {
-      removeConstraint();
-    } else if (b.max() == 0) {
-      x.domain.inMax(store.level, x, z.max() - c);
-      z.domain.inMin(store.level, z, x.min() + c);
-      if (x.max() + c <= z.min()) {
-        removeConstraint();
-      }
-    } else if (x.min() + c > z.max()) {
-      b.domain.inValue(store.level, b, 1);
-      removeConstraint();
-    } else if (x.max() + c <= z.min()) {
-      removeConstraint();
-    }
-  }
-
-  @Override
-  public void notConsistency(final Store store) {
-
-    // not (b = 0 => x + c <= z) is b = 0 and x + c > z.
-    if (x == z && c <= 0) {
-      throw Store.failException;
-    }
-    b.domain.inValue(store.level, b, 0);
-    if (x == z) {
-      return;
-    }
-    x.domain.inMin(store.level, x, z.min() - c + 1);
-    z.domain.inMax(store.level, z, x.max() + c - 1);
-  }
-
-  @Override
-  public boolean satisfied() {
-    return b.min() == 1 || (x == z ? c <= 0 : x.max() + c <= z.min());
-  }
-
-  @Override
-  public boolean notSatisfied() {
-    return b.max() == 0 && (x == z ? c > 0 : x.min() + c > z.max());
-  }
-
-  @Override
-  public String toString() {
-
-    return id() + " : XplusClteqZImpliedNot(" + b + ", " + x + ", " + c + ", " + z + " )";
+    super(b, x, c, z, 0);
   }
 
   @Override
   public XplusClteqZImpliedNot copy(VarMap map) {
     return new XplusClteqZImpliedNot(map.get(b), map.get(x), c, map.get(z));
-  }
-
-  // the implied inequality, for its explanations
-  private XplusClteqZ lcgNested;
-
-  private XplusClteqZ nested() {
-    if (lcgNested == null) {
-      lcgNested = new XplusClteqZ(x, c, z);
-    }
-    return lcgNested;
-  }
-
-  @Override
-  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return getClass() == XplusClteqZImpliedNot.class
-        && x != z
-        && b != x
-        && b != z
-        && ReifiedExplanation.explainNegatedControl(trail, entry, b, nested(), out);
-  }
-
-  @Override
-  public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return getClass() == XplusClteqZImpliedNot.class
-        && x != z
-        && b != x
-        && b != z
-        && ReifiedExplanation.explainNegatedControlFailure(trail, b, nested(), out);
-  }
-
-  // not b -> x + c <= z, as the inequality under the guard not b
-  @Override
-  public boolean encode(PbModel model) {
-    if (getClass() != XplusClteqZImpliedNot.class
-        || model.domain(b).min() < 0
-        || model.domain(b).max() > 1) {
-      return false;
-    }
-    model.guarded(PbModel.not(model.equalTo(b, 1)), nested().linearForm());
-    return true;
   }
 }
