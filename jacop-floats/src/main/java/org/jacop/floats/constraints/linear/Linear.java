@@ -80,6 +80,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   };
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
+
   /**
    * Leaf node of each variable, by its position in {@link #list}. With {@link #queue} this replaces
    * a LinkedHashSet of changed variables and a map from variables to nodes: queueVariable runs for
@@ -493,7 +494,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
   }
 
-  /** The slot of a store index in the position table: its own slot, or the free one it would take. */
+  /**
+   * The slot of a store index in the position table: its own slot, or the free one it would take.
+   */
   private int slotOf(int key) {
     int mask = positionKeys.length - 1;
     int slot = (key * 0x9E3779B9) >>> 7 & mask;
@@ -506,7 +509,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   private int positionOf(Var v) {
     if (positionKeys != null) {
       int slot = slotOf(v.index());
-      return positionKeys[slot] == -1 || list[positionValues[slot]] != v ? -1 : positionValues[slot];
+      return positionKeys[slot] == -1 || list[positionValues[slot]] != v
+          ? -1
+          : positionValues[slot];
     }
     for (int i = 0; i < list.length; i++) {
       if (list[i] == v) {

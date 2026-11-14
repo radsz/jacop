@@ -2410,7 +2410,8 @@ public class FloatIntervalDomain extends FloatDomain {
       FloatInterval current = intervals[0];
       FloatInterval narrowed =
           new FloatInterval(
-              current.min() >= min ? current.min() : min, current.max() <= max ? current.max() : max);
+              current.min() >= min ? current.min() : min,
+              current.max() <= max ? current.max() : max);
       if (stamp == storeLevel) {
         intervals[0] = narrowed;
       } else {
