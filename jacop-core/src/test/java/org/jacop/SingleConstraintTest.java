@@ -58,6 +58,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllDifferentLists;
@@ -110,6 +111,7 @@ import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
@@ -9880,6 +9882,43 @@ class SingleConstraintTest extends TestHelper {
     es[0].domain.in(store.level, es[0], 0, 0);
     // without edge 0 every tree weighs at least 5
     assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * Enforcement inlining posts {@code ImpliesNot(b, XneqC)} for {@code int_ne_imp} under a negated
+   * control; presolve copies every constraint, so XneqC must be copyable (hook_mdd-decomp.fzn).
+   */
+  @Test
+  void impliesNotOfXneqCCanBeCopied() {
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar x = new IntVar(store, "x", 0, 2);
+    ImpliesNot c = new ImpliesNot(b, new XneqC(x, 2));
+    assertThat(Copyable.canCopy(c)).isTrue();
+
+    Store child = new Store();
+    IntVar cb = new IntVar(child, "b", 0, 1);
+    IntVar cx = new IntVar(child, "x", 0, 2);
+    Map<Var, Var> copies = Map.of(b, cb, x, cx);
+    child.impose(
+        c.copy(
+            new VarMap() {
+              @Override
+              public Store target() {
+                return child;
+              }
+
+              @Override
+              @SuppressWarnings("unchecked")
+              public <V extends Var> V get(V v) {
+                return (V) copies.get(v);
+              }
+            }));
+    assertThat(child.consistency()).isTrue();
+    child.setLevel(child.level + 1);
+    cb.domain.in(child.level, cb, 0, 0);
+    assertThat(child.consistency()).isTrue();
+    assertThat(cx.max()).isEqualTo(1);
   }
 
   private static int root(int[] parent, int v) {
