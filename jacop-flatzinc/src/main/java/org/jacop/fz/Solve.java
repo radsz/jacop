@@ -3445,6 +3445,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.coreSkips
         + "\n%%%mzn-stat: lcgCoreProbeSkips="
         + lcg.probeSkips
+        + "\n%%%mzn-stat: lcgBoundDives="
+        + lcg.boundDives
+        + "\n%%%mzn-stat: lcgBoundDiveSolutions="
+        + lcg.boundDiveSolutions
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="
