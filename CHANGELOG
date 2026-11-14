@@ -5523,6 +5523,15 @@ Version 5.0 (unreleased)
    the gate. Of the 187 optimisation instances of the wide benchmark set,
    the detector reads cost terms in 52 and 1 passes the gate.
 
+318. Under --lcg, a table's explanations remember the values the reason
+   already covers: a tuple with such a value is dead at no cost, where
+   each tuple re-evaluated its values and their alternatives before. The
+   reasons are unchanged. On the crosswords grid-05.04 instance
+   explanations took 39 % of the time and the search runs 1.18x the
+   nodes in 240 s. On the 49 wide-set instances with a table at 600 s,
+   default search solves 32 instead of 31 (time 0.985 on both solved)
+   and -f 37 = 37 (time 0.992).
+
 Version 4.11
 =============
 
