@@ -51,6 +51,7 @@ import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -109,6 +110,9 @@ public class Tables {
   // variables that no constraint uses any more, such as the sums merged into a minimum
   final ArrayList<Var> unusedVariables = new ArrayList<>();
 
+  /** The variables that table variable elimination joined out of the model, or null. */
+  TableVariableElimination tableElimination;
+
   // variables the detectors add for redundant constraints, which follow from the model's own: the
   // search of lazy clause generation branches on them last
   final ArrayList<Var> auxiliaryVariables = new ArrayList<>();
@@ -158,6 +162,119 @@ public class Tables {
 
   void noteClampedDomain(ClampedDomain d) {
     clampedDomains.add(d);
+  }
+
+  // pairs of variables a declaration makes equal (var int: x = y), with the bounds each had
+  // before the equality was imposed
+  private final List<IntVar[]> declaredEqualities = new ArrayList<>();
+  private final IdentityHashMap<IntVar, long[]> boundsBeforeEquality = new IdentityHashMap<>();
+  // the factor the objective was divided by (ObjectiveScaling), and the identifiers of the
+  // variables that hold the divided values
+  private long objectiveScale = 1;
+  private final Set<String> scaledIdents = new HashSet<>();
+
+  /**
+   * Notes that the declaration of a variable makes it equal to another, before the equality is
+   * imposed.
+   *
+   * @param x the declared variable
+   * @param y the variable it is declared equal to
+   */
+  void noteDeclaredEquality(IntVar x, IntVar y) {
+    declaredEqualities.add(new IntVar[] {x, y});
+    boundsBeforeEquality.putIfAbsent(x, new long[] {x.min(), x.max()});
+    boundsBeforeEquality.putIfAbsent(y, new long[] {y.min(), y.max()});
+  }
+
+  /**
+   * The pairs of variables declarations make equal.
+   *
+   * @return the pairs
+   */
+  public List<IntVar[]> declaredEqualities() {
+    return declaredEqualities;
+  }
+
+  /**
+   * The declared bounds of a variable narrowed to JaCoP's range, or null for one not narrowed.
+   *
+   * @param v the variable
+   * @return {low, high} as declared, or null
+   */
+  public long[] clampedDeclaredBounds(IntVar v) {
+    for (ClampedDomain d : clampedDomains) {
+      if (variableTable.get(d.ident()) == v) {
+        return declaredInterval(d.declared());
+      }
+    }
+    return null;
+  }
+
+  /**
+   * The bounds a variable was declared with, before the equalities of declarations narrowed them:
+   * beyond JaCoP's range for a narrowed one, unbounded for one declared without bounds.
+   *
+   * @param v the variable
+   * @return {low, high}
+   */
+  public long[] declaredMemberBounds(IntVar v) {
+    long[] b = clampedDeclaredBounds(v);
+    if (b != null) {
+      return b;
+    }
+    b = boundsBeforeEquality.get(v);
+    if (b == null) {
+      b = new long[] {v.min(), v.max()};
+    }
+    return new long[] {
+      b[0] <= IntDomain.MIN_INT ? -ClampedBounds.INF : b[0],
+      b[1] >= IntDomain.MAX_INT ? ClampedBounds.INF : b[1]
+    };
+  }
+
+  /**
+   * Records that a variable holds the objective divided by a factor: its declared domain is no
+   * longer narrowed, and its values are printed multiplied by the factor.
+   *
+   * @param v the variable
+   * @param factor the factor
+   */
+  public void scale(IntVar v, long factor) {
+    clampedDomains.removeIf(d -> variableTable.get(d.ident()) == v);
+    objectiveScale = factor;
+    scaledIdents.add(v.id());
+  }
+
+  /**
+   * The factor the objective was divided by, 1 when it was not.
+   *
+   * @return the factor
+   */
+  public long objectiveScale() {
+    return objectiveScale;
+  }
+
+  /**
+   * The factor the values of an output variable are multiplied by when printed.
+   *
+   * @param ident the identifier of the variable
+   * @return the factor, 1 for most variables
+   */
+  long outputScale(String ident) {
+    return scaledIdents.contains(ident) ? objectiveScale : 1;
+  }
+
+  /**
+   * The variables of the output arrays.
+   *
+   * @return the arrays
+   */
+  public List<Var[]> outputArrays() {
+    List<Var[]> list = new ArrayList<>();
+    for (OutputArrayAnnotation a : outputArray) {
+      list.add(a.getArray());
+    }
+    return list;
   }
 
   // the domains of the variables as declared, by store index, when a domain was narrowed
@@ -423,6 +540,18 @@ public class Tables {
   }
 
   /**
+   * Returns whether the variable of the given identity was merged into another one as its alias, as
+   * the integer of {@code bool2int} is merged into its Boolean.
+   *
+   * @param ident the identity of the variable
+   * @return true when the identity names an alias of another variable
+   */
+  public boolean isAlias(String ident) {
+    IntVar v = variableTable.get(ident);
+    return v != null && aliasTable.containsKey(v);
+  }
+
+  /**
    * Returns the alias for a variable, or the variable itself if no alias exists.
    *
    * @param b the variable to look up
@@ -482,6 +611,8 @@ public class Tables {
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
+    t.objectiveScale = objectiveScale;
+    t.scaledIdents.addAll(scaledIdents);
     t.numberBoolVariables = numberBoolVariables;
     t.numberFloatVariables = numberFloatVariables;
     t.numberSetVariables = numberSetVariables;

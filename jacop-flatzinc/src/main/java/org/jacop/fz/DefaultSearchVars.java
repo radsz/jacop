@@ -151,6 +151,12 @@ public class DefaultSearchVars {
     }
     // collect output variables
     collectVariables(dictionary.outputVariables, intVarSet, boolVarSet, setVarSet, floatVarSet);
+    // the variables joined out of the model get their values when the solution is printed
+    if (dictionary.tableElimination != null) {
+      Set<Var> eliminated = dictionary.tableElimination.eliminated();
+      intVarSet.removeAll(eliminated);
+      boolVarSet.removeAll(eliminated);
+    }
 
     intVars = intVarSet.toArray(new IntVar[0]);
     boolVars = boolVarSet.toArray(new BooleanVar[0]);

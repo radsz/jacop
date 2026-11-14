@@ -1368,7 +1368,10 @@ public abstract class IntDomain extends Domain {
         pruningEventConstraints != null
             && ownedModelConstraints != null
             && pruningEventConstraints == ownedModelConstraints[pruningEvent];
-    Constraint[] table = owned ? ownedModelConstraintTables[pruningEvent] : null;
+    Constraint[] table =
+        owned && ownedModelConstraintTables != null
+            ? ownedModelConstraintTables[pruningEvent]
+            : null;
 
     // the table holds every constraint of the array, so a constraint missing from it is not imposed
     if (table == null || tableContains(table, constraint)) {
@@ -1404,12 +1407,12 @@ public abstract class IntDomain extends Domain {
       modelConstraints = copyModelConstraintsArray(pruningEvent, newPruningEventConstraints);
       if (ownedModelConstraints == null) {
         ownedModelConstraints = new Constraint[modelConstraints.length][];
-        ownedModelConstraintTables = new Constraint[modelConstraints.length][];
-        ownedModelConstraintTableSizes = new int[modelConstraints.length];
       }
       ownedModelConstraints[pruningEvent] = newPruningEventConstraints;
       if (newPruningEventConstraints.length < TABLE_THRESHOLD) {
-        ownedModelConstraintTables[pruningEvent] = null;
+        if (ownedModelConstraintTables != null) {
+          ownedModelConstraintTables[pruningEvent] = null;
+        }
       } else {
         setTable(pruningEvent, newPruningEventConstraints, pruningConstraintsToEvaluate + 1);
       }
@@ -1422,6 +1425,11 @@ public abstract class IntDomain extends Domain {
    * at least twice as many slots as the array.
    */
   private void setTable(int pruningEvent, Constraint[] constraints, int size) {
+    // most variables have short arrays only, so the tables are made with the first long one
+    if (ownedModelConstraintTables == null) {
+      ownedModelConstraintTables = new Constraint[modelConstraints.length][];
+      ownedModelConstraintTableSizes = new int[modelConstraints.length];
+    }
     Constraint[] table = new Constraint[Integer.highestOneBit(constraints.length) << 2];
     for (int i = 0; i < size; i++) {
       tableAdd(table, constraints[i]);

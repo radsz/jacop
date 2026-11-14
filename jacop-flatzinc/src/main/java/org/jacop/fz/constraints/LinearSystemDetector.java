@@ -30,9 +30,12 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.LinearEqualities;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
@@ -50,6 +53,14 @@ import org.jacop.fz.SimpleNode;
  * most 100 values) is also reformulated as Aardal, Hurkens and Lenstra do (Math. of OR 25(3),
  * 2000): new variables λ over a reduced basis of the lattice, x = x0 + Σ λ_k q_k, which the
  * relaxation takes in as rows, and which are searched first ({@link #lattice()}).
+ *
+ * <p>An all-different constraint over n variables whose domains together hold exactly n values (a
+ * permutation) takes every value once, so the sum of its variables is the sum of those values. That
+ * equality joins the system (both the model's all_different constraints and those {@link
+ * AlldifferentDetector} finds, with their offsets). With the equalities linking the variables it
+ * proves parity arguments, such as Langford's pairings of n ≡ 1, 2 (mod 4) being impossible (C. D.
+ * Langford, Math. Gazette 42, 1958; the parity proof is R. O. Davies, Math. Gazette 43, 1959),
+ * which search alone cannot. {@code org.jacop.fz.permutationSums=false} leaves these rows out.
  *
  * <p>System properties: {@code org.jacop.fz.lattice=false} turns it off; {@code
  * org.jacop.fz.latticeReformulate} is {@code auto} (default), {@code on} (every component) or
@@ -101,6 +112,17 @@ public class LinearSystemDetector {
    */
   public void detect(SimpleNode astTree, boolean relaxation) {
     support.forEachConstraint(astTree, this::collect);
+    int permutations = 0;
+    if (!"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.permutationSums"))
+        && !rows.isEmpty()) {
+      for (IntVar[] x : support.alldifferentLists) {
+        permutations += permutationSum(x, new int[x.length]);
+      }
+      for (Support.Shifted s : support.allDifferentOffsets) {
+        int[] o = s.o().stream().mapToInt(Integer::intValue).toArray();
+        permutations += permutationSum(s.x().toArray(new IntVar[0]), o);
+      }
+    }
     if (rows.isEmpty()) {
       return;
     }
@@ -115,7 +137,9 @@ public class LinearSystemDetector {
     lattice.addAll(le.lattice);
     if (support.options.debug() || support.options.searchStatistics()) {
       FzConsole.println(
-          "%%%mzn-stat: latticeComponents="
+          "%%%mzn-stat: latticePermutationSums="
+              + permutations
+              + "\n%%%mzn-stat: latticeComponents="
               + le.components
               + "\n%%%mzn-stat: latticeRows="
               + le.componentRows
@@ -158,6 +182,46 @@ public class LinearSystemDetector {
       }
     }
     return largest >= 10;
+  }
+
+  // x[k] + o[k] all different and together a permutation of the union U of their domains:
+  // Σ x[k] = Σ U - Σ o[k]; 1 when the row is added
+  private int permutationSum(IntVar[] x, int[] o) {
+    if (x.length < 2) {
+      return 0;
+    }
+    IntervalDomain union = new IntervalDomain();
+    long offsets = 0;
+    for (int k = 0; k < x.length; k++) {
+      IntDomain d = x[k].dom();
+      for (int i = 0; i < d.noIntervals(); i++) {
+        long lo = (long) d.leftElement(i) + o[k];
+        long hi = (long) d.rightElement(i) + o[k];
+        if (lo < IntDomain.MIN_INT || hi > IntDomain.MAX_INT) {
+          return 0;
+        }
+        union.unionAdapt((int) lo, (int) hi);
+      }
+      offsets += o[k];
+    }
+    if (union.getSize() != x.length) {
+      // more values than variables, or fewer, which the all-different constraint fails on
+      return 0;
+    }
+    long sum = 0;
+    for (int i = 0; i < union.noIntervals(); i++) {
+      long lo = union.leftElement(i);
+      long hi = union.rightElement(i);
+      sum += (lo + hi) * (hi - lo + 1) / 2;
+    }
+    long b = sum - offsets;
+    if (b < Integer.MIN_VALUE || b > Integer.MAX_VALUE) {
+      return 0;
+    }
+    int[] a = new int[x.length];
+    Arrays.fill(a, 1);
+    rows.add(new LinearEqualities.Row(x, a, (int) b));
+    return 1;
   }
 
   private void collect(ASTConstElem node) {
