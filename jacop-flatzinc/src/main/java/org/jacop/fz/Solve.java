@@ -2754,6 +2754,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      // once a solution is known, more literal runs per turn (CHANGELOG 318):
+      // multi-agent-graph-coverage rnd_n10 proofs need half the conflicts with literals alone
+      lcg.setLiteralRuns(
+          Integer.parseInt(options.freeConfig("lcg-literal-runs", "1")),
+          Integer.parseInt(options.freeConfig("lcg-literal-runs-solved", "6")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;

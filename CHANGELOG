@@ -5543,6 +5543,27 @@ Version 5.0 (unreleased)
    the gate. Of the 187 optimisation instances of the wide benchmark set,
    the detector reads cost terms in 52 and 1 passes the gate.
 
+318. Under free search (-f) with lazy clause generation and a search
+   annotation, once a first solution is known each turn of runs at
+   restarts is the annotation, six runs of the SAT solver's own decisions
+   on literals, then activity branching, instead of one run of each
+   (--free-config lcg-literal-runs-solved=<n>, default 6;
+   lcg-literal-runs=<n> before a solution, default 1). Literal runs can
+   prove much faster than the others: on MiniZinc Challenge 2023
+   multi-agent-graph-coverage rnd_n10, literal decisions alone prove the
+   optimum with 34k-49k conflicts in 8-10 s (CP-SAT 9.15 -f -p 1: 31k,
+   9 s) against 89k-111k conflicts in 26-32 s for the turns; first
+   solutions keep the old turns, since literal runs alone lose them on
+   cargo, linear-to-program and p1f. Wide benchmark set at 240 s: 186 ->
+   189 solved, 5 families better and 3 worse, runtime on solved instances
+   1.03 (instances solved within 5 s slower); 600 s on the 118
+   optimisation instances not solved within 5 s by both: 78 -> 81 solved
+   (celar graph11, crosswords grid-05.04, physician-scheduling
+   instance10), 7 families better and 2 worse, runtime on solved
+   instances 0.88 (vrplc9 112 -> 18 s, javarouting trip_7_2 363 -> 139 s,
+   workforce-alloc 202 130 -> 45 s; steelmillslab bench_19_6 12 -> 30 s,
+   evm-super-compilation 49 -> 108 s).
+
 Version 4.11
 =============
 

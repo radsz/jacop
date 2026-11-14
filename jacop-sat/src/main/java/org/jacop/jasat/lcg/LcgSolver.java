@@ -4155,6 +4155,23 @@ public final class LcgSolver implements ExternalPropagator {
     keepImprovingRun = keep;
   }
 
+  // literal runs per turn of Branching.ALTERNATE with an annotation, before and after a solution
+  private int literalRuns = 1;
+  private int literalRunsSolved = 1;
+
+  /**
+   * Sets the runs on literals in each turn of {@link Branching#ALTERNATE} under free search with an
+   * annotation (the annotation, then this many literal runs, then activity branching), before and
+   * after the first solution.
+   *
+   * @param before literal runs per turn before a solution, at least 1
+   * @param solved literal runs per turn once a solution is known, at least 1
+   */
+  public void setLiteralRuns(int before, int solved) {
+    literalRuns = Math.max(1, before);
+    literalRunsSolved = Math.max(1, solved);
+  }
+
   /**
    * Sets how decisions are made outside the runs of the annotation. Set it before solving.
    *
@@ -5671,8 +5688,10 @@ public final class LcgSolver implements ExternalPropagator {
       // the annotation, the literals and the activity in turn, with the activity completing the
       // annotation's runs
       runs++;
-      annotationRun = runs % 3 == 0;
-      activityBranching = runs % 3 != 1;
+      int turn = 2 + (best == null ? literalRuns : literalRunsSolved);
+      long r = runs % turn;
+      annotationRun = r == 0;
+      activityBranching = r == 0 || r == turn - 1;
     } else if (branching == Branching.ALTERNATE) {
       activityBranching = !activityBranching;
     } else if (annotation != null && freeSearch) {
