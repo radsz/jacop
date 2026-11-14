@@ -1136,11 +1136,20 @@ public class LinearRelaxation extends Constraint
     List<LinearForm> ownTried = objective == null ? List.of() : new ArrayList<>(tried);
     // the clauses of the tables over 0/1 variables, tried with the table rows: on Fortress (walls
     // that enclose points of a grid) they make the relaxation the vertex cut LP, whose bound is the
-    // fewest walls; without them the tables gave the relaxation no row
+    // fewest walls; without them the tables gave the relaxation no row. A table whose variables
+    // are all in the given tried rows has its convex hull over tuple columns there (TableCliques),
+    // which implies each of its clauses: the clauses of the xor tables of DC only slowed the first
+    // solve and moved the search
     int tableClauses = 0;
     if (TABLE_CLAUSES && objective != null) {
+      Set<IntVar> inTried = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : tried) {
+        inTried.addAll(Arrays.asList(f.vars()));
+      }
       for (Constraint c : constraints) {
-        if (c instanceof HybridTable h) {
+        if (c instanceof HybridTable h
+            && !h.arguments().stream()
+                .allMatch(v -> v.singleton() || v instanceof IntVar i && inTried.contains(i))) {
           List<LinearForm> rows = h.clauseRows();
           ownTried.addAll(rows);
           tableClauses += rows.size();
