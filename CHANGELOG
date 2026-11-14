@@ -4874,8 +4874,10 @@ Version 5.0 (unreleased)
      Wolsey, "Aggregation and mixed integer rounding to solve MIPs",
      Operations Research 49(3), 2001) are also separated in search from
      the rows of the root, as the capacity cuts are, with a period that
-     halves when they move the bound (-Dorg.jacop.lp.mirSearch=false; new
-     statistics lpMirSearchCuts, lpMirSeparations, lpCutLimits). Cut bound
+     halves when they move the bound, off by default
+     (-Dorg.jacop.lp.mirSearch=true; on a knapsack their separations took
+     the LP's work budget and the search 7 times more nodes). New
+     statistics lpMirSearchCuts, lpMirSeparations, lpCutLimits. Cut bound
      on TankAllocation1-0000 1768 -> 1676.
 
 Version 4.11

@@ -609,9 +609,10 @@ public class LinearRelaxation extends Constraint
   // globally; the period halves after a separation whose cuts move the bound and doubles otherwise
   // (up to CAPACITY_MAX_PERIOD). The cuts go into the row pool and leave the simplex when they age.
   // A model with a weak root relaxation that only branching tightens (tank allocation, XCSP 2025,
-  // where CP-SAT adds about 1,200 cuts in search) gets its bound from them
-  private static final boolean MIR_SEARCH =
-      !"false".equals(System.getProperty("org.jacop.lp.mirSearch"));
+  // where CP-SAT adds about 1,200 cuts in search) gets its bound from them. Off by default
+  // (-Dorg.jacop.lp.mirSearch=true): the separations take the work budget of the LP calls, so on a
+  // knapsack of 60 items the LP ran 8 times less often and the search needed 7 times more nodes
+  private static final boolean MIR_SEARCH = Boolean.getBoolean("org.jacop.lp.mirSearch");
   private static final int MIR_SEARCH_CUTS = Integer.getInteger("org.jacop.lp.mirSearchCuts", 10);
   private int mirPeriod = 4;
   private int mirWaited;
