@@ -884,7 +884,8 @@ class LcgSolverTest {
   /**
    * An objective that the core-guided phase cannot take (the maximum of pairwise different values,
    * no linear sum) is bisected to closure when core-guided search and lower-bound runs are on, as
-   * under free search: it keeps the optimum of plain branch and bound and proves it.
+   * under free search, at once or after a few conflicts: it keeps the optimum of plain branch and
+   * bound and proves it.
    */
   @Test
   void anUncoredObjectiveIsBisectedToClosure() {
@@ -921,6 +922,8 @@ class LcgSolverTest {
         if (run == 1) {
           solver.setCoreSearch(0.5, 1000, 100);
           solver.setLowerBoundSearch(0.5, 3);
+          // half of them after a few conflicts of branch and bound with lower-bound runs
+          solver.setUncoredBisectionDelay(instance % 2 == 0 ? 0 : 5);
         }
         status[run] = solver.minimize(max);
         if (status[run] == CdclSolver.SAT) {
