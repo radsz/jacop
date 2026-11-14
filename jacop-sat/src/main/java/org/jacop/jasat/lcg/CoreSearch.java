@@ -1053,7 +1053,7 @@ public final class CoreSearch {
       return Double.MAX_VALUE;
     }
     double q = r2 / r1;
-    double stretch = now - w1;
+    double stretch = (double) now - w1;
     double stretches = ((double) end - now) / stretch;
     // r2 L (q + q^2 + ... + q^n) over the n stretches left
     return r2 * stretch * q * (1 - Math.pow(q, stretches)) / (1 - q);
