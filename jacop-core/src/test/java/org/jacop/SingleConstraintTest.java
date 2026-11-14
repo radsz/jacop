@@ -60,6 +60,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -5117,6 +5118,67 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x1, x2);
 
     assertThat(noOfSolutions).isEqualTo(188640);
+  }
+
+  @Test
+  void testAllDifferentListsSolutionCount() {
+    Store store = new Store();
+    IntVar[][] x = new IntVar[4][2];
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 2);
+      }
+    }
+    store.impose(new AllDifferentLists(x));
+
+    // 4 different pairs out of the 9, in order: 9 * 8 * 7 * 6
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(3024);
+  }
+
+  /**
+   * AllDifferentLists keeps the solutions of its pairwise decomposition (a disjunction of
+   * disequalities for each pair of rows), on random rows with holes and repeated variables.
+   */
+  @Test
+  void testAllDifferentListsMatchesDecomposition() {
+    for (long seed = 0; seed < 60; seed++) {
+      int[] counts = new int[2];
+      for (int k = 0; k < 2; k++) {
+        Random rnd = new Random(seed);
+        Store store = new Store();
+        int m = 2 + rnd.nextInt(3);
+        int n = 1 + rnd.nextInt(3);
+        IntVar[] pool = new IntVar[m * n];
+        for (int q = 0; q < pool.length; q++) {
+          pool[q] = new IntVar(store, "v" + q, 0, 1 + rnd.nextInt(2));
+          if (rnd.nextInt(4) == 0) {
+            pool[q].domain.subtractAdapt(rnd.nextInt(2));
+            pool[q].refreshBounds();
+          }
+        }
+        IntVar[][] x = new IntVar[m][n];
+        for (int i = 0; i < m; i++) {
+          for (int j = 0; j < n; j++) {
+            x[i][j] = rnd.nextInt(5) == 0 ? pool[rnd.nextInt(pool.length)] : pool[i * n + j];
+          }
+        }
+        if (k == 0) {
+          store.impose(new AllDifferentLists(x));
+        } else {
+          for (int i = 0; i < m; i++) {
+            for (int r = i + 1; r < m; r++) {
+              PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+              for (int j = 0; j < n; j++) {
+                ne[j] = new XneqY(x[i][j], x[r][j]);
+              }
+              store.impose(new Or(ne));
+            }
+          }
+        }
+        counts[k] = store.consistency() ? noOfAllSolutions(store, pool) : 0;
+      }
+      assertThat(counts[0]).as("seed %d", seed).isEqualTo(counts[1]);
+    }
   }
 
   @Test

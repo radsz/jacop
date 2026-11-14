@@ -5195,6 +5195,25 @@ Version 5.0 (unreleased)
    from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
    0.54 on those both solve), model search 19 as before (time 0.89).
 
+302. New constraint AllDifferentLists(x): the rows of x are pairwise
+   different tuples, the allDifferent constraint over lists of XCSP3
+   (Boussemart, Lecoutre, Audemard and Piette, "XCSP3-core", arXiv
+   2009.00514, 2020). It hashes the fixed rows and the rows with one
+   variable left: two equal fixed rows fail, and a row with one variable
+   left loses the values that would make it equal a fixed row, which is
+   unit propagation on the pairwise decomposition for all pairs at once.
+   A call handles only the rows fixed since the last one. Under --lcg it
+   explains a removed value by the two rows and a failure by the two
+   equal rows. JaCoP's MiniZinc library defines
+   fzn_xcsp_all_different_lists with it, so the XCSP3 translations of
+   radsz/xcsp-competition no longer get the pairwise decomposition:
+   m(m-1)/2 disjunctions for m rows, 3.0M int_lin_ne_imp and 3.0M
+   Booleans (a 685 MB FlatZinc file, 4.7 GB to flatten) on XCSP 2025
+   LotteryDesign-32-6-6-2-1000. On the 12 LotteryDesign instances of
+   XCSP 2025 (the only ones of 2022-2025 with the constraint), -f, 600 s:
+   11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
+   the other 9 2-10x faster.
+
 Version 4.11
 =============
 

@@ -955,6 +955,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_lex_lesseq_int(n);
   }
 
+  /** Handles the jacop_all_different_lists FlatZinc constraint. */
+  public void jacop_all_different_lists(SimpleNode n) {
+    gc.gen_jacop_all_different_lists(n);
+  }
+
   /** Handles the jacop_lex_chain_less_int FlatZinc constraint. */
   public void jacop_lex_chain_less_int(SimpleNode n) {
     gc.gen_jacop_lex_chain(n, true);
