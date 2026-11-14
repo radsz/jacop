@@ -3065,10 +3065,6 @@ public final class CdclSolver {
   }
 
   /**
-   * Uses a reason clause that {@link #temporaryFits} once, as a temporary reason or conflict on the
-   * reason stack, instead of keeping it.
-   */
-  /**
    * Whether a reason clause with an unkept literal, ordered for watches, can be used once without
    * being kept: it is satisfied or not unit (and is dropped), asserts its first literal, or is a
    * conflict at the current level.
@@ -3082,6 +3078,10 @@ public final class CdclSolver {
     return vals[c[0]] == 0 || litLevel(c[0]) == decisionLevel && litLevel(c[1]) == decisionLevel;
   }
 
+  /**
+   * Uses a reason clause that {@link #temporaryFits} once, as a temporary reason or conflict on the
+   * reason stack, instead of keeping it.
+   */
   private int externalTemporary(int[] c, int size) {
     if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
       return NO_CONFLICT;
