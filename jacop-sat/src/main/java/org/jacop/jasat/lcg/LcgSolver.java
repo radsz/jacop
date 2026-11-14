@@ -4606,11 +4606,21 @@ public final class LcgSolver implements ExternalPropagator {
    * a term b (spot5 28 loses its at-most-one groups and its proof when they are clauses).
    */
   private java.util.Set<IntVar> objectiveTerms() {
+    if ("none".equals(CLAUSE_CLASSES)
+        && !COUNTERS
+        && ("none".equals(tableMode) && !compressedTables || !TABLE_OBJECTIVE_TERMS)) {
+      return java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    }
+    return objectiveDefinition();
+  }
+
+  /**
+   * The objective and the terms of the linear forms that define it, whatever the clause settings:
+   * the objective's sum, then the definitions of its terms that are defined once more.
+   */
+  private java.util.Set<IntVar> objectiveDefinition() {
     java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-    if (clauseObjective == null
-        || "none".equals(CLAUSE_CLASSES)
-            && !COUNTERS
-            && ("none".equals(tableMode) && !compressedTables || !TABLE_OBJECTIVE_TERMS)) {
+    if (clauseObjective == null) {
       return terms;
     }
     terms.add(clauseObjective);
@@ -4662,6 +4672,17 @@ public final class LcgSolver implements ExternalPropagator {
   static final boolean ALLDIFF_CLAUSES =
       Boolean.parseBoolean(System.getProperty("jacop.lcg.alldiffClauses", "true"));
 
+  /**
+   * Whether a permutation over terms of the objective's sum may become clauses too, the system
+   * property {@code jacop.lcg.alldiffClauses.objective}: the linear forms that define the objective
+   * from its terms (the objective's sum and the blocks of a split sum, see {@link
+   * #objectiveDefinition}) then do not count as other constraints of its variables. The 25x25
+   * sudokus of sudoku_opt (MiniZinc Challenge 2022), whose objective is a signed sum of all cells,
+   * otherwise keep their 75 all different propagators.
+   */
+  static final boolean ALLDIFF_OBJ =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.alldiffClauses.objective", "true"));
+
   /** Statistics: all different constraints over permutations given to the solver as clauses. */
   public long permutationsAsClauses;
 
@@ -4699,10 +4720,11 @@ public final class LcgSolver implements ExternalPropagator {
     if (!ALLDIFF_CLAUSES) {
       return java.util.Set.of();
     }
+    java.util.Set<IntVar> definition = ALLDIFF_OBJ ? objectiveDefinition() : java.util.Set.of();
     java.util.Set<Var> in = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     java.util.Set<Var> other = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : store.getConstraints()) {
-      if (c instanceof LinearRelaxation) {
+      if (c instanceof LinearRelaxation || definesObjective(c, definition)) {
         continue;
       }
       boolean permutation = isPermutation(c);
@@ -4716,6 +4738,20 @@ public final class LcgSolver implements ExternalPropagator {
     return in;
   }
 
+  /**
+   * Whether a constraint is a linear form that defines the objective from its terms, with {@link
+   * #ALLDIFF_OBJ}: an equation over variables of the objective's definition only.
+   */
+  private boolean definesObjective(Constraint c, java.util.Set<IntVar> definition) {
+    if (!ALLDIFF_OBJ || clauseObjective == null) {
+      return false;
+    }
+    LinearForm f = LinearForms.of(c);
+    return f != null
+        && f.relation() == LinearForm.EQ
+        && definition.containsAll(Arrays.asList(f.vars()));
+  }
+
   /** Whether a constraint is a domain consistent all different over as many values as variables. */
   private boolean isPermutation(Constraint c) {
     if (c.getClass() != Alldistinct.class) {
@@ -4725,7 +4761,7 @@ public final class LcgSolver implements ExternalPropagator {
     IntervalDomain union = new IntervalDomain();
     for (Var v : list) {
       IntVar x = (IntVar) v;
-      if (x == clauseObjective || objectiveTerms.contains(x)) {
+      if (x == clauseObjective || !ALLDIFF_OBJ && objectiveTerms.contains(x)) {
         return false;
       }
       if (!x.singleton() && (trail.id(x) < 0 || trail.id(x) >= vars.length)) {
@@ -5605,8 +5641,46 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  // run once at the first restart to the root, see atRootAfter
+  private Runnable rootAction;
+  private long rootActionDelay;
+
+  /**
+   * Restarts the search to the root once the given time has passed, also under fixed search without
+   * restarts, and runs the given action there, before the search goes on: for example to turn on a
+   * propagator whose first, expensive, call is worth it only when the search does not end quickly.
+   * Set it before solving.
+   *
+   * @param nanos the time from now, in nanoseconds.
+   * @param action the action run at the root.
+   */
+  public void atRootAfter(long nanos, Runnable action) {
+    rootAction = action;
+    rootActionDelay = nanos;
+    sat.restartAt(System.nanoTime() + nanos);
+  }
+
+  /**
+   * Tells whether the action of {@link #atRootAfter} is still to run.
+   *
+   * @return true until it ran.
+   */
+  public boolean rootActionPending() {
+    return rootAction != null;
+  }
+
   @Override
   public void notifyRestart() {
+    if (rootAction != null) {
+      if (store.level == baseLevel) {
+        Runnable action = rootAction;
+        rootAction = null;
+        action.run();
+      } else {
+        // under assumptions: at a later restart to the root
+        sat.restartAt(System.nanoTime() + rootActionDelay);
+      }
+    }
     // a restart under assumptions keeps their level, whose bounds hold only under them
     if (store.level == baseLevel) {
       deleteLpSteps();

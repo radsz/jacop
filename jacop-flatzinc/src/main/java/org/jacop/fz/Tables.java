@@ -113,6 +113,11 @@ public class Tables {
   /** The variables that table variable elimination joined out of the model, or null. */
   TableVariableElimination tableElimination;
 
+  // the cost function network of the objective (-Dorg.jacop.fz.costNetwork=true), until Solve
+  // builds
+  // its bound
+  org.jacop.fz.constraints.CostNetworkDetector costNetwork;
+
   // variables the detectors add for redundant constraints, which follow from the model's own: the
   // search of lazy clause generation branches on them last
   final ArrayList<Var> auxiliaryVariables = new ArrayList<>();

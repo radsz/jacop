@@ -3389,6 +3389,13 @@ public final class CdclSolver {
   }
 
   private boolean shouldRestart() {
+    if (forcedRestartAt != Long.MAX_VALUE
+        && decisionLevel > 0
+        && System.nanoTime() >= forcedRestartAt) {
+      forcedRestartAt = Long.MAX_VALUE;
+      forcedRestart = true;
+      return true;
+    }
     if (!restartsOn || decisionLevel <= assumptionLevels) {
       return false;
     }
@@ -3411,7 +3418,9 @@ public final class CdclSolver {
   private void restart() {
     restarts++;
     // vivification and elimination work at the root; other restarts keep the assumption level
-    boolean root = vivifyDue || conflicts >= nextElimination && elimination && !externalUsed;
+    boolean root =
+        forcedRestart || vivifyDue || conflicts >= nextElimination && elimination && !externalUsed;
+    forcedRestart = false;
     backtrack(root ? 0 : Math.min(decisionLevel, assumptionLevels));
     if (external != null) {
       external.notifyRestart();
@@ -3847,6 +3856,20 @@ public final class CdclSolver {
    */
   public void setRestarts(boolean on) {
     restartsOn = on;
+  }
+
+  // a restart to the root at this time, also without restarts (see restartAt)
+  private long forcedRestartAt = Long.MAX_VALUE;
+  private boolean forcedRestart;
+
+  /**
+   * Restarts the search once, back to level 0, at the first decision after the given time, also
+   * when restarts are off.
+   *
+   * @param nanoTime the time, as {@link System#nanoTime()} gives it.
+   */
+  public void restartAt(long nanoTime) {
+    forcedRestartAt = nanoTime;
   }
 
   /** Removes satisfied clauses at level 0. */
