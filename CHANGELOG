@@ -5172,6 +5172,21 @@ Version 5.0 (unreleased)
    from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
    0.54 on those both solve), model search 19 as before (time 0.89).
 
+300. Reified and implied linear equalities and disequalities
+     (int_lin_eq/ne_reif/imp with weights other than 1 and -1) fix their
+     0/1 variable when the gcd of the weights of the free terms does not
+     divide the constant minus the fixed terms: -x0 - 3 * x1 != -1 holds
+     for x0 = 2 whatever x1 is, but the 0/1 variable stayed free because
+     entailment was read from the bounds of the sum only. Lazy clause
+     generation explains it by the fixed terms. Found by the new
+     ConsistencyChecker case ReifiedLinear (nodes with a free b that has
+     no support: about 420 per 1000 instances before, 86 after); the 6
+     wide-set instances that
+     post such constraints keep their solved counts and times at 600 s.
+     ConsistencyChecker has 17 more cases, for the constraints the wide
+     set posts most, and LcgFuzzTest has -Dlcg.fuzz.focus to check the
+     explanations of chosen constraints at volume.
+
 Version 4.11
 =============
 
