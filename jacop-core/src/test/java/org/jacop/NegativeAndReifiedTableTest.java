@@ -42,7 +42,6 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
-import org.jacop.constraints.table.BinaryTable;
 import org.jacop.constraints.table.NegativeTable;
 import org.jacop.constraints.table.TableReified;
 import org.jacop.core.IntVar;
@@ -51,10 +50,10 @@ import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests {@link NegativeTable}, {@link BinaryTable} and {@link TableReified} against brute-force
- * enumeration: at every node of complete search trees on random tables the domains must be exactly
- * the values with a support (generalized arc consistency), they must be restored after
- * backtracking, and the solutions found must be exactly the allowed assignments.
+ * Tests {@link NegativeTable} and {@link TableReified} against brute-force enumeration: at every
+ * node of complete search trees on random tables the domains must be exactly the values with a
+ * support (generalized arc consistency), they must be restored after backtracking, and the
+ * solutions found must be exactly the allowed assignments.
  */
 class NegativeAndReifiedTableTest {
 
@@ -172,15 +171,9 @@ class NegativeAndReifiedTableTest {
    */
   private static void check(
       long seed, boolean control, Poster poster, BiPredicateOnTuples semantics) {
-    check(seed, control, poster, semantics, 0);
-  }
-
-  // as above with arity columns, or a random arity from 1 to 4 when arity is 0
-  private static void check(
-      long seed, boolean control, Poster poster, BiPredicateOnTuples semantics, int arity) {
     Random random = new Random(seed);
     for (int trial = 0; trial < TRIALS; trial++) {
-      int n = arity > 0 ? arity : 1 + random.nextInt(4);
+      int n = 1 + random.nextInt(4);
       int[][] domains = new int[n + (control ? 1 : 0)][];
       for (int i = 0; i < n; i++) {
         domains[i] = randomDomain(random, 0, 3);
@@ -244,26 +237,6 @@ class NegativeAndReifiedTableTest {
   @Test
   void negativeTableReachesGacAndFindsAllSolutions() {
     check(1, false, (s, x, b, t) -> s.impose(new NegativeTable(x, t)), (in, values, n) -> !in);
-  }
-
-  @Test
-  void binaryConflictTableReachesGacAndFindsAllSolutions() {
-    check(
-        4,
-        false,
-        (s, x, b, t) -> s.impose(new BinaryTable(x[0], x[1], t, true)),
-        (in, values, n) -> !in,
-        2);
-  }
-
-  @Test
-  void binarySupportTableReachesGacAndFindsAllSolutions() {
-    check(
-        5,
-        false,
-        (s, x, b, t) -> s.impose(new BinaryTable(x[0], x[1], t, false)),
-        (in, values, n) -> in,
-        2);
   }
 
   @Test

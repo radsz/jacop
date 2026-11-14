@@ -145,7 +145,6 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
-import org.jacop.constraints.table.BinaryTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.NegativeTable;
 import org.jacop.constraints.table.Restriction;
@@ -1995,28 +1994,7 @@ class GlobalConstraints implements ParserTreeConstants {
       nv[0].domain.in(store.level, nv[0], nv[0].domain.subtract(d));
       return;
     }
-    int[][] forbidden = deduplicateTableRows(kept.toArray(new int[0][]));
-    if (nv.length == 2
-        && binaryTables(false)
-        && BinaryTable.fits(nv[0])
-        && BinaryTable.fits(nv[1])) {
-      support.pose(new BinaryTable(nv[0], nv[1], forbidden, true));
-      return;
-    }
-    support.pose(new NegativeTable(nv, forbidden));
-  }
-
-  /**
-   * Which tables over two variables with small domains are posted as {@link BinaryTable}: the
-   * system property org.jacop.fz.binaryTable is negative (the default: the conflict tables), all
-   * (also the positive tables) or off.
-   *
-   * @param positive true for a positive table.
-   * @return true when such a table is posted as a binary table.
-   */
-  static boolean binaryTables(boolean positive) {
-    String mode = System.getProperty("org.jacop.fz.binaryTable", "negative");
-    return positive ? "all".equals(mode) : "all".equals(mode) || "negative".equals(mode);
+    support.pose(new NegativeTable(nv, deduplicateTableRows(kept.toArray(new int[0][]))));
   }
 
   /**
@@ -2280,10 +2258,6 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void poseTableBySizePlain(IntVar[] v, int[][] t) {
-    if (v.length == 2 && binaryTables(true) && BinaryTable.fits(v[0]) && BinaryTable.fits(v[1])) {
-      support.pose(new BinaryTable(v[0], v[1], t, false));
-      return;
-    }
     // Merging the tuples that differ in one column only (-Djacop.table=star into *, or =sets into
     // sets of values) shrinks the tables that MiniZinc expanded from short tables, but it measured
     // slower overall on the FlatZinc benchmarks, so it is off by default.

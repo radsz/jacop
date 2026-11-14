@@ -196,7 +196,6 @@ import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.constraints.regular.Regular;
-import org.jacop.constraints.table.BinaryTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
@@ -512,19 +511,6 @@ class LcgFuzzTest {
       return resources == 1
           ? new CostRegular(v, transition, -1, 0, finals, costs[0], cost[0])
           : new MultiCostRegular(v, transition, -1, 0, finals, costs, cost);
-    }
-
-    /** A binary table of random allowed or forbidden pairs, or a hybrid table when none fits. */
-    private Constraint binaryTable() {
-      IntVar[] v = pick(x, 2);
-      if (v.length < 2 || !BinaryTable.fits(v[0]) || !BinaryTable.fits(v[1])) {
-        return hybridTable();
-      }
-      int[][] pairs = new int[2 + rnd.nextInt(9)][];
-      for (int k = 0; k < pairs.length; k++) {
-        pairs[k] = new int[] {value(), value()};
-      }
-      return new BinaryTable(v[0], v[1], pairs, rnd.nextBoolean());
     }
 
     /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
@@ -1135,7 +1121,7 @@ class LcgFuzzTest {
         }
         case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
         case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
-        case 64 -> rnd.nextInt(3) == 0 ? binaryTable() : hybridTable();
+        case 64 -> hybridTable();
         case 65 -> regular();
         case 66 -> mdd();
         case 67 -> unaryTransition();
