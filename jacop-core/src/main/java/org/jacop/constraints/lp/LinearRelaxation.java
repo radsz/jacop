@@ -304,6 +304,14 @@ public class LinearRelaxation extends Constraint
   /** Statistics: infeasible relaxations. */
   public long infeasible;
 
+  /**
+   * Statistics: infeasible relaxations whose rounded Farkas multipliers proved the infeasibility
+   * at no scale. Skipping the solves below such a solve was tried and lost: the subtree is then
+   * searched without the relaxation (the 60-item knapsack with search cuts of weights up to 2^24:
+   * 141 million nodes in 60 s after 5 unproven solves).
+   */
+  public long unproven;
+
   /** Statistics: failures proved by an exact combination. */
   public long failures;
 
@@ -618,6 +626,9 @@ public class LinearRelaxation extends Constraint
   // knapsack of 60 items the LP ran 8 times less often and the search needed 7 times more nodes
   private static final boolean MIR_SEARCH = Boolean.getBoolean("org.jacop.lp.mirSearch");
   private static final int MIR_SEARCH_CUTS = Integer.getInteger("org.jacop.lp.mirSearchCuts", 10);
+  // the largest weight of a cut made in search (see MirCut.capped)
+  private static final long MIR_SEARCH_WEIGHT =
+      Long.getLong("org.jacop.lp.mirSearchWeight", 1L << 16);
   private int mirPeriod = 4;
   private int mirWaited;
   // the rows of the first cut rounds, as aggregates, and the keys of the cuts chosen so far
@@ -2523,7 +2534,7 @@ public class LinearRelaxation extends Constraint
     for (int s = 0; s < SCALES.length; s++) {
       long[] lambda = scaled(y, SCALES[s]);
       if (lambda == null) {
-        return;
+        break;
       }
       int[][] facts = new int[2][];
       long[][] used = new long[2][];
@@ -2567,6 +2578,9 @@ public class LinearRelaxation extends Constraint
         // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
       }
       // the bounds reasoning on the form would overflow: try a smaller scale
+    }
+    if (status == LpSolver.INFEASIBLE) {
+      unproven++;
     }
   }
 
@@ -3267,7 +3281,7 @@ public class LinearRelaxation extends Constraint
           break;
         }
       }
-      List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen);
+      List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen, Long.MAX_VALUE);
       if (chosen.isEmpty()) {
         break;
       }
@@ -4096,7 +4110,12 @@ public class LinearRelaxation extends Constraint
     mirSeparations++;
     int n = lp.columns();
     List<MirCut> found =
-        separateCuts(Arrays.copyOf(rootLo, n), Arrays.copyOf(rootHi, n), mirRows, mirSeen);
+        separateCuts(
+            Arrays.copyOf(rootLo, n),
+            Arrays.copyOf(rootHi, n),
+            mirRows,
+            mirSeen,
+            MIR_SEARCH_WEIGHT);
     List<MirCut> chosen =
         found.size() > MIR_SEARCH_CUTS ? found.subList(0, MIR_SEARCH_CUTS) : found;
     for (MirCut c : found.subList(chosen.size(), found.size())) {
@@ -4177,10 +4196,12 @@ public class LinearRelaxation extends Constraint
    * @param hi the global upper bounds by column, of the first solve
    * @param unitRows the rows that are not cuts, as aggregates
    * @param seen the cuts chosen in earlier rounds, as keys; the cuts chosen are added
+   * @param maxWeight the largest weight of a cut; larger cuts are scaled down ({@link
+   *     MirCut#capped})
    * @return the cuts chosen, most efficacious first
    */
   private List<MirCut> separateCuts(
-      long[] lo, long[] hi, Aggregate[] unitRows, Set<List<Long>> seen) {
+      long[] lo, long[] hi, Aggregate[] unitRows, Set<List<Long>> seen, long maxWeight) {
     int n = lp.columns();
     double[] value = new double[n];
     for (int j = 0; j < n; j++) {
@@ -4213,6 +4234,16 @@ public class LinearRelaxation extends Constraint
     }
     for (Aggregate row : unitRows) {
       mir(row, value, lo, hi, found);
+    }
+    if (maxWeight < Long.MAX_VALUE) {
+      List<MirCut> small = new ArrayList<>(found.size());
+      for (MirCut c : found) {
+        MirCut d = MirCut.capped(c, maxWeight, value, lo, hi);
+        if (d != null) {
+          small.add(d);
+        }
+      }
+      found = small;
     }
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
     List<MirCut> chosen = new ArrayList<>();

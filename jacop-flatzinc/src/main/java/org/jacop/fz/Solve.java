@@ -931,6 +931,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.limits
             + "\n%%%mzn-stat: lpInfeasible="
             + r.infeasible
+            + "\n%%%mzn-stat: lpUnproven="
+            + r.unproven
             + "\n%%%mzn-stat: lpFailures="
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="

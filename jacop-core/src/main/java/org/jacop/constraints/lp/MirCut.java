@@ -417,6 +417,43 @@ final class MirCut {
   }
 
   /**
+   * Returns the cut with its weights brought within {@code maxWeight}: the cut itself when they
+   * are, otherwise the cut divided by the least power of two that does it, as {@link #reduce} does
+   * (exact over the bounds), or null when what is left is not violated enough or the arithmetic
+   * overflows. Cuts made in search are capped harder than at the root: their rows enter the integer
+   * certificates of every later solve, and weights up to {@code 2^24} make the scaled Farkas
+   * multipliers overflow or round into combinations that prove nothing (the 60-item knapsack of
+   * PortfolioSplitTest: 70 % of the infeasible solves were left unproven).
+   *
+   * @param c the cut
+   * @param maxWeight the largest weight allowed
+   * @param value the LP solution by column
+   * @param lo the global lower bounds by column
+   * @param hi the global upper bounds by column
+   * @return the cut, a scaled-down cut, or null
+   */
+  static MirCut capped(MirCut c, long maxWeight, double[] value, long[] lo, long[] hi) {
+    long largest = 0;
+    for (long w : c.weights) {
+      largest = Math.max(largest, Math.abs(w));
+    }
+    if (largest <= maxWeight) {
+      return c;
+    }
+    long divisor = 1;
+    while (largest / divisor > maxWeight) {
+      divisor *= 2;
+    }
+    try {
+      long[] w = c.weights.clone();
+      long rhs = reduce(c.columns, w, c.rhs, divisor, (double) largest / MAX_RATIO, value, lo, hi);
+      return finishCut(c.columns, w, rhs, value, lo, hi, false, 1);
+    } catch (ArithmeticException _) {
+      return null;
+    }
+  }
+
+  /**
    * Scales {@code sum w_k x_columns[k] <= rhs} down by divisor, exactly and safely: each weight
    * becomes {@code q_k = w_k / divisor} rounded towards the side that keeps the cut tight at the LP
    * solution, and the remainder {@code e_k = w_k - q_k divisor} goes to the right side at the bound
