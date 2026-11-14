@@ -4968,6 +4968,14 @@ Version 5.0 (unreleased)
    122 s -> 10 s; 30 of the 32 solved instead of 28.
    -Dorg.jacop.fz.partitionSums=false turns it off.
 
+290. JaLP's dual simplex no longer factorizes the basis again to check the
+   rows it left out as round-off when its factors have had no update since
+   the last factorization: the duals and basic values are computed again on
+   those factors, which gives the same pivots. In free search of MiniZinc
+   Challenge 2023 unit-commitment L10 the check ran about 38,000 times in
+   120 s and took 462 microseconds each with a new factorization (15 % of
+   the run), 130 to 150 microseconds without.
+
 Version 4.11
 =============
 
