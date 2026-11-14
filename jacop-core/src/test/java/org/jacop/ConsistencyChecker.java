@@ -1900,11 +1900,7 @@ class ConsistencyChecker {
             .toArray(IntVar[]::new);
     IntVar[] r =
         IntStream.range(0, n)
-            .mapToObj(
-                i ->
-                    random.nextInt(3) == 0
-                        ? new IntVar(store, "r" + i, 0, 1)
-                        : new IntVar(store, "r" + i, 1, 1))
+            .mapToObj(i -> new IntVar(store, "r" + i, random.nextInt(3) == 0 ? 0 : 1, 1))
             .toArray(IntVar[]::new);
     boolean profile = random.nextBoolean();
     return new Model(
