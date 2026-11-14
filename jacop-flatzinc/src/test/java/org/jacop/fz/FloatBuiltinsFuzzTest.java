@@ -208,6 +208,40 @@ class FloatBuiltinsFuzzTest {
   }
 
   /**
+   * floor, ceil and round of a float that has no bounds when the constraint is posted (a var float
+   * bounded only by a later constraint) threw "JaCoP cannot handle ... in rounding to integer".
+   */
+  @Test
+  void roundingOfAnUnboundedFloat() throws IOException {
+    for (String rounding : new String[] {"float_floor", "float_ceil", "float_round"}) {
+      String model =
+          "var -3..3: i :: output_var;\n"
+              + "var float: x;\n"
+              + "var float: h;\n"
+              + "var int: k :: output_var;\n"
+              + "constraint "
+              + rounding
+              + "(h, k);\n"
+              + "constraint int2float(i, x);\n"
+              + "constraint float_times(x, 0.25, h);\n"
+              + "solve :: int_search([i], input_order, indomain_min, complete) satisfy;\n";
+      List<String> solutions = solveAll(model);
+      Set<String> expected = new TreeSet<>();
+      for (int i = -3; i <= 3; i++) {
+        double h = i * 0.25;
+        long k =
+            switch (rounding) {
+              case "float_floor" -> (long) Math.floor(h);
+              case "float_ceil" -> (long) Math.ceil(h);
+              default -> (long) (Math.signum(h) * Math.floor(Math.abs(h) + 0.5));
+            };
+        expected.add("i = " + i + "; k = " + k + ";");
+      }
+      assertThat(new TreeSet<>(solutions)).as(rounding).isEqualTo(expected);
+    }
+  }
+
+  /**
    * Minimises or maximises a float function of the integers (a built-in, or a linear sum defined by
    * float_lin_eq), and checks the last solution against the optimum found by enumeration.
    */

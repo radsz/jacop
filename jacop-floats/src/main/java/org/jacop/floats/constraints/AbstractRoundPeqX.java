@@ -62,10 +62,8 @@ public abstract class AbstractRoundPeqX extends Constraint implements SatisfiedP
   protected AbstractRoundPeqX(AtomicInteger idNum, FloatVar p, IntVar x) {
     checkInputForNullness(new String[] {"x", "q"}, new Object[] {x, p});
 
-    double q = Double.max(p.min(), p.max());
-    if (q > Integer.MAX_VALUE || q < Integer.MIN_VALUE) {
-      throw new IllegalArgumentException("JaCoP cannot handle " + p + " in rounding to integer.");
-    }
+    // p may be wider than the integers (an unbounded float, -1e150..1e150): consistency prunes p
+    // to the interval of x before rounding its bounds
     numberId = idNum.incrementAndGet();
 
     this.x = x;
