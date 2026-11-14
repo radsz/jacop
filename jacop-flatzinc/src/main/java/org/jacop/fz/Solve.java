@@ -2635,9 +2635,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
-        // short bound-literal chains: multi-agent-graph-coverage proofs 43 -> 26 s, 6 families
-        // better and none worse over 65 instances at 600 s; in the default search the changed
-        // learning lost on 5 families and won on none
+        // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
+        // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
+        // in the default search the changed learning lost on 5 families and won on none
         lcg.setChainLimit(Integer.parseInt(options.freeConfig("lcg-chain-limit", "64")));
       }
     }
