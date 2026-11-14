@@ -3,15 +3,19 @@ package org.jacop.constraints.lp;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.LinearForm;
 import org.junit.jupiter.api.Test;
 
-/** Tests of {@link TimeIndexedBound}: its bound never cuts off an optimum. */
+/**
+ * Tests of {@link TimeIndexedBound}: its bound never cuts off an optimum, with arc-flow blocks too.
+ */
 class TimeIndexedBoundTest {
 
   private static final int INSTANCES = Integer.getInteger("timeIndexed.instances", 200);
@@ -170,6 +174,128 @@ class TimeIndexedBoundTest {
         if (opt > c.min()) {
           c.domain.inMax(store.level, c, opt - 1);
           store.consistency();
+        }
+      }
+    }
+    assertThat(raised).isPositive();
+  }
+
+  // a model of a bin packing with the cost sum (load_b - target)^2, the objective c
+  private static IntVar binPackingModel(
+      Store store,
+      int[] w,
+      int bins,
+      int target,
+      int limit,
+      List<LinearForm> rows,
+      List<TimeIndexedBound.LoadFunction> functions) {
+    IntVar[] bin = new IntVar[w.length];
+    int total = 0;
+    for (int i = 0; i < w.length; i++) {
+      bin[i] = new IntVar(store, "b" + i, 1, bins);
+      total += w[i];
+    }
+    IntVar[] load = new IntVar[bins];
+    IntVar[] cost = new IntVar[bins];
+    long[] values = new long[total + 1];
+    for (int v = 0; v <= total; v++) {
+      values[v] = (long) (v - target) * (v - target);
+    }
+    for (int b = 0; b < bins; b++) {
+      load[b] = new IntVar(store, "l" + b, 0, total);
+      cost[b] = new IntVar(store, "z" + b, 0, (total + target) * (total + target));
+      functions.add(new TimeIndexedBound.LoadFunction(cost[b], load[b], 0, values));
+    }
+    store.impose(new Binpacking(bin, load, w));
+    IntVar c = new IntVar(store, "c", 0, limit);
+    IntVar[] vs = new IntVar[bins + 1];
+    long[] ws = new long[bins + 1];
+    for (int b = 0; b < bins; b++) {
+      vs[b] = cost[b];
+      ws[b] = 1;
+    }
+    vs[bins] = c;
+    ws[bins] = -1;
+    rows.add(new LinearForm(vs, ws, 0, LinearForm.EQ));
+    long[] ones = new long[bins];
+    Arrays.fill(ones, 1);
+    rows.add(new LinearForm(load, ones, total, LinearForm.EQ));
+    return c;
+  }
+
+  // three items of weight 2 in two bins, cost load^2: the loads can only be 0, 2, 4 or 6, so the
+  // arc-flow bound is 4 + 16 = 20 (the plain relaxation allows 3 + 3, cost 18)
+  @Test
+  void arcFlowSquaredLoads() {
+    Store store = new Store();
+    List<LinearForm> rows = new ArrayList<>();
+    List<TimeIndexedBound.LoadFunction> functions = new ArrayList<>();
+    IntVar c = binPackingModel(store, new int[] {2, 2, 2}, 2, 0, 100, rows, functions);
+    TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
+    assertThat(bound).isNotNull();
+    store.impose(bound);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.min()).isEqualTo(20);
+    assertThat(bound.lastArcs).isPositive();
+  }
+
+  // the least cost of the bin packing over all assignments
+  private static int binPackingOptimum(int[] w, int bins, int target) {
+    int n = w.length;
+    int[] a = new int[n];
+    int best = Integer.MAX_VALUE;
+    while (true) {
+      int[] load = new int[bins];
+      for (int i = 0; i < n; i++) {
+        load[a[i]] += w[i];
+      }
+      int cost = 0;
+      for (int l : load) {
+        cost += (l - target) * (l - target);
+      }
+      best = Math.min(best, cost);
+      int i = 0;
+      while (i < n && a[i] == bins - 1) {
+        a[i] = 0;
+        i++;
+      }
+      if (i == n) {
+        return best;
+      }
+      a[i]++;
+    }
+  }
+
+  // random bin packings with a squared deviation cost: the arc-flow bound at the root never
+  // passes the optimum, and it raises the bound on some
+  @Test
+  void arcFlowKeepsTheOptimum() {
+    Random rnd = new Random(5);
+    int raised = 0;
+    for (int instance = 0; instance < INSTANCES; instance++) {
+      int n = 2 + rnd.nextInt(5);
+      int bins = 2 + rnd.nextInt(2);
+      int[] w = new int[n];
+      int total = 0;
+      for (int i = 0; i < n; i++) {
+        w[i] = 1 + rnd.nextInt(5);
+        total += w[i];
+      }
+      int target = rnd.nextInt(total + 1);
+      int opt = binPackingOptimum(w, bins, target);
+      for (int limit : new int[] {10_000, opt}) {
+        Store store = new Store();
+        List<LinearForm> rows = new ArrayList<>();
+        List<TimeIndexedBound.LoadFunction> functions = new ArrayList<>();
+        IntVar c = binPackingModel(store, w, bins, target, limit, rows, functions);
+        TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
+        store.impose(bound);
+        assertThat(store.consistency())
+            .as("instance %d, limit %d, optimum %d", instance, limit, opt)
+            .isTrue();
+        assertThat(c.min()).as("instance %d, limit %d", instance, limit).isLessThanOrEqualTo(opt);
+        if (limit > opt && bound.bestBound > 0) {
+          raised++;
         }
       }
     }

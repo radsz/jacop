@@ -44,6 +44,7 @@ import java.util.Set;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -132,6 +133,9 @@ public class Tables {
   int numberSetVariables;
   // MiniZinc on_restart built-ins of the model, or null
   OnRestart onRestart;
+  // the variables defined as functions of bin loads, for the arc-flow blocks of the time-indexed
+  // bound (org.jacop.lp.arcFlow)
+  List<TimeIndexedBound.LoadFunction> loadFunctions = List.of();
   // variables whose declared domain reached beyond JaCoP's integer range and was narrowed to it
   private final ArrayList<ClampedDomain> clampedDomains = new ArrayList<>();
 

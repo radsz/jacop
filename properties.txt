@@ -786,6 +786,12 @@ Cuts:
   org.jacop.lp.timeIndexed.pivots: the time limit of the first and of
   later solves and the most pivots of one solve; default 10000 ms,
   3000 ms and 50000.
+- org.jacop.lp.arcFlow: arc-flow columns of the bins of each bin packing
+  in TimeIndexedBound, with exact rows for the variables the model
+  defines as functions of the loads; default false. It shares the
+  time limits above.
+- org.jacop.lp.arcFlow.arcs: the most arcs of all arc-flow blocks of one
+  solve; default 200000.
 
 Row pool and lazy rows:
 
