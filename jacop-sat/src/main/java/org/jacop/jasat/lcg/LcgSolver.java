@@ -110,6 +110,9 @@ public final class LcgSolver implements ExternalPropagator {
   private static final int EQ_KIND = 1;
 
   private final Store store;
+
+  // the work of the core-guided phase outside the solver: the soft literals it scans between calls
+  long coreWork;
   private final CdclSolver sat = new CdclSolver();
   private final AtomicTrail trail;
   private final int baseLevel;
@@ -545,7 +548,7 @@ public final class LcgSolver implements ExternalPropagator {
     // against 20.2 on the OR-Tools set and 18.9 against 19.1 on the Challenge sample, and proved
     // one more instance in each
     sat.setExternalReasonKeep(Integer.getInteger("jacop.lcg.reasonKeep", 3));
-    sat.setExternalWork(() -> WORK_PER_CALL * store.numberConsistencyCalls);
+    sat.setExternalWork(() -> WORK_PER_CALL * store.numberConsistencyCalls + coreWork);
     // learnt clauses keep longer in LCG, where a level holds many atoms: core up to LBD 3, middle
     // up to 8 scored 19.4 against 15.6 for 2 and 6 on the Challenge sample, in four pairings
     sat.setTierLimits(3, 8);
@@ -3146,11 +3149,16 @@ public final class LcgSolver implements ExternalPropagator {
       boolean probeWithoutSolution = false;
       if (coreProbeShare > 0) {
         long stops = coreSearch.noSolutionStops;
+        double[] probeSaved = PROBE_RESTORE ? activity.clone() : null;
+        double probeInc = activityInc;
         result = runCores(coreProbeShare, coreDelayBudget, false);
         if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
           return result;
         }
         probeWithoutSolution = coreSearch.noSolutionStops > stops;
+        if (probeSaved != null) {
+          restoreActivity(probeSaved, probeInc);
+        }
       }
       result = minimizeBeforeCores();
       if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
@@ -3193,13 +3201,22 @@ public final class LcgSolver implements ExternalPropagator {
       // the core phase bumped the variables of conflicts under its assumptions, which mislead
       // branch and bound: harmony-brother reached the optimum's bound in 8 s and then did not find
       // the optimum, which branch and bound alone proves in 35 s
-      System.arraycopy(saved, 0, activity, 0, Math.min(saved.length, activity.length));
-      activityInc = savedInc;
-      rebuildHeap(heap);
-      rebuildHeap(wide);
-      rebuildHeap(lateHeap);
+      restoreActivity(saved, savedInc);
     }
     return afterCores();
+  }
+
+  // -Djacop.lcg.probeRestore=false: branch and bound after the core-guided probe keeps the
+  // activity the probe's conflicts gave
+  private static final boolean PROBE_RESTORE =
+      !"false".equals(System.getProperty("jacop.lcg.probeRestore"));
+
+  private void restoreActivity(double[] saved, double savedInc) {
+    System.arraycopy(saved, 0, activity, 0, Math.min(saved.length, activity.length));
+    activityInc = savedInc;
+    rebuildHeap(heap);
+    rebuildHeap(wide);
+    rebuildHeap(lateHeap);
   }
 
   /** Branch and bound after the core-guided phase, from its best solution. */

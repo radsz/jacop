@@ -504,6 +504,16 @@ public final class CoreSearch {
       start(sat.work());
     }
     while (true) {
+      if (SCAN_WORK && (System.nanoTime() > sat.deadline() || sat.work() >= sat.workLimit())) {
+        // relaxing and hardening between calls of the solver count as work of their own (one
+        // per soft literal scanned): train 2012 instance.2, whose objective spans 2,850,000
+        // values, spent 110 of 240 s in them under a share of 2 % and found its first solution
+        // only after them
+        return CdclSolver.UNKNOWN;
+      }
+      if (SCAN_WORK) {
+        lcg.coreWork += 2L * softs.size();
+      }
       if (!relaxTrueAtRoot()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
@@ -943,6 +953,9 @@ public final class CoreSearch {
   // half of the phase is tested, 0 never; 0.1: work-task-variation 2025 seed-8 proves its optimum
   // after a stall of 20 s that a test from the start would end, community-detection 2026 and
   // javarouting trip_7_2 stall for good after 12 s and 330 s
+  // -Djacop.lcg.coreScanWork=false: the scans between calls of the solver are not work
+  static final boolean SCAN_WORK = !"false".equals(System.getProperty("jacop.lcg.coreScanWork"));
+
   static final double STALL = Double.parseDouble(System.getProperty("jacop.lcg.coreStall", "0.1"));
 
   // the solver's work and the lower bound at each test of the phase's rate, and the last sample at
