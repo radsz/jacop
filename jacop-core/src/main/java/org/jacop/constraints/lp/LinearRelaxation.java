@@ -2354,9 +2354,8 @@ public class LinearRelaxation extends Constraint
       if (beforeExtra != null
           && !keepEncodings
           && trees.isEmpty()
-          && extraHits >= EXTRA_LIMITS
-          && extraHits * 20 > calls
-          && calls >= 20L * EXTRA_LIMITS) {
+          && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
+              || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
       }
       return;

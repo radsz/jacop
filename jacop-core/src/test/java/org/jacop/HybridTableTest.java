@@ -734,7 +734,7 @@ class HybridTableTest {
    * The clause rows of tables over 0/1 variables are their prime implicates: each holds for every
    * allowed tuple, each loses that with any literal left out, and when the table has few of them
    * the rows allow exactly the tuples of the table (no unit clause remains after the propagation,
-   * which makes the domains arc consistent).
+   * which makes the domains arc consistent). A table with more of them than free columns gets none.
    */
   @Test
   void clauseRowsAreThePrimeImplicatesOfZeroOneTables() {
@@ -789,7 +789,7 @@ class HybridTableTest {
           assertThat(allowed).anyMatch(v -> !holds(row, x, v, d));
         }
       }
-      if (rows.size() < 32) {
+      if (!rows.isEmpty()) {
         long satisfying =
             box.stream().filter(v -> rows.stream().allMatch(r -> holds(r, x, v, -1))).count();
         assertThat(satisfying).as(Arrays.deepToString(tuples)).isEqualTo(allowed.size());
@@ -797,6 +797,20 @@ class HybridTableTest {
       checked += rows.isEmpty() ? 0 : 1;
     }
     assertThat(checked).isGreaterThan(TRIALS / 4);
+  }
+
+  /** A parity table has more prime implicates (four) than columns, so it gets no clause rows. */
+  @Test
+  void clauseRowsOfAParityTableAreLeftOut() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    int[][] tuples = {{0, 0, 0}, {0, 1, 1}, {1, 0, 1}, {1, 1, 0}};
+    HybridTable table = new HybridTable(x, tuples, -1);
+    store.impose(table);
+    assertThat(table.clauseRows()).isEmpty();
   }
 
   /**

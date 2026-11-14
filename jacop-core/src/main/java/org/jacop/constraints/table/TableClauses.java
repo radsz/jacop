@@ -65,8 +65,14 @@ final class TableClauses {
   /** The most free 0/1 columns of a table that gets clause rows. */
   static final int MAX_ARITY = Integer.getInteger("org.jacop.lp.tableClauseArity", 10);
 
-  /** The most clause rows of one table; the shortest are kept. */
-  static final int MAX_CLAUSES = Integer.getInteger("org.jacop.lp.tableClauses", 32);
+  /**
+   * The most clause rows of one table per free column. A table with more prime implicates gets
+   * none: its clauses then describe a parity or counting relation (xor tables of DC, the life rule
+   * of MaximumDensityOscillatingLife: about 5 and 30 per table), whose rows hold at the fractional
+   * points the search visits and only make the simplex slower, while the implications of Fortress
+   * take about one row per column.
+   */
+  static final int MAX_CLAUSES = Integer.getInteger("org.jacop.lp.tableClausesPerColumn", 1);
 
   /** The most tuple checks of one table when the allowed assignments are listed. */
   private static final long MAX_CHECKS = 4_000_000;
@@ -79,7 +85,8 @@ final class TableClauses {
    * @param x the variables of the columns
    * @param tuples the number of tuples
    * @param accepts whether a tuple of values, one per column, is allowed
-   * @return the rows, empty unless the columns not fixed are 0/1 and at most {@link #MAX_ARITY}
+   * @return the rows, empty unless the columns not fixed are 0/1, at most {@link #MAX_ARITY}, and
+   *     have at most {@link #MAX_CLAUSES} prime implicates each
    */
   static List<LinearForm> of(IntVar[] x, int tuples, Predicate<int[]> accepts) {
     if (MAX_CLAUSES <= 0) {
@@ -151,9 +158,12 @@ final class TableClauses {
         clauses.add(new int[] {size, s});
       }
     }
+    if (clauses.size() > MAX_CLAUSES * n) {
+      return List.of();
+    }
     clauses.sort(Comparator.comparingInt(c -> c[0]));
     List<LinearForm> rows = new ArrayList<>();
-    for (int k = 0; k < clauses.size() && k < MAX_CLAUSES; k++) {
+    for (int k = 0; k < clauses.size(); k++) {
       int size = clauses.get(k)[0];
       IntVar[] vars = new IntVar[size];
       long[] weights = new long[size];
