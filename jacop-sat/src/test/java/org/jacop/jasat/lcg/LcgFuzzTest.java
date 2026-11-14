@@ -178,8 +178,10 @@ import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
@@ -1544,6 +1546,146 @@ class LcgFuzzTest {
     return new Object[] {
       status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
     };
+  }
+
+  /**
+   * Geost explains its pruning and failures by forbidden boxes (obstacles' compulsory parts, the
+   * outside of an allowed area and its holes) covering the swept region. On random small placements
+   * of polymorphic objects in two or three dimensions, with times that may separate objects and an
+   * optional area, LCG with checked explanations must agree with depth-first search over the same
+   * constraint, give a placement, and explain most atoms by its own reasons rather than by replay.
+   */
+  @Test
+  void geostReasonsAgreeWithSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    long all = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = placement(seed, false) != null;
+      Object[] lcg = placement(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+      all += (Long) lcg[2];
+    }
+    assertThat(own).isPositive();
+    assertThat(2 * own).as("own %d of %d", own, all).isGreaterThan(all);
+  }
+
+  // random objects in a small space: search over Geost (null if none), or LCG over Geost ({status,
+  // own reasons and failures of Geost, all of them})
+  private static Object[] placement(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int k = rnd.nextInt(4) == 0 ? 3 : 2;
+    int side = k == 2 ? 4 + rnd.nextInt(3) : 3 + rnd.nextInt(2);
+    List<Shape> shapes = new ArrayList<>();
+    int numShapes = 2 + rnd.nextInt(4);
+    for (int s = 0; s < numShapes; s++) {
+      List<Dbox> boxes = new ArrayList<>();
+      int[] length = new int[k];
+      for (int d = 0; d < k; d++) {
+        length[d] = 1 + rnd.nextInt(2);
+      }
+      boxes.add(new Dbox(new int[k], length));
+      if (rnd.nextInt(3) == 0) {
+        // a second box beside the first: an L, or two pieces apart
+        int[] origin = new int[k];
+        origin[0] = length[0] + rnd.nextInt(2);
+        int[] second = new int[k];
+        Arrays.fill(second, 1);
+        boxes.add(new Dbox(origin, second));
+      }
+      shapes.add(new Shape(s, boxes));
+    }
+    int n = 3 + rnd.nextInt(k == 2 ? 4 : 2);
+    boolean timed = rnd.nextInt(3) == 0;
+    List<GeostObject> objects = new ArrayList<>();
+    List<IntVar> vars = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      IntVar[] coords = new IntVar[k];
+      for (int d = 0; d < k; d++) {
+        coords[d] = new IntVar(store, "o" + i + "_" + d, 0, side - 1);
+        if (rnd.nextInt(6) == 0) {
+          coords[d].domain.subtractAdapt(rnd.nextInt(side));
+          if (coords[d].domain.isEmpty()) {
+            coords[d].domain.unionAdapt(0, 0);
+          }
+          coords[d].refreshBounds();
+        }
+        vars.add(coords[d]);
+      }
+      int s0 = rnd.nextInt(numShapes);
+      IntVar shape = new IntVar(store, "s" + i, s0, s0);
+      // a few more shapes, often with gaps between them (shapes removed before a bound moves)
+      for (int s1 = 0; s1 < numShapes; s1++) {
+        if (rnd.nextInt(3) == 0) {
+          shape.domain.unionAdapt(s1, s1);
+        }
+      }
+      shape.refreshBounds();
+      vars.add(shape);
+      int start = timed ? rnd.nextInt(2) : 0;
+      objects.add(
+          new GeostObject(
+              i,
+              coords,
+              shape,
+              new IntVar(store, start, start),
+              new IntVar(store, 1, 1),
+              new IntVar(store, start + 1, start + 1)));
+    }
+    int[] dims = new int[k + 1];
+    for (int d = 0; d <= k; d++) {
+      dims[d] = d;
+    }
+    if (rnd.nextInt(5) == 0) {
+      // overlap allowed in the last spatial dimension
+      dims = new int[k];
+      for (int d = 0; d < k - 1; d++) {
+        dims[d] = d;
+      }
+      dims[k - 1] = k;
+    }
+    List<ExternalConstraint> external = new ArrayList<>();
+    external.add(new NonOverlapping(objects, dims));
+    if (rnd.nextBoolean()) {
+      int[] origin = new int[k];
+      int[] length = new int[k];
+      Arrays.fill(length, side + 1 - rnd.nextInt(2));
+      List<Dbox> holes = new ArrayList<>();
+      if (rnd.nextBoolean()) {
+        int[] hole = new int[k];
+        for (int d = 0; d < k; d++) {
+          hole[d] = rnd.nextInt(side);
+        }
+        int[] one = new int[k];
+        Arrays.fill(one, 1);
+        holes.add(new Dbox(hole, one));
+      }
+      external.add(new InArea(new Dbox(origin, length), holes));
+    }
+    IntVar[] all = vars.toArray(new IntVar[0]);
+    store.impose(new Geost(objects, external, shapes));
+    if (!lcg) {
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    long[] c = solver.explanationStatistics().get("Geost");
+    long own = c == null ? 0 : c[0] - c[1] - c[6] + c[3] - c[4] - c[7];
+    long total = c == null ? 0 : c[0] + c[3];
+    return new Object[] {status, own, total};
   }
 
   /**
