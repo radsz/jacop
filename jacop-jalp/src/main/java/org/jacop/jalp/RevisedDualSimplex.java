@@ -444,6 +444,8 @@ public final class RevisedDualSimplex {
     boundsPerturbed = false;
     perturbed = o.perturbed;
     roundOffShare = o.roundOffShare;
+    reuseFreshFactors = o.reuseFreshFactors;
+    refreshedFromFactors = o.refreshedFromFactors;
     seed = o.seed;
     exact = o.exact;
     cleaning = o.cleaning;
