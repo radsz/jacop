@@ -36,6 +36,9 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Common part of the balancing constraints {@link Deviation} and {@link Spread}: x[0] + ... +
@@ -66,7 +69,7 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public abstract class AbstractBalance extends Constraint implements SatisfiedPresent {
+public abstract class AbstractBalance extends Constraint implements SatisfiedPresent, Explainable {
 
   /** The balanced variables. */
   final IntVar[] x;
@@ -238,6 +241,210 @@ public abstract class AbstractBalance extends Constraint implements SatisfiedPre
   // least cost with x[i] = v
   private long cost(int i, long v) {
     return term(v) + least(i, sum - v);
+  }
+
+  // the box of an explanation: the bounds of x and of the cost, those of the negated atom fixed
+  private long[] boxLo;
+  private long[] boxHi;
+  private boolean[] fixedLo;
+  private boolean[] fixedHi;
+  private long costLo;
+  private long costHi;
+  private boolean costLoFixed;
+  private boolean costHiFixed;
+
+  // the bounds of a reason are relaxed to the initial ones one by one only up to this many
+  // variables, and only while every term stays far from an overflow
+  private static final int RELAX_LIMIT = 256;
+  private static final long TERM_LIMIT = 1L << 24;
+
+  /**
+   * Explains a bound of the cost or of x[i] by a box of bounds in which the constraint has no
+   * solution once the atom is negated: the sum of x falls outside the sums of the bounds, the least
+   * cost (the balanced assignment within the bounds) exceeds the upper bound of the cost, or the
+   * largest cost is below its lower bound. Only bounds are read, never holes, and every bound whose
+   * initial value keeps the box without solution is left out, one at a time.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar y = trail.variable(entry);
+    int kind = trail.kind(entry);
+    int i = -1;
+    for (int k = 0; k < n; k++) {
+      if (x[k] == y) {
+        if (i >= 0) {
+          return false;
+        }
+        i = k;
+      }
+    }
+    if (y == cost ? i >= 0 : i < 0) {
+      return false;
+    }
+    if (kind == AtomicTrail.NE) {
+      load(trail, entry);
+      if (y == cost) {
+        return false;
+      }
+      fix(i, trail.value(entry), trail.value(entry));
+      return infeasible() && cite(trail, entry, out);
+    }
+    boolean lower = kind == AtomicTrail.GE;
+    int value = trail.value(entry);
+    for (int bound : new int[] {value, trail.skippedBound(entry)}) {
+      load(trail, entry);
+      // the negation: below the bound for a lower bound, above it for an upper bound
+      long from = lower ? Long.MIN_VALUE : (long) bound + 1;
+      long to = lower ? (long) bound - 1 : Long.MAX_VALUE;
+      if (y == cost) {
+        if (lower) {
+          costHi = Math.min(costHi, to);
+          costHiFixed = true;
+        } else {
+          costLo = Math.max(costLo, from);
+          costLoFixed = true;
+        }
+      } else if (lower) {
+        boxHi[i] = Math.min(boxHi[i], to);
+        fixedHi[i] = true;
+      } else {
+        boxLo[i] = Math.max(boxLo[i], from);
+        fixedLo[i] = true;
+      }
+      if (infeasible() && cite(trail, entry, out)) {
+        if (bound != value) {
+          trail.addSkippedHoles(entry, bound, out);
+        }
+        return true;
+      }
+      if (bound == value && trail.skippedBound(entry) == value) {
+        break;
+      }
+    }
+    return false;
+  }
+
+  /** Explains a failure by the box of the bounds, relaxed as for {@link #explain}. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    int now = trail.size();
+    load(trail, now);
+    return infeasible() && cite(trail, now, out);
+  }
+
+  // the bounds just before the position, none fixed
+  private void load(AtomicTrail trail, int position) {
+    if (boxLo == null) {
+      boxLo = new long[n];
+      boxHi = new long[n];
+      fixedLo = new boolean[n];
+      fixedHi = new boolean[n];
+    }
+    for (int k = 0; k < n; k++) {
+      boxLo[k] = trail.minBefore(x[k], position);
+      boxHi[k] = trail.maxBefore(x[k], position);
+      fixedLo[k] = false;
+      fixedHi[k] = false;
+    }
+    costLo = trail.minBefore(cost, position);
+    costHi = trail.maxBefore(cost, position);
+    costLoFixed = false;
+    costHiFixed = false;
+  }
+
+  // x[i] within from..to, the negated atom
+  private void fix(int i, long from, long to) {
+    boxLo[i] = from;
+    boxHi[i] = to;
+    fixedLo[i] = true;
+    fixedHi[i] = true;
+  }
+
+  // whether the box has no solution, by the checks of consistency
+  private boolean infeasible() {
+    if (costLo > costHi) {
+      return true;
+    }
+    sumLo = 0;
+    sumHi = 0;
+    long largest = 0;
+    for (int k = 0; k < n; k++) {
+      if (boxLo[k] > boxHi[k]) {
+        return true;
+      }
+      lo[k] = boxLo[k];
+      hi[k] = boxHi[k];
+      sumLo += lo[k];
+      sumHi += hi[k];
+      largest += Math.max(term(lo[k]), term(hi[k]));
+    }
+    if (sum < sumLo || sum > sumHi) {
+      return true;
+    }
+    prepare();
+    return least(-1, sum) > costHi || largest < costLo;
+  }
+
+  // relaxes every bound that may go back to its initial value, then cites the others
+  private boolean cite(AtomicTrail trail, int position, EntryList out) {
+    if (n <= RELAX_LIMIT) {
+      for (int k = 0; k < n; k++) {
+        if (!fixedLo[k]) {
+          long keep = boxLo[k];
+          long root = trail.rootDomain(x[k]).min();
+          if (root < keep && small(root)) {
+            boxLo[k] = root;
+            if (!infeasible()) {
+              boxLo[k] = keep;
+            }
+          }
+        }
+        if (!fixedHi[k]) {
+          long keep = boxHi[k];
+          long root = trail.rootDomain(x[k]).max();
+          if (root > keep && small(root)) {
+            boxHi[k] = root;
+            if (!infeasible()) {
+              boxHi[k] = keep;
+            }
+          }
+        }
+      }
+      if (!costHiFixed) {
+        long keep = costHi;
+        costHi = trail.rootDomain(cost).max();
+        if (!infeasible()) {
+          costHi = keep;
+        }
+      }
+      if (!costLoFixed) {
+        long keep = costLo;
+        costLo = trail.rootDomain(cost).min();
+        if (!infeasible()) {
+          costLo = keep;
+        }
+      }
+    }
+    for (int k = 0; k < n; k++) {
+      if (!fixedLo[k]) {
+        trail.addBoundReaching(x[k], position, true, boxLo[k], out);
+      }
+      if (!fixedHi[k]) {
+        trail.addBoundReaching(x[k], position, false, boxHi[k], out);
+      }
+    }
+    if (!costLoFixed) {
+      trail.addBoundReaching(cost, position, true, costLo, out);
+    }
+    if (!costHiFixed) {
+      trail.addBoundReaching(cost, position, false, costHi, out);
+    }
+    return true;
+  }
+
+  // whether the terms of a value stay far from an overflow
+  private boolean small(long v) {
+    return Math.abs(a * v - b) <= TERM_LIMIT;
   }
 
   @Override
