@@ -2428,6 +2428,39 @@ public class HybridTable extends Constraint
   }
 
   /**
+   * The tuples of values of a table whose every cell is one value, reduced to those valid on the
+   * current domains, without duplicates; null when a cell is not a single value.
+   *
+   * @return the valid tuples, or null
+   */
+  public int[][] validPlainTuples() {
+    List<int[]> out = new ArrayList<>();
+    java.util.Set<List<Integer>> seen = new java.util.HashSet<>();
+    for (int t = 0; t < tupleCount; t++) {
+      int[] v = new int[arity];
+      boolean valid = true;
+      for (int i = 0; i < arity; i++) {
+        Restriction r = cells[t * arity + i];
+        if (r.kind != Restriction.Kind.EQ) {
+          return null;
+        }
+        v[i] = r.value;
+        valid &= x[i].domain.contains(v[i]);
+      }
+      if (valid) {
+        List<Integer> key = new ArrayList<>(arity);
+        for (int a : v) {
+          key.add(a);
+        }
+        if (seen.add(key)) {
+          out.add(v);
+        }
+      }
+    }
+    return out.toArray(new int[0][]);
+  }
+
+  /**
    * Whether some tuple restricts a column by another column.
    *
    * @return true when a restriction is between columns

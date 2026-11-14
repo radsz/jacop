@@ -334,6 +334,7 @@ setup to run configuration. -->
                                 <include>**/WeightedSubcircuitsTest.java</include>
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/ConjunctionSumTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/EnergyPrecedenceTest.java</include>
@@ -569,6 +570,7 @@ setup to run configuration. -->
                                 <include>**/EnergyPrecedenceTest.java</include>
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/ConjunctionSumTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/InferredCumulativesTest.java</include>
@@ -793,6 +795,7 @@ setup to run configuration. -->
                                 <include>**/EnergyPrecedenceTest.java</include>
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/ConjunctionSumTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/InferredCumulativesTest.java</include>
@@ -1015,6 +1018,7 @@ setup to run configuration. -->
                                 <include>**/EnergyPrecedenceTest.java</include>
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
+                                <include>**/ConjunctionSumTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/InferredCumulativesTest.java</include>
