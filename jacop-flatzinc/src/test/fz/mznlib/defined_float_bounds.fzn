@@ -1,0 +1,11 @@
+% b = 1.0 + 0.1 * i and c = 1.0 + 1.0e-9 * i with i in 1..5; MiniZinc rounds the computed bounds
+% of b and c to decimals, so 1.0 + 0.1 * 1 is below the double 1.1 and 1.0 + 1.0e-9 * 5 is above
+% the double 1.000000005.
+var 1..5: i:: output_var;
+var 1.0..5.0: X_INTRODUCED_0_ ::var_is_introduced :: is_defined_var;
+var 1.1..1.5: b:: output_var:: is_defined_var;
+var 1.000000001..1.000000005: c:: output_var:: is_defined_var;
+constraint int2float(i,X_INTRODUCED_0_):: defines_var(X_INTRODUCED_0_);
+constraint float_lin_eq([0.1,-1.0],[X_INTRODUCED_0_,b],-1.0):: defines_var(b);
+constraint float_lin_eq([1e-09,-1.0],[X_INTRODUCED_0_,c],-1.0):: defines_var(c);
+solve  satisfy;

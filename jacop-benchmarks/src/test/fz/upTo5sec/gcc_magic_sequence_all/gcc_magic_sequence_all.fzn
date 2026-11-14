@@ -1,0 +1,14 @@
+
+predicate jacop_count_values(array [int] of var int: x,array [int] of int: cover,array [int] of var int: counter);
+array [1..7] of int: X_INTRODUCED_25_ = [0,1,2,3,4,5,6];
+var 0..6: X_INTRODUCED_17_;
+var 0..6: X_INTRODUCED_18_;
+var 0..6: X_INTRODUCED_19_;
+var 0..6: X_INTRODUCED_20_;
+var 0..6: X_INTRODUCED_21_;
+var 0..6: X_INTRODUCED_22_;
+var 0..6: X_INTRODUCED_23_;
+array [1..7] of var int: X_INTRODUCED_16_:: output_array([1..7]) = [X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_];
+array [1..7] of var int: X_INTRODUCED_26_ ::var_is_introduced  = [X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_,X_INTRODUCED_23_];
+constraint jacop_count_values(X_INTRODUCED_26_,X_INTRODUCED_25_,X_INTRODUCED_26_);
+solve  satisfy;

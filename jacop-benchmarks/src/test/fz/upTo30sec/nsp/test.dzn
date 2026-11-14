@@ -1,0 +1,9 @@
+n_nurses = 8;
+sched_period = 4;		
+n_shifts = 3;
+
+nurses_coverage = array2d(period, shifts,  
+[2,	0,	1,	
+ 0, 2, 1,
+ 2, 1, 1,
+ 1, 1, 0]);

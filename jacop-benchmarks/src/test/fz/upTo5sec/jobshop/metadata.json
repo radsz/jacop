@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["array_bool_or", "int_lin_eq", "int_lin_le", "int_lin_le_reif", "jacop_cumulative", "jacop_list_diff2", "jacop_maximum"],
+  "constraintFamilies": ["boolean", "cumulative", "diffn", "linear", "minmax"],
+  "domains": []
+}

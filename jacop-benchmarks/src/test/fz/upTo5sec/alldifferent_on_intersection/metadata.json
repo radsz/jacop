@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int"],
+  "constraintFamilies": ["boolean"],
+  "domains": []
+}

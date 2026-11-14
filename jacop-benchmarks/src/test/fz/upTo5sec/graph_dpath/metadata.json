@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_dpath"],
+  "constraintFamilies": ["graph"],
+  "domains": []
+}

@@ -1,0 +1,13 @@
+{
+  "fznBuiltins": [
+    "int_eq_reif",
+    "int_lin_le",
+    "jacop_cumulative_optional"
+  ],
+  "constraintFamilies": [
+    "comparison",
+    "cumulative",
+    "linear"
+  ],
+  "domains": []
+}

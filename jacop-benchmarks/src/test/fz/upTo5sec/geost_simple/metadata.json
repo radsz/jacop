@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_geost_bb"],
+  "constraintFamilies": ["geost"],
+  "domains": []
+}

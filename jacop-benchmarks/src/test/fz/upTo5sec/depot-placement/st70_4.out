@@ -1,0 +1,8 @@
+Depot = 2;
+ADist = 145;
+BDist = 144;
+objective = 145;
+TourALoc = array1d(1..6, [1, 1, 2, 4, 5, 10]);
+TourBLoc = array1d(1..6, [6, 7, 2, 3, 8, 9]);
+----------
+==========

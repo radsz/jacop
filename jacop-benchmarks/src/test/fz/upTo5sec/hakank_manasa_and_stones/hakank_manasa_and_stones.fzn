@@ -1,0 +1,25 @@
+
+predicate int_lin_eq_imp(array [int] of int: as,array [int] of var int: bs,int: c,var bool: r);
+predicate jacop_increasing(array [int] of var int: x);
+array [1..2] of int: X_INTRODUCED_22_ = [1,-1];
+var 0..400: X_INTRODUCED_17_;
+var 0..400: X_INTRODUCED_18_;
+var 0..400: X_INTRODUCED_19_;
+var bool: X_INTRODUCED_23_ ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_25_ ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_27_ ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_29_ ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_31_ ::var_is_introduced :: is_defined_var;
+var bool: X_INTRODUCED_33_ ::var_is_introduced :: is_defined_var;
+array [1..4] of var int: x:: output_array([1..4]) = [0,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_];
+constraint bool_clause([X_INTRODUCED_23_,X_INTRODUCED_25_],[]);
+constraint bool_clause([X_INTRODUCED_27_,X_INTRODUCED_29_],[]);
+constraint bool_clause([X_INTRODUCED_31_,X_INTRODUCED_33_],[]);
+constraint jacop_increasing(x);
+constraint int_lin_eq_imp([1],[X_INTRODUCED_17_],10,X_INTRODUCED_23_):: defines_var(X_INTRODUCED_23_);
+constraint int_lin_eq_imp([1],[X_INTRODUCED_17_],100,X_INTRODUCED_25_):: defines_var(X_INTRODUCED_25_);
+constraint int_lin_eq_imp(X_INTRODUCED_22_,[X_INTRODUCED_18_,X_INTRODUCED_17_],10,X_INTRODUCED_27_):: defines_var(X_INTRODUCED_27_);
+constraint int_lin_eq_imp(X_INTRODUCED_22_,[X_INTRODUCED_18_,X_INTRODUCED_17_],100,X_INTRODUCED_29_):: defines_var(X_INTRODUCED_29_);
+constraint int_lin_eq_imp(X_INTRODUCED_22_,[X_INTRODUCED_19_,X_INTRODUCED_18_],10,X_INTRODUCED_31_):: defines_var(X_INTRODUCED_31_);
+constraint int_lin_eq_imp(X_INTRODUCED_22_,[X_INTRODUCED_19_,X_INTRODUCED_18_],100,X_INTRODUCED_33_):: defines_var(X_INTRODUCED_33_);
+solve :: int_search(x,first_fail,indomain_split,complete) satisfy;

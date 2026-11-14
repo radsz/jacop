@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_atleast", "jacop_atmost", "jacop_atmost_reif", "jacop_count_reif", "jacop_count_values_bounds", "jacop_count_var"],
+  "constraintFamilies": ["counting"],
+  "domains": []
+}

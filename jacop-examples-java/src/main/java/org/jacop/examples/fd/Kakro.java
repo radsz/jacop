@@ -1,0 +1,152 @@
+/*
+ * Kakro.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.examples.fd;
+
+import static org.jacop.core.Store.ASSERTS_ENABLED;
+
+import java.util.ArrayList;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.constraints.Alldiff;
+import org.jacop.constraints.SumInt;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+
+/**
+ * It is program to solve Kakro puzzles.
+ *
+ * <p>This is a program which uses Constraint Programming to find the solution to a simple Kakro
+ * puzzle. For a moment the problem representation does not allow to model the problems with fields
+ * which are both origins of the row and column word.
+ *
+ * @author Radoslaw Szymanek
+ * @version 5.0
+ */
+@Slf4j
+public class Kakro extends ExampleFd {
+
+  public final int noRows = 4;
+  public final int noColumns = 4;
+  // >1 - wall with row sum
+  // <0 - wall with column sum
+  // 1 - field
+  // 0 - clean wall.
+  final int[][] rowDescription = {{0, 0, 0, 0}, {3, 1, 1, 0}, {6, 1, 1, 1}, {0, 5, 1, 1}};
+  final int[][] columnDescription = {{0, -4, -7, 0}, {0, 1, 1, -3}, {0, 1, 1, 1}, {0, 0, 1, 1}};
+  public IntVar[][] elements;
+
+  /**
+   * It executes the program to solve simple Kakro puzzle.
+   *
+   * @param args no parameters
+   */
+  static void main(String[] args) {
+    if (args == null) {
+      throw new IllegalArgumentException("args must not be null");
+    }
+    Kakro example = new Kakro();
+
+    example.model();
+
+    if (example.search()) {
+      log.info("Solution(s) found");
+
+      printMatrix(example.elements, example.noRows, example.noColumns);
+    }
+  }
+
+  @Override
+  public void model() {
+
+    store = new Store();
+    vars = new ArrayList<>();
+    elements = new IntVar[noRows][noColumns];
+    createElementsAndVariables();
+    addRowConstraints();
+    addColumnConstraints();
+  }
+
+  private void createElementsAndVariables() {
+    IntVar zero = new IntVar(store, "0", 0, 0);
+    for (int i = 0; i < noRows; i++) {
+      for (int j = 0; j < noColumns; j++) {
+        if (rowDescription[i][j] == 1) {
+          if (ASSERTS_ENABLED && columnDescription[i][j] != 1) {
+            throw new IllegalStateException(
+                String.valueOf("Contradiction between row and column descriptions."));
+          }
+          elements[i][j] = new IntVar(store, "f" + i + "-" + j, 1, 9);
+          vars.add(elements[i][j]);
+        } else {
+          elements[i][j] = zero;
+        }
+      }
+    }
+  }
+
+  private void addRowConstraints() {
+    for (int i = 0; i < noRows; i++) {
+      for (int j = 0; j < noColumns; j++) {
+        if (rowDescription[i][j] > 1) {
+          IntVar sum =
+              new IntVar(store, "sumAt" + i + "-" + j, rowDescription[i][j], rowDescription[i][j]);
+          List<IntVar> row = new ArrayList<>();
+          for (int m = j + 1; m < noColumns && rowDescription[i][m] == 1; m++) {
+            row.add(elements[i][m]);
+          }
+          store.impose(new SumInt(row, "==", sum));
+          store.impose(new Alldiff(row));
+        }
+      }
+    }
+  }
+
+  private void addColumnConstraints() {
+    for (int i = 0; i < noRows; i++) {
+      for (int j = 0; j < noColumns; j++) {
+        if (columnDescription[i][j] < 0) {
+          IntVar sum =
+              new IntVar(
+                  store,
+                  "sumCol" + i + "-" + j,
+                  -columnDescription[i][j],
+                  -columnDescription[i][j]);
+          List<IntVar> column = new ArrayList<>();
+          for (int m = i + 1; m < noRows && columnDescription[m][j] == 1; m++) {
+            column.add(elements[m][j]);
+          }
+          store.impose(new SumInt(column, "==", sum));
+          store.impose(new Alldiff(column));
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_le", "int_lin_ne", "jacop_int_set_channel", "jacop_maximum", "set_card"],
+  "constraintFamilies": ["linear", "minmax", "set"],
+  "domains": []
+}

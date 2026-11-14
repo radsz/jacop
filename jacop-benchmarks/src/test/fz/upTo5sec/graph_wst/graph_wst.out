@@ -1,0 +1,4 @@
+K = 13;
+es = array1d(1..11, [true, false, false, true, false, true, false, true, false, true, false]);
+----------
+==========

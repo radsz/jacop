@@ -1,0 +1,23 @@
+include "globals.mzn";
+% count_* over Booleans with fixed value and count, and their reified forms.
+array[1..4] of var bool: x;
+var bool: v;
+var 0..4: n;
+array[1..12] of var bool: b;
+constraint count_leq(x, true, 1);
+constraint count_geq(x, true, 3);
+constraint count_neq(x, false, 0);
+constraint b[1] <-> count_eq(x, v, n);
+constraint b[2] <-> count_neq(x, v, n);
+constraint b[3] <-> count_lt(x, v, n);
+constraint b[4] <-> count_leq(x, v, n);
+constraint b[5] <-> count_gt(x, v, n);
+constraint b[6] <-> count_geq(x, v, n);
+constraint b[7] <-> count_eq(x, false, 2);
+constraint b[8] <-> count_neq(x, false, 2);
+constraint b[9] <-> count_lt(x, false, 2);
+constraint b[10] <-> count_leq(x, false, 2);
+constraint b[11] <-> count_gt(x, false, 2);
+constraint b[12] <-> count_geq(x, false, 2);
+solve satisfy;
+output ["x=\(x) v=\(v) n=\(n) b=\(b)\n"];

@@ -1,0 +1,4 @@
+source: MiniZinc/minizinc-benchmarks shortest_path/shortest_path.mzn with data 06.dzn, rewritten with network_flow_cost
+mode: fixed (optimisation)
+verified: JaCoP, Gecode 6.4.0 and Chuffed 0.14.0 find the same optimal solution
+feasibility: 1 JaCoP solution(s) accepted by gecode as data

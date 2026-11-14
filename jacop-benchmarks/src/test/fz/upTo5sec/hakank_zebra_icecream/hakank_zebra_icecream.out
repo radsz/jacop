@@ -1,0 +1,18 @@
+Daniel = 2;
+Joseph = 4;
+Kevin = 1;
+Nicholas = 3;
+Harris = 4;
+Miller = 1;
+Taylor = 2;
+Young = 3;
+Black = 2;
+Blue = 1;
+Green = 4;
+Red = 3;
+Mint = 3;
+Vanilla = 4;
+Age = array1d(1..4, [10, 9, 7, 8]);
+Position = array1d(1..4, [1, 2, 3, 4]);
+----------
+==========

@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["int_lin_eq", "jacop_alldiff", "jacop_disjoint"],
+  "constraintFamilies": ["alldifferent", "linear"],
+  "domains": []
+}

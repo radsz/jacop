@@ -1,0 +1,5 @@
+source: hakank/minizinc/modulo_partition.mzn
+mode: all (satisfaction)
+verified: JaCoP, Chuffed 0.13.2 find 1 distinct solutions
+feasibility: 1 JaCoP solution(s) accepted by chuffed as data
+gecode differs: Gecode's link_set_to_booleans ignores the index set of the Boolean array; JaCoP and Chuffed follow the MiniZinc library

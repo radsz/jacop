@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["jacop_count_values", "jacop_value_precede_chain_int"],
+  "constraintFamilies": ["counting", "sequence"],
+  "domains": []
+}

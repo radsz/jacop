@@ -1,0 +1,4 @@
+source: written for the global cardinality review (JaCoP's GCC predicate)
+mode: first solution (satisfaction)
+verified: JaCoP finds 1 distinct solutions; with GCC decomposed into a Count per value, gecode: satisfiable=True; chuffed: satisfiable=True
+feasibility: 1 of 1 JaCoP solution(s) accepted by gecode (decomposed GCC) as data

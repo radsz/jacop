@@ -1,0 +1,4 @@
+source: hakank/minizinc/3_coins.mzn
+mode: all (satisfaction)
+verified: JaCoP, Gecode 6.3.0 and Chuffed 0.13.2 find 7 distinct solutions
+feasibility: 7 JaCoP solution(s) accepted by gecode as data

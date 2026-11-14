@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["set_le", "set_ne"],
+  "constraintFamilies": ["set"],
+  "domains": []
+}

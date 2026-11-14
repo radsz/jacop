@@ -1,0 +1,22 @@
+last_sum = 3;
+X_INTRODUCED_16_ = array1d(1..12, [true, false, true, false, false, true, false, true, true, true, true, true]);
+----------
+last_sum = 3;
+X_INTRODUCED_16_ = array1d(1..12, [true, false, true, false, false, true, true, false, true, true, true, true]);
+----------
+last_sum = 3;
+X_INTRODUCED_16_ = array1d(1..12, [true, false, true, true, false, false, true, false, true, true, true, true]);
+----------
+last_sum = 3;
+X_INTRODUCED_16_ = array1d(1..12, [true, false, true, true, false, false, true, true, false, true, true, true]);
+----------
+last_sum = 3;
+X_INTRODUCED_16_ = array1d(1..12, [true, false, true, true, true, true, false, true, true, true, true, true]);
+----------
+last_sum = 3;
+X_INTRODUCED_16_ = array1d(1..12, [true, false, true, true, true, true, true, false, true, true, true, true]);
+----------
+last_sum = 3;
+X_INTRODUCED_16_ = array1d(1..12, [true, false, true, true, true, true, true, true, false, true, true, true]);
+----------
+==========

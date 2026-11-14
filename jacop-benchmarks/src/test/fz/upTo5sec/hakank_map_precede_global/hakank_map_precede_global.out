@@ -1,0 +1,241 @@
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 2]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 2, 3, 4, 4]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [1, 1, 2, 3, 4, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [1, 1, 2, 4, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [1, 1, 4, 2, 3, 4]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 2]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 2]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [4, 1, 1, 2, 3, 3]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 1]);
+----------
+uses_four = true;
+country = array1d(1..6, [1, 2, 3, 4, 2, 3]);
+country2 = array1d(1..6, [4, 1, 2, 3, 1, 2]);
+----------
+==========

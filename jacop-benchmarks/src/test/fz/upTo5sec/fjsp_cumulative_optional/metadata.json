@@ -1,0 +1,20 @@
+{
+  "fznBuiltins": [
+    "array_bool_and",
+    "bool2int",
+    "bool_clause",
+    "bool_not",
+    "int_eq_imp",
+    "int_lin_le",
+    "int_ne",
+    "int_ne_reif",
+    "jacop_cumulative_optional"
+  ],
+  "constraintFamilies": [
+    "boolean",
+    "comparison",
+    "cumulative",
+    "linear"
+  ],
+  "domains": []
+}

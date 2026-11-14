@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool2int", "bool_clause", "int_lin_le", "set_in_reif", "set_intersect", "set_superset", "set_superset_reif", "set_union"],
+  "constraintFamilies": ["boolean", "linear", "set"],
+  "domains": []
+}

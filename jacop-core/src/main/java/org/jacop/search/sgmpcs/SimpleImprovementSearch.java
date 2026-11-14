@@ -1,0 +1,230 @@
+/*
+ * SimpleImprovementSearch.java
+ * This file is part of JaCoP.
+ * <p>
+ * JaCoP is a Java Constraint Programming solver.
+ * <p>
+ * Copyright (C) 2000-2026 Krzysztof Kuchcinski and Radoslaw Szymanek
+ * <p>
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * <p>
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * <p>
+ * Notwithstanding any other provision of this License, the copyright
+ * owners of this work supplement the terms of this License with terms
+ * prohibiting misrepresentation of the origin of this work and requiring
+ * that modified versions of this work be marked in reasonable ways as
+ * different from the original version. This supplement of the license
+ * terms is in accordance with Section 7 of GNU Affero General Public
+ * License version 3.
+ * <p>
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see http://www.gnu.org/licenses/.
+ */
+
+package org.jacop.search.sgmpcs;
+
+import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.jacop.core.Domain;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
+import org.jacop.core.Var;
+import org.jacop.search.DepthFirstSearch;
+import org.jacop.search.IndomainDefaultValue;
+import org.jacop.search.IndomainMin;
+import org.jacop.search.RandomSelect;
+import org.jacop.search.Search;
+import org.jacop.search.SelectChoicePoint;
+import org.jacop.search.SimpleSelect;
+import org.jacop.search.SimpleSolutionListener;
+import org.jacop.search.SmallestMin;
+
+/**
+ * Defines an interface for defining different methods for selecting next search decision to be
+ * taken. The search decision called choice point will be first enforced and later upon backtrack a
+ * negation of that search decision will be enforced.
+ *
+ * @param <T> type of the variable for which choice point is being created.
+ * @author krzysztof Kuchcinski
+ * @version 5.0
+ */
+@Slf4j
+public class SimpleImprovementSearch<T extends IntVar> implements ImproveSolution<T> {
+
+  /*
+   * current store
+   */
+  public final Store store;
+  /*
+   * search variable
+   */
+  public final IntVar[] vars;
+  /*
+   * cost variable
+   */
+  final IntVar cost;
+  /*
+   * The solution produced by last search
+   */
+  public int[] solution;
+  public SgmpcsCalculator<Var> failCalculator;
+  boolean printInfo = true;
+  /*
+   * The cost produced by last search
+   */
+  int searchCost;
+  long timeOut;
+
+  /**
+   * Constructs a simple improvement search with the given store, variables, and cost variable.
+   *
+   * @param store the constraint store used for search.
+   * @param vars the search variables.
+   * @param cost the cost variable to minimize.
+   */
+  public SimpleImprovementSearch(Store store, IntVar[] vars, IntVar cost) {
+    this.store = store;
+    this.vars = new IntVar[vars.length];
+    System.arraycopy(vars, 0, this.vars, 0, vars.length);
+    this.cost = cost;
+  }
+
+  /**
+   * Performs a search starting from an empty solution using depth-first search.
+   *
+   * @param failLimit the maximum number of allowed failures before the search stops.
+   * @return true if a solution was found, false otherwise.
+   */
+  @Override
+  public boolean searchFromEmptySolution(int failLimit) {
+
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
+    label.setAssignSolution(false);
+    label.setSolutionListener(new CostListener<>());
+    label.getSolutionListener().recordSolutions(true);
+    failCalculator = new SgmpcsCalculator<>(failLimit);
+    label.setConsistencyListener(failCalculator);
+    label.setPrintInfo(false);
+    label.setTimeOut(timeOut);
+
+    SelectChoicePoint<IntVar> select =
+        new SimpleSelect<>(vars, new SmallestMin<>(), new IndomainMin<>());
+    boolean result = label.labeling(store, select);
+
+    if (result) {
+      Domain[] domSolution = label.getSolution();
+      solution = new int[domSolution.length];
+      for (int i = 0; i < domSolution.length; i++) {
+        solution[i] = ((IntDomain) domSolution[i]).value();
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Performs a search starting from an elite solution, using it as default variable assignment.
+   *
+   * @param eliteSolution the elite solution to guide the search.
+   * @param failLimit the maximum number of allowed failures before the search stops.
+   * @return true if a solution was found, false otherwise.
+   */
+  @Override
+  public boolean searchFromEliteSolution(int[] eliteSolution, int failLimit) {
+
+    Map<IntVar, Integer> mapping = Var.createEmptyPositioning();
+    for (int i = 0; i < eliteSolution.length - 1; i++) {
+      mapping.put(vars[i], eliteSolution[i]);
+    }
+
+    DepthFirstSearch<IntVar> label = new DepthFirstSearch<>();
+    label.setAssignSolution(false);
+    label.setSolutionListener(new CostListener<>());
+    label.getSolutionListener().recordSolutions(true);
+    failCalculator = new SgmpcsCalculator<>(failLimit);
+    label.setConsistencyListener(failCalculator);
+    label.setPrintInfo(false);
+    label.setTimeOut(timeOut);
+
+    SelectChoicePoint<IntVar> select =
+        new RandomSelect<>(vars, new IndomainDefaultValue<>(mapping, new IndomainMin<>()));
+    boolean result = label.labeling(store, select);
+
+    if (result) {
+      Domain[] domSolution = label.getSolution();
+      solution = new int[domSolution.length];
+      for (int i = 0; i < domSolution.length; i++) {
+        solution[i] = ((IntDomain) domSolution[i]).value();
+      }
+    }
+
+    return result;
+  }
+
+  @Override
+  public int getCurrentCost() {
+    return searchCost;
+  }
+
+  @Override
+  public int[] getSolution() {
+    return solution;
+  }
+
+  @Override
+  public int getNumberFails() {
+    return failCalculator.getNumberFails();
+  }
+
+  @Override
+  public int getFailLimit() {
+    return failCalculator.getFailLimit();
+  }
+
+  @Override
+  public void setPrintInfo(boolean print) {
+    printInfo = print;
+  }
+
+  @Override
+  public void setTimeOut(long timeOut) {
+    this.timeOut = timeOut;
+  }
+
+  /**
+   * Saves the cost produced by a given search.
+   *
+   * @author Krzysztof Kuchcinski
+   */
+  public class CostListener<U extends IntVar> extends SimpleSolutionListener<U> {
+
+    /**
+     * Executes after a solution is found, recording the cost of the current solution.
+     *
+     * @param search the current search.
+     * @param select the choice point selection strategy.
+     * @return true if the search should continue looking for better solutions.
+     */
+    @Override
+    public boolean executeAfterSolution(Search<U> search, SelectChoicePoint<U> select) {
+
+      boolean returnCode = super.executeAfterSolution(search, select);
+
+      searchCost = cost.value();
+
+      if (printInfo) {
+        log.info("----------\nCost = {}", searchCost);
+      }
+
+      return returnCode;
+    }
+  }
+}

@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["bool_xor", "set_card", "set_in_reif"],
+  "constraintFamilies": ["boolean", "set"],
+  "domains": []
+}

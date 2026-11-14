@@ -1,0 +1,5 @@
+{
+  "fznBuiltins": ["set_in", "set_in_reif"],
+  "constraintFamilies": ["set"],
+  "domains": []
+}

@@ -1,0 +1,5 @@
+objective = 28;
+s = array1d(1..16, [0, 0, 6, 2, 2, 14, 2, 12, 20, 6, 19, 15, 14, 20, 23, 20]);
+X_INTRODUCED_32_ = array1d(1..96, [true, false, true, true, false, true, true, false, true, false, true, false, false, true, true, false, true, false, true, true, false, false, true, true, true, false, false, true, false, true, true, false, true, false, true, true, false, false, true, true, true, false, false, true, false, true, true, false, true, false, false, true, false, true, true, false, true, true, true, false, false, true, true, false, true, false, false, true, false, false, true, false, false, true, false, true, true, true, false, true, false, true, false, false, true, false, true, false, false, true, false, true, true, true, false, true]);
+----------
+==========

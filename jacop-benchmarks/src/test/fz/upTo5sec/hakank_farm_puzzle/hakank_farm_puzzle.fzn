@@ -1,0 +1,24 @@
+
+predicate jacop_increasing(array [int] of var int: x);
+predicate jacop_count_values(array [int] of var int: x,array [int] of int: cover,array [int] of var int: counter);
+array [1..7] of int: X_INTRODUCED_30_ = [1,1,1,1,1,1,1];
+array [1..5] of int: X_INTRODUCED_31_ = [0,1,2,3,4];
+var {2,4}: X_INTRODUCED_16_;
+var {2,4}: X_INTRODUCED_17_;
+var {2,4}: X_INTRODUCED_18_;
+var {2,4}: X_INTRODUCED_19_;
+var {2,4}: X_INTRODUCED_20_;
+var {2,4}: X_INTRODUCED_21_;
+var {2,4}: X_INTRODUCED_22_;
+var int: X_INTRODUCED_24_;
+var int: X_INTRODUCED_25_;
+var int: X_INTRODUCED_26_;
+var int: X_INTRODUCED_27_;
+var int: X_INTRODUCED_28_;
+array [1..7] of var int: x:: output_array([1..7]) = [X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_];
+array [1..5] of var int: X_INTRODUCED_23_:: output_array([1..5]) = [X_INTRODUCED_24_,X_INTRODUCED_25_,X_INTRODUCED_26_,X_INTRODUCED_27_,X_INTRODUCED_28_];
+array [1..5] of var int: X_INTRODUCED_32_ ::var_is_introduced  = [X_INTRODUCED_24_,X_INTRODUCED_25_,X_INTRODUCED_26_,X_INTRODUCED_27_,X_INTRODUCED_28_];
+constraint int_lin_eq(X_INTRODUCED_30_,[X_INTRODUCED_16_,X_INTRODUCED_17_,X_INTRODUCED_18_,X_INTRODUCED_19_,X_INTRODUCED_20_,X_INTRODUCED_21_,X_INTRODUCED_22_],22);
+constraint jacop_increasing(x);
+constraint jacop_count_values(x,X_INTRODUCED_31_,X_INTRODUCED_32_);
+solve  satisfy;
