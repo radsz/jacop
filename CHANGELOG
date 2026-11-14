@@ -4850,6 +4850,24 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
+285. LCG free search (-f) that makes few conflicts gives way to free search
+   without learning only when it has also stopped making progress, and the
+   rate below which it is slow is 300 conflicts/s instead of 50. At the
+   check (lcg-slow-at, 0.1 of -t) a search under lcg-slow-rate goes on while,
+   during the last lcg-slow-stall share of the time limit (default 0.05), it
+   raised the bound or its best cost fell by lcg-slow-gain of itself
+   (default 0.005); otherwise it gives way as before. Free search without
+   learning can improve the best solution but never raises the bound, so a
+   search whose bound still rises keeps learning: on ma-path-finding LCG
+   makes about 14 conflicts/s on 650,000 variables while core-guided search
+   raises the bound to the optimum. At 600 s with -f on the 17 instances
+   where the check at 300 fires (15 of the 187 wide-set optimisation
+   instances and unit-commitment L10, L15): unit-commitment L10 2.97M ->
+   1,703,450 (the optimum), L12 3.05M -> 1.49M, L15 96.0M -> 43.2M, ihtc
+   kletzander i09 8,310 -> 7,135; stable-goods s-d19 (maximised) 7,304 ->
+   7,186. Statistic lcgSlowDeferred counts the checks that let a slow LCG
+   go on.
+
 Version 4.11
 =============
 

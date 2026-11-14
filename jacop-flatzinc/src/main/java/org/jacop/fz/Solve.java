@@ -2869,13 +2869,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * and with a solution, 12 switch: 7 end better than both runs of LCG, 3 worse (cargo challenge08
    * and 16, jobshop swv07) and 2 equal.
    *
+   * <p>Since 2026-11 the rate is 300 conflicts/s, and a slow search gives way only when it also
+   * stopped making progress (see {@link #stillProgressing}): during the last lcg-slow-stall share
+   * of the time limit it raised no bound and its best cost fell by less than lcg-slow-gain of
+   * itself. At 600 s on the 17 instances where a check at 300 fires (15 of the wide set and
+   * unit-commitment L10, L15): unit-commitment L10 2.97M to 1,703,450 (the optimum), L12 3.05M to
+   * 1.49M, L15 96.0M to 43.2M, ihtc kletzander i09 8,310 to 7,135, stable-goods s-d19 (maximised)
+   * 7,304 to 7,186. On ma-path-finding LCG makes about 14 conflicts/s while core-guided search
+   * raises the bound, so it goes on.
+   *
    * @return the thread of the check, or null when it is off
    */
   private Thread slowLcgCheck(Var costVar) {
-    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "50"));
+    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "300"));
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
-    double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.01"));
+    double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
@@ -2911,7 +2920,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                     costs.removeFirst();
                   }
                   if (solutionFound) {
-                    if (stillProgressing(now, stallNanos, gain, costs.peekFirst()[1], cost)) {
+                    long before = costs.peekFirst()[1];
+                    if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
                       lcgSlowDeferred++;
                     } else {
                       lcgSlow = true;
@@ -2940,12 +2950,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param now the time of the check (System.nanoTime)
    * @param window the length of the window, in nanoseconds
    * @param gain the share of the cost the best cost must fall by over the window
-   * @param before the best cost printed at the start of the window
+   * @param boundRaised when LCG last raised the bound, or {@code Long.MIN_VALUE} if never
+   * @param before the best cost printed at the start of the window ({@code Integer.MAX_VALUE} if
+   *     none)
    * @param after the best cost printed now
    * @return true if LCG should go on
    */
-  private boolean stillProgressing(long now, long window, double gain, long before, long after) {
-    if (lcgBoundRaised != Long.MIN_VALUE && now - lcgBoundRaised < window) {
+  static boolean stillProgressing(
+      long now, long window, double gain, long boundRaised, long before, long after) {
+    if (boundRaised != Long.MIN_VALUE && now - boundRaised < window) {
       return true;
     }
     if (before == Integer.MAX_VALUE || after == Integer.MAX_VALUE) {
