@@ -69,6 +69,9 @@ public class XplusClteqZImplied extends PrimitiveConstraint
   /** It specifies the 0/1 variable that implies x + c &lt;= z. */
   public final IntVar b;
 
+  // the value of b that enforces x + c <= z: 1, or 0 in XplusClteqZImpliedNot
+  private final int on;
+
   /**
    * It constructs constraint b =&gt; X + C{@literal <=} Z.
    *
@@ -78,16 +81,30 @@ public class XplusClteqZImplied extends PrimitiveConstraint
    * @param z variable z.
    */
   public XplusClteqZImplied(IntVar b, IntVar x, int c, IntVar z) {
+    this(b, x, c, z, 1);
+  }
+
+  /**
+   * It constructs constraint b = on =&gt; X + C{@literal <=} Z.
+   *
+   * @param b the 0/1 variable that implies the inequality.
+   * @param x variable x.
+   * @param c constant c.
+   * @param z variable z.
+   * @param on the value of b, 0 or 1, that enforces the inequality.
+   */
+  protected XplusClteqZImplied(IntVar b, IntVar x, int c, IntVar z, int on) {
 
     checkInputForNullness(new String[] {"b", "x", "z"}, new Object[] {b, x, z});
     if (b.min() < 0 || b.max() > 1) {
       throw new IllegalArgumentException(
-          "Variable b in XplusClteqZImplied must be 0/1 but is " + b);
+          "Variable b in " + getClass().getSimpleName() + " must be 0/1 but is " + b);
     }
 
     numberId = idNumber.incrementAndGet();
 
     this.b = b;
+    this.on = on;
     this.x = x;
     this.c = c;
     this.z = z;
@@ -132,19 +149,19 @@ public class XplusClteqZImplied extends PrimitiveConstraint
       // b => x + c <= x is b = 0 for c > 0 and true otherwise; the bounds below would shrink by c
       // per call, but the constraint is not woken by its own pruning
       if (c > 0) {
-        b.domain.inValue(store.level, b, 0);
+        b.domain.inValue(store.level, b, 1 - on);
       }
       removeConstraint();
-    } else if (b.max() == 0) {
+    } else if (off()) {
       removeConstraint();
-    } else if (b.min() == 1) {
+    } else if (b.singleton()) {
       x.domain.inMax(store.level, x, z.max() - c);
       z.domain.inMin(store.level, z, x.min() + c);
       if (x.max() + c <= z.min()) {
         removeConstraint();
       }
     } else if (x.min() + c > z.max()) {
-      b.domain.inValue(store.level, b, 0);
+      b.domain.inValue(store.level, b, 1 - on);
       removeConstraint();
     } else if (x.max() + c <= z.min()) {
       removeConstraint();
@@ -158,7 +175,7 @@ public class XplusClteqZImplied extends PrimitiveConstraint
     if (x == z && c <= 0) {
       throw Store.failException;
     }
-    b.domain.inValue(store.level, b, 1);
+    b.domain.inValue(store.level, b, on);
     if (x == z) {
       return;
     }
@@ -168,18 +185,29 @@ public class XplusClteqZImplied extends PrimitiveConstraint
 
   @Override
   public boolean satisfied() {
-    return b.max() == 0 || (x == z ? c <= 0 : x.max() + c <= z.min());
+    return off() || (x == z ? c <= 0 : x.max() + c <= z.min());
   }
 
   @Override
   public boolean notSatisfied() {
-    return b.min() == 1 && (x == z ? c > 0 : x.min() + c > z.max());
+    return b.singleton() && !off() && (x == z ? c > 0 : x.min() + c > z.max());
   }
 
   @Override
   public String toString() {
 
-    return id() + " : XplusClteqZImplied(" + b + ", " + x + ", " + c + ", " + z + " )";
+    return id()
+        + " : "
+        + getClass().getSimpleName()
+        + "("
+        + b
+        + ", "
+        + x
+        + ", "
+        + c
+        + ", "
+        + z
+        + " )";
   }
 
   @Override
@@ -197,33 +225,56 @@ public class XplusClteqZImplied extends PrimitiveConstraint
     return lcgNested;
   }
 
+  /**
+   * It returns the value of b that enforces the inequality.
+   *
+   * @return 1, or 0 for {@link XplusClteqZImpliedNot}.
+   */
+  public int enforcingValue() {
+    return on;
+  }
+
+  // b cannot take the value that enforces the inequality
+  private boolean off() {
+    return on == 1 ? b.max() == 0 : b.min() == 1;
+  }
+
+  // the explanations and the encoding are this class's and XplusClteqZImpliedNot's, not of others
+  private boolean own() {
+    return getClass() == XplusClteqZImplied.class || getClass() == XplusClteqZImpliedNot.class;
+  }
+
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
-    return getClass() == XplusClteqZImplied.class
-        && x != z
-        && b != x
-        && b != z
-        && ReifiedExplanation.explain(trail, entry, b, nested(), false, out);
+    if (!own() || x == z || b == x || b == z) {
+      return false;
+    }
+    return on == 1
+        ? ReifiedExplanation.explain(trail, entry, b, nested(), false, out)
+        : ReifiedExplanation.explainNegatedControl(trail, entry, b, nested(), out);
   }
 
   @Override
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
-    return getClass() == XplusClteqZImplied.class
-        && x != z
-        && b != x
-        && b != z
-        && ReifiedExplanation.explainFailure(trail, b, nested(), false, out);
-  }
-
-  // b -> x + c <= z, as the inequality under the guard b
-  @Override
-  public boolean encode(PbModel model) {
-    if (getClass() != XplusClteqZImplied.class
-        || model.domain(b).min() < 0
-        || model.domain(b).max() > 1) {
+    if (!own() || x == z || b == x || b == z) {
       return false;
     }
-    model.reified(b, nested().linearForm(), false);
+    return on == 1
+        ? ReifiedExplanation.explainFailure(trail, b, nested(), false, out)
+        : ReifiedExplanation.explainNegatedControlFailure(trail, b, nested(), out);
+  }
+
+  // b = on -> x + c <= z, as the inequality under the guard b (or not b)
+  @Override
+  public boolean encode(PbModel model) {
+    if (!own() || model.domain(b).min() < 0 || model.domain(b).max() > 1) {
+      return false;
+    }
+    if (on == 1) {
+      model.reified(b, nested().linearForm(), false);
+    } else {
+      model.guarded(PbModel.not(model.equalTo(b, 1)), nested().linearForm());
+    }
     return true;
   }
 }
