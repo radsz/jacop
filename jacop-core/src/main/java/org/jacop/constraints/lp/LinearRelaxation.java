@@ -878,6 +878,7 @@ public class LinearRelaxation extends Constraint
     int m = base;
     rowColumns = rc.subList(0, m).toArray(new int[0][]);
     rowWeights = rw.subList(0, m).toArray(new long[0][]);
+    setRows = setRows(m);
     rowLo = new long[m];
     rowHi = new long[m];
     hasLo = new boolean[m];
@@ -1944,6 +1945,60 @@ public class LinearRelaxation extends Constraint
   public IntVar column(int j) {
     return x[j];
   }
+
+  /**
+   * Returns whether the relaxation is a set partitioning, packing or covering model over 0/1
+   * columns: each row that does not hold the objective has weights of one sign and size one over
+   * columns whose domains are within 0..1 (fixed columns are constants), and there are at most
+   * org.jacop.lp.setRowsShare (0.1) rows per column. Its root solution is often almost integral,
+   * and its bound is often the optimum (the crew schedules of XCSP 2025 BusScheduling, 199 rows
+   * over 14,773 columns: root bound 28.5, optimum 29).
+   *
+   * @return whether every row of the relaxation is a set row over 0/1 columns
+   */
+  public boolean setRows() {
+    return setRows;
+  }
+
+  // whether the model's rows are set rows, decided when the relaxation is built: cuts come later
+  private final boolean setRows;
+
+  // whether the first m rows, the model's, are set rows over 0/1 columns
+  private boolean setRows(int m) {
+    if (m < 2 || m > x.length * SET_ROWS_SHARE) {
+      return false;
+    }
+    for (int i = 0; i < m; i++) {
+      int[] cs = rowColumns[i];
+      boolean holdsObjective =
+          objective != null && Arrays.stream(cs).anyMatch(j -> x[j] == objective);
+      if (!holdsObjective && !setRow(cs, rowWeights[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether a row has weights of one sign and size one over 0/1 columns; fixed columns are
+  // constants of the row
+  private boolean setRow(int[] cs, long[] ws) {
+    long sign = 0;
+    for (int k = 0; k < cs.length; k++) {
+      IntVar v = x[cs[k]];
+      if (!v.singleton()) {
+        if (sign == 0) {
+          sign = ws[k];
+        }
+        if (ws[k] != sign || Math.abs(ws[k]) != 1 || v.min() < 0 || v.max() > 1) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static final double SET_ROWS_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.setRowsShare", "0.1"));
 
   /**
    * Returns the variable minimized, or null for satisfaction.
