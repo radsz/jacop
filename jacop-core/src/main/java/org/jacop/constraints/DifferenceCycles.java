@@ -183,6 +183,13 @@ public class DifferenceCycles extends Constraint
   // arcs that hold but are not in the potential yet
   private boolean[] pending;
 
+  // the conditional arcs in the potential, with the levels at which they joined it, so that the
+  // search of insert need not test their literals
+  private boolean[] inSet;
+  private int[] setArc;
+  private int[] setLevel;
+  private int setSize;
+
   // the search of insert: gamma[n] < 0 is the change of pi[n]; heap of the nodes with gamma < 0
   private long[] gamma;
   private int[] parentArc;
@@ -388,6 +395,11 @@ public class DifferenceCycles extends Constraint
         arcsOf[lfill[lit[a]]++] = a;
       }
     }
+    // the arcs of each literal by value, so that a literal fixed to a value finds the arcs that
+    // hold by binary search instead of testing all of them
+    for (int l = 0; l < nl; l++) {
+      sortByValue(litStart[l], litStart[l + 1]);
+    }
 
     int no = offset.length;
     offStart = new int[no + 1];
@@ -416,6 +428,36 @@ public class DifferenceCycles extends Constraint
       }
     }
     setScope(scope.toArray(new IntVar[0]));
+  }
+
+  // sorts arcsOf[from .. to) by value, ties by arc index
+  private void sortByValue(int from, int to) {
+    if (to - from < 2) {
+      return;
+    }
+    long[] keys = new long[to - from];
+    for (int i = from; i < to; i++) {
+      keys[i - from] = ((long) value[arcsOf[i]] << 32) | arcsOf[i];
+    }
+    Arrays.sort(keys);
+    for (int i = from; i < to; i++) {
+      arcsOf[i] = (int) keys[i - from];
+    }
+  }
+
+  // the first index in arcsOf[from .. to) whose arc has a value of at least val
+  private int firstWithValue(int from, int to, int val) {
+    int lo = from;
+    int hi = to;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (value[arcsOf[mid]] < val) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
   }
 
   // the weight of arc a now: its constant less the bound of its offset
@@ -543,6 +585,9 @@ public class DifferenceCycles extends Constraint
     Arrays.fill(heapPos, -1);
     touched = new int[n];
     pending = new boolean[tail.length];
+    inSet = new boolean[tail.length];
+    setArc = new int[8];
+    setLevel = new int[8];
     initialPotential();
     super.impose(store);
   }
@@ -637,6 +682,9 @@ public class DifferenceCycles extends Constraint
   @Override
   public void removeLevel(int level) {
     queue.clear();
+    while (setSize > 0 && setLevel[setSize - 1] >= level) {
+      inSet[setArc[--setSize]] = false;
+    }
   }
 
   @Override
@@ -673,10 +721,15 @@ public class DifferenceCycles extends Constraint
     int na = 0;
     for (Var v : queue) {
       Integer l = literalIndex.get(v);
-      if (l != null) {
-        for (int i = litStart[l]; i < litStart[l + 1]; i++) {
+      if (l != null && v.singleton()) {
+        int val = ((IntVar) v).value();
+        int end = litStart[l + 1];
+        for (int i = firstWithValue(litStart[l], end, val); i < end; i++) {
           int a = arcsOf[i];
-          if (!pending[a] && holds(a)) {
+          if (value[a] != val) {
+            break;
+          }
+          if (!pending[a]) {
             pending[a] = true;
             if (na == arcs.length) {
               arcs = Arrays.copyOf(arcs, 2 * na);
@@ -707,12 +760,25 @@ public class DifferenceCycles extends Constraint
         int a = arcs[next];
         pending[a] = false;
         insert(a);
+        if (lit[a] >= 0 && !inSet[a]) {
+          addToSet(a, store.level);
+        }
       }
     } finally {
       for (; next < na; next++) {
         pending[arcs[next]] = false;
       }
     }
+  }
+
+  private void addToSet(int a, int level) {
+    if (setSize == setArc.length) {
+      setArc = Arrays.copyOf(setArc, 2 * setSize);
+      setLevel = Arrays.copyOf(setLevel, 2 * setSize);
+    }
+    inSet[a] = true;
+    setArc[setSize] = a;
+    setLevel[setSize++] = level;
   }
 
   // adds arc a, which holds, to the potential, or fails with the cycle it closes
@@ -735,7 +801,7 @@ public class DifferenceCycles extends Constraint
         for (int e = start[s]; e < start[s + 1]; e++) {
           int arc = out[e];
           int w = head[arc];
-          if (done[w] || pending[arc] || !holds(arc)) {
+          if (done[w] || pending[arc] || lit[arc] >= 0 && !inSet[arc]) {
             continue;
           }
           long ng = ps + weightOf(arc) - pi[w];
