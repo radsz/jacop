@@ -183,7 +183,9 @@ class FlatzincFrontEndTest {
 
     assertTrue(run(first, "--format", "0.01")[0].contains("y = 0.33;"));
     String out = run(second)[0];
-    assertTrue(out.contains("x = 1.4142135623730951;"), out);
+    // the solution is one of the two doubles around sqrt(2), not an interval of precision 0.5
+    assertTrue(
+        out.contains("x = 1.4142135623730951;") || out.contains("x = 1.414213562373095;"), out);
     assertEquals(FloatDomain.DEFAULT_PRECISION, FloatDomain.precision());
   }
 

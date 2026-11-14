@@ -242,6 +242,42 @@ class FloatBuiltinsFuzzTest {
   }
 
   /**
+   * An exact sum or product of floats is a single value: -2.0 + 2.0 was the interval [-4.9e-324,
+   * 4.9e-324] (outward rounding by an ulp even when exact), so floor(x + y) for x = -2, y = 2 also
+   * gave -1 and the model had wrong solutions.
+   */
+  @Test
+  void exactArithmeticGivesExactRounding() throws IOException {
+    String model =
+        """
+        var -2..2: i :: output_var;
+        var -2..2: j :: output_var;
+        var -2.0..2.0: x;
+        var -2.0..2.0: y;
+        var float: s;
+        var float: p;
+        var int: k :: output_var;
+        var int: m :: output_var;
+        constraint int2float(i, x);
+        constraint int2float(j, y);
+        constraint float_plus(x, y, s);
+        constraint float_times(x, y, p);
+        constraint float_floor(s, k);
+        constraint float_ceil(p, m);
+        solve :: int_search([i, j, k, m], input_order, indomain_min, complete) satisfy;
+        """;
+    Set<String> expected = new TreeSet<>();
+    for (int i = -2; i <= 2; i++) {
+      for (int j = -2; j <= 2; j++) {
+        expected.add("i = " + i + "; j = " + j + "; k = " + (i + j) + "; m = " + (i * j) + ";");
+      }
+    }
+    List<String> solutions = solveAll(model);
+    assertThat(solutions).hasSize(expected.size());
+    assertThat(new TreeSet<>(solutions)).isEqualTo(expected);
+  }
+
+  /**
    * Minimises or maximises a float function of the integers (a built-in, or a linear sum defined by
    * float_lin_eq), and checks the last solution against the optimum found by enumeration.
    */
