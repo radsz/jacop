@@ -4865,7 +4865,88 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
-286. LCG free search (-f) that makes few conflicts gives way to free search
+286. The linear relaxation is much tighter on models with half-reified value
+     literals (MiniZinc int_eq_imp, JaCoP ChannelImply) beside reified ones
+     of the same variable, as XCSP 2025 TankAllocation1 (the cargo of each
+     tank, with x = empty reified for the objective). The half-reified
+     literals join the variable's value clique, sum b + e <= 1, and a
+     literal that doubles a reified one gets b <= e, as CP-SAT's presolve
+     detects half-reified value encodings (-Dorg.jacop.lp.impliedValues=false
+     turns this off): root bound 16880 -> 1799 on TankAllocation1-0000
+     (optimum 1619). The dense dual simplex no longer stalls in the cut
+     rounds: slacks have no cost and no perturbation, and the rows of cuts
+     made thousands of zero-length pivots up to the round's limit; a slack's
+     cost is now shifted as it leaves the basis, scaled by the root of its
+     row's largest weight so that the integer certificate of the duals keeps
+     the LP bound (cost shifting, A. Koberstein, "The dual simplex method,
+     techniques for a fast and stable implementation", PhD thesis,
+     Paderborn, 2005; -Dorg.jacop.lp.slackShift=false). The root cut rounds
+     go on after the first five while each moves the bound by 1 % of what
+     the rounds before it did (up to 50 rounds and 1 s more,
+     -Dorg.jacop.lp.cutRoundsMax, -Dorg.jacop.lp.cutExtraSeconds), and a
+     round of Gomory cuts over the slacks that stops at its pivot limit is
+     taken again with MIR cuts only. MIR cuts (H. Marchand and L. A.
+     Wolsey, "Aggregation and mixed integer rounding to solve MIPs",
+     Operations Research 49(3), 2001) are also separated in search from
+     the rows of the root, as the capacity cuts are, with a period that
+     halves when they move the bound, off by default
+     (-Dorg.jacop.lp.mirSearch=true; on a knapsack their separations took
+     the LP's work budget and the search 7 times more nodes). New
+     statistics lpMirSearchCuts, lpMirSeparations, lpCutLimits. Cut bound
+     on TankAllocation1-0000 1768 -> 1676.
+
+287. DifferenceCycles takes arcs x - y <= c - s * o whose weight depends on
+   the bound of an offset variable o (y >= x + d with a variable duration
+   or travel time), and literals of any domain: the arc holds when the
+   literal is fixed to its value. The FlatZinc front end adds the arcs of
+   three-variable unit rows (int_lin_le/eq over x, y and an offset), of
+   int_max/int_min (m >= x) and of array_var_int_element (z = a[j] when
+   the index is j), so cycles through element successors and variable
+   travel times, as in routing and cyclic scheduling, fail at once
+   instead of creeping by bounds propagation. As before, the constraint
+   is posted only when a conditional arc lies on a cycle: offset arcs
+   alone (costas-array, road-cons, celar) cost more than they gained.
+   On the MiniZinc Challenge
+   2023 yumi-static instance p_4_GG_GG_yumi_grid_setup_7_7, -f proves the
+   optimum 457 in 104 s instead of 232 s (CP-SAT 19 s). This is the
+   precedence reasoning with variable offsets of CP-SAT (Perron, Didier
+   and Gay, The CP-SAT-LP solver, CP 2023) and the global difference
+   constraint propagation of Feydy, Schutt and Stuckey (PPDP 2008), used
+   for cycle detection only. -Dorg.jacop.fz.differenceOffsets=false and
+   -Dorg.jacop.fz.differenceElements=false turn the new arcs off.
+
+288. Lazy clause generation under -f with a linear objective: when the
+     objective's root bound (from the linear relaxation, say) is above the
+     lower bound the core-guided phase starts from, a search for a solution
+     at that bound, under an assumption, runs before the core-guided probe
+     (0.2 % of the work left, at most 1,000 conflicts). A solution found
+     there is optimal; without one the activity and target phases are
+     restored and the schedule goes on as before. On nfc (Challenge 2022,
+     cyclic staffing over a network flow) the relaxation's bound is the
+     optimum, but the probe delayed branch and bound by 0.67 % of the time
+     limit: at 1200 s the five instances take 0.35-0.46 s instead of
+     2-14 s (CP-SAT proves them at the root too). It fires on 55 of the
+     187 optimisation instances of the wide set and finds the optimum on
+     14-17 of them; at 600 s over two seeds proofs stay at 87 of 110, the
+     proved instances take 0.89x and 0.78x the time (geometric mean),
+     families 3 better / 2 worse and 4 / 1. -Djacop.lcg.boundDive=0 turns
+     it off; statistics lcgBoundDives and lcgBoundDiveSolutions.
+
+289. Large neighbourhood search under -f (free search with lazy clause
+   generation) fixes and relaxes the model's own decision variables again
+   on models where MiniZinc defines the integer copy of a Boolean by
+   bool2int(b, i) :: defines_var(i). The front end merges i into b, and
+   the defines_var annotation then marked b itself as defined, so b was
+   left out of the neighbourhoods. On speck-optimisation (2023)
+   very_hard_5 that left 1 of 12,213 variables to LNS, every
+   neighbourhood was the whole model and LNS made no progress; it now
+   works over 2,541 variables. 32 of the 187 optimisation instances of
+   the wide benchmark set get a different set of LNS variables. When
+   fewer than 16 variables are not defined by a constraint (a few roots
+   that define the rest by chains, as in pattern-set-mining), the
+   neighbourhoods take every variable, as they did when none was left.
+
+290. LCG free search (-f) that makes few conflicts gives way to free search
    without learning only when it has also stopped making progress, and the
    rate below which it is slow is 300 conflicts/s instead of 50. At the
    check (lcg-slow-at, 0.1 of -t) a search under lcg-slow-rate goes on while,
@@ -4883,7 +4964,7 @@ Version 5.0 (unreleased)
    7,186. Statistic lcgSlowDeferred counts the checks that let a slow LCG
    go on.
 
-287. The FlatZinc front end tabulates small flattened expressions: the
+291. The FlatZinc front end tabulates small flattened expressions: the
    constraints joined by variables that MiniZinc introduced (not output,
    not in the solve item, not aliased), over at most three other
    variables, become one table of the tuples that extend to a solution,
@@ -4902,7 +4983,7 @@ Version 5.0 (unreleased)
    before. Off with -a (unless org.jacop.fz.intensionTable=force) and
    --proof; org.jacop.fz.intensionTable=false turns it off.
 
-288. The FlatZinc front end proves parity infeasibilities such as
+292. The FlatZinc front end proves parity infeasibilities such as
    Langford's problem L(2, n) for n = 1, 2 (mod 4) (C. D. Langford, Math.
    Gazette 42, 1958; parity proof R. O. Davies, Math. Gazette 43, 1959)
    before search. An all_different constraint over n variables whose
@@ -4927,7 +5008,7 @@ Version 5.0 (unreleased)
    same results at 600 s). Posting the implied cliques changes 81 and
    slows the solvable LangfordBin instances.
 
-289. Lazy clause generation explains the atoms of nine recent globals
+293. Lazy clause generation explains the atoms of nine recent globals
      with their own reasons instead of the replayed or generic one:
      - MultiInterDistance, Spread, Deviation and StockingCost by the box of
        bounds in which the pruned value has no solution, relaxed bound by
@@ -4968,7 +5049,7 @@ Version 5.0 (unreleased)
      half of the constraints (1.2 million runs with the explanation
      checker, with and without holes: clean).
 
-290. Tables as clauses under LCG (experiment, off by default):
+294. Tables as clauses under LCG (experiment, off by default):
    -Djacop.lcg.tableClauses=direct makes each HybridTable (no restrictions
    between columns, at most 100 tuples, 64 values per column and 5000
    clauses, .tuples/.dom/.limit) clauses of the SAT solver in place of
@@ -4991,7 +5072,7 @@ Version 5.0 (unreleased)
    SportsScheduling-dummy, Eternity, PegSolitaire, Spot5-0412 (2-3x).
    Statistics lcgTablesAsClauses, lcgTableClauses, lcgTableTupleLiterals.
 
-291. The FlatZinc front end divides an objective declared beyond JaCoP's
+295. The FlatZinc front end divides an objective declared beyond JaCoP's
    integer range by the factor its defining equation forces on it,
    instead of narrowing its domain to the range. When the objective z
    occurs in c*z + sum(a_i*x_i) = b, z is a multiple of g = G / gcd(G, c)
@@ -5010,7 +5091,7 @@ Version 5.0 (unreleased)
    order reaches; with -f L10 reaches the optimum 1703450 in 3 of 3 runs
    (before 2551340-3519410) and L15 46758125 (before 103430755).
 
-292. The FlatZinc front end posts the sums implied by linear equalities
+296. The FlatZinc front end posts the sums implied by linear equalities
    with unit coefficients that partition the variables of an
    all_different. When sum(X_1) = s_1, ..., sum(X_k) = s_k split the
    variables of all_different(A) into disjoint blocks (the rows, or the
@@ -5029,36 +5110,6 @@ Version 5.0 (unreleased)
    (unsolved before), AntimagicSquare-11/12 162 s -> 35 s and
    122 s -> 10 s; 30 of the 32 solved instead of 28.
    -Dorg.jacop.fz.partitionSums=false turns it off.
-
-293. The linear relaxation is much tighter on models with half-reified value
-     literals (MiniZinc int_eq_imp, JaCoP ChannelImply) beside reified ones
-     of the same variable, as XCSP 2025 TankAllocation1 (the cargo of each
-     tank, with x = empty reified for the objective). The half-reified
-     literals join the variable's value clique, sum b + e <= 1, and a
-     literal that doubles a reified one gets b <= e, as CP-SAT's presolve
-     detects half-reified value encodings (-Dorg.jacop.lp.impliedValues=false
-     turns this off): root bound 16880 -> 1799 on TankAllocation1-0000
-     (optimum 1619). The dense dual simplex no longer stalls in the cut
-     rounds: slacks have no cost and no perturbation, and the rows of cuts
-     made thousands of zero-length pivots up to the round's limit; a slack's
-     cost is now shifted as it leaves the basis, scaled by the root of its
-     row's largest weight so that the integer certificate of the duals keeps
-     the LP bound (cost shifting, A. Koberstein, "The dual simplex method,
-     techniques for a fast and stable implementation", PhD thesis,
-     Paderborn, 2005; -Dorg.jacop.lp.slackShift=false). The root cut rounds
-     go on after the first five while each moves the bound by 1 % of what
-     the rounds before it did (up to 50 rounds and 1 s more,
-     -Dorg.jacop.lp.cutRoundsMax, -Dorg.jacop.lp.cutExtraSeconds), and a
-     round of Gomory cuts over the slacks that stops at its pivot limit is
-     taken again with MIR cuts only. MIR cuts (H. Marchand and L. A.
-     Wolsey, "Aggregation and mixed integer rounding to solve MIPs",
-     Operations Research 49(3), 2001) are also separated in search from
-     the rows of the root, as the capacity cuts are, with a period that
-     halves when they move the bound, off by default
-     (-Dorg.jacop.lp.mirSearch=true; on a knapsack their separations took
-     the LP's work budget and the search 7 times more nodes). New
-     statistics lpMirSearchCuts, lpMirSeparations, lpCutLimits. Cut bound
-     on TankAllocation1-0000 1768 -> 1676.
 
 Version 4.11
 =============

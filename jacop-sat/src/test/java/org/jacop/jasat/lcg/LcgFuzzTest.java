@@ -1238,8 +1238,9 @@ class LcgFuzzTest {
       };
     }
 
-    // conditional difference constraints x - y <= c (each always, or when b == v), posted as
-    // primitives, and DifferenceCycles over them, as the FlatZinc detector posts it
+    // conditional difference constraints x - y <= c - s * o (each always, or when b == v, with an
+    // optional offset variable o), posted as primitives, and DifferenceCycles over them, as the
+    // FlatZinc detector posts it; a literal may be a variable wider than 0/1, as an element index
     private DifferenceCycles differenceCycles() {
       int m = 3 + rnd.nextInt(3);
       // arcs among three variables, so that they close cycles
@@ -1247,23 +1248,40 @@ class LcgFuzzTest {
       IntVar[] xs = new IntVar[m];
       IntVar[] ys = new IntVar[m];
       IntVar[] bs = new IntVar[m];
+      IntVar[] os = new IntVar[m];
       int[] c = new int[m];
       int[] v = new int[m];
+      int[] s = new int[m];
       for (int i = 0; i < m; i++) {
         IntVar[] e = pick(nodes, 2);
         xs[i] = e[0];
         ys[i] = e[1];
         c[i] = rnd.nextInt(4) - 2;
-        XplusClteqZ d = new XplusClteqZ(xs[i], -c[i], ys[i]);
-        if (rnd.nextBoolean()) {
+        PrimitiveConstraint d;
+        if (rnd.nextInt(3) == 0) {
+          os[i] = one();
+          s[i] = rnd.nextBoolean() ? 1 : -1;
+          d =
+              new LinearInt(
+                  new IntVar[] {xs[i], ys[i], os[i]}, new int[] {1, -1, s[i]}, "<=", c[i]);
+        } else {
+          d = new XplusClteqZ(xs[i], -c[i], ys[i]);
+        }
+        int kind = rnd.nextInt(3);
+        if (kind == 0) {
           bs[i] = b[rnd.nextInt(b.length)];
           v[i] = rnd.nextInt(2);
+        } else if (kind == 1) {
+          bs[i] = one();
+          v[i] = bs[i].min() + rnd.nextInt(bs[i].max() - bs[i].min() + 1);
+        }
+        if (bs[i] != null) {
           post(new IfThen(new XeqC(bs[i], v[i]), d));
         } else {
           post(d);
         }
       }
-      return new DifferenceCycles(xs, ys, c, bs, v);
+      return new DifferenceCycles(xs, ys, c, bs, v, os, s);
     }
 
     private String relation() {

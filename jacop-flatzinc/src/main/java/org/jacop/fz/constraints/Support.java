@@ -752,7 +752,14 @@ public class Support implements ParserTreeConstants {
         Var v = getAnnVar(expr);
 
         definedVar = (IntVar) v;
-        dictionary.addDefinedVar(v);
+        ASTScalarFlatExpr name = (ASTScalarFlatExpr) expr.jjtGetChild(0);
+        if (name == null || !dictionary.isAlias(name.getIdent())) {
+          // the integer of bool2int names its Boolean once merged into it, and the Boolean is not
+          // defined by the constraint that defines the integer: speck-optimisation defines the
+          // integer copy of every bit of the state, which left one variable of 12,213 to the
+          // neighbourhoods of LNS
+          dictionary.addDefinedVar(v);
+        }
       } else if ("priority".equals(ann.getAnnId())) {
         SimpleNode child = (SimpleNode) ann.jjtGetChild(0);
         ASTAnnExpr expr = (ASTAnnExpr) child.jjtGetChild(0);

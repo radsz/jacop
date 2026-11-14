@@ -3451,6 +3451,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.coreSkips
         + "\n%%%mzn-stat: lcgCoreProbeSkips="
         + lcg.probeSkips
+        + "\n%%%mzn-stat: lcgBoundDives="
+        + lcg.boundDives
+        + "\n%%%mzn-stat: lcgBoundDiveSolutions="
+        + lcg.boundDiveSolutions
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="
@@ -3460,6 +3464,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
+
+  // the fewest variables not defined by a constraint that the neighbourhoods keep to; with fewer,
+  // nearly every variable is defined by a chain of constraints from a handful of roots (one bit of
+  // pattern-set-mining, two of ionosphere), and fixing them all or none is no neighbourhood: the
+  // neighbourhoods take every variable, as when none is independent
+  private static final int MIN_LNS_INDEPENDENT = 16;
 
   /**
    * The neighbourhoods of large neighbourhood search over the decision variables of the model, or
@@ -3488,7 +3498,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           independent.add(x);
         }
       }
-      if (!independent.isEmpty()) {
+      if (independent.size() >= MIN_LNS_INDEPENDENT) {
         vars = new LinkedHashSet<>(independent);
       }
     }
