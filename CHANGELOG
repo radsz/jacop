@@ -4850,6 +4850,26 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
+285. New constraint ConjunctionSum(terms, weights, sum): sum is at least
+   the weighted number of conjunctions of value literals (x = a, x != a)
+   that hold. Besides the terms that hold it counts, for each variable,
+   the least cost over its domain of the terms whose other literals all
+   hold, and removes the values whose cost would take the bound above
+   the maximum of sum: the partial forward checking bound of weighted
+   constraint satisfaction (E. C. Freuder and R. J. Wallace, Partial
+   constraint satisfaction, Artificial Intelligence 58, 1992; J. Larrosa,
+   P. Meseguer and T. Schiex, Maintaining reversible DAC for Max-CSP,
+   Artificial Intelligence 107, 1999). Terms watch two variables that
+   are open for them, as clauses watch two literals, and the bound is
+   kept incrementally; it explains its pruning for lazy clause
+   generation. The FlatZinc front end posts it as a redundant constraint
+   on a minimized objective that is a sum of bool2int(array_bool_and)
+   over int_eq_reif and int_ne_reif literals, as in the XCSP 2025
+   BlockModeling problems; -Dorg.jacop.fz.conjunctionSum=false turns it
+   off. A linear sum over the indicators counts a term only once all its
+   literals hold, so before the lower bound stayed near zero.
+   BLOCKMODELING_RESULTS
+
 Version 4.11
 =============
 

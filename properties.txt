@@ -349,6 +349,13 @@ unless stated otherwise):
   (half-)reified difference constraints.
 - org.jacop.fz.disjunctiveCliques: CumulativeUnary on sets of tasks
   that can never overlap (Sidorov, Marijnissen, Demirovic, CP 2025).
+- org.jacop.fz.conjunctionSum: ConjunctionSum, the partial forward
+  checking bound, on a minimized sum of 0/1 indicators of conjunctions
+  of value literals (bool2int(array_bool_and) over int_eq_reif and
+  int_ne_reif); default true, off under --proof.
+- org.jacop.fz.conjunctionSum.maxValues: ConjunctionSum is posted only
+  when every variable of a literal has at most this many values;
+  default 4.
 - org.jacop.fz.inferredCumulatives: redundant cumulatives lifted from
   covers of the cumulatives with a fixed capacity and from the tasks
   that can never overlap (Sidorov, CP 2026); default true.

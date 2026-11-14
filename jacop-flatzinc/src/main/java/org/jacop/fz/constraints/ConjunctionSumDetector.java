@@ -30,6 +30,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +56,8 @@ import org.jacop.fz.SimpleNode;
  * that wait for one variable only.
  *
  * <p>Setting the system property {@code org.jacop.fz.conjunctionSum} to false turns the detection
- * off.
+ * off. The constraint is posted only when every variable of a literal has at most {@code
+ * org.jacop.fz.conjunctionSum.maxValues} values (default 4).
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -67,6 +69,12 @@ public class ConjunctionSumDetector implements ParserTreeConstants {
 
   // the widest domain of a variable in a literal
   private static final int MAX_SPAN = 64;
+
+  // the most values of a variable in a literal: with more, the least cost of a variable over its
+  // domain stays zero until most variables are fixed, and the reasons cost more than the bound
+  // gains
+  private static final int MAX_VALUES =
+      Integer.getInteger("org.jacop.fz.conjunctionSum.maxValues", 4);
 
   private final Support support;
 
@@ -268,7 +276,7 @@ public class ConjunctionSumDetector implements ParserTreeConstants {
     int[][] values = new int[m][];
     boolean[][] eqs = new boolean[m][];
     int[] w = new int[m];
-    Set<IntVar> distinct = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
     long literals = 0;
     int t = 0;
     boolean joint = false;
@@ -309,6 +317,14 @@ public class ConjunctionSumDetector implements ParserTreeConstants {
     // the bound adds nothing when every term has the literals of one variable only
     if (!joint || literals > MAX_LITERALS || distinct.size() >= m) {
       return false;
+    }
+    for (IntVar v : distinct) {
+      if (v.getSize() > MAX_VALUES) {
+        if (support.options.debug() || support.options.searchStatistics()) {
+          FzConsole.println("%%%mzn-stat: conjunctionSumSkipped=" + v.getSize());
+        }
+        return false;
+      }
     }
     ConjunctionSum bound = new ConjunctionSum(vars, values, eqs, w, objective);
     bound.setDegreeWeight(0);
