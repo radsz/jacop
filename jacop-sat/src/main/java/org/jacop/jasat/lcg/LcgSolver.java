@@ -3051,6 +3051,7 @@ public final class LcgSolver implements ExternalPropagator {
     this.objective = trail.id(objective);
     best = null;
     lastBound = Long.MIN_VALUE;
+    impactLower = Long.MIN_VALUE;
     if (proof != null && coreShare > 0) {
       // the core-guided phase sums the model's lines, so the proof starts before it
       startProof();
@@ -4621,8 +4622,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyNewDecisionLevel() {
-    if (onBound != null && objective >= 0 && store.level == baseLevel) {
-      rootBound();
+    if (objective >= 0 && store.level == baseLevel) {
+      impactLower = Math.max(impactLower, vars[objective].min());
+      if (onBound != null) {
+        rootBound();
+      }
     }
     store.setLevel(store.level + 1);
   }
@@ -4870,6 +4874,7 @@ public final class LcgSolver implements ExternalPropagator {
       exchangeShared();
     }
     targetTrail = 0;
+    impactRestarts++;
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {
@@ -6152,6 +6157,28 @@ public final class LcgSolver implements ExternalPropagator {
   static final boolean IMPACT_BEFORE_SOLUTION = Boolean.getBoolean("jacop.lcg.valueImpactFirst");
   // -Djacop.lcg.valueImpactLns=true: only in the runs of large neighbourhood search
   static final boolean IMPACT_LNS_ONLY = Boolean.getBoolean("jacop.lcg.valueImpactLns");
+  // -Djacop.lcg.valueImpactEvery=<k>: only in every k-th run between restarts
+  static final int IMPACT_EVERY = Integer.getInteger("jacop.lcg.valueImpactEvery", 1);
+  private long impactRestarts;
+  // -Djacop.lcg.valueImpactGap=<share>: only while the best solution is more than this share of
+  // its absolute value above the objective's lower bound at the root
+  static final double IMPACT_GAP =
+      Double.parseDouble(System.getProperty("jacop.lcg.valueImpactGap", "0"));
+  // the objective's greatest lower bound seen at the root
+  private long impactLower = Long.MIN_VALUE;
+
+  private boolean impactGapOpen() {
+    if (IMPACT_GAP <= 0 || best == null) {
+      return true;
+    }
+    long lower = impactLower;
+    if (coreSearch != null) {
+      lower = Math.max(lower, coreSearch.lowerBound);
+    }
+    long incumbent = best[objective];
+    return (double) incumbent - lower > IMPACT_GAP * Math.max(1.0, Math.abs((double) incumbent));
+  }
+
   private long impactStart = -1;
   private long impactNanos;
 
@@ -6171,7 +6198,9 @@ public final class LcgSolver implements ExternalPropagator {
         || objective < 0
         || i == objective
         || (best == null && !IMPACT_BEFORE_SOLUTION)
-        || (IMPACT_LNS_ONLY && !inNeighbourhoods)) {
+        || (IMPACT_LNS_ONLY && !inNeighbourhoods)
+        || (IMPACT_EVERY > 1 && impactRestarts % IMPACT_EVERY != 0)
+        || !impactGapOpen()) {
       return Integer.MIN_VALUE;
     }
     IntVar x = vars[i];
