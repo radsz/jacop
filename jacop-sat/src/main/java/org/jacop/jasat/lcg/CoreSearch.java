@@ -504,14 +504,17 @@ public final class CoreSearch {
       start(sat.work());
     }
     while (true) {
-      if (SCAN_WORK && (System.nanoTime() > sat.deadline() || sat.work() >= sat.workLimit())) {
-        // relaxing and hardening between calls of the solver count as work of their own (one
-        // per soft literal scanned): train 2012 instance.2, whose objective spans 2,850,000
-        // values, spent 110 of 240 s in them under a share of 2 % and found its first solution
-        // only after them
+      if (CLOCK_CHECK && System.nanoTime() > sat.deadline()) {
+        // relaxing and hardening between calls of the solver do no work of the solver, so only
+        // the clock stops a phase spent in them: train 2012 instance.2, whose objective spans
+        // 2,850,000 values, spent 110 of 240 s in them under a probe share of 2 % and found its
+        // first solution only after them
         return CdclSolver.UNKNOWN;
       }
       if (SCAN_WORK) {
+        if (sat.work() >= sat.workLimit()) {
+          return CdclSolver.UNKNOWN;
+        }
         lcg.coreWork += 2L * softs.size();
       }
       if (!relaxTrueAtRoot()) {
@@ -953,8 +956,13 @@ public final class CoreSearch {
   // half of the phase is tested, 0 never; 0.1: work-task-variation 2025 seed-8 proves its optimum
   // after a stall of 20 s that a test from the start would end, community-detection 2026 and
   // javarouting trip_7_2 stall for good after 12 s and 330 s
-  // -Djacop.lcg.coreScanWork=false: the scans between calls of the solver are not work
-  static final boolean SCAN_WORK = !"false".equals(System.getProperty("jacop.lcg.coreScanWork"));
+  // -Djacop.lcg.coreScanWork=true: the scans between calls of the solver count as work, two per
+  // soft literal (wide set at 240 s: 2 more proofs, but proofs of the core phase slower)
+  static final boolean SCAN_WORK = Boolean.getBoolean("jacop.lcg.coreScanWork");
+
+  // -Djacop.lcg.coreClockCheck=false: no check of the phase's deadline between calls (for A/B)
+  static final boolean CLOCK_CHECK =
+      !"false".equals(System.getProperty("jacop.lcg.coreClockCheck"));
 
   static final double STALL = Double.parseDouble(System.getProperty("jacop.lcg.coreStall", "0.1"));
 
