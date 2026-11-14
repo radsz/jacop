@@ -139,6 +139,23 @@ public class Support implements ParserTreeConstants {
   int alldiffsChannelled;
   // all different variables found by AlldifferentDetector, for AlldiffSum only
   final ArrayList<IntVar[]> detectedAlldifferentLists = new ArrayList<>();
+
+  /**
+   * Variables shifted by constants, {@code x[k] + o[k]}.
+   *
+   * @param x the variables.
+   * @param o the offsets.
+   */
+  record Shifted(List<IntVar> x, List<Integer> o) {
+    Shifted {
+      x = List.copyOf(x);
+      o = List.copyOf(o);
+    }
+  }
+
+  // the cliques of AlldifferentDetector with their offsets, for the permutation sums of
+  // LinearSystemDetector
+  final ArrayList<Shifted> allDifferentOffsets = new ArrayList<>();
   // sums with unit coefficients that get an AlldiffSum when their variables are all different
   final ArrayList<UnitSum> unitSums = new ArrayList<>();
   static final int ALLDIFF_SUM_MIN_VARIABLES = 3;
