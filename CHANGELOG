@@ -5573,7 +5573,15 @@ Version 5.0 (unreleased)
    the gate. Of the 187 optimisation instances of the wide benchmark set,
    the detector reads cost terms in 52 and 1 passes the gate.
 
-319. The FlatZinc front end removes the control b of a half-reified
+320. After the search before an expensive root LP (317), the first solve of
+   the linear relaxation keeps the rows of the other constraints as a
+   first solve at the start of that search would: the trial compares the
+   bounds with and without them at the variable bounds the search started
+   from, not at those it ended with. Facts found by the short search could
+   make 1,859 extra rows of mqueens n11 raise the bound from 0 to 1, and
+   keeping them cost 12 s of LP in search (14.2 s against 3.2 s).
+
+321. The FlatZinc front end removes the control b of a half-reified
    constraint b -> C when b appears nowhere else but as a positive literal
    of clauses, as bounded variable elimination does in SAT preprocessing
    (Een and Biere, Effective preprocessing in SAT through variable and
