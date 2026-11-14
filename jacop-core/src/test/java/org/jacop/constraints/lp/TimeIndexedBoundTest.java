@@ -1,6 +1,7 @@
 package org.jacop.constraints.lp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,8 +9,11 @@ import java.util.List;
 import java.util.Random;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
 import org.jacop.lcg.LinearForm;
 import org.junit.jupiter.api.Test;
 
@@ -262,6 +266,50 @@ class TimeIndexedBoundTest {
     assertThat(c.min()).isZero();
     bound.consistency(store);
     assertThat(c.min()).isLessThanOrEqualTo(20);
+  }
+
+  // the root solve proves c >= 20 assuming c <= 100; when a lower bound probe sets c <= 19 the
+  // failure is explained by c <= 19 (before: by c <= 100, which is no condition at all, so the
+  // learnt clause cut off every solution and proved a wrong optimum on gbac under -f)
+  @Test
+  void arcFlowFailureIsExplainedByTheObjectiveBelowTheBound() {
+    Store store = new Store();
+    List<LinearForm> rows = new ArrayList<>();
+    List<TimeIndexedBound.LoadFunction> functions = new ArrayList<>();
+    IntVar c = binPackingModel(store, new int[] {2, 2, 2}, 2, 0, 100, rows, functions);
+    AtomicTrail trail = new AtomicTrail(store);
+    TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
+    store.setLevel(store.level + 1);
+    store.impose(bound);
+    // restarts that change other root bounds (the bound wakes on the objective only, so it is
+    // called here) solve again; the solves do not improve the bound and
+    // back off, so the probe below the bound reuses the solve that assumed no objective limit
+    IntVar z = (IntVar) store.findVariable("z0");
+    for (int k = 0; k < 8; k++) {
+      store.setLevel(store.level + 1);
+      z.domain.inMax(store.level, z, 36 - k);
+      bound.consistency(store);
+      assertThat(c.min()).isEqualTo(20);
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
+    // a probe of the objective limit below the bound, as core-guided lower bound runs make
+    store.setLevel(store.level + 1);
+    c.domain.inMax(store.level, c, 19);
+    assertThatThrownBy(() -> bound.consistency(store)).isInstanceOf(FailException.class);
+    EntryList out = new EntryList();
+    assertThat(bound.explainFailure(trail, out)).isTrue();
+    boolean cited = false;
+    for (int k = 0; k < out.size(); k++) {
+      int e = out.get(k);
+      if (trail.variable(e) == c) {
+        assertThat(trail.kind(e)).isEqualTo(AtomicTrail.LE);
+        assertThat(trail.value(e)).isLessThanOrEqualTo(19);
+        cited = true;
+      }
+    }
+    assertThat(cited).isTrue();
+    trail.detach();
   }
 
   // the least cost of the bin packing over all assignments

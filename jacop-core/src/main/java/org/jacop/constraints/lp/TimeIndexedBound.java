@@ -1415,7 +1415,7 @@ public final class TimeIndexedBound extends Constraint
     if (s == null) {
       return false;
     }
-    reason(s, trail, entry, out);
+    reason(s, s.assumed(), trail, entry, out);
     return true;
   }
 
@@ -1430,7 +1430,11 @@ public final class TimeIndexedBound extends Constraint
     if (s == null) {
       return false;
     }
-    reason(s, trail, position, out);
+    // the solve proved the objective at least its bound: a failure is explained by the objective
+    // below that bound, not by the looser limit the solve assumed (core-guided lower bound runs
+    // probe limits below the bound, and the assumed limit there gave a wrong optimum on gbac)
+    long cap = s.bound() == Long.MAX_VALUE ? s.assumed() : Math.min(s.assumed(), s.bound() - 1);
+    reason(s, cap, trail, position, out);
     return true;
   }
 
@@ -1449,15 +1453,16 @@ public final class TimeIndexedBound extends Constraint
     return null;
   }
 
-  // the objective bound a solve assumed, and every root bound it used that is not initial
-  private void reason(Solve s, AtomicTrail trail, int position, EntryList out) {
+  // the objective at most cap (the limit the solve assumed, or below its bound for a failure),
+  // and every root bound the solve used that is not initial
+  private void reason(Solve s, long cap, AtomicTrail trail, int position, EntryList out) {
     if (maximize) {
-      long limit = Math.max(-s.assumed(), s.lo()[0]);
+      long limit = Math.max(-cap, s.lo()[0]);
       if (trail.rootDomain(objective).min() < limit) {
         trail.addBoundReaching(objective, position, true, limit, out);
       }
     } else {
-      long limit = Math.min(s.assumed(), s.hi()[0]);
+      long limit = Math.min(cap, s.hi()[0]);
       if (trail.rootDomain(objective).max() > limit) {
         trail.addBoundReaching(objective, position, false, limit, out);
       }
