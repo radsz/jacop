@@ -37,8 +37,10 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import org.jacop.constraints.DifferenceCycles;
 import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.core.IntVar;
@@ -153,6 +155,112 @@ class DifferenceCyclesTest {
     assertNull(checker.checkFailure(cycles, out));
     assertEquals(1, checker.skipped);
     assertNull(new ExplanationMinimality(trail).minimise(cycles, -1, out));
+    trail.detach();
+  }
+
+  @Test
+  void explainsALiteralWiderThanZeroOneByBothBounds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100);
+    IntVar y = new IntVar(store, "y", 0, 100);
+    IntVar k = new IntVar(store, "k", 0, 2);
+    AtomicTrail trail = new AtomicTrail(store);
+    // k == 1 -> x - y <= -1 and y - x <= -1, as the arcs of two elements indexed by k
+    DifferenceCycles cycles =
+        new DifferenceCycles(
+            new IntVar[] {x, y},
+            new IntVar[] {y, x},
+            new int[] {-1, -1},
+            new IntVar[] {k, k},
+            new int[] {1, 1});
+    store.impose(cycles);
+    assertTrue(store.consistency());
+    store.setLevel(1);
+    k.domain.inMin(1, k, 1);
+    assertTrue(store.consistency());
+    store.setLevel(2);
+    k.domain.inMax(2, k, 1);
+    assertFalse(store.consistency());
+    EntryList out = new EntryList();
+    assertTrue(cycles.explainFailure(trail, out));
+    // k is now within 0..1, but k >= 1 alone does not fix it to 1: k = 2 is still allowed by it
+    Set<Integer> entries = new HashSet<>();
+    for (int i = 0; i < out.size(); i++) {
+      assertEquals("k", trail.variable(out.get(i)).id());
+      entries.add(out.get(i));
+    }
+    assertEquals(2, entries.size());
+    trail.detach();
+  }
+
+  @Test
+  void failsOnACycleWhoseWeightDependsOnAnOffset() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 100);
+    IntVar y = new IntVar(store, "y", 0, 100);
+    IntVar d = new IntVar(store, "d", 0, 10);
+    AtomicTrail trail = new AtomicTrail(store);
+    // y >= x + d, that is x - y <= 0 - d, and y - x <= 3
+    DifferenceCycles cycles =
+        new DifferenceCycles(
+            new IntVar[] {x, y},
+            new IntVar[] {y, x},
+            new int[] {0, 3},
+            new IntVar[] {null, null},
+            new int[] {1, 1},
+            new IntVar[] {d, null},
+            new int[] {1, 0});
+    assertEquals(1, cycles.offsetArcs());
+    store.impose(cycles);
+    assertTrue(store.consistency());
+    store.setLevel(1);
+    d.domain.inMin(1, d, 3);
+    assertTrue(store.consistency());
+    store.setLevel(2);
+    d.domain.inMin(2, d, 4);
+    assertFalse(store.consistency());
+    EntryList out = new EntryList();
+    assertTrue(cycles.explainFailure(trail, out));
+    assertEquals(1, out.size());
+    assertEquals("d", trail.variable(out.get(0)).id());
+    trail.detach();
+    store.removeLevel(2);
+    store.setLevel(1);
+    assertTrue(store.consistency());
+  }
+
+  @Test
+  void copiesKeepTheArcsOfVariablesFixedAfterTheConstraintWasBuilt() {
+    // LcgFuzzTest seed 7049418: x0 is fixed at the root after the constraint is built, so the
+    // explanation checker copies it over x0 = 1; a copy that dropped the arcs of x0 missed the
+    // cycle and reported a sound reason as wrong
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 4);
+    IntVar x2 = new IntVar(store, "x2", -1, 3);
+    IntVar x3 = new IntVar(store, "x3", 0, 3);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    DifferenceCycles cycles =
+        new DifferenceCycles(
+            new IntVar[] {x3, x0, x2, x0, x3},
+            new IntVar[] {x2, x2, x0, x3, x2},
+            new int[] {-2, 1, 1, -2, -1},
+            new IntVar[] {b1, x2, b0, b0, null},
+            new int[] {1, -1, 1, 1, 1},
+            new IntVar[] {null, x3, x0, null, x0},
+            new int[] {0, -1, 1, 0, -1});
+    x0.domain.in(0, x0, 1, 1);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(cycles);
+    assertTrue(store.consistency());
+    store.setLevel(1);
+    b0.domain.inMin(1, b0, 1);
+    assertFalse(store.consistency());
+    EntryList out = new EntryList();
+    assertTrue(cycles.explainFailure(trail, out));
+    ExplanationChecker checker = new ExplanationChecker(trail);
+    assertNull(checker.checkFailure(cycles, out));
+    assertEquals(0, checker.skipped);
     trail.detach();
   }
 
