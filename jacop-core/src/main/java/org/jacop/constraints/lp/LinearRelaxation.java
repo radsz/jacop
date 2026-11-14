@@ -1758,22 +1758,6 @@ public class LinearRelaxation extends Constraint
     return large;
   }
 
-  // a relaxation that has deduced nothing in its first USELESS_SOLVES solves (no bound, no
-  // failure, no infeasibility) is removed: its solves then only cost time (wwtpp-real, celar,
-  // sudoku and the satisfaction models of the Challenge: 0.3 to 7 s in 20 s with not one pruning).
-  // Not with kept solutions, which guide the search. 0 turns the rule off.
-  private static final int USELESS_SOLVES = Integer.getInteger("org.jacop.lp.uselessSolves", 0);
-  private boolean uselessDropped;
-
-  /**
-   * Returns whether the relaxation was removed because its first solves deduced nothing.
-   *
-   * @return whether the relaxation was removed as useless
-   */
-  public boolean uselessDropped() {
-    return uselessDropped;
-  }
-
   // a large relaxation removed after its root solve, which did not bound the objective
   private boolean largeDropped;
 
@@ -2047,9 +2031,6 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void consistency(Store store) {
-    if (uselessDropped) {
-      return;
-    }
     if (large && calls > 0 && store.level > rootLevel && !restarting) {
       // a large relaxation does nothing in search once it is solved: it never prunes there, so
       // the constraints of its rows hold an assignment to them, and checking the ground columns
@@ -2137,17 +2118,6 @@ public class LinearRelaxation extends Constraint
           period *= 2;
         }
       }
-    }
-    if (USELESS_SOLVES > 0
-        && !largeDropped
-        && !keepSolutions
-        && calls >= USELESS_SOLVES
-        && prunings == 0
-        && failures == 0
-        && infeasible == 0
-        && rootPrunings == 0) {
-      uselessDropped = true;
-      return;
     }
     checkGround();
   }
