@@ -5273,7 +5273,31 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
-306. Under free search (-f) the search follows the LP solution
+307. The FlatZinc front end finds bin packing constraints whose items fall
+   into groups that fill every bin with exactly one item: the bin
+   variables of an all_different constraint, as many as there are bins,
+   with values among the bins. For each group it posts the dual
+   viewpoint (redundant modelling with channelling, Cheng, Lee and Wu,
+   "Increasing constraint propagation by redundant modeling: an
+   experience report", Constraints 4(2), 1999): the position of the item
+   each bin gets (Assignment), the weight of that item (ElementInteger)
+   and each load as the sum of these weights, the weights placed for good
+   and the load of the other items. The bin packing constraint bounds a
+   load by all items that may still go into the bin; the sums also see
+   that the bin gets one more item of every group, the lightest at least
+   and the heaviest at most (CP-SAT's presolve tightens the loads the
+   same way). In MiniZinc Challenge team-assignment (one player of each
+   board in every team) under the model's search, which it follows
+   exactly (the same solutions in the same order): data1_6_6 is proved
+   in 4 s instead of 173 s, 2018 data2_4_15 in 86 s (unproved in 600 s),
+   and at 600 s 2022 data3_4_31 reaches 26441 instead of 8363 (CP-SAT
+   9.15 with the model's search 23434); 9 of the 10 instances are better,
+   data3_5_31 is worse at 600 s (22357 instead of 29357) and better at
+   1200 s (32357 instead of 31357). It fires only on
+   team-assignment among the 1,781 Challenge instances of 2008-2026.
+   -Dorg.jacop.fz.binPackingPermutations=false turns it off.
+
+308. Under free search (-f) the search follows the LP solution
    (lcg-lp-branching auto) also for an optimisation problem whose linear
    relaxation is a set partitioning, packing or covering model:
    LinearRelaxation.setRows() holds when every model row other than the
