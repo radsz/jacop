@@ -4771,7 +4771,14 @@ Version 5.0 (unreleased)
    are the same and the speed geomean is 1.04 (rpp21 1.18x, carpet-cutting
    up to 1.48x nodes).
 
-279. A domain declared beyond JaCoP's integer range, which the FlatZinc
+279. JaSAT (CdclSolver) clause headers take three ints instead of four: the
+   saved position of the search for a new watch moves into the free high
+   16 bits of the flags word, so a clause of three literals takes 6 ints
+   instead of 7. Same search (the simplification schedule still
+   counts the old header size); pure SAT runs (CdclMain) are about 2 %
+   faster.
+
+280. A domain declared beyond JaCoP's integer range, which the FlatZinc
    front end narrows to the range, no longer blocks the claim of
    optimality or unsatisfiability when the model shows the narrowing
    harmless. The model's linear rows (int_lin_eq, int_lin_le, int_eq,
@@ -4787,7 +4794,7 @@ Version 5.0 (unreleased)
    0..1000000000) is now proved optimal in 15 s; before, the search
    completed at the optimum and printed no ==========.
 
-280. LCG free search (-f) uses target phases in its activity runs before the
+281. LCG free search (-f) uses target phases in its activity runs before the
    first solution: a decision on an integer variable takes the value that
    variable had in the deepest assignment (longest SAT trail at a conflict)
    reached since the last restart, as CaDiCaL does for Boolean variables
@@ -4801,7 +4808,7 @@ Version 5.0 (unreleased)
    191 s, workforce-alloc 202 131 -> 42 s; pure satisfaction losses on
    monomatch n5 3.8 -> 10.3 s and oocsp racks 030 10 -> 16 s).
 
-281. Lazy clause generation explains the pruning of SymmetricGCC,
+282. Lazy clause generation explains the pruning of SymmetricGCC,
      CardinalityMatrix, Same and UsedBy (entry 274) with their own reasons
      instead of the generic one. The network is rebuilt from the domains
      before the atom with the atom negated; it has no feasible flow, and
@@ -4818,14 +4825,32 @@ Version 5.0 (unreleased)
      from 35 to 7 literals under -f, nodes/s +5.8 % under -f; at 600 s
      the three vrp proofs of -f take 125-208 s instead of 147-500 s.
 
-282. The FlatZinc front end with -a and -cs (complementary search) labels
+283. The FlatZinc front end with -a and -cs (complementary search) labels
    the output variables first and then completes the other variables
    once, as without -cs. Before, -cs labelled every variable under -a and
    printed an output solution again for each assignment of the variables
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
-283. Under --lcg, an all different constraint over as many values as
+284. Search splitting for -p (opt-in, --free-config portfolio-split=N):
+   N LCG threads of the portfolio divide one search tree in place of the
+   last N settings, while the other threads keep searching the whole tree.
+   A part of the tree is a cube of atoms [x >= v], [x = v] over FlatZinc
+   names, which a thread solves under assumptions in branch and bound; a
+   busy thread splits its cube on its first decision below the assumptions
+   when another waits, keeps the decision and gives away its negation
+   (CP-SAT's shared tree workers; C. Chu, C. Schulte and P. J. Stuckey,
+   CP 2009; Cube and Conquer, M. Heule et al., HVC 2011; E. Ehlers and
+   P. J. Stuckey, CPAIOR 2016). Learnt clauses hold without the
+   assumptions, so clause and bound sharing go on. On wide-quick at 240 s
+   with -f -p 4, two split threads beside two portfolio threads were
+   better in 4 families and worse in none in both of two rounds, with
+   optimality proofs about 5 % faster (geometric mean 0.94 and 0.95);
+   four split threads lost proofs that need core-guided or lower-bound
+   search (spot5 28) and were 17 % slower. ExternalPropagator gets
+   notifyTopDecision, called before each decision at the assumption level.
+
+285. Under --lcg, an all different constraint over as many values as
    variables (a permutation, up to 32 variables), whose unfixed variables
    are in no other constraint, becomes clauses of the SAT solver in place
    of its propagator: x[i] = v excludes x[j] = v, and each value is taken
