@@ -440,6 +440,16 @@ public final class LcgSolver implements ExternalPropagator {
   // dichotomic bound search: the relative gap below which it gives way to branch and bound; 0 = off
   private double bisectGap;
 
+  // -Djacop.lcg.bisectUncored=false: an objective that the core-guided phase cannot take (no
+  // linear sum, such as the index of an element, a maximum or a product) keeps branch and bound
+  // with lower-bound runs instead of dichotomic probes of its bound
+  private static final boolean BISECT_UNCORED =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.bisectUncored", Boolean.TRUE.toString()));
+
+  // the bisection runs for an objective the core-guided phase cannot take, until the bound meets
+  // the best solution
+  private boolean uncoredBisection;
+
   /** Statistics: probes of dichotomic bound search. */
   public long bisectProbes;
 
@@ -3082,6 +3092,7 @@ public final class LcgSolver implements ExternalPropagator {
       startProof();
     }
     coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
+    uncoredBisection = false;
     int result;
     // a conflict limit set before bounds the core-guided phase and branch and bound
     conflictCap = sat.conflictLimit();
@@ -3089,6 +3100,15 @@ public final class LcgSolver implements ExternalPropagator {
       if (tree != null) {
         result = solveInTree();
       } else if (bisectGap > 0 && proof == null) {
+        result = minimizeByBisection();
+      } else if (coreSearch == null
+          && coreShare > 0
+          && BISECT_UNCORED
+          && lowerBoundShare > 0
+          && proof == null) {
+        // an objective that is no linear sum, so the core-guided phase cannot take it: dichotomic
+        // probes of its bound until the bound meets the best solution
+        uncoredBisection = true;
         result = minimizeByBisection();
       } else if (coreSearch != null) {
         result = minimizeWithCores();
@@ -3949,7 +3969,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       // after solve the domains are those of level 0
       long lb = Math.max(vars[objective].min(), raised);
-      if (lb >= ub || ub - lb <= bisectGap * Math.abs((double) ub)) {
+      if (lb >= ub || (!uncoredBisection && ub - lb <= bisectGap * Math.abs((double) ub))) {
         // closed, or within the gap: branch and bound from here, which also proves lb >= ub
         return interleaved() ? minimizeWithLowerBoundSearch() : solve();
       }
@@ -3987,6 +4007,16 @@ public final class LcgSolver implements ExternalPropagator {
       reportBound(target + 1L);
       fraction = Math.min(0.5, 2 * fraction);
     }
+  }
+
+  /**
+   * Tells whether the last {@link #minimize} bisected the bound of an objective that the
+   * core-guided phase cannot take.
+   *
+   * @return true when it did
+   */
+  public boolean uncoredBisection() {
+    return uncoredBisection;
   }
 
   /**
