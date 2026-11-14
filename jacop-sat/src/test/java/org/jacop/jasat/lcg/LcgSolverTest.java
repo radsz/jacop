@@ -5099,6 +5099,56 @@ class LcgSolverTest {
   }
 
   /**
+   * After {@link CoreSearch#DECAY_AFTER} of the phase's own work, a rate that falls from the third
+   * to the fourth quarter of the phase is projected as a geometric series: on chessboard3 (2023)
+   * each core cost more than the last, and the linear projection kept the phase for half of a 1200
+   * s run while the bound stayed 13 below the optimum. Before that work, the linear test alone.
+   */
+  @Test
+  void corePhaseStopsWhenItsBoundRateKeepsFalling() {
+    CoreSearch cores = sumCores();
+    long u = CoreSearch.DECAY_AFTER / 4; // a quarter of the work before a falling rate counts
+    long end = 40 * u;
+    cores.lowerBound = 0;
+    cores.start(0);
+    cores.lowerBound = 4;
+    cores.sample(2 * u);
+    cores.lowerBound = 6; // 2 over the third quarter
+    cores.sample(3 * u);
+    cores.lowerBound = 7; // 1 over the last: q = 1/2, at most 1 more in all
+    cores.sample(4 * u);
+    // linearly 1.5 per u, three times over 36 u reaches 162; the falling rate reaches 3 at most
+    assertThat(cores.stalled(4 * u, end, 7 + 20)).isTrue();
+    assertThat(cores.stalled(4 * u, end, 7 + 2)).isFalse();
+    // the same quarters before DECAY_AFTER: the linear test only
+    CoreSearch early = sumCores();
+    early.lowerBound = 0;
+    early.start(0);
+    early.lowerBound = 4;
+    early.sample(u);
+    early.lowerBound = 6;
+    early.sample(3 * u / 2);
+    early.lowerBound = 7;
+    early.sample(2 * u);
+    assertThat(early.stalled(2 * u, 20 * u, 7 + 20)).isFalse();
+  }
+
+  /** The core-guided search of obj = x0 + x1 + x2 over 0..10 each, for the tests of its rates. */
+  private static CoreSearch sumCores() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 30);
+    store.impose(
+        new LinearInt(new IntVar[] {x[0], x[1], x[2], obj}, new int[] {1, 1, 1, -1}, "==", 0));
+    CoreSearch cores = CoreSearch.of(new LcgSolver(store), obj);
+    assertThat(cores).isNotNull();
+    return cores;
+  }
+
+  /**
    * Whether the core-guided phase could reach the objective's root bound: at three times the rate
    * of its lower bound per unit of the solver's work since the mark, within the work given. Before
    * a mark, and once the bound is there, it could.
