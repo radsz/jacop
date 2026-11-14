@@ -4865,10 +4865,18 @@ Version 5.0 (unreleased)
    generation. The FlatZinc front end posts it as a redundant constraint
    on a minimized objective that is a sum of bool2int(array_bool_and)
    over int_eq_reif and int_ne_reif literals, as in the XCSP 2025
-   BlockModeling problems; -Dorg.jacop.fz.conjunctionSum=false turns it
-   off. A linear sum over the indicators counts a term only once all its
-   literals hold, so before the lower bound stayed near zero.
-   BLOCKMODELING_RESULTS
+   BlockModeling problems, when every variable of a literal has at most
+   4 values (-Dorg.jacop.fz.conjunctionSum.maxValues);
+   -Dorg.jacop.fz.conjunctionSum=false turns it off. A linear sum over
+   the indicators counts a term only once all its literals hold, so
+   before the lower bound stayed near zero. On the 8 BlockModeling
+   instances with 2 or 3 blocks, -f at 600 s proves all 8 optima instead
+   of 4 (kansas-02 in 5 s instead of 480 s, kansas-03 83 instead of an
+   unproved 88, karate-02 and karate-03 in 15 s and 548 s instead of
+   unproved, politicalactor-03 in 6 s instead of 408 s, transatlantic-03
+   in 6 s instead of 130 s). With 5 or 10
+   blocks the least costs stay zero until most nodes are placed and the
+   reasons cost more than the bound gains, so it is not posted there.
 
 Version 4.11
 =============
