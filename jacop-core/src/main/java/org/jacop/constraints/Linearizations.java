@@ -1050,13 +1050,17 @@ public final class Linearizations {
     } else if (k == Implies.class) {
       Implies r = (Implies) c;
       reified(LinearForms.of(r.c), r.b, false, out);
-    } else if (k == XplusClteqZImplied.class) {
-      // b -> x + c <= z
+    } else if (k == ImpliesNot.class) {
+      ImpliesNot r = (ImpliesNot) c;
+      reified(LinearForms.of(r.c), r.b, false, 0, out);
+    } else if (k == XplusClteqZImplied.class || k == XplusClteqZImpliedNot.class) {
+      // b -> x + c <= z, or not b -> x + c <= z
       XplusClteqZImplied r = (XplusClteqZImplied) c;
       reified(
           new LinearForm(new IntVar[] {r.x, r.z}, new long[] {1, -1}, -r.c, LinearForm.LE),
           r.b,
           false,
+          r.enforcingValue(),
           out);
     } else if (k == AndBoolSimple.class || k == OrBoolSimple.class) {
       AbstractBoolSimple s = (AbstractBoolSimple) c;
@@ -1369,6 +1373,11 @@ public final class Linearizations {
    * the bounds, gives no row.
    */
   private static void reified(LinearForm f, IntVar b, boolean both, List<LinearForm> out) {
+    reified(f, b, both, 1, out);
+  }
+
+  // b = on -> f, and b = 1 - on -> not f as well when both; on = 0 gives the rows of ImpliesNot
+  private static void reified(LinearForm f, IntVar b, boolean both, int on, List<LinearForm> out) {
     if (f == null || !boolean01(b) || f.vars().length == 0) {
       return;
     }
@@ -1388,26 +1397,26 @@ public final class Linearizations {
     long c = f.c();
     switch (f.relation()) {
       case LinearForm.LE -> {
-        implyLe(f, b, 1, c, most, out);
+        implyLe(f, b, on, c, most, out);
         if (both) {
-          implyGe(f, b, 0, Math.addExact(c, 1), least, out);
+          implyGe(f, b, 1 - on, Math.addExact(c, 1), least, out);
         }
       }
       case LinearForm.GE -> {
-        implyGe(f, b, 1, c, least, out);
+        implyGe(f, b, on, c, least, out);
         if (both) {
-          implyLe(f, b, 0, Math.subtractExact(c, 1), most, out);
+          implyLe(f, b, 1 - on, Math.subtractExact(c, 1), most, out);
         }
       }
       case LinearForm.EQ -> {
-        implyLe(f, b, 1, c, most, out);
-        implyGe(f, b, 1, c, least, out);
+        implyLe(f, b, on, c, most, out);
+        implyGe(f, b, on, c, least, out);
       }
       default -> {
         // x != c: only the negation is linear
         if (both) {
-          implyLe(f, b, 0, c, most, out);
-          implyGe(f, b, 0, c, least, out);
+          implyLe(f, b, 1 - on, c, most, out);
+          implyGe(f, b, 1 - on, c, least, out);
         }
       }
     }

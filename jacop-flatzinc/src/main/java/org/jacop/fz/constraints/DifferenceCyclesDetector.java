@@ -380,6 +380,12 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
 
   // x - y <= c when literal is null or literal == value
   private void difference(IntVar x, IntVar y, long c, IntVar literal, int value) {
+    Support.ControlSubstitution s = literal == null ? null : support.substitutedControl(literal);
+    if (s != null) {
+      // the control was eliminated: its literal stands for it
+      literal = s.to();
+      value = s.negated() ? 1 - value : value;
+    }
     // an arc through a constant is on no cycle of the variables; it never reaches the constraint,
     // so
     // the scratch constants stay out of it

@@ -1614,4 +1614,14 @@ public final class ConstraintFncs {
   public void jacop_on_restart_last_val_bool(SimpleNode n) {
     rc.gen_jacop_on_restart_last_val_int(n);
   }
+
+  /**
+   * Posts the clause {@code a1[0] \/ ... \/ not a2[0] \/ ...} as a bool_clause constraint.
+   *
+   * @param a1 the positive literals.
+   * @param a2 the negative literals.
+   */
+  public void poseClause(IntVar[] a1, IntVar[] a2) {
+    bc.poseClause(a1, a2);
+  }
 }
