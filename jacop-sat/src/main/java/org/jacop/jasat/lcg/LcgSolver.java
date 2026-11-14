@@ -4724,16 +4724,8 @@ public final class LcgSolver implements ExternalPropagator {
     java.util.Set<Var> in = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     java.util.Set<Var> other = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : store.getConstraints()) {
-      if (c instanceof LinearRelaxation) {
+      if (c instanceof LinearRelaxation || definesObjective(c, definition)) {
         continue;
-      }
-      if (ALLDIFF_OBJ && clauseObjective != null) {
-        LinearForm f = LinearForms.of(c);
-        if (f != null
-            && f.relation() == LinearForm.EQ
-            && definition.containsAll(Arrays.asList(f.vars()))) {
-          continue;
-        }
       }
       boolean permutation = isPermutation(c);
       for (Var v : c.arguments()) {
@@ -4744,6 +4736,20 @@ public final class LcgSolver implements ExternalPropagator {
     }
     in.removeAll(other);
     return in;
+  }
+
+  /**
+   * Whether a constraint is a linear form that defines the objective from its terms, with {@link
+   * #ALLDIFF_OBJ}: an equation over variables of the objective's definition only.
+   */
+  private boolean definesObjective(Constraint c, java.util.Set<IntVar> definition) {
+    if (!ALLDIFF_OBJ || clauseObjective == null) {
+      return false;
+    }
+    LinearForm f = LinearForms.of(c);
+    return f != null
+        && f.relation() == LinearForm.EQ
+        && definition.containsAll(Arrays.asList(f.vars()));
   }
 
   /** Whether a constraint is a domain consistent all different over as many values as variables. */

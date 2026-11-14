@@ -63,7 +63,7 @@ public class SmallestSpan<T extends IntVar> implements ComparatorVariable<T> {
    * @return positive if left has higher priority, negative if v has higher priority, 0 if equal.
    */
   public int compare(double left, T v) {
-    return Double.compare(span(v), left);
+    return Double.compare((double) span(v), left);
   }
 
   /**
@@ -85,6 +85,6 @@ public class SmallestSpan<T extends IntVar> implements ComparatorVariable<T> {
    * @return the span of the variable's domain.
    */
   public double metric(T v) {
-    return span(v);
+    return (double) span(v);
   }
 }
