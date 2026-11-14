@@ -194,4 +194,43 @@ class BasisLuTest {
     assertThat(hyperSolves).isGreaterThan(500);
     assertThat(flipHyperSolves).isGreaterThan(500);
   }
+
+  @Test
+  void smallColumnSingletonsOfATriangularBasisArePivotsAtOnce() {
+    // column k < h holds 1e-3 in row k alone; column h + k holds 1 in rows k and h + k: every
+    // column singleton is below the row threshold of its row, and a search that rejects them looks
+    // at all of them again at each of the m steps
+    int h = 20_000;
+    int m = 2 * h;
+    int[][] idx = new int[m][];
+    double[][] val = new double[m][];
+    int[] len = new int[m];
+    for (int k = 0; k < h; k++) {
+      idx[k] = new int[] {k};
+      val[k] = new double[] {1e-3};
+      len[k] = 1;
+      idx[h + k] = new int[] {k, h + k};
+      val[h + k] = new double[] {1, 1};
+      len[h + k] = 2;
+    }
+    BasisLu lu = new BasisLu(m, idx, val, len);
+    // the work of the search and elimination, before the fixed cost per row is added to it
+    assertThat(lu.build - 256L * m).as("factorization work").isLessThan(100L * m);
+    Random rnd = new Random(5);
+    double[] b = new double[m];
+    for (int i = 0; i < m; i++) {
+      b[i] = rnd.nextInt(9) - 4;
+    }
+    double[] y = new double[m];
+    lu.ftran(b.clone(), y);
+    double[] r = b.clone();
+    for (int k = 0; k < m; k++) {
+      for (int e = 0; e < len[k]; e++) {
+        r[idx[k][e]] -= val[k][e] * y[k];
+      }
+    }
+    for (int i = 0; i < m; i++) {
+      assertThat(Math.abs(r[i])).as("residual of row " + i).isLessThan(1e-9);
+    }
+  }
 }
