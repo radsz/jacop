@@ -2543,6 +2543,94 @@ class LcgSolverTest {
   }
 
   /**
+   * Permutations over the terms of the objective's sum become clauses too (sudoku_opt of the
+   * MiniZinc Challenge 2022): on a 3x3 Latin square minimising a signed sum of its cells, split
+   * into two blocks as the FlatZinc front end splits long sums, all six rows and columns become
+   * clauses and the optimum is the one of brute force.
+   */
+  @Test
+  void permutationsOverObjectiveTermsBecomeClauses() {
+    int n = 3;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n * n];
+    int[] sign = new int[n * n];
+    for (int k = 0; k < x.length; k++) {
+      x[k] = new IntVar(store, "x" + k, 1, n);
+      sign[k] = (k / n + k % n) % 2 == 0 ? 1 : -1;
+    }
+    for (int i = 0; i < n; i++) {
+      IntVar[] row = new IntVar[n];
+      IntVar[] col = new IntVar[n];
+      for (int j = 0; j < n; j++) {
+        row[j] = x[i * n + j];
+        col[j] = x[j * n + i];
+      }
+      store.impose(new Alldistinct(row));
+      store.impose(new Alldistinct(col));
+    }
+    // b1 = the signed first row, b2 = the signed rest, obj = b1 + b2
+    IntVar b1 = new IntVar(store, "b1", -n * n, n * n);
+    IntVar b2 = new IntVar(store, "b2", -n * n * n, n * n * n);
+    IntVar obj = new IntVar(store, "obj", -n * n * n, n * n * n);
+    IntVar[] first = new IntVar[n + 1];
+    int[] w1 = new int[n + 1];
+    IntVar[] rest = new IntVar[n * n - n + 1];
+    int[] w2 = new int[n * n - n + 1];
+    for (int k = 0; k < n * n; k++) {
+      if (k < n) {
+        first[k] = x[k];
+        w1[k] = sign[k];
+      } else {
+        rest[k - n] = x[k];
+        w2[k - n] = sign[k];
+      }
+    }
+    first[n] = b1;
+    w1[n] = -1;
+    rest[n * n - n] = b2;
+    w2[n * n - n] = -1;
+    store.impose(new LinearInt(first, w1, "==", 0));
+    store.impose(new LinearInt(rest, w2, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {b1, b2, obj}, new int[] {1, 1, -1}, "==", 0));
+    // brute force over all assignments of the cells
+    int best = Integer.MAX_VALUE;
+    int[] t = new int[n * n];
+    for (int code = 0; code < Math.pow(n, n * n); code++) {
+      int c = code;
+      for (int k = 0; k < t.length; k++) {
+        t[k] = 1 + c % n;
+        c /= n;
+      }
+      if (latin(t, n)) {
+        int sum = 0;
+        for (int k = 0; k < t.length; k++) {
+          sum += sign[k] * t[k];
+        }
+        best = Math.min(best, sum);
+      }
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(best);
+    assertThat(solver.permutationsAsClauses).isEqualTo(2L * n);
+  }
+
+  private static boolean latin(int[] t, int n) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        for (int k = j + 1; k < n; k++) {
+          if (t[i * n + j] == t[i * n + k] || t[j * n + i] == t[k * n + i]) {
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
    * An all different over as many values as variables gets the clauses that each value is taken,
    * and the answers still agree with brute force.
    */

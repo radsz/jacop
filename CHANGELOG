@@ -5481,6 +5481,26 @@ Version 5.0 (unreleased)
    and work-task-variation). The FlatZinc statistics print
    lcgUnkeptReasons and lcgExpandedLiterals.
 
+317. Under --lcg, a permutation (a domain consistent all different over as
+   many values as variables) whose variables are terms of the objective's
+   sum also becomes clauses (item 293): the linear forms that define the
+   objective (its sum and the blocks of a split sum) no longer count as
+   other constraints of its variables
+   (-Djacop.lcg.alldiffClauses.objective=false turns this off). On the
+   25x25 sudokus of sudoku_opt (MiniZinc Challenge 2022), whose objective
+   is a signed sum of all 625 cells, the 75 all different propagators had
+   stayed; with clauses the same fixed search runs about 2x faster
+   (p20 26 -> 11 s, p23 364 -> 203 s; 9 -> 11 of 18 puzzles proved at
+   600 s). It turns on for no instance of the wide benchmark set.
+   New option -Dorg.jacop.fz.firstFailTie=span (off by default) breaks the
+   ties of first_fail between the variables with the fewest values by the
+   smallest max - min + 1 (new comparator org.jacop.search.SmallestSpan),
+   as OR-Tools CP-SAT's CHOOSE_MIN_DOMAIN_SIZE ranks them. The variable
+   chosen still has the smallest domain. On sudoku_opt p23 it gives the
+   tree of CP-SAT's fixed search (668k -> 74k failures, as CP-SAT's 69k);
+   on the 102 wide instances with a first_fail search it makes 18 worse
+   and 9 better at 600 s, so it is not the default.
+
 316. AllDifferentLists(x, except) takes excepted tuples (XCSP3 allDifferent
    over lists with except): two rows may be equal when their tuple is one
    of them. A fixed row with an excepted tuple is not hashed, so it neither
@@ -5510,6 +5530,37 @@ Version 5.0 (unreleased)
    both ways, 0.927 time geomean on them (hoist PU_2_8_1 19.2 -> 4.3 s,
    nside MEDIUM_5_3 3.6 -> 1.9 s, harmony canon 179 -> 117 s); orthorio
    challenge_12 loses its only solution, found at 400 s without the probe.
+
+318. New constraint CostNetworkBound (org.jacop.constraints.cfn): a lower
+   bound of an objective that sums unary and binary cost tables, the form
+   of weighted constraint satisfaction problems (frequency assignment,
+   satellite photograph selection, protein design). At the root the cost
+   network is reparametrised by equivalence-preserving transformations:
+   variables tied by bijective hard constraints (|x - y| = k) are merged,
+   then block coordinate ascent of the dual of the local polytope (MPLP;
+   A. Globerson and T. Jaakkola, NIPS 2007), in scaled integers, so the
+   bound is exact for any rounding, moves costs to the unary functions
+   (soft arc consistency and virtual arc consistency, M. C. Cooper, S. de
+   Givry, M. Sanchez, T. Schiex, M. Zytnicki and T. Werner, Artificial
+   Intelligence 174 (2010) 449-478; H. Montalbano, S. de Givry and G.
+   Katsirelos, arXiv 2509.17706, 2025). During search the bound is node
+   consistency of the reparametrised network with forward checking of
+   its binary costs, and a value whose cost lifts the bound past the
+   objective's other bound is removed; reasons for lazy clause generation
+   cite the removals of the cheaper values (and the values of the fixed
+   neighbours), lifted by the slack. -Dorg.jacop.fz.costNetwork=true
+   (default false) finds such objectives in FlatZinc (tables and
+   expressions over at most two variables per term) and posts the bound
+   when its root bound is above the objective's root bound after the
+   linear relaxation and some cost is binary. On the MiniZinc Challenge
+   proteindesign12 instances at 600 s, -f proves 13 of 15 instead of 9
+   (geometric mean time 0.17 on those both prove) and default search 10
+   of 15 at 240 s instead of 3; on celar graph and scen instances the
+   proven bound rises from 0 to the network's (graph11 2712, scen07
+   21023, graph05 221 = optimum) with default search at 240 s. SPOT5
+   (unary costs only) and CELAR6/7 SUB (root bound 0) are left alone by
+   the gate. Of the 187 optimisation instances of the wide benchmark set,
+   the detector reads cost terms in 52 and 1 passes the gate.
 
 Version 4.11
 =============

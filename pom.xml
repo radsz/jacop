@@ -336,6 +336,7 @@ setup to run configuration. -->
                                 <include>**/StockingCostTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/ConjunctionSumTest.java</include>
+                                <include>**/CostNetworkBoundTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/AtMostOnesTest.java</include>
                                 <include>**/EnergyPrecedenceTest.java</include>
@@ -360,6 +361,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
@@ -574,6 +576,7 @@ setup to run configuration. -->
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/ConjunctionSumTest.java</include>
+                                <include>**/CostNetworkBoundTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/InferredCumulativesTest.java</include>
@@ -591,6 +594,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
@@ -801,6 +805,7 @@ setup to run configuration. -->
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/ConjunctionSumTest.java</include>
+                                <include>**/CostNetworkBoundTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/InferredCumulativesTest.java</include>
@@ -818,6 +823,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
@@ -1026,6 +1032,7 @@ setup to run configuration. -->
                                 <include>**/ReservoirTest.java</include>
                                 <include>**/WeightedCompletionTest.java</include>
                                 <include>**/ConjunctionSumTest.java</include>
+                                <include>**/CostNetworkBoundTest.java</include>
                                 <include>**/SchedulingBoundsTest.java</include>
                                 <include>**/DisjunctiveCliquesTest.java</include>
                                 <include>**/InferredCumulativesTest.java</include>
@@ -1043,6 +1050,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>

@@ -70,6 +70,7 @@ import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.cfn.CostNetworkBound;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -87,6 +88,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.ObjectiveDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -649,8 +651,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       dominanceNogoods(node);
     }
 
+    if (dictionary.costNetwork != null) {
+      if (opt.presolve() == Options.Presolve.OFF && store.consistency()) {
+        costNetworkBound(node);
+      }
+      dictionary.costNetwork = null;
+    }
+
     if (opt.lp()) {
       imposeLinearRelaxation(node);
+    }
+
+    if (costNetworkBound != null) {
+      imposeCostNetworkBound();
     }
 
     if (DecompositionBound.on() && opt.proof() == null) {
@@ -731,6 +744,109 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // what the decomposition bound did, for the statistics
   private DecompositionBound.Outcome decomposition;
+
+  // the cost network bound (-Dorg.jacop.fz.costNetwork=true), for the statistics
+  private CostNetworkBound costNetworkBound;
+
+  private boolean costNetworkPosted;
+
+  private CostNetworkDetector costNetworkDetector;
+
+  /**
+   * Bounds the objective by the cost function network of its unary and binary cost functions
+   * ({@code -Dorg.jacop.fz.costNetwork=true}), see {@link CostNetworkDetector}.
+   *
+   * @param node the solve item.
+   */
+  private void costNetworkBound(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
+      return;
+    }
+    IntVar objective =
+        switch (expr.getType()) {
+          case 0 -> dictionary.getVariable(expr.getIdent());
+          case 1 -> {
+            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+            yield a == null ? null : a[expr.getIndex()];
+          }
+          default -> null;
+        };
+    if (objective == null) {
+      return;
+    }
+    CostNetworkDetector d = dictionary.costNetwork;
+    CostNetworkBound b = d.build(objective, k == 2, dictionary::isOutput, options.debug());
+    costNetworkDetector = d;
+    costNetworkBound = b;
+  }
+
+  /**
+   * Posts the cost network bound when its root bound is above the bound the objective already has
+   * at the root (from the linear relaxation, for example), or always with
+   * -Dorg.jacop.cfn.gate=false.
+   */
+  private void imposeCostNetworkBound() {
+    CostNetworkBound b = costNetworkBound;
+    IntVar z = b.objective();
+    if (!store.consistency()) {
+      return;
+    }
+    long before = b.maximize() ? -(long) z.max() : z.min();
+    b.prepare(store);
+    if (!Boolean.parseBoolean(System.getProperty("org.jacop.cfn.gate", "true"))
+        || b.rootBound > before) {
+      store.impose(b);
+      costNetworkPosted = true;
+    }
+  }
+
+  /** Prints what the cost network bound did. */
+  private void printCostNetworkStatistics() {
+    CostNetworkDetector d = costNetworkDetector;
+    if (d == null || !options.searchStatistics()) {
+      return;
+    }
+    CostNetworkBound b = costNetworkBound;
+    IO.println(
+        "%%%mzn-stat: cfnTerms="
+            + d.terms
+            + "\n%%%mzn-stat: cfnTermsLeft="
+            + d.termsLeft
+            + "\n%%%mzn-stat: cfnBinaryTerms="
+            + d.binaryTerms
+            + "\n%%%mzn-stat: cfnHard="
+            + d.hard
+            + "\n%%%mzn-stat: cfnDetectTime="
+            + d.seconds
+            + (b == null
+                ? ""
+                : "\n%%%mzn-stat: cfnStartBound="
+                    + (b.startBound == Long.MIN_VALUE ? "none" : sign(b.startBound))
+                    + "\n%%%mzn-stat: cfnRootBound="
+                    + (b.rootBound == Long.MIN_VALUE ? "none" : sign(b.rootBound))
+                    + "\n%%%mzn-stat: cfnPosted="
+                    + costNetworkPosted
+                    + "\n%%%mzn-stat: cfnSweeps="
+                    + b.sweeps
+                    + "\n%%%mzn-stat: cfnMerged="
+                    + b.merged
+                    + "\n%%%mzn-stat: cfnPrunings="
+                    + b.prunings
+                    + "\n%%%mzn-stat: cfnTime="
+                    + b.seconds));
+  }
+
+  // a bound of the network (of minus a maximised objective) in the objective's own direction
+  private String sign(long bound) {
+    if (bound == Long.MAX_VALUE) {
+      return "infeasible";
+    }
+    return Long.toString(costNetworkBound.maximize() ? -bound : bound);
+  }
 
   /**
    * Imposes the linear relaxation of the linear constraints of the store as a propagator (--lp),
@@ -4674,6 +4790,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
 
     printLinearRelaxationStatistics();
+    printCostNetworkStatistics();
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
@@ -5232,6 +5349,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
 
     printLinearRelaxationStatistics();
+    printCostNetworkStatistics();
 
     if (lcg != null) {
       printLcgStatistics(interrupted);
