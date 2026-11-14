@@ -225,7 +225,7 @@ class EnforcementInlinerFlatzincTest {
         """;
     String out = run(model, true, "-debug");
     assertTrue(out.contains("enforcement inlining: 1 controls eliminated"), out);
-    assertTrue(out.contains("ImpliesNot"), out);
+    assertTrue(out.contains("XplusClteqZImpliedNot"), out);
     assertEquals(optimum(run(model, false)), optimum(out));
   }
 

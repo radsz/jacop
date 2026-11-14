@@ -61,8 +61,8 @@ import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
-import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusClteqZImplied;
+import org.jacop.constraints.XplusClteqZImpliedNot;
 import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.regular.MultiCostRegular;
@@ -1452,7 +1452,7 @@ public class Support implements ParserTreeConstants {
       XplusClteqZImplied i = (XplusClteqZImplied) c;
       if (i.x != s.to() && i.z != s.to()) {
         activeConverted = true;
-        return new ImpliesNot(s.to(), new XplusClteqZ(i.x, i.c, i.z));
+        return new XplusClteqZImpliedNot(s.to(), i.x, i.c, i.z);
       }
     }
     if (c.arguments().contains(s.from())) {

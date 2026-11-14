@@ -1061,6 +1061,13 @@ public final class Linearizations {
           r.b,
           false,
           out);
+    } else if (k == XplusClteqZImpliedNot.class) {
+      // not b -> x + c <= z
+      XplusClteqZImpliedNot r = (XplusClteqZImpliedNot) c;
+      impliedByZero(
+          new LinearForm(new IntVar[] {r.x, r.z}, new long[] {1, -1}, -r.c, LinearForm.LE),
+          r.b,
+          out);
     } else if (k == AndBoolSimple.class || k == OrBoolSimple.class) {
       AbstractBoolSimple s = (AbstractBoolSimple) c;
       andOr(new IntVar[] {s.a, s.b}, s.result, k == AndBoolSimple.class, out);
