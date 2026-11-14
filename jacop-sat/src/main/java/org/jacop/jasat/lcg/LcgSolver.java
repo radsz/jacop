@@ -3143,8 +3143,19 @@ public final class LcgSolver implements ExternalPropagator {
   // -Djacop.lcg.boundDive=<share>: share of the work left for a search for a solution at the
   // objective's root bound before the core-guided probe, when that bound is above the cores' lower
   // bound; 0 turns it off
-  private static final double BOUND_DIVE_SHARE =
+  private double boundDiveShare =
       Double.parseDouble(System.getProperty("jacop.lcg.boundDive", "0.002"));
+
+  /**
+   * Sets the share of the work left for the search for a solution at the objective's root bound
+   * that runs before the core-guided probe of {@link #minimize} when that bound is above the cores'
+   * lower bound ({@code -Djacop.lcg.boundDive}, default 0.002).
+   *
+   * @param share the share, 0 for no such search
+   */
+  public void setBoundDive(double share) {
+    boundDiveShare = share;
+  }
 
   // -Djacop.lcg.boundDiveConflicts=<n>: the most conflicts of that search
   private static final long BOUND_DIVE_CONFLICTS =
@@ -3157,7 +3168,7 @@ public final class LcgSolver implements ExternalPropagator {
   public long boundDiveSolutions;
 
   /**
-   * Searches, for {@link #BOUND_DIVE_SHARE} of the work left, for a solution whose objective is at
+   * Searches, for {@link #boundDiveShare} of the work left, for a solution whose objective is at
    * its root bound, under an assumption, so that no other solution is kept: when it finds none, the
    * schedule goes on as without it.
    *
@@ -3166,12 +3177,12 @@ public final class LcgSolver implements ExternalPropagator {
   private int diveAtRootBound() {
     long deadline = sat.deadline();
     boundDives++;
-    double[] saved = activity.clone();
-    double savedInc = activityInc;
-    int[] savedTarget = targetValue == null ? null : targetValue.clone();
-    boolean[] savedTargetSet = targetSet == null ? null : targetSet.clone();
-    int savedTargetTrail = targetTrail;
-    setPhaseLimits(BOUND_DIVE_SHARE, deadline);
+    final double[] saved = activity.clone();
+    final double savedInc = activityInc;
+    final int[] savedTarget = targetValue == null ? null : targetValue.clone();
+    final boolean[] savedTargetSet = targetSet == null ? null : targetSet.clone();
+    final int savedTargetTrail = targetTrail;
+    setPhaseLimits(boundDiveShare, deadline);
     sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + BOUND_DIVE_CONFLICTS));
     coreMode = true; // a solution ends the call of the solver without a clause
     try {
@@ -3221,7 +3232,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } else if (coreDelayShare > 0) {
       boolean probeWithoutSolution = false;
-      if (BOUND_DIVE_SHARE > 0
+      if (boundDiveShare > 0
           && coreProbeShare > 0
           && workEnd != Long.MAX_VALUE
           && coreSearch.lowerBound < root[objective].min()) {

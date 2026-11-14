@@ -4850,6 +4850,23 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
+285. Lazy clause generation under -f with a linear objective: when the
+     objective's root bound (from the linear relaxation, say) is above the
+     lower bound the core-guided phase starts from, a search for a solution
+     at that bound, under an assumption, runs before the core-guided probe
+     (0.2 % of the work left, at most 1,000 conflicts). A solution found
+     there is optimal; without one the activity and target phases are
+     restored and the schedule goes on as before. On nfc (Challenge 2022,
+     cyclic staffing over a network flow) the relaxation's bound is the
+     optimum, but the probe delayed branch and bound by 0.67 % of the time
+     limit: at 1200 s the five instances take 0.35-0.46 s instead of
+     2-14 s (CP-SAT proves them at the root too). It fires on 55 of the
+     187 optimisation instances of the wide set and finds the optimum on
+     14-17 of them; at 600 s over two seeds proofs stay at 87 of 110, the
+     proved instances take 0.89x and 0.78x the time (geometric mean),
+     families 3 better / 2 worse and 4 / 1. -Djacop.lcg.boundDive=0 turns
+     it off; statistics lcgBoundDives and lcgBoundDiveSolutions.
+
 Version 4.11
 =============
 

@@ -4810,6 +4810,46 @@ class LcgSolverTest {
   }
 
   /**
+   * When the objective's root bound is above the cores' lower bound, a short search for a solution
+   * at that bound runs before the core-guided probe and ends the search with it: on nfc (Challenge
+   * 2022) the linear relaxation's bound is the optimum, which the probe delayed by 0.67 % of the
+   * time limit.
+   */
+  @Test
+  void solutionAtTheRootBoundBeforeTheCoreProbe() {
+    // dive = true runs with the default
+    for (boolean dive : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 20);
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[0], x[1], x[2], x[3], obj}, new int[] {1, 1, 1, 1, -1}, "==", 0));
+      // the root bound obj >= 7, as from a linear relaxation; the cores start at the terms'
+      // minima, 0
+      store.impose(new XgteqC(obj, 7));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMax<>()), true);
+      solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+      solver.setCoreDelay(0.05, 1_000_000, 0.02);
+      if (!dive) {
+        solver.setBoundDive(0);
+      }
+      solver.setTimeLimit(200);
+      solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(obj)).isEqualTo(7);
+      assertThat(solver.boundDives).isEqualTo(dive ? 1 : 0);
+      assertThat(solver.boundDiveSolutions).isEqualTo(dive ? 1 : 0);
+      // without the search, the probe's cores start from 0 and raise the bound first
+      assertThat(solver.coreSearch().lowerBound > 0).isEqualTo(!dive);
+    }
+  }
+
+  /**
    * When the probe of the core-guided phase stops without a solution of its own and branch and
    * bound after it finds one, the rest of the phase is skipped: it would stop the same way after a
    * third of its time (fast-food, gt-sort and city-position spent minutes on it before branch and
