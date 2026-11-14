@@ -5223,7 +5223,23 @@ Version 5.0 (unreleased)
    from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
    0.54 on those both solve), model search 19 as before (time 0.89).
 
-302. New constraint AllDifferentLists(x): the rows of x are pairwise
+304. Under -f with --lcg, the core-guided phase ends sooner when its lower
+   bound slows down. An extension of the phase now also needs the bound to
+   meet the best solution at its rate over the second half of the phase,
+   not only at its rate since the start, which counts the fast rise from a
+   far initial bound. After 120 s of the phase's own work, the stall test
+   projects a rate that falls from the third to the fourth quarter of the
+   phase as a geometric series instead of linearly. On chessboard3 (MiniZinc
+   Challenge 2023) each core cost more than the last and the phase took
+   about 1,050 s of a 1,200 s run: -f now proves it in 447-473 s (4 runs),
+   where it was unproved at 1,200 s. Of 187 optimisation instances of the
+   wide benchmark set at 600 s, the rules reach 5; javarouting trip_7_2 is proved in
+   255-349 s instead of 284-419 s, kitchen 2026 linear in 177-318 s
+   instead of 194-364 s, the others are unchanged.
+   -Djacop.lcg.coreExtendRecent=false and -Djacop.lcg.coreDecay=false turn
+   the two rules off; -Djacop.lcg.coreDecayAfterMs sets the 120 s.
+
+305. New constraint AllDifferentLists(x): the rows of x are pairwise
    different tuples, the allDifferent constraint over lists of XCSP3
    (Boussemart, Lecoutre, Audemard and Piette, "XCSP3-core", arXiv
    2009.00514, 2020). It hashes the fixed rows and the rows with one
