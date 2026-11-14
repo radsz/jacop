@@ -134,6 +134,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
   /** Graphs with more vertices are not searched. */
   static final int MAX_VERTICES = 2_000_000;
 
+  /** Whether the value symmetry search fixes the variables of the spaces by their colours. */
+  static final boolean VALUE_ANCHORS =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.symmetryValueAnchors", "true"));
+
   /** The largest number of adjacency entries the automorphism search reads. */
   static final long MAX_WORK = 200_000_000L;
 
@@ -613,6 +617,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
     List<Item> items;
     try {
       items = parse(astTree);
+      if (Boolean.getBoolean("symtrace")) {
+        System.err.println(
+            "SYMT parsed " + (clock.getAsLong() - (deadline - maxNanos)) / 1_000_000);
+      }
+
     } catch (Unsupported e) {
       return new Outcome(0, 0, 0, !(e instanceof OutOfTime), e.getMessage());
     } catch (IllegalArgumentException | ClassCastException e) {
@@ -661,6 +670,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
       ranked = reordered;
     }
 
+    if (Boolean.getBoolean("symtrace")) {
+      System.err.println("SYMT values " + (clock.getAsLong() - (deadline - maxNanos)) / 1_000_000);
+    }
     Graph graph = new Graph(goal, null);
     try {
       // a chain of set unions is one n-ary union, whose operands can be exchanged
@@ -672,6 +684,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     } catch (Unsupported e) {
       return new Outcome(
           0, 0, values.posted(), !(e instanceof OutOfTime), e.getMessage(), values.posted(), 0);
+    }
+    if (Boolean.getBoolean("symtrace")) {
+      System.err.println("SYMT built " + (clock.getAsLong() - (deadline - maxNanos)) / 1_000_000);
     }
     int n = graph.size();
     if (n > MAX_VERTICES) {
@@ -1658,6 +1673,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
     if (spaces.isEmpty()) {
       return new ValueOutcome(List.of(), 0, true);
     }
+    if (Boolean.getBoolean("symtrace")) {
+      System.err.println(
+          "SYMT spaces "
+              + spaces.size()
+              + " "
+              + (deadline - clock.getAsLong()) / 1_000_000
+              + " left");
+    }
     Graph graph = new Graph(objective, spaceOf);
     graph.spaces = spaces;
     graph.setSpaceOf = setSpaceOf;
@@ -1669,6 +1692,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
       graph.finish();
     } catch (Unsupported e) {
       return new ValueOutcome(List.of(), 0, !(e instanceof OutOfTime));
+    }
+    if (Boolean.getBoolean("symtrace")) {
+      System.err.println(
+          "SYMT vbuilt "
+              + graph.size()
+              + " "
+              + (deadline - clock.getAsLong()) / 1_000_000
+              + " left");
     }
     if (graph.size() > MAX_VERTICES) {
       return new ValueOutcome(List.of(), 0, true);
@@ -1689,13 +1720,30 @@ final class SymmetryBreaking implements ParserTreeConstants {
         base.add(valueVertices[k][i]);
       }
     }
+    // only generators that fix every variable of the spaces are used, so each of those vertices
+    // gets a colour of its own: the search then runs over the value levels alone, instead of
+    // first individualizing the variables one level at a time and then also searching the
+    // variable levels for symmetries that are thrown away (the group searched is the same)
+    int[] colors = graph.colors();
+    int fresh = Arrays.stream(colors).max().orElse(0) + 1;
+    for (Space s : VALUE_ANCHORS ? spaces : List.<Space>of()) {
+      for (IntVar x : s.anchors()) {
+        colors[graph.varVertex(x)] = fresh++;
+      }
+    }
     GraphAutomorphisms.Result result =
         new GraphAutomorphisms(
-                graph.colors(),
-                graph.adjacency(),
-                base.stream().mapToInt(Integer::intValue).toArray())
+                colors, graph.adjacency(), base.stream().mapToInt(Integer::intValue).toArray())
             .generators(MAX_WORK, Math.min(maxNanos, Math.max(0, deadline - clock.getAsLong())));
 
+    if (Boolean.getBoolean("symtrace")) {
+      System.err.println(
+          "SYMT vsearch "
+              + result.generators().size()
+              + " "
+              + (deadline - clock.getAsLong()) / 1_000_000
+              + " left");
+    }
     boolean[] fixedVertex = new boolean[graph.size()];
     for (Space s : spaces) {
       for (IntVar x : s.anchors()) {
