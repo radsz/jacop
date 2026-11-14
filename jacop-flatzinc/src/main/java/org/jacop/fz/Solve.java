@@ -87,6 +87,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.FloatCid;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
@@ -5419,6 +5420,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         variableSelection = (SelectChoicePoint<T>) floatSelect;
       }
       floatSearch.setSelectChoicePoint((SelectChoicePoint<T>) floatSelect);
+      attachFloatCid(floatSearch, floatSearchVariables);
       floatSearch.setPrintInfo(false);
       if (lastSearch != null) {
         lastSearch.addChildSearch(floatSearch);
@@ -6025,8 +6027,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       label.setInitializeListener(new PrecisionSetting(si.precision));
     }
+    attachFloatCid(label, si.vars());
 
     return label;
+  }
+
+  /**
+   * Adds the 3BCID contractor ({@link FloatCid}) over the float variables of a search when system
+   * property org.jacop.floats.cid is set to "s3b,variablesPerNode".
+   */
+  private void attachFloatCid(DepthFirstSearch<T> label, Var[] vars) {
+    String spec = System.getProperty("org.jacop.floats.cid");
+    if (spec == null || spec.isBlank()) {
+      return;
+    }
+    FloatVar[] floats =
+        Arrays.stream(vars).filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
+    if (floats.length == 0) {
+      return;
+    }
+    String[] p = spec.split(",");
+    FloatCid cid =
+        new FloatCid(
+            store,
+            floats,
+            Integer.parseInt(p[0].trim()),
+            p.length > 1 ? Integer.parseInt(p[1].trim()) : floats.length);
+    if (label.getConsistencyListener() != null) {
+      cid.setChildrenListeners(label.getConsistencyListener());
+    }
+    label.setConsistencyListener(cid);
   }
 
   @SuppressWarnings("unchecked")
