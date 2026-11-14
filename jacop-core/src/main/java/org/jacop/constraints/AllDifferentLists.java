@@ -180,8 +180,8 @@ public class AllDifferentLists extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    int[] cells = positions.get(var);
+  public void queueVariable(int level, Var variable) {
+    int[] cells = positions.get(variable);
     if (cells != null) {
       for (int cell : cells) {
         markDirty(cell / n);
