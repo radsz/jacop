@@ -183,6 +183,7 @@ public class Parser {
 	dict.setNumberOfAllVariables(cg.numberBooleanVariables, cg.numberSetVariables, cg.numberFloatVariables);
 	if (dict.domainsClamped()) {
 	    System.err.println(dict.clampedDomainsWarning());
+	    dict.recordDeclaredDomains();
 	}
     }
 

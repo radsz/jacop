@@ -966,7 +966,8 @@ class FlatzincFrontEndTest {
     // MiniZinc writes computed bounds such as 0..4722438400 for a product (2022
     // arithmetic-target); they were rejected as 32-bit overflows, and 0..1687566400 was taken
     // silently beyond IntDomain.MAX_INT. The domain is narrowed to JaCoP's range, so a completed
-    // search proves nothing about the values cut off.
+    // search proves nothing about the values cut off, unless the model's linear rows bound them
+    // (here x <= 3)
     String fzn =
         """
         var 0..4722438400: x :: output_var;
@@ -975,9 +976,19 @@ class FlatzincFrontEndTest {
         """;
     String[] out = run(fzn);
     assertEquals(0, lastStatus, out[1]);
-    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
+    assertEquals("x = 3;\n----------\n==========\n", out[0]);
     assertTrue(out[1].contains("1 variable domain reaches beyond"), out[1]);
     assertTrue(out[1].contains("(first: x 0..4722438400)"), out[1]);
+    // bounded only through a non-linear constraint: no claim
+    out =
+        run(
+            """
+            var 0..4722438400: x :: output_var;
+            var 0..3: y;
+            constraint int_abs(y, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
 
     // no claim of unsatisfiability: the solutions may lie in the values cut off
     out =
@@ -1012,7 +1023,7 @@ class FlatzincFrontEndTest {
             solve minimize c;
             """);
     assertEquals("c = 2;\ny = 1;\n----------\n==========\n", out[0]);
-    // maximised, the values cut off are the better ones
+    // maximised, the values cut off are the better ones, but c = 2 * y <= 10 bounds them
     out =
         run(
             """
@@ -1021,8 +1032,18 @@ class FlatzincFrontEndTest {
             constraint int_lin_eq([1, -2], [c, y], 0);
             solve maximize c;
             """);
-    assertTrue(out[0].endsWith("c = 10;\ny = 5;\n----------\n"), out[0]);
-    // an array element of the objective's array narrowed too: no claim
+    assertEquals("c = 10;\ny = 5;\n----------\n==========\n", out[0]);
+    // without a row that bounds them: no claim
+    out =
+        run(
+            """
+            var 0..2014326920: c :: output_var;
+            var 1..5: y :: output_var;
+            constraint int_times(y, y, c);
+            solve maximize c;
+            """);
+    assertTrue(out[0].endsWith("c = 25;\ny = 5;\n----------\n"), out[0]);
+    // an array element of the objective's array narrowed too; a[2] <= 4 bounds it
     out =
         run(
             """
@@ -1030,7 +1051,61 @@ class FlatzincFrontEndTest {
             constraint int_le(a[2], 4);
             solve minimize a[1];
             """);
-    assertFalse(out[0].contains("=========="), out[0]);
+    assertTrue(out[0].endsWith("----------\n==========\n"), out[0]);
+  }
+
+  @Test
+  void narrowingShownHarmlessByTheModelsRows() throws IOException {
+    // 2021 connect 0086_02: 325 domains 0..1000000000, bounded through the linear rows with the
+    // objective below the best solution, unused, or only bounded from below as s >= -y / 1000. The
+    // search completed in 15 s at the optimum and could not claim it
+    String[] out =
+        run(
+            """
+            var 0..1000000000: f :: output_var;
+            var 0..1000000000: unused;
+            var 0..1000000000: s;
+            var 0..20: y :: output_var;
+            var 0..1000000000: cost :: output_var;
+            constraint int_le(3, y);
+            constraint int_lin_le([-1, -1000], [y, s], 0);
+            constraint int_lin_le([1, -1], [y, f], 0);
+            constraint int_lin_eq([1, -2, -1], [cost, f, y], 0);
+            solve minimize cost;
+            """);
+    assertEquals("f = 3;\ny = 3;\ncost = 9;\n----------\n==========\n", tail(out[0]));
+    // y = 0 needs s >= 600000000, beyond the narrowed domain: no claim of the optimum 0 cut off
+    out =
+        run(
+            """
+            var 0..2000000000: s :: output_var;
+            var 0..1: y :: output_var;
+            constraint int_lin_le([-1, -600000000], [s, y], -600000000);
+            solve minimize y;
+            """);
+    assertTrue(out[0].endsWith("y = 1;\n----------\n"), out[0]);
+    // four pigeons in three holes, which the search proves, and the narrowed variable unused
+    out =
+        run(
+            """
+            var 0..2000000000: s :: output_var;
+            array [1..4] of var 1..3: p :: output_array([1..4]);
+            constraint int_ne(p[1], p[2]);
+            constraint int_ne(p[1], p[3]);
+            constraint int_ne(p[1], p[4]);
+            constraint int_ne(p[2], p[3]);
+            constraint int_ne(p[2], p[4]);
+            constraint int_ne(p[3], p[4]);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+  }
+
+  // the last solution and the status lines
+  private static String tail(String out) {
+    int end = out.lastIndexOf("----------");
+    int start = out.lastIndexOf("----------", end - 1);
+    return out.substring(start < 0 ? 0 : start + "----------\n".length());
   }
 
   @Test

@@ -47,6 +47,7 @@ import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
+import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
@@ -297,6 +298,12 @@ public class Constraints implements ParserTreeConstants {
       }
 
       support.reportAlldiffChannels();
+      if (dictionary.domainsClamped()) {
+        // reads the rows as declared, to show the narrowing of domains harmless at the end
+        dictionary.setClampedBounds(
+            new ClampedBounds(
+                support, astTree, dictionary.narrowedVariables(), dictionary::declaredBounds));
+      }
       cf.poseCounts();
       cf.poseDiffnProjections();
 
