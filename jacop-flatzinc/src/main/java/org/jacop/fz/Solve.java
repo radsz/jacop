@@ -977,6 +977,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.valueColumns
             + "\n%%%mzn-stat: lpSimplexValueColumns="
             + r.simplexValueColumns()
+            + "\n%%%mzn-stat: lpSetRows="
+            + r.setRows()
             + "\n%%%mzn-stat: lpFreeColumns="
             + r.freeColumns
             + "\n%%%mzn-stat: lpSimplexFreeColumns="
@@ -2658,7 +2660,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // 240 s with it, 65,651 without the relaxation); not for one large by its columns only
     // (rcpsp-wet-diverse j60_19_6, 682 rows and 140,186 columns: no solution with it in 240 s),
     // nor for one with few columns (triangular 2015-2024, 36k-101k rows over 408-782 columns:
-    // worse on 4 of 7 in 600 s with it, better on 2)
+    // worse on 4 of 7 in 600 s with it, better on 2). Under -f also on for a set partitioning,
+    // packing or covering relaxation (LinearRelaxation.setRows) of an optimisation problem, whose
+    // root solution is almost integral: the crew schedules of XCSP 2025 BusScheduling c2 and r5a,
+    // 199 rows over 14,773 columns, prove their optima 29 and 28 in 16-41 s with it, c2 not in 600
+    // s
+    // without and r5a in 306 s
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
@@ -2666,6 +2673,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 || "auto".equals(lpBranching)
                     && (linearRelaxation.simplexValueColumns() > 0
                         || free && linearRelaxation.treeConstraints() > 0
+                        || free
+                            && linearRelaxation.objective() != null
+                            && linearRelaxation.setRows()
                         || free
                             && linearRelaxation.largeByRows()
                             && linearRelaxation.columns() >= LARGE_GUIDE_COLUMNS));

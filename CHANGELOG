@@ -5258,6 +5258,24 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
+306. Under free search (-f) the search follows the LP solution
+   (lcg-lp-branching auto) also for an optimisation problem whose linear
+   relaxation is a set partitioning, packing or covering model:
+   LinearRelaxation.setRows() holds when every model row other than the
+   objective's has unit weights of one sign over 0/1 columns (fixed
+   columns are constants) and there are at most 0.1 rows per column
+   (-Dorg.jacop.lp.setRowsShare). Their root solutions are almost integral
+   and the root bound is often the optimum, as in the LP-based branching
+   of set partitioning solvers (Ryan and Foster, An integer programming
+   approach to scheduling, 1981; Barnhart et al., Branch-and-price,
+   Operations Research 46(3), 1998). XCSP 2025 BusScheduling, 12
+   instances at 600 s: 9 -> 12 optimal (c2 600 -> 16 s, r3 unsolved ->
+   205 s, r5 feasible 30 -> optimal 29 in 91 s, r5a 306 -> 41 s). It turns
+   on for 5 instances of the wide benchmark set (jp-encoding,
+   prize-collecting, hitori, skill-allocation, community-detection) and
+   for 22 MiniZinc Challenge instances of those problems, neutral on both.
+   The FlatZinc statistics print lpSetRows.
+
 Version 4.11
 =============
 
