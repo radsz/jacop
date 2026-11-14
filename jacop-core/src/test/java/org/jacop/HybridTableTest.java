@@ -53,6 +53,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.LinearForm;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMiddle;
 import org.jacop.search.Search;
@@ -727,5 +728,139 @@ class HybridTableTest {
           .isTrue();
     }
     assertThat(found).hasSize(33);
+  }
+
+  /**
+   * The clause rows of tables over 0/1 variables are their prime implicates: each holds for every
+   * allowed tuple, each loses that with any literal left out, and when the table has few of them
+   * the rows allow exactly the tuples of the table (no unit clause remains after the propagation,
+   * which makes the domains arc consistent).
+   */
+  @Test
+  void clauseRowsAreThePrimeImplicatesOfZeroOneTables() {
+    Random random = new Random(11);
+    int checked = 0;
+    for (int trial = 0; trial < TRIALS; trial++) {
+      int n = 2 + random.nextInt(6);
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int fixed = random.nextInt(8);
+        x[i] = new IntVar(store, "x" + i, fixed == 0 ? 1 : 0, fixed == 1 ? 0 : 1);
+      }
+      int k = 1 + random.nextInt(12);
+      int[][] tuples = new int[k][n];
+      for (int[] t : tuples) {
+        for (int i = 0; i < n; i++) {
+          t[i] = random.nextInt(5) == 0 ? -1 : random.nextInt(2);
+        }
+      }
+      HybridTable table = new HybridTable(x, tuples, -1);
+      try {
+        store.impose(table);
+        if (!store.consistency()) {
+          continue;
+        }
+      } catch (FailException _) {
+        continue;
+      }
+      List<int[]> allowed = new ArrayList<>();
+      List<int[]> box = new ArrayList<>();
+      for (int a = 0; a < 1 << n; a++) {
+        int[] v = new int[n];
+        boolean inBox = true;
+        for (int i = 0; i < n; i++) {
+          v[i] = (a >> i) & 1;
+          inBox &= x[i].domain.contains(v[i]);
+        }
+        if (inBox) {
+          box.add(v);
+          if (Arrays.stream(tuples).anyMatch(t -> matches(t, v))) {
+            allowed.add(v);
+          }
+        }
+      }
+      List<LinearForm> rows = table.clauseRows();
+      for (LinearForm row : rows) {
+        assertThat(allowed).allMatch(v -> holds(row, x, v, -1));
+        // prime: with a literal left out, some allowed tuple breaks the row
+        for (int drop = 0; drop < row.vars().length; drop++) {
+          int d = drop;
+          assertThat(allowed).anyMatch(v -> !holds(row, x, v, d));
+        }
+      }
+      if (rows.size() < 32) {
+        long satisfying =
+            box.stream().filter(v -> rows.stream().allMatch(r -> holds(r, x, v, -1))).count();
+        assertThat(satisfying).as(Arrays.deepToString(tuples)).isEqualTo(allowed.size());
+      }
+      checked += rows.isEmpty() ? 0 : 1;
+    }
+    assertThat(checked).isGreaterThan(TRIALS / 4);
+  }
+
+  /**
+   * The reachability table of Fortress (XCSP 2025): a cell that is neither a wall nor free makes
+   * its neighbours not free, the row {@code f_n <= w + f} of the vertex cut relaxation.
+   */
+  @Test
+  void clauseRowsOfTheFortressTableBoundTheNeighbours() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[6];
+    for (int i = 0; i < 6; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    int[][] tuples = {
+      {0, 0, 0, 0, 0, 0},
+      {0, 1, 1, -1, -1, -1},
+      {0, 1, -1, 1, -1, -1},
+      {0, 1, -1, -1, 1, -1},
+      {0, 1, -1, -1, -1, 1},
+      {1, 0, -1, -1, -1, -1}
+    };
+    HybridTable table = new HybridTable(x, tuples, -1);
+    store.impose(table);
+    List<String> rows = new ArrayList<>();
+    for (LinearForm r : table.clauseRows()) {
+      StringBuilder b = new StringBuilder();
+      for (int i = 0; i < r.vars().length; i++) {
+        b.append(r.weights()[i] > 0 ? "+" : "-").append(r.vars()[i].id());
+      }
+      rows.add(b.append(">=").append(r.c()).toString());
+    }
+    // w + f <= 1, n_i <= w + f for each neighbour, f <= sum of the neighbours
+    assertThat(rows)
+        .containsExactlyInAnyOrder(
+            "-x0-x1>=-1",
+            "+x0+x1-x2>=0",
+            "+x0+x1-x3>=0",
+            "+x0+x1-x4>=0",
+            "+x0+x1-x5>=0",
+            "-x1+x2+x3+x4+x5>=0");
+  }
+
+  private static boolean matches(int[] tuple, int[] v) {
+    for (int i = 0; i < v.length; i++) {
+      if (tuple[i] != -1 && tuple[i] != v[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // the row at the values; with drop >= 0, the clause of the row without its literal at drop
+  private static boolean holds(LinearForm row, IntVar[] x, int[] v, int drop) {
+    long sum = 0;
+    long literals = 0;
+    for (int i = 0; i < row.vars().length; i++) {
+      int value = v[Arrays.asList(x).indexOf(row.vars()[i])];
+      sum += row.weights()[i] * value;
+      // the literal of weight 1 is x, that of weight -1 is 1 - x
+      literals += i == drop ? 0 : row.weights()[i] > 0 ? value : 1 - value;
+    }
+    if (drop < 0) {
+      assertThat(sum >= row.c()).isEqualTo(literals >= 1);
+    }
+    return literals >= 1;
   }
 }

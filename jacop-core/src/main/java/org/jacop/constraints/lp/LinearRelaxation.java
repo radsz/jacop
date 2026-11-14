@@ -55,6 +55,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -329,6 +330,9 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
   public int pairCliques;
+
+  /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
+  public int tableClauses;
 
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
@@ -1090,6 +1094,19 @@ public class LinearRelaxation extends Constraint
     // the value encodings of the counting, all-different and element constraints come last: they
     // are tried at the first solve like the other rows, and kept only when they help
     List<LinearForm> ownTried = objective == null ? List.of() : new ArrayList<>(tried);
+    // the clauses of the tables over 0/1 variables, tried with the table rows: on Fortress (walls
+    // that enclose points of a grid) they make the relaxation the vertex cut LP, whose bound is the
+    // fewest walls; without them the tables gave the relaxation no row
+    int tableClauses = 0;
+    if (TABLE_CLAUSES && objective != null) {
+      for (Constraint c : constraints) {
+        if (c instanceof HybridTable h) {
+          List<LinearForm> rows = h.clauseRows();
+          ownTried.addAll(rows);
+          tableClauses += rows.size();
+        }
+      }
+    }
     List<LinearForm> triedRows = new ArrayList<>(valueRows.tried());
     triedRows.addAll(ownTried);
     // the sorting networks of the all-different permutations are tried like the value encodings,
@@ -1124,7 +1141,10 @@ public class LinearRelaxation extends Constraint
       auto = large;
     }
     if (auto
-        && (large || localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
+        && (large
+            || localForms.size() >= SPARSE_ROWS
+            || tableClauses >= SPARSE_ROWS
+            || tooLarge(localForms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
       // larger ones, also those over the dense size cap, which would get no relaxation at all
@@ -1169,6 +1189,7 @@ public class LinearRelaxation extends Constraint
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     r.pairCliques = pairCliques;
+    r.tableClauses = tableClauses;
     r.capacity = separations;
     r.energy = resources;
     r.hall = hall;
@@ -1434,6 +1455,10 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the clause rows of tables over 0/1 variables (HybridTable.clauseRows)
+  private static final boolean TABLE_CLAUSES =
+      !"false".equals(System.getProperty("org.jacop.lp.tableClauseRows"));
 
   // the conflicts of pairs of 0/1 literals merged into clique rows
   private static final boolean PAIR_CLIQUES =
