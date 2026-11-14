@@ -224,22 +224,6 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   private static final Map<String, Spec> SPECS = new HashMap<>();
 
-  // the tables whose tuples the graph reads, so that it finds the permutations of their columns
-  private static final Set<String> TABLES =
-      Set.of(
-          "jacop_table_int",
-          "jacop_table_bool",
-          "jacop_negative_table_int",
-          "jacop_negative_table_bool",
-          "jacop_short_table_int");
-
-  // the most cells of the tuples of a table the graph reads (org.jacop.fz.symmetryTableCells)
-  private static final int MAX_TABLE_CELLS =
-      Integer.getInteger("org.jacop.fz.symmetryTableCells", 100_000);
-
-  // the most cells of a table that gets the vertices of its tuples for itself alone
-  private static final int OWN_TUPLE_CELLS = 256;
-
   static {
     for (String s :
         new String[] {
@@ -2537,8 +2521,6 @@ final class SymmetryBreaking implements ParserTreeConstants {
     private final Map<Var, Integer> otherVertex = new IdentityHashMap<>();
     private final Map<Long, Integer> valueVertex = new HashMap<>();
     private final Set<String> distinct = new HashSet<>();
-    // the column vertices of the tuples of each table read, by the table's key
-    private final Map<String, int[]> tableColumns = new HashMap<>();
     final List<IntVar> vars = new ArrayList<>();
     // the element vertices of each set variable, in increasing order of the elements
     final Map<SetVar, int[]> elementVertices = new IdentityHashMap<>();
@@ -2666,25 +2648,6 @@ final class SymmetryBreaking implements ParserTreeConstants {
           addBag(constraint, prefix + "b" + b + "|", bag, args, constants);
         }
       }
-      if (spec == null && space < 0 && TABLES.contains(name) && arity >= 2) {
-        String table = tableKey(args, array);
-        if (table != null) {
-          // the columns meet the table's tuples, so a symmetry may permute them as the tuples allow
-          grouped[0] = true;
-          grouped[1] = true;
-          constants.add("t=" + table);
-          int[] columns = tableColumns(table, args[1], args[0].length);
-          for (int j = 0; j < args[0].length; j++) {
-            Atom atom = args[0][j];
-            int p = vertex("t|" + prefix + (atom.isConstant() ? "=" + atom.constant() : "_"));
-            edge(constraint, p);
-            edge(p, columns[j]);
-            if (!atom.isConstant()) {
-              edge(p, atomVertex(atom));
-            }
-          }
-        }
-      }
       if (indexed >= 0) {
         // element j belongs to the value offset + j, wherever the value goes
         grouped[indexed] = true;
@@ -2718,93 +2681,6 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       constants.sort(null);
       colorKeys.set(constraint, "c|" + prefix + String.join(";", constants));
-    }
-
-    /**
-     * The key of the tuples of a table whose columns some permutation other than the identity may
-     * map onto each other, or null: tuples given as an array of constants of at most {@link
-     * #MAX_TABLE_CELLS} cells, with two columns holding the same values as often.
-     */
-    private String tableKey(Atom[][] args, boolean[] array) {
-      if (!array[0] || !array[1]) {
-        return null;
-      }
-      int width = args[0].length;
-      Atom[] tuples = args[1];
-      if (width < 2
-          || tuples.length == 0
-          || tuples.length % width != 0
-          || tuples.length > MAX_TABLE_CELLS) {
-        return null;
-      }
-      String key = constantArray(tuples);
-      if (key == null) {
-        return null;
-      }
-      // the values of each column with their counts: a permutation maps a column to one with the
-      // same counts
-      Set<Map<String, Integer>> counts = new HashSet<>();
-      for (int j = 0; j < width; j++) {
-        Map<String, Integer> c = new HashMap<>();
-        for (int t = j; t < tuples.length; t += width) {
-          c.merge(tuples[t].constant(), 1, Integer::sum);
-        }
-        if (!counts.add(c)) {
-          return key + "/" + width;
-        }
-      }
-      return null;
-    }
-
-    /**
-     * The column vertices of a table's tuples, built once per table: a vertex per tuple, joined to
-     * the vertex of each of its (column, value) pairs, joined to the vertex of its column. A
-     * permutation of the column vertices extends to an automorphism exactly when it maps the set of
-     * tuples onto itself.
-     */
-    private int[] tableColumns(String table, Atom[] tuples, int width) {
-      // a small table gets its own copy of the tuples, so that each constraint may have its
-      // columns permuted in its own way (the triples along the rows and along the columns of a
-      // board under a reflection); the tuples of a larger table are read once, and then a
-      // symmetry permutes the columns of all its constraints in the same way
-      if (tuples.length <= OWN_TUPLE_CELLS) {
-        return tuples(table, tuples, width);
-      }
-      int[] columns = tableColumns.get(table);
-      if (columns == null) {
-        columns = tuples(table, tuples, width);
-        tableColumns.put(table, columns);
-      }
-      return columns;
-    }
-
-    private int[] tuples(String table, Atom[] tuples, int width) {
-      int[] columns;
-      columns = new int[width];
-      List<Map<String, Integer>> values = new ArrayList<>();
-      for (int j = 0; j < width; j++) {
-        columns[j] = vertex("tc|" + table);
-        values.add(new HashMap<>());
-      }
-      for (int t = 0; t < tuples.length; t += width) {
-        int tuple = vertex("tt|" + table);
-        for (int j = 0; j < width; j++) {
-          String value = tuples[t + j].constant();
-          int column = columns[j];
-          int literal =
-              values
-                  .get(j)
-                  .computeIfAbsent(
-                      value,
-                      v -> {
-                        int w = vertex("tv|" + table + "|" + v);
-                        edge(column, w);
-                        return w;
-                      });
-          edge(tuple, literal);
-        }
-      }
-      return columns;
     }
 
     /**
