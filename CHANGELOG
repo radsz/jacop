@@ -4865,7 +4865,26 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
-286. The FlatZinc front end proves parity infeasibilities such as
+286. The FlatZinc front end tabulates small flattened expressions: the
+   constraints joined by variables that MiniZinc introduced (not output,
+   not in the solve item, not aliased), over at most three other
+   variables, become one table of the tuples that extend to a solution,
+   when the group holds a division, a modulo or an element over a
+   variable array. These propagate to bounds while their relations have
+   holes all over the box: x mod y = 0 \/ y mod x = 0 flattens into two
+   int_mod, two int_eq_imp and a clause that prune almost nothing between
+   x and y. XCSP3 solvers keep such expressions whole (C. Lecoutre,
+   Constraint Networks, 2009) and Savile Row tabulates such subproblems
+   (Ö. Akgün, I. P. Gent, C. Jefferson, I. Miguel, P. Nightingale and
+   A. Z. Salamon, CP 2018; J. J. Dekker, G. Björdal, M. Carlsson,
+   P. Flener and J.-N. Monette, Constraints 22, 2017). XCSP 2025
+   ChainReaction at 600 s: 9 of 14 solved, 6 before (30-035 proved
+   unsatisfiable in 26 s, where the fastest 2025 solver took 87 s). On
+   the wide set it fires on 4 of 240 instances, within a few percent of
+   before. Off with -a (unless org.jacop.fz.intensionTable=force) and
+   --proof; org.jacop.fz.intensionTable=false turns it off.
+
+287. The FlatZinc front end proves parity infeasibilities such as
    Langford's problem L(2, n) for n = 1, 2 (mod 4) (C. D. Langford, Math.
    Gazette 42, 1958; parity proof R. O. Davies, Math. Gazette 43, 1959)
    before search. An all_different constraint over n variables whose
@@ -4890,7 +4909,7 @@ Version 5.0 (unreleased)
    same results at 600 s). Posting the implied cliques changes 81 and
    slows the solvable LangfordBin instances.
 
-287. Lazy clause generation explains the atoms of nine recent globals
+288. Lazy clause generation explains the atoms of nine recent globals
      with their own reasons instead of the replayed or generic one:
      - MultiInterDistance, Spread, Deviation and StockingCost by the box of
        bounds in which the pruned value has no solution, relaxed bound by
@@ -4931,7 +4950,7 @@ Version 5.0 (unreleased)
      half of the constraints (1.2 million runs with the explanation
      checker, with and without holes: clean).
 
-288. Tables as clauses under LCG (experiment, off by default):
+289. Tables as clauses under LCG (experiment, off by default):
    -Djacop.lcg.tableClauses=direct makes each HybridTable (no restrictions
    between columns, at most 100 tuples, 64 values per column and 5000
    clauses, .tuples/.dom/.limit) clauses of the SAT solver in place of
@@ -4954,7 +4973,7 @@ Version 5.0 (unreleased)
    SportsScheduling-dummy, Eternity, PegSolitaire, Spot5-0412 (2-3x).
    Statistics lcgTablesAsClauses, lcgTableClauses, lcgTableTupleLiterals.
 
-289. The FlatZinc front end divides an objective declared beyond JaCoP's
+290. The FlatZinc front end divides an objective declared beyond JaCoP's
    integer range by the factor its defining equation forces on it,
    instead of narrowing its domain to the range. When the objective z
    occurs in c*z + sum(a_i*x_i) = b, z is a multiple of g = G / gcd(G, c)
@@ -4973,7 +4992,7 @@ Version 5.0 (unreleased)
    order reaches; with -f L10 reaches the optimum 1703450 in 3 of 3 runs
    (before 2551340-3519410) and L15 46758125 (before 103430755).
 
-290. The FlatZinc front end posts the sums implied by linear equalities
+291. The FlatZinc front end posts the sums implied by linear equalities
    with unit coefficients that partition the variables of an
    all_different. When sum(X_1) = s_1, ..., sum(X_k) = s_k split the
    variables of all_different(A) into disjoint blocks (the rows, or the
