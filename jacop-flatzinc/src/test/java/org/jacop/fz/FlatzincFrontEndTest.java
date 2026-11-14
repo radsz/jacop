@@ -3661,6 +3661,29 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void integerOfBool2intInASearchedOutputArrayPrintsAsInteger() throws IOException {
+    // 2016 maximum-dag 25_01 printed distance = [..., true, ...]: the int_search over distance read
+    // the array through getVariableArray, which wrote the Boolean alias of a bool2int integer into
+    // the stored array, and that array is also the output array
+    String model =
+        """
+        var bool: b :: output_var;
+        var 0..1: x :: is_defined_var;
+        var 0..2: y;
+        array [1..2] of var int: a :: output_array([1..2]) = [x, y];
+        constraint bool2int(b, x) :: defines_var(x);
+        constraint int_le(y, x);
+        solve :: int_search(a, input_order, indomain_max, complete) satisfy;
+        """;
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "-a", "--lcg", lcg)[0];
+      assertTrue(out.contains("a = array1d(1..2, [1, 1]);"), out);
+      assertTrue(out.contains("a = array1d(1..2, [0, 0]);"), out);
+      assertFalse(out.contains("true,") || out.contains("false,"), out);
+    }
+  }
+
+  @Test
   void differenceCyclesSurvivePresolveFixingAVariableOfAnArc() throws IOException {
     // fuzz seed 1300110: x <= y or y < x is a conditional cycle, so DifferenceCycles is posted with
     // the arc f1 <= x too. Presolve fixes f1, which only the literals of the constraint name, and
