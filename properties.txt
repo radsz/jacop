@@ -797,7 +797,7 @@ Cuts:
   org.jacop.lp.arcFlow.pivotsPerColumn: with arc-flow blocks, the time
   limit of the first and of later solves (at least the time-indexed
   ones) and the pivots allowed per column (at least
-  org.jacop.lp.timeIndexed.pivots); default 60000 ms, 20000 ms and 20.
+  org.jacop.lp.timeIndexed.pivots); default 30000 ms, 20000 ms and 20.
 
 Row pool and lazy rows:
 

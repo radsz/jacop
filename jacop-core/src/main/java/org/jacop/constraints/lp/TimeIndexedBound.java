@@ -156,7 +156,7 @@ public final class TimeIndexedBound extends Constraint
   // the time of the first and of later solves with arc-flow blocks, in milliseconds, and the
   // pivots per column: the arc-flow programs of gbac (20,000 to 70,000 columns) need 100,000 and
   // more pivots
-  private static final long ARC_FIRST_MS = Long.getLong("org.jacop.lp.arcFlow.firstMs", 60_000L);
+  private static final long ARC_FIRST_MS = Long.getLong("org.jacop.lp.arcFlow.firstMs", 30_000L);
 
   private static final long ARC_SOLVE_MS = Long.getLong("org.jacop.lp.arcFlow.solveMs", 20_000L);
 
