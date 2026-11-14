@@ -113,7 +113,12 @@ public final class Tabling implements Rule {
 
   /** Creates the rule with the default limits: 10 variables and 10,000 tuples. */
   public Tabling() {
-    this(Limits.DEFAULT);
+    // the property jacop.tabling.all=true tabulates every group within the limits, also those
+    // whose own propagation is as strong as their table (for measurements)
+    this(
+        Boolean.getBoolean("jacop.tabling.all")
+            ? new Limits(10, 3, 10_000, 100_000, 2_000_000, false)
+            : Limits.DEFAULT);
   }
 
   Tabling(Limits limits) {
