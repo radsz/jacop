@@ -126,6 +126,12 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
   long sumMin;
   long sumMax;
 
+  /**
+   * An upper bound of the variability of the free terms, the largest one computeInit found: a pass
+   * whose slack is at least this prunes nothing and is skipped. Pruning only lowers variabilities.
+   */
+  long maxVariability;
+
   /** The variables with positive weights that propagation reads are x[0..freePos). */
   int freePos;
 
@@ -518,6 +524,7 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
     long e = 0;
     long min;
     long max;
+    long largest = 0;
     int i = 0;
     // positive weights
     for (; i < pos; i++) {
@@ -527,6 +534,7 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
       f += min;
       e += max;
       variability[i] = max - min;
+      largest = Math.max(largest, max - min);
     }
     // negative weights
     for (; i < l; i++) {
@@ -536,7 +544,9 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
       f += min;
       e += max;
       variability[i] = max - min;
+      largest = Math.max(largest, max - min);
     }
+    maxVariability = largest;
     freePos = pos;
     freeNeg = l;
     sumMin = f;
@@ -549,6 +559,7 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
     long e = f;
     long min;
     long max;
+    long largest = 0;
     int i = 0;
     // positive weights
     int end = dropped.freeFirst;
@@ -564,6 +575,7 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
         dropped.freeFirst = end;
       } else {
         variability[i] = max - min;
+        largest = Math.max(largest, max - min);
         i++;
       }
     }
@@ -583,9 +595,11 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
         dropped.freeSecond = end;
       } else {
         variability[i] = max - min;
+        largest = Math.max(largest, max - min);
         i++;
       }
     }
+    maxVariability = largest;
     freeNeg = end;
     sumMin = f;
     sumMax = e;
@@ -604,6 +618,9 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
 
     if (sumMin > b) {
       throw Store.failException;
+    }
+    if (maxVariability <= b - sumMin) {
+      return;
     }
 
     long min;
@@ -640,6 +657,9 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
 
     if (sumMax < b) {
       throw Store.failException;
+    }
+    if (maxVariability <= sumMax - b) {
+      return;
     }
 
     long min;
@@ -1002,7 +1022,7 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
     if (getClass() != LinearInt.class) {
       return false;
     }
-    if (!lcgForm().explain(trail, entry, out)) {
+    if (!explanationForm().explain(trail, entry, out)) {
       return false;
     }
     addFolded(trail, entry, out);
@@ -1014,7 +1034,7 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
     if (getClass() != LinearInt.class) {
       return false;
     }
-    boolean explained = lcgForm().explainFailure(trail, out);
+    boolean explained = explanationForm().explainFailure(trail, out);
     if (explained) {
       addFolded(trail, trail.size(), out);
     }
@@ -1032,7 +1052,16 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
 
   // the relation over the variables left after folding, for entailment and negation
   private LinearForm form() {
-    return getClass() == LinearInt.class ? lcgForm() : null;
+    return getClass() == LinearInt.class ? explanationForm() : null;
+  }
+
+  /**
+   * Returns the relation over the variables left after folding, as lcgForm does, but over the
+   * constraint's own arrays instead of copies: an explanation reads it only during the call, while
+   * the order of the terms cannot change. Long sums are explained often, so the copies cost.
+   */
+  private LinearForm explanationForm() {
+    return lcgForm(x, a);
   }
 
   /**
@@ -1041,8 +1070,10 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
    * @return the linear form
    */
   LinearForm lcgForm() {
-    IntVar[] vars = Arrays.copyOf(x, l);
-    long[] weights = Arrays.copyOf(a, l);
+    return lcgForm(Arrays.copyOf(x, l), Arrays.copyOf(a, l));
+  }
+
+  private LinearForm lcgForm(IntVar[] vars, long[] weights) {
     return switch (relationType) {
       case EQ -> new LinearForm(vars, weights, b, LinearForm.EQ);
       case LE -> new LinearForm(vars, weights, b, LinearForm.LE);

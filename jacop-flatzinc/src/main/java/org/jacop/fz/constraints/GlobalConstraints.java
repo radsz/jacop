@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -1789,12 +1790,21 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_table_int(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-    int size = v.length;
     int[] tbl = support.mergedTables.remove(node);
     if (tbl == null) {
       tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     }
+    poseTableRows(v, tbl);
+  }
 
+  /**
+   * It posts a positive table given by its rows flattened row by row, as jacop_table_int does.
+   *
+   * @param v the variables.
+   * @param tbl the rows, flattened row by row.
+   */
+  void poseTableRows(IntVar[] v, int[] tbl) {
+    int size = v.length;
     int[][] t = filterFeasibleTuples(tbl, v, size);
     if (t.length == 0) {
       // no tuple is allowed by the domains
@@ -2802,6 +2812,19 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
     support.pose(new LexOrder(x, y, false));
+  }
+
+  void gen_jacop_all_different_lists(SimpleNode node) {
+    IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int rows = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int n = rows == 0 ? 0 : a.length / rows;
+
+    // row i of the matrix is a[i * n .. i * n + n - 1]
+    IntVar[][] x = new IntVar[rows][n];
+    for (int i = 0; i < rows; i++) {
+      System.arraycopy(a, i * n, x[i], 0, n);
+    }
+    support.pose(new AllDifferentLists(x));
   }
 
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {

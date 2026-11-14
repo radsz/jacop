@@ -181,10 +181,6 @@ public class Parser {
 
     private void variablesRead() {
 	dict.setNumberOfAllVariables(cg.numberBooleanVariables, cg.numberSetVariables, cg.numberFloatVariables);
-	if (dict.domainsClamped()) {
-	    System.err.println(dict.clampedDomainsWarning());
-	    dict.recordDeclaredDomains();
-	}
     }
 
     private void modelRead(SimpleNode model) throws Throwable {

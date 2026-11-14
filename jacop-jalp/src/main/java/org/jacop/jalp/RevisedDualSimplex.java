@@ -294,6 +294,8 @@ public final class RevisedDualSimplex {
   // proof of infeasibility on fresh factors
   private boolean[] skipped = {};
   private int skippedRows;
+  private long refreshedFromFactors;
+  private boolean reuseFreshFactors = true;
   private double[] proofAlpha = {};
   private int[] touched = {};
   private int touchedCount;
@@ -442,6 +444,8 @@ public final class RevisedDualSimplex {
     boundsPerturbed = false;
     perturbed = o.perturbed;
     roundOffShare = o.roundOffShare;
+    reuseFreshFactors = o.reuseFreshFactors;
+    refreshedFromFactors = o.refreshedFromFactors;
     seed = o.seed;
     exact = o.exact;
     cleaning = o.cleaning;
@@ -1327,6 +1331,26 @@ public final class RevisedDualSimplex {
     return false;
   }
 
+  // whether the factors are those of the current basis with no update, nothing left out for
+  // singularity and every dual steepest-edge weight known: factorize() would build them again
+  private boolean factorFresh() {
+    return reuseFreshFactors
+        && factorValid
+        && lu.updates() == 0
+        && lu.replacedPos.length == 0
+        && weightsFrom >= m;
+  }
+
+  // false: the skipped-row check factorizes again even when the factors are fresh (tests)
+  void setReuseFreshFactors(boolean reuse) {
+    reuseFreshFactors = reuse;
+  }
+
+  // skipped-row checks done on the factors at hand instead of new ones (tests, stats)
+  long refreshedFromFactors() {
+    return refreshedFromFactors;
+  }
+
   private void refactor() {
     factorize();
     placeNonbasic();
@@ -1372,7 +1396,18 @@ public final class RevisedDualSimplex {
    */
   private boolean skippedRowsHold() {
     clearSkipped();
-    refactor();
+    if (factorFresh()) {
+      // the factors are those a new factorization of this basis would build: only the duals,
+      // the places of the nonbasic columns and the basic values are computed again
+      // (unit-commitment L10, -f: 34,077 of 34,085 checks, 16 % of the run in factorizations)
+      refreshedFromFactors++;
+      computeDuals();
+      placeNonbasic();
+      betaValid = false;
+      updateBeta();
+    } else {
+      refactor();
+    }
     for (int r = leavingRow(); r >= 0; r = leavingRow()) {
       rhoLen = unitRow(r, rho, rhoIdx, rhoLen);
       if (proofHolds(r)) {
