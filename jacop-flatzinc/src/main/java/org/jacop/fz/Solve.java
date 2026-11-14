@@ -3219,6 +3219,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.constraintsAsClauses
             + "\n%%%mzn-stat: lcgConstraintClauses="
             + lcg.constraintClauses
+            + "\n%%%mzn-stat: lcgTablesAsClauses="
+            + lcg.tablesAsClauses
+            + "\n%%%mzn-stat: lcgTableClauses="
+            + lcg.tableClauses
+            + "\n%%%mzn-stat: lcgTableTupleLiterals="
+            + lcg.tableTupleLiterals
             + "\n%%%mzn-stat: lcgPureClauses="
             + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="

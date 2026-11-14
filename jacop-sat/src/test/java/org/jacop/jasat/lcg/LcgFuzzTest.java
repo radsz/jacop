@@ -1816,6 +1816,8 @@ class LcgFuzzTest {
         solver.setChecking(true);
         // reasons of up to 1 to 3 literals stay as clauses
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        // tables as clauses: one run in three by support clauses, one in three direct
+        solver.setTableClauses(new String[] {"none", "support", "direct"}[(int) (seed / 4 % 3)]);
         annotate(solver, model, seed);
         // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT
         boolean refuted = seed % 4 == 3 && !solver.probeRoot(Long.MAX_VALUE);
