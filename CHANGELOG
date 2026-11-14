@@ -5273,7 +5273,20 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
-307. The linear relaxation gets the prime implicates of tables over 0/1
+307. -Dorg.jacop.fz.binaryEqAlias=true (off by default) makes a 0..1
+   integer x an alias of the Boolean b when int_eq_reif(x, 1, b) states
+   x = b, as bool2int(b, x) does, instead of keeping both variables and an
+   equality. MiniZinc writes a Boolean grid used in sums as 0..1 integers
+   channelled to Booleans this way: on ma-path-finding g16_p10_a30
+   (MiniZinc Challenge 2022) 141,000 such pairs, which drops the
+   propagators before search from 462,000 to 325,000. A search variable
+   that becomes an alias is searched as its Boolean, in the integer
+   variable order, and under --lcg the alias gets no literals. At 240 s,
+   -f, 3 seeds on 5 ma-path-finding instances the result is mixed:
+   g24_p20_a10 reaches its optimum in 3 of 3 seeds at about 68 s instead of
+   1 of 3, the others gain or lose with the seed, so it stays off.
+
+308. The linear relaxation gets the prime implicates of tables over 0/1
    variables as clause rows (Quine, "The problem of simplifying truth
    functions", American Mathematical Monthly 59, 1952; McCluskey, Bell
    System Technical Journal 35, 1956): a minimal partial assignment that
@@ -5297,7 +5310,7 @@ Version 5.0 (unreleased)
    Benzenoide-06 get them. -Dorg.jacop.lp.tableClauseRows=false turns
    them off; statistic lpTableClauses.
 
-308. The FlatZinc front end finds bin packing constraints whose items fall
+309. The FlatZinc front end finds bin packing constraints whose items fall
    into groups that fill every bin with exactly one item: the bin
    variables of an all_different constraint, as many as there are bins,
    with values among the bins. For each group it posts the dual
@@ -5321,7 +5334,7 @@ Version 5.0 (unreleased)
    team-assignment among the 1,781 Challenge instances of 2008-2026.
    -Dorg.jacop.fz.binPackingPermutations=false turns it off.
 
-309. Under free search (-f) the search follows the LP solution
+310. Under free search (-f) the search follows the LP solution
    (lcg-lp-branching auto) also for an optimisation problem whose linear
    relaxation is a set partitioning, packing or covering model:
    LinearRelaxation.setRows() holds when every model row other than the

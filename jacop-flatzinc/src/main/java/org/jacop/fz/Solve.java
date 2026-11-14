@@ -2522,6 +2522,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    // an integer variable that became an alias of a Boolean is in no constraint, unless it is an
+    // output, whose equality with the Boolean is posted
+    lcg.setUnusedVariables(
+        dictionary.binaryEqAliases.stream().filter(x -> x.dom().sizeConstraints() == 0).toList());
     if (options.proof() != null) {
       try {
         lcg.setProof(

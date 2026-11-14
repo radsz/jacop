@@ -212,7 +212,9 @@ public class DefaultSearchVars {
       LinkedHashSet<BooleanVar> boolVars,
       Set<IntVar> aliasVars,
       Var v) {
-    if (v instanceof BooleanVar bv) {
+    if (v instanceof BooleanVar bv && dictionary.searchedAsIntegers.contains(bv)) {
+      intVars.add(bv);
+    } else if (v instanceof BooleanVar bv) {
       boolVars.add(bv);
     } else if (((IntVar) v).min() >= 0 && ((IntVar) v).max() <= 1 && aliasVars.contains(v)) {
       boolVars.add((BooleanVar) v);
