@@ -5258,7 +5258,7 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
-304. The linear relaxation gets the prime implicates of tables over 0/1
+306. The linear relaxation gets the prime implicates of tables over 0/1
    variables as clause rows (Quine, "The problem of simplifying truth
    functions", American Mathematical Monthly 59, 1952; McCluskey, Bell
    System Technical Journal 35, 1956): a minimal partial assignment that
