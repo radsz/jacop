@@ -2660,8 +2660,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       SelectChoicePoint<IntVar> first = new SimpleSelect<>(constraintHint.vars, null, hinted);
       annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
-    lcg.setAnnotation(
-        free && Boolean.getBoolean("jacop.lcg.noAnnotation") ? null : annotated, free);
+    lcg.setAnnotation(annotated, free);
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
       // defined variables follow from the others: activity branches on them last. A defined 0/1
       // variable is the truth of a reified constraint, a literal CP-SAT's search branches on as on
