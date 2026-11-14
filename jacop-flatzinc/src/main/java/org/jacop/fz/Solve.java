@@ -931,6 +931,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.limits
             + "\n%%%mzn-stat: lpInfeasible="
             + r.infeasible
+            + "\n%%%mzn-stat: lpUnproven="
+            + r.unproven
             + "\n%%%mzn-stat: lpFailures="
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
@@ -973,6 +975,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.capacityBound
             + "\n%%%mzn-stat: lpCutLimits="
             + r.cutLimits
+            + "\n%%%mzn-stat: lpZeroHalfCuts="
+            + r.zeroHalfCuts
             + "\n%%%mzn-stat: lpMirSearchCuts="
             + r.mirSearchCuts
             + "\n%%%mzn-stat: lpMirSeparations="

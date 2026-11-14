@@ -5421,7 +5421,41 @@ Version 5.0 (unreleased)
    for 22 MiniZinc Challenge instances of those problems, neutral on both.
    The FlatZinc statistics print lpSetRows.
 
-311. Under free search (-f) with lazy clause generation, a variable whose
+314. JaLP can separate zero-half ({0,1/2}-Chvatal-Gomory) cuts in its root
+   cut rounds (Caprara and Fischetti, "{0,1/2}-Chvatal-Gomory cuts",
+   Math. Programming 74, 1996), with the heuristic of Koster, Zymolka
+   and Kutschka ("Algorithms to separate {0,1/2}-Chvatal-Gomory cuts",
+   Algorithmica 55, 2009) that CP-SAT and SCIP use: the integer rows
+   tight within 0.1 at the LP solution are eliminated over GF(2) on
+   bitsets, and each set of rows whose sum is odd on the right side and
+   violated by at least 0.1 is aggregated exactly and rounded with the
+   MIR of MirCut and divisor 2; cuts of efficacy below 0.02 are dropped.
+   It is off by default (-Dorg.jacop.lp.zeroHalf=true turns it on): it
+   fires on 36 of the 240 instances of the wide benchmark set and raises
+   the integer root bound on 10 of them (racp j30 461 -> 467,
+   steiner-tree +1.3 %, triangular 36 -> 34) and lowers it on 2
+   (hoist, unit-commitment). On the 41 wide instances where it changes
+   anything it solved the same instances at 240 s and 600 s and was
+   within the noise on time (geomean 1.03). On TankAllocation1 of XCSP
+   2025 (-f, 600 s) it proves 1600 in 31-35 s and 2591 in 55-132 s (two
+   runs each), which the base proves in neither run. The statistic
+   lpZeroHalfCuts counts the cuts added.
+
+   MIR cuts made in search (-Dorg.jacop.lp.mirSearch=true, off) are now
+   scaled down to weights of at most 2^16
+   (-Dorg.jacop.lp.mirSearchWeight). Their weights reached 2^24 with
+   right sides near 1e10, and on such rows the dense tableau gives Farkas
+   multipliers of about 1e-7 with the wrong sign, so most infeasible LP
+   solves gave no certificate and pruned nothing: on the 60-item
+   knapsack of PortfolioSplitTest search cuts timed out after 90 s; now
+   the optimum takes 18,292 nodes and 9 s (42,356 nodes and 1.5 s
+   without search cuts, so they stay off). -Dorg.jacop.lp.cutWeight
+   caps the root cuts the same way (off by default; 2^20 removes every
+   unproven solve of smelt and maximum-dag, within the noise on time).
+   The statistic lpUnproven counts infeasible LP solves without an
+   integer certificate.
+
+315. Under free search (-f) with lazy clause generation, a variable whose
    chain of linked bound literals [x >= v] -> [x >= u] has reached 64
    literals gets no new links from short reasons: a reason of up to 3
    literals that holds a transient bound literal of such a variable is
@@ -5447,7 +5481,7 @@ Version 5.0 (unreleased)
    and work-task-variation). The FlatZinc statistics print
    lcgUnkeptReasons and lcgExpandedLiterals.
 
-312. AllDifferentLists(x, except) takes excepted tuples (XCSP3 allDifferent
+316. AllDifferentLists(x, except) takes excepted tuples (XCSP3 allDifferent
    over lists with except): two rows may be equal when their tuple is one
    of them. A fixed row with an excepted tuple is not hashed, so it neither
    fails nor prunes; explanations are unchanged. JaCoP's MiniZinc library
