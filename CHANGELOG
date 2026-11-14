@@ -5258,6 +5258,25 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
+306. fzn-jacop searches before an expensive root LP. When the first solve
+   of the linear relaxation is large (its rows and the rows of the other
+   constraints that it tries, times those rows and the columns: at least
+   1,000,000 tableau entries, -Dorg.jacop.fz.lpProbeSize), a fixed search
+   first runs for 200 ms (-Dorg.jacop.fz.lpProbe, 0 turns it off) with the
+   relaxation suspended. If it has not finished by then, it starts again
+   from the root, where the relaxation is solved as without the probe:
+   under LCG by a one-time restart of the SAT core to level 0
+   (CdclSolver.restartAt, LcgSolver.atRootAfter), which keeps the learnt
+   clauses, and otherwise by a RestartSearch of two runs
+   (ProbeCalculator), which keeps the bound of the best solution. Easy
+   instances no longer pay for a root LP and cut rounds that they do not
+   need: nside MEDIUM_5_3 of the 2026 Challenge spent 1.3 s in them and
+   0.04 s in search. Free search (-f) is unchanged. On the 62 instances of
+   the wide benchmark set where it fires, 600 s, fixed search: 33 proved
+   both ways, 0.927 time geomean on them (hoist PU_2_8_1 19.2 -> 4.3 s,
+   nside MEDIUM_5_3 3.6 -> 1.9 s, harmony canon 179 -> 117 s); orthorio
+   challenge_12 loses its only solution, found at 400 s without the probe.
+
 Version 4.11
 =============
 

@@ -4361,10 +4361,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // relaxation, which is then solved at the root as without the probe (0: off). nside MEDIUM_5_3 of
   // the 2026 Challenge: 1.3 s of root LP and cut rounds, and 391 nodes of search, 0.04 s, without
   // it
-  private final long lpProbeMs = Long.getLong("org.jacop.fz.lpProbe", 0);
+  private final long lpProbeMs = Long.getLong("org.jacop.fz.lpProbe", 200);
 
   // -Dorg.jacop.fz.lpProbeSize=n: the smallest tableau of the first solve (rows times rows and
-  // columns, LinearRelaxation.rootTrialSize) that the probe waits for
+  // columns, LinearRelaxation.rootTrialSize) that the probe waits for; below it the root solve is
+  // cheap, and a restart costs more than it saves (multiple-constant-multiplication XU07_28)
   private final long lpProbeSize = Long.getLong("org.jacop.fz.lpProbeSize", 1_000_000);
 
   // the relaxation is suspended until the probe ends
