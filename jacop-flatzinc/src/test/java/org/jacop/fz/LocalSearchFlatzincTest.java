@@ -289,12 +289,57 @@ class LocalSearchFlatzincTest {
     assertTrue(out.contains("=========="), out);
   }
 
+  /**
+   * Fix-propagate-repair dives and lift moves under lazy clause generation: the clauses of the
+   * cover go to the SAT solver, and the dives propagate them in the store, so a complete dive is a
+   * cover; the optimum is still proven.
+   */
+  @Test
+  void optimumUnderLcgWithRepairDives() throws IOException {
+    String out =
+        runWith(
+            "ls=0.5,ls-patience=0,ls-fpr=0.5,ls-lift=1",
+            COVER + "solve minimize cost;\n",
+            "--lcg",
+            "-f",
+            "-a",
+            "--search-statistics",
+            "-t",
+            "5000");
+    assertTrue(out.contains("lsDives="), out);
+    checkOptimum(out);
+  }
+
+  /** The same for satisfaction: the solution a dive or the walk finds is a cover. */
+  @Test
+  void satisfactionUnderLcgWithRepairDives() throws IOException {
+    String out =
+        runWith(
+            "ls=0.5,ls-fpr=0.5",
+            COVER + "constraint int_le(cost,3);\nsolve satisfy;\n",
+            "--lcg",
+            "-f",
+            "--search-statistics",
+            "-t",
+            "5000");
+    assertTrue(out.contains("lsSolutions=1"), out);
+    for (int i = 1; i <= 6; i++) {
+      assertTrue(
+          out.contains("x" + i + " = true;") || out.contains("x" + (i % 6 + 1) + " = true;"),
+          "edge " + i + " uncovered: " + out);
+    }
+  }
+
   private String run(String model, String... options) throws IOException {
+    return runWith("ls=0.5,ls-patience=0", model, options);
+  }
+
+  private String runWith(String config, String model, String... options) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     String[] args = Arrays.copyOf(options, options.length + 3);
     args[options.length] = "--free-config";
-    args[options.length + 1] = "ls=0.5,ls-patience=0";
+    args[options.length + 1] = config;
     args[options.length + 2] = fzn.toString();
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;

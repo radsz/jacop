@@ -318,7 +318,12 @@ public class Options {
                 ls-keys=1|0 (1, the default: the other columns of a table with a key column follow
                 the key as definitions), ls-follow=1|0 (1, the default: a variable of the lists of
                 element constraints list[index] = y that nothing else reads is not moved but takes
-                the value of y most of the element constraints selecting it ask for)
+                the value of y most of the element constraints selecting it ask for),
+                ls-fpr=<share> (fix-propagate-repair dives start local search for this share of its
+                time and replace its restarts: fix and propagate, and on a failure move an earlier
+                fixing of the failed constraint instead of backtracking; default 0 = off),
+                ls-lift=1|0 (lift moves at each assignment that violates no constraint: every
+                variable of the objective moves as far as it goes toward a lower cost; default 0)
             -r <value> --random-seed <value> use value as the random seed for random number generators the solver is using (default 0).
             -b, --bound - use bounds consistency whenever possible;
                 overrides annotation ":: domain" and selects constraints

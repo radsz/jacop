@@ -855,4 +855,149 @@ class LocalSearchTest {
     }
     return violation;
   }
+
+  /**
+   * Fix-propagate-repair dives on 20 queens, each queen preferring row 0: fix-and-propagate with a
+   * one-level backtrack dead-ends, the repair of earlier fixings completes a dive. The store is
+   * left at its level and the values of a complete dive are a solution.
+   */
+  @Test
+  void repairDivesPlaceQueens() {
+    int n = 20;
+    Store store = new Store();
+    IntVar[] q = new IntVar[n];
+    IntVar[] up = new IntVar[n];
+    IntVar[] down = new IntVar[n];
+    java.util.Map<IntVar, Integer> index = new java.util.IdentityHashMap<>();
+    for (int i = 0; i < n; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, n - 1);
+      up[i] = new IntVar(store, "u" + i, 0, 2 * n);
+      down[i] = new IntVar(store, "d" + i, -n, n);
+      store.impose(new XplusCeqZ(q[i], i, up[i]));
+      store.impose(new XplusCeqZ(q[i], -i, down[i]));
+      index.put(q[i], i);
+    }
+    store.impose(new Alldistinct(q));
+    store.impose(new Alldistinct(up));
+    store.impose(new Alldistinct(down));
+    assertTrue(store.consistency());
+    int level = store.level;
+    FixPropagateRepair fpr =
+        new FixPropagateRepair(store, q, index, new java.util.SplittableRandom(11), () -> false);
+    int[] order = new int[n];
+    for (int i = 0; i < n; i++) {
+      order[i] = i;
+    }
+    int[] out = new int[n];
+    boolean complete = false;
+    for (int dive = 0; dive < 20 && !complete; dive++) {
+      complete = fpr.dive(order, new int[n], null, Long.MAX_VALUE, out);
+      assertEquals(level, store.level);
+    }
+    assertTrue(complete, "dives " + fpr.dives + ", repairs " + fpr.repairs);
+    assertTrue(fpr.repairs > 0);
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        assertTrue(out[i] != out[j] && out[i] + i != out[j] + j && out[i] - i != out[j] - j);
+      }
+    }
+  }
+
+  /** Local search started by repair dives in place of its single dive finds 12 queens. */
+  @Test
+  void findsQueensFromRepairDives() {
+    int n = 12;
+    Store store = new Store();
+    IntVar[] q = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, n - 1);
+    }
+    IntVar[] up = new IntVar[n];
+    IntVar[] down = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      up[i] = new IntVar(store, "u" + i, 0, 2 * n);
+      down[i] = new IntVar(store, "d" + i, -n, n);
+      store.impose(new XplusCeqZ(q[i], i, up[i]));
+      store.impose(new XplusCeqZ(q[i], -i, down[i]));
+    }
+    store.impose(new Alldistinct(q));
+    store.impose(new Alldistinct(up));
+    store.impose(new Alldistinct(down));
+    assertTrue(store.consistency());
+    List<int[]> found = new ArrayList<>();
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .order(q)
+            .fixPropagateRepair(0.5)
+            .timeLimit(LIMIT)
+            .seed(3)
+            .onSolution(s -> found.add(new int[] {q[0].value()}))
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    // reported once, from the dive or from the walk
+    assertEquals(1, found.size());
+    assertTrue(ls.getRepairCounts()[0] > 0);
+    int[] v = ls.getSolution(q);
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        assertTrue(v[i] != v[j] && v[i] + i != v[j] + j && v[i] - i != v[j] - j);
+      }
+    }
+  }
+
+  /**
+   * Lift moves on cost = x0 + ... + x9 with x[i] + x[i+1] >= 7 over 0..50: from any feasible
+   * assignment each variable is lowered while its rows hold, the cost following its defining row.
+   * The optimum is 35; the costs reported decrease.
+   */
+  @Test
+  void liftMovesLowerTheCost() {
+    int n = 10;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 50);
+    }
+    for (int i = 0; i + 1 < n; i++) {
+      store.impose(new LinearInt(new IntVar[] {x[i], x[i + 1]}, new int[] {1, 1}, ">=", 7));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 1000);
+    IntVar[] all = Arrays.copyOf(x, n + 1);
+    all[n] = cost;
+    int[] w = new int[n + 1];
+    Arrays.fill(w, 1);
+    w[n] = -1;
+    store.impose(new LinearInt(all, w, "==", 0));
+    assertTrue(store.consistency());
+    List<Integer> costs = new ArrayList<>();
+    // the first assignment is the largest values: the lift moves bring them down
+    IntVar[] hint = x;
+    int[] high = new int[n];
+    Arrays.fill(high, 50);
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .order(x)
+            .minimize(cost)
+            .hint(hint, high)
+            .lift(true)
+            .timeLimit(Duration.ofSeconds(2))
+            .seed(5)
+            .onSolution(s -> costs.add(cost.value()))
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(ls.getRepairCounts()[4] > 0);
+    for (int k = 1; k < costs.size(); k++) {
+      assertTrue(costs.get(k) < costs.get(k - 1), costs.toString());
+    }
+    assertTrue(ls.getCostValue() >= 35);
+    int[] v = ls.getSolution(x);
+    int sum = 0;
+    for (int i = 0; i < n; i++) {
+      sum += v[i];
+      if (i + 1 < n) {
+        assertTrue(v[i] + v[i + 1] >= 7);
+      }
+    }
+    assertEquals(ls.getCostValue(), sum);
+  }
 }

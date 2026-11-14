@@ -3643,6 +3643,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .tableKeys(!"0".equals(options.freeConfig("ls-keys", "1")))
             // the cells of a matrix only element constraints look up follow them
             .follow(!"0".equals(options.freeConfig("ls-follow", "1")))
+            // fix-propagate-repair dives start the walk and replace its restarts (share of its
+            // time)
+            .fixPropagateRepair(Double.parseDouble(options.freeConfig("ls-fpr", "0")))
+            // lift moves of the objective's variables at assignments that violate nothing
+            .lift(!"0".equals(options.freeConfig("ls-lift", "0")))
             // the seed of -r, so that runs repeat and portfolio threads do not share a generator
             .seed(options.getRandomSeed());
     if (symmetry != null && !"0".equals(options.freeConfig("ls-sym", "1"))) {
@@ -3862,7 +3867,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + counts[2]
         + "\n%%%mzn-stat: lsEvaluations="
         + localSearch.getEvaluations()
+        + repairStatistics()
         + scheduleStatistics();
+  }
+
+  // the dives of ls-fpr (dives/complete/repairs/repair moves/variables left out) and the lift moves
+  // of ls-lift
+  private String repairStatistics() {
+    long[] counts = localSearch.getRepairCounts();
+    if (counts[0] == 0 && counts[4] == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lsDives="
+        + counts[0]
+        + "/"
+        + counts[1]
+        + "/"
+        + counts[2]
+        + "/"
+        + counts[3]
+        + "/"
+        + counts[5]
+        + "\n%%%mzn-stat: lsLifts="
+        + counts[4];
   }
 
   // the disjunctive graph of the scheduling search of local search: tasks/machines/iterations

@@ -160,6 +160,8 @@ public final class LocalSearch {
   // constraints not evaluated: a solution is mapped by the canonicalizer onto one that holds them
   private final Set<Constraint> symmetry;
   private final Canonicalizer canonicalizer;
+  private final double fprShare;
+  private final boolean lift;
 
   // the variables, their root domains and current values
   private IntVar[] vars;
@@ -331,6 +333,8 @@ public final class LocalSearch {
       symmetry.addAll(b.symmetry);
     }
     canonicalizer = b.canonicalizer;
+    fprShare = b.fprShare;
+    lift = b.lift;
   }
 
   /**
@@ -389,10 +393,22 @@ public final class LocalSearch {
       store.activityManagement(false);
     }
     relaxations.forEach(r -> r.suspend(true));
+    int base = store.level;
     try {
-      initialAssignment();
-      search();
+      if (fprShare > 0) {
+        imposeExtra();
+        fprPhase();
+      } else {
+        initialAssignment();
+      }
+      if (!(firstSolution && solution != null)) {
+        search();
+      }
     } finally {
+      while (store.level > base) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
       relaxations.forEach(r -> r.suspend(false));
       store.variableWeightManagement = weights;
       store.afcManagement(afc);
@@ -401,6 +417,33 @@ public final class LocalSearch {
       }
     }
     return solution != null ? Status.SATISFIED : Status.UNKNOWN;
+  }
+
+  /**
+   * Imposes the constraints given with {@link Builder#extraConstraints}, which the store does not
+   * have (the clauses that went to the SAT solver under lazy clause generation), at a level of
+   * their own for as long as the search runs, so that the dives propagate them. Removing the level
+   * detaches them. When they fail at once they are left out.
+   */
+  private void imposeExtra() {
+    if (extra == null || extra.isEmpty()) {
+      return;
+    }
+    store.setLevel(store.level + 1);
+    boolean ok;
+    try {
+      for (Constraint c : extra) {
+        // not through the store's impose, which would record them in its model
+        c.impose(store);
+      }
+      ok = store.consistency();
+    } catch (FailException _) {
+      ok = false;
+    }
+    if (!ok) {
+      store.removeLevel(store.level);
+      store.setLevel(store.level - 1);
+    }
   }
 
   /** Stops the search; it may be called from another thread. */
@@ -2452,6 +2495,412 @@ public final class LocalSearch {
     bestAssignment = val.clone();
   }
 
+  // ------------------------------------------------------------ fix-propagate-repair dives
+
+  // the dives of fixPropagateRepair, or null
+  private FixPropagateRepair fpr;
+  // the dive in progress stops at this time
+  private long diveDeadline = Long.MAX_VALUE;
+  // the cost changes in this direction when a variable grows (-1, 0 unknown, 1), and the row that
+  // defines the cost, or -1; computed on first use
+  private int[] objSign;
+  private int objRow = -2;
+  private long lifts;
+
+  private static final int VALUE_ZERO = 0;
+  private static final int VALUE_GOOD = 1;
+  private static final int VALUE_UP = 2;
+  private static final int VALUE_RANDOM = 3;
+  private static final int VALUE_BAD = 4;
+  private static final int VALUE_HINT = 5;
+  private static final int VALUE_INCUMBENT = 6;
+
+  /**
+   * Runs fix-propagate-repair dives for the share of the time limit given to them: for satisfaction
+   * until one of them gives a solution, for optimisation each under the cost bound of the best
+   * solution so far. The best solution, otherwise the dive with the fewest violated constraints,
+   * starts the local search.
+   */
+  private void fprPhase() {
+    fpr =
+        new FixPropagateRepair(
+            store,
+            vars,
+            index,
+            random,
+            () -> expired() || System.currentTimeMillis() >= diveDeadline);
+    long now = System.currentTimeMillis();
+    long span = deadline == Long.MAX_VALUE ? 10_000 : Math.max(0, deadline - now);
+    long phaseEnd = now + (long) (fprShare * span);
+    int[] bestStart = null;
+    int fewest = Integer.MAX_VALUE;
+    for (int t = 0; ; t++) {
+      diveDeadline = phaseEnd;
+      oneDive(t);
+      if (violatedCount == 0) {
+        if (lift && cost != null) {
+          liftMoves();
+        }
+        if (feasible() && firstSolution) {
+          break;
+        }
+      } else if (violatedCount < fewest) {
+        fewest = violatedCount;
+        bestStart = val.clone();
+      }
+      if (expired() || System.currentTimeMillis() >= phaseEnd) {
+        break;
+      }
+    }
+    diveDeadline = Long.MAX_VALUE;
+    int[] from = solution != null ? solution : bestStart;
+    if (from != null) {
+      System.arraycopy(from, 0, val, 0, val.length);
+      evaluateAll();
+      defineAll();
+    }
+    bestAssignment = val.clone();
+  }
+
+  /**
+   * One dive, number t of the rotation over value and variable strategies; its values become the
+   * assignment of the local search.
+   */
+  private void oneDive(long t) {
+    int n = vars.length;
+    int[] kinds = valueKinds();
+    int kind = solution != null && (t & 1) == 1 ? VALUE_INCUMBENT : kinds[(int) (t % kinds.length)];
+    int orderKind = (int) ((t / kinds.length) % 3);
+    int[] pref = new int[n];
+    for (int i = 0; i < n; i++) {
+      pref[i] = preferred(i, kind);
+    }
+    long bound =
+        cost != null && boundRow >= 0 && rhs[boundRow] < Long.MAX_VALUE / 4
+            ? rhs[boundRow]
+            : Long.MAX_VALUE;
+    int[] out = new int[n];
+    fpr.dive(diveOrder(orderKind), pref, cost, bound, out);
+    System.arraycopy(out, 0, val, 0, n);
+    for (int i = 0; i < n; i++) {
+      if (!domains[i].contains(val[i])) {
+        val[i] = nearestToZero(domains[i]);
+      }
+    }
+    repairGroups();
+    evaluateAll();
+    defineAll();
+  }
+
+  // the value strategies of the rotation
+  private int[] valueKinds() {
+    List<Integer> k = new ArrayList<>();
+    k.add(VALUE_ZERO);
+    if (cost != null) {
+      k.add(VALUE_GOOD);
+    }
+    k.add(VALUE_UP);
+    k.add(VALUE_RANDOM);
+    if (cost != null) {
+      k.add(VALUE_BAD);
+    }
+    if (hintVars != null) {
+      k.add(0, VALUE_HINT);
+    }
+    return k.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private Map<IntVar, Integer> hintMap;
+
+  // the preferred value of variable i under a value strategy
+  private int preferred(int i, int kind) {
+    IntDomain d = domains[i];
+    switch (kind) {
+      case VALUE_GOOD, VALUE_BAD -> {
+        int sign = objectiveSign(i) * (kind == VALUE_BAD ? -1 : 1);
+        if (sign > 0) {
+          return d.min();
+        }
+        if (sign < 0) {
+          return d.max();
+        }
+        return nearestToZero(d);
+      }
+      case VALUE_UP -> {
+        return d.max();
+      }
+      case VALUE_RANDOM -> {
+        return d.getElementAt(random.nextInt(d.getSize()));
+      }
+      case VALUE_HINT -> {
+        if (hintMap == null) {
+          hintMap = new IdentityHashMap<>();
+          for (int k = 0; k < hintVars.length; k++) {
+            hintMap.put(hintVars[k], hintValues[k]);
+          }
+        }
+        Integer h = hintMap.get(vars[i]);
+        return h != null ? h : nearestToZero(d);
+      }
+      case VALUE_INCUMBENT -> {
+        return solution[i];
+      }
+      default -> {
+        return nearestToZero(d);
+      }
+    }
+  }
+
+  /**
+   * The variables in the order a dive fixes them: those of the given order first (as given, most
+   * constrained first, or shuffled), then the others as found, so that variables defined by others
+   * come after them.
+   */
+  private int[] diveOrder(int kind) {
+    int n = vars.length;
+    int[] o = new int[n];
+    for (int i = 0; i < n; i++) {
+      o[i] = i;
+    }
+    int head = orderCount > 0 ? orderCount : n;
+    if (kind == 1) {
+      Integer[] h = new Integer[head];
+      for (int i = 0; i < head; i++) {
+        h[i] = i;
+      }
+      Arrays.sort(h, (a, b) -> Integer.compare(occ[b].length, occ[a].length));
+      for (int i = 0; i < head; i++) {
+        o[i] = h[i];
+      }
+    } else if (kind == 2) {
+      for (int i = head - 1; i > 0; i--) {
+        int j = random.nextInt(i + 1);
+        int x = o[i];
+        o[i] = o[j];
+        o[j] = x;
+      }
+    }
+    return o;
+  }
+
+  // the direction in which a growth of variable i moves the cost: 1, -1, or 0 when not known
+  private int objectiveSign(int i) {
+    if (objRow == -2) {
+      computeObjective();
+    }
+    return objSign[i];
+  }
+
+  /**
+   * Finds the row that defines the cost (a linear equation in which the cost has coefficient 1 or
+   * -1) and the sign of each variable in it, carried down through the linear definitions of the
+   * variables it reads.
+   */
+  private void computeObjective() {
+    int n = vars.length;
+    objSign = new int[n];
+    objRow = -1;
+    if (cost == null) {
+      return;
+    }
+    objSign[costIndex] = 1;
+    long ac = 0;
+    for (int c = 0; c < linearCount && objRow < 0; c++) {
+      if (rel[c] != EQ || enforcer[c] >= 0 || c == boundRow) {
+        continue;
+      }
+      for (int k = 0; k < scope[c].length; k++) {
+        if (scope[c][k] == costIndex && Math.abs(coef[c][k]) == 1) {
+          objRow = c;
+          ac = coef[c][k];
+          break;
+        }
+      }
+    }
+    if (objRow < 0) {
+      return;
+    }
+    // cost = (rhs - rest) * ac: a variable with coefficient a moves it by -a * ac
+    for (int k = 0; k < scope[objRow].length; k++) {
+      int x = scope[objRow][k];
+      if (x != costIndex) {
+        objSign[x] = addSign(objSign[x], Long.signum(-coef[objRow][k] * ac));
+      }
+    }
+    // the definitions in reverse order: a defined variable passes its sign to what it reads
+    for (int t = topological.length - 1; t >= 0; t--) {
+      int d = topological[t];
+      int y = defOut[d];
+      if (objSign[y] == 0 || objSign[y] == 2 || defKind[d] != LINEAR_DEFINITION) {
+        continue;
+      }
+      int c = defRow[d];
+      for (int k = 0; k < scope[c].length; k++) {
+        int x = scope[c][k];
+        if (x != y) {
+          objSign[x] = addSign(objSign[x], objSign[y] * Long.signum(-coef[c][k] * defCoef[d]));
+        }
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      if (objSign[i] == 2) {
+        objSign[i] = 0;
+      }
+    }
+  }
+
+  // signs met on two paths: 2 when they disagree
+  private static int addSign(int old, int s) {
+    if (old == 0 || old == s) {
+      return s;
+    }
+    return 2;
+  }
+
+  /**
+   * Lift moves of Local-MIP at an assignment that violates no constraint: each variable of the
+   * objective moves as far as it can in the direction that lowers the cost (doubling the step, then
+   * halving it) while no constraint becomes violated, with the cost following its defining row.
+   * Sweeps repeat while one of them lowers the cost.
+   */
+  private void liftMoves() {
+    if (objRow == -2) {
+      computeObjective();
+    }
+    List<Integer> cands = new ArrayList<>();
+    for (int i = 0; i < vars.length; i++) {
+      if (i != costIndex && objSign[i] != 0 && defOf[i] < 0 && !fixedForMoves(i) && !grouped(i)) {
+        cands.add(i);
+      }
+    }
+    if (objRow < 0 && defOf[costIndex] < 0 && !fixedForMoves(costIndex)) {
+      // no row defines the cost: it is bounded by other constraints, lower it alone
+      cands.add(costIndex);
+    }
+    if (cands.isEmpty()) {
+      return;
+    }
+    int[] cs = cands.stream().mapToInt(Integer::intValue).toArray();
+    for (int sweep = 0; sweep < 32 && !expired(); sweep++) {
+      boolean improved = false;
+      int offset = random.nextInt(cs.length);
+      for (int t = 0; t < cs.length; t++) {
+        int i = cs[(offset + t) % cs.length];
+        if (liftOne(i)) {
+          improved = true;
+        }
+        if ((t & 63) == 63 && expired()) {
+          return;
+        }
+      }
+      if (!improved) {
+        return;
+      }
+    }
+  }
+
+  // lifts variable i: the furthest value in the improving direction that keeps every constraint
+  private boolean liftOne(int i) {
+    int dir = i == costIndex ? -1 : -objSign[i];
+    IntDomain d = domains[i];
+    int start = val[i];
+    int good = start;
+    long step = 1;
+    int bad = Integer.MIN_VALUE;
+    while (true) {
+      long target = good + dir * step;
+      int t = snap(d, target, dir);
+      if (t == good) {
+        break;
+      }
+      if (tryLift(i, t)) {
+        good = t;
+        step *= 2;
+      } else {
+        bad = t;
+        break;
+      }
+    }
+    // halve between the last value that held and the first that did not
+    while (bad != Integer.MIN_VALUE && Math.abs((long) bad - good) > 1) {
+      long mid = good + ((long) bad - good) / 2;
+      int t = snap(d, mid, dir);
+      if (t == good || t == bad) {
+        break;
+      }
+      if (tryLift(i, t)) {
+        good = t;
+      } else {
+        bad = t;
+      }
+    }
+    return good != start;
+  }
+
+  // the value of the domain nearest to target, not beyond it in direction dir
+  private static int snap(IntDomain d, long target, int dir) {
+    if (target <= d.min()) {
+      return d.min();
+    }
+    if (target >= d.max()) {
+      return d.max();
+    }
+    int t = (int) target;
+    if (d.contains(t)) {
+      return t;
+    }
+    return dir < 0 ? d.nextValue(t) : d.previousValue(t);
+  }
+
+  /** Moves variable i to v and the cost to follow its row; keeps it if all holds and cost fell. */
+  private boolean tryLift(int i, int v) {
+    int old = val[i];
+    int costBefore = val[costIndex];
+    move(i, v);
+    boolean ok = true;
+    if (objRow >= 0 && i != costIndex) {
+      long ac = coefOf(objRow, costIndex);
+      long rest = lhs[objRow] - ac * val[costIndex];
+      long c = (rhs[objRow] - rest) * ac;
+      if (c < Integer.MIN_VALUE || c > Integer.MAX_VALUE || !domains[costIndex].contains((int) c)) {
+        ok = false;
+      } else if (c != val[costIndex]) {
+        move(costIndex, (int) c);
+      }
+    }
+    ok = ok && violatedCount == 0 && val[costIndex] < costBefore;
+    if (!ok) {
+      if (val[costIndex] != costBefore) {
+        move(costIndex, costBefore);
+      }
+      move(i, old);
+      return false;
+    }
+    lifts++;
+    return true;
+  }
+
+  private long coefOf(int c, int i) {
+    for (int k = 0; k < scope[c].length; k++) {
+      if (scope[c][k] == i) {
+        return coef[c][k];
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Returns the dives of {@link Builder#fixPropagateRepair}, those that fixed every variable, the
+   * repairs, the repair moves, the lift moves and the variables dives left out.
+   *
+   * @return dives, complete dives, repairs, repair moves, lift moves, variables left out.
+   */
+  public long[] getRepairCounts() {
+    return fpr == null
+        ? new long[] {0, 0, 0, 0, lifts, 0}
+        : new long[] {fpr.dives, fpr.complete, fpr.repairs, fpr.repairMoves, lifts, fpr.skipped};
+  }
+
   private static int nearestToZero(IntDomain d) {
     if (d.min() >= 0) {
       return d.min();
@@ -2897,6 +3346,9 @@ public final class LocalSearch {
         }
       }
       if (violatedCount == 0) {
+        if (lift && cost != null) {
+          liftMoves();
+        }
         if (feasible()) {
           if (firstSolution) {
             return;
@@ -3497,11 +3949,17 @@ public final class LocalSearch {
   // starts again from the best assignment of this round, with some variables changed at random
   private void restart() {
     restarts++;
-    int[] from = solution != null && random.nextBoolean() ? solution : bestAssignment;
-    System.arraycopy(from, 0, val, 0, val.length);
     for (int k = 0; k < m; k++) {
       weight[k] = 1 + (weight[k] - 1) * 0.5;
     }
+    if (fpr != null) {
+      // a dive in place of a random perturbation
+      diveDeadline = Long.MAX_VALUE;
+      oneDive(fpr.dives);
+      return;
+    }
+    int[] from = solution != null && random.nextBoolean() ? solution : bestAssignment;
+    System.arraycopy(from, 0, val, 0, val.length);
     evaluateAll();
     perturb();
   }
@@ -3813,6 +4271,8 @@ public final class LocalSearch {
     private boolean follow = true;
     private Collection<? extends Constraint> symmetry = List.of();
     private Canonicalizer canonicalizer;
+    private double fprShare;
+    private boolean lift;
 
     private Builder(Store store) {
       this.store = store;
@@ -4056,6 +4516,36 @@ public final class LocalSearch {
      */
     public Builder sharedBound(IntSupplier bound) {
       this.sharedBound = bound;
+      return this;
+    }
+
+    /**
+     * Starts the local search with fix-propagate-repair dives ({@link FixPropagateRepair};
+     * Salvagnin, Roberti and Fischetti, Mathematical Programming Computation 17, 2025) in place of
+     * its single fix-and-propagate dive, and replaces its random restarts by such dives. The dives
+     * rotate over variable orders and preferred values; for optimisation each one bounds the cost
+     * below the best solution, and a dive may follow the best solution's values.
+     *
+     * @param share the part of the time limit the first dives may take; 0 (the default) turns them
+     *     off.
+     * @return this builder.
+     */
+    public Builder fixPropagateRepair(double share) {
+      this.fprShare = share;
+      return this;
+    }
+
+    /**
+     * Makes lift moves at every assignment that violates no constraint, before it is reported (Lin,
+     * Zou and Cai, "Local-MIP: Efficient local search for mixed integer programming", CP 2024):
+     * each variable of the objective is moved as far as it goes in the direction that improves the
+     * cost without violating any constraint, the cost following its defining row.
+     *
+     * @param on whether to make lift moves (off by default).
+     * @return this builder.
+     */
+    public Builder lift(boolean on) {
+      this.lift = on;
       return this;
     }
 
