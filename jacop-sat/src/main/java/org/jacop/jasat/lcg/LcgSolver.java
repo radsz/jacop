@@ -5053,7 +5053,32 @@ public final class LcgSolver implements ExternalPropagator {
         targetSet[i] = true;
       }
     }
+    if (TARGET_BEST > 0 && assigned > bestTrail) {
+      bestTrail = assigned;
+      if (bestValue == null) {
+        bestValue = new int[vars.length];
+        bestSet = new boolean[vars.length];
+      }
+      for (int i = 0; i < bestValue.length; i++) {
+        IntVar x = vars[i];
+        bestSet[i] = x != null && x.singleton();
+        if (bestSet[i]) {
+          bestValue[i] = x.value();
+        }
+      }
+    }
   }
+
+  // every this many restarts the target becomes the values of the longest trail seen so far, as in
+  // the best rephasing of CaDiCaL (Biere, CaDiCaL entering the SAT Race 2019; Biere and Fleury,
+  // Chasing
+  // Target Phases, POS 2020); 0 never; -Djacop.lcg.targetBest
+  static final int TARGET_BEST = Integer.getInteger("jacop.lcg.targetBest", 1);
+
+  private int[] bestValue;
+  private boolean[] bestSet;
+  private int bestTrail;
+  private int targetRestarts;
 
   @Override
   public void notifyBacktrack(int level) {
@@ -5259,6 +5284,10 @@ public final class LcgSolver implements ExternalPropagator {
       exchangeShared();
     }
     targetTrail = 0;
+    if (TARGET_BEST > 0 && bestValue != null && ++targetRestarts % TARGET_BEST == 0) {
+      System.arraycopy(bestValue, 0, targetValue, 0, bestValue.length);
+      System.arraycopy(bestSet, 0, targetSet, 0, bestSet.length);
+    }
     boolean improved = improvedInRun;
     improvedInRun = false;
     if (keepImprovingRun && improved) {

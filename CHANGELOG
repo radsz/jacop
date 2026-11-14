@@ -5152,6 +5152,21 @@ Version 5.0 (unreleased)
    open-stacks). -Djacop.lcg.alldiffClauses=false turns it off; statistic
    lcgPermutationsAsClauses.
 
+300. The target phases of LCG free search (entry 280) are reset at every
+   restart to the values of the longest SAT trail at a conflict seen so far
+   in the search, instead of being kept from the run before: the best
+   rephasing of CaDiCaL (A. Biere, "CaDiCaL, Lingeling, Plingeling,
+   Treengeling and YalSAT Entering the SAT Race 2019"; A. Biere, M. Fleury,
+   "Chasing Target Phases", Pragmatics of SAT 2020). On the 99 of 240
+   wide-set instances where target phases fire, at 600 s with -f, 75 -> 74
+   solved, 10 instances better and 5 worse, 4 families better and 2 worse,
+   and the time geomean on the 74 instances solved by both is 0.940
+   (vrplc9_5_10_s2 113 -> 25 s, sudoku_fixed p28 28 -> 9 s,
+   traveling-tppv circ20fnonbal 24 -> 12 s, oocsp racks 030 12 -> 7 s;
+   community-detection Sampson s10 k3, 264 or 558 s in base runs, is not
+   proved in 600 s, workforce-alloc 202 55 -> 139 s).
+   -Djacop.lcg.targetBest=N resets every N restarts, 0 never (default 1).
+
 Version 4.11
 =============
 
