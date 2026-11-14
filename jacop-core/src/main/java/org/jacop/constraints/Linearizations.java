@@ -1050,6 +1050,9 @@ public final class Linearizations {
     } else if (k == Implies.class) {
       Implies r = (Implies) c;
       reified(LinearForms.of(r.c), r.b, false, out);
+    } else if (k == ImpliesNot.class) {
+      ImpliesNot r = (ImpliesNot) c;
+      impliedByZero(LinearForms.of(r.c), r.b, out);
     } else if (k == XplusClteqZImplied.class) {
       // b -> x + c <= z
       XplusClteqZImplied r = (XplusClteqZImplied) c;
@@ -1409,6 +1412,38 @@ public final class Linearizations {
           implyLe(f, b, 0, c, most, out);
           implyGe(f, b, 0, c, least, out);
         }
+      }
+    }
+  }
+
+  // b = 0 -> f, the rows of ImpliesNot
+  private static void impliedByZero(LinearForm f, IntVar b, List<LinearForm> out) {
+    if (f == null || !boolean01(b) || f.vars().length == 0) {
+      return;
+    }
+    for (IntVar v : f.vars()) {
+      if (v == b) {
+        return;
+      }
+    }
+    long least = 0;
+    long most = 0;
+    for (int i = 0; i < f.vars().length; i++) {
+      long w = f.weights()[i];
+      IntVar v = f.vars()[i];
+      least = Math.addExact(least, Math.multiplyExact(w, w > 0 ? v.min() : v.max()));
+      most = Math.addExact(most, Math.multiplyExact(w, w > 0 ? v.max() : v.min()));
+    }
+    long c = f.c();
+    switch (f.relation()) {
+      case LinearForm.LE -> implyLe(f, b, 0, c, most, out);
+      case LinearForm.GE -> implyGe(f, b, 0, c, least, out);
+      case LinearForm.EQ -> {
+        implyLe(f, b, 0, c, most, out);
+        implyGe(f, b, 0, c, least, out);
+      }
+      default -> {
+        // x != c has no linear form
       }
     }
   }

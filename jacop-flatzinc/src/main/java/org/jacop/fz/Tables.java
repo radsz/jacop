@@ -557,7 +557,7 @@ public class Tables {
    * @param b the variable to look up
    * @return the alias variable or the original variable
    */
-  IntVar getAlias(IntVar b) {
+  public IntVar getAlias(IntVar b) {
     IntVar v = aliasTable.get(b);
     if (v == null) {
       return b;

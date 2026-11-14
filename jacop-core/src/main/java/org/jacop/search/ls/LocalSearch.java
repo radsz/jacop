@@ -55,6 +55,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValues;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XplusClteqZImplied;
@@ -1488,6 +1489,11 @@ public final class LocalSearch {
     if (c instanceof Violation v) {
       return v;
     }
+    if (c.getClass() == ImpliesNot.class
+        && ((AbstractReifiedConstraint) c).c instanceof Violation inner) {
+      IntVar b = ((AbstractReifiedConstraint) c).b;
+      return value -> value.applyAsInt(b) == 1 || inner.violation(value) == 0 ? 0 : 1;
+    }
     if ((c.getClass() == Reified.class || c.getClass() == Implies.class)
         && ((AbstractReifiedConstraint) c).c instanceof Violation inner) {
       IntVar b = ((AbstractReifiedConstraint) c).b;
@@ -1980,6 +1986,16 @@ public final class LocalSearch {
         return h.b.value() == 0 || addRow(row, null, rows, varList);
       }
       return addRow(row, new int[] {addVar(h.b, varList), 1}, rows, varList);
+    }
+    if (c instanceof ImpliesNot r) {
+      LinearForm inner = LinearForms.of(r.c);
+      if (inner == null) {
+        return false;
+      }
+      if (r.b.singleton()) {
+        return r.b.value() == 1 || addRow(inner, null, rows, varList);
+      }
+      return addRow(inner, new int[] {addVar(r.b, varList), 0}, rows, varList);
     }
     if (c instanceof AbstractReifiedConstraint r
         && (c.getClass() == Reified.class || c.getClass() == Implies.class)) {

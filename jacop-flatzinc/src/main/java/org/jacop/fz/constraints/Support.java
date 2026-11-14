@@ -52,6 +52,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.SumInt;
@@ -59,6 +60,9 @@ import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XneqC;
+import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.cumulative.MultiCumulative;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.regular.MultiCostRegular;
@@ -327,6 +331,12 @@ public class Support implements ParserTreeConstants {
    * @return the integer variable
    */
   public IntVar getVariable(ASTScalarFlatExpr node) {
+    IntVar v = getVariableUnsubstituted(node);
+    ControlSubstitution s = activeControl;
+    return s != null && v == s.from() && !s.negated() ? s.to() : v;
+  }
+
+  private IntVar getVariableUnsubstituted(ASTScalarFlatExpr node) {
     if (node.getType() == 0) { // int
       int val = node.getInt();
       return dictionary.getConstant(val);
@@ -1346,7 +1356,116 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /**
+   * The control {@code from} of a half-reified constraint replaced by the literal {@code to}, or by
+   * its negation, when the constraint is posted ({@link EnforcementInliner}).
+   *
+   * @param from the eliminated control.
+   * @param to the variable of the literal that replaces it.
+   * @param negated true when the literal is {@code to = 0}.
+   */
+  public record ControlSubstitution(IntVar from, IntVar to, boolean negated) {}
+
+  /** The constraint nodes posted with a substituted control. */
+  final Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
+
+  /** The substitutions by eliminated control, for detectors that read controls as literals. */
+  final Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
+
+  private ControlSubstitution activeControl;
+
+  private boolean activeConverted;
+
+  private boolean activeOther;
+
+  /**
+   * The substitution of an eliminated control, or null.
+   *
+   * @param b a control of a half-reified constraint.
+   * @return the substitution of b, or null if b was not eliminated.
+   */
+  public ControlSubstitution substitutedControl(IntVar b) {
+    return substitutedControls.isEmpty() ? null : substitutedControls.get(b);
+  }
+
+  /**
+   * The substitution to apply while the given constraint node is posted, or null.
+   *
+   * @param node a constraint node.
+   * @return its substitution, or null.
+   */
+  public ControlSubstitution controlSubstitution(SimpleNode node) {
+    return controlSubstitutions.isEmpty() ? null : controlSubstitutions.get(node);
+  }
+
+  /**
+   * Starts posting a constraint node with a substituted control.
+   *
+   * @param s the substitution.
+   */
+  public void beginControlSubstitution(ControlSubstitution s) {
+    activeControl = s;
+    activeConverted = false;
+    activeOther = false;
+  }
+
+  /**
+   * Ends posting a node with a substituted control. A negated control that no constraint posted for
+   * the node could take is linked to its literal instead, so the model stays the same.
+   *
+   * @return true if the control is no longer needed by the node's constraints.
+   */
+  public boolean endControlSubstitution() {
+    ControlSubstitution s = activeControl;
+    activeControl = null;
+    if (s == null || !s.negated()) {
+      return true;
+    }
+    if (activeConverted && !activeOther) {
+      return true;
+    }
+    // from = not to, as the removed clause to \/ from allowed
+    pose(new XneqY(s.from(), s.to()));
+    return false;
+  }
+
+  // whether b => c over x and y is posted while b stands for a negated literal; marks it converted
+  private boolean negatedControl(IntVar b, IntVar x, IntVar y) {
+    ControlSubstitution s = activeControl;
+    if (s == null || !s.negated() || b != s.from() || x == s.to() || y == s.to()) {
+      return false;
+    }
+    activeConverted = true;
+    return true;
+  }
+
+  // b => c over the eliminated control becomes to = 0 => c
+  private Constraint negateControl(Constraint c) {
+    ControlSubstitution s = activeControl;
+    if (c.getClass() == Implies.class && ((Implies) c).b == s.from()) {
+      Implies i = (Implies) c;
+      if (!i.c.arguments().contains(s.from()) && !i.c.arguments().contains(s.to())) {
+        activeConverted = true;
+        return new ImpliesNot(s.to(), i.c);
+      }
+    } else if (c.getClass() == XplusClteqZImplied.class && ((XplusClteqZImplied) c).b == s.from()) {
+      XplusClteqZImplied i = (XplusClteqZImplied) c;
+      if (i.x != s.to() && i.z != s.to()) {
+        activeConverted = true;
+        return new ImpliesNot(s.to(), new XplusClteqZ(i.x, i.c, i.z));
+      }
+    }
+    if (c.arguments().contains(s.from())) {
+      activeOther = true;
+    }
+    return c;
+  }
+
   void pose(Constraint c) throws FailException {
+
+    if (activeControl != null && activeControl.negated()) {
+      c = negateControl(c);
+    }
 
     if (options.lcg()) {
       Constraint split =
@@ -1672,6 +1791,9 @@ public class Support implements ParserTreeConstants {
   }
 
   Constraint fzXeqCimplied(IntVar x, int c, IntVar b) {
+    if (negatedControl(b, x, x)) {
+      return new ImpliesNot(activeControl.to(), new XeqC(x, c));
+    }
     return fzXeqC(x, c, b, false);
   }
 
@@ -1771,6 +1893,9 @@ public class Support implements ParserTreeConstants {
   }
 
   Constraint fzXneqCimplied(IntVar x, int c, IntVar b) {
+    if (negatedControl(b, x, x)) {
+      return new ImpliesNot(activeControl.to(), new XneqC(x, c));
+    }
     return fzXneqC(x, c, b, false);
   }
 
@@ -1886,10 +2011,16 @@ public class Support implements ParserTreeConstants {
   }
 
   Constraint fzXeqYimplied(IntVar x, IntVar y, IntVar b) {
+    if (negatedControl(b, x, y)) {
+      return new ImpliesNot(activeControl.to(), new XeqY(x, y));
+    }
     return fzXeqY(x, y, b, false);
   }
 
   Constraint fzIfThenBool(IntVar b, IntVar x) {
+    if (negatedControl(b, x, x)) {
+      return new ImpliesNot(activeControl.to(), new XeqC(x, 1));
+    }
     return new FzIfThenBool(b, x);
   }
 
