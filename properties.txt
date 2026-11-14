@@ -730,6 +730,14 @@ Rows and encodings:
   default 20000 and 2000.
 - org.jacop.lp.pairCliques: conflicts of pairs of 0/1 literals merged
   into clique rows; default true.
+- org.jacop.lp.tableClauseRows: the prime implicates of tables over 0/1
+  variables as clause rows, for an objective; default true.
+- org.jacop.lp.tableClauseArity: the most free 0/1 columns of a table
+  that gets clause rows; default 10.
+- org.jacop.lp.tableClausesPerColumn: a table with more prime implicates
+  than this many per free column gets no clause rows; default 1.
+- org.jacop.lp.tableClauseRowsMax: the most clause rows over all tables;
+  a model with more gets none; default 10000.
 
 Cuts:
 

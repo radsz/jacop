@@ -1365,6 +1365,90 @@ class LcgFuzzTest {
   }
 
   /**
+   * Under LCG a reified In counts as entailed only once the bounds of its variable lie in the set,
+   * not as soon as the values left all do. On random models of reified membership tests over
+   * domains with holes, counted by sums of the indicators, LCG with checked explanations must agree
+   * with depth-first search, where the entailment check stays complete, and give a solution.
+   */
+  @Test
+  void reifiedInAgreesWithSearch() {
+    int runs = Math.max(200, RUNS / 4);
+    int sat = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = memberships(seed, false);
+      boolean lcg = memberships(seed, true);
+      assertThat(lcg).as("seed " + seed).isEqualTo(expected);
+      sat += expected ? 1 : 0;
+    }
+    assertThat(sat).isPositive().isLessThan(runs);
+  }
+
+  // random reified membership tests: true when a solution exists (LCG solutions are checked)
+  private static boolean memberships(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 3 + rnd.nextInt(3);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      IntervalDomain d = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(3) > 0) {
+          d.unionAdapt(v, v);
+        }
+      }
+      if (d.isEmpty()) {
+        d.unionAdapt(0, 0);
+      }
+      x[i] = new IntVar(store, "x" + i, d);
+    }
+    int m = 4 + rnd.nextInt(5);
+    IntVar[] b = new IntVar[m];
+    IntVar[] at = new IntVar[m];
+    IntervalDomain[] sets = new IntervalDomain[m];
+    for (int j = 0; j < m; j++) {
+      sets[j] = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(5) < 2) {
+          sets[j].unionAdapt(v, v);
+        }
+      }
+      at[j] = x[rnd.nextInt(n)];
+      b[j] = new BooleanVar(store, "b" + j);
+      store.impose(new Reified(new In(at[j], sets[j]), b[j]));
+    }
+    int need = rnd.nextInt(m + 1);
+    store.impose(new SumBool(b, rnd.nextBoolean() ? "==" : ">=", new IntVar(store, need, need)));
+    for (int k = 0; k + 1 < n; k++) {
+      if (rnd.nextBoolean()) {
+        store.impose(new XneqY(x[k], x[k + 1]));
+      }
+    }
+    if (!lcg) {
+      if (!store.consistency()) {
+        return false;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    if (solver.solve() != CdclSolver.SAT) {
+      return false;
+    }
+    int count = 0;
+    for (int j = 0; j < m; j++) {
+      boolean in = sets[j].contains(solver.value(at[j]));
+      assertThat(solver.value(b[j])).as("seed %d: b%d", seed, j).isEqualTo(in ? 1 : 0);
+      count += in ? 1 : 0;
+    }
+    assertThat(count).as("seed %d: sum", seed).isGreaterThanOrEqualTo(need);
+    return true;
+  }
+
+  /**
    * Diffn's area check, with its dual feasible functions, explains a failure by the rectangles in a
    * window. On random tight packings LCG with checked explanations must agree with search over the
    * pairwise rule only, and give a packing.
