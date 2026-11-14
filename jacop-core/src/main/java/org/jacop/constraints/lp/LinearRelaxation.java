@@ -626,12 +626,15 @@ public class LinearRelaxation extends Constraint
   // knapsack of 60 items the LP ran 8 times less often and the search needed 7 times more nodes
   private static final boolean MIR_SEARCH = Boolean.getBoolean("org.jacop.lp.mirSearch");
   private static final int MIR_SEARCH_CUTS = Integer.getInteger("org.jacop.lp.mirSearchCuts", 10);
-  // the largest weight of a cut made in the cut rounds (see MirCut.capped): a cut row of weights
-  // near 2^24, with a right side near 10^10, gets Farkas multipliers of 10^-7 of the wrong sign
-  // from the dense tableau, which the integer certificate cannot use, and the infeasible solve
-  // proves nothing (smelt_4, MiniZinc Challenge 2014, -f: 56 of 57 infeasible solves; tank
-  // allocation: thousands in 60 s). 2^20 removes them there without moving the root bounds
-  private static final long ROOT_CUT_WEIGHT = Long.getLong("org.jacop.lp.cutWeight", 1L << 20);
+  // the largest weight of a cut made in the cut rounds (see MirCut.capped), unlimited by default
+  // (-Dorg.jacop.lp.cutWeight=1048576 for 2^20): a cut row of weights near 2^24, with a right side
+  // near 10^10, gets Farkas multipliers of 10^-7 of the wrong sign from the dense tableau, which
+  // the integer certificate cannot use, so the infeasible solve proves nothing (smelt_4, MiniZinc
+  // Challenge 2014, -f: 56 of 57 infeasible solves; tank allocation: thousands in 60 s). 2^20
+  // removes them there, but on the 41 wide instances whose cuts it changes it was not faster at
+  // 240 s (-f 1.03, default 1.10 time on the solved ones, within the noise of two base runs)
+  private static final long ROOT_CUT_WEIGHT =
+      Long.getLong("org.jacop.lp.cutWeight", Long.MAX_VALUE);
   // the largest weight of a cut made in search (see MirCut.capped)
   private static final long MIR_SEARCH_WEIGHT =
       Long.getLong("org.jacop.lp.mirSearchWeight", 1L << 16);
@@ -648,9 +651,13 @@ public class LinearRelaxation extends Constraint
   public long cutLimits;
 
   // zero-half cuts in the cut rounds, from sets of tight rows whose sum is odd on the right side
-  // (ZeroHalfCuts), rounded with the MIR of divisor 2 (-Dorg.jacop.lp.zeroHalf=false to turn off)
-  private static final boolean ZERO_HALF =
-      !"false".equals(System.getProperty("org.jacop.lp.zeroHalf"));
+  // (ZeroHalfCuts), rounded with the MIR of divisor 2. Off by default
+  // (-Dorg.jacop.lp.zeroHalf=true):
+  // on the 240 wide instances they fire on 36 and raise the integer root bound of 10 (lower 2),
+  // but at 240 s on the 41 where the cuts change the solves were the same, 5-7 % slower, and the
+  // best solutions of 3 families worse: the extra rows cost each solve more than they prune. Not
+  // final, so that tests can switch it on
+  static boolean zeroHalfOn = Boolean.getBoolean("org.jacop.lp.zeroHalf");
   // the most slack of a row the zero-half separator takes, the most rows, and the most sets
   private static final double ZERO_HALF_SLACK = 0.1;
   private static final int ZERO_HALF_ROWS = 2000;
@@ -4255,7 +4262,7 @@ public class LinearRelaxation extends Constraint
       }
     }
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (ZERO_HALF) {
+    if (zeroHalfOn) {
       zeroHalf(value, lo, hi, found, zeroHalf);
     }
     for (Aggregate row : unitRows) {

@@ -162,55 +162,46 @@ class ZeroHalfCutsTest {
   void stableSetsKeepTheirOptimum() {
     Random rnd = new Random(7);
     long zeroHalf = 0;
-    for (int run = 0; run < 60; run++) {
-      int n = run % 3 == 0 ? 5 : 5 + rnd.nextInt(6);
-      List<int[]> edges = new ArrayList<>();
-      for (int i = 0; i < n; i++) {
-        edges.add(new int[] {i, (i + 1) % n});
-      }
-      if (run % 3 != 0) {
-        for (int e = 0; e < n / 2; e++) {
-          int a = rnd.nextInt(n);
-          int b = rnd.nextInt(n);
-          if (a != b) {
-            edges.add(new int[] {a, b});
+    boolean was = LinearRelaxation.zeroHalfOn;
+    LinearRelaxation.zeroHalfOn = true;
+    try {
+      for (int run = 0; run < 60; run++) {
+        int n = run % 3 == 0 ? 5 : 5 + rnd.nextInt(6);
+        List<int[]> edges = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+          edges.add(new int[] {i, (i + 1) % n});
+        }
+        if (run % 3 != 0) {
+          for (int e = 0; e < n / 2; e++) {
+            int a = rnd.nextInt(n);
+            int b = rnd.nextInt(n);
+            if (a != b) {
+              edges.add(new int[] {a, b});
+            }
           }
         }
+        long[] w = new long[n];
+        for (int i = 0; i < n; i++) {
+          w[i] = run % 3 == 0 ? 1 : 1 + rnd.nextInt(5);
+        }
+        long expected = new Model(n, edges, w).optimum();
+        Model m = new Model(n, edges, w);
+        LinearRelaxation r = LinearRelaxation.of(m.store, m.cost, false);
+        assertThat(r).as("run %d", run).isNotNull();
+        m.store.impose(r);
+        long got = m.optimum();
+        assertThat(got).as("run %d", run).isEqualTo(expected);
+        assertThat(r.rootBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
+        if (!Double.isNaN(r.cutBound)) {
+          assertThat(r.cutBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
+        }
+        if (run % 3 == 0) {
+          assertThat(r.cutBound).as("run %d", run).isGreaterThanOrEqualTo(expected - 1e-6);
+        }
+        zeroHalf += r.zeroHalfCuts;
       }
-      long[] w = new long[n];
-      for (int i = 0; i < n; i++) {
-        w[i] = run % 3 == 0 ? 1 : 1 + rnd.nextInt(5);
-      }
-      long expected = new Model(n, edges, w).optimum();
-      Model m = new Model(n, edges, w);
-      LinearRelaxation r = LinearRelaxation.of(m.store, m.cost, false);
-      assertThat(r).as("run %d", run).isNotNull();
-      m.store.impose(r);
-      long got = m.optimum();
-      assertThat(got).as("run %d", run).isEqualTo(expected);
-      assertThat(r.rootBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      if (!Double.isNaN(r.cutBound)) {
-        assertThat(r.cutBound).as("run %d", run).isLessThanOrEqualTo(expected + 1e-6);
-      }
-      System.err.println(
-          "DBG run "
-              + run
-              + " n="
-              + n
-              + " root="
-              + r.rootBound
-              + " cut="
-              + r.cutBound
-              + " zh="
-              + r.zeroHalfCuts
-              + " cuts="
-              + r.cuts
-              + " exp="
-              + expected);
-      if (run % 3 == 0) {
-        assertThat(r.cutBound).as("run %d", run).isGreaterThanOrEqualTo(expected - 1e-6);
-      }
-      zeroHalf += r.zeroHalfCuts;
+    } finally {
+      LinearRelaxation.zeroHalfOn = was;
     }
     assertThat(zeroHalf).isPositive();
   }
