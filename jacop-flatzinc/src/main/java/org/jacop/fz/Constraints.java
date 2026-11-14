@@ -34,8 +34,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
 import org.jacop.core.FailException;
@@ -76,6 +78,7 @@ import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
 import org.jacop.fz.constraints.TableScopeMerger;
+import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -224,6 +227,24 @@ public class Constraints implements ParserTreeConstants {
         if (!tables.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(tables.replaced());
+        }
+      }
+
+      // the variables of degree two between tables and elements are joined out of the model, and
+      // given values again when a solution is printed
+      if (TableVariableElimination.enabled() && options.proof() == null && !manySolutions) {
+        TableVariableElimination elimination =
+            new TableVariableElimination(support, replaced, solveItemVariables(astTree));
+        elimination.detect(astTree);
+        if (!elimination.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(elimination.replaced());
+          dictionary.removeFromDefaultSearch(elimination.eliminated());
+          dictionary.unusedVariables.addAll(elimination.eliminated());
+          dictionary.tableElimination = elimination;
+          for (Map.Entry<IntVar[], int[][]> t : elimination.tables()) {
+            cf.poseTable(t.getKey(), t.getValue());
+          }
         }
       }
 
@@ -467,6 +488,42 @@ public class Constraints implements ParserTreeConstants {
   }
 
   // a constraint item, imposed as implied by the others when implied is true
+  /** The integer variables named by the solve item: the objective and the search annotations. */
+  private Set<IntVar> solveItemVariables(SimpleNode astTree) {
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() == JJTMODELEND) {
+        namedVariables(node, vars);
+      }
+    }
+    return vars;
+  }
+
+  private void namedVariables(Node node, Set<IntVar> vars) {
+    String ident =
+        switch (node) {
+          case ASTScalarFlatExpr e -> e.getIdent();
+          case ASTVariableExpr e -> e.getIdent();
+          case ASTSolveExpr e -> e.getIdent();
+          case ASTAnnExpr e -> e.getIdent();
+          default -> null;
+        };
+    if (ident != null) {
+      IntVar v = dictionary.variableTable.get(ident);
+      if (v != null) {
+        vars.add(v);
+      }
+      IntVar[] a = dictionary.variableArrayTable.get(ident);
+      if (a != null) {
+        Collections.addAll(vars, a);
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      namedVariables(node.jjtGetChild(i), vars);
+    }
+  }
+
   private void generateConstraint(SimpleNode constraintWithAnnotations, boolean implied)
       throws Throwable {
     store.imposingImplied(implied);

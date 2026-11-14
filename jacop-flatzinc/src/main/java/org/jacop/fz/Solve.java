@@ -5409,8 +5409,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   @SuppressWarnings("unchecked")
+  // the values of the variables joined out of the model, for the solution being printed
+  private Map<Var, Integer> eliminatedValues = Map.of();
+
   private void appendVariableOutput(StringBuffer printBuffer, Var v) {
-    if (v instanceof BooleanVar var1) {
+    Integer eliminated = eliminatedValues.get(v);
+    if (eliminated != null) {
+      printBuffer.append(v.id()).append(" = ");
+      if (v instanceof BooleanVar) {
+        printBuffer.append(eliminated == 1);
+      } else {
+        printBuffer.append(eliminated);
+      }
+      printBuffer.append(";\n");
+    } else if (v instanceof BooleanVar var1) {
       printBuffer.append(v.id()).append(" = ");
       if (v.singleton()) {
         switch (var1.value()) {
@@ -5471,12 +5483,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       presolve.returnSolution();
     }
 
+    // the variables that table variable elimination removed get values from the others
+    eliminatedValues =
+        output.tableElimination == null ? Map.of() : output.tableElimination.values();
+
     if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);
     }
 
     for (int i = 0; i < output.outputArray.size(); i++) {
-      printBuffer.append(output.outputArray.get(i)).append("\n");
+      printBuffer.append(output.outputArray.get(i).toString(eliminatedValues)).append("\n");
     }
 
     if (options.getVerbose()) {
