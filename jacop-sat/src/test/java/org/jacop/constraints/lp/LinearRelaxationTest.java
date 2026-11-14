@@ -331,6 +331,115 @@ class LinearRelaxationTest {
     lazyClauseGeneration(18_000_148L, new TreeMap<>(), LinearRelaxation.Simplex.DENSE);
   }
 
+  /**
+   * Tank allocation (XCSP 2025 TankAllocation1-0000, optimum 1619): each tank holds one cargo or
+   * stays empty, each cargo needs tanks of at least its volume, and the objective is the capacity
+   * left empty. The LP bound is 1799; the cut rows' slacks have no cost, and the dual simplex used
+   * to stall on them (pivots of zero length up to the round's pivot limit), which ended the cut
+   * rounds at 1768.5. With the slack costs shifted no round stops at its pivot limit, the bound
+   * passes 1730, and the integer certificate gives the objective the bound of the LP.
+   */
+  @Test
+  void cutRoundsOnTankAllocationDoNotStall() {
+    int[] capacity = {
+      813, 814, 430, 650, 557, 431, 719, 930, 916, 828, 756, 574, 681, 429, 343, 889, 589, 412, 274,
+      837, 691, 997, 946, 612, 762
+    };
+    int[] volume = {1861, 2262, 256, 0, 0, 1046, 0, 717, 603, 807, 717, 555, 1672, 1606, 2979};
+    int[][] forbidden = {
+      {13},
+      {},
+      {3, 8, 10, 11, 13},
+      {0, 2, 5},
+      {9, 13},
+      {13},
+      {9, 11, 14},
+      {0, 4, 12},
+      {1, 5, 14},
+      {5, 6, 8},
+      {0, 4, 7},
+      {0, 9, 13},
+      {0, 3, 4, 10, 12},
+      {2},
+      {3, 8, 12},
+      {0, 13},
+      {0, 6, 8, 10},
+      {0, 3, 7, 8, 14},
+      {3, 6, 12, 13},
+      {5, 9},
+      {3, 4, 11},
+      {6, 8},
+      {1, 3, 5, 9},
+      {0, 5, 9, 12},
+      {1, 8, 10, 11}
+    };
+    Store store = new Store();
+    int tanks = capacity.length;
+    int cargoes = volume.length;
+    IntVar[][] holds = new IntVar[tanks][cargoes];
+    IntVar[] empty = new IntVar[tanks];
+    List<LinearForm> rows = new ArrayList<>();
+    int total = Arrays.stream(capacity).sum();
+    IntVar free = new IntVar(store, "free", 0, total);
+    IntVar[] objective = new IntVar[tanks + 1];
+    long[] objectiveWeights = new long[tanks + 1];
+    for (int t = 0; t < tanks; t++) {
+      List<IntVar> one = new ArrayList<>();
+      for (int c = 0; c < cargoes; c++) {
+        int cargo = c;
+        if (Arrays.stream(forbidden[t]).noneMatch(f -> f == cargo)) {
+          holds[t][c] = new IntVar(store, "h" + t + "_" + c, 0, 1);
+          one.add(holds[t][c]);
+        }
+      }
+      empty[t] = new IntVar(store, "e" + t, 0, 1);
+      one.add(empty[t]);
+      long[] ones = new long[one.size()];
+      Arrays.fill(ones, 1);
+      rows.add(new LinearForm(one.toArray(new IntVar[0]), ones, 1, LinearForm.EQ));
+      objective[t] = empty[t];
+      objectiveWeights[t] = capacity[t];
+    }
+    for (int c = 0; c < cargoes; c++) {
+      List<IntVar> vs = new ArrayList<>();
+      List<Long> ws = new ArrayList<>();
+      for (int t = 0; t < tanks; t++) {
+        if (holds[t][c] != null) {
+          vs.add(holds[t][c]);
+          ws.add((long) -capacity[t]);
+        }
+      }
+      rows.add(
+          new LinearForm(
+              vs.toArray(new IntVar[0]),
+              ws.stream().mapToLong(Long::longValue).toArray(),
+              -volume[c],
+              LinearForm.LE));
+    }
+    objective[tanks] = free;
+    objectiveWeights[tanks] = -1;
+    rows.add(new LinearForm(objective, objectiveWeights, 0, LinearForm.EQ));
+    LinearRelaxation r = new LinearRelaxation(rows, free, true);
+    store.impose(r);
+    assertThat(store.consistency()).isTrue();
+    String seen =
+        "root "
+            + r.rootBound
+            + " cut "
+            + r.cutBound
+            + " max "
+            + free.max()
+            + " cuts "
+            + r.cuts
+            + " limits "
+            + r.cutLimits;
+    assertThat(r.rootBound).as(seen).isCloseTo(1799, offset(1e-6));
+    assertThat(r.cutLimits).as(seen).isZero();
+    assertThat(r.cutBound).as(seen).isLessThan(1730).isGreaterThanOrEqualTo(1619);
+    // the integer certificate of the duals gives the objective the bound of the LP
+    assertThat((double) free.max()).as(seen).isLessThanOrEqualTo(Math.ceil(r.cutBound - 1e-6));
+  }
+
   @Test
   void gomoryCutsOverTheSlacksKeepTheOptimum() {
     int stronger = 0;

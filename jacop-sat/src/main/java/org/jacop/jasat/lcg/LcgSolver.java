@@ -53,6 +53,7 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
@@ -3143,6 +3144,77 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: core-guided phases skipped as their probe found no solution of its own. */
   public long probeSkips;
 
+  // -Djacop.lcg.boundDive=<share>: share of the work left for a search for a solution at the
+  // objective's root bound before the core-guided probe, when that bound is above the cores' lower
+  // bound; 0 turns it off
+  private double boundDiveShare =
+      Double.parseDouble(System.getProperty("jacop.lcg.boundDive", "0.002"));
+
+  /**
+   * Sets the share of the work left for the search for a solution at the objective's root bound
+   * that runs before the core-guided probe of {@link #minimize} when that bound is above the cores'
+   * lower bound ({@code -Djacop.lcg.boundDive}, default 0.002).
+   *
+   * @param share the share, 0 for no such search
+   */
+  public void setBoundDive(double share) {
+    boundDiveShare = share;
+  }
+
+  // -Djacop.lcg.boundDiveConflicts=<n>: the most conflicts of that search
+  private static final long BOUND_DIVE_CONFLICTS =
+      Long.getLong("jacop.lcg.boundDiveConflicts", 1000);
+
+  /** Statistics: searches for a solution at the objective's root bound before the cores. */
+  public long boundDives;
+
+  /** Statistics: searches for a solution at the objective's root bound that found one. */
+  public long boundDiveSolutions;
+
+  /**
+   * Searches, for {@link #boundDiveShare} of the work left, for a solution whose objective is at
+   * its root bound, under an assumption, so that no other solution is kept: when it finds none, the
+   * schedule goes on as without it.
+   *
+   * @return SAT with an optimal solution, UNKNOWN otherwise
+   */
+  private int diveAtRootBound() {
+    long deadline = sat.deadline();
+    boundDives++;
+    final double[] saved = activity.clone();
+    final double savedInc = activityInc;
+    final int[] savedTarget = targetValue == null ? null : targetValue.clone();
+    final boolean[] savedTargetSet = targetSet == null ? null : targetSet.clone();
+    final int savedTargetTrail = targetTrail;
+    setPhaseLimits(boundDiveShare, deadline);
+    sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + BOUND_DIVE_CONFLICTS));
+    coreMode = true; // a solution ends the call of the solver without a clause
+    try {
+      solve(-geLit(objective, root[objective].min() + 1));
+    } finally {
+      coreMode = false;
+      endPhase(deadline);
+    }
+    if (best != null && best[objective] <= root[objective].min()) {
+      boundDiveSolutions++;
+      return CdclSolver.SAT;
+    }
+    // without a solution the schedule goes on from the activity and target phases before the
+    // search, which bumped the variables of conflicts under its assumption: vrplc9_5_10_s2 (2023)
+    // took 85 s instead of 28 s with them, work-task-variation seed-8 lost its proof in 240 s
+    System.arraycopy(saved, 0, activity, 0, Math.min(saved.length, activity.length));
+    activityInc = savedInc;
+    if (savedTarget != null && targetValue != null && savedTarget.length == targetValue.length) {
+      System.arraycopy(savedTarget, 0, targetValue, 0, savedTarget.length);
+      System.arraycopy(savedTargetSet, 0, targetSet, 0, savedTargetSet.length);
+      targetTrail = savedTargetTrail;
+    }
+    rebuildHeap(heap);
+    rebuildHeap(wide);
+    rebuildHeap(lateHeap);
+    return CdclSolver.UNKNOWN;
+  }
+
   private int minimizeWithCores() {
     long millis = timeLimitMillis;
     if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
@@ -3164,6 +3236,20 @@ public final class LcgSolver implements ExternalPropagator {
       }
     } else if (coreDelayShare > 0) {
       boolean probeWithoutSolution = false;
+      if (boundDiveShare > 0
+          && coreProbeShare > 0
+          && workEnd != Long.MAX_VALUE
+          && coreSearch.lowerBound < root[objective].min()
+          && root[objective].min() < root[objective].max()) {
+        // the root bound of the objective (from the linear relaxation, say) is above the cores'
+        // lower bound: a short search for a solution at that bound goes first, as such a solution
+        // is optimal. The cores start below what is already proved: on nfc (Challenge 2022) the
+        // relaxation's bound is the optimum, which the probe delayed by 0.67 % of the time limit
+        result = diveAtRootBound();
+        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+          return result;
+        }
+      }
       if (coreProbeShare > 0) {
         long stops = coreSearch.noSolutionStops;
         result = runCores(coreProbeShare, coreDelayBudget, false);
@@ -4273,6 +4359,7 @@ public final class LcgSolver implements ExternalPropagator {
         };
     boolean propagatorLeft = false;
     objectiveTerms = objectiveTerms();
+    permutationOnly = permutationOnlyVariables();
     for (Constraint c : store.getConstraints()) {
       if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
         g.removeConstraint();
@@ -4282,8 +4369,11 @@ public final class LcgSolver implements ExternalPropagator {
           && c.getClass() == HybridTable.class
           && encodeTable((HybridTable) c)) {
         tablesAsClauses++;
-      } else if (clauseCandidate(c) && encodeAsClauses(c)) {
+      } else if ((clauseCandidate(c) || permutationCandidate(c)) && encodeAsClauses(c)) {
         constraintsAsClauses++;
+        if (c instanceof Alldistinct) {
+          permutationsAsClauses++;
+        }
       } else {
         propagatorLeft = true;
         if (c instanceof ImpliedClauses i && !rootFailed) {
@@ -4422,6 +4512,90 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The objective of {@link #minimize}, known when its terms are left out of the clauses. */
   private IntVar clauseObjective;
+
+  /**
+   * Whether permutations become clauses, the system property {@code jacop.lcg.alldiffClauses} (true
+   * by default).
+   */
+  static final boolean ALLDIFF_CLAUSES =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.alldiffClauses", "true"));
+
+  /** Statistics: all different constraints over permutations given to the solver as clauses. */
+  public long permutationsAsClauses;
+
+  /**
+   * Whether a domain consistent all different constraint is a permutation, as many variables as
+   * values, with few enough clauses ({@link ClauseEncoder#ALLDIFF_LIMIT}) to become clauses in
+   * place of its propagator, as CP-SAT expands a permutation into exactly-one constraints over the
+   * literals [x = v] (Lynce and Ouaknine, "Sudoku as a SAT problem", ISAIM 2006, the extended
+   * encoding). Unit propagation over them finds the values each variable must take and the
+   * variables each value must go to, though not the larger Hall sets the propagator finds; each
+   * step is a clause of the solver, with no explanation to build. On the 25x25 sudokus of Gecode's
+   * examples, under their fixed search, the solver makes about twice as many conflicts a second and
+   * searches trees of about the same size.
+   */
+  private boolean permutationCandidate(Constraint c) {
+    if (!ALLDIFF_CLAUSES || !isPermutation(c)) {
+      return false;
+    }
+    for (Var v : c.arguments()) {
+      if (!v.singleton() && !permutationOnly.contains(v)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** The variables whose only constraints are permutations, see {@link #permutationCandidate}. */
+  private java.util.Set<Var> permutationOnly = java.util.Set.of();
+
+  /**
+   * The unfixed variables of permutations that are in no other constraint of the store (the linear
+   * relaxation aside, which only relaxes the others).
+   */
+  private java.util.Set<Var> permutationOnlyVariables() {
+    if (!ALLDIFF_CLAUSES) {
+      return java.util.Set.of();
+    }
+    java.util.Set<Var> in = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    java.util.Set<Var> other = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint c : store.getConstraints()) {
+      if (c instanceof LinearRelaxation) {
+        continue;
+      }
+      boolean permutation = isPermutation(c);
+      for (Var v : c.arguments()) {
+        if (!v.singleton()) {
+          (permutation ? in : other).add(v);
+        }
+      }
+    }
+    in.removeAll(other);
+    return in;
+  }
+
+  /** Whether a constraint is a domain consistent all different over as many values as variables. */
+  private boolean isPermutation(Constraint c) {
+    if (c.getClass() != Alldistinct.class) {
+      return false;
+    }
+    java.util.Set<Var> list = c.arguments();
+    IntervalDomain union = new IntervalDomain();
+    for (Var v : list) {
+      IntVar x = (IntVar) v;
+      if (x == clauseObjective || objectiveTerms.contains(x)) {
+        return false;
+      }
+      if (!x.singleton() && (trail.id(x) < 0 || trail.id(x) >= vars.length)) {
+        return false;
+      }
+      union = (IntervalDomain) union.union(x.dom());
+      if (union.getSize() > list.size()) {
+        return false;
+      }
+    }
+    return union.getSize() == list.size();
+  }
 
   private boolean clauseCandidate(Constraint c) {
     if ("none".equals(CLAUSE_CLASSES)
