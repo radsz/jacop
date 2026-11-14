@@ -4825,6 +4825,23 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+283. Under --lcg, an all different constraint over as many values as
+   variables (a permutation, up to 32 variables), whose unfixed variables
+   are in no other constraint, becomes clauses of the SAT solver in place
+   of its propagator: x[i] = v excludes x[j] = v, and each value is taken
+   by some variable (the extended encoding of Lynce and Ouaknine, "Sudoku
+   as a SAT problem", ISAIM 2006; CP-SAT expands permutations the same
+   way). Unit propagation finds the forced values and places, though not
+   the larger Hall sets of the propagator, and needs no explanations. On
+   the 18 25x25 sudokus of Gecode's examples under their fixed search
+   (MiniZinc Challenge sudoku_fixed) at 600 s: 14 solved as before, 1.6x
+   faster on them (13 of 14), 3,942 instead of 2,245 conflicts per second;
+   at 1200 s sudoku_fixed p21 and p27 are solved. Permutations that share
+   variables with other constraints keep the propagator: there its Hall
+   sets made -f proofs 3-4x slower without it (traveling-tppv, vrplc,
+   open-stacks). -Djacop.lcg.alldiffClauses=false turns it off; statistic
+   lcgPermutationsAsClauses.
+
 Version 4.11
 =============
 
