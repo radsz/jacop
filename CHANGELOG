@@ -4850,6 +4850,25 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
+285. The FlatZinc front end tabulates small flattened expressions: the
+   constraints joined by variables that MiniZinc introduced (not output,
+   not in the solve item, not aliased), over at most three other
+   variables, become one table of the tuples that extend to a solution,
+   when the group holds a division, a modulo or an element over a
+   variable array. These propagate to bounds while their relations have
+   holes all over the box: x mod y = 0 \/ y mod x = 0 flattens into two
+   int_mod, two int_eq_imp and a clause that prune almost nothing between
+   x and y. XCSP3 solvers keep such expressions whole (C. Lecoutre,
+   Constraint Networks, 2009) and Savile Row tabulates such subproblems
+   (Ö. Akgün, I. P. Gent, C. Jefferson, I. Miguel, P. Nightingale and
+   A. Z. Salamon, CP 2018; J. J. Dekker, G. Björdal, M. Carlsson,
+   P. Flener and J.-N. Monette, Constraints 22, 2017). XCSP 2025
+   ChainReaction at 600 s: 9 of 14 solved, 6 before (30-035 proved
+   unsatisfiable in 26 s, where the fastest 2025 solver took 87 s). On
+   the wide set it fires on 4 of 240 instances, within a few percent of
+   before. Off with -a (unless org.jacop.fz.intensionTable=force) and
+   --proof; org.jacop.fz.intensionTable=false turns it off.
+
 Version 4.11
 =============
 

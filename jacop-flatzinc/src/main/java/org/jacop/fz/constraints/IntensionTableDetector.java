@@ -47,6 +47,7 @@ import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.ASTSolveExpr;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
@@ -269,6 +270,19 @@ public class IntensionTableDetector implements ParserTreeConstants {
 
   private void collectAll(SimpleNode node, Map<IntVar, Integer> found) {
     PartialCopyDetector.countVariables(support, node, found);
+    if (node instanceof ASTSolveExpr e && e.getIdent() != null) {
+      // the objective: a variable, or an element of an array of variables (all of it is pinned)
+      IntVar v = support.dictionary.getVariable(e.getIdent());
+      IntVar[] array = support.dictionary.getVariableArray(e.getIdent());
+      if (v != null) {
+        found.merge(v, 1, Integer::sum);
+      }
+      if (array != null) {
+        for (IntVar a : array) {
+          found.merge(a, 1, Integer::sum);
+        }
+      }
+    }
     for (int i = 0; i < node.jjtGetNumChildren(); i++) {
       collectAll((SimpleNode) node.jjtGetChild(i), found);
     }

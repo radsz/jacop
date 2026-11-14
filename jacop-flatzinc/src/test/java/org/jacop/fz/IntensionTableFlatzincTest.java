@@ -368,6 +368,27 @@ class IntensionTableFlatzincTest {
         solutions(run(model, "false", "-a")), solutions(run(model, "force", "-a", "-debug")));
   }
 
+  @Test
+  void objectiveDefinedByDivisionStaysLinked() throws IOException {
+    // the objective o = (100 * c) div 1000 is introduced and not output; it must stay outer, or the
+    // group drops the link between c and o and o reaches its upper bound (itemset_mining)
+    String model =
+        """
+        var 0..20: c:: output_var;
+        var 0..2000: t:: var_is_introduced :: is_defined_var;
+        var 0..20: o:: var_is_introduced :: is_defined_var;
+        constraint int_lin_eq([100,-1],[c,t],0):: defines_var(t);
+        constraint int_div(t,1000,o):: defines_var(o);
+        constraint int_le(c,10);
+        solve maximize o;
+        """;
+    for (String lcg : new String[] {"on", "off"}) {
+      // only c = 10 reaches o = 1
+      String out = run(model, "force", "--lcg", lcg);
+      assertTrue(out.strip().endsWith("c = 10;\n----------\n=========="), out);
+    }
+  }
+
   private String run(String model, String property, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
