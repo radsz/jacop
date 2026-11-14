@@ -836,6 +836,10 @@ public class LinearRelaxation extends Constraint
   // diagnostic: probe once at the first call after the root solve, under the bound the objective
   // has then (a model with the incumbent bound added, as in the screen of osolpro #446)
   private static final boolean PROBE_AT_ROOT = Boolean.getBoolean("org.jacop.lp.probe.atRoot");
+  private static final boolean PROBE_VALUES =
+      !"false".equals(System.getProperty("org.jacop.lp.probe.values"));
+  private static final boolean PROBE_STORED =
+      !"false".equals(System.getProperty("org.jacop.lp.probe.stored"));
   private static final boolean PROBE_DEBUG = Boolean.getBoolean("org.jacop.lp.probe.debug");
   private static final boolean PROBE_RESTORE = Boolean.getBoolean("org.jacop.lp.probe.restore");
   private final long[] probeStatusCount = new long[4];
@@ -2269,7 +2273,7 @@ public class LinearRelaxation extends Constraint
         // again at the next call, after the model propagated what the probes found
         cutoffPending = probePrunings > before && ++cutoffRounds < PROBE_AGAIN;
       }
-      if (!probeForms.isEmpty()) {
+      if (!probeForms.isEmpty() && PROBE_STORED) {
         propagateProbeForms(store);
       }
     }
@@ -4967,10 +4971,21 @@ public class LinearRelaxation extends Constraint
    * solution, while the objective has its value.
    */
   public void solutionFound() {
-    if (!probeOn || objective == null || !objective.singleton()) {
+    if (objective != null && objective.singleton()) {
+      solutionFound(objective.value());
+    }
+  }
+
+  /**
+   * Takes the value of the objective in a solution, as {@link #solutionFound()}.
+   *
+   * @param value the value of the objective
+   */
+  public void solutionFound(long value) {
+    if (!probeOn || objective == null) {
       return;
     }
-    long bound = maximize ? objective.value() + 1L : objective.value() - 1L;
+    long bound = maximize ? value + 1L : value - 1L;
     if (!cutoffKnown || (maximize ? bound > cutoff : bound < cutoff)) {
       cutoff = bound;
       cutoffKnown = true;
@@ -5056,7 +5071,9 @@ public class LinearRelaxation extends Constraint
           if (System.nanoTime() - started > PROBE_NANOS || probeForms.size() >= PROBE_FORMS) {
             break;
           }
-          if (lpOnly[j] && ((LpColumn) x[j]).isFree() || lo[j] >= hi[j]) {
+          // an arc column at 1 is not x = v, nor at 0 x != v: only indicators say what a probe
+          // of theirs finds about their variable
+          if (lpOnly[j] && !indicator(j) || lo[j] >= hi[j]) {
             continue;
           }
           double v = value[j];
@@ -5235,6 +5252,11 @@ public class LinearRelaxation extends Constraint
       probeLpRow[i] = i;
     }
     return rootSolve(s, ROOT_PIVOTS, SPARSE_ROOT_WORK, PROBE_NANOS) == LpSolver.OPTIMAL ? s : null;
+  }
+
+  private boolean indicator(int j) {
+    LpColumn c = (LpColumn) x[j];
+    return PROBE_VALUES && !c.isFree() && !c.isArc();
   }
 
   // solves the probe simplex with column j in [from, to]; the bounds of j stay so, for its proof

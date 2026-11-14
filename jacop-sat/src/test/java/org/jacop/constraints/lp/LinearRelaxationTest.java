@@ -311,6 +311,95 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Probing at the incumbent: after each solution the relaxation probes the sides of its columns
+   * under the bound a better solution must meet, and keeps the Farkas inequalities of the
+   * infeasible probes. With restarts after each solution, and under lazy clause generation with the
+   * explanation checker, the optimum must stay that of depth-first search.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void probesAtTheIncumbentKeepTheOptimum(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.probeOn;
+    try {
+      LinearRelaxation.probeOn = true;
+      long probes = 0;
+      long pruned = 0;
+      long checked = 0;
+      Map<String, long[]> statistics = new TreeMap<>();
+      for (int run = 0; run < RUNS; run++) {
+        LinearRelaxation r = probedRestarts(run, simplex);
+        if (r != null) {
+          probes += r.probes;
+          pruned += r.probePrunings;
+        }
+        checked += probedLazyClauseGeneration(run, statistics, simplex);
+      }
+      assertThat(probes).isPositive();
+      assertThat(pruned).isPositive();
+      assertThat(checked).isPositive();
+    } finally {
+      LinearRelaxation.probeOn = was;
+    }
+  }
+
+  // restarts after each solution, each solution given to the relaxation
+  private static LinearRelaxation probedRestarts(long run, LinearRelaxation.Simplex simplex) {
+    long[] expected = search(new Model(run));
+    Model model = new Model(run);
+    if (model.objective == null) {
+      return null;
+    }
+    model.simplex = simplex;
+    LinearRelaxation r = model.relaxation();
+    IntVar cost = model.cost();
+    IntVar[] vars = Arrays.copyOf(model.x, model.x.length + 1);
+    vars[model.x.length] = cost;
+    long best = Long.MIN_VALUE;
+    while (model.store.consistency()) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.setAssignSolution(false);
+      search.getSolutionListener().recordSolutions(true);
+      if (!search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()))) {
+        break;
+      }
+      best = search.getSolution()[model.x.length].valueEnumeration().nextElement();
+      r.solutionFound(model.maximize ? -best : best);
+      if (best == cost.min()) {
+        break;
+      }
+      cost.domain.inMax(model.store.level, cost, (int) best - 1);
+    }
+    assertThat(new long[] {best == Long.MIN_VALUE ? 0 : 1, best})
+        .as("seed %d", run)
+        .isEqualTo(expected);
+    return r;
+  }
+
+  // lazy clause generation with the explanation checker, each solution given to the relaxation
+  private static long probedLazyClauseGeneration(
+      long run, Map<String, long[]> statistics, LinearRelaxation.Simplex simplex) {
+    long[] expected = search(new Model(run));
+    Model model = new Model(run);
+    if (model.objective == null) {
+      return 0;
+    }
+    model.simplex = simplex;
+    LinearRelaxation r = model.relaxation();
+    IntVar cost = model.cost();
+    LcgSolver solver = new LcgSolver(model.store);
+    solver.setChecking(true);
+    solver.onSolution(r::solutionFound);
+    int status = solver.minimize(cost);
+    assertThat(status).as("seed %d", run).isNotEqualTo(CdclSolver.UNKNOWN);
+    assertThat(status == CdclSolver.SAT).as("seed %d", run).isEqualTo(expected[0] > 0);
+    if (status == CdclSolver.SAT) {
+      assertThat((long) solver.value(cost)).as("seed %d", run).isEqualTo(expected[1]);
+    }
+    return solver.checker().checked;
+  }
+
+  /**
    * A combination at the long minimum keeps its sign when negated: the multiplier -2^40 of a cut
    * with the weight 2^23 gave -2^63, whose negation is itself, so the lower inequality of the root
    * reduced costs held that weight with the wrong sign. At a restart it removed the optimum (-9
