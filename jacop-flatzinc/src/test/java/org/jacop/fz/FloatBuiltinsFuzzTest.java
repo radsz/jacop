@@ -278,6 +278,25 @@ class FloatBuiltinsFuzzTest {
   }
 
   /**
+   * MiniZinc writes x != 0.0 or x &gt; 0.0 of a defined float as the bound 4.940656458412465e-324
+   * (the double after 0.0), and x &lt; 2.0 as 1.9999999999999998. The front end widened bounds of
+   * defined floats by the precision, which gave x = 0.0 and x = 2.0 back.
+   */
+  @Test
+  void strictBoundsOfDefinedFloatsAreKept() throws IOException {
+    String low =
+        """
+        var 0..2: i :: output_var;
+        var 4.940656458412465e-324..2.0: f ::var_is_introduced :: is_defined_var;
+        constraint int2float(i, f) :: defines_var(f);
+        solve satisfy;
+        """;
+    assertThat(new TreeSet<>(solveAll(low))).containsExactly("i = 1;", "i = 2;");
+    String high = low.replace("4.940656458412465e-324..2.0", "0.0..1.9999999999999998");
+    assertThat(new TreeSet<>(solveAll(high))).containsExactly("i = 0;", "i = 1;");
+  }
+
+  /**
    * Minimises or maximises a float function of the integers (a built-in, or a linear sum defined by
    * float_lin_eq), and checks the last solution against the optimum found by enumeration.
    */
