@@ -35,9 +35,10 @@ import org.jacop.core.IntVar;
 /**
  * Defines a SmallestSpan comparator for variables. It prefers variables whose domain spans fewer
  * values, max - min + 1, holes included. It breaks the ties of {@link SmallestDomain} in the
- * variable selection {@code first_fail} of FlatZinc: among the variables with the fewest values,
- * those with the values closest together first, as OR-Tools CP-SAT ranks the variables of {@code
- * first_fail} (its {@code CHOOSE_MIN_DOMAIN_SIZE} compares max - min + 1).
+ * variable selection {@code first_fail} of FlatZinc with {@code -Dorg.jacop.fz.firstFailTie=span}:
+ * among the variables with the fewest values, those with the values closest together first, as
+ * OR-Tools CP-SAT ranks the variables of {@code first_fail} (its {@code CHOOSE_MIN_DOMAIN_SIZE}
+ * compares max - min + 1).
  *
  * @param <T> type of variable being used in the search.
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek

@@ -5481,6 +5481,26 @@ Version 5.0 (unreleased)
    and work-task-variation). The FlatZinc statistics print
    lcgUnkeptReasons and lcgExpandedLiterals.
 
+317. Under --lcg, a permutation (a domain consistent all different over as
+   many values as variables) whose variables are terms of the objective's
+   sum also becomes clauses (item 293): the linear forms that define the
+   objective (its sum and the blocks of a split sum) no longer count as
+   other constraints of its variables
+   (-Djacop.lcg.alldiffClauses.objective=false turns this off). On the
+   25x25 sudokus of sudoku_opt (MiniZinc Challenge 2022), whose objective
+   is a signed sum of all 625 cells, the 75 all different propagators had
+   stayed; with clauses the same fixed search runs about 2x faster
+   (p20 26 -> 11 s, p23 364 -> 203 s; 9 -> 11 of 18 puzzles proved at
+   600 s). It turns on for no instance of the wide benchmark set.
+   New option -Dorg.jacop.fz.firstFailTie=span (off by default) breaks the
+   ties of first_fail between the variables with the fewest values by the
+   smallest max - min + 1 (new comparator org.jacop.search.SmallestSpan),
+   as OR-Tools CP-SAT's CHOOSE_MIN_DOMAIN_SIZE ranks them. The variable
+   chosen still has the smallest domain. On sudoku_opt p23 it gives the
+   tree of CP-SAT's fixed search (668k -> 74k failures, as CP-SAT's 69k);
+   on the 102 wide instances with a first_fail search it makes 18 worse
+   and 9 better at 600 s, so it is not the default.
+
 316. AllDifferentLists(x, except) takes excepted tuples (XCSP3 allDifferent
    over lists with except): two rows may be equal when their tuple is one
    of them. A fixed row with an excepted tuple is not hashed, so it neither

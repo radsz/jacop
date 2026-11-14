@@ -856,18 +856,21 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
 
   /**
    * How {@code first_fail} breaks the ties between variables with the fewest values, the system
-   * property {@code org.jacop.fz.firstFailTie}: {@code span} (default) prefers the smallest max -
-   * min + 1 ({@link SmallestSpan}), {@code min} the smallest minimum, {@code none} the first in the
-   * annotation's order. The variable chosen always has the smallest domain, as {@code first_fail}
-   * asks; only the order among equally small domains changes, and only when they have holes.
+   * property {@code org.jacop.fz.firstFailTie}: {@code none} (default) takes the first in the
+   * annotation's order, {@code span} the smallest max - min + 1 ({@link SmallestSpan}). The
+   * variable chosen always has the smallest domain, as {@code first_fail} asks; only the order
+   * among equally small domains changes, and only when they have holes. With {@code span}, the
+   * fixed search of the 25x25 sudokus of sudoku_opt (MiniZinc Challenge 2022) makes the tree of
+   * OR-Tools CP-SAT's fixed search (p23: 668k to 74k failures); on the wide benchmark set it makes
+   * 18 of the 102 instances it reaches worse and 9 better at 600 s (osolpro benchmarks/sudoku-opt),
+   * so it is off.
    */
-  static final String FIRST_FAIL_TIE = System.getProperty("org.jacop.fz.firstFailTie", "span");
+  static final String FIRST_FAIL_TIE = System.getProperty("org.jacop.fz.firstFailTie", "none");
 
   private static ComparatorVariable<IntVar> firstFailTie() {
     return switch (FIRST_FAIL_TIE) {
-      case "none" -> null;
-      case "min" -> new SmallestMin<>();
-      default -> new SmallestSpan<>();
+      case "span" -> new SmallestSpan<>();
+      default -> null;
     };
   }
 
