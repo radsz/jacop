@@ -293,6 +293,12 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: activity decisions on late variables (see {@link #setLateVariables}). */
   public long lateDecisions;
 
+  /**
+   * Statistics: the changes of order of activity branching before the first solution (see {@link
+   * #setBooleansFirstTurnsUntilSolution}).
+   */
+  public long booleansFirstTurnsBeforeSolution;
+
   /** Statistics: the late variables (see {@link #setLateVariables}). */
   public long lateVariables;
 
@@ -373,6 +379,10 @@ public final class LcgSolver implements ExternalPropagator {
   private boolean split = !FALSE.equals(System.getProperty("jacop.lcg.booleansFirst"));
   // whether the runs of activity branching take turns with and without Booleans first
   private boolean booleansFirstTurns;
+  // whether the runs of activity branching take those turns only until the first solution, then
+  // keep the order set before solving
+  private boolean booleansFirstTurnsUntilSolution;
+  private boolean splitAtStart;
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
   private final boolean[] late;
@@ -4218,6 +4228,22 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Sets whether the runs of activity branching take turns at restarts with and without the 0/1
+   * variables first (see {@link #setBooleansFirstTurns}) only until the first solution, and then go
+   * back to the order set by {@link #setBooleansFirst}. Deciding every 0/1 variable first can make
+   * a first solution out of reach: on the traveling tournament (XCSP 2024, 24 to 40 teams) the
+   * home/away pattern of the whole season and tens of thousands of half-reified Booleans are
+   * decided before any opponent, and no solution came in 600 s; in turns the first one comes in 30
+   * to 90 s. Set it before solving.
+   *
+   * @param turns true for turns until the first solution
+   */
+  public void setBooleansFirstTurnsUntilSolution(boolean turns) {
+    booleansFirstTurnsUntilSolution = turns;
+    splitAtStart = split;
+  }
+
+  /**
    * Returns whether activity branching decides the 0/1 variables first.
    *
    * @return true for the 0/1 variables first
@@ -5724,6 +5750,13 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
+    } else if (booleansFirstTurnsUntilSolution) {
+      if (best == null && activityBranching) {
+        setBooleansFirst(!split);
+        booleansFirstTurnsBeforeSolution++;
+      } else if (best != null) {
+        setBooleansFirst(splitAtStart);
+      }
     }
   }
 
