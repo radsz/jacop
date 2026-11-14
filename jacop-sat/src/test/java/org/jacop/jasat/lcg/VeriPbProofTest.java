@@ -710,6 +710,33 @@ class VeriPbProofTest {
     optimaAreProved(12, VeriPbProofTest::mixedModel);
   }
 
+  // if b then y = z else y = 0, with 0 a hole of y: the root propagation sets b, and the proof
+  // derives it only if the else branch states the value literal of y (its bounds allow 0)
+  @Test
+  void conditionalSelectOfAConstantHoleIsDerived() {
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar z = new IntVar(store, "z", -5, 5);
+    IntVar y = new IntVar(store, "y", -5, 5);
+    for (int v : new int[] {-2, 0, 1, 2}) {
+      z.domain.inComplement(0, z, v);
+      y.domain.inComplement(0, y, v);
+    }
+    IntVar[] branches = {z, new IntVar(store, 0, 0)};
+    IntVar[] conditions = {b, new IntVar(store, 1, 1)};
+    // attached after the variables: the model states their domains before the root propagation
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new ConditionalSelect(conditions, branches, y));
+    assertThat(b.min()).isEqualTo(1);
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("root changes derived, 0 taken into");
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
   // y = x[k] for the first k with b[k] = 1 (if_then_else_int), over branches with holes
   @Test
   void conditionalSelectIsProved() {
