@@ -5181,8 +5181,8 @@ Version 5.0 (unreleased)
      generation explains it by the fixed terms. Found by the new
      ConsistencyChecker case ReifiedLinear (nodes with a free b that has
      no support: about 420 per 1000 instances before, 86 after); the 6
-     wide-set instances that
-     post such constraints keep their solved counts and times at 600 s.
+     wide-set instances that post such constraints keep their solved
+     counts and times at 600 s.
      ConsistencyChecker has 17 more cases, for the constraints the wide
      set posts most, and LcgFuzzTest has -Dlcg.fuzz.focus to check the
      explanations of chosen constraints at volume.
