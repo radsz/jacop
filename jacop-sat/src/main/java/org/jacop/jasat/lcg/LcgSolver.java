@@ -3886,6 +3886,18 @@ public final class LcgSolver implements ExternalPropagator {
    *     smallest value)
    */
   private int neighbourhoodRuns(long nanos) {
+    inNeighbourhoods = true;
+    try {
+      return neighbourhoodRunsFor(nanos);
+    } finally {
+      inNeighbourhoods = false;
+    }
+  }
+
+  // whether the search is in a run of neighbourhoodRuns
+  private boolean inNeighbourhoods;
+
+  private int neighbourhoodRunsFor(long nanos) {
     long end = Math.min(System.nanoTime() + nanos, sat.deadline());
     while (System.nanoTime() < end) {
       int[] fixed = lns.neighbourhood();
@@ -6138,6 +6150,8 @@ public final class LcgSolver implements ExternalPropagator {
       Double.parseDouble(System.getProperty("jacop.lcg.valueImpactTime", "0.25"));
   // -Djacop.lcg.valueImpactFirst=true: also before the first solution, ahead of the target phase
   static final boolean IMPACT_BEFORE_SOLUTION = Boolean.getBoolean("jacop.lcg.valueImpactFirst");
+  // -Djacop.lcg.valueImpactLns=true: only in the runs of large neighbourhood search
+  static final boolean IMPACT_LNS_ONLY = Boolean.getBoolean("jacop.lcg.valueImpactLns");
   private long impactStart = -1;
   private long impactNanos;
 
@@ -6156,7 +6170,8 @@ public final class LcgSolver implements ExternalPropagator {
         || !freeSearch
         || objective < 0
         || i == objective
-        || (best == null && !IMPACT_BEFORE_SOLUTION)) {
+        || (best == null && !IMPACT_BEFORE_SOLUTION)
+        || (IMPACT_LNS_ONLY && !inNeighbourhoods)) {
       return Integer.MIN_VALUE;
     }
     IntVar x = vars[i];
