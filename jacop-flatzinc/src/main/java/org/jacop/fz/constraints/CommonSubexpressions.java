@@ -38,7 +38,9 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
@@ -415,7 +417,7 @@ public class CommonSubexpressions implements ParserTreeConstants {
       return LINEAR.contains(name) ? new Keyed(key, null) : output(node, 3, key);
     }
     if (CONNECTIVES.contains(name)) {
-      key.add(new java.util.TreeSet<>(tokens(support.getVarArray(child(node, 0)))));
+      key.add(sorted(tokens(support.getVarArray(child(node, 0)))));
       return output(node, 1, key);
     }
     if (ELEMENTS.contains(name)) {
@@ -441,8 +443,8 @@ public class CommonSubexpressions implements ParserTreeConstants {
       // an int_eq or bool_eq with a constant, which equality() leaves
       return null;
     }
-    key.add(new java.util.TreeSet<>(tokens(support.getVarArray(child(node, 0)))));
-    key.add(new java.util.TreeSet<>(tokens(support.getVarArray(child(node, 1)))));
+    key.add(sorted(tokens(support.getVarArray(child(node, 0)))));
+    key.add(sorted(tokens(support.getVarArray(child(node, 1)))));
     return new Keyed(key, null);
   }
 
@@ -491,6 +493,13 @@ public class CommonSubexpressions implements ParserTreeConstants {
       t.add(token(v));
     }
     return t;
+  }
+
+  // the tokens as a set, constants (Integer) before variables (Long)
+  private static SortedSet<Object> sorted(List<Object> tokens) {
+    SortedSet<Object> set = new TreeSet<>(CommonSubexpressions::compare);
+    set.addAll(tokens);
+    return set;
   }
 
   private static boolean constant(Object t) {

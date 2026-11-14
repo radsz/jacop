@@ -276,6 +276,27 @@ class CommonSubexpressionsFlatzincTest {
     assertTrue(out.contains("x = 2;") && out.contains("y = 2;") && out.contains("b = true;"), out);
   }
 
+  /** Clauses and connectives whose arrays mix constants and variables (gfd-schedule). */
+  @Test
+  void arraysWithConstantsAndVariables() throws IOException {
+    String model =
+        """
+        var bool: a:: output_var;
+        var bool: b:: output_var;
+        var bool: r1:: output_var;
+        var bool: r2:: output_var;
+        constraint array_bool_or([a,false,b],r1);
+        constraint array_bool_or([b,a,false],r2);
+        constraint bool_clause([a,true],[b]);
+        constraint bool_clause([true,a],[b]);
+        solve satisfy;
+        """;
+    String out = run(model, true, "-a", "-debug");
+    assertTrue(out.contains("% common subexpressions: 1 outputs merged"), out);
+    assertEquals(4, solutions(out), out);
+    assertEquals(4, solutions(run(model, false, "-a")));
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }
