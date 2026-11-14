@@ -308,6 +308,53 @@ class LcgSolverTest {
   }
 
   @Test
+  void lazyCountersAgreeWithPigeonhole() {
+    // pigeons in holes: rows and columns are SumBool counts, which become unary counters at a
+    // restart once they explained a conflict (lazy decomposition); n + 1 pigeons do not fit
+    long encoded = 0;
+    for (int n = 4; n <= 6; n++) {
+      for (int pigeons = n; pigeons <= n + 1; pigeons++) {
+        Store store = new Store();
+        IntVar[][] x = new IntVar[pigeons][n];
+        for (int p = 0; p < pigeons; p++) {
+          for (int h = 0; h < n; h++) {
+            x[p][h] = new IntVar(store, "x" + p + "_" + h, 0, 1);
+          }
+          store.impose(new SumBool(x[p], "==", new IntVar(store, 1, 1)));
+        }
+        for (int h = 0; h < n; h++) {
+          IntVar[] column = new IntVar[pigeons];
+          for (int p = 0; p < pigeons; p++) {
+            column[p] = x[p][h];
+          }
+          store.impose(new SumBool(column, "<=", new IntVar(store, 0, 1)));
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setLazyCounterUses(1);
+        int status = solver.solve();
+        assertThat(status)
+            .as("%d pigeons, %d holes", pigeons, n)
+            .isEqualTo(pigeons > n ? CdclSolver.UNSAT : CdclSolver.SAT);
+        if (status == CdclSolver.SAT) {
+          int[] perHole = new int[n];
+          for (int p = 0; p < pigeons; p++) {
+            int sum = 0;
+            for (int h = 0; h < n; h++) {
+              sum += solver.value(x[p][h]);
+              perHole[h] += solver.value(x[p][h]);
+            }
+            assertThat(sum).isEqualTo(1);
+          }
+          assertThat(Arrays.stream(perHole).max().getAsInt()).isLessThanOrEqualTo(1);
+        }
+        encoded += solver.lazyCountersEncoded;
+      }
+    }
+    assertThat(encoded).isGreaterThan(0);
+  }
+
+  @Test
   void largeAlldiffStaysWithinTheLiteralBudget() {
     // each value fixed removes it from every other variable: n * n / 2 removals on one branch,
     // which made a solver variable each and filled the heap on debruijn_binary_04_06 (n = 4096)

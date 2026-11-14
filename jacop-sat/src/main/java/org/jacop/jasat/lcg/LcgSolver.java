@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -4259,11 +4260,18 @@ public final class LcgSolver implements ExternalPropagator {
         graphConstraintsEncoded++;
       } else if (clauseCandidate(c) && encodeAsClauses(c)) {
         constraintsAsClauses++;
-      } else if (defaultCounter(c) && encodeAsCounter(c)) {
+      } else if (!LAZY_COUNTERS && defaultCounter(c) && encodeAsCounter(c)) {
+        if (COUNTERS_LOG) {
+          System.out.println(
+              "% counter " + c.getClass().getSimpleName() + " vars " + c.arguments().size());
+        }
         defaultCounters++;
         constraintsAsClauses++;
       } else {
         propagatorLeft = true;
+        if (LAZY_COUNTERS && defaultCounter(c)) {
+          lazyCounters.put(c, new int[1]);
+        }
         if (c instanceof ImpliedClauses i && !rootFailed) {
           impliedClauses += i.impliedClauses(model);
         }
@@ -4350,10 +4358,10 @@ public final class LcgSolver implements ExternalPropagator {
   /**
    * Whether small counting constraints over 0/1 terms outside a reification (sums of 0/1 variables,
    * counts of a value, the counts of global_cardinality) become unary counters by default, {@code
-   * jacop.lcg.counters} (true unless set to false). A propagator explains a count by the literals
-   * of the variables only, so every learnt clause restates whole counts; the counter's literals
-   * {@code [sum of the first i terms >= j]} let learnt clauses state partial counts, as the
-   * auxiliary variables of a SAT encoding do (Abio and Stuckey, Conflict directed lazy
+   * jacop.lcg.counters} (lazy unless set to eager or false). A propagator explains a count by the
+   * literals of the variables only, so every learnt clause restates whole counts; the counter's
+   * literals {@code [sum of the first i terms >= j]} let learnt clauses state partial counts, as
+   * the auxiliary variables of a SAT encoding do (Abio and Stuckey, Conflict directed lazy
    * decomposition, CP 2012; Abio, Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, To encode
    * or to propagate? The best choice for each constraint in SAT, CP 2013). On the XCSP
    * EFPA-4-5-4-11 the proof takes 0.81 million conflicts instead of 2.6 million.
@@ -4367,16 +4375,97 @@ public final class LcgSolver implements ExternalPropagator {
   /** The classes whose small instances become counters by default ({@link #COUNTERS}). */
   private static final java.util.Set<String> DEFAULT_COUNTER_CLASSES =
       java.util.Set.of(
-          "SumBool",
-          "LinearBool",
-          "Count",
-          "CountBounds",
-          "CountValues",
-          "CountValuesBounds",
-          "AtMost",
-          "AtLeast");
+          System.getProperty(
+                  "jacop.lcg.counters.classes",
+                  "SumBool,LinearBool,Count,CountBounds,CountValues,CountValuesBounds,AtMost,AtLeast")
+              .split(","));
+
+  private static final boolean COUNTERS_LOG = Boolean.getBoolean("jacop.lcg.counters.log");
 
   private ClauseEncoder counterEncoder;
+
+  /**
+   * Whether the counting constraints of {@link #COUNTERS} stay propagators until their explanations
+   * take part in {@link #LAZY_USES} conflicts, and become counters at the next restart (lazy
+   * decomposition, Abio and Stuckey, Conflict directed lazy decomposition, CP 2012). The default;
+   * {@code jacop.lcg.counters=eager} encodes them all before search. Eager counters slow down
+   * models whose counts rarely take part in conflicts (mondoku 12-12-8 9 s to 14 s, cryptanalysis
+   * kb128 obj11 28 s to 34 s), lazy ones keep their time.
+   */
+  static final boolean LAZY_COUNTERS = !"eager".equals(System.getProperty("jacop.lcg.counters"));
+
+  /** The explanations of a lazy counter after which it becomes clauses. */
+  static final int LAZY_USES = Integer.getInteger("jacop.lcg.counters.uses", 100);
+
+  // the lazy counters still propagators, with the number of their explanations, in the order of
+  // the store (constraints use identity hash codes, so the order does not depend on them)
+  private final Map<Constraint, int[]> lazyCounters = new java.util.LinkedHashMap<>();
+
+  /** Statistics: lazy counters that became clauses. */
+  public long lazyCountersEncoded;
+
+  private int lazyUses = LAZY_USES;
+
+  /**
+   * Sets the number of explanations after which a lazy counter becomes clauses ({@link
+   * #LAZY_COUNTERS}); before solving.
+   *
+   * @param uses the explanations, at least 1
+   */
+  public void setLazyCounterUses(int uses) {
+    lazyUses = Math.max(1, uses);
+  }
+
+  private void useCounter(Constraint c) {
+    if (!lazyCounters.isEmpty()) {
+      int[] uses = lazyCounters.get(c);
+      if (uses != null) {
+        uses[0]++;
+      }
+    }
+  }
+
+  // at a restart at the base level: the active lazy counters become clauses, added as structural
+  // clauses, and their propagators are removed at this level, below which search never goes
+  private void decomposeActiveCounters() {
+    if (proof != null || rootFailed || failed) {
+      return;
+    }
+    Iterator<Map.Entry<Constraint, int[]>> it = lazyCounters.entrySet().iterator();
+    while (it.hasNext()) {
+      Map.Entry<Constraint, int[]> e = it.next();
+      Constraint c = e.getKey();
+      if (e.getValue()[0] < lazyUses) {
+        continue;
+      }
+      it.remove();
+      if (c.isEntailed()) {
+        continue;
+      }
+      if (counterEncoder == null) {
+        counterEncoder = new ClauseEncoder(encoderLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
+      }
+      List<int[]> cs = counterEncoder.encode(c, true);
+      if (cs == null) {
+        continue;
+      }
+      structural.addAll(cs);
+      constraintClauses += cs.size();
+      c.removeConstraint();
+      encodedConstraints.add(c);
+      lazyCountersEncoded++;
+      defaultCounters++;
+      if (COUNTERS_LOG) {
+        System.out.println(
+            "% lazy counter "
+                + c.getClass().getSimpleName()
+                + " vars "
+                + c.arguments().size()
+                + " uses "
+                + e.getValue()[0]);
+      }
+    }
+  }
 
   /** Statistics: counting constraints that became unary counters by default. */
   public long defaultCounters;
@@ -4914,6 +5003,9 @@ public final class LcgSolver implements ExternalPropagator {
       }
       if (restartPresolve > 0) {
         presolveAtRestart();
+      }
+      if (!lazyCounters.isEmpty()) {
+        decomposeActiveCounters();
       }
       exchangeShared();
     }
@@ -5557,6 +5649,7 @@ public final class LcgSolver implements ExternalPropagator {
           proofLinearBounds(store.recentlyFailedConstraint, atoms, 0, -1);
         }
         count(store.recentlyFailedConstraint, own, atoms.size(), 3);
+        useCounter(store.recentlyFailedConstraint);
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
@@ -5598,6 +5691,7 @@ public final class LcgSolver implements ExternalPropagator {
       genericDeferred.add(trail.reason(e));
     }
     count(trail.reason(e), own, out.size() - mark, 0);
+    useCounter(trail.reason(e));
     measure(trail.reason(e), own, e, out, mark);
     if (checker != null) {
       EntryList reason = new EntryList();
