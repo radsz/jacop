@@ -159,6 +159,9 @@ public class Constraints implements ParserTreeConstants {
     }
 
     Options options = support.options;
+    if (options.symmetry() && ConditionalValueSwaps.ENABLED) {
+      support.recordChannelDomains(astTree);
+    }
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
     if (hasFloatVariables()) {

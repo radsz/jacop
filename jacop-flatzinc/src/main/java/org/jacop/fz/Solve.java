@@ -498,6 +498,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + o.cuts()
               + "\n%%%mzn-stat: symmetrySchreierSimsImplied="
               + o.impliedCuts()
+              + "\n%%%mzn-stat: symmetryValueSwaps="
+              + symmetry.swaps()
               + "\n%%%mzn-stat: symmetrySearchComplete="
               + o.complete()
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
