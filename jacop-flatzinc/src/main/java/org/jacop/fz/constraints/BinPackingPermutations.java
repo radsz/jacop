@@ -79,6 +79,8 @@ public final class BinPackingPermutations {
     }
   }
 
+  private static final int[] NONE = new int[0];
+
   private final Support support;
 
   private final List<Packing> packings = new ArrayList<>();
@@ -128,28 +130,28 @@ public final class BinPackingPermutations {
     }
   }
 
-  // the item of each bin variable; null when a variable is the bin of two items
+  // the item of each bin variable; empty when a variable is the bin of two items
   private static Map<IntVar, Integer> items(IntVar[] bin) {
     Map<IntVar, Integer> item = new IdentityHashMap<>();
     for (int i = 0; i < bin.length; i++) {
       if (!bin[i].singleton() && item.put(bin[i], i) != null) {
-        return null;
+        return Map.of();
       }
     }
     return item;
   }
 
-  // the items of an all_different that is a permutation of the bins, or null
+  // the items of an all_different that is a permutation of the bins, or none
   private static int[] group(IntVar[] x, Map<IntVar, Integer> item, Packing p, boolean[] used) {
     int n = p.load.length;
     if (x.length != n) {
-      return null;
+      return NONE;
     }
     int[] g = new int[n];
     for (int k = 0; k < n; k++) {
       Integer i = item.get(x[k]);
       if (i == null || used[i] || x[k].min() < p.minBin || x[k].max() > p.minBin + n - 1) {
-        return null;
+        return NONE;
       }
       g[k] = i;
     }
@@ -160,14 +162,14 @@ public final class BinPackingPermutations {
   private int post(Packing p) {
     int n = p.load.length;
     Map<IntVar, Integer> item = items(p.bin);
-    if (item == null || n < 3) {
+    if (item.isEmpty() || n < 3) {
       return 0;
     }
     boolean[] used = new boolean[p.bin.length];
     List<int[]> groups = new ArrayList<>();
     for (IntVar[] x : support.alldifferentLists) {
       int[] g = group(x, item, p, used);
-      if (g == null) {
+      if (g.length == 0) {
         continue;
       }
       boolean distinct = false;
