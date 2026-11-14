@@ -87,7 +87,7 @@ class ZeroHalfCutsTest {
     List<int[]> sets = ZeroHalfCuts.separate(columns, weights, odd, new double[n], distance, 10);
     for (int[] set : sets) {
       // the six rows sum to an even right side: no set may take all of them
-      assertThat(set.length).isLessThan(n);
+      assertThat(set).hasSizeLessThan(n);
     }
   }
 

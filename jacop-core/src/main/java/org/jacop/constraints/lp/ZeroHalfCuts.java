@@ -165,24 +165,10 @@ final class ZeroHalfCuts {
     }
     Arrays.sort(order, Comparator.comparingInt((Integer i) -> size[i]).thenComparingInt(i -> i));
     long work = 0;
-    for (int r : order) {
-      if (work > MAX_WORK) {
-        break;
-      }
-      if (dead[r] || s[r] > AT_BOUND || popCount(mult[r]) > MAX_COMBINED) {
-        continue;
-      }
-      int pivot = -1;
-      for (int word = 0; word < colWords; word++) {
-        long b = bits[r][word];
-        while (b != 0) {
-          int c = (word << 6) + Long.numberOfTrailingZeros(b);
-          b &= b - 1;
-          if (pivot < 0 || w[c] > w[pivot]) {
-            pivot = c;
-          }
-        }
-      }
+    for (int next = 0; next < rows && work <= MAX_WORK; next++) {
+      int r = order[next];
+      boolean pivots = !dead[r] && s[r] <= AT_BOUND && popCount(mult[r]) <= MAX_COMBINED;
+      int pivot = pivots ? largest(bits[r], w) : -1;
       if (pivot < 0) {
         continue;
       }
@@ -199,7 +185,7 @@ final class ZeroHalfCuts {
             while (changed != 0) {
               int c = (t << 6) + Long.numberOfTrailingZeros(changed);
               changed &= changed - 1;
-              degree[c] += (both & (1L << (c & 63))) != 0 ? -1 : 1;
+              degree[c] += (both & (1L << (c & 63))) == 0 ? 1 : -1;
             }
           }
           for (int t = 0; t < rowWords; t++) {
@@ -248,10 +234,8 @@ final class ZeroHalfCuts {
     found.sort(Comparator.comparingDouble((Integer i) -> -violation[i]).thenComparingInt(i -> i));
     List<int[]> sets = new ArrayList<>();
     List<long[]> taken = new ArrayList<>();
-    for (int i : found) {
-      if (sets.size() >= maxCuts) {
-        break;
-      }
+    for (int next = 0; next < found.size() && sets.size() < maxCuts; next++) {
+      int i = found.get(next);
       boolean duplicate = false;
       for (long[] m : taken) {
         duplicate |= Arrays.equals(m, mult[i]);
@@ -272,6 +256,22 @@ final class ZeroHalfCuts {
       sets.add(set);
     }
     return sets;
+  }
+
+  // the column of the row with the largest distance, the first on ties, or -1 if the row is empty
+  private static int largest(long[] row, double[] w) {
+    int pivot = -1;
+    for (int word = 0; word < row.length; word++) {
+      long b = row[word];
+      while (b != 0) {
+        int c = (word << 6) + Long.numberOfTrailingZeros(b);
+        b &= b - 1;
+        if (pivot < 0 || w[c] > w[pivot]) {
+          pivot = c;
+        }
+      }
+    }
+    return pivot;
   }
 
   // a column left in one live row only: its distance goes to that row's slack, which costs the

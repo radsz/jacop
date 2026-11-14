@@ -2563,7 +2563,8 @@ public class LinearRelaxation extends Constraint
     for (int s = 0; s < SCALES.length; s++) {
       long[] lambda = scaled(y, SCALES[s]);
       if (lambda == null) {
-        break;
+        countUnproven(status);
+        return;
       }
       int[][] facts = new int[2][];
       long[][] used = new long[2][];
@@ -2608,6 +2609,11 @@ public class LinearRelaxation extends Constraint
       }
       // the bounds reasoning on the form would overflow: try a smaller scale
     }
+    countUnproven(status);
+  }
+
+  // an infeasible LP solve that ends without an integer certificate
+  private void countUnproven(int status) {
     if (status == LpSolver.INFEASIBLE) {
       unproven++;
     }
@@ -4321,23 +4327,12 @@ public class LinearRelaxation extends Constraint
       distance[j] = Math.min(v - lo[j], hi[j] - v);
     }
     int maxLength = 100 + n / 20;
-    List<int[]> candidates = new ArrayList<>(); // {pool row, sign}
+    // each candidate is a pool row and the sign it enters with
+    List<int[]> candidates = new ArrayList<>();
     List<Double> slacks = new ArrayList<>();
     for (int i = 0; i < pool; i++) {
-      if (!inLp[i] || rowColumns[i].length > maxLength) {
-        continue;
-      }
-      int[] cs = rowColumns[i];
-      long[] ws = rowWeights[i];
-      boolean anyOdd = false;
-      boolean small = true;
-      double act = 0;
-      for (int k = 0; k < cs.length; k++) {
-        anyOdd |= (ws[k] & 1) != 0;
-        small &= Math.abs(ws[k]) <= 1_000_000;
-        act += ws[k] * value[cs[k]];
-      }
-      if (!anyOdd || !small) {
+      double act = zeroHalfActivity(i, maxLength, value);
+      if (Double.isNaN(act)) {
         continue;
       }
       boolean equality = hasLo[i] && hasHi[i] && rowLo[i] == rowHi[i];
@@ -4391,22 +4386,44 @@ public class LinearRelaxation extends Constraint
       for (int t : set) {
         lambda[picked[t][0]] += picked[t][1];
       }
-      Aggregate g = aggregate(lambda);
-      if (g == null || !g.hasUpper() || g.columns().length == 0) {
-        continue;
-      }
-      long[] raw = MirCut.raw(g.columns(), g.coef(), g.upper(), value, lo, hi, 2);
-      if (raw == null) {
-        continue;
-      }
-      MirCut c =
-          MirCut.finish(
-              g.columns(), raw, raw[g.columns().length], value, lo, hi, MirCut.REDUCE_CUTS);
+      MirCut c = zeroHalfCut(aggregate(lambda), value, lo, hi);
       if (c != null && c.efficacy >= ZERO_HALF_EFFICACY) {
         found.add(c);
         zeroHalf.add(c);
       }
     }
+  }
+
+  // the zero-half cut of an aggregate: its MIR with divisor 2, or null
+  private static MirCut zeroHalfCut(Aggregate g, double[] value, long[] lo, long[] hi) {
+    if (g == null || !g.hasUpper() || g.columns().length == 0) {
+      return null;
+    }
+    long[] raw = MirCut.raw(g.columns(), g.coef(), g.upper(), value, lo, hi, 2);
+    if (raw == null) {
+      return null;
+    }
+    return MirCut.finish(
+        g.columns(), raw, raw[g.columns().length], value, lo, hi, MirCut.REDUCE_CUTS);
+  }
+
+  // the activity of pool row i at the LP solution, or NaN if the row cannot enter a zero-half cut:
+  // not in the LP, too long, without an odd weight or with a weight too large
+  private double zeroHalfActivity(int i, int maxLength, double[] value) {
+    int[] cs = rowColumns[i];
+    if (!inLp[i] || cs.length > maxLength) {
+      return Double.NaN;
+    }
+    long[] ws = rowWeights[i];
+    boolean anyOdd = false;
+    boolean small = true;
+    double act = 0;
+    for (int k = 0; k < cs.length; k++) {
+      anyOdd |= (ws[k] & 1) != 0;
+      small &= Math.abs(ws[k]) <= 1_000_000;
+      act += ws[k] * value[cs[k]];
+    }
+    return anyOdd && small ? act : Double.NaN;
   }
 
   // whether the cut is far enough from parallel to each of the cuts chosen
