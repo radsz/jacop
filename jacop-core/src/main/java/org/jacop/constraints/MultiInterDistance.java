@@ -41,6 +41,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * MultiInterDistance constraint: for every v at most m of the variables x take a value in v..v + p
@@ -68,7 +71,7 @@ import org.jacop.core.Store;
  * @version 5.0
  */
 public class MultiInterDistance extends Constraint
-    implements SatisfiedPresent, Copyable<MultiInterDistance> {
+    implements SatisfiedPresent, Copyable<MultiInterDistance>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -556,6 +559,50 @@ public class MultiInterDistance extends Constraint
       }
     }
     return false;
+  }
+
+  // the explanations of the bounds, made on first use
+  private BoxReason boxReason;
+
+  // the propagation is bounds(Z) consistent: an atom holds when the box of the bounds with the
+  // atom negated has no schedule, which lower() tells
+  private BoxReason boxReason() {
+    if (boxReason == null) {
+      boxReason =
+          new BoxReason(
+              x,
+              (boxLo, boxHi) -> {
+                for (int i = 0; i < n; i++) {
+                  lo[i] = boxLo[i];
+                  up[i] = boxHi[i] + 1;
+                }
+                return !lower();
+              },
+              64,
+              1L << 40);
+    }
+    return boxReason;
+  }
+
+  /**
+   * Explains a bound of a start by the bounds of the other starts in which, with the atom negated,
+   * no schedule exists (see {@link BoxReason}).
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    if (p == 0 || n <= m || overRepeated) {
+      return false;
+    }
+    return boxReason().explain(trail, entry, out);
+  }
+
+  /** Explains a failure by the bounds in which no schedule exists. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    if (p == 0 || n <= m || overRepeated) {
+      return false;
+    }
+    return boxReason().explainFailure(trail, out);
   }
 
   @Override

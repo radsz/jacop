@@ -71,6 +71,15 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExpla
 
   long sumXmax;
 
+  // an upper bound of I[i] over all i, the largest one computeInit found; pruning only lowers I
+  private long maxVariability;
+
+  // propagation reads x[0..free); the variables after it are fixed and their sum is in dropped
+  private int free;
+
+  // the fixed variables moved out of the free part of x, for an imposed constraint; otherwise null
+  private DroppedTerms dropped;
+
   // a variable occurs twice (in the list, or in the list and as the sum): pruning one occurrence
   // changes the bounds of the other, so the sums are recomputed after each pruning
   private final boolean aliased;
@@ -155,10 +164,29 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExpla
    */
   public void propagate(int rel) {
     computeInit();
-    do {
-      store.propagationHasOccurred = false;
+    if (aliased || rel == NE) {
+      do {
+        store.propagationHasOccurred = false;
+        applyRelation(rel);
+      } while (store.propagationHasOccurred);
+    } else if (rel == EQ) {
+      // pruning the maxima reads the minimum of the sum of x and the maximum of sum, and pruning
+      // the
+      // minima has just run, so the pair is repeated only when one of them changed (the maximum of
+      // sum can fall below the sum of the maxima of x when its domain has holes)
+      long lastSumMin;
+      int lastMax;
+      do {
+        pruneLtEq(0L);
+        lastSumMin = sumXmin;
+        lastMax = sum.max();
+        pruneGtEq(0L);
+      } while (sumXmin != lastSumMin || sum.max() != lastMax);
+    } else {
+      // an inequality prunes only the bounds its own sum bound does not read: one pass is a
+      // fixpoint
       applyRelation(rel);
-    } while (store.propagationHasOccurred);
+    }
   }
 
   private void applyRelation(int rel) {
@@ -223,11 +251,16 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExpla
   }
 
   private void computeInit() {
+    if (dropped != null) {
+      computeInitDropping();
+      return;
+    }
     long f = 0;
     long e = 0;
     long min;
     long max;
 
+    long largest = 0;
     for (int i = 0; i < l; i++) {
       IntDomain xd = x[i].dom();
       min = xd.min();
@@ -235,10 +268,55 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExpla
       f += min;
       e += max;
       I[i] = max - min;
+      largest = Math.max(largest, max - min);
     }
 
+    maxVariability = largest;
+    free = l;
     sumXmin = f;
     sumXmax = e;
+  }
+
+  /** Computes the bounds of the sum of x like computeInit and moves the fixed variables out. */
+  private void computeInitDropping() {
+    long f = dropped.fixedSum;
+    long e = f;
+    long largest = 0;
+    int i = 0;
+    int end = dropped.freeFirst;
+    while (i < end) {
+      IntDomain xd = x[i].dom();
+      long min = xd.min();
+      long max = xd.max();
+      f += min;
+      e += max;
+      if (min == max) {
+        dropped.drop(min);
+        end--;
+        IntVar v = x[i];
+        x[i] = x[end];
+        x[end] = v;
+        dropped.freeFirst = end;
+      } else {
+        I[i] = max - min;
+        largest = Math.max(largest, max - min);
+        i++;
+      }
+    }
+    maxVariability = largest;
+    free = end;
+    sumXmin = f;
+    sumXmax = e;
+  }
+
+  @Override
+  public void impose(Store store) {
+    // fixed variables are moved behind the free ones; short sums gain nothing from it, and with a
+    // repeated variable the sums are recomputed after every pruning anyway
+    if (getClass() == SumInt.class && !aliased && l > 3) {
+      dropped = new DroppedTerms(store, l, 0);
+    }
+    super.impose(store);
   }
 
   private void pruneLtEq(long b) {
@@ -265,7 +343,11 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExpla
       computeInit();
     }
     long sumBound = isLtEq ? sum.max() : sum.min();
-    for (int i = 0; i < l; i++) {
+    if (!aliased
+        && maxVariability <= (isLtEq ? sumBound - sumXmin - b : -(sumBound - sumXmax + b))) {
+      return;
+    }
+    for (int i = 0; i < free; i++) {
       pruneVariableForDirection(i, isLtEq, b, sumBound);
     }
   }
@@ -315,7 +397,7 @@ public class SumInt extends AbstractSum implements Copyable<SumInt>, LinearExpla
     long min;
     long max;
 
-    for (int i = 0; i < l; i++) {
+    for (int i = 0; i < free; i++) {
       min = x[i].min();
       max = min + I[i];
 

@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import java.util.ArrayList;
+import java.util.Map;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.ValueEnumeration;
@@ -98,12 +99,29 @@ public class OutputArrayAnnotation {
   /** {@inheritDoc} */
   @Override
   public String toString() {
+    return toString(Map.of());
+  }
+
+  /**
+   * The output line of the array, with the given values for variables the model no longer has.
+   *
+   * @param values the values of the variables that table variable elimination removed.
+   * @return the output line.
+   */
+  public String toString(Map<Var, Integer> values) {
 
     StringBuilder s = new StringBuilder(id + " = array" + indexes.size() + "d(");
     appendIndexes(s);
     s.append("[");
     for (int i = 0; i < array.length; i++) {
-      appendVarToString(s, array[i]);
+      Integer value = values.get(array[i]);
+      if (value == null) {
+        appendVarToString(s, array[i]);
+      } else if (array[i] instanceof BooleanVar) {
+        s.append(value == 1);
+      } else {
+        s.append(value);
+      }
       if (i < array.length - 1) {
         s.append(", ");
       }
