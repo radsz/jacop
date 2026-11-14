@@ -820,6 +820,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: lpRows="
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat: lpTableClauses="
+              + (linearRelaxation == null ? 0 : linearRelaxation.tableClauses)
               + (cliques == null
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
@@ -953,6 +955,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
+            + "\n%%%mzn-stat: lpTableClauses="
+            + r.tableClauses
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootPrunings="
