@@ -1526,6 +1526,10 @@ setup to run configuration. -->
                         <!-- and without the default symmetry breaking (presolve-off runs); with
                              presolve the tests break symmetries as before -->
                         <jacop.symmetry>presolve</jacop.symmetry>
+                        <!-- the automorphism search stops after a wall-clock budget, so on a slow
+                             or loaded machine it can stop early and break other symmetries; give
+                             it room so that the expected outputs do not depend on the machine -->
+                        <org.jacop.fz.symmetryTime>20000</org.jacop.fz.symmetryTime>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
                     <argLine>@{argLine} -Xss100m</argLine>
