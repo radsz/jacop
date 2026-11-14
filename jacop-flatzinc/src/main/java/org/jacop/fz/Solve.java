@@ -793,10 +793,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (linearRelaxation != null) {
       linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
-      if (LP_PROBE_MS > 0
+      if (lpProbeMs > 0
           && !options.freeSearch()
           && options.portfolioWorker == null
-          && linearRelaxation.rootTrialSize() >= LP_PROBE_SIZE) {
+          && linearRelaxation.rootTrialSize() >= lpProbeSize) {
         // the root solve waits for a short search without it: see executeSearch
         linearRelaxation.suspend(true);
         lpProbing = true;
@@ -937,7 +937,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n%%%mzn-stat: lpUselessDropped="
             + r.uselessDropped()
             + "\n%%%mzn-stat: lpProbe="
-            + (LP_PROBE_MS == 0
+            + (lpProbeMs == 0
                 ? "off"
                 : lpProbeFinished ? "finished" : r.solved() ? "solved" : "unsolved")
             + "\n%%%mzn-stat: lpRootTrialSize="
@@ -2868,7 +2868,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     if (lpProbing) {
-      lcg.atRootAfter(LP_PROBE_MS * 1_000_000L, this::resumeRelaxation);
+      lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
     }
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
     if (lpProbing) {
@@ -4363,11 +4363,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // relaxation, which is then solved at the root as without the probe (0: off). nside MEDIUM_5_3 of
   // the 2026 Challenge: 1.3 s of root LP and cut rounds, and 391 nodes of search, 0.04 s, without
   // it
-  static final long LP_PROBE_MS = Long.getLong("org.jacop.fz.lpProbe", 0);
+  private final long lpProbeMs = Long.getLong("org.jacop.fz.lpProbe", 0);
 
   // -Dorg.jacop.fz.lpProbeSize=n: the smallest tableau of the first solve (rows times rows and
   // columns, LinearRelaxation.rootTrialSize) that the probe waits for
-  static final long LP_PROBE_SIZE = Long.getLong("org.jacop.fz.lpProbeSize", 200_000);
+  private final long lpProbeSize = Long.getLong("org.jacop.fz.lpProbeSize", 1_000_000);
 
   // the relaxation is suspended until the probe ends
   private boolean lpProbing;
@@ -4392,13 +4392,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean executeProbeSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
     if (options.debug()) {
-      IO.print("% probe of " + LP_PROBE_MS + " ms without the relaxation, ");
+      IO.print("% probe of " + lpProbeMs + " ms without the relaxation, ");
       label.setSelectChoicePoint(select);
       IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
       printSearch(label);
     }
     ProbeCalculator calculator =
-        new ProbeCalculator(LP_PROBE_MS * 1_000_000L, this::resumeRelaxation);
+        new ProbeCalculator(lpProbeMs * 1_000_000L, this::resumeRelaxation);
     rs =
         new RestartSearch<>(store, label, select, calculator, costVar != null ? (T) costVar : null);
     setSearchTimeout(rs);

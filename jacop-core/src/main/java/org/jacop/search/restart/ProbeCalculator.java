@@ -75,7 +75,8 @@ public class ProbeCalculator extends Calculator {
 
   @Override
   public void newLimit() {
-    if (probing) {
+    // RestartSearch also asks for a new limit after the last run; the action is for a second run
+    if (probing && limitReached) {
       probing = false;
       afterProbe.run();
     }
