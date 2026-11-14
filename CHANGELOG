@@ -5289,7 +5289,32 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
-308. New constraint ConjunctionSum(terms, weights, sum): sum is at least
+308. Under --lcg, a table that compresses to a few tuples of value sets
+   becomes clauses of the SAT solver in place of its propagator, as
+   CP-SAT does in presolve (cp_model_expand.cc: tuples are merged into
+   tuples of value sets first, then the compressed table is encoded).
+   A table of plain values whose valid tuples compress to at most 16
+   tuples of value sets, at least 4 times fewer than before, over
+   columns of at most 256 values each, is written as the support clauses
+   of its compressed form (Bacchus, "GAC via unit propagation", CP 2007),
+   or with two unfixed columns as the support clauses of their values
+   with no literal per tuple (Gent, "Arc consistency in SAT", ECAI 2002).
+   Unit propagation keeps the propagator's domain consistency. Frame
+   axioms of planning models such as the move tables of XCSP PegSolitaire
+   (140 tuples, 4-6 after compression) woke their propagator on every
+   literal of their columns while most calls pruned nothing; as clauses
+   only the watched literals are visited, 2.1x the conflicts per second.
+   On the 23 instances where it fires (11 of the 240 of the wide set and
+   the 12 PegSolitaireTable instances of XCSP 2025), 600 s, -f and
+   default: no instance lost, the solved ones 1.29x (-f) and 1.36x
+   (default) faster (geomean), PegSolitaireTable 3-3-0 327 -> 109 s,
+   0-3-0 189 -> 83 s, 2-2-0 15 -> 4 s, 1-4-0 8 -> 19 s.
+   Tables over the objective's definition keep their propagator.
+   -Djacop.lcg.tableClauses.compressed=false turns it off
+   (.tuples, .ratio, .dom and .input set the limits); statistic
+   lcgCompressedTablesAsClauses.
+
+309. New constraint ConjunctionSum(terms, weights, sum): sum is at least
    the weighted number of conjunctions of value literals (x = a, x != a)
    that hold. Besides the terms that hold it counts, for each variable,
    the least cost over its domain of the terms whose other literals all
@@ -5317,7 +5342,7 @@ Version 5.0 (unreleased)
    zero until most nodes are placed and the reasons cost more than the
    bound gains, so it is not posted there.
 
-309. -Dorg.jacop.fz.binaryEqAlias=true (off by default) makes a 0..1
+310. -Dorg.jacop.fz.binaryEqAlias=true (off by default) makes a 0..1
    integer x an alias of the Boolean b when int_eq_reif(x, 1, b) states
    x = b, as bool2int(b, x) does, instead of keeping both variables and an
    equality. MiniZinc writes a Boolean grid used in sums as 0..1 integers
@@ -5330,7 +5355,7 @@ Version 5.0 (unreleased)
    g24_p20_a10 reaches its optimum in 3 of 3 seeds at about 68 s instead of
    1 of 3, the others gain or lose with the seed, so it stays off.
 
-310. The linear relaxation gets the prime implicates of tables over 0/1
+311. The linear relaxation gets the prime implicates of tables over 0/1
    variables as clause rows (Quine, "The problem of simplifying truth
    functions", American Mathematical Monthly 59, 1952; McCluskey, Bell
    System Technical Journal 35, 1956): a minimal partial assignment that
@@ -5354,7 +5379,7 @@ Version 5.0 (unreleased)
    Benzenoide-06 get them. -Dorg.jacop.lp.tableClauseRows=false turns
    them off; statistic lpTableClauses.
 
-311. The FlatZinc front end finds bin packing constraints whose items fall
+312. The FlatZinc front end finds bin packing constraints whose items fall
    into groups that fill every bin with exactly one item: the bin
    variables of an all_different constraint, as many as there are bins,
    with values among the bins. For each group it posts the dual
@@ -5378,7 +5403,7 @@ Version 5.0 (unreleased)
    team-assignment among the 1,781 Challenge instances of 2008-2026.
    -Dorg.jacop.fz.binPackingPermutations=false turns it off.
 
-312. Under free search (-f) the search follows the LP solution
+313. Under free search (-f) the search follows the LP solution
    (lcg-lp-branching auto) also for an optimisation problem whose linear
    relaxation is a set partitioning, packing or covering model:
    LinearRelaxation.setRows() holds when every model row other than the

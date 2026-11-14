@@ -4382,6 +4382,11 @@ public final class LcgSolver implements ExternalPropagator {
           && c.getClass() == HybridTable.class
           && encodeTable((HybridTable) c)) {
         tablesAsClauses++;
+      } else if (compressedTables
+          && c.getClass() == HybridTable.class
+          && encodeCompressedTable((HybridTable) c)) {
+        tablesAsClauses++;
+        compressedTablesAsClauses++;
       } else if ((clauseCandidate(c) || permutationCandidate(c)) && encodeAsClauses(c)) {
         constraintsAsClauses++;
         if (c instanceof Alldistinct) {
@@ -4601,7 +4606,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (clauseObjective == null
         || "none".equals(CLAUSE_CLASSES)
             && !COUNTERS
-            && ("none".equals(tableMode) || !TABLE_OBJECTIVE_TERMS)) {
+            && ("none".equals(tableMode) && !compressedTables || !TABLE_OBJECTIVE_TERMS)) {
       return terms;
     }
     terms.add(clauseObjective);
@@ -4995,6 +5000,135 @@ public final class LcgSolver implements ExternalPropagator {
               + nFree
               + " tuples "
               + tuples
+              + " doms "
+              + freeDomains(t));
+    }
+    if (cs == null) {
+      return false;
+    }
+    tableTupleLiterals += auxiliaryVariables - aux;
+    for (int[] cl : cs) {
+      tableClauses++;
+      if (!rootFailed && !sat.addClause(cl)) {
+        rootFailed = true;
+        clauseFailedAtRoot = true;
+      }
+    }
+    t.removeConstraint();
+    encodedConstraints.add(t);
+    return true;
+  }
+
+  /**
+   * Whether a table that is not written as clauses by {@link #TABLE_CLAUSES} is written as the
+   * clauses of its compressed form when compression shrinks it to a few tuples, {@code
+   * jacop.lcg.tableClauses.compressed}. CP-SAT does the same in presolve (cp_model_expand.cc:
+   * tuples are merged into tuples of value sets first, then each compressed tuple gets one
+   * literal). A table posted as tuples of values (frame axioms such as PegSolitaire's 140-tuple
+   * move tables) wakes its propagator on every literal of its columns, while most wake-ups prune
+   * nothing; as clauses only the watched literals are visited. The plain tuples are too many to
+   * encode, the compressed ones are not.
+   */
+  static final boolean COMPRESSED_TABLES =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.tableClauses.compressed", "true"));
+
+  private boolean compressedTables = COMPRESSED_TABLES;
+
+  /**
+   * Sets whether tables that compress well become clauses, before the solver starts (see {@link
+   * #COMPRESSED_TABLES}).
+   *
+   * @param on true to write them as clauses
+   */
+  public void setCompressedTableClauses(boolean on) {
+    compressedTables = on;
+  }
+
+  /** The most tuples of a compressed table written as clauses, {@code ...compressed.tuples}. */
+  static final int COMPRESSED_TUPLES =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.tuples", 16);
+
+  /**
+   * The least ratio of plain to compressed tuples for a table written as clauses, {@code
+   * ...compressed.ratio}: a table that compresses little stays a propagator.
+   */
+  static final int COMPRESSED_RATIO =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.ratio", 4);
+
+  /** The most values of a column of a compressed table, {@code ...compressed.dom}. */
+  static final int COMPRESSED_DOM =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.dom", 256);
+
+  /** The most tuples of a plain table that is tried for compression (the cost of compressing). */
+  static final int COMPRESSED_INPUT =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.input", 4096);
+
+  /** Statistics: tables written as clauses of their compressed form. */
+  public long compressedTablesAsClauses;
+
+  /**
+   * Writes a table of plain tuples as the support clauses of its compressed form when that has at
+   * most {@link #COMPRESSED_TUPLES} tuples and at most 1/{@link #COMPRESSED_RATIO} of the plain
+   * ones (the tuples are first reduced to those valid on the root domains).
+   */
+  private boolean encodeCompressedTable(HybridTable t) {
+    int arity = t.columnCount();
+    int tuples = t.tupleCount();
+    if (tuples < COMPRESSED_RATIO || tuples > COMPRESSED_INPUT || t.hasColumnRestrictions()) {
+      return false;
+    }
+    IntVar[] x = new IntVar[arity];
+    int nFree = 0;
+    int[] free = new int[arity];
+    for (int k = 0; k < arity; k++) {
+      x[k] = t.column(k);
+      if (!x[k].singleton()) {
+        free[nFree] = k;
+        if (trail.id(x[k]) >= vars.length
+            || x[k].getSize() > COMPRESSED_DOM
+            || TABLE_OBJECTIVE_TERMS && objectiveTerms.contains(x[k])) {
+          return false;
+        }
+        nFree++;
+      }
+    }
+    if (nFree < 2) {
+      return false;
+    }
+    int[][] plain = t.validPlainTuples();
+    if (plain == null || plain.length < COMPRESSED_RATIO) {
+      return false;
+    }
+    org.jacop.constraints.table.Restriction[][] compressed =
+        org.jacop.constraints.table.TableCompressor.compress(x, plain, true);
+    if (compressed == null
+        || compressed.length > COMPRESSED_TUPLES
+        || (long) compressed.length * COMPRESSED_RATIO > plain.length) {
+      return false;
+    }
+    if (tableEncoder == null) {
+      tableEncoder = new ClauseEncoder(solverLiterals(), TABLE_LIMIT);
+    }
+    long aux = auxiliaryVariables;
+    // two unfixed columns: the support clauses of their values, with no literal per tuple
+    List<int[]> cs =
+        nFree == 2
+            ? directTable(t, free[0], free[1])
+            : tableEncoder.encode(new HybridTable(x, compressed, false));
+    if (TABLE_DEBUG) {
+      System.out.println(
+          "% compressed table clauses "
+              + (cs == null ? "rejected" : cs.size())
+              + " arity "
+              + arity
+              + " free "
+              + nFree
+              + " tuples "
+              + tuples
+              + " valid "
+              + plain.length
+              + " compressed "
+              + compressed.length
               + " doms "
               + freeDomains(t));
     }
