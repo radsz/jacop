@@ -1789,12 +1789,21 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_table_int(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-    int size = v.length;
     int[] tbl = support.mergedTables.remove(node);
     if (tbl == null) {
       tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     }
+    poseTableRows(v, tbl);
+  }
 
+  /**
+   * It posts a positive table given by its rows flattened row by row, as jacop_table_int does.
+   *
+   * @param v the variables.
+   * @param tbl the rows, flattened row by row.
+   */
+  void poseTableRows(IntVar[] v, int[] tbl) {
+    int size = v.length;
     int[][] t = filterFeasibleTuples(tbl, v, size);
     if (t.length == 0) {
       // no tuple is allowed by the domains
