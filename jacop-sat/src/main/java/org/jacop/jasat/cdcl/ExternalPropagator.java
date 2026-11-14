@@ -137,6 +137,18 @@ public interface ExternalPropagator {
   }
 
   /**
+   * Whether a solver variable should not get a lasting place in clauses: a short reason with it is
+   * used once instead of being kept, and conflict analysis replaces it in a learnt clause, below
+   * the conflict level, by its reason.
+   *
+   * @param aVar the solver variable, from 1
+   * @return true to keep the variable out of lasting clauses
+   */
+  default boolean unkept(int aVar) {
+    return false;
+  }
+
+  /**
    * Names a literal equivalent to the conjunction of true atoms of one integer variable, all set at
    * the conflict level, so that conflict analysis can stop there: a learnt clause with that
    * literal's negation in place of theirs is still implied, and asserting.

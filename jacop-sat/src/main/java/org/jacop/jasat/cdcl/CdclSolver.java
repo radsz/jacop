@@ -1501,7 +1501,11 @@ public final class CdclSolver {
       r = UNIT_REASON;
     } else {
       orderForWatches(c, n);
-      if (n == 2) {
+      if (n <= externalReasonKeep && notifying && REASON_UNKEPT && hasUnkeptLiteral(c, n)) {
+        // kept, it would make the literal permanent and lengthen the chain of its variable
+        unkeptReasons++;
+        r = pushReason(v, c, n);
+      } else if (n == 2) {
         addLearntBinary(c[0], c[1]);
         notifyKept(c, n);
         noteLowWatched(BINARY, c[0], c[1]);
@@ -1518,6 +1522,16 @@ public final class CdclSolver {
     }
     vdata[v << 2 | REASON] = r;
     return r;
+  }
+
+  /** Whether one of the first n literals of c is one the external propagator does not keep. */
+  private boolean hasUnkeptLiteral(int[] c, int n) {
+    for (int i = 0; i < n; i++) {
+      if (external.unkept((c[i] >> 1) + 1)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void notifyKept(int[] c, int n) {
@@ -1641,6 +1655,9 @@ public final class CdclSolver {
       }
     } while (pathCount > 0);
     learnt[0] = p ^ 1;
+    if (notifying && EXPAND_UNKEPT) {
+      expandLearnt();
+    }
 
     int analysedEnd = toClearSize;
 
@@ -1695,6 +1712,62 @@ public final class CdclSolver {
     learnt[1] = learnt[maxIndex];
     learnt[maxIndex] = tmp;
     return litLevel(learnt[1]);
+  }
+
+  static final boolean EXPAND_UNKEPT = Boolean.getBoolean("jacop.lcg.expandUnkept");
+  static final boolean REASON_UNKEPT =
+      !"false".equals(System.getProperty("jacop.lcg.reasonUnkept"));
+
+  /** Statistics: learnt clause literals replaced by their reasons in {@link #expandLearnt}. */
+  public long expandedLiterals;
+
+  /** Statistics: short reasons used once instead of kept, for an unkept literal. */
+  public long unkeptReasons;
+
+  /**
+   * Replaces the lower-level literals of the learnt clause that the external propagator does not
+   * keep ({@link ExternalPropagator#unkept}) by the other literals of their reasons, recursively,
+   * as CP-SAT expands integer reasons to Boolean ones: the clause stays implied and asserting. A
+   * budget bounds the work; literals left when it runs out stay in the clause.
+   */
+  private void expandLearnt() {
+    int budget = 4 * learntSize + 64;
+    int i = 1;
+    while (i < learntSize && budget > 0) {
+      int q = learnt[i];
+      int v = q >> 1;
+      int why = varReason(v);
+      if (why == NO_REASON || why == UNIT_REASON || !external.unkept(v + 1)) {
+        i++;
+        continue;
+      }
+      budget--;
+      expandedLiterals++;
+      learnt[i] = learnt[--learntSize];
+      int r = reasonRef(v);
+      if (r == UNIT_REASON) {
+        continue;
+      }
+      if (r < NO_REASON) {
+        expandLit(-2 - r);
+        continue;
+      }
+      int off = reasonOffset(r);
+      int size = reasonArena(r)[off + SIZE];
+      for (int k = 1; k < size; k++) {
+        expandLit(reasonArena(r)[off + HEADER + k]);
+      }
+    }
+  }
+
+  private void expandLit(int q) {
+    int v = q >> 1;
+    if (vdata[v << 2 | SEEN] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
+      return;
+    }
+    vdata[v << 2 | SEEN] = 1;
+    markClear(v);
+    addLearnt(q);
   }
 
   /**
@@ -2462,8 +2535,10 @@ public final class CdclSolver {
     if (conflictRef == BINARY_CONFLICT) {
       return atCurrentLevel(conflictLit0) || atCurrentLevel(conflictLit1);
     }
-    for (int k = 0; k < mem[conflictRef + SIZE]; k++) {
-      if (atCurrentLevel(mem[conflictRef + HEADER + k])) {
+    int[] arena = reasonArena(conflictRef);
+    int off = reasonOffset(conflictRef);
+    for (int k = 0; k < arena[off + SIZE]; k++) {
+      if (atCurrentLevel(arena[off + HEADER + k])) {
         return true;
       }
     }
@@ -2922,7 +2997,12 @@ public final class CdclSolver {
     if (proof != null) {
       proof.add(c, 0, size);
     }
-    if (implied >= 0) {
+    boolean temporary = false;
+    if (implied >= 0 && size > 1 && REASON_UNKEPT && hasUnkeptLiteral(c, size)) {
+      orderForWatches(c);
+      temporary = temporaryFits(c);
+    }
+    if (implied >= 0 && !temporary) {
       notifyKept(c, size);
     }
     if (size <= 1) {
@@ -2935,6 +3015,10 @@ public final class CdclSolver {
       return NO_CONFLICT;
     }
     orderForWatches(c);
+    if (temporary) {
+      unkeptReasons++;
+      return externalTemporary(c, size);
+    }
     int ref = BINARY;
     if (size == 2) {
       if (implied >= 0 || implied == IMPORTED) {
@@ -2975,6 +3059,39 @@ public final class CdclSolver {
     backtrack(top);
     qhead = trailSize;
     conflictRef = ref == BINARY ? BINARY_CONFLICT : ref;
+    conflictLit0 = c[0];
+    conflictLit1 = c[1];
+    return conflictRef;
+  }
+
+  /**
+   * Whether a reason clause with an unkept literal, ordered for watches, can be used once without
+   * being kept: it is satisfied or not unit (and is dropped), asserts its first literal, or is a
+   * conflict at the current level.
+   */
+  private boolean temporaryFits(int[] c) {
+    if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
+      return true; // dropped
+    }
+    // a backtrack would release transient literals created above its level, which this clause,
+    // not being kept, does not link: those clauses are kept as before
+    return vals[c[0]] == 0 || litLevel(c[0]) == decisionLevel && litLevel(c[1]) == decisionLevel;
+  }
+
+  /**
+   * Uses a reason clause that {@link #temporaryFits} once, as a temporary reason or conflict on the
+   * reason stack, instead of keeping it.
+   */
+  private int externalTemporary(int[] c, int size) {
+    if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
+      return NO_CONFLICT;
+    }
+    if (vals[c[0]] == 0) {
+      assign(c[0], pushReason(c[0] >> 1, c, size));
+      return NO_CONFLICT;
+    }
+    qhead = trailSize;
+    conflictRef = pushReason(c[0] >> 1, c, size);
     conflictLit0 = c[0];
     conflictLit1 = c[1];
     return conflictRef;

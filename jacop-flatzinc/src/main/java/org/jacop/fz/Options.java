@@ -256,6 +256,9 @@ public class Options {
                 relaxation has value columns, or under -f tree cuts),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
+                lcg-chain-limit=<n> (with --lcg: linked bound literals per variable past which
+                short reasons on its new bounds are used once, not kept, so its chain
+                [x >= v] -> [x >= u] stops growing; default 64, a huge value turns it off),
                 lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
                 neighbourhood and lower-bound runs on one decision level, kept at restarts;
                 0 gives each its own level, default 1),

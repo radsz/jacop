@@ -5455,6 +5455,43 @@ Version 5.0 (unreleased)
    The statistic lpUnproven counts infeasible LP solves without an
    integer certificate.
 
+315. Under free search (-f) with lazy clause generation, a variable whose
+   chain of linked bound literals [x >= v] -> [x >= u] has reached 64
+   literals gets no new links from short reasons: a reason of up to 3
+   literals that holds a transient bound literal of such a variable is
+   used once from the reason stack instead of being kept as a clause,
+   and so is a conflicting propagation's reason when it needs no
+   backtrack. Each linked literal is a step that every bound change of
+   the variable walks; on MiniZinc Challenge 2023
+   multi-agent-graph-coverage (arrival times 0..405) the kept reasons
+   linked about 260 literals per variable and 81 % of all SAT assignments
+   were chain steps. CP-SAT keeps integer bounds out of its clauses (its
+   integer reasons are expanded to Boolean ones in conflict analysis).
+   On the 65 instances of the wide benchmark set where it fires, two
+   paired rounds at 600 s: 6 and 4 families better, 0 and 2 worse, one
+   more proof in both (community-detection Sampson.s10.k3), runtime on
+   solved instances 0.987 pooled; rnd_n10_p1500 43-48 -> 22-26 s, wwtpp
+   ex05160 14 -> 6 s, hoist PU_2_8_1 and multiple-constant-multiplication
+   XU07_28 slower (search changes). In the default search it lost on 5
+   families and won on none, so it is off there.
+   --free-config lcg-chain-limit=<n> sets the limit under -f and
+   -Djacop.lcg.chainLimit=<n> in every search; -Djacop.lcg.reasonUnkept=false
+   turns it off. -Djacop.lcg.expandUnkept=true also resolves such
+   literals out of learnt clauses (off: slower on liner-sf-repositioning
+   and work-task-variation). The FlatZinc statistics print
+   lcgUnkeptReasons and lcgExpandedLiterals.
+
+316. AllDifferentLists(x, except) takes excepted tuples (XCSP3 allDifferent
+   over lists with except): two rows may be equal when their tuple is one
+   of them. A fixed row with an excepted tuple is not hashed, so it neither
+   fails nor prunes; explanations are unchanged. JaCoP's MiniZinc library
+   defines fzn_xcsp_all_different_lists_except with it (the
+   radsz/xcsp-competition include has the pairwise decomposition). No
+   main-track XCSP3 instance of 2022-2026 uses the except form. Tests:
+   SingleConstraintTest and LcgFuzzTest compare it with the decomposition;
+   ConsistencyChecker has AllDifferentLists cases (no wrong pruning over
+   230,000 nodes; forward checking, so no consistency level is claimed).
+
 Version 4.11
 =============
 
