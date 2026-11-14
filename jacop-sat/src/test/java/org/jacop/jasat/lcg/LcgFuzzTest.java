@@ -215,6 +215,8 @@ import org.jacop.search.SplitSelect;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -227,7 +229,9 @@ import org.junit.jupiter.api.Test;
  * profile) and the first seed by {@code lcg.fuzz.seed} (default 1). A failure names the seed, which
  * rebuilds the same model. With {@code lcg.fuzz.holes=true} every variable, auxiliary ones too,
  * gets up to two holes inside its domain, for the reasons of bounds that skip holes; a model that
- * fails while its constraints are imposed is skipped.
+ * fails while its constraints are imposed is skipped. With {@code lcg.fuzz.recent} set to a
+ * comma-separated list of the cases of the globals added in 5.0, half of the constraints are drawn
+ * from those cases, to test their explanations at volume.
  */
 class LcgFuzzTest {
 
@@ -236,6 +240,29 @@ class LcgFuzzTest {
   private static final int SEED = Integer.getInteger("lcg.fuzz.seed", 1);
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
+
+  // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
+  private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
+
+  // the explanations that are off by default are checked too
+  @BeforeAll
+  static void explainAll() {
+    CircuitCost.setAssignmentReasons(true);
+    InterDistance.setExplanations(true);
+  }
+
+  @AfterAll
+  static void explainDefaults() {
+    CircuitCost.setAssignmentReasons(false);
+    InterDistance.setExplanations(false);
+  }
+
+  private static int[] recentCases(String cases) {
+    if (cases == null || cases.isBlank()) {
+      return null;
+    }
+    return Arrays.stream(cases.split(",")).mapToInt(c -> Integer.parseInt(c.trim())).toArray();
+  }
 
   // seconds for the reference search of one model; a model it cannot solve in time is skipped
   private static final int REFERENCE_SECONDS = Integer.getInteger("lcg.fuzz.referenceSeconds", 60);
@@ -504,7 +531,8 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(40)) {
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(40);
+      return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -915,6 +943,9 @@ class LcgFuzzTest {
     }
 
     Object randomConstraint() {
+      if (RECENT != null && rnd.nextBoolean()) {
+        return recentGlobal();
+      }
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
       return switch (rnd.nextInt(84)) {
@@ -1816,6 +1847,8 @@ class LcgFuzzTest {
         solver.setChecking(true);
         // reasons of up to 1 to 3 literals stay as clauses
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        // tables as clauses: one run in three by support clauses, one in three direct
+        solver.setTableClauses(new String[] {"none", "support", "direct"}[(int) (seed / 4 % 3)]);
         annotate(solver, model, seed);
         // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT
         boolean refuted = seed % 4 == 3 && !solver.probeRoot(Long.MAX_VALUE);

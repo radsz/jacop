@@ -390,9 +390,10 @@ public class LinearIntDom extends LinearInt {
       for (Interval iv : intervals(x[k], window)) {
         for (long v = iv.min(); v <= iv.max(); v++) {
           long shift = lo[k] + w * v - lo[k + 1];
-          if (intersectsShifted(reach[k], back, shift)) {
+          // v has a support when F_k shifted by a_k v meets G_(k+1), that is when G_(k+1) shifted
+          // back meets F_k; the values met are added to G_k
+          if (andOrShifted(back, reach[k], prev, -shift)) {
             supported.unionAdapt((int) v, (int) v);
-            andOrShifted(back, reach[k], prev, -shift);
           }
         }
       }
@@ -521,13 +522,48 @@ public class LinearIntDom extends LinearInt {
     return false;
   }
 
-  /** out |= (src shifted up by shift bits) & mask. */
-  private static void andOrShifted(long[] src, long[] mask, long[] out, long shift) {
-    long[] tmp = new long[out.length];
-    orShifted(src, tmp, shift);
-    for (int i = 0; i < out.length; i++) {
-      out[i] |= tmp[i] & mask[i];
+  /**
+   * out |= (src shifted up by shift bits) &amp; mask, word by word without a temporary set.
+   *
+   * @return whether (src shifted up by shift bits) &amp; mask is not empty
+   */
+  static boolean andOrShifted(long[] src, long[] mask, long[] out, long shift) {
+    int n = Math.min(out.length, mask.length);
+    long any = 0;
+    if (shift >= 0) {
+      if (shift >= (long) n << 6) {
+        return false;
+      }
+      int ws = (int) (shift >>> 6);
+      int bs = (int) (shift & 63);
+      for (int j = ws; j < n; j++) {
+        int i = j - ws;
+        long word = i < src.length ? src[i] << bs : 0L;
+        if (bs != 0 && i >= 1 && i - 1 < src.length) {
+          word |= src[i - 1] >>> (64 - bs);
+        }
+        long t = word & mask[j];
+        out[j] |= t;
+        any |= t;
+      }
+    } else {
+      long s = -shift;
+      if (s >= (long) src.length << 6) {
+        return false;
+      }
+      int ws = (int) (s >>> 6);
+      int bs = (int) (s & 63);
+      for (int j = 0; j < n && j + ws < src.length; j++) {
+        long word = src[j + ws] >>> bs;
+        if (bs != 0 && j + ws + 1 < src.length) {
+          word |= src[j + ws + 1] << (64 - bs);
+        }
+        long t = word & mask[j];
+        out[j] |= t;
+        any |= t;
+      }
     }
+    return any != 0;
   }
 
   private static void clearTail(long[] set, int bits) {

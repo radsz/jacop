@@ -368,11 +368,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (sharedModelTree) {
       return;
     }
+    releaseAllBut(solveItem);
+  }
+
+  /**
+   * Cuts every branch of the parse tree but the one of a node: the children of its ancestors other
+   * than the path to it, and the children of those, the variable and constraint items. A node of a
+   * dropped item that another structure keeps then reaches its own item only, not every item of the
+   * model through its parent.
+   *
+   * @param solveItem the node whose branch is kept
+   */
+  static void releaseAllBut(SimpleNode solveItem) {
     Node kept = solveItem;
     while (kept.jjtGetParent() instanceof SimpleNode parent) {
       if (parent.children != null) {
         for (int i = 0; i < parent.children.length; i++) {
           if (parent.children[i] != kept) {
+            // and its own items: a node another structure keeps (a rewritten constraint) reaches
+            // them through its parent, which would keep every item of the model live
+            if (parent.children[i] instanceof SimpleNode released && released.children != null) {
+              Arrays.fill(released.children, null);
+            }
             parent.children[i] = null;
           }
         }
@@ -3166,7 +3183,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
         int value = lcgLastCost;
-        IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
+        IO.println(MZN_STAT_OBJECTIVE + objectiveValue(minimize ? value : -value));
       }
       if (options.searchStatistics()) {
         printLcgExplanationStatistics();
@@ -3268,6 +3285,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.constraintsAsClauses
             + "\n%%%mzn-stat: lcgConstraintClauses="
             + lcg.constraintClauses
+            + "\n%%%mzn-stat: lcgTablesAsClauses="
+            + lcg.tablesAsClauses
+            + "\n%%%mzn-stat: lcgTableClauses="
+            + lcg.tableClauses
+            + "\n%%%mzn-stat: lcgTableTupleLiterals="
+            + lcg.tableTupleLiterals
             + "\n%%%mzn-stat: lcgPureClauses="
             + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="
@@ -5453,8 +5476,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   @SuppressWarnings("unchecked")
+  // the values of the variables joined out of the model, for the solution being printed
+  private Map<Var, Integer> eliminatedValues = Map.of();
+
   private void appendVariableOutput(StringBuffer printBuffer, Var v) {
-    if (v instanceof BooleanVar var1) {
+    Integer eliminated = eliminatedValues.get(v);
+    if (eliminated != null) {
+      printBuffer.append(v.id()).append(" = ");
+      if (v instanceof BooleanVar) {
+        printBuffer.append(eliminated == 1);
+      } else {
+        printBuffer.append(eliminated);
+      }
+      printBuffer.append(";\n");
+    } else if (v instanceof BooleanVar var1) {
       printBuffer.append(v.id()).append(" = ");
       if (v.singleton()) {
         switch (var1.value()) {
@@ -5486,6 +5521,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         printBuffer.append(v.dom().toString());
       }
       printBuffer.append(";\n");
+    } else if (v instanceof IntVar x && v.singleton() && output.outputScale(v.id()) != 1) {
+      // the variable holds the objective divided by the scale (ObjectiveScaling)
+      printBuffer
+          .append(v.id())
+          .append(" = ")
+          .append(x.value() * output.outputScale(v.id()))
+          .append(";\n");
     } else {
       printBuffer.append(v).append(";\n");
     }
@@ -5508,12 +5550,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       presolve.returnSolution();
     }
 
+    // the variables that table variable elimination removed get values from the others
+    eliminatedValues =
+        output.tableElimination == null ? Map.of() : output.tableElimination.values();
+
     if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);
     }
 
     for (int i = 0; i < output.outputArray.size(); i++) {
-      printBuffer.append(output.outputArray.get(i)).append("\n");
+      printBuffer.append(output.outputArray.get(i).toString(eliminatedValues)).append("\n");
     }
 
     if (options.getVerbose()) {
@@ -5524,6 +5570,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
+      worker.objectiveScale(dictionary.objectiveScale());
       Integer cost = costVariable instanceof IntVar c ? c.min() : null;
       worker.solution(printBuffer.toString(), cost, !minimize, sharedNames(), sharedValues());
     }
@@ -5549,6 +5596,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       objectiveGap =
           new ObjectiveGap(
               options.gap(), !minimize, options.searchStatistics() ? IO::println : null);
+      objectiveGap.scale(dictionary.objectiveScale());
     }
     return objectiveGap;
   }
@@ -5566,6 +5614,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
+      worker.objectiveScale(dictionary.objectiveScale());
       // a bound that reaches the best solution proves it optimal only when it is a bound of the
       // model itself, not of the restarts of relax and reconstruct or on_restart
       worker.bound(lower, !minimize, relaxVars == null && dictionary.onRestart == null);
@@ -5618,19 +5667,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return nodes;
   }
 
+  // the value of the model's objective for a value of its variable, which may hold the objective
+  // divided by a scale (ObjectiveScaling)
+  private long objectiveValue(long value) {
+    return value * dictionary.objectiveScale();
+  }
+
   private void appendCostLineToBuffer(StringBuffer printBuffer) {
     if (costVariable == null) {
       return;
     }
     if (minimize) {
       if (costVariable instanceof IntVar var1) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(var1.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
       }
     } else {
       if (costVariable instanceof IntVar var1) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(-var1.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(-var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
       }
