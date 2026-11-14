@@ -31,6 +31,7 @@
 
 package org.jacop.fz;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -138,6 +139,72 @@ class FloatBuiltinsFuzzTest {
             fail(String.join("\n\n", failures));
           }
         });
+  }
+
+  /**
+   * float_pow with a base that can be 0 or negative: the decomposition exp(c * ln(x)) lost x = 0
+   * (pow(0.0, 2.0), asinh(0.0), whose MiniZinc definition uses x^2.0, and pow(0.0, 0.5) were
+   * unsatisfiable). Every integer base in -2..2 has its power, except 0 for a negative exponent.
+   */
+  @Test
+  void powKeepsZeroAndNegativeBases() throws IOException {
+    double[] exponents = {2.0, 3.0, 5.0, 0.0, 1.0, -1.0, -2.0, 0.5, 1.5};
+    for (double c : exponents) {
+      boolean fractional = c != Math.rint(c);
+      int lo = fractional ? 0 : -2;
+      String model =
+          "var "
+              + lo
+              + "..2: i :: output_var;\n"
+              + "var float: x;\n"
+              + "var float: y :: output_var;\n"
+              + "constraint int2float(i, x);\n"
+              + "constraint float_pow(x, "
+              + c
+              + ", y);\n"
+              + "solve :: int_search([i], input_order, indomain_min, complete) satisfy;\n";
+      List<String> solutions = solveAll(model);
+      Set<Integer> bases = new TreeSet<>();
+      for (String solution : solutions) {
+        int i = Integer.parseInt(valueOf(solution, "i"));
+        double y = Double.parseDouble(valueOf(solution, "y"));
+        double expected = Math.pow(i, c);
+        assertThat(Math.abs(y - expected))
+            .as("pow(" + i + ", " + c + ") = " + y)
+            .isLessThanOrEqualTo(1e-9 * (1 + Math.abs(expected)));
+        bases.add(i);
+      }
+      Set<Integer> expectedBases = new TreeSet<>();
+      for (int i = lo; i <= 2; i++) {
+        if (i != 0 || c >= 0) {
+          expectedBases.add(i);
+        }
+      }
+      assertThat(bases).as("bases of pow(x, " + c + ")").isEqualTo(expectedBases);
+    }
+    // a fractional or variable power of a base that can be 0 is never negative, also while x > 0
+    // is undecided (minimising pow(x, 0.1) printed a negative minimum)
+    for (String exponent : new String[] {"0.1", "e"}) {
+      String model =
+          "var 0.0..10.0: x :: output_var;\n"
+              + "var 0.1..0.5: e;\n"
+              + "var float: z :: output_var;\n"
+              + "constraint float_pow(x, "
+              + exponent
+              + ", z);\n"
+              + "solve :: float_search([x], 1.0e-6, input_order, indomain_split, complete)"
+              + " minimize z;\n";
+      String out = run(model);
+      String last = out.substring(out.lastIndexOf("z = ") + 4);
+      double z = Double.parseDouble(last.substring(0, last.indexOf(';')));
+      assertThat(z).as("minimum of pow(x, " + exponent + ")").isBetween(0.0, 0.3);
+    }
+  }
+
+  /** The value printed for a variable in a solution such as "i = 2; y = 4.0;". */
+  private static String valueOf(String solution, String name) {
+    int start = solution.indexOf(name + " = ") + name.length() + 3;
+    return solution.substring(start, solution.indexOf(';', start));
   }
 
   /**
