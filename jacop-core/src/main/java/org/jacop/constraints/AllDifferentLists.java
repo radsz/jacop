@@ -197,7 +197,7 @@ public class AllDifferentLists extends Constraint
   private boolean[] inOpen;
 
   // the undo entry of a fixed row with an excepted tuple, which is not hashed
-  private static final Object EXCEPTED = new Object();
+  private static final Object EXCEPTED_ROW_UNDO = new Object();
 
   // the rows whose variables were fixed since the last call
   private int[] dirty;
@@ -238,7 +238,7 @@ public class AllDifferentLists extends Constraint
       k--;
       int i = undoRows.get(k);
       Object key = undoKeys.get(k);
-      if (key == EXCEPTED) {
+      if (key == EXCEPTED_ROW_UNDO) {
         inFixed[i] = false;
       } else if (key instanceof Key fixedKey) {
         fixedRows.remove(fixedKey);
@@ -310,7 +310,7 @@ public class AllDifferentLists extends Constraint
     if (excepted.contains(key)) {
       // an excepted tuple may repeat: the row is done
       inFixed[i] = true;
-      undoKeys.add(EXCEPTED);
+      undoKeys.add(EXCEPTED_ROW_UNDO);
       undoLevels.add(store.level);
       undoRows.add(i);
       return;
