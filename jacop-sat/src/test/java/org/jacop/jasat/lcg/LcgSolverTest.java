@@ -309,6 +309,53 @@ class LcgSolverTest {
   }
 
   @Test
+  void lazyCountersAgreeWithPigeonhole() {
+    // pigeons in holes: rows and columns are SumBool counts, which become unary counters at a
+    // restart once they explained a conflict (lazy decomposition); n + 1 pigeons do not fit
+    long encoded = 0;
+    for (int n = 4; n <= 6; n++) {
+      for (int pigeons = n; pigeons <= n + 1; pigeons++) {
+        Store store = new Store();
+        IntVar[][] x = new IntVar[pigeons][n];
+        for (int p = 0; p < pigeons; p++) {
+          for (int h = 0; h < n; h++) {
+            x[p][h] = new IntVar(store, "x" + p + "_" + h, 0, 1);
+          }
+          store.impose(new SumBool(x[p], "==", new IntVar(store, 1, 1)));
+        }
+        for (int h = 0; h < n; h++) {
+          IntVar[] column = new IntVar[pigeons];
+          for (int p = 0; p < pigeons; p++) {
+            column[p] = x[p][h];
+          }
+          store.impose(new SumBool(column, "<=", new IntVar(store, 0, 1)));
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setLazyCounterUses(1);
+        int status = solver.solve();
+        assertThat(status)
+            .as("%d pigeons, %d holes", pigeons, n)
+            .isEqualTo(pigeons > n ? CdclSolver.UNSAT : CdclSolver.SAT);
+        if (status == CdclSolver.SAT) {
+          int[] perHole = new int[n];
+          for (int p = 0; p < pigeons; p++) {
+            int sum = 0;
+            for (int h = 0; h < n; h++) {
+              sum += solver.value(x[p][h]);
+              perHole[h] += solver.value(x[p][h]);
+            }
+            assertThat(sum).isEqualTo(1);
+          }
+          assertThat(Arrays.stream(perHole).max().getAsInt()).isLessThanOrEqualTo(1);
+        }
+        encoded += solver.lazyCountersEncoded;
+      }
+    }
+    assertThat(encoded).isGreaterThan(0);
+  }
+
+  @Test
   void tablesAsClausesAgreeWithBruteForce() {
     // tables of 2 to 4 columns, some over a fixed variable, written as clauses (support or
     // direct, jacop.lcg.tableClauses) next to other constraints; tuples may name values outside
@@ -5049,6 +5096,56 @@ class LcgSolverTest {
     // over 800,000 units is 960
     assertThat(cores.stalled(200_000, end, 100 + 960)).isFalse();
     assertThat(cores.stalled(200_000, end, 100 + 961)).isTrue();
+  }
+
+  /**
+   * After {@link CoreSearch#DECAY_AFTER} of the phase's own work, a rate that falls from the third
+   * to the fourth quarter of the phase is projected as a geometric series: on chessboard3 (2023)
+   * each core cost more than the last, and the linear projection kept the phase for half of a 1200
+   * s run while the bound stayed 13 below the optimum. Before that work, the linear test alone.
+   */
+  @Test
+  void corePhaseStopsWhenItsBoundRateKeepsFalling() {
+    CoreSearch cores = sumCores();
+    long u = CoreSearch.DECAY_AFTER / 4; // a quarter of the work before a falling rate counts
+    long end = 40 * u;
+    cores.lowerBound = 0;
+    cores.start(0);
+    cores.lowerBound = 4;
+    cores.sample(2 * u);
+    cores.lowerBound = 6; // 2 over the third quarter
+    cores.sample(3 * u);
+    cores.lowerBound = 7; // 1 over the last: q = 1/2, at most 1 more in all
+    cores.sample(4 * u);
+    // linearly 1.5 per u, three times over 36 u reaches 162; the falling rate reaches 3 at most
+    assertThat(cores.stalled(4 * u, end, 7 + 20)).isTrue();
+    assertThat(cores.stalled(4 * u, end, 7 + 2)).isFalse();
+    // the same quarters before DECAY_AFTER: the linear test only
+    CoreSearch early = sumCores();
+    early.lowerBound = 0;
+    early.start(0);
+    early.lowerBound = 4;
+    early.sample(u);
+    early.lowerBound = 6;
+    early.sample(3 * u / 2);
+    early.lowerBound = 7;
+    early.sample(2 * u);
+    assertThat(early.stalled(2 * u, 20 * u, 7 + 20)).isFalse();
+  }
+
+  /** The core-guided search of obj = x0 + x1 + x2 over 0..10 each, for the tests of its rates. */
+  private static CoreSearch sumCores() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 30);
+    store.impose(
+        new LinearInt(new IntVar[] {x[0], x[1], x[2], obj}, new int[] {1, 1, 1, -1}, "==", 0));
+    CoreSearch cores = CoreSearch.of(new LcgSolver(store), obj);
+    assertThat(cores).isNotNull();
+    return cores;
   }
 
   /**

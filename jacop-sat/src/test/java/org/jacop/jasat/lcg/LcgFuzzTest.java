@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldiffSum;
@@ -178,8 +179,10 @@ import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
@@ -531,7 +534,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(40);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(41);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -665,6 +668,7 @@ class LcgFuzzTest {
         case 37 -> cardinalityMatrix();
         case 38 -> new Same(pick(x, 3), pick(x, 3));
         case 39 -> new UsedBy(pick(x, 3), pick(x, 2));
+        case 40 -> new AllDifferentLists(new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)});
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -1547,6 +1551,146 @@ class LcgFuzzTest {
   }
 
   /**
+   * Geost explains its pruning and failures by forbidden boxes (obstacles' compulsory parts, the
+   * outside of an allowed area and its holes) covering the swept region. On random small placements
+   * of polymorphic objects in two or three dimensions, with times that may separate objects and an
+   * optional area, LCG with checked explanations must agree with depth-first search over the same
+   * constraint, give a placement, and explain most atoms by its own reasons rather than by replay.
+   */
+  @Test
+  void geostReasonsAgreeWithSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    long all = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = placement(seed, false) != null;
+      Object[] lcg = placement(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+      all += (Long) lcg[2];
+    }
+    assertThat(own).isPositive();
+    assertThat(2 * own).as("own %d of %d", own, all).isGreaterThan(all);
+  }
+
+  // random objects in a small space: search over Geost (null if none), or LCG over Geost ({status,
+  // own reasons and failures of Geost, all of them})
+  private static Object[] placement(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int k = rnd.nextInt(4) == 0 ? 3 : 2;
+    int side = k == 2 ? 4 + rnd.nextInt(3) : 3 + rnd.nextInt(2);
+    List<Shape> shapes = new ArrayList<>();
+    int numShapes = 2 + rnd.nextInt(4);
+    for (int s = 0; s < numShapes; s++) {
+      List<Dbox> boxes = new ArrayList<>();
+      int[] length = new int[k];
+      for (int d = 0; d < k; d++) {
+        length[d] = 1 + rnd.nextInt(2);
+      }
+      boxes.add(new Dbox(new int[k], length));
+      if (rnd.nextInt(3) == 0) {
+        // a second box beside the first: an L, or two pieces apart
+        int[] origin = new int[k];
+        origin[0] = length[0] + rnd.nextInt(2);
+        int[] second = new int[k];
+        Arrays.fill(second, 1);
+        boxes.add(new Dbox(origin, second));
+      }
+      shapes.add(new Shape(s, boxes));
+    }
+    int n = 3 + rnd.nextInt(k == 2 ? 4 : 2);
+    boolean timed = rnd.nextInt(3) == 0;
+    List<GeostObject> objects = new ArrayList<>();
+    List<IntVar> vars = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      IntVar[] coords = new IntVar[k];
+      for (int d = 0; d < k; d++) {
+        coords[d] = new IntVar(store, "o" + i + "_" + d, 0, side - 1);
+        if (rnd.nextInt(6) == 0) {
+          coords[d].domain.subtractAdapt(rnd.nextInt(side));
+          if (coords[d].domain.isEmpty()) {
+            coords[d].domain.unionAdapt(0, 0);
+          }
+          coords[d].refreshBounds();
+        }
+        vars.add(coords[d]);
+      }
+      int s0 = rnd.nextInt(numShapes);
+      IntVar shape = new IntVar(store, "s" + i, s0, s0);
+      // a few more shapes, often with gaps between them (shapes removed before a bound moves)
+      for (int s1 = 0; s1 < numShapes; s1++) {
+        if (rnd.nextInt(3) == 0) {
+          shape.domain.unionAdapt(s1, s1);
+        }
+      }
+      shape.refreshBounds();
+      vars.add(shape);
+      int start = timed ? rnd.nextInt(2) : 0;
+      objects.add(
+          new GeostObject(
+              i,
+              coords,
+              shape,
+              new IntVar(store, start, start),
+              new IntVar(store, 1, 1),
+              new IntVar(store, start + 1, start + 1)));
+    }
+    int[] dims = new int[k + 1];
+    for (int d = 0; d <= k; d++) {
+      dims[d] = d;
+    }
+    if (rnd.nextInt(5) == 0) {
+      // overlap allowed in the last spatial dimension
+      dims = new int[k];
+      for (int d = 0; d < k - 1; d++) {
+        dims[d] = d;
+      }
+      dims[k - 1] = k;
+    }
+    List<ExternalConstraint> external = new ArrayList<>();
+    external.add(new NonOverlapping(objects, dims));
+    if (rnd.nextBoolean()) {
+      int[] origin = new int[k];
+      int[] length = new int[k];
+      Arrays.fill(length, side + 1 - rnd.nextInt(2));
+      List<Dbox> holes = new ArrayList<>();
+      if (rnd.nextBoolean()) {
+        int[] hole = new int[k];
+        for (int d = 0; d < k; d++) {
+          hole[d] = rnd.nextInt(side);
+        }
+        int[] one = new int[k];
+        Arrays.fill(one, 1);
+        holes.add(new Dbox(hole, one));
+      }
+      external.add(new InArea(new Dbox(origin, length), holes));
+    }
+    IntVar[] all = vars.toArray(new IntVar[0]);
+    store.impose(new Geost(objects, external, shapes));
+    if (!lcg) {
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    long[] c = solver.explanationStatistics().get("Geost");
+    long own = c == null ? 0 : c[0] - c[1] - c[6] + c[3] - c[4] - c[7];
+    long total = c == null ? 0 : c[0] + c[3];
+    return new Object[] {status, own, total};
+  }
+
+  /**
    * LexChain explains a pruning that needs both sides of the chain (no tuple of a vector with the
    * value lies between the bounds of the vectors below and above it) by the vectors around it. On
    * random chains of three to five short vectors, with column sums and disequalities, LCG with
@@ -1565,6 +1709,107 @@ class LcgFuzzTest {
       own += (Long) lcg[1];
     }
     assertThat(own).isPositive();
+  }
+
+  /**
+   * AllDifferentLists explains a removed value by the fixed row it would equal and a failure by two
+   * equal rows. On random rows of one to three variables with column sums and disequalities, often
+   * with fewer different tuples than rows, LCG with checked explanations must agree with search
+   * over the pairwise decomposition (a disjunction of disequalities for each pair of rows).
+   */
+  @Test
+  void allDifferentListsReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = differentLists(seed, false) != null;
+      Object[] lcg = differentLists(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // random rows: search over the pairwise decomposition (null if no solution), or LCG over
+  // AllDifferentLists ({status, own reasons and failures of AllDifferentLists})
+  private static Object[] differentLists(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int m = 3 + rnd.nextInt(5);
+    int n = 1 + rnd.nextInt(3);
+    int top = 1 + rnd.nextInt(3);
+    IntVar[][] x = new IntVar[m][n];
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, top);
+        if (rnd.nextInt(4) == 0) {
+          x[i][j].domain.subtractAdapt(rnd.nextInt(top + 1));
+          x[i][j].refreshBounds();
+        }
+        all.add(x[i][j]);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      if (rnd.nextBoolean()) {
+        IntVar[] column = new IntVar[m];
+        for (int i = 0; i < m; i++) {
+          column[i] = x[i][j];
+        }
+        int sum = rnd.nextInt(m * top + 1);
+        store.impose(new SumInt(column, "<=", new IntVar(store, sum, sum)));
+      }
+    }
+    for (int k = rnd.nextInt(4); k > 0; k--) {
+      IntVar a = all.get(rnd.nextInt(all.size()));
+      IntVar b = all.get(rnd.nextInt(all.size()));
+      if (a != b) {
+        store.impose(new XneqY(a, b));
+      }
+    }
+    if (lcg) {
+      store.impose(new AllDifferentLists(x));
+    } else {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+          for (int j = 0; j < n; j++) {
+            ne[j] = new XneqY(x[i][j], x[r][j]);
+          }
+          store.impose(new Or(ne));
+        }
+      }
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(
+              store, new SimpleSelect<>(all.toArray(new IntVar[0]), null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          boolean differ = false;
+          for (int j = 0; j < n; j++) {
+            differ |= solver.value(x[i][j]) != solver.value(x[r][j]);
+          }
+          assertThat(differ).as("seed %d: rows %d and %d", seed, i, r).isTrue();
+        }
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("AllDifferentLists");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
   }
 
   // a random chain of vectors: search over pairwise LexOrder (null if no solution), or LCG over

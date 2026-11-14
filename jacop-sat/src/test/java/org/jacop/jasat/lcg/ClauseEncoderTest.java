@@ -212,6 +212,33 @@ class ClauseEncoderTest {
           return new LinearInt(x, w, rel(r), r.nextInt(5) - 2);
         });
     FACTORIES.put("Count", (s, r) -> new Count(vs(s, r, 2 + r.nextInt(3)), var(s, r, 0, 4), 2));
+    FACTORIES.put(
+        "CountValues",
+        (s, r) -> {
+          CountValues c =
+              new CountValues(
+                  vs(s, r, 2 + r.nextInt(3)),
+                  new IntVar[] {var(s, r, 0, 3), var(s, r, 0, 3)},
+                  new int[] {1, 2 + r.nextInt(2)});
+          // the count of the other values, a variable of the constraint's own
+          for (org.jacop.core.Var x : c.arguments()) {
+            if (!CREATED.contains(x)) {
+              CREATED.add((IntVar) x);
+            }
+          }
+          return c;
+        });
+    FACTORIES.put(
+        "CountValuesBounds",
+        (s, r) -> {
+          int lo1 = r.nextInt(2);
+          int lo2 = r.nextInt(2);
+          return new CountValuesBounds(
+              vs(s, r, 2 + r.nextInt(3)),
+              new int[] {lo1, lo2},
+              new int[] {lo1 + r.nextInt(3), lo2 + r.nextInt(3)},
+              new int[] {0, 2});
+        });
     FACTORIES.put("AtMost", (s, r) -> new AtMost(vs(s, r, 2 + r.nextInt(3)), 1 + r.nextInt(2), 2));
     FACTORIES.put(
         "AtLeast", (s, r) -> new AtLeast(vs(s, r, 2 + r.nextInt(3)), 1 + r.nextInt(2), 2));

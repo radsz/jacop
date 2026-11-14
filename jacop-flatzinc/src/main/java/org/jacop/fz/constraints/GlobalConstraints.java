@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -2811,6 +2812,19 @@ class GlobalConstraints implements ParserTreeConstants {
     IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
 
     support.pose(new LexOrder(x, y, false));
+  }
+
+  void gen_jacop_all_different_lists(SimpleNode node) {
+    IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int rows = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int n = rows == 0 ? 0 : a.length / rows;
+
+    // row i of the matrix is a[i * n .. i * n + n - 1]
+    IntVar[][] x = new IntVar[rows][n];
+    for (int i = 0; i < rows; i++) {
+      System.arraycopy(a, i * n, x[i], 0, n);
+    }
+    support.pose(new AllDifferentLists(x));
   }
 
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
