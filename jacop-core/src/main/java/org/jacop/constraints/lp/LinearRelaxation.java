@@ -55,6 +55,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -329,6 +330,9 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
   public int pairCliques;
+
+  /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
+  public int tableClauses;
 
   /** Statistics: the time of the solves and their propagation, in nanoseconds. */
   public long solveNanos;
@@ -878,6 +882,7 @@ public class LinearRelaxation extends Constraint
     int m = base;
     rowColumns = rc.subList(0, m).toArray(new int[0][]);
     rowWeights = rw.subList(0, m).toArray(new long[0][]);
+    setRows = setRows(m);
     rowLo = new long[m];
     rowHi = new long[m];
     hasLo = new boolean[m];
@@ -1130,6 +1135,34 @@ public class LinearRelaxation extends Constraint
     // the value encodings of the counting, all-different and element constraints come last: they
     // are tried at the first solve like the other rows, and kept only when they help
     List<LinearForm> ownTried = objective == null ? List.of() : new ArrayList<>(tried);
+    // the clauses of the tables over 0/1 variables, tried with the table rows: on Fortress (walls
+    // that enclose points of a grid) they make the relaxation the vertex cut LP, whose bound is the
+    // fewest walls; without them the tables gave the relaxation no row. A table whose variables
+    // are all in the given tried rows has its convex hull over tuple columns there (TableCliques),
+    // which implies each of its clauses: the clauses of the xor tables of DC only slowed the first
+    // solve and moved the search
+    int tableClauses = 0;
+    if (TABLE_CLAUSES && objective != null) {
+      List<LinearForm> clauseRows = new ArrayList<>();
+      Set<IntVar> inTried = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (LinearForm f : tried) {
+        inTried.addAll(Arrays.asList(f.vars()));
+      }
+      for (Constraint c : constraints) {
+        if (c instanceof HybridTable h
+            && !h.arguments().stream()
+                .allMatch(v -> v.singleton() || v instanceof IntVar i && inTried.contains(i))) {
+          List<LinearForm> rows = h.clauseRows();
+          clauseRows.addAll(rows);
+        }
+      }
+      // more rows than the trial takes in proportion: DC-midori r14, 76,036 rows over the tables
+      // past the hull cap, never raised the bound and slowed its first solutions
+      if (clauseRows.size() <= MAX_TABLE_CLAUSES) {
+        ownTried.addAll(clauseRows);
+        tableClauses = clauseRows.size();
+      }
+    }
     List<LinearForm> triedRows = new ArrayList<>(valueRows.tried());
     triedRows.addAll(ownTried);
     // the sorting networks of the all-different permutations are tried like the value encodings,
@@ -1164,7 +1197,10 @@ public class LinearRelaxation extends Constraint
       auto = large;
     }
     if (auto
-        && (large || localForms.size() >= SPARSE_ROWS || tooLarge(localForms, Simplex.DENSE))) {
+        && (large
+            || localForms.size() >= SPARSE_ROWS
+            || tableClauses >= SPARSE_ROWS
+            || tooLarge(localForms, Simplex.DENSE))) {
       // the dense tableau costs rows times columns per pivot, the sparse simplex its nonzeros: the
       // dense one is kept for small relaxations, where it is as fast, and the sparse one takes the
       // larger ones, also those over the dense size cap, which would get no relaxation at all
@@ -1209,6 +1245,7 @@ public class LinearRelaxation extends Constraint
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     r.pairCliques = pairCliques;
+    r.tableClauses = tableClauses;
     r.capacity = separations;
     r.energy = resources;
     r.hall = hall;
@@ -1474,6 +1511,14 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the most clause rows of tables over all tables; more give none
+  private static final int MAX_TABLE_CLAUSES =
+      Integer.getInteger("org.jacop.lp.tableClauseRowsMax", 10_000);
+
+  // the clause rows of tables over 0/1 variables (HybridTable.clauseRows)
+  private static final boolean TABLE_CLAUSES =
+      !"false".equals(System.getProperty("org.jacop.lp.tableClauseRows"));
 
   // the conflicts of pairs of 0/1 literals merged into clique rows
   private static final boolean PAIR_CLIQUES =
@@ -1946,6 +1991,60 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Returns whether the relaxation is a set partitioning, packing or covering model over 0/1
+   * columns: each row that does not hold the objective has weights of one sign and size one over
+   * columns whose domains are within 0..1 (fixed columns are constants), and there are at most
+   * org.jacop.lp.setRowsShare (0.1) rows per column. Its root solution is often almost integral,
+   * and its bound is often the optimum (the crew schedules of XCSP 2025 BusScheduling, 199 rows
+   * over 14,773 columns: root bound 28.5, optimum 29).
+   *
+   * @return whether every row of the relaxation is a set row over 0/1 columns
+   */
+  public boolean setRows() {
+    return setRows;
+  }
+
+  // whether the model's rows are set rows, decided when the relaxation is built: cuts come later
+  private final boolean setRows;
+
+  // whether the first m rows, the model's, are set rows over 0/1 columns
+  private boolean setRows(int m) {
+    if (m < 2 || m > x.length * SET_ROWS_SHARE) {
+      return false;
+    }
+    for (int i = 0; i < m; i++) {
+      int[] cs = rowColumns[i];
+      boolean holdsObjective =
+          objective != null && Arrays.stream(cs).anyMatch(j -> x[j] == objective);
+      if (!holdsObjective && !setRow(cs, rowWeights[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // whether a row has weights of one sign and size one over 0/1 columns; fixed columns are
+  // constants of the row
+  private boolean setRow(int[] cs, long[] ws) {
+    long sign = 0;
+    for (int k = 0; k < cs.length; k++) {
+      IntVar v = x[cs[k]];
+      if (!v.singleton()) {
+        if (sign == 0) {
+          sign = ws[k];
+        }
+        if (ws[k] != sign || Math.abs(ws[k]) != 1 || v.min() < 0 || v.max() > 1) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private static final double SET_ROWS_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.setRowsShare", "0.1"));
+
+  /**
    * Returns the variable minimized, or null for satisfaction.
    *
    * @return the objective
@@ -2380,9 +2479,8 @@ public class LinearRelaxation extends Constraint
       if (beforeExtra != null
           && !keepEncodings
           && trees.isEmpty()
-          && extraHits >= EXTRA_LIMITS
-          && extraHits * 20 > calls
-          && calls >= 20L * EXTRA_LIMITS) {
+          && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
+              || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
       }
       return;

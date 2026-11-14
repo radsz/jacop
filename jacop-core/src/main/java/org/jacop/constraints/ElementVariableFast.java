@@ -93,6 +93,18 @@ public class ElementVariableFast extends AbstractElement
   private final IntVar[] list;
 
   /**
+   * A value that list[p] and the value shared when position p was last checked (residual support,
+   * Lecoutre and Hemery, IJCAI 2007), or {@link #NO_SUPPORT}. It is only a hint, checked again at
+   * every use, so it is not trailed. On XCSP3 RollerSplat, 160 element constraints over one list of
+   * 71 plan variables spent most of their time intersecting the domains of every selectable
+   * position, although the same common value nearly always remained.
+   */
+  private final int[] residue;
+
+  /** No common value is known for the position. */
+  private static final int NO_SUPPORT = Integer.MIN_VALUE;
+
+  /**
    * It constructs an element constraint.
    *
    * @param index variable index
@@ -111,6 +123,8 @@ public class ElementVariableFast extends AbstractElement
     this.numberId = idNumber.incrementAndGet();
     this.value = value;
     this.list = Arrays.copyOf(list, list.length);
+    this.residue = new int[list.length];
+    Arrays.fill(residue, NO_SUPPORT);
 
     setScope(Stream.concat(Stream.concat(Stream.of(index), Arrays.stream(list)), Stream.of(value)));
   }
@@ -199,7 +213,7 @@ public class ElementVariableFast extends AbstractElement
     for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
       int position = e.nextElement() - 1 - indexOffset;
 
-      if (disjoint(value, list[position])) {
+      if (!supported(position)) {
         indexDomNonEmpty = true;
         if (indexDom.size == 0) {
           indexDom.unionAdapt(position + 1 + indexOffset);
@@ -239,6 +253,52 @@ public class ElementVariableFast extends AbstractElement
       // the positions not removed from the index all hold the value, so no change can prune
       removeConstraint();
     }
+  }
+
+  /**
+   * Checks whether list[position] and the value share a value, first at the residue of the
+   * position, and records the common value found.
+   */
+  private boolean supported(int position) {
+    IntDomain x = list[position].domain;
+    IntDomain v = value.domain;
+    int r = residue[position];
+    if (r != NO_SUPPORT && x.contains(r) && v.contains(r)) {
+      return true;
+    }
+    r = commonValue(x, v);
+    residue[position] = r;
+    return r != NO_SUPPORT;
+  }
+
+  /**
+   * The smallest value of both domains, or {@link #NO_SUPPORT}: each domain in turn jumps to its
+   * next value at or after the current candidate.
+   */
+  static int commonValue(IntDomain a, IntDomain b) {
+    if (a.isEmpty() || b.isEmpty()) {
+      return NO_SUPPORT;
+    }
+    int hi = Math.min(a.max(), b.max());
+    int v = Math.max(a.min(), b.min());
+    while (v <= hi) {
+      if (!a.contains(v)) {
+        int next = a.nextValue(v);
+        if (next <= v) {
+          return NO_SUPPORT;
+        }
+        v = next;
+      } else if (!b.contains(v)) {
+        int next = b.nextValue(v);
+        if (next <= v) {
+          return NO_SUPPORT;
+        }
+        v = next;
+      } else {
+        return v;
+      }
+    }
+    return NO_SUPPORT;
   }
 
   @Override
