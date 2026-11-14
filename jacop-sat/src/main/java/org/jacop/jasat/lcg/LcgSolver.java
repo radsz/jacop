@@ -4328,7 +4328,11 @@ public final class LcgSolver implements ExternalPropagator {
    * backjump it takes again every decision between the backjump level and the conflict: on
    * gardner_dinner, whose learnt clauses join the deepest level with one 17 to 66 levels up, 2,242
    * decisions for 90 conflicts, against 266 nodes without learning and 175 decisions with one-level
-   * backtracking. Runs of activity branching or of the solver's own decisions keep backjumping,
+   * backtracking (193 with the FlatZinc default limit of 10). Shorter backjumps are kept, as in
+   * Nadel and Ryvchin's rule with its threshold lowered from 100: with first_fail they reorder the
+   * decisions after the asserted literal, and backtracking one level on every conflict found no
+   * solution of 2026 orthorio challenge_12 in 600 s (backjumps up to 10 levels: 95 at 300 s, as
+   * develop-5.0). Runs of activity branching or of the solver's own decisions keep backjumping,
    * which reorders their decisions.
    *
    * @param limit the backjump length above which the annotation's runs backtrack one level, 0 for

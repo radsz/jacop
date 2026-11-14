@@ -2798,7 +2798,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg.sat().setAssumptionsOnOneLevel(!"0".equals(options.freeConfig("lcg-assume-level", "1")));
     // runs of the annotation (or the default branching) backtrack one level after a conflict
     // instead of backjumping (see LcgSolver.setAnnotationChrono)
-    lcg.setAnnotationChrono(Integer.parseInt(options.freeConfig("lcg-chrono", "0")));
+    lcg.setAnnotationChrono(Integer.parseInt(options.freeConfig("lcg-chrono", "10")));
     if (free) {
       lcg.setBranching(branching);
       if (branching != LcgSolver.Branching.ACTIVITY) {
