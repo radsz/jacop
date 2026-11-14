@@ -147,6 +147,22 @@ public final class TimeIndexedBound extends Constraint
   /** The arcs of all arc-flow blocks at most, {@code org.jacop.lp.arcFlow.arcs}. */
   static final int MAX_ARCS = Integer.getInteger("org.jacop.lp.arcFlow.arcs", 200_000);
 
+  /**
+   * The columns of the program at most for one more bin packing, {@code
+   * org.jacop.lp.arcFlow.columns}.
+   */
+  static final int MAX_ARC_COLUMNS = Integer.getInteger("org.jacop.lp.arcFlow.columns", 100_000);
+
+  // the time of the first and of later solves with arc-flow blocks, in milliseconds, and the
+  // pivots per column: the arc-flow programs of gbac (20,000 to 70,000 columns) need 100,000 and
+  // more pivots
+  private static final long ARC_FIRST_MS = Long.getLong("org.jacop.lp.arcFlow.firstMs", 60_000L);
+
+  private static final long ARC_SOLVE_MS = Long.getLong("org.jacop.lp.arcFlow.solveMs", 20_000L);
+
+  private static final int ARC_PIVOTS_PER_COLUMN =
+      Integer.getInteger("org.jacop.lp.arcFlow.pivotsPerColumn", 20);
+
   /** The value of a {@link LoadFunction} at a load value where it is not defined. */
   public static final long NONE = Long.MIN_VALUE;
 
@@ -679,7 +695,14 @@ public final class TimeIndexedBound extends Constraint
     }
     lastColumns = p.columns();
     lastRows = p.rowLo.size();
-    return p.bound(maximize, solvedOnce ? SOLVE_MS : FIRST_MS);
+    if (packings.isEmpty()) {
+      return p.bound(maximize, solvedOnce ? SOLVE_MS : FIRST_MS, PIVOTS);
+    }
+    long pivots = Math.max(PIVOTS, (long) ARC_PIVOTS_PER_COLUMN * p.columns());
+    return p.bound(
+        maximize,
+        solvedOnce ? Math.max(SOLVE_MS, ARC_SOLVE_MS) : Math.max(FIRST_MS, ARC_FIRST_MS),
+        (int) Math.min(Integer.MAX_VALUE, pivots));
   }
 
   // the arc-flow columns of the bins of a packing, within a budget of arcs; the arcs made. The
@@ -700,6 +723,15 @@ public final class TimeIndexedBound extends Constraint
       if (hi[item[i]] - lo[item[i]] >= q.loads().length + 1L) {
         return 0;
       }
+    }
+    long more = 0;
+    for (int j : item) {
+      if (!buckets.containsKey(j)) {
+        more += hi[j] - lo[j] + 1;
+      }
+    }
+    if (p.columns() + more > MAX_ARC_COLUMNS) {
+      return 0;
     }
     // the value columns of the bins of the items, shared with the time-indexed blocks at width 1
     for (int j : item) {
@@ -757,7 +789,7 @@ public final class TimeIndexedBound extends Constraint
         from.add(leave);
         arcs += leave.cardinality();
       }
-      if (made + arcs > budget) {
+      if (made + arcs > budget || p.columns() + arcs > MAX_ARC_COLUMNS) {
         break;
       }
       made += arcs;
@@ -1198,7 +1230,7 @@ public final class TimeIndexedBound extends Constraint
     }
 
     // the exact bound of the program in the minimized direction (column 0, negated when maximizing)
-    long bound(boolean maximize, long millis) {
+    long bound(boolean maximize, long millis, int pivots) {
       int m = rowLo.size();
       int n = columns();
       int[][] cs = rowCols.toArray(new int[0][]);
@@ -1218,7 +1250,7 @@ public final class TimeIndexedBound extends Constraint
       // in slices of pivots, until the time of one solve is up
       long deadline = System.nanoTime() + millis * 1_000_000L;
       int status = RevisedDualSimplex.LIMIT;
-      for (int done = 0; done < PIVOTS && status == RevisedDualSimplex.LIMIT; done += SLICE) {
+      for (int done = 0; done < pivots && status == RevisedDualSimplex.LIMIT; done += SLICE) {
         status = lp.solve(SLICE);
         if (System.nanoTime() > deadline) {
           break;
