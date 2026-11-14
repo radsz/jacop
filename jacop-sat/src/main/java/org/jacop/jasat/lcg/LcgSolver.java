@@ -5468,8 +5468,46 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  // run once at the first restart to the root, see atRootAfter
+  private Runnable rootAction;
+  private long rootActionDelay;
+
+  /**
+   * Restarts the search to the root once the given time has passed, also under fixed search without
+   * restarts, and runs the given action there, before the search goes on: for example to turn on a
+   * propagator whose first, expensive, call is worth it only when the search does not end quickly.
+   * Set it before solving.
+   *
+   * @param nanos the time from now, in nanoseconds.
+   * @param action the action run at the root.
+   */
+  public void atRootAfter(long nanos, Runnable action) {
+    rootAction = action;
+    rootActionDelay = nanos;
+    sat.restartAt(System.nanoTime() + nanos);
+  }
+
+  /**
+   * Tells whether the action of {@link #atRootAfter} is still to run.
+   *
+   * @return true until it ran.
+   */
+  public boolean rootActionPending() {
+    return rootAction != null;
+  }
+
   @Override
   public void notifyRestart() {
+    if (rootAction != null) {
+      if (store.level == baseLevel) {
+        Runnable action = rootAction;
+        rootAction = null;
+        action.run();
+      } else {
+        // under assumptions: at a later restart to the root
+        sat.restartAt(System.nanoTime() + rootActionDelay);
+      }
+    }
     // a restart under assumptions keeps their level, whose bounds hold only under them
     if (store.level == baseLevel) {
       deleteLpSteps();
