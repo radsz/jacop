@@ -359,6 +359,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -577,6 +578,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -791,6 +793,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -1003,6 +1006,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>

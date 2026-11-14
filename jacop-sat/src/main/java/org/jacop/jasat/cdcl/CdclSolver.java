@@ -2771,6 +2771,13 @@ public final class CdclSolver {
           next = vals[l] == 0 && !eliminatedVar[l >> 1] ? l : -1;
         }
       }
+      if (next == -1 && external != null && external.modelComplete() && clausesSatisfied()) {
+        // the external propagator holds a model whatever the unassigned variables take
+        if (!modelAccepted()) {
+          continue;
+        }
+        return SAT;
+      }
       if (next == -1) {
         next = pickBranch();
         if (next == -1 && external != null) {
@@ -2798,6 +2805,46 @@ public final class CdclSolver {
       newSearchLevel();
       assign(next, NO_REASON);
     }
+  }
+
+  /**
+   * Returns whether every clause of the solver, unit, binary, original or learnt, has a true
+   * literal under the current assignment, so that any values of the unassigned variables extend it
+   * to a model of the clauses.
+   *
+   * @return true when every clause is satisfied
+   */
+  public boolean clausesSatisfied() {
+    for (int i = 0; i < numUnits; i++) {
+      if (vals[units[i]] <= 0) {
+        return false;
+      }
+    }
+    for (int[] binaries : new int[][] {originalBinaries, learntBinaries}) {
+      int n = binaries == originalBinaries ? numOriginalBinaries : numLearntBinaries;
+      for (int i = 0; i < n; i += 2) {
+        if (vals[binaries[i]] <= 0 && vals[binaries[i + 1]] <= 0) {
+          return false;
+        }
+      }
+    }
+    for (int[] refs : new int[][] {originals, learnts}) {
+      int n = refs == originals ? numOriginals : numLearnts;
+      for (int i = 0; i < n; i++) {
+        int ref = refs[i];
+        if ((mem[ref + META] & DELETED) != 0) {
+          continue;
+        }
+        boolean satisfied = false;
+        for (int k = 0, size = mem[ref + SIZE]; k < size && !satisfied; k++) {
+          satisfied = vals[mem[ref + HEADER + k]] > 0;
+        }
+        if (!satisfied) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   /** Asks the external propagator to check the complete assignment. */

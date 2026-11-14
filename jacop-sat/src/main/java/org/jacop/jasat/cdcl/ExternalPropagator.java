@@ -170,6 +170,18 @@ public interface ExternalPropagator {
   }
 
   /**
+   * Called when {@link #decide} gave no decision: true when the current assignment, with the
+   * variables still unassigned taking any values, is a model, so that the solver offers it to
+   * {@link #checkModel} at once instead of deciding the rest one level at a time. The solver checks
+   * that every clause it holds is satisfied first ({@link CdclSolver#clausesSatisfied}).
+   *
+   * @return true to offer the current assignment as a model
+   */
+  default boolean modelComplete() {
+    return false;
+  }
+
+  /**
    * Suggests a decision once the solver has assigned all its variables, before the assignment is
    * offered as a model, for example on a variable that has no literal yet.
    *

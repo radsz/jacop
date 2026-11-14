@@ -100,6 +100,28 @@ class DefaultSetSearchFlatzincTest {
   }
 
   @Test
+  void lcgBacktracksOneLevelInTheDefaultBranching() throws IOException {
+    // LCG's backjumps over the decisions of the default branching took them again after each of
+    // the 90 conflicts: 2,242 decisions, 175 with one-level backtracking (266 nodes without LCG)
+    String out = run("--lcg", "on", "-s");
+    check(out);
+    long nodes = nodes(out);
+    assertTrue(nodes < 600, "nodes with one-level backtracking: " + nodes);
+    long backjumping = nodes(run("--lcg", "on", "-s", "--free-config", "lcg-chrono=-1"));
+    assertTrue(backjumping > 2 * nodes, "nodes with backjumps " + backjumping + ", " + nodes);
+  }
+
+  static long nodes(String out) {
+    Matcher m = Pattern.compile("^%%%mzn-stat: nodes=(\\d+)$", Pattern.MULTILINE).matcher(out);
+    long nodes = -1;
+    while (m.find()) {
+      nodes = Long.parseLong(m.group(1)); // the last one: the search's own
+    }
+    assertTrue(nodes >= 0, "no node count:\n" + out);
+    return nodes;
+  }
+
+  @Test
   void freeSearchOption() throws IOException {
     check(run("-f", "--lcg", "on"));
   }

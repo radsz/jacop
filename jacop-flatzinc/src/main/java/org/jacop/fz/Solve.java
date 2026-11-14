@@ -2664,6 +2664,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
     lcg.setAnnotation(annotated, free);
+    if (presolve == null) {
+      // the annotation's runs take the assignment as a solution once the variables left are free;
+      // the printed variables must be fixed (presolve rebuilds its removed variables from the
+      // store's values, so not with it)
+      List<Var> printed = new ArrayList<>(output.outputVariables);
+      for (OutputArrayAnnotation a : output.outputArray) {
+        printed.addAll(Arrays.asList(a.getArray()));
+      }
+      lcg.setCompletion(printed);
+    }
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
       // defined variables follow from the others: activity branches on them last. A defined 0/1
       // variable is the truth of a reified constraint, a literal CP-SAT's search branches on as on
@@ -3215,6 +3225,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().conflicts
             + "\n%%%mzn-stat: lcgChronoBacktracks="
             + lcg.sat().lazyChronoBacktracks
+            + "\n%%%mzn-stat: lcgCompletedModels="
+            + lcg.completedModels
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
