@@ -674,7 +674,10 @@ class LcgFuzzTest {
         case 37 -> cardinalityMatrix();
         case 38 -> new Same(pick(x, 3), pick(x, 3));
         case 39 -> new UsedBy(pick(x, 3), pick(x, 2));
-        case 40 -> new AllDifferentLists(new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)});
+        case 40 ->
+            new AllDifferentLists(
+                new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)},
+                rnd.nextBoolean() ? new int[0][] : new int[][] {{rnd.nextInt(3), rnd.nextInt(3)}});
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -1806,8 +1809,9 @@ class LcgFuzzTest {
   /**
    * AllDifferentLists explains a removed value by the fixed row it would equal and a failure by two
    * equal rows. On random rows of one to three variables with column sums and disequalities, often
-   * with fewer different tuples than rows, LCG with checked explanations must agree with search
-   * over the pairwise decomposition (a disjunction of disequalities for each pair of rows).
+   * with fewer different tuples than rows and, one seed in two, excepted tuples, LCG with checked
+   * explanations must agree with search over the pairwise decomposition (a disjunction of
+   * disequalities, and of the excepted tuples, for each pair of rows).
    */
   @Test
   void allDifferentListsReasonsAgreeWithPairwiseSearch() {
@@ -1861,14 +1865,28 @@ class LcgFuzzTest {
         store.impose(new XneqY(a, b));
       }
     }
+    // one seed in two: excepted tuples, which two rows may share
+    int[][] except = new int[rnd.nextBoolean() ? 0 : 1 + rnd.nextInt(2)][n];
+    for (int[] t : except) {
+      for (int j = 0; j < n; j++) {
+        t[j] = rnd.nextInt(top + 1);
+      }
+    }
     if (lcg) {
-      store.impose(new AllDifferentLists(x));
+      store.impose(new AllDifferentLists(x, except));
     } else {
       for (int i = 0; i < m; i++) {
         for (int r = i + 1; r < m; r++) {
-          PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+          PrimitiveConstraint[] ne = new PrimitiveConstraint[n + except.length];
           for (int j = 0; j < n; j++) {
             ne[j] = new XneqY(x[i][j], x[r][j]);
+          }
+          for (int e = 0; e < except.length; e++) {
+            PrimitiveConstraint[] eq = new PrimitiveConstraint[n];
+            for (int j = 0; j < n; j++) {
+              eq[j] = new XeqC(x[i][j], except[e][j]);
+            }
+            ne[n + e] = new And(eq);
           }
           store.impose(new Or(ne));
         }
@@ -1891,9 +1909,12 @@ class LcgFuzzTest {
       for (int i = 0; i < m; i++) {
         for (int r = i + 1; r < m; r++) {
           boolean differ = false;
+          int[] row = new int[n];
           for (int j = 0; j < n; j++) {
-            differ |= solver.value(x[i][j]) != solver.value(x[r][j]);
+            row[j] = solver.value(x[i][j]);
+            differ |= row[j] != solver.value(x[r][j]);
           }
+          differ |= Arrays.stream(except).anyMatch(t -> Arrays.equals(t, row));
           assertThat(differ).as("seed %d: rows %d and %d", seed, i, r).isTrue();
         }
       }
