@@ -53,6 +53,7 @@ import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
+import org.jacop.fz.constraints.CountPartnersDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -80,6 +81,7 @@ import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
 import org.jacop.fz.constraints.TableScopeMerger;
 import org.jacop.fz.constraints.TableVariableElimination;
+import org.jacop.fz.constraints.TranslationTilingDetector;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -409,6 +411,11 @@ public class Constraints implements ParserTreeConstants {
         new CardinalityDetector(support).detect(astTree);
       }
 
+      // each variable whose values are all counted at least twice equals one of its few partners
+      if (CountPartnersDetector.enabled() && options.proof() == null) {
+        new CountPartnersDetector(support).detect(astTree);
+      }
+
       if (increasing != null && IncreasingDetector.sumEnabled()) {
         increasing.postSums();
       }
@@ -455,6 +462,11 @@ public class Constraints implements ParserTreeConstants {
       // --lcg off thread of -p); --proof does not encode them
       if (TableCoverDetector.enabled(options.lcg()) && options.proof() == null) {
         new TableCoverDetector(support).detect(astTree);
+      }
+      // the exact cover of a tiling by translation written as an all different of shifted terms,
+      // redundant; --proof does not encode it
+      if (TranslationTilingDetector.enabled() && options.proof() == null) {
+        new TranslationTilingDetector(support).detect(astTree);
       }
       store.imposingImplied(false);
 
