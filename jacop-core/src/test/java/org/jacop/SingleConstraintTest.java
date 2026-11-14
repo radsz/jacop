@@ -60,6 +60,7 @@ import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -5120,6 +5121,67 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void testAllDifferentListsSolutionCount() {
+    Store store = new Store();
+    IntVar[][] x = new IntVar[4][2];
+    for (int i = 0; i < 4; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, 2);
+      }
+    }
+    store.impose(new AllDifferentLists(x));
+
+    // 4 different pairs out of the 9, in order: 9 * 8 * 7 * 6
+    assertThat(noOfAllSolutions(store, x)).isEqualTo(3024);
+  }
+
+  /**
+   * AllDifferentLists keeps the solutions of its pairwise decomposition (a disjunction of
+   * disequalities for each pair of rows), on random rows with holes and repeated variables.
+   */
+  @Test
+  void testAllDifferentListsMatchesDecomposition() {
+    for (long seed = 0; seed < 60; seed++) {
+      int[] counts = new int[2];
+      for (int k = 0; k < 2; k++) {
+        Random rnd = new Random(seed);
+        Store store = new Store();
+        int m = 2 + rnd.nextInt(3);
+        int n = 1 + rnd.nextInt(3);
+        IntVar[] pool = new IntVar[m * n];
+        for (int q = 0; q < pool.length; q++) {
+          pool[q] = new IntVar(store, "v" + q, 0, 1 + rnd.nextInt(2));
+          if (rnd.nextInt(4) == 0) {
+            pool[q].domain.subtractAdapt(rnd.nextInt(2));
+            pool[q].refreshBounds();
+          }
+        }
+        IntVar[][] x = new IntVar[m][n];
+        for (int i = 0; i < m; i++) {
+          for (int j = 0; j < n; j++) {
+            x[i][j] = rnd.nextInt(5) == 0 ? pool[rnd.nextInt(pool.length)] : pool[i * n + j];
+          }
+        }
+        if (k == 0) {
+          store.impose(new AllDifferentLists(x));
+        } else {
+          for (int i = 0; i < m; i++) {
+            for (int r = i + 1; r < m; r++) {
+              PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+              for (int j = 0; j < n; j++) {
+                ne[j] = new XneqY(x[i][j], x[r][j]);
+              }
+              store.impose(new Or(ne));
+            }
+          }
+        }
+        counts[k] = store.consistency() ? noOfAllSolutions(store, pool) : 0;
+      }
+      assertThat(counts[0]).as("seed %d", seed).isEqualTo(counts[1]);
+    }
+  }
+
+  @Test
   void testLexChainSolutionCount() {
 
     for (boolean strict : new boolean[] {true, false}) {
@@ -9200,6 +9262,72 @@ class SingleConstraintTest extends TestHelper {
       reasons.put(trail.variable(e), vars);
     }
     return reasons;
+  }
+
+  /**
+   * Under LCG, Geost explains a bound by the obstacles whose compulsory parts cover the swept
+   * region, not by replay or the generic reason: three unit squares on a line fixed at 0, 1 and 3
+   * push a fourth one to 2, its lower bound because of the squares at 0 and 1, its upper bound
+   * because of the square at 3.
+   */
+  @Test
+  void geostExplainsItsAtoms() {
+    Store store = new Store();
+    Shape square = new Shape(0, new int[] {0, 0}, new int[] {1, 1});
+    IntVar[] x = new IntVar[4];
+    IntVar[] y = new IntVar[4];
+    List<GeostObject> objects = new ArrayList<>();
+    for (int i = 0; i < 4; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+      y[i] = new IntVar(store, "y" + i, 0, 1);
+      objects.add(
+          new GeostObject(
+              i,
+              new IntVar[] {x[i], y[i]},
+              new IntVar(store, "s" + i, 0, 0),
+              new IntVar(store, 0, 0),
+              new IntVar(store, 1, 1),
+              new IntVar(store, 1, 1)));
+    }
+    Geost geost =
+        new Geost(
+            objects,
+            List.<ExternalConstraint>of(new NonOverlapping(objects, new int[] {0, 1, 2})),
+            List.of(square));
+    store.impose(geost);
+    assertThat(store.consistency()).isTrue();
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(store.level + 1);
+    for (int i = 0; i < 4; i++) {
+      if (i < 3) {
+        x[i].domain.in(store.level, x[i], i == 2 ? 3 : i, i == 2 ? 3 : i);
+      }
+      y[i].domain.in(store.level, y[i], 0, 0);
+    }
+    assertThat(store.consistency()).isTrue();
+    assertThat(x[3].singleton(2)).isTrue();
+    int explained = 0;
+    EntryList reason = new EntryList();
+    for (int e = 0; e < trail.size(); e++) {
+      if (trail.reason(e) != geost || trail.variable(e) != x[3]) {
+        continue;
+      }
+      reason.clear();
+      assertThat(trail.explain(e, reason)).as(trail.atomString(e)).isTrue();
+      assertThat(trail.replayed()).as(trail.atomString(e)).isFalse();
+      List<IntVar> vars = new ArrayList<>();
+      for (int k = 0; k < reason.size(); k++) {
+        vars.add(trail.variable(reason.get(k)));
+      }
+      explained++;
+      if (trail.kind(e) == AtomicTrail.GE) {
+        assertThat(vars).doesNotContain(x[2]).contains(x[0], x[1]);
+      } else {
+        assertThat(vars).doesNotContain(x[0], x[1]).contains(x[2]);
+      }
+    }
+    assertThat(explained).isPositive();
+    trail.detach();
   }
 
   /**

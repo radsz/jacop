@@ -5152,6 +5152,96 @@ Version 5.0 (unreleased)
    open-stacks). -Djacop.lcg.alldiffClauses=false turns it off; statistic
    lcgPermutationsAsClauses.
 
+300. The FlatZinc front end finds tilings of the cyclic group Z_n by
+   translation, A + B = Z_n, written as an all different over the n terms
+   (b + a) mod n, and posts the redundant exact cover over the
+   characteristic vector c of B: c counts the base variables per value
+   (CountValues), and every value is covered by exactly one c[v - a]
+   (E. M. Coven and A. Meyerowitz, J. Algebra 212, 1999; the SAT encoding
+   of G. Auricchio, L. Ferrarini, S. Gualandi, G. Lanzarotto and
+   L. Pernazza, CPAIOR 2022 and Constraints 29, 2024). The vector joins
+   the default search. XCSP 2025 TilingRythmicCanons with -f at 600 s:
+   12 of 14 solved, 3 without the cover, among them 1-18, 1-22 and 1-33
+   that no 2025 solver solved. It fires on no wide-set instance. Off
+   under --proof; org.jacop.fz.translationTiling=false turns it off.
+
+301. The target phases of LCG free search (entry 280) are reset at every
+   restart to the values of the longest SAT trail at a conflict seen so far
+   in the search, instead of being kept from the run before: the best
+   rephasing of CaDiCaL (A. Biere, "CaDiCaL, Lingeling, Plingeling,
+   Treengeling and YalSAT Entering the SAT Race 2019"; A. Biere, M. Fleury,
+   "Chasing Target Phases", Pragmatics of SAT 2020). On the 99 of 240
+   wide-set instances where target phases fire, at 600 s with -f, 75 -> 74
+   solved, 10 instances better and 5 worse, 4 families better and 2 worse,
+   and the time geomean on the 74 instances solved by both is 0.940
+   (vrplc9_5_10_s2 113 -> 25 s, sudoku_fixed p28 28 -> 9 s,
+   traveling-tppv circ20fnonbal 24 -> 12 s, oocsp racks 030 12 -> 7 s;
+   community-detection Sampson s10 k3, 264 or 558 s in base runs, is not
+   proved in 600 s, workforce-alloc 202 55 -> 139 s).
+   -Djacop.lcg.targetBest=N resets every N restarts, 0 never (default 1).
+
+302. Lazy clause generation adds unary (sequential) counters for small
+   counting constraints outside reification (SumBool, LinearBool, Count,
+   CountBounds, CountValues, CountValuesBounds, AtMost, AtLeast) once
+   they take part in conflicts. A propagator explains a count by the
+   literals of its variables only, so every learnt clause restates a
+   whole count; the counter literals [first i terms sum to at least j]
+   let learnt clauses state partial counts, as the auxiliary variables
+   of a SAT encoding do (Sinz, Towards an optimal CNF encoding of Boolean
+   cardinality constraints, CP 2005; Abio, Nieuwenhuis, Oliveras,
+   Rodriguez-Carbonell and Stuckey, To encode or to propagate? The best
+   choice for each constraint in SAT, CP 2013). As in lazy decomposition
+   (Abio and Stuckey, Conflict directed lazy decomposition, CP 2012) a
+   constraint stays a propagator until it explained 100 conflicts
+   (-Djacop.lcg.counters.uses) and becomes clauses at the next restart;
+   -Djacop.lcg.counters=eager encodes them all before search,
+   -Djacop.lcg.counters=false turns this off. ClauseEncoder now encodes
+   CountValues and CountValuesBounds (global_cardinality) with the count
+   of the other values. On the XCSP 2025 EFPA instances with q >= 4 the
+   -f proofs and solutions take 0.36-0.59 of the time at 600 s
+   (EFPA-4-5-4-11 484 s to 263 s, 2.6 to 1.1 million conflicts); on the
+   38 MiniZinc Challenge instances of the wide set where counters fire,
+   35 = 35 solved, timing within noise.
+
+303. Lazy clause generation explains the pruning and failures of Geost
+   itself instead of replaying it (replay gave up and left 97 % of its
+   reasons generic). A bound of a coordinate is explained by the region
+   the sweep (Beldiceanu, Carlsson, Poder, Sadek and Truchet, "A Generic
+   Geometrical Constraint Kernel in Space and Time for Handling
+   Polymorphic k-Dimensional Objects", CP 2007, LNCS 4741, 180-194) moved
+   past, a removed shape by the whole origin box: the region is covered by
+   the compulsory parts of other objects (the cells each covers at every
+   origin and with every shape it may take), the outside and holes of the
+   allowed area, and the holes of the object's own domain; the reason
+   cites the bounds that delimit the region, the shapes left and the
+   bounds and shapes of the obstacles the cover needs. Objects whose
+   times vary are left to replay. -Dorg.jacop.geost.reasons=false gives the
+   old behaviour. LcgFuzzTest has a Geost case with polymorphic objects,
+   areas, times and shape domains with gaps (80,000 runs with the
+   explanation checker: clean). On 40 pentomino and polyomino strip
+   packings at 600 s, generic reasons fall from 97 % to 13 % and reasons
+   from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
+   0.54 on those both solve), model search 19 as before (time 0.89).
+
+302. New constraint AllDifferentLists(x): the rows of x are pairwise
+   different tuples, the allDifferent constraint over lists of XCSP3
+   (Boussemart, Lecoutre, Audemard and Piette, "XCSP3-core", arXiv
+   2009.00514, 2020). It hashes the fixed rows and the rows with one
+   variable left: two equal fixed rows fail, and a row with one variable
+   left loses the values that would make it equal a fixed row, which is
+   unit propagation on the pairwise decomposition for all pairs at once.
+   A call handles only the rows fixed since the last one. Under --lcg it
+   explains a removed value by the two rows and a failure by the two
+   equal rows. JaCoP's MiniZinc library defines
+   fzn_xcsp_all_different_lists with it, so the XCSP3 translations of
+   radsz/xcsp-competition no longer get the pairwise decomposition:
+   m(m-1)/2 disjunctions for m rows, 3.0M int_lin_ne_imp and 3.0M
+   Booleans (a 685 MB FlatZinc file, 4.7 GB to flatten) on XCSP 2025
+   LotteryDesign-32-6-6-2-1000. On the 12 LotteryDesign instances of
+   XCSP 2025 (the only ones of 2022-2025 with the constraint), -f, 600 s:
+   11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
+   the other 9 2-10x faster.
+
 Version 4.11
 =============
 
