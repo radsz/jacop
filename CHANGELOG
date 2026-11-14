@@ -5492,6 +5492,17 @@ Version 5.0 (unreleased)
    ConsistencyChecker has AllDifferentLists cases (no wrong pruning over
    230,000 nodes; forward checking, so no consistency level is claimed).
 
+317. DifferenceCycles finds the arcs that a literal fixed to a value makes
+    hold by binary search over the literal's arcs sorted by value, and keeps
+    a flag for each conditional arc in its potential, so that neither the
+    literal events nor the potential repair test the literals of all arcs.
+    Search and failures are the same in fixed search. The constraint itself
+    took 19.6 % of solver time on word-equations (MZNC 2024) and now 5.1 %
+    (1.27x more nodes per second at 60 s, 1.11x at 600 s). On the 85
+    wide-set instances that post it, at 600 s, both runs solve the same
+    instances (57 by default, 62 with -f) and the times and timed-out
+    objectives are within noise.
+
 Version 4.11
 =============
 
