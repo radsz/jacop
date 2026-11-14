@@ -5223,7 +5223,23 @@ Version 5.0 (unreleased)
    from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
    0.54 on those both solve), model search 19 as before (time 0.89).
 
-304. Under lazy clause generation a reified or implied In(x, dom) counts as
+304. Reified and implied linear equalities and disequalities
+     (int_lin_eq/ne_reif/imp with weights other than 1 and -1) fix their
+     0/1 variable when the gcd of the weights of the free terms does not
+     divide the constant minus the fixed terms: -x0 - 3 * x1 != -1 holds
+     for x0 = 2 whatever x1 is, but the 0/1 variable stayed free because
+     entailment was read from the bounds of the sum only. Lazy clause
+     generation explains it by the fixed terms. Found by the new
+     ConsistencyChecker case ReifiedLinear (nodes with a free b that has
+     no support: about 420 per 1000 instances before, 86 after); the 6
+     wide-set instances that post such constraints run as before at 600 s
+     (same nodes where solved; pennies-opt n8, proved by the base at
+     598 s, times out at the limit).
+     ConsistencyChecker has 17 more cases, for the constraints the wide
+     set posts most, and LcgFuzzTest has -Dlcg.fuzz.focus to check the
+     explanations of chosen constraints at volume.
+
+305. Under lazy clause generation a reified or implied In(x, dom) counts as
    entailed only when the bounds of x lie in dom, not when every value
    left in x does. The full test needs a reason with every value removed
    between the bounds, which on the XCSP 2025 RollerSplat models (plan
@@ -5238,7 +5254,7 @@ Version 5.0 (unreleased)
    On the 40 wide-set instances with set_in_reif or set_in_imp, at 600 s,
    no family is worse with -f or with model search.
 
-305. Under -f with --lcg, the core-guided phase ends sooner when its lower
+306. Under -f with --lcg, the core-guided phase ends sooner when its lower
    bound slows down. An extension of the phase now also needs the bound to
    meet the best solution at its rate over the second half of the phase,
    not only at its rate since the start, which counts the fast rise from a
@@ -5254,7 +5270,7 @@ Version 5.0 (unreleased)
    -Djacop.lcg.coreExtendRecent=false and -Djacop.lcg.coreDecay=false turn
    the two rules off; -Djacop.lcg.coreDecayAfterMs sets the 120 s.
 
-306. New constraint AllDifferentLists(x): the rows of x are pairwise
+307. New constraint AllDifferentLists(x): the rows of x are pairwise
    different tuples, the allDifferent constraint over lists of XCSP3
    (Boussemart, Lecoutre, Audemard and Piette, "XCSP3-core", arXiv
    2009.00514, 2020). It hashes the fixed rows and the rows with one
@@ -5273,7 +5289,7 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
-307. -Dorg.jacop.fz.binaryEqAlias=true (off by default) makes a 0..1
+308. -Dorg.jacop.fz.binaryEqAlias=true (off by default) makes a 0..1
    integer x an alias of the Boolean b when int_eq_reif(x, 1, b) states
    x = b, as bool2int(b, x) does, instead of keeping both variables and an
    equality. MiniZinc writes a Boolean grid used in sums as 0..1 integers
@@ -5286,7 +5302,7 @@ Version 5.0 (unreleased)
    g24_p20_a10 reaches its optimum in 3 of 3 seeds at about 68 s instead of
    1 of 3, the others gain or lose with the seed, so it stays off.
 
-308. The linear relaxation gets the prime implicates of tables over 0/1
+309. The linear relaxation gets the prime implicates of tables over 0/1
    variables as clause rows (Quine, "The problem of simplifying truth
    functions", American Mathematical Monthly 59, 1952; McCluskey, Bell
    System Technical Journal 35, 1956): a minimal partial assignment that
@@ -5310,7 +5326,7 @@ Version 5.0 (unreleased)
    Benzenoide-06 get them. -Dorg.jacop.lp.tableClauseRows=false turns
    them off; statistic lpTableClauses.
 
-309. The FlatZinc front end finds bin packing constraints whose items fall
+310. The FlatZinc front end finds bin packing constraints whose items fall
    into groups that fill every bin with exactly one item: the bin
    variables of an all_different constraint, as many as there are bins,
    with values among the bins. For each group it posts the dual
@@ -5334,7 +5350,7 @@ Version 5.0 (unreleased)
    team-assignment among the 1,781 Challenge instances of 2008-2026.
    -Dorg.jacop.fz.binPackingPermutations=false turns it off.
 
-310. Under free search (-f) the search follows the LP solution
+311. Under free search (-f) the search follows the LP solution
    (lcg-lp-branching auto) also for an optimisation problem whose linear
    relaxation is a set partitioning, packing or covering model:
    LinearRelaxation.setRows() holds when every model row other than the
