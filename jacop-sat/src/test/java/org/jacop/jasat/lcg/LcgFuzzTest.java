@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldiffSum;
@@ -533,7 +534,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(40);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(41);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -667,6 +668,7 @@ class LcgFuzzTest {
         case 37 -> cardinalityMatrix();
         case 38 -> new Same(pick(x, 3), pick(x, 3));
         case 39 -> new UsedBy(pick(x, 3), pick(x, 2));
+        case 40 -> new AllDifferentLists(new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)});
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -1707,6 +1709,107 @@ class LcgFuzzTest {
       own += (Long) lcg[1];
     }
     assertThat(own).isPositive();
+  }
+
+  /**
+   * AllDifferentLists explains a removed value by the fixed row it would equal and a failure by two
+   * equal rows. On random rows of one to three variables with column sums and disequalities, often
+   * with fewer different tuples than rows, LCG with checked explanations must agree with search
+   * over the pairwise decomposition (a disjunction of disequalities for each pair of rows).
+   */
+  @Test
+  void allDifferentListsReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = differentLists(seed, false) != null;
+      Object[] lcg = differentLists(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // random rows: search over the pairwise decomposition (null if no solution), or LCG over
+  // AllDifferentLists ({status, own reasons and failures of AllDifferentLists})
+  private static Object[] differentLists(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int m = 3 + rnd.nextInt(5);
+    int n = 1 + rnd.nextInt(3);
+    int top = 1 + rnd.nextInt(3);
+    IntVar[][] x = new IntVar[m][n];
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, top);
+        if (rnd.nextInt(4) == 0) {
+          x[i][j].domain.subtractAdapt(rnd.nextInt(top + 1));
+          x[i][j].refreshBounds();
+        }
+        all.add(x[i][j]);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      if (rnd.nextBoolean()) {
+        IntVar[] column = new IntVar[m];
+        for (int i = 0; i < m; i++) {
+          column[i] = x[i][j];
+        }
+        int sum = rnd.nextInt(m * top + 1);
+        store.impose(new SumInt(column, "<=", new IntVar(store, sum, sum)));
+      }
+    }
+    for (int k = rnd.nextInt(4); k > 0; k--) {
+      IntVar a = all.get(rnd.nextInt(all.size()));
+      IntVar b = all.get(rnd.nextInt(all.size()));
+      if (a != b) {
+        store.impose(new XneqY(a, b));
+      }
+    }
+    if (lcg) {
+      store.impose(new AllDifferentLists(x));
+    } else {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+          for (int j = 0; j < n; j++) {
+            ne[j] = new XneqY(x[i][j], x[r][j]);
+          }
+          store.impose(new Or(ne));
+        }
+      }
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(
+              store, new SimpleSelect<>(all.toArray(new IntVar[0]), null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          boolean differ = false;
+          for (int j = 0; j < n; j++) {
+            differ |= solver.value(x[i][j]) != solver.value(x[r][j]);
+          }
+          assertThat(differ).as("seed %d: rows %d and %d", seed, i, r).isTrue();
+        }
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("AllDifferentLists");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
   }
 
   // a random chain of vectors: search over pairwise LexOrder (null if no solution), or LCG over
