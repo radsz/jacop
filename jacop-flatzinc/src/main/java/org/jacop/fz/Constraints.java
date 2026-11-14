@@ -52,6 +52,7 @@ import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ColouredTreeDetector;
+import org.jacop.fz.constraints.ConjunctionSumDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
@@ -412,6 +413,12 @@ public class Constraints implements ParserTreeConstants {
 
       if (CardinalityDetector.enabled()) {
         new CardinalityDetector(support).detect(astTree);
+      }
+
+      // the bound of the terms of a sum of conjunctions that wait for one variable, redundant;
+      // --proof does not encode it
+      if (ConjunctionSumDetector.enabled() && options.proof() == null) {
+        new ConjunctionSumDetector(support).detect(astTree);
       }
 
       // each variable whose values are all counted at least twice equals one of its few partners
