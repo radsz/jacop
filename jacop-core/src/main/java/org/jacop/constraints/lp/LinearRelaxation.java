@@ -1961,7 +1961,7 @@ public class LinearRelaxation extends Constraint
   }
 
   // whether the model's rows are set rows, decided when the relaxation is built: cuts come later
-  private boolean setRows;
+  private final boolean setRows;
 
   // whether the first m rows, the model's, are set rows over 0/1 columns
   private boolean setRows(int m) {
@@ -1970,17 +1970,22 @@ public class LinearRelaxation extends Constraint
     }
     for (int i = 0; i < m; i++) {
       int[] cs = rowColumns[i];
-      long[] ws = rowWeights[i];
-      if (objective != null && Arrays.stream(cs).anyMatch(j -> x[j] == objective)) {
-        continue;
+      boolean holdsObjective =
+          objective != null && Arrays.stream(cs).anyMatch(j -> x[j] == objective);
+      if (!holdsObjective && !setRow(cs, rowWeights[i])) {
+        return false;
       }
-      // fixed columns are constants of the row
-      long sign = 0;
-      for (int k = 0; k < cs.length; k++) {
-        IntVar v = x[cs[k]];
-        if (v.singleton()) {
-          continue;
-        }
+    }
+    return true;
+  }
+
+  // whether a row has weights of one sign and size one over 0/1 columns; fixed columns are
+  // constants of the row
+  private boolean setRow(int[] cs, long[] ws) {
+    long sign = 0;
+    for (int k = 0; k < cs.length; k++) {
+      IntVar v = x[cs[k]];
+      if (!v.singleton()) {
         if (sign == 0) {
           sign = ws[k];
         }
