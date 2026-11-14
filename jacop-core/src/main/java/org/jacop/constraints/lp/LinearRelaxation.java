@@ -2147,6 +2147,27 @@ public class LinearRelaxation extends Constraint
     suspended = suspend;
   }
 
+  /**
+   * Returns the size of the dense tableau of the first solve, its rows and the rows of the other
+   * constraints that the first solve tries, times those rows and the columns: an estimate of the
+   * cost of the root solve and its cut rounds, known before it runs.
+   *
+   * @return rows times (rows plus columns) of the first solve.
+   */
+  public long rootTrialSize() {
+    long m = (long) rows() + extraColumns.length;
+    return m * (m + columns());
+  }
+
+  /**
+   * Tells whether the relaxation was solved at least once.
+   *
+   * @return true after the first solve.
+   */
+  public boolean solved() {
+    return calls > 0;
+  }
+
   @Override
   public void consistency(Store store) {
     if (large && calls > 0 && store.level > rootLevel && !restarting) {

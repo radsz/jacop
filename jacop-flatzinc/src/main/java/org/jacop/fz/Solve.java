@@ -147,6 +147,7 @@ import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.ProbeCalculator;
 import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
 import org.jacop.set.constraints.SetMirror;
@@ -922,6 +923,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (linearRelaxation != null) {
       linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
+      if (lpProbeMs > 0
+          && !options.freeSearch()
+          && options.portfolioWorker == null
+          && linearRelaxation.rootTrialSize() >= lpProbeSize) {
+        // the root solve waits for a short search without it: see executeSearch
+        linearRelaxation.suspend(true);
+        lpProbing = true;
+      }
       if (TIME_INDEXED && objective != null) {
         timeIndexedBound =
             TimeIndexedBound.of(store, objective, maximize, linearRelaxation.allRows());
@@ -1059,6 +1068,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.columns()
             + "\n%%%mzn-stat: lpLarge="
             + (r.largeDropped() ? "dropped" : r.large())
+            + "\n%%%mzn-stat: lpProbe="
+            + (lpProbeMs == 0
+                ? "off"
+                : lpProbeFinished ? "finished" : r.solved() ? "solved" : "unsolved")
+            + "\n%%%mzn-stat: lpRootTrialSize="
+            + r.rootTrialSize()
             + "\n%%%mzn-stat: lpPivotWork="
             + r.pivotWork()
             + "\n%%%mzn-stat: lpSimplexRows="
@@ -2315,6 +2330,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   private boolean executeSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    if (lpProbing && !probeTakes(costVar)) {
+      resumeRelaxation();
+    }
     if (!options.runSearch()) {
       flatzincDfs = label;
       flatzincVariableSelection = select;
@@ -2344,11 +2362,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (useLcg(costVar)) {
         return executeLcgSearch(costVar);
       }
+      if (lpProbing && useFreeSearchEngine(costVar)) {
+        resumeRelaxation();
+      }
       if (useFreeSearchEngine(costVar)) {
         return executeFreeSearch(costVar);
       }
       if (restartCalculator != null) {
         return executeRestartSearch(label, select, costVar, solveType);
+      }
+      if (lpProbing) {
+        return executeProbeSearch(label, select, costVar, solveType);
       }
       return executeNonRestartSearch(label, select, costVar, solveType);
     } catch (NumberSolutionsReached _) {
@@ -2990,7 +3014,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
+    if (lpProbing) {
+      lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
+    }
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    if (lpProbing) {
+      // the probe finished the search: the relaxation was never solved
+      linearRelaxation.suspend(false);
+      lpProbing = false;
+      lpProbeFinished = true;
+    }
     if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
       printProbeStatistics(lcg);
     }
@@ -4476,6 +4509,66 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
   }
+
+  // -Dorg.jacop.fz.lpProbe=ms: a fixed search whose root linear relaxation is large first runs for
+  // this long without the relaxation; if it has not finished, it starts again from the root with
+  // the
+  // relaxation, which is then solved at the root as without the probe (0: off). nside MEDIUM_5_3 of
+  // the 2026 Challenge: 1.3 s of root LP and cut rounds, and 391 nodes of search, 0.04 s, without
+  // it
+  private final long lpProbeMs = Long.getLong("org.jacop.fz.lpProbe", 200);
+
+  // -Dorg.jacop.fz.lpProbeSize=n: the smallest tableau of the first solve (rows times rows and
+  // columns, LinearRelaxation.rootTrialSize) that the probe waits for; below it the root solve is
+  // cheap, and a restart costs more than it saves (multiple-constant-multiplication XU07_28)
+  private final long lpProbeSize = Long.getLong("org.jacop.fz.lpProbeSize", 1_000_000);
+
+  // the relaxation is suspended until the probe ends
+  private boolean lpProbing;
+
+  // whether the search of the probe can run: a single depth-first search with nothing that needs
+  // its own run structure
+  private boolean probeTakes(Var costVar) {
+    return options.runSearch()
+        && dictionary.onRestart == null
+        && restartCalculator == null
+        && !(costVar == null && options.getAll());
+  }
+
+  private void resumeRelaxation() {
+    lpProbing = false;
+    linearRelaxation.suspend(false);
+    store.addChanged(linearRelaxation);
+  }
+
+  /** The fixed search, first for a short time without the relaxation (org.jacop.fz.lpProbe). */
+  @SuppressWarnings("unchecked")
+  private boolean executeProbeSearch(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    if (options.debug()) {
+      IO.print("% probe of " + lpProbeMs + " ms without the relaxation, ");
+      label.setSelectChoicePoint(select);
+      IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
+      printSearch(label);
+    }
+    ProbeCalculator calculator =
+        new ProbeCalculator(lpProbeMs * 1_000_000L, this::resumeRelaxation);
+    rs =
+        new RestartSearch<>(store, label, select, calculator, costVar != null ? (T) costVar : null);
+    setSearchTimeout(rs);
+    calculator.start();
+    boolean found = rs.labeling();
+    if (lpProbing) {
+      // the probe finished the search: the relaxation was never solved
+      linearRelaxation.suspend(false);
+      lpProbing = false;
+      lpProbeFinished = true;
+    }
+    return found;
+  }
+
+  // whether the probe finished the search
+  private boolean lpProbeFinished;
 
   private boolean executeNonRestartSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
