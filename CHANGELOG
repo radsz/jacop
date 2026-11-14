@@ -4865,7 +4865,26 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
-285. The FlatZinc front end posts the sums implied by linear equalities
+286. The FlatZinc front end divides an objective declared beyond JaCoP's
+   integer range by the factor its defining equation forces on it,
+   instead of narrowing its domain to the range. When the objective z
+   occurs in c*z + sum(a_i*x_i) = b, z is a multiple of g = G / gcd(G, c)
+   with G = gcd(a_i, b); z is then held as z/g, its coefficient in every
+   linear row is multiplied by g, and the output multiplies its value
+   back. This is the objective scaling of the CP-SAT presolve
+   (PresolveContext::CanonicalizeObjective in Google OR-Tools, which
+   divides the objective by the gcd of its coefficients). It applies only
+   when the objective, and the variables declared equal to it, occur in
+   no constraint but linear rows and fit the range once divided. Of the
+   13 Challenge instances (2008-2026) with domains beyond the range it
+   fires on the 3 large 2023 unit-commitment ones (obj 0..2147483646,
+   g = 5): with fixed search L12 and L15 now find solutions (2113098330
+   and 2143644175 at 600 s, CP-SAT 2117495245 and 2146624175 at 1200 s in
+   the Challenge), where narrowing cut off every solution the search
+   order reaches; with -f L10 reaches the optimum 1703450 in 3 of 3 runs
+   (before 2551340-3519410) and L15 46758125 (before 103430755).
+
+287. The FlatZinc front end posts the sums implied by linear equalities
    with unit coefficients that partition the variables of an
    all_different. When sum(X_1) = s_1, ..., sum(X_k) = s_k split the
    variables of all_different(A) into disjoint blocks (the rows, or the

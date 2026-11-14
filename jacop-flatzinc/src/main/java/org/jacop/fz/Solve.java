@@ -3104,7 +3104,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
         int value = lcgLastCost;
-        IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
+        IO.println(MZN_STAT_OBJECTIVE + objectiveValue(minimize ? value : -value));
       }
       if (options.searchStatistics()) {
         printLcgExplanationStatistics();
@@ -5419,6 +5419,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         printBuffer.append(v.dom().toString());
       }
       printBuffer.append(";\n");
+    } else if (v instanceof IntVar x && v.singleton() && output.outputScale(v.id()) != 1) {
+      // the variable holds the objective divided by the scale (ObjectiveScaling)
+      printBuffer
+          .append(v.id())
+          .append(" = ")
+          .append(x.value() * output.outputScale(v.id()))
+          .append(";\n");
     } else {
       printBuffer.append(v).append(";\n");
     }
@@ -5457,6 +5464,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
+      worker.objectiveScale(dictionary.objectiveScale());
       Integer cost = costVariable instanceof IntVar c ? c.min() : null;
       worker.solution(printBuffer.toString(), cost, !minimize, sharedNames(), sharedValues());
     }
@@ -5482,6 +5490,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       objectiveGap =
           new ObjectiveGap(
               options.gap(), !minimize, options.searchStatistics() ? IO::println : null);
+      objectiveGap.scale(dictionary.objectiveScale());
     }
     return objectiveGap;
   }
@@ -5499,6 +5508,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
+      worker.objectiveScale(dictionary.objectiveScale());
       // a bound that reaches the best solution proves it optimal only when it is a bound of the
       // model itself, not of the restarts of relax and reconstruct or on_restart
       worker.bound(lower, !minimize, relaxVars == null && dictionary.onRestart == null);
@@ -5551,19 +5561,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return nodes;
   }
 
+  // the value of the model's objective for a value of its variable, which may hold the objective
+  // divided by a scale (ObjectiveScaling)
+  private long objectiveValue(long value) {
+    return value * dictionary.objectiveScale();
+  }
+
   private void appendCostLineToBuffer(StringBuffer printBuffer) {
     if (costVariable == null) {
       return;
     }
     if (minimize) {
       if (costVariable instanceof IntVar var1) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(var1.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
       }
     } else {
       if (costVariable instanceof IntVar var1) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(-var1.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(-var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
       }
