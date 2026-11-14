@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.LinearExplainable;
@@ -132,8 +133,9 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExp
   }
 
   private void pruneOnce(byte rel) {
-    int min = sumMin();
-    int max = sumMax();
+    computeBounds();
+    int min = boundMin;
+    int max = boundMax;
 
     switch (rel) {
       case EQ -> pruneEq(min, max);
@@ -146,20 +148,24 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExp
     }
   }
 
-  private int sumMin() {
-    int min = 0;
-    for (int i = 0; i < l; i++) {
-      min += x[i].dom().min();
-    }
-    return min;
-  }
+  // the bounds of the sum of x, set by computeBounds
+  private int boundMin;
+  private int boundMax;
 
-  private int sumMax() {
+  // the smallest and the largest sum of x, in one pass over the domains. Counting them in
+  // queueVariable with trailed counters was tried: cryptanalysis (a variable in many sums, few
+  // propagations per change) ran 20 % slower, the counter updates and their trail costing more
+  // than the scans they save
+  private void computeBounds() {
+    int min = 0;
     int max = 0;
     for (int i = 0; i < l; i++) {
-      max += x[i].dom().max();
+      IntDomain d = x[i].dom();
+      min += d.min();
+      max += d.max();
     }
-    return max;
+    boundMin = min;
+    boundMax = max;
   }
 
   private void pruneEq(int min, int max) {
@@ -265,8 +271,9 @@ public class SumBool extends AbstractSum implements Copyable<SumBool>, LinearExp
 
   private boolean entailed(byte rel) {
 
-    int min = sumMin();
-    int max = sumMax();
+    computeBounds();
+    int min = boundMin;
+    int max = boundMax;
 
     return switch (rel) {
       case EQ -> sum.singleton(min) && min == max;

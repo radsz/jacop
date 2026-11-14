@@ -318,6 +318,34 @@ class SingleConstraintTest {
     assertThat(b.value()).isZero();
   }
 
+  /**
+   * Two sums x + x whose results miss each other by two ulps fail at once: r - x did not narrow x
+   * by itself, so x lost an ulp per pass and the node took about 10^14 passes to fail
+   * (FloatPropagationFuzzTest "PplusQeqR x+x & PplusQeqR x+x" with xseed 59).
+   */
+  @Test
+  void testTwiceTheSameVariableReachesItsFixpointAtOnce() {
+    assertTimeoutPreemptively(
+        Duration.ofSeconds(10),
+        () -> {
+          Store store = new Store();
+          FloatVar x = new FloatVar(store, "x", -0.2985134456065404, -0.14925672280327026);
+          FloatVar r1 = new FloatVar(store, "r1", -0.4477701684098105, -0.2985134456065405);
+          FloatVar r2 = new FloatVar(store, "r2", -0.597026891213081, -0.4477701684098107);
+          store.impose(new PplusQeqR(x, x, r1));
+          store.impose(new PplusQeqR(x, x, r2));
+          assertThat(store.consistency()).isFalse();
+        });
+
+    Store store = new Store();
+    FloatVar x = new FloatVar(store, "x", -10, 10);
+    FloatVar r = new FloatVar(store, "r", 3, 5);
+    store.impose(new PplusQeqR(x, x, r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.min()).isCloseTo(1.5, offset(1e-12));
+    assertThat(x.max()).isCloseTo(2.5, offset(1e-12));
+  }
+
   @Test
   void testMultiplicationWithProductSameAsFactor() {
     // p * q = p was propagated as q = 1, which loses p = 0 with any q
@@ -564,6 +592,39 @@ class SingleConstraintTest {
       store.impose(new AcosPeqR(p, r));
       assertThat(store.consistency()).as("acos %s", x).isTrue();
       assertThat(p.min()).as("p min for r <= acos(%s)", x).isLessThanOrEqualTo(x);
+    }
+  }
+
+  /**
+   * A result bound at exp(x) or ln(x) keeps x: the inverse of a rounded bound misses x by more than
+   * an ulp, since exp multiplies the rounding of its argument by the argument, and a result at most
+   * ln(291702.1017107711) cut 291702.1017107711 from the argument of LnPeqR (random checks, 26% of
+   * the arguments of ln and 0.3% of those of exp were cut).
+   */
+  @Test
+  void testExpAndLnResultBoundsKeepTheirArgument() {
+    Random random = new Random(11);
+    for (int k = 0; k < 2000; k++) {
+      double x = k == 0 ? 291702.1017107711 : Math.pow(10, 16 * random.nextDouble() - 8);
+      double y = Math.log(x);
+      for (boolean below : new boolean[] {true, false}) {
+        Store store = new Store();
+        FloatVar p = new FloatVar(store, "p", x / 2, 2 * x);
+        FloatVar r = below ? new FloatVar(store, "r", -50, y) : new FloatVar(store, "r", y, 50);
+        store.impose(new LnPeqR(p, r));
+        assertThat(store.consistency()).as("ln %s", x).isTrue();
+        assertThat(p.min()).as("ln %s below %s", x, below).isLessThanOrEqualTo(x);
+        assertThat(p.max()).as("ln %s below %s", x, below).isGreaterThanOrEqualTo(x);
+
+        store = new Store();
+        p = new FloatVar(store, "p", y - 1, y + 1);
+        double e = Math.exp(y);
+        r = below ? new FloatVar(store, "r", 0, e) : new FloatVar(store, "r", e, 1e9);
+        store.impose(new ExpPeqR(p, r));
+        assertThat(store.consistency()).as("exp %s", y).isTrue();
+        assertThat(p.min()).as("exp %s below %s", y, below).isLessThanOrEqualTo(y);
+        assertThat(p.max()).as("exp %s below %s", y, below).isGreaterThanOrEqualTo(y);
+      }
     }
   }
 

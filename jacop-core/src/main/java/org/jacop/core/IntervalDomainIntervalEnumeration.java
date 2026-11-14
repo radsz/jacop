@@ -65,7 +65,7 @@ public class IntervalDomainIntervalEnumeration extends IntervalEnumeration {
 
     if (intervalNo < maxIntervalNo) {
       intervalNo++;
-      return domain.intervals[intervalNo];
+      return domain.getInterval(intervalNo);
     }
 
     throw new NoSuchElementException("No more intervals in the domain.");

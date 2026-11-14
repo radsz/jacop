@@ -33,6 +33,9 @@ package org.jacop.fz;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -47,6 +50,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -962,7 +966,8 @@ class FlatzincFrontEndTest {
     // MiniZinc writes computed bounds such as 0..4722438400 for a product (2022
     // arithmetic-target); they were rejected as 32-bit overflows, and 0..1687566400 was taken
     // silently beyond IntDomain.MAX_INT. The domain is narrowed to JaCoP's range, so a completed
-    // search proves nothing about the values cut off.
+    // search proves nothing about the values cut off, unless the model's linear rows bound them
+    // (here x <= 3)
     String fzn =
         """
         var 0..4722438400: x :: output_var;
@@ -971,9 +976,19 @@ class FlatzincFrontEndTest {
         """;
     String[] out = run(fzn);
     assertEquals(0, lastStatus, out[1]);
-    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
+    assertEquals("x = 3;\n----------\n==========\n", out[0]);
     assertTrue(out[1].contains("1 variable domain reaches beyond"), out[1]);
     assertTrue(out[1].contains("(first: x 0..4722438400)"), out[1]);
+    // bounded only through a non-linear constraint: no claim
+    out =
+        run(
+            """
+            var 0..4722438400: x :: output_var;
+            var 0..3: y;
+            constraint int_abs(y, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
 
     // no claim of unsatisfiability: the solutions may lie in the values cut off
     out =
@@ -1008,7 +1023,7 @@ class FlatzincFrontEndTest {
             solve minimize c;
             """);
     assertEquals("c = 2;\ny = 1;\n----------\n==========\n", out[0]);
-    // maximised, the values cut off are the better ones
+    // maximised, the values cut off are the better ones, but c = 2 * y <= 10 bounds them
     out =
         run(
             """
@@ -1017,8 +1032,18 @@ class FlatzincFrontEndTest {
             constraint int_lin_eq([1, -2], [c, y], 0);
             solve maximize c;
             """);
-    assertTrue(out[0].endsWith("c = 10;\ny = 5;\n----------\n"), out[0]);
-    // an array element of the objective's array narrowed too: no claim
+    assertEquals("c = 10;\ny = 5;\n----------\n==========\n", out[0]);
+    // without a row that bounds them: no claim
+    out =
+        run(
+            """
+            var 0..2014326920: c :: output_var;
+            var 1..5: y :: output_var;
+            constraint int_times(y, y, c);
+            solve maximize c;
+            """);
+    assertTrue(out[0].endsWith("c = 25;\ny = 5;\n----------\n"), out[0]);
+    // an array element of the objective's array narrowed too; a[2] <= 4 bounds it
     out =
         run(
             """
@@ -1026,7 +1051,122 @@ class FlatzincFrontEndTest {
             constraint int_le(a[2], 4);
             solve minimize a[1];
             """);
-    assertFalse(out[0].contains("=========="), out[0]);
+    assertTrue(out[0].endsWith("----------\n==========\n"), out[0]);
+  }
+
+  @Test
+  void objectiveBeyondTheRangeDividedByItsDivisor() throws IOException {
+    // 2023 unit-commitment: obj 0..2147483646 is a sum of costs that are multiples of 5, and the
+    // solutions of the fixed search all lie beyond 536870909; narrowed, L12 and L15 got no
+    // solution in 1200 s. Here obj = 1000000 * x >= 600000000: narrowed, no solution at all
+    String model =
+        """
+        var 0..2147483646: obj :: is_defined_var;
+        var 0..2147483646: _objective :: output_var = obj;
+        var 600..2000: x :: output_var;
+        array [1..2] of int: c = [1000000, -1];
+        constraint int_lin_eq(c, [x, obj], 0) :: defines_var(obj);
+        constraint int_lin_le([1, 1], [x, obj], 2100000000);
+        solve :: int_search([obj], input_order, indomain_max, complete) minimize obj;
+        """;
+    String[] out = run(model, "-a");
+    assertEquals(0, lastStatus, out[1]);
+    assertTrue(out[0].startsWith("_objective = 2000000000;\nx = 2000;\n----------\n"), out[0]);
+    assertTrue(
+        out[0].endsWith("_objective = 600000000;\nx = 600;\n----------\n==========\n"), out[0]);
+    assertFalse(out[1].contains("narrowed"), out[1]);
+    // the threads of a portfolio share the model tree, whose rows are rewritten once
+    out = run(model, "-p", "2");
+    assertTrue(
+        out[0].endsWith("_objective = 600000000;\nx = 600;\n----------\n==========\n"), out[0]);
+    // maximised, with the objective's coefficient -2: c * obj is a multiple of 2000000, so obj of
+    // 1000000
+    out =
+        run(
+            """
+            var -2147483646..0: obj :: output_var;
+            var 300..1000: x :: output_var;
+            constraint int_lin_eq([-2000000, -2], [x, obj], 0);
+            solve maximize obj;
+            """);
+    assertEquals("obj = -300000000;\nx = 300;\n----------\n==========\n", tail(out[0]));
+    // the objective in a constraint other than a linear row keeps its narrowed domain
+    out =
+        run(
+            """
+            var 0..2147483646: obj :: output_var;
+            var 600..2000: x :: output_var;
+            var 0..2147483646: y;
+            constraint int_lin_eq([1000000, -1], [x, obj], 0);
+            constraint int_abs(obj, y);
+            solve minimize obj;
+            """);
+    assertTrue(out[0].contains("=====UNKNOWN====="), out[0]);
+    // without a divisor that brings the domain into the range
+    out =
+        run(
+            """
+            var 0..2147483646: obj :: output_var;
+            var 0..2000: x :: output_var;
+            constraint int_lin_eq([3, -1], [x, obj], 1);
+            solve minimize obj;
+            """);
+    assertTrue(out[0].endsWith("obj = 2;\nx = 1;\n----------\n==========\n"), out[0]);
+    assertTrue(out[1].contains("narrowed"), out[1]);
+  }
+
+  @Test
+  void narrowingShownHarmlessByTheModelsRows() throws IOException {
+    // 2021 connect 0086_02: 325 domains 0..1000000000, bounded through the linear rows with the
+    // objective below the best solution, unused, or only bounded from below as s >= -y / 1000. The
+    // search completed in 15 s at the optimum and could not claim it
+    String[] out =
+        run(
+            """
+            var 0..1000000000: f :: output_var;
+            var 0..1000000000: unused;
+            var 0..1000000000: s;
+            var 0..20: y :: output_var;
+            var 0..1000000000: cost :: output_var;
+            constraint int_le(3, y);
+            constraint int_lin_le([-1, -1000], [y, s], 0);
+            constraint int_lin_le([1, -1], [y, f], 0);
+            constraint int_lin_eq([1, -2, -1], [cost, f, y], 0);
+            solve minimize cost;
+            """);
+    assertEquals("f = 3;\ny = 3;\ncost = 9;\n----------\n==========\n", tail(out[0]));
+    // y = 0 needs s >= 600000000, beyond the narrowed domain: no claim of the optimum 0 cut off
+    out =
+        run(
+            """
+            var 0..2000000000: s :: output_var;
+            var 0..1: y :: output_var;
+            constraint int_lin_le([-1, -600000000], [s, y], -600000000);
+            solve minimize y;
+            """);
+    assertTrue(out[0].endsWith("y = 1;\n----------\n"), out[0]);
+    // four pigeons in three holes, which the search proves, and the narrowed variable unused
+    out =
+        run(
+            """
+            var 0..2000000000: s :: output_var;
+            array [1..4] of var 1..3: p :: output_array([1..4]);
+            constraint int_ne(p[1], p[2]);
+            constraint int_ne(p[1], p[3]);
+            constraint int_ne(p[1], p[4]);
+            constraint int_ne(p[2], p[3]);
+            constraint int_ne(p[2], p[4]);
+            constraint int_ne(p[3], p[4]);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+  }
+
+  // the last solution and the status lines
+  private static String tail(String out) {
+    int end = out.lastIndexOf("----------");
+    int start = out.lastIndexOf("----------", end - 1);
+    return out.substring(start < 0 ? 0 : start + "----------\n".length());
   }
 
   @Test
@@ -1164,6 +1304,115 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void theParseTreeIsReleasedBeforeTheSearch() throws IOException, ParseException {
+    // the parser keeps the root of the parse tree on its stack while the search runs, so the
+    // variable and constraint items stayed live: 29 % of the heap of nside EASY_200_50
+    Path fzn = tmp.resolve("release.fzn");
+    Files.writeString(
+        fzn,
+        "var 0..9: x :: output_var;\nvar 0..9: y;\nconstraint int_lt(x, y);\nsolve minimize y;\n",
+        StandardCharsets.UTF_8);
+    Options opt = new Options(new String[] {"-t", "10000", fzn.toString()});
+    PrintStream originalOut = System.out;
+    try (PrintStream capture =
+            new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.UTF_8);
+        java.io.FileInputStream input = new java.io.FileInputStream(fzn.toFile())) {
+      System.setOut(capture);
+      Parser parser = new Parser(input);
+      parser.setOptions(opt);
+      parser.model();
+      SimpleNode root = (SimpleNode) parser.jjtree.rootNode();
+      int kept = 0;
+      for (int i = 0; i < root.jjtGetNumChildren(); i++) {
+        SimpleNode item = (SimpleNode) root.jjtGetChild(i);
+        if (item != null) {
+          assertEquals(ParserTreeConstants.JJTMODELEND, item.getId());
+          kept++;
+        } else {
+          assertNull(item);
+        }
+      }
+      assertEquals(1, kept, "only the solve item is kept");
+      assertNotNull(parser.getStore());
+    } finally {
+      System.setOut(originalOut);
+    }
+  }
+
+  @Test
+  void aDeclarationKeepsItsPartsOnlyWhenItIsAnAlias() throws ParseException {
+    // a declaration is read once, when its variable is made; only var int: y = x is read again,
+    // by symmetry breaking. The others held their annotations and array literals while the model
+    // was posted: a sixth of the heap of rcpsp-wet-diverse j90_48_4
+    Parser parser =
+        new Parser(
+            new java.io.StringReader(
+                """
+                var 0..9: x :: output_var;
+                var 0..9: y = x;
+                array [1..2] of var int: a :: output_array([1..2]) = [x, y];
+                """));
+    Options opt = new Options(new String[] {"model.fzn"});
+    parser.setOptions(opt);
+    parser.cc.setOptions(opt);
+    parser.cg.setOptions(opt);
+    parser.var_decl_items();
+    SimpleNode items = (SimpleNode) parser.jjtree.popNode();
+    assertEquals(3, items.jjtGetNumChildren());
+    assertEquals(0, items.jjtGetChild(0).jjtGetNumChildren(), "x");
+    assertTrue(items.jjtGetChild(1).jjtGetNumChildren() >= 2, "y = x");
+    assertEquals(0, items.jjtGetChild(2).jjtGetNumChildren(), "a");
+    assertNotNull(parser.dict.getVariableArray("a"));
+  }
+
+  @Test
+  void aReleasedItemKeptElsewhereDoesNotReachTheOtherItems() {
+    // the linear overlap rewrites kept constraint nodes by identity during the search; through
+    // their parent they reached every constraint item: 21 % of the heap of ma-path-finding
+    // ins_g24_p20_a10 and nside HARD_2000_500
+    SimpleNode root = new SimpleNode(ParserTreeConstants.JJTMODEL);
+    SimpleNode items = new SimpleNode(ParserTreeConstants.JJTCONSTRAINTITEMS);
+    SimpleNode end = new SimpleNode(ParserTreeConstants.JJTMODELEND);
+    SimpleNode solve = new SimpleNode(ParserTreeConstants.JJTSOLVEITEM);
+    SimpleNode kept = new SimpleNode(ParserTreeConstants.JJTCONSTRAINT);
+    SimpleNode other = new SimpleNode(ParserTreeConstants.JJTCONSTRAINT);
+    link(root, items, 0);
+    link(root, end, 1);
+    link(end, solve, 0);
+    link(items, kept, 0);
+    link(items, other, 1);
+
+    Solve.releaseAllBut(solve);
+
+    assertNull(root.jjtGetChild(0));
+    assertSame(end, root.jjtGetChild(1));
+    assertSame(solve, end.jjtGetChild(0));
+    // kept still reaches its item list, but the list no longer holds the other items
+    assertSame(items, kept.jjtGetParent());
+    for (int i = 0; i < items.jjtGetNumChildren(); i++) {
+      assertNull(items.jjtGetChild(i));
+    }
+  }
+
+  private static void link(SimpleNode parent, SimpleNode child, int i) {
+    parent.jjtAddChild(child, i);
+    child.jjtSetParent(parent);
+  }
+
+  @Test
+  void aNameReadTwiceIsOneString() {
+    // one String per occurrence of a name made a third of the parse tree of ma-path-finding
+    // ins_g32_p20_a10 (950 MB of strings for 12 million name uses), which died at 4 GB while
+    // posting
+    Parser parser = new Parser(new java.io.StringReader(""));
+    Token first = new Token();
+    first.image = new String("X_INTRODUCED_7_".toCharArray());
+    Token second = new Token();
+    second.image = new String("X_INTRODUCED_7_".toCharArray());
+    assertSame(parser.name(first), parser.name(second));
+  }
+
+  @Test
   void readingTheModelStopsAtTheTimeOut() throws IOException, ParseException {
     // the time-out was checked only while the constraints were posted, after the whole file was
     // read: rcpsp-wet-diverse j90_48_4 (470 MB) read for a minute and ended 18 s after -t 60 s
@@ -1201,8 +1450,15 @@ class FlatzincFrontEndTest {
       System.setOut(capture);
       Parser parser = new Parser(input);
       parser.setOptions(opt);
-      parser.model();
-      SimpleNode tree = (SimpleNode) parser.jjtree.rootNode();
+      parser.cc.setOptions(opt);
+      // the items only: model() releases them before the search
+      parser.pred_decl_items();
+      parser.var_decl_items();
+      parser.constraint_items();
+      SimpleNode tree = new SimpleNode(ParserTreeConstants.JJTMODEL);
+      Node constraints = parser.jjtree.popNode();
+      tree.jjtAddChild(parser.jjtree.popNode(), 0);
+      tree.jjtAddChild(constraints, 1);
       opt.startedEarlier(120_000);
       Support support = parser.cc.support;
       assertThrows(ModelTimeOut.class, () -> new PartialCopyDetector(support).detect(tree));
@@ -1287,6 +1543,32 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void complementarySearchPrintsEachOutputSolutionOnce() throws IOException {
+    // -cs labelled every variable, also under -a, so the output solutions with x < y, where the
+    // half-reified b may take both values, were printed twice (9 solutions instead of 6).
+    String model =
+        """
+        var 1..3: x :: output_var;
+        var 1..3: y :: output_var;
+        var bool: b;
+        constraint int_ne(x, y);
+        constraint int_lt_imp(x, y, b);
+        solve satisfy;
+        """;
+    for (String[] options : new String[][] {{"-a"}, {"-a", "-cs"}, {"-a", "-cs", "--lcg", "off"}}) {
+      String out = run(model, options)[0];
+      List<String> solutions =
+          Arrays.stream(out.split("----------\n"))
+              .map(String::strip)
+              .filter(s -> s.startsWith("x ="))
+              .toList();
+      assertEquals(6, solutions.size(), Arrays.toString(options) + "\n" + out);
+      assertEquals(6, new HashSet<>(solutions).size(), Arrays.toString(options) + "\n" + out);
+      assertTrue(out.contains("=========="), Arrays.toString(options) + "\n" + out);
+    }
+  }
+
+  @Test
   void circuitPostsAlldistinctUnderDomainAnnotation() throws IOException {
     // x1 and x2 take 3 and 4 between them (a Hall set), so x5 cannot be 3 or 4. Circuit alone
     // propagates all-different on fixed values only and needs two failed decisions on x5; the
@@ -1325,6 +1607,26 @@ class FlatzincFrontEndTest {
     String bounds = run(fzn, "-s", "-b")[0];
     assertTrue(bounds.contains("x30 = 2;"), bounds);
     assertTrue(bounds.contains("%%%mzn-stat: failures=2"), bounds);
+  }
+
+  @Test
+  void subcircuitUnderProofKeepsSuccessorsDifferent() throws IOException {
+    // Nodes 1 and 2 both have successor 3. Under --proof the subcircuit was a decomposition by
+    // positions without the all-different, which accepted 1 -> 3 -> 1 with 2 -> 3, so wide-set
+    // tpp and mario proved optima better than the true ones.
+    String fzn =
+        """
+        var {3}: x1:: output_var;
+        var {3}: x2:: output_var;
+        var 1..3: x3:: output_var;
+        array [1..3] of var int: x = [x1,x2,x3];
+        constraint jacop_subcircuit(x);
+        solve satisfy;
+        """;
+    String prefix = tmp.resolve("subcircuit").toString();
+    String out = run(fzn, "--proof", prefix)[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(run(fzn)[0].contains("=====UNSATISFIABLE====="));
   }
 
   @Test
@@ -2495,18 +2797,34 @@ class FlatzincFrontEndTest {
     model.append(
         "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
     model.append("solve minimize obj;\n");
+    // without linear overlap factoring, which would make the two long sums one
     String out =
-        run(
-            model.toString(),
-            "--lcg",
-            "-f",
-            "--search-statistics",
-            "--free-config",
-            "lcg-branching=activity")[0];
+        withoutLinearOverlap(
+            () ->
+                run(
+                    model.toString(),
+                    "--lcg",
+                    "-f",
+                    "--search-statistics",
+                    "--free-config",
+                    "lcg-branching=activity")[0]);
     assertTrue(out.strip().contains("=========="), out);
     String late = out.substring(out.indexOf("lcgLateVariables=") + 17);
     // obj, the objective, and the block sums of the two long constraints
     assertTrue(Integer.parseInt(late.substring(0, late.indexOf('\n')).strip()) > 10, out);
+  }
+
+  private interface Run {
+    String get() throws IOException;
+  }
+
+  private static String withoutLinearOverlap(Run run) throws IOException {
+    System.setProperty("org.jacop.fz.linearOverlap", "false");
+    try {
+      return run.get();
+    } finally {
+      System.clearProperty("org.jacop.fz.linearOverlap");
+    }
   }
 
   @Test
@@ -2531,7 +2849,8 @@ class FlatzincFrontEndTest {
     model.append(
         "constraint int_lin_le([%s], [%s], -30);\n".formatted(ws.replaceAll("(\\d)", "-$1"), xs));
     model.append("solve minimize obj;\n");
-    String out = run(model.toString(), "--lcg", "-f", "-debug")[0];
+    // without linear overlap factoring, which would make the two long sums one
+    String out = withoutLinearOverlap(() -> run(model.toString(), "--lcg", "-f", "-debug")[0]);
     // two sums of block sums, the inequality's and the objective's equation
     long sumsOfBlocks =
         out.lines().filter(l -> l.matches("% LinearInt\\d+ : LinearInt\\( \\[ _.*")).count();
@@ -3454,6 +3773,29 @@ class FlatzincFrontEndTest {
         """;
     String out = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> run(model, "-s")[0]);
     assertTrue(out.contains("b = false;"), out);
+  }
+
+  @Test
+  void integerOfBool2intInASearchedOutputArrayPrintsAsInteger() throws IOException {
+    // 2016 maximum-dag 25_01 printed distance = [..., true, ...]: the int_search over distance read
+    // the array through getVariableArray, which wrote the Boolean alias of a bool2int integer into
+    // the stored array, and that array is also the output array
+    String model =
+        """
+        var bool: b :: output_var;
+        var 0..1: x :: is_defined_var;
+        var 0..2: y;
+        array [1..2] of var int: a :: output_array([1..2]) = [x, y];
+        constraint bool2int(b, x) :: defines_var(x);
+        constraint int_le(y, x);
+        solve :: int_search(a, input_order, indomain_max, complete) satisfy;
+        """;
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, "-a", "--lcg", lcg)[0];
+      assertTrue(out.contains("a = array1d(1..2, [1, 1]);"), out);
+      assertTrue(out.contains("a = array1d(1..2, [0, 0]);"), out);
+      assertFalse(out.contains("true,") || out.contains("false,"), out);
+    }
   }
 
   @Test

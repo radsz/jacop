@@ -34,7 +34,6 @@ import static java.util.stream.Collectors.joining;
 
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -250,7 +249,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   protected void setScope(Var... variables) {
-    this.scope = Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(variables)));
+    this.scope = SmallScope.of(variables);
   }
 
   /**
@@ -290,8 +289,7 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   }
 
   protected void setConstraintScope(PrimitiveConstraint... primitiveConstraints) {
-    this.constraintScope =
-        Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(primitiveConstraints)));
+    this.constraintScope = SmallScope.of(primitiveConstraints);
   }
 
   /**

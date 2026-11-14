@@ -32,6 +32,7 @@ package org.jacop.fz;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
@@ -117,7 +118,7 @@ public class Fz2jacop {
     // deleted on Windows)
     int status = 1;
     try (FileInputStream file = opt.getFile()) {
-      status = solve(opt, file);
+      status = solve(opt, file, null);
     } catch (IOException e) {
       log.error("Failed to close {}", opt.getFileName(), e);
     }
@@ -132,16 +133,27 @@ public class Fz2jacop {
    * @return the exit status, as {@link #callMain}
    */
   static int solveInPortfolio(Options opt, FileInputStream file) {
-    return new Fz2jacop().solve(opt, file);
+    return new Fz2jacop().solve(opt, file, null);
   }
 
-  private int solve(Options opt, FileInputStream file) {
+  /**
+   * Solves a model the portfolio has read already, in the calling thread.
+   *
+   * @param opt the options of the thread
+   * @param model the tree of the model ({@link Parser#parseModel}), which is only read
+   * @return 0 when the run ended normally
+   */
+  static int solveInPortfolio(Options opt, SimpleNode model) {
+    return new Fz2jacop().solve(opt, InputStream.nullInputStream(), model);
+  }
+
+  private int solve(Options opt, InputStream file, SimpleNode model) {
 
     Parser parser = new Parser(file);
     parser.setOptions(opt);
 
     RunWhenShuttingDown t = new RunWhenShuttingDown(parser);
-    if (opt.getStatistics()) {
+    if (printsAtShutdown(opt)) {
       Runtime.getRuntime().addShutdownHook(t);
     }
 
@@ -158,12 +170,24 @@ public class Fz2jacop {
               });
     }
     try {
-      return solve(opt, parser, t);
+      return solve(opt, parser, model, t);
     } finally {
       if (watch != null) {
         watch.cancel();
       }
     }
+  }
+
+  /**
+   * Whether the run prints its last solution and statistics when the JVM is shut down before it
+   * ends. A thread of a portfolio does not: it would print its own solution, which need not be the
+   * best one, after the portfolio's answer; the portfolio prints the best solution itself.
+   *
+   * @param opt the options of the run
+   * @return true with statistics, outside a portfolio
+   */
+  static boolean printsAtShutdown(Options opt) {
+    return opt.getStatistics() && opt.portfolioWorker() == null;
   }
 
   // what the watchdog prints when the run overruns its time-out
@@ -188,10 +212,14 @@ public class Fz2jacop {
     };
   }
 
-  private int solve(Options opt, Parser parser, RunWhenShuttingDown t) {
+  private int solve(Options opt, Parser parser, SimpleNode model, RunWhenShuttingDown t) {
     int status = 1;
     try {
-      parser.model();
+      if (model == null) {
+        parser.model();
+      } else {
+        parser.build(model);
+      }
       status = 0;
     } catch (FailException _) {
       handleFailException(opt, parser);

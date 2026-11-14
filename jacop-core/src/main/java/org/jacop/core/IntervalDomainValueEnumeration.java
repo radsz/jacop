@@ -42,7 +42,12 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
 
   final IntervalDomain domain;
   int current;
-  Interval i;
+
+  /** The maximum of the current interval. */
+  int currentMax;
+
+  /** False once all values have been returned. */
+  boolean more;
 
   int intervalNo;
 
@@ -57,26 +62,27 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
     domain = dom;
     maxIntervalNo = domain.size - 1;
     if (maxIntervalNo >= 0) {
-      i = domain.intervals[intervalNo];
-      current = i.min();
+      current = domain.bounds[2 * intervalNo];
+      currentMax = domain.bounds[2 * intervalNo + 1];
+      more = true;
     }
   }
 
   @Override
   public boolean hasMoreElements() {
-    return i != null;
+    return more;
   }
 
   @Override
   public int nextElement() {
 
-    if (i == null) {
+    if (!more) {
       throw new NoSuchElementException("No more values in the domain.");
     }
 
     int v;
 
-    if (current < i.max()) {
+    if (current < currentMax) {
       v = current;
       current++;
       return v;
@@ -85,11 +91,11 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
       if (intervalNo < maxIntervalNo) {
         intervalNo++;
         v = current;
-        i = domain.intervals[intervalNo];
-        current = i.min();
+        current = domain.bounds[2 * intervalNo];
+        currentMax = domain.bounds[2 * intervalNo + 1];
         return v;
       } else {
-        i = null;
+        more = false;
         return current;
       }
     }
@@ -102,20 +108,21 @@ public class IntervalDomainValueEnumeration extends ValueEnumeration {
     if (intervalNo == -1) {
 
       for (int j = 0; j <= maxIntervalNo; j++) {
-        if (domain.intervals[j].min() > current) {
-          current = domain.intervals[j].min();
+        if (domain.bounds[2 * j] > current) {
+          current = domain.bounds[2 * j];
+          currentMax = domain.bounds[2 * j + 1];
           intervalNo = j;
-          i = domain.intervals[j];
+          more = true;
           return;
         }
       }
 
-      i = null;
+      more = false;
       return;
     }
 
-    if (i != null) {
-      i = domain.intervals[intervalNo];
+    if (more) {
+      currentMax = domain.bounds[2 * intervalNo + 1];
     }
   }
 }

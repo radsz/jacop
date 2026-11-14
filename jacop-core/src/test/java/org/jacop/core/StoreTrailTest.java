@@ -74,19 +74,22 @@ class StoreTrailTest {
               : new IntVar(store, "x" + i, 0, max));
     }
     List<TimeStamp<Integer>> stamps = new ArrayList<>();
+    // Each int timestamp gets the same updates as the generic timestamp at its position.
+    List<TimeStampInt> intStamps = new ArrayList<>();
     for (int i = 0; i < 1 + random.nextInt(20); i++) {
       stamps.add(new TimeStamp<>(store, -1));
+      intStamps.add(new TimeStampInt(store, -1));
     }
 
     Deque<String> saved = new ArrayDeque<>();
     for (int step = 0; step < 3000; step++) {
       int action = random.nextInt(100);
       if (action < 15 && store.level < 60) {
-        saved.push(state(vars, stamps));
+        saved.push(state(vars, stamps, intStamps));
         store.setLevel(store.level + 1);
       } else if (action < 30 && !saved.isEmpty()) {
         store.removeLevel(store.level);
-        assertThat(state(vars, stamps)).isEqualTo(saved.peek());
+        assertThat(state(vars, stamps, intStamps)).isEqualTo(saved.peek());
         if (random.nextBoolean()) {
           // Back to the parent level.
           saved.pop();
@@ -96,7 +99,10 @@ class StoreTrailTest {
           store.setLevel(store.level);
         }
       } else if (action < 45) {
-        stamps.get(random.nextInt(stamps.size())).update(random.nextInt(1000));
+        int i = random.nextInt(stamps.size());
+        int value = random.nextInt(1000);
+        stamps.get(i).update(value);
+        intStamps.get(i).update(value);
       } else {
         IntVar v = vars.get(random.nextInt(vars.size()));
         if (v.getSize() > 1) {
@@ -115,17 +121,22 @@ class StoreTrailTest {
 
     while (!saved.isEmpty()) {
       store.removeLevel(store.level);
-      assertThat(state(vars, stamps)).isEqualTo(saved.pop());
+      assertThat(state(vars, stamps, intStamps)).isEqualTo(saved.pop());
       store.setLevel(store.level - 1);
     }
   }
 
-  private static String state(List<IntVar> vars, List<TimeStamp<Integer>> stamps) {
+  private static String state(
+      List<IntVar> vars, List<TimeStamp<Integer>> stamps, List<TimeStampInt> intStamps) {
     StringBuilder result = new StringBuilder();
     for (IntVar v : vars) {
       result.append(v.domain).append(' ');
     }
-    for (TimeStamp<Integer> t : stamps) {
+    for (int i = 0; i < stamps.size(); i++) {
+      TimeStamp<Integer> t = stamps.get(i);
+      TimeStampInt ti = intStamps.get(i);
+      assertThat(ti.value()).isEqualTo(t.value());
+      assertThat(ti.stamp()).isEqualTo(t.stamp());
       result.append(t.value()).append(' ');
     }
     return result.toString();
@@ -147,6 +158,29 @@ class StoreTrailTest {
     store.removeLevel(3);
     store.setLevel(2);
     assertThat(inner.value()).isEqualTo(6);
+    store.removeLevel(2);
+    store.setLevel(1);
+    assertThat(inner.pointer4Last).isEqualTo(-1);
+    assertThat(root.value()).isEqualTo(1);
+  }
+
+  /** An int timestamp created during the search loses its value with the level of its creation. */
+  @Test
+  void timeStampIntCreatedDuringSearchIsRemovedWithItsLevel() {
+    Store store = new Store();
+    TimeStampInt root = new TimeStampInt(store, 1);
+    store.setLevel(1);
+    store.setLevel(2);
+    TimeStampInt inner = new TimeStampInt(store, 5);
+    inner.update(6);
+    root.update(2);
+    store.setLevel(3);
+    inner.update(7);
+
+    store.removeLevel(3);
+    store.setLevel(2);
+    assertThat(inner.value()).isEqualTo(6);
+    assertThat(root.value()).isEqualTo(2);
     store.removeLevel(2);
     store.setLevel(1);
     assertThat(inner.pointer4Last).isEqualTo(-1);

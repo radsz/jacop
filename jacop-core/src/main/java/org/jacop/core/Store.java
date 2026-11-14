@@ -711,6 +711,18 @@ public class Store {
     entailed[entailedSize++] = c;
   }
 
+  /**
+   * Clears the entailment mark of a constraint that is attached to its variables again at the level
+   * where {@link #markEntailed} marked it, such as a constraint a lazy clause generation solver
+   * replaced by clauses and hands back to propagation. Its record stays and is dropped without
+   * effect when the store backtracks below that level.
+   *
+   * @param c the constraint.
+   */
+  public void clearEntailed(Constraint c) {
+    c.setEntailedAt(Integer.MAX_VALUE);
+  }
+
   private void queueModelConstraintsForVariable(Domain vdomain, Var v, int pruningEvent) {
     for (int j : vdomain.getEventsInclusion(pruningEvent)) {
       Constraint[] addedConstraints = vdomain.modelConstraints[j];

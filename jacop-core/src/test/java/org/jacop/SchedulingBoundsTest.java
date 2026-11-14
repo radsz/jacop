@@ -347,7 +347,7 @@ class SchedulingBoundsTest {
     Random rnd = new Random(31);
     int checked = 0;
     int failures = 0;
-    for (int instance = 0; instance < 400; instance++) {
+    for (int instance = 0; instance < 600; instance++) {
       Store store = new Store();
       int n = 3 + rnd.nextInt(5);
       IntVar[] s = new IntVar[n];
@@ -361,9 +361,17 @@ class SchedulingBoundsTest {
         d[i] = rnd.nextInt(6) == 0 ? 0 : 1 + rnd.nextInt(4);
         due[i] = s[i].min() + d[i] + rnd.nextInt(6);
       }
-      IntVar late = new IntVar(store, "late", 0, n);
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(5);
+      }
+      boolean weighted = rnd.nextInt(3) == 0;
+      IntVar late = new IntVar(store, "late", 0, weighted ? Arrays.stream(w).sum() : n);
       AtomicTrail trail = new AtomicTrail(store);
-      LateCount lc = new LateCount(s, d, due, late, rnd.nextBoolean());
+      LateCount lc =
+          weighted
+              ? new LateCount(s, d, due, w, late)
+              : new LateCount(s, d, due, late, rnd.nextBoolean());
       store.impose(lc);
       boolean consistent = store.consistency();
       for (int step = 0; consistent && step < 10; step++) {
@@ -399,5 +407,64 @@ class SchedulingBoundsTest {
     }
     assertTrue(checked > 300, "reasons checked: " + checked);
     assertTrue(failures > 20, "failures checked: " + failures);
+  }
+
+  /**
+   * Weighted late counts (1|r_j|sum w_j U_j): the optima with LateCount and weights, from the
+   * linear relaxation and the smallest weights, equal those of the decomposition, also with equal
+   * weights and weights 0.
+   */
+  @Test
+  void weightedLateCountOptimaMatchDecomposition() {
+    Random random = new Random(17);
+    for (int t = 0; t < INSTANCES; t++) {
+      int n = 2 + random.nextInt(6);
+      int[] p = new int[n];
+      int[] r = new int[n];
+      int[] due = new int[n];
+      int[] w = new int[n];
+      int same = random.nextInt(4) == 0 ? 1 + random.nextInt(3) : 0;
+      for (int i = 0; i < n; i++) {
+        p[i] = random.nextInt(5);
+        r[i] = random.nextInt(8);
+        due[i] = r[i] + random.nextInt(10);
+        w[i] = same > 0 ? same : random.nextInt(6);
+      }
+      String what =
+          "p="
+              + Arrays.toString(p)
+              + " r="
+              + Arrays.toString(r)
+              + " due="
+              + Arrays.toString(due)
+              + " w="
+              + Arrays.toString(w);
+      assertEquals(
+          weightedLateOptimum(p, r, due, w, false), weightedLateOptimum(p, r, due, w, true), what);
+    }
+  }
+
+  private static int weightedLateOptimum(int[] p, int[] r, int[] due, int[] w, boolean global) {
+    Store store = new Store();
+    int n = p.length;
+    int horizon = 8 + Arrays.stream(p).sum();
+    IntVar[] s = new IntVar[n];
+    IntVar[] dv = new IntVar[n];
+    IntVar[] one = new IntVar[n];
+    IntVar[] b = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      s[i] = new IntVar(store, "s" + i, r[i], horizon);
+      dv[i] = new IntVar(store, p[i], p[i]);
+      one[i] = new IntVar(store, 1, 1);
+      b[i] = new IntVar(store, 0, 1);
+      store.impose(new Reified(new XgtC(s[i], due[i] - p[i]), b[i]));
+    }
+    IntVar late = new IntVar(store, "late", 0, Arrays.stream(w).sum());
+    store.impose(new LinearInt(b, w, "==", late));
+    store.impose(new CumulativeUnary(s, dv, one, new IntVar(store, 1, 1)));
+    if (global) {
+      store.impose(new LateCount(s, p, due, w, late));
+    }
+    return minimize(store, s, late);
   }
 }

@@ -208,7 +208,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
     val tmp = new IntSet
     tmp.unionAdapt(this)
     for (i <- 0 until that.size) {
-      tmp.subtractAdapt(that.intervals(i).min, that.intervals(i).max)
+      tmp.subtractAdapt(that.leftElement(i), that.rightElement(i))
     }
     tmp
   }
@@ -220,7 +220,7 @@ class IntSet extends org.jacop.core.IntervalDomain {
   def unary_~ : IntSet = {
     val tmp = new IntSet(org.jacop.core.IntDomain.MIN_INT, org.jacop.core.IntDomain.MAX_INT)
     for (i <- 0 until this.size)
-      tmp.subtractAdapt(intervals(i).min, intervals(i).max)
+      tmp.subtractAdapt(leftElement(i), rightElement(i))
     tmp
   }
 

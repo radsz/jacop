@@ -39,7 +39,7 @@ import org.jacop.core.InitOnce;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.util.IndexDomainView;
 import org.jacop.util.TupleUtils;
@@ -92,10 +92,10 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
   private int[] nexts;
 
   /** Gives the first position of the eliminated tuple at a given level. */
-  private TimeStamp<Integer> headsOfEliminatedTuples;
+  private TimeStampInt headsOfEliminatedTuples;
 
   /** Gives the last position of the eliminated tuple at a given level. */
-  private TimeStamp<Integer> tailsOfEliminatedTuples;
+  private TimeStampInt tailsOfEliminatedTuples;
 
   /** The number of variable-value pairs which need to have support. */
   private int nbGlobalValuesToBeSupported;
@@ -550,8 +550,8 @@ public class ExtensionalSupportStr extends Constraint implements UsesQueueVariab
       }
     }
 
-    headsOfEliminatedTuples = new TimeStamp<>(store, -1);
-    tailsOfEliminatedTuples = new TimeStamp<>(store, -1);
+    headsOfEliminatedTuples = new TimeStampInt(store, -1);
+    tailsOfEliminatedTuples = new TimeStampInt(store, -1);
 
     nbValuesToBeSupported = new int[list.length];
     validityVariablePositions = new int[list.length];

@@ -340,6 +340,30 @@ public final class AffineDomain extends IntDomain {
   }
 
   @Override
+  public int leftElement(int intervalNo) {
+    if (a == 1) {
+      return image(base.domain.leftElement(intervalNo));
+    }
+    if (a == -1) {
+      IntDomain d = base.domain;
+      return image(d.rightElement(d.noIntervals() - 1 - intervalNo));
+    }
+    return getElementAt(intervalNo);
+  }
+
+  @Override
+  public int rightElement(int intervalNo) {
+    if (a == 1) {
+      return image(base.domain.rightElement(intervalNo));
+    }
+    if (a == -1) {
+      IntDomain d = base.domain;
+      return image(d.leftElement(d.noIntervals() - 1 - intervalNo));
+    }
+    return getElementAt(intervalNo);
+  }
+
+  @Override
   public int getElementAt(int index) {
     IntDomain d = base.domain;
     return image(d.getElementAt(a > 0 ? index : d.getSize() - 1 - index));

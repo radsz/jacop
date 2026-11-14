@@ -1,2 +1,4 @@
 #!/bin/bash
-exec java -XX:+UseSerialGC -server -cp "path to JaCoP classes or .jar file" -Xmx8G -Xss100M org.jacop.fz.Fz2jacop "$@"
+# huge pages for the heap (about 5 % faster); the option exists only in the Linux JVM
+THP=; [[ "$(uname -s)" == Linux ]] && THP=-XX:+UseTransparentHugePages
+exec java -XX:+UseSerialGC $THP -server -cp "path to JaCoP classes or .jar file" -Xmx8G -Xss100M org.jacop.fz.Fz2jacop "$@"

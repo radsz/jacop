@@ -187,6 +187,44 @@ class DomainOperationsBruteForceTest {
   }
 
   /** The pruning operations of a variable's domain, followed by backtracking to the old domain. */
+  // an IntervalDomain against affine views, which reach the paths that read the argument through
+  // leftElement and rightElement
+  @ParameterizedTest(name = "{0}")
+  @MethodSource("kinds")
+  void intervalDomainMatchesSetsWithAffineArguments(
+      String name, Scale scale, Function<TreeSet<Integer>, IntDomain> kind) {
+    if (!name.startsWith("IntervalDomain")) {
+      return;
+    }
+    Random random = new Random(name.hashCode() + 2);
+    for (int trial = 0; trial < TRIALS; trial++) {
+      TreeSet<Integer> a = randomSet(random, scale);
+      TreeSet<Integer> b = randomSet(random, scale);
+      int shift = random.nextInt(5) - 2;
+      TreeSet<Integer> shifted = new TreeSet<>();
+      b.forEach(v -> shifted.add(v + shift));
+      for (IntDomain db : new IntDomain[] {affine(b, 1, 3), affine(b, -1, 5)}) {
+        String c = "a=" + a + " b=" + b + " shift=" + shift + " argument " + db;
+        IntDomain da = kind.apply(a);
+        check(da.intersect(db), intersect(a, b), "intersect(dom) " + c);
+        check(da.subtract(db), subtract(a, b), "subtract(dom) " + c);
+        assertThat(da.sizeOfIntersection(db))
+            .as("sizeOfIntersection(dom) " + c)
+            .isEqualTo(intersect(a, b).size());
+        IntDomain adapted = kind.apply(a);
+        adapted.intersectAdapt(db);
+        check(adapted, intersect(a, b), "intersectAdapt(dom) " + c);
+        prune(kind, a, intersect(a, b), "in(dom) " + c, (d, l, v) -> d.in(l, v, db));
+        prune(
+            kind,
+            a,
+            intersect(a, shifted),
+            "inShift " + c,
+            (d, l, v) -> d.inShift(l, v, db, shift));
+      }
+    }
+  }
+
   @ParameterizedTest(name = "{0}")
   @MethodSource("kinds")
   void pruningMatchesSetsAndBacktracks(
@@ -656,6 +694,13 @@ class DomainOperationsBruteForceTest {
       result.add(new BoundDomain(b.first(), b.last()));
     }
     return result.toArray(new IntDomain[0]);
+  }
+
+  /** An affine view a * x + c whose values are the given set. */
+  private static IntDomain affine(TreeSet<Integer> values, int a, int c) {
+    TreeSet<Integer> base = new TreeSet<>();
+    values.forEach(v -> base.add((v - c) / a));
+    return new AffineDomain(new IntVar(new Store(), interval(base)), a, c);
   }
 
   private static IntDomain lazy(TreeSet<Integer> values) {

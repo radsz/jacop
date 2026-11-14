@@ -31,6 +31,7 @@
 package org.jacop.constraints.lp;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -44,6 +45,24 @@ import org.junit.jupiter.api.Test;
 class DualSimplexTest {
 
   private static final double TOL = 1e-6;
+
+  /**
+   * A Farkas ray from the simplex carries rounding noise: here 1e-11 on the row x &lt;= 5, whose
+   * lower side is infinite. x &gt;= 2 alone proves x in [0, 1] infeasible, so the check must accept
+   * the ray, and still reject one whose second multiplier is not noise.
+   */
+  @Test
+  void farkasCheckIgnoresRoundingNoise() {
+    double inf = Double.POSITIVE_INFINITY;
+    double[][] a = {{1}, {1}};
+    double[] rowLo = {2, -inf};
+    double[] rowHi = {inf, 5};
+    double[] lo = {0};
+    double[] hi = {1};
+    checkFarkas(new double[] {1, 1e-11}, a, rowLo, rowHi, lo, hi, 0);
+    assertThatThrownBy(() -> checkFarkas(new double[] {1, 0.5}, a, rowLo, rowHi, lo, hi, 0))
+        .isInstanceOf(AssertionError.class);
+  }
 
   @Test
   void randomLpsGiveCertificates() {
@@ -313,10 +332,17 @@ class DualSimplexTest {
       least += Math.min(r * lo[j], r * hi[j]);
       most += Math.max(r * lo[j], r * hi[j]);
     }
+    // entries below 1e-9 of the largest multiplier are rounding noise of the ray (a multiplier of
+    // 1e-12 on a row with an infinite side would otherwise make that side infinite)
+    double largest = 0;
+    for (double v : y) {
+      largest = Math.max(largest, Math.abs(v));
+    }
+    double noise = Math.max(1e-12, 1e-9 * largest);
     double sideLo = 0;
     double sideHi = 0;
     for (int i = 0; i < m; i++) {
-      if (Math.abs(y[i]) > 1e-12) {
+      if (Math.abs(y[i]) > noise) {
         sideLo += y[i] > 0 ? y[i] * rowLo[i] : y[i] * rowHi[i];
         sideHi += y[i] > 0 ? y[i] * rowHi[i] : y[i] * rowLo[i];
       }

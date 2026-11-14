@@ -43,7 +43,7 @@ import org.jacop.constraints.netflow.simplex.Arc;
 import org.jacop.constraints.netflow.simplex.NetworkSimplex;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 
 /**
  * This class extends the minimum-cost flow network by providing operations and data structures for
@@ -71,13 +71,13 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   // Data structure for arc modification
   // (similar to geost constraint)
   /** Number of deleted arcs at each level. */
-  public TimeStamp<Integer> deletedSize;
+  public TimeStampInt deletedSize;
 
   /** Cost due to deleted arcs. */
   long costOffset;
 
   /** Number of modified arcs at each level. */
-  public TimeStamp<Integer> modifiedSize;
+  public TimeStampInt modifiedSize;
 
   // Data structure for pruning
 
@@ -108,8 +108,8 @@ public class Network extends NetworkSimplex implements MutableNetwork {
   public void initialize(Store store) {
 
     this.store = store;
-    this.deletedSize = new TimeStamp<>(store, 0);
-    this.modifiedSize = new TimeStamp<>(store, 0);
+    this.deletedSize = new TimeStampInt(store, 0);
+    this.modifiedSize = new TimeStampInt(store, 0);
   }
 
   // adds an arc at its lower or upper bound

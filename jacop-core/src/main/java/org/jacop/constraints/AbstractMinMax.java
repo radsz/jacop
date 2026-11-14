@@ -37,7 +37,7 @@ import org.jacop.api.SatisfiedPresent;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 
 /**
@@ -59,7 +59,7 @@ public abstract class AbstractMinMax extends Constraint implements SatisfiedPres
   final int l;
 
   /** Defines first position of the variable that needs to be considered. */
-  protected TimeStamp<Integer> position;
+  protected TimeStampInt position;
 
   /**
    * Constructs the base min/max constraint.
@@ -120,6 +120,6 @@ public abstract class AbstractMinMax extends Constraint implements SatisfiedPres
   @Override
   public void impose(Store store) {
     super.impose(store);
-    position = new TimeStamp<>(store, 0);
+    position = new TimeStampInt(store, 0);
   }
 }

@@ -58,6 +58,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 
@@ -119,6 +120,12 @@ public class HybridTable extends Constraint
 
   /** True to expand the tuples with restrictions between columns when the constraint is imposed. */
   private final boolean expandBetweenColumns;
+
+  /**
+   * The structures built from the tuples at imposition, shared by the tables over the same tuples
+   * (copies, and tables made with {@link #HybridTable(IntVar[], HybridTable)}).
+   */
+  private final SharedIndex shared;
 
   private final Map<IntVar, Integer> varMap;
 
@@ -298,6 +305,7 @@ public class HybridTable extends Constraint
     }
     this.x = Arrays.copyOf(list, list.length);
     this.expandBetweenColumns = expandBetweenColumns;
+    this.shared = new SharedIndex();
     setTuples(tuples);
     this.varMap = Var.positionMapping(list, false, this.getClass());
     this.queueIndex = 1;
@@ -310,6 +318,7 @@ public class HybridTable extends Constraint
     this.arity = original.arity;
     this.x = map.get(original.x);
     this.expandBetweenColumns = original.expandBetweenColumns;
+    this.shared = original.shared;
     this.cells = original.cells;
     this.tupleCount = original.tupleCount;
     this.varMap = Var.positionMapping(x, false, this.getClass());
@@ -318,11 +327,82 @@ public class HybridTable extends Constraint
     setScope(x);
   }
 
+  /**
+   * It constructs a table over other variables with the same tuples as another table. The tuples
+   * and the bit-sets built from them are shared, so many tables over one large relation, as in
+   * models that post the same table on many pairs of variables, take the memory of one.
+   *
+   * @param list the variables in the scope of the constraint.
+   * @param sameTuples a table with the arity of list whose tuples this table takes.
+   */
+  public HybridTable(IntVar[] list, HybridTable sameTuples) {
+    if (list == null || sameTuples == null) {
+      throw new IllegalArgumentException("HybridTable: list and sameTuples must not be null");
+    }
+    checkInputForNullness("list", list);
+    checkInputForDuplication("list", list);
+    if (list.length != sameTuples.arity) {
+      throw new IllegalArgumentException("HybridTable: list must have the arity of sameTuples");
+    }
+    this.arity = list.length;
+    this.x = Arrays.copyOf(list, list.length);
+    this.expandBetweenColumns = sameTuples.expandBetweenColumns;
+    this.shared = sameTuples.shared;
+    this.cells = sameTuples.shared.original;
+    this.tupleCount = sameTuples.shared.originalCount;
+    this.varMap = Var.positionMapping(list, false, this.getClass());
+    this.queueIndex = 1;
+    numberId = idNumber.incrementAndGet();
+    setScope(list);
+  }
+
+  /**
+   * The structures that depend on the tuples only, built by the first of the tables over the same
+   * cells that is imposed and taken by the others. The structures that change during search are
+   * built by each table.
+   */
+  private static final class SharedIndex {
+    /** The cells as given to the constructor, before any expansion at imposition. */
+    Restriction[] original;
+
+    /** The number of tuples of the original cells. */
+    int originalCount;
+
+    /** The cells the structures below were built from, null before the first build. */
+    Restriction[] cells;
+
+    int[][] constants;
+    int[][] classMin;
+    int[][] classMax;
+    long[][][] supports;
+    long[][][] equalSupports;
+    long[][][] notEqualSupports;
+    long[][] upperAll;
+    long[][][] upperAccept;
+    long[][] lowerAll;
+    long[][][] lowerAccept;
+    long[][] setAll;
+    long[][][] setAccept;
+    long[] binaryAll;
+    long[][] binaryColumn;
+    int[][] binaryColumns;
+    int[][] binarySources;
+    IntDomain[][] setDomains;
+    int[][] tupleClass;
+    int[][] sparseStart;
+    int[][] sparseWord;
+    long[][] sparseBits;
+  }
+
   private void setTuples(Restriction[][] rows) {
     tupleCount = rows.length;
     cells = new Restriction[tupleCount * arity];
     for (int t = 0; t < tupleCount; t++) {
       System.arraycopy(rows[t], 0, cells, t * arity, arity);
+    }
+    if (shared.original == null) {
+      shared.original = cells;
+      shared.originalCount = tupleCount;
     }
   }
 
@@ -483,8 +563,7 @@ public class HybridTable extends Constraint
     words = valid.words;
     queue = new int[arity];
     queued = new boolean[arity];
-    buildClasses();
-    buildSupports();
+    buildIndex();
 
     state = valid.state;
     index = valid.index;
@@ -572,6 +651,79 @@ public class HybridTable extends Constraint
     indexOffset = TrailedTupleSet.minIndex(x);
 
     super.impose(store);
+  }
+
+  /** It builds the structures of the tuples, or takes them from a table over the same cells. */
+  private void buildIndex() {
+    SharedIndex s = shared;
+    synchronized (s) {
+      if (s.cells != cells) {
+        buildClasses();
+        buildSupports();
+        if (s.cells == null) {
+          s.cells = cells;
+          s.constants = constants;
+          s.classMin = classMin;
+          s.classMax = classMax;
+          s.supports = supports;
+          s.equalSupports = equalSupports;
+          s.notEqualSupports = notEqualSupports;
+          s.upperAll = upperAll;
+          s.upperAccept = upperAccept;
+          s.lowerAll = lowerAll;
+          s.lowerAccept = lowerAccept;
+          s.setAll = setAll;
+          s.setAccept = setAccept;
+          s.binaryAll = binaryAll;
+          s.binaryColumn = binaryColumn;
+          s.binaryColumns = binaryColumns;
+          s.binarySources = binarySources;
+          s.setDomains = setDomains;
+          s.tupleClass = tupleClass;
+          s.sparseStart = sparseStart;
+          s.sparseWord = sparseWord;
+          s.sparseBits = sparseBits;
+        }
+        return;
+      }
+      constants = s.constants;
+      classMin = s.classMin;
+      classMax = s.classMax;
+      supports = s.supports;
+      equalSupports = s.equalSupports;
+      notEqualSupports = s.notEqualSupports;
+      upperAll = s.upperAll;
+      upperAccept = s.upperAccept;
+      lowerAll = s.lowerAll;
+      lowerAccept = s.lowerAccept;
+      setAll = s.setAll;
+      setAccept = s.setAccept;
+      binaryAll = s.binaryAll;
+      binaryColumn = s.binaryColumn;
+      binaryColumns = s.binaryColumns;
+      binarySources = s.binarySources;
+      setDomains = s.setDomains;
+      tupleClass = s.tupleClass;
+      sparseStart = s.sparseStart;
+      sparseWord = s.sparseWord;
+      sparseBits = s.sparseBits;
+    }
+    // The work space of this table.
+    residues = new int[arity][];
+    seen = new int[arity][];
+    int maxClasses = 0;
+    for (int i = 0; i < arity; i++) {
+      int classes = classMin[i].length;
+      residues[i] = new int[classes];
+      if (tupleClass[i] != null) {
+        seen[i] = new int[classes];
+      }
+      maxClasses = Math.max(maxClasses, classes);
+    }
+    removedClasses = new int[maxClasses];
+    classMarks = new long[(maxClasses + 63) >> 6];
+    scanColumn = new boolean[arity];
+    scanned = new int[arity];
   }
 
   private void buildClasses() {
@@ -1900,6 +2052,30 @@ public class HybridTable extends Constraint
   }
 
   /**
+   * Returns the clause rows of a table over 0/1 variables ({@link TableClauses}): its prime
+   * implicates over the columns not fixed, for the linear relaxation. They hold within the current
+   * domains, so they are made at the root.
+   *
+   * @return the rows, empty when a column not fixed is not 0/1 or the table is too large
+   */
+  public List<LinearForm> clauseRows() {
+    if (getClass() != HybridTable.class) {
+      return List.of();
+    }
+    return TableClauses.of(
+        x,
+        tupleCount,
+        values -> {
+          for (int t = 0; t < tupleCount; t++) {
+            if (accepts(cells, t * arity, arity, values)) {
+              return true;
+            }
+          }
+          return false;
+        });
+  }
+
+  /**
    * The violation for local search: 0 when some hybrid tuple accepts the values, otherwise the
    * fewest columns that any hybrid tuple rejects, the Hamming distance from the values to the
    * table. A move that brings the values closer to a tuple lowers it, which a 0/1 violation would
@@ -2236,6 +2412,66 @@ public class HybridTable extends Constraint
       }
     }
     return true;
+  }
+
+  /**
+   * Whether the restriction of a tuple on a column accepts a value. A restriction between columns
+   * accepts every value here; {@link #hasColumnRestrictions} tells whether there is one.
+   *
+   * @param t the tuple
+   * @param column the column
+   * @param v the value
+   * @return true when the restriction accepts v
+   */
+  public boolean cellAccepts(int t, int column, int v) {
+    return cells[t * arity + column].accepts(v);
+  }
+
+  /**
+   * The tuples of values of a table whose every cell is one value, reduced to those valid on the
+   * current domains, without duplicates; null when a cell is not a single value.
+   *
+   * @return the valid tuples, or null
+   */
+  public int[][] validPlainTuples() {
+    List<int[]> out = new ArrayList<>();
+    java.util.Set<List<Integer>> seen = new java.util.HashSet<>();
+    for (int t = 0; t < tupleCount; t++) {
+      int[] v = new int[arity];
+      boolean valid = true;
+      for (int i = 0; i < arity; i++) {
+        Restriction r = cells[t * arity + i];
+        if (r.kind != Restriction.Kind.EQ) {
+          return null;
+        }
+        v[i] = r.value;
+        valid &= x[i].domain.contains(v[i]);
+      }
+      if (valid) {
+        List<Integer> key = new ArrayList<>(arity);
+        for (int a : v) {
+          key.add(a);
+        }
+        if (seen.add(key)) {
+          out.add(v);
+        }
+      }
+    }
+    return out.toArray(new int[0][]);
+  }
+
+  /**
+   * Whether some tuple restricts a column by another column.
+   *
+   * @return true when a restriction is between columns
+   */
+  public boolean hasColumnRestrictions() {
+    for (Restriction r : cells) {
+      if (r.isBinary()) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static long key(int column, int value) {

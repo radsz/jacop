@@ -63,6 +63,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
@@ -109,6 +110,7 @@ import org.jacop.constraints.OverlappingAlldiff;
 import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Same;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
@@ -120,7 +122,9 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
+import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.UnaryEarlinessTardiness;
+import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -304,6 +308,14 @@ class GlobalConstraintBruteForceTest {
             (Function<Random, Instance>) GlobalConstraintBruteForceTest::valuesDifferences),
         Arguments.of(
             "Assignment", (Function<Random, Instance>) GlobalConstraintBruteForceTest::assignment),
+        Arguments.of("Same", same(false)),
+        Arguments.of("UsedBy", same(true)),
+        Arguments.of(
+            "SymmetricGCC",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::symmetricGcc),
+        Arguments.of(
+            "CardinalityMatrix",
+            (Function<Random, Instance>) GlobalConstraintBruteForceTest::cardinalityMatrix),
         Arguments.of("Max", maxOrMin(true)),
         Arguments.of("Min", maxOrMin(false)),
         Arguments.of("MaxSimple", maxOrMinSimple(true)),
@@ -2224,6 +2236,140 @@ class GlobalConstraintBruteForceTest {
           return true;
         },
         "");
+  }
+
+  private static Function<Random, Instance> same(boolean usedBy) {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      int p = usedBy ? random.nextInt(n + 1) : n;
+      return new Instance(
+          domains(random, n + p, 0, 3),
+          (store, x) -> {
+            IntVar[] a = Arrays.copyOfRange(x, 0, n);
+            IntVar[] b = Arrays.copyOfRange(x, n, n + p);
+            store.impose(usedBy ? new UsedBy(a, b) : new Same(a, b));
+          },
+          x -> {
+            int[] count = new int[4];
+            for (int i = 0; i < n; i++) {
+              count[x[i]]++;
+            }
+            for (int j = n; j < n + p; j++) {
+              count[x[j]]--;
+            }
+            return Arrays.stream(count).allMatch(c -> usedBy ? c >= 0 : c == 0);
+          },
+          "n=" + n + " p=" + p);
+    };
+  }
+
+  // the cells of an n x m 0/1 matrix, then the row sums and the column sums
+  private static Instance symmetricGcc(Random random) {
+    int n = 1 + random.nextInt(3);
+    int m = 1 + random.nextInt(3);
+    int[][] domains = new int[n * m + n + m][];
+    for (int i = 0; i < n * m; i++) {
+      domains[i] = domain(random, 0, 2);
+    }
+    for (int i = n * m; i < domains.length; i++) {
+      domains[i] = domain(random, -1, 3);
+    }
+    return new Instance(
+        domains,
+        (store, x) -> {
+          IntVar[][] cells = new IntVar[n][];
+          for (int r = 0; r < n; r++) {
+            cells[r] = Arrays.copyOfRange(x, r * m, r * m + m);
+          }
+          store.impose(
+              new SymmetricGCC(
+                  cells,
+                  Arrays.copyOfRange(x, n * m, n * m + n),
+                  Arrays.copyOfRange(x, n * m + n, n * m + n + m)));
+        },
+        x -> {
+          for (int i = 0; i < n * m; i++) {
+            if (x[i] < 0 || x[i] > 1) {
+              return false;
+            }
+          }
+          for (int r = 0; r < n; r++) {
+            int sum = 0;
+            for (int c = 0; c < m; c++) {
+              sum += x[r * m + c];
+            }
+            if (sum != x[n * m + r]) {
+              return false;
+            }
+          }
+          for (int c = 0; c < m; c++) {
+            int sum = 0;
+            for (int r = 0; r < n; r++) {
+              sum += x[r * m + c];
+            }
+            if (sum != x[n * m + n + c]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        n + "x" + m);
+  }
+
+  // the cells of an n x m matrix over 0..2, then the counts of values 0 and 2 per row and column
+  private static Instance cardinalityMatrix(Random random) {
+    // small enough to enumerate: up to 3 x 2 cells with one value, 2 x 2 with two
+    int[] values = random.nextBoolean() ? new int[] {0, 2} : new int[] {1};
+    int k = values.length;
+    int n = 1 + random.nextInt(k == 1 ? 3 : 2);
+    int m = 1 + random.nextInt(2);
+    int[][] domains = new int[n * m + (n + m) * k][];
+    for (int i = 0; i < n * m; i++) {
+      domains[i] = domain(random, 0, 2);
+    }
+    for (int i = n * m; i < domains.length; i++) {
+      domains[i] = domain(random, 0, k == 1 ? 3 : 2);
+    }
+    return new Instance(
+        domains,
+        (store, x) -> {
+          IntVar[][] cells = new IntVar[n][];
+          IntVar[][] rows = new IntVar[n][];
+          IntVar[][] cols = new IntVar[m][];
+          for (int r = 0; r < n; r++) {
+            cells[r] = Arrays.copyOfRange(x, r * m, r * m + m);
+            rows[r] = Arrays.copyOfRange(x, n * m + r * k, n * m + r * k + k);
+          }
+          for (int c = 0; c < m; c++) {
+            int at = n * m + n * k + c * k;
+            cols[c] = Arrays.copyOfRange(x, at, at + k);
+          }
+          store.impose(new CardinalityMatrix(cells, values, rows, cols));
+        },
+        x -> {
+          for (int v = 0; v < k; v++) {
+            for (int r = 0; r < n; r++) {
+              int count = 0;
+              for (int c = 0; c < m; c++) {
+                count += x[r * m + c] == values[v] ? 1 : 0;
+              }
+              if (count != x[n * m + r * k + v]) {
+                return false;
+              }
+            }
+            for (int c = 0; c < m; c++) {
+              int count = 0;
+              for (int r = 0; r < n; r++) {
+                count += x[r * m + c] == values[v] ? 1 : 0;
+              }
+              if (count != x[n * m + n * k + c * k + v]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        n + "x" + m + " values " + Arrays.toString(values));
   }
 
   private static Function<Random, Instance> maxOrMin(boolean max) {

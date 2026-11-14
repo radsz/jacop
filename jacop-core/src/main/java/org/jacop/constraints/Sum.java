@@ -40,7 +40,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.LinearExplainable;
 import org.jacop.lcg.LinearForm;
@@ -67,10 +67,10 @@ public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum>, 
   int guideValue;
 
   /** The sum of grounded variables. */
-  private TimeStamp<Integer> sumGrounded;
+  private TimeStampInt sumGrounded;
 
   /** The position for the next grounded variable. */
-  private TimeStamp<Integer> nextGroundedPosition;
+  private TimeStampInt nextGroundedPosition;
 
   /** True if the sum variable is also one of the summed variables. */
   private final boolean sumInList;
@@ -212,8 +212,8 @@ public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum>, 
   @Override
   public void impose(Store store) {
 
-    sumGrounded = new TimeStamp<>(store, 0);
-    nextGroundedPosition = new TimeStamp<>(store, 0);
+    sumGrounded = new TimeStampInt(store, 0);
+    nextGroundedPosition = new TimeStampInt(store, 0);
 
     super.impose(store);
   }

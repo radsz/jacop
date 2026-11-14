@@ -36,7 +36,7 @@ import java.util.Arrays;
 import java.util.Map;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 
 /**
@@ -55,7 +55,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 
   final T[] searchVariables;
   final Indomain<T> valueOrdering;
-  final TimeStamp<Integer> currentIndex;
+  final TimeStampInt currentIndex;
 
   /**
    * It constructs an input order selection procedure.
@@ -85,7 +85,7 @@ public class InputOrderSelect<T extends Var> implements SelectChoicePoint<T> {
 
     valueOrdering = indomain;
 
-    currentIndex = new TimeStamp<>(store, 0);
+    currentIndex = new TimeStampInt(store, 0);
   }
 
   /**

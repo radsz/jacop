@@ -44,7 +44,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.InitOnce;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.PbEncodable;
@@ -80,9 +80,9 @@ public class ValuePrecede extends Constraint
   /*
    * Defines variables alpha, beta, gamma for the algorithm
    */
-  private TimeStamp<Integer> alpha;
-  private TimeStamp<Integer> beta;
-  private TimeStamp<Integer> gamma;
+  private TimeStampInt alpha;
+  private TimeStampInt beta;
+  private TimeStampInt gamma;
   private int alphaValue;
   private int betaValue;
   private int gammaValue;
@@ -135,9 +135,9 @@ public class ValuePrecede extends Constraint
 
     super.impose(store);
 
-    alpha = new TimeStamp<>(store, 0);
-    beta = new TimeStamp<>(store, 0);
-    gamma = new TimeStamp<>(store, 0);
+    alpha = new TimeStampInt(store, 0);
+    beta = new TimeStampInt(store, 0);
+    gamma = new TimeStampInt(store, 0);
 
     alphaValue = 0;
     betaValue = 0;

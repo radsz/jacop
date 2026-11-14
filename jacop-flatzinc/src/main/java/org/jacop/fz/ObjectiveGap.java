@@ -56,6 +56,9 @@ final class ObjectiveGap {
   private long best = Long.MAX_VALUE;
   private boolean reached;
 
+  // the factor the printed bound is multiplied by
+  private long scale = 1;
+
   /**
    * Creates the gap of one optimisation.
    *
@@ -67,6 +70,16 @@ final class ObjectiveGap {
     this.gap = gap;
     this.maximise = maximise;
     this.printer = printer;
+  }
+
+  /**
+   * Sets the factor the cost variable's values are multiplied by in the printed bound, when the
+   * variable holds the objective divided by it (ObjectiveScaling).
+   *
+   * @param factor the factor
+   */
+  synchronized void scale(long factor) {
+    scale = factor;
   }
 
   /**
@@ -84,7 +97,7 @@ final class ObjectiveGap {
                 / 1000.0;
         printer.accept(
             "%%%mzn-stat: objectiveBound="
-                + (maximise ? -lower : lower)
+                + (maximise ? -lower : lower) * scale
                 + "\n%%%mzn-stat: objectiveBoundTime="
                 + time
                 + "\n%%%mzn-stat-end");

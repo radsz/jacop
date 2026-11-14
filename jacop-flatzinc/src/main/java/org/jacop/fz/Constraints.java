@@ -34,10 +34,13 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -47,9 +50,12 @@ import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
+import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ColouredTreeDetector;
+import org.jacop.fz.constraints.ConjunctionSumDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
+import org.jacop.fz.constraints.CountPartnersDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -57,19 +63,27 @@ import org.jacop.fz.constraints.ElementTableDetector;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
+import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
+import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
+import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
 import org.jacop.fz.constraints.Support;
+import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
+import org.jacop.fz.constraints.TableScopeMerger;
+import org.jacop.fz.constraints.TableVariableElimination;
+import org.jacop.fz.constraints.TranslationTilingDetector;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
 import org.jacop.jasat.lcg.LcgSolver;
@@ -132,6 +146,14 @@ public class Constraints implements ParserTreeConstants {
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
 
+    // an objective declared beyond the integer range is divided by the factor its definition
+    // forces on it, instead of being narrowed
+    ObjectiveScaling.apply(support, astTree);
+    if (dictionary.domainsClamped()) {
+      System.err.println(dictionary.clampedDomainsWarning());
+      dictionary.recordDeclaredDomains();
+    }
+
     Options options = support.options;
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
@@ -178,6 +200,9 @@ public class Constraints implements ParserTreeConstants {
       // disequalities that are part of a detected all-different constraint, and the constraints of
       // merged copies of partial function results
       Set<SimpleNode> replaced = Set.of();
+      Set<IntVar> tabled = Set.of();
+      // a search variable that became an alias is searched as its Boolean
+      dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       if (PartialCopyDetector.enabled()) {
         replaced = new PartialCopyDetector(support).detect(astTree);
         dictionary.removeAliasFromSearch();
@@ -193,6 +218,23 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // small expressions flattened into several constraints become the table of their solutions
+      // over the model's variables; solutions that differ only in internal variables would merge,
+      // so not when all solutions are searched for, and --proof does not encode tables
+      if (IntensionTableDetector.enabled()
+          && options.proof() == null
+          && (!manySolutions || IntensionTableDetector.forced())) {
+        IntensionTableDetector intensions = new IntensionTableDetector(support);
+        intensions.detect(astTree, replaced);
+        if (!intensions.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(intensions.replaced());
+          dictionary.removeFromDefaultSearch(intensions.unconstrained());
+          dictionary.unusedVariables.addAll(intensions.unconstrained());
+          tabled = intensions.tabled();
+        }
+      }
+
       // the tables check their rows against the domains, and --proof does not encode them
       if (ElementTableDetector.enabled() && options.proof() == null) {
         ElementTableDetector elements = new ElementTableDetector(support);
@@ -200,6 +242,34 @@ public class Constraints implements ParserTreeConstants {
         if (!elements.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(elements.replaced());
+        }
+      }
+
+      // the tables over the same variables become one, before the parts of each are posted
+      if (TableScopeMerger.enabled() && options.proof() == null) {
+        TableScopeMerger tables = new TableScopeMerger(support);
+        tables.detect(astTree);
+        if (!tables.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(tables.replaced());
+        }
+      }
+
+      // the variables of degree two between tables and elements are joined out of the model, and
+      // given values again when a solution is printed
+      if (TableVariableElimination.enabled() && options.proof() == null && !manySolutions) {
+        TableVariableElimination elimination =
+            new TableVariableElimination(support, replaced, solveItemVariables(astTree));
+        elimination.detect(astTree);
+        if (!elimination.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(elimination.replaced());
+          dictionary.removeFromDefaultSearch(elimination.eliminated());
+          dictionary.unusedVariables.addAll(elimination.eliminated());
+          dictionary.tableElimination = elimination;
+          for (Map.Entry<IntVar[], int[][]> t : elimination.tables()) {
+            cf.poseTable(t.getKey(), t.getValue());
+          }
         }
       }
 
@@ -253,8 +323,14 @@ public class Constraints implements ParserTreeConstants {
         new DifferenceBoundsDetector(support).detect(astTree);
       }
 
+      // common sub-sums of linear constraints become variables; --proof encodes the rows as given
+      if (LinearOverlapDetector.enabled() && options.proof() == null) {
+        new LinearOverlapDetector(support).detect(astTree);
+      }
+
       if (!"false".equals(AlldiffChannels.rule())) {
         support.alldiffChannels = AlldiffChannels.collect(support, astTree);
+        support.alldiffChannels.addAll(tabled);
       }
 
       int n = astTree.jjtGetNumChildren();
@@ -277,7 +353,14 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      support.releaseLinearRewrites();
       support.reportAlldiffChannels();
+      if (dictionary.domainsClamped()) {
+        // reads the rows as declared, to show the narrowing of domains harmless at the end
+        dictionary.setClampedBounds(
+            new ClampedBounds(
+                support, astTree, dictionary.narrowedVariables(), dictionary::declaredBounds));
+      }
       cf.poseCounts();
       cf.poseDiffnProjections();
 
@@ -286,6 +369,11 @@ public class Constraints implements ParserTreeConstants {
       // its cost constraints are redundant, with bounds a proof does not derive
       if (CircuitCostDetector.enabled() && options.proof() == null) {
         new CircuitCostDetector(support).detect(astTree);
+      }
+
+      // a relaxed decision diagram over a circuit whose arcs carry times
+      if (SequenceMddDetector.enabled() && options.proof() == null) {
+        new SequenceMddDetector(support).detect(astTree);
       }
 
       // a redundant Routes over 0/1 arcs, whose rules a proof does not derive
@@ -302,7 +390,8 @@ public class Constraints implements ParserTreeConstants {
         new RoutesDetector(support, false).detect(astTree);
       }
 
-      if (DisjunctiveCliqueDetector.enabled() && options.proof() == null) {
+      if ((DisjunctiveCliqueDetector.enabled() || DisjunctiveCliqueDetector.inferredEnabled())
+          && options.proof() == null) {
         // the unary resources it adds explain by rules a proof's unit propagation does not reach
         new DisjunctiveCliqueDetector(support).detect(astTree);
       }
@@ -324,6 +413,17 @@ public class Constraints implements ParserTreeConstants {
 
       if (CardinalityDetector.enabled()) {
         new CardinalityDetector(support).detect(astTree);
+      }
+
+      // the bound of the terms of a sum of conjunctions that wait for one variable, redundant;
+      // --proof does not encode it
+      if (ConjunctionSumDetector.enabled() && options.proof() == null) {
+        new ConjunctionSumDetector(support).detect(astTree);
+      }
+
+      // each variable whose values are all counted at least twice equals one of its few partners
+      if (CountPartnersDetector.enabled() && options.proof() == null) {
+        new CountPartnersDetector(support).detect(astTree);
       }
 
       if (increasing != null && IncreasingDetector.sumEnabled()) {
@@ -362,10 +462,21 @@ public class Constraints implements ParserTreeConstants {
         new ExactCoverDetector(support).detect(astTree);
       }
 
+      // flows over 0/1 matrices whose row and column sums are bounded, redundant and opt-in;
+      // --proof does not encode them
+      if (SymmetricGCCDetector.enabled() && options.proof() == null) {
+        new SymmetricGCCDetector(support).detect(astTree);
+      }
+
       // tilings written as tables and an all different, redundant, by default without LCG (the
       // --lcg off thread of -p); --proof does not encode them
       if (TableCoverDetector.enabled(options.lcg()) && options.proof() == null) {
         new TableCoverDetector(support).detect(astTree);
+      }
+      // the exact cover of a tiling by translation written as an all different of shifted terms,
+      // redundant; --proof does not encode it
+      if (TranslationTilingDetector.enabled() && options.proof() == null) {
+        new TranslationTilingDetector(support).detect(astTree);
       }
       store.imposingImplied(false);
 
@@ -419,6 +530,42 @@ public class Constraints implements ParserTreeConstants {
   }
 
   // a constraint item, imposed as implied by the others when implied is true
+  /** The integer variables named by the solve item: the objective and the search annotations. */
+  private Set<IntVar> solveItemVariables(SimpleNode astTree) {
+    Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() == JJTMODELEND) {
+        namedVariables(node, vars);
+      }
+    }
+    return vars;
+  }
+
+  private void namedVariables(Node node, Set<IntVar> vars) {
+    String ident =
+        switch (node) {
+          case ASTScalarFlatExpr e -> e.getIdent();
+          case ASTVariableExpr e -> e.getIdent();
+          case ASTSolveExpr e -> e.getIdent();
+          case ASTAnnExpr e -> e.getIdent();
+          default -> null;
+        };
+    if (ident != null) {
+      IntVar v = dictionary.variableTable.get(ident);
+      if (v != null) {
+        vars.add(v);
+      }
+      IntVar[] a = dictionary.variableArrayTable.get(ident);
+      if (a != null) {
+        Collections.addAll(vars, a);
+      }
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      namedVariables(node.jjtGetChild(i), vars);
+    }
+  }
+
   private void generateConstraint(SimpleNode constraintWithAnnotations, boolean implied)
       throws Throwable {
     store.imposingImplied(implied);
@@ -537,9 +684,44 @@ public class Constraints implements ParserTreeConstants {
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
     IntVar b = support.getVariable(p3);
     IntVarAndValue xv = extractIntVarAndValue(p1, p2);
-    if (xv != null) {
-      support.addReified(xv.x, xv.v, b);
+    if (xv == null) {
+      return;
     }
+    if (binaryEqAlias && xv.v == 1 && binaryAlias(xv.x, b)) {
+      return;
+    }
+    support.addReified(xv.x, xv.v, b);
+  }
+
+  /*
+   * Whether int_eq_reif(x, 1, b) of a 0..1 variable x, which states x = b, makes x an alias of b,
+   * as bool2int(b, x) does. MiniZinc writes a Boolean grid used in sums as 0..1 integers channelled
+   * to Booleans this way (ma-path-finding: 141,000 of them), and each kept pair was two variables,
+   * their atoms and an equality. Off by default; the system property
+   * org.jacop.fz.binaryEqAlias=true turns it on.
+   */
+  private final boolean binaryEqAlias = Boolean.getBoolean("org.jacop.fz.binaryEqAlias");
+
+  private boolean binaryAlias(IntVar x, IntVar b) {
+    if (!(b instanceof BooleanVar)
+        || x instanceof BooleanVar
+        || x.min() < 0
+        || x.max() > 1
+        || dictionary.aliasTable.containsKey(x)
+        || dictionary.isAliasTarget(x)
+        || dictionary.aliasTable.containsKey(b)) {
+      return false;
+    }
+    dictionary.addAlias(b, x);
+    dictionary.binaryEqAliases.add(x);
+    if (x.singleton() || b.singleton()) {
+      x.domain.in(store.level, x, b.domain);
+      b.domain.in(store.level, b, x.domain);
+    }
+    if (debug) {
+      FzConsole.println("% Alias: " + b + " == " + x);
+    }
+    return true;
   }
 
   private void handleIntEqImp(SimpleNode node) {

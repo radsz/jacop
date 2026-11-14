@@ -43,7 +43,7 @@ import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -114,8 +114,8 @@ public class LexOrder extends Constraint
   private int[] round;
 
   private Store store;
-  private TimeStamp<Integer> alpha;
-  private TimeStamp<Integer> beta;
+  private TimeStampInt alpha;
+  private TimeStampInt beta;
   private int alphaValue;
   private int betaValue;
 
@@ -184,8 +184,8 @@ public class LexOrder extends Constraint
 
     this.store = store;
 
-    alpha = new TimeStamp<>(store, 0);
-    beta = new TimeStamp<>(store, 0);
+    alpha = new TimeStampInt(store, 0);
+    beta = new TimeStampInt(store, 0);
 
     for (int i = 0; i < n; i++) {
       addPosition(x[i], i);

@@ -177,7 +177,7 @@ final class Components {
    * only watch some of their variables, such as a long LinearBool or a clause, which {@link
    * Store#getConstraints()} leaves out.
    */
-  private static Set<Constraint> constraints(Store store) {
+  static Set<Constraint> constraints(Store store) {
     Set<Constraint> all = new LinkedHashSet<>(store.getConstraints());
     List<Var> vars = new ArrayList<>(store.variablesHashMap.values());
     vars.addAll(Arrays.asList(store.vars).subList(0, store.size()));

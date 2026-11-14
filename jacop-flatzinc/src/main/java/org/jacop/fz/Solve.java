@@ -42,6 +42,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -66,10 +67,13 @@ import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.XgteqC;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
@@ -82,6 +86,7 @@ import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
+import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ObjectiveDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -93,6 +98,7 @@ import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.BooleanProducts;
 import org.jacop.presolve.CumulativeReductions;
 import org.jacop.presolve.Derivation;
+import org.jacop.presolve.DominanceNogoods;
 import org.jacop.presolve.Entry;
 import org.jacop.presolve.ImpliedConstraints;
 import org.jacop.presolve.ObjectivePresolve;
@@ -214,8 +220,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private static final boolean LP_GUIDE_ROOT =
       Boolean.parseBoolean(System.getProperty("jacop.lcg.lpGuideRoot", Boolean.TRUE.toString()));
 
+  // under -f the root solution of a relaxation large by its rows guides the search only when it has
+  // at least this many columns (-Dorg.jacop.lp.largeGuideColumns)
+
+  // whether the search follows the relaxation's solution by default (lcg-lp-branching auto)
+  private static boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
+    if (r.simplexValueColumns() > 0) {
+      return true;
+    }
+    if (!free) {
+      return false;
+    }
+    return r.treeConstraints() > 0
+        || r.objective() != null && r.setRows()
+        || r.largeByRows() && r.columns() >= LARGE_GUIDE_COLUMNS;
+  }
+
+  private static final int LARGE_GUIDE_COLUMNS =
+      Integer.getInteger("org.jacop.lp.largeGuideColumns", 10_000);
+
   // the clique rows of binary tables in the linear relaxation (-Dorg.jacop.lp.tableCliques=false
   // turns them off)
+  // the time-indexed bound of the cumulative resources (TimeIndexedBound), off by default
+  private static final boolean TIME_INDEXED = Boolean.getBoolean("org.jacop.lp.timeIndexed");
+
+  private TimeIndexedBound timeIndexedBound;
+
   private static final boolean TABLE_CLIQUES =
       !"false".equals(System.getProperty("org.jacop.lp.tableCliques"));
   // the cost of the last solution LCG printed; the shutdown hook may print the statistics while
@@ -321,13 +351,64 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (int i = 0; i < n; i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
 
-      if (node.getId() == JJTMODELEND) {
+      if (node != null && node.getId() == JJTMODELEND) {
         ASTSolveItem solveItem = (ASTSolveItem) node.jjtGetChild(0);
         if (opt.symmetry()) {
           breakSymmetries(astTree, solveItem, opt);
         }
         search(solveItem, table, opt);
       }
+    }
+  }
+
+  // the parse tree is read by the other threads of a portfolio (Parser.build): it is kept whole
+  private boolean sharedModelTree;
+
+  /** Keeps the parse tree whole during the search, since other parsers build from it too. */
+  void shareModelTree() {
+    sharedModelTree = true;
+  }
+
+  /**
+   * Drops the parsed variable and constraint items of the model once the model is built and the
+   * search is about to start: the store holds what was built from them, and only the solve item is
+   * read from here on. The parser keeps the root of the parse tree on its stack for the whole
+   * search, so without this the parse tree stays live: 29 % of the heap of nside EASY_200_50 and
+   * most of the heap of the largest models.
+   *
+   * @param solveItem the solve item, whose branch of the parse tree is kept
+   */
+  private void releaseModelItems(SimpleNode solveItem) {
+    if (sharedModelTree) {
+      return;
+    }
+    releaseAllBut(solveItem);
+  }
+
+  /**
+   * Cuts every branch of the parse tree but the one of a node: the children of its ancestors other
+   * than the path to it, and the children of those, the variable and constraint items. A node of a
+   * dropped item that another structure keeps then reaches its own item only, not every item of the
+   * model through its parent.
+   *
+   * @param solveItem the node whose branch is kept
+   */
+  static void releaseAllBut(SimpleNode solveItem) {
+    Node kept = solveItem;
+    while (kept.jjtGetParent() instanceof SimpleNode parent) {
+      if (parent.children != null) {
+        for (int i = 0; i < parent.children.length; i++) {
+          if (parent.children[i] != kept) {
+            // and its own items: a node another structure keeps (a rewritten constraint) reaches
+            // them through its parent, which would keep every item of the model live
+            if (parent.children[i] instanceof SimpleNode released && released.children != null) {
+              Arrays.fill(released.children, null);
+            }
+            parent.children[i] = null;
+          }
+        }
+      }
+      kept = parent;
     }
   }
 
@@ -384,6 +465,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     SymmetryBreaking.Outcome o =
         symmetry
             .keepLargest(largestFirst(item))
+            .branchesOnSets(branchesOnSets(item))
             .freeSearch(opt.freeSearch())
             .run(
                 astTree,
@@ -409,11 +491,80 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + o.precedences()
               + "\n%%%mzn-stat: symmetryOrbitopes="
               + o.orbitopes()
+              + "\n%%%mzn-stat: symmetrySchreierSimsCuts="
+              + o.cuts()
+              + "\n%%%mzn-stat: symmetrySchreierSimsImplied="
+              + o.impliedCuts()
               + "\n%%%mzn-stat: symmetrySearchComplete="
               + o.complete()
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  /**
+   * Imposes the automatic dominance breaking nogoods of {@link DominanceNogoods} (Lee and Zhong,
+   * IJCAI 2020; CP 2022) for an integer objective. They keep every optimum but drop solutions that
+   * are not optimal, so they are not used for satisfaction problems or with restart constraints.
+   */
+  private void dominanceNogoods(ASTSolveItem node) {
+    if (dictionary.onRestart != null
+        || !(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
+      return;
+    }
+    IntVar objective =
+        switch (expr.getType()) {
+          case 0 -> dictionary.getVariable(expr.getIdent());
+          case 1 -> {
+            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+            yield a == null ? null : a[expr.getIndex()];
+          }
+          default -> null;
+        };
+    if (objective == null) {
+      return;
+    }
+    long start = timer.getCpuTime();
+    DominanceNogoods.Outcome o =
+        new DominanceNogoods(store, objective, k == 1).run(sat.collectedClauses());
+    boolean ok = store.consistency();
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: dominanceTime="
+              + (timer.getCpuTime() - start) / 1_000_000_000.0
+              + "\n%%%mzn-stat: dominanceRemoved="
+              + o.removed()
+              + "\n%%%mzn-stat: dominancePairs="
+              + o.pairs()
+              + "\n%%%mzn-stat: dominanceNogoods="
+              + o.nogoods()
+              + "\n%%%mzn-stat: dominanceChecked="
+              + o.checked()
+              + "\n%%%mzn-stat: dominanceComplete="
+              + o.complete()
+              + (o.skipped() != null ? "\n%% dominance: " + o.skipped() : "")
+              + "\n%%%mzn-stat-end");
+    }
+    if (!ok) {
+      throw Store.failException;
+    }
+  }
+
+  /** Whether the search annotation, or one of those it sequences, branches on set variables. */
+  private static boolean branchesOnSets(SimpleNode node) {
+    if (node instanceof ASTAnnotation a && SET_SEARCH.equals(a.getAnnId())) {
+      return true;
+    }
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      if (branchesOnSets((SimpleNode) node.jjtGetChild(i))) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Whether the first value choice of the search annotation tries the largest values first. */
@@ -482,6 +633,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     output = table;
     solveSideComponents(node);
     ObjectivePresolve objective = objectiveRule(node);
+    // the last reader of the variable and constraint items
+    releaseModelItems(node);
     if (opt.presolve() != Options.Presolve.OFF) {
       presolve(node, objective);
       if (sat.collecting() && !opt.lcg()) {
@@ -491,8 +644,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
+    if (Boolean.getBoolean("org.jacop.fz.dominance") && store.consistency()) {
+      dominanceNogoods(node);
+    }
+
     if (opt.lp()) {
       imposeLinearRelaxation(node);
+    }
+
+    if (DecompositionBound.on() && opt.proof() == null) {
+      decompositionBound(node);
     }
 
     if (opt.debug()) {
@@ -527,6 +688,50 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Bounds the objective at the root by the decomposition bound of the model, when it has blocks
+   * linked by counting and linear constraints ({@code -Dorg.jacop.fz.decomposition=true}).
+   *
+   * @param node the solve item.
+   */
+  private void decompositionBound(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr) || !store.consistency()) {
+      return;
+    }
+    IntVar objective =
+        switch (expr.getType()) {
+          case 0 -> dictionary.getVariable(expr.getIdent());
+          case 1 -> {
+            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+            yield a == null ? null : a[expr.getIndex()];
+          }
+          default -> null;
+        };
+    if (objective == null) {
+      return;
+    }
+    boolean maximize = k == 2;
+    long timeOut = options.getTimeOut();
+    DecompositionBound.Outcome o =
+        DecompositionBound.run(
+            store, sat.collectedClauses(), objective, maximize, List.of(), timeOut);
+    if (o == null) {
+      return;
+    }
+    decomposition = o;
+    if (o.certified()) {
+      int bound = (int) Math.clamp(o.bound(), Integer.MIN_VALUE + 1L, Integer.MAX_VALUE - 1L);
+      store.impose(maximize ? new XlteqC(objective, bound) : new XgteqC(objective, bound));
+    }
+  }
+
+  // what the decomposition bound did, for the statistics
+  private DecompositionBound.Outcome decomposition;
+
+  /**
    * Imposes the linear relaxation of the linear constraints of the store as a propagator (--lp),
    * with the objective of the solve item.
    *
@@ -550,6 +755,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         maximize = k == 2;
       }
     }
+    lpObjective = objective;
+    lpMaximize = maximize;
     long start = timer.getCpuTime();
     TableCliques.Result cliques = null;
     if (options.proof() != null) {
@@ -564,6 +771,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (options.lcg()) {
         for (IntVar[][] clause : sat.collectedClauses()) {
           clauses.add(clauseRow(clause[0], clause[1]));
+        }
+      }
+      // only for a model that LCG solves, with its sets mirrored as LCG search has them: the
+      // explanations of a set constraint name the atoms of the mirror, and without them a
+      // failure of ElementSet had the empty explanation and refuted harmony 2024 canon
+      if (options.lcg() && lcgProbe > 0 && lcgProbeEarly && lcgUnsupported(objective) == null) {
+        mirrorSetVariables();
+        List<LinearForm> conflicts = probeBeforeRelaxation();
+        if (objective != null) {
+          clauses.addAll(conflicts);
         }
       }
       // the cliques and the convex hulls of the tables, over columns of their values that the
@@ -587,7 +804,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               options.lpSimplex());
     }
     if (linearRelaxation != null) {
+      linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
+      if (TIME_INDEXED && objective != null) {
+        timeIndexedBound =
+            TimeIndexedBound.of(store, objective, maximize, linearRelaxation.allRows());
+        if (timeIndexedBound != null) {
+          store.impose(timeIndexedBound);
+        }
+      }
     }
     if (options.searchStatistics()) {
       IO.println(
@@ -595,6 +820,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: lpRows="
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat: lpTableClauses="
+              + (linearRelaxation == null ? 0 : linearRelaxation.tableClauses)
               + (cliques == null
                   ? ""
                   : "\n%%%mzn-stat: lpTableCliques="
@@ -645,11 +872,55 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return new LinearForm(vars, weights, 1L - negative.length, LinearForm.GE);
   }
 
+  /** Prints what the decomposition bound did. */
+  private void printDecompositionStatistics() {
+    DecompositionBound.Outcome o = decomposition;
+    if (o == null || !options.searchStatistics()) {
+      return;
+    }
+    IO.println(
+        "%%%mzn-stat: dbBlocks="
+            + o.blocks()
+            + "\n%%%mzn-stat: dbRows="
+            + o.rows()
+            + "\n%%%mzn-stat: dbIterations="
+            + o.iterations()
+            + "\n%%%mzn-stat: dbColumns="
+            + o.columns()
+            + "\n%%%mzn-stat: dbBound="
+            + (o.certified() ? Long.toString(o.bound()) : "none")
+            + "\n%%%mzn-stat: dbPricingTimeOuts="
+            + o.pricingTimeOuts()
+            + "\n%%%mzn-stat: dbTime="
+            + o.millis() / 1000.0
+            + (o.primal() == null
+                ? ""
+                : "\n%%%mzn-stat: dbPrimal="
+                    + (o.primal().feasible() ? Long.toString(o.primal().cost()) : "none")
+                    + "\n%%%mzn-stat: dbPrimalTime="
+                    + o.primal().millis() / 1000.0));
+  }
+
   /** Prints the counts of the linear relaxation (--lp). */
   private void printLinearRelaxationStatistics() {
+    printDecompositionStatistics();
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
       return;
+    }
+    TimeIndexedBound t = timeIndexedBound;
+    if (t != null) {
+      IO.println(
+          "%%%mzn-stat: tiSolves="
+              + t.solves
+              + "\n%%%mzn-stat: tiBound="
+              + t.bestBound
+              + "\n%%%mzn-stat: tiColumns="
+              + t.lastColumns
+              + "\n%%%mzn-stat: tiRows="
+              + t.lastRows
+              + "\n%%%mzn-stat: tiTime="
+              + t.seconds);
     }
     IO.println(
         "%%%mzn-stat: lpCalls="
@@ -660,6 +931,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.limits
             + "\n%%%mzn-stat: lpInfeasible="
             + r.infeasible
+            + "\n%%%mzn-stat: lpUnproven="
+            + r.unproven
             + "\n%%%mzn-stat: lpFailures="
             + r.failures
             + "\n%%%mzn-stat: lpPrunings="
@@ -668,6 +941,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.solveNanos / 1e9
             + "\n%%%mzn-stat: lpColumns="
             + r.columns()
+            + "\n%%%mzn-stat: lpLarge="
+            + (r.largeDropped() ? "dropped" : r.large())
             + "\n%%%mzn-stat: lpPivotWork="
             + r.pivotWork()
             + "\n%%%mzn-stat: lpSimplexRows="
@@ -682,6 +957,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
+            + "\n%%%mzn-stat: lpTableClauses="
+            + r.tableClauses
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootPrunings="
@@ -696,6 +973,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
+            + "\n%%%mzn-stat: lpCutLimits="
+            + r.cutLimits
+            + "\n%%%mzn-stat: lpZeroHalfCuts="
+            + r.zeroHalfCuts
+            + "\n%%%mzn-stat: lpMirSearchCuts="
+            + r.mirSearchCuts
+            + "\n%%%mzn-stat: lpMirSeparations="
+            + r.mirSeparations
             + "\n%%%mzn-stat: lpCapacitySearchCuts="
             + r.capacitySearchCuts
             + "\n%%%mzn-stat: lpCapacitySeparations="
@@ -714,6 +999,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.valueColumns
             + "\n%%%mzn-stat: lpSimplexValueColumns="
             + r.simplexValueColumns()
+            + "\n%%%mzn-stat: lpSetRows="
+            + r.setRows()
             + "\n%%%mzn-stat: lpFreeColumns="
             + r.freeColumns
             + "\n%%%mzn-stat: lpSimplexFreeColumns="
@@ -730,6 +1017,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.alldiffSearchCuts
             + "\n%%%mzn-stat: lpAlldiffSeparations="
             + r.alldiffSeparations
+            + "\n%%%mzn-stat: lpEnergySearchCuts="
+            + r.energySearchCuts
+            + "\n%%%mzn-stat: lpEnergySeparations="
+            + r.energySeparations
+            + "\n%%%mzn-stat: lpSearchSeparationsMoved="
+            + r.searchSeparationsMoved
             + "\n%%%mzn-stat: lpTreeCuts="
             + r.treeCuts
             + "\n%%%mzn-stat: lpTreeBound="
@@ -1998,11 +2291,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // whether mirrorSetVariables ran: early probing mirrors the sets before LCG search does
+  private boolean setsMirrored;
+
   /**
    * Mirrors every set variable by integer variables, the membership of its elements and its
    * cardinality, whose atoms stand for the set in the explanations of the set constraints.
    */
   private void mirrorSetVariables() {
+    if (setsMirrored) {
+      return;
+    }
+    setsMirrored = true;
     List<SetVar> sets = new ArrayList<>();
     // sets whose constraints a reformulation replaced need no literals
     Set<Var> unused = new HashSet<>(dictionary.unusedVariables);
@@ -2042,6 +2342,171 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return null;
   }
 
+  // -Djacop.lcg.probe=share: root probing of the 0/1 variables before LCG search, for at most
+  // this share of the time left (0, the default, is off)
+  private final double lcgProbe = Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
+
+  // -Djacop.lcg.probe.delay=share: probe between runs of the search from the root, once this share
+  // of the time limit has passed, instead of before the search
+  private final double lcgProbeDelay =
+      Double.parseDouble(System.getProperty("jacop.lcg.probe.delay", "0"));
+
+  // -Djacop.lcg.probe.only=true: stop after root probing, to measure its reach
+  private final boolean lcgProbeOnly = Boolean.getBoolean("jacop.lcg.probe.only");
+
+  // -Djacop.lcg.probe.lp=none|facts|cliques, with probe.only: the root bound of a relaxation built
+  // again after probing, on the probed domains (facts) and also with the conflicts that probing
+  // found as rows that PairCliques merges into cliques (cliques)
+  // the objective of the relaxation imposed with --lp, and its sense
+  private IntVar lpObjective;
+  private boolean lpMaximize;
+
+  private final String lcgProbeLp = System.getProperty("jacop.lcg.probe.lp", "none");
+
+  // measures the root bound of a relaxation built after probing (probe.only runs)
+  private void probedRootBound() {
+    IntVar objective = lpObjective;
+    if (objective == null || objective.singleton()) {
+      return;
+    }
+    double before = linearRelaxation == null ? Double.NaN : linearRelaxation.rootBound;
+    List<LinearForm> rows = new ArrayList<>();
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      rows.add(clauseRow(clause[0], clause[1]));
+    }
+    int conflictRows = 0;
+    if ("cliques".equals(lcgProbeLp)) {
+      List<LinearForm> conflicts = conflictRows(lcg);
+      rows.addAll(conflicts);
+      conflictRows = conflicts.size();
+    }
+    long start = System.nanoTime();
+    LinearRelaxation probed =
+        LinearRelaxation.of(
+            store, objective, lpMaximize, rows, List.of(), splitSums(), options.lpSimplex());
+    double after = Double.NaN;
+    boolean infeasible = false;
+    if (probed != null) {
+      store.impose(probed);
+      infeasible = !store.consistency();
+      after = probed.rootBound;
+    }
+    IO.print(
+        "%%%mzn-stat: lcgProbeLpBefore="
+            + before
+            + "\n%%%mzn-stat: lcgProbeLpAfter="
+            + after
+            + "\n%%%mzn-stat: lcgProbeLpInfeasible="
+            + infeasible
+            + "\n%%%mzn-stat: lcgProbeLpConflictRows="
+            + conflictRows
+            + "\n%%%mzn-stat: lcgProbeLpPairCliques="
+            + (probed == null ? 0 : probed.pairCliques)
+            + "\n%%%mzn-stat: lcgProbeLpRows="
+            + (probed == null ? 0 : probed.rows())
+            + "\n%%%mzn-stat: lcgProbeLpTime="
+            + (System.nanoTime() - start) / 1e9
+            + "\n");
+  }
+
+  // the conflicts x = a, y = b that probing found, as rows [x = a] + [y = b] <= 1 ([x = 0] as 1 -
+  // x)
+  private static List<LinearForm> conflictRows(LcgSolver solver) {
+    List<LinearForm> rows = new ArrayList<>();
+    List<IntVar[]> pairs = solver.probeConflicts();
+    List<int[]> values = solver.probeConflictValues();
+    for (int k = 0; k < pairs.size(); k++) {
+      IntVar x = pairs.get(k)[0];
+      IntVar y = pairs.get(k)[1];
+      if (x.singleton() || y.singleton()) {
+        continue;
+      }
+      int a = values.get(k)[0];
+      int b = values.get(k)[1];
+      long c = 1L - (a == 0 ? 1 : 0) - (b == 0 ? 1 : 0);
+      rows.add(
+          new LinearForm(
+              new IntVar[] {x, y},
+              new long[] {a == 1 ? 1 : -1, b == 1 ? 1 : -1},
+              c,
+              LinearForm.LE));
+    }
+    return rows;
+  }
+
+  // -Djacop.lcg.probe.early=true: probe the root before the linear relaxation is built, with a
+  // solver of its own, so that the relaxation has the probed domains and the conflicts that probing
+  // found as rows, merged into cliques (PairCliques); the search's solver does not probe again
+  private final boolean lcgProbeEarly = Boolean.getBoolean("jacop.lcg.probe.early");
+
+  // the solver of early probing, for its statistics, and whether probing refuted the root
+  private LcgSolver earlyProber;
+  private boolean probeRefuted;
+
+  /**
+   * Probes the root with a solver of its own, before the linear relaxation is built (see {@link
+   * #lcgProbeEarly}). The solver is released after probing; the facts stay in the store's domains.
+   *
+   * @return the conflicts as rows, for the relaxation
+   */
+  private List<LinearForm> probeBeforeRelaxation() {
+    LcgSolver early = new LcgSolver(store);
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      early.addClause(clause[0], clause[1]);
+    }
+    if (options.getTimeOut() > 0) {
+      early.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+    }
+    early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
+    long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
+    probeRefuted = !early.probeRoot((long) (lcgProbe * left * 1_000_000L));
+    List<LinearForm> rows =
+        probeRefuted
+            ? List.of()
+            : ConflictCliques.rows(early.probeConflicts(), early.probeConflictValues(), 50_000);
+    early.release();
+    earlyProber = early;
+    return rows;
+  }
+
+  private void printProbeStatistics(LcgSolver lcg) {
+    if (!options.getStatistics()) {
+      return;
+    }
+    IO.print(
+        "%%%mzn-stat: lcgProbeBooleans="
+            + lcg.probeBooleans
+            + "\n%%%mzn-stat: lcgProbeProbes="
+            + lcg.probeProbes
+            + "\n%%%mzn-stat: lcgProbeFailed="
+            + lcg.probeFailed
+            + "\n%%%mzn-stat: lcgProbeLifted="
+            + lcg.probeLifted
+            + "\n%%%mzn-stat: lcgProbeFixedBefore="
+            + lcg.probeFixedBefore
+            + "\n%%%mzn-stat: lcgProbeFixedBooleans="
+            + lcg.probeFixedBooleans
+            + "\n%%%mzn-stat: lcgProbeValueVariables="
+            + lcg.probeValueVariables
+            + "\n%%%mzn-stat: lcgProbeValues="
+            + lcg.probeValues
+            + "\n%%%mzn-stat: lcgProbeValuesRemoved="
+            + lcg.probeValuesRemoved
+            + "\n%%%mzn-stat: lcgProbeEquivalences="
+            + lcg.probeEquivalences
+            + "\n%%%mzn-stat: lcgProbeExclusions="
+            + lcg.probeExclusions
+            + "\n%%%mzn-stat: lcgProbePasses="
+            + lcg.probePasses
+            + "\n%%%mzn-stat: lcgProbeTime="
+            + lcg.probeNanos / 1e9
+            + "\n%%%mzn-stat: lcgProbeExhausted="
+            + lcg.probeExhausted
+            + "\n%%%mzn-stat: lcgProbeBarren="
+            + lcg.probeBarren
+            + "\n");
+  }
+
   /**
    * Solves with lazy clause generation: JaSAT searches, the store's constraints propagate and
    * explain their prunings. Solutions are printed when found, with the domains fixed to them.
@@ -2061,6 +2526,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
+    // an integer variable that became an alias of a Boolean is in no constraint, unless it is an
+    // output, whose equality with the Boolean is posted
+    lcg.setUnusedVariables(
+        dictionary.binaryEqAliases.stream().filter(x -> x.dom().sizeConstraints() == 0).toList());
     if (options.proof() != null) {
       try {
         lcg.setProof(
@@ -2083,6 +2552,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (pumped != null) {
       lcg.setPhase(pumped.vars, pumped.values);
     }
+    DecompositionBound.Primal columns =
+        decomposition == null || !options.freeSearch() ? null : decomposition.primal();
+    if (columns != null && !columns.feasible()) {
+      lcg.setPhase(columns.vars(), columns.values());
+    }
     if (ls != null) {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
@@ -2099,6 +2573,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
     } else if (worker != null && costVar != null) {
       lcg.setSharedBound(worker::sharedBound);
+    }
+    if (worker != null
+        && costVar != null
+        && !"0".equals(options.freeConfig("lcg-shared-phase", "1"))) {
+      lcg.setSharedPhase(worker.sharedSolution(dictionary::getVariable));
+    }
+    if (columns != null && columns.feasible()) {
+      // an integer solution of the restricted master of the decomposition bound
+      lcg.setPhase(columns.vars(), columns.values());
     }
     if (worker != null) {
       worker.onStop(lcg::stop);
@@ -2123,6 +2606,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       LcgSolver solver = lcg;
       lcg.onBound(
           lower -> {
+            lcgBoundRaised = System.nanoTime();
             if (reportBound(lower)) {
               solver.stop();
             }
@@ -2154,6 +2638,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      if (!LcgSolver.CHAIN_LIMIT_SET) {
+        // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
+        // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
+        // in the default search the changed learning lost on 5 families and won on none
+        lcg.setChainLimit(Integer.parseInt(options.freeConfig("lcg-chain-limit", "64")));
+      }
     }
     SelectChoicePoint<? extends Var> annotated =
         free && "none".equals(interleave) ? null : latticeFirst(annotationSelect(annotatedSearch));
@@ -2197,14 +2687,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // it in 60 s. Under -f also on when the relaxation has the subtour elimination cuts of trees,
     // whose root solution is often the optimum (surface-based-tsp berlin52: -f finds it in 2 s with
     // them, in 13-50 s without); in fixed search the activity runs it guides slowed berlin52 down
-    // (149 s instead of 60 s)
+    // (149 s instead of 60 s). Under -f also on for a relaxation large by its rows, which is solved
+    // at the root only (the store x warehouse MIP form of the 2026 warehouse olal41: 45,340 in
+    // 240 s with it, 65,651 without the relaxation); not for one large by its columns only
+    // (rcpsp-wet-diverse j60_19_6, 682 rows and 140,186 columns: no solution with it in 240 s),
+    // nor for one with few columns (triangular 2015-2024, 36k-101k rows over 408-782 columns:
+    // worse on 4 of 7 in 600 s with it, better on 2). Under -f also on for a set partitioning,
+    // packing or covering relaxation (LinearRelaxation.setRows) of an optimisation problem, whose
+    // root solution is almost integral: the crew schedules of XCSP 2025 BusScheduling c2 and r5a,
+    // 199 rows over 14,773 columns, prove their optima 29 and 28 in 16-41 s with it; without it c2
+    // is not proved in 600 s and r5a takes 306 s
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
-                || "auto".equals(lpBranching)
-                    && (linearRelaxation.simplexValueColumns() > 0
-                        || free && linearRelaxation.treeConstraints() > 0));
+                || "auto".equals(lpBranching) && lpGuidedByDefault(linearRelaxation, free));
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -2290,6 +2787,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
+      if (columns != null && "1".equals(options.freeConfig("lns-blocks", "1"))) {
+        // the blocks of the decomposition bound, those far from integral in its master first
+        lns.addGroups(columns.blocks(), columns.fractionality());
+      }
       lcg.setLns(
           lns,
           Double.parseDouble(options.freeConfig("lns-share", "3")),
@@ -2336,8 +2837,47 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         options.getTimeOut() > 0
             ? options.getTimeOut()
             : Long.parseLong(options.freeConfig("lcg-core-time", "60000")));
+    if (earlyProber != null) {
+      printProbeStatistics(earlyProber);
+      earlyProber = null;
+      if (probeRefuted) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+      if (lcgProbeOnly) {
+        lcgStatus = CdclSolver.UNKNOWN;
+        return false;
+      }
+    } else if (lcgProbe > 0 && lcgProbeDelay > 0) {
+      long limit = options.getTimeOut() > 0 ? options.getTimeOut() : 60_000L;
+      lcg.setDelayedProbe(
+          System.nanoTime() + (long) (lcgProbeDelay * limit * 1_000_000L),
+          (long) (lcgProbe * limit * 1_000_000L));
+    } else if (lcgProbe > 0) {
+      // root probing of the 0/1 variables: facts only, the model stays as it is
+      long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
+      if (!"none".equals(lcgProbeLp)) {
+        lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
+      }
+      boolean feasible = lcg.probeRoot((long) (lcgProbe * left * 1_000_000L));
+      printProbeStatistics(lcg);
+      if (feasible && lcgProbeOnly && !"none".equals(lcgProbeLp)) {
+        probedRootBound();
+      }
+      if (!feasible) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+      if (lcgProbeOnly) {
+        lcgStatus = CdclSolver.UNKNOWN;
+        return false;
+      }
+    }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
+      printProbeStatistics(lcg);
+    }
     if (slowCheck != null) {
       slowCheck.interrupt();
     }
@@ -2349,6 +2889,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // set when LCG free search was stopped for making too few conflicts
   private volatile boolean lcgSlow;
+  // when LCG last raised the bound on the objective (System.nanoTime)
+  private volatile long lcgBoundRaised;
+  // the checks of LCG's speed that found it slow but let it go on, because it made progress
+  private volatile int lcgSlowDeferred;
   // the LCG solver free search took over from, for the statistics
   private LcgSolver slowLcg;
   private long lcgStart;
@@ -2381,15 +2925,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * and with a solution, 12 switch: 7 end better than both runs of LCG, 3 worse (cargo challenge08
    * and 16, jobshop swv07) and 2 equal.
    *
+   * <p>Since 2026-11 the rate is 300 conflicts/s, and a slow search gives way only when it also
+   * stopped making progress (see {@link #stillProgressing}): during the last lcg-slow-stall share
+   * of the time limit it raised no bound and its best cost fell by less than lcg-slow-gain of
+   * itself. At 600 s on the 17 instances where a check at 300 fires (15 of the wide set and
+   * unit-commitment L10, L15): unit-commitment L10 2.97M to 1,703,450 (the optimum), L12 3.05M to
+   * 1.49M, L15 96.0M to 43.2M, ihtc kletzander i09 8,310 to 7,135, stable-goods s-d19 (maximised)
+   * 7,304 to 7,186. On ma-path-finding LCG makes about 14 conflicts/s while core-guided search
+   * raises the bound, so it goes on.
+   *
    * @return the thread of the check, or null when it is off
    */
   private Thread slowLcgCheck(Var costVar) {
-    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "50"));
+    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "300"));
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
+    double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
+    double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
     lcgStart = System.nanoTime();
+    lcgBoundRaised = Long.MIN_VALUE;
+    long stallNanos = (long) (stall * options.getTimeOut() * 1_000_000L);
     long wait = (long) (at * options.getRemainingTimeOut());
     LcgSolver solver = lcg;
     if (wait <= 0) {
@@ -2403,6 +2960,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 Thread.sleep(wait);
+                // the best cost printed at each check, to measure the gain over the last window
+                ArrayDeque<long[]> costs = new ArrayDeque<>();
                 // LCG gives way only with a solution to hand over: without one, the check is
                 // made again until LCG has one or is no longer slow. cutstock type16 TEST9
                 // found its first solution with LCG at 37 s and none without
@@ -2410,10 +2969,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   if (tooLateForFreeSearch()) {
                     return;
                   }
+                  long now = System.nanoTime();
+                  long cost = bestPrintedCost.get();
+                  costs.addLast(new long[] {now, cost});
+                  while (costs.size() > 1 && now - costs.peekFirst()[0] > stallNanos) {
+                    costs.removeFirst();
+                  }
                   if (solutionFound) {
-                    lcgSlow = true;
-                    solver.stop();
-                    return;
+                    long before = costs.peekFirst()[1];
+                    if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
+                      lcgSlowDeferred++;
+                    } else {
+                      lcgSlow = true;
+                      solver.stop();
+                      return;
+                    }
                   }
                   Thread.sleep(500);
                 }
@@ -2422,6 +2992,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  /**
+   * Whether a slow LCG free search still makes progress that free search without learning would
+   * lose: it raised the bound during the last window (free search without learning never raises
+   * it), or its best cost fell over the window by at least the share {@code gain} of itself. On
+   * ma-path-finding a dive assigns thousands of literals for one conflict (about 14 conflicts/s on
+   * 650,000 variables) while core-guided search raises the bound up to the optimum, which free
+   * search without learning never proves. On unit-commitment LCG improves its best solution by
+   * under 0.5 % per 30 s, and free search without learning ends 30 to 60 % lower.
+   *
+   * @param now the time of the check (System.nanoTime)
+   * @param window the length of the window, in nanoseconds
+   * @param gain the share of the cost the best cost must fall by over the window
+   * @param boundRaised when LCG last raised the bound, or {@code Long.MIN_VALUE} if never
+   * @param before the best cost printed at the start of the window ({@code Integer.MAX_VALUE} if
+   *     none)
+   * @param after the best cost printed now
+   * @return true if LCG should go on
+   */
+  static boolean stillProgressing(
+      long now, long window, double gain, long boundRaised, long before, long after) {
+    if (boundRaised != Long.MIN_VALUE && now - boundRaised < window) {
+      return true;
+    }
+    if (before == Integer.MAX_VALUE || after == Integer.MAX_VALUE) {
+      // the first solution came during the window: no gain to measure yet
+      return before != after;
+    }
+    return before - after >= gain * Math.abs((double) before);
   }
 
   /**
@@ -2478,9 +3078,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * dom/wdeg on the default search variables, smallest value first. The store's constraints fail
    * under LCG too, so their weights grow as without learning. Activity alone misses first solutions
    * this finds, for example on cutstock, where each item's demand is a sum over hundreds of
-   * variables.
+   * variables. The set variables of the default search come before all of these, branched on as by
+   * the free search without learning.
    */
-  private SelectChoicePoint<IntVar> lcgDefaultSelect(Var costVar) {
+  private SelectChoicePoint<? extends Var> lcgDefaultSelect(Var costVar) {
+    SelectChoicePoint<IntVar> ints = lcgDefaultIntSelect(costVar);
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    List<SetVar> sets = new ArrayList<>();
+    for (SetVar s : searchVars.getSetVars()) {
+      if (!s.singleton()) {
+        sets.add(s);
+      }
+    }
+    if (sets.isEmpty()) {
+      return ints;
+    }
+    // the set variables first, as in the free search without learning: without them the runs of
+    // this branching decided the cardinalities of gardner_dinner's intersections and left the sets
+    // to activity, and found no solution in 30 s (input order on the sets: 2,242 nodes)
+    SelectChoicePoint<SetVar> setSelect = defaultSetSelect(sets.toArray(new SetVar[0]));
+    return ints == null ? setSelect : new SequenceSelect(List.of(setSelect, ints));
+  }
+
+  /** The integer and Boolean part of {@link #lcgDefaultSelect}. */
+  private SelectChoicePoint<IntVar> lcgDefaultIntSelect(Var costVar) {
     IntVar[] starts = resourceStarts();
     setTimesStarts = starts.length;
     if (starts.length > 0) {
@@ -2600,10 +3222,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
         int value = lcgLastCost;
-        IO.println(MZN_STAT_OBJECTIVE + (minimize ? value : -value));
+        IO.println(MZN_STAT_OBJECTIVE + objectiveValue(minimize ? value : -value));
       }
       if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcgSlowDeferred > 0) {
+          // LCG made too few conflicts but kept finding better solutions or bounds
+          IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
+        }
       }
     }
   }
@@ -2698,6 +3324,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.constraintsAsClauses
             + "\n%%%mzn-stat: lcgConstraintClauses="
             + lcg.constraintClauses
+            + "\n%%%mzn-stat: lcgDefaultCounters="
+            + lcg.defaultCounters
+            + "\n%%%mzn-stat: lcgLazyCounters="
+            + lcg.lazyCountersEncoded
+            + "\n%%%mzn-stat: lcgPermutationsAsClauses="
+            + lcg.permutationsAsClauses
+            + "\n%%%mzn-stat: lcgTablesAsClauses="
+            + lcg.tablesAsClauses
+            + "\n%%%mzn-stat: lcgCompressedTablesAsClauses="
+            + lcg.compressedTablesAsClauses
+            + "\n%%%mzn-stat: lcgTableClauses="
+            + lcg.tableClauses
+            + "\n%%%mzn-stat: lcgTableTupleLiterals="
+            + lcg.tableTupleLiterals
             + "\n%%%mzn-stat: lcgPureClauses="
             + lcg.pureClauses
             + "\n%%%mzn-stat: lcgImpliedClauses="
@@ -2706,6 +3346,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
             + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgUnkeptReasons="
+            + lcg.sat().unkeptReasons
+            + "\n%%%mzn-stat: lcgExpandedLiterals="
+            + lcg.sat().expandedLiterals
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
@@ -2744,6 +3388,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + inputOrderCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
+            + "\n%%%mzn-stat: lcgTargetDecisions="
+            + lcg.targetDecisions
+            + "\n%%%mzn-stat: lcgTargetSnapshots="
+            + lcg.targetSnapshots
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="
@@ -2788,6 +3436,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     lcg.setSharedClauses(worker.sharedClauses(), added, names::get, size, lbd);
+    if ("1".equals(options.freeConfig("lcg-split", "0"))
+        && !lcg.setSharedTree(worker.sharedTree(), added)) {
+      FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
+    }
   }
 
   // the probes of dichotomic bound search (lcg-bisect), when it ran
@@ -2814,7 +3466,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "\n%%%mzn-stat: lcgClausesImported="
         + lcg.clausesImported
         + "\n%%%mzn-stat: lcgClausesSkipped="
-        + lcg.clausesSkipped;
+        + lcg.clausesSkipped
+        + "\n%%%mzn-stat: lcgSharedPhases="
+        + lcg.sharedPhases;
   }
 
   private String coreStatistics() {
@@ -2840,6 +3494,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.clockStops
         + "\n%%%mzn-stat: lcgCoreSkips="
         + lcg.coreSkips
+        + "\n%%%mzn-stat: lcgCoreProbeSkips="
+        + lcg.probeSkips
+        + "\n%%%mzn-stat: lcgBoundDives="
+        + lcg.boundDives
+        + "\n%%%mzn-stat: lcgBoundDiveSolutions="
+        + lcg.boundDiveSolutions
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="
@@ -2849,6 +3509,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
+
+  // the fewest variables not defined by a constraint that the neighbourhoods keep to; with fewer,
+  // nearly every variable is defined by a chain of constraints from a handful of roots (one bit of
+  // pattern-set-mining, two of ionosphere), and fixing them all or none is no neighbourhood: the
+  // neighbourhoods take every variable, as when none is independent
+  private static final int MIN_LNS_INDEPENDENT = 16;
 
   /**
    * The neighbourhoods of large neighbourhood search over the decision variables of the model, or
@@ -2877,7 +3543,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           independent.add(x);
         }
       }
-      if (!independent.isEmpty()) {
+      if (independent.size() >= MIN_LNS_INDEPENDENT) {
         vars = new LinkedHashSet<>(independent);
       }
     }
@@ -3455,6 +4121,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * integer and Boolean variables, then the objective and the float variables. The settings of
    * --free-config select the heuristics.
    */
+  /**
+   * The free search's branching on the set variables of the default search: input order, smallest
+   * element in first, as the default search of JaCoP 4 and Gecode; set-heuristic=afc picks the set
+   * of the largest accumulated failure count and degree, the default from 4.10 to 5.0. Set models
+   * are often built from interchangeable set variables, such as the days of gardner_dinner (35
+   * triples of 15 guests, any two sharing at most one guest): input order builds them one after the
+   * other, and solves it in 266 nodes; afc moves between the days and found no solution in 30 s.
+   */
+  private SelectChoicePoint<SetVar> defaultSetSelect(SetVar[] sets) {
+    String heuristic = options.freeConfig("set-heuristic", "input");
+    return switch (heuristic) {
+      case "input" -> new SimpleSelect<>(sets, null, new IndomainSetMin<>());
+      case "afc" -> new SimpleSelect<>(sets, new AfcMaxDeg<>(store), new IndomainSetMin<>());
+      default -> throw new IllegalArgumentException("set-heuristic=" + heuristic);
+    };
+  }
+
   private void addFreeSelects(
       List<SelectChoicePoint<? extends Var>> selects,
       List<SearchMonitor> monitors,
@@ -3467,7 +4150,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int lastConflict = Integer.parseInt(options.freeConfig("lc", "1"));
     boolean phase = "1".equals(options.freeConfig("phase", "1"));
     if (sets.length > 0) {
-      selects.add(new SimpleSelect<>(sets, new AfcMaxDeg<>(store), new IndomainSetMin<>()));
+      selects.add(defaultSetSelect(sets));
     }
     LinkedHashSet<IntVar> intAndBool = new LinkedHashSet<>(Arrays.asList(ints));
     intAndBool.addAll(Arrays.asList(bools));
@@ -3764,7 +4447,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%% =====INTERRUPTED=====");
       return;
     }
-    if (isComplete && relaxedSearchComplete() && !dictionary.domainsClamped()) {
+    if (isComplete && relaxedSearchComplete() && !clampedDomainsHideSolutions()) {
       IO.println("=====UNSATISFIABLE=====");
       writeUnsatToOutputFile();
       return;
@@ -3837,8 +4520,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * found is still the optimum of the model when only the objective was cut, on its worse side.
    */
   private boolean clampedDomainsKeepOptimum() {
-    return !dictionary.domainsClamped()
-        || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize);
+    if (!dictionary.domainsClamped()
+        || dictionary.onlyObjectiveWorseSideClamped(objectiveVariable, minimize)) {
+      return true;
+    }
+    if (!(objectiveVariable instanceof IntVar objective)) {
+      return false;
+    }
+    // the solutions better than the best one must not lie beyond the narrowed domains
+    int best = bestPrintedCost.get();
+    if (best == Integer.MAX_VALUE) {
+      return dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+    }
+    if (best != clampCheckedCost) {
+      clampCheckedCost = best;
+      // the cost is the objective when minimising and its negation when maximising
+      clampHarmless =
+          minimize
+              ? dictionary.clampsHarmless(objective, -ClampedBounds.INF, (long) best - 1)
+              : dictionary.clampsHarmless(objective, -(long) best + 1, ClampedBounds.INF);
+    }
+    return clampHarmless;
+  }
+
+  // the best cost for which clampHarmless was computed
+  private int clampCheckedCost = Integer.MAX_VALUE;
+  private boolean clampHarmless;
+
+  /** Whether the narrowing of declared domains may hide a solution of a satisfaction problem. */
+  private boolean clampedDomainsHideSolutions() {
+    return dictionary.domainsClamped()
+        && !dictionary.clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
   }
 
   private boolean isSearchComplete() {
@@ -3901,6 +4613,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
+          IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
         }
       }
       return;
@@ -3952,8 +4665,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     // With all solutions requested the default search also labels the output variables first:
     // labelling every variable would report a solution again for each assignment of variables
-    // that are not output, such as the Boolean of a half-reification.
-    boolean outputVarsOnly = !options.complementarySearch() && (label != null || options.getAll());
+    // that are not output, such as the Boolean of a half-reification. This holds for the
+    // complementary search (-cs) too, whose search over all variables would otherwise print the
+    // same output solution once per assignment of the other variables.
+    boolean outputVarsOnly = options.getAll() || (!options.complementarySearch() && label != null);
     if (outputVarsOnly) {
       searchVars.outputVars();
     }
@@ -4205,7 +4920,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && boolVars.length == 0
             && setVars.length == 0
             && floatVars.length == 0)
-        || options.complementarySearch()
+        || (options.complementarySearch() && !options.getAll())
         || options.freeSearch();
   }
 
@@ -4822,8 +5537,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   @SuppressWarnings("unchecked")
+  // the values of the variables joined out of the model, for the solution being printed
+  private Map<Var, Integer> eliminatedValues = Map.of();
+
   private void appendVariableOutput(StringBuffer printBuffer, Var v) {
-    if (v instanceof BooleanVar var1) {
+    Integer eliminated = eliminatedValues.get(v);
+    if (eliminated != null) {
+      printBuffer.append(v.id()).append(" = ");
+      if (v instanceof BooleanVar) {
+        printBuffer.append(eliminated == 1);
+      } else {
+        printBuffer.append(eliminated);
+      }
+      printBuffer.append(";\n");
+    } else if (v instanceof BooleanVar var1) {
       printBuffer.append(v.id()).append(" = ");
       if (v.singleton()) {
         switch (var1.value()) {
@@ -4855,6 +5582,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         printBuffer.append(v.dom().toString());
       }
       printBuffer.append(";\n");
+    } else if (v instanceof IntVar x && v.singleton() && output.outputScale(v.id()) != 1) {
+      // the variable holds the objective divided by the scale (ObjectiveScaling)
+      printBuffer
+          .append(v.id())
+          .append(" = ")
+          .append(x.value() * output.outputScale(v.id()))
+          .append(";\n");
     } else {
       printBuffer.append(v).append(";\n");
     }
@@ -4877,12 +5611,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       presolve.returnSolution();
     }
 
+    // the variables that table variable elimination removed get values from the others
+    eliminatedValues =
+        output.tableElimination == null ? Map.of() : output.tableElimination.values();
+
     if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);
     }
 
     for (int i = 0; i < output.outputArray.size(); i++) {
-      printBuffer.append(output.outputArray.get(i)).append("\n");
+      printBuffer.append(output.outputArray.get(i).toString(eliminatedValues)).append("\n");
     }
 
     if (options.getVerbose()) {
@@ -4893,6 +5631,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
+      worker.objectiveScale(dictionary.objectiveScale());
       Integer cost = costVariable instanceof IntVar c ? c.min() : null;
       worker.solution(printBuffer.toString(), cost, !minimize, sharedNames(), sharedValues());
     }
@@ -4918,6 +5657,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       objectiveGap =
           new ObjectiveGap(
               options.gap(), !minimize, options.searchStatistics() ? IO::println : null);
+      objectiveGap.scale(dictionary.objectiveScale());
     }
     return objectiveGap;
   }
@@ -4935,6 +5675,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Portfolio.Worker worker = options.portfolioWorker();
     if (worker != null) {
+      worker.objectiveScale(dictionary.objectiveScale());
       // a bound that reaches the best solution proves it optimal only when it is a bound of the
       // model itself, not of the restarts of relax and reconstruct or on_restart
       worker.bound(lower, !minimize, relaxVars == null && dictionary.onRestart == null);
@@ -4987,19 +5728,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return nodes;
   }
 
+  // the value of the model's objective for a value of its variable, which may hold the objective
+  // divided by a scale (ObjectiveScaling)
+  private long objectiveValue(long value) {
+    return value * dictionary.objectiveScale();
+  }
+
   private void appendCostLineToBuffer(StringBuffer printBuffer) {
     if (costVariable == null) {
       return;
     }
     if (minimize) {
       if (costVariable instanceof IntVar var1) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(var1.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(fv.value()).append("\n");
       }
     } else {
       if (costVariable instanceof IntVar var1) {
-        printBuffer.append(MZN_STAT_OBJECTIVE).append(-var1.value()).append("\n");
+        printBuffer.append(MZN_STAT_OBJECTIVE).append(objectiveValue(-var1.value())).append("\n");
       } else if (costVariable instanceof FloatVar fv) {
         printBuffer.append(MZN_STAT_OBJECTIVE).append(-fv.value()).append("\n");
       }

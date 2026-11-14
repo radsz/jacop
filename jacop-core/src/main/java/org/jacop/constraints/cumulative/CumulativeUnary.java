@@ -38,7 +38,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 
@@ -97,7 +97,7 @@ public class CumulativeUnary extends Cumulative {
   // left out stay out in the subtree: leftOutStack[0, leftOut) holds them
   private int[] leftOutStack;
   private int[] stackPosition;
-  private TimeStamp<Integer> leftOut;
+  private TimeStampInt leftOut;
   // the tasks not left out, in the order of their index, which breaks ties in the rules
   private int[] activeTasks;
   private int activeCount;
@@ -503,7 +503,7 @@ public class CumulativeUnary extends Cumulative {
     stackPosition = new int[n];
     Arrays.fill(stackPosition, -1);
     activeTasks = new int[n];
-    leftOut = new TimeStamp<>(store, 0);
+    leftOut = new TimeStampInt(store, 0);
   }
 
   private boolean isLeftOut(int i) {

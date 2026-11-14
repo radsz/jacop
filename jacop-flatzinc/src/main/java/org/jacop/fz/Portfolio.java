@@ -46,10 +46,12 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.function.ObjIntConsumer;
 import java.util.regex.Pattern;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.jasat.lcg.SharedClauses;
+import org.jacop.jasat.lcg.SharedTree;
 import org.jacop.search.free.SharedSolution;
 
 /**
@@ -105,6 +107,15 @@ final class Portfolio {
   /** The most threads the portfolio uses: the options given and each setting above. */
   static final int MAX_THREADS = CONFIGS.length + 1;
 
+  /**
+   * The setting of the threads that divide one search tree (option {@code --free-config
+   * portfolio-split=<threads>}): LCG free search as branch and bound, each thread under the cube of
+   * the tree it took; see {@link SharedTree}.
+   */
+  static final String[] SPLIT_SETTING = {
+    "lcg-split", LCG, "on", "-f", FREE_CONFIG, "lcg-split=1,lcg-core=0,lcg-lb=0"
+  };
+
   /** The name of the thread of {@link #boundSetting}. */
   static final String BOUND_THREAD = "lcg-bisect";
 
@@ -130,6 +141,8 @@ final class Portfolio {
   private final List<Worker> workers = new ArrayList<>();
   // learnt clauses and root bounds of the LCG threads
   private final SharedClauses sharedClauses = new SharedClauses();
+  // the search tree the threads of SPLIT_SETTING divide among themselves
+  private final SharedTree sharedTree = new SharedTree();
   private final Object lock = new Object();
   // where the portfolio prints: stdout as it was when the portfolio started
   private PrintStream stdout;
@@ -152,6 +165,11 @@ final class Portfolio {
   private int running;
   private boolean finished;
   private boolean complete;
+  // the answer has been printed, by run() or at shutdown
+  private boolean printed;
+  // the factor the threads divided the objective by (ObjectiveScaling)
+  private long objectiveScale = 1;
+
   // the best solution and bound of all threads, for --gap and the objectiveBound statistic
   private ObjectiveGap gap;
   // a thread's bound holds only for the restarts of relax and reconstruct or on_restart
@@ -241,28 +259,53 @@ final class Portfolio {
     List<String> base = baseArguments(args);
     int threads = Math.min(options.threads(), MAX_THREADS);
     boolean satisfaction = isSatisfaction(readModel(options));
-    workers.add(new Worker("given", arguments(base, List.of(), false)));
+    SimpleNode model = "0".equals(options.freeConfig("portfolio-one-parse", "1")) ? null : parse();
+    // the threads that divide one search tree, in place of the last settings
+    int split = Math.min(threads, Integer.parseInt(options.freeConfig("portfolio-split", "0")));
+    if (split < 2) {
+      split = 0;
+    }
+    List<String> splitFlags = Arrays.asList(SPLIT_SETTING).subList(1, SPLIT_SETTING.length);
+    if (split < threads) {
+      workers.add(new Worker("given", arguments(base, List.of(), false)));
+    }
     String given = search(options.lcg(), options.freeSearch(), options.freeConfig, satisfaction);
     double bisect = Double.parseDouble(options.freeConfig("portfolio-bisect", "0"));
-    for (String[] config : settings(given, threads - 1, satisfaction, bisect)) {
+    int others = Math.max(0, threads - 1 - split);
+    for (String[] config : settings(given, others, satisfaction, bisect)) {
       List<String> flags = Arrays.asList(config).subList(1, config.length);
       workers.add(new Worker(config[0], arguments(base, flags, true)));
+    }
+    for (int k = 0; k < split; k++) {
+      workers.add(new Worker(SPLIT_SETTING[0] + k, arguments(base, splitFlags, true)));
     }
     String file = args[args.length - 1];
     synchronized (lock) {
       running = workers.size();
     }
     for (Worker w : workers) {
-      Thread t = new Thread(() -> w.run(file), "jacop-portfolio-" + w.name);
+      Thread t = new Thread(() -> w.run(file, model), "jacop-portfolio-" + w.name);
       t.setDaemon(true);
       w.thread = t;
       t.start();
+    }
+    // a run killed before it answers (SIGTERM) prints the best solution, as one thread does
+    Thread atShutdown = new Thread(() -> printResult(out, true, start), "jacop-portfolio-exit");
+    if (options.getStatistics()) {
+      Runtime.getRuntime().addShutdownHook(atShutdown);
     }
     boolean timedOut = await(timeOutAt);
     for (Worker w : workers) {
       w.stop();
     }
     printResult(out, timedOut, start);
+    if (options.getStatistics()) {
+      try {
+        Runtime.getRuntime().removeShutdownHook(atShutdown);
+      } catch (IllegalStateException _) {
+        // the JVM is shutting down: the hook finds the answer printed
+      }
+    }
     // the threads stop within milliseconds in search, later when stopped while reading the model
     long joinDeadline = System.currentTimeMillis() + JOIN_MILLIS;
     for (Worker w : workers) {
@@ -322,6 +365,10 @@ final class Portfolio {
   private void printResult(PrintStream out, boolean timedOut, long start) {
     StringBuilder s = new StringBuilder();
     synchronized (lock) {
+      if (printed) {
+        return;
+      }
+      printed = true;
       if (bestSolution != null) {
         if (!options.getAll()) {
           s.append(bestSolution);
@@ -351,6 +398,17 @@ final class Portfolio {
           if (imports > 0) {
             s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
           }
+          if (sharedTree.joined() > 0) {
+            s.append("%%%mzn-stat: portfolioSplitThreads=")
+                .append(sharedTree.joined())
+                .append("\n%%%mzn-stat: portfolioSplits=")
+                .append(sharedTree.splits())
+                .append("\n%%%mzn-stat: portfolioCubesClosed=")
+                .append(sharedTree.closedCubes())
+                .append("\n%%%mzn-stat: portfolioSplitWaitMillis=")
+                .append(sharedTree.waitedMillis())
+                .append('\n');
+          }
           if (sharedClauses.size() > 0) {
             s.append("%%%mzn-stat: portfolioSharedClauses=")
                 .append(sharedClauses.size())
@@ -370,9 +428,10 @@ final class Portfolio {
     out.flush();
   }
 
-  // the cost variable is the negated objective under maximisation
-  private int objective(int cost) {
-    return maximisation ? -cost : cost;
+  // the cost variable is the negated objective under maximisation, and it may hold the objective
+  // divided by a scale (ObjectiveScaling)
+  private long objective(int cost) {
+    return (maximisation ? -(long) cost : cost) * objectiveScale;
   }
 
   /**
@@ -529,6 +588,22 @@ final class Portfolio {
         || key.startsWith("probe");
   }
 
+  /**
+   * Reads the model once for all threads, which build their stores from the tree it gives; it is
+   * about a third of their start-up, and one tree in place of one per thread saves its memory. A
+   * model that does not parse gives null, and each thread reads it again and reports the error as
+   * one thread does.
+   */
+  private SimpleNode parse() {
+    try (FileInputStream in = new FileInputStream(options.getFileName())) {
+      Parser parser = new Parser(in);
+      parser.setOptions(options);
+      return parser.parseModel();
+    } catch (IOException | ParseException | TokenMgrError | RuntimeException _) {
+      return null;
+    }
+  }
+
   private static String readModel(Options options) {
     try {
       return Files.readString(Path.of(options.getFileName()), StandardCharsets.ISO_8859_1);
@@ -584,6 +659,7 @@ final class Portfolio {
               options.gap(),
               maximise,
               options.searchStatistics() ? line -> printBound(out, line) : null);
+      gap.scale(objectiveScale);
     }
     return gap;
   }
@@ -635,7 +711,7 @@ final class Portfolio {
       this.args = args;
     }
 
-    private void run(String file) {
+    private void run(String file, SimpleNode model) {
       StatusCapture capture = new StatusCapture();
       CAPTURE.set(capture);
       boolean ran = false;
@@ -644,8 +720,12 @@ final class Portfolio {
         a.add(file);
         Options opt = new Options(a.toArray(new String[0]));
         opt.portfolioWorker = this;
-        try (FileInputStream in = opt.getFile()) {
-          ran = Fz2jacop.solveInPortfolio(opt, in) == 0;
+        if (model != null) {
+          ran = Fz2jacop.solveInPortfolio(opt, model) == 0;
+        } else {
+          try (FileInputStream in = opt.getFile()) {
+            ran = Fz2jacop.solveInPortfolio(opt, in) == 0;
+          }
         }
       } catch (IOException | RuntimeException e) {
         FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
@@ -680,6 +760,21 @@ final class Portfolio {
     }
 
     /**
+     * Sets the factor the objective was divided by in the model of the threads (ObjectiveScaling),
+     * which every thread finds the same.
+     *
+     * @param factor the factor
+     */
+    void objectiveScale(long factor) {
+      synchronized (lock) {
+        objectiveScale = factor;
+        if (gap != null) {
+          gap.scale(factor);
+        }
+      }
+    }
+
+    /**
      * Reports a bound this thread proved: no solution better than the best one of the portfolio has
      * a smaller value of the minimised cost variable.
      *
@@ -702,6 +797,10 @@ final class Portfolio {
      *
      * @return the clauses
      */
+    SharedTree sharedTree() {
+      return sharedTree;
+    }
+
     SharedClauses sharedClauses() {
       return sharedClauses;
     }
@@ -764,12 +863,24 @@ final class Portfolio {
 
       @Override
       public void impose(Store store) {
+        synchronized (lock) {
+          imports++;
+        }
+        values(
+            (x, v) -> {
+              if (!x.singleton() && x.domain.contains(v)) {
+                x.domain.inValue(store.level, x, v);
+              }
+            });
+      }
+
+      @Override
+      public void values(ObjIntConsumer<IntVar> action) {
         String[] n;
         int[] values;
         synchronized (lock) {
           n = bestNames;
           values = bestValues;
-          imports++;
         }
         if (n == null) {
           return;
@@ -782,10 +893,8 @@ final class Portfolio {
           }
         }
         for (int i = 0; i < vars.length; i++) {
-          IntVar x = vars[i];
-          int v = values[i];
-          if (x != null && v != UNKNOWN && !x.singleton() && x.domain.contains(v)) {
-            x.domain.inValue(store.level, x, v);
+          if (vars[i] != null && values[i] != UNKNOWN) {
+            action.accept(vars[i], values[i]);
           }
         }
       }

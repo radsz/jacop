@@ -46,7 +46,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.DomainCover;
@@ -90,9 +90,9 @@ public class Among extends Constraint
   // because if X was in between lbS and ubS than
   // it can have the between (x intersects S <> empty and x doesn't belong to
   // S) values being shrinked.
-  private TimeStamp<Integer> lowerBorder;
+  private TimeStampInt lowerBorder;
   // number of x who may still intersect K (Kset)
-  private TimeStamp<Integer> upperBorder;
+  private TimeStampInt upperBorder;
   private Map<IntVar, Integer> position;
 
   /**
@@ -263,8 +263,8 @@ public class Among extends Constraint
 
     super.impose(store);
 
-    this.lowerBorder = new TimeStamp<>(store, 0);
-    this.upperBorder = new TimeStamp<>(store, list.length);
+    this.lowerBorder = new TimeStampInt(store, 0);
+    this.upperBorder = new TimeStampInt(store, list.length);
 
     position = Var.positionMapping(list, false, this.getClass());
   }

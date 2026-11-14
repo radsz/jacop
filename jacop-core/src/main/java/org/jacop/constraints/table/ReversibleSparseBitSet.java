@@ -33,6 +33,7 @@ package org.jacop.constraints.table;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 
 /**
  * ReversibleSparseBitSet implements the main data structure for table constraint.
@@ -44,7 +45,7 @@ public class ReversibleSparseBitSet {
 
   TimeStamp<long[]> words;
   private int[] index;
-  private TimeStamp<Integer> limit;
+  private TimeStampInt limit;
   private long[] mask;
 
   /** Creates an empty reversible sparse bit set. */
@@ -94,7 +95,7 @@ public class ReversibleSparseBitSet {
       }
     }
 
-    limit = new TimeStamp<>(store, front - 1);
+    limit = new TimeStampInt(store, front - 1);
 
     words = new TimeStamp<>(store, w);
 

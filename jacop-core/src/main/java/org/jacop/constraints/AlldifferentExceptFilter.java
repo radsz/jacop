@@ -33,7 +33,6 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
@@ -222,8 +221,7 @@ final class AlldifferentExceptFilter {
       if (d instanceof IntervalDomain) {
         IntervalDomain id = (IntervalDomain) d;
         for (int j = 0; j < id.size; j++) {
-          Interval interval = id.intervals[j];
-          for (int w = interval.min(); w <= interval.max(); w++) {
+          for (int w = id.leftElement(j), max = id.rightElement(j); w <= max; w++) {
             adj[e++] = w - base;
           }
         }
@@ -446,8 +444,7 @@ final class AlldifferentExceptFilter {
       } else if (d instanceof IntervalDomain) {
         IntervalDomain id = (IntervalDomain) d;
         for (int i = 0; i < id.size; i++) {
-          Interval interval = id.intervals[i];
-          for (int value = interval.min(); value <= interval.max(); value++) {
+          for (int value = id.leftElement(i), max = id.rightElement(i); value <= max; value++) {
             count = removeIfUnsupported(value, count);
           }
         }

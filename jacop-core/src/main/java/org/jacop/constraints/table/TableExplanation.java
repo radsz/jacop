@@ -115,8 +115,10 @@ final class TableExplanation {
   private int reqCount;
   private int altCount;
 
-  // Entries in the reason have chosen[entry] == call.
-  private int[] chosen = new int[256];
+  // Entries in the reason have chosen[entry] == mark. The array is the trail's, shared by all
+  // explanations (AtomicTrail.newEntryMark), so the memory is one trail length, not one per table.
+  private int[] chosen;
+  private int mark;
 
   private long[] candidates;
 
@@ -217,7 +219,6 @@ final class TableExplanation {
     if (call == Integer.MAX_VALUE) {
       call = 1;
       Arrays.fill(built, 0);
-      Arrays.fill(chosen, 0);
       Arrays.fill(columnChosen, 0);
       for (int[] stamp : valueStamp) {
         if (stamp != null) {
@@ -225,16 +226,17 @@ final class TableExplanation {
         }
       }
     }
-    if (chosen.length < position) {
-      chosen = Arrays.copyOf(chosen, Math.max(position, 2 * chosen.length));
-    }
+    mark = trail.newEntryMark(position);
+    chosen = trail.entryMarks();
   }
 
   /**
    * Shows tuple t dead, adding to {@code out} the entries this needs that are not in it yet: the
    * explained column first, which most candidates of a scan already rule out, then the columns with
    * entries in the reason, where the tuple may be dead for free, and only then every column and
-   * restriction between columns for the cheapest way.
+   * restriction between columns for the cheapest way. Among columns that cost the same, the one
+   * with the narrowest bounds before the position is chosen, not the first one, so the reason does
+   * not depend on the order of the table's columns.
    *
    * @return false when the tuple is alive
    */
@@ -266,9 +268,15 @@ final class TableExplanation {
       if (status == FREE) {
         return true;
       }
-      if (status > 0 && cost() < best) {
-        best = cost();
-        bestColumn = j;
+      if (status > 0) {
+        int c = cost();
+        // a tie goes to the column with the narrower bounds: its atoms are the ones most likely to
+        // kill the tuples still to come, and they make a smaller learnt clause
+        if (c < best
+            || c == best && j < arity && bestColumn < arity && span(j) < span(bestColumn)) {
+          best = c;
+          bestColumn = j;
+        }
       }
     }
     if (bestColumn == -2) {
@@ -348,7 +356,7 @@ final class TableExplanation {
 
   private boolean anyChosen(int q) {
     for (int k = reqStart[q]; k < reqStart[q + 1]; k++) {
-      if (chosen[alt[k]] == call) {
+      if (chosen[alt[k]] == mark) {
         return true;
       }
     }
@@ -356,7 +364,7 @@ final class TableExplanation {
   }
 
   private void choose(int e, EntryList out) {
-    chosen[e] = call;
+    chosen[e] = mark;
     out.add(e);
     IntVar y = trail.variable(e);
     for (int j = 0; j < table.x.length; j++) {
@@ -613,6 +621,11 @@ final class TableExplanation {
 
   // ---------------------------------------------------------------------------------------------
   // Column snapshots.
+
+  /** The span of column j's bounds before the position. */
+  private long span(int j) {
+    return (long) high(j) - low(j);
+  }
 
   private IntDomain root(int j) {
     snapshot(j);

@@ -37,7 +37,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.DomainCover;
@@ -65,7 +65,7 @@ public class AllEqual extends PrimitiveConstraint
 
   private final int n;
 
-  private TimeStamp<Integer> position;
+  private TimeStampInt position;
 
   /**
    * It constructs constraint x[i] = x[j].
@@ -184,7 +184,7 @@ public class AllEqual extends PrimitiveConstraint
 
   @Override
   public void include(Store store) {
-    position = new TimeStamp<>(store, 0);
+    position = new TimeStampInt(store, 0);
   }
 
   @Override

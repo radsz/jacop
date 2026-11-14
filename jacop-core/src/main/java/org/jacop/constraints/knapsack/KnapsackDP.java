@@ -44,6 +44,9 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.IntervalEnumeration;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * A knapsack constraint, sum(weights[i] * quantity[i]) = capacity and sum(profits[i] * quantity[i])
@@ -78,7 +81,8 @@ import org.jacop.core.ValueEnumeration;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class KnapsackDP extends Constraint implements SatisfiedPresent, Copyable<KnapsackDP> {
+public class KnapsackDP extends Constraint
+    implements SatisfiedPresent, Copyable<KnapsackDP>, Explainable {
 
   private static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -756,6 +760,33 @@ public class KnapsackDP extends Constraint implements SatisfiedPresent, Copyable
       }
       throw new IllegalStateException("No extra weight gives the best profit.");
     }
+  }
+
+  // the surrogate row explanations of Knapsack, made on first use
+  private KnapsackExplanation explanation;
+
+  private KnapsackExplanation explanation() {
+    if (explanation == null) {
+      explanation =
+          new KnapsackExplanation(quantity, weights, profits, knapsackCapacity, knapsackProfit);
+    }
+    return explanation;
+  }
+
+  /**
+   * Explains an atom by a surrogate row of the two equalities whose bounds imply it, as {@link
+   * Knapsack} does (see {@link KnapsackExplanation}). The dynamic program prunes values no row
+   * implies; those have no reason of their own.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return explanation().explain(trail, entry, out);
+  }
+
+  /** Explains a failure by a surrogate row whose bounds cannot all hold. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return explanation().explainFailure(trail, out);
   }
 
   @Override

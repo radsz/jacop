@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldiffSum;
@@ -57,6 +58,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelImply;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
@@ -115,6 +117,7 @@ import org.jacop.constraints.PrecedenceCost;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.Same;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.Sort;
@@ -128,7 +131,9 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.UnaryEarlinessTardiness;
+import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.WeightedCompletion;
@@ -174,8 +179,10 @@ import org.jacop.constraints.diffn.Diffn;
 import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
+import org.jacop.constraints.geost.ExternalConstraint;
 import org.jacop.constraints.geost.Geost;
 import org.jacop.constraints.geost.GeostObject;
+import org.jacop.constraints.geost.InArea;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
@@ -211,6 +218,8 @@ import org.jacop.search.SplitSelect;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -223,7 +232,11 @@ import org.junit.jupiter.api.Test;
  * profile) and the first seed by {@code lcg.fuzz.seed} (default 1). A failure names the seed, which
  * rebuilds the same model. With {@code lcg.fuzz.holes=true} every variable, auxiliary ones too,
  * gets up to two holes inside its domain, for the reasons of bounds that skip holes; a model that
- * fails while its constraints are imposed is skipped.
+ * fails while its constraints are imposed is skipped. With {@code lcg.fuzz.recent} set to a
+ * comma-separated list of the cases of the globals added in 5.0, half of the constraints are drawn
+ * from those cases, to test their explanations at volume. With {@code lcg.fuzz.focus} set to a
+ * comma-separated list of the cases of {@code randomConstraint}, three constraints in four are
+ * drawn from those cases (the constraint audit checks one constraint's explanations this way).
  */
 class LcgFuzzTest {
 
@@ -232,6 +245,45 @@ class LcgFuzzTest {
   private static final int SEED = Integer.getInteger("lcg.fuzz.seed", 1);
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
+
+  // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
+  private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
+
+  // with lcg.fuzz.focus=64,65 (cases of randomConstraint), three constraints in four are drawn
+  // from those cases, to check the explanations of one constraint at volume
+  private static final int[] FOCUS = recentCases(System.getProperty("lcg.fuzz.focus"));
+
+  // the explanations that are off by default are checked too
+  @BeforeAll
+  static void explainAll() {
+    CircuitCost.setAssignmentReasons(true);
+    InterDistance.setExplanations(true);
+  }
+
+  @AfterAll
+  static void explainDefaults() {
+    CircuitCost.setAssignmentReasons(false);
+    InterDistance.setExplanations(false);
+  }
+
+  private static int[] recentCases(String cases) {
+    if (cases == null || cases.isBlank()) {
+      return null;
+    }
+    return Arrays.stream(cases.split(",")).mapToInt(c -> Integer.parseInt(c.trim())).toArray();
+  }
+
+  // seconds for the reference search of one model; a model it cannot solve in time is skipped
+  private static final int REFERENCE_SECONDS = Integer.getInteger("lcg.fuzz.referenceSeconds", 60);
+
+  /** The reference search ran out of time; the model is skipped. */
+  private static final class ReferenceTimeout extends RuntimeException {
+    private static final long serialVersionUID = 1L;
+
+    ReferenceTimeout() {
+      super(null, null, false, false);
+    }
+  }
 
   /** A random model; built twice from the same seed, once for each solver. */
   private static final class Model {
@@ -488,7 +540,8 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      return switch (rnd.nextInt(35)) {
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(41);
+      return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
         case 2 -> new LexChain(new IntVar[][] {pick(x, 2), pick(x, 2)}, rnd.nextBoolean());
@@ -610,8 +663,60 @@ class LcgFuzzTest {
         case 31 -> unaryEarlinessTardiness(p);
         case 32 -> colouredTree();
         case 33 -> spanningTree();
+        case 34 ->
+            new LateCount(
+                p,
+                new int[] {1 + rnd.nextInt(2), rnd.nextInt(3), 1 + rnd.nextInt(2)},
+                new int[] {rnd.nextInt(5), rnd.nextInt(5), rnd.nextInt(5)},
+                new int[] {rnd.nextInt(4), 1 + rnd.nextInt(3), rnd.nextInt(4)},
+                intVar("wl", 0, 2 + rnd.nextInt(4)));
+        case 36 -> symmetricGcc();
+        case 37 -> cardinalityMatrix();
+        case 38 -> new Same(pick(x, 3), pick(x, 3));
+        case 39 -> new UsedBy(pick(x, 3), pick(x, 2));
+        case 40 ->
+            new AllDifferentLists(
+                new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)},
+                rnd.nextBoolean() ? new int[0][] : new int[][] {{rnd.nextInt(3), rnd.nextInt(3)}});
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // a 2 x 2 or 2 x 3 matrix of the 0/1 variables and the variables, with counted rows and columns
+    private SymmetricGCC symmetricGcc() {
+      int m = 2 + rnd.nextInt(2);
+      IntVar[] both = new IntVar[b.length + x.length];
+      System.arraycopy(b, 0, both, 0, b.length);
+      System.arraycopy(x, 0, both, b.length, x.length);
+      IntVar[] cells = pick(both, 2 * m);
+      IntVar[][] matrix = {Arrays.copyOf(cells, m), Arrays.copyOfRange(cells, m, 2 * m)};
+      IntVar[] rows = {count(m), count(m)};
+      IntVar[] cols = new IntVar[m];
+      for (int c = 0; c < m; c++) {
+        cols[c] = count(2);
+      }
+      return new SymmetricGCC(matrix, rows, cols);
+    }
+
+    // a count from 0 to at most max, or one of the variables
+    private IntVar count(int max) {
+      return rnd.nextInt(3) == 0 ? one() : intVar("sc", rnd.nextInt(2), 1 + rnd.nextInt(max));
+    }
+
+    // a 2 x 2 matrix of the variables with the counts of one or two values in its rows and columns
+    private CardinalityMatrix cardinalityMatrix() {
+      IntVar[] cells = pick(x, 4);
+      IntVar[][] matrix = {{cells[0], cells[1]}, {cells[2], cells[3]}};
+      int[] values = rnd.nextBoolean() ? new int[] {1} : new int[] {0, 2};
+      IntVar[][] rows = new IntVar[2][values.length];
+      IntVar[][] cols = new IntVar[2][values.length];
+      for (int i = 0; i < 2; i++) {
+        for (int k = 0; k < values.length; k++) {
+          rows[i][k] = count(2);
+          cols[i][k] = count(2);
+        }
+      }
+      return new CardinalityMatrix(matrix, values, rows, cols);
     }
 
     // Values over 4 or 5 variables, some pairs of which other constraints force to differ, so that
@@ -851,9 +956,14 @@ class LcgFuzzTest {
     }
 
     Object randomConstraint() {
+      if (RECENT != null && rnd.nextBoolean()) {
+        return recentGlobal();
+      }
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(84)) {
+      int kind =
+          FOCUS != null && rnd.nextInt(4) > 0 ? FOCUS[rnd.nextInt(FOCUS.length)] : rnd.nextInt(84);
+      return switch (kind) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -1061,14 +1171,17 @@ class LcgFuzzTest {
           IntVar end = rnd.nextBoolean() ? one() : intVar("mk", 0, 6);
           // durations or heights vary, not both: the reference search enumerates them
           boolean variableDurations = rnd.nextBoolean();
+          IntVar[] ed = variableDurations ? chain("ed", 3, 0, 2) : constants(3, 1, 2);
+          IntVar[] eh =
+              !variableDurations && rnd.nextBoolean() ? chain("eh", 3, 0, 2) : constants(3, 1, 2);
+          IntVar limit = constant(1 + rnd.nextInt(2));
+          // the rule only adds to the cumulative of a model (it checks the capacity once fixed):
+          // alone, the reference search enumerates every point before it finds an overload
+          Cumulative cumulative = new Cumulative(s, ed, eh, limit);
+          posted.add(cumulative.toString());
+          store.impose(cumulative);
           yield new EnergyPrecedence(
-              s,
-              variableDurations ? chain("ed", 3, 0, 2) : constants(3, 1, 2),
-              !variableDurations && rnd.nextBoolean() ? chain("eh", 3, 0, 2) : constants(3, 1, 2),
-              constant(1 + rnd.nextInt(2)),
-              s,
-              new IntVar[] {end, end, end},
-              new int[] {2, 2, 2});
+              s, ed, eh, limit, s, new IntVar[] {end, end, end}, new int[] {2, 2, 2});
         }
         case 78, 79 -> recentGlobal();
         case 63 -> {
@@ -1140,8 +1253,9 @@ class LcgFuzzTest {
       };
     }
 
-    // conditional difference constraints x - y <= c (each always, or when b == v), posted as
-    // primitives, and DifferenceCycles over them, as the FlatZinc detector posts it
+    // conditional difference constraints x - y <= c - s * o (each always, or when b == v, with an
+    // optional offset variable o), posted as primitives, and DifferenceCycles over them, as the
+    // FlatZinc detector posts it; a literal may be a variable wider than 0/1, as an element index
     private DifferenceCycles differenceCycles() {
       int m = 3 + rnd.nextInt(3);
       // arcs among three variables, so that they close cycles
@@ -1149,23 +1263,40 @@ class LcgFuzzTest {
       IntVar[] xs = new IntVar[m];
       IntVar[] ys = new IntVar[m];
       IntVar[] bs = new IntVar[m];
+      IntVar[] os = new IntVar[m];
       int[] c = new int[m];
       int[] v = new int[m];
+      int[] s = new int[m];
       for (int i = 0; i < m; i++) {
         IntVar[] e = pick(nodes, 2);
         xs[i] = e[0];
         ys[i] = e[1];
         c[i] = rnd.nextInt(4) - 2;
-        XplusClteqZ d = new XplusClteqZ(xs[i], -c[i], ys[i]);
-        if (rnd.nextBoolean()) {
+        PrimitiveConstraint d;
+        if (rnd.nextInt(3) == 0) {
+          os[i] = one();
+          s[i] = rnd.nextBoolean() ? 1 : -1;
+          d =
+              new LinearInt(
+                  new IntVar[] {xs[i], ys[i], os[i]}, new int[] {1, -1, s[i]}, "<=", c[i]);
+        } else {
+          d = new XplusClteqZ(xs[i], -c[i], ys[i]);
+        }
+        int kind = rnd.nextInt(3);
+        if (kind == 0) {
           bs[i] = b[rnd.nextInt(b.length)];
           v[i] = rnd.nextInt(2);
+        } else if (kind == 1) {
+          bs[i] = one();
+          v[i] = bs[i].min() + rnd.nextInt(bs[i].max() - bs[i].min() + 1);
+        }
+        if (bs[i] != null) {
           post(new IfThen(new XeqC(bs[i], v[i]), d));
         } else {
           post(d);
         }
       }
-      return new DifferenceCycles(xs, ys, c, bs, v);
+      return new DifferenceCycles(xs, ys, c, bs, v, os, s);
     }
 
     private String relation() {
@@ -1208,12 +1339,18 @@ class LcgFuzzTest {
     }
     DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
     search.setPrintInfo(false);
+    search.setTimeOut(REFERENCE_SECONDS);
     SimpleSelect<IntVar> select =
         new SimpleSelect<>(model.decisionVars(), null, new IndomainMin<>());
     boolean found =
         model.objective == null
             ? search.labeling(model.store, select)
             : search.labeling(model.store, select, model.objective);
+    if (search.timeOutOccured) {
+      // a constraint that propagates little, such as Knapsack before its dynamic program has
+      // earned its first run, can leave depth-first search an exhaustive tree
+      throw new ReferenceTimeout();
+    }
     if (!found) {
       return null;
     }
@@ -1236,6 +1373,90 @@ class LcgFuzzTest {
     DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
     search.setPrintInfo(false);
     return search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+  }
+
+  /**
+   * Under LCG a reified In counts as entailed only once the bounds of its variable lie in the set,
+   * not as soon as the values left all do. On random models of reified membership tests over
+   * domains with holes, counted by sums of the indicators, LCG with checked explanations must agree
+   * with depth-first search, where the entailment check stays complete, and give a solution.
+   */
+  @Test
+  void reifiedInAgreesWithSearch() {
+    int runs = Math.max(200, RUNS / 4);
+    int sat = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = memberships(seed, false);
+      boolean lcg = memberships(seed, true);
+      assertThat(lcg).as("seed " + seed).isEqualTo(expected);
+      sat += expected ? 1 : 0;
+    }
+    assertThat(sat).isPositive().isLessThan(runs);
+  }
+
+  // random reified membership tests: true when a solution exists (LCG solutions are checked)
+  private static boolean memberships(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 3 + rnd.nextInt(3);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      IntervalDomain d = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(3) > 0) {
+          d.unionAdapt(v, v);
+        }
+      }
+      if (d.isEmpty()) {
+        d.unionAdapt(0, 0);
+      }
+      x[i] = new IntVar(store, "x" + i, d);
+    }
+    int m = 4 + rnd.nextInt(5);
+    IntVar[] b = new IntVar[m];
+    IntVar[] at = new IntVar[m];
+    IntervalDomain[] sets = new IntervalDomain[m];
+    for (int j = 0; j < m; j++) {
+      sets[j] = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(5) < 2) {
+          sets[j].unionAdapt(v, v);
+        }
+      }
+      at[j] = x[rnd.nextInt(n)];
+      b[j] = new BooleanVar(store, "b" + j);
+      store.impose(new Reified(new In(at[j], sets[j]), b[j]));
+    }
+    int need = rnd.nextInt(m + 1);
+    store.impose(new SumBool(b, rnd.nextBoolean() ? "==" : ">=", new IntVar(store, need, need)));
+    for (int k = 0; k + 1 < n; k++) {
+      if (rnd.nextBoolean()) {
+        store.impose(new XneqY(x[k], x[k + 1]));
+      }
+    }
+    if (!lcg) {
+      if (!store.consistency()) {
+        return false;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    if (solver.solve() != CdclSolver.SAT) {
+      return false;
+    }
+    int count = 0;
+    for (int j = 0; j < m; j++) {
+      boolean in = sets[j].contains(solver.value(at[j]));
+      assertThat(solver.value(b[j])).as("seed %d: b%d", seed, j).isEqualTo(in ? 1 : 0);
+      count += in ? 1 : 0;
+    }
+    assertThat(count).as("seed %d: sum", seed).isGreaterThanOrEqualTo(need);
+    return true;
   }
 
   /**
@@ -1425,6 +1646,146 @@ class LcgFuzzTest {
   }
 
   /**
+   * Geost explains its pruning and failures by forbidden boxes (obstacles' compulsory parts, the
+   * outside of an allowed area and its holes) covering the swept region. On random small placements
+   * of polymorphic objects in two or three dimensions, with times that may separate objects and an
+   * optional area, LCG with checked explanations must agree with depth-first search over the same
+   * constraint, give a placement, and explain most atoms by its own reasons rather than by replay.
+   */
+  @Test
+  void geostReasonsAgreeWithSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    long all = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = placement(seed, false) != null;
+      Object[] lcg = placement(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+      all += (Long) lcg[2];
+    }
+    assertThat(own).isPositive();
+    assertThat(2 * own).as("own %d of %d", own, all).isGreaterThan(all);
+  }
+
+  // random objects in a small space: search over Geost (null if none), or LCG over Geost ({status,
+  // own reasons and failures of Geost, all of them})
+  private static Object[] placement(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int k = rnd.nextInt(4) == 0 ? 3 : 2;
+    int side = k == 2 ? 4 + rnd.nextInt(3) : 3 + rnd.nextInt(2);
+    List<Shape> shapes = new ArrayList<>();
+    int numShapes = 2 + rnd.nextInt(4);
+    for (int s = 0; s < numShapes; s++) {
+      List<Dbox> boxes = new ArrayList<>();
+      int[] length = new int[k];
+      for (int d = 0; d < k; d++) {
+        length[d] = 1 + rnd.nextInt(2);
+      }
+      boxes.add(new Dbox(new int[k], length));
+      if (rnd.nextInt(3) == 0) {
+        // a second box beside the first: an L, or two pieces apart
+        int[] origin = new int[k];
+        origin[0] = length[0] + rnd.nextInt(2);
+        int[] second = new int[k];
+        Arrays.fill(second, 1);
+        boxes.add(new Dbox(origin, second));
+      }
+      shapes.add(new Shape(s, boxes));
+    }
+    int n = 3 + rnd.nextInt(k == 2 ? 4 : 2);
+    boolean timed = rnd.nextInt(3) == 0;
+    List<GeostObject> objects = new ArrayList<>();
+    List<IntVar> vars = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      IntVar[] coords = new IntVar[k];
+      for (int d = 0; d < k; d++) {
+        coords[d] = new IntVar(store, "o" + i + "_" + d, 0, side - 1);
+        if (rnd.nextInt(6) == 0) {
+          coords[d].domain.subtractAdapt(rnd.nextInt(side));
+          if (coords[d].domain.isEmpty()) {
+            coords[d].domain.unionAdapt(0, 0);
+          }
+          coords[d].refreshBounds();
+        }
+        vars.add(coords[d]);
+      }
+      int s0 = rnd.nextInt(numShapes);
+      IntVar shape = new IntVar(store, "s" + i, s0, s0);
+      // a few more shapes, often with gaps between them (shapes removed before a bound moves)
+      for (int s1 = 0; s1 < numShapes; s1++) {
+        if (rnd.nextInt(3) == 0) {
+          shape.domain.unionAdapt(s1, s1);
+        }
+      }
+      shape.refreshBounds();
+      vars.add(shape);
+      int start = timed ? rnd.nextInt(2) : 0;
+      objects.add(
+          new GeostObject(
+              i,
+              coords,
+              shape,
+              new IntVar(store, start, start),
+              new IntVar(store, 1, 1),
+              new IntVar(store, start + 1, start + 1)));
+    }
+    int[] dims = new int[k + 1];
+    for (int d = 0; d <= k; d++) {
+      dims[d] = d;
+    }
+    if (rnd.nextInt(5) == 0) {
+      // overlap allowed in the last spatial dimension
+      dims = new int[k];
+      for (int d = 0; d < k - 1; d++) {
+        dims[d] = d;
+      }
+      dims[k - 1] = k;
+    }
+    List<ExternalConstraint> external = new ArrayList<>();
+    external.add(new NonOverlapping(objects, dims));
+    if (rnd.nextBoolean()) {
+      int[] origin = new int[k];
+      int[] length = new int[k];
+      Arrays.fill(length, side + 1 - rnd.nextInt(2));
+      List<Dbox> holes = new ArrayList<>();
+      if (rnd.nextBoolean()) {
+        int[] hole = new int[k];
+        for (int d = 0; d < k; d++) {
+          hole[d] = rnd.nextInt(side);
+        }
+        int[] one = new int[k];
+        Arrays.fill(one, 1);
+        holes.add(new Dbox(hole, one));
+      }
+      external.add(new InArea(new Dbox(origin, length), holes));
+    }
+    IntVar[] all = vars.toArray(new IntVar[0]);
+    store.impose(new Geost(objects, external, shapes));
+    if (!lcg) {
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    long[] c = solver.explanationStatistics().get("Geost");
+    long own = c == null ? 0 : c[0] - c[1] - c[6] + c[3] - c[4] - c[7];
+    long total = c == null ? 0 : c[0] + c[3];
+    return new Object[] {status, own, total};
+  }
+
+  /**
    * LexChain explains a pruning that needs both sides of the chain (no tuple of a vector with the
    * value lies between the bounds of the vectors below and above it) by the vectors around it. On
    * random chains of three to five short vectors, with column sums and disequalities, LCG with
@@ -1443,6 +1804,125 @@ class LcgFuzzTest {
       own += (Long) lcg[1];
     }
     assertThat(own).isPositive();
+  }
+
+  /**
+   * AllDifferentLists explains a removed value by the fixed row it would equal and a failure by two
+   * equal rows. On random rows of one to three variables with column sums and disequalities, often
+   * with fewer different tuples than rows and, one seed in two, excepted tuples, LCG with checked
+   * explanations must agree with search over the pairwise decomposition (a disjunction of
+   * disequalities, and of the excepted tuples, for each pair of rows).
+   */
+  @Test
+  void allDifferentListsReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = differentLists(seed, false) != null;
+      Object[] lcg = differentLists(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // random rows: search over the pairwise decomposition (null if no solution), or LCG over
+  // AllDifferentLists ({status, own reasons and failures of AllDifferentLists})
+  private static Object[] differentLists(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int m = 3 + rnd.nextInt(5);
+    int n = 1 + rnd.nextInt(3);
+    int top = 1 + rnd.nextInt(3);
+    IntVar[][] x = new IntVar[m][n];
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, top);
+        if (rnd.nextInt(4) == 0) {
+          x[i][j].domain.subtractAdapt(rnd.nextInt(top + 1));
+          x[i][j].refreshBounds();
+        }
+        all.add(x[i][j]);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      if (rnd.nextBoolean()) {
+        IntVar[] column = new IntVar[m];
+        for (int i = 0; i < m; i++) {
+          column[i] = x[i][j];
+        }
+        int sum = rnd.nextInt(m * top + 1);
+        store.impose(new SumInt(column, "<=", new IntVar(store, sum, sum)));
+      }
+    }
+    for (int k = rnd.nextInt(4); k > 0; k--) {
+      IntVar a = all.get(rnd.nextInt(all.size()));
+      IntVar b = all.get(rnd.nextInt(all.size()));
+      if (a != b) {
+        store.impose(new XneqY(a, b));
+      }
+    }
+    // one seed in two: excepted tuples, which two rows may share
+    int[][] except = new int[rnd.nextBoolean() ? 0 : 1 + rnd.nextInt(2)][n];
+    for (int[] t : except) {
+      for (int j = 0; j < n; j++) {
+        t[j] = rnd.nextInt(top + 1);
+      }
+    }
+    if (lcg) {
+      store.impose(new AllDifferentLists(x, except));
+    } else {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          PrimitiveConstraint[] ne = new PrimitiveConstraint[n + except.length];
+          for (int j = 0; j < n; j++) {
+            ne[j] = new XneqY(x[i][j], x[r][j]);
+          }
+          for (int e = 0; e < except.length; e++) {
+            PrimitiveConstraint[] eq = new PrimitiveConstraint[n];
+            for (int j = 0; j < n; j++) {
+              eq[j] = new XeqC(x[i][j], except[e][j]);
+            }
+            ne[n + e] = new And(eq);
+          }
+          store.impose(new Or(ne));
+        }
+      }
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(
+              store, new SimpleSelect<>(all.toArray(new IntVar[0]), null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          boolean differ = false;
+          int[] row = new int[n];
+          for (int j = 0; j < n; j++) {
+            row[j] = solver.value(x[i][j]);
+            differ |= row[j] != solver.value(x[r][j]);
+          }
+          differ |= Arrays.stream(except).anyMatch(t -> Arrays.equals(t, row));
+          assertThat(differ).as("seed %d: rows %d and %d", seed, i, r).isTrue();
+        }
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("AllDifferentLists");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
   }
 
   // a random chain of vectors: search over pairwise LexOrder (null if no solution), or LCG over
@@ -1718,6 +2198,9 @@ class LcgFuzzTest {
     long lowerBoundRuns = 0;
     long lowerBoundRaised = 0;
     long bisectProbes = 0;
+    long probes = 0;
+    long probeFacts = 0;
+    int referenceTimeouts = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
       Integer expected;
@@ -1725,6 +2208,10 @@ class LcgFuzzTest {
         expected = reference(new Model(seed));
       } catch (FailException _) {
         // a constraint failed when it was imposed (machines outside a domain with holes)
+        continue;
+      } catch (ReferenceTimeout _) {
+        System.out.println("lcg fuzz: seed " + seed + " skipped, the reference search timed out");
+        referenceTimeouts++;
         continue;
       }
       Model model = new Model(seed);
@@ -1736,8 +2223,22 @@ class LcgFuzzTest {
         solver.setChecking(true);
         // reasons of up to 1 to 3 literals stay as clauses
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        // tables as clauses: one run in three by support clauses, one in three direct
+        solver.setTableClauses(new String[] {"none", "support", "direct"}[(int) (seed / 4 % 3)]);
+        if (seed % 5 == 1 && !LcgSolver.CHAIN_LIMIT_SET) {
+          // one run in five keeps bound-literal chains of 1 to 4 literals (unkept reasons)
+          solver.setChainLimit(1 + (int) (seed / 5 % 4));
+        }
         annotate(solver, model, seed);
-        status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
+        // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT
+        boolean refuted = seed % 4 == 3 && !solver.probeRoot(Long.MAX_VALUE);
+        probes += solver.probeProbes;
+        probeFacts += solver.probeFailed + solver.probeLifted;
+        if (refuted) {
+          status = CdclSolver.UNSAT;
+        } else {
+          status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
+        }
         checked += solver.checker().checked;
         lowerBoundRuns += solver.lowerBoundRuns;
         lowerBoundRaised += solver.lowerBoundRaised;
@@ -1772,8 +2273,17 @@ class LcgFuzzTest {
     if (RUNS >= 1000) {
       System.out.printf(
           "lcg fuzz: %d runs, %d sat, %d unsat, %d explanations checked,"
-              + " %d lower-bound runs (%d raised the bound), %d bisection probes%n",
-          RUNS, sat, unsat, checked, lowerBoundRuns, lowerBoundRaised, bisectProbes);
+              + " %d lower-bound runs (%d raised the bound), %d bisection probes,"
+              + " %d reference timeouts%n",
+          RUNS,
+          sat,
+          unsat,
+          checked,
+          lowerBoundRuns,
+          lowerBoundRaised,
+          bisectProbes,
+          referenceTimeouts);
+      System.out.printf("  root probing: %d probes, %d facts%n", probes, probeFacts);
       statistics.forEach(
           (k, v) ->
               System.out.printf(

@@ -108,17 +108,19 @@ public class Nooverlap extends Constraint
   static final int AREA_PASS = 2;
 
   /*
-   * The profile of another rectangle uses a rectangle only while it has a compulsory part, and a
-   * rectangle that has none now had none since the previous pass, since compulsory parts only grow
-   * until a backtrack. So the profile pass tracks such rectangles apart from all changed ones.
+   * The profile of another rectangle in dimension d uses a rectangle only while it has a compulsory
+   * part in d and a positive minimal length in the other dimension (it makes no sweep event
+   * otherwise), and a rectangle that has none now had none since the previous pass, since compulsory
+   * parts only grow until a backtrack. So the profile pass tracks such rectangles apart from all
+   * changed ones, for each dimension: PROFILE_OF_OTHERS + d.
    */
   static final int PROFILE_OF_OTHERS = 3;
 
   /** For each kind of pass, the rectangles changed since the current pass of that kind began. */
-  private final BitSet[] changed = new BitSet[4];
+  private final BitSet[] changed = new BitSet[5];
 
   /** For each kind of pass, the rectangles changed since the previous pass of that kind began. */
-  private final BitSet[] changedBefore = new BitSet[4];
+  private final BitSet[] changedBefore = new BitSet[5];
 
   /** The position in {@link #rectanglesOf} of each variable. */
   private VarIntMap rectanglesSlot;
@@ -464,7 +466,8 @@ public class Nooverlap extends Constraint
   void startPass(int pass) {
     swap(pass);
     if (pass == PROFILE_PASS) {
-      swap(PROFILE_OF_OTHERS);
+      swap(PROFILE_OF_OTHERS + X);
+      swap(PROFILE_OF_OTHERS + Y);
     }
   }
 
@@ -485,9 +488,31 @@ public class Nooverlap extends Constraint
    * @return true if the rectangle has to be examined.
    */
   boolean mustExamine(int pass, int j, BitSet o) {
-    int others = pass == PROFILE_PASS ? PROFILE_OF_OTHERS : pass;
+    if (pass == PROFILE_PASS) {
+      return mustSweep(j, o, X) || mustSweep(j, o, Y);
+    }
+    int others = pass;
     return changedBefore[pass].get(j)
         || changed[pass].get(j)
+        || o.intersects(changedBefore[others])
+        || o.intersects(changed[others]);
+  }
+
+  /**
+   * Tells whether the profile pass has to sweep a rectangle in a dimension, that is, whether the
+   * rectangle changed, or one that may overlap it and is in the profile of dimension dim changed,
+   * since the previous profile pass began. The sweep in dim reads only the bounds of the rectangle
+   * and of those in the profile of dim.
+   *
+   * @param j the index of the rectangle.
+   * @param o the rectangles that may overlap it.
+   * @param dim the dimension of the sweep.
+   * @return true if the rectangle has to be swept in dim.
+   */
+  boolean mustSweep(int j, BitSet o, int dim) {
+    int others = PROFILE_OF_OTHERS + dim;
+    return changedBefore[PROFILE_PASS].get(j)
+        || changed[PROFILE_PASS].get(j)
         || o.intersects(changedBefore[others])
         || o.intersects(changed[others]);
   }
@@ -502,8 +527,12 @@ public class Nooverlap extends Constraint
       changed[PRUNING_PASS].set(j);
       changed[PROFILE_PASS].set(j);
       changed[AREA_PASS].set(j);
-      if (hasCompulsoryPart(rectangle[j])) {
-        changed[PROFILE_OF_OTHERS].set(j);
+      Rectangle r = rectangle[j];
+      if (inProfile(r, X)) {
+        changed[PROFILE_OF_OTHERS + X].set(j);
+      }
+      if (inProfile(r, Y)) {
+        changed[PROFILE_OF_OTHERS + Y].set(j);
       }
     }
   }
@@ -516,15 +545,16 @@ public class Nooverlap extends Constraint
     changedBefore[PRUNING_PASS].clear();
     changed[PROFILE_PASS].clear();
     changedBefore[PROFILE_PASS].clear();
-    changed[PROFILE_OF_OTHERS].clear();
-    changedBefore[PROFILE_OF_OTHERS].clear();
+    for (int d = X; d <= Y; d++) {
+      changed[PROFILE_OF_OTHERS + d].clear();
+      changedBefore[PROFILE_OF_OTHERS + d].clear();
+    }
     changed[AREA_PASS].set(0, rectangle.length);
   }
 
-  // whether the profile of another rectangle in some dimension uses r
-  private static boolean hasCompulsoryPart(Rectangle r) {
-    return r.lst(X) < r.ect(X) && r.getLength(Y).min() > 0
-        || r.lst(Y) < r.ect(Y) && r.getLength(X).min() > 0;
+  // whether r makes events in the profiles of other rectangles in dimension d
+  private static boolean inProfile(Rectangle r, int d) {
+    return r.lst(d) < r.ect(d) && r.getLength(1 - d).min() > 0;
   }
 
   /**

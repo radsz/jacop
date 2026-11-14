@@ -195,6 +195,65 @@ class LazyBitSetDomainTest {
     }
   }
 
+  /**
+   * Probes a domain whose holes are kept as intervals the way a time table does, in increasing
+   * order over and over, and also backwards, at random and after removals that shrink the intervals
+   * below the index found last: contains, next and previous values and the removals must agree with
+   * an interval domain however the last found interval is out of date.
+   */
+  @Test
+  void probesOverIntervalHolesAgreeInAnyOrder() {
+    Random random = new Random(11);
+    for (int run = 0; run < 60; run++) {
+      int lo = random.nextInt(1000);
+      int hi = lo + LazyBitSetDomain.MAX_SPAN + random.nextInt(5000);
+      Store store = new Store();
+      IntVar lazy = new IntVar(store, "l", new LazyBitSetDomain(lo, hi, true));
+      IntVar plain = new IntVar(store, "p", new IntervalDomain(lo, hi));
+      for (int step = 0; step < 200; step++) {
+        store.setLevel(store.level + 1);
+        int a = lo + random.nextInt(hi - lo + 1);
+        int b = Math.min(hi, a + random.nextInt(random.nextBoolean() ? 3 : 400));
+        boolean failed = false;
+        try {
+          lazy.domain.inComplement(store.level, lazy, a, b);
+        } catch (FailException e) {
+          failed = true;
+        }
+        if (failed) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          continue;
+        }
+        plain.domain.inComplement(store.level, plain, a, b);
+        assertThat(lazy.domain.toString())
+            .as("run %d step %d", run, step)
+            .isEqualTo(plain.domain.toString());
+        int order = random.nextInt(3);
+        int probes = 300;
+        for (int k = 0; k < probes; k++) {
+          int v =
+              switch (order) {
+                case 0 -> lo - 2 + (int) ((long) k * (hi - lo + 4) / probes);
+                case 1 -> hi + 2 - (int) ((long) k * (hi - lo + 4) / probes);
+                default -> lo - 2 + random.nextInt(hi - lo + 5);
+              };
+          String at = "run " + run + " step " + step + " value " + v;
+          assertThat(lazy.domain.contains(v)).as(at).isEqualTo(plain.domain.contains(v));
+          assertThat(lazy.domain.nextValue(v)).as(at).isEqualTo(plain.domain.nextValue(v));
+          assertThat(lazy.domain.previousValue(v)).as(at).isEqualTo(plain.domain.previousValue(v));
+        }
+        if (random.nextInt(4) == 0) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          assertThat(lazy.domain.toString())
+              .as("run %d step %d undone", run, step)
+              .isEqualTo(plain.domain.toString());
+        }
+      }
+    }
+  }
+
   @Test
   void manyHolesAreRemovedInOnePass() {
     // a domain kept as intervals with many holes removes a domain of many intervals in one merge

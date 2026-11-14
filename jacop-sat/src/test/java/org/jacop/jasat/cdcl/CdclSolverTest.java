@@ -48,6 +48,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.locks.LockSupport;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -406,6 +407,33 @@ class CdclSolverTest {
     s.setDeadline(System.nanoTime() - 1);
     assertEquals(CdclSolver.UNKNOWN, s.solve());
     assertTrue(implied[0] < 5000, "rounds after the deadline: " + implied[0]);
+  }
+
+  @Test
+  void deadlineStopsAPropagationOfSlowRoundsSoon() {
+    // The clock was read every 1,024 rounds of the external propagator. Rounds of a creeping
+    // fixpoint can each take long (vrp-submission toy_D under the core-guided probe), so the
+    // search ran minutes past the deadline; now it stops within 64 rounds.
+    CdclSolver s = new CdclSolver();
+    int vars = 10_000;
+    s.ensureVars(vars);
+    int[] implied = {0};
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int propagate() {
+            LockSupport.parkNanos(100_000); // a slow round
+            return implied[0] < vars ? ++implied[0] : 0;
+          }
+
+          @Override
+          public int[] reason(int lit) {
+            return new int[] {lit};
+          }
+        });
+    s.setDeadline(System.nanoTime() - 1);
+    assertEquals(CdclSolver.UNKNOWN, s.solve());
+    assertTrue(implied[0] <= 64, "rounds after the deadline: " + implied[0]);
   }
 
   @Test

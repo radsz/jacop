@@ -35,7 +35,10 @@ import java.util.List;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 
-/** Diffn as it was before it skipped rectangles: every pass examines every rectangle. */
+/**
+ * Diffn as it was before it skipped rectangles: every pass examines every rectangle in both
+ * dimensions, and the profile events and dual feasible function tests are recomputed every time.
+ */
 public class DiffnExaminingAll extends Diffn {
 
   public DiffnExaminingAll(List<? extends List<? extends IntVar>> rectangles, boolean strict) {
@@ -45,6 +48,16 @@ public class DiffnExaminingAll extends Diffn {
   @Override
   boolean mustExamine(int pass, int j, BitSet o) {
     return true;
+  }
+
+  @Override
+  boolean mustSweep(int j, BitSet o, int dim) {
+    return true;
+  }
+
+  @Override
+  boolean reusesWork() {
+    return false;
   }
 
   @Override

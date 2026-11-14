@@ -47,7 +47,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -160,7 +160,7 @@ public class GCC extends Constraint
   /** One-time work of the first consistency call. */
   final InitOnce init = new InitOnce();
 
-  TimeStamp<Integer> stamp;
+  TimeStampInt stamp;
   private int stampValue;
 
   /**
@@ -497,7 +497,7 @@ public class GCC extends Constraint
   @Override
   public void impose(Store store) {
 
-    stamp = new TimeStamp<>(store, xSize);
+    stamp = new TimeStampInt(store, xSize);
 
     super.impose(store);
   }

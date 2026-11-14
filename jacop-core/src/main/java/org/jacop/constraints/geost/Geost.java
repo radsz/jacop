@@ -57,9 +57,12 @@ import org.jacop.core.InitOnce;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * Geost constraint for handling geometric placement problems.
@@ -121,7 +124,13 @@ import org.jacop.core.Var;
 @Slf4j
 @SuppressWarnings("PointlessBooleanExpression")
 public class Geost extends Constraint
-    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<Geost> {
+    implements UsesQueueVariable, Stateful, RemoveLevelLate, Copyable<Geost>, Explainable {
+
+  // whether LCG explains pruning and failures by covering the swept region (else by replay)
+  static final boolean EXPLAIN = !"false".equals(System.getProperty("org.jacop.geost.reasons"));
+
+  // built when LCG first asks for a reason
+  private GeostExplanation explanation;
 
   /**
    * It specifies different debugging switches to print out diverse information about execution of
@@ -342,7 +351,7 @@ public class Geost extends Constraint
   LinkedHashSet<Var> variableQueue;
 
   /** It stores the position of the last variable grounded in the previous level. */
-  TimeStamp<Integer> lastLevelLastVar;
+  TimeStampInt lastLevelLastVar;
 
   /** It contains all the objects which have been updated in the previous levels. */
   ArrayList<GeostObject> objectList;
@@ -359,7 +368,7 @@ public class Geost extends Constraint
    * It stores the index of the first object which have changed at current level. It allows to
    * inform the external constraints about objects being changed due to backtracking.
    */
-  TimeStamp<Integer> setStart;
+  TimeStampInt setStart;
 
   /** It contains objects that need to be checked in the next sweep. */
   LinkedHashSet<GeostObject> objectQueue;
@@ -1728,14 +1737,14 @@ public class Geost extends Constraint
 
     this.store = store;
 
-    lastLevelLastVar = new TimeStamp<>(store, store.level);
+    lastLevelLastVar = new TimeStampInt(store, store.level);
     lastLevelLastVar.update(-1);
 
     genInternalConstraints();
 
     store.registerRemoveLevelLateListener(this);
 
-    setStart = new TimeStamp<>(store, store.level);
+    setStart = new TimeStampInt(store, store.level);
     setStart.update(0);
 
     objectList = new ArrayList<>();
@@ -1938,6 +1947,28 @@ public class Geost extends Constraint
    *
    * @return an array list consisting of different statistics collected during search.
    */
+  /**
+   * Explains an atom by forbidden boxes covering the region it removes, see {@link
+   * GeostExplanation}.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    return EXPLAIN && explanation().explain(trail, entry, out);
+  }
+
+  /** Explains a failure by an object none of whose shapes fits in its origin domain. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return EXPLAIN && explanation().explainFailure(trail, out);
+  }
+
+  private GeostExplanation explanation() {
+    if (explanation == null) {
+      explanation = GeostExplanation.of(this);
+    }
+    return explanation;
+  }
+
   public List<Long> getStatistics() {
 
     List<Long> stats = new ArrayList<>();

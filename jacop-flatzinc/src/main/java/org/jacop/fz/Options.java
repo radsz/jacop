@@ -189,6 +189,8 @@ public class Options {
                 "free" (default; as with -f), "input" (input order, splitting the domains)
             --free-config <key=value,...> settings of the new free search engine, for experiments:
                 heuristic=domwdeg|cacd|chs|afc, lc=<k>, phase=0|1, restarts=geometric|luby|none,
+                set-heuristic=input|afc (set variables: input order (default) or largest
+                accumulated failure count and degree),
                 scale=<failures>, base=<growth of geometric restarts> (100, 1.5; optimisation 10, 1.05),
                 restart-on-solution=0|1, objective-last=0|1, interleave=restart|solution|none,
                 nogoods=0|1 (nogoods from restarts, default 1),
@@ -232,10 +234,14 @@ public class Options {
                 after each round without a better solution, up to 4, and resets on one;
                 default 1 = fixed share),
                 lcg-slow-rate=<conflicts per second> (with --lcg and an objective: LCG
-                that makes fewer conflicts per second by lcg-slow-at, and has a solution,
-                gives way to free search without learning, default 50; 0 = off),
+                that makes fewer conflicts per second by lcg-slow-at, has a solution and
+                stopped making progress, gives way to free search without learning,
+                default 300; 0 = off),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
+                lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
+                this share of the time limit, it raised the bound or its best cost fell by
+                lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
@@ -250,6 +256,9 @@ public class Options {
                 relaxation has value columns, or under -f tree cuts),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
+                lcg-chain-limit=<n> (with --lcg: linked bound literals per variable past which
+                short reasons on its new bounds are used once, not kept, so its chain
+                [x >= v] -> [x >= u] stops growing; default 64, a huge value turns it off),
                 lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
                 neighbourhood and lower-bound runs on one decision level, kept at restarts;
                 0 gives each its own level, default 1),
@@ -260,6 +269,11 @@ public class Options {
                 portfolio-bisect=<gap> (with -p 2 or more and an objective: the second thread
                 runs lcg-bisect=<gap> and proves lower bounds for the others, in place of the
                 last thread of the default layout; e.g. 0.1; default 0 = off),
+                lcg-shared-phase=0|1 (with --lcg, -p 2 or more and an objective: 1 lets activity
+                branching prefer the values of a better solution of another thread when it takes
+                up its bound; default 1),
+                portfolio-one-parse=0|1 (with -p 2 or more: 1 reads the model once and every
+                thread builds its store from that reading; 0 lets each thread read it; default 1),
                 share-clauses=<size>, share-lbd=<lbd> (with --lcg and -p: the LCG threads share
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),
@@ -276,7 +290,9 @@ public class Options {
                 routes of two-index vrp models, default 1),
                 lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
                 default 1), lns-kinds=<kind>+<kind>... (the neighbourhoods used, of random, graph,
-                propagation, objective, constraints, scheduling, packing, routes, related; default all),
+                propagation, objective, constraints, scheduling, packing, routes, related, blocks;
+                default all), lns-blocks=0|1 (whole blocks of the decomposition bound as
+                neighbourhoods, default 1),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
@@ -375,7 +391,8 @@ public class Options {
                 domains)
             --presolve-probe-budget <ms> time probing may take (default 1000)
             -cs, --complementary-search - gathers all model, non-defined
-                 variables to create the final search
+                 variables to create the final search (with -a the output
+                 variables first, so each output solution is printed once)
             -i, --interval print intervals instead of values for floating variables
             --precision <value> defines precision for floating operations
                 overrides precision definition in search annotation.

@@ -95,11 +95,16 @@ final class CardinalityExplanation {
     private long nanos;
 
     // whether the constraint may explain now
-    private boolean allows(long now) {
+    boolean allows(long now) {
       if (start == 0) {
         start = now;
       }
       return nanos <= SHARE * (now - start) + GRACE;
+    }
+
+    // counts the time of an explanation that started at the given time
+    void spend(long started) {
+      nanos += System.nanoTime() - started;
     }
   }
 

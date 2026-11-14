@@ -46,6 +46,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -86,7 +87,7 @@ public class SumWeight extends Constraint
   private TimeStamp<Long> sumGrounded;
 
   /** The position for the next grounded variable. */
-  private TimeStamp<Integer> nextGroundedPosition;
+  private TimeStampInt nextGroundedPosition;
 
   private long lMin;
   private long lMax;
@@ -269,7 +270,15 @@ public class SumWeight extends Constraint
 
   private void propagateBoundsToVariables(Store store, long min, long max, int pointer) {
 
+    // a term whose spread is within the room on both sides keeps its bounds: the bounds computed
+    // below would contain them, so the divisions and the domain call are skipped
+    long room = Math.min(-min, max);
+
     for (int i = pointer; i < list.length; i++) {
+
+      if (lMaxArray[i] - lMinArray[i] <= room) {
+        continue;
+      }
 
       IntVar v = list[i];
 
@@ -303,7 +312,7 @@ public class SumWeight extends Constraint
     positionMaping = Var.positionMapping(list, false, this.getClass());
 
     sumGrounded = new TimeStamp<>(store, 0L);
-    nextGroundedPosition = new TimeStamp<>(store, 0);
+    nextGroundedPosition = new TimeStampInt(store, 0);
 
     store.registerRemoveLevelLateListener(this);
 

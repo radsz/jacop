@@ -34,10 +34,13 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldifferentExcept;
@@ -51,6 +54,7 @@ import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.CardinalityMatrix;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Conditional;
@@ -84,6 +88,7 @@ import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.Or;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Same;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Sequence;
 import org.jacop.constraints.SoftAlldifferent;
@@ -97,13 +102,16 @@ import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SymmetricAlldifferent;
+import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.WeightedSubcircuits;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulCeqZ;
@@ -190,6 +198,39 @@ class GlobalConstraints implements ParserTreeConstants {
 
   // the tasks of the cumulative constraints read so far, see taskKey
   private final Set<List<IntVar>> cumulativeTasks = new HashSet<>();
+
+  // Tables over at most TableCliques.MAX_ARITY variables with the same tuples (after the filtering
+  // by the domains) share one tuple array, the reformulation of the table and, through the first
+  // HybridTable posted for them, the bit-sets built from the tuples. Models such as CrazyFrog post
+  // one large binary table on a thousand pairs of variables.
+  private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
+  private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
+  private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
+
+  /** The tuples of a table, compared by content. */
+  private record TableTuples(int[][] tuples, int hash) {
+    TableTuples(int[][] tuples) {
+      this(tuples, Arrays.deepHashCode(tuples));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof TableTuples(int[][] otherTuples, int otherHash)
+          && otherHash == hash
+          && Arrays.deepEquals(otherTuples, tuples);
+    }
+
+    @Override
+    public String toString() {
+      return "TableTuples[tuples=" + Arrays.deepToString(tuples) + ", hash=" + hash + "]";
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+  }
+
   boolean useDisjunctions;
   boolean useCumulativeUnary;
   ArrayList<Pair> duplicates;
@@ -591,7 +632,10 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   // under --proof a decomposition by positions, whose encoding unit propagation follows; the cut
-  // and dominance reasons of Subcircuit it does not
+  // and dominance reasons of Subcircuit it does not. The decomposition does not state that the
+  // successors differ, and --proof implies -b, which leaves out the implied Alldistinct, so the
+  // all-different is posted here: without it two nodes could share a successor (tpp and mario
+  // proved optima below the true ones).
   private void subcircuit(IntVar[] v) {
     if (support.options.proof() == null) {
       support.pose(new Subcircuit(v));
@@ -600,6 +644,7 @@ class GlobalConstraints implements ParserTreeConstants {
     for (Constraint c : Subcircuit.decomposition(store, v)) {
       support.pose(c);
     }
+    support.pose(new Alldiff(v));
   }
 
   // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
@@ -783,6 +828,82 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.parameterListForAlldistincts.add(v);
     support.alldifferentLists.add(v);
+  }
+
+  void gen_jacop_same(SimpleNode node, boolean usedBy) {
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] y = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    if (support.options.proof() == null) {
+      support.pose(usedBy ? new UsedBy(x, y) : new Same(x, y));
+      return;
+    }
+    // --proof: the counts of every value, whose encodings the proof has
+    if (!usedBy && x.length != y.length) {
+      throw Store.failException;
+    }
+    TreeSet<Integer> values = new java.util.TreeSet<>();
+    for (IntVar v : y) {
+      for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        values.add(e.nextElement());
+      }
+    }
+    for (int value : values) {
+      IntVar cx = new IntVar(store, 0, x.length);
+      IntVar cy = new IntVar(store, 0, y.length);
+      support.pose(new Count(x, cx, value));
+      support.pose(new Count(y, cy, value));
+      support.pose(usedBy ? new XgteqY(cx, cy) : new XeqY(cx, cy));
+    }
+    if (!usedBy) {
+      for (IntVar v : x) {
+        v.domain.in(store.level, v, setOf(values));
+      }
+    }
+  }
+
+  private static IntDomain setOf(Set<Integer> values) {
+    IntervalDomain d = new IntervalDomain();
+    for (int v : values) {
+      d.unionAdapt(v, v);
+    }
+    return d;
+  }
+
+  // the row and column sums are posted by the predicate; this adds the flow that links them
+  void gen_jacop_symmetric_gcc(SimpleNode node) {
+    IntVar[] flat = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int columns = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    IntVar[] rowCount = support.getVarArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] colCount = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    if (flat.length > 0 && support.options.proof() == null) {
+      support.pose(new SymmetricGCC(rows(flat, columns), rowCount, colCount));
+    }
+  }
+
+  // the cardinalities of the rows and columns are posted by the predicate; this adds the flows
+  void gen_jacop_cardinality_matrix(SimpleNode node) {
+    IntVar[] flat = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int columns = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int[] values = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+    IntVar[] rowCount = support.getVarArray((SimpleNode) node.jjtGetChild(3));
+    IntVar[] colCount = support.getVarArray((SimpleNode) node.jjtGetChild(4));
+    if (flat.length > 0 && values.length > 0 && support.options.proof() == null) {
+      support.pose(
+          new CardinalityMatrix(
+              rows(flat, columns),
+              values,
+              rows(rowCount, values.length),
+              rows(colCount, values.length)));
+    }
+  }
+
+  // a row-major array as rows of the given length
+  private static IntVar[][] rows(IntVar[] flat, int columns) {
+    IntVar[][] result = new IntVar[columns == 0 ? 0 : flat.length / columns][];
+    for (int r = 0; r < result.length; r++) {
+      result[r] = Arrays.copyOfRange(flat, r * columns, r * columns + columns);
+    }
+    return result;
   }
 
   // the capacity and the cost sum are posted by the predicate; this only adds the cost reasoning
@@ -1673,9 +1794,21 @@ class GlobalConstraints implements ParserTreeConstants {
 
   void gen_jacop_table_int(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
-    int size = v.length;
-    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int[] tbl = support.mergedTables.remove(node);
+    if (tbl == null) {
+      tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    }
+    poseTableRows(v, tbl);
+  }
 
+  /**
+   * It posts a positive table given by its rows flattened row by row, as jacop_table_int does.
+   *
+   * @param v the variables.
+   * @param tbl the rows, flattened row by row.
+   */
+  void poseTableRows(IntVar[] v, int[] tbl) {
+    int size = v.length;
     int[][] t = filterFeasibleTuples(tbl, v, size);
     if (t.length == 0) {
       // no tuple is allowed by the domains
@@ -1697,6 +1830,8 @@ class GlobalConstraints implements ParserTreeConstants {
       poseTableWithUniqueVars(v, t, vu);
     } else {
       if (v.length <= TableCliques.MAX_ARITY) {
+        t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
+        tableByTuples.putIfAbsent(t, null);
         support.dictionary.addTable(v, t);
       }
       poseTableBySize(v, t);
@@ -1755,12 +1890,55 @@ class GlobalConstraints implements ParserTreeConstants {
         return;
       }
     }
+    if (TableReformulation.enabled() && support.options.proof() == null) {
+      // a column of stars only is free, a column of one value fixes its variable
+      int[] keep = new int[nv.length];
+      int k = 0;
+      for (int c = 0; c < nv.length; c++) {
+        int value = kept.get(0)[c];
+        boolean same = true;
+        for (int[] row : kept) {
+          same &= row[c] == value;
+        }
+        if (!same) {
+          keep[k++] = c;
+        } else if (value != star) {
+          nv[c].domain.in(store.level, nv[c], value, value);
+        }
+      }
+      if (k < nv.length) {
+        IntVar[] rv = new IntVar[k];
+        List<int[]> rows = new ArrayList<>(kept.size());
+        for (int c = 0; c < k; c++) {
+          rv[c] = nv[keep[c]];
+        }
+        for (int[] row : kept) {
+          int[] r = new int[k];
+          for (int c = 0; c < k; c++) {
+            r[c] = row[keep[c]];
+          }
+          rows.add(r);
+        }
+        if (k == 0) {
+          return;
+        }
+        nv = rv;
+        kept = rows;
+      }
+    }
     if (nv.length == 1) {
       IntervalDomain d = new IntervalDomain();
+      boolean any = false;
       for (int[] row : kept) {
-        d.unionAdapt(row[0], row[0]);
+        if (row[0] == star) {
+          any = true;
+        } else {
+          d.unionAdapt(row[0], row[0]);
+        }
       }
-      nv[0].domain.in(store.level, nv[0], d);
+      if (!any) {
+        nv[0].domain.in(store.level, nv[0], d);
+      }
       return;
     }
     support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
@@ -2020,6 +2198,66 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private void poseTableBySize(IntVar[] v, int[][] t) {
+    if (v.length >= 2 && TableReformulation.enabled() && support.options.proof() == null) {
+      TableReformulation.Result parts;
+      if (tableByTuples.containsKey(t)) {
+        if (!reformulations.containsKey(t)) {
+          reformulations.put(t, TableReformulation.reformulate(t));
+        }
+        parts = reformulations.get(t);
+      } else {
+        parts = TableReformulation.reformulate(t);
+      }
+      if (parts != null) {
+        poseReformulatedTable(v, parts);
+        return;
+      }
+    }
+    poseTableBySizePlain(v, t);
+  }
+
+  // the parts of an exactly reformulated table: unary domains, binary tables, the rest
+  private void poseReformulatedTable(IntVar[] v, TableReformulation.Result parts) {
+    for (TableReformulation.Unary u : parts.unary()) {
+      IntervalDomain d = new IntervalDomain();
+      for (int value : u.values()) {
+        d.unionAdapt(value, value);
+      }
+      IntVar x = v[u.column()];
+      x.domain.in(store.level, x, d);
+    }
+    for (TableReformulation.Binary b : parts.binary()) {
+      IntVar x = v[b.from()];
+      IntVar y = v[b.to()];
+      if (b.identity()) {
+        support.pose(new XeqY(x, y));
+      } else {
+        support.pose(new HybridTable(new IntVar[] {x, y}, b.pairs()));
+      }
+    }
+    int[] rest = parts.rest();
+    if (rest.length >= 2) {
+      IntVar[] rv = new IntVar[rest.length];
+      for (int c = 0; c < rest.length; c++) {
+        rv[c] = v[rest[c]];
+      }
+      poseTableBySizePlain(rv, parts.restRows());
+    }
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% table reformulation: arity "
+              + v.length
+              + " -> "
+              + rest.length
+              + ", "
+              + parts.unary().size()
+              + " unary, "
+              + parts.binary().size()
+              + " binary");
+    }
+  }
+
+  private void poseTableBySizePlain(IntVar[] v, int[][] t) {
     // Merging the tuples that differ in one column only (-Djacop.table=star into *, or =sets into
     // sets of values) shrinks the tables that MiniZinc expanded from short tables, but it measured
     // slower overall on the FlatZinc benchmarks, so it is off by default.
@@ -2028,6 +2266,11 @@ class GlobalConstraints implements ParserTreeConstants {
         "plain".equals(mode) ? null : TableCompressor.compress(v, t, "sets".equals(mode));
     if (compressed != null && compressed.length < t.length) {
       support.pose(new HybridTable(v, compressed));
+    } else if (tableByTuples.containsKey(t)) {
+      HybridTable same = tableByTuples.get(t);
+      HybridTable table = same == null ? new HybridTable(v, t) : new HybridTable(v, same);
+      tableByTuples.put(t, table);
+      support.pose(table);
     } else {
       support.pose(new HybridTable(v, t));
     }
@@ -2575,6 +2818,27 @@ class GlobalConstraints implements ParserTreeConstants {
     support.pose(new LexOrder(x, y, false));
   }
 
+  void gen_jacop_all_different_lists(SimpleNode node) {
+    IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int rows = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
+    int n = rows == 0 ? 0 : a.length / rows;
+
+    // row i of the matrix is a[i * n .. i * n + n - 1]
+    IntVar[][] x = new IntVar[rows][n];
+    for (int i = 0; i < rows; i++) {
+      System.arraycopy(a, i * n, x[i], 0, n);
+    }
+    int[][] except = new int[0][];
+    if (node.jjtGetNumChildren() > 2) {
+      int[] e = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+      except = new int[n == 0 ? 0 : e.length / n][];
+      for (int t = 0; t < except.length; t++) {
+        except[t] = Arrays.copyOfRange(e, t * n, t * n + n);
+      }
+    }
+    support.pose(new AllDifferentLists(x, except));
+  }
+
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {
     IntVar[] a = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int vectors = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -2734,6 +2998,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
+    support.binPackingPermutations.add(bin, cc, w, minBin);
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -2749,6 +3014,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, load, w, minBin));
     support.binPackingCliques.add(bin, load, w, minBin);
+    support.binPackingPermutations.add(bin, load, w, minBin);
   }
 
   void gen_jacop_float_maximum(SimpleNode node) {

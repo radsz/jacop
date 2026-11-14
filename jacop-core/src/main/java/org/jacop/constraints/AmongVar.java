@@ -52,7 +52,7 @@ import org.jacop.core.MutableDomain;
 import org.jacop.core.MutableDomainValue;
 import org.jacop.core.MutableVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 
 /**
@@ -101,9 +101,9 @@ public class AmongVar extends Constraint
   private MutableVar lbS;
   private MutableVar futureLbS;
   // Time stamps
-  private TimeStamp<Integer> lb0Ts;
-  private TimeStamp<Integer> ub0Ts;
-  private TimeStamp<Integer> yGrounded;
+  private TimeStampInt lb0Ts;
+  private TimeStampInt ub0Ts;
+  private TimeStampInt yGrounded;
 
   // Scratch space of consistency, kept between calls so that the counting allocates nothing.
   // lbOfValue and ubOfValue hold lb[v] and ub[v] at v - valueOffset, valid where valueStamp is
@@ -554,7 +554,7 @@ public class AmongVar extends Constraint
     }
     int lastIndex = lastIndexRef[0];
     for (int h = 0; h < mustBeCoveredNow.size; h++) {
-      Interval inv = mustBeCoveredNow.intervals[h];
+      Interval inv = mustBeCoveredNow.getInterval(h);
       for (int v = inv.min(); v <= inv.max(); v++) {
         int cardinalityV = 0;
         int last = -1;
@@ -847,7 +847,7 @@ public class AmongVar extends Constraint
       Interval inv;
 
       for (int h = 0; h < pureUbs.size; h++) {
-        inv = pureUbs.intervals[h];
+        inv = pureUbs.getInterval(h);
         // for each interval of UBS
         if (inv != null) {
           // For each value of the interval
@@ -905,19 +905,19 @@ public class AmongVar extends Constraint
               lbTmp = lbTmp - lb0;
 
               if (lbVubV.getSize() > 0) {
-                for (Interval a : lbVubV.intervals) {
-                  if (a != null) {
-                    max = Math.min(weight + a.max(), ub0);
-                    min = Math.max(lbTmp + a.min(), lb0);
+                IntervalDomain snapshot = lbVubV;
+                for (int k = 0; k < snapshot.size; k++) {
+                  Interval a = snapshot.getInterval(k);
+                  max = Math.min(weight + a.max(), ub0);
+                  min = Math.max(lbTmp + a.min(), lb0);
 
-                    if (min <= max) {
-                      lbVubV = (IntervalDomain) lbVubV.union(min, max);
-                      if (DEBUG_ALL && a != null) {
-                        log.debug(" >>>> {} + [{}, {}] = [{}, {} ]", a, lbTmp, weight, min, max);
-                      }
-                    } else if (DEBUG_ALL && a != null) {
-                      log.debug(" >>>> {} + [{}, {}] = NOTHING", a, lbTmp, weight);
+                  if (min <= max) {
+                    lbVubV = (IntervalDomain) lbVubV.union(min, max);
+                    if (DEBUG_ALL) {
+                      log.debug(" >>>> {} + [{}, {}] = [{}, {} ]", a, lbTmp, weight, min, max);
                     }
+                  } else if (DEBUG_ALL) {
+                    log.debug(" >>>> {} + [{}, {}] = NOTHING", a, lbTmp, weight);
                   }
                 }
               }
@@ -942,7 +942,7 @@ public class AmongVar extends Constraint
       pureUbs = (IntervalDomain) ubSdom.subtract(lbSdom);
 
       for (int h = 0; h < pureUbs.size; h++) {
-        inv = pureUbs.intervals[h];
+        inv = pureUbs.getInterval(h);
         if (inv != null) {
 
           for (int v = inv.min(); v <= inv.max(); v++) {
@@ -1272,10 +1272,10 @@ public class AmongVar extends Constraint
     lbOutside = new int[listOfX.length];
     lbOutsideValue = new int[listOfX.length];
 
-    lb0Ts = new TimeStamp<>(store, 0);
-    ub0Ts = new TimeStamp<>(store, listOfX.length);
+    lb0Ts = new TimeStampInt(store, 0);
+    ub0Ts = new TimeStampInt(store, listOfX.length);
 
-    yGrounded = new TimeStamp<>(store, 0);
+    yGrounded = new TimeStampInt(store, 0);
 
     store.raiseLevelBeforeConsistency = true;
 

@@ -104,9 +104,13 @@ public class ExpPeqR extends Constraint
     if (q.min() == 1.0 && q.max() == 1.0) {
       return new double[] {0.0, 0.0};
     }
+    // exp multiplies the rounding of its argument by the argument, so the bounds of one side,
+    // roundings of exp or log, miss their preimage by more than an ulp (exp(log(x)) is not x): the
+    // inverse is taken one step outside each bound
     double pMin;
-    if (q.min() > 0) {
-      pMin = Math.log(q.min());
+    double qMin = FloatDomain.down(q.min());
+    if (qMin > 0) {
+      pMin = Math.log(qMin);
       if (Double.isNaN(pMin) || Double.isInfinite(pMin)) {
         throw new InternalException("Floating-point overflow in constraint " + this);
       }
@@ -116,7 +120,7 @@ public class ExpPeqR extends Constraint
     } else {
       throw Store.failException;
     }
-    double pMax = Math.log(q.max());
+    double pMax = Math.log(outward(q.max(), FloatDomain.up(q.max())));
     if (Double.isNaN(pMax) || Double.isInfinite(pMax)) {
       throw new InternalException("Floating-point overflow in constraint " + this);
     }
@@ -124,18 +128,23 @@ public class ExpPeqR extends Constraint
     return new double[] {pMin, pMax};
   }
 
+  // the step outside a bound, or the bound itself when that step overflows
+  private static double outward(double bound, double step) {
+    return Double.isInfinite(step) && !Double.isInfinite(bound) ? bound : step;
+  }
+
   /** Returns {qMin, qMax} for exp(p)=q. */
   private double[] computeSecondBoundsFromFirst() {
     if (p.min() == p.max() && p.min() == 0.0) {
       return new double[] {1.0, 1.0};
     }
-    double qMin = Math.exp(p.min());
+    double qMin = Math.exp(FloatDomain.down(p.min()));
     if (Double.isNaN(qMin) || Double.isInfinite(qMin)) {
       throw new InternalException("Floating-point overflow in constraint " + this);
     }
     qMin = FloatDomain.down(qMin);
 
-    double qMax = Math.exp(p.max());
+    double qMax = Math.exp(outward(p.max(), FloatDomain.up(p.max())));
     if (Double.isNaN(qMax) || Double.isInfinite(qMax)) {
       throw new InternalException("Floating-point overflow in constraint " + this);
     }

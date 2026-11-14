@@ -127,6 +127,34 @@ class AdaptiveLnsTest {
   }
 
   @Test
+  void blocksRelaxWholeGroupsHeavyFirst() {
+    AdaptiveLns lns = withSolution(3);
+    assertFalse(lns.usable(AdaptiveLns.Kind.BLOCKS));
+    // four groups of three; the last one weighs 30 times each other one
+    IntVar[][] groups = new IntVar[4][3];
+    for (int i = 0; i < N; i++) {
+      groups[i / 3][i % 3] = x[i];
+    }
+    lns.addGroups(groups, new double[] {0.1, 0.1, 0.1, 3});
+    assertTrue(lns.usable(AdaptiveLns.Kind.BLOCKS));
+    int lastFree = 0;
+    int runs = 200;
+    for (int k = 0; k < runs; k++) {
+      boolean[] free = relaxed(lns.neighbourhood(AdaptiveLns.Kind.BLOCKS), N);
+      for (int g = 0; g < 4; g++) {
+        // a group is relaxed as a whole or not at all
+        assertEquals(free[3 * g], free[3 * g + 1]);
+        assertEquals(free[3 * g], free[3 * g + 2]);
+      }
+      if (free[N - 1]) {
+        lastFree++;
+      }
+      lns.outcome(AdaptiveLns.Outcome.LIMIT);
+    }
+    assertTrue(lastFree > runs * 3 / 4, "heavy group relaxed in " + lastFree + " runs");
+  }
+
+  @Test
   void neighbourhoodsGrowWhenRunsFinish() {
     AdaptiveLns lns = withSolution(2);
     int first = 0;

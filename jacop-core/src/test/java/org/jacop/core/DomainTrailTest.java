@@ -50,57 +50,109 @@ class DomainTrailTest {
     final List<long[]> undone = new ArrayList<>();
 
     @Override
-    public void undo(DomainTrail trail, int entry) {
-      undone.add(
-          new long[] {
-            entry,
-            trail.getInt(entry, 0),
-            trail.getInt(entry, 1),
-            trail.getInt(entry, DomainTrail.INTS_PER_ENTRY - 1),
-            trail.getLong(entry),
-            trail.getObject(entry, DomainTrail.OBJECTS_PER_ENTRY - 1) instanceof Integer i ? i : -1
-          });
+    public void undoWord(int word, int stamp, long value) {
+      undone.add(new long[] {word, stamp, value});
     }
+
+    @Override
+    public void undo(DomainTrail trail, int entry, int kind) {
+      int n = -kind;
+      long[] u = new long[2 + 2 * n];
+      u[0] = kind;
+      u[1] = trail.getObject(entry, 0) == this ? 1 : 0;
+      for (int k = 0; k < n; k++) {
+        u[2 + k] = trail.getInt(entry, k);
+        u[2 + n + k] = (Integer) trail.getObject(entry, k + 1);
+      }
+      undone.add(u);
+    }
+  }
+
+  /** The values the i-th push of fill writes, as the recorder reads them back. */
+  private static long[] expected(int i, int level) {
+    if (i % 3 != 0) {
+      return new long[] {i % 1000, level, 1L << 40 | i};
+    }
+    int n = 1 + i % 7;
+    long[] u = new long[2 + 2 * n];
+    u[0] = -n;
+    u[1] = 1;
+    for (int k = 0; k < n; k++) {
+      u[2 + k] = i * 10L + k;
+      u[2 + n + k] = -(i * 10L + k);
+    }
+    return u;
+  }
+
+  /** Pushes perLevel entries for each level from first to last, mixing word and other entries. */
+  private static int fill(DomainTrail trail, Recorder r, int first, int last, int perLevel) {
+    int i = (first - 1) * perLevel;
+    for (int level = first; level <= last; level++) {
+      for (int k = 0; k < perLevel; k++, i++) {
+        if (i % 3 != 0) {
+          trail.pushWord(r, i % 1000, level, level, 1L << 40 | i);
+        } else {
+          int n = 1 + i % 7;
+          int entry = trail.push(r, -n, level, n, n);
+          for (int j = 0; j < n; j++) {
+            trail.setInt(entry, j, i * 10 + j);
+            trail.setObject(entry, j + 1, -(i * 10 + j));
+          }
+        }
+      }
+    }
+    return i;
   }
 
   @Test
   void entriesSurviveGrowthAndPopNewestFirst() {
     DomainTrail trail = new DomainTrail();
     Recorder r = new Recorder();
-    // 10 levels of 1000 entries cross the first segments (256, 512, 1024, ... entries)
-    int levels = 10;
+    assertThat(trail.isEmpty()).isTrue();
+    // 20 levels of 1000 mixed entries cross the first segments of both streams
+    int levels = 20;
     int perLevel = 1000;
-    for (int level = 1; level <= levels; level++) {
-      for (int k = 0; k < perLevel; k++) {
-        int entry = trail.push(r, k, level);
-        assertThat(entry).isEqualTo((level - 1) * perLevel + k);
-        trail.setInt(entry, DomainTrail.INTS_PER_ENTRY - 1, -entry);
-        trail.setLong(entry, 1L << 40 | entry);
-        trail.setObject(entry, DomainTrail.OBJECTS_PER_ENTRY - 1, entry * 3);
-      }
-    }
-    assertThat(trail.size()).isEqualTo(levels * perLevel);
+    fill(trail, r, 1, levels, perLevel);
 
     trail.removeLevel(levels - 1);
-    assertThat(trail.size()).isEqualTo((levels - 2) * perLevel);
     assertThat(r.undone).hasSize(2 * perLevel);
-    for (int i = 0; i < r.undone.size(); i++) {
-      long[] u = r.undone.get(i);
-      int entry = levels * perLevel - 1 - i;
-      int level = entry / perLevel + 1;
-      assertThat(u)
-          .containsExactly(entry, entry % perLevel, level, -entry, 1L << 40 | entry, entry * 3L);
+    for (int j = 0; j < r.undone.size(); j++) {
+      int i = levels * perLevel - 1 - j;
+      assertThat(r.undone.get(j)).containsExactly(expected(i, i / perLevel + 1));
     }
 
-    // the space of popped entries is used again, with no stale objects
-    int entry = trail.push(r, 7, levels);
-    assertThat(entry).isEqualTo((levels - 2) * perLevel);
-    assertThat(trail.getObject(entry, DomainTrail.OBJECTS_PER_ENTRY - 1)).isNull();
-    assertThat(trail.getInt(entry - 1, DomainTrail.INTS_PER_ENTRY - 1)).isEqualTo(-(entry - 1));
-
+    // the space of popped entries is used again, then everything pops in order
+    fill(trail, r, levels - 1, levels + 5, perLevel);
     r.undone.clear();
     trail.removeLevel(1);
-    assertThat(trail.size()).isZero();
-    assertThat(r.undone).hasSize((levels - 2) * perLevel + 1);
+    assertThat(trail.isEmpty()).isTrue();
+    assertThat(r.undone).hasSize((levels + 5) * perLevel);
+    for (int j = 0; j < r.undone.size(); j++) {
+      int i = (levels + 5) * perLevel - 1 - j;
+      assertThat(r.undone.get(j)).containsExactly(expected(i, i / perLevel + 1));
+    }
+    r.undone.clear();
+    trail.removeLevel(0);
+    assertThat(r.undone).isEmpty();
+  }
+
+  @Test
+  void savedWordsGivesTheOldestWordAfterAnEntry() {
+    DomainTrail trail = new DomainTrail();
+    Recorder a = new Recorder();
+    Recorder b = new Recorder();
+    for (int i = 0; i < 5000; i++) {
+      trail.pushWord(b, i % 4, 1, 0, -1L);
+    }
+    int entry = trail.push(a, -1, 2, 1, 1);
+    for (int i = 0; i < 5000; i++) {
+      // a's words 0..3 first saved with values 100 + word, then overwritten by later saves
+      trail.pushWord(a, i % 4, 2 + i / 100, 0, 100 + i);
+      trail.pushWord(b, i % 4, 2 + i / 100, 0, -2L);
+      trail.push(b, -3, 2 + i / 100, 3, 2);
+    }
+    long[] words = new long[5];
+    trail.savedWords(a, entry, words);
+    assertThat(words).containsExactly(100, 101, 102, 103, 0);
   }
 }

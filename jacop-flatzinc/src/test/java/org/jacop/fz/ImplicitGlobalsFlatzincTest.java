@@ -273,6 +273,8 @@ class ImplicitGlobalsFlatzincTest {
     }
   }
 
+  private static final String LINEAR_OVERLAP = "org.jacop.fz.linearOverlap";
+
   @Test
   void detectedGlobalsKeepAllSolutions() throws IOException {
     Random random = new Random(7);
@@ -281,7 +283,15 @@ class ImplicitGlobalsFlatzincTest {
     int trials = Integer.getInteger("implicitGlobals.trials", 600);
     for (int trial = 0; trial < trials; trial++) {
       Model model = randomModel(random);
-      String out = run(model.fzn(), "-a", "-debug");
+      // linear overlap factoring proves some of these models infeasible while posting, before the
+      // detectors run, so it would hide the detections this test counts
+      System.setProperty(LINEAR_OVERLAP, "false");
+      String out;
+      try {
+        out = run(model.fzn(), "-a", "-debug");
+      } finally {
+        System.clearProperty(LINEAR_OVERLAP);
+      }
       if (out.contains("% redundant GCC")) {
         gcc++;
       }

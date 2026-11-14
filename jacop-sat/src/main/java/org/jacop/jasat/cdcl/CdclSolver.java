@@ -74,14 +74,13 @@ public final class CdclSolver {
   // reason of a literal the external propagator implied, asked for only when analysis needs it
   private static final int EXTERNAL_REASON = Integer.MIN_VALUE + 1;
 
-  // clause header
+  // clause header: three ints, the saved search position shares META with the flags and the LBD
   private static final int SIZE = 0;
   private static final int META = 1;
   private static final int ACT = 2;
-  private static final int POS = 3;
-  private static final int HEADER = 4;
+  private static final int HEADER = 3;
 
-  // META bits; LBD in the bits from LBD_SHIFT
+  // META bits; LBD in the bits from LBD_SHIFT, the saved search position from POS_SHIFT
   private static final int LEARNT_FLAG = 1;
   private static final int DELETED = 2;
   private static final int USED = 4;
@@ -90,6 +89,11 @@ public final class CdclSolver {
   private static final int TIER_MASK = 3 << TIER_SHIFT;
   private static final int LBD_SHIFT = 8;
   private static final int MAX_LBD = 255;
+  private static final int POS_SHIFT = 16;
+  private static final int MAX_POS = 0xFFFF;
+  private static final int NOT_POS = (1 << POS_SHIFT) - 1;
+  // META of a fresh clause: the search for a replacement watch starts at the third literal
+  private static final int POS_START = 2 << POS_SHIFT;
 
   private static final int TIER_CORE = 0;
   private static final int TIER_MID = 1;
@@ -100,8 +104,16 @@ public final class CdclSolver {
   // --- variables and assignment
   private int numVars;
   private byte[] vals = new byte[0];
-  private int[] level = new int[0];
-  private int[] reason = new int[0];
+  // per variable v, one record of VREC ints at v << 2: its decision level, reason, trail position
+  // and the seen mark of conflict analysis and minimisation (0 or 1). An assignment writes one
+  // cache line, and analysis reads one line per variable instead of one per array (as Kissat's
+  // struct assigned and CaDiCaL's Var). 16 bytes keep a record inside one line.
+  private static final int LEVEL = 0;
+  private static final int REASON = 1;
+  private static final int TPOS = 2;
+  private static final int SEEN = 3;
+  private static final int VREC = 4;
+  private int[] vdata = new int[0];
   private byte[] savedSign = new byte[0];
   private byte originalSign; // the initial phase: 0 for true, 1 for false
   private byte[] targetSign = new byte[0];
@@ -120,7 +132,6 @@ public final class CdclSolver {
   private int chronoLimit = 100;
   private int targetAssigned;
   private double[] activity = new double[0];
-  private byte[] seen = new byte[0];
 
   /** Whether the analysed variables besides the learnt ones go to the external propagator. */
   private boolean analysedNotify;
@@ -133,8 +144,6 @@ public final class CdclSolver {
   private final VarHeap order = new VarHeap();
 
   private int[] trail = new int[0];
-  // position of each assigned variable on the trail
-  private int[] trailPos = new int[0];
   private int trailSize;
   private int qhead;
   private int[] trailLim = new int[16];
@@ -213,6 +222,8 @@ public final class CdclSolver {
   private long conflictsAtRestart;
   private int lubyIndex;
   private long lubyLimit;
+  // conflicts of one unit of the Luby sequence in stable mode
+  private static final long LUBY_UNIT = Long.getLong("jacop.jasat.lubyUnit", 512L);
   private final int[] lbdQueue = new int[50];
   private int lbdQueueSize;
   private int lbdQueueHead;
@@ -370,20 +381,17 @@ public final class CdclSolver {
     if (n <= numVars) {
       return;
     }
-    int cap = reason.length;
+    int cap = vdata.length / VREC;
     if (n > cap) {
       int c = Math.max(n, 2 * cap);
       vals = Arrays.copyOf(vals, 2 * c);
-      level = Arrays.copyOf(level, c);
-      reason = Arrays.copyOf(reason, c);
+      vdata = Arrays.copyOf(vdata, VREC * c);
       savedSign = Arrays.copyOf(savedSign, c);
       targetSign = Arrays.copyOf(targetSign, c);
       bestSign = Arrays.copyOf(bestSign, c);
       activity = Arrays.copyOf(activity, c);
-      seen = Arrays.copyOf(seen, c);
       analysedMark = Arrays.copyOf(analysedMark, c);
       trail = Arrays.copyOf(trail, c);
-      trailPos = Arrays.copyOf(trailPos, c);
       shrinkMark = Arrays.copyOf(shrinkMark, c);
       poisonMark = Arrays.copyOf(poisonMark, c);
       eliminatedVar = Arrays.copyOf(eliminatedVar, c);
@@ -394,7 +402,9 @@ public final class CdclSolver {
       binSize = Arrays.copyOf(binSize, 2 * c);
     }
     order.grow(n, activity);
-    Arrays.fill(reason, numVars, n, NO_REASON);
+    for (int v = numVars; v < n; v++) {
+      vdata[v << 2 | REASON] = NO_REASON;
+    }
     // the initial phase, true (sign 0) by default as in CaDiCaL
     Arrays.fill(savedSign, numVars, n, originalSign);
     Arrays.fill(targetSign, numVars, n, (byte) -1);
@@ -895,9 +905,11 @@ public final class CdclSolver {
     mem[ref + SIZE] = size;
     int tier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : TIER_LOCAL;
     mem[ref + META] =
-        (isLearnt ? LEARNT_FLAG : 0) | (tier << TIER_SHIFT) | (Math.min(lbd, MAX_LBD) << LBD_SHIFT);
+        (isLearnt ? LEARNT_FLAG : 0)
+            | (tier << TIER_SHIFT)
+            | (Math.min(lbd, MAX_LBD) << LBD_SHIFT)
+            | POS_START;
     mem[ref + ACT] = Float.floatToRawIntBits(0f);
-    mem[ref + POS] = 2;
     System.arraycopy(lits, 0, mem, ref + HEADER, size);
     memSize += need;
     return ref;
@@ -940,7 +952,7 @@ public final class CdclSolver {
 
   private boolean isLocked(int ref) {
     int l0 = mem[ref + HEADER];
-    return vals[l0] > 0 && reason[l0 >> 1] == ref;
+    return vals[l0] > 0 && varReason(l0 >> 1) == ref;
   }
 
   private void deleteClause(int ref) {
@@ -953,7 +965,7 @@ public final class CdclSolver {
   }
 
   private static int lbdOf(int meta) {
-    return meta >>> LBD_SHIFT;
+    return (meta >>> LBD_SHIFT) & MAX_LBD;
   }
 
   private static int tierOf(int meta) {
@@ -968,13 +980,33 @@ public final class CdclSolver {
 
   /** Assigns at a level that may be below the current one (chronological backtracking). */
   private void assignAt(int lit, int why, int lvl) {
-    int v = lit >> 1;
+    int r = (lit >> 1) << 2;
     vals[lit] = 1;
     vals[lit ^ 1] = -1;
-    level[v] = lvl;
-    reason[v] = why;
-    trailPos[v] = trailSize;
+    vdata[r | LEVEL] = lvl;
+    vdata[r | REASON] = why;
+    vdata[r | TPOS] = trailSize;
     trail[trailSize++] = lit;
+  }
+
+  /** The decision level of variable v (meaningful while v is assigned). */
+  private int varLevel(int v) {
+    return vdata[v << 2 | LEVEL];
+  }
+
+  /** The decision level of the variable of internal literal lit. */
+  private int litLevel(int lit) {
+    return vdata[(lit >> 1) << 2 | LEVEL];
+  }
+
+  /** The reason of variable v: NO_REASON, UNIT_REASON, a clause reference or a stack reference. */
+  private int varReason(int v) {
+    return vdata[v << 2 | REASON];
+  }
+
+  /** The position of variable v on the trail (meaningful while v is assigned). */
+  private int varTrailPos(int v) {
+    return vdata[v << 2 | TPOS];
   }
 
   private void newDecisionLevel() {
@@ -1006,18 +1038,18 @@ public final class CdclSolver {
     for (int i = start; i < trailSize; i++) {
       int lit = trail[i];
       int v = lit >> 1;
-      if (level[v] <= target) {
+      if (varLevel(v) <= target) {
         // assigned out of order below the target level (chronological backtracking): stays
-        trailPos[v] = kept;
+        vdata[v << 2 | TPOS] = kept;
         trail[kept++] = lit;
         continue;
       }
       vals[lit] = 0;
       vals[lit ^ 1] = 0;
-      int r = reason[v];
+      int r = varReason(v);
       if (r >= STACK_REF) {
         rwasted += HEADER + rstack[r - STACK_REF + SIZE];
-        reason[v] = NO_REASON;
+        vdata[v << 2 | REASON] = NO_REASON;
         if (proof != null) {
           proof.delete(rstack, r - STACK_REF + HEADER, rstack[r - STACK_REF + SIZE]);
         }
@@ -1071,7 +1103,7 @@ public final class CdclSolver {
           return BINARY_CONFLICT;
         }
         if (chrono) {
-          assignAt(other, -2 - falseLit, level[falseLit >> 1]);
+          assignAt(other, -2 - falseLit, litLevel(falseLit));
         } else {
           assign(other, -2 - falseLit);
         }
@@ -1103,7 +1135,8 @@ public final class CdclSolver {
           continue;
         }
         int size = localMem[ref + SIZE];
-        int pos = localMem[ref + POS];
+        int meta = localMem[ref + META];
+        int pos = meta >>> POS_SHIFT;
         int k = pos;
         int found = -1;
         for (; k < size; k++) {
@@ -1121,7 +1154,10 @@ public final class CdclSolver {
           }
         }
         if (found >= 0) {
-          localMem[ref + POS] = found;
+          // a position past 16 bits (clauses over 65,535 literals) keeps the old start
+          if (found <= MAX_POS) {
+            localMem[ref + META] = (meta & NOT_POS) | (found << POS_SHIFT);
+          }
           int w = localMem[lits + found];
           localMem[lits + 1] = w;
           localMem[lits + found] = falseLit;
@@ -1137,7 +1173,7 @@ public final class CdclSolver {
         if (chrono) {
           int lvl = 0;
           for (k = 1; k < size; k++) {
-            lvl = Math.max(lvl, level[localMem[lits + k] >> 1]);
+            lvl = Math.max(lvl, litLevel(localMem[lits + k]));
           }
           assignAt(first, ref, lvl);
         } else {
@@ -1165,7 +1201,7 @@ public final class CdclSolver {
   private void noteLowWatched(int ref, int a, int b) {
     int t = vals[a] > 0 ? a : b;
     int f = t == a ? b : a;
-    if (vals[t] <= 0 || vals[f] >= 0 || level[t >> 1] <= level[f >> 1]) {
+    if (vals[t] <= 0 || vals[f] >= 0 || litLevel(t) <= litLevel(f)) {
       return;
     }
     if (numLowWatched + 3 > lowWatched.length) {
@@ -1228,7 +1264,7 @@ public final class CdclSolver {
   private boolean atRisk(int a, int b) {
     int t = vals[a] > 0 ? a : b;
     int f = t == a ? b : a;
-    return vals[t] > 0 && vals[f] < 0 && level[t >> 1] > level[f >> 1];
+    return vals[t] > 0 && vals[f] < 0 && litLevel(t) > litLevel(f);
   }
 
   private int visitLowWatched(int a, int b) {
@@ -1328,7 +1364,7 @@ public final class CdclSolver {
     }
     int lbd = 0;
     for (int i = from; i < from + size; i++) {
-      int l = level[a[i] >> 1];
+      int l = litLevel(a[i]);
       if (l >= levelStamp.length) {
         levelStamp = Arrays.copyOf(levelStamp, 2 * l + 2);
       }
@@ -1350,7 +1386,7 @@ public final class CdclSolver {
       int lbd = computeLbd(mem, ref + HEADER, mem[ref + SIZE]);
       if (lbd < lbdOf(meta)) {
         int newTier = lbd <= coreLbd ? TIER_CORE : lbd <= midLbd ? TIER_MID : tier;
-        meta = (meta & ((1 << LBD_SHIFT) - 1) & ~TIER_MASK) | (newTier << TIER_SHIFT);
+        meta = (meta & ~(MAX_LBD << LBD_SHIFT) & ~TIER_MASK) | (newTier << TIER_SHIFT);
         meta |= lbd << LBD_SHIFT;
       }
     }
@@ -1385,7 +1421,7 @@ public final class CdclSolver {
       } else {
         lit = k == 0 ? conflictLit0 : conflictLit1;
       }
-      int l = level[lit >> 1];
+      int l = litLevel(lit);
       if (l > maxLevel) {
         maxLevel = l;
         count = 1;
@@ -1408,12 +1444,12 @@ public final class CdclSolver {
     backtrack(maxLevel - 1);
     if (lits < 0) {
       int other = forced == conflictLit0 ? conflictLit1 : conflictLit0;
-      assignAt(forced, -2 - other, level[other >> 1]);
+      assignAt(forced, -2 - other, litLevel(other));
     } else {
       rewatch(ref);
       int lvl = 0;
       for (int k = 1; k < size; k++) {
-        lvl = Math.max(lvl, level[mem[lits + k] >> 1]);
+        lvl = Math.max(lvl, litLevel(mem[lits + k]));
       }
       assignAt(mem[lits], ref, lvl);
     }
@@ -1426,7 +1462,7 @@ public final class CdclSolver {
    * #setExternalReasonKeep} literals, and is temporary beyond.
    */
   private int reasonRef(int v) {
-    int r = reason[v];
+    int r = varReason(v);
     if (r != EXTERNAL_REASON) {
       return r;
     }
@@ -1442,7 +1478,7 @@ public final class CdclSolver {
       int l = toLit(d);
       if (l == lit) {
         found = true;
-      } else if (vals[l] >= 0 || trailPos[l >> 1] > trailPos[v]) {
+      } else if (vals[l] >= 0 || varTrailPos(l >> 1) > varTrailPos(v)) {
         throw new IllegalStateException(
             "reason of " + toDimacs(lit) + " has " + d + " not false before it");
       }
@@ -1465,7 +1501,11 @@ public final class CdclSolver {
       r = UNIT_REASON;
     } else {
       orderForWatches(c, n);
-      if (n == 2) {
+      if (n <= externalReasonKeep && notifying && REASON_UNKEPT && hasUnkeptLiteral(c, n)) {
+        // kept, it would make the literal permanent and lengthen the chain of its variable
+        unkeptReasons++;
+        r = pushReason(v, c, n);
+      } else if (n == 2) {
         addLearntBinary(c[0], c[1]);
         notifyKept(c, n);
         noteLowWatched(BINARY, c[0], c[1]);
@@ -1480,8 +1520,18 @@ public final class CdclSolver {
         r = pushReason(v, c, n);
       }
     }
-    reason[v] = r;
+    vdata[v << 2 | REASON] = r;
     return r;
+  }
+
+  /** Whether one of the first n literals of c is one the external propagator does not keep. */
+  private boolean hasUnkeptLiteral(int[] c, int n) {
+    for (int i = 0; i < n; i++) {
+      if (external.unkept((c[i] >> 1) + 1)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private void notifyKept(int[] c, int n) {
@@ -1508,7 +1558,7 @@ public final class CdclSolver {
   }
 
   private boolean reasonLive(int off) {
-    return reason[rstack[off + META]] == STACK_REF + off;
+    return varReason(rstack[off + META]) == STACK_REF + off;
   }
 
   /**
@@ -1532,7 +1582,7 @@ public final class CdclSolver {
         if (reasonLive(off)) {
           int len = HEADER + rstack[off + SIZE];
           System.arraycopy(rstack, off, rstack, top, len);
-          reason[rstack[top + META]] = STACK_REF + top;
+          vdata[rstack[top + META] << 2 | REASON] = STACK_REF + top;
           rstarts[j++] = top;
           top += len;
         }
@@ -1585,7 +1635,8 @@ public final class CdclSolver {
           pathCount += analyzeLit(mem[lits + k]);
         }
       }
-      while (seen[trail[index] >> 1] == 0 || level[trail[index] >> 1] != decisionLevel) {
+      while (vdata[(trail[index] >> 1) << 2 | SEEN] == 0
+          || litLevel(trail[index]) != decisionLevel) {
         index--;
       }
       if (notifying && pathCount >= 2 && groupsOpen == 1 && ungroupedOpen == 0) {
@@ -1597,13 +1648,16 @@ public final class CdclSolver {
       }
       p = trail[index--];
       ref = reasonRef(p >> 1);
-      seen[p >> 1] = 0;
+      vdata[(p >> 1) << 2 | SEEN] = 0;
       pathCount--;
       if (notifying) {
         closeFrontier(p >> 1);
       }
     } while (pathCount > 0);
     learnt[0] = p ^ 1;
+    if (notifying && EXPAND_UNKEPT) {
+      expandLearnt();
+    }
 
     int analysedEnd = toClearSize;
 
@@ -1614,12 +1668,12 @@ public final class CdclSolver {
     }
     int abstractLevels = 0;
     for (int i = 1; i < learntSize; i++) {
-      abstractLevels |= 1 << (level[learnt[i] >> 1] & 31);
+      abstractLevels |= 1 << (litLevel(learnt[i]) & 31);
     }
     int j = 1;
     for (int i = 1; i < learntSize; i++) {
       int v = learnt[i] >> 1;
-      if (reason[v] == NO_REASON || !redundant(learnt[i], abstractLevels)) {
+      if (varReason(v) == NO_REASON || !redundant(learnt[i], abstractLevels)) {
         learnt[j++] = learnt[i];
       }
     }
@@ -1632,9 +1686,9 @@ public final class CdclSolver {
     }
 
     for (int i = 0; i < toClearSize; i++) {
-      seen[toClear[i]] = 0;
+      vdata[toClear[i] << 2 | SEEN] = 0;
     }
-    seen[learnt[0] >> 1] = 0;
+    vdata[(learnt[0] >> 1) << 2 | SEEN] = 0;
     learntLiterals += learntSize;
     if (notifying) {
       for (int i = 0; i < learntSize; i++) {
@@ -1650,14 +1704,70 @@ public final class CdclSolver {
     }
     int maxIndex = 1;
     for (int i = 2; i < learntSize; i++) {
-      if (level[learnt[i] >> 1] > level[learnt[maxIndex] >> 1]) {
+      if (litLevel(learnt[i]) > litLevel(learnt[maxIndex])) {
         maxIndex = i;
       }
     }
     int tmp = learnt[1];
     learnt[1] = learnt[maxIndex];
     learnt[maxIndex] = tmp;
-    return level[learnt[1] >> 1];
+    return litLevel(learnt[1]);
+  }
+
+  static final boolean EXPAND_UNKEPT = Boolean.getBoolean("jacop.lcg.expandUnkept");
+  static final boolean REASON_UNKEPT =
+      !"false".equals(System.getProperty("jacop.lcg.reasonUnkept"));
+
+  /** Statistics: learnt clause literals replaced by their reasons in {@link #expandLearnt}. */
+  public long expandedLiterals;
+
+  /** Statistics: short reasons used once instead of kept, for an unkept literal. */
+  public long unkeptReasons;
+
+  /**
+   * Replaces the lower-level literals of the learnt clause that the external propagator does not
+   * keep ({@link ExternalPropagator#unkept}) by the other literals of their reasons, recursively,
+   * as CP-SAT expands integer reasons to Boolean ones: the clause stays implied and asserting. A
+   * budget bounds the work; literals left when it runs out stay in the clause.
+   */
+  private void expandLearnt() {
+    int budget = 4 * learntSize + 64;
+    int i = 1;
+    while (i < learntSize && budget > 0) {
+      int q = learnt[i];
+      int v = q >> 1;
+      int why = varReason(v);
+      if (why == NO_REASON || why == UNIT_REASON || !external.unkept(v + 1)) {
+        i++;
+        continue;
+      }
+      budget--;
+      expandedLiterals++;
+      learnt[i] = learnt[--learntSize];
+      int r = reasonRef(v);
+      if (r == UNIT_REASON) {
+        continue;
+      }
+      if (r < NO_REASON) {
+        expandLit(-2 - r);
+        continue;
+      }
+      int off = reasonOffset(r);
+      int size = reasonArena(r)[off + SIZE];
+      for (int k = 1; k < size; k++) {
+        expandLit(reasonArena(r)[off + HEADER + k]);
+      }
+    }
+  }
+
+  private void expandLit(int q) {
+    int v = q >> 1;
+    if (vdata[v << 2 | SEEN] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
+      return;
+    }
+    vdata[v << 2 | SEEN] = 1;
+    markClear(v);
+    addLearnt(q);
   }
 
   /**
@@ -1679,7 +1789,7 @@ public final class CdclSolver {
   }
 
   private void notifyAnalysedVar(int v, int stamp) {
-    if (analysedMark[v] != stamp && level[v] > 0) {
+    if (analysedMark[v] != stamp && varLevel(v) > 0) {
       analysedMark[v] = stamp;
       external.notifyAnalysedLiteral(v + 1);
     }
@@ -1723,7 +1833,7 @@ public final class CdclSolver {
     int n = 0;
     for (int t = index; n < open; t--) {
       int v = trail[t] >> 1;
-      if (seen[v] != 0 && level[v] == decisionLevel) {
+      if (vdata[v << 2 | SEEN] != 0 && varLevel(v) == decisionLevel) {
         frontier[n++] = toDimacs(trail[t]);
       }
     }
@@ -1732,12 +1842,12 @@ public final class CdclSolver {
       return -1;
     }
     int lit = toLit(d);
-    if (vals[lit] <= 0 || level[lit >> 1] != decisionLevel) {
+    if (vals[lit] <= 0 || litLevel(lit) != decisionLevel) {
       return -1;
     }
     for (int k = 0; k < n; k++) {
       int v = Math.abs(frontier[k]) - 1;
-      seen[v] = 0;
+      vdata[v << 2 | SEEN] = 0;
       closeFrontier(v);
     }
     semanticUips++;
@@ -1774,7 +1884,7 @@ public final class CdclSolver {
     }
     for (int i = 0; i < n; i++) {
       int lit = learnt[i + 1];
-      shrinkKeys[i] = (long) level[lit >> 1] << 32 | lit;
+      shrinkKeys[i] = (long) litLevel(lit) << 32 | lit;
     }
     Arrays.sort(shrinkKeys, 0, n);
     int j = 1;
@@ -1809,12 +1919,12 @@ public final class CdclSolver {
     for (int i = start; i < end; i++) {
       int v = (int) shrinkKeys[i] >> 1;
       shrinkMark[v] = shrinkStamp;
-      index = Math.max(index, trailPos[v]);
+      index = Math.max(index, varTrailPos(v));
     }
     for (; ; index--) {
       int t = trail[index];
       int v = t >> 1;
-      if (shrinkMark[v] != shrinkStamp || level[v] != lvl) {
+      if (shrinkMark[v] != shrinkStamp || varLevel(v) != lvl) {
         continue;
       }
       if (--open == 0) {
@@ -1846,7 +1956,7 @@ public final class CdclSolver {
    */
   private int shrinkStep(int q, int lvl) {
     int v = q >> 1;
-    int l = level[v];
+    int l = varLevel(v);
     if (l == lvl) {
       if (shrinkMark[v] == shrinkStamp) {
         return 0;
@@ -1854,19 +1964,19 @@ public final class CdclSolver {
       shrinkMark[v] = shrinkStamp;
       return 1;
     }
-    return l == 0 || seen[v] != 0 ? 0 : Integer.MIN_VALUE / 2;
+    return l == 0 || vdata[v << 2 | SEEN] != 0 ? 0 : Integer.MIN_VALUE / 2;
   }
 
   /** Marks the variable of a reason literal; returns 1 when it is at the conflict level. */
   private int analyzeLit(int q) {
     int v = q >> 1;
-    if (seen[v] != 0 || level[v] == 0 || reason[v] == UNIT_REASON) {
+    if (vdata[v << 2 | SEEN] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
       return 0;
     }
-    seen[v] = 1;
+    vdata[v << 2 | SEEN] = 1;
     markClear(v);
     bumpVar(v);
-    if (level[v] >= decisionLevel) {
+    if (varLevel(v) >= decisionLevel) {
       if (notifying) {
         openFrontier(v);
       }
@@ -1909,17 +2019,17 @@ public final class CdclSolver {
 
   private boolean removable(int q, int abstractLevels, int depth) {
     int v = q >> 1;
-    if (seen[v] != 0 || level[v] == 0 || reason[v] == UNIT_REASON) {
+    if (vdata[v << 2 | SEEN] != 0 || varLevel(v) == 0 || varReason(v) == UNIT_REASON) {
       return true;
     }
     if (poisonMark[v] == poisonStamp
-        || reason[v] == NO_REASON
-        || ((1 << (level[v] & 31)) & abstractLevels) == 0
+        || varReason(v) == NO_REASON
+        || ((1 << (varLevel(v) & 31)) & abstractLevels) == 0
         || depth > MINIMIZE_DEPTH) {
       return false;
     }
     if (antecedentsRemovable(v, abstractLevels, depth)) {
-      seen[v] = 1;
+      vdata[v << 2 | SEEN] = 1;
       markClear(v);
       return true;
     }
@@ -2001,8 +2111,8 @@ public final class CdclSolver {
   }
 
   private void markFinal(int q) {
-    if (level[q >> 1] > 0) {
-      seen[q >> 1] = 1;
+    if (litLevel(q) > 0) {
+      vdata[(q >> 1) << 2 | SEEN] = 1;
     }
   }
 
@@ -2015,7 +2125,7 @@ public final class CdclSolver {
   private int collectFinal(int[] out, int n) {
     for (int i = trailSize - 1; i >= trailLim[0]; i--) {
       int x = trail[i] >> 1;
-      if (seen[x] == 0) {
+      if (vdata[x << 2 | SEEN] == 0) {
         continue;
       }
       int r = reasonRef(x);
@@ -2030,7 +2140,7 @@ public final class CdclSolver {
           markFinal(m[off + HEADER + k]);
         }
       }
-      seen[x] = 0;
+      vdata[x << 2 | SEEN] = 0;
     }
     return n;
   }
@@ -2108,7 +2218,7 @@ public final class CdclSolver {
    * @return the level it was assigned at
    */
   public int levelOf(int lit) {
-    return level[Math.abs(lit) - 1];
+    return varLevel(Math.abs(lit) - 1);
   }
 
   /**
@@ -2118,7 +2228,7 @@ public final class CdclSolver {
    * @return its position, or -1 when the variable is unassigned
    */
   public int trailPosition(int lit) {
-    return vals[toLit(lit)] == 0 ? -1 : trailPos[Math.abs(lit) - 1];
+    return vals[toLit(lit)] == 0 ? -1 : varTrailPos(Math.abs(lit) - 1);
   }
 
   /**
@@ -2130,7 +2240,7 @@ public final class CdclSolver {
    * @return the kind of its reason
    */
   public int reasonKind(int lit) {
-    int r = reason[Math.abs(lit) - 1];
+    int r = varReason(Math.abs(lit) - 1);
     if (r == NO_REASON) {
       return 0;
     }
@@ -2342,7 +2452,7 @@ public final class CdclSolver {
     int size = 0;
     for (int i = 0; i < n; i++) {
       int l = c[i];
-      boolean fixed = vals[l] != 0 && level[l >> 1] == 0;
+      boolean fixed = vals[l] != 0 && litLevel(l) == 0;
       if ((fixed && vals[l] > 0) || (size > 0 && c[size - 1] == (l ^ 1))) {
         return true; // satisfied at level 0, or a tautology
       }
@@ -2393,7 +2503,7 @@ public final class CdclSolver {
   public void writeDimacs(java.io.Writer out) throws java.io.IOException {
     restoreEliminated();
     int fixed = 0;
-    for (int i = 0; i < trailSize && level[trail[i] >> 1] == 0; i++) {
+    for (int i = 0; i < trailSize && litLevel(trail[i]) == 0; i++) {
       fixed++;
     }
     out.write(
@@ -2425,8 +2535,10 @@ public final class CdclSolver {
     if (conflictRef == BINARY_CONFLICT) {
       return atCurrentLevel(conflictLit0) || atCurrentLevel(conflictLit1);
     }
-    for (int k = 0; k < mem[conflictRef + SIZE]; k++) {
-      if (atCurrentLevel(mem[conflictRef + HEADER + k])) {
+    int[] arena = reasonArena(conflictRef);
+    int off = reasonOffset(conflictRef);
+    for (int k = 0; k < arena[off + SIZE]; k++) {
+      if (atCurrentLevel(arena[off + HEADER + k])) {
         return true;
       }
     }
@@ -2435,7 +2547,7 @@ public final class CdclSolver {
 
   private boolean atCurrentLevel(int lit) {
     int v = lit >> 1;
-    return level[v] == decisionLevel && reason[v] != UNIT_REASON;
+    return varLevel(v) == decisionLevel && varReason(v) != UNIT_REASON;
   }
 
   /** Copies an arena clause into the pending clause (attached). */
@@ -2451,7 +2563,7 @@ public final class CdclSolver {
     int[] c = Arrays.copyOfRange(mem, lits, lits + mem[ref + SIZE]);
     orderForWatches(c);
     System.arraycopy(c, 0, mem, lits, c.length);
-    mem[ref + POS] = 2;
+    mem[ref + META] = (mem[ref + META] & NOT_POS) | POS_START;
     attach(ref);
   }
 
@@ -2545,7 +2657,10 @@ public final class CdclSolver {
 
   private int watchScore(int l) {
     int v = vals[l];
-    return v > 0 ? Integer.MAX_VALUE : v == 0 ? Integer.MAX_VALUE - 1 : level[l >> 1];
+    if (v > 0) {
+      return Integer.MAX_VALUE;
+    }
+    return v == 0 ? Integer.MAX_VALUE - 1 : litLevel(l);
   }
 
   /**
@@ -2731,6 +2846,9 @@ public final class CdclSolver {
       if (workLimit != Long.MAX_VALUE && work() >= workLimit) {
         return UNKNOWN;
       }
+      if (decisionLevel == assumptionLevels && external != null) {
+        external.notifyTopDecision(toDimacs(next));
+      }
       newSearchLevel();
       assign(next, NO_REASON);
     }
@@ -2759,6 +2877,12 @@ public final class CdclSolver {
    * @return a conflict (as {@link #propagate}), or NO_CONFLICT; ok is false when the formula is
    *     found unsatisfiable
    */
+  private static final int ROUND_CLOCK_MASK =
+      Integer.getInteger("jacop.jasat.roundClockMask", 1023);
+
+  // propagateAll reads the clock every CLOCK_ROUNDS + 1 rounds of the external propagator
+  private static final int CLOCK_ROUNDS = 63;
+
   private int propagateAll() {
     for (int rounds = 1; ; rounds++) {
       int confl = propagate();
@@ -2766,23 +2890,26 @@ public final class CdclSolver {
         return confl;
       }
       // an external propagator can take many rounds to reach a fixpoint (bounds that creep by one
-      // value at a time between constraints), so the clock is read here too, not only per decision
-      if ((rounds & 1023) == 0 && (interrupted || System.nanoTime() > deadline)) {
+      // value at a time between constraints), so the clock is read here too, not only per decision.
+      // A round can be slow: on vrp-submission toy_D (arrival times up to 460,588) under the
+      // core-guided probe 1,024 rounds took minutes, the probe kept the whole -t 600 s run and
+      // found no solution, which branch and bound finds in 0.2 s
+      if ((rounds & CLOCK_ROUNDS) == 0 && (interrupted || System.nanoTime() > deadline)) {
         outOfTime = true;
         return NO_CONFLICT;
       }
       for (int i = 0; i < numLateObserved; i++) {
         int v = lateObserved[i];
-        if (vals[2 * v] != 0 && trailPos[v] < notified) {
+        if (vals[2 * v] != 0 && varTrailPos(v) < notified) {
           int l = 2 * v + (vals[2 * v] > 0 ? 0 : 1);
-          external.notifyAssignment(toDimacs(l), level[v] == 0);
+          external.notifyAssignment(toDimacs(l), varLevel(v) == 0);
         }
       }
       numLateObserved = 0;
       for (; notified < trailSize; notified++) {
         int l = trail[notified];
         if (observed[l >> 1]) {
-          external.notifyAssignment(toDimacs(l), level[l >> 1] == 0);
+          external.notifyAssignment(toDimacs(l), litLevel(l) == 0);
         }
       }
       int[] c = queuedExternal;
@@ -2870,7 +2997,12 @@ public final class CdclSolver {
     if (proof != null) {
       proof.add(c, 0, size);
     }
-    if (implied >= 0) {
+    boolean temporary = false;
+    if (implied >= 0 && size > 1 && REASON_UNKEPT && hasUnkeptLiteral(c, size)) {
+      orderForWatches(c);
+      temporary = temporaryFits(c);
+    }
+    if (implied >= 0 && !temporary) {
       notifyKept(c, size);
     }
     if (size <= 1) {
@@ -2883,6 +3015,10 @@ public final class CdclSolver {
       return NO_CONFLICT;
     }
     orderForWatches(c);
+    if (temporary) {
+      unkeptReasons++;
+      return externalTemporary(c, size);
+    }
     int ref = BINARY;
     if (size == 2) {
       if (implied >= 0 || implied == IMPORTED) {
@@ -2899,7 +3035,7 @@ public final class CdclSolver {
       originals = push(originals, numOriginals++, ref);
       attach(ref);
     }
-    int top = level[c[0] >> 1];
+    int top = litLevel(c[0]);
     if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
       noteLowWatched(ref, c);
       return NO_CONFLICT;
@@ -2913,7 +3049,7 @@ public final class CdclSolver {
       ok = false;
       return NO_CONFLICT;
     }
-    if (level[c[1] >> 1] < top) {
+    if (litLevel(c[1]) < top) {
       // only c[0] is false at its level: it is implied one level lower
       backtrack(top - 1);
       assign(c[0], ref == BINARY ? -2 - c[1] : ref);
@@ -2923,6 +3059,39 @@ public final class CdclSolver {
     backtrack(top);
     qhead = trailSize;
     conflictRef = ref == BINARY ? BINARY_CONFLICT : ref;
+    conflictLit0 = c[0];
+    conflictLit1 = c[1];
+    return conflictRef;
+  }
+
+  /**
+   * Whether a reason clause with an unkept literal, ordered for watches, can be used once without
+   * being kept: it is satisfied or not unit (and is dropped), asserts its first literal, or is a
+   * conflict at the current level.
+   */
+  private boolean temporaryFits(int[] c) {
+    if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
+      return true; // dropped
+    }
+    // a backtrack would release transient literals created above its level, which this clause,
+    // not being kept, does not link: those clauses are kept as before
+    return vals[c[0]] == 0 || litLevel(c[0]) == decisionLevel && litLevel(c[1]) == decisionLevel;
+  }
+
+  /**
+   * Uses a reason clause that {@link #temporaryFits} once, as a temporary reason or conflict on the
+   * reason stack, instead of keeping it.
+   */
+  private int externalTemporary(int[] c, int size) {
+    if (vals[c[0]] > 0 || vals[c[1]] >= 0) {
+      return NO_CONFLICT;
+    }
+    if (vals[c[0]] == 0) {
+      assign(c[0], pushReason(c[0] >> 1, c, size));
+      return NO_CONFLICT;
+    }
+    qhead = trailSize;
+    conflictRef = pushReason(c[0] >> 1, c, size);
     conflictLit0 = c[0];
     conflictLit1 = c[1];
     return conflictRef;
@@ -2953,7 +3122,7 @@ public final class CdclSolver {
       restoreEliminated();
     }
     int v = variable - 1;
-    if (!observed[v] && vals[2 * v] != 0 && trailPos[v] < notified) {
+    if (!observed[v] && vals[2 * v] != 0 && varTrailPos(v) < notified) {
       lateObserved = push(lateObserved, numLateObserved++, v);
     }
     observed[v] = true;
@@ -2982,7 +3151,7 @@ public final class CdclSolver {
    */
   public void reuse(int variable) {
     int v = variable - 1;
-    reason[v] = NO_REASON;
+    vdata[v << 2 | REASON] = NO_REASON;
     activity[v] = 0;
     savedSign[v] = originalSign;
     targetSign[v] = -1;
@@ -3165,7 +3334,7 @@ public final class CdclSolver {
         proof.add(learnt, 0, 2);
       }
       addLearntBinary(learnt[0], learnt[1]);
-      assignAt(learnt[0], -2 - learnt[1], level[learnt[1] >> 1]);
+      assignAt(learnt[0], -2 - learnt[1], litLevel(learnt[1]));
     } else {
       lbd = computeLbd(learnt, 0, learntSize);
       if (proof != null) {
@@ -3175,7 +3344,7 @@ public final class CdclSolver {
       learnts = push(learnts, numLearnts++, ref);
       attach(ref);
       bumpClause(ref);
-      assignAt(learnt[0], ref, level[learnt[1] >> 1]);
+      assignAt(learnt[0], ref, litLevel(learnt[1]));
     }
     if (learntSize <= exportSize && lbd <= exportLbd && external != null) {
       int[] dimacs = new int[learntSize];
@@ -3264,7 +3433,7 @@ public final class CdclSolver {
       lubyIndex = 0;
     }
     if (stable) {
-      lubyLimit = 512L * luby(++lubyIndex);
+      lubyLimit = LUBY_UNIT * luby(++lubyIndex);
     }
   }
 
@@ -3391,7 +3560,7 @@ public final class CdclSolver {
         // the root facts outlive their reasons, which elimination and keepLearnts may delete
         proof.add(trail, i, 1);
       }
-      reason[trail[i] >> 1] = NO_REASON;
+      vdata[(trail[i] >> 1) << 2 | REASON] = NO_REASON;
     }
     rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
@@ -3460,7 +3629,7 @@ public final class CdclSolver {
       int[] c = Arrays.copyOfRange(mem, lits, lits + size);
       orderForWatches(c);
       System.arraycopy(c, 0, mem, lits, size);
-      mem[ref + POS] = 2;
+      mem[ref + META] = (mem[ref + META] & NOT_POS) | POS_START;
       attach(ref);
     }
     int j = 0;
@@ -3694,9 +3863,9 @@ public final class CdclSolver {
         for (int k = 0; k < size; k++) {
           if (vals[mem[ref + HEADER + k]] > 0) {
             int v = mem[ref + HEADER] >> 1;
-            if (reason[v] == ref) {
-              reason[v] = NO_REASON;
-              if (proof != null && vals[mem[ref + HEADER]] > 0 && level[v] == 0) {
+            if (varReason(v) == ref) {
+              vdata[v << 2 | REASON] = NO_REASON;
+              if (proof != null && vals[mem[ref + HEADER]] > 0 && varLevel(v) == 0) {
                 // the root fact outlives its reason in the proof as well
                 proof.add(mem, ref + HEADER, 1);
               }
@@ -3709,7 +3878,9 @@ public final class CdclSolver {
     }
     purge();
     simplifyAssigns = trailSize;
-    simplifyProps = propagations + memSize - wasted + 2L * numVars;
+    // the arena counted with one more int per clause, as with the earlier four-int header, so the
+    // simplification schedule (and the search) stays as it was
+    simplifyProps = propagations + memSize - wasted + numOriginals + numLearnts + 2L * numVars;
   }
 
   /**
@@ -3770,9 +3941,9 @@ public final class CdclSolver {
     }
     for (int i = 0; i < trailSize; i++) {
       int v = trail[i] >> 1;
-      int r = reason[v];
+      int r = varReason(v);
       if (r >= 0 && r < STACK_REF) {
-        reason[v] = (mem[r + META] & DELETED) == 0 ? mem[r + ACT] : NO_REASON;
+        vdata[v << 2 | REASON] = (mem[r + META] & DELETED) == 0 ? mem[r + ACT] : NO_REASON;
       }
     }
     for (int lit = 0; lit < 2 * numVars; lit++) {
@@ -3827,19 +3998,19 @@ public final class CdclSolver {
     for (int i = 0; i < trailSize; i++) {
       int lit = trail[i];
       int v = lit >> 1;
-      if (vals[lit] <= 0 || vals[lit ^ 1] >= 0 || trailPos[v] != i) {
+      if (vals[lit] <= 0 || vals[lit ^ 1] >= 0 || varTrailPos(v) != i) {
         throw new IllegalStateException("trail entry " + i + " inconsistent: " + toDimacs(lit));
       }
-      if (level[v] > decisionLevel) {
+      if (varLevel(v) > decisionLevel) {
         throw new IllegalStateException(toDimacs(lit) + " above the decision level");
       }
       int at = 0;
       while (at < decisionLevel && trailLim[at] <= i) {
         at++;
       }
-      if (level[v] > at || (!chrono && level[v] != at)) {
+      if (varLevel(v) > at || (!chrono && varLevel(v) != at)) {
         throw new IllegalStateException(
-            toDimacs(lit) + " at level " + level[v] + " but in the trail of level " + at);
+            toDimacs(lit) + " at level " + varLevel(v) + " but in the trail of level " + at);
       }
       checkReason(lit, i);
     }
@@ -3930,7 +4101,7 @@ public final class CdclSolver {
 
   private void checkReason(int lit, int pos) {
     int v = lit >> 1;
-    int r = reason[v];
+    int r = varReason(v);
     if (r == NO_REASON || r == UNIT_REASON || r == EXTERNAL_REASON) {
       return;
     }
@@ -3967,7 +4138,7 @@ public final class CdclSolver {
 
   private void checkAntecedent(int lit, int q, int pos) {
     int u = q >> 1;
-    if (vals[q] >= 0 || trailPos[u] >= pos || level[u] > level[lit >> 1]) {
+    if (vals[q] >= 0 || varTrailPos(u) >= pos || varLevel(u) > litLevel(lit)) {
       throw new IllegalStateException(
           "reason of " + toDimacs(lit) + " has " + toDimacs(q) + " not false before it");
     }

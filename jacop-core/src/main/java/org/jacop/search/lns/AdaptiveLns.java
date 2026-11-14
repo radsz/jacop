@@ -81,6 +81,9 @@ import org.jacop.lcg.LinearForm;
  *       Subcircuit}, a giant tour), the customers of whole routes, or customers near each other,
  *       removed from the best solution and reinserted by the run (see {@link RouteNeighbourhoods}
  *       and {@link SuccessorRoutes}).
+ *   <li>{@link Kind#BLOCKS}: whole groups of variables given by {@link #addGroups(IntVar[][],
+ *       double[])}, such as the blocks of a Dantzig-Wolfe decomposition, chosen by roulette on
+ *       their weights (the blocks whose column in the fractional master is far from 1 first).
  * </ul>
  *
  * <p>A neighbourhood made of variables that the runs do not fix (a task's start defined by the
@@ -124,7 +127,9 @@ public final class AdaptiveLns {
      * The tasks that start in a window of time, with the tasks after it free to start earlier: a
      * shift to the left of the schedule after the window.
      */
-    SHIFT
+    SHIFT,
+    /** Whole groups of variables, such as the blocks of a decomposition. */
+    BLOCKS
   }
 
   /** How a run in a neighbourhood ended. */
@@ -209,6 +214,9 @@ public final class AdaptiveLns {
   private final List<RouteStructure> routings = new ArrayList<>();
   private final List<Routes> imposedRoutes = new ArrayList<>();
   private final List<Constraint> imposedCircuits = new ArrayList<>();
+  // the groups of variables of the BLOCKS kind, as indices of decision variables, and their weights
+  private int[][] groups = new int[0][];
+  private double[] groupWeight = new double[0];
   // the variables that are successors of a circuit among the routings
   private final boolean[] successorVar;
 
@@ -378,6 +386,42 @@ public final class AdaptiveLns {
   }
 
   /**
+   * Adds groups of variables for the {@link Kind#BLOCKS} neighbourhood, which relaxes whole groups
+   * chosen by roulette on their weights. A variable that the runs do not fix stands for the
+   * decision variables nearest to it; a group that stands for none is dropped. It is called before
+   * the first solution.
+   *
+   * @param groupVars the variables of each group.
+   * @param weights the weight of each group; a group of weight 0 is dropped.
+   * @return this object.
+   */
+  public AdaptiveLns addGroups(IntVar[][] groupVars, double[] weights) {
+    if (groupVars.length != weights.length) {
+      throw new IllegalArgumentException("one weight per group");
+    }
+    List<int[]> kept = new ArrayList<>();
+    List<Double> keptWeight = new ArrayList<>();
+    for (int g = 0; g < groupVars.length; g++) {
+      Set<Integer> members = new LinkedHashSet<>();
+      for (IntVar x : groupVars[g]) {
+        Integer node = nodeOf.get(x);
+        if (node != null) {
+          for (int d : near(node)) {
+            members.add(d);
+          }
+        }
+      }
+      if (!members.isEmpty() && weights[g] > 0) {
+        kept.add(members.stream().mapToInt(Integer::intValue).toArray());
+        keptWeight.add(weights[g]);
+      }
+    }
+    groups = kept.toArray(new int[0][]);
+    groupWeight = keptWeight.stream().mapToDouble(Double::doubleValue).toArray();
+    return this;
+  }
+
+  /**
    * Stops using a kind of neighbourhood. {@link Kind#PROPAGATION} propagates the store between
    * runs, which a search that keeps its own view of the root (lazy clause generation) may not
    * allow. {@link Kind#RANDOM} cannot be turned off, so at least one kind stays.
@@ -531,6 +575,7 @@ public final class AdaptiveLns {
           case SCHEDULING -> schedulingRelax(relaxed);
           case SHIFT -> shiftRelax(relaxed);
           case PACKING -> packingRelax(relaxed);
+          case BLOCKS -> blocksRelax(relaxed);
           default -> null;
         };
     if (relax == null) {
@@ -654,6 +699,7 @@ public final class AdaptiveLns {
       case SCHEDULING -> tasks.length > 1;
       case SHIFT -> SHIFT_ON && tasks.length > 1;
       case PACKING -> packings.length > 0;
+      case BLOCKS -> groups.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
       default -> true;
     };
@@ -880,6 +926,42 @@ public final class AdaptiveLns {
     int count = 0;
     for (int k = 0; k < n && count < relaxed; k++) {
       count += relaxTask(rects[order[k]], relax);
+    }
+    return relax;
+  }
+
+  /**
+   * Relaxes whole groups, each chosen by roulette on the weights of the groups not chosen yet,
+   * until enough decision variables are relaxed.
+   */
+  private boolean[] blocksRelax(int relaxed) {
+    boolean[] relax = new boolean[vars.length];
+    boolean[] chosen = new boolean[groups.length];
+    double left = 0;
+    for (double w : groupWeight) {
+      left += w;
+    }
+    int count = 0;
+    for (int k = 0; k < groups.length && count < relaxed; k++) {
+      double r = random.nextDouble() * left;
+      int g = -1;
+      for (int h = 0; h < groups.length; h++) {
+        if (!chosen[h]) {
+          g = h;
+          r -= groupWeight[h];
+          if (r < 0) {
+            break;
+          }
+        }
+      }
+      chosen[g] = true;
+      left -= groupWeight[g];
+      for (int d : groups[g]) {
+        if (!relax[d] && !vars[d].singleton()) {
+          relax[d] = true;
+          count++;
+        }
+      }
     }
     return relax;
   }

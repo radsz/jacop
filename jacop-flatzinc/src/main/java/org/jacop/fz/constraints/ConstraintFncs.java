@@ -25,6 +25,7 @@
 
 package org.jacop.fz.constraints;
 
+import org.jacop.core.IntVar;
 import org.jacop.fz.SimpleNode;
 
 /** Registry of constraint generation functions for flatzinc. */
@@ -540,6 +541,26 @@ public final class ConstraintFncs {
     gc.gen_jacop_softgcc_var(n);
   }
 
+  /** Handles the jacop_same FlatZinc constraint. */
+  public void jacop_same(SimpleNode n) {
+    gc.gen_jacop_same(n, false);
+  }
+
+  /** Handles the jacop_used_by FlatZinc constraint. */
+  public void jacop_used_by(SimpleNode n) {
+    gc.gen_jacop_same(n, true);
+  }
+
+  /** Handles the jacop_symmetric_gcc FlatZinc constraint. */
+  public void jacop_symmetric_gcc(SimpleNode n) {
+    gc.gen_jacop_symmetric_gcc(n);
+  }
+
+  /** Handles the jacop_cardinality_matrix FlatZinc constraint. */
+  public void jacop_cardinality_matrix(SimpleNode n) {
+    gc.gen_jacop_cardinality_matrix(n);
+  }
+
   /** Handles the jacop_stocking_cost FlatZinc constraint. */
   public void jacop_stocking_cost(SimpleNode n) {
     gc.gen_jacop_stocking_cost(n);
@@ -668,6 +689,20 @@ public final class ConstraintFncs {
   /** Handles the jacop_count_var_reif FlatZinc constraint. */
   public void jacop_count_var_reif(SimpleNode n) {
     gc.gen_jacop_count_var_reif(n);
+  }
+
+  /**
+   * It posts a positive table over the given variables.
+   *
+   * @param v the variables.
+   * @param rows the rows of the table.
+   */
+  public void poseTable(IntVar[] v, int[][] rows) {
+    int[] flat = new int[rows.length * v.length];
+    for (int r = 0; r < rows.length; r++) {
+      System.arraycopy(rows[r], 0, flat, r * v.length, v.length);
+    }
+    gc.poseTableRows(v, flat);
   }
 
   /** Handles the jacop_count_values FlatZinc constraint. */
@@ -918,6 +953,16 @@ public final class ConstraintFncs {
   /** Handles the jacop_lex_lesseq_bool FlatZinc constraint. */
   public void jacop_lex_lesseq_bool(SimpleNode n) {
     gc.gen_jacop_lex_lesseq_int(n);
+  }
+
+  /** Handles the jacop_all_different_lists FlatZinc constraint. */
+  public void jacop_all_different_lists(SimpleNode n) {
+    gc.gen_jacop_all_different_lists(n);
+  }
+
+  /** Handles the jacop_all_different_lists_except FlatZinc constraint. */
+  public void jacop_all_different_lists_except(SimpleNode n) {
+    gc.gen_jacop_all_different_lists(n);
   }
 
   /** Handles the jacop_lex_chain_less_int FlatZinc constraint. */

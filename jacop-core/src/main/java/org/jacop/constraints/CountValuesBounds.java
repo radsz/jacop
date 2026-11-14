@@ -305,6 +305,15 @@ public class CountValuesBounds extends AbstractCountValues
   }
 
   /**
+   * Returns the counted variables.
+   *
+   * @return the counted variables, with repetitions; the array is not copied.
+   */
+  public IntVar[] countedList() {
+    return list;
+  }
+
+  /**
    * Returns the number of counted variables, with repetitions.
    *
    * @return the length of the list.

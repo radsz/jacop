@@ -1,0 +1,79 @@
+# Decomposition check state, see DecompositionCheck. Columns are tab-separated.
+# B problem hash kind objective status solutions distinct digest nodes millis date
+# C problem hash constraint occurrences verdict status solutions distinct digest nodes millis date note
+# N problem hash reason date
+N	bacp/bacp-17	ea8ff4cacb366208	no global constraint	2026-11-14T04:45:33Z
+C	elitserien/handball7	4617e42767f24d4b	jacop_global_cardinality_closed	1	NO_DECOMPOSITION							2026-11-14T04:45:33Z	
+B	cvrp/simple2	e13aaf85b5d45d36	minimize	34	COMPLETE	6720	6720	894e6d10ac153d16	19187	5035	2026-11-14T04:45:39Z
+C	cvrp/simple2	e13aaf85b5d45d36	jacop_circuit	2	PASS	COMPLETE	6720	6720	894e6d10ac153d16	319775	16392	2026-11-14T04:45:56Z	
+B	costasArray/CostasArrayTestN16	f0255751a93dce4f	satisfy		INCOMPLETE	1	1	a1de98d72a9f0e07	1538357	30178	2026-11-14T04:46:03Z
+B	elitserien/handball7	4617e42767f24d4b	minimize	2	INCOMPLETE	18529	18529	b38b89d1e37226af	1501610	30170	2026-11-14T04:46:16Z
+C	costasArray/CostasArrayTestN16	f0255751a93dce4f	jacop_alldiff	16	PARTIAL	INCOMPLETE	1	1	a1de98d72a9f0e07	1613230	30158	2026-11-14T04:46:33Z	first 1 solutions agree
+B	fastfood/ff59	ba20c0c45545bc52	minimize	242	COMPLETE	8	8	ec4d30179ccf8af7	400671	9746	2026-11-14T04:46:36Z
+C	elitserien/handball7	4617e42767f24d4b	jacop_assignment	21	PARTIAL	INCOMPLETE	13471	13471	ae299218ccf3a519	1077520	30204	2026-11-14T04:46:46Z	first 13471 solutions agree
+C	fastfood/ff59	ba20c0c45545bc52	jacop_minimum	26	PASS	COMPLETE	8	8	ec4d30179ccf8af7	400671	11120	2026-11-14T04:46:47Z	
+B	fastfood/ff62	bd595c485925a174	minimize	125	COMPLETE	8	8	c9f1d999f4bb79e4	224187	7162	2026-11-14T04:47:05Z
+C	fastfood/ff62	bd595c485925a174	jacop_minimum	32	PASS	COMPLETE	8	8	c9f1d999f4bb79e4	224187	7610	2026-11-14T04:47:13Z	
+C	elitserien/handball7	4617e42767f24d4b	jacop_member_int	8	PARTIAL	INCOMPLETE	13471	13471	ae299218ccf3a519	1628379	30259	2026-11-14T04:47:16Z	first 13471 solutions agree
+B	fastfood/ff61	b4eee58b5e1f2bdd	minimize	166	COMPLETE	126	126	9737218482b1070b	474583	13032	2026-11-14T04:47:30Z
+C	fastfood/ff61	b4eee58b5e1f2bdd	jacop_minimum	32	PASS	COMPLETE	126	126	9737218482b1070b	474583	13400	2026-11-14T04:47:44Z	
+N	gap/gap	f3ff27b273f8cc52	no global constraint	2026-11-14T04:47:44Z
+C	elitserien/handball7	4617e42767f24d4b	jacop_regular	14	PARTIAL	INCOMPLETE	13471	13471	ae299218ccf3a519	1374163	30277	2026-11-14T04:47:46Z	first 13471 solutions agree
+B	fastfood/ff60	57955bf59a660cf7	minimize	206	COMPLETE	82	82	329d8b93acb7b8b6	585047	16297	2026-11-14T04:47:59Z
+C	fastfood/ff60	57955bf59a660cf7	jacop_minimum	32	PASS	COMPLETE	82	82	329d8b93acb7b8b6	585047	15173	2026-11-14T04:48:14Z	
+N	grid-colouring/10_5	d83da0daaf83b5bf	no global constraint	2026-11-14T04:48:14Z
+B	ghoulomb/3-9-16	1f7470416550e536	minimize	44	INCOMPLETE	1542	1542	d405bcc43fe16f2d	359608	30318	2026-11-14T04:48:18Z
+C	elitserien/handball7	4617e42767f24d4b	jacop_alldiff	42	PARTIAL	INCOMPLETE	0	0	0	1841818	30449	2026-11-14T04:48:24Z	first 0 solutions agree, decomposed accepts the first reference solutions
+N	M12b/M12b	1ec2f006cb54d3ee	no global constraint	2026-11-14T04:48:24Z
+B	mario/mario_n_medium_4	96c11ccef13db6d8	maximize	832	COMPLETE	1	1	65f9226abb0a4315	196	1113	2026-11-14T04:48:30Z
+B	linear-to-program/l2p13	eee9daad376b7aee	minimize	6	INCOMPLETE	0	0	0	953284	30339	2026-11-14T04:48:48Z
+C	ghoulomb/3-9-16	1f7470416550e536	jacop_cumulative	3	PARTIAL	INCOMPLETE	119	119	4a3e05c4e302024a	14482	30365	2026-11-14T04:48:49Z	first 119 solutions agree
+C	mario/mario_n_medium_4	96c11ccef13db6d8	jacop_subcircuit	1	PARTIAL	INCOMPLETE	0	0	0	1349058	30222	2026-11-14T04:49:01Z	first 0 solutions agree, decomposed accepts the first reference solutions
+N	monorail/monorail3	a201875bf7adc24a	no global constraint	2026-11-14T04:49:01Z
+B	mario/mario_n_medium_5	dc8c32068067e1aa	maximize	771	COMPLETE	1	1	7e08ce8449f2d1ca	7566	2765	2026-11-14T04:49:01Z
+B	mspsp/medium_02	d62124d045cc9115	minimize	15	INCOMPLETE	200000	200000	839981f0f6c1a6d8	511641	5693	2026-11-14T04:49:08Z
+C	linear-to-program/l2p13	eee9daad376b7aee	jacop_alldiff	1	PARTIAL	INCOMPLETE	0	0	0	989667	30193	2026-11-14T04:49:18Z	first 0 solutions agree
+C	mario/mario_n_medium_5	dc8c32068067e1aa	jacop_subcircuit	1	PARTIAL	INCOMPLETE	0	0	0	1235605	30247	2026-11-14T04:49:33Z	first 0 solutions agree, decomposed accepts the first reference solutions
+C	mspsp/medium_02	d62124d045cc9115	jacop_cumulative	9	PARTIAL	INCOMPLETE	120246	120246	2a5409fc24ada3f8	424424	30195	2026-11-14T04:49:38Z	first 120246 solutions agree
+B	nonogram/non_med_4	246e613640cde1ca	satisfy		INCOMPLETE	1	1	1d2f7a9b52da0475	488194	30206	2026-11-14T04:49:48Z
+B	nonogram/non_fast_7	b8b8a97b10b05b20	satisfy		COMPLETE	1	1	2bca2337a68b3d55	227028	19401	2026-11-14T04:49:52Z
+B	nonogram/non_fast_6	cba1de05e775bc2d	satisfy		INCOMPLETE	1	1	c272feab4fb81f99	415017	30170	2026-11-14T04:50:08Z
+C	nonogram/non_med_4	246e613640cde1ca	jacop_regular	120	PARTIAL	INCOMPLETE	0	0	0	268693	30232	2026-11-14T04:50:21Z	first 0 solutions agree, decomposed accepts the first reference solutions
+C	nonogram/non_fast_7	b8b8a97b10b05b20	jacop_regular	110	PARTIAL	INCOMPLETE	0	0	0	383211	30332	2026-11-14T04:50:26Z	first 0 solutions agree, decomposed accepts the first reference solutions
+C	nonogram/non_fast_6	cba1de05e775bc2d	jacop_regular	110	PARTIAL	INCOMPLETE	0	0	0	232882	30241	2026-11-14T04:50:41Z	first 0 solutions agree, decomposed accepts the first reference solutions
+N	or_seating/or_seating	a02aefbb629845ae	no global constraint	2026-11-14T04:50:41Z
+B	oocsp_racks/oocsp_racks_030_ea4_cc	90dcbe602c36a107	satisfy		INCOMPLETE	1668	1668	638a8d7e6f16469f	2701426	30207	2026-11-14T04:50:52Z
+B	oocsp_racks/oocsp_racks_030_f7_cc	a33bf6438333bc30	satisfy		INCOMPLETE	0	0	0	46127	30307	2026-11-14T04:50:57Z
+B	pentominoes/04	b06c15f01eb2166d	satisfy		INCOMPLETE	948	948	76925294c50bbc2c	26127	30183	2026-11-14T04:51:11Z
+C	oocsp_racks/oocsp_racks_030_ea4_cc	90dcbe602c36a107	jacop_count	150	PARTIAL	INCOMPLETE	634	634	680991d2ea8826d6	1428014	30224	2026-11-14T04:51:22Z	first 634 solutions agree
+C	oocsp_racks/oocsp_racks_030_f7_cc	a33bf6438333bc30	jacop_count	150	PARTIAL	INCOMPLETE	0	0	0	42327	30375	2026-11-14T04:51:27Z	first 0 solutions agree
+B	rcpsp-data_psplib-J30/J30_10_6	0d02c175bd82bec6	minimize	44	INCOMPLETE	200000	200000	beb388aa4d8abbed	235819	9821	2026-11-14T04:51:33Z
+C	pentominoes/04	b06c15f01eb2166d	jacop_regular	17	PARTIAL	INCOMPLETE	0	0	0	24392	30296	2026-11-14T04:52:02Z	first 0 solutions agree, decomposed accepts the first reference solutions
+N	scene_allocation/scene_allocation	83b8d478c418efc8	no global constraint	2026-11-14T04:52:02Z
+N	ship-schedule.cp/7ShipsMixedUnconst	1aca21f0e3b2440f	no global constraint	2026-11-14T04:52:02Z
+N	ship-schedule.cp/7Ships	20e6e100bcc60bfd	no global constraint	2026-11-14T04:52:02Z
+N	state_name_puzzle/state_name_puzzle	18a84bb953ff5747	no global constraint	2026-11-14T04:52:02Z
+N	still-life-wastage/10	4b4824f7ec055e23	no global constraint	2026-11-14T04:52:02Z
+N	stochastic-fjsp/fjsp-a1-s5_fjsp-t8-j2-m3-a1_det	ef8480d7441f6679	no global constraint	2026-11-14T04:52:03Z
+C	rcpsp-data_psplib-J30/J30_10_6	0d02c175bd82bec6	jacop_cumulative	4	PARTIAL	INCOMPLETE	15835	15835	91c2ba74eabc3e32	56526	30384	2026-11-14T04:52:04Z	first 15835 solutions agree
+N	table-layout/en-1250-1479-line419.dzn	b84e58bb8f1920a8	no global constraint	2026-11-14T04:52:04Z
+B	road-cons/road_33	bfc640d2351cf932	minimize	8035230	INCOMPLETE	2821	2821	3c9c4b7faabdcbb6	4384	30352	2026-11-14T04:52:33Z
+B	sugiyama2/g4_7_7_7_7	05ccbb9e83fbcf0e	minimize	9	INCOMPLETE	4	4	651bf09a977a31bb	3704594	30184	2026-11-14T04:52:41Z
+B	template_design/catfood_3	851fb8f35e8485cb	minimize	409	INCOMPLETE	10	10	7a2711a6928bc937	3850265	30173	2026-11-14T04:53:04Z
+C	road-cons/road_33	bfc640d2351cf932	jacop_minimum	16800	PARTIAL	INCOMPLETE	9	9	cf9062b6a5db08b9	532	30560	2026-11-14T04:53:07Z	first 9 solutions agree
+C	sugiyama2/g4_7_7_7_7	05ccbb9e83fbcf0e	jacop_alldiff	4	PARTIAL	INCOMPLETE	4	4	651bf09a977a31bb	3761167	30145	2026-11-14T04:53:11Z	first 4 solutions agree
+N	trucking_hl/trucking_hl_5	6d0a532f3e370bfe	no global constraint	2026-11-14T04:53:11Z
+N	prop_stress/0200	60fc95bd7a8b3c93	no global constraint	2026-11-14T04:53:12Z
+B	tpp/tpp_6_3_20_1	66229cea9d050694	minimize	131	COMPLETE	4	4	60dd65ee3816666d	2771001	5778	2026-11-14T04:53:14Z
+C	tpp/tpp_6_3_20_1	66229cea9d050694	jacop_subcircuit	1	PASS	COMPLETE	4	4	60dd65ee3816666d	2771841	6147	2026-11-14T04:53:20Z	
+C	template_design/catfood_3	851fb8f35e8485cb	jacop_lex_lesseq_int	1	PARTIAL	INCOMPLETE	10	10	7a2711a6928bc937	3710869	30251	2026-11-14T04:53:35Z	first 10 solutions agree
+B	pentominoes-zayenz/size_10_tiles_10_seed_17_strategy_target	9ef73fc8243c77a1	satisfy		INCOMPLETE	120	120	c33cb7f3ead66edb	94627	30154	2026-11-14T04:53:42Z
+B	table_crossword/cw_13x13	4e26a8ff6153ce82	satisfy		INCOMPLETE	0	0	0	2923078	30186	2026-11-14T04:53:50Z
+B	golfers/golfers_5_5_6	e23b9f6110d1bae4	satisfy		INCOMPLETE	1080	1080	370277b975f6dda8	382532	30199	2026-11-14T04:54:05Z
+C	pentominoes-zayenz/size_10_tiles_10_seed_17_strategy_target	9ef73fc8243c77a1	jacop_regular	10	PARTIAL	INCOMPLETE	0	0	0	48421	30203	2026-11-14T04:54:19Z	first 0 solutions agree, decomposed accepts the first reference solutions
+C	table_crossword/cw_13x13	4e26a8ff6153ce82	jacop_table_int	58	PARTIAL	INCOMPLETE	0	0	0	1085070	30263	2026-11-14T04:54:21Z	first 0 solutions agree
+N	dudeney_bishop_placement2/dudeney_bishop_placement2	13d76e9160f6d5de	no global constraint	2026-11-14T04:54:21Z
+N	radiation/i7-9	c1c09ed2eae42cb8	no global constraint	2026-11-14T04:54:21Z
+C	golfers/golfers_5_5_6	e23b9f6110d1bae4	jacop_alldiff	6	PARTIAL	INCOMPLETE	1225	1225	d5b59927e0a9ae3e	435503	30208	2026-11-14T04:54:35Z	first 1080 solutions agree
+B	pentominoes/04_int	efee3d768057e0df	satisfy		INCOMPLETE	1200	1200	37ded358d262877c	28389	30221	2026-11-14T04:54:49Z
+C	pentominoes/04_int	efee3d768057e0df	jacop_regular	17	PARTIAL	INCOMPLETE	0	0	0	27358	30191	2026-11-14T04:55:34Z	first 0 solutions agree, decomposed accepts the first reference solutions

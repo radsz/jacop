@@ -171,40 +171,38 @@ public class AbsXeqY extends AbstractConstraintXandY
 
   private IntervalDomain computeYdom1FromX(IntervalDomain xdomain) {
     IntervalDomain yDom1 = new IntervalDomain(xdomain.size + 1);
-    Interval[] intervals = xdomain.intervals;
     int i = 0;
     for (; i < xdomain.size; i++) {
-      if (intervals[i].max() > 0) {
+      if (xdomain.rightElement(i) > 0) {
         break;
       }
     }
     int j = i == xdomain.size ? i - 1 : i;
     for (; j >= 0; j--) {
-      if (intervals[j].max() <= 0) {
-        yDom1.unionAdapt(-intervals[j].max(), -intervals[j].min());
+      if (xdomain.rightElement(j) <= 0) {
+        yDom1.unionAdapt(-xdomain.rightElement(j), -xdomain.leftElement(j));
       }
     }
-    if (i < xdomain.size && intervals[i].min() < 0 && intervals[i].max() > 0) {
-      if (-intervals[i].min() > intervals[i].max()) {
-        yDom1.unionAdapt(0, -intervals[i].min());
+    if (i < xdomain.size && xdomain.leftElement(i) < 0 && xdomain.rightElement(i) > 0) {
+      if (-xdomain.leftElement(i) > xdomain.rightElement(i)) {
+        yDom1.unionAdapt(0, -xdomain.leftElement(i));
       } else {
-        yDom1.unionAdapt(0, intervals[i].max());
+        yDom1.unionAdapt(0, xdomain.rightElement(i));
       }
     }
     return yDom1;
   }
 
   private IntervalDomain computeYdomFromX(IntervalDomain xdomain, IntervalDomain ydomain1) {
-    Interval[] intervals = xdomain.intervals;
     int i = 0;
     for (; i < xdomain.size; i++) {
-      if (intervals[i].max() > 0) {
+      if (xdomain.rightElement(i) > 0) {
         break;
       }
     }
     IntervalDomain yDom = new IntervalDomain(xdomain.size + 1);
     for (; i < xdomain.size; i++) {
-      yDom.unionAdapt(intervals[i]);
+      yDom.unionAdapt(xdomain.leftElement(i), xdomain.rightElement(i));
     }
     yDom.addDom(ydomain1);
     return yDom;
@@ -229,7 +227,7 @@ public class AbsXeqY extends AbstractConstraintXandY
   private IntervalDomain computeXdomFromY(IntervalDomain ydomain) {
     IntervalDomain xDom = new IntervalDomain(ydomain.size + 1);
     for (int i = ydomain.size - 1; i >= 0; i--) {
-      xDom.unionAdapt(-ydomain.intervals[i].max(), -ydomain.intervals[i].min());
+      xDom.unionAdapt(-ydomain.rightElement(i), -ydomain.leftElement(i));
     }
     xDom.addDom(ydomain);
     return xDom;

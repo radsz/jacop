@@ -42,7 +42,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.DomainCover;
@@ -71,7 +71,7 @@ public class Member extends PrimitiveConstraint implements Copyable<Member>, Exp
   /*
    * Defines first position of the variable that might equal e
    */
-  private TimeStamp<Integer> position;
+  private TimeStampInt position;
 
   /* Whether e is itself on the list, which makes the constraint always true; null until checked. */
   private Boolean aliased;
@@ -256,7 +256,7 @@ public class Member extends PrimitiveConstraint implements Copyable<Member>, Exp
     // search. Keep a stamp that still has a value, as one created at a search level loses it on
     // backtracking while the constraint may still be used below that level.
     if (position == null || position.pointer4Last < 0) {
-      position = new TimeStamp<>(store, moveRepeatedVariablesToFront());
+      position = new TimeStampInt(store, moveRepeatedVariablesToFront());
     }
   }
 

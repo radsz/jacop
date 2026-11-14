@@ -40,7 +40,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.Var;
 import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
@@ -73,9 +73,9 @@ public class BoolClause extends PrimitiveConstraint
   /**
    * Defines first position of the variable that is not ground to 0 (positionX) or 0 (positionY).
    */
-  private TimeStamp<Integer> positionX;
+  private TimeStampInt positionX;
 
-  private TimeStamp<Integer> positionY;
+  private TimeStampInt positionY;
 
   /**
    * It constructs BoolClause.
@@ -171,8 +171,8 @@ public class BoolClause extends PrimitiveConstraint
     // created there would be emptied on backtracking while the constraint is still nested. Stamps
     // emptied by backtracking (first included at a search level) are made again.
     if (positionX == null || positionX.pointer4Last < 0) {
-      positionX = new TimeStamp<>(store, 0);
-      positionY = new TimeStamp<>(store, 0);
+      positionX = new TimeStampInt(store, 0);
+      positionY = new TimeStampInt(store, 0);
     }
   }
 

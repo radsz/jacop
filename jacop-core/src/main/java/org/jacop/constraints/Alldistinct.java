@@ -46,11 +46,10 @@ import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
-import org.jacop.core.Interval;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
-import org.jacop.core.TimeStamp;
+import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
@@ -150,7 +149,7 @@ public class Alldistinct extends Constraint
 
   // Variables (indexes) on positions 0..notGrounded-1 are not yet processed as grounded.
   private final int[] position;
-  private TimeStamp<Integer> notGrounded;
+  private TimeStampInt notGrounded;
 
   // Adjacency lists (value indexes) of not grounded variables, rebuilt at each execution.
   private final int[][] adjacency;
@@ -289,7 +288,7 @@ public class Alldistinct extends Constraint
 
     super.impose(store);
 
-    notGrounded = new TimeStamp<>(store, list.length);
+    notGrounded = new TimeStampInt(store, list.length);
 
     // the initial maximum matching needs to be computed, failure is reported by consistency
     if (words > 0) {
@@ -478,16 +477,16 @@ public class Alldistinct extends Constraint
     } else if (dom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       IntervalDomain id = (IntervalDomain) dom;
       for (int k = 0; k < id.size; k++) {
-        Interval interval = id.intervals[k];
-        int max = interval.max();
+        int min = id.leftElement(k);
+        int max = id.rightElement(k);
         if (valueIndexOffset != null) {
-          for (int v = interval.min(); v <= max; v++) {
+          for (int v = min; v <= max; v++) {
             adj[d++] = valueIndexOffset[v - minValue];
           }
         } else {
           // consecutive values have consecutive indexes in the sorted union
-          int a = Arrays.binarySearch(values, interval.min());
-          for (int v = interval.min(); v <= max; v++) {
+          int a = Arrays.binarySearch(values, min);
+          for (int v = min; v <= max; v++) {
             adj[d++] = a++;
           }
         }
@@ -690,10 +689,10 @@ public class Alldistinct extends Constraint
     if (dom.domainId() == IntDomain.INTERVAL_DOMAIN_ID) {
       IntervalDomain id = (IntervalDomain) dom;
       for (int k = 0; k < id.size; k++) {
-        Interval interval = id.intervals[k];
+        int min = id.leftElement(k);
         // consecutive values have consecutive indexes in the sorted union
-        int a = valueIndex(interval.min());
-        for (int last = a + interval.max() - interval.min(); a <= last; a++) {
+        int a = valueIndex(min);
+        for (int last = a + id.rightElement(k) - min; a <= last; a++) {
           domainBits[base + (a >>> 6)] |= 1L << a;
         }
       }
