@@ -626,13 +626,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (sat.collecting() && !opt.lcg()) {
         postClausesToSat();
       }
-    } else {
-      if (opt.presolveTabling()) {
-        tableInPlace();
-      }
-      if (objective != null && store.consistency()) {
-        imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
-      }
+    } else if (objective != null && store.consistency()) {
+      imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
     if (Boolean.getBoolean("org.jacop.fz.dominance") && store.consistency()) {
@@ -641,6 +636,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
     if (opt.lp()) {
       imposeLinearRelaxation(node);
+    }
+
+    // after the linear relaxation, which keeps the rows of the constraints a table replaces
+    if (opt.presolve() == Options.Presolve.OFF && opt.presolveTabling()) {
+      tableInPlace();
     }
 
     if (DecompositionBound.on() && opt.proof() == null) {

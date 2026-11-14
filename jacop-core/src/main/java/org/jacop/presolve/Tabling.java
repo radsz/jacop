@@ -188,6 +188,7 @@ public final class Tabling implements Rule {
     }
     for (TableGroups.Group g : groups) {
       for (Constraint c : g.constraints()) {
+        replaced++;
         for (Var v : c.arguments()) {
           if (v.singleton()) {
             // Var.removeConstraint leaves a fixed variable alone; the constraint must go from
@@ -198,7 +199,6 @@ public final class Tabling implements Rule {
           }
         }
       }
-      replaced += g.constraints().size();
       if (g.tuples() != null) {
         HybridTable table = new HybridTable(g.scope(), g.tuples());
         tried.add(table);
