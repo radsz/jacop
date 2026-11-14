@@ -306,6 +306,7 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      support.releaseLinearRewrites();
       support.reportAlldiffChannels();
       if (dictionary.domainsClamped()) {
         // reads the rows as declared, to show the narrowing of domains harmless at the end

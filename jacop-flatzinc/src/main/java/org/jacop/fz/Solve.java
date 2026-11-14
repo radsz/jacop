@@ -367,11 +367,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (sharedModelTree) {
       return;
     }
+    releaseAllBut(solveItem);
+  }
+
+  /**
+   * Cuts every branch of the parse tree but the one of a node: the children of its ancestors other
+   * than the path to it, and the children of those, the variable and constraint items. A node of a
+   * dropped item that another structure keeps then reaches its own item only, not every item of the
+   * model through its parent.
+   *
+   * @param solveItem the node whose branch is kept
+   */
+  static void releaseAllBut(SimpleNode solveItem) {
     Node kept = solveItem;
     while (kept.jjtGetParent() instanceof SimpleNode parent) {
       if (parent.children != null) {
         for (int i = 0; i < parent.children.length; i++) {
           if (parent.children[i] != kept) {
+            // and its own items: a node another structure keeps (a rewritten constraint) reaches
+            // them through its parent, which would keep every item of the model live
+            if (parent.children[i] instanceof SimpleNode released && released.children != null) {
+              Arrays.fill(released.children, null);
+            }
             parent.children[i] = null;
           }
         }
