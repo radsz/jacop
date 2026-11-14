@@ -66,8 +66,8 @@ import org.jacop.lcg.Explainable;
  * of {@code sum}. The reasons for lazy clause generation are the literals of the terms counted and
  * the removed values of the variables waited for.
  *
- * <p>The bound is kept incrementally. A term with two variables open for it (variables on which
- * one of its literals does not hold yet) costs nothing and watches two of them, as clauses watch two
+ * <p>The bound is kept incrementally. A term with two variables open for it (variables on which one
+ * of its literals does not hold yet) costs nothing and watches two of them, as clauses watch two
  * literals in a SAT solver, so it is looked at again only when a watched variable gets fixed. A
  * term left with one open variable or none becomes active until backtracking: its weight goes to
  * the costs of the values of its open variable that satisfy its literals there, or to the weight of
@@ -113,12 +113,10 @@ public class ConjunctionSum extends Constraint
   // the least cost of each variable waited for
   private final long[] eleast;
 
-  // the terms waiting for each variable, grouped by buckets (filled by buckets)
-  private final int[] bucketStart;
-  private final int[] bucketTerms;
-  // the terms counted by the last evaluation (status -1 or a variable), for the explanations
-  private final int[] included;
-  private int includedCount;
+  // per variable, and at index n for the terms that hold: the stack positions of the active terms
+  // waiting for it, in stack order
+  private final int[][] bucket;
+  private final int[] bucketSize;
 
   // ---- incremental state, kept by consistency ----
   // each term not active watches two variables that are open for it (some literal of the term on
@@ -136,9 +134,12 @@ public class ConjunctionSum extends Constraint
   private final int[] openVar;
   private final int[] stackTerm;
   private final int[] stackLevel;
+  // the size of the trail of lazy clause generation when the term was activated: the term's
+  // literals
+  // hold in the domains given by the atoms before that position
+  private final int[] stackPos;
   private int stackSize;
-  // changes of the stack, which invalidate the part of an explanation's evaluation kept below
-  private int stackMod;
+  private Store store;
   private final int[] queue;
   private final boolean[] queued;
   private int queueSize;
@@ -235,9 +236,8 @@ public class ConjunctionSum extends Constraint
     this.waited = new int[n];
     this.isWaited = new boolean[n];
     this.eleast = new long[n];
-    this.bucketStart = new int[n + 2];
-    this.bucketTerms = new int[m];
-    this.included = new int[m];
+    this.bucket = new int[n + 1][4];
+    this.bucketSize = new int[n + 1];
     this.pendingCount = new int[n];
     this.watch1 = new int[m];
     this.watch2 = new int[m];
@@ -247,11 +247,14 @@ public class ConjunctionSum extends Constraint
     this.openVar = new int[m];
     this.stackTerm = new int[m];
     this.stackLevel = new int[m];
+    this.stackPos = new int[m];
     this.queue = new int[n];
     this.queued = new boolean[n];
     this.seen = new int[m];
     this.indexOf = index;
 
+    this.explained = new int[n];
+    this.leastStamp = new int[n];
     this.queueIndex = 2;
     setScope(Stream.concat(Arrays.stream(vars), Stream.of(sum)));
   }
@@ -292,40 +295,38 @@ public class ConjunctionSum extends Constraint
         }
       };
 
-  // the domains just before a trail position, read once per variable when first asked for
+  // the domains just before a trail position: the bounds read once per variable, and a value
+  // between them once when first asked for
   private final class Before implements Domains {
-    private final AtomicTrail trail;
-    private final int position;
-    private final long[] mask;
-    private final int[] lo;
-    private final int[] hi;
-    private final boolean[] read;
+    private AtomicTrail trail;
+    private int position;
+    private int stamp;
+    private int[] boundsRead;
+    private int[] lo;
+    private int[] hi;
+    private int[] valueRead;
+    private boolean[] in;
     private final EntryList scratch = new EntryList();
 
-    Before(AtomicTrail trail, int position) {
+    void reset(AtomicTrail trail, int position) {
+      if (boundsRead == null) {
+        int n = vars.length;
+        boundsRead = new int[n];
+        lo = new int[n];
+        hi = new int[n];
+        valueRead = new int[offset[n]];
+        in = new boolean[offset[n]];
+      }
       this.trail = trail;
       this.position = position;
-      int n = vars.length;
-      lo = new int[n];
-      hi = new int[n];
-      read = new boolean[n];
-      mask = new long[(offset[n] + 63) / 64];
+      stamp++;
     }
 
     private void read(int v) {
-      if (read[v]) {
-        return;
-      }
-      read[v] = true;
-      lo[v] = trail.minBefore(vars[v], position);
-      hi[v] = trail.maxBefore(vars[v], position);
-      for (int b = lo[v]; b <= hi[v]; b++) {
-        scratch.clear();
-        // the bounds are in the domain; only the values between them can be holes
-        if (b == lo[v] || b == hi[v] || !trail.excludedBefore(vars[v], b, position, scratch)) {
-          int bit = offset[v] + b - base[v];
-          mask[bit >>> 6] |= 1L << bit;
-        }
+      if (boundsRead[v] != stamp) {
+        boundsRead[v] = stamp;
+        lo[v] = trail.minBefore(vars[v], position);
+        hi[v] = trail.maxBefore(vars[v], position);
       }
     }
 
@@ -335,8 +336,16 @@ public class ConjunctionSum extends Constraint
       if (value < lo[v] || value > hi[v]) {
         return false;
       }
-      int bit = offset[v] + value - base[v];
-      return (mask[bit >>> 6] & (1L << bit)) != 0;
+      if (value == lo[v] || value == hi[v]) {
+        return true;
+      }
+      int i = offset[v] + value - base[v];
+      if (valueRead[i] != stamp) {
+        valueRead[i] = stamp;
+        scratch.clear();
+        in[i] = !trail.excludedBefore(vars[v], value, position, scratch);
+      }
+      return in[i];
     }
 
     @Override
@@ -357,6 +366,8 @@ public class ConjunctionSum extends Constraint
       return lo[v] == value && hi[v] == value;
     }
   }
+
+  private final Before before = new Before();
 
   private boolean holds(int k, Domains d) {
     return litEq[k] ? d.singleton(litVar[k], litValue[k]) : !d.contains(litVar[k], litValue[k]);
@@ -477,9 +488,15 @@ public class ConjunctionSum extends Constraint
   private void activate(int t, int level, int u) {
     active[t] = true;
     openVar[t] = u;
+    int b = u < 0 ? vars.length : u;
+    if (bucketSize[b] == bucket[b].length) {
+      bucket[b] = Arrays.copyOf(bucket[b], 2 * bucket[b].length);
+    }
+    bucket[b][bucketSize[b]++] = stackSize;
     stackTerm[stackSize] = t;
-    stackLevel[stackSize++] = level;
-    stackMod++;
+    stackLevel[stackSize] = level;
+    stackPos[stackSize++] =
+        store != null && store.domainChangeRecorder instanceof AtomicTrail trail ? trail.size() : 0;
     contribute(t, u, weights[t]);
   }
 
@@ -490,17 +507,64 @@ public class ConjunctionSum extends Constraint
       return;
     }
     pendingCount[u] += w > 0 ? 1 : -1;
-    int o = offset[u];
-    for (int i = 0; i < offset[u + 1] - o; i++) {
-      if (satisfiedBy(t, u, base[u] + i)) {
-        cost[o + i] += w;
+    addCost(cost, t, u, w);
+  }
+
+  // adds w to costs at the values of u that satisfy t's literals on u
+  private void addCost(long[] costs, int t, int u, long w) {
+    int o = offset[u] - base[u];
+    int eq = Integer.MIN_VALUE;
+    boolean anyNe = false;
+    for (int k = start[t]; k < start[t + 1]; k++) {
+      if (litVar[k] != u) {
+        continue;
+      }
+      if (!litEq[k]) {
+        anyNe = true;
+      } else if (eq == Integer.MIN_VALUE) {
+        eq = litValue[k];
+      } else if (eq != litValue[k]) {
+        // two different values: no value satisfies the term
+        return;
       }
     }
+    if (eq != Integer.MIN_VALUE) {
+      // a literal u = a: only a can satisfy the term
+      if (eq >= base[u]
+          && eq < base[u] + offset[u + 1] - offset[u]
+          && (!anyNe || satisfiedBy(t, u, eq))) {
+        costs[o + eq] += w;
+      }
+      return;
+    }
+    for (int i = offset[u]; i < offset[u + 1]; i++) {
+      costs[i] += w;
+    }
+    for (int k = start[t]; k < start[t + 1]; k++) {
+      int a = litValue[k];
+      if (litVar[k] == u
+          && a >= base[u]
+          && a < base[u] + offset[u + 1] - offset[u]
+          && firstNe(t, k)) {
+        costs[o + a] -= w;
+      }
+    }
+  }
+
+  // whether literal k of term t is the first literal u != a of t for its variable and value
+  private boolean firstNe(int t, int k) {
+    for (int j = start[t]; j < k; j++) {
+      if (litVar[j] == litVar[k] && litValue[j] == litValue[k]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
   public void impose(Store store) {
     super.impose(store);
+    this.store = store;
     for (int t = 0; t < weights.length; t++) {
       if (weights[t] == 0) {
         continue;
@@ -536,8 +600,8 @@ public class ConjunctionSum extends Constraint
   public void removeLevel(int level) {
     while (stackSize > 0 && stackLevel[stackSize - 1] >= level) {
       int t = stackTerm[--stackSize];
-      stackMod++;
       active[t] = false;
+      bucketSize[openVar[t] < 0 ? vars.length : openVar[t]]--;
       contribute(t, openVar[t], -weights[t]);
     }
   }
@@ -655,160 +719,98 @@ public class ConjunctionSum extends Constraint
 
   // ---- explanations -----------------------------------------------------------------------
 
-  /**
-   * The evaluation of {@link #evaluate} for the terms that were active just before a trail
-   * position: those activated at a lower level, and those activated at the position's level whose
-   * other literals held before it. The domains are those before the position.
-   */
-  private void evaluateAt(AtomicTrail trail, int position, Before d) {
-    int level = position >= trail.size() ? Integer.MAX_VALUE : trail.level(position);
-    if (stackMod != cacheMod || level != cacheLevel) {
-      evaluateBelow(level);
-    }
-    for (int i = 0; i < waitedCount; i++) {
-      int v = waited[i];
-      isWaited[v] = false;
-      Arrays.fill(ecost, offset[v], offset[v + 1], 0L);
-    }
-    waitedCount = 0;
-    for (int i = 0; i < lowWaitedCount; i++) {
-      int v = lowWaited[i];
-      isWaited[v] = true;
-      waited[waitedCount++] = v;
-      System.arraycopy(ecostLow, offset[v], ecost, offset[v], offset[v + 1] - offset[v]);
-    }
-    System.arraycopy(lowIncluded, 0, included, 0, lowCount);
-    includedCount = lowCount;
-    for (int i = lowEnd; i < stackSize && stackLevel[i] == level; i++) {
-      int t = stackTerm[i];
-      int u = openVar[t];
-      if (!othersHold(t, u, d)) {
-        continue;
-      }
-      included[includedCount++] = t;
-      if (u >= 0) {
-        if (!isWaited[u]) {
-          isWaited[u] = true;
-          waited[waitedCount++] = u;
-        }
-        addCosts(ecost, t, u);
-      }
-    }
-    for (int i = 0; i < waitedCount; i++) {
-      int v = waited[i];
-      long low = Long.MAX_VALUE;
-      int o = offset[v] - base[v];
-      for (int b = d.min(v); b <= d.max(v); b++) {
-        if (d.contains(v, b) && ecost[o + b] < low) {
-          low = ecost[o + b];
-        }
-      }
-      eleast[v] = low == Long.MAX_VALUE ? 0 : low;
-    }
-  }
-
-  // the part of an explanation's evaluation from the terms activated below a level, kept while
-  // the stack does not change
-  private long[] ecostLow;
-  private int[] lowIncluded;
-  private int lowCount;
-  private int[] lowWaited;
-  private boolean[] isLowWaited;
-  private int lowWaitedCount;
-  private int lowEnd;
-  private int cacheMod = -1;
-  private int cacheLevel;
-
-  private void evaluateBelow(int level) {
-    if (ecostLow == null) {
-      ecostLow = new long[offset[vars.length]];
-      lowIncluded = new int[weights.length];
-      lowWaited = new int[vars.length];
-      isLowWaited = new boolean[vars.length];
-    }
-    for (int i = 0; i < lowWaitedCount; i++) {
-      int v = lowWaited[i];
-      isLowWaited[v] = false;
-      Arrays.fill(ecostLow, offset[v], offset[v + 1], 0L);
-    }
-    lowWaitedCount = 0;
-    lowCount = 0;
-    int i = 0;
-    for (; i < stackSize && stackLevel[i] < level; i++) {
-      int t = stackTerm[i];
-      int u = openVar[t];
-      lowIncluded[lowCount++] = t;
-      if (u >= 0) {
-        if (!isLowWaited[u]) {
-          isLowWaited[u] = true;
-          lowWaited[lowWaitedCount++] = u;
-        }
-        addCosts(ecostLow, t, u);
-      }
-    }
-    lowEnd = i;
-    cacheMod = stackMod;
-    cacheLevel = level;
-  }
-
-  // adds t's weight to every value of the initial range of u that satisfies t's literals on u
-  private void addCosts(long[] costs, int t, int u) {
-    int o = offset[u];
-    for (int i = 0; i < offset[u + 1] - o; i++) {
-      if (satisfiedBy(t, u, base[u] + i)) {
-        costs[o + i] += weights[t];
-      }
-    }
-  }
-
-  // whether the literals of t on variables other than u hold in d
-  private boolean othersHold(int t, int u, Domains d) {
-    for (int k = start[t]; k < start[t + 1]; k++) {
-      if (litVar[k] != u && !holds(k, d)) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  // groups the terms by the variable they wait for, after evaluate
-  private void buckets() {
-    int n = vars.length;
-    Arrays.fill(bucketStart, 0);
-    for (int i = 0; i < includedCount; i++) {
-      int t = included[i];
-      if (openVar[t] >= 0) {
-        bucketStart[openVar[t] + 2]++;
-      }
-    }
-    for (int v = 0; v < n; v++) {
-      bucketStart[v + 2] += bucketStart[v + 1];
-    }
-    for (int i = 0; i < includedCount; i++) {
-      int t = included[i];
-      if (openVar[t] >= 0) {
-        bucketTerms[bucketStart[openVar[t] + 1]++] = t;
-      }
-    }
-  }
-
-  // the domains of the explanation being built, and the variables whose bounds it cites
+  // the explanation being built: its domains, the number of stack entries active before its atom,
+  // the variables whose bounds it cites and whose costs and least costs it has computed
   private Before explaining;
+  private int prefix;
   private int[] cited;
   private int citeStamp;
+  private final int[] explained;
+  private final int[] leastStamp;
 
-  private void startExplanation(Before d) {
-    explaining = d;
+  /**
+   * Starts an explanation at a trail position. The terms active just before it are a prefix of the
+   * stack, those activated when the trail was not longer than the position, since the stack and the
+   * trail grow together.
+   */
+  private Before startExplanation(AtomicTrail trail, int position) {
+    before.reset(trail, position);
+    explaining = before;
     if (cited == null) {
       cited = new int[vars.length];
     }
     citeStamp++;
+    int lo = 0;
+    int hi = stackSize;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (stackPos[mid] <= position) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    prefix = lo;
+    return before;
   }
 
-  // the reasons of the terms waiting for v, except their literals on v
+  // the number of entries of bucket b in the prefix
+  private int inPrefix(int b) {
+    int size = bucketSize[b];
+    if (size == 0 || bucket[b][size - 1] < prefix) {
+      return size;
+    }
+    int lo = 0;
+    int hi = size;
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (bucket[b][mid] < prefix) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return lo;
+  }
+
+  // the costs of v's values from the terms of the prefix in ecost: the costs now less those of the
+  // terms activated after the prefix
+  private void costsAt(int v) {
+    if (explained[v] == citeStamp) {
+      return;
+    }
+    explained[v] = citeStamp;
+    int o = offset[v];
+    System.arraycopy(cost, o, ecost, o, offset[v + 1] - o);
+    for (int i = inPrefix(v); i < bucketSize[v]; i++) {
+      int t = stackTerm[bucket[v][i]];
+      addCost(ecost, t, v, -weights[t]);
+    }
+  }
+
+  // the least cost of v over its domain before the position, from the terms of the prefix
+  private long leastAt(int v, Domains d) {
+    if (leastStamp[v] == citeStamp) {
+      return eleast[v];
+    }
+    leastStamp[v] = citeStamp;
+    costsAt(v);
+    long low = Long.MAX_VALUE;
+    int o = offset[v] - base[v];
+    for (int b = d.min(v); b <= d.max(v); b++) {
+      if (ecost[o + b] < low && d.contains(v, b)) {
+        low = ecost[o + b];
+      }
+    }
+    eleast[v] = low == Long.MAX_VALUE ? 0 : low;
+    return eleast[v];
+  }
+
+  // the reasons of the terms of the prefix waiting for v, except their literals on v
   private void waitingReason(AtomicTrail trail, int position, int v, EntryList out) {
-    for (int i = bucketStart[v]; i < bucketStart[v + 1]; i++) {
-      termReason(trail, position, bucketTerms[i], v, out);
+    int end = inPrefix(v);
+    for (int i = 0; i < end; i++) {
+      termReason(trail, position, stackTerm[bucket[v][i]], v, out);
     }
   }
 
@@ -843,15 +845,13 @@ public class ConjunctionSum extends Constraint
     IntDomain root = trail.rootDomain(x);
     int o = offset[v] - base[v];
     for (int b = root.min(); b <= root.max(); b++) {
-      if (root.contains(b) && !d.contains(v, b) && ecost[o + b] < eleast[v]) {
+      if (ecost[o + b] < eleast[v] && root.contains(b) && !d.contains(v, b)) {
         // a removed value cheaper than the least; values outside the initial domain need none
         trail.excludedBefore(x, b, position, out);
       }
     }
     // the values left cost at least eleast[v] through the terms waiting for v
-    if (eleast[v] > 0) {
-      waitingReason(trail, position, v, out);
-    }
+    waitingReason(trail, position, v, out);
   }
 
   /**
@@ -861,18 +861,19 @@ public class ConjunctionSum extends Constraint
   private boolean contributions(
       AtomicTrail trail, int position, Domains d, int skip, long need, EntryList out) {
     long got = 0;
-    for (int i = 0; i < includedCount && got < need; i++) {
-      int t = included[i];
-      if (openVar[t] == -1) {
-        termReason(trail, position, t, -1, out);
-        got += weights[t];
-      }
+    int held = inPrefix(vars.length);
+    for (int i = 0; i < held && got < need; i++) {
+      int t = stackTerm[bucket[vars.length][i]];
+      termReason(trail, position, t, -1, out);
+      got += weights[t];
     }
-    for (int i = 0; i < waitedCount && got < need; i++) {
-      int v = waited[i];
-      if (v != skip && eleast[v] > 0) {
-        leastReason(trail, position, v, d, out);
-        got += eleast[v];
+    for (int v = 0; v < vars.length && got < need; v++) {
+      if (v != skip && inPrefix(v) > 0) {
+        long least = leastAt(v, d);
+        if (least > 0) {
+          leastReason(trail, position, v, d, out);
+          got += least;
+        }
       }
     }
     return got >= need;
@@ -882,10 +883,7 @@ public class ConjunctionSum extends Constraint
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     IntVar y = trail.variable(entry);
     int mark = out.size();
-    Before d = new Before(trail, entry);
-    startExplanation(d);
-    evaluateAt(trail, entry, d);
-    buckets();
+    Before d = startExplanation(trail, entry);
     if (y == sum) {
       if (trail.kind(entry) != AtomicTrail.GE) {
         return false;
@@ -897,16 +895,12 @@ public class ConjunctionSum extends Constraint
       out.sortUnique(mark);
       return true;
     }
-    int v = -1;
-    for (int i = 0; i < vars.length; i++) {
-      if (vars[i] == y) {
-        v = i;
-        break;
-      }
-    }
-    if (v < 0 || !isWaited[v]) {
+    Integer index = indexOf.get(y);
+    if (index == null || inPrefix(index) == 0) {
       return false;
     }
+    int v = index;
+    costsAt(v);
     int lo = trail.removedMin(entry);
     int hi = trail.removedMax(entry);
     long max = trail.maxBefore(sum, entry);
@@ -938,10 +932,7 @@ public class ConjunctionSum extends Constraint
   public boolean explainFailure(AtomicTrail trail, EntryList out) {
     int mark = out.size();
     int position = trail.size();
-    Before d = new Before(trail, position);
-    startExplanation(d);
-    evaluateAt(trail, position, d);
-    buckets();
+    Before d = startExplanation(trail, position);
     long max = trail.maxBefore(sum, position);
     trail.addUpperBound(sum, position, out);
     if (!contributions(trail, position, d, -1, max + 1, out)) {
