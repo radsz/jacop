@@ -2252,6 +2252,10 @@ public final class LcgSolver implements ExternalPropagator {
   private void link(int i, int v, int lit) {
     transientLit[lit] = false;
     boundLiterals++;
+    if (i >= linkedCount.length) {
+      linkedCount = Arrays.copyOf(linkedCount, Math.max(i + 1, 2 * linkedCount.length));
+    }
+    linkedCount[i]++;
     int below = linked[i].lower(v);
     int above = linked[i].higher(v);
     if (below != LiteralMap.NONE) {
@@ -5790,6 +5794,46 @@ public final class LcgSolver implements ExternalPropagator {
     long bLo = b > 0 ? litValue[vb] : Long.MIN_VALUE;
     long bHi = bEq || b < 0 ? litValue[vb] - (bEq ? 0L : 1L) : Long.MAX_VALUE;
     return bLo <= aLo && aHi <= bHi;
+  }
+
+  // bound literals linked per integer variable, see unkept
+  private int[] linkedCount = new int[16];
+
+  /**
+   * Linked bound literals of one variable past which its new bound literals stay transient: short
+   * reasons with one are not kept, and learnt clauses resolve one away. Each linked literal of a
+   * variable is a step of the binary chain [x >= v] -> [x >= u] that every bound change of the
+   * variable walks; on multi-agent-graph-coverage (arrival times 0..405) the kept 2-3 literal
+   * reasons linked about 260 literals per variable and 81 % of all SAT assignments were chain
+   * steps. CP-SAT keeps integer bounds out of its clauses altogether (its integer reasons are
+   * expanded to Boolean ones in conflict analysis). {@link #setChainLimit} turns it on (the
+   * FlatZinc front end does so under free search with 64); {@code -Djacop.lcg.chainLimit} sets the
+   * limit in every search.
+   */
+  private int chainLimit = Integer.getInteger("jacop.lcg.chainLimit", Integer.MAX_VALUE);
+
+  /**
+   * Whether {@code -Djacop.lcg.chainLimit} is given, which then overrides {@link #setChainLimit}.
+   */
+  public static final boolean CHAIN_LIMIT_SET = System.getProperty("jacop.lcg.chainLimit") != null;
+
+  /**
+   * Sets the linked bound literals of one variable past which its new bound literals stay transient
+   * (see {@link #unkept}); {@code Integer.MAX_VALUE}, the default, turns it off.
+   *
+   * @param limit linked bound literals per variable
+   */
+  public void setChainLimit(int limit) {
+    chainLimit = limit;
+  }
+
+  @Override
+  public boolean unkept(int aVar) {
+    if (aVar >= transientLit.length || !transientLit[aVar] || litKind[aVar] != GE_KIND) {
+      return false;
+    }
+    int i = litVar[aVar];
+    return i < linkedCount.length && linkedCount[i] >= chainLimit;
   }
 
   @Override

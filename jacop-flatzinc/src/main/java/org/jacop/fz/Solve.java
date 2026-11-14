@@ -2634,6 +2634,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      if (!LcgSolver.CHAIN_LIMIT_SET) {
+        // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
+        // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
+        // in the default search the changed learning lost on 5 families and won on none
+        lcg.setChainLimit(Integer.parseInt(options.freeConfig("lcg-chain-limit", "64")));
+      }
     }
     SelectChoicePoint<? extends Var> annotated =
         free && "none".equals(interleave) ? null : latticeFirst(annotationSelect(annotatedSearch));
@@ -3336,6 +3342,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
             + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgUnkeptReasons="
+            + lcg.sat().unkeptReasons
+            + "\n%%%mzn-stat: lcgExpandedLiterals="
+            + lcg.sat().expandedLiterals
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="
