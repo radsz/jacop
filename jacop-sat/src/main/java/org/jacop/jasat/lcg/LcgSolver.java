@@ -2252,6 +2252,10 @@ public final class LcgSolver implements ExternalPropagator {
   private void link(int i, int v, int lit) {
     transientLit[lit] = false;
     boundLiterals++;
+    if (i >= linkedCount.length) {
+      linkedCount = Arrays.copyOf(linkedCount, Math.max(i + 1, 2 * linkedCount.length));
+    }
+    linkedCount[i]++;
     int below = linked[i].lower(v);
     int above = linked[i].higher(v);
     if (below != LiteralMap.NONE) {
@@ -3448,12 +3452,23 @@ public final class LcgSolver implements ExternalPropagator {
     return CORE_ANY_SOLUTION ? best != null : coreSearch.stratumSolutions > 0;
   }
 
+  // -Djacop.lcg.coreExtendRecent=false: extensions measure the bound's rate since the phase's start
+  // only
+  private static final boolean CORE_EXTEND_RECENT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreExtendRecent", "true"));
+
   /**
    * Whether the core-guided run that just stopped gets another share of the time left before the
-   * given deadline, as {@link #runCores} describes.
+   * given deadline, as {@link #runCores} describes. The lower bound must also meet the best
+   * solution at its rate over the second half of the phase ({@link CoreSearch#closingRecently}):
+   * the rate since the start counts the fast rise from a far initial bound, and on chessboard3
+   * (2023, -f, 1200 s) gave a 426 s extension that raised the bound by 3 of the 13 it lacked.
    */
   private boolean extendCores(long deadline) {
     if (System.nanoTime() > deadline || !coreSearch.rose() || !coreSearch.closing(workEnd)) {
+      return false;
+    }
+    if (CORE_EXTEND_RECENT && !coreSearch.closingRecently(workEnd)) {
       return false;
     }
     return sat.work() >= sat.workLimit() || !coreSearch.exhausted() && coreSearch.halfWay();
@@ -4371,6 +4386,11 @@ public final class LcgSolver implements ExternalPropagator {
           && c.getClass() == HybridTable.class
           && encodeTable((HybridTable) c)) {
         tablesAsClauses++;
+      } else if (compressedTables
+          && c.getClass() == HybridTable.class
+          && encodeCompressedTable((HybridTable) c)) {
+        tablesAsClauses++;
+        compressedTablesAsClauses++;
       } else if ((clauseCandidate(c) || permutationCandidate(c)) && encodeAsClauses(c)) {
         constraintsAsClauses++;
         if (c instanceof Alldistinct) {
@@ -4586,11 +4606,21 @@ public final class LcgSolver implements ExternalPropagator {
    * a term b (spot5 28 loses its at-most-one groups and its proof when they are clauses).
    */
   private java.util.Set<IntVar> objectiveTerms() {
+    if ("none".equals(CLAUSE_CLASSES)
+        && !COUNTERS
+        && ("none".equals(tableMode) && !compressedTables || !TABLE_OBJECTIVE_TERMS)) {
+      return java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+    }
+    return objectiveDefinition();
+  }
+
+  /**
+   * The objective and the terms of the linear forms that define it, whatever the clause settings:
+   * the objective's sum, then the definitions of its terms that are defined once more.
+   */
+  private java.util.Set<IntVar> objectiveDefinition() {
     java.util.Set<IntVar> terms = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-    if (clauseObjective == null
-        || "none".equals(CLAUSE_CLASSES)
-            && !COUNTERS
-            && ("none".equals(tableMode) || !TABLE_OBJECTIVE_TERMS)) {
+    if (clauseObjective == null) {
       return terms;
     }
     terms.add(clauseObjective);
@@ -4642,6 +4672,17 @@ public final class LcgSolver implements ExternalPropagator {
   static final boolean ALLDIFF_CLAUSES =
       Boolean.parseBoolean(System.getProperty("jacop.lcg.alldiffClauses", "true"));
 
+  /**
+   * Whether a permutation over terms of the objective's sum may become clauses too, the system
+   * property {@code jacop.lcg.alldiffClauses.objective}: the linear forms that define the objective
+   * from its terms (the objective's sum and the blocks of a split sum, see {@link
+   * #objectiveDefinition}) then do not count as other constraints of its variables. The 25x25
+   * sudokus of sudoku_opt (MiniZinc Challenge 2022), whose objective is a signed sum of all cells,
+   * otherwise keep their 75 all different propagators.
+   */
+  static final boolean ALLDIFF_OBJ =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.alldiffClauses.objective", "true"));
+
   /** Statistics: all different constraints over permutations given to the solver as clauses. */
   public long permutationsAsClauses;
 
@@ -4679,10 +4720,11 @@ public final class LcgSolver implements ExternalPropagator {
     if (!ALLDIFF_CLAUSES) {
       return java.util.Set.of();
     }
+    java.util.Set<IntVar> definition = ALLDIFF_OBJ ? objectiveDefinition() : java.util.Set.of();
     java.util.Set<Var> in = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     java.util.Set<Var> other = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     for (Constraint c : store.getConstraints()) {
-      if (c instanceof LinearRelaxation) {
+      if (c instanceof LinearRelaxation || definesObjective(c, definition)) {
         continue;
       }
       boolean permutation = isPermutation(c);
@@ -4696,6 +4738,20 @@ public final class LcgSolver implements ExternalPropagator {
     return in;
   }
 
+  /**
+   * Whether a constraint is a linear form that defines the objective from its terms, with {@link
+   * #ALLDIFF_OBJ}: an equation over variables of the objective's definition only.
+   */
+  private boolean definesObjective(Constraint c, java.util.Set<IntVar> definition) {
+    if (!ALLDIFF_OBJ || clauseObjective == null) {
+      return false;
+    }
+    LinearForm f = LinearForms.of(c);
+    return f != null
+        && f.relation() == LinearForm.EQ
+        && definition.containsAll(Arrays.asList(f.vars()));
+  }
+
   /** Whether a constraint is a domain consistent all different over as many values as variables. */
   private boolean isPermutation(Constraint c) {
     if (c.getClass() != Alldistinct.class) {
@@ -4705,7 +4761,7 @@ public final class LcgSolver implements ExternalPropagator {
     IntervalDomain union = new IntervalDomain();
     for (Var v : list) {
       IntVar x = (IntVar) v;
-      if (x == clauseObjective || objectiveTerms.contains(x)) {
+      if (x == clauseObjective || !ALLDIFF_OBJ && objectiveTerms.contains(x)) {
         return false;
       }
       if (!x.singleton() && (trail.id(x) < 0 || trail.id(x) >= vars.length)) {
@@ -4987,6 +5043,18 @@ public final class LcgSolver implements ExternalPropagator {
               + " doms "
               + freeDomains(t));
     }
+    return addTableClauses(t, cs, aux);
+  }
+
+  /**
+   * Gives the clauses of an encoded table to the solver in place of its propagator.
+   *
+   * @param t the table
+   * @param cs its clauses, or null when it was not encoded
+   * @param aux the number of auxiliary variables before the encoding
+   * @return whether the table became clauses
+   */
+  private boolean addTableClauses(HybridTable t, List<int[]> cs, long aux) {
     if (cs == null) {
       return false;
     }
@@ -5001,6 +5069,122 @@ public final class LcgSolver implements ExternalPropagator {
     t.removeConstraint();
     encodedConstraints.add(t);
     return true;
+  }
+
+  /**
+   * Whether a table that is not written as clauses by {@link #TABLE_CLAUSES} is written as the
+   * clauses of its compressed form when compression shrinks it to a few tuples, {@code
+   * jacop.lcg.tableClauses.compressed}. CP-SAT does the same in presolve (cp_model_expand.cc:
+   * tuples are merged into tuples of value sets first, then each compressed tuple gets one
+   * literal). A table posted as tuples of values (frame axioms such as PegSolitaire's 140-tuple
+   * move tables) wakes its propagator on every literal of its columns, while most wake-ups prune
+   * nothing; as clauses only the watched literals are visited. The plain tuples are too many to
+   * encode, the compressed ones are not.
+   */
+  static final boolean COMPRESSED_TABLES =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.tableClauses.compressed", "true"));
+
+  private boolean compressedTables = COMPRESSED_TABLES;
+
+  /**
+   * Sets whether tables that compress well become clauses, before the solver starts (see {@link
+   * #COMPRESSED_TABLES}).
+   *
+   * @param on true to write them as clauses
+   */
+  public void setCompressedTableClauses(boolean on) {
+    compressedTables = on;
+  }
+
+  /** The most tuples of a compressed table written as clauses, {@code ...compressed.tuples}. */
+  static final int COMPRESSED_TUPLES =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.tuples", 16);
+
+  /**
+   * The least ratio of plain to compressed tuples for a table written as clauses, {@code
+   * ...compressed.ratio}: a table that compresses little stays a propagator.
+   */
+  static final int COMPRESSED_RATIO =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.ratio", 4);
+
+  /** The most values of a column of a compressed table, {@code ...compressed.dom}. */
+  static final int COMPRESSED_DOM =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.dom", 256);
+
+  /** The most tuples of a plain table that is tried for compression (the cost of compressing). */
+  static final int COMPRESSED_INPUT =
+      Integer.getInteger("jacop.lcg.tableClauses.compressed.input", 4096);
+
+  /** Statistics: tables written as clauses of their compressed form. */
+  public long compressedTablesAsClauses;
+
+  /**
+   * Writes a table of plain tuples as the support clauses of its compressed form when that has at
+   * most {@link #COMPRESSED_TUPLES} tuples and at most 1/{@link #COMPRESSED_RATIO} of the plain
+   * ones (the tuples are first reduced to those valid on the root domains).
+   */
+  private boolean encodeCompressedTable(HybridTable t) {
+    int arity = t.columnCount();
+    int tuples = t.tupleCount();
+    if (tuples < COMPRESSED_RATIO || tuples > COMPRESSED_INPUT || t.hasColumnRestrictions()) {
+      return false;
+    }
+    IntVar[] x = new IntVar[arity];
+    int nFree = 0;
+    int[] free = new int[arity];
+    for (int k = 0; k < arity; k++) {
+      x[k] = t.column(k);
+      if (!x[k].singleton()) {
+        free[nFree] = k;
+        if (trail.id(x[k]) >= vars.length
+            || x[k].getSize() > COMPRESSED_DOM
+            || TABLE_OBJECTIVE_TERMS && objectiveTerms.contains(x[k])) {
+          return false;
+        }
+        nFree++;
+      }
+    }
+    if (nFree < 2) {
+      return false;
+    }
+    int[][] plain = t.validPlainTuples();
+    if (plain == null || plain.length < COMPRESSED_RATIO) {
+      return false;
+    }
+    org.jacop.constraints.table.Restriction[][] compressed =
+        org.jacop.constraints.table.TableCompressor.compress(x, plain, true);
+    if (compressed == null
+        || compressed.length > COMPRESSED_TUPLES
+        || (long) compressed.length * COMPRESSED_RATIO > plain.length) {
+      return false;
+    }
+    if (tableEncoder == null) {
+      tableEncoder = new ClauseEncoder(solverLiterals(), TABLE_LIMIT);
+    }
+    long aux = auxiliaryVariables;
+    // two unfixed columns: the support clauses of their values, with no literal per tuple
+    List<int[]> cs =
+        nFree == 2
+            ? directTable(t, free[0], free[1])
+            : tableEncoder.encode(new HybridTable(x, compressed, false));
+    if (TABLE_DEBUG) {
+      System.out.println(
+          "% compressed table clauses "
+              + (cs == null ? "rejected" : cs.size())
+              + " arity "
+              + arity
+              + " free "
+              + nFree
+              + " tuples "
+              + tuples
+              + " valid "
+              + plain.length
+              + " compressed "
+              + compressed.length
+              + " doms "
+              + freeDomains(t));
+    }
+    return addTableClauses(t, cs, aux);
   }
 
   /**
@@ -5457,8 +5641,46 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  // run once at the first restart to the root, see atRootAfter
+  private Runnable rootAction;
+  private long rootActionDelay;
+
+  /**
+   * Restarts the search to the root once the given time has passed, also under fixed search without
+   * restarts, and runs the given action there, before the search goes on: for example to turn on a
+   * propagator whose first, expensive, call is worth it only when the search does not end quickly.
+   * Set it before solving.
+   *
+   * @param nanos the time from now, in nanoseconds.
+   * @param action the action run at the root.
+   */
+  public void atRootAfter(long nanos, Runnable action) {
+    rootAction = action;
+    rootActionDelay = nanos;
+    sat.restartAt(System.nanoTime() + nanos);
+  }
+
+  /**
+   * Tells whether the action of {@link #atRootAfter} is still to run.
+   *
+   * @return true until it ran.
+   */
+  public boolean rootActionPending() {
+    return rootAction != null;
+  }
+
   @Override
   public void notifyRestart() {
+    if (rootAction != null) {
+      if (store.level == baseLevel) {
+        Runnable action = rootAction;
+        rootAction = null;
+        action.run();
+      } else {
+        // under assumptions: at a later restart to the root
+        sat.restartAt(System.nanoTime() + rootActionDelay);
+      }
+    }
     // a restart under assumptions keeps their level, whose bounds hold only under them
     if (store.level == baseLevel) {
       deleteLpSteps();
@@ -5646,6 +5868,46 @@ public final class LcgSolver implements ExternalPropagator {
     long bLo = b > 0 ? litValue[vb] : Long.MIN_VALUE;
     long bHi = bEq || b < 0 ? litValue[vb] - (bEq ? 0L : 1L) : Long.MAX_VALUE;
     return bLo <= aLo && aHi <= bHi;
+  }
+
+  // bound literals linked per integer variable, see unkept
+  private int[] linkedCount = new int[16];
+
+  /**
+   * Linked bound literals of one variable past which its new bound literals stay transient: short
+   * reasons with one are not kept, and learnt clauses resolve one away. Each linked literal of a
+   * variable is a step of the binary chain [x >= v] -> [x >= u] that every bound change of the
+   * variable walks; on multi-agent-graph-coverage (arrival times 0..405) the kept 2-3 literal
+   * reasons linked about 260 literals per variable and 81 % of all SAT assignments were chain
+   * steps. CP-SAT keeps integer bounds out of its clauses altogether (its integer reasons are
+   * expanded to Boolean ones in conflict analysis). {@link #setChainLimit} turns it on (the
+   * FlatZinc front end does so under free search with 64); {@code -Djacop.lcg.chainLimit} sets the
+   * limit in every search.
+   */
+  private int chainLimit = Integer.getInteger("jacop.lcg.chainLimit", Integer.MAX_VALUE);
+
+  /**
+   * Whether {@code -Djacop.lcg.chainLimit} is given, which then overrides {@link #setChainLimit}.
+   */
+  public static final boolean CHAIN_LIMIT_SET = System.getProperty("jacop.lcg.chainLimit") != null;
+
+  /**
+   * Sets the linked bound literals of one variable past which its new bound literals stay transient
+   * (see {@link #unkept}); {@code Integer.MAX_VALUE}, the default, turns it off.
+   *
+   * @param limit linked bound literals per variable
+   */
+  public void setChainLimit(int limit) {
+    chainLimit = limit;
+  }
+
+  @Override
+  public boolean unkept(int aVar) {
+    if (aVar >= transientLit.length || !transientLit[aVar] || litKind[aVar] != GE_KIND) {
+      return false;
+    }
+    int i = litVar[aVar];
+    return i < linkedCount.length && linkedCount[i] >= chainLimit;
   }
 
   @Override

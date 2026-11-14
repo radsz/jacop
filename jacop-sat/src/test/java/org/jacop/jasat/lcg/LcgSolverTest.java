@@ -436,6 +436,97 @@ class LcgSolverTest {
   }
 
   @Test
+  void compressedTablesAsClausesAgreeWithBruteForce() {
+    // tables that are unions of one to three boxes of value sets, so they compress to a few
+    // tuples, written as the clauses of their compressed form
+    // (jacop.lcg.tableClauses.compressed) next to other constraints
+    Random rnd = new Random(89);
+    long encoded = 0;
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 600; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        IntVar[] scope = Arrays.copyOf(x, 2 + rnd.nextInt(3));
+        Collections.shuffle(Arrays.asList(scope), rnd);
+        Set<List<Integer>> rows = new LinkedHashSet<>();
+        for (int box = 1 + rnd.nextInt(3); box > 0; box--) {
+          int[][] sets = new int[scope.length][];
+          for (int k = 0; k < scope.length; k++) {
+            sets[k] = rnd.ints(1 + rnd.nextInt(3), -1, 6).distinct().toArray();
+          }
+          addProduct(rows, sets, new ArrayList<>());
+        }
+        int[][] tuples =
+            rows.stream()
+                .map(r -> r.stream().mapToInt(Integer::intValue).toArray())
+                .toArray(int[][]::new);
+        int[] position = new int[scope.length];
+        for (int k = 0; k < scope.length; k++) {
+          position[k] = Arrays.asList(x).indexOf(scope[k]);
+        }
+        relations.add(
+            new Relation(
+                new HybridTable(scope, tuples),
+                t ->
+                    Arrays.stream(tuples)
+                        .anyMatch(
+                            row ->
+                                IntStream.range(0, row.length)
+                                    .allMatch(k -> row[k] == t[position[k]]))));
+      }
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setCompressedTableClauses(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      encoded += solver.compressedTablesAsClauses;
+    }
+    assertThat(sat).isGreaterThan(50);
+    assertThat(unsat).isGreaterThan(50);
+    assertThat(encoded).isGreaterThan(50);
+  }
+
+  private static void addProduct(Set<List<Integer>> rows, int[][] sets, List<Integer> prefix) {
+    if (prefix.size() == sets.length) {
+      rows.add(new ArrayList<>(prefix));
+      return;
+    }
+    for (int v : sets[prefix.size()]) {
+      prefix.add(v);
+      addProduct(rows, sets, prefix);
+      prefix.remove(prefix.size() - 1);
+    }
+  }
+
+  @Test
   void largeAlldiffStaysWithinTheLiteralBudget() {
     // each value fixed removes it from every other variable: n * n / 2 removals on one branch,
     // which made a solver variable each and filled the heap on debruijn_binary_04_06 (n = 4096)
@@ -2445,6 +2536,94 @@ class LcgSolverTest {
       for (int b = a + 1; b < at.length; b++) {
         if (t[at[a]] == t[at[b]]) {
           return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Permutations over the terms of the objective's sum become clauses too (sudoku_opt of the
+   * MiniZinc Challenge 2022): on a 3x3 Latin square minimising a signed sum of its cells, split
+   * into two blocks as the FlatZinc front end splits long sums, all six rows and columns become
+   * clauses and the optimum is the one of brute force.
+   */
+  @Test
+  void permutationsOverObjectiveTermsBecomeClauses() {
+    int n = 3;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n * n];
+    int[] sign = new int[n * n];
+    for (int k = 0; k < x.length; k++) {
+      x[k] = new IntVar(store, "x" + k, 1, n);
+      sign[k] = (k / n + k % n) % 2 == 0 ? 1 : -1;
+    }
+    for (int i = 0; i < n; i++) {
+      IntVar[] row = new IntVar[n];
+      IntVar[] col = new IntVar[n];
+      for (int j = 0; j < n; j++) {
+        row[j] = x[i * n + j];
+        col[j] = x[j * n + i];
+      }
+      store.impose(new Alldistinct(row));
+      store.impose(new Alldistinct(col));
+    }
+    // b1 = the signed first row, b2 = the signed rest, obj = b1 + b2
+    IntVar b1 = new IntVar(store, "b1", -n * n, n * n);
+    IntVar b2 = new IntVar(store, "b2", -n * n * n, n * n * n);
+    IntVar obj = new IntVar(store, "obj", -n * n * n, n * n * n);
+    IntVar[] first = new IntVar[n + 1];
+    int[] w1 = new int[n + 1];
+    IntVar[] rest = new IntVar[n * n - n + 1];
+    int[] w2 = new int[n * n - n + 1];
+    for (int k = 0; k < n * n; k++) {
+      if (k < n) {
+        first[k] = x[k];
+        w1[k] = sign[k];
+      } else {
+        rest[k - n] = x[k];
+        w2[k - n] = sign[k];
+      }
+    }
+    first[n] = b1;
+    w1[n] = -1;
+    rest[n * n - n] = b2;
+    w2[n * n - n] = -1;
+    store.impose(new LinearInt(first, w1, "==", 0));
+    store.impose(new LinearInt(rest, w2, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {b1, b2, obj}, new int[] {1, 1, -1}, "==", 0));
+    // brute force over all assignments of the cells
+    int best = Integer.MAX_VALUE;
+    int[] t = new int[n * n];
+    for (int code = 0; code < Math.pow(n, n * n); code++) {
+      int c = code;
+      for (int k = 0; k < t.length; k++) {
+        t[k] = 1 + c % n;
+        c /= n;
+      }
+      if (latin(t, n)) {
+        int sum = 0;
+        for (int k = 0; k < t.length; k++) {
+          sum += sign[k] * t[k];
+        }
+        best = Math.min(best, sum);
+      }
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(best);
+    assertThat(solver.permutationsAsClauses).isEqualTo(2L * n);
+  }
+
+  private static boolean latin(int[] t, int n) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        for (int k = j + 1; k < n; k++) {
+          if (t[i * n + j] == t[i * n + k] || t[j * n + i] == t[k * n + i]) {
+            return false;
+          }
         }
       }
     }
@@ -5096,6 +5275,56 @@ class LcgSolverTest {
     // over 800,000 units is 960
     assertThat(cores.stalled(200_000, end, 100 + 960)).isFalse();
     assertThat(cores.stalled(200_000, end, 100 + 961)).isTrue();
+  }
+
+  /**
+   * After {@link CoreSearch#DECAY_AFTER} of the phase's own work, a rate that falls from the third
+   * to the fourth quarter of the phase is projected as a geometric series: on chessboard3 (2023)
+   * each core cost more than the last, and the linear projection kept the phase for half of a 1200
+   * s run while the bound stayed 13 below the optimum. Before that work, the linear test alone.
+   */
+  @Test
+  void corePhaseStopsWhenItsBoundRateKeepsFalling() {
+    CoreSearch cores = sumCores();
+    long u = CoreSearch.DECAY_AFTER / 4; // a quarter of the work before a falling rate counts
+    long end = 40 * u;
+    cores.lowerBound = 0;
+    cores.start(0);
+    cores.lowerBound = 4;
+    cores.sample(2 * u);
+    cores.lowerBound = 6; // 2 over the third quarter
+    cores.sample(3 * u);
+    cores.lowerBound = 7; // 1 over the last: q = 1/2, at most 1 more in all
+    cores.sample(4 * u);
+    // linearly 1.5 per u, three times over 36 u reaches 162; the falling rate reaches 3 at most
+    assertThat(cores.stalled(4 * u, end, 7 + 20)).isTrue();
+    assertThat(cores.stalled(4 * u, end, 7 + 2)).isFalse();
+    // the same quarters before DECAY_AFTER: the linear test only
+    CoreSearch early = sumCores();
+    early.lowerBound = 0;
+    early.start(0);
+    early.lowerBound = 4;
+    early.sample(u);
+    early.lowerBound = 6;
+    early.sample(3 * u / 2);
+    early.lowerBound = 7;
+    early.sample(2 * u);
+    assertThat(early.stalled(2 * u, 20 * u, 7 + 20)).isFalse();
+  }
+
+  /** The core-guided search of obj = x0 + x1 + x2 over 0..10 each, for the tests of its rates. */
+  private static CoreSearch sumCores() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    IntVar obj = new IntVar(store, "obj", 0, 30);
+    store.impose(
+        new LinearInt(new IntVar[] {x[0], x[1], x[2], obj}, new int[] {1, 1, 1, -1}, "==", 0));
+    CoreSearch cores = CoreSearch.of(new LcgSolver(store), obj);
+    assertThat(cores).isNotNull();
+    return cores;
   }
 
   /**

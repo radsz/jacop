@@ -50,6 +50,7 @@ import java.util.function.ToIntFunction;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
@@ -298,6 +299,18 @@ final class OpbEncoder implements PbModel {
       return implied(lit, r.c, false)
           && (!(r instanceof Reified) || implied(negate(lit), r.c, true));
     }
+    if (c instanceof ImpliesNot r) {
+      if (!isBoolean(r.b)) {
+        return false;
+      }
+      String lit = literal(r.b, false);
+      LinearForm inner = form(r.c);
+      if (inner != null) {
+        guarded(lit, inner);
+        return true;
+      }
+      return implied(lit, r.c, false);
+    }
     if (c instanceof Not n && n.getClass() == Not.class) {
       return implied("1", n.negatedConstraint(), true);
     }
@@ -445,7 +458,21 @@ final class OpbEncoder implements PbModel {
     int y = id.applyAsInt(f.vars()[1]);
     IntDomain dx = root[x];
     IntDomain dy = root[y];
-    if (dx.singleton() || dy.singleton()) {
+    if (dx.singleton() != dy.singleton()) {
+      // the other variable is a constant k, so the free one equals c - b k: the sum alone is two
+      // bounds, and unit propagation does not see that this value is a hole of the free one
+      boolean xFixed = dx.singleton();
+      IntDomain d = xFixed ? dy : dx;
+      long k = xFixed ? dx.value() : dy.value();
+      long wFree = f.weights()[xFixed ? 1 : 0];
+      long wFixed = f.weights()[xFixed ? 0 : 1];
+      long v = (f.c() - wFixed * k) * wFree;
+      String value =
+          v < d.min() || v > d.max() || !d.contains((int) v) ? "0" : eq(xFixed ? y : x, (int) v);
+      implication("1", value);
+      return;
+    }
+    if (dx.singleton()) {
       return;
     }
     grow(2L * (dx.max() - dx.min()));

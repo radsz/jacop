@@ -110,8 +110,24 @@ public class In extends PrimitiveConstraint implements Copyable<In>, Explainable
     // !dom.contains(x.domain);
   }
 
+  /**
+   * Under lazy clause generation (a domain change recorder is set), the constraint counts as
+   * satisfied only when the bounds of x lie in dom, not when the values between them that are left
+   * are all in dom. The reason of the earlier entailment is the bounds plus every removed value
+   * between them that is not in dom, so a reified In over a wide domain gave each conflict a long
+   * explanation: on XCSP3 RollerSplat-07b-50 (10,825 reified set tests over 411-value plan
+   * variables) proving the optimum took 393 s and 254k nodes, and 205 s and 147k nodes with this
+   * rule. Without a recorder the entailment stays complete. The property jacop.lcg.inEntailByBounds
+   * set to false restores the complete check under LCG too.
+   */
+  static final boolean ENTAIL_BY_BOUNDS =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.inEntailByBounds", "true"));
+
   @Override
   public boolean satisfied() {
+    if (ENTAIL_BY_BOUNDS && x.store.domainChangeRecorder != null) {
+      return dom.contains(x.min(), x.max());
+    }
     return // x.singleton() &&
     dom.contains(x.domain);
   }

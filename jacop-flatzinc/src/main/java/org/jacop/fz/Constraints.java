@@ -34,15 +34,18 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
@@ -51,13 +54,16 @@ import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ColouredTreeDetector;
+import org.jacop.fz.constraints.ConjunctionSumDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
+import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
+import org.jacop.fz.constraints.EnforcementInliner;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
@@ -199,6 +205,8 @@ public class Constraints implements ParserTreeConstants {
       // merged copies of partial function results
       Set<SimpleNode> replaced = Set.of();
       Set<IntVar> tabled = Set.of();
+      // a search variable that became an alias is searched as its Boolean
+      dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       if (PartialCopyDetector.enabled()) {
         replaced = new PartialCopyDetector(support).detect(astTree);
         dictionary.removeAliasFromSearch();
@@ -324,6 +332,25 @@ public class Constraints implements ParserTreeConstants {
         new LinearOverlapDetector(support).detect(astTree);
       }
 
+      // the unary and binary cost functions the objective sums, for the cost network bound that
+      // Solve imposes once the objective is known; it reads the model as it is
+      if (CostNetworkDetector.enabled() && options.proof() == null) {
+        CostNetworkDetector costNetwork = new CostNetworkDetector(support);
+        costNetwork.collect(astTree);
+        dictionary.costNetwork = costNetwork;
+      }
+
+      // controls of half-reified constraints that only clauses want true are replaced by literals
+      EnforcementInliner inliner = null;
+      if (EnforcementInliner.enabled() && options.proof() == null && !manySolutions) {
+        inliner = new EnforcementInliner(support, replaced, keptVariables(astTree));
+        inliner.detect(astTree, cf);
+        if (!inliner.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(inliner.replaced());
+        }
+      }
+
       if (!"false".equals(AlldiffChannels.rule())) {
         support.alldiffChannels = AlldiffChannels.collect(support, astTree);
         support.alldiffChannels.addAll(tabled);
@@ -343,10 +370,27 @@ public class Constraints implements ParserTreeConstants {
             }
             SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
             if (!replaced.contains(snode.jjtGetChild(0))) {
-              generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
+              Support.ControlSubstitution control =
+                  support.controlSubstitution((SimpleNode) snode.jjtGetChild(0));
+              if (control == null) {
+                generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
+              } else {
+                support.beginControlSubstitution(control);
+                try {
+                  generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
+                } finally {
+                  support.endControlSubstitution();
+                }
+              }
             }
           }
         }
+      }
+
+      if (inliner != null && !inliner.eliminated().isEmpty()) {
+        Set<Var> free = inliner.unconstrained();
+        dictionary.removeFromDefaultSearch(free);
+        dictionary.unusedVariables.addAll(free);
       }
 
       support.releaseLinearRewrites();
@@ -409,6 +453,12 @@ public class Constraints implements ParserTreeConstants {
 
       if (CardinalityDetector.enabled()) {
         new CardinalityDetector(support).detect(astTree);
+      }
+
+      // the bound of the terms of a sum of conjunctions that wait for one variable, redundant;
+      // --proof does not encode it
+      if (ConjunctionSumDetector.enabled() && options.proof() == null) {
+        new ConjunctionSumDetector(support).detect(astTree);
       }
 
       // each variable whose values are all counted at least twice equals one of its few partners
@@ -528,6 +578,27 @@ public class Constraints implements ParserTreeConstants {
       if (node.getId() == JJTMODELEND) {
         namedVariables(node, vars);
       }
+    }
+    return vars;
+  }
+
+  /** The variables of the solve item and the output variables, with the Booleans of aliases. */
+  private Set<IntVar> keptVariables(SimpleNode astTree) {
+    Set<IntVar> vars = solveItemVariables(astTree);
+    for (Var v : dictionary.outputVariables) {
+      if (v instanceof IntVar x) {
+        vars.add(x);
+      }
+    }
+    for (Var[] a : dictionary.outputArrays()) {
+      for (Var v : a) {
+        if (v instanceof IntVar x) {
+          vars.add(x);
+        }
+      }
+    }
+    for (IntVar v : new ArrayList<>(vars)) {
+      vars.add(dictionary.getAlias(v));
     }
     return vars;
   }
@@ -674,9 +745,44 @@ public class Constraints implements ParserTreeConstants {
     ASTScalarFlatExpr p3 = (ASTScalarFlatExpr) node.jjtGetChild(2);
     IntVar b = support.getVariable(p3);
     IntVarAndValue xv = extractIntVarAndValue(p1, p2);
-    if (xv != null) {
-      support.addReified(xv.x, xv.v, b);
+    if (xv == null) {
+      return;
     }
+    if (binaryEqAlias && xv.v == 1 && binaryAlias(xv.x, b)) {
+      return;
+    }
+    support.addReified(xv.x, xv.v, b);
+  }
+
+  /*
+   * Whether int_eq_reif(x, 1, b) of a 0..1 variable x, which states x = b, makes x an alias of b,
+   * as bool2int(b, x) does. MiniZinc writes a Boolean grid used in sums as 0..1 integers channelled
+   * to Booleans this way (ma-path-finding: 141,000 of them), and each kept pair was two variables,
+   * their atoms and an equality. Off by default; the system property
+   * org.jacop.fz.binaryEqAlias=true turns it on.
+   */
+  private final boolean binaryEqAlias = Boolean.getBoolean("org.jacop.fz.binaryEqAlias");
+
+  private boolean binaryAlias(IntVar x, IntVar b) {
+    if (!(b instanceof BooleanVar)
+        || x instanceof BooleanVar
+        || x.min() < 0
+        || x.max() > 1
+        || dictionary.aliasTable.containsKey(x)
+        || dictionary.isAliasTarget(x)
+        || dictionary.aliasTable.containsKey(b)) {
+      return false;
+    }
+    dictionary.addAlias(b, x);
+    dictionary.binaryEqAliases.add(x);
+    if (x.singleton() || b.singleton()) {
+      x.domain.in(store.level, x, b.domain);
+      b.domain.in(store.level, b, x.domain);
+    }
+    if (debug) {
+      FzConsole.println("% Alias: " + b + " == " + x);
+    }
+    return true;
   }
 
   private void handleIntEqImp(SimpleNode node) {

@@ -113,6 +113,11 @@ public class Tables {
   /** The variables that table variable elimination joined out of the model, or null. */
   TableVariableElimination tableElimination;
 
+  // the cost function network of the objective (-Dorg.jacop.fz.costNetwork=true), until Solve
+  // builds
+  // its bound
+  org.jacop.fz.constraints.CostNetworkDetector costNetwork;
+
   // variables the detectors add for redundant constraints, which follow from the model's own: the
   // search of lazy clause generation branches on them last
   final ArrayList<Var> auxiliaryVariables = new ArrayList<>();
@@ -557,7 +562,7 @@ public class Tables {
    * @param b the variable to look up
    * @return the alias variable or the original variable
    */
-  IntVar getAlias(IntVar b) {
+  public IntVar getAlias(IntVar b) {
     IntVar v = aliasTable.get(b);
     if (v == null) {
       return b;
@@ -639,6 +644,38 @@ public class Tables {
     defaultSearchSetVariables.removeIf(vars::contains);
     defaultSearchSetArrays.replaceAll(
         a -> Arrays.stream(a).filter(v -> !vars.contains(v)).toArray(n -> Arrays.copyOf(a, n)));
+  }
+
+  /**
+   * The Booleans that stand in the search for the 0..1 integer variables made their aliases, so
+   * that default search orders them as it ordered those integer variables.
+   */
+  final Set<IntVar> searchedAsIntegers = new HashSet<>();
+
+  /** The 0..1 integer variables made aliases of Booleans by int_eq_reif(x, 1, b). */
+  final Set<IntVar> binaryEqAliases = new HashSet<>();
+
+  /**
+   * Replaces the 0..1 integer variables made aliases of Booleans by their Booleans in the search.
+   */
+  void searchAliasTargets(Set<IntVar> aliases) {
+    if (aliases.isEmpty()) {
+      return;
+    }
+    Set<Var> seen = new HashSet<>();
+    List<Var> search = new ArrayList<>(defaultSearchVariables.size());
+    for (Var v : defaultSearchVariables) {
+      Var w = v;
+      if (v instanceof IntVar x && aliases.contains(x)) {
+        w = aliasTable.get(x);
+        searchedAsIntegers.add((IntVar) w);
+      }
+      if (seen.add(w)) {
+        search.add(w);
+      }
+    }
+    defaultSearchVariables.clear();
+    defaultSearchVariables.addAll(search);
   }
 
   /** Removes aliased variables from the search variable collection. */

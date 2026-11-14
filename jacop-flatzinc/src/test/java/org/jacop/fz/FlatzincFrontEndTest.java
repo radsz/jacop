@@ -1610,6 +1610,26 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void subcircuitUnderProofKeepsSuccessorsDifferent() throws IOException {
+    // Nodes 1 and 2 both have successor 3. Under --proof the subcircuit was a decomposition by
+    // positions without the all-different, which accepted 1 -> 3 -> 1 with 2 -> 3, so wide-set
+    // tpp and mario proved optima better than the true ones.
+    String fzn =
+        """
+        var {3}: x1:: output_var;
+        var {3}: x2:: output_var;
+        var 1..3: x3:: output_var;
+        array [1..3] of var int: x = [x1,x2,x3];
+        constraint jacop_subcircuit(x);
+        solve satisfy;
+        """;
+    String prefix = tmp.resolve("subcircuit").toString();
+    String out = run(fzn, "--proof", prefix)[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(run(fzn)[0].contains("=====UNSATISFIABLE====="));
+  }
+
+  @Test
   void subcircuitPostsAlldistinctByDefaultFromThirtyNodes() throws IOException {
     // The same Hall set: Subcircuit alone tries x30 = 4 and x30 = 3 first.
     String fzn = hallSetSuccessors(30) + "constraint jacop_subcircuit(x);\n" + hallSetSearch(30);

@@ -349,6 +349,13 @@ unless stated otherwise):
   (half-)reified difference constraints.
 - org.jacop.fz.disjunctiveCliques: CumulativeUnary on sets of tasks
   that can never overlap (Sidorov, Marijnissen, Demirovic, CP 2025).
+- org.jacop.fz.conjunctionSum: ConjunctionSum, the partial forward
+  checking bound, on a minimized sum of 0/1 indicators of conjunctions
+  of value literals (bool2int(array_bool_and) over int_eq_reif and
+  int_ne_reif); default true, off under --proof.
+- org.jacop.fz.conjunctionSum.maxValues: ConjunctionSum is posted only
+  when every variable of a literal has at most this many values;
+  default 4.
 - org.jacop.fz.inferredCumulatives: redundant cumulatives lifted from
   covers of the cumulatives with a fixed capacity and from the tasks
   that can never overlap (Sidorov, CP 2026); default true.
@@ -437,6 +444,25 @@ unless stated otherwise):
   default 200.
 - org.jacop.fz.linearOverlap.work: the most terms visited while
   looking for shared sub-sums; default 50000000.
+- org.jacop.fz.costNetwork: CostNetworkBound on an objective that is a
+  sum of unary and binary cost tables (weighted constraint satisfaction:
+  frequency assignment, photograph selection, protein design); default
+  false, off under --proof.
+- org.jacop.cfn.rootMs, org.jacop.cfn.sweeps: the most milliseconds and
+  sweeps of the reparametrisation at the root; default 2000 and 1000.
+- org.jacop.cfn.maxDomain, org.jacop.cfn.maxEntries, org.jacop.cfn.nodes:
+  the largest domain of a network variable, the most table entries of
+  the network and the most nodes of the tabulation; default 1024,
+  12000000 and 40000000.
+- org.jacop.cfn.gate: post the bound only when its root bound is above
+  the objective's bound at the root after the linear relaxation; default
+  true.
+- org.jacop.cfn.prune: remove the values whose cost lifts the bound past
+  the objective's other bound; false keeps only the objective bound;
+  default true.
+- org.jacop.cfn.unaryOnly: build a network also when every cost is unary
+  (hard binary constraints only); default false.
+- org.jacop.cfn.dump=file: writes the network in the wcsp format.
 - org.jacop.fz.stockingCost: StockingCost on lot sizing costs.
 - org.jacop.fz.tableCover: TableCover on tables over groups of the
   variables of an all different (tilings); default true without LCG
@@ -730,6 +756,14 @@ Rows and encodings:
   default 20000 and 2000.
 - org.jacop.lp.pairCliques: conflicts of pairs of 0/1 literals merged
   into clique rows; default true.
+- org.jacop.lp.tableClauseRows: the prime implicates of tables over 0/1
+  variables as clause rows, for an objective; default true.
+- org.jacop.lp.tableClauseArity: the most free 0/1 columns of a table
+  that gets clause rows; default 10.
+- org.jacop.lp.tableClausesPerColumn: a table with more prime implicates
+  than this many per free column gets no clause rows; default 1.
+- org.jacop.lp.tableClauseRowsMax: the most clause rows over all tables;
+  a model with more gets none; default 10000.
 
 Cuts:
 

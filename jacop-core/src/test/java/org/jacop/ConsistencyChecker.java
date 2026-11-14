@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.AlldifferentExcept;
@@ -52,6 +53,7 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongSeq;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ConvexAllocation;
 import org.jacop.constraints.ConvexCost;
@@ -59,6 +61,7 @@ import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountVar;
 import org.jacop.constraints.DecomposedConstraint;
+import org.jacop.constraints.DifferenceCycles;
 import org.jacop.constraints.Distance;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -213,6 +216,9 @@ class ConsistencyChecker {
     /** Nodes where a bound has no support but running the constraint again would prune more. */
     int notFixpoint;
 
+    /** The first node that was not at fixpoint. */
+    String fixpointExample;
+
     final List<String> errors = new ArrayList<>();
     final Map<Level, Integer> violations = new EnumMap<>(Level.class);
     final Map<Level, String> examples = new EnumMap<>(Level.class);
@@ -264,6 +270,9 @@ class ConsistencyChecker {
           break;
         }
       }
+      if (fixpointExample != null) {
+        b.append("\n    not at fixpoint, e.g. ").append(fixpointExample);
+      }
       errors.forEach(e -> b.append("\n    ERROR ").append(e));
       return b.toString();
     }
@@ -275,7 +284,8 @@ class ConsistencyChecker {
     for (int run = 0; run < instances && result.errors.size() < 5; run++) {
       Store store = new Store();
       Model m = c.generator().apply(store, random);
-      String instance = c.name() + " run " + run + " " + domainsOf(m.vars());
+      String instance =
+          c.name() + " run " + run + " " + domainsOf(m.vars()) + describe(m.constraint());
       result.realChecked &= m.real() != null;
       List<int[]> before = solutions(m);
       m.post(store);
@@ -309,6 +319,11 @@ class ConsistencyChecker {
       }
     }
     return result;
+  }
+
+  /** The constraint's own text, with -Dconsistency.describe=true, to read a counterexample. */
+  private static String describe(Object constraint) {
+    return Boolean.getBoolean("consistency.describe") ? " {" + constraint + "}" : "";
   }
 
   private static boolean propagate(Store store, Result result, String instance) {
@@ -420,8 +435,12 @@ class ConsistencyChecker {
     }
     if (!boundsSupported && m.constraint() instanceof Constraint c) {
       String propagated = domainsOf(vars);
-      if (!rerun(store, c, vars).equals(propagated)) {
+      String again = rerun(store, c, vars);
+      if (!again.equals(propagated)) {
         result.notFixpoint++;
+        if (result.fixpointExample == null) {
+          result.fixpointExample = where + ", running it again gives " + again;
+        }
       }
     }
   }
@@ -964,6 +983,41 @@ class ConsistencyChecker {
         concat(x, y, z));
   }
 
+  // 3-4 rows of 2 variables over 0..2 with holes, pairwise different tuples (maybe but excepted
+  // ones)
+  static Model differentLists(Store s, Random r, boolean withExcept) {
+    int m = 3 + r.nextInt(2);
+    IntVar[][] x = new IntVar[m][2];
+    IntVar[] all = new IntVar[2 * m];
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = aVar(s, "x" + i + "_" + j, 0, 2, r);
+        all[2 * i + j] = x[i][j];
+      }
+    }
+    int[][] except = new int[withExcept ? 1 + r.nextInt(2) : 0][];
+    for (int e = 0; e < except.length; e++) {
+      except[e] = new int[] {r.nextInt(3), r.nextInt(3)};
+    }
+    return new Model(
+        new AllDifferentLists(x, except),
+        t -> {
+          for (int i = 0; i < m; i++) {
+            for (int k = i + 1; k < m; k++) {
+              if (t[2 * i] == t[2 * k] && t[2 * i + 1] == t[2 * k + 1]) {
+                int a = t[2 * i];
+                int b = t[2 * i + 1];
+                if (Arrays.stream(except).noneMatch(e -> e[0] == a && e[1] == b)) {
+                  return false;
+                }
+              }
+            }
+          }
+          return true;
+        },
+        all);
+  }
+
   private static Model alldiff(Store store, Random random, boolean gac) {
     int n = 3 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, 0, n, random);
@@ -1303,6 +1357,8 @@ class ConsistencyChecker {
               ((LinearIntDom) m.constraint()).setSumsets("always");
               return m;
             }),
+        new Case("AllDifferentLists", Level.NONE, (s, r) -> differentLists(s, r, false)),
+        new Case("AllDifferentListsExcept", Level.NONE, (s, r) -> differentLists(s, r, true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
         new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),
@@ -1561,7 +1617,317 @@ class ConsistencyChecker {
         new Case("GeostSubdims", Level.NONE, (s, r) -> geost(s, r, Family.SUBDIMS, null)),
         // the bound on the cost is exact over the intervals; the starts are filtered by the
         // reduced cost of one path, which is weaker than bounds(Z)
-        new Case("PrecedenceCost", Level.NONE, ConsistencyChecker::precedenceCost));
+        new Case("PrecedenceCost", Level.NONE, ConsistencyChecker::precedenceCost),
+        // constraint audit, 2026-11-14: the constraints most often posted on the wide set that had
+        // no case yet, in order of reach
+        new Case("ReifiedLinear", Level.NONE, (s, r) -> reifiedLinear(s, r, false)),
+        new Case("ImpliesLinear", Level.NONE, (s, r) -> reifiedLinear(s, r, true)),
+        new Case("ChannelReif", Level.DOMAIN, (s, r) -> channel(s, r, true)),
+        new Case("ChannelImply", Level.DOMAIN, (s, r) -> channel(s, r, false)),
+        new Case("SumBool", Level.DOMAIN, ConsistencyChecker::sumBool),
+        // redundant with the difference constraints posted on their own: it only fails earlier, so
+        // the check is that it never fails while a solution exists
+        new Case("DifferenceCycles", Level.NONE, ConsistencyChecker::differenceCycles),
+        new Case("LexOrder", Level.DOMAIN, ConsistencyChecker::lexOrder),
+        new Case("HybridTable", Level.DOMAIN, (s, r) -> hybridTable(s, r, false)),
+        new Case("HybridTableShort", Level.DOMAIN, (s, r) -> hybridTable(s, r, true)),
+        new Case("ConditionalSelect", Level.BOUNDS_Z, ConsistencyChecker::conditionalSelect),
+        new Case("MaxSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, false)),
+        new Case("MinSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, true)),
+        new Case("BoolClause", Level.DOMAIN, ConsistencyChecker::boolClause),
+        new Case("CountValues", Level.NONE, ConsistencyChecker::countValues),
+        new Case("SeqPrecedeChain", Level.DOMAIN, (s, r) -> seqPrecedeChain(s, r, false)),
+        new Case("ValuePrecedeChain", Level.DOMAIN, (s, r) -> seqPrecedeChain(s, r, true)));
+  }
+
+  private static IntVar[] bools(Store store, String prefix, int n) {
+    return IntStream.range(0, n)
+        .mapToObj(i -> new IntVar(store, prefix + i, 0, 1))
+        .toArray(IntVar[]::new);
+  }
+
+  /** b &lt;=&gt; (or b =&gt;) a linear constraint over 2 or 3 variables. */
+  private static Model reifiedLinear(Store store, Random random, boolean implies) {
+    int n = 2 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, -2, 3, random);
+    int[] w = weights(random, n, 3);
+    String rel = RELATIONS[random.nextInt(RELATIONS.length)];
+    int c = random.nextInt(5) - 2;
+    IntVar b = new IntVar(store, "b", 0, 1);
+    LinearInt lin = new LinearInt(x, w, rel, c);
+    Predicate<int[]> holds =
+        t -> {
+          long sum = 0;
+          for (int i = 0; i < n; i++) {
+            sum += (long) w[i] * t[i];
+          }
+          return holds(rel, sum, c);
+        };
+    Constraint con = implies ? new org.jacop.constraints.Implies(b, lin) : new Reified(lin, b);
+    return new Model(
+        con,
+        t -> implies ? t[n] == 0 || holds.test(t) : (t[n] == 1) == holds.test(t),
+        concat(x, new IntVar[] {b}));
+  }
+
+  /** b[i] &lt;=&gt; x = v[i] (or b[i] =&gt; x = v[i]) for distinct values, some outside x. */
+  private static Model channel(Store store, Random random, boolean reif) {
+    IntVar x = aVar(store, "x", 0, 5, random);
+    int k = 2 + random.nextInt(4);
+    int[] v = random.ints(-1, 7).distinct().limit(k).toArray();
+    IntVar[] b = bools(store, "b", k);
+    Constraint con =
+        reif
+            ? new org.jacop.constraints.ChannelReif(x, b, v)
+            : new org.jacop.constraints.ChannelImply(x, b, v);
+    return new Model(
+        con,
+        t -> {
+          for (int i = 0; i < k; i++) {
+            boolean eq = t[0] == v[i];
+            if (reif ? (t[i + 1] == 1) != eq : t[i + 1] == 1 && !eq) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(new IntVar[] {x}, b));
+  }
+
+  /** A relation between the sum of 2 to 6 0/1 variables and a variable. */
+  private static Model sumBool(Store store, Random random) {
+    int n = 2 + random.nextInt(5);
+    IntVar[] b = bools(store, "b", n);
+    IntVar s = aVar(store, "s", -1, n + 1, random);
+    String rel = RELATIONS[random.nextInt(RELATIONS.length)];
+    return new Model(
+        new org.jacop.constraints.SumBool(b, rel, s),
+        t -> holds(rel, Arrays.stream(t, 0, n).sum(), t[n]),
+        concat(b, new IntVar[] {s}));
+  }
+
+  /** Difference constraints x - y &lt;= c over 3 or 4 nodes, some conditional on a 0/1 variable. */
+  private static Model differenceCycles(Store store, Random random) {
+    int nodes = 3 + random.nextInt(2);
+    IntVar[] node = vars(store, "n", nodes, 0, 4, random);
+    int arcs = 2 + random.nextInt(4);
+    IntVar[] x = new IntVar[arcs];
+    IntVar[] y = new IntVar[arcs];
+    int[] from = new int[arcs];
+    int[] to = new int[arcs];
+    int[] c = new int[arcs];
+    int[] lit = new int[arcs];
+    IntVar[] b = new IntVar[arcs];
+    int[] v = new int[arcs];
+    List<IntVar> bs = new ArrayList<>();
+    for (int a = 0; a < arcs; a++) {
+      from[a] = random.nextInt(nodes);
+      do {
+        to[a] = random.nextInt(nodes);
+      } while (to[a] == from[a]);
+      x[a] = node[from[a]];
+      y[a] = node[to[a]];
+      c[a] = random.nextInt(6) - 3;
+      lit[a] = -1;
+      if (random.nextBoolean()) {
+        b[a] = new IntVar(store, "b" + a, 0, 1);
+        v[a] = random.nextInt(2);
+        lit[a] = nodes + bs.size();
+        bs.add(b[a]);
+      }
+    }
+    return new Model(
+        new DifferenceCycles(x, y, c, b, v),
+        t -> {
+          for (int a = 0; a < arcs; a++) {
+            if ((lit[a] < 0 || t[lit[a]] == v[a]) && t[from[a]] - t[to[a]] > c[a]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(node, bs.toArray(IntVar[]::new)));
+  }
+
+  /** x &lt;=_lex y (or &lt;_lex) for vectors of 1 to 4 variables, possibly of different lengths. */
+  private static Model lexOrder(Store store, Random random) {
+    int nx = 1 + random.nextInt(4);
+    int ny = random.nextInt(4) == 0 ? 1 + random.nextInt(4) : nx;
+    IntVar[] x = vars(store, "x", nx, 0, 3, random);
+    IntVar[] y = vars(store, "y", ny, 0, 3, random);
+    boolean lt = random.nextBoolean();
+    return new Model(
+        new org.jacop.constraints.LexOrder(x, y, lt),
+        t -> {
+          for (int i = 0; i < Math.min(nx, ny); i++) {
+            if (t[i] != t[nx + i]) {
+              return t[i] < t[nx + i];
+            }
+          }
+          return nx < ny || (nx == ny && !lt);
+        },
+        concat(x, y));
+  }
+
+  /**
+   * A random table of 2 to 4 columns, plain or with unary restrictions (short and smart tables).
+   */
+  private static Model hybridTable(Store store, Random random, boolean restrictions) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int rows = 1 + random.nextInt(10);
+    if (!restrictions) {
+      int[][] tuples = new int[rows][n];
+      for (int[] row : tuples) {
+        for (int i = 0; i < n; i++) {
+          row[i] = random.nextInt(5) - 1;
+        }
+      }
+      return new Model(
+          new org.jacop.constraints.table.HybridTable(x, tuples),
+          t -> Arrays.stream(tuples).anyMatch(row -> Arrays.equals(row, t)),
+          x);
+    }
+    org.jacop.constraints.table.Restriction[][] tuples =
+        new org.jacop.constraints.table.Restriction[rows][n];
+    List<List<java.util.function.IntPredicate>> accept = new ArrayList<>();
+    for (int r = 0; r < rows; r++) {
+      List<java.util.function.IntPredicate> row = new ArrayList<>();
+      for (int i = 0; i < n; i++) {
+        int a = random.nextInt(5) - 1;
+        int b = random.nextInt(5) - 1;
+        switch (random.nextInt(6)) {
+          case 0 -> {
+            tuples[r][i] = org.jacop.constraints.table.Restriction.any();
+            row.add(w -> true);
+          }
+          case 1 -> {
+            tuples[r][i] = org.jacop.constraints.table.Restriction.ne(a);
+            row.add(w -> w != a);
+          }
+          case 2 -> {
+            tuples[r][i] = org.jacop.constraints.table.Restriction.le(a);
+            row.add(w -> w <= a);
+          }
+          case 3 -> {
+            tuples[r][i] = org.jacop.constraints.table.Restriction.ge(a);
+            row.add(w -> w >= a);
+          }
+          case 4 -> {
+            tuples[r][i] = org.jacop.constraints.table.Restriction.in(a, b);
+            row.add(w -> w == a || w == b);
+          }
+          default -> {
+            tuples[r][i] = org.jacop.constraints.table.Restriction.eq(a);
+            row.add(w -> w == a);
+          }
+        }
+      }
+      accept.add(row);
+    }
+    return new Model(
+        new org.jacop.constraints.table.HybridTable(x, tuples),
+        t ->
+            accept.stream()
+                .anyMatch(row -> IntStream.range(0, n).allMatch(i -> row.get(i).test(t[i]))),
+        x);
+  }
+
+  /** y = x[k] for the first k with b[k] = 1, some k must have b[k] = 1. */
+  private static Model conditionalSelect(Store store, Random random) {
+    int n = 1 + random.nextInt(4);
+    IntVar[] b = bools(store, "b", n);
+    IntVar[] x = vars(store, "x", n, 0, 4, random);
+    IntVar y = aVar(store, "y", 0, 4, random);
+    return new Model(
+        new ConditionalSelect(b, x, y),
+        t -> {
+          for (int i = 0; i < n; i++) {
+            if (t[i] == 1) {
+              return t[2 * n] == t[n + i];
+            }
+          }
+          return false;
+        },
+        concat(b, x, new IntVar[] {y}));
+  }
+
+  private static Model minMaxSimple(Store store, Random random, boolean min) {
+    IntVar[] x = vars(store, "x", 3, -2, 4, random);
+    Constraint con =
+        min
+            ? new org.jacop.constraints.MinSimple(x[0], x[1], x[2])
+            : new org.jacop.constraints.MaxSimple(x[0], x[1], x[2]);
+    return new Model(con, t -> t[2] == (min ? Math.min(t[0], t[1]) : Math.max(t[0], t[1])), x);
+  }
+
+  /** or(x) \/ or(not y) over 0/1 variables, 0 to 4 of each, at least one in all. */
+  private static Model boolClause(Store store, Random random) {
+    int nx = random.nextInt(5);
+    int ny = (nx == 0 ? 1 : 0) + random.nextInt(4);
+    IntVar[] x = bools(store, "x", nx);
+    IntVar[] y = bools(store, "y", ny);
+    return new Model(
+        new org.jacop.constraints.BoolClause(x, y),
+        t ->
+            IntStream.range(0, nx).anyMatch(i -> t[i] == 1)
+                || IntStream.range(0, ny).anyMatch(i -> t[nx + i] == 0),
+        concat(x, y));
+  }
+
+  /** counter[j] = number of x equal to values[j]. */
+  private static Model countValues(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int k = 1 + random.nextInt(3);
+    int[] values = random.ints(0, 4).distinct().limit(k).sorted().toArray();
+    IntVar[] counter = vars(store, "c", k, 0, n, random);
+    return new Model(
+        new org.jacop.constraints.CountValues(x, counter, values),
+        t -> {
+          for (int j = 0; j < k; j++) {
+            int v = values[j];
+            if (IntStream.range(0, n).filter(i -> t[i] == v).count() != t[n + j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(x, counter));
+  }
+
+  /** seq_precede_chain(x), or value_precede_chain(c, x) for a random chain. */
+  private static Model seqPrecedeChain(Store store, Random random, boolean valueChain) {
+    int n = 2 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, -1, 4, random);
+    int[] chain =
+        valueChain ? random.ints(-1, 5).distinct().limit(2 + random.nextInt(3)).toArray() : null;
+    java.util.function.IntUnaryOperator rank =
+        v -> {
+          if (chain == null) {
+            return Math.max(0, v);
+          }
+          for (int i = 0; i < chain.length; i++) {
+            if (chain[i] == v) {
+              return i + 1;
+            }
+          }
+          return 0;
+        };
+    return new Model(
+        new org.jacop.constraints.SeqPrecedeChain(x, chain),
+        t -> {
+          int m = 0;
+          for (int v : t) {
+            int r = rank.applyAsInt(v);
+            if (r > m + 1) {
+              return false;
+            }
+            m = Math.max(m, r);
+          }
+          return true;
+        },
+        x);
   }
 
   /**

@@ -960,6 +960,11 @@ public final class ConstraintFncs {
     gc.gen_jacop_all_different_lists(n);
   }
 
+  /** Handles the jacop_all_different_lists_except FlatZinc constraint. */
+  public void jacop_all_different_lists_except(SimpleNode n) {
+    gc.gen_jacop_all_different_lists(n);
+  }
+
   /** Handles the jacop_lex_chain_less_int FlatZinc constraint. */
   public void jacop_lex_chain_less_int(SimpleNode n) {
     gc.gen_jacop_lex_chain(n, true);
@@ -1608,5 +1613,15 @@ public final class ConstraintFncs {
   /** Handles the jacop_on_restart_last_val_bool FlatZinc constraint. */
   public void jacop_on_restart_last_val_bool(SimpleNode n) {
     rc.gen_jacop_on_restart_last_val_int(n);
+  }
+
+  /**
+   * Posts the clause {@code a1[0] \/ ... \/ not a2[0] \/ ...} as a bool_clause constraint.
+   *
+   * @param a1 the positive literals.
+   * @param a2 the negative literals.
+   */
+  public void poseClause(IntVar[] a1, IntVar[] a2) {
+    bc.poseClause(a1, a2);
   }
 }
