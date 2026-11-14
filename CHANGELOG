@@ -5492,6 +5492,37 @@ Version 5.0 (unreleased)
    ConsistencyChecker has AllDifferentLists cases (no wrong pruning over
    230,000 nodes; forward checking, so no consistency level is claimed).
 
+317. New constraint CostNetworkBound (org.jacop.constraints.cfn): a lower
+   bound of an objective that sums unary and binary cost tables, the form
+   of weighted constraint satisfaction problems (frequency assignment,
+   satellite photograph selection, protein design). At the root the cost
+   network is reparametrised by equivalence-preserving transformations:
+   variables tied by bijective hard constraints (|x - y| = k) are merged,
+   then block coordinate ascent of the dual of the local polytope (MPLP;
+   A. Globerson and T. Jaakkola, NIPS 2007), in scaled integers, so the
+   bound is exact for any rounding, moves costs to the unary functions
+   (soft arc consistency and virtual arc consistency, M. C. Cooper, S. de
+   Givry, M. Sanchez, T. Schiex, M. Zytnicki and T. Werner, Artificial
+   Intelligence 174 (2010) 449-478; H. Montalbano, S. de Givry and G.
+   Katsirelos, arXiv 2509.17706, 2025). During search the bound is node
+   consistency of the reparametrised network with forward checking of
+   its binary costs, and a value whose cost lifts the bound past the
+   objective's other bound is removed; reasons for lazy clause generation
+   cite the removals of the cheaper values (and the values of the fixed
+   neighbours), lifted by the slack. -Dorg.jacop.fz.costNetwork=true
+   (default false) finds such objectives in FlatZinc (tables and
+   expressions over at most two variables per term) and posts the bound
+   when its root bound is above the objective's root bound after the
+   linear relaxation and some cost is binary. On the MiniZinc Challenge
+   proteindesign12 instances at 600 s, -f proves 13 of 15 instead of 9
+   (geometric mean time 0.17 on those both prove) and default search 10
+   of 15 at 240 s instead of 3; on celar graph and scen instances the
+   proven bound rises from 0 to the network's (graph11 2712, scen07
+   21023, graph05 221 = optimum) with default search at 240 s. SPOT5
+   (unary costs only) and CELAR6/7 SUB (root bound 0) are left alone by
+   the gate. Of the 187 optimisation instances of the wide benchmark set,
+   the detector reads cost terms in 52 and 1 passes the gate.
+
 Version 4.11
 =============
 

@@ -55,6 +55,7 @@ import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.ConjunctionSumDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
+import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
@@ -326,6 +327,14 @@ public class Constraints implements ParserTreeConstants {
       // common sub-sums of linear constraints become variables; --proof encodes the rows as given
       if (LinearOverlapDetector.enabled() && options.proof() == null) {
         new LinearOverlapDetector(support).detect(astTree);
+      }
+
+      // the unary and binary cost functions the objective sums, for the cost network bound that
+      // Solve imposes once the objective is known; it reads the model as it is
+      if (CostNetworkDetector.enabled() && options.proof() == null) {
+        CostNetworkDetector costNetwork = new CostNetworkDetector(support);
+        costNetwork.collect(astTree);
+        dictionary.costNetwork = costNetwork;
       }
 
       if (!"false".equals(AlldiffChannels.rule())) {
