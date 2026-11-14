@@ -1,0 +1,10 @@
+array[1..3] of var bool: c;
+array[1..3] of var 0..3: v;
+var 0..3: r;
+var bool: q;
+array[1..2] of var bool: p;
+constraint r = if c[1] then v[1] elseif c[2] then v[2] else v[3] endif;
+constraint q = if c[2] then p[1] elseif c[3] then p[2] else c[1] endif;
+constraint r >= 2 \/ q;
+constraint v[1] + v[2] + v[3] <= 5;
+solve satisfy;

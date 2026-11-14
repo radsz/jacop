@@ -1,0 +1,10 @@
+array[1..5] of var bool: b;
+var 1..5: i;
+var 2..6: j;
+var bool: e;
+var bool: f;
+constraint e = b[i];
+constraint f = b[j - 1];
+constraint e != f \/ b[3];
+constraint sum(b) <= 3;
+solve satisfy;
