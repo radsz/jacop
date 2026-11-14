@@ -1142,6 +1142,7 @@ public class LinearRelaxation extends Constraint
     // solve and moved the search
     int tableClauses = 0;
     if (TABLE_CLAUSES && objective != null) {
+      List<LinearForm> clauseRows = new ArrayList<>();
       Set<IntVar> inTried = Collections.newSetFromMap(new IdentityHashMap<>());
       for (LinearForm f : tried) {
         inTried.addAll(Arrays.asList(f.vars()));
@@ -1151,9 +1152,14 @@ public class LinearRelaxation extends Constraint
             && !h.arguments().stream()
                 .allMatch(v -> v.singleton() || v instanceof IntVar i && inTried.contains(i))) {
           List<LinearForm> rows = h.clauseRows();
-          ownTried.addAll(rows);
-          tableClauses += rows.size();
+          clauseRows.addAll(rows);
         }
+      }
+      // more rows than the trial takes in proportion: DC-midori r14, 76,036 rows over the tables
+      // past the hull cap, never raised the bound and slowed its first solutions
+      if (clauseRows.size() <= MAX_TABLE_CLAUSES) {
+        ownTried.addAll(clauseRows);
+        tableClauses = clauseRows.size();
       }
     }
     List<LinearForm> triedRows = new ArrayList<>(valueRows.tried());
@@ -1504,6 +1510,10 @@ public class LinearRelaxation extends Constraint
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
   private static final int SPARSE_ROWS = Integer.getInteger("org.jacop.lp.sparseRows", 100);
+
+  // the most clause rows of tables over all tables; more give none
+  private static final int MAX_TABLE_CLAUSES =
+      Integer.getInteger("org.jacop.lp.tableClauseRowsMax", 10_000);
 
   // the clause rows of tables over 0/1 variables (HybridTable.clauseRows)
   private static final boolean TABLE_CLAUSES =
