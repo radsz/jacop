@@ -63,6 +63,7 @@ import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
+import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
@@ -136,6 +137,14 @@ public class Constraints implements ParserTreeConstants {
   }
 
   void generateAllConstraints(SimpleNode astTree) throws Throwable {
+
+    // an objective declared beyond the integer range is divided by the factor its definition
+    // forces on it, instead of being narrowed
+    ObjectiveScaling.apply(support, astTree);
+    if (dictionary.domainsClamped()) {
+      System.err.println(dictionary.clampedDomainsWarning());
+      dictionary.recordDeclaredDomains();
+    }
 
     Options options = support.options;
     boolean manySolutions =
@@ -297,6 +306,7 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      support.releaseLinearRewrites();
       support.reportAlldiffChannels();
       if (dictionary.domainsClamped()) {
         // reads the rows as declared, to show the narrowing of domains harmless at the end

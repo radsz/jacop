@@ -2704,6 +2704,84 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void sumIntAndLinearIntReachTheirFixpointThroughDivesAndBacktracks() {
+    // SumInt ==: when sum.max falls into a hole of the sum's domain the pruning must run again;
+    // SumInt over more than three variables drops fixed terms on a trail; LinearInt and SumInt skip
+    // a
+    // pruning pass when no term can lose a value. After every decision and every backtrack the
+    // domains must be those a fresh store reaches from the same domains.
+    String[] relations = {"==", "<=", ">=", "!="};
+    Random random = new Random(61);
+    for (int trial = 0; trial < 1500; trial++) {
+      Store store = new Store();
+      int n = 2 + random.nextInt(4);
+      IntVar[] x = new IntVar[n + 1];
+      for (int i = 0; i <= n; i++) {
+        x[i] =
+            i < n
+                ? randomVar(store, "x" + i, -2, 4, random)
+                : randomVar(store, "s", -4, 12, random);
+      }
+      int[] w = new int[n + 1];
+      boolean weighted = random.nextBoolean();
+      for (int i = 0; i < n; i++) {
+        w[i] = weighted ? random.nextInt(7) - 3 : 1;
+      }
+      w[n] = -1;
+      String rel = relations[random.nextInt(relations.length)];
+      Function<IntVar[], Constraint> make =
+          v -> weighted ? new LinearInt(v, w, rel, 0) : new SumInt(Arrays.copyOf(v, n), rel, v[n]);
+      String instance =
+          "trial " + trial + " " + (weighted ? Arrays.toString(w) : "sum") + " " + rel;
+      store.impose(make.apply(x));
+      boolean consistent = store.consistency();
+      assertSameAsFreshStore(x, make, consistent, instance);
+      List<String> domainsAtLevel = new ArrayList<>();
+      while (consistent) {
+        domainsAtLevel.add(Arrays.toString(x));
+        List<IntVar> free = Arrays.stream(x).filter(v -> !v.singleton()).toList();
+        if (free.isEmpty()) {
+          break;
+        }
+        IntVar v = free.get(random.nextInt(free.size()));
+        int[] values = valuesOf(v);
+        int value = values[random.nextInt(values.length)];
+        store.setLevel(store.level + 1);
+        switch (random.nextInt(3)) {
+          case 0 -> v.domain.inComplement(store.level, v, value);
+          case 1 -> v.domain.inMax(store.level, v, Math.max(value, v.min()));
+          default -> v.domain.inMin(store.level, v, Math.min(value, v.max()));
+        }
+        consistent = store.consistency();
+        assertSameAsFreshStore(x, make, consistent, instance);
+      }
+      while (store.level > 0) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        if (store.level < domainsAtLevel.size()) {
+          assertThat(Arrays.toString(x)).as(instance).isEqualTo(domainsAtLevel.get(store.level));
+        }
+      }
+    }
+  }
+
+  private static void assertSameAsFreshStore(
+      IntVar[] x, Function<IntVar[], Constraint> make, boolean consistent, String instance) {
+    Store fresh = new Store();
+    IntVar[] y = new IntVar[x.length];
+    for (int i = 0; i < x.length; i++) {
+      y[i] = new IntVar(fresh, x[i].id(), x[i].dom().cloneLight());
+    }
+    fresh.impose(make.apply(y));
+    boolean freshConsistent = fresh.consistency();
+    if (!consistent) {
+      return;
+    }
+    assertThat(freshConsistent).as(instance + " " + Arrays.toString(x)).isTrue();
+    assertThat(Arrays.toString(y)).as(instance + " not at fixpoint").isEqualTo(Arrays.toString(x));
+  }
+
+  @Test
   void networkFlowWithAWeightThatIsAnotherArcsFlowCountsMatchBruteForce() {
     // the weight of one arc is the flow of another: pruning the flow during the sensitivity
     // analysis left the arc cost behind its weight (AssertionError in Pruning.analyzeArc); and a
