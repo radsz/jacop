@@ -147,9 +147,11 @@ class IntensionTableFlatzincTest {
       String r = boolVar();
       String rel = List.of("eq", "ne", "le", "lt").get(random.nextInt(4));
       String form = random.nextInt(3) == 0 ? "_imp" : "_reif";
-      if (random.nextInt(4) == 0) {
+      // a set membership in 4 of 16 draws, a linear comparison in 3 of 16
+      int kind = random.nextInt(16);
+      if (kind < 4) {
         constraints.add("set_in" + form + "(" + a + ",{0,2,3}," + r + ")");
-      } else if (random.nextInt(4) == 0) {
+      } else if (kind < 7) {
         constraints.add(
             "int_lin_"
                 + (rel.equals("lt") ? "le" : rel)

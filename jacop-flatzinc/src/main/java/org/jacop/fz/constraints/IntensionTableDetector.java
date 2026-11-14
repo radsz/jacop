@@ -543,7 +543,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
             yield new Item(node, op, all, null, null);
           }
         };
-      } catch (RuntimeException e) {
+      } catch (RuntimeException _) {
         // an argument the detector does not read (a float, a set variable): the constraint stays
         return null;
       }
@@ -879,7 +879,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
         if (b.at[k] >= 0 && b.at[k] == b.at[i]) {
           a += c[k];
         } else {
-          rest -= (long) c[k] * term(b, k);
+          rest -= c[k] * term(b, k);
         }
       }
       if (a == 0) {
