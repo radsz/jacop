@@ -1647,7 +1647,247 @@ class ConsistencyChecker {
         new Case("Assignment", Level.NONE, ConsistencyChecker::assignment),
         new Case("CountValuesBounds", Level.NONE, ConsistencyChecker::countValuesBounds),
         new Case("CumulativeUnaryVar", Level.NONE, ConsistencyChecker::cumulativeUnary),
-        new Case("EnergyPrecedence", Level.NONE, ConsistencyChecker::energyPrecedence));
+        new Case("EnergyPrecedence", Level.NONE, ConsistencyChecker::energyPrecedence),
+        // round 4: globals posted by fewer wide-set instances
+        new Case("AtMost", Level.DOMAIN, (s, r) -> atMostLeast(s, r, true)),
+        new Case("AtLeast", Level.DOMAIN, (s, r) -> atMostLeast(s, r, false)),
+        new Case("AllEqual", Level.DOMAIN, ConsistencyChecker::allEqual),
+        new Case("XorBool", Level.DOMAIN, ConsistencyChecker::xorBool),
+        new Case("AndBoolSimple", Level.DOMAIN, ConsistencyChecker::andBoolSimple),
+        new Case("Knapsack", Level.NONE, ConsistencyChecker::knapsack),
+        new Case(
+            "SymmetricAlldifferentDomain", Level.DOMAIN, (s, r) -> symmetricAlldiff(s, r, true)),
+        new Case(
+            "SymmetricAlldifferentBounds", Level.NONE, (s, r) -> symmetricAlldiff(s, r, false)),
+        new Case("ValuePrecede", Level.DOMAIN, ConsistencyChecker::valuePrecede),
+        new Case("MinOfSums", Level.BOUNDS_Z, ConsistencyChecker::minOfSums),
+        new Case("StockingCost", Level.NONE, ConsistencyChecker::stockingCost),
+        new Case("CostAlldifferent", Level.NONE, ConsistencyChecker::costAlldifferent),
+        new Case("CircuitCost", Level.NONE, ConsistencyChecker::circuitCost));
+  }
+
+  /** at_most(k, x, v) or at_least(k, x, v) over 2 to 5 variables. */
+  private static Model atMostLeast(Store store, Random random, boolean most) {
+    int n = 2 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int v = random.nextInt(4);
+    int k = random.nextInt(n + 1);
+    return new Model(
+        most
+            ? new org.jacop.constraints.AtMost(x, k, v)
+            : new org.jacop.constraints.AtLeast(x, k, v),
+        t -> {
+          long c = Arrays.stream(t).filter(w -> w == v).count();
+          return most ? c <= k : c >= k;
+        },
+        x);
+  }
+
+  private static Model allEqual(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 2 + random.nextInt(3), 0, 5, random);
+    return new Model(
+        new org.jacop.constraints.AllEqual(x), t -> Arrays.stream(t).distinct().count() == 1, x);
+  }
+
+  /** xor of 2 to 5 booleans equals y. */
+  private static Model xorBool(Store store, Random random) {
+    int n = 2 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, 0, 1, random);
+    IntVar y = aVar(store, "y", 0, 1, random);
+    return new Model(
+        new org.jacop.constraints.XorBool(x, y),
+        t -> (Arrays.stream(t, 0, n).sum() & 1) == t[n],
+        concat(x, new IntVar[] {y}));
+  }
+
+  private static Model andBoolSimple(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 3, 0, 1, random);
+    return new Model(
+        new org.jacop.constraints.AndBoolSimple(x[0], x[1], x[2]), t -> (t[0] & t[1]) == t[2], x);
+  }
+
+  /** capacity = sum w * q and profit = sum p * q over 2 to 4 items with quantities 0..2. */
+  private static Model knapsack(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    int[] w = random.ints(n, 1, 4).toArray();
+    int[] p = random.ints(n, 1, 5).toArray();
+    IntVar[] q = vars(store, "q", n, 0, 2, random);
+    IntVar cap = aVar(store, "c", 0, 12, random);
+    IntVar profit = aVar(store, "p", 0, 16, random);
+    return new Model(
+        new org.jacop.constraints.knapsack.Knapsack(p, w, q, cap, profit),
+        t -> {
+          int sw = 0;
+          int sp = 0;
+          for (int i = 0; i < n; i++) {
+            sw += w[i] * t[i];
+            sp += p[i] * t[i];
+          }
+          return sw == t[n] && sp == t[n + 1];
+        },
+        concat(q, new IntVar[] {cap, profit}));
+  }
+
+  /** symmetric_all_different: x[x[i]] = i, numbered from 1, 2 to 6 variables. */
+  private static Model symmetricAlldiff(Store store, Random random, boolean domain) {
+    int n = 2 + random.nextInt(5);
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    return new Model(
+        new org.jacop.constraints.SymmetricAlldifferent(x, 1, domain),
+        t -> {
+          for (int i = 0; i < n; i++) {
+            if (t[i] < 1 || t[i] > n || t[t[i] - 1] != i + 1) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /** value_precede(s, t, x) over 2 to 5 variables on 0..3. */
+  private static Model valuePrecede(Store store, Random random) {
+    int n = 2 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int s = random.nextInt(4);
+    int u = (s + 1 + random.nextInt(3)) % 4;
+    return new Model(
+        new org.jacop.constraints.ValuePrecede(s, u, x),
+        t -> {
+          for (int v : t) {
+            if (v == s) {
+              return true;
+            }
+            if (v == u) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /** m = min(x[i] + y[i]), some terms without y. */
+  private static Model minOfSums(Store store, Random random) {
+    int n = 2 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, -2, 3, random);
+    IntVar[] y = new IntVar[n];
+    List<IntVar> vs = new ArrayList<>(Arrays.asList(x));
+    int[] yIndex = new int[n];
+    for (int i = 0; i < n; i++) {
+      if (random.nextInt(3) > 0) {
+        y[i] = aVar(store, "y" + i, -2, 3, random);
+        yIndex[i] = vs.size();
+        vs.add(y[i]);
+      } else {
+        yIndex[i] = -1;
+      }
+    }
+    IntVar m = aVar(store, "m", -4, 6, random);
+    int mIndex = vs.size();
+    vs.add(m);
+    return new Model(
+        new org.jacop.constraints.MinOfSums(x, y, m),
+        t -> {
+          int best = Integer.MAX_VALUE;
+          for (int i = 0; i < n; i++) {
+            best = Math.min(best, t[i] + (yIndex[i] < 0 ? 0 : t[yIndex[i]]));
+          }
+          return best == t[mIndex];
+        },
+        vs.toArray(new IntVar[0]));
+  }
+
+  /** StockingCost over 2 to 4 orders, periods 0..4, capacity 1 or 2, random holding costs. */
+  private static Model stockingCost(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 4, random);
+    int[] due = random.ints(n, 1, 5).toArray();
+    int[] h = random.ints(n, 1, 3).toArray();
+    int cap = 1 + random.nextInt(2);
+    IntVar cost = aVar(store, "cost", 0, 10, random);
+    return new Model(
+        new org.jacop.constraints.StockingCost(x, due, h, cost, cap),
+        t -> {
+          int[] load = new int[5];
+          int c = 0;
+          for (int i = 0; i < n; i++) {
+            if (t[i] > due[i] || ++load[t[i]] > cap) {
+              return false;
+            }
+            c += h[i] * (due[i] - t[i]);
+          }
+          return c <= t[n];
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
+  /** alldifferent with cost = sum costs[i][x[i] - 1], 2 to 4 variables on 1..4. */
+  private static Model costAlldifferent(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    int vals = n + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, 1, vals, random);
+    int[][] costs = new int[n][vals];
+    for (int[] row : costs) {
+      for (int j = 0; j < vals; j++) {
+        row[j] = random.nextInt(4);
+      }
+    }
+    IntVar cost = aVar(store, "cost", 0, 3 * n, random);
+    return new Model(
+        new org.jacop.constraints.CostAlldifferent(x, costs, cost),
+        t -> {
+          int c = 0;
+          for (int i = 0; i < n; i++) {
+            c += costs[i][t[i] - 1];
+          }
+          return c == t[n] && Arrays.stream(t, 0, n).distinct().count() == n;
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
+  /** circuit with cost = sum costs[i][x[i] - 1], 3 to 5 nodes, random (not symmetric) costs. */
+  private static Model circuitCost(Store store, Random random) {
+    int n = 3 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    int[][] costs = new int[n][n];
+    boolean symmetric = random.nextBoolean();
+    for (int i = 0; i < n; i++) {
+      for (int j = symmetric ? i : 0; j < n; j++) {
+        costs[i][j] = i == j ? 0 : 1 + random.nextInt(5);
+        if (symmetric) {
+          costs[j][i] = costs[i][j];
+        }
+      }
+    }
+    IntVar cost = aVar(store, "cost", 0, 5 * n, random);
+    return new Model(
+        new org.jacop.constraints.CircuitCost(x, costs, cost),
+        t -> {
+          int c = 0;
+          for (int i = 0; i < n; i++) {
+            if (t[i] < 1 || t[i] > n) {
+              return false;
+            }
+            c += costs[i][t[i] - 1];
+          }
+          return c == t[n] && isCircuit(t, n);
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
+  /** Whether the first n values, numbered from 1, are the successors of one Hamiltonian circuit. */
+  private static boolean isCircuit(int[] t, int n) {
+    boolean[] seen = new boolean[n];
+    int i = 0;
+    for (int len = 0; len < n; len++) {
+      if (seen[i]) {
+        return false;
+      }
+      seen[i] = true;
+      i = t[i] - 1;
+    }
+    return i == 0;
   }
 
   /** CumulativeUnary over 3 or 4 tasks with variable durations and 0/1 resource uses. */
