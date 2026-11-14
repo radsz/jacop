@@ -5421,6 +5421,14 @@ Version 5.0 (unreleased)
    for 22 MiniZinc Challenge instances of those problems, neutral on both.
    The FlatZinc statistics print lpSetRows.
 
+314. Bug fix: diffn and diffn_nonstrict of JaCoP's MiniZinc library lost
+   the solutions with a negative size. MiniZinc defines them by their
+   decompositions, which allow sizes below 0 (a rectangle with dx < 0
+   ends left of x), but Diffn and Diff2 force every size to be >= 0. With
+   a size whose lower bound is negative they now post the MiniZinc
+   decomposition, as diffn_k and diffn_nonstrict_k already did. Found by
+   the all-solutions suite (random variants of its diffn model).
+
 Version 4.11
 =============
 
