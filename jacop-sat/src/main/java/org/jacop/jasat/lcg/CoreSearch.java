@@ -1003,12 +1003,14 @@ public final class CoreSearch {
     return RATE_SLACK * reach < best - lowerBound;
   }
 
-  // the phase's own work before a falling rate counts, 60 s at LcgSolver#WORK_PER_MS whatever the
-  // time limit: a bound that slows down early is often about to meet a solution of the cores' own
-  // (work-task-variation 2025 seed-8: the rate fell after 31 s of the phase's work, bound 215 with
-  // the best solution at 514, and 2 cores later the cores found and proved the optimum, 217)
+  // the phase's own work before a falling rate counts, 120 s at LcgSolver#WORK_PER_MS whatever the
+  // time limit: a bound that slows down early is often about to meet a solution of the cores' own,
+  // or still helps branch and bound after the phase. With 60 s, work-task-variation 2025 seed-8
+  // (rate falling after 31 s, bound 215, best 514, the cores' own optimum 217 two cores later) kept
+  // its proof but kitchen 2026 linear lost one of 6 at 600 s and took a median 330 s instead of
+  // 230 s; with 120 s it took 177-318 s (4 seeds) and chessboard3 is proved in 447-473 s
   static final long DECAY_AFTER =
-      Long.getLong("jacop.lcg.coreDecayAfterMs", 60_000L) * LcgSolver.WORK_PER_MS;
+      Long.getLong("jacop.lcg.coreDecayAfterMs", 120_000L) * LcgSolver.WORK_PER_MS;
 
   // -Djacop.lcg.coreDecay=false: the stall test projects the bound's rate over the second half of
   // the phase linearly, also when that rate is falling
