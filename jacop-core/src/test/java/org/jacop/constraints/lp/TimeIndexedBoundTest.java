@@ -239,6 +239,31 @@ class TimeIndexedBoundTest {
     assertThat(bound.lastArcs).isPositive();
   }
 
+  // a solve at a level where the items were fixed proves 36; back above that level, with the items
+  // free again, the bound is 20 (regression: the stronger solve stayed in force with looser bounds,
+  // which proved a wrong optimum under lazy clause generation free search on gbac)
+  @Test
+  void arcFlowSolveHoldsOnlyWithinItsBounds() {
+    Store store = new Store();
+    List<LinearForm> rows = new ArrayList<>();
+    List<TimeIndexedBound.LoadFunction> functions = new ArrayList<>();
+    IntVar c = binPackingModel(store, new int[] {2, 2, 2}, 2, 0, 100, rows, functions);
+    TimeIndexedBound bound = TimeIndexedBound.of(store, c, false, rows, false, true, functions);
+    store.setLevel(store.level + 1);
+    for (int i = 0; i < 3; i++) {
+      IntVar b = (IntVar) store.findVariable("b" + i);
+      b.domain.in(store.level, b, 1, 1);
+    }
+    store.impose(bound);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.min()).isEqualTo(36);
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    assertThat(c.min()).isZero();
+    bound.consistency(store);
+    assertThat(c.min()).isLessThanOrEqualTo(20);
+  }
+
   // the least cost of the bin packing over all assignments
   private static int binPackingOptimum(int[] w, int bins, int target) {
     int n = w.length;

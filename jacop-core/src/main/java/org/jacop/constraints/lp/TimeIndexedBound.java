@@ -575,10 +575,11 @@ public final class TimeIndexedBound extends Constraint
         }
       }
     }
-    if (current == null || limit > current.assumed()) {
+    Solve s = applicable(limit);
+    if (s == null) {
       return;
     }
-    long bound = current.bound();
+    long bound = s.bound();
     if (bound > limit) {
       throw Store.failException;
     }
@@ -589,6 +590,41 @@ public final class TimeIndexedBound extends Constraint
     } else if (bound > objective.min()) {
       objective.domain.inMin(store.level, objective, (int) bound);
     }
+  }
+
+  // a solve that holds now: it assumed an objective limit at least the current one and root bounds
+  // that contain the current bounds. Search can be back above the level where the root bounds were
+  // captured (lazy clause generation: phases and neighbourhoods of free search, restarts), where
+  // the bounds are looser than those a solve used, and its bound does not hold there
+  private Solve applicable(long limit) {
+    if (current != null && limit <= current.assumed() && contains(current)) {
+      return current;
+    }
+    Solve best = null;
+    for (int k = proved.size() - 1; k >= 0; k--) {
+      Solve s = proved.get(k);
+      if (limit <= s.assumed()
+          && (best == null || s.bound() > best.bound())
+          && s.bound() > (maximize ? -(long) objective.max() : objective.min())
+          && contains(s)) {
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  // whether the current bounds lie in the root bounds of a solve (the objective's limit side is
+  // checked by its assumed limit)
+  private boolean contains(Solve s) {
+    for (int j = 0; j < vars.length; j++) {
+      if ((j != 0 || !maximize) && vars[j].min() < s.lo()[j]) {
+        return false;
+      }
+      if ((j != 0 || maximize) && vars[j].max() > s.hi()[j]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private boolean mayResolve() {
@@ -760,7 +796,7 @@ public final class TimeIndexedBound extends Constraint
       }
       long llo = Math.max(lo[load], fixed);
       long lhi = Math.min(hi[load], fixed + open);
-      if (byWeight.isEmpty() || llo > lhi || lhi > 10_000_000L || fixed < 0) {
+      if (llo > lhi || lhi > 10_000_000L || fixed < 0) {
         continue;
       }
       int top = (int) lhi;
