@@ -4825,6 +4825,31 @@ Version 5.0 (unreleased)
    that are not output (for example 388 solutions for the 102 of the
    mznlib all_different_opt test, 580950 for the 5700 of geost_zero_size).
 
+283. The FlatZinc front end proves parity infeasibilities such as
+   Langford's problem L(2, n) for n = 1, 2 (mod 4) (C. D. Langford, Math.
+   Gazette 42, 1958; parity proof R. O. Davies, Math. Gazette 43, 1959)
+   before search. An all_different constraint over n variables whose
+   domains together hold exactly n values takes every value, so the sum
+   of its variables is the sum of those values; that equality now joins
+   the int_lin_eq system that LinearSystemDetector reduces to its Hermite
+   normal form, which proves 2 S + 104 = 325 infeasible on XCSP
+   LangfordBin-013. The all-different constraints are the model's own and
+   those AlldifferentDetector finds, which now also uses disequalities
+   implied by other constraints: x[p] = y and x[q] = z over the same array
+   with disjoint domains of y and z give p != q (shifted by the index
+   bases), and a*x - a*y = c with c != 0 gives x != y. A clique of
+   implied disequalities only is recorded for the sum, not posted
+   (-Dorg.jacop.fz.alldifferentImplied=post posts its Alldiff too, which
+   made the solvable LangfordBin instances much slower; =off does not
+   collect implied disequalities); -Dorg.jacop.fz.permutationSums=false
+   leaves the sums out. XCSP 2025 LangfordBin-010/013/014 are proved
+   infeasible in 0.5 s (before: 5.9 s, none in 240 s, none in 240 s); CP-SAT
+   proves them with zero-half cuts of its LP worker. Of 1,998 wide-set
+   and XCSP instances screened, the model changes on 4 (those three and
+   gfd-schedule, where implied disequalities enlarge a detected clique;
+   same results at 600 s). Posting the implied cliques changes 81 and
+   slows the solvable LangfordBin instances.
+
 Version 4.11
 =============
 
