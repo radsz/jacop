@@ -38,6 +38,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -352,6 +353,86 @@ class LcgSolverTest {
       }
     }
     assertThat(encoded).isGreaterThan(0);
+  }
+
+  @Test
+  void tablesAsClausesAgreeWithBruteForce() {
+    // tables of 2 to 4 columns, some over a fixed variable, written as clauses (support or
+    // direct, jacop.lcg.tableClauses) next to other constraints; tuples may name values outside
+    // the domains
+    Random rnd = new Random(83);
+    String[] modes = {"support", "direct", "binary"};
+    long[] encoded = new long[modes.length];
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(2);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      if (rnd.nextInt(4) == 0) {
+        x[0] = new IntVar(store, "c", 2, 2);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        IntVar[] scope = Arrays.copyOf(x, 2 + rnd.nextInt(3));
+        Collections.shuffle(Arrays.asList(scope), rnd);
+        int[][] tuples = new int[1 + rnd.nextInt(12)][scope.length];
+        for (int[] tuple : tuples) {
+          for (int k = 0; k < tuple.length; k++) {
+            tuple[k] = rnd.nextInt(7) - 1;
+          }
+        }
+        int[] position = new int[scope.length];
+        for (int k = 0; k < scope.length; k++) {
+          position[k] = Arrays.asList(x).indexOf(scope[k]);
+        }
+        relations.add(
+            new Relation(
+                new HybridTable(scope, tuples),
+                t ->
+                    Arrays.stream(tuples)
+                        .anyMatch(
+                            row ->
+                                IntStream.range(0, row.length)
+                                    .allMatch(k -> row[k] == t[position[k]]))));
+      }
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      int mode = instance % modes.length;
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setTableClauses(modes[mode]);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d (%s)", instance, modes[mode])
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      encoded[mode] += solver.tablesAsClauses;
+    }
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    for (long e : encoded) {
+      assertThat(e).isGreaterThan(20);
+    }
   }
 
   @Test
@@ -4854,6 +4935,46 @@ class LcgSolverTest {
     solver.minimize(obj);
     assertThat(solver.coreSearch().stratumSolutions).isZero();
     assertThat(solver.coreSearch().noSolutionStops).isEqualTo(1);
+  }
+
+  /**
+   * When the objective's root bound is above the cores' lower bound, a short search for a solution
+   * at that bound runs before the core-guided probe and ends the search with it: on nfc (Challenge
+   * 2022) the linear relaxation's bound is the optimum, which the probe delayed by 0.67 % of the
+   * time limit.
+   */
+  @Test
+  void solutionAtTheRootBoundBeforeTheCoreProbe() {
+    // dive = true runs with the default
+    for (boolean dive : new boolean[] {true, false}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[4];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 20);
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[0], x[1], x[2], x[3], obj}, new int[] {1, 1, 1, 1, -1}, "==", 0));
+      // the root bound obj >= 7, as from a linear relaxation; the cores start at the terms'
+      // minima, 0
+      store.impose(new XgteqC(obj, 7));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMax<>()), true);
+      solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+      solver.setCoreDelay(0.05, 1_000_000, 0.02);
+      if (!dive) {
+        solver.setBoundDive(0);
+      }
+      solver.setTimeLimit(200);
+      solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(obj)).isEqualTo(7);
+      assertThat(solver.boundDives).isEqualTo(dive ? 1 : 0);
+      assertThat(solver.boundDiveSolutions).isEqualTo(dive ? 1 : 0);
+      // without the search, the probe's cores start from 0 and raise the bound first
+      assertThat(solver.coreSearch().lowerBound > 0).isEqualTo(!dive);
+    }
   }
 
   /**

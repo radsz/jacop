@@ -354,12 +354,17 @@ setup to run configuration. -->
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -402,6 +407,7 @@ setup to run configuration. -->
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
+                                <include>**/PortfolioSplitTest.java</include>
                                 <!-- a few upTo30sec instances for built-ins no upTo5sec instance uses -->
                                 <include>**/MinizincBasedUpTo30SecondsSampleTest.java</include>
                             </includes>
@@ -572,12 +578,17 @@ setup to run configuration. -->
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -621,6 +632,7 @@ setup to run configuration. -->
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
+                                <include>**/PortfolioSplitTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                             </includes>
                             <excludes>
@@ -786,12 +798,17 @@ setup to run configuration. -->
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -835,6 +852,7 @@ setup to run configuration. -->
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
+                                <include>**/PortfolioSplitTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>
@@ -998,12 +1016,17 @@ setup to run configuration. -->
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
+                                <include>**/DefinedVariablesFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
+                                <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
+                                <include>**/TableVariableEliminationFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
+                                <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
                                 <include>**/StockingCostFlatzincTest.java</include>
@@ -1024,6 +1047,7 @@ setup to run configuration. -->
                                 <include>**/MinizincPortfolioTest.java</include>
                                 <include>**/PortfolioSettingsTest.java</include>
                                 <include>**/PortfolioOneParseTest.java</include>
+                                <include>**/PortfolioSplitTest.java</include>
                                 <include>**/MinizincBasedUpTo30SecondsTest.java</include>
                                 <include>**/MinizincBasedUpTo1MinutesTest.java</include>
                                 <include>**/MinizincBasedUpTo5MinutesTest.java</include>

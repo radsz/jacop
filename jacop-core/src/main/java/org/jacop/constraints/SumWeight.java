@@ -270,7 +270,15 @@ public class SumWeight extends Constraint
 
   private void propagateBoundsToVariables(Store store, long min, long max, int pointer) {
 
+    // a term whose spread is within the room on both sides keeps its bounds: the bounds computed
+    // below would contain them, so the divisions and the domain call are skipped
+    long room = Math.min(-min, max);
+
     for (int i = pointer; i < list.length; i++) {
+
+      if (lMaxArray[i] - lMinArray[i] <= room) {
+        continue;
+      }
 
       IntVar v = list[i];
 
