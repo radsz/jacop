@@ -201,7 +201,7 @@ public class Constraints implements ParserTreeConstants {
       Set<SimpleNode> replaced = Set.of();
       Set<IntVar> tabled = Set.of();
       // a search variable that became an alias is searched as its Boolean
-      dictionary.searchAliasTargets(binaryAliases);
+      dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       if (PartialCopyDetector.enabled()) {
         replaced = new PartialCopyDetector(support).detect(astTree);
         dictionary.removeAliasFromSearch();
@@ -680,24 +680,20 @@ public class Constraints implements ParserTreeConstants {
     if (xv == null) {
       return;
     }
-    if (BINARY_EQ_ALIAS && xv.v == 1 && binaryAlias(xv.x, b)) {
+    if (binaryEqAlias && xv.v == 1 && binaryAlias(xv.x, b)) {
       return;
     }
     support.addReified(xv.x, xv.v, b);
   }
 
-  /**
+  /*
    * Whether int_eq_reif(x, 1, b) of a 0..1 variable x, which states x = b, makes x an alias of b,
    * as bool2int(b, x) does. MiniZinc writes a Boolean grid used in sums as 0..1 integers channelled
    * to Booleans this way (ma-path-finding: 141,000 of them), and each kept pair was two variables,
-   * their atoms and an equality. The system property {@code org.jacop.fz.binaryEqAlias} set to
-   * false keeps the equality.
+   * their atoms and an equality. Off by default; the system property
+   * org.jacop.fz.binaryEqAlias=true turns it on.
    */
-  static final boolean BINARY_EQ_ALIAS =
-      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.binaryEqAlias"));
-
-  // the 0..1 integer variables that binaryAlias made aliases of Booleans
-  private final Set<IntVar> binaryAliases = new HashSet<>();
+  private final boolean binaryEqAlias = Boolean.getBoolean("org.jacop.fz.binaryEqAlias");
 
   private boolean binaryAlias(IntVar x, IntVar b) {
     if (!(b instanceof BooleanVar)
@@ -710,7 +706,7 @@ public class Constraints implements ParserTreeConstants {
       return false;
     }
     dictionary.addAlias(b, x);
-    binaryAliases.add(x);
+    dictionary.binaryEqAliases.add(x);
     if (x.singleton() || b.singleton()) {
       x.domain.in(store.level, x, b.domain);
       b.domain.in(store.level, b, x.domain);

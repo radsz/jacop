@@ -5258,6 +5258,19 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
+306. -Dorg.jacop.fz.binaryEqAlias=true (off by default) makes a 0..1
+   integer x an alias of the Boolean b when int_eq_reif(x, 1, b) states
+   x = b, as bool2int(b, x) does, instead of keeping both variables and an
+   equality. MiniZinc writes a Boolean grid used in sums as 0..1 integers
+   channelled to Booleans this way: on ma-path-finding g16_p10_a30
+   (MiniZinc Challenge 2022) 141,000 such pairs, which drops the
+   propagators before search from 462,000 to 325,000. A search variable
+   that becomes an alias is searched as its Boolean, in the integer
+   variable order, and under --lcg the alias gets no literals. At 240 s,
+   -f, 3 seeds on 5 ma-path-finding instances the result is mixed:
+   g24_p20_a10 reaches its optimum in 3 of 3 seeds at about 68 s instead of
+   1 of 3, the others gain or lose with the seed, so it stays off.
+
 Version 4.11
 =============
 
