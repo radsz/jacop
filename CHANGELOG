@@ -5603,6 +5603,20 @@ Version 5.0 (unreleased)
    13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
    is off under --proof and when all solutions are asked for.
 
+322. The route neighbourhoods of free search (ROUTES, RELATED) now run on
+   models whose successors are numbered from 0, such as the XCSP3 VRP_LC
+   models through MiniZinc: there the subcircuit is posted on copies
+   succ + 1 that are not search variables, and AdaptiveLns built no
+   routes. It maps such copies back to the successors and reads the arc
+   costs from the elements on them. Customers that must share a route (a
+   label element label[succ[v]] = label[v] with two labels equal, such as
+   a pickup and its delivery) are removed together by Shaw removal. On the
+   10 VRP_LC instances of the XCSP 2024 competition with -f, 240 s, two
+   seeds, 11-05-15-s4 reaches 332 instead of 352/346 and 13-11-20-s4 606
+   instead of 634/606; at 600 s 11-05-15-s3 332 instead of 340; the
+   others are equal. On the 13 wide-set instances with a circuit the
+   change does not fire and the results are identical.
+
 Version 4.11
 =============
 
