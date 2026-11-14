@@ -5242,6 +5242,16 @@ Version 5.0 (unreleased)
    11 solved instead of 9 (1000 and 2000 tickets, out of memory before),
    the other 9 2-10x faster.
 
+304. The LU factorization of JaLP takes a column singleton as its pivot
+   whatever its size against its row (Suhl and Suhl 1990): such a
+   column eliminates nothing below it. Before, a triangular basis with
+   many small column singletons took a quadratic pivot search: 8 s per
+   factorization on the LP relaxation of MIPLIB 2017 app1-2 (the solve
+   from over 120 s to 14 s). On the 687 LPs of the LP bench 644 = 644
+   are solved; on the wide-set instances where the change applies, -f
+   connect 0086_02 takes 7 s instead of 52 s, wordpress Offers500 15 s
+   instead of 221 s.
+
 Version 4.11
 =============
 
