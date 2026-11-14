@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -53,6 +54,7 @@ import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XmulCeqZ;
@@ -850,7 +852,7 @@ public class Support implements ParserTreeConstants {
     // cost_regular constraints over the same word and automaton are filtered together;
     // org.jacop.fz.multiCostRegular=false keeps them apart, =lagrangian adds the relaxation
     String multiCost = System.getProperty("org.jacop.fz.multiCostRegular", "true");
-    if (!"false".equalsIgnoreCase(multiCost)) {
+    if (!DISABLED.equalsIgnoreCase(multiCost)) {
       List<Constraint> merged = MultiCostRegular.merge(delayedConstraints);
       if (merged != delayedConstraints) {
         delayedConstraints.clear();
@@ -886,6 +888,7 @@ public class Support implements ParserTreeConstants {
     }
     poseAlldistinctConstraints();
     implied(this::poseOverlappingAlldiffs);
+    implied(this::posePartitionSums);
     poseAlldiffSums();
 
     // generate channeling constraints instead of reified constraints
@@ -939,7 +942,7 @@ public class Support implements ParserTreeConstants {
    */
   void poseOverlappingAlldiffs() {
     // --proof leaves out this redundant constraint, which it does not encode
-    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
+    if (DISABLED.equalsIgnoreCase(System.getProperty("org.jacop.fz.overlappingAlldiff"))
         || alldifferentLists.size() < 2
         || options.proof() != null) {
       return;
@@ -985,6 +988,232 @@ public class Support implements ParserTreeConstants {
     }
   }
 
+  /** The value of a system property that turns a rule of the front end off. */
+  private static final String DISABLED = "false";
+
+  /** Fewest variables of an all_different whose partitions by unit sums get an implied sum. */
+  static final int PARTITION_SUMS_MIN_VARIABLES = 4;
+
+  /** Most all_different lists searched for partitions by unit sums. */
+  static final int PARTITION_SUMS_MAX_LISTS = 1_000;
+
+  /**
+   * Posts the sums implied by unit sums that partition the variables of an all_different.
+   *
+   * <p>When equalities sum(X_1) = s_1, ..., sum(X_k) = s_k with unit coefficients split the
+   * variables of an all_different A into disjoint blocks X_1, ..., X_k, then s_1 + ... + s_k is the
+   * sum of the values of A. Those are |A| different values of the union of the domains of A, so the
+   * total lies between the sum of the |A| smallest and the sum of the |A| largest values of that
+   * union, and is a constant when A is a permutation of it (Choco's implied constraints, here
+   * applied to the block sums). The rows of a magic square or a heterosquare are such a partition,
+   * and so are its columns. The implied sum over the block sums s_i is posted, and it is also a
+   * candidate for an {@link AlldiffSum} when the s_i are pairwise different by the all_different
+   * constraints of the model (a heterosquare: the row sums of a permutation of 1..n² add up to
+   * n²(n²+1)/2 and are all different, so each of them is far from its bounds). When A has several
+   * partitions, the union of their block sums, with the sum of the totals, is one more candidate.
+   *
+   * <p>This is the aggregation that a linear relaxation of the all_different (the assignment
+   * polytope, or the cuts of Williams and Yan, "Representations of the all_different predicate of
+   * constraint satisfaction in integer programming", INFORMS Journal on Computing 13(2), 2001)
+   * gives an LP solver, and that the propagators of the separate sums cannot see. The system
+   * property {@code org.jacop.fz.partitionSums} set to false turns it off.
+   */
+  void posePartitionSums() {
+    // --proof leaves out this redundant constraint, which it does not encode
+    if (DISABLED.equalsIgnoreCase(System.getProperty("org.jacop.fz.partitionSums"))
+        || options.proof() != null
+        || unitSums.isEmpty()
+        || alldifferentLists.isEmpty()) {
+      return;
+    }
+    List<UnitSum> equalities = new ArrayList<>();
+    for (UnitSum u : unitSums) {
+      if ("==".equals(u.rel()) && !u.x().contains(u.sum())) {
+        equalities.add(u);
+      }
+    }
+    if (equalities.isEmpty()) {
+      return;
+    }
+    List<UnitSum> implied = new ArrayList<>();
+    Set<List<IntVar>> done = new HashSet<>();
+    int lists = 0;
+    for (IntVar[] a : alldifferentLists) {
+      if (a.length >= PARTITION_SUMS_MIN_VARIABLES
+          && done.add(List.of(a))
+          && lists++ < PARTITION_SUMS_MAX_LISTS) {
+        partitionSums(a, equalities, implied);
+      }
+    }
+    // only sums of different variables that are not all fixed, within the AlldiffSum size limits
+    for (UnitSum u : implied) {
+      List<IntVar> x = u.x();
+      if (x.size() >= ALLDIFF_SUM_MIN_VARIABLES
+          && x.size() <= ALLDIFF_SUM_MAX_VARIABLES
+          && distinct(x)
+          && x.stream().anyMatch(v -> !v.singleton())) {
+        unitSums.add(u);
+      }
+    }
+  }
+
+  /**
+   * Posts the implied sums of the partitions of all_different(a) by the equalities and adds them to
+   * implied, as {@link #posePartitionSums()} describes.
+   */
+  private void partitionSums(IntVar[] a, List<UnitSum> equalities, List<UnitSum> implied) {
+    Map<IntVar, Integer> index = new IdentityHashMap<>();
+    for (IntVar v : a) {
+      index.putIfAbsent(v, index.size());
+    }
+    if (index.size() != a.length) {
+      return;
+    }
+    List<List<UnitSum>> partitions = partitionsBySums(a, index, equalities);
+    long[] total = valueSumBounds(a);
+    if (partitions.isEmpty() || total.length == 0) {
+      return;
+    }
+    if (options.debug()) {
+      FzConsole.println(
+          "% partition sums: "
+              + partitions.size()
+              + " partition(s) of an all_different of "
+              + a.length);
+    }
+    List<IntVar> union = new ArrayList<>();
+    List<IntVar> totals = new ArrayList<>();
+    for (List<UnitSum> p : partitions) {
+      IntVar[] s = p.stream().map(UnitSum::sum).toArray(IntVar[]::new);
+      IntVar t = totalVar(total[0], total[1]);
+      pose(new SumInt(s, "==", t));
+      implied.add(new UnitSum(List.of(s), "==", t));
+      union.addAll(List.of(s));
+      totals.add(t);
+    }
+    long unionLo = partitions.size() * total[0];
+    long unionHi = partitions.size() * total[1];
+    if (partitions.size() < 2 || unionLo < IntDomain.MIN_INT || unionHi > IntDomain.MAX_INT) {
+      return;
+    }
+    // with a constant total, the sum of the totals is a constant too and needs no constraint
+    if (total[0] < total[1]) {
+      IntVar t = totalVar(unionLo, unionHi);
+      pose(new SumInt(totals, "==", t));
+      implied.add(new UnitSum(union, "==", t));
+    } else {
+      implied.add(new UnitSum(union, "==", dictionary.getConstant((int) unionLo)));
+    }
+  }
+
+  private static boolean distinct(List<IntVar> x) {
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : x) {
+      if (!seen.add(v)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * The partitions of the variables of a, each a list of equalities whose summed variables are
+   * disjoint and cover a. Equalities over variables of a only are put in layers, each in the first
+   * layer it is disjoint from; a layer that covers a is a partition. Greedy: it finds the rows and
+   * the columns of a grid, not every partition.
+   */
+  private static List<List<UnitSum>> partitionsBySums(
+      IntVar[] a, Map<IntVar, Integer> index, List<UnitSum> equalities) {
+    List<BitSet> covered = new ArrayList<>();
+    List<List<UnitSum>> layers = new ArrayList<>();
+    for (UnitSum u : equalities) {
+      BitSet b = block(u, a.length, index);
+      if (b == null) {
+        continue;
+      }
+      int layer = 0;
+      while (layer < layers.size() && covered.get(layer).intersects(b)) {
+        layer++;
+      }
+      if (layer == layers.size()) {
+        covered.add(new BitSet(a.length));
+        layers.add(new ArrayList<>());
+      }
+      covered.get(layer).or(b);
+      layers.get(layer).add(u);
+    }
+    List<List<UnitSum>> partitions = new ArrayList<>();
+    for (int l = 0; l < layers.size(); l++) {
+      if (covered.get(l).cardinality() == a.length && layers.get(l).size() > 1) {
+        partitions.add(layers.get(l));
+      }
+    }
+    return partitions;
+  }
+
+  /**
+   * The positions in a of the summed variables of u, or null when the sum variable is in a or a
+   * summed variable is not (or occurs twice).
+   */
+  private static BitSet block(UnitSum u, int size, Map<IntVar, Integer> index) {
+    if (index.containsKey(u.sum())) {
+      return null;
+    }
+    BitSet b = new BitSet(size);
+    for (IntVar v : u.x()) {
+      Integer i = index.get(v);
+      if (i == null || b.get(i)) {
+        return null;
+      }
+      b.set(i);
+    }
+    return b;
+  }
+
+  /**
+   * The smallest and the largest sum of a.length different values of the union of the domains of a,
+   * or an empty array when the union has fewer values (the all_different fails on its own) or a
+   * bound does not fit in an int.
+   */
+  static long[] valueSumBounds(IntVar[] a) {
+    IntDomain union = new IntervalDomain();
+    for (IntVar v : a) {
+      union = union.union(v.dom());
+    }
+    int n = a.length;
+    if (union.getSize() < n) {
+      return new long[0];
+    }
+    long lo = 0;
+    int left = n;
+    for (int i = 0; i < union.noIntervals() && left > 0; i++) {
+      Interval iv = union.getInterval(i);
+      int k = (int) Math.min(left, (long) iv.max() - iv.min() + 1);
+      lo += k * (long) iv.min() + (long) k * (k - 1) / 2;
+      left -= k;
+    }
+    long hi = 0;
+    left = n;
+    for (int i = union.noIntervals() - 1; i >= 0 && left > 0; i--) {
+      Interval iv = union.getInterval(i);
+      int k = (int) Math.min(left, (long) iv.max() - iv.min() + 1);
+      hi += k * (long) iv.max() - (long) k * (k - 1) / 2;
+      left -= k;
+    }
+    if (lo < IntDomain.MIN_INT || hi > IntDomain.MAX_INT) {
+      return new long[0];
+    }
+    return new long[] {lo, hi};
+  }
+
+  private IntVar totalVar(long lo, long hi) {
+    if (lo == hi) {
+      return dictionary.getConstant((int) lo);
+    }
+    return new IntVar(
+        store, (int) Math.max(lo, IntDomain.MIN_INT), (int) Math.min(hi, IntDomain.MAX_INT));
+  }
+
   /** sum(x) rel sum with rel one of ==, &lt;=, &gt;=, a candidate for an {@link AlldiffSum}. */
   record UnitSum(List<IntVar> x, String rel, IntVar sum) {}
 
@@ -1008,7 +1237,7 @@ public class Support implements ParserTreeConstants {
    * off.
    */
   void poseAlldiffSums() {
-    if ("false".equalsIgnoreCase(System.getProperty("org.jacop.fz.alldiffSum"))
+    if (DISABLED.equalsIgnoreCase(System.getProperty("org.jacop.fz.alldiffSum"))
         || unitSums.isEmpty()) {
       return;
     }
