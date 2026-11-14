@@ -200,15 +200,15 @@ public class ConjunctionSumDetector implements ParserTreeConstants {
   // one literal: its variable, value and kind
   private record Literal(IntVar x, int value, boolean eq) {}
 
-  /** The literals whose conjunction is b = 1, or null when b is not such a conjunction. */
+  /** The literals whose conjunction is b = 1, or an empty list when b is not such a conjunction. */
   private List<Literal> conjunction(IntVar b, int depth) {
     List<Literal> out = new ArrayList<>();
     IntVar[] parts = and.get(b);
     if (parts != null && depth < 4) {
       for (IntVar p : parts) {
         List<Literal> sub = conjunction(p, depth + 1);
-        if (sub == null) {
-          return null;
+        if (sub.isEmpty()) {
+          return List.of();
         }
         out.addAll(sub);
       }
@@ -216,7 +216,7 @@ public class ConjunctionSumDetector implements ParserTreeConstants {
     }
     Literal l = literal(b, depth);
     if (l == null) {
-      return null;
+      return List.of();
     }
     out.add(l);
     return out;
@@ -289,7 +289,7 @@ public class ConjunctionSumDetector implements ParserTreeConstants {
         return false;
       }
       List<Literal> lits = conjunction(x[k], 0);
-      if (lits == null) {
+      if (lits.isEmpty()) {
         lits = List.of(new Literal(x[k], 1, true));
       }
       vars[t] = new IntVar[lits.size()];

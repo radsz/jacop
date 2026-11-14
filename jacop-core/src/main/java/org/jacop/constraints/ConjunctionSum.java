@@ -104,7 +104,8 @@ public class ConjunctionSum extends Constraint
   private final int[] offset;
   private final long[] ecost;
 
-  // per term: -2 not counted, -1 holds, else the variable it waits for (filled by evaluate)
+  // the status of each term after evaluate: not counted (-2), holds (-1), or the index of the
+  // variable it waits for
   private final int[] status;
   // the variables some term waits for, and whether each is listed
   private final int[] waited;
@@ -405,21 +406,15 @@ public class ConjunctionSum extends Constraint
     for (int t = 0; t < m; t++) {
       int pending = -1;
       int st = -1;
-      for (int k = start[t]; k < start[t + 1]; k++) {
-        if (holds(k, d)) {
-          continue;
-        }
-        int v = litVar[k];
-        if (fails(k, d)) {
-          st = -2;
-          break;
-        }
-        if (pending == -1) {
-          pending = v;
-        } else if (pending != v) {
-          st = -2;
-          // a later literal may fail; either way the term is not counted
-          break;
+      for (int k = start[t]; k < start[t + 1] && st != -2; k++) {
+        if (!holds(k, d)) {
+          int v = litVar[k];
+          if (fails(k, d) || (pending != -1 && pending != v)) {
+            // a failed literal, or a second open variable: the term is not counted
+            st = -2;
+          } else {
+            pending = v;
+          }
         }
       }
       if (st == -2 || weights[t] == 0) {
@@ -588,8 +583,8 @@ public class ConjunctionSum extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
-    Integer i = indexOf.get(var);
+  public void queueVariable(int level, Var changed) {
+    Integer i = indexOf.get(changed);
     if (i != null && !queued[i]) {
       queued[i] = true;
       queue[queueSize++] = i;
@@ -614,36 +609,13 @@ public class ConjunctionSum extends Constraint
     seenStamp++;
     for (int i = 0; i < size; i++) {
       int t = list[i];
-      if ((watch1[t] != v && watch2[t] != v) || seen[t] == seenStamp) {
-        // moved away, or listed twice
-        continue;
-      }
-      seen[t] = seenStamp;
-      if (active[t] || open(t, v)) {
-        list[kept++] = t;
-        continue;
-      }
-      int other = watch1[t] == v ? watch2[t] : watch1[t];
-      if (other >= 0 && !open(t, other)) {
-        other = -1;
-      }
-      int first = other >= 0 ? other : otherOpen(t, v, -1);
-      int second = first < 0 ? -1 : otherOpen(t, v, first);
-      if (second >= 0) {
-        // two open variables again: t leaves v
-        if (first != watch1[t] && first != watch2[t]) {
-          addWatch(first, t);
+      // a term that moved away or is listed twice is dropped
+      if ((watch1[t] == v || watch2[t] == v) && seen[t] != seenStamp) {
+        seen[t] = seenStamp;
+        if (active[t] || open(t, v) || !rewatch(t, v, level)) {
+          list[kept++] = t;
         }
-        if (second != watch1[t] && second != watch2[t]) {
-          addWatch(second, t);
-        }
-        watch1[t] = first;
-        watch2[t] = second;
-        continue;
       }
-      // at most one open variable: t is active and keeps watching v
-      list[kept++] = t;
-      activate(t, level, first);
     }
     // terms added to this list while it was scanned cannot be v's own: copy the rest over
     int added = watchSize[v] - size;
@@ -651,6 +623,33 @@ public class ConjunctionSum extends Constraint
       System.arraycopy(watches[v], size, watches[v], kept, added);
     }
     watchSize[v] = kept + added;
+  }
+
+  /**
+   * Term t, watching v whose literals in t all hold now, watches two other open variables if it has
+   * them (true), or else becomes active and keeps watching v (false).
+   */
+  private boolean rewatch(int t, int v, int level) {
+    int other = watch1[t] == v ? watch2[t] : watch1[t];
+    if (other >= 0 && !open(t, other)) {
+      other = -1;
+    }
+    int first = other >= 0 ? other : otherOpen(t, v, -1);
+    int second = first < 0 ? -1 : otherOpen(t, v, first);
+    if (second < 0) {
+      activate(t, level, first);
+      return false;
+    }
+    // two open variables again: t leaves v
+    if (first != watch1[t] && first != watch2[t]) {
+      addWatch(first, t);
+    }
+    if (second != watch1[t] && second != watch2[t]) {
+      addWatch(second, t);
+    }
+    watch1[t] = first;
+    watch2[t] = second;
+    return true;
   }
 
   @Override
