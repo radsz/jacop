@@ -505,6 +505,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // the dominance nogoods are on by default for fixed search: on the 39 instances where they fire
+  // (trucking, spot5, shortest_path, pattern-set-mining, unit-commitment, table-layout,
+  // maximum-dag, aircraft-disassembly) at 600 s they prove 26 instead of 24 and improve 10
+  // objectives, 1 worse; under -f they are neutral (3 better, 4 worse, 31 = 31 proved), so they
+  // stay off there. A proof does not log them. org.jacop.fz.dominance=true or false overrides
+  private boolean dominanceOn() {
+    String p = System.getProperty("org.jacop.fz.dominance");
+    if (p != null) {
+      return Boolean.parseBoolean(p);
+    }
+    return !options.freeSearch() && options.proof() == null;
+  }
+
   /**
    * Imposes the automatic dominance breaking nogoods of {@link DominanceNogoods} (Lee and Zhong,
    * IJCAI 2020; CP 2022) for an integer objective. They keep every optimum but drop solutions that
@@ -647,7 +660,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
-    if (Boolean.getBoolean("org.jacop.fz.dominance") && store.consistency()) {
+    if (dominanceOn() && store.consistency()) {
       dominanceNogoods(node);
     }
 

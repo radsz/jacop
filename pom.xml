@@ -385,6 +385,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -619,6 +620,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -849,6 +851,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -1077,6 +1080,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
