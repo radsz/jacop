@@ -377,6 +377,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
+                                <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -602,6 +603,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
+                                <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -823,6 +825,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
+                                <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -1042,6 +1045,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
+                                <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
