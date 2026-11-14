@@ -4864,11 +4864,11 @@ Version 5.0 (unreleased)
    bounds and shapes of the obstacles the cover needs. Objects whose
    times vary are left to replay. -Dorg.jacop.geost.reasons=false gives the
    old behaviour. LcgFuzzTest has a Geost case with polymorphic objects,
-   areas and times (210,000 runs with the explanation checker: clean).
-   On 40 pentomino and polyomino strip packings at 600 s, generic reasons
-   fall from 97 % to 15 % and reasons from 36 to 15 literals; -f solves
-   31 instead of 25 (geometric mean time 0.74 on those both solve), model
-   search 18 instead of 19 (time 0.94).
+   areas, times and shape domains with gaps (80,000 runs with the
+   explanation checker: clean). On 40 pentomino and polyomino strip
+   packings at 600 s, generic reasons fall from 97 % to 13 % and reasons
+   from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
+   0.54 on those both solve), model search 19 as before (time 0.89).
 
 Version 4.11
 =============
