@@ -255,6 +255,27 @@ class CommonSubexpressionsFlatzincTest {
     assertEquals(12, solutions(run(model, false, "-a")));
   }
 
+  /** An int_eq or bool_eq with a constant is neither an equality of two variables nor a key. */
+  @Test
+  void equalitiesWithConstantsAreKept() throws IOException {
+    String model =
+        """
+        var 0..3: x:: output_var;
+        var 0..3: y:: output_var;
+        var bool: b:: output_var;
+        constraint int_eq(x,2);
+        constraint int_eq(2,y);
+        constraint bool_eq(b,true);
+        constraint int_le(x,y);
+        constraint int_le(x,y);
+        solve satisfy;
+        """;
+    String out = run(model, true, "-a", "-debug");
+    assertTrue(out.contains("1 duplicate constraints removed"), out);
+    assertEquals(1, solutions(out), out);
+    assertTrue(out.contains("x = 2;") && out.contains("y = 2;") && out.contains("b = true;"), out);
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }

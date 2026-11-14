@@ -211,6 +211,7 @@ setup to run configuration. -->
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
                                 <enforcementInlining.trials>100</enforcementInlining.trials>
+                                <cse.trials>100</cse.trials>
                                 <convex.lcg.runs>300</convex.lcg.runs>
                                 <convex.fz.trials>100</convex.fz.trials>
                                 <prob.trials>300</prob.trials>
@@ -373,6 +374,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -612,6 +614,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -847,6 +850,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
@@ -1080,6 +1084,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>

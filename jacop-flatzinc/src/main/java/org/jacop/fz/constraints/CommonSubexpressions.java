@@ -437,7 +437,10 @@ public class CommonSubexpressions implements ParserTreeConstants {
       }
       return new Keyed(key, null);
     }
-    // bool_clause
+    if (!name.equals("bool_clause")) {
+      // an int_eq or bool_eq with a constant, which equality() leaves
+      return null;
+    }
     key.add(new java.util.TreeSet<>(tokens(support.getVarArray(child(node, 0)))));
     key.add(new java.util.TreeSet<>(tokens(support.getVarArray(child(node, 1)))));
     return new Keyed(key, null);
