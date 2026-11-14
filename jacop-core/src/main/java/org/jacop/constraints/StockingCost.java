@@ -31,6 +31,7 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
+import java.util.PriorityQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
@@ -39,6 +40,9 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.EntryList;
+import org.jacop.lcg.Explainable;
 
 /**
  * StockingCost constraint for lot sizing (Houndji, Schaus, Wolsey and Deville, "The StockingCost
@@ -64,7 +68,8 @@ import org.jacop.core.Store;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class StockingCost extends Constraint implements SatisfiedPresent, Copyable<StockingCost> {
+public class StockingCost extends Constraint
+    implements SatisfiedPresent, Copyable<StockingCost>, Explainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -484,6 +489,99 @@ public class StockingCost extends Constraint implements SatisfiedPresent, Copyab
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
+  }
+
+  // the explanations by boxes of bounds, over x and the cost; made on first use
+  private BoxReason boxReason;
+
+  private BoxReason boxReason() {
+    if (boxReason == null) {
+      IntVar[] vars = Arrays.copyOf(x, n + 1);
+      vars[n] = cost;
+      boxReason = new BoxReason(vars, this::boxInfeasible, 64, 1L << 40);
+    }
+    return boxReason;
+  }
+
+  /**
+   * Whether a box of bounds of x (then of the cost, at index n) has no solution of the relaxation
+   * the propagation uses: the orders whose bounds meet are produced then, at most capacity per
+   * period, and the others, by their latest periods (their due dates at the latest), produced
+   * greedily from the latest period down would cost more than the upper bound of the cost.
+   */
+  private boolean boxInfeasible(long[] lo, long[] hi) {
+    if (lo[n] > hi[n]) {
+      return true;
+    }
+    long total = 0;
+    java.util.Map<Long, Integer> fixedAt = new java.util.HashMap<>();
+    Long[] free = new Long[n];
+    int frees = 0;
+    for (int i = 0; i < n; i++) {
+      long last = Math.min(hi[i], due[i]);
+      if (lo[i] > last) {
+        return true;
+      }
+      if (lo[i] == last) {
+        if (fixedAt.merge(last, 1, Integer::sum) > capacity) {
+          return true;
+        }
+        total += h[i] * (due[i] - last);
+      } else {
+        free[frees++] = (last << 32) | i;
+      }
+    }
+    Arrays.sort(free, 0, frees, (u, v) -> Long.compare(v, u));
+    PriorityQueue<Integer> waiting = new PriorityQueue<>((u, v) -> Integer.compare(h[v], h[u]));
+    int next = 0;
+    long t = Long.MAX_VALUE;
+    while (next < frees || !waiting.isEmpty()) {
+      if (waiting.isEmpty()) {
+        t = free[next] >> 32;
+      }
+      while (next < frees && free[next] >> 32 == t) {
+        waiting.add((int) (free[next++] & 0xffffffffL));
+      }
+      int left = capacity - fixedAt.getOrDefault(t, 0);
+      for (int q = 0; q < left && !waiting.isEmpty(); q++) {
+        int i = waiting.poll();
+        total += h[i] * (due[i] - t);
+      }
+      if (total > hi[n]) {
+        return true;
+      }
+      t--;
+    }
+    return total > hi[n];
+  }
+
+  /**
+   * Explains a bound of a period or of the cost by the bounds in which, with the atom negated, the
+   * relaxation costs more than the cost allows or a period holds too many produced orders (see
+   * {@link BoxReason}); a period is at most the order's due date whatever the bounds.
+   */
+  @Override
+  public boolean explain(AtomicTrail trail, int entry, EntryList out) {
+    IntVar y = trail.variable(entry);
+    if (trail.kind(entry) == AtomicTrail.LE && y != cost) {
+      // x[i] <= due[i] holds by the constraint alone
+      boolean byDue = true;
+      for (int i = 0; i < n; i++) {
+        if (x[i] == y && trail.value(entry) < due[i]) {
+          byDue = false;
+        }
+      }
+      if (byDue) {
+        return true;
+      }
+    }
+    return boxReason().explain(trail, entry, out);
+  }
+
+  /** Explains a failure by the bounds in which the relaxation has no solution within the cost. */
+  @Override
+  public boolean explainFailure(AtomicTrail trail, EntryList out) {
+    return boxReason().explainFailure(trail, out);
   }
 
   @Override
