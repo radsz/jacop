@@ -4865,7 +4865,25 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
-286. The FlatZinc front end tabulates small flattened expressions: the
+286. LCG free search (-f) that makes few conflicts gives way to free search
+   without learning only when it has also stopped making progress, and the
+   rate below which it is slow is 300 conflicts/s instead of 50. At the
+   check (lcg-slow-at, 0.1 of -t) a search under lcg-slow-rate goes on while,
+   during the last lcg-slow-stall share of the time limit (default 0.05), it
+   raised the bound or its best cost fell by lcg-slow-gain of itself
+   (default 0.005); otherwise it gives way as before. Free search without
+   learning can improve the best solution but never raises the bound, so a
+   search whose bound still rises keeps learning: on ma-path-finding LCG
+   makes about 14 conflicts/s on 650,000 variables while core-guided search
+   raises the bound to the optimum. At 600 s with -f on the 17 instances
+   where the check at 300 fires (15 of the 187 wide-set optimisation
+   instances and unit-commitment L10, L15): unit-commitment L10 2.97M ->
+   1,703,450 (the optimum), L12 3.05M -> 1.49M, L15 96.0M -> 43.2M, ihtc
+   kletzander i09 8,310 -> 7,135; stable-goods s-d19 (maximised) 7,304 ->
+   7,186. Statistic lcgSlowDeferred counts the checks that let a slow LCG
+   go on.
+
+287. The FlatZinc front end tabulates small flattened expressions: the
    constraints joined by variables that MiniZinc introduced (not output,
    not in the solve item, not aliased), over at most three other
    variables, become one table of the tuples that extend to a solution,
@@ -4884,7 +4902,7 @@ Version 5.0 (unreleased)
    before. Off with -a (unless org.jacop.fz.intensionTable=force) and
    --proof; org.jacop.fz.intensionTable=false turns it off.
 
-287. The FlatZinc front end proves parity infeasibilities such as
+288. The FlatZinc front end proves parity infeasibilities such as
    Langford's problem L(2, n) for n = 1, 2 (mod 4) (C. D. Langford, Math.
    Gazette 42, 1958; parity proof R. O. Davies, Math. Gazette 43, 1959)
    before search. An all_different constraint over n variables whose
@@ -4909,7 +4927,7 @@ Version 5.0 (unreleased)
    same results at 600 s). Posting the implied cliques changes 81 and
    slows the solvable LangfordBin instances.
 
-288. Lazy clause generation explains the atoms of nine recent globals
+289. Lazy clause generation explains the atoms of nine recent globals
      with their own reasons instead of the replayed or generic one:
      - MultiInterDistance, Spread, Deviation and StockingCost by the box of
        bounds in which the pruned value has no solution, relaxed bound by
@@ -4950,7 +4968,7 @@ Version 5.0 (unreleased)
      half of the constraints (1.2 million runs with the explanation
      checker, with and without holes: clean).
 
-289. Tables as clauses under LCG (experiment, off by default):
+290. Tables as clauses under LCG (experiment, off by default):
    -Djacop.lcg.tableClauses=direct makes each HybridTable (no restrictions
    between columns, at most 100 tuples, 64 values per column and 5000
    clauses, .tuples/.dom/.limit) clauses of the SAT solver in place of
@@ -4973,7 +4991,7 @@ Version 5.0 (unreleased)
    SportsScheduling-dummy, Eternity, PegSolitaire, Spot5-0412 (2-3x).
    Statistics lcgTablesAsClauses, lcgTableClauses, lcgTableTupleLiterals.
 
-290. The FlatZinc front end divides an objective declared beyond JaCoP's
+291. The FlatZinc front end divides an objective declared beyond JaCoP's
    integer range by the factor its defining equation forces on it,
    instead of narrowing its domain to the range. When the objective z
    occurs in c*z + sum(a_i*x_i) = b, z is a multiple of g = G / gcd(G, c)
@@ -4992,7 +5010,7 @@ Version 5.0 (unreleased)
    order reaches; with -f L10 reaches the optimum 1703450 in 3 of 3 runs
    (before 2551340-3519410) and L15 46758125 (before 103430755).
 
-291. The FlatZinc front end posts the sums implied by linear equalities
+292. The FlatZinc front end posts the sums implied by linear equalities
    with unit coefficients that partition the variables of an
    all_different. When sum(X_1) = s_1, ..., sum(X_k) = s_k split the
    variables of all_different(A) into disjoint blocks (the rows, or the

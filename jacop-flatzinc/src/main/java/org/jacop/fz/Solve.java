@@ -42,6 +42,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.text.NumberFormat;
 import java.time.Duration;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -2571,6 +2572,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       LcgSolver solver = lcg;
       lcg.onBound(
           lower -> {
+            lcgBoundRaised = System.nanoTime();
             if (reportBound(lower)) {
               solver.stop();
             }
@@ -2848,6 +2850,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // set when LCG free search was stopped for making too few conflicts
   private volatile boolean lcgSlow;
+  // when LCG last raised the bound on the objective (System.nanoTime)
+  private volatile long lcgBoundRaised;
+  // the checks of LCG's speed that found it slow but let it go on, because it made progress
+  private volatile int lcgSlowDeferred;
   // the LCG solver free search took over from, for the statistics
   private LcgSolver slowLcg;
   private long lcgStart;
@@ -2880,15 +2886,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * and with a solution, 12 switch: 7 end better than both runs of LCG, 3 worse (cargo challenge08
    * and 16, jobshop swv07) and 2 equal.
    *
+   * <p>Since 2026-11 the rate is 300 conflicts/s, and a slow search gives way only when it also
+   * stopped making progress (see {@link #stillProgressing}): during the last lcg-slow-stall share
+   * of the time limit it raised no bound and its best cost fell by less than lcg-slow-gain of
+   * itself. At 600 s on the 17 instances where a check at 300 fires (15 of the wide set and
+   * unit-commitment L10, L15): unit-commitment L10 2.97M to 1,703,450 (the optimum), L12 3.05M to
+   * 1.49M, L15 96.0M to 43.2M, ihtc kletzander i09 8,310 to 7,135, stable-goods s-d19 (maximised)
+   * 7,304 to 7,186. On ma-path-finding LCG makes about 14 conflicts/s while core-guided search
+   * raises the bound, so it goes on.
+   *
    * @return the thread of the check, or null when it is off
    */
   private Thread slowLcgCheck(Var costVar) {
-    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "50"));
+    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "300"));
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
+    double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
+    double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
     lcgStart = System.nanoTime();
+    lcgBoundRaised = Long.MIN_VALUE;
+    long stallNanos = (long) (stall * options.getTimeOut() * 1_000_000L);
     long wait = (long) (at * options.getRemainingTimeOut());
     LcgSolver solver = lcg;
     if (wait <= 0) {
@@ -2902,6 +2921,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 Thread.sleep(wait);
+                // the best cost printed at each check, to measure the gain over the last window
+                ArrayDeque<long[]> costs = new ArrayDeque<>();
                 // LCG gives way only with a solution to hand over: without one, the check is
                 // made again until LCG has one or is no longer slow. cutstock type16 TEST9
                 // found its first solution with LCG at 37 s and none without
@@ -2909,10 +2930,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                   if (tooLateForFreeSearch()) {
                     return;
                   }
+                  long now = System.nanoTime();
+                  long cost = bestPrintedCost.get();
+                  costs.addLast(new long[] {now, cost});
+                  while (costs.size() > 1 && now - costs.peekFirst()[0] > stallNanos) {
+                    costs.removeFirst();
+                  }
                   if (solutionFound) {
-                    lcgSlow = true;
-                    solver.stop();
-                    return;
+                    long before = costs.peekFirst()[1];
+                    if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
+                      lcgSlowDeferred++;
+                    } else {
+                      lcgSlow = true;
+                      solver.stop();
+                      return;
+                    }
                   }
                   Thread.sleep(500);
                 }
@@ -2921,6 +2953,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  /**
+   * Whether a slow LCG free search still makes progress that free search without learning would
+   * lose: it raised the bound during the last window (free search without learning never raises
+   * it), or its best cost fell over the window by at least the share {@code gain} of itself. On
+   * ma-path-finding a dive assigns thousands of literals for one conflict (about 14 conflicts/s on
+   * 650,000 variables) while core-guided search raises the bound up to the optimum, which free
+   * search without learning never proves. On unit-commitment LCG improves its best solution by
+   * under 0.5 % per 30 s, and free search without learning ends 30 to 60 % lower.
+   *
+   * @param now the time of the check (System.nanoTime)
+   * @param window the length of the window, in nanoseconds
+   * @param gain the share of the cost the best cost must fall by over the window
+   * @param boundRaised when LCG last raised the bound, or {@code Long.MIN_VALUE} if never
+   * @param before the best cost printed at the start of the window ({@code Integer.MAX_VALUE} if
+   *     none)
+   * @param after the best cost printed now
+   * @return true if LCG should go on
+   */
+  static boolean stillProgressing(
+      long now, long window, double gain, long boundRaised, long before, long after) {
+    if (boundRaised != Long.MIN_VALUE && now - boundRaised < window) {
+      return true;
+    }
+    if (before == Integer.MAX_VALUE || after == Integer.MAX_VALUE) {
+      // the first solution came during the window: no gain to measure yet
+      return before != after;
+    }
+    return before - after >= gain * Math.abs((double) before);
   }
 
   /**
@@ -3125,6 +3187,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcgSlowDeferred > 0) {
+          // LCG made too few conflicts but kept finding better solutions or bounds
+          IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
+        }
       }
     }
   }
@@ -4486,6 +4552,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
+          IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
         }
       }
       return;
