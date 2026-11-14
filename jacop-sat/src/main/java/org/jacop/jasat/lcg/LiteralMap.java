@@ -53,12 +53,16 @@ final class LiteralMap {
 
   private static final int MIN_DENSE_SIZE = 8;
 
+  private static final int[] EMPTY = new int[0];
+
   private final int min;
   private final long span;
 
   // sorted form
-  private int[] values = new int[4];
-  private int[] literals = new int[4];
+  // empty until the first literal: most variables never get literals of some kind, and three maps
+  // per variable with two arrays of four each took 6 % of the live heap of the largest LCG models
+  private int[] values = EMPTY;
+  private int[] literals = EMPTY;
   private int size;
 
   // indexed form, null while sorted: the DIMACS variable of value min + k at k, and k in present
@@ -189,8 +193,9 @@ final class LiteralMap {
         put(v, literal);
         return;
       }
-      values = Arrays.copyOf(values, 2 * size);
-      literals = Arrays.copyOf(literals, 2 * size);
+      int length = size == 0 ? 4 : 2 * size;
+      values = Arrays.copyOf(values, length);
+      literals = Arrays.copyOf(literals, length);
     }
     int k = -Arrays.binarySearch(values, 0, size, v) - 1;
     System.arraycopy(values, k, values, k + 1, size - k);
