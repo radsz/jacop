@@ -3184,10 +3184,10 @@ public class LinearRelaxation extends Constraint
         dropCuts(chosen.size(), kept, keptRows);
         break;
       }
-      if (status == DualSimplex.LIMIT) {
+      if (status == LpSolver.LIMIT) {
         cutLimits++;
       }
-      if (status == DualSimplex.LIMIT && slackGomory) {
+      if (status == LpSolver.LIMIT && slackGomory) {
         // the Gomory cuts over the slacks can stall the simplex (degenerate pivots on tank
         // allocation, XCSP 2025); the round is dropped and the next ones take the MIR of the
         // aggregates instead
@@ -3195,7 +3195,7 @@ public class LinearRelaxation extends Constraint
         for (MirCut c : chosen) {
           seen.remove(key(c));
         }
-        status = DualSimplex.OPTIMAL;
+        status = LpSolver.OPTIMAL;
         slackGomory = false;
         continue;
       }

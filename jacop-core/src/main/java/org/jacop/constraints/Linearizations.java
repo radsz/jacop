@@ -171,7 +171,7 @@ public final class Linearizations {
   // the clique rows that join the Booleans of ChannelImply (b_v -> x = v) with the Booleans b_v
   // <-> x = v of the same variable
   private static final boolean IMPLIED_VALUES =
-      !"false".equals(System.getProperty("org.jacop.lp.impliedValues"));
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.impliedValues", "true"));
 
   /**
    * Adds, for each {@link ChannelImply} {@code b_v -> x = v} over a variable that also has Booleans
@@ -192,35 +192,36 @@ public final class Linearizations {
       Map<IntVar, Map<Integer, IntVar>> byVar,
       List<LinearForm> out) {
     for (Constraint c : constraints) {
-      if (c.getClass() != ChannelImply.class) {
-        continue;
-      }
-      ChannelImply ch = (ChannelImply) c;
-      Map<Integer, IntVar> eq = byVar.get(ch.x);
-      if (eq == null || eq.isEmpty() || eq.containsValue(ch.x)) {
-        continue;
-      }
-      Map<Integer, IntVar> clique = new LinkedHashMap<>(eq);
-      boolean implied = false;
-      for (AbstractChannel.Item it : ch.item) {
-        if (!ch.x.domain.contains(it.value()) || it.b() == ch.x) {
-          continue;
+      if (c.getClass() == ChannelImply.class) {
+        ChannelImply ch = (ChannelImply) c;
+        Map<Integer, IntVar> eq = byVar.get(ch.x);
+        if (eq != null && !eq.isEmpty() && !eq.containsValue(ch.x)) {
+          impliedValues(ch, eq, out);
         }
+      }
+    }
+  }
+
+  // the rows of impliedValues for one ChannelImply over a variable with the equivalent Booleans eq
+  private static void impliedValues(
+      ChannelImply ch, Map<Integer, IntVar> eq, List<LinearForm> out) {
+    Map<Integer, IntVar> clique = new LinkedHashMap<>(eq);
+    boolean implied = false;
+    for (AbstractChannel.Item it : ch.item) {
+      if (ch.x.domain.contains(it.value()) && it.b() != ch.x) {
         IntVar e = eq.get(it.value());
         if (e == null) {
-          if (clique.putIfAbsent(it.value(), it.b()) == null) {
-            implied = true;
-          }
+          implied |= clique.putIfAbsent(it.value(), it.b()) == null;
         } else if (e != it.b()) {
           out.add(new LinearForm(new IntVar[] {it.b(), e}, new long[] {1, -1}, 0, LinearForm.LE));
         }
       }
-      if (implied && clique.size() >= 2) {
-        IntVar[] bs = clique.values().toArray(new IntVar[0]);
-        long[] ones = new long[bs.length];
-        Arrays.fill(ones, 1);
-        out.add(new LinearForm(bs, ones, 1, LinearForm.LE));
-      }
+    }
+    if (implied && clique.size() >= 2) {
+      IntVar[] bs = clique.values().toArray(new IntVar[0]);
+      long[] ones = new long[bs.length];
+      Arrays.fill(ones, 1);
+      out.add(new LinearForm(bs, ones, 1, LinearForm.LE));
     }
   }
 
