@@ -4850,6 +4850,22 @@ Version 5.0 (unreleased)
    search (spot5 28) and were 17 % slower. ExternalPropagator gets
    notifyTopDecision, called before each decision at the assumption level.
 
+285. The FlatZinc front end posts partner constraints for counts that cannot
+   be one (CountPartnersDetector). When every value of x[i] is counted
+   over a list x with jacop_among(x, {v}, n) or jacop_count(x, v, n) and n
+   cannot be 1..k-1, a value taken by x[i] is taken by k - 1 others; the
+   model's disequalities x[i] != x[j] (int_ne, int_lin_ne, all-different)
+   leave x[i] few partners P(i), and sum(j in P(i)) (x[i] = x[j]) >= k - 1
+   is posted (a clause for k = 2, x[i] = x[j] for a single partner), as an
+   implied constraint (B. M. Smith, Modelling, Handbook of Constraint
+   Programming, 2006, ch. 11). Under LCG the counts explain each pruning
+   with all other variables of the list (50-70 literals on XCSP3
+   ButtonsScissors), the partner clause with a few. ButtonsScissors 2025
+   at 600 s with -f: solutions on all 11 instances where 07-09 had none,
+   09 proved optimal (21) in 95 s, 00-03 proved 2-10x faster. It fires on
+   no instance of the wide MiniZinc set. -Dorg.jacop.fz.countPartners=false
+   turns it off.
+
 Version 4.11
 =============
 
