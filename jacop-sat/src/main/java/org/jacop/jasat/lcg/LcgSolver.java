@@ -4445,7 +4445,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (counterEncoder == null) {
         counterEncoder = new ClauseEncoder(encoderLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
       }
-      List<int[]> cs = counterEncoder.encode(c, true);
+      List<int[]> cs = counterFits(c) ? counterEncoder.encode(c, true) : null;
       if (cs == null) {
         continue;
       }
@@ -4571,10 +4571,59 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private boolean encodeAsCounter(Constraint c) {
+    if (!counterFits(c)) {
+      return false;
+    }
     if (counterEncoder == null) {
       counterEncoder = new ClauseEncoder(encoderLiterals(), CLAUSE_LIMIT, COUNTERS_LIMIT);
     }
     return addEncoded(c, counterEncoder.encode(c, true));
+  }
+
+  // a dry run of the counter encoding on literals that are only numbers: an encoding over the
+  // limit is rejected only after it made some literals, which would stay in the solver unused
+  // and change its search (EFPA-3-8-8-08: 8272 auxiliary variables and 24 % more conflicts)
+  private ClauseEncoder dryEncoder;
+
+  private final Map<IntVar, Map<Integer, Integer>> dryAtoms = new IdentityHashMap<>();
+
+  private int dryNext;
+
+  private boolean counterFits(Constraint c) {
+    if (dryEncoder == null) {
+      dryEncoder =
+          new ClauseEncoder(
+              new ClauseEncoder.Literals() {
+                @Override
+                public int atLeast(IntVar x, int v) {
+                  return dryAtoms
+                      .computeIfAbsent(x, k -> new HashMap<>())
+                      .computeIfAbsent(2 * v, k -> ++dryNext);
+                }
+
+                @Override
+                public int valueLiteral(IntVar x, int v) {
+                  return dryAtoms
+                      .computeIfAbsent(x, k -> new HashMap<>())
+                      .computeIfAbsent(2 * v + 1, k -> ++dryNext);
+                }
+
+                @Override
+                public int auxiliary() {
+                  return ++dryNext;
+                }
+
+                @Override
+                public IntDomain root(IntVar x) {
+                  return x.dom();
+                }
+              },
+              CLAUSE_LIMIT,
+              COUNTERS_LIMIT);
+    }
+    dryAtoms.clear();
+    dryNext = 0;
+    return dryEncoder.encode(c, true) != null;
   }
 
   private ClauseEncoder.Literals encoderLiterals() {
