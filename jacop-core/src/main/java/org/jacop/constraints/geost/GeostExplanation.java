@@ -48,27 +48,26 @@ import org.jacop.lcg.EntryList;
  * in forbidden regions, and a shape is removed when every point of the domain is forbidden for it.
  * A point is forbidden by the compulsory part of another object it must not overlap, or by an
  * {@link InArea} constraint. So an atom is implied by a set of forbidden boxes covering the swept
- * region, and its reason is the atoms those boxes come from, in the style of the explanations of
- * the sweep for non-overlapping rectangles by Schutt, Feydy and Stuckey ("Explaining
- * time-table-edge-finding propagation for the cumulative resource constraint", CPAIOR 2013, and the
- * diffn explanations of the same authors): the bounds of the explained object that delimit the
- * region, the shapes it may still take, and for each obstacle the bounds that make its compulsory
- * part.
+ * region, and its reason is the atoms those boxes come from: the bounds of the explained object
+ * that delimit the region, the shapes it may still take, and for each obstacle the bounds and
+ * shapes that make its compulsory part.
  *
  * <p>The region is recomputed on the bounds just before the explained atom (or now, for a failure)
  * and covered by the forbidden boxes of:
  *
  * <ul>
- *   <li>each object it must not overlap ({@link NonOverlapping}) whose shape is fixed, or whose
- *       shapes are boxes, with times fixed from the start and overlapping when time is selected:
- *       for a fixed shape, the part of each of its boxes covered at every position of its origin
- *       domain; otherwise the part common to all its shapes' boxes;
- *   <li>the outside of the allowed area and the holes of each {@link InArea}, which need no atom.
+ *   <li>each object it must not overlap ({@link NonOverlapping}), with times fixed from the start
+ *       and overlapping when time is selected: the part of each of its boxes covered at every
+ *       origin of its domain (for a fixed shape, as Geost's frames), and the cells covered by the
+ *       union of the boxes of every shape it may take at every origin (at most {@link #CELL_LIMIT}
+ *       cells tested);
+ *   <li>the outside of the allowed area and the holes of each {@link InArea}, which need no atom;
+ *   <li>the values removed from the explained object's own coordinates, cited by their atoms.
  * </ul>
  *
- * Obstacles that the cover does not need are dropped, the latest first. A region that these boxes
- * do not cover (holes of the origin domains, lexicographic ordering, volume reasoning, times that
- * vary) is left to the generic reason.
+ * Obstacles and holes that the cover does not need are dropped, the latest first. A region that
+ * these boxes do not cover (lexicographic ordering, volume reasoning, times that vary) is left to
+ * replay or the generic reason.
  */
 final class GeostExplanation {
 
@@ -292,6 +291,10 @@ final class GeostExplanation {
     for (int s = lo; s <= hi; s++) {
       scratch.clear();
       if (trail.excludedBefore(obj.shapeId, s, entry, scratch)) {
+        // a shape removed before is removed by the atom too: its removal is part of the reason
+        if (scratch.size() > 0) {
+          out.addFrom(scratch, 0);
+        }
         continue;
       }
       if (!validShape(s) || !cover(trail, o, s, region, entry, out)) {
@@ -301,6 +304,13 @@ final class GeostExplanation {
     }
     if (any) {
       citeRegion(trail, obj, region, entry, -1, out);
+      // the shapes the atom removes beyond the bound before it were removed by that bound
+      int kind = trail.kind(entry);
+      if (kind == AtomicTrail.GE) {
+        trail.addBoundReaching(obj.shapeId, entry, true, trail.minBefore(obj.shapeId, entry), out);
+      } else if (kind == AtomicTrail.LE) {
+        trail.addBoundReaching(obj.shapeId, entry, false, trail.maxBefore(obj.shapeId, entry), out);
+      }
     }
     return any;
   }

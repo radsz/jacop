@@ -1532,7 +1532,7 @@ class LcgFuzzTest {
     int k = rnd.nextInt(4) == 0 ? 3 : 2;
     int side = k == 2 ? 4 + rnd.nextInt(3) : 3 + rnd.nextInt(2);
     List<Shape> shapes = new ArrayList<>();
-    int numShapes = 2 + rnd.nextInt(3);
+    int numShapes = 2 + rnd.nextInt(4);
     for (int s = 0; s < numShapes; s++) {
       List<Dbox> boxes = new ArrayList<>();
       int[] length = new int[k];
@@ -1569,11 +1569,13 @@ class LcgFuzzTest {
       }
       int s0 = rnd.nextInt(numShapes);
       IntVar shape = new IntVar(store, "s" + i, s0, s0);
-      if (rnd.nextBoolean()) {
-        int s1 = rnd.nextInt(numShapes);
-        shape.domain.unionAdapt(s1, s1);
-        shape.refreshBounds();
+      // a few more shapes, often with gaps between them (shapes removed before a bound moves)
+      for (int s1 = 0; s1 < numShapes; s1++) {
+        if (rnd.nextInt(3) == 0) {
+          shape.domain.unionAdapt(s1, s1);
+        }
       }
+      shape.refreshBounds();
       vars.add(shape);
       int start = timed ? rnd.nextInt(2) : 0;
       objects.add(
