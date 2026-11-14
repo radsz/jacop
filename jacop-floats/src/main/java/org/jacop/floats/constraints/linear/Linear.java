@@ -34,9 +34,7 @@ import java.io.Serializable;
 import java.math.BigDecimal;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -82,8 +80,34 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   };
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
-  final Map<FloatVar, VariableNode> varMap = Var.createEmptyPositioning();
-  final LinkedHashSet<FloatVar> variableQueue = new LinkedHashSet<>();
+  /**
+   * Leaf node of each variable, by its position in {@link #list}. With {@link #queue} this replaces
+   * a LinkedHashSet of changed variables and a map from variables to nodes: queueVariable runs for
+   * every change of every variable of the constraint, and the hashing was a tenth of the solving
+   * time of linear-heavy float models. The order is the same (first queued, first propagated; a
+   * variable already queued keeps its place), so the pruning is identical.
+   */
+  private VariableNode[] nodes;
+
+  /**
+   * For lists too long for a linear scan: an open-addressing table from a variable's store index
+   * ({@link Var#index()}) to its position in {@link #list}, -1 marking a free slot.
+   */
+  private int[] positionKeys;
+
+  private int[] positionValues;
+
+  /** Lists up to this length find a variable's position by scanning {@link #list}. */
+  private static final int SCAN_LIMIT = 8;
+
+  /** Positions of the queued variables, a circular buffer holding each position at most once. */
+  private int[] queue;
+
+  private int queueHead;
+
+  private int queueSize;
+
+  private boolean[] queued;
 
   /** It specifies what relations is used by this constraint. */
   public byte relationType;
@@ -214,6 +238,15 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     }
 
     VariableNode[] leafNodes = new VariableNode[this.list.length];
+    nodes = new VariableNode[this.list.length];
+    queue = new int[this.list.length];
+    queued = new boolean[this.list.length];
+    if (this.list.length > SCAN_LIMIT && Arrays.stream(this.list).allMatch(x -> x.index() >= 0)) {
+      int capacity = Integer.highestOneBit(this.list.length * 4 - 1);
+      positionKeys = new int[capacity];
+      positionValues = new int[capacity];
+      Arrays.fill(positionKeys, -1);
+    }
 
     for (int i = 0; i < this.list.length; i++) {
 
@@ -224,7 +257,12 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       }
       leafNodes[i].rel = relationType;
 
-      varMap.put(this.list[i], leafNodes[i]);
+      nodes[i] = leafNodes[i];
+      if (positionKeys != null) {
+        int slot = slotOf(this.list[i].index());
+        positionKeys[slot] = this.list[i].index();
+        positionValues[slot] = i;
+      }
     }
 
     Arrays.sort(leafNodes, new VarWeightComparator<>());
@@ -423,7 +461,9 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   private void resyncWhenReified() {
     if (reified()) {
-      variableQueue.addAll(Arrays.asList(list));
+      for (int i = 0; i < list.length; i++) {
+        enqueue(i);
+      }
     }
   }
 
@@ -433,16 +473,47 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   private void pruneRelation() {
 
-    while (!variableQueue.isEmpty()) {
+    while (queueSize > 0) {
       // propagate changes in FDV's and prune
+      int i = queue[queueHead];
+      queueHead = queueHead + 1 == queue.length ? 0 : queueHead + 1;
+      queueSize--;
+      queued[i] = false;
 
-      Iterator<FloatVar> it = variableQueue.iterator();
-      FloatVar v = it.next();
-      it.remove();
-      VariableNode n = varMap.get(v);
-
-      n.propagateAndPrune();
+      nodes[i].propagateAndPrune();
     }
+  }
+
+  private void enqueue(int i) {
+    if (!queued[i]) {
+      queued[i] = true;
+      int tail = queueHead + queueSize;
+      queue[tail >= queue.length ? tail - queue.length : tail] = i;
+      queueSize++;
+    }
+  }
+
+  /** The slot of a store index in the position table: its own slot, or the free one it would take. */
+  private int slotOf(int key) {
+    int mask = positionKeys.length - 1;
+    int slot = (key * 0x9E3779B9) >>> 7 & mask;
+    while (positionKeys[slot] != -1 && positionKeys[slot] != key) {
+      slot = (slot + 1) & mask;
+    }
+    return slot;
+  }
+
+  private int positionOf(Var v) {
+    if (positionKeys != null) {
+      int slot = slotOf(v.index());
+      return positionKeys[slot] == -1 || list[positionValues[slot]] != v ? -1 : positionValues[slot];
+    }
+    for (int i = 0; i < list.length; i++) {
+      if (list[i] == v) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   @Override
@@ -474,7 +545,10 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public void queueVariable(int level, Var v) {
-    variableQueue.add((FloatVar) v);
+    int i = positionOf(v);
+    if (i >= 0) {
+      enqueue(i);
+    }
   }
 
   /**
