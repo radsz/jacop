@@ -38,6 +38,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.TreeMap;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldiffSum;
@@ -233,7 +234,9 @@ import org.junit.jupiter.api.Test;
  * gets up to two holes inside its domain, for the reasons of bounds that skip holes; a model that
  * fails while its constraints are imposed is skipped. With {@code lcg.fuzz.recent} set to a
  * comma-separated list of the cases of the globals added in 5.0, half of the constraints are drawn
- * from those cases, to test their explanations at volume.
+ * from those cases, to test their explanations at volume. With {@code lcg.fuzz.focus} set to a
+ * comma-separated list of the cases of {@code randomConstraint}, three constraints in four are
+ * drawn from those cases (the constraint audit checks one constraint's explanations this way).
  */
 class LcgFuzzTest {
 
@@ -245,6 +248,10 @@ class LcgFuzzTest {
 
   // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
   private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
+
+  // with lcg.fuzz.focus=64,65 (cases of randomConstraint), three constraints in four are drawn
+  // from those cases, to check the explanations of one constraint at volume
+  private static final int[] FOCUS = recentCases(System.getProperty("lcg.fuzz.focus"));
 
   // the explanations that are off by default are checked too
   @BeforeAll
@@ -533,7 +540,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(40);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(41);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -667,6 +674,10 @@ class LcgFuzzTest {
         case 37 -> cardinalityMatrix();
         case 38 -> new Same(pick(x, 3), pick(x, 3));
         case 39 -> new UsedBy(pick(x, 3), pick(x, 2));
+        case 40 ->
+            new AllDifferentLists(
+                new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)},
+                rnd.nextBoolean() ? new int[0][] : new int[][] {{rnd.nextInt(3), rnd.nextInt(3)}});
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -950,7 +961,9 @@ class LcgFuzzTest {
       }
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(84)) {
+      int kind =
+          FOCUS != null && rnd.nextInt(4) > 0 ? FOCUS[rnd.nextInt(FOCUS.length)] : rnd.nextInt(84);
+      return switch (kind) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -1363,6 +1376,90 @@ class LcgFuzzTest {
   }
 
   /**
+   * Under LCG a reified In counts as entailed only once the bounds of its variable lie in the set,
+   * not as soon as the values left all do. On random models of reified membership tests over
+   * domains with holes, counted by sums of the indicators, LCG with checked explanations must agree
+   * with depth-first search, where the entailment check stays complete, and give a solution.
+   */
+  @Test
+  void reifiedInAgreesWithSearch() {
+    int runs = Math.max(200, RUNS / 4);
+    int sat = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = memberships(seed, false);
+      boolean lcg = memberships(seed, true);
+      assertThat(lcg).as("seed " + seed).isEqualTo(expected);
+      sat += expected ? 1 : 0;
+    }
+    assertThat(sat).isPositive().isLessThan(runs);
+  }
+
+  // random reified membership tests: true when a solution exists (LCG solutions are checked)
+  private static boolean memberships(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 3 + rnd.nextInt(3);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      IntervalDomain d = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(3) > 0) {
+          d.unionAdapt(v, v);
+        }
+      }
+      if (d.isEmpty()) {
+        d.unionAdapt(0, 0);
+      }
+      x[i] = new IntVar(store, "x" + i, d);
+    }
+    int m = 4 + rnd.nextInt(5);
+    IntVar[] b = new IntVar[m];
+    IntVar[] at = new IntVar[m];
+    IntervalDomain[] sets = new IntervalDomain[m];
+    for (int j = 0; j < m; j++) {
+      sets[j] = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(5) < 2) {
+          sets[j].unionAdapt(v, v);
+        }
+      }
+      at[j] = x[rnd.nextInt(n)];
+      b[j] = new BooleanVar(store, "b" + j);
+      store.impose(new Reified(new In(at[j], sets[j]), b[j]));
+    }
+    int need = rnd.nextInt(m + 1);
+    store.impose(new SumBool(b, rnd.nextBoolean() ? "==" : ">=", new IntVar(store, need, need)));
+    for (int k = 0; k + 1 < n; k++) {
+      if (rnd.nextBoolean()) {
+        store.impose(new XneqY(x[k], x[k + 1]));
+      }
+    }
+    if (!lcg) {
+      if (!store.consistency()) {
+        return false;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    if (solver.solve() != CdclSolver.SAT) {
+      return false;
+    }
+    int count = 0;
+    for (int j = 0; j < m; j++) {
+      boolean in = sets[j].contains(solver.value(at[j]));
+      assertThat(solver.value(b[j])).as("seed %d: b%d", seed, j).isEqualTo(in ? 1 : 0);
+      count += in ? 1 : 0;
+    }
+    assertThat(count).as("seed %d: sum", seed).isGreaterThanOrEqualTo(need);
+    return true;
+  }
+
+  /**
    * Diffn's area check, with its dual feasible functions, explains a failure by the rectangles in a
    * window. On random tight packings LCG with checked explanations must agree with search over the
    * pairwise rule only, and give a packing.
@@ -1707,6 +1804,125 @@ class LcgFuzzTest {
       own += (Long) lcg[1];
     }
     assertThat(own).isPositive();
+  }
+
+  /**
+   * AllDifferentLists explains a removed value by the fixed row it would equal and a failure by two
+   * equal rows. On random rows of one to three variables with column sums and disequalities, often
+   * with fewer different tuples than rows and, one seed in two, excepted tuples, LCG with checked
+   * explanations must agree with search over the pairwise decomposition (a disjunction of
+   * disequalities, and of the excepted tuples, for each pair of rows).
+   */
+  @Test
+  void allDifferentListsReasonsAgreeWithPairwiseSearch() {
+    int runs = Math.max(200, RUNS / 2);
+    long own = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = differentLists(seed, false) != null;
+      Object[] lcg = differentLists(seed, true);
+      String where = "seed " + seed;
+      assertThat(lcg[0]).as(where).isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      own += (Long) lcg[1];
+    }
+    assertThat(own).isPositive();
+  }
+
+  // random rows: search over the pairwise decomposition (null if no solution), or LCG over
+  // AllDifferentLists ({status, own reasons and failures of AllDifferentLists})
+  private static Object[] differentLists(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int m = 3 + rnd.nextInt(5);
+    int n = 1 + rnd.nextInt(3);
+    int top = 1 + rnd.nextInt(3);
+    IntVar[][] x = new IntVar[m][n];
+    List<IntVar> all = new ArrayList<>();
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < n; j++) {
+        x[i][j] = new IntVar(store, "x" + i + "_" + j, 0, top);
+        if (rnd.nextInt(4) == 0) {
+          x[i][j].domain.subtractAdapt(rnd.nextInt(top + 1));
+          x[i][j].refreshBounds();
+        }
+        all.add(x[i][j]);
+      }
+    }
+    for (int j = 0; j < n; j++) {
+      if (rnd.nextBoolean()) {
+        IntVar[] column = new IntVar[m];
+        for (int i = 0; i < m; i++) {
+          column[i] = x[i][j];
+        }
+        int sum = rnd.nextInt(m * top + 1);
+        store.impose(new SumInt(column, "<=", new IntVar(store, sum, sum)));
+      }
+    }
+    for (int k = rnd.nextInt(4); k > 0; k--) {
+      IntVar a = all.get(rnd.nextInt(all.size()));
+      IntVar b = all.get(rnd.nextInt(all.size()));
+      if (a != b) {
+        store.impose(new XneqY(a, b));
+      }
+    }
+    // one seed in two: excepted tuples, which two rows may share
+    int[][] except = new int[rnd.nextBoolean() ? 0 : 1 + rnd.nextInt(2)][n];
+    for (int[] t : except) {
+      for (int j = 0; j < n; j++) {
+        t[j] = rnd.nextInt(top + 1);
+      }
+    }
+    if (lcg) {
+      store.impose(new AllDifferentLists(x, except));
+    } else {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          PrimitiveConstraint[] ne = new PrimitiveConstraint[n + except.length];
+          for (int j = 0; j < n; j++) {
+            ne[j] = new XneqY(x[i][j], x[r][j]);
+          }
+          for (int e = 0; e < except.length; e++) {
+            PrimitiveConstraint[] eq = new PrimitiveConstraint[n];
+            for (int j = 0; j < n; j++) {
+              eq[j] = new XeqC(x[i][j], except[e][j]);
+            }
+            ne[n + e] = new And(eq);
+          }
+          store.impose(new Or(ne));
+        }
+      }
+      if (!store.consistency()) {
+        return null;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(
+              store, new SimpleSelect<>(all.toArray(new IntVar[0]), null, new IndomainMin<>()))
+          ? new Object[0]
+          : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    int status = solver.solve();
+    if (status == CdclSolver.SAT) {
+      for (int i = 0; i < m; i++) {
+        for (int r = i + 1; r < m; r++) {
+          boolean differ = false;
+          int[] row = new int[n];
+          for (int j = 0; j < n; j++) {
+            row[j] = solver.value(x[i][j]);
+            differ |= row[j] != solver.value(x[r][j]);
+          }
+          differ |= Arrays.stream(except).anyMatch(t -> Arrays.equals(t, row));
+          assertThat(differ).as("seed %d: rows %d and %d", seed, i, r).isTrue();
+        }
+      }
+    }
+    long[] counts = solver.explanationStatistics().get("AllDifferentLists");
+    return new Object[] {
+      status, counts == null ? 0L : counts[0] - counts[1] + counts[3] - counts[4]
+    };
   }
 
   // a random chain of vectors: search over pairwise LexOrder (null if no solution), or LCG over
