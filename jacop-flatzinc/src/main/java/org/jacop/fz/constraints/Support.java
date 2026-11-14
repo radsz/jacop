@@ -144,7 +144,12 @@ public class Support implements ParserTreeConstants {
    * @param x the variables.
    * @param o the offsets.
    */
-  record Shifted(IntVar[] x, int[] o) {}
+  record Shifted(List<IntVar> x, List<Integer> o) {
+    Shifted {
+      x = List.copyOf(x);
+      o = List.copyOf(o);
+    }
+  }
 
   // the cliques of AlldifferentDetector with their offsets, for the permutation sums of
   // LinearSystemDetector

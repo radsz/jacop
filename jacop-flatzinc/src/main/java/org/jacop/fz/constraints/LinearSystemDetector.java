@@ -119,7 +119,8 @@ public class LinearSystemDetector {
         permutations += permutationSum(x, new int[x.length]);
       }
       for (Support.Shifted s : support.allDifferentOffsets) {
-        permutations += permutationSum(s.x(), s.o());
+        int[] o = s.o().stream().mapToInt(Integer::intValue).toArray();
+        permutations += permutationSum(s.x().toArray(new IntVar[0]), o);
       }
     }
     if (rows.isEmpty()) {

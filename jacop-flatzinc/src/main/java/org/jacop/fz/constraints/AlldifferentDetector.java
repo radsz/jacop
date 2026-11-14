@@ -229,11 +229,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
           edge(x[0], x[1], c / a[0], node);
         }
       }
-      case "int_lin_eq" -> {
-        if (!"off".equals(implied)) {
-          linearEquality(node);
-        }
-      }
+      case "int_lin_eq" -> linearEquality(node);
       case "array_var_int_element", "array_var_bool_element" -> element(node, 1);
       case "jacop_array_var_int_element_nonshifted", "jacop_array_var_bool_element_nonshifted" ->
           element(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
@@ -245,6 +241,9 @@ public class AlldifferentDetector implements ParserTreeConstants {
 
   // a * x0 - a * x1 = c with c != 0: x0 != x1
   private void linearEquality(ASTConstElem node) {
+    if ("off".equals(implied)) {
+      return;
+    }
     int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     if (a == null || a.length != 2 || a[0] != -a[1] || a[0] == 0) {
       return;
@@ -424,7 +423,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
     if ("sum".equals(implied) && edges.stream().noneMatch(stated::contains)) {
       // a clique of implied disequalities only: recorded for the permutation sums, not posted
       covered.addAll(edges);
-      record(clique.toArray(new int[0][]));
+      rememberClique(clique.toArray(new int[0][]));
       return false;
     }
     covered.addAll(edges);
@@ -469,16 +468,16 @@ public class AlldifferentDetector implements ParserTreeConstants {
     }
     support.delayedConstraints.add(new Alldiff(x).setDegreeWeight(0));
     support.detectedAlldifferentLists.add(x);
-    record(clique);
+    rememberClique(clique);
   }
 
   // the clique for the permutation sums: x[k] + o[k] are all different
-  private void record(int[][] clique) {
-    IntVar[] x = new IntVar[clique.length];
-    int[] o = new int[clique.length];
-    for (int k = 0; k < clique.length; k++) {
-      x[k] = nodes.get(clique[k][0]);
-      o[k] = clique[k][1];
+  private void rememberClique(int[][] clique) {
+    List<IntVar> x = new ArrayList<>(clique.length);
+    List<Integer> o = new ArrayList<>(clique.length);
+    for (int[] member : clique) {
+      x.add(nodes.get(member[0]));
+      o.add(member[1]);
     }
     support.allDifferentOffsets.add(new Support.Shifted(x, o));
   }
