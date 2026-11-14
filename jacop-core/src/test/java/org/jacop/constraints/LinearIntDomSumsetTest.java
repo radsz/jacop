@@ -90,6 +90,22 @@ class LinearIntDomSumsetTest {
       for (int i = 0; i < dst.length * 64; i++) {
         assertThat((or[i >>> 6] >>> i & 1L) != 0).isEqualTo(expected.get(i));
       }
+      // out |= (src shifted) & mask, with mask = dst and out holding some bits already
+      long[] out = new long[dst.length];
+      BitSet before = new BitSet();
+      for (int i = 0; i < dst.length * 64; i++) {
+        if (r.nextInt(8) == 0) {
+          out[i >>> 6] |= 1L << i;
+          before.set(i);
+        }
+      }
+      boolean met = LinearIntDom.andOrShifted(src, dst, out, shift);
+      assertThat(met).isEqualTo(meets);
+      for (int i = 0; i < dst.length * 64; i++) {
+        long j = i - shift;
+        boolean shifted = j >= 0 && j < src.length * 64L && s.get((int) j);
+        assertThat((out[i >>> 6] >>> i & 1L) != 0).isEqualTo(before.get(i) || shifted && d.get(i));
+      }
     }
   }
 
