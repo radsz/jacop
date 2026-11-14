@@ -79,6 +79,16 @@ import org.jacop.fz.SimpleNode;
  */
 public class EnforcementInliner implements ParserTreeConstants {
 
+  // the parts of the reduction, for experiments
+  private static final boolean LITERAL =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.enforcementInlining.literal"));
+
+  private static final boolean BINARY =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.enforcementInlining.binary"));
+
+  private static final boolean NEGATED =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.enforcementInlining.negated"));
+
   private final Support support;
 
   private final Set<SimpleNode> frozenNodes;
@@ -365,7 +375,7 @@ public class EnforcementInliner implements ParserTreeConstants {
 
   // b -> x = t over a 0/1 variable x: b becomes the literal x = t in its clauses
   private void literalBody(IntVar b) {
-    if (!candidate(b)) {
+    if (!LITERAL || !candidate(b)) {
       return;
     }
     Info info = infos.get(b);
@@ -420,7 +430,7 @@ public class EnforcementInliner implements ParserTreeConstants {
 
   // b -> C with the only clause l \/ b: not l -> C
   private void binaryClause(IntVar b) {
-    if (!candidate(b)) {
+    if (!BINARY || !candidate(b)) {
       return;
     }
     Info info = infos.get(b);
@@ -440,7 +450,11 @@ public class EnforcementInliner implements ParserTreeConstants {
       w = c.neg.getFirst();
       negated = false;
     }
-    if (w == b || info.control.body().contains(w) || w.min() != 0 || w.max() != 1) {
+    if (w == b
+        || negated && !NEGATED
+        || info.control.body().contains(w)
+        || w.min() != 0
+        || w.max() != 1) {
       return;
     }
     kill(c);
