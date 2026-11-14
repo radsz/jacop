@@ -566,12 +566,30 @@ public class Tables {
   }
 
   /**
+   * Makes a variable an alias of another one, together with the variables that are aliases of it.
+   *
+   * @param to the variable that stays.
+   * @param from the variable that becomes an alias of {@code to}.
+   * @param aliasesOfFrom the variables whose alias is {@code from}.
+   */
+  public void mergeAlias(IntVar to, IntVar from, List<IntVar> aliasesOfFrom) {
+    for (IntVar v : aliasesOfFrom) {
+      aliasTable.put(v, to);
+    }
+    aliasTargets.remove(from);
+    if (!aliasesOfFrom.isEmpty()) {
+      aliasTargets.add(to);
+    }
+    addAlias(to, from);
+  }
+
+  /**
    * Tells whether integer variables are aliases of a variable.
    *
    * @param b the variable
    * @return true if some integer variable is an alias of b
    */
-  boolean isAliasTarget(IntVar b) {
+  public boolean isAliasTarget(IntVar b) {
     return aliasTargets.contains(b);
   }
 
@@ -710,7 +728,7 @@ public class Tables {
   }
 
   /** Removes aliased variables from the search variable collection. */
-  void removeAliasFromSearch() {
+  public void removeAliasFromSearch() {
 
     defaultSearchVariables.removeIf(aliasTable::containsKey);
   }
