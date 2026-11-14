@@ -273,6 +273,22 @@ class ClauseEncoderTest {
           }
           return new HybridTable(x, t, Integer.MIN_VALUE);
         });
+    FACTORIES.put("Alldistinct", (s, r) -> new Alldistinct(vs(s, r, 2 + r.nextInt(3))));
+    FACTORIES.put(
+        "AlldistinctPermutation",
+        (s, r) -> {
+          // as many values as variables, with holes: a sudoku row
+          int n = 3 + r.nextInt(2);
+          IntVar[] x = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            x[i] = new IntVar(s, 0, n - 1);
+            CREATED.add(x[i]);
+            if (r.nextInt(3) == 0) {
+              x[i].domain.subtract(r.nextInt(n));
+            }
+          }
+          return new Alldistinct(x);
+        });
     FACTORIES.put("Reified", (s, r) -> new Reified(prim(s, r), b(s)));
     FACTORIES.put("Implies", (s, r) -> new Implies(b(s), prim(s, r)));
     FACTORIES.put("Not", (s, r) -> new Not(prim(s, r)));
