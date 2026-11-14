@@ -765,7 +765,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         updateCostValue(childCostValue);
       }
       double minCost = costHandler.getMinCostValue(costVariable);
-      if (childCostValue <= minCost) {
+      // the next cost must be at most the previous value of the child's cost (cost - 1 for an
+      // integer, cost - step for a float with a minimization step), which may be below the minimum
+      // even though the child's cost is above it
+      if (costHandler.getPreviousCostValue(childCostValue) < minCost) {
         return true;
       }
       costHandler.updateCostDomain(store, costVariable, childCostValue);

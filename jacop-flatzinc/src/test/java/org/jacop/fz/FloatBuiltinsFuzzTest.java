@@ -297,6 +297,30 @@ class FloatBuiltinsFuzzTest {
   }
 
   /**
+   * --step (the distance by which a float objective must improve) made optimisation report
+   * UNSATISFIABLE: a child search's cost minus the step fell below the cost's minimum, and the
+   * FailException of the bound escaped the search.
+   */
+  @Test
+  void floatOptimisationWithAStep() throws IOException {
+    String model =
+        """
+        var -1.0..8.0: x :: output_var;
+        var -100.0..100.0: z :: output_var;
+        constraint float_times(x, x, z);
+        solve :: float_search([x], 0.0001, input_order, indomain_split, complete) minimize z;
+        """;
+    for (String[] options : new String[][] {{"--step", "1e-4"}, {"--step", "1e-2", "-a"}}) {
+      String out = run(model, options);
+      assertThat(out).as(Arrays.toString(options)).doesNotContain("UNSATISFIABLE");
+      assertThat(out).as(Arrays.toString(options)).contains("==========");
+      String last = out.substring(out.lastIndexOf("z = ") + 4);
+      double z = Double.parseDouble(last.substring(0, last.indexOf(';')));
+      assertThat(z).as(Arrays.toString(options)).isLessThan(0.02);
+    }
+  }
+
+  /**
    * Minimises or maximises a float function of the integers (a built-in, or a linear sum defined by
    * float_lin_eq), and checks the last solution against the optimum found by enumeration.
    */
