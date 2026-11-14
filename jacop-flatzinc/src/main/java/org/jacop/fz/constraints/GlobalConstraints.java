@@ -2824,7 +2824,15 @@ class GlobalConstraints implements ParserTreeConstants {
     for (int i = 0; i < rows; i++) {
       System.arraycopy(a, i * n, x[i], 0, n);
     }
-    support.pose(new AllDifferentLists(x));
+    int[][] except = new int[0][];
+    if (node.jjtGetNumChildren() > 2) {
+      int[] e = support.getIntArray((SimpleNode) node.jjtGetChild(2));
+      except = new int[n == 0 ? 0 : e.length / n][];
+      for (int t = 0; t < except.length; t++) {
+        except[t] = Arrays.copyOfRange(e, t * n, t * n + n);
+      }
+    }
+    support.pose(new AllDifferentLists(x, except));
   }
 
   void gen_jacop_lex_chain(SimpleNode node, boolean strict) {

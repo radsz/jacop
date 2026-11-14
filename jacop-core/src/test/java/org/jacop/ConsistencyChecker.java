@@ -45,6 +45,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.jacop.constraints.AbsXeqY;
+import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.AlldiffSum;
 import org.jacop.constraints.AlldifferentExcept;
@@ -964,6 +965,41 @@ class ConsistencyChecker {
         concat(x, y, z));
   }
 
+  // 3-4 rows of 2 variables over 0..2 with holes, pairwise different tuples (maybe but excepted
+  // ones)
+  static Model differentLists(Store s, Random r, boolean withExcept) {
+    int m = 3 + r.nextInt(2);
+    IntVar[][] x = new IntVar[m][2];
+    IntVar[] all = new IntVar[2 * m];
+    for (int i = 0; i < m; i++) {
+      for (int j = 0; j < 2; j++) {
+        x[i][j] = aVar(s, "x" + i + "_" + j, 0, 2, r);
+        all[2 * i + j] = x[i][j];
+      }
+    }
+    int[][] except = new int[withExcept ? 1 + r.nextInt(2) : 0][];
+    for (int e = 0; e < except.length; e++) {
+      except[e] = new int[] {r.nextInt(3), r.nextInt(3)};
+    }
+    return new Model(
+        new AllDifferentLists(x, except),
+        t -> {
+          for (int i = 0; i < m; i++) {
+            for (int k = i + 1; k < m; k++) {
+              if (t[2 * i] == t[2 * k] && t[2 * i + 1] == t[2 * k + 1]) {
+                int a = t[2 * i];
+                int b = t[2 * i + 1];
+                if (Arrays.stream(except).noneMatch(e -> e[0] == a && e[1] == b)) {
+                  return false;
+                }
+              }
+            }
+          }
+          return true;
+        },
+        all);
+  }
+
   private static Model alldiff(Store store, Random random, boolean gac) {
     int n = 3 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, 0, n, random);
@@ -1303,6 +1339,8 @@ class ConsistencyChecker {
               ((LinearIntDom) m.constraint()).setSumsets("always");
               return m;
             }),
+        new Case("AllDifferentLists", Level.NONE, (s, r) -> differentLists(s, r, false)),
+        new Case("AllDifferentListsExcept", Level.NONE, (s, r) -> differentLists(s, r, true)),
         new Case("Alldiff", Level.BOUNDS_Z, (s, r) -> alldiff(s, r, false)),
         // bounds(Z) at all but about 1 node in 60,000: the paper's rule 3a is not applied
         new Case("OverlappingAlldiff", Level.NONE, ConsistencyChecker::overlappingAlldiff),

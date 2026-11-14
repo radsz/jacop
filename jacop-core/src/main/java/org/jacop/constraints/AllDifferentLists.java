@@ -33,9 +33,11 @@ package org.jacop.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -69,6 +71,10 @@ import org.jacop.lcg.Explainable;
  * <p>Explanations: a removed value is explained by the other values of its row and the values of
  * the fixed row it would equal; a failure by the values of the two equal rows.
  *
+ * <p>With excepted tuples (XCSP3 allDifferent over lists with except), two rows may be equal when
+ * their tuple is excepted: a fixed row whose tuple is excepted is not hashed, so it neither fails
+ * nor prunes.
+ *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
@@ -87,6 +93,11 @@ public class AllDifferentLists extends Constraint
   private final int m;
   private final int n;
 
+  /** The excepted tuples: two rows may be equal when their tuple is one of them. */
+  public final int[][] except;
+
+  private final Set<Key> excepted = new HashSet<>();
+
   // the positions (row * n + column) of each variable
   private final Map<IntVar, int[]> positions = new IdentityHashMap<>();
 
@@ -96,7 +107,19 @@ public class AllDifferentLists extends Constraint
    * @param x the rows, all of the same length; no two may be equal tuples
    */
   public AllDifferentLists(IntVar[][] x) {
+    this(x, new int[0][]);
+  }
+
+  /**
+   * It creates the constraint with excepted tuples (XCSP3 allDifferent over lists with except).
+   *
+   * @param x the rows, all of the same length; no two may be equal tuples unless the tuple is
+   *     excepted
+   * @param except the excepted tuples, each of the length of the rows
+   */
+  public AllDifferentLists(IntVar[][] x, int[][] except) {
     checkInputForNullness("x", x);
+    checkInputForNullness("except", except);
     for (int i = 0; i < x.length; i++) {
       checkInputForNullness("x[" + i + "]", x[i]);
     }
@@ -112,6 +135,15 @@ public class AllDifferentLists extends Constraint
                 + "] has "
                 + x[i].length);
       }
+    }
+    this.except = new int[except.length][];
+    for (int e = 0; e < except.length; e++) {
+      if (except[e] == null || except[e].length != n) {
+        throw new IllegalArgumentException(
+            "AllDifferentLists excepted tuple " + e + " must have the rows' length " + n);
+      }
+      this.except[e] = except[e].clone();
+      excepted.add(new Key(this.except[e]));
     }
     this.numberId = idNumber.incrementAndGet();
     this.queueIndex = 1;
@@ -164,6 +196,9 @@ public class AllDifferentLists extends Constraint
   private boolean[] inFixed;
   private boolean[] inOpen;
 
+  // the undo entry of a fixed row with an excepted tuple, which is not hashed
+  private static final Object EXCEPTED = new Object();
+
   // the rows whose variables were fixed since the last call
   private int[] dirty;
   private int dirtyCount;
@@ -203,7 +238,9 @@ public class AllDifferentLists extends Constraint
       k--;
       int i = undoRows.get(k);
       Object key = undoKeys.get(k);
-      if (key instanceof Key fixedKey) {
+      if (key == EXCEPTED) {
+        inFixed[i] = false;
+      } else if (key instanceof Key fixedKey) {
         fixedRows.remove(fixedKey);
         inFixed[i] = false;
       } else {
@@ -270,6 +307,14 @@ public class AllDifferentLists extends Constraint
   // row i is fixed: it differs from the fixed rows and makes the open rows it matches lose a value
   private void fix(Store store, int i) {
     Key key = new Key(values(i, -1, 0));
+    if (excepted.contains(key)) {
+      // an excepted tuple may repeat: the row is done
+      inFixed[i] = true;
+      undoKeys.add(EXCEPTED);
+      undoLevels.add(store.level);
+      undoRows.add(i);
+      return;
+    }
     Integer same = fixedRows.putIfAbsent(key, i);
     if (same != null) {
       failRow = i;
@@ -353,7 +398,8 @@ public class AllDifferentLists extends Constraint
           return false;
         }
       }
-      if (seen.put(new Key(values(i, -1, 0)), i) != null) {
+      Key key = new Key(values(i, -1, 0));
+      if (!excepted.contains(key) && seen.put(key, i) != null) {
         return false;
       }
     }
@@ -466,7 +512,11 @@ public class AllDifferentLists extends Constraint
         result.append(", ");
       }
     }
-    result.append("])");
+    result.append("]");
+    if (except.length > 0) {
+      result.append(", except ").append(Arrays.deepToString(except));
+    }
+    result.append(")");
     return result.toString();
   }
 
@@ -476,6 +526,6 @@ public class AllDifferentLists extends Constraint
     for (int i = 0; i < m; i++) {
       y[i] = map.get(x[i]);
     }
-    return new AllDifferentLists(y);
+    return new AllDifferentLists(y, except);
   }
 }
