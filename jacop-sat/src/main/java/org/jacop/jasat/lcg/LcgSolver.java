@@ -5003,6 +5003,18 @@ public final class LcgSolver implements ExternalPropagator {
               + " doms "
               + freeDomains(t));
     }
+    return addTableClauses(t, cs, aux);
+  }
+
+  /**
+   * Gives the clauses of an encoded table to the solver in place of its propagator.
+   *
+   * @param t the table
+   * @param cs its clauses, or null when it was not encoded
+   * @param aux the number of auxiliary variables before the encoding
+   * @return whether the table became clauses
+   */
+  private boolean addTableClauses(HybridTable t, List<int[]> cs, long aux) {
     if (cs == null) {
       return false;
     }
@@ -5132,20 +5144,7 @@ public final class LcgSolver implements ExternalPropagator {
               + " doms "
               + freeDomains(t));
     }
-    if (cs == null) {
-      return false;
-    }
-    tableTupleLiterals += auxiliaryVariables - aux;
-    for (int[] cl : cs) {
-      tableClauses++;
-      if (!rootFailed && !sat.addClause(cl)) {
-        rootFailed = true;
-        clauseFailedAtRoot = true;
-      }
-    }
-    t.removeConstraint();
-    encodedConstraints.add(t);
-    return true;
+    return addTableClauses(t, cs, aux);
   }
 
   /**
