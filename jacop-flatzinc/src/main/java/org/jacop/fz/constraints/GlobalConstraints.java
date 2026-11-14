@@ -145,6 +145,7 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.NegativeTable;
 import org.jacop.constraints.table.Restriction;
@@ -2257,7 +2258,20 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Whether tables of two variables with small ranges are posted as {@link BinaryBitTable}, {@code
+   * org.jacop.fz.binaryBitTable} (default true).
+   */
+  static final boolean BINARY_BIT_TABLE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.binaryBitTable", "true"));
+
   private void poseTableBySizePlain(IntVar[] v, int[][] t) {
+    // a table of two variables over at most 4096 values each: AC3-bit with residues, about three
+    // times as many nodes a second as the compact table on Subisomorphism (XCSP 2024)
+    if (v.length == 2 && BINARY_BIT_TABLE && BinaryBitTable.fits(v[0], v[1])) {
+      support.pose(new BinaryBitTable(v[0], v[1], t));
+      return;
+    }
     // Merging the tuples that differ in one column only (-Djacop.table=star into *, or =sets into
     // sets of values) shrinks the tables that MiniZinc expanded from short tables, but it measured
     // slower overall on the FlatZinc benchmarks, so it is off by default.
