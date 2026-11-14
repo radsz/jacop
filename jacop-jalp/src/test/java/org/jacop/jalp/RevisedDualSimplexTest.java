@@ -347,6 +347,26 @@ class RevisedDualSimplexTest {
     // artificial bounds of 1e12 the basic slack of row 8 is off by 2e-5, and the combination of
     // the two rows is 0 over every column, so no pivot can move it: the solve used to stop at its
     // limit instead of finding the problem unbounded
+    assertThat(twoEqualRows(true).solve(100_000)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+  }
+
+  @Test
+  void rowsLeftOutAreCheckedOnFreshFactorsWithoutFactorizingAgain() {
+    // the left-out row of twoEqualRows is checked at the end of the solve on factors with no
+    // update: computing the duals and basic values again on them gives what a new factorization
+    // would, pivot for pivot (unit-commitment L10 with -f spent 16 % of its run refactorizing
+    // there)
+    RevisedDualSimplex again = twoEqualRows(false);
+    RevisedDualSimplex reused = twoEqualRows(true);
+    assertThat(reused.solve(100_000)).isEqualTo(again.solve(100_000));
+    assertThat(reused.refreshedFromFactors()).isPositive();
+    assertThat(again.refreshedFromFactors()).isZero();
+    assertThat(reused.pivots()).isEqualTo(again.pivots());
+    assertThat(reused.factorizations())
+        .isEqualTo(again.factorizations() - reused.refreshedFromFactors());
+  }
+
+  private static RevisedDualSimplex twoEqualRows(boolean reuseFreshFactors) {
     double inf = Double.POSITIVE_INFINITY;
     int[][] cols = {{1}, {1, 7, 8, 12}, {10}, {}, {8, 10}, {9, 12}, {1, 8}, {0}, {9, 12}};
     double[][] vals = {
@@ -371,7 +391,8 @@ class RevisedDualSimplexTest {
     for (int j = 0; j < lo.length; j++) {
       lp.setBounds(j, lo[j], hi[j]);
     }
-    assertThat(lp.solve(100_000)).isEqualTo(RevisedDualSimplex.UNBOUNDED);
+    lp.setReuseFreshFactors(reuseFreshFactors);
+    return lp;
   }
 
   @Test

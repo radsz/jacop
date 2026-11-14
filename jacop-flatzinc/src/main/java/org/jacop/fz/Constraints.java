@@ -53,6 +53,7 @@ import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
+import org.jacop.fz.constraints.CountPartnersDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -407,6 +408,11 @@ public class Constraints implements ParserTreeConstants {
 
       if (CardinalityDetector.enabled()) {
         new CardinalityDetector(support).detect(astTree);
+      }
+
+      // each variable whose values are all counted at least twice equals one of its few partners
+      if (CountPartnersDetector.enabled() && options.proof() == null) {
+        new CountPartnersDetector(support).detect(astTree);
       }
 
       if (increasing != null && IncreasingDetector.sumEnabled()) {
