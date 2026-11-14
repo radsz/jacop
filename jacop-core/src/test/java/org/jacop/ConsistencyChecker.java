@@ -1637,7 +1637,168 @@ class ConsistencyChecker {
         new Case("BoolClause", Level.DOMAIN, ConsistencyChecker::boolClause),
         new Case("CountValues", Level.NONE, ConsistencyChecker::countValues),
         new Case("SeqPrecedeChain", Level.DOMAIN, (s, r) -> seqPrecedeChain(s, r, false)),
-        new Case("ValuePrecedeChain", Level.DOMAIN, (s, r) -> seqPrecedeChain(s, r, true)));
+        new Case("ValuePrecedeChain", Level.DOMAIN, (s, r) -> seqPrecedeChain(s, r, true)),
+        // constraint audit round 2: the next constraints by wide-set reach without a case
+        new Case("Regular", Level.DOMAIN, ConsistencyChecker::regular),
+        new Case("Circuit", Level.NONE, (s, r) -> circuit(s, r, false)),
+        new Case("Subcircuit", Level.NONE, (s, r) -> circuit(s, r, true)),
+        new Case("Binpacking", Level.NONE, ConsistencyChecker::binpacking),
+        new Case("Assignment", Level.NONE, ConsistencyChecker::assignment),
+        new Case("CountValuesBounds", Level.NONE, ConsistencyChecker::countValuesBounds));
+  }
+
+  /** A random automaton of 2 to 4 states over 2 to 5 variables. */
+  private static Model regular(Store store, Random random) {
+    int states = 2 + random.nextInt(3);
+    org.jacop.util.fsm.FsmState[] state = new org.jacop.util.fsm.FsmState[states];
+    for (int i = 0; i < states; i++) {
+      state[i] = new org.jacop.util.fsm.FsmState();
+    }
+    org.jacop.util.fsm.Fsm fsm = new org.jacop.util.fsm.Fsm();
+    fsm.initState = state[0];
+    boolean[] accepting = new boolean[states];
+    List<int[]> arcs = new ArrayList<>(); // from, lo, hi, to
+    for (int i = 0; i < states; i++) {
+      fsm.allStates.add(state[i]);
+      if (random.nextInt(3) == 0 || i == states - 1) {
+        accepting[i] = true;
+        fsm.finalStates.add(state[i]);
+      }
+      for (int t = 1 + random.nextInt(3); t > 0; t--) {
+        int lo = random.nextInt(4);
+        int hi = lo + random.nextInt(2);
+        int to = random.nextInt(states);
+        arcs.add(new int[] {i, lo, hi, to});
+        state[i].addTransition(
+            new org.jacop.util.fsm.FsmTransition(new IntervalDomain(lo, hi), state[to]));
+      }
+    }
+    int n = 2 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    return new Model(
+        new org.jacop.constraints.regular.Regular(fsm, x),
+        t -> {
+          boolean[] at = new boolean[states];
+          at[0] = true;
+          for (int v : t) {
+            boolean[] next = new boolean[states];
+            for (int[] a : arcs) {
+              if (at[a[0]] && a[1] <= v && v <= a[2]) {
+                next[a[3]] = true;
+              }
+            }
+            at = next;
+          }
+          for (int i = 0; i < states; i++) {
+            if (at[i] && accepting[i]) {
+              return true;
+            }
+          }
+          return false;
+        },
+        x);
+  }
+
+  /** circuit or subcircuit over 3 to 5 successor variables numbered from 1. */
+  private static Model circuit(Store store, Random random, boolean sub) {
+    int n = 3 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    return new Model(
+        sub ? new org.jacop.constraints.Subcircuit(x) : new org.jacop.constraints.Circuit(x),
+        t -> {
+          // successors form a permutation whose non-fixed points make one cycle (all of them for
+          // circuit)
+          boolean[] seen = new boolean[n];
+          int moving = 0;
+          int start = -1;
+          for (int i = 0; i < n; i++) {
+            if (t[i] < 1 || t[i] > n || seen[t[i] - 1]) {
+              return false;
+            }
+            seen[t[i] - 1] = true;
+            if (t[i] != i + 1) {
+              moving++;
+              start = i;
+            }
+          }
+          if (!sub && moving != n) {
+            return false;
+          }
+          if (moving == 0) {
+            return sub;
+          }
+          int len = 0;
+          int i = start;
+          do {
+            i = t[i] - 1;
+            len++;
+          } while (i != start && len <= n);
+          return len == moving;
+        },
+        x);
+  }
+
+  /** load[b] = sum of w[i] over the items i with bin[i] = b, bins numbered from 0. */
+  private static Model binpacking(Store store, Random random) {
+    int items = 2 + random.nextInt(3);
+    int bins = 2 + random.nextInt(2);
+    IntVar[] bin = vars(store, "b", items, 0, bins - 1, random);
+    int[] w = random.ints(items, 1, 4).toArray();
+    int total = Arrays.stream(w).sum();
+    IntVar[] load = vars(store, "l", bins, 0, Math.min(total, 6), random);
+    return new Model(
+        new org.jacop.constraints.binpacking.Binpacking(bin, load, w, 0),
+        t -> {
+          int[] sum = new int[bins];
+          for (int i = 0; i < items; i++) {
+            sum[t[i]] += w[i];
+          }
+          for (int b = 0; b < bins; b++) {
+            if (sum[b] != t[items + b]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(bin, load));
+  }
+
+  /** d[x[i]] = i and x[d[i]] = i over 2 to 4 positions numbered from 0. */
+  private static Model assignment(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, n - 1, random);
+    IntVar[] d = vars(store, "d", n, 0, n - 1, random);
+    return new Model(
+        new org.jacop.constraints.Assignment(x, d),
+        t -> IntStream.range(0, n).allMatch(i -> t[n + t[i]] == i),
+        concat(x, d));
+  }
+
+  /** lb[j] &lt;= number of x equal to values[j] &lt;= ub[j]. */
+  private static Model countValuesBounds(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int k = 1 + random.nextInt(3);
+    int[] values = random.ints(0, 4).distinct().limit(k).sorted().toArray();
+    int[] lb = new int[k];
+    int[] ub = new int[k];
+    for (int j = 0; j < k; j++) {
+      lb[j] = random.nextInt(2);
+      ub[j] = lb[j] + random.nextInt(n);
+    }
+    return new Model(
+        new org.jacop.constraints.CountValuesBounds(x, lb, ub, values),
+        t -> {
+          for (int j = 0; j < k; j++) {
+            int v = values[j];
+            long c = Arrays.stream(t).filter(e -> e == v).count();
+            if (c < lb[j] || c > ub[j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
   }
 
   private static IntVar[] bools(Store store, String prefix, int n) {
