@@ -5152,6 +5152,19 @@ Version 5.0 (unreleased)
    open-stacks). -Djacop.lcg.alldiffClauses=false turns it off; statistic
    lcgPermutationsAsClauses.
 
+300. The FlatZinc front end finds tilings of the cyclic group Z_n by
+   translation, A + B = Z_n, written as an all different over the n terms
+   (b + a) mod n, and posts the redundant exact cover over the
+   characteristic vector c of B: c counts the base variables per value
+   (CountValues), and every value is covered by exactly one c[v - a]
+   (E. M. Coven and A. Meyerowitz, J. Algebra 212, 1999; the SAT encoding
+   of G. Auricchio, L. Ferrarini, S. Gualandi, G. Lanzarotto and
+   L. Pernazza, CPAIOR 2022 and Constraints 29, 2024). The vector joins
+   the default search. XCSP 2025 TilingRythmicCanons with -f at 600 s:
+   12 of 14 solved, 3 without the cover, among them 1-18, 1-22 and 1-33
+   that no 2025 solver solved. It fires on no wide-set instance. Off
+   under --proof; org.jacop.fz.translationTiling=false turns it off.
+
 Version 4.11
 =============
 
