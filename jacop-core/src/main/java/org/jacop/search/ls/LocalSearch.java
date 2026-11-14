@@ -2506,6 +2506,7 @@ public final class LocalSearch {
   private int[] objSign;
   private int objRow = -2;
   private long lifts;
+  private long liftProbes;
 
   private static final int VALUE_ZERO = 0;
   private static final int VALUE_GOOD = 1;
@@ -2688,7 +2689,7 @@ public final class LocalSearch {
     if (objRow == -2) {
       computeObjective();
     }
-    return objSign[i];
+    return objSign[i] == 2 ? 0 : objSign[i];
   }
 
   /**
@@ -2727,11 +2728,18 @@ public final class LocalSearch {
         objSign[x] = addSign(objSign[x], Long.signum(-coef[objRow][k] * ac));
       }
     }
-    // the definitions in reverse order: a defined variable passes its sign to what it reads
+    // the definitions in reverse order: a defined variable passes its sign to what it reads; what
+    // a non-linear definition reads moves the cost in a direction not known (2)
     for (int t = topological.length - 1; t >= 0; t--) {
       int d = topological[t];
       int y = defOut[d];
-      if (objSign[y] == 0 || objSign[y] == 2 || defKind[d] != LINEAR_DEFINITION) {
+      if (objSign[y] == 0) {
+        continue;
+      }
+      if (objSign[y] == 2 || defKind[d] != LINEAR_DEFINITION) {
+        for (int x : defInputs[d]) {
+          objSign[x] = 2;
+        }
         continue;
       }
       int c = defRow[d];
@@ -2740,11 +2748,6 @@ public final class LocalSearch {
         if (x != y) {
           objSign[x] = addSign(objSign[x], objSign[y] * Long.signum(-coef[c][k] * defCoef[d]));
         }
-      }
-    }
-    for (int i = 0; i < n; i++) {
-      if (objSign[i] == 2) {
-        objSign[i] = 0;
       }
     }
   }
@@ -2778,10 +2781,20 @@ public final class LocalSearch {
       cands.add(costIndex);
     }
     if (cands.isEmpty()) {
+      if (DEBUG_REJECT) {
+        System.out.println("% lift: no candidates, objRow " + objRow);
+      }
       return;
     }
     int[] cs = cands.stream().mapToInt(Integer::intValue).toArray();
-    for (int sweep = 0; sweep < 32 && !expired(); sweep++) {
+    if (DEBUG_REJECT) {
+      System.out.println(
+          "% lift: objRow " + objRow + ", candidates " + cs.length + ", cost " + val[costIndex]);
+    }
+    // trial moves at one assignment: a few sweeps, so that large models do not stall the walk
+    liftProbes = 0;
+    long cap = 8L * cs.length + 10_000;
+    for (int sweep = 0; sweep < 32 && !expired() && liftProbes < cap; sweep++) {
       boolean improved = false;
       int offset = random.nextInt(cs.length);
       for (int t = 0; t < cs.length; t++) {
@@ -2801,7 +2814,14 @@ public final class LocalSearch {
 
   // lifts variable i: the furthest value in the improving direction that keeps every constraint
   private boolean liftOne(int i) {
-    int dir = i == costIndex ? -1 : -objSign[i];
+    if (i != costIndex && objSign[i] == 2) {
+      // the direction is not known: the one where a first step lowers the cost
+      return liftOne(i, -1) || liftOne(i, 1);
+    }
+    return liftOne(i, i == costIndex ? -1 : -objSign[i]);
+  }
+
+  private boolean liftOne(int i, int dir) {
     IntDomain d = domains[i];
     int start = val[i];
     int good = start;
@@ -2854,6 +2874,7 @@ public final class LocalSearch {
 
   /** Moves variable i to v and the cost to follow its row; keeps it if all holds and cost fell. */
   private boolean tryLift(int i, int v) {
+    liftProbes++;
     int old = val[i];
     int costBefore = val[costIndex];
     move(i, v);
