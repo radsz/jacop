@@ -153,7 +153,7 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
         } else if (largest < c) {
           addLifted(trail, position, false, c - 1 - largest, out);
         } else {
-          return notEqualByHole(trail, position, out);
+          return notEqualByGcd(trail, position, out) || notEqualByHole(trail, position, out);
         }
       }
     }
@@ -165,6 +165,46 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
       AtomicTrail trail, int position, boolean lowerSum, long slack, EntryList out) {
     LinearExplanation.addLiftedBounds(
         trail, position, vars, weights, -1, null, lowerSum, slack, out);
+  }
+
+  // != because the gcd of the weights of the free variables does not divide c minus the fixed part
+  private boolean notEqualByGcd(AtomicTrail trail, int position, EntryList out) {
+    long g = 0;
+    long rest = c;
+    for (int i = 0; i < vars.length; i++) {
+      int lo = trail.minBefore(vars[i], position);
+      if (lo == trail.maxBefore(vars[i], position)) {
+        try {
+          rest = Math.subtractExact(rest, Math.multiplyExact(weights[i], lo));
+        } catch (ArithmeticException _) {
+          return false;
+        }
+      } else {
+        g = gcd(g, Math.abs(weights[i]));
+        if (g == 1) {
+          return false;
+        }
+      }
+    }
+    if (g <= 1 || rest % g == 0) {
+      return false;
+    }
+    for (int i = 0; i < vars.length; i++) {
+      if (trail.minBefore(vars[i], position) == trail.maxBefore(vars[i], position)) {
+        trail.addLowerBound(vars[i], position, out);
+        trail.addUpperBound(vars[i], position, out);
+      }
+    }
+    return true;
+  }
+
+  private static long gcd(long p, long q) {
+    while (q != 0) {
+      long t = p % q;
+      p = q;
+      q = t;
+    }
+    return p;
   }
 
   // != with every variable but one fixed, whose value that would make the sum c is a hole

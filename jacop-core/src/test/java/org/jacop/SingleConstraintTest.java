@@ -3086,6 +3086,34 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void reifiedLinearEntailedByGcdOfFreeWeights() {
+
+    // -x0 - 3 * x1 != -1 holds for x0 = 2 whatever x1 is, since 3 does not divide 1 - 2
+    // (found by ConsistencyChecker case ReifiedLinear)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -2, 3);
+    IntVar x1 = new IntVar(store, "x1", -2, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new Reified(new LinearInt(new IntVar[] {x0, x1}, new int[] {-1, -3}, "!=", -1), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isOne();
+    assertThat(b.min()).isZero();
+    store.setLevel(store.level + 1);
+    x0.domain.in(store.level, x0, 2, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.min()).isOne();
+
+    // 3 * y - 3 * z == -2 has no integer solution: the implication sets c to 0 at once
+    IntVar y = new IntVar(store, "y", -2, 3);
+    IntVar z = new IntVar(store, "z", -2, 3);
+    IntVar c = new IntVar(store, "c", 0, 1);
+    store.impose(new Implies(c, new LinearInt(new IntVar[] {y, z}, new int[] {3, -3}, "==", -2)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+  }
+
+  @Test
   void testXplusCneqZCountsMatchBruteForce() {
 
     Random random = new Random(43);

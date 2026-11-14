@@ -234,7 +234,9 @@ import org.junit.jupiter.api.Test;
  * gets up to two holes inside its domain, for the reasons of bounds that skip holes; a model that
  * fails while its constraints are imposed is skipped. With {@code lcg.fuzz.recent} set to a
  * comma-separated list of the cases of the globals added in 5.0, half of the constraints are drawn
- * from those cases, to test their explanations at volume.
+ * from those cases, to test their explanations at volume. With {@code lcg.fuzz.focus} set to a
+ * comma-separated list of the cases of {@code randomConstraint}, three constraints in four are
+ * drawn from those cases (the constraint audit checks one constraint's explanations this way).
  */
 class LcgFuzzTest {
 
@@ -246,6 +248,10 @@ class LcgFuzzTest {
 
   // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
   private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
+
+  // with lcg.fuzz.focus=64,65 (cases of randomConstraint), three constraints in four are drawn
+  // from those cases, to check the explanations of one constraint at volume
+  private static final int[] FOCUS = recentCases(System.getProperty("lcg.fuzz.focus"));
 
   // the explanations that are off by default are checked too
   @BeforeAll
@@ -952,7 +958,9 @@ class LcgFuzzTest {
       }
       IntVar[] p = pick(x, 3);
       IntVar[] q = pick(x, 2 + rnd.nextInt(3));
-      return switch (rnd.nextInt(84)) {
+      int kind =
+          FOCUS != null && rnd.nextInt(4) > 0 ? FOCUS[rnd.nextInt(FOCUS.length)] : rnd.nextInt(84);
+      return switch (kind) {
         case 0 -> primitive(1);
         case 1 ->
             new LinearInt(p, new int[] {2, -1, 3}, rnd.nextBoolean() ? "<=" : ">=", value() + 2);
@@ -1362,6 +1370,90 @@ class LcgFuzzTest {
     DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
     search.setPrintInfo(false);
     return search.labeling(model.store, new SimpleSelect<>(vars, null, new IndomainMin<>()));
+  }
+
+  /**
+   * Under LCG a reified In counts as entailed only once the bounds of its variable lie in the set,
+   * not as soon as the values left all do. On random models of reified membership tests over
+   * domains with holes, counted by sums of the indicators, LCG with checked explanations must agree
+   * with depth-first search, where the entailment check stays complete, and give a solution.
+   */
+  @Test
+  void reifiedInAgreesWithSearch() {
+    int runs = Math.max(200, RUNS / 4);
+    int sat = 0;
+    for (int run = 0; run < runs; run++) {
+      long seed = SEED + (long) run;
+      boolean expected = memberships(seed, false);
+      boolean lcg = memberships(seed, true);
+      assertThat(lcg).as("seed " + seed).isEqualTo(expected);
+      sat += expected ? 1 : 0;
+    }
+    assertThat(sat).isPositive().isLessThan(runs);
+  }
+
+  // random reified membership tests: true when a solution exists (LCG solutions are checked)
+  private static boolean memberships(long seed, boolean lcg) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 3 + rnd.nextInt(3);
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      IntervalDomain d = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(3) > 0) {
+          d.unionAdapt(v, v);
+        }
+      }
+      if (d.isEmpty()) {
+        d.unionAdapt(0, 0);
+      }
+      x[i] = new IntVar(store, "x" + i, d);
+    }
+    int m = 4 + rnd.nextInt(5);
+    IntVar[] b = new IntVar[m];
+    IntVar[] at = new IntVar[m];
+    IntervalDomain[] sets = new IntervalDomain[m];
+    for (int j = 0; j < m; j++) {
+      sets[j] = new IntervalDomain();
+      for (int v = 0; v < 12; v++) {
+        if (rnd.nextInt(5) < 2) {
+          sets[j].unionAdapt(v, v);
+        }
+      }
+      at[j] = x[rnd.nextInt(n)];
+      b[j] = new BooleanVar(store, "b" + j);
+      store.impose(new Reified(new In(at[j], sets[j]), b[j]));
+    }
+    int need = rnd.nextInt(m + 1);
+    store.impose(new SumBool(b, rnd.nextBoolean() ? "==" : ">=", new IntVar(store, need, need)));
+    for (int k = 0; k + 1 < n; k++) {
+      if (rnd.nextBoolean()) {
+        store.impose(new XneqY(x[k], x[k + 1]));
+      }
+    }
+    if (!lcg) {
+      if (!store.consistency()) {
+        return false;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      return search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()));
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    if (solver.solve() != CdclSolver.SAT) {
+      return false;
+    }
+    int count = 0;
+    for (int j = 0; j < m; j++) {
+      boolean in = sets[j].contains(solver.value(at[j]));
+      assertThat(solver.value(b[j])).as("seed %d: b%d", seed, j).isEqualTo(in ? 1 : 0);
+      count += in ? 1 : 0;
+    }
+    assertThat(count).as("seed %d: sum", seed).isGreaterThanOrEqualTo(need);
+    return true;
   }
 
   /**

@@ -632,7 +632,10 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   // under --proof a decomposition by positions, whose encoding unit propagation follows; the cut
-  // and dominance reasons of Subcircuit it does not
+  // and dominance reasons of Subcircuit it does not. The decomposition does not state that the
+  // successors differ, and --proof implies -b, which leaves out the implied Alldistinct, so the
+  // all-different is posted here: without it two nodes could share a successor (tpp and mario
+  // proved optima below the true ones).
   private void subcircuit(IntVar[] v) {
     if (support.options.proof() == null) {
       support.pose(new Subcircuit(v));
@@ -641,6 +644,7 @@ class GlobalConstraints implements ParserTreeConstants {
     for (Constraint c : Subcircuit.decomposition(store, v)) {
       support.pose(c);
     }
+    support.pose(new Alldiff(v));
   }
 
   // jacop_subcircuit_cost(x, d, cost): a subcircuit of x numbered from 1 whose cost is
@@ -2986,6 +2990,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, cc, w, minBin));
     support.binPackingCliques.add(bin, cc, w, minBin);
+    support.binPackingPermutations.add(bin, cc, w, minBin);
   }
 
   void gen_jacop_bin_packing_capacity(SimpleNode node) {
@@ -3001,6 +3006,7 @@ class GlobalConstraints implements ParserTreeConstants {
 
     support.delayedConstraints.add(support.binPackingCardinality.binPacking(bin, load, w, minBin));
     support.binPackingCliques.add(bin, load, w, minBin);
+    support.binPackingPermutations.add(bin, load, w, minBin);
   }
 
   void gen_jacop_float_maximum(SimpleNode node) {

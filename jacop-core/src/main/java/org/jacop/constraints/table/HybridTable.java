@@ -58,6 +58,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 
@@ -2048,6 +2049,30 @@ public class HybridTable extends Constraint
       }
     }
     return false;
+  }
+
+  /**
+   * Returns the clause rows of a table over 0/1 variables ({@link TableClauses}): its prime
+   * implicates over the columns not fixed, for the linear relaxation. They hold within the current
+   * domains, so they are made at the root.
+   *
+   * @return the rows, empty when a column not fixed is not 0/1 or the table is too large
+   */
+  public List<LinearForm> clauseRows() {
+    if (getClass() != HybridTable.class) {
+      return List.of();
+    }
+    return TableClauses.of(
+        x,
+        tupleCount,
+        values -> {
+          for (int t = 0; t < tupleCount; t++) {
+            if (accepts(cells, t * arity, arity, values)) {
+              return true;
+            }
+          }
+          return false;
+        });
   }
 
   /**
