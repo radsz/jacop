@@ -305,8 +305,8 @@ public class LinearRelaxation extends Constraint
   public long infeasible;
 
   /**
-   * Statistics: infeasible relaxations whose rounded Farkas multipliers proved the infeasibility
-   * at no scale. Skipping the solves below such a solve was tried and lost: the subtree is then
+   * Statistics: infeasible relaxations whose rounded Farkas multipliers proved the infeasibility at
+   * no scale. Skipping the solves below such a solve was tried and lost: the subtree is then
    * searched without the relaxation (the 60-item knapsack with search cuts of weights up to 2^24:
    * 141 million nodes in 60 s after 5 unproven solves).
    */
@@ -626,6 +626,12 @@ public class LinearRelaxation extends Constraint
   // knapsack of 60 items the LP ran 8 times less often and the search needed 7 times more nodes
   private static final boolean MIR_SEARCH = Boolean.getBoolean("org.jacop.lp.mirSearch");
   private static final int MIR_SEARCH_CUTS = Integer.getInteger("org.jacop.lp.mirSearchCuts", 10);
+  // the largest weight of a cut made in the cut rounds (see MirCut.capped): a cut row of weights
+  // near 2^24, with a right side near 10^10, gets Farkas multipliers of 10^-7 of the wrong sign
+  // from the dense tableau, which the integer certificate cannot use, and the infeasible solve
+  // proves nothing (smelt_4, MiniZinc Challenge 2014, -f: 56 of 57 infeasible solves; tank
+  // allocation: thousands in 60 s). 2^20 removes them there without moving the root bounds
+  private static final long ROOT_CUT_WEIGHT = Long.getLong("org.jacop.lp.cutWeight", 1L << 20);
   // the largest weight of a cut made in search (see MirCut.capped)
   private static final long MIR_SEARCH_WEIGHT =
       Long.getLong("org.jacop.lp.mirSearchWeight", 1L << 16);
@@ -640,6 +646,22 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: rounds of root cuts whose re-solve stopped at its pivot limit. */
   public long cutLimits;
+
+  // zero-half cuts in the cut rounds, from sets of tight rows whose sum is odd on the right side
+  // (ZeroHalfCuts), rounded with the MIR of divisor 2 (-Dorg.jacop.lp.zeroHalf=false to turn off)
+  private static final boolean ZERO_HALF =
+      !"false".equals(System.getProperty("org.jacop.lp.zeroHalf"));
+  // the most slack of a row the zero-half separator takes, the most rows, and the most sets
+  private static final double ZERO_HALF_SLACK = 0.1;
+  private static final int ZERO_HALF_ROWS = 2000;
+  private static final int ZERO_HALF_SETS = 50;
+  // the least efficacy of a zero-half cut: the dense sums of many rows the separator finds on
+  // tank allocation (XCSP 2025) are violated by 0.001 to 0.1 over their norm, and those below 0.02
+  // took the places of better MIR cuts (cut bound 1676 -> 1681) and made the LP numerically weak
+  private static final double ZERO_HALF_EFFICACY = 0.02;
+
+  /** Statistics: zero-half cuts added (in the cut rounds and in search). */
+  public long zeroHalfCuts;
 
   /** Statistics: MIR and Gomory cuts added in search. */
   public long mirSearchCuts;
@@ -3281,7 +3303,7 @@ public class LinearRelaxation extends Constraint
           break;
         }
       }
-      List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen, Long.MAX_VALUE);
+      List<MirCut> chosen = separateCuts(lo, hi, unitRows, seen, ROOT_CUT_WEIGHT);
       if (chosen.isEmpty()) {
         break;
       }
@@ -4232,6 +4254,10 @@ public class LinearRelaxation extends Constraint
         mir(g, value, lo, hi, found);
       }
     }
+    Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (ZERO_HALF) {
+      zeroHalf(value, lo, hi, found, zeroHalf);
+    }
     for (Aggregate row : unitRows) {
       mir(row, value, lo, hi, found);
     }
@@ -4241,6 +4267,9 @@ public class LinearRelaxation extends Constraint
         MirCut d = MirCut.capped(c, maxWeight, value, lo, hi);
         if (d != null) {
           small.add(d);
+          if (d != c && zeroHalf.contains(c)) {
+            zeroHalf.add(d);
+          }
         }
       }
       found = small;
@@ -4261,9 +4290,116 @@ public class LinearRelaxation extends Constraint
       if (!seen.contains(key) && orthogonal(c, chosen)) {
         seen.add(key);
         chosen.add(c);
+        if (zeroHalf.contains(c)) {
+          zeroHalfCuts++;
+        }
       }
     }
     return chosen;
+  }
+
+  /**
+   * Adds the zero-half cuts of the rows in the simplex to found: each row that is tight within
+   * ZERO_HALF_SLACK on a side enters as {@code sum w x <= b} (the lower side negated), the
+   * separator picks sets of them (ZeroHalfCuts), and each set's exact sum is rounded with the MIR
+   * of divisor 2 over the global bounds, so the cut holds everywhere.
+   */
+  private void zeroHalf(
+      double[] value, long[] lo, long[] hi, List<MirCut> found, Set<MirCut> zeroHalf) {
+    int n = lp.columns();
+    int pool = rows();
+    double[] distance = new double[n];
+    for (int j = 0; j < n; j++) {
+      double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
+      distance[j] = Math.min(v - lo[j], hi[j] - v);
+    }
+    int maxLength = 100 + n / 20;
+    List<int[]> candidates = new ArrayList<>(); // {pool row, sign}
+    List<Double> slacks = new ArrayList<>();
+    for (int i = 0; i < pool; i++) {
+      if (!inLp[i] || rowColumns[i].length > maxLength) {
+        continue;
+      }
+      int[] cs = rowColumns[i];
+      long[] ws = rowWeights[i];
+      boolean anyOdd = false;
+      boolean small = true;
+      double act = 0;
+      for (int k = 0; k < cs.length; k++) {
+        anyOdd |= (ws[k] & 1) != 0;
+        small &= Math.abs(ws[k]) <= 1_000_000;
+        act += ws[k] * value[cs[k]];
+      }
+      if (!anyOdd || !small) {
+        continue;
+      }
+      boolean equality = hasLo[i] && hasHi[i] && rowLo[i] == rowHi[i];
+      if (hasHi[i] && rowHi[i] - act <= ZERO_HALF_SLACK) {
+        candidates.add(new int[] {i, 1});
+        slacks.add(Math.max(0, rowHi[i] - act));
+      }
+      if (!equality && hasLo[i] && act - rowLo[i] <= ZERO_HALF_SLACK) {
+        candidates.add(new int[] {i, -1});
+        slacks.add(Math.max(0, act - rowLo[i]));
+      }
+    }
+    if (candidates.isEmpty()) {
+      return;
+    }
+    Integer[] order = new Integer[candidates.size()];
+    for (int k = 0; k < order.length; k++) {
+      order[k] = k;
+    }
+    Arrays.sort(
+        order, Comparator.comparingDouble((Integer k) -> slacks.get(k)).thenComparingInt(k -> k));
+    int r = Math.min(order.length, ZERO_HALF_ROWS);
+    int[][] columns = new int[r][];
+    long[][] weights = new long[r][];
+    boolean[] odd = new boolean[r];
+    double[] slack = new double[r];
+    int[][] picked = new int[r][];
+    for (int t = 0; t < r; t++) {
+      int[] cand = candidates.get(order[t]);
+      int i = cand[0];
+      picked[t] = cand;
+      columns[t] = rowColumns[i];
+      weights[t] = rowWeights[i];
+      slack[t] = slacks.get(order[t]);
+      // the parity of the right side with the odd columns at their nearer bound
+      long side = cand[1] > 0 ? rowHi[i] : -rowLo[i];
+      long parity = side & 1;
+      for (int k = 0; k < columns[t].length; k++) {
+        if ((weights[t][k] & 1) != 0) {
+          int j = columns[t][k];
+          double v = Math.clamp(value[j], (double) lo[j], (double) hi[j]);
+          long bound = hi[j] - v < v - lo[j] ? hi[j] : lo[j];
+          parity ^= bound & 1;
+        }
+      }
+      odd[t] = parity != 0;
+    }
+    for (int[] set :
+        ZeroHalfCuts.separate(columns, weights, odd, slack, distance, ZERO_HALF_SETS)) {
+      long[] lambda = new long[pool];
+      for (int t : set) {
+        lambda[picked[t][0]] += picked[t][1];
+      }
+      Aggregate g = aggregate(lambda);
+      if (g == null || !g.hasUpper() || g.columns().length == 0) {
+        continue;
+      }
+      long[] raw = MirCut.raw(g.columns(), g.coef(), g.upper(), value, lo, hi, 2);
+      if (raw == null) {
+        continue;
+      }
+      MirCut c =
+          MirCut.finish(
+              g.columns(), raw, raw[g.columns().length], value, lo, hi, MirCut.REDUCE_CUTS);
+      if (c != null && c.efficacy >= ZERO_HALF_EFFICACY) {
+        found.add(c);
+        zeroHalf.add(c);
+      }
+    }
   }
 
   // whether the cut is far enough from parallel to each of the cuts chosen

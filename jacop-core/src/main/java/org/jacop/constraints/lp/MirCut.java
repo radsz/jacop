@@ -440,8 +440,9 @@ final class MirCut {
     if (largest <= maxWeight) {
       return c;
     }
+    // rounded up, a weight stays within the cap too
     long divisor = 1;
-    while (largest / divisor > maxWeight) {
+    while (Math.ceilDiv(largest, divisor) > maxWeight) {
       divisor *= 2;
     }
     try {
