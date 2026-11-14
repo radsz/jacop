@@ -1491,7 +1491,7 @@ public final class CdclSolver {
       r = UNIT_REASON;
     } else {
       orderForWatches(c, n);
-      if (n <= externalReasonKeep && notifying && hasUnkeptLiteral(c, n)) {
+      if (n <= externalReasonKeep && notifying && REASON_UNKEPT && hasUnkeptLiteral(c, n)) {
         // kept, it would make the literal permanent and lengthen the chain of its variable
         unkeptReasons++;
         r = pushReason(v, c, n);
@@ -1645,7 +1645,7 @@ public final class CdclSolver {
       }
     } while (pathCount > 0);
     learnt[0] = p ^ 1;
-    if (notifying) {
+    if (notifying && EXPAND_UNKEPT) {
       expandLearnt();
     }
 
@@ -1703,6 +1703,10 @@ public final class CdclSolver {
     learnt[maxIndex] = tmp;
     return litLevel(learnt[1]);
   }
+
+  static final boolean EXPAND_UNKEPT = Boolean.getBoolean("jacop.lcg.expandUnkept");
+  static final boolean REASON_UNKEPT =
+      !"false".equals(System.getProperty("jacop.lcg.reasonUnkept"));
 
   /** Statistics: learnt clause literals replaced by their reasons in {@link #expandLearnt}. */
   public long expandedLiterals;
@@ -2981,7 +2985,7 @@ public final class CdclSolver {
       proof.add(c, 0, size);
     }
     boolean temporary = false;
-    if (implied >= 0 && size > 1 && hasUnkeptLiteral(c, size)) {
+    if (implied >= 0 && size > 1 && REASON_UNKEPT && hasUnkeptLiteral(c, size)) {
       orderForWatches(c);
       temporary = temporaryFits(c);
     }
