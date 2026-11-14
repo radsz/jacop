@@ -59,7 +59,8 @@ import org.junit.jupiter.api.Test;
 class ConjunctionSumTest {
 
   // a random instance: variables with small domains and terms of one to three literals
-  private record Instance(int[] lo, int[] hi, int[][] vars, int[][] values, boolean[][] eq, int[] w) {
+  private record Instance(
+      int[] lo, int[] hi, int[][] vars, int[][] values, boolean[][] eq, int[] w) {
 
     static Instance random(Random rnd) {
       int n = 2 + rnd.nextInt(3);

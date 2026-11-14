@@ -146,7 +146,8 @@ public class ConjunctionSumDetector implements ParserTreeConstants {
         IntVar x = variable(node, 0);
         IntVar c = variable(node, 1);
         if (c.singleton() && !x.singleton()) {
-          reif.put(variable(node, 2), new Object[] {x, c.value(), node.getName().equals("int_eq_reif")});
+          reif.put(
+              variable(node, 2), new Object[] {x, c.value(), node.getName().equals("int_eq_reif")});
         }
       }
       case "bool_not" -> {

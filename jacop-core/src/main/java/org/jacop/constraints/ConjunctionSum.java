@@ -49,8 +49,8 @@ import org.jacop.lcg.Explainable;
 /**
  * A lower bound on a weighted sum of conjunctions of value literals: {@code sum >= w[0] * [c[0]] +
  * ... + w[m-1] * [c[m-1]]}, where each conjunction {@code c[t]} is a set of literals {@code x = a}
- * or {@code x != a} and every weight is at least 0. Such sums are the objectives of soft constraints
- * written out term by term, as {@code sum(i, j) [y[i] = a /\ y[j] = b /\ x[a][b] = 0]}.
+ * or {@code x != a} and every weight is at least 0. Such sums are the objectives of soft
+ * constraints written out term by term, as {@code sum(i, j) [y[i] = a /\ y[j] = b /\ x[a][b] = 0]}.
  *
  * <p>A linear sum over the indicators of the conjunctions counts a term only once all its literals
  * hold. This constraint also counts the terms that wait for one variable only: a term whose
@@ -62,9 +62,17 @@ import org.jacop.lcg.Explainable;
  * satisfaction (Freuder and Wallace, Partial constraint satisfaction, Artificial Intelligence 58,
  * 1992; Larrosa, Meseguer and Schiex, Maintaining reversible DAC for Max-CSP, Artificial
  * Intelligence 107, 1999), applied to the terms of a sum. The constraint raises the minimum of
- * {@code sum} to the bound and removes the values whose cost would take the bound above the
- * maximum of {@code sum}. The reasons for lazy clause generation are the literals of the terms
- * counted and the removed values of the variables waited for.
+ * {@code sum} to the bound and removes the values whose cost would take the bound above the maximum
+ * of {@code sum}. The reasons for lazy clause generation are the literals of the terms counted and
+ * the removed values of the variables waited for.
+ *
+ * <p>The bound is kept incrementally. A term with two variables open for it (variables on which
+ * one of its literals does not hold yet) costs nothing and watches two of them, as clauses watch two
+ * literals in a SAT solver, so it is looked at again only when a watched variable gets fixed. A
+ * term left with one open variable or none becomes active until backtracking: its weight goes to
+ * the costs of the values of its open variable that satisfy its literals there, or to the weight of
+ * the terms that hold. Each propagation then reads the least costs of the variables in their
+ * domains. A reason is built from the terms active just before its atom.
  *
  * <p>The constraint is redundant next to the linear sum it bounds: it neither fixes the indicators
  * nor bounds the sum from above.
@@ -129,6 +137,8 @@ public class ConjunctionSum extends Constraint
   private final int[] stackTerm;
   private final int[] stackLevel;
   private int stackSize;
+  // changes of the stack, which invalidate the part of an explanation's evaluation kept below
+  private int stackMod;
   private final int[] queue;
   private final boolean[] queued;
   private int queueSize;
@@ -152,12 +162,17 @@ public class ConjunctionSum extends Constraint
    */
   public ConjunctionSum(
       IntVar[][] termVars, int[][] termValues, boolean[][] termEq, int[] weights, IntVar sum) {
-    if (termVars == null || termValues == null || termEq == null || weights == null || sum == null) {
+    if (termVars == null
+        || termValues == null
+        || termEq == null
+        || weights == null
+        || sum == null) {
       throw new IllegalArgumentException("ConjunctionSum needs terms, weights and a sum");
     }
     int m = termVars.length;
     if (termValues.length != m || termEq.length != m || weights.length != m) {
-      throw new IllegalArgumentException("ConjunctionSum needs a value, a kind and a weight per term");
+      throw new IllegalArgumentException(
+          "ConjunctionSum needs a value, a kind and a weight per term");
     }
     this.numberId = idNumber.incrementAndGet();
     this.termVars = termVars;
@@ -306,7 +321,8 @@ public class ConjunctionSum extends Constraint
       hi[v] = trail.maxBefore(vars[v], position);
       for (int b = lo[v]; b <= hi[v]; b++) {
         scratch.clear();
-        if (!trail.excludedBefore(vars[v], b, position, scratch)) {
+        // the bounds are in the domain; only the values between them can be holes
+        if (b == lo[v] || b == hi[v] || !trail.excludedBefore(vars[v], b, position, scratch)) {
           int bit = offset[v] + b - base[v];
           mask[bit >>> 6] |= 1L << bit;
         }
@@ -373,7 +389,6 @@ public class ConjunctionSum extends Constraint
       Arrays.fill(ecost, offset[v], offset[v + 1], 0L);
     }
     waitedCount = 0;
-    includedCount = 0;
     long fixed = 0;
     int m = weights.length;
     for (int t = 0; t < m; t++) {
@@ -400,7 +415,6 @@ public class ConjunctionSum extends Constraint
         status[t] = -2;
         continue;
       }
-      included[includedCount++] = t;
       if (pending == -1) {
         status[t] = -1;
         fixed += weights[t];
@@ -465,6 +479,7 @@ public class ConjunctionSum extends Constraint
     openVar[t] = u;
     stackTerm[stackSize] = t;
     stackLevel[stackSize++] = level;
+    stackMod++;
     contribute(t, u, weights[t]);
   }
 
@@ -521,6 +536,7 @@ public class ConjunctionSum extends Constraint
   public void removeLevel(int level) {
     while (stackSize > 0 && stackLevel[stackSize - 1] >= level) {
       int t = stackTerm[--stackSize];
+      stackMod++;
       active[t] = false;
       contribute(t, openVar[t], -weights[t]);
     }
@@ -645,35 +661,37 @@ public class ConjunctionSum extends Constraint
    * other literals held before it. The domains are those before the position.
    */
   private void evaluateAt(AtomicTrail trail, int position, Before d) {
+    int level = position >= trail.size() ? Integer.MAX_VALUE : trail.level(position);
+    if (stackMod != cacheMod || level != cacheLevel) {
+      evaluateBelow(level);
+    }
     for (int i = 0; i < waitedCount; i++) {
       int v = waited[i];
       isWaited[v] = false;
       Arrays.fill(ecost, offset[v], offset[v + 1], 0L);
     }
     waitedCount = 0;
-    includedCount = 0;
-    int level = position >= trail.size() ? Integer.MAX_VALUE : trail.level(position);
-    for (int i = 0; i < stackSize && stackLevel[i] <= level; i++) {
+    for (int i = 0; i < lowWaitedCount; i++) {
+      int v = lowWaited[i];
+      isWaited[v] = true;
+      waited[waitedCount++] = v;
+      System.arraycopy(ecostLow, offset[v], ecost, offset[v], offset[v + 1] - offset[v]);
+    }
+    System.arraycopy(lowIncluded, 0, included, 0, lowCount);
+    includedCount = lowCount;
+    for (int i = lowEnd; i < stackSize && stackLevel[i] == level; i++) {
       int t = stackTerm[i];
       int u = openVar[t];
-      if (stackLevel[i] == level && !othersHold(t, u, d)) {
+      if (!othersHold(t, u, d)) {
         continue;
       }
       included[includedCount++] = t;
-      status[t] = u;
-      if (u < 0) {
-        continue;
-      }
-      if (!isWaited[u]) {
-        isWaited[u] = true;
-        waited[waitedCount++] = u;
-      }
-      // every value of the initial range, so that removed values cheaper than the least are known
-      int o = offset[u];
-      for (int i2 = 0; i2 < offset[u + 1] - o; i2++) {
-        if (satisfiedBy(t, u, base[u] + i2)) {
-          ecost[o + i2] += weights[t];
+      if (u >= 0) {
+        if (!isWaited[u]) {
+          isWaited[u] = true;
+          waited[waitedCount++] = u;
         }
+        addCosts(ecost, t, u);
       }
     }
     for (int i = 0; i < waitedCount; i++) {
@@ -686,6 +704,60 @@ public class ConjunctionSum extends Constraint
         }
       }
       eleast[v] = low == Long.MAX_VALUE ? 0 : low;
+    }
+  }
+
+  // the part of an explanation's evaluation from the terms activated below a level, kept while
+  // the stack does not change
+  private long[] ecostLow;
+  private int[] lowIncluded;
+  private int lowCount;
+  private int[] lowWaited;
+  private boolean[] isLowWaited;
+  private int lowWaitedCount;
+  private int lowEnd;
+  private int cacheMod = -1;
+  private int cacheLevel;
+
+  private void evaluateBelow(int level) {
+    if (ecostLow == null) {
+      ecostLow = new long[offset[vars.length]];
+      lowIncluded = new int[weights.length];
+      lowWaited = new int[vars.length];
+      isLowWaited = new boolean[vars.length];
+    }
+    for (int i = 0; i < lowWaitedCount; i++) {
+      int v = lowWaited[i];
+      isLowWaited[v] = false;
+      Arrays.fill(ecostLow, offset[v], offset[v + 1], 0L);
+    }
+    lowWaitedCount = 0;
+    lowCount = 0;
+    int i = 0;
+    for (; i < stackSize && stackLevel[i] < level; i++) {
+      int t = stackTerm[i];
+      int u = openVar[t];
+      lowIncluded[lowCount++] = t;
+      if (u >= 0) {
+        if (!isLowWaited[u]) {
+          isLowWaited[u] = true;
+          lowWaited[lowWaitedCount++] = u;
+        }
+        addCosts(ecostLow, t, u);
+      }
+    }
+    lowEnd = i;
+    cacheMod = stackMod;
+    cacheLevel = level;
+  }
+
+  // adds t's weight to every value of the initial range of u that satisfies t's literals on u
+  private void addCosts(long[] costs, int t, int u) {
+    int o = offset[u];
+    for (int i = 0; i < offset[u + 1] - o; i++) {
+      if (satisfiedBy(t, u, base[u] + i)) {
+        costs[o + i] += weights[t];
+      }
     }
   }
 
@@ -705,8 +777,8 @@ public class ConjunctionSum extends Constraint
     Arrays.fill(bucketStart, 0);
     for (int i = 0; i < includedCount; i++) {
       int t = included[i];
-      if (status[t] >= 0) {
-        bucketStart[status[t] + 2]++;
+      if (openVar[t] >= 0) {
+        bucketStart[openVar[t] + 2]++;
       }
     }
     for (int v = 0; v < n; v++) {
@@ -714,8 +786,8 @@ public class ConjunctionSum extends Constraint
     }
     for (int i = 0; i < includedCount; i++) {
       int t = included[i];
-      if (status[t] >= 0) {
-        bucketTerms[bucketStart[status[t] + 1]++] = t;
+      if (openVar[t] >= 0) {
+        bucketTerms[bucketStart[openVar[t] + 1]++] = t;
       }
     }
   }
@@ -791,7 +863,7 @@ public class ConjunctionSum extends Constraint
     long got = 0;
     for (int i = 0; i < includedCount && got < need; i++) {
       int t = included[i];
-      if (status[t] == -1) {
+      if (openVar[t] == -1) {
         termReason(trail, position, t, -1, out);
         got += weights[t];
       }
