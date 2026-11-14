@@ -537,6 +537,47 @@ final class DualSimplex implements LpSolver {
    *
    * @return y, by row
    */
+  String farkasDump() {
+    int r = infeasibleRow;
+    StringBuilder sb = new StringBuilder();
+    int p = basis[r];
+    sb.append("row ").append(r).append(" basic ").append(p).append(" beta ").append(beta[r]);
+    sb.append(" [").append(lo[p]).append(",").append(hi[p]).append("]\n");
+    int shown = 0;
+    for (int j = 0; j < cols && shown < 40; j++) {
+      if (row[j] < 0 && Math.abs(t[r][j]) > 1e-12) {
+        shown++;
+        sb.append("  j=").append(j).append(" t=").append(t[r][j]).append(" [").append(lo[j]);
+        sb.append(",").append(hi[j]).append("] up=").append(upper[j]).append(" d=").append(d[j]);
+        sb.append("\n");
+      }
+    }
+    return sb.toString();
+  }
+
+  // the range of y [A -I] (x, s) over the bounds, for y the Farkas multipliers: a proof excludes 0
+  double[] farkasRange() {
+    double[] y = farkas();
+    double lo0 = 0;
+    double hi0 = 0;
+    for (int j = 0; j < n; j++) {
+      double c = 0;
+      for (int i = 0; i < m; i++) {
+        c += y[i] * a[i][j];
+      }
+      lo0 += c > 0 ? c * lo[j] : c * hi[j];
+      hi0 += c > 0 ? c * hi[j] : c * lo[j];
+    }
+    for (int i = 0; i < m; i++) {
+      double c = -y[i];
+      if (c != 0) {
+        lo0 += c > 0 ? c * lo[n + i] : c * hi[n + i];
+        hi0 += c > 0 ? c * hi[n + i] : c * lo[n + i];
+      }
+    }
+    return new double[] {lo0, hi0};
+  }
+
   @Override
   public double[] farkas() {
     return inverseRow(infeasibleRow);

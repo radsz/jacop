@@ -1094,6 +1094,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootPrunings="
             + r.rootPrunings
+            + "\n%%%mzn-stat: lpProbeRounds="
+            + r.probeRounds
+            + "\n%%%mzn-stat: lpProbes="
+            + r.probes
+            + "\n%%%mzn-stat: lpProbePrunings="
+            + r.probePrunings
+            + "\n%%%mzn-stat: lpProbeStorePrunings="
+            + r.probeStorePrunings
+            + "\n%%%mzn-stat: lpProbeProofs="
+            + r.probeProofs
+            + "\n%%%mzn-stat: lpProbeMs="
+            + r.probeNanos / 1_000_000
             + "\n%%%mzn-stat: lpCutBound="
             + r.cutBound
             + "\n%%%mzn-stat: lpSparseCuts="
@@ -5816,6 +5828,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgLastCost = cost.value();
       }
       bestPrintedCost.accumulateAndGet(cost.value(), Math::min);
+    }
+
+    if (linearRelaxation != null) {
+      linearRelaxation.solutionFound();
     }
 
     if (presolve != null) {

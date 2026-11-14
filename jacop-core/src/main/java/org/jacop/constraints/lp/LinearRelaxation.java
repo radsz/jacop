@@ -783,6 +783,81 @@ public class LinearRelaxation extends Constraint
   /** Statistics: bounds tightened by the root reduced costs at restarts. */
   public long rootPrunings;
 
+  // LP probing at the incumbent (OBBT under the objective cutoff, Gleixner, Berthold, Mueller and
+  // Weltge 2017; probing, Savelsbergh 1994): at the root level, after the bound of the objective
+  // improved, the root relaxation is solved again with that bound, and then once for each side of
+  // a column that its solution does not take (x <= floor(v) and x >= ceil(v)), from the root basis
+  // and with a pivot limit. Only an infeasible probe counts: its Farkas multipliers combine the
+  // rows into an inequality that holds in the whole search and that, with the bound of the
+  // objective, excludes the side probed; it is propagated at once and kept with the root forms,
+  // which explain their bounds under lazy clause generation. Off by default.
+  static boolean probeOn = "true".equals(System.getProperty("org.jacop.lp.probe"));
+  private static final int PROBE_PIVOTS = Integer.getInteger("org.jacop.lp.probe.pivots", 500);
+  private static final long PROBE_NANOS =
+      (long) (Double.parseDouble(System.getProperty("org.jacop.lp.probe.seconds", "2")) * 1e9);
+  private static final int PROBE_FORMS = Integer.getInteger("org.jacop.lp.probe.forms", 2000);
+  private static final int PROBE_ROUNDS = Integer.getInteger("org.jacop.lp.probe.rounds", 200);
+  private static final long PROBE_TOTAL_NANOS =
+      (long) (Double.parseDouble(System.getProperty("org.jacop.lp.probe.total", "30")) * 1e9);
+  private LpSolver probeBase;
+  private int[] probeLpRow;
+  private int probeRows;
+  private int probeColumns;
+  private int rowsEpoch;
+  private int probeEpoch = -1;
+  private long probedObjective;
+  private static final int PROBE_PASSES = Integer.getInteger("org.jacop.lp.probe.passes", 3);
+  // the bounds of the columns at the root solve the probes start from
+  private long[] probeLo;
+  private long[] probeHi;
+  private Map<IntVar, Integer> probeColumnOf;
+  // the bound of the objective that a better solution than the best one must meet
+  private long cutoff;
+  private boolean cutoffKnown;
+  private boolean cutoffPending;
+  private int cutoffRounds;
+  private static final int PROBE_AGAIN = Integer.getInteger("org.jacop.lp.probe.again", 10);
+  private final List<LinearForm> probeForms = new ArrayList<>();
+  private final List<int[]> probeFacts = new ArrayList<>();
+  private final List<Certificate> probeCertificates = new ArrayList<>();
+  // the auxiliary column each probe form is about (or -1 for a bound of a column), and whether
+  // its probe had that column at 1
+  private final List<Integer> probeColumn = new ArrayList<>();
+  private final List<Boolean> probeOne = new ArrayList<>();
+  // the values the probe forms removed or fixed, with their reasons, for the explanations
+  private final List<IntVar> valueVar = new ArrayList<>();
+  private final List<LinearForm> valueForm = new ArrayList<>();
+  private final List<int[]> valueFacts = new ArrayList<>();
+  private final List<Integer> valueLevel = new ArrayList<>();
+
+  /** Statistics: bounds tightened by the forms of the probes when propagated again. */
+  public long probeStorePrunings;
+
+  // diagnostic: probe once at the first call after the root solve, under the bound the objective
+  // has then (a model with the incumbent bound added, as in the screen of osolpro #446)
+  private static final boolean PROBE_AT_ROOT = Boolean.getBoolean("org.jacop.lp.probe.atRoot");
+  private static final boolean PROBE_DEBUG = Boolean.getBoolean("org.jacop.lp.probe.debug");
+  private static final boolean PROBE_RESTORE = Boolean.getBoolean("org.jacop.lp.probe.restore");
+  private final long[] probeStatusCount = new long[4];
+  private int probeDebugLeft = 3;
+
+  /** Statistics: probing rounds at the root level after the bound of the objective improved. */
+  public long probeRounds;
+
+  /** Statistics: probes solved. */
+  public long probes;
+
+  /** Statistics: probes that were infeasible and pruned. */
+  public long probePrunings;
+
+  /**
+   * Statistics: probing rounds whose first solve was infeasible: the bound of the objective holds.
+   */
+  public long probeProofs;
+
+  /** Statistics: time spent probing, in nanoseconds. */
+  public long probeNanos;
+
   /**
    * Creates the relaxation of linear forms.
    *
@@ -2183,6 +2258,21 @@ public class LinearRelaxation extends Constraint
     if (suspended) {
       return;
     }
+    if (probeOn && rootLevel >= 0 && objective != null && rowSource == null) {
+      if (probeBase != null
+          && (cutoffPending || PROBE_AT_ROOT && probeRounds == 0 && setRootCutoff())
+          && (maximize ? objective.min() >= cutoff : objective.max() <= cutoff)
+          && probeRounds < PROBE_ROUNDS
+          && probeNanos < PROBE_TOTAL_NANOS) {
+        long before = probePrunings;
+        probeRound(store, cutoff);
+        // again at the next call, after the model propagated what the probes found
+        cutoffPending = probePrunings > before && ++cutoffRounds < PROBE_AGAIN;
+      }
+      if (!probeForms.isEmpty()) {
+        propagateProbeForms(store);
+      }
+    }
     if (rootLevel < 0) {
       rootLevel = store.level;
       rootObjective = objectiveBound();
@@ -2607,6 +2697,22 @@ public class LinearRelaxation extends Constraint
         rootForms = kept.toArray(new LinearForm[0]);
         rootCertificates = keptCertificates.toArray(new Certificate[0]);
         rootFacts = keptFacts.toArray(new int[0][]);
+        if (probeOn && objective != null && !large) {
+          probeBase = probeSimplex();
+          probeRows = rows();
+          probeColumns = lp.columns();
+          probeEpoch = rowsEpoch;
+          probeLo = new long[probeColumns];
+          probeHi = new long[probeColumns];
+          probeColumnOf = new IdentityHashMap<>();
+          for (int j = 0; j < probeColumns; j++) {
+            probeLo[j] = lpOnly[j] ? ((LpColumn) x[j]).lower() : x[j].min();
+            probeHi[j] = lpOnly[j] ? ((LpColumn) x[j]).upper() : x[j].max();
+            if (!lpOnly[j]) {
+              probeColumnOf.put(x[j], j);
+            }
+          }
+        }
         if (restartSolvesOn && RESTART_FROM_ROOT && simplex != Simplex.LAZY && objective != null) {
           rootSimplex = lp.copy();
           rootSimplexRows = rows();
@@ -3194,6 +3300,12 @@ public class LinearRelaxation extends Constraint
    * Returns the two inequalities of the combination {@code sum lambda_i a_i x}, each as {@code <=}
    * (one of them may be null when a row lacks the side it needs).
    */
+  // the bounds of the auxiliary columns that combine() takes instead of those of their domains
+  // (the bounds of a probe over the root), or null
+  private long[] combineLo;
+
+  private long[] combineHi;
+
   private LinearForm[] combine(Aggregate g) {
     int[] columns = g.columns();
     long[] coef = g.coef();
@@ -3220,8 +3332,8 @@ public class LinearRelaxation extends Constraint
           // sum_rest c x >= lower - max(c lo, c hi); lo and hi are those of the simplex, from the
           // domain of the column's variable
           LpColumn column = (LpColumn) x[j];
-          int lo = column.lower();
-          int hi = column.upper();
+          int lo = combineLo == null ? column.lower() : (int) combineLo[j];
+          int hi = combineHi == null ? column.upper() : (int) combineHi[j];
           long a = coef[k] * (long) lo;
           long b = coef[k] * (long) hi;
           upper = Math.subtractExact(upper, Math.min(a, b));
@@ -4768,6 +4880,7 @@ public class LinearRelaxation extends Constraint
 
   // keeps the first m rows
   private void truncateRows(int m) {
+    rowsEpoch++;
     returns = Arrays.copyOf(returns, Math.min(returns.length, m));
     rowColumns = Arrays.copyOf(rowColumns, m);
     rowWeights = Arrays.copyOf(rowWeights, m);
@@ -4848,6 +4961,460 @@ public class LinearRelaxation extends Constraint
     cuts += k;
   }
 
+  /**
+   * Takes a solution: with {@code org.jacop.lp.probe=true}, the next call probes the root
+   * relaxation under the bound that a better solution must meet. The search calls it at each
+   * solution, while the objective has its value.
+   */
+  public void solutionFound() {
+    if (!probeOn || objective == null || !objective.singleton()) {
+      return;
+    }
+    long bound = maximize ? objective.value() + 1L : objective.value() - 1L;
+    if (!cutoffKnown || (maximize ? bound > cutoff : bound < cutoff)) {
+      cutoff = bound;
+      cutoffKnown = true;
+      cutoffPending = true;
+      cutoffRounds = 0;
+    }
+  }
+
+  private boolean setRootCutoff() {
+    cutoff = objectiveBound();
+    cutoffKnown = true;
+    cutoffPending = true;
+    return true;
+  }
+
+  // one round of probing under the bound the objective has now (see probeOn), over the bounds of
+  // the root solve: what it deduces is a combination of the rows, so it holds at any level
+  private void probeRound(Store store, long bound) {
+    if (probeEpoch != rowsEpoch
+        || rows() < probeRows
+        || probeBase.columns() != probeColumns
+        || lp.columns() != probeColumns) {
+      probeBase = null; // rows were dropped since: the multipliers would not map to them
+      if (PROBE_DEBUG) {
+        System.err.println("%% probe off: rows dropped");
+      }
+      return;
+    }
+    long started = System.nanoTime();
+    long pruned = probePrunings;
+    probeRounds++;
+    LpSolver p = probeBase.copy();
+    try {
+      int n = probeColumns;
+      long[] lo = new long[n];
+      long[] hi = new long[n];
+      for (int j = 0; j < n; j++) {
+        lo[j] = lpOnly[j] ? ((LpColumn) x[j]).lower() : x[j].min();
+        hi[j] = lpOnly[j] ? ((LpColumn) x[j]).upper() : x[j].max();
+      }
+      if (maximize) {
+        lo[0] = Math.max(lo[0], bound);
+      } else {
+        hi[0] = Math.min(hi[0], bound);
+      }
+      if (lo[0] > hi[0]) {
+        return;
+      }
+      for (int j = 0; j < n; j++) {
+        p.setBounds(j, lo[j], hi[j]);
+      }
+      for (int pass = 0; pass < PROBE_PASSES; pass++) {
+        int status = rootSolve(p, ROOT_PIVOTS, rootWork(), PROBE_NANOS);
+        if (status == LpSolver.INFEASIBLE) {
+          probeProofs++;
+          probeInfeasible(store, p, lo, hi, -1, 0, 0);
+          return;
+        }
+        if (status != LpSolver.OPTIMAL) {
+          return;
+        }
+        Object basis = p.saveBasis();
+        if (basis == null) {
+          return;
+        }
+        double[] value = new double[n];
+        for (int j = 0; j < n; j++) {
+          value[j] = p.value(j);
+        }
+        // the largest reduced costs first, as they are the nearest to the gap; basic columns
+        // after them, the most fractional first
+        double[] rc = combination(probeByRow(p.duals()));
+        Integer[] order = new Integer[n - 1];
+        double[] score = new double[n];
+        for (int j = 1; j < n; j++) {
+          order[j - 1] = j;
+          double f = value[j] - Math.floor(value[j]);
+          score[j] = p.basicRow(j) >= 0 ? -1 + Math.min(f, 1 - f) : Math.abs(rc[j]);
+        }
+        Arrays.sort(order, (a, b) -> Double.compare(score[b], score[a]));
+        boolean tightened = false;
+        for (int j : order) {
+          if (System.nanoTime() - started > PROBE_NANOS || probeForms.size() >= PROBE_FORMS) {
+            break;
+          }
+          if (lpOnly[j] && ((LpColumn) x[j]).isFree() || lo[j] >= hi[j]) {
+            continue;
+          }
+          double v = value[j];
+          for (int side = 0; side < 2 && lo[j] < hi[j]; side++) {
+            long from;
+            long to;
+            if (side == 0) {
+              long c = (long) Math.ceil(v - 1e-9);
+              from = Math.max(lo[j], c > v + 1e-9 ? c : c + 1);
+              to = hi[j];
+            } else {
+              long f = (long) Math.floor(v + 1e-9);
+              from = lo[j];
+              to = Math.min(hi[j], f < v - 1e-9 ? f : f - 1);
+            }
+            if (from > to || from == lo[j] && to == hi[j]) {
+              continue;
+            }
+            int st = probe(p, basis, j, from, to);
+            if (st != LpSolver.INFEASIBLE && to > from) {
+              // the side is feasible: is its far end out? Then the largest part of the side
+              // that is, by bisection (Gleixner et al.: OBBT on integers)
+              long end = side == 0 ? to : from;
+              if (probe(p, basis, j, end, end) == LpSolver.INFEASIBLE) {
+                long in = side == 0 ? from : to; // a feasible end of the part
+                long out = end; // an infeasible one
+                while (Math.abs(out - in) > 1 && System.nanoTime() - started < PROBE_NANOS) {
+                  long mid = in + (out - in) / 2;
+                  int sm = side == 0 ? probe(p, basis, j, mid, to) : probe(p, basis, j, from, mid);
+                  if (sm == LpSolver.INFEASIBLE) {
+                    out = mid;
+                  } else {
+                    in = mid;
+                  }
+                }
+                from = side == 0 ? out : from;
+                to = side == 0 ? to : out;
+                st = probe(p, basis, j, from, to);
+              }
+            }
+            if (st == LpSolver.INFEASIBLE && probeInfeasible(store, p, lo, hi, j, from, to)) {
+              // the probe's side is out under this bound of the objective
+              if (side == 0) {
+                hi[j] = from - 1;
+              } else {
+                lo[j] = to + 1;
+              }
+              tightened = true;
+            }
+            p.setBounds(j, lo[j], hi[j]);
+          }
+        }
+        if (!tightened || System.nanoTime() - started > PROBE_NANOS) {
+          return;
+        }
+      }
+    } finally {
+      probeNanos += System.nanoTime() - started;
+      if (PROBE_DEBUG) {
+        System.err.println(
+            "%% probeRound bound="
+                + bound
+                + " level="
+                + store.level
+                + " pruned="
+                + (probePrunings - pruned)
+                + " forms="
+                + probeForms.size()
+                + " probes="
+                + probes
+                + " status="
+                + Arrays.toString(probeStatusCount)
+                + " simplex="
+                + p.getClass().getSimpleName()
+                + " ms="
+                + (System.nanoTime() - started) / 1_000_000);
+      }
+    }
+  }
+
+  // propagates the forms of the infeasible probes, until none prunes or after a few passes
+  private void propagateProbeForms(Store store) {
+    for (int pass = 0; pass < 3; pass++) {
+      long before = prunings;
+      for (int k = 0; k < probeForms.size(); k++) {
+        int column = probeColumn.get(k);
+        if (!factsHold(probeFacts.get(k))) {
+          continue;
+        }
+        if (column < 0) {
+          propagate(store, probeForms.get(k), probeFacts.get(k), probeCertificates.get(k));
+        } else {
+          propagateValue(store, k, column);
+        }
+      }
+      if (prunings == before) {
+        return;
+      }
+      probeStorePrunings += prunings - before;
+    }
+  }
+
+  // whether the facts x != v and x = v of a probe form hold now: the form was made over the bounds
+  // of its probe, at any level
+  private boolean factsHold(int[] facts) {
+    if (facts == null) {
+      return true;
+    }
+    for (int f : facts) {
+      LpColumn c = (LpColumn) x[f >= 0 ? f : ~f];
+      if (f >= 0 ? c.variable().domain.contains(c.value()) : !c.variable().singleton(c.value())) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // the probe form k of the auxiliary column [x = v] holds only with the column at the bound the
+  // probe gave it: when its bounds fail now, the column takes the other bound (x != v, or x = v)
+  private void propagateValue(Store store, int k, int column) {
+    LinearForm f = probeForms.get(k);
+    IntVar[] vars = f.vars();
+    long[] w = f.weights();
+    long smallest = 0;
+    try {
+      for (int a = 0; a < vars.length; a++) {
+        smallest =
+            Math.addExact(
+                smallest, Math.multiplyExact(w[a], w[a] > 0 ? vars[a].min() : vars[a].max()));
+      }
+    } catch (ArithmeticException _) {
+      return;
+    }
+    if (smallest <= f.c()) {
+      return;
+    }
+    LpColumn c = (LpColumn) x[column];
+    IntVar v = c.variable();
+    boolean one = probeOne.get(k); // the probe had the column at 1: x != v
+    if (one ? !v.domain.contains(c.value()) : v.singleton(c.value())) {
+      return;
+    }
+    prunings++;
+    valueVar.add(v);
+    valueForm.add(new LinearForm(vars, w, f.c() + 1, LinearForm.GE));
+    valueFacts.add(probeFacts.get(k));
+    valueLevel.add(store.level);
+    if (one) {
+      v.domain.inComplement(store.level, v, c.value());
+    } else {
+      v.domain.in(store.level, v, c.value(), c.value());
+    }
+  }
+
+  // the probes run on JaLP's sparse simplex over all the rows of the relaxation, whose LU
+  // factors keep the bases of a long series of probes accurate (the dense tableau, copied and
+  // probed, drifted into bases with reduced costs of 10^13 whose rays proved nothing), solved
+  // once now at the bounds of the root
+  private LpSolver probeSimplex() {
+    int m = rows();
+    int n = lp.columns();
+    double[] rlo = new double[m];
+    double[] rhi = new double[m];
+    for (int i = 0; i < m; i++) {
+      rlo[i] = hasLo[i] ? rowLo[i] : Double.NEGATIVE_INFINITY;
+      rhi[i] = hasHi[i] ? rowHi[i] : Double.POSITIVE_INFINITY;
+    }
+    double[] cost = new double[n];
+    cost[0] = maximize ? -1 : 1;
+    LpSolver s = sparse(sparseRows(m), doubles(m), rlo, rhi, cost);
+    for (int j = 0; j < n; j++) {
+      setBounds(s, j);
+    }
+    probeLpRow = new int[m];
+    for (int i = 0; i < m; i++) {
+      probeLpRow[i] = i;
+    }
+    return rootSolve(s, ROOT_PIVOTS, SPARSE_ROOT_WORK, PROBE_NANOS) == LpSolver.OPTIMAL ? s : null;
+  }
+
+  // solves the probe simplex with column j in [from, to]; the bounds of j stay so, for its proof
+  private int probe(LpSolver p, Object basis, int j, long from, long to) {
+    if (PROBE_RESTORE) {
+      p.restoreBasis(basis);
+    }
+    p.setBounds(j, from, to);
+    probes++;
+    int st = p.solve(PROBE_PIVOTS);
+    if (PROBE_DEBUG) {
+      probeStatusCount[Math.clamp(st, 0, 3)]++;
+    }
+    return st;
+  }
+
+  // the multipliers of the rows of the probe simplex as multipliers of the rows of the relaxation
+  private double[] probeByRow(double[] y) {
+    double[] full = new double[rows()];
+    for (int k = 0; k < y.length; k++) {
+      full[probeLpRow[k]] = y[k];
+    }
+    return full;
+  }
+
+  // the combination of the rows by y, by column, in floating point
+  private double[] combination(double[] y) {
+    double[] coef = new double[probeColumns];
+    for (int i = 0; i < y.length; i++) {
+      if (y[i] == 0) {
+        continue;
+      }
+      int[] cs = rowColumns[i];
+      long[] ws = rowWeights[i];
+      for (int k = 0; k < cs.length; k++) {
+        if (cs[k] >= 0 && cs[k] < coef.length) {
+          coef[cs[k]] += y[i] * ws[k];
+        }
+      }
+    }
+    return coef;
+  }
+
+  // the inequality of the Farkas multipliers of an infeasible probe of column j in [from, to] (or
+  // of the whole relaxation, j < 0), over the bounds of the probe: the auxiliary columns leave it
+  // at those bounds, which hold at the root (and for the probed column only with the probe's
+  // bound). Kept when, rounded to integers, it still excludes the probe; then propagated, which
+  // may fail
+  private boolean probeInfeasible(
+      Store store, LpSolver p, long[] lo, long[] hi, int j, long from, long to) {
+    double[] y = probeByRow(p.farkas());
+    if (PROBE_DEBUG && probeDebugLeft > 0) {
+      double norm = 0;
+      for (double e : y) {
+        norm += Math.abs(e);
+      }
+      System.err.println("%% probe farkas j=" + j + " [" + from + "," + to + "] |y|=" + norm);
+    }
+    long[] clo = lo.clone();
+    long[] chi = hi.clone();
+    if (j >= 0) {
+      clo[j] = from;
+      chi[j] = to;
+    }
+    if (PROBE_DEBUG && probeDebugLeft > 0) {
+      double[] coef = combination(y);
+      double minA = 0;
+      double maxA = 0;
+      for (int k = 0; k < coef.length; k++) {
+        minA += coef[k] > 0 ? coef[k] * clo[k] : coef[k] * chi[k];
+        maxA += coef[k] > 0 ? coef[k] * chi[k] : coef[k] * clo[k];
+      }
+      double minS = 0;
+      double maxS = 0;
+      for (int i = 0; i < y.length; i++) {
+        if (y[i] != 0) {
+          double l = hasLo[i] ? rowLo[i] : Double.NEGATIVE_INFINITY;
+          double h = hasHi[i] ? rowHi[i] : Double.POSITIVE_INFINITY;
+          minS += y[i] > 0 ? y[i] * l : y[i] * h;
+          maxS += y[i] > 0 ? y[i] * h : y[i] * l;
+        }
+      }
+      if (p instanceof DualSimplex d) {
+        System.err.println("%% probe own range " + Arrays.toString(d.farkasRange()));
+        System.err.print(d.farkasDump());
+      }
+      System.err.println(
+          "%% probe check yAx in [" + minA + "," + maxA + "] ys in [" + minS + "," + maxS + "]");
+    }
+    for (long scale : SCALES) {
+      long[] lambda = scaled(y, scale);
+      if (lambda == null) {
+        return false;
+      }
+      int[][] facts = new int[2][];
+      long[][] used = new long[2][];
+      LinearForm[] local;
+      combineLo = clo;
+      combineHi = chi;
+      try {
+        local = certificate(lambda, facts, used);
+      } finally {
+        combineLo = null;
+        combineHi = null;
+      }
+      if (local == null) {
+        continue;
+      }
+      boolean fits = true;
+      boolean excludes = false;
+      for (LinearForm g : local) {
+        fits &= g == null || fits(g);
+        excludes |= g != null && excludes(g, clo, chi);
+      }
+      if (!fits && scale != 1 || !excludes) {
+        if (PROBE_DEBUG) {
+          probeStatusCount[excludes ? 3 : 0] += 1000000;
+          if (probeDebugLeft > 0 && scale == 1) {
+            probeDebugLeft--;
+            for (LinearForm g : local) {
+              if (g != null) {
+                System.err.println("%% probe form " + g + " least=" + least(g, clo, chi));
+              }
+            }
+          }
+        }
+        continue;
+      }
+      probePrunings++;
+      boolean value = j >= 0 && lpOnly[j];
+      int first = probeForms.size();
+      for (int k = 0; k < local.length; k++) {
+        if (local[k] != null && excludes(local[k], clo, chi)) {
+          probeForms.add(local[k]);
+          probeFacts.add(value ? withoutColumn(facts[k], j) : facts[k]);
+          probeCertificates.add(value ? null : certified(local[k], used[k], k == 0));
+          probeColumn.add(value ? j : -1);
+          probeOne.add(value && from == 1);
+        }
+      }
+      for (int k = first; k < probeForms.size(); k++) {
+        if (value) {
+          propagateValue(store, k, j);
+        } else {
+          propagate(store, probeForms.get(k), probeFacts.get(k), probeCertificates.get(k));
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+
+  // the facts without those of column j
+  private static int[] withoutColumn(int[] facts, int j) {
+    if (facts == null) {
+      return null;
+    }
+    int[] kept = Arrays.stream(facts).filter(f -> f != j && f != ~j).toArray();
+    return kept.length == 0 ? null : kept;
+  }
+
+  // whether sum w x <= c has no solution over the bounds of the probe; a variable of the form
+  // that is not a column of the relaxation takes its domain
+  private boolean excludes(LinearForm f, long[] lo, long[] hi) {
+    return least(f, lo, hi) > f.c() + 0.5;
+  }
+
+  private double least(LinearForm f, long[] lo, long[] hi) {
+    IntVar[] vars = f.vars();
+    long[] w = f.weights();
+    double least = 0;
+    for (int k = 0; k < vars.length; k++) {
+      Integer col = probeColumnOf.get(vars[k]);
+      double min = col == null ? vars[k].min() : lo[col];
+      double max = col == null ? vars[k].max() : hi[col];
+      least += w[k] > 0 ? w[k] * min : w[k] * max;
+    }
+    return least;
+  }
+
   // bounds propagation of sum w x <= c, exact; nothing on overflow
   private void propagate(Store store, LinearForm f, int[] facts, Certificate certificate) {
     IntVar[] vars = f.vars();
@@ -4913,6 +5480,16 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void removeLevel(int level) {
+    int q = valueLevel.size();
+    while (q > 0 && valueLevel.get(q - 1) >= level) {
+      q--;
+    }
+    if (q < valueLevel.size()) {
+      valueVar.subList(q, valueVar.size()).clear();
+      valueForm.subList(q, valueForm.size()).clear();
+      valueFacts.subList(q, valueFacts.size()).clear();
+      valueLevel.subList(q, valueLevel.size()).clear();
+    }
     int k = deducedLevel.size();
     while (k > 0 && deducedLevel.get(k - 1) >= level) {
       k--;
@@ -4929,6 +5506,15 @@ public class LinearRelaxation extends Constraint
     IntVar v = trail.variable(entry);
     int mark = out.size();
     lastCertificate = null;
+    for (int k = valueVar.size() - 1; k >= 0; k--) {
+      if (valueVar.get(k) == v) {
+        if (valueForm.get(k).explainEntailed(trail, entry, out)
+            && addFacts(trail, valueFacts.get(k), entry, out)) {
+          return true;
+        }
+        out.truncate(mark);
+      }
+    }
     for (int k = deducedVar.size() - 1; k >= 0; k--) {
       if (deducedVar.get(k) == v) {
         if (deducedForm.get(k).explain(trail, entry, out)
