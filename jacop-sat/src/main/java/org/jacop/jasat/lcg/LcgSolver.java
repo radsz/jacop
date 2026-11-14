@@ -4476,15 +4476,10 @@ public final class LcgSolver implements ExternalPropagator {
           (permutation ? in : other).add(v);
         }
       }
-      if (PERMUTATION_DEBUG && !permutation) {
-        System.out.println("% permutation rule: other constraint " + c.getClass().getSimpleName());
-      }
     }
     in.removeAll(other);
     return in;
   }
-
-  static final boolean PERMUTATION_DEBUG = Boolean.getBoolean("jacop.lcg.alldiffClauses.debug");
 
   /** Whether a constraint is a domain consistent all different over as many values as variables. */
   private boolean isPermutation(Constraint c) {
