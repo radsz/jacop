@@ -5169,7 +5169,7 @@ class SingleConstraintTest extends TestHelper {
    */
   @Test
   void testAllDifferentListsMatchesDecomposition() {
-    for (long seed = 0; seed < 60; seed++) {
+    for (long seed = 0; seed < 120; seed++) {
       int[] counts = new int[2];
       for (int k = 0; k < 2; k++) {
         Random rnd = new Random(seed);
@@ -5190,14 +5190,28 @@ class SingleConstraintTest extends TestHelper {
             x[i][j] = rnd.nextInt(5) == 0 ? pool[rnd.nextInt(pool.length)] : pool[i * n + j];
           }
         }
+        // odd seeds: excepted tuples, which two rows may share
+        int[][] except = new int[seed % 2 == 0 ? 0 : 1 + rnd.nextInt(2)][n];
+        for (int[] t : except) {
+          for (int j = 0; j < n; j++) {
+            t[j] = rnd.nextInt(3);
+          }
+        }
         if (k == 0) {
-          store.impose(new AllDifferentLists(x));
+          store.impose(new AllDifferentLists(x, except));
         } else {
           for (int i = 0; i < m; i++) {
             for (int r = i + 1; r < m; r++) {
-              PrimitiveConstraint[] ne = new PrimitiveConstraint[n];
+              PrimitiveConstraint[] ne = new PrimitiveConstraint[n + except.length];
               for (int j = 0; j < n; j++) {
                 ne[j] = new XneqY(x[i][j], x[r][j]);
+              }
+              for (int e = 0; e < except.length; e++) {
+                PrimitiveConstraint[] eq = new PrimitiveConstraint[n];
+                for (int j = 0; j < n; j++) {
+                  eq[j] = new XeqC(x[i][j], except[e][j]);
+                }
+                ne[n + e] = new And(eq);
               }
               store.impose(new Or(ne));
             }
