@@ -5210,6 +5210,21 @@ Version 5.0 (unreleased)
    from 36 to 15 literals; -f solves 32 instead of 25 (geometric mean time
    0.54 on those both solve), model search 19 as before (time 0.89).
 
+303. Under lazy clause generation a reified or implied In(x, dom) counts as
+   entailed only when the bounds of x lie in dom, not when every value
+   left in x does. The full test needs a reason with every value removed
+   between the bounds, which on the XCSP 2025 RollerSplat models (plan
+   variables with 411 values) made learnt clauses long. RollerSplat-07b-50
+   proves its optimum in 379 s instead of 503 s at 600 s and 07c-70 is
+   proved in 560 s (not proved before); with z <= 41 the 07b proof takes
+   205 s and 147k nodes instead of 393 s and 254k. Search without LCG is
+   unchanged; -Djacop.lcg.inEntailByBounds=false restores the full test.
+   ElementVariableFast keeps a residual support per index (Lecoutre and
+   Hemery, "A Study of Residual Supports in Arc Consistency", IJCAI 2007,
+   125-130), so the search is the same and about 4 % faster on RollerSplat.
+   On the 40 wide-set instances with set_in_reif or set_in_imp, at 600 s,
+   no family is worse with -f or with model search.
+
 Version 4.11
 =============
 
