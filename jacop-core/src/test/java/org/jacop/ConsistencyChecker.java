@@ -106,6 +106,7 @@ import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeUnary;
+import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -1644,7 +1645,105 @@ class ConsistencyChecker {
         new Case("Subcircuit", Level.NONE, (s, r) -> circuit(s, r, true)),
         new Case("Binpacking", Level.NONE, ConsistencyChecker::binpacking),
         new Case("Assignment", Level.NONE, ConsistencyChecker::assignment),
-        new Case("CountValuesBounds", Level.NONE, ConsistencyChecker::countValuesBounds));
+        new Case("CountValuesBounds", Level.NONE, ConsistencyChecker::countValuesBounds),
+        new Case("CumulativeUnaryVar", Level.NONE, ConsistencyChecker::cumulativeUnary),
+        new Case("EnergyPrecedence", Level.NONE, ConsistencyChecker::energyPrecedence));
+  }
+
+  /** CumulativeUnary over 3 or 4 tasks with variable durations and 0/1 resource uses. */
+  private static Model cumulativeUnary(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    IntVar[] s = vars(store, "s", n, 0, 5, random);
+    IntVar[] d =
+        IntStream.range(0, n)
+            .mapToObj(i -> interval(store, "d" + i, 0, 3, random))
+            .toArray(IntVar[]::new);
+    IntVar[] r =
+        IntStream.range(0, n)
+            .mapToObj(
+                i ->
+                    random.nextInt(3) == 0
+                        ? new IntVar(store, "r" + i, 0, 1)
+                        : new IntVar(store, "r" + i, 1, 1))
+            .toArray(IntVar[]::new);
+    boolean profile = random.nextBoolean();
+    return new Model(
+        new CumulativeUnary(s, d, r, new IntVar(store, 1, 1), profile),
+        t -> {
+          for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+              boolean both = t[2 * n + i] > 0 && t[2 * n + j] > 0 && t[n + i] > 0 && t[n + j] > 0;
+              if (both && t[i] < t[j] + t[n + j] && t[j] < t[i] + t[n + i]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(s, d, r));
+  }
+
+  /**
+   * EnergyPrecedence over 4 tasks on one resource with random precedences between the tasks (lag
+   * the duration or a random 0..2) and from every task to a makespan point; the relation is the
+   * cumulative and the precedences.
+   */
+  private static Model energyPrecedence(Store store, Random random) {
+    int n = 4;
+    IntVar[] s = vars(store, "s", n, 0, 6, random);
+    int[] dur = IntStream.range(0, n).map(i -> 1 + random.nextInt(3)).toArray();
+    int[] use = IntStream.range(0, n).map(i -> 1 + random.nextInt(2)).toArray();
+    IntVar[] d =
+        IntStream.range(0, n)
+            .mapToObj(i -> new IntVar(store, dur[i], dur[i]))
+            .toArray(IntVar[]::new);
+    IntVar[] h =
+        IntStream.range(0, n)
+            .mapToObj(i -> new IntVar(store, use[i], use[i]))
+            .toArray(IntVar[]::new);
+    int cap = 2 + random.nextInt(2);
+    IntVar limit = new IntVar(store, cap, cap);
+    IntVar m = aVar(store, "m", 3, 10, random);
+    List<IntVar> from = new ArrayList<>();
+    List<IntVar> to = new ArrayList<>();
+    List<int[]> edges = new ArrayList<>(); // point from, point to (n = m), lag
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (random.nextInt(3) == 0) {
+          edges.add(new int[] {i, j, random.nextBoolean() ? dur[i] : random.nextInt(3)});
+        }
+      }
+      edges.add(new int[] {i, n, dur[i]});
+    }
+    IntVar[] point = concat(s, new IntVar[] {m});
+    for (int[] e : edges) {
+      from.add(point[e[0]]);
+      to.add(point[e[1]]);
+    }
+    int[] lag = edges.stream().mapToInt(e -> e[2]).toArray();
+    return new Model(
+        new EnergyPrecedence(
+            s, d, h, limit, from.toArray(new IntVar[0]), to.toArray(new IntVar[0]), lag),
+        t -> {
+          for (int[] e : edges) {
+            if (t[e[1]] < t[e[0]] + e[2]) {
+              return false;
+            }
+          }
+          for (int time = 0; time <= 9; time++) {
+            int load = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[i] <= time && time < t[i] + dur[i]) {
+                load += use[i];
+              }
+            }
+            if (load > cap) {
+              return false;
+            }
+          }
+          return true;
+        },
+        point);
   }
 
   /** A random automaton of 2 to 4 states over 2 to 5 variables. */
