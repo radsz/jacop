@@ -736,6 +736,637 @@ public class LinearRelaxation extends Constraint
   // the model row of each simplex row of that copy: the row pool may have swapped rows since
   private int[] rootSimplexLpRows;
 
+  // offline screen of Lagrangian filtering zones (diagnostic, osolpro benchmarks/filtering-zones):
+  // with -Dorg.jacop.lp.zoneScreen.ub=UB, the first optimal root solve compares the bounds that
+  // the root reduced-cost forms remove under objective <= UB-1 (>= UB+1 when maximizing) with the
+  // bounds that probing the relaxation itself removes, which is the most that any change of the
+  // multipliers per column and value can remove from this relaxation (LP duality)
+  private static final Long ZONE_SCREEN_UB = Long.getLong("org.jacop.lp.zoneScreen.ub");
+  private static final long ZONE_SCREEN_MS = Long.getLong("org.jacop.lp.zoneScreen.ms", 120_000L);
+  private boolean zoneScreened;
+  private static final String ZONE_APPLY = System.getProperty("org.jacop.lp.zoneScreen.apply");
+  private int zoneLevel = -1;
+
+  // the values left in the variables of the relaxation
+  private long zoneSize() {
+    java.util.Set<IntVar> seen =
+        java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    long size = 0;
+    for (int j = 1; j < x.length; j++) {
+      IntVar v = x[j] instanceof LpColumn c ? c.variable() : x[j];
+      if (seen.add(v)) {
+        size += v.getSize();
+      }
+    }
+    return size;
+  }
+
+  private static final int[] ZONE_PIVOTS =
+      Arrays.stream(System.getProperty("org.jacop.lp.zoneScreen.pivots", "1,3,10").split(","))
+          .mapToInt(Integer::parseInt)
+          .toArray();
+
+  private long zoneLo(int j) {
+    return lpOnly[j] ? ((LpColumn) x[j]).lower() : x[j].min();
+  }
+
+  private long zoneHi(int j) {
+    return lpOnly[j] ? ((LpColumn) x[j]).upper() : x[j].max();
+  }
+
+  private void zoneScreen(Store store) {
+    long t0 = System.nanoTime();
+    int n = x.length;
+    long ub = ZONE_SCREEN_UB;
+    long[] lo = new long[n];
+    long[] hi = new long[n];
+    for (int j = 0; j < n; j++) {
+      lo[j] = zoneLo(j);
+      hi[j] = zoneHi(j);
+    }
+    if (maximize) {
+      lo[0] = Math.max(lo[0], ub + 1);
+    } else {
+      hi[0] = Math.min(hi[0], ub - 1);
+    }
+    java.util.IdentityHashMap<IntVar, Integer> col = new java.util.IdentityHashMap<>();
+    for (int j = 0; j < n; j++) {
+      col.put(x[j], j);
+    }
+    long[] rcLo = lo.clone();
+    long[] rcHi = hi.clone();
+    // one pass of bounds reasoning on each root form: reduced-cost fixing
+    for (LinearForm f : rootForms) {
+      java.util.Map<Integer, Long> w = new java.util.LinkedHashMap<>();
+      boolean known = true;
+      for (int k = 0; k < f.vars().length; k++) {
+        Integer j = col.get(f.vars()[k]);
+        if (j == null) {
+          known = false;
+          break;
+        }
+        w.merge(j, f.weights()[k], Long::sum);
+      }
+      if (!known) {
+        continue;
+      }
+      int rel = f.relation();
+      for (int side = 0; side < 2; side++) {
+        // side 0: sum w x <= c (LE or EQ), side 1: sum w x >= c (GE or EQ)
+        if (side == 0 && rel == LinearForm.GE || side == 1 && rel == LinearForm.LE) {
+          continue;
+        }
+        if (rel == LinearForm.NE) {
+          continue;
+        }
+        double sgn = side == 0 ? 1 : -1;
+        double c = sgn * f.c();
+        // sum s*w x <= c: minimal activity
+        double minAct = 0;
+        for (var e : w.entrySet()) {
+          double a = sgn * e.getValue();
+          minAct += a > 0 ? a * lo[e.getKey()] : a * hi[e.getKey()];
+        }
+        for (var e : w.entrySet()) {
+          int j = e.getKey();
+          double a = sgn * e.getValue();
+          if (a == 0 || j == 0) {
+            continue;
+          }
+          double rest = minAct - (a > 0 ? a * lo[j] : a * hi[j]);
+          double slack = c - rest;
+          if (a > 0) {
+            long nh = (long) Math.floor(slack / a + 1e-9);
+            rcHi[j] = Math.min(rcHi[j], nh);
+          } else {
+            long nl = (long) Math.ceil(slack / a - 1e-9);
+            rcLo[j] = Math.max(rcLo[j], nl);
+          }
+        }
+      }
+    }
+    LpSolver probe = lp.copy();
+    probeOwner = this;
+    LpSolver[] pens = new LpSolver[ZONE_PIVOTS.length];
+    Object[] penBasis = new Object[ZONE_PIVOTS.length];
+    long[][] penRemoved = new long[ZONE_PIVOTS.length][2];
+    long[] penProbes = new long[ZONE_PIVOTS.length];
+    for (int q = 0; q < pens.length; q++) {
+      pens[q] = lp.copy();
+      penBasis[q] = pens[q].saveBasis();
+    }
+    double target = maximize ? -(ub + 1) : ub - 1; // the LP minimizes cost[0] * x0
+    long probes = 0;
+    long limits = 0;
+    long screened = 0;
+    long[] rcRemoved = new long[2];
+    long[] prRemoved = new long[2];
+    long[] domain = new long[2];
+    long[] fixedRc = new long[2];
+    long[] fixedPr = new long[2];
+    long[] colsRc = new long[2];
+    long[] colsPr = new long[2];
+    // a deterministic spread of the columns, so that a time-out screens a sample
+    int stride = 1;
+    for (int cand = (int) (n * 0.618) | 1; cand > 1; cand -= 2) {
+      if (gcd(cand, n) == 1) {
+        stride = cand;
+        break;
+      }
+    }
+    boolean timedOut = false;
+    long[] apLo = lo.clone();
+    long[] apHi = hi.clone();
+    for (int t = 0, j = 0; t < n; t++, j = (j + stride) % n) {
+      if (j == 0) {
+        continue;
+      }
+      if (System.nanoTime() - t0 > ZONE_SCREEN_MS * 1_000_000L) {
+        timedOut = true;
+        break;
+      }
+      if (lo[j] >= hi[j] || hi[j] - lo[j] > 1_000_000) {
+        continue;
+      }
+      screened++;
+      int kind = lpOnly[j] ? 1 : 0;
+      long size = hi[j] - lo[j] + 1;
+      domain[kind] += size;
+      long rl = Math.min(rcLo[j], hi[j] + 1);
+      long rh = Math.max(rcHi[j], lo[j] - 1);
+      long rcKept = Math.max(0, rh - rl + 1);
+      rcRemoved[kind] += size - rcKept;
+      if (rcKept < size) {
+        colsRc[kind]++;
+      }
+      if (rcKept <= 1) {
+        fixedRc[kind]++;
+      }
+      if ("rc".equals(ZONE_APPLY) || rcKept == 0) {
+        apLo[j] = rl;
+        apHi[j] = rh;
+      }
+      if (rcKept == 0) {
+        for (long[] pr : penRemoved) {
+          pr[kind] += size;
+        }
+        prRemoved[kind] += size;
+        colsPr[kind]++;
+        fixedPr[kind]++;
+        continue;
+      }
+      // probe: smallest v in [rl, rh] with LP(x_j in [lo, v]) <= target, and the largest from above
+      long a = rl;
+      long b = rh;
+      // invariant: values below a are removed; find the first feasible v
+      long low = a;
+      long high = b;
+      while (low < high) {
+        long mid = low + (high - low) / 2;
+        probes++;
+        int st = probeStatus(probe, j, lo[j], mid, target, lo[j], hi[j]);
+        if (st == LpSolver.LIMIT) {
+          limits++;
+        }
+        if (st == 1) {
+          low = mid + 1;
+        } else {
+          high = mid;
+        }
+      }
+      long nl = low;
+      probes++;
+      int stl = probeStatus(probe, j, lo[j], nl, target, lo[j], hi[j]);
+      if (stl == 1) {
+        nl = hi[j] + 1; // even the whole range is infeasible
+      }
+      long nh = nl - 1;
+      if (nl <= hi[j]) {
+        low = nl;
+        high = b;
+        while (low < high) {
+          long mid = low + (high - low + 1) / 2;
+          probes++;
+          int st = probeStatus(probe, j, mid, hi[j], target, lo[j], hi[j]);
+          if (st == LpSolver.LIMIT) {
+            limits++;
+          }
+          if (st == 1) {
+            high = mid - 1;
+          } else {
+            low = mid;
+          }
+        }
+        nh = low;
+      }
+      long prKept = Math.max(0, nh - nl + 1);
+      prRemoved[kind] += size - prKept;
+      if ("probe".equals(ZONE_APPLY)) {
+        apLo[j] = nl;
+        apHi[j] = nh;
+      }
+      for (int q = 0; q < ZONE_PIVOTS.length; q++) {
+        long[] r =
+            zoneSearch(pens[q], j, lo[j], hi[j], rl, rh, target, ZONE_PIVOTS[q], penBasis[q]);
+        penProbes[q] += r[2];
+        penRemoved[q][kind] += size - Math.max(0, r[1] - r[0] + 1);
+        if (("pen" + ZONE_PIVOTS[q]).equals(ZONE_APPLY)) {
+          apLo[j] = r[0];
+          apHi[j] = r[1];
+        }
+      }
+      if (prKept < size) {
+        colsPr[kind]++;
+      }
+      if (prKept <= 1) {
+        fixedPr[kind]++;
+      }
+    }
+    long ms = (System.nanoTime() - t0) / 1_000_000;
+    System.err.println(
+        "%% zoneScreen {\"lb\":"
+            + lp.objective() * (maximize ? -1 : 1)
+            + ",\"ub\":"
+            + ub
+            + ",\"columns\":"
+            + n
+            + ",\"rows\":"
+            + lp.rows()
+            + ",\"forms\":"
+            + rootForms.length
+            + ",\"screened\":"
+            + screened
+            + ",\"timedOut\":"
+            + timedOut
+            + ",\"domain\":["
+            + domain[0]
+            + ","
+            + domain[1]
+            + "],\"rcRemoved\":["
+            + rcRemoved[0]
+            + ","
+            + rcRemoved[1]
+            + "],\"probeRemoved\":["
+            + prRemoved[0]
+            + ","
+            + prRemoved[1]
+            + "],\"colsRc\":["
+            + colsRc[0]
+            + ","
+            + colsRc[1]
+            + "],\"colsProbe\":["
+            + colsPr[0]
+            + ","
+            + colsPr[1]
+            + "],\"fixedRc\":["
+            + fixedRc[0]
+            + ","
+            + fixedRc[1]
+            + "],\"fixedProbe\":["
+            + fixedPr[0]
+            + ","
+            + fixedPr[1]
+            + "],\"pivots\":"
+            + Arrays.toString(ZONE_PIVOTS)
+            + ",\"penRemoved\":"
+            + Arrays.deepToString(penRemoved)
+            + ",\"penProbes\":"
+            + Arrays.toString(penProbes)
+            + ",\"probes\":"
+            + probes
+            + ",\"limits\":"
+            + limits
+            + ",\"ms\":"
+            + ms
+            + "}");
+    if (ZONE_APPLY != null) {
+      zoneLevel = store.level;
+      System.err.println("%% zoneApply before " + ZONE_APPLY + " " + zoneSize());
+      for (int j = 1; j < n; j++) {
+        if (apLo[j] <= lo[j] && apHi[j] >= hi[j]) {
+          continue;
+        }
+        if (apLo[j] > apHi[j]) {
+          System.err.println("%% zoneApply failed " + ZONE_APPLY);
+          Runtime.getRuntime().halt(0);
+        }
+        if (lpOnly[j]) {
+          LpColumn c = (LpColumn) x[j];
+          IntVar v = c.variable();
+          if (apHi[j] <= 0) {
+            v.domain.inComplement(store.level, v, c.value());
+          } else if (apLo[j] >= 1) {
+            v.domain.in(store.level, v, c.value(), c.value());
+          }
+        } else {
+          x[j].domain.in(store.level, x[j], (int) apLo[j], (int) apHi[j]);
+        }
+      }
+    }
+    if (Boolean.getBoolean("org.jacop.lp.zoneScreen.exit")) {
+      System.err.flush();
+      Runtime.getRuntime().halt(0);
+    }
+  }
+
+  // the bounds [nl, nh] that pivot-limited probes from the root basis keep of column j in [rl, rh]
+  private static long[] zoneSearch(
+      LpSolver p,
+      int j,
+      long lo,
+      long hi,
+      long rl,
+      long rh,
+      double target,
+      int limit,
+      Object basis) {
+    long probes = 0;
+    long low = rl;
+    long high = rh;
+    while (low < high) {
+      long mid = low + (high - low) / 2;
+      probes++;
+      if (probeStatus(p, j, lo, mid, target, lo, hi, limit, basis) == 1) {
+        low = mid + 1;
+      } else {
+        high = mid;
+      }
+    }
+    long nl = low;
+    probes++;
+    if (probeStatus(p, j, lo, nl, target, lo, hi, limit, basis) == 1) {
+      return new long[] {hi + 1, hi, probes};
+    }
+    low = nl;
+    high = rh;
+    while (low < high) {
+      long mid = low + (high - low + 1) / 2;
+      probes++;
+      if (probeStatus(p, j, mid, hi, target, lo, hi, limit, basis) == 1) {
+        high = mid - 1;
+      } else {
+        low = mid;
+      }
+    }
+    return new long[] {nl, low, probes};
+  }
+
+  private static int gcd(int a, int b) {
+    return b == 0 ? a : gcd(b, a % b);
+  }
+
+  // 1 when the relaxation with column j in [from, to] cannot reach the target, 0 otherwise
+  private static final int ZONE_DEBUG = Integer.getInteger("org.jacop.lp.zoneScreen.debug", 0);
+  private static int zoneDebug = ZONE_DEBUG;
+
+  private static LinearRelaxation probeOwner;
+
+  private static String zoneName(LinearRelaxation r, int j) {
+    IntVar v = r.x[j];
+    return v instanceof LpColumn c ? "[" + c.variable().id() + "=" + c.value() + "]" : v.id();
+  }
+
+  private static int probeStatus(
+      LpSolver probe, int j, long from, long to, double target, long lo, long hi) {
+    return probeStatus(probe, j, from, to, target, lo, hi, 100_000, null);
+  }
+
+  // with a pivot limit and the root basis: the dual simplex stays dual feasible, so the objective
+  // after a few pivots from the root optimum is a bound (the multipliers altered by those pivots)
+  private static int probeStatus(
+      LpSolver probe,
+      int j,
+      long from,
+      long to,
+      double target,
+      long lo,
+      long hi,
+      int limit,
+      Object basis) {
+    if (basis != null) {
+      probe.restoreBasis(basis);
+    }
+    probe.setBounds(j, from, to);
+    int st = probe.solve(limit);
+    int result;
+    if (st == LpSolver.INFEASIBLE) {
+      result = 1;
+    } else if (st == LpSolver.OPTIMAL || basis != null && st == LpSolver.LIMIT) {
+      // the objective is integer and the target an integer: half a unit absorbs the perturbation of
+      // the simplex (0.0007 above the target on racp j30_26 with a 1e-6 margin)
+      result = probe.objective() > target + 0.5 ? 1 : 0;
+    } else {
+      result = LpSolver.LIMIT;
+    }
+    if (result == 1 && zoneDebug > 0) {
+      zoneDebug--;
+      System.err.println(
+          "%% zoneProbe j="
+              + j
+              + " "
+              + zoneName(probeOwner, j)
+              + " ["
+              + from
+              + ","
+              + to
+              + "] of ["
+              + lo
+              + ","
+              + hi
+              + "] st="
+              + st
+              + " obj="
+              + (st == LpSolver.OPTIMAL ? probe.objective() : Double.NaN)
+              + " target="
+              + target);
+    }
+    probe.setBounds(j, lo, hi);
+    return result;
+  }
+
+  // Lagrangian filtering zones (Berthiaume and Quimper, CPAIOR 2024 and 2026): the root reduced
+  // costs come from one vector of multipliers, under which a basic column has reduced cost zero
+  // and is never fixed. For each basic column j the multipliers y + theta rho, rho the row of the
+  // basis inverse of j, give that column the coefficient theta in the combination; the largest
+  // theta of each sign that keeps the coefficients of the nonbasic columns on the sign of their
+  // bound is one dual simplex step (the penalty of Driebeek), so the combination bounds the
+  // objective by theta times the move of x_j away from its root value. Each such combination is
+  // a combination of the rows like the reduced-cost forms: kept with them, propagated again
+  // whenever the bound of the objective improves at the root level, explained by its inequality.
+  static boolean zonesOn = "true".equals(System.getProperty("org.jacop.lp.zones"));
+  private static final long ZONE_WORK = Long.getLong("org.jacop.lp.zones.work", 50_000_000L);
+  private static final int ZONE_MAX = Integer.getInteger("org.jacop.lp.zones.max", 2000);
+
+  /** Statistics: the zone forms kept at the root. */
+  public long zoneForms;
+
+  // the combination of the rows by y, by column, in floating point
+  private double[] combination(double[] y) {
+    double[] coef = new double[lp.columns()];
+    for (int i = 0; i < y.length; i++) {
+      if (y[i] == 0) {
+        continue;
+      }
+      int[] cs = rowColumns[i];
+      long[] ws = rowWeights[i];
+      for (int k = 0; k < cs.length; k++) {
+        coef[cs[k]] += y[i] * ws[k];
+      }
+    }
+    return coef;
+  }
+
+  private void addZoneForms(Store store) {
+    long started = System.nanoTime();
+    try {
+      zoneFormsAt(store);
+    } finally {
+      zoneNanos += System.nanoTime() - started;
+      if (ZONE_SCREEN_UB != null) {
+        System.err.println("%% zoneForms " + zoneForms + " " + zoneNanos / 1_000_000);
+      }
+    }
+  }
+
+  /** Statistics: time spent building the zone forms, in nanoseconds. */
+  public long zoneNanos;
+
+  private void zoneFormsAt(Store store) {
+    int n = lp.columns();
+    double[] y = byRow(lp.duals());
+    double[] dy = combination(y);
+    double[] value = new double[n];
+    long[] lo = new long[n];
+    long[] hi = new long[n];
+    for (int k = 0; k < n; k++) {
+      value[k] = lp.value(k);
+      lo[k] = lpOnly[k] ? ((LpColumn) x[k]).lower() : x[k].min();
+      hi[k] = lpOnly[k] ? ((LpColumn) x[k]).upper() : x[k].max();
+    }
+    // orientation: the reduced costs of the columns at their lower bound are of one sign
+    double votes = 0;
+    for (int k = 1; k < n; k++) {
+      if (lp.basicRow(k) < 0 && Math.abs(value[k] - lo[k]) < 1e-9 && lo[k] < hi[k]) {
+        votes += Math.signum(dy[k]);
+      } else if (lp.basicRow(k) < 0 && Math.abs(value[k] - hi[k]) < 1e-9 && lo[k] < hi[k]) {
+        votes -= Math.signum(dy[k]);
+      }
+    }
+    double sigma = votes >= 0 ? 1 : -1;
+    // the most fractional basic columns first, then the others
+    List<Integer> basic = new ArrayList<>();
+    for (int j = 1; j < n; j++) {
+      if (lp.basicRow(j) >= 0 && lo[j] < hi[j]) {
+        basic.add(j);
+      }
+    }
+    basic.sort(Comparator.comparingDouble(j -> -Math.min(value[j] - lo[j], hi[j] - value[j])));
+    List<LinearForm> forms = new ArrayList<>(Arrays.asList(rootForms));
+    List<Certificate> certificates = new ArrayList<>(Arrays.asList(rootCertificates));
+    List<int[]> facts = new ArrayList<>(Arrays.asList(rootFacts));
+    long work = 0;
+    int done = 0;
+    for (int j : basic) {
+      if (done++ >= ZONE_MAX || work > ZONE_WORK) {
+        break;
+      }
+      double[] rho = byRow(lp.inverseRow(lp.basicRow(j)));
+      double[] dr = combination(rho);
+      work += (long) rho.length + n;
+      if (Math.abs(dr[j]) < 1e-9) {
+        continue;
+      }
+      // scaled so that column j has coefficient 1 in the combination by rho
+      double unit = dr[j];
+      for (int i = 0; i < rho.length; i++) {
+        rho[i] /= unit;
+      }
+      for (int k = 0; k < n; k++) {
+        dr[k] /= unit;
+      }
+      for (int dir = -1; dir <= 1; dir += 2) {
+        // theta with sign dir; the coefficient of a column at its lower bound stays >= 0 and at its
+        // upper bound <= 0 (sigma orients the combination as the reduced costs)
+        double theta = Double.POSITIVE_INFINITY;
+        for (int k = 1; k < n; k++) {
+          if (k == j || lp.basicRow(k) >= 0) {
+            continue;
+          }
+          double e = sigma * dy[k];
+          double f = sigma * dir * dr[k];
+          if (Math.abs(f) < 1e-9) {
+            continue;
+          }
+          boolean atLo = Math.abs(value[k] - lo[k]) < 1e-9;
+          boolean atHi = Math.abs(value[k] - hi[k]) < 1e-9;
+          if (atLo && !atHi && f < 0) {
+            theta = Math.min(theta, Math.max(0, e) / -f);
+          } else if (atHi && !atLo && f > 0) {
+            theta = Math.min(theta, Math.max(0, -e) / f);
+          }
+        }
+        if (theta <= 1e-9 || Double.isInfinite(theta)) {
+          continue;
+        }
+        double[] lambda = new double[y.length];
+        for (int i = 0; i < y.length; i++) {
+          lambda[i] = y[i] + dir * theta * rho[i];
+        }
+        addZoneForm(store, lambda, j, forms, certificates, facts);
+      }
+    }
+    rootForms = forms.toArray(new LinearForm[0]);
+    rootCertificates = certificates.toArray(new Certificate[0]);
+    rootFacts = facts.toArray(new int[0][]);
+  }
+
+  private void addZoneForm(
+      Store store,
+      double[] lambda,
+      int j,
+      List<LinearForm> forms,
+      List<Certificate> certificates,
+      List<int[]> facts) {
+    for (long scale : SCALES) {
+      long[] l = scaled(lambda, scale);
+      if (l == null) {
+        return;
+      }
+      int[][] f = new int[2][];
+      long[][] used = new long[2][];
+      LinearForm[] local = certificate(l, f, used);
+      if (local == null) {
+        continue;
+      }
+      boolean fits = true;
+      for (LinearForm g : local) {
+        fits &= g == null || fits(g);
+      }
+      if (!fits && scale != 1) {
+        continue;
+      }
+      for (int k = 0; k < local.length; k++) {
+        if (local[k] != null && mentions(local[k], x[0]) && mentions(local[k], x[j])) {
+          forms.add(local[k]);
+          certificates.add(certified(local[k], used[k], k == 0));
+          facts.add(f[k]);
+          zoneForms++;
+          propagate(store, local[k], f[k], certificates.getLast());
+        }
+      }
+      return;
+    }
+  }
+
+  private static boolean mentions(LinearForm f, IntVar v) {
+    for (IntVar w : f.vars()) {
+      if (w == v) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Statistics: bounds tightened by the root reduced costs at restarts. */
   public long rootPrunings;
 
@@ -2023,6 +2654,11 @@ public class LinearRelaxation extends Constraint
     if (suspended) {
       return;
     }
+    if (zoneLevel >= 0 && store.level > zoneLevel) {
+      // the search made its first decision: the root fixpoint after the screen's pruning
+      System.err.println("%% zoneApply after " + ZONE_APPLY + " " + zoneSize());
+      Runtime.getRuntime().halt(0);
+    }
     if (rootLevel < 0) {
       rootLevel = store.level;
       rootObjective = objectiveBound();
@@ -2447,6 +3083,13 @@ public class LinearRelaxation extends Constraint
         rootForms = kept.toArray(new LinearForm[0]);
         rootCertificates = keptCertificates.toArray(new Certificate[0]);
         rootFacts = keptFacts.toArray(new int[0][]);
+        if (zonesOn && objective != null) {
+          addZoneForms(store);
+        }
+        if (ZONE_SCREEN_UB != null && !zoneScreened && calls == 1) {
+          zoneScreened = true;
+          zoneScreen(store);
+        }
         if (restartSolvesOn && RESTART_FROM_ROOT && simplex != Simplex.LAZY && objective != null) {
           rootSimplex = lp.copy();
           rootSimplexRows = rows();

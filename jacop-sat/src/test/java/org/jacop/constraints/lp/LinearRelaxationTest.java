@@ -260,6 +260,37 @@ class LinearRelaxationTest {
     }
   }
 
+  /**
+   * Filtering zones: the forms of the multipliers altered per basic column join the root reduced
+   * costs and are propagated again at each restart; they must keep the optimum under depth-first
+   * search and be sound explanations under lazy clause generation.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void zoneFormsKeepTheOptimum(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.zonesOn;
+    try {
+      LinearRelaxation.zonesOn = true;
+      long forms = 0;
+      long rootPruned = 0;
+      long checked = 0;
+      Map<String, long[]> statistics = new TreeMap<>();
+      for (int run = 0; run < RUNS; run++) {
+        LinearRelaxation r = restarts(run, simplex);
+        if (r != null) {
+          forms += r.zoneForms;
+          rootPruned += r.rootPrunings;
+        }
+        checked += lazyClauseGeneration(run, statistics, simplex);
+      }
+      assertThat(forms).isPositive();
+      assertThat(rootPruned).isPositive();
+      assertThat(checked).isPositive();
+    } finally {
+      LinearRelaxation.zonesOn = was;
+    }
+  }
+
   // solves each model with restarts after each solution; returns the restart solves and the root
   // reduced-cost prunings
   private static long[] restarts(LinearRelaxation.Simplex simplex) {
