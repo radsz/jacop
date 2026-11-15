@@ -513,8 +513,8 @@ class GlobalConstraints implements ParserTreeConstants {
    * but no cumulative rule sees it. The decomposition states the task's presence at each time point
    * through the literals of its start and of its end, and lazy clause generation learns from them
    * (Schutt, Feydy, Stuckey and Wallace, Why cumulative decomposition is not as bad as it sounds,
-   * CP 2009). XCSP 2024 Cargo-22 proves its optimum in 5 s and Cargo-10 in 35 s, which no 600 s run
-   * proved before.
+   * CP 2009). XCSP 2024 Cargo-22 proves its optimum in 4 s and Cargo-10 in 62-154 s, which no 600 s
+   * run proved before.
    */
   private boolean timeIndexedCumulative(IntVar[] s, IntVar[] d, IntVar[] r) {
     String mode = System.getProperty("org.jacop.fz.cumulativeTimeIndexed", "lcg").toLowerCase();
