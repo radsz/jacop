@@ -1267,6 +1267,10 @@ public final class LocalSearch {
       // no row cost >= s[t] + lag: the cost is not a makespan of these tasks
       return;
     }
+    if (scheduleOnly && arcs.isEmpty()) {
+      // no precedences (an open shop): run alone, the machine sequences lose to the search
+      return;
+    }
     int[] aVar = new int[n];
     int[] dur = new int[n];
     int[] release = new int[n];
@@ -3963,9 +3967,9 @@ public final class LocalSearch {
 
     /**
      * Runs only the scheduling search of {@link #scheduling(int)}: the search is not applicable
-     * when the model has no unary resource (a {@code CumulativeBasic}) or no disjunctive schedule
-     * whose makespan is the cost, and it ends when the schedules give way instead of going on with
-     * the general moves.
+     * when the model has no unary resource (a {@code CumulativeBasic}), no disjunctive schedule
+     * whose makespan is the cost or no precedences between the tasks (an open shop), and it ends
+     * when the schedules give way instead of going on with the general moves.
      *
      * @param scheduleOnly true for the scheduling search only.
      * @return this builder.

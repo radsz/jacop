@@ -734,6 +734,47 @@ class LocalSearchTest {
     assertEquals(0, none.getSteps());
   }
 
+  /** An open shop (machines and jobs as unary resources, no precedences) is left to the search. */
+  @Test
+  void leavesOpenShopsOutOfTheSchedulingSearchAlone() {
+    Store store = new Store();
+    int n = 3;
+    IntVar[][] s = new IntVar[n][n];
+    IntVar makespan = new IntVar(store, "makespan", 0, 100);
+    for (int j = 0; j < n; j++) {
+      for (int m = 0; m < n; m++) {
+        s[j][m] = new IntVar(store, "s" + j + m, 0, 100);
+        store.impose(
+            new LinearInt(new IntVar[] {s[j][m], makespan}, new int[] {1, -1}, "<=", -(j + m + 1)));
+      }
+    }
+    IntVar one = new IntVar(store, 1, 1);
+    for (int a = 0; a < n; a++) {
+      IntVar[] job = new IntVar[n];
+      IntVar[] machine = new IntVar[n];
+      IntVar[] jobDur = new IntVar[n];
+      IntVar[] machineDur = new IntVar[n];
+      for (int b = 0; b < n; b++) {
+        job[b] = s[a][b];
+        jobDur[b] = new IntVar(store, a + b + 1, a + b + 1);
+        machine[b] = s[b][a];
+        machineDur[b] = new IntVar(store, a + b + 1, a + b + 1);
+      }
+      IntVar[] ones = new IntVar[n];
+      java.util.Arrays.fill(ones, one);
+      store.impose(new Cumulative(job, jobDur, ones, one));
+      store.impose(new Cumulative(machine, machineDur, ones, one));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .minimize(makespan)
+            .scheduleOnly(true)
+            .timeLimit(Duration.ofSeconds(1))
+            .build();
+    assertEquals(LocalSearch.Status.NOT_APPLICABLE, ls.solve());
+  }
+
   /**
    * The time limit holds when one step evaluates thousands of costly constraints: two Regular
    * constraints on the sum modulo 40 of 150 variables that no assignment satisfies together.
