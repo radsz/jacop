@@ -6448,7 +6448,16 @@ public final class LcgSolver implements ExternalPropagator {
     int d = Math.abs(lit);
     int i = d < litVar.length ? litVar[d] : -1;
     if (i < 0 || sharedId[i] < 0) {
-      return; // an auxiliary literal or a variable of this store only: no split this time
+      // an auxiliary literal or a variable of this store only, such as the objective: no split on
+      // it. With the fixpoint's atoms pushed before a conflict, the objective's atoms stay in the
+      // conflict clauses, and every run of a 60-item knapsack under portfolio-split=4 decided on
+      // the objective first, so the tree never split (30 s instead of 2 s); the split is then on
+      // the next decision on a shared variable (30 of 30 runs in 1-2 s). Without the push the
+      // split waits for the next run, as before: deferred, it timed out in 3 of 34 runs
+      if (pushBeforeConflict) {
+        sat.notifyNextDecision();
+      }
+      return;
     }
     int kind = litKind[d] + (lit < 0 ? SharedClauses.NEGATED : 0);
     int negatedKind = litKind[d] + (lit < 0 ? 0 : SharedClauses.NEGATED);
