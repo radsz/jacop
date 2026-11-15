@@ -6079,6 +6079,18 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
+340. Under -f, a model whose cost is the makespan of a disjunctive
+   schedule (unary resources and precedences between the task starts,
+   such as job shops, also with decomposed disjunctions) first runs the
+   critical-path tabu search of local search alone, for half of the time
+   left until it stalls for 5 s, without --free-config ls. On the 50x10
+   job shops swv11-swv14 (240 s) the makespans drop by 2-13 % and beat
+   CP-SAT; open shops (no precedences) and portfolio workers are left out.
+   --free-config ls-auto=0 turns it off. Nowicki and Smutnicki, A fast
+   taboo search algorithm for the job shop problem, Management Science
+   1996; Dell'Amico and Trubian, Applying tabu search to the job-shop
+   scheduling problem, Annals of OR 1993.
+
 Version 4.11
 =============
 
