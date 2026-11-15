@@ -298,6 +298,25 @@ class LinearRelaxationTest {
     }
   }
 
+  /**
+   * The cut rounds of the restart solves over the bounds of the root level at that restart
+   * (org.jacop.lp.restartBounds) keep the optimum of every model, as depth-first search finds it.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsTheOptimumWithCutsOverTheRestartBounds(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    boolean bounds = LinearRelaxation.restartBoundsOn;
+    try {
+      LinearRelaxation.restartSolvesOn = true;
+      LinearRelaxation.restartBoundsOn = true;
+      assertThat(restarts(simplex)[0]).isPositive();
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+      LinearRelaxation.restartBoundsOn = bounds;
+    }
+  }
+
   // solves each model with restarts after each solution; returns the restart solves and the root
   // reduced-cost prunings
   private static long[] restarts(LinearRelaxation.Simplex simplex) {
