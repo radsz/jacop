@@ -640,6 +640,11 @@ public class LinearRelaxation extends Constraint
   // (-Dorg.jacop.lp.mirSearch=true): the separations take the work budget of the LP calls, so on a
   // knapsack of 60 items the LP ran 8 times less often and the search needed 7 times more nodes
   private static final boolean MIR_SEARCH = Boolean.getBoolean("org.jacop.lp.mirSearch");
+  // Gomory cuts alone in search, as mirSearch but without the MIR of the single rows: by source,
+  // the Gomory rows give most of what the cuts give at the root (osolpro lp-cut-sources); off by
+  // default (-Dorg.jacop.lp.gomorySearch=true)
+  private static final boolean GOMORY_SEARCH = Boolean.getBoolean("org.jacop.lp.gomorySearch");
+  private static final Aggregate[] NO_ROWS = new Aggregate[0];
   private static final int MIR_SEARCH_CUTS = Integer.getInteger("org.jacop.lp.mirSearchCuts", 10);
   // the largest weight of a cut made in the cut rounds (see MirCut.capped), unlimited by default
   // (-Dorg.jacop.lp.cutWeight=1048576 for 2^20): a cut row of weights near 2^24, with a right side
@@ -2644,7 +2649,7 @@ public class LinearRelaxation extends Constraint
       status = cutRounds();
     }
     if (status == LpSolver.OPTIMAL
-        && MIR_SEARCH
+        && (MIR_SEARCH || GOMORY_SEARCH)
         && mirRows != null
         && mirColumns == lp.columns()
         && objective != null
@@ -3328,6 +3333,9 @@ public class LinearRelaxation extends Constraint
       hi[q] = hasHi[i] ? rowHi[i] : Double.POSITIVE_INFINITY;
       lpRow[l + q] = i;
       inLp[i] = true;
+      if (SOURCE_AGE) {
+        sourceBack[sourceId(i)]++;
+      }
       if (sources != null) {
         sources.of(source(i)).returns++;
       }
@@ -3376,9 +3384,15 @@ public class LinearRelaxation extends Constraint
     for (int k = baseCount; k < lpRow.length; k++) {
       if (inactive[k] >= ageOf(lpRow[k], age)) {
         gone[old++] = k;
-        if (sources != null) {
-          sources.of(source(lpRow[k])).agedOut++;
-        }
+      }
+    }
+    // counted after the choice, which the counts of the sources steer
+    for (int k : gone) {
+      if (SOURCE_AGE) {
+        sourceLeft[sourceId(lpRow[k])]++;
+      }
+      if (sources != null) {
+        sources.of(source(lpRow[k])).agedOut++;
       }
     }
     int[] kept = lp.removeRows(gone);
@@ -3406,7 +3420,59 @@ public class LinearRelaxation extends Constraint
 
   // the inactive solves after which row i of the pool leaves the simplex
   private int ageOf(int i, int age) {
-    return i < returns.length ? age << Math.min(returns[i], 6) : age;
+    int a = i < returns.length ? age << Math.min(returns[i], 6) : age;
+    return SOURCE_AGE ? sourceAge(i, a) : a;
+  }
+
+  // ageing by source (org.jacop.lp.sourceAge): once SOURCE_AGE_SEEN rows of a source have left the
+  // simplex, a source whose rows mostly came back (Gomory cuts: 54 % on the wide set) keeps its
+  // rows four times longer, and a source whose rows hardly ever came back (tree, capacity cuts,
+  // clauses of lazy clause generation) lets them go four times sooner
+  private static final boolean SOURCE_AGE = Boolean.getBoolean("org.jacop.lp.sourceAge");
+  private static final int SOURCE_AGE_SEEN = 20;
+  private final Map<String, Integer> sourceIds = new HashMap<>();
+  private int[] rowSourceId = new int[0];
+  private int[] sourceLeft = new int[0];
+  private int[] sourceBack = new int[0];
+
+  private int sourceId(int i) {
+    if (i >= rowSourceId.length) {
+      int old = rowSourceId.length;
+      rowSourceId = Arrays.copyOf(rowSourceId, Math.max(i + 1, 2 * old));
+      Arrays.fill(rowSourceId, old, rowSourceId.length, -1);
+    }
+    if (rowSourceId[i] < 0) {
+      Integer id = sourceIds.computeIfAbsent(source(i), q -> sourceIds.size());
+      rowSourceId[i] = id;
+      if (id >= sourceLeft.length) {
+        sourceLeft = Arrays.copyOf(sourceLeft, id + 8);
+        sourceBack = Arrays.copyOf(sourceBack, id + 8);
+      }
+    }
+    return rowSourceId[i];
+  }
+
+  private int sourceAge(int i, int a) {
+    int id = sourceId(i);
+    int left = sourceLeft[id];
+    if (left < SOURCE_AGE_SEEN) {
+      return a;
+    }
+    int back = sourceBack[id];
+    if (2 * back >= left) {
+      return a << 2;
+    }
+    if (20 * back < left) {
+      return Math.max(8, a >> 2);
+    }
+    return a;
+  }
+
+  // the rows of the pool from i on may have other sources now
+  private void forgetSources(int i) {
+    if (i < rowSourceId.length) {
+      Arrays.fill(rowSourceId, i, rowSourceId.length, -1);
+    }
   }
 
   // y scaled so that its largest entry is about scale, rounded; null when y is zero. With the
@@ -4538,7 +4604,7 @@ public class LinearRelaxation extends Constraint
         separateCuts(
             Arrays.copyOf(rootLo, n),
             Arrays.copyOf(rootHi, n),
-            mirRows,
+            MIR_SEARCH ? mirRows : NO_ROWS,
             mirSeen,
             MIR_SEARCH_WEIGHT);
     List<MirCut> chosen =
@@ -4998,6 +5064,7 @@ public class LinearRelaxation extends Constraint
 
   // the rows are the m given ones and the first k extra rows
   private void setExtraRows(int m, int k) {
+    forgetSources(m);
     rowColumns = Arrays.copyOf(rowColumns, m + k);
     rowWeights = Arrays.copyOf(rowWeights, m + k);
     rowLo = Arrays.copyOf(rowLo, m + k);
@@ -5149,6 +5216,7 @@ public class LinearRelaxation extends Constraint
   // with org.jacop.lp.poolExtra those over the columns of the simplex stay in the pool, out of the
   // simplex, and enter it when its solution breaks them; the others are removed
   private void poolExtraRows(int m, int k) {
+    forgetSources(m);
     List<LinearForm> pooled = new ArrayList<>();
     int kept = m;
     for (int q = 0; POOL_EXTRA && q < k; q++) {
@@ -5251,6 +5319,7 @@ public class LinearRelaxation extends Constraint
 
   // keeps the first m rows
   private void truncateRows(int m) {
+    forgetSources(m);
     returns = Arrays.copyOf(returns, Math.min(returns.length, m));
     cutSource = Arrays.copyOf(cutSource, Math.min(cutSource.length, m));
     rowColumns = Arrays.copyOf(rowColumns, m);
@@ -5331,6 +5400,7 @@ public class LinearRelaxation extends Constraint
     lp.addRows(cs, ws, lo, hi);
     cuts += k;
     cutSource = Arrays.copyOf(cutSource, m + k);
+    forgetSources(m);
     for (int q = 0; q < k; q++) {
       String source = chosen.get(q).source;
       cutSource[m + q] = (calls > 1 && !restarting ? "s-" : "") + (source == null ? "cut" : source);
