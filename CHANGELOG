@@ -6087,6 +6087,18 @@ Version 5.0 (unreleased)
    ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
    6.6 % and 3 % more nodes.
 
+346. SumWeight reads the whole queue of changed variables and reuses its set
+   between calls; it stopped at the first variable already behind its
+   pointer, which never left a value unpruned (100,000 WakeUpFixpointTest
+   trials with a new SumWeight case). ElementInteger with an index smaller
+   than its domain pruning limit unions the values of the index directly
+   instead of walking the groups of duplicate values. On the 45 wide
+   instances that post one of them (fixed search, 600 s) time is 1.011 of
+   before over the 30 solved by both, inside the noise (0.978 at 240 s),
+   and the 15 unsolved search 0.7 % more nodes; physician-scheduling
+   instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
+   objectives, none worse.
+
 Version 4.11
 =============
 
