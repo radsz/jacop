@@ -69,6 +69,16 @@ public class XorSystemDetector implements ParserTreeConstants {
 
   static final int MAX_ROWS = Integer.getInteger("jacop.fz.xorSystemRows", 20_000);
 
+  // equations over 0/1 variables enter the system (see linear(int[], IntVar[], int))
+  static final boolean ZERO_ONE_EQUALITIES =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.xorZeroOne"));
+
+  // the longest inequality matched with its opposite into an equation
+  static final int MAX_PAIRED_LENGTH = 64;
+
+  // the inequalities over 0/1 variables not yet matched, by their terms
+  private final Map<Map<IntVar, Integer>, Integer> lessEquals = new HashMap<>();
+
   private final Support support;
 
   private final Map<IntVar, Integer> index = new IdentityHashMap<>();
@@ -89,6 +99,12 @@ public class XorSystemDetector implements ParserTreeConstants {
   int tableRows;
 
   int linearRows;
+
+  /** Statistics: the rows from equations over 0/1 variables only. */
+  int zeroOneRows;
+
+  /** Statistics: the equations read as two opposite inequalities. */
+  int pairedRows;
 
   // the 0/1 columns of a table read, at most, for its implied parities
   static final int MAX_TABLE_COLUMNS = 63;
@@ -119,6 +135,7 @@ public class XorSystemDetector implements ParserTreeConstants {
    */
   public void detect(SimpleNode astTree) {
     support.forEachConstraint(astTree, this::collect);
+    lessEquals.clear();
     if (rows.size() < 2) {
       return;
     }
@@ -156,6 +173,18 @@ public class XorSystemDetector implements ParserTreeConstants {
       systems++;
       systemRows += members.size();
     }
+    if (support.options.searchStatistics() && systems > 0) {
+      FzConsole.println(
+          "%%%mzn-stat: xorSystems="
+              + systems
+              + "\n%%%mzn-stat: xorSystemRows="
+              + systemRows
+              + "\n%%%mzn-stat: xorZeroOneRows="
+              + zeroOneRows
+              + "\n%%%mzn-stat: xorPairedRows="
+              + pairedRows
+              + "\n%%%mzn-stat-end");
+    }
     if (support.options.debug() && systems > 0) {
       FzConsole.println(
           "% XorSystem: "
@@ -192,6 +221,11 @@ public class XorSystemDetector implements ParserTreeConstants {
       case "int_lin_eq" -> {
         if (node.jjtGetNumChildren() == 3) {
           linear(node);
+        }
+      }
+      case "int_lin_le" -> {
+        if (node.jjtGetNumChildren() == 3 && ZERO_ONE_EQUALITIES) {
+          lessEqual(node);
         }
       }
       case "jacop_table_int", "jacop_table_bool" -> {
@@ -339,6 +373,43 @@ public class XorSystemDetector implements ParserTreeConstants {
   }
 
   /**
+   * It reads a_1 x_1 + ... + a_n x_n &lt;= k over 0/1 variables and, when the model also has -a_1
+   * x_1 - ... - a_n x_n &lt;= -k (an equation written as two inequalities, as in OPB files), adds
+   * the parity row of a_1 x_1 + ... + a_n x_n = k as {@link #linear} does.
+   */
+  private void lessEqual(ASTConstElem node) {
+    int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    if (a.length != v.length || v.length < 2 || v.length > MAX_PAIRED_LENGTH) {
+      return;
+    }
+    Map<IntVar, Integer> terms = new HashMap<>();
+    for (int i = 0; i < v.length; i++) {
+      if (v[i].min() < 0 || v[i].max() > 1) {
+        return;
+      }
+      terms.merge(v[i], a[i], Integer::sum);
+    }
+    terms.values().removeIf(c -> c == 0);
+    int k = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    Map<IntVar, Integer> negated = new HashMap<>();
+    terms.forEach((x, c) -> negated.put(x, -c));
+    Integer other = lessEquals.get(negated);
+    if (other != null && other == -k) {
+      lessEquals.remove(negated);
+      IntVar[] x = terms.keySet().toArray(new IntVar[0]);
+      int[] c = new int[x.length];
+      for (int i = 0; i < x.length; i++) {
+        c[i] = terms.get(x[i]);
+      }
+      pairedRows++;
+      linear(c, x, k);
+    } else {
+      lessEquals.putIfAbsent(terms, k);
+    }
+  }
+
+  /**
    * It adds the parity row of a_1 x_1 + ... + a_n x_n = k when every variable with an odd
    * coefficient is a 0/1 variable or takes values of one parity only: taken modulo 2, the equation
    * is the xor of the 0/1 variables with odd coefficients, and the other terms move to the parity
@@ -347,10 +418,22 @@ public class XorSystemDetector implements ParserTreeConstants {
   private void linear(ASTConstElem node) {
     int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    linear(a, v, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)));
+  }
+
+  /**
+   * It adds the parity row of a_1 x_1 + ... + a_n x_n = k, see {@link #linear(ASTConstElem)}. An
+   * equation over 0/1 variables only enters (with {@code org.jacop.fz.xorZeroOne}, on by default)
+   * unless it is a cardinality of value 1 or n - 1 over n variables: x_1 + ... + x_7 = 3 over the
+   * edges of a vertex is one row of the parity argument of an even colouring (PB competition
+   * evencolouring, ec_*), which the rows of the whole graph give together, while exactly-one rows,
+   * common in assignment models, are left out.
+   */
+  private void linear(int[] a, IntVar[] v, int rhs) {
     if (a.length != v.length || v.length < 2) {
       return;
     }
-    int parity = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) & 1;
+    int parity = rhs & 1;
     // odd coefficients per variable; a variable listed twice adds its coefficients
     Map<IntVar, Integer> odd = new IdentityHashMap<>();
     for (int i = 0; i < v.length; i++) {
@@ -376,12 +459,35 @@ public class XorSystemDetector implements ParserTreeConstants {
         nonBinary = true;
       }
     }
-    // a plain 0/1 equation such as x_1 + ... + x_k = 1 is no parity information beyond itself
-    if (!nonBinary || x.size() < 2) {
+    if (x.size() < 2) {
       return;
+    }
+    // a plain 0/1 equation such as x_1 + ... + x_k = 1 is no parity information beyond itself
+    if (!nonBinary && !(ZERO_ONE_EQUALITIES && zeroOneParity(a, v, rhs))) {
+      return;
+    }
+    if (!nonBinary) {
+      zeroOneRows++;
     }
     linearRows++;
     row(x.toArray(new IntVar[0]), parity);
+  }
+
+  // whether an equation over 0/1 variables enters the system: two variables (an equivalence or a
+  // negation), or not a cardinality of value 1 or n - 1 over n variables (exactly one, or all
+  // but one)
+  private static boolean zeroOneParity(int[] a, IntVar[] v, int rhs) {
+    if (v.length == 2) {
+      return true;
+    }
+    int sign = Integer.signum(a[0]);
+    for (int c : a) {
+      if (c != sign) {
+        return true;
+      }
+    }
+    int k = sign * rhs;
+    return k != 1 && k != v.length - 1;
   }
 
   // the parity of all values of the domain of y, or -1 when it has values of both parities
