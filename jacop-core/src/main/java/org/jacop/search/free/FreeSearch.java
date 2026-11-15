@@ -581,6 +581,18 @@ public final class FreeSearch {
             xs[k].domain.inMax(store.level, xs[k], lns.value(k));
           }
         }
+        int[] windowed = lns.windowed();
+        int[] low = lns.windowLow();
+        int[] high = lns.windowHigh();
+        for (int j = 0; j < windowed.length; j++) {
+          IntVar x = xs[windowed[j]];
+          if (low[j] > x.min()) {
+            x.domain.inMin(store.level, x, low[j]);
+          }
+          if (high[j] < x.max()) {
+            x.domain.inMax(store.level, x, high[j]);
+          }
+        }
       } else {
         hook.restart(store, hookStatus);
       }

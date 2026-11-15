@@ -399,6 +399,8 @@ public final class LcgSolver implements ExternalPropagator {
   private int numPopped;
   // the values of the last solution, preferred in decisions
   private int[] phase;
+  // a neighbourhood run that takes the smallest values (AdaptiveLns.Completion.EARLIEST)
+  private boolean lnsEarliest;
   // target phases of activity branching (CaDiCaL's target phases over integer values): the values
   // of the variables fixed at the conflict with the longest SAT trail since the last restart, taken
   // until the first solution gives its values. On under free search (-f) by default;
@@ -4081,7 +4083,10 @@ public final class LcgSolver implements ExternalPropagator {
     while (sat.now() < end) {
       int[] fixed = lns.neighbourhood();
       int[] upper = lns.upperBounded();
-      int[] assumed = new int[fixed.length + upper.length];
+      int[] windowed = lns.windowed();
+      int[] low = lns.windowLow();
+      int[] high = lns.windowHigh();
+      int[] assumed = new int[fixed.length + upper.length + 2 * windowed.length];
       int n = 0;
       for (int k : fixed) {
         int i = lnsIds[k];
@@ -4097,10 +4102,29 @@ public final class LcgSolver implements ExternalPropagator {
           assumed[n++] = -geVar(i, v + 1);
         }
       }
+      for (int j = 0; j < windowed.length; j++) {
+        int i = lnsIds[windowed[j]];
+        if (i < 0 || vars[i].singleton()) {
+          continue;
+        }
+        if (low[j] > vars[i].min() && low[j] <= vars[i].max()) {
+          assumed[n++] = geVar(i, low[j]);
+        }
+        if (high[j] < vars[i].max() && high[j] >= vars[i].min()) {
+          assumed[n++] = -geVar(i, high[j] + 1);
+        }
+      }
       long before = best[objective];
       sat.setConflictLimit(sat.conflicts + lnsConflicts);
       lnsRuns++;
-      int result = solve(Arrays.copyOf(assumed, n));
+      // the earliest completion leaves the best solution's values for the smallest ones
+      lnsEarliest = lns.completion() == AdaptiveLns.Completion.EARLIEST;
+      int result;
+      try {
+        result = solve(Arrays.copyOf(assumed, n));
+      } finally {
+        lnsEarliest = false;
+      }
       boolean improved = best[objective] < before;
       if (improved) {
         lnsImproved++;
@@ -7112,6 +7136,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     IntVar x = vars[i];
     searchDecisions++;
+    if (lnsEarliest) {
+      return -geLit(i, x.min() + 1);
+    }
     if (phase != null && x.domain.contains(phase[i])) {
       return assignLit(i, phase[i]);
     }

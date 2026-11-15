@@ -53,6 +53,8 @@ import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.cumulative.CumulativeOptional;
+import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
@@ -92,6 +94,11 @@ import org.jacop.lcg.LinearForm;
  *   <li>{@link Kind#LINES}: the scopes of random all-different constraints, with the variables that
  *       constraints of at most five variables tie to them and to no other all-different scope; on a
  *       round-robin schedule, whole rounds with their venues and travels.
+ *   <li>{@link Kind#POS}: partial-order-schedule neighbourhoods over the cumulative and unary
+ *       resources (Godard, Laborie and Nuijten, ICAPS 2005): tasks removed from the precedences
+ *       that chain the best solution's tasks over the units of each resource; the other tasks keep
+ *       these precedences, not their times, as windows of their starts ({@link #windowed()}), so
+ *       they can move both ways (see {@link PartialOrderSchedule}).
  * </ul>
  *
  * <p>A neighbourhood made of variables that the runs do not fix (a task's start defined by the
@@ -142,7 +149,28 @@ public final class AdaptiveLns {
      * The variables of random all-different constraints, with the variables that small constraints
      * tie to them alone: whole rounds of a round-robin schedule, with their venues and travels.
      */
-    LINES
+    LINES,
+    /**
+     * Tasks removed from the partial-order schedule of the best solution; the other tasks keep its
+     * precedences as windows of their starts.
+     */
+    POS
+  }
+
+  /**
+   * How a run completes a neighbourhood: the search that assigns the relaxed variables. The engine
+   * asks {@link #completion()} before a run; like the kinds, the completions are chosen by roulette
+   * on how often their runs improved the best solution (self-adapting LNS, Laborie and Godard,
+   * MISTA 2007).
+   */
+  public enum Completion {
+    /** The values of the best solution first, as the engine does by default. */
+    INCUMBENT,
+    /**
+     * The smallest value first: on start times, each task as early as it can, the left shift of a
+     * schedule-generation scheme.
+     */
+    EARLIEST
   }
 
   /** How a run in a neighbourhood ended. */
@@ -220,6 +248,8 @@ public final class AdaptiveLns {
   private int[] termMax = new int[0];
   // the tasks of the resources (nodes of their start, duration and resource)
   private int[][] tasks = new int[0][];
+  // the partial-order schedule over the resources of the POS kind
+  private final PartialOrderSchedule pos = new PartialOrderSchedule();
   // the rectangles of non-overlap constraints, as nodes of x, y, width and height (-1 - value for a
   // constant), one array per constraint
   private int[][][] packings = new int[0][][];
@@ -253,6 +283,14 @@ public final class AdaptiveLns {
   private long totalRuns;
   private long totalImproved;
 
+  // the completions, their scores, runs and improving runs, and the one of the current run
+  private static final Completion[] COMPLETIONS = Completion.values();
+  private final double[] completionScore = new double[COMPLETIONS.length];
+  private final long[] completionRuns = new long[COMPLETIONS.length];
+  private final long[] completionImproved = new long[COMPLETIONS.length];
+  private Completion lastCompletion;
+  private boolean completionsOff;
+
   /**
    * Creates the neighbourhoods over the given variables. The graph of the constraints is read now,
    * so it is created at the root, before the search.
@@ -278,6 +316,7 @@ public final class AdaptiveLns {
     disabled = new boolean[kinds.length];
     Arrays.fill(share, FIRST_SHARE);
     Arrays.fill(score, 1.0);
+    Arrays.fill(completionScore, 1.0);
     buildGraph();
     for (Routes r : imposedRoutes) {
       addRoutes(r);
@@ -652,6 +691,7 @@ public final class AdaptiveLns {
     for (RouteStructure r : routings) {
       r.solution();
     }
+    pos.invalidate();
     hasIncumbent = true;
   }
 
@@ -703,6 +743,7 @@ public final class AdaptiveLns {
     for (int u : watched) {
       nodeValue[u] = known[u] ? given[u] : nodes[u].min();
     }
+    pos.invalidate();
     hasIncumbent = true;
     return true;
   }
@@ -743,10 +784,48 @@ public final class AdaptiveLns {
     return bounded;
   }
 
+  // the variables that the last neighbourhood keeps in windows, and the windows
+  private int[] windowed = new int[0];
+  private int[] windowLow = new int[0];
+  private int[] windowHigh = new int[0];
+
+  /**
+   * Returns the variables that the last {@link #neighbourhood()} neither fixes nor relaxes but
+   * keeps in a window, {@link #windowLow()} to {@link #windowHigh()}: the starts of the tasks a
+   * {@link Kind#POS} neighbourhood keeps, which may move as far as the precedences of the
+   * partial-order schedule allow.
+   *
+   * @return their indices, empty for the other kinds
+   */
+  public int[] windowed() {
+    return windowed;
+  }
+
+  /**
+   * Returns the smallest values of the variables of {@link #windowed()}, in the same order.
+   *
+   * @return the lower ends of the windows
+   */
+  public int[] windowLow() {
+    return windowLow;
+  }
+
+  /**
+   * Returns the largest values of the variables of {@link #windowed()}, in the same order.
+   *
+   * @return the upper ends of the windows
+   */
+  public int[] windowHigh() {
+    return windowHigh;
+  }
+
   /** The next neighbourhood of the given kind, which the tests choose. */
   int[] neighbourhood(Kind kind) {
     last = kind;
     bounded = new int[0];
+    windowed = new int[0];
+    windowLow = windowed;
+    windowHigh = windowed;
     runs[kind.ordinal()]++;
     totalRuns++;
     int free = 0;
@@ -773,6 +852,7 @@ public final class AdaptiveLns {
           case PACKING -> packingRelax(relaxed);
           case BLOCKS -> blocksRelax(relaxed);
           case LINES -> linesRelax(relaxed);
+          case POS -> posRelax(relaxed);
           default -> null;
         };
     if (relax == null) {
@@ -812,6 +892,14 @@ public final class AdaptiveLns {
     int k = last.ordinal();
     double reward = outcome == Outcome.IMPROVED ? 1.0 : 0.0;
     score[k] = (1 - DECAY) * score[k] + DECAY * (reward + FLOOR);
+    if (lastCompletion != null) {
+      int c = lastCompletion.ordinal();
+      completionScore[c] = (1 - DECAY) * completionScore[c] + DECAY * (reward + FLOOR);
+      if (outcome == Outcome.IMPROVED) {
+        completionImproved[c]++;
+      }
+      lastCompletion = null;
+    }
     switch (outcome) {
       case IMPROVED -> {
         improvements[k]++;
@@ -821,6 +909,63 @@ public final class AdaptiveLns {
       case LIMIT -> share[k] = Math.max(1e-4, share[k] / SHARE_STEP);
     }
     last = null;
+  }
+
+  /**
+   * Chooses how the run in the last {@link #neighbourhood()} completes it, by roulette on the
+   * scores of the completions. Models without cumulative or unary resources, and neighbourhoods
+   * after {@link #disableCompletions()}, always get {@link Completion#INCUMBENT}, which is not
+   * scored then.
+   *
+   * @return the completion of the run
+   */
+  public Completion completion() {
+    if (completionsOff || !(pos.usable() || tasks.length > 1)) {
+      return Completion.INCUMBENT;
+    }
+    double total = 0;
+    for (double v : completionScore) {
+      total += v;
+    }
+    double r = random.nextDouble() * total;
+    Completion chosen = COMPLETIONS[COMPLETIONS.length - 1];
+    for (Completion c : COMPLETIONS) {
+      r -= completionScore[c.ordinal()];
+      if (r < 0) {
+        chosen = c;
+        break;
+      }
+    }
+    completionRuns[chosen.ordinal()]++;
+    lastCompletion = chosen;
+    return chosen;
+  }
+
+  /**
+   * Makes {@link #completion()} always return {@link Completion#INCUMBENT}.
+   *
+   * @return this
+   */
+  public AdaptiveLns disableCompletions() {
+    completionsOff = true;
+    return this;
+  }
+
+  /**
+   * Returns the runs and improving runs of each completion, for statistics.
+   *
+   * @return text such as {@code INCUMBENT 10/2, EARLIEST 8/1}
+   */
+  public String completionStatistics() {
+    StringBuilder b = new StringBuilder();
+    for (Completion c : COMPLETIONS) {
+      if (!b.isEmpty()) {
+        b.append(", ");
+      }
+      int i = c.ordinal();
+      b.append(c).append(' ').append(completionRuns[i]).append('/').append(completionImproved[i]);
+    }
+    return b.toString();
   }
 
   /**
@@ -898,6 +1043,7 @@ public final class AdaptiveLns {
       case PACKING -> packings.length > 0;
       case BLOCKS -> groups.length > 1;
       case LINES -> lines.length > 1;
+      case POS -> pos.usable();
       case ROUTES, RELATED -> !routings.isEmpty();
       default -> true;
     };
@@ -1520,6 +1666,7 @@ public final class AdaptiveLns {
           readLine(c, nodeOf, lineList);
         }
         readStructure(c, nodeOf, taskList, taskStarts);
+        readResource(c, nodeOf);
         if (c instanceof Nooverlap packing) {
           readPacking(packing, nodeOf, packingList);
         }
@@ -1568,6 +1715,17 @@ public final class AdaptiveLns {
     java.util.BitSet w = new java.util.BitSet(nodes.length);
     for (int[] t : tasks) {
       w.set(t[0]);
+    }
+    for (int t = 0; t < pos.tasks(); t++) {
+      if (pos.startNode(t) >= 0) {
+        w.set(pos.startNode(t));
+      }
+      for (int u : pos.parts(t)) {
+        w.set(u);
+      }
+    }
+    for (int u : posLimits) {
+      w.set(u);
     }
     for (int[][] p : packings) {
       for (int[] r : p) {
@@ -1632,6 +1790,197 @@ public final class AdaptiveLns {
       }
     }
     return relax;
+  }
+
+  // the nodes of the variable limits of the POS resources
+  private final List<Integer> posLimits = new ArrayList<>();
+
+  /**
+   * Records a cumulative or unary resource for {@link Kind#POS}: its starts, durations, uses and
+   * limit, each a node or a constant of at least 0. Resources with optional tasks are left out,
+   * since a task that is absent from the best solution uses nothing there.
+   */
+  private void readResource(Constraint c, Map<Var, Integer> nodeOf) {
+    if (!(c instanceof CumulativeBasic resource)
+        || c instanceof CumulativeOptional
+        || c instanceof CumulativeUnaryOptional) {
+      return;
+    }
+    IntVar[][] t = resource.tasks();
+    int n = t[0].length;
+    int[][] refs = new int[3][n];
+    for (int j = 0; j < 3; j++) {
+      for (int i = 0; i < n; i++) {
+        refs[j][i] = reference(nodeOf, t[j][i]);
+        if (refs[j][i] == Integer.MIN_VALUE) {
+          return;
+        }
+      }
+    }
+    int limit = reference(nodeOf, resource.limit());
+    if (limit == Integer.MIN_VALUE || n < 2) {
+      return;
+    }
+    if (limit >= 0) {
+      posLimits.add(limit);
+    }
+    pos.addResource(refs[0], refs[1], refs[2], limit);
+  }
+
+  /** A node, -1 - value for a constant of at least 0, or Integer.MIN_VALUE for neither. */
+  private static int reference(Map<Var, Integer> nodeOf, IntVar x) {
+    if (x.singleton()) {
+      return x.value() >= 0 ? -1 - x.value() : Integer.MIN_VALUE;
+    }
+    Integer node = nodeOf.get(x);
+    return node == null ? Integer.MIN_VALUE : node;
+  }
+
+  /**
+   * A partial-order-schedule neighbourhood: removes tasks (a window of time of the best solution,
+   * tasks at random, or tasks near each other in the partial-order schedule, each a third of the
+   * time) until enough decision variables are relaxed. The starts of the other tasks that are
+   * decision variables get windows instead of values, and the decision variables tied to such a
+   * start alone by a constraint of at most {@link #COMPANION_ARITY} variables (its end, an
+   * earliness or a precedence literal) are relaxed with them, so that the start can move.
+   */
+  private boolean[] posRelax(int relaxed) {
+    pos.build(this::valueOf);
+    int n = pos.tasks();
+    boolean[] relax = new boolean[vars.length];
+    boolean[] removed = new boolean[n];
+    int count = 0;
+    int[] order = pos.order();
+    int way = random.nextInt(3);
+    if (way == 0) {
+      int first = random.nextInt(n);
+      for (int k = first; k < n && count < relaxed; k++) {
+        count += removeTask(order[k], removed, relax);
+      }
+      for (int k = first - 1; k >= 0 && count < relaxed; k--) {
+        count += removeTask(order[k], removed, relax);
+      }
+    } else if (way == 1) {
+      int[] shuffledTasks = shuffled(n);
+      for (int k = 0; k < n && count < relaxed; k++) {
+        count += removeTask(shuffledTasks[k], removed, relax);
+      }
+    } else {
+      // breadth first over the precedences from a task at random
+      int[] queue = new int[n];
+      boolean[] queued = new boolean[n];
+      int head = 0;
+      int tail = 0;
+      int[] seeds = shuffled(n);
+      int nextSeed = 0;
+      while (count < relaxed && nextSeed < n) {
+        if (head == tail) {
+          int s = seeds[nextSeed++];
+          if (queued[s]) {
+            continue;
+          }
+          queued[s] = true;
+          queue[tail++] = s;
+        }
+        int t = queue[head++];
+        count += removeTask(t, removed, relax);
+        for (int q : pos.neighbours(t)) {
+          if (!queued[q]) {
+            queued[q] = true;
+            queue[tail++] = q;
+          }
+        }
+      }
+    }
+    int[] min = new int[n];
+    int[] max = new int[n];
+    boolean[] isTaskNode = posTaskNodes();
+    for (int t = 0; t < n; t++) {
+      int u = pos.startNode(t);
+      min[t] = u >= 0 ? nodes[u].min() : -1 - u;
+      max[t] = u >= 0 ? nodes[u].max() : -1 - u;
+    }
+    long[] low = new long[n];
+    long[] high = new long[n];
+    pos.windows(removed, min, max, low, high);
+    int[] w = new int[n];
+    int[] lo = new int[n];
+    int[] hi = new int[n];
+    int m = 0;
+    for (int t = 0; t < n; t++) {
+      int u = pos.startNode(t);
+      if (removed[t] || u < 0 || u >= vars.length || vars[u].singleton() || relax[u]) {
+        continue;
+      }
+      relax[u] = true;
+      w[m] = u;
+      lo[m] = (int) low[t];
+      hi[m] = (int) high[t];
+      m++;
+      for (int c : varCons[u]) {
+        if (conVars[c].length > COMPANION_ARITY) {
+          continue;
+        }
+        for (int x : conVars[c]) {
+          if (x != u && x < vars.length && !isTaskNode[x]) {
+            relax[x] = true;
+          }
+        }
+      }
+    }
+    windowed = Arrays.copyOf(w, m);
+    windowLow = Arrays.copyOf(lo, m);
+    windowHigh = Arrays.copyOf(hi, m);
+    return relax;
+  }
+
+  // whether a node is a start, duration or use of a task of the POS resources
+  private boolean[] posTaskNode;
+
+  private boolean[] posTaskNodes() {
+    if (posTaskNode == null) {
+      posTaskNode = new boolean[nodes.length];
+      for (int t = 0; t < pos.tasks(); t++) {
+        if (pos.startNode(t) >= 0) {
+          posTaskNode[pos.startNode(t)] = true;
+        }
+        for (int u : pos.parts(t)) {
+          posTaskNode[u] = true;
+        }
+      }
+    }
+    return posTaskNode;
+  }
+
+  /**
+   * Removes a task from the partial-order schedule; returns the decision variables it relaxed: its
+   * own and its companions that are no part of another task, whose starts keep their windows.
+   */
+  private int removeTask(int t, boolean[] removed, boolean[] relax) {
+    if (removed[t]) {
+      return 0;
+    }
+    removed[t] = true;
+    boolean[] taskNode = posTaskNodes();
+    List<Integer> own = new ArrayList<>(pos.parts(t));
+    if (pos.startNode(t) >= 0) {
+      own.add(pos.startNode(t));
+    }
+    int n = 0;
+    for (int u : own) {
+      n += relaxNode(u, relax);
+      for (int c : varCons[u]) {
+        if (conVars[c].length > COMPANION_ARITY) {
+          continue;
+        }
+        for (int w : conVars[c]) {
+          if (w != u && w < vars.length && !taskNode[w]) {
+            n += relaxNode(w, relax);
+          }
+        }
+      }
+    }
+    return n;
   }
 
   /**

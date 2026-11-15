@@ -387,6 +387,89 @@ class AdaptiveLnsTest {
   }
 
   @Test
+  void posKeepsTheOrderOfTheKeptTasksInWindows() {
+    Store s = new Store();
+    int n = 10;
+    IntVar[] start = new IntVar[n];
+    IntVar[] dur = new IntVar[n];
+    IntVar[] one = new IntVar[n];
+    int[] at = new int[n];
+    int[] d = new int[n];
+    int time = 0;
+    for (int i = 0; i < n; i++) {
+      d[i] = 1 + i % 3;
+      start[i] = new IntVar(s, "t" + i, 0, 100);
+      dur[i] = new IntVar(s, d[i], d[i]);
+      one[i] = new IntVar(s, 1, 1);
+      // a unary resource with a gap after every third task
+      at[i] = time;
+      time += d[i] + (i % 3 == 2 ? 2 : 0);
+    }
+    s.impose(new Cumulative(start, dur, one, new IntVar(s, 1, 1)));
+    IntVar c = new IntVar(s, "c", 0, 1000);
+    AdaptiveLns lns = new AdaptiveLns(s, start, c, new Random(7));
+    assertTrue(lns.usable(AdaptiveLns.Kind.POS));
+    assertTrue(lns.solution(start, at));
+    int end = at[n - 1] + d[n - 1];
+    int windows = 0;
+    for (int k = 0; k < 60; k++) {
+      int[] fixed = lns.neighbourhood(AdaptiveLns.Kind.POS);
+      int[] w = lns.windowed();
+      int[] low = lns.windowLow();
+      int[] high = lns.windowHigh();
+      Set<Integer> fixedSet = new HashSet<>();
+      for (int i : fixed) {
+        fixedSet.add(i);
+      }
+      int[] lo = new int[n];
+      int[] hi = new int[n];
+      boolean[] kept = new boolean[n];
+      for (int j = 0; j < w.length; j++) {
+        int i = w[j];
+        assertFalse(fixedSet.contains(i));
+        // the window holds the best solution and the schedule ends by its end
+        assertTrue(low[j] <= at[i] && at[i] <= high[j], "window of " + i);
+        assertTrue(high[j] + d[i] <= end);
+        kept[i] = true;
+        lo[i] = low[j];
+        hi[i] = high[j];
+      }
+      // on a unary resource the chain is the order of the solution, through the removed tasks
+      int prev = -1;
+      for (int i = 0; i < n; i++) {
+        if (kept[i]) {
+          if (prev >= 0) {
+            assertTrue(lo[prev] + d[prev] <= lo[i]);
+            assertTrue(hi[prev] + d[prev] <= hi[i]);
+          }
+          prev = i;
+        }
+      }
+      windows += w.length;
+      lns.outcome(AdaptiveLns.Outcome.LIMIT);
+    }
+    assertTrue(windows > 0);
+    // the other kinds keep no windows
+    lns.neighbourhood(AdaptiveLns.Kind.SCHEDULING);
+    assertEquals(0, lns.windowed().length);
+  }
+
+  @Test
+  void posChainsTheUnitsOfACumulativeResource() {
+    PartialOrderSchedule pos = new PartialOrderSchedule();
+    // limit 2: tasks 0 and 1 in parallel on [0, 2), task 2 uses both units on [2, 3), task 3 one
+    // unit on [3, 5) and task 4 one unit on [4, 5)
+    int[] s = {-1 - 0, -1 - 0, -1 - 2, -1 - 3, -1 - 4};
+    int[] d = {-1 - 2, -1 - 2, -1 - 1, -1 - 2, -1 - 1};
+    int[] r = {-1 - 1, -1 - 1, -1 - 2, -1 - 1, -1 - 1};
+    pos.addResource(s, d, r, -1 - 2);
+    pos.build(u -> -1 - u);
+    // 0 -> 2, 1 -> 2, 2 -> 3, 2 -> 4
+    assertEquals(4, pos.precedences());
+    assertEquals(5, pos.tasks());
+  }
+
+  @Test
   void packingRelaxesRectanglesNearEachOther() {
     // 16 unit squares; the decision variables are their x and y origins
     Store s = new Store();

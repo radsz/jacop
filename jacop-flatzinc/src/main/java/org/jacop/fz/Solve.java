@@ -3829,6 +3829,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       lns.disable(AdaptiveLns.Kind.ROUTES).disable(AdaptiveLns.Kind.RELATED);
     }
+    if ("0".equals(options.freeConfig("lns-pos", "1"))) {
+      lns.disable(AdaptiveLns.Kind.POS);
+    }
+    if ("0".equals(options.freeConfig("lns-completions", "1"))) {
+      lns.disableCompletions();
+    }
     String kinds = options.freeConfig("lns-kinds", "");
     if (!kinds.isEmpty()) {
       // the kinds to use, separated by '+', for example random+graph+objective
@@ -3853,6 +3859,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lns.improved()
         + "\n%%%mzn-stat: lnsNeighbourhoods=\""
         + lns.statistics()
+        + "\"\n%%%mzn-stat: lnsCompletions=\""
+        + lns.completionStatistics()
         + "\"";
   }
 
