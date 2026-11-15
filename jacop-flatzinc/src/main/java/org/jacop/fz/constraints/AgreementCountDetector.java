@@ -101,7 +101,17 @@ public class AgreementCountDetector {
   private final Map<IntVar, Indicator> indicators = new IdentityHashMap<>();
 
   // the model's rows a * v <= c, kept when every v is an indicator
-  private record Row(IntVar[] v, int[] a, long c) {}
+  private static final class Row {
+    final IntVar[] v;
+    final int[] a;
+    final long c;
+
+    Row(IntVar[] v, int[] a, long c) {
+      this.v = v;
+      this.a = a;
+      this.c = c;
+    }
+  }
 
   private final List<Row> rows = new ArrayList<>();
 
@@ -312,22 +322,22 @@ public class AgreementCountDetector {
   private void check() {
     for (Row row : rows) {
       boolean upper = true;
-      for (int k = 0; k < row.v().length && upper; k++) {
-        Indicator i = indicators.get(row.v()[k]);
+      for (int k = 0; k < row.v.length && upper; k++) {
+        Indicator i = indicators.get(row.v[k]);
         // an upper bound on agreements: positive weights on equality indicators, negative ones on
         // difference indicators
         upper =
-            grouped.containsKey(row.v()[k])
+            grouped.containsKey(row.v[k])
                 && i != null
-                && (i.positive() ? row.a()[k] >= 0 : row.a()[k] <= 0);
+                && (i.positive() ? row.a[k] >= 0 : row.a[k] <= 0);
       }
       if (!upper) {
         continue;
       }
-      for (int k = 0; k < row.v().length; k++) {
-        combination.merge(row.v()[k], (long) row.a()[k], Long::sum);
+      for (int k = 0; k < row.v.length; k++) {
+        combination.merge(row.v[k], (long) row.a[k], Long::sum);
       }
-      rhs += row.c();
+      rhs += row.c;
     }
     long least = 0;
     for (Map.Entry<IntVar, Long> e : combination.entrySet()) {
