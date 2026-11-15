@@ -135,6 +135,12 @@ public class LinearRelaxation extends Constraint
   // whether the relaxation holds the all-different-except encodings over auxiliary columns, which
   // are the relaxation itself and are never dropped (the other encodings are extra rows like any)
   private boolean keepEncodings;
+  // the extra rows are tried a group at a time (by their source: clauses, linearized rows, value
+  // encodings, table rows, conflict cliques, ...) when the prefixes of them were not all kept, so
+  // that one group that does not help no longer takes the others out with it
+  private static final boolean GROUP_TRIAL = Boolean.getBoolean("org.jacop.lp.groupTrial");
+  private static final int GROUP_TRIALS = Integer.getInteger("org.jacop.lp.groupTrials", 8);
+  private static final boolean GROUP_LOG = Boolean.getBoolean("org.jacop.lp.groupLog");
   // the extra rows before the value encodings of valueRows' tried rows, which come last; the others
   // are tried without them when all of them are not kept
   private int plainExtra = Integer.MAX_VALUE;
@@ -364,6 +370,15 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
   public int pairCliques;
+
+  /**
+   * Statistics: the groups of extra rows tried one at a time after the prefixes of them were not
+   * all kept, and the groups kept.
+   */
+  public int groupTrials;
+
+  /** Statistics: the groups of extra rows kept by their trials one at a time. */
+  public int groupsKept;
 
   /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
   public int tableClauses;
@@ -1353,6 +1368,19 @@ public class LinearRelaxation extends Constraint
       List<LinearForm> sorted = fitOrder(localForms, candidates, first, triedSet, flow, objective);
       fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
     }
+    if (GROUP_LOG) {
+      System.err.println(
+          "%%LPF simplex="
+              + simplex
+              + " local="
+              + localForms.size()
+              + " share="
+              + share
+              + " candidates="
+              + tagCounts(tags, candidates)
+              + " further="
+              + tagCounts(tags, further));
+    }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.large = large && simplex == Simplex.SPARSE;
@@ -1367,6 +1395,15 @@ public class LinearRelaxation extends Constraint
     r.hall = hall;
     r.trees = trees;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  private static String tagCounts(Map<LinearForm, String> tags, List<LinearForm> forms) {
+    Map<String, Integer> counts = new java.util.TreeMap<>();
+    for (LinearForm f : forms) {
+      String t = tags.getOrDefault(f, "other");
+      counts.merge(t.startsWith("lin:") ? "lin" : t, 1, Integer::sum);
+    }
+    return counts.toString().replace(" ", "");
   }
 
   // the source of each of the forms that has none yet
@@ -5022,6 +5059,42 @@ public class LinearRelaxation extends Constraint
       kept = p;
       keptStatus = trialStatus;
     }
+    if (GROUP_TRIAL && objective != null && (full == null || kept < k)) {
+      int[] result = trialGroups(status, before, m, k, full, kept, keptStatus);
+      if (result != null) {
+        if (result[0] >= 0) {
+          if (full != null && groupSolver != full) {
+            droppedPivots += full.pivots();
+          }
+          full = groupSolver;
+          kept = result[0];
+          keptStatus = result[1];
+        }
+        last = result[2];
+      }
+      groupSolver = null;
+    }
+    if (GROUP_LOG) {
+      System.err.println(
+          "%%LPG kept="
+              + (full == null ? -1 : kept)
+              + " of "
+              + k
+              + " status="
+              + keptStatus
+              + " before="
+              + before
+              + " after="
+              + (full != null && keptStatus == LpSolver.OPTIMAL ? full.value(0) : Double.NaN)
+              + " groups="
+              + groupCounts(0, k)
+              + " keptGroups="
+              + (full == null ? "{}" : groupCounts(0, kept))
+              + " groupTrials="
+              + groupTrials
+              + "/"
+              + groupsKept);
+    }
     searchStartMin = null;
     searchStartMax = null;
     if (full != null && kept != last) {
@@ -5049,6 +5122,123 @@ public class LinearRelaxation extends Constraint
     // the rows of the last trial are the m + last rows
     poolExtraRows(m, last);
     return status;
+  }
+
+  // the simplex of the last group kept by trialGroups
+  private LpSolver groupSolver;
+
+  // the group of an extra row: its source, the linearized rows of every constraint class one group
+  private String groupOf(int q) {
+    String t = formSource.get(extraForms.get(q));
+    if (t == null) {
+      return "other";
+    }
+    if (t.startsWith("lin:")) {
+      return "lin";
+    }
+    return switch (t) {
+      case "encoding", "valueConj" -> "encoding";
+      default -> t;
+    };
+  }
+
+  // the rows of each group among the extra rows from..to-1, for the log
+  private String groupCounts(int from, int to) {
+    Map<String, Integer> counts = new java.util.LinkedHashMap<>();
+    for (int q = from; q < to; q++) {
+      counts.merge(groupOf(q), 1, Integer::sum);
+    }
+    return counts.toString().replace(" ", "");
+  }
+
+  /**
+   * Tries the groups of the extra rows after the first kept ones (none when nothing was kept) one
+   * at a time over the given rows and those kept so far, and keeps each that makes the relaxation
+   * infeasible or raises its bound. The extra rows are reordered so that those kept are a prefix.
+   *
+   * @return null when no group was tried; otherwise the rows kept (-1 for none; the simplex is in
+   *     groupSolver), the status of their trial, and the rows of the last trial
+   */
+  private int[] trialGroups(
+      int status, double before, int m, int k, LpSolver full, int kept, int keptStatus) {
+    int prefix = full == null ? 0 : kept;
+    List<String> groups = new ArrayList<>();
+    for (int q = prefix; q < k; q++) {
+      String g = groupOf(q);
+      if (!groups.contains(g)) {
+        groups.add(g);
+      }
+    }
+    // a single group after nothing kept is the trial of all the rows, already made
+    if (groups.isEmpty() || groups.size() == 1 && prefix == 0) {
+      return null;
+    }
+    int accepted = full == null ? -1 : kept;
+    int acceptedStatus = full == null ? status : keptStatus;
+    double bound =
+        full == null ? before : keptStatus == LpSolver.OPTIMAL ? full.value(0) : Double.NaN;
+    groupSolver = full;
+    int lastRows = -1;
+    int limited = 0;
+    for (String g : groups) {
+      if (groupTrials >= GROUP_TRIALS || limited >= 2) {
+        break;
+      }
+      int at = Math.max(0, accepted);
+      int p = moveGroup(at, k, g);
+      groupTrials++;
+      LpSolver trial = trialRows(acceptedStatus, bound, m, p, columnsOf(p), false);
+      lastRows = p;
+      if (trial == null) {
+        limited += trialStatus == LpSolver.LIMIT ? 1 : 0;
+        continue;
+      }
+      if (groupSolver != null && groupSolver != full) {
+        droppedPivots += groupSolver.pivots();
+      }
+      groupSolver = trial;
+      groupsKept++;
+      accepted = p;
+      acceptedStatus = trialStatus;
+      bound = acceptedStatus == LpSolver.OPTIMAL ? trial.value(0) : Double.NaN;
+      if (acceptedStatus == LpSolver.INFEASIBLE) {
+        break;
+      }
+    }
+    return new int[] {accepted, acceptedStatus, lastRows};
+  }
+
+  // moves the extra rows of group g among those from at on to just after the first at, the others
+  // after them in their order, and returns at plus the rows of g
+  private int moveGroup(int at, int k, String g) {
+    Integer[] order = new Integer[k - at];
+    int p = at;
+    int o = 0;
+    for (int q = at; q < k; q++) {
+      if (groupOf(q).equals(g)) {
+        order[o++] = q;
+        p++;
+      }
+    }
+    for (int q = at; q < k; q++) {
+      if (!groupOf(q).equals(g)) {
+        order[o++] = q;
+      }
+    }
+    int[][] columns = extraColumns.clone();
+    long[][] weights = extraWeights.clone();
+    long[] side = extraSide.clone();
+    int[] relation = extraRelation.clone();
+    List<LinearForm> forms = new ArrayList<>(extraForms);
+    for (int i = 0; i < order.length; i++) {
+      int q = order[i];
+      extraColumns[at + i] = columns[q];
+      extraWeights[at + i] = weights[q];
+      extraSide[at + i] = side[q];
+      extraRelation[at + i] = relation[q];
+      extraForms.set(at + i, forms.get(q));
+    }
+    return p;
   }
 
   // the columns of the base rows and the first p extra rows
