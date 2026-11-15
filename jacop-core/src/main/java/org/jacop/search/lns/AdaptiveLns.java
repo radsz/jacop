@@ -41,6 +41,8 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import org.jacop.constraints.AbstractElement;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
@@ -87,6 +89,9 @@ import org.jacop.lcg.LinearForm;
  *   <li>{@link Kind#BLOCKS}: whole groups of variables given by {@link #addGroups(IntVar[][],
  *       double[])}, such as the blocks of a Dantzig-Wolfe decomposition, chosen by roulette on
  *       their weights (the blocks whose column in the fractional master is far from 1 first).
+ *   <li>{@link Kind#LINES}: the scopes of random all-different constraints, with the variables that
+ *       constraints of at most five variables tie to them and to no other all-different scope; on a
+ *       round-robin schedule, whole rounds with their venues and travels.
  * </ul>
  *
  * <p>A neighbourhood made of variables that the runs do not fix (a task's start defined by the
@@ -134,8 +139,13 @@ public final class AdaptiveLns {
     /** Whole groups of variables, such as the blocks of a decomposition. */
     BLOCKS,
     /**
+     * The variables of random all-different constraints, with the variables that small constraints
+     * tie to them alone: whole rounds of a round-robin schedule, with their venues and travels.
+     */
+    LINES,
+    /**
      * A whole new assignment of some variables proposed by a heuristic from the best solution, such
-     * as a schedule of the tasks built by a genetic algorithm; the others keep their values.
+     * as a schedule of the tasks built by a genetic algorithm; the other variables are free.
      */
     PROPOSALS
   }
@@ -180,6 +190,9 @@ public final class AdaptiveLns {
 
   /** Constraints of at most this many variables tie a task's companions to it. */
   static final int COMPANION_ARITY = 3;
+
+  /** Constraints of at most this many variables tie variables to an all-different scope. */
+  static final int LINE_ARITY = 5;
 
   /** The most decision variables that a variable runs do not fix stands for. */
   static final int MAX_NEAR = 16;
@@ -247,6 +260,10 @@ public final class AdaptiveLns {
   // the groups of variables of the BLOCKS kind, as indices of decision variables, and their weights
   private int[][] groups = new int[0][];
   private double[] groupWeight = new double[0];
+  // the scopes of the all-different constraints of the LINES kind, as nodes, and whether a node
+  // is in one of them
+  private int[][] lines = new int[0][];
+  private boolean[] inLine = new boolean[0];
   // the variables that are successors of a circuit among the routings
   private final boolean[] successorVar;
 
@@ -820,6 +837,7 @@ public final class AdaptiveLns {
           case SHIFT -> shiftRelax(relaxed);
           case PACKING -> packingRelax(relaxed);
           case BLOCKS -> blocksRelax(relaxed);
+          case LINES -> linesRelax(relaxed);
           default -> null;
         };
     if (relax == null) {
@@ -983,6 +1001,7 @@ public final class AdaptiveLns {
       case SHIFT -> SHIFT_ON && tasks.length > 1;
       case PACKING -> packings.length > 0;
       case BLOCKS -> groups.length > 1;
+      case LINES -> lines.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
       case PROPOSALS -> proposer != null;
       default -> true;
@@ -1595,12 +1614,16 @@ public final class AdaptiveLns {
     List<int[]> taskList = new ArrayList<>();
     Map<Var, Boolean> taskStarts = new IdentityHashMap<>();
     List<int[][]> packingList = new ArrayList<>();
+    List<int[]> lineList = new ArrayList<>();
     for (IntVar x : nodes) {
       for (Constraint c : x.constraintsWithWatches()) {
         if (conOf.containsKey(c)) {
           continue;
         }
         conOf.put(c, -1);
+        if (c instanceof Alldistinct || c instanceof Alldifferent) {
+          readLine(c, nodeOf, lineList);
+        }
         readStructure(c, nodeOf, taskList, taskStarts);
         if (c instanceof Nooverlap packing) {
           readPacking(packing, nodeOf, packingList);
@@ -1636,6 +1659,13 @@ public final class AdaptiveLns {
       }
     }
     conVars = conList.toArray(new int[0][]);
+    lines = lineList.toArray(new int[0][]);
+    inLine = new boolean[nodes.length];
+    for (int[] line : lines) {
+      for (int u : line) {
+        inLine[u] = true;
+      }
+    }
     tasks = taskList.toArray(new int[0][]);
     packings = packingList.toArray(new int[0][][]);
     nodeValue = new int[nodes.length];
@@ -1660,6 +1690,53 @@ public final class AdaptiveLns {
     }
     seenVar = new int[nodes.length];
     seenCon = new int[conVars.length];
+  }
+
+  /** Records the scope of an all-different constraint of at least 3 decision variables. */
+  private void readLine(Constraint c, Map<Var, Integer> nodeOf, List<int[]> lineList) {
+    int[] members =
+        c.arguments().stream()
+            .map(nodeOf::get)
+            .filter(u -> u != null && u < vars.length)
+            .mapToInt(Integer::intValue)
+            .distinct()
+            .toArray();
+    if (members.length >= 3) {
+      lineList.add(members);
+    }
+  }
+
+  /**
+   * Relaxes the scopes of all-different constraints chosen at random, until enough decision
+   * variables are relaxed, each with the decision variables that share a constraint of at most
+   * {@link #LINE_ARITY} variables with a member and are in no all-different scope: on a round-robin
+   * schedule with one all-different constraint over the opponents of each round, the opponents of
+   * whole rounds with their venues and travels, so that rounds can be rematched and reordered.
+   */
+  private boolean[] linesRelax(int relaxed) {
+    boolean[] relax = new boolean[vars.length];
+    int[] order = shuffled(lines.length);
+    int count = 0;
+    for (int k = 0; k < order.length && count < relaxed; k++) {
+      for (int u : lines[order[k]]) {
+        if (!relax[u] && !vars[u].singleton()) {
+          relax[u] = true;
+          count++;
+        }
+        for (int c : varCons[u]) {
+          if (conVars[c].length > LINE_ARITY) {
+            continue;
+          }
+          for (int w : conVars[c]) {
+            if (w < vars.length && !inLine[w] && !relax[w] && !vars[w].singleton()) {
+              relax[w] = true;
+              count++;
+            }
+          }
+        }
+      }
+    }
+    return relax;
   }
 
   /**

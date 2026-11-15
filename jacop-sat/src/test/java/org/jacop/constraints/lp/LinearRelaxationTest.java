@@ -55,14 +55,18 @@ import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
 import org.jacop.constraints.ExtensionalSupportMdd;
 import org.jacop.constraints.GCC;
+import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.SumBool;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
@@ -2510,6 +2514,77 @@ class LinearRelaxationTest {
       store.addChanged(r);
       assertThat(store.consistency()).isTrue();
       assertThat(r.extraRows).as("remember " + remember).isEqualTo(remember ? 0 : y.length);
+    }
+  }
+
+  /**
+   * A golfers count that only the root refutation sees: each of the weeks puts two of four players
+   * into group 0 (a GCC), and no player is in group 0 twice. Three weeks need six such places, the
+   * four players give four; root propagation sees nothing, the value encodings and the cliques of
+   * the pairs make the root LP infeasible. Two weeks fit, and the relaxation is then removed after
+   * its one solve. The pairs are stated in the three forms the FlatZinc front end posts: sums of
+   * indicators, half-reified exclusions with a clause, and an exclusion with an ImpliesNot (the
+   * clause's other control eliminated).
+   */
+  @Test
+  void rootRefutationFindsTheGolfersCount() {
+    for (int form = 0; form < 3; form++) {
+      for (int weeks = 2; weeks <= 3; weeks++) {
+        Store store = new Store();
+        int players = 4;
+        IntVar[][] x = new IntVar[weeks][players];
+        for (int w = 0; w < weeks; w++) {
+          IntVar[] counters = {
+            new IntVar(store, "zeros" + w, 2, 2),
+            new IntVar(store, "ones" + w, 0, players),
+            new IntVar(store, "twos" + w, 0, players)
+          };
+          for (int p = 0; p < players; p++) {
+            x[w][p] = new IntVar(store, "x" + w + "_" + p, 0, 2);
+          }
+          store.impose(new GCC(x[w], counters));
+        }
+        List<LinearForm> clauses = new ArrayList<>();
+        for (int p = 0; p < players; p++) {
+          if (form == 0) {
+            IntVar[] in = new IntVar[weeks];
+            for (int w = 0; w < weeks; w++) {
+              in[w] = new IntVar(store, "in" + w + "_" + p, 0, 1);
+              store.impose(new Reified(new XeqC(x[w][p], 0), in[w]));
+            }
+            store.impose(new SumBool(in, "<=", new IntVar(store, 1, 1)));
+            continue;
+          }
+          for (int w = 0; w < weeks; w++) {
+            for (int v = w + 1; v < weeks; v++) {
+              IntVar a = new IntVar(store, "a" + p + w + v, 0, 1);
+              store.impose(new Implies(a, new XneqC(x[w][p], 0)));
+              if (form == 1) {
+                IntVar b = new IntVar(store, "b" + p + w + v, 0, 1);
+                store.impose(new Implies(b, new XneqC(x[v][p], 0)));
+                clauses.add(
+                    new LinearForm(new IntVar[] {a, b}, new long[] {1, 1}, 1, LinearForm.GE));
+              } else {
+                store.impose(new ImpliesNot(a, new XneqC(x[v][p], 0)));
+              }
+            }
+          }
+        }
+        LinearRelaxation r = LinearRelaxation.refutation(store, clauses);
+        assertThat(r).as("form " + form).isNotNull();
+        assertThat(r.refutationOutcome()).isEqualTo("unsolved");
+        store.impose(r);
+        boolean consistent = store.consistency();
+        assertThat(consistent).as("form %d, %d weeks", form, weeks).isEqualTo(weeks == 2);
+        assertThat(r.refutationOutcome()).isEqualTo(weeks == 2 ? "feasible" : "refuted");
+        if (weeks == 2) {
+          IntVar[] all = Arrays.stream(x).flatMap(Arrays::stream).toArray(IntVar[]::new);
+          DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+          search.setPrintInfo(false);
+          assertThat(search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>())))
+              .isTrue();
+        }
+      }
     }
   }
 }
