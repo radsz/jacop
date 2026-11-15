@@ -287,16 +287,17 @@ public class ElementInteger extends AbstractElement
   private void propagateIndexChanged(Store store) {
     indexHasChanged = false;
 
+    // a small index reads its values directly: testing every group of duplicate positions against
+    // it costs more than the values it holds; a large one skips the groups it covers
+    boolean small = index.getSize() < limitForDomainPruning;
     IntervalDomain domValue;
-    if (index.getSize() < limitForDomainPruning || sortedValues == null) {
-      IntDomain indexDom = index.dom().cloneLight();
-      domValue = addDuplicatesToDomValue(indexDom);
-      if (!duplicates.isEmpty()) {
-        indexDom = indexDom.subtract(duplicatesIndexes);
+    if (sortedValues == null) {
+      domValue = new IntervalDomain(5);
+      for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        domValue.unionAdapt(list[e.nextElement() - 1 - indexOffset]);
       }
-      addIndexDomValuesToDomValue(indexDom, domValue);
     } else {
-      domValue = supportedValuesByRank();
+      domValue = supportedValuesByRank(!small);
     }
 
     value.domain.in(store.level, value, domValue);
@@ -310,13 +311,14 @@ public class ElementInteger extends AbstractElement
    * or O(|D(index)| + number of distinct values) instead of the quadratic worst case of adding
    * values out of order to an interval domain.
    *
+   * @param useDuplicates whether groups of positions holding one value are tested as a whole.
    * @return the domain of values supported by the index.
    */
-  private IntervalDomain supportedValuesByRank() {
+  private IntervalDomain supportedValuesByRank(boolean useDuplicates) {
 
     int count = 0;
     IntDomain indexDom = index.dom();
-    if (!duplicates.isEmpty()) {
+    if (useDuplicates && !duplicates.isEmpty()) {
       for (IntDomain duplicate : duplicates) {
         if (indexDom.isIntersecting(duplicate)) {
           supportedRanks[count++] = valueRank[duplicate.min() - 1 - indexOffset];
@@ -364,30 +366,6 @@ public class ElementInteger extends AbstractElement
       }
     }
     return domValue;
-  }
-
-  private IntervalDomain addDuplicatesToDomValue(IntDomain indexDom) {
-    IntervalDomain domValue = new IntervalDomain(5);
-    if (!checkDuplicates) {
-      return domValue;
-    }
-    for (IntDomain duplicate : duplicates) {
-      if (indexDom.isIntersecting(duplicate)) {
-        if (domValue.isEmpty()) {
-          domValue.unionAdapt(list[duplicate.min() - 1 - indexOffset]);
-        } else {
-          domValue.addLastElement(list[duplicate.min() - 1 - indexOffset]);
-        }
-      }
-    }
-    return domValue;
-  }
-
-  private void addIndexDomValuesToDomValue(IntDomain indexDom, IntervalDomain domValue) {
-    for (ValueEnumeration e = indexDom.valueEnumeration(); e.hasMoreElements(); ) {
-      int valueOfElement = list[e.nextElement() - 1 - indexOffset];
-      domValue.unionAdapt(valueOfElement);
-    }
   }
 
   private void propagateValueChanged(Store store) {
