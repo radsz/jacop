@@ -856,6 +856,31 @@ class VeriPbProofTest {
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
 
+  @Test
+  void countIntoAHoleOfACountIsDerived() {
+    // x1 = -1 and x2 = 2 count one 2, a hole of the counter c in {0, 2}: the row of Count counts
+    // value literals, which unit propagation does not round into c's order literals (fuzz seed
+    // 2047046)
+    Store store = new Store();
+    IntVar c = var(store, "c", 0, 2);
+    IntVar x1 = var(store, "x1", -1, 2, 3, 4);
+    IntVar x2 = new IntVar(store, "x2", -1, 3);
+    IntVar x4 = new IntVar(store, "x4", 1, 3);
+    IntVar x5 = new IntVar(store, "x5", 0, 3);
+    IntVar obj = new IntVar(store, "obj", -30, -13);
+    obj.addDom(-11, 4);
+    obj.addDom(6, 30);
+    store.impose(new Count(new IntVar[] {x1, x2}, c, 2));
+    store.impose(new XplusClteqZ(x2, 1, x4));
+    store.impose(new LinearInt(new IntVar[] {x5, x2, x1, obj}, new int[] {1, -1, 1, -1}, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
   private static IntVar var(Store store, String name, int... values) {
     IntVar x = new IntVar(store, name);
     for (int v : values) {

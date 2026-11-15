@@ -58,6 +58,7 @@ import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -1242,6 +1243,29 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Writes the bounds of the counter of a {@link Count} under the hypotheses of a clause, when the
+   * counter has a hole: its row sum [x_j = v] - counter = 0 counts value literals, which unit
+   * propagation does not round into the counter's order literals.
+   */
+  private void proofCountBounds(Count c, EntryList atoms, int from, int entry) {
+    IntVar[] list = c.countedVariables();
+    int n = list.length;
+    int[] ids = new int[n + 1];
+    Map<Integer, Integer> position = new HashMap<>();
+    for (int j = 0; j <= n; j++) {
+      ids[j] = trail.id(j < n ? list[j] : c.functionalResult());
+      if (position.put(ids[j], j) != null) {
+        return; // the counter in the list, or a variable twice: not encoded as one row
+      }
+    }
+    IntDomain[] dom = new IntDomain[n + 1];
+    StringBuilder[] literals = new StringBuilder[n + 1];
+    hypotheses(position, ids, atoms, from, entry, dom, literals);
+    proofCounterBounds(
+        ids[n], c.countedValue(), Arrays.copyOf(dom, n), Arrays.copyOf(literals, n), literals[n]);
+  }
+
+  /**
    * Writes the bounds of a counter with a hole in its domain under the hypotheses of a clause: at
    * least the variables fixed to its value and at most those that can take it. The flow of {@link
    * #proofCardinality} sees the counter's interval only, and unit propagation over the order
@@ -1853,6 +1877,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (proofStarted && c instanceof AbstractReifiedConstraint r) {
       proofReifiedBounds(r, atoms, from, entry);
+      return;
+    }
+    if (proofStarted && c.getClass() == Count.class) {
+      proofCountBounds((Count) c, atoms, from, entry);
       return;
     }
     LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
