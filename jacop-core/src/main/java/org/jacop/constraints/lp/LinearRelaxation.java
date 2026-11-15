@@ -4292,7 +4292,7 @@ public class LinearRelaxation extends Constraint
       }
     }
     Set<MirCut> dual = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (DUAL_AGGREGATE) {
+    if (dualAggregateOn) {
       int before = found.size();
       dualAggregate(value, lo, hi, found);
       dual.addAll(found.subList(before, found.size()));
@@ -4486,14 +4486,20 @@ public class LinearRelaxation extends Constraint
     return true;
   }
 
-  static final boolean DUAL_AGGREGATE =
+  // the MIR cuts of the dual-weighted rows, on by default (-Dorg.jacop.lp.dualAggregate=false: off)
+  static boolean dualAggregateOn =
       !"false".equals(System.getProperty("org.jacop.lp.dualAggregate"));
 
   /**
    * Adds the MIR cuts of the rows weighted by their dual values, without the rows of the objective
    * (column 0): {@code sum y_i a_i x >= y b} is the row whose bound the LP proves, and its rounding
    * by a divisor near the objective's coefficients counts the columns a solution needs (a
-   * Chvatal-Gomory cut with the LP's own multipliers).
+   * Chvatal-Gomory cut with the LP's own multipliers). On covers with near-equal costs this is the
+   * cut that proves the optimum (MiniZinc Challenge 2021 wmsmc-int).
+   *
+   * <p>V. Chvatal, Edmonds polytopes and a hierarchy of combinatorial problems, Discrete
+   * Mathematics 4(4), 1973; H. Marchand and L. A. Wolsey, Aggregation and mixed integer rounding to
+   * solve MIPs, Operations Research 49(3), 2001.
    */
   private void dualAggregate(double[] value, long[] lo, long[] hi, List<MirCut> found) {
     double[] y = byRow(lp.duals());

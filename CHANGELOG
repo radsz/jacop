@@ -5790,6 +5790,18 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
+334. The linear relaxation rounds the row it proves its bound with: each cut
+   round adds the mixed-integer rounding (MIR) cut of the rows weighted by
+   their LP dual values, without the objective's own rows (a Chvatal-Gomory
+   cut with the LP's multipliers, V. Chvatal, Edmonds polytopes and a
+   hierarchy of combinatorial problems, Discrete Math. 4, 1973; MIR of an
+   aggregated row as in H. Marchand and L. A. Wolsey, Aggregation and mixed
+   integer rounding to solve MIPs, Oper. Res. 49(3), 2001). On covers with
+   near-equal costs this row counts the sets a cover needs: MiniZinc
+   Challenge 2021 wmsmc-int batch_0_case_115_instance_0 has root bound
+   509,697 instead of 500,353 (optimum 509,704) and -f proves it in 10 s
+   instead of not in 600 s. -Dorg.jacop.lp.dualAggregate=false turns it off.
+
 Version 4.11
 =============
 
