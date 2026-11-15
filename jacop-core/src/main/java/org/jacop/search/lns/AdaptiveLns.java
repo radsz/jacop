@@ -178,6 +178,14 @@ public final class AdaptiveLns {
   private static final double FIRST_SHARE = 0.2;
   private static final double MAX_SHARE = 0.95;
   private static final double SHARE_STEP = 1.15;
+  // route removal also frees the links between routes and depots (CHANGELOG): with identical
+  // vehicles and the symmetry breaking "vehicle k unused implies vehicle k + 1 unused", a route
+  // other than the last cannot be emptied while the routes after it keep their vehicles. XCSP 2024
+  // VRP_LC-10-05-20-s3 at 600 s: 267, 288, 269 over three seeds instead of 288, 289, 288 (the
+  // better solutions use one vehicle fewer)
+  private static final boolean DEPOT_LINKS =
+      !"false".equals(System.getProperty("jacop.lns.depotLinks"));
+
   private static final double DECAY = 0.2;
   private static final double FLOOR = 0.1;
 
@@ -1204,6 +1212,9 @@ public final class AdaptiveLns {
             }
           }
         }
+      }
+      if (kind == Kind.ROUTES && DEPOT_LINKS) {
+        successors.relaxDepotLinks(relax);
       }
       return relax;
     }
