@@ -159,11 +159,17 @@ public class Constraints implements ParserTreeConstants {
     }
 
     Options options = support.options;
-    if (options.symmetry() && ConditionalValueSwaps.ENABLED) {
-      support.recordChannelDomains(astTree);
-    }
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
+    // the exchanges of values that symmetry breaking breaks in a satisfaction problem compare the
+    // domains of inverse channels as declared
+    if (options.symmetry()
+        && ConditionalValueSwaps.ENABLED
+        && !options.freeSearch()
+        && !manySolutions
+        && satisfaction(astTree)) {
+      support.recordChannelDomains(astTree);
+    }
     if (hasFloatVariables()) {
       // the model is built as without LCG, also when --lcg was given: LcgSolver has no atoms for
       // float variables, and a model built for LCG (clauses, split sums, no views) and then solved

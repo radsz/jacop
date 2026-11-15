@@ -674,8 +674,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
 
     // exchanges of interchangeable values of a sequence that its precedences allow, for a
-    // satisfaction problem
-    if (objective == null && ConditionalValueSwaps.ENABLED) {
+    // satisfaction problem under the search of its annotation; free search (black-hole) is 2-5x
+    // slower with them on the hard instances
+    if (objective == null && !free && ConditionalValueSwaps.ENABLED) {
       ConditionalValueSwaps swaps = new ConditionalValueSwaps(store, dictionary);
       this.swaps = swaps.run(items, ranked, largest && values.posted() == 0);
       if (this.swaps > 0) {

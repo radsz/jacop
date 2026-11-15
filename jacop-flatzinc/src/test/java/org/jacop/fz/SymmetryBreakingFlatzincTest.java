@@ -1537,4 +1537,144 @@ class SymmetryBreakingFlatzincTest {
   private static String bv(IntUnaryOperator bs, int i) {
     return "b" + bs.applyAsInt(i);
   }
+
+  private static final Pattern SWAPS = Pattern.compile("symmetryValueSwaps=(\\d+)");
+
+  /**
+   * The exchanges of interchangeable values that {@link ConditionalValueSwaps} breaks keep the
+   * lexicographically smallest (or, for indomain_max, largest) solution over the sequence, which is
+   * the first one a search in input order finds: random patience games (cards of a few ranks, a
+   * table of the ranks that may follow each other, piles as precedences) give the same first
+   * solution, or no solution, with and without symmetry breaking, with and without LCG.
+   */
+  @Test
+  void conditionalValueSwapsKeepFirstSolution() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 23));
+    int trials = Integer.getInteger("symmetry.trials", 300);
+    int broken = 0;
+    int solved = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      String model = patienceModel(random, trial % 3 == 2);
+      for (String lcg : new String[] {"on", "off"}) {
+        String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg", lcg);
+        String on =
+            FlatzincTestRunner.run(
+                tmp, model, "--search-statistics", "--symmetry", "on", "--lcg", lcg);
+        String what = "trial " + trial + " lcg " + lcg + "\n" + model + "\n" + on;
+        assertEquals(firstSolution(off), firstSolution(on), what);
+        if (lcg.equals("on")) {
+          Matcher m = SWAPS.matcher(on);
+          if (m.find() && Integer.parseInt(m.group(1)) > 0) {
+            broken++;
+          }
+          if (!off.contains("=====UNSATISFIABLE=====")) {
+            solved++;
+          }
+        }
+      }
+    }
+    assertTrue(broken > trials / 2, "broken " + broken);
+    assertTrue(solved > trials / 5 && solved < trials, "solved " + solved);
+  }
+
+  private static String firstSolution(String out) {
+    int end = out.indexOf("----------");
+    if (end < 0) {
+      return out.contains("=====UNSATISFIABLE=====") ? "UNSAT" : "none";
+    }
+    return Arrays.stream(out.substring(0, end).split("\n"))
+        .filter(l -> l.startsWith("x = "))
+        .findFirst()
+        .orElse("none");
+  }
+
+  /**
+   * A patience game: the card at each position may follow the one before it when the table of ranks
+   * allows it, card 1 comes first, and the cards of a pile are played from the top.
+   */
+  private static String patienceModel(Random random, boolean largestFirst) {
+    int n = 6 + random.nextInt(5);
+    int ranks = 2 + random.nextInt(3);
+    int[] rank = new int[n + 1];
+    for (int v = 1; v <= n; v++) {
+      rank[v] = random.nextInt(ranks);
+    }
+    boolean[][] follows = new boolean[ranks][ranks];
+    for (int r = 0; r < ranks; r++) {
+      for (int q = 0; q < ranks; q++) {
+        follows[r][q] = random.nextInt(3) > 0;
+      }
+    }
+    List<String> tuples = new ArrayList<>();
+    for (int u = 1; u <= n; u++) {
+      for (int v = 1; v <= n; v++) {
+        if (u != v && follows[rank[u]][rank[v]]) {
+          tuples.add(u + "," + v);
+        }
+      }
+    }
+    StringBuilder m = new StringBuilder();
+    m.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    m.append("predicate jacop_assignment(array [int] of var int: f,array [int] of var int: invf,")
+        .append("int: index_f,int: index_invf);\n");
+    m.append("array [1..")
+        .append(2 * tuples.size())
+        .append("] of int: T = [")
+        .append(String.join(",", tuples))
+        .append("];\n");
+    m.append("array [1..2] of int: C = [1,-1];\n");
+    for (int i = 2; i <= n; i++) {
+      m.append("var 1..").append(n).append(": x").append(i).append(";\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      m.append("var 1..").append(n).append(": y").append(i).append(";\n");
+    }
+    List<String> xs = new ArrayList<>(List.of("1"));
+    List<String> ys = new ArrayList<>();
+    for (int i = 2; i <= n; i++) {
+      xs.add("x" + i);
+    }
+    for (int i = 1; i <= n; i++) {
+      ys.add("y" + i);
+    }
+    m.append("array [1..")
+        .append(n)
+        .append("] of var int: x :: output_array([1..")
+        .append(n)
+        .append("]) = [")
+        .append(String.join(",", xs))
+        .append("];\n");
+    m.append("array [1..").append(n).append("] of var int: y = [").append(String.join(",", ys));
+    m.append("];\n");
+    for (int i = 0; i + 1 < n; i++) {
+      m.append("constraint jacop_table_int([")
+          .append(xs.get(i))
+          .append(",")
+          .append(xs.get(i + 1))
+          .append("],T);\n");
+    }
+    m.append("constraint jacop_assignment(x,y,1,1);\n");
+    // piles of cards 2..n, played from the top
+    List<Integer> cards = new ArrayList<>();
+    for (int v = 2; v <= n; v++) {
+      cards.add(v);
+    }
+    Collections.shuffle(cards, random);
+    int k = 0;
+    while (k < cards.size()) {
+      int height = 1 + random.nextInt(3);
+      for (int j = k; j + 1 < Math.min(k + height, cards.size()); j++) {
+        m.append("constraint int_lin_le(C,[y")
+            .append(cards.get(j))
+            .append(",y")
+            .append(cards.get(j + 1))
+            .append("],-1);\n");
+      }
+      k += height;
+    }
+    m.append("solve :: int_search(x,input_order,")
+        .append(largestFirst ? "indomain_max" : "indomain_min")
+        .append(",complete) satisfy;\n");
+    return m.toString();
+  }
 }
