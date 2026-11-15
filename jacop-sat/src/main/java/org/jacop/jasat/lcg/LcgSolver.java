@@ -6643,13 +6643,33 @@ public final class LcgSolver implements ExternalPropagator {
    * store. A failure is returned as a false literal whose reason is the conflict clause, which the
    * solver takes as a conflict.
    */
-  // prototype -Djacop.lcg.pushBeforeConflict=true: a constraint failure first pushes the atoms of
-  // the fixpoint that are not in the solver yet, so that the conflict clause cites them instead of
-  // their explanations, and conflict analysis can stop at one of them
-  private static final boolean PUSH_BEFORE_CONFLICT =
-      Boolean.getBoolean("jacop.lcg.pushBeforeConflict");
+  // whether a constraint failure first pushes the atoms of its fixpoint (see setPushBeforeConflict)
+  private boolean pushBeforeConflict = Boolean.getBoolean("jacop.lcg.pushBeforeConflict");
 
+  /**
+   * Whether the system property jacop.lcg.pushBeforeConflict is set (tests leave it alone then).
+   */
+  public static final boolean PUSH_BEFORE_CONFLICT_SET =
+      System.getProperty("jacop.lcg.pushBeforeConflict") != null;
+
+  // the atoms of a failure held back while the atoms of its fixpoint are pushed, or null
   private EntryList heldFailure;
+  private final EntryList heldAtoms = new EntryList();
+
+  /**
+   * Sets whether a constraint failure first hands the solver the atoms its fixpoint recorded and
+   * did not push yet, and only then the conflict, whose clause cites those atoms instead of their
+   * explanations. Conflict analysis resolves them lazily and can stop at one of them, as in lazy
+   * clause generation with literals created on demand (Feydy and Stuckey, Lazy Clause Generation
+   * Reengineered, CP 2009). Expanded at once, the conflict clauses of a failure of Alldiff on
+   * ghoulomb had 406 literals on average and those of XplusYeqZ 187. Off with proof logging. The
+   * default is the system property jacop.lcg.pushBeforeConflict, false when unset.
+   *
+   * @param on whether to push the fixpoint's atoms before the conflict
+   */
+  public void setPushBeforeConflict(boolean on) {
+    pushBeforeConflict = on;
+  }
 
   /** Statistics: failures whose fixpoint atoms were pushed before the conflict. */
   public long heldFailures;
@@ -6749,13 +6769,13 @@ public final class LcgSolver implements ExternalPropagator {
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
         }
-        if (PUSH_BEFORE_CONFLICT && pushed < trail.size() && proof == null) {
+        if (pushBeforeConflict && pushed < trail.size() && proof == null) {
           heldFailures++;
-          EntryList held = new EntryList();
+          heldAtoms.clear();
           for (int k = 0; k < atoms.size(); k++) {
-            held.addFrom(atoms, k);
+            heldAtoms.addFrom(atoms, k);
           }
-          heldFailure = held;
+          heldFailure = heldAtoms;
           numPending = 0;
           continue;
         }
