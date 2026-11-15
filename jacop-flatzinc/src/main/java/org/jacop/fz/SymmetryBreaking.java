@@ -193,7 +193,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * symmetry moves, or a constant written as a string. An integer constant has its value; when it
    * stands for a value of a value space ({@code space >= 0}) it is a vertex, not a constant.
    */
-  private record Atom(IntVar aVar, Var other, String constant, int space, int value) {
+  record Atom(IntVar aVar, Var other, String constant, int space, int value) {
     boolean isConstant() {
       return constant != null && space < 0;
     }
@@ -412,7 +412,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
   static final int MAX_SCHREIER_SIMS = 40;
 
   /** A constraint of the model with its arguments. */
-  private record Item(String name, Atom[][] args, boolean[] array) {
+  record Item(String name, Atom[][] args, boolean[] array) {
     @Override
     public boolean equals(Object o) {
       return o instanceof Item i
@@ -440,6 +440,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private long deadline = Long.MAX_VALUE;
   // whether the lex-leader keeps the largest solution of an orbit instead of the smallest
   private boolean largest;
+
+  // the exchanges of values broken by ConditionalValueSwaps
+  private int swaps;
   // whether the search is free search (-f), which does not follow the search annotation
   private boolean free;
   // whether set variables are vertices of the variable graph that symmetries may move
@@ -470,6 +473,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private void note(String kind, IntVar[]... rows) {
     postedKinds.add(kind);
     postedVariables.add(rows);
+  }
+
+  /**
+   * The constraints posted by {@link ConditionalValueSwaps}.
+   *
+   * @return the number of pairs of values whose exchange got a constraint.
+   */
+  int swaps() {
+    return swaps;
   }
 
   /**
@@ -659,6 +671,17 @@ final class SymmetryBreaking implements ParserTreeConstants {
         }
       }
       ranked = reordered;
+    }
+
+    // exchanges of interchangeable values of a sequence that its precedences allow, for a
+    // satisfaction problem under the search of its annotation; free search (black-hole) is up to
+    // 5.8x slower with them on the hard instances
+    if (objective == null && !free && ConditionalValueSwaps.ENABLED) {
+      ConditionalValueSwaps finder = new ConditionalValueSwaps(store, dictionary);
+      swaps = finder.run(items, ranked, largest && values.posted() == 0);
+      if (swaps > 0) {
+        note("swaps", finder.pairs().toArray(new IntVar[0][]));
+      }
     }
 
     Graph graph = new Graph(goal, null);
