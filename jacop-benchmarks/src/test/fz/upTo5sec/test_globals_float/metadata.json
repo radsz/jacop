@@ -1,0 +1,12 @@
+{
+  "fznBuiltins": [
+    "float_le",
+    "jacop_float_maximum",
+    "jacop_float_minimum"
+  ],
+  "constraintFamilies": [
+    "float",
+    "global"
+  ],
+  "domains": []
+}

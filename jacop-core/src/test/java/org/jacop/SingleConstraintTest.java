@@ -6357,6 +6357,110 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  // Deciding residual arcs of any capacity by shortest paths (org.jacop.netflow.generalArcs) and
+  // probing the others by successive shortest paths (org.jacop.netflow.shortestPaths) must prune
+  // exactly what the probe of each arc by pivots of the network simplex prunes: random dives over
+  // random networks with
+  // parallel arcs, capacities up to 9 and a tight cost bound, compared domain by domain.
+  @Test
+  void testNetworkFlowShortestPathDecisionsMatchProbes() {
+    Random random = new Random(1215);
+    for (int trial = 0; trial < 300; trial++) {
+      int nodeCount = 3 + random.nextInt(5);
+      int arcCount = nodeCount + random.nextInt(2 * nodeCount);
+      int[][] arcs = new int[arcCount][2];
+      int[] weights = new int[arcCount];
+      int[][] flowDomains = new int[arcCount][2];
+      int[] balance = new int[nodeCount];
+      long flowCost = 0;
+      for (int i = 0; i < arcCount; i++) {
+        arcs[i][0] = random.nextInt(nodeCount);
+        arcs[i][1] = (arcs[i][0] + 1 + random.nextInt(nodeCount - 1)) % nodeCount;
+        weights[i] = random.nextInt(6);
+        int min = random.nextInt(3) == 0 ? random.nextInt(2) : 0;
+        flowDomains[i] = new int[] {min, min + random.nextInt(10)};
+        int flow = min + random.nextInt(flowDomains[i][1] - min + 1);
+        balance[arcs[i][0]] += flow;
+        balance[arcs[i][1]] -= flow;
+        flowCost += (long) weights[i] * flow;
+      }
+      int costMax = (int) (flowCost * (50 + random.nextInt(60)) / 100);
+      Store[] stores = new Store[2];
+      IntVar[][] vars = new IntVar[2][];
+      String previous = System.getProperty("org.jacop.netflow.generalArcs");
+      String previousPaths = System.getProperty("org.jacop.netflow.shortestPaths");
+      try {
+        for (int s = 0; s < 2; s++) {
+          System.setProperty("org.jacop.netflow.generalArcs", s == 0 ? "false" : "true");
+          System.setProperty("org.jacop.netflow.shortestPaths", s == 0 ? "false" : "true");
+          stores[s] = new Store();
+          NetworkBuilder net = new NetworkBuilder();
+          Node[] nodes = new Node[nodeCount];
+          for (int i = 0; i < nodeCount; i++) {
+            nodes[i] = net.addNode("n" + i, balance[i]);
+          }
+          vars[s] = new IntVar[arcCount + 1];
+          for (int i = 0; i < arcCount; i++) {
+            vars[s][i] = new IntVar(stores[s], "f" + i, flowDomains[i][0], flowDomains[i][1]);
+            net.addArc(nodes[arcs[i][0]], nodes[arcs[i][1]], weights[i], vars[s][i]);
+          }
+          vars[s][arcCount] = new IntVar(stores[s], "cost", 0, costMax);
+          net.setCostVariable(vars[s][arcCount]);
+          stores[s].impose(net.build());
+        }
+      } finally {
+        if (previous == null) {
+          System.clearProperty("org.jacop.netflow.generalArcs");
+        } else {
+          System.setProperty("org.jacop.netflow.generalArcs", previous);
+        }
+        if (previousPaths == null) {
+          System.clearProperty("org.jacop.netflow.shortestPaths");
+        } else {
+          System.setProperty("org.jacop.netflow.shortestPaths", previousPaths);
+        }
+      }
+      String network =
+          "arcs="
+              + Arrays.deepToString(arcs)
+              + " weights="
+              + Arrays.toString(weights)
+              + " flows="
+              + Arrays.deepToString(flowDomains)
+              + " balance="
+              + Arrays.toString(balance)
+              + " cost<="
+              + costMax;
+      boolean ok0 = stores[0].consistency();
+      boolean ok1 = stores[1].consistency();
+      assertThat(ok1).as(network).isEqualTo(ok0);
+      for (int step = 0; ok0 && step < 12; step++) {
+        for (int i = 0; i <= arcCount; i++) {
+          assertThat(vars[1][i].dom())
+              .as("%s step %d var %d", network, step, i)
+              .hasToString(vars[0][i].dom().toString());
+        }
+        int i = random.nextInt(arcCount + 1);
+        if (vars[0][i].singleton()) {
+          continue;
+        }
+        int v = vars[0][i].min() + random.nextInt(vars[0][i].max() - vars[0][i].min());
+        boolean upper = random.nextBoolean();
+        for (int s = 0; s < 2; s++) {
+          stores[s].setLevel(stores[s].level + 1);
+          if (upper) {
+            vars[s][i].domain.inMax(stores[s].level, vars[s][i], v);
+          } else {
+            vars[s][i].domain.inMin(stores[s].level, vars[s][i], v + 1);
+          }
+        }
+        ok0 = stores[0].consistency();
+        ok1 = stores[1].consistency();
+        assertThat(ok1).as("%s step %d", network, step).isEqualTo(ok0);
+      }
+    }
+  }
+
   private static int networkFlowBruteForce(
       int[][] arcs,
       int[] weights,
