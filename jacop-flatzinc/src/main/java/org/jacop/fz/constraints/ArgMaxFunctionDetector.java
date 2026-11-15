@@ -81,7 +81,29 @@ public class ArgMaxFunctionDetector {
   private record Affine(IntVar v, long m, long c) {}
 
   /** v = array[p - first]. */
-  private record Element(IntVar p, int[] array, int first) {}
+  private static final class Element {
+    private final IntVar p;
+    private final int[] array;
+    private final int first;
+
+    Element(IntVar p, int[] array, int first) {
+      this.p = p;
+      this.array = array;
+      this.first = first;
+    }
+
+    IntVar p() {
+      return p;
+    }
+
+    int[] array() {
+      return array;
+    }
+
+    int first() {
+      return first;
+    }
+  }
 
   private final Map<IntVar, Affine> affine = new IdentityHashMap<>();
 
@@ -178,7 +200,7 @@ public class ArgMaxFunctionDetector {
     for (int k = 0; k < 2; k++) {
       int o = 1 - k;
       if (Math.abs(a[k]) == 1 && a[o] != 0 && !x[k].singleton() && !x[o].singleton()) {
-        affine.putIfAbsent(x[k], new Affine(x[o], -(long) a[k] * a[o], (long) a[k] * c));
+        affine.putIfAbsent(x[k], new Affine(x[o], -(long) a[k] * a[o], a[k] * c));
       }
     }
   }

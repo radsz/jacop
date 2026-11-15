@@ -143,14 +143,14 @@ public class ArgMaxMonotone extends Constraint implements SatisfiedPresent, Expl
     if (f[k] == null) {
       return u;
     }
-    int i = (int) Math.max(0, Math.min((long) u - first[k], f[k].length - 1L));
+    int i = (int) Math.clamp((long) u - first[k], 0L, f[k].length - 1L);
     return f[k][i];
   }
 
   /** The largest argument of position k up to hi whose value is at most v, or lo - 1. */
   private int lastAtMost(int k, int lo, int hi, long v) {
     if (f[k] == null) {
-      return (int) Math.max(lo - 1L, Math.min(hi, v));
+      return (int) Math.clamp(v, lo - 1L, (long) hi);
     }
     // binary search over the nondecreasing table
     int a = lo;
@@ -171,7 +171,7 @@ public class ArgMaxMonotone extends Constraint implements SatisfiedPresent, Expl
   /** The smallest argument of position k from lo whose value is at least v, or hi + 1. */
   private int firstAtLeast(int k, int lo, int hi, long v) {
     if (f[k] == null) {
-      return (int) Math.min(hi + 1L, Math.max(lo, v));
+      return (int) Math.clamp(v, (long) lo, hi + 1L);
     }
     int a = lo;
     int b = hi;
@@ -611,20 +611,21 @@ public class ArgMaxMonotone extends Constraint implements SatisfiedPresent, Expl
       IntVar x = list[k];
       int end = step > 0 ? trail.maxBefore(x, position) : trail.minBefore(x, position);
       IntDomain r = trail.rootDomain(x);
-      for (int count = 0; step > 0 ? u <= end : u >= end; u += step) {
-        if (!r.contains(u)) {
-          int next = step > 0 ? r.nextValue(u) : r.previousValue(u);
-          if (next == u) {
-            break;
+      int count = 0;
+      int at = u;
+      while (step > 0 ? at <= end : at >= end) {
+        if (r.contains(at)) {
+          if (count++ == VALUE_LIMIT) {
+            return step > 0 ? Integer.MIN_VALUE : Integer.MAX_VALUE;
           }
-          u = next - step;
-          continue;
-        }
-        if (count++ == VALUE_LIMIT) {
-          return step > 0 ? Integer.MIN_VALUE : Integer.MAX_VALUE;
-        }
-        if (!trail.excludedBefore(x, u, position, out)) {
-          return u;
+          if (!trail.excludedBefore(x, at, position, out)) {
+            return at;
+          }
+          at += step;
+        } else {
+          // values outside the initial domain need no atom, so they are skipped without counting
+          int next = step > 0 ? r.nextValue(at) : r.previousValue(at);
+          at = next == at ? (step > 0 ? end + 1 : end - 1) : next;
         }
       }
       if (step > 0) {
