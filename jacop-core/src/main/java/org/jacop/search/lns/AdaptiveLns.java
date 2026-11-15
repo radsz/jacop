@@ -142,8 +142,32 @@ public final class AdaptiveLns {
      * The variables of random all-different constraints, with the variables that small constraints
      * tie to them alone: whole rounds of a round-robin schedule, with their venues and travels.
      */
-    LINES
+    LINES,
+    /**
+     * A whole new assignment of some variables proposed by a heuristic from the best solution, such
+     * as a schedule of the tasks built by a genetic algorithm; the other variables are free.
+     */
+    PROPOSALS
   }
+
+  /** Proposes new values of some variables from their values in the best solution. */
+  @FunctionalInterface
+  public interface Proposer {
+    /**
+     * A proposal.
+     *
+     * @param incumbent the values of the proposer's variables in the best solution
+     * @return their proposed values, or null for none
+     */
+    int[] propose(int[] incumbent);
+  }
+
+  // the proposer, its variables as indices of vars, and the values of the last proposal
+  private Proposer proposer;
+  private int[] proposerVars = new int[0];
+  // the values given to the proposer for its variables outside the neighbourhoods
+  private int[] proposerValue = new int[0];
+  private int[] proposal;
 
   /** How a run in a neighbourhood ended. */
   public enum Outcome {
@@ -640,6 +664,41 @@ public final class AdaptiveLns {
     return this;
   }
 
+  /**
+   * Adds a heuristic that proposes new values of some variables from their values in the best
+   * solution ({@link Kind#PROPOSALS}). A proposal fixes those variables to the proposed values and
+   * leaves every other variable free, for the search to complete.
+   *
+   * @param xs the variables of the proposals; those that are not variables of the neighbourhoods
+   *     are left to the search, and the proposer gets their smallest value
+   * @param p the heuristic
+   * @return this object, unchanged when none of them is a variable of the neighbourhoods
+   */
+  public AdaptiveLns setProposer(IntVar[] xs, Proposer p) {
+    Map<IntVar, Integer> at = new IdentityHashMap<>();
+    for (int i = 0; i < vars.length; i++) {
+      at.put(vars[i], i);
+    }
+    int[] idx = new int[xs.length];
+    int found = 0;
+    for (int k = 0; k < xs.length; k++) {
+      Integer i = at.get(xs[k]);
+      // a variable that is not among them (fixed, or defined by others) is left to the search
+      idx[k] = i == null ? -1 : i;
+      found += i == null ? 0 : 1;
+    }
+    if (found == 0) {
+      return this;
+    }
+    proposer = p;
+    proposerVars = idx;
+    proposerValue = new int[xs.length];
+    for (int k = 0; k < xs.length; k++) {
+      proposerValue[k] = xs[k].min();
+    }
+    return this;
+  }
+
   /** The routing structures, for tests. */
   List<RouteStructure> routings() {
     return routings;
@@ -755,6 +814,12 @@ public final class AdaptiveLns {
   int[] neighbourhood(Kind kind) {
     last = kind;
     bounded = new int[0];
+    proposal = null;
+    if (kind == Kind.PROPOSALS) {
+      runs[kind.ordinal()]++;
+      totalRuns++;
+      return proposed();
+    }
     runs[kind.ordinal()]++;
     totalRuns++;
     int free = 0;
@@ -796,7 +861,46 @@ public final class AdaptiveLns {
    * @return its value in the best solution.
    */
   public int value(int i) {
-    return incumbent[i];
+    return proposal != null && proposal[i] != Integer.MIN_VALUE ? proposal[i] : incumbent[i];
+  }
+
+  /**
+   * The neighbourhood of a proposal: its variables fixed to the proposed values, every other
+   * variable free. Without a proposal, a random neighbourhood.
+   */
+  private int[] proposed() {
+    int[] current = new int[proposerVars.length];
+    for (int k = 0; k < current.length; k++) {
+      int i = proposerVars[k];
+      current[k] = i >= 0 ? incumbent[i] : proposerValue[k];
+    }
+    int[] values = proposer.propose(current);
+    if (values == null) {
+      // nothing better to propose: the run is a random neighbourhood
+      int free = 0;
+      for (IntVar x : vars) {
+        if (!x.singleton()) {
+          free++;
+        }
+      }
+      int relaxed = Math.max(2, (int) Math.round(share[Kind.RANDOM.ordinal()] * free));
+      return relaxed >= free ? new int[0] : fixedOutside(randomRelax(relaxed));
+    }
+    proposal = new int[vars.length];
+    Arrays.fill(proposal, Integer.MIN_VALUE);
+    for (int k = 0; k < values.length; k++) {
+      if (proposerVars[k] >= 0) {
+        proposal[proposerVars[k]] = values[k];
+      }
+    }
+    int[] fixed = new int[proposerVars.length];
+    int m = 0;
+    for (int i : proposerVars) {
+      if (i >= 0 && !vars[i].singleton()) {
+        fixed[m++] = i;
+      }
+    }
+    return Arrays.copyOf(fixed, m);
   }
 
   /**
@@ -907,6 +1011,7 @@ public final class AdaptiveLns {
       case BLOCKS -> groups.length > 1;
       case LINES -> lines.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
+      case PROPOSALS -> proposer != null;
       default -> true;
     };
   }

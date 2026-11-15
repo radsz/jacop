@@ -57,6 +57,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SolutionHint;
@@ -64,6 +65,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Routes;
@@ -85,6 +87,7 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.FloatNewton;
+import org.jacop.floats.constraints.LinearFloatRelaxation;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -148,6 +151,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.ls.ProjectSchedule;
 import org.jacop.search.ls.ScheduleResources;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
@@ -238,7 +242,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // at least this many columns (-Dorg.jacop.lp.largeGuideColumns)
 
   // whether the search follows the relaxation's solution by default (lcg-lp-branching auto)
-  private static boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
+  private boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
     if (r.simplexValueColumns() > 0) {
       return true;
     }
@@ -246,7 +250,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return r.treeConstraints() > 0
-        || r.objective() != null && r.setRows()
+        || r.objective() != null && (r.setRows() || dictionary.overlapSetRows(r.objective()))
         || r.largeByRows() && r.columns() >= LARGE_GUIDE_COLUMNS;
   }
 
@@ -257,6 +261,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // turns them off)
   // the time-indexed bound of the cumulative resources (TimeIndexedBound), off by default
   private static final boolean TIME_INDEXED = Boolean.getBoolean("org.jacop.lp.timeIndexed");
+  // a float objective searched by bisection of its range (executeFloatBisection), not by asking
+  // each solution to improve by the next float below the last one
+  private static final boolean FLOAT_BISECTION =
+      !"false".equals(System.getProperty("org.jacop.fz.floatBisection"));
+
+  // the LP relaxation of the linear float rows of a float objective (LinearFloatRelaxation)
+  private static final boolean FLOAT_LP =
+      !"false".equals(System.getProperty("org.jacop.fz.floatLp"));
+
+  private static final int FLOAT_LP_ROWS = Integer.getInteger("org.jacop.fz.floatLpRows", 5000);
+
+  private LinearFloatRelaxation floatRelaxation;
+
+  // the bisection of a float objective first tries the point of the relaxation (pointProbe)
+  private static final boolean FLOAT_LP_POINT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatLpPoint", "true"));
+
+  // the solutions of a float objective's branch and bound before it turns to bisection
+  // the node budget of a run of the bisection, at least the nodes so far
+  private static final long STEP_NODES = Long.getLong("org.jacop.fz.floatStepNodes", 100_000);
+
+  private static final int FLOAT_CRAWL = Integer.getInteger("org.jacop.fz.floatCrawl", 1000);
+
+  // how far above lo, relative to max(1, |best|), a float cost steps down by max(1, |best|) in
+  // place of bisecting
+  private static final double FAR = 1e6;
 
   private TimeIndexedBound timeIndexedBound;
 
@@ -1093,6 +1123,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
       return;
+    }
+    String bySource = r.sourceReport();
+    if (bySource != null) {
+      // -Dorg.jacop.lp.sourceStats=true: what the rows of each source gave (LpSources)
+      for (String line : bySource.split("\n")) {
+        int space = line.indexOf(' ');
+        if (space > 0) {
+          IO.println(
+              "%%%mzn-stat: lpSource_"
+                  + line.substring(0, space).replaceAll("\\W", "_")
+                  + "="
+                  + line.substring(space + 1));
+        }
+      }
     }
     TimeIndexedBound t = timeIndexedBound;
     if (t != null) {
@@ -2164,6 +2208,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Var costVar = null;
     if (solveKind > 0) {
       costVar = setupCostVariable(kind, solveKind);
+      if (costVar instanceof FloatVar floatCost && FLOAT_LP) {
+        floatRelaxation = LinearFloatRelaxation.ofModel(store, floatCost, FLOAT_LP_ROWS);
+        if (floatRelaxation != null) {
+          store.impose(floatRelaxation);
+        }
+      }
     }
 
     // adds child search for cost; to be sure that all variables get a value
@@ -2770,6 +2820,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     // the pump dives in the store, before the solver takes it over
     Hint pumped = options.freeSearch() && ls == null ? pumpHint() : null;
+    // the dive that fills the slots of a fixed multiset, largest value first
+    Hint dived = options.freeSearch() && ls == null ? slotDive(costVar) : null;
+    // a project schedule of the cumulative resources, before the solver takes the store over
+    Hint scheduled =
+        options.freeSearch() && ls == null && costVar instanceof IntVar c
+            ? projectScheduleHint(c, worker)
+            : null;
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -2799,6 +2856,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (pumped != null) {
       lcg.setPhase(pumped.vars, pumped.values);
     }
+    if (dived != null) {
+      lcg.setPhase(dived.vars, dived.values);
+    }
     DecompositionBound.Primal columns =
         decomposition == null || !options.freeSearch() ? null : decomposition.primal();
     if (columns != null && !columns.feasible()) {
@@ -2818,6 +2878,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = ls.getCostValue();
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    } else if (scheduled != null) {
+      // the schedule is the solver's first solution: branch and bound and neighbourhood search
+      // go on from it (as a bound and phase alone, neighbourhood search never ran: j60_45_1)
+      lcg.setIncumbent(scheduled.vars, scheduled.values);
+      lcgLastCost = scheduledCost;
+      if (worker != null) {
+        lcg.setSharedBound(worker::sharedBound);
+      }
     } else if (worker != null && costVar != null) {
       lcg.setSharedBound(worker::sharedBound);
     }
@@ -2837,7 +2905,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if (ls != null && costVar instanceof IntVar cost) {
+    if ((ls != null || scheduled != null) && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better
       lcg.onSolution(
@@ -2957,12 +3025,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // packing or covering relaxation (LinearRelaxation.setRows) of an optimisation problem, whose
     // root solution is almost integral: the crew schedules of XCSP 2025 BusScheduling c2 and r5a,
     // 199 rows over 14,773 columns, prove their optima 29 and 28 in 16-41 s with it; without it c2
-    // is not proved in 600 s and r5a takes 306 s
+    // is not proved in 600 s and r5a takes 306 s. The rows that linear overlap factoring rewrote
+    // into rows over shared sums are no set rows in the relaxation, so the detector tells whether
+    // the model's rows were (Tables.overlapSetRows): CSPLib bus driver scheduling r3 and r5 (160
+    // and 199 rows over 19,091 and 7,292 shifts) then prove their optima 16 and 29 in 29 s and 28
+    // s, unsolved in 240 s before
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
                 || "auto".equals(lpBranching) && lpGuidedByDefault(linearRelaxation, free));
+    if (linearRelaxation != null && options.searchStatistics()) {
+      FzConsole.println("%%%mzn-stat: lpGuided=" + lpGuided + "\n%%%mzn-stat-end");
+    }
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -2971,12 +3046,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search: the runs of activity branching between the annotation's runs start from it
       lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
     }
-    if (defaultSearch && constraintHint != null) {
+    // the hints of the constraints, or else the slots of the dive
+    Hint firstHint = constraintHint != null ? constraintHint : dived;
+    if (defaultSearch && firstHint != null) {
       // no search annotation: the runs of the default search start with the values of the hints
-      IndomainLastSolution hinted =
-          new IndomainLastSolution(constraintHint.vars, new IndomainMin<>());
-      hinted.hint(constraintHint.vars, constraintHint.values);
-      SelectChoicePoint<IntVar> first = new SimpleSelect<>(constraintHint.vars, null, hinted);
+      IndomainLastSolution hinted = new IndomainLastSolution(firstHint.vars, new IndomainMin<>());
+      hinted.hint(firstHint.vars, firstHint.values);
+      SelectChoicePoint<IntVar> first = new SimpleSelect<>(firstHint.vars, null, hinted);
       annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
     lcg.setAnnotation(annotated, free);
@@ -3058,6 +3134,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
+    addScheduleProposer(lns);
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -3580,6 +3657,116 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return select;
   }
 
+  // the slots of a cardinality with fixed counts that slotDive fills, for the statistics
+  private int countSlotCount;
+
+  // the time of slotDive in milliseconds, for the statistics
+  private long countSlotDiveTime;
+
+  /**
+   * Dives through the slots of a cardinality with fixed counts before free search with learning, as
+   * first fit decreasing does: input order, largest value first, without learning, until the first
+   * solution or a share of the time. On the slot model of XCSP 2024 BinPacking, where x[i][j] is
+   * the weight of the j-th item in bin i and every weight occurs a fixed number of times, LCG free
+   * search made about 30 conflicts a second (each explanation of the cardinality about 85 literals)
+   * and found no solution in 600 s on n3c2w1a and n3c3w4a; this dive finds 91, the optimum of
+   * n3c2w1a, at once. Under LCG the reifications and the objective live in SAT clauses, which the
+   * store does not see, so the dive keeps the values of the slots only: they become the phase of
+   * LCG and the start of the default branching's runs, and the first run completes the solution.
+   *
+   * @return the hint of the dive's solution, or null when there is no such cardinality or none was
+   *     found
+   */
+  private Hint slotDive(Var costVar) {
+    if (!(costVar instanceof IntVar) || "off".equals(options.freeConfig("slot-dive", "on"))) {
+      return null;
+    }
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    // the defined variables, such as the truth of x[i][0] != 0 of a bin in use, follow the slots
+    Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+    defined.addAll(dictionary.definedVariables);
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar[] group : List.of(searchVars.getIntVars(), searchVars.getBoolVars())) {
+      for (IntVar x : group) {
+        if (x != costVar && !defined.contains(x)) {
+          vars.add(x);
+        }
+      }
+    }
+    IntVar[] slots = fixedCountSlots(vars);
+    countSlotCount = slots.length;
+    if (slots.length == 0) {
+      return null;
+    }
+    long budget =
+        options.getTimeOut() > 0
+            ? (long)
+                (Double.parseDouble(options.freeConfig("slot-dive-share", "0.05"))
+                    * options.getRemainingTimeOut())
+            : 10_000;
+    long start = System.currentTimeMillis();
+    int[][] found = new int[1][];
+    DepthFirstSearch<IntVar> dive = new DepthFirstSearch<>();
+    dive.setPrintInfo(false);
+    dive.setAssignSolution(false);
+    dive.setTimeOutMilliseconds(Math.max(1, budget));
+    dive.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(
+              Search<IntVar> search, SelectChoicePoint<IntVar> select) {
+            int[] values = new int[slots.length];
+            for (int i = 0; i < slots.length; i++) {
+              values[i] = slots[i].value();
+            }
+            found[0] = values;
+            return true;
+          }
+        });
+    dive.labeling(store, new SimpleSelect<>(slots, null, new IndomainMax<>()));
+    countSlotDiveTime = System.currentTimeMillis() - start;
+    if (options.debug()) {
+      IO.println(
+          "% slot dive: "
+              + slots.length
+              + " slots, "
+              + (found[0] == null ? "no solution" : "a solution")
+              + " in "
+              + countSlotDiveTime
+              + " ms");
+    }
+    return found[0] == null ? null : new Hint(slots, found[0]);
+  }
+
+  /**
+   * Returns the list of a cardinality constraint with fixed counts, in the order of the model, when
+   * it holds every one of the given variables that is not fixed; otherwise none.
+   */
+  private IntVar[] fixedCountSlots(List<IntVar> vars) {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if (c instanceof CountValuesBounds count && seen.add(c) && count.fixedCounts()) {
+          IntVar[] list = count.list();
+          Set<IntVar> in = Collections.newSetFromMap(new IdentityHashMap<>());
+          in.addAll(Arrays.asList(list));
+          boolean covers = true;
+          for (IntVar x : vars) {
+            if (!x.singleton() && !in.contains(x)) {
+              covers = false;
+              break;
+            }
+          }
+          if (covers) {
+            return list;
+          }
+        }
+      }
+    }
+    return new IntVar[0];
+  }
+
   /**
    * Returns the index variables, not yet fixed, of the element constraints over variable lists, in
    * the order the store meets them, when every one of the given variables that is not fixed is in
@@ -3814,6 +4001,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + setTimesStarts
             + "\n%%%mzn-stat: lcgRectangles="
             + rectangleCount
+            + "\n%%%mzn-stat: slotDiveSlots="
+            + countSlotCount
+            + "\n%%%mzn-stat: slotDiveTime="
+            + countSlotDiveTime / 1e3
             + "\n%%%mzn-stat: lcgElementPositions="
             + elementPositionCount
             + "\n%%%mzn-stat: lcgInputOrder="
@@ -4215,6 +4406,163 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the integer variables of the store not fixed at the root, which a solution hint covers
   /** Variables with the values a hint prefers for them. */
+  // the cost of the best project schedule, printed before the solver starts
+  private int scheduledCost;
+
+  // the project schedule of the cumulative resources, or null
+  private ProjectSchedule projectSchedule;
+  private long projectScheduleMillis;
+
+  /**
+   * Runs the project scheduling heuristic ({@link ProjectSchedule}) when the cost is the makespan
+   * of cumulative resources with fixed durations, demands and capacities, not all of them machines:
+   * serial schedule generation with forward-backward improvement inside a genetic algorithm. Each
+   * better schedule is checked in the store and printed, and the best becomes the first solution of
+   * the solver. The genetic algorithm then goes on in slices of sgs-lns schedules (default twenty
+   * per task) as a kind of neighbourhood of large neighbourhood search. --free-config sgs=0 turns
+   * it off, sgs-share gives the first run its share of the time (default 0.03), sgs-max caps it in
+   * milliseconds (default 60000) and sgs-patience is the number of schedules without improvement
+   * after which it ends (default 20000).
+   *
+   * @return the best schedule found, as a hint of all variables, or null
+   */
+  private Hint projectScheduleHint(IntVar cost, Portfolio.Worker worker) {
+    if ("0".equals(options.freeConfig("sgs", "1"))) {
+      return null;
+    }
+    long begin = System.currentTimeMillis();
+    ProjectSchedule ps = ProjectSchedule.detect(cost, options.getRandomSeed());
+    if (ps == null) {
+      return null;
+    }
+    projectSchedule = ps;
+    long budget = Long.parseLong(options.freeConfig("sgs-max", "60000"));
+    if (options.getTimeOut() > 0) {
+      budget =
+          Math.min(
+              budget,
+              (long)
+                  (Double.parseDouble(options.freeConfig("sgs-share", "0.03"))
+                      * options.getRemainingTimeOut()));
+    }
+    long deadline = begin + budget;
+    long patience = Long.parseLong(options.freeConfig("sgs-patience", "20000"));
+    IntVar[] starts = ps.starts();
+    IntVar[] hinted = hintedVariables();
+    int[][] best = {null};
+    boolean[] stopped = {false};
+    if (worker != null) {
+      worker.onStop(() -> stopped[0] = true);
+    }
+    ProjectSchedule.Listener listener =
+        new ProjectSchedule.Listener() {
+          @Override
+          public boolean improved(int[] start, int makespan) {
+            int[] values = checkSchedule(starts, start, cost, makespan, hinted);
+            if (values == null) {
+              // the other constraints reject it, or the cost is not this makespan
+              return false;
+            }
+            best[0] = values;
+            scheduledCost = makespan;
+            return true;
+          }
+
+          @Override
+          public boolean stop() {
+            return stopped[0] || System.currentTimeMillis() > deadline;
+          }
+
+          @Override
+          public long bound() {
+            return worker == null
+                ? bestPrintedCost.get()
+                : Math.min(bestPrintedCost.get(), worker.sharedBound());
+          }
+        };
+    ps.run(listener, patience);
+    projectScheduleMillis = System.currentTimeMillis() - begin;
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: sgsTasks="
+              + ps.tasks()
+              + "\n%%%mzn-stat: sgsResources="
+              + ps.resources()
+              + "\n%%%mzn-stat: sgsSchedules="
+              + ps.schedules()
+              + "\n%%%mzn-stat: sgsImprovements="
+              + ps.improvements()
+              + "\n%%%mzn-stat: sgsRestarts="
+              + ps.restarts()
+              + "\n%%%mzn-stat: sgsTime="
+              + projectScheduleMillis / 1000.0
+              + (best[0] == null ? "" : "\n%%%mzn-stat: sgsBest=" + scheduledCost));
+    }
+    return best[0] == null ? null : new Hint(hinted, best[0]);
+  }
+
+  /**
+   * Fixes the task starts of a schedule in the store, the cost to the makespan and the other
+   * variables to their smallest values with propagation, and prints the solution.
+   *
+   * @return the values of the hinted variables, or null when the store rejects the schedule
+   */
+  private int[] checkSchedule(
+      IntVar[] starts, int[] start, IntVar cost, int makespan, IntVar[] hinted) {
+    int base = store.level;
+    store.setLevel(base + 1);
+    try {
+      for (int k = 0; k < starts.length; k++) {
+        starts[k].domain.in(store.level, starts[k], start[k], start[k]);
+      }
+      if (!store.consistency() || !cost.domain.contains(makespan) || cost.min() != makespan) {
+        return null;
+      }
+      cost.domain.in(store.level, cost, makespan, makespan);
+      if (!store.consistency()) {
+        return null;
+      }
+      for (IntVar x : hinted) {
+        if (!x.singleton()) {
+          x.domain.in(store.level, x, x.min(), x.min());
+          if (!store.consistency()) {
+            return null;
+          }
+        }
+      }
+      int[] values = new int[hinted.length];
+      for (int k = 0; k < hinted.length; k++) {
+        values[k] = hinted[k].value();
+      }
+      printSolution();
+      return values;
+    } catch (FailException e) {
+      return null;
+    } finally {
+      while (store.level > base) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+    }
+  }
+
+  /**
+   * Lets the genetic algorithm of the project schedule go on in slices from the best solution of
+   * the search, as a kind of neighbourhood whose runs fix the task starts of a better schedule.
+   */
+  private void addScheduleProposer(AdaptiveLns lns) {
+    if (lns == null || projectSchedule == null) {
+      return;
+    }
+    ProjectSchedule ps = projectSchedule;
+    long slice =
+        Long.parseLong(
+            options.freeConfig("sgs-lns", Long.toString(Math.max(1000, 20L * ps.tasks()))));
+    if (slice > 0) {
+      lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
+    }
+  }
+
   private static final class Hint {
     final IntVar[] vars;
     final int[] values;
@@ -4568,6 +4916,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.restartHook(dictionary.onRestart);
     } else if (restarts != null && !allSolutions) {
       freeLns = lnsNeighbourhoods(costVar);
+      addScheduleProposer(freeLns);
       if (freeLns != null && lcgHint != null) {
         // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
         // they waited for free search's own first solution, which must improve on it, and on
@@ -5040,10 +5389,298 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           });
     }
+    if (costVar instanceof FloatVar floatCost && FLOAT_BISECTION) {
+      return executeFloatBisection(label, select, floatCost);
+    }
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
     return label.labeling(store, select);
+  }
+
+  /**
+   * Minimises a float cost, by branch and bound until it crawls and by bisection of the cost range
+   * after that. Branch and bound asks each solution only to cost less than the last one, by one
+   * float, so on a float objective each solution can improve on the last by a few ulps: the
+   * 3-variable linear program mip1 found 16 million solutions in 60 s and was still at a cost of
+   * 1e-9 against the optimum 39. So once the search has found {@link #FLOAT_CRAWL} solutions, each
+   * further solution must cost at most the middle of [lo, best], where lo is the lowest cost not
+   * yet refuted. A search that ends under that bound proves that no solution costs at most the
+   * bound, so lo moves above it and the search runs again from the root, until the range is
+   * narrower than the precision: the last search then asks for a cost of at most best minus the
+   * precision and its end proves best optimal within the precision. A cost far above lo steps down
+   * at once ({@link #floatCostBound}). Otherwise, below that many solutions nothing changes: a run
+   * from the root under a bound can cost far more than the branch and bound it replaces (box: 15.7
+   * million nodes to refute a cost of 50.9 from the root, 38,000 for the whole branch and bound to
+   * the optimum 50.94).
+   *
+   * @param label the search
+   * @param select the choice points
+   * @param cost the cost, minimised
+   * @return true if a solution was found
+   */
+  private boolean executeFloatBisection(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, FloatVar cost) {
+    double[] lo = {cost.min()};
+    // the solutions of the first run so far, and the cost of the last one; no bisection in the
+    // first run until it crawls
+    int[] solutions = {0};
+    double[] last = {Double.NaN};
+    // a cost far above any bound known (mip2: 6 solutions in 60 s, the last of 1.7e14 with the
+    // optimum 18.6) steps down at once. Each run under a step of the bisection or a far step has a
+    // node budget, the nodes so far and at least STEP_NODES: a run from the root under a step can
+    // cost more than the whole branch and bound (arbitrage_loops5: z >= 2 not refuted in 90 s, 32
+    // solutions of branch and bound to the optimum 1.000000000000003 in 42 s). Out of its budget,
+    // branch and bound goes on from the best solution and bisects again once it crawls
+    boolean[] farOff = {false};
+    boolean[] farRun = {false};
+    // with a relaxation, its point probes give the solutions to bisect from at once (ex2_1_10
+    // under -f: the probe found 49,400 and branch and bound nothing better in 17 s)
+    // only with a finite bound to bisect from (mip2, unbounded columns: the points of the
+    // relaxation ran off to -1e143)
+    // only under free search: the annotated searches of ex2_1_10 (input_order, split) and box prove
+    // the optimum in 4 s and 0.8 s by branch and bound to 1000 solutions, and in 59 s and 53 s by
+    // bisection from the start
+    boolean[] bisect = {
+      FLOAT_BISECT_START
+          && options.freeSearch()
+          && FLOAT_LP_POINT
+          && floatRelaxation != null
+          && lo[0] > -1e12
+    };
+    DoubleUnaryOperator bound =
+        best -> {
+          if (best != last[0]) {
+            last[0] = best;
+            bisect[0] |= ++solutions[0] > FLOAT_CRAWL;
+          }
+          return bisect[0] || far(lo[0], best, farOff[0] || !farRun[0])
+              ? floatCostBound(lo[0], best, gap(best))
+              : FloatDomain.previousForMinimization(best);
+        };
+    label.setFloatCostBound(bound);
+    SimpleSolutionListener<T> listener =
+        label.getSolutionListener() instanceof SimpleSolutionListener<T> l ? l : null;
+    int solutionLimit = listener == null ? -1 : listener.solutionLimit;
+    int base = store.level;
+    boolean found = false;
+    while (true) {
+      double best = label.getCostValueFloat();
+      boolean farStep = !bisect[0] && best != Double.MAX_VALUE && far(lo[0], best, farOff[0]);
+      farRun[0] = farStep;
+      double limit = best == Double.MAX_VALUE ? Double.MAX_VALUE : bound.applyAsDouble(best);
+      if (FLOAT_LP_POINT
+          && (bisect[0] || best == Double.MAX_VALUE)
+          && floatRelaxation != null
+          && select instanceof SplitSelectFloat<?> split
+          && pointProbe(
+              label, select, cost, split.searchVariables, limit, base, listener, solutionLimit)) {
+        found = true;
+        if (label.timeOutOccured) {
+          break;
+        }
+        continue;
+      }
+      boolean result = false;
+      // the first run stops after FLOAT_CRAWL solutions and a run of the bisection at its first
+      // solution, to start again from the root under the next bound: a depth-first search that
+      // goes on from where it found a solution stays in its subtree (ackley5, default search: 1001
+      // solutions and then none under the middle bound in 18 s; with a restart 0.4 s)
+      // a run under a step of the bisection, or far below the best cost, has a node budget
+      boolean budget = bisect[0] || farStep;
+      if (budget) {
+        label.setNodesOut(label.getNodes() + Math.max(STEP_NODES, label.getNodes()));
+      }
+      int stopAt = -1;
+      if (listener != null && FLOAT_RESTART) {
+        // a cost that can be far below its first solution stops there, to step down within a
+        // budget
+        boolean step = bisect[0] || farStep || (best == Double.MAX_VALUE && lo[0] < 1 - FAR);
+        stopAt = listener.solutionsNo() + (step ? 1 : FLOAT_CRAWL + 1);
+        listener.setSolutionLimit(Math.min(stopAt, solutionLimit));
+      }
+      store.setLevel(base + 1);
+      try {
+        // only the upper bound: with a lower bound too, a run that ends without a solution has to
+        // split the boxes whose cost straddles lo down to the precision (box: 3.9 million nodes to
+        // refute [25.9, 38.8], 2,800 with no lower bound)
+        cost.domain.inMax(store.level, cost, limit);
+        result = label.labeling(store, select, cost);
+      } catch (FailException _) {
+        store.clearChanged();
+      }
+      store.removeLevel(base + 1);
+      store.setLevel(base);
+      // a run that found a solution and failed after it, as when it assigns the solution, still
+      // found it
+      result |= label.getCostValueFloat() < best;
+      found |= result;
+      if (budget) {
+        label.setNodesOut(Long.MAX_VALUE);
+        if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+          // out of the node budget: branch and bound from the best solution, and bisect again
+          // once it crawls
+          label.timeOutOccured = false;
+          farOff[0] |= farStep;
+          bisect[0] = false;
+          solutions[0] = 0;
+          continue;
+        }
+      }
+      if (label.timeOutOccured) {
+        break;
+      }
+      best = label.getCostValueFloat();
+      // a search that does not stop at the solution limit (free search with -a) ran to its end
+      if (stopAt >= 0 && stopAt <= solutionLimit && listener.solutionsNo() == stopAt) {
+        // stopped at a solution: bisect from it once the first run crawls, step down from it when
+        // its cost is far above lo, and branch and bound from it otherwise
+        bisect[0] |= solutions[0] > FLOAT_CRAWL;
+        continue;
+      }
+      if (farStep) {
+        // the step is refuted: bisect from it
+        bisect[0] = true;
+      }
+      if (best == Double.MAX_VALUE || !bisect[0]) {
+        break; // no solution, or branch and bound to the end
+      }
+      double end = floatCostBound(lo[0], best, gap(best));
+      if (end >= best - gap(best)) {
+        break; // nothing costs best - eps or less: best is optimal within the precision
+      }
+      // nothing costs at most end: the lowest cost left is above it
+      lo[0] = Math.nextUp(end);
+    }
+    label.setFloatCostBound(null);
+    if (listener != null) {
+      listener.setSolutionLimit(solutionLimit);
+    }
+    return found;
+  }
+
+  /**
+   * Tries the point of the relaxation: under the cost bound, fixes each search variable to its
+   * value at the optimum of the relaxation and searches the rest. On a model whose constraints are
+   * linear inequalities that point is a solution whenever it is in the domains (Ibex's upper
+   * bounding at the vertex of a linear relaxation): ex2_1_10, whose depth-first search found
+   * nothing under 277,717 in 13 s, has its optimum 49,318 near the point of the root.
+   *
+   * @return true when the search found a better solution
+   */
+  private boolean pointProbe(
+      DepthFirstSearch<T> label,
+      SelectChoicePoint<T> select,
+      FloatVar cost,
+      Var[] vars,
+      double limit,
+      int base,
+      SimpleSolutionListener<T> listener,
+      int solutionLimit) {
+    double before = label.getCostValueFloat();
+    boolean result = false;
+    store.setLevel(base + 1);
+    try {
+      cost.domain.inMax(store.level, cost, limit);
+      if (store.consistency()) {
+        double[] point = new double[vars.length];
+        for (int i = 0; i < vars.length; i++) {
+          point[i] =
+              vars[i] instanceof FloatVar v && v != cost
+                  ? floatRelaxation.pointValue(v, store.level)
+                  : Double.NaN;
+        }
+        int fixed = 0;
+        for (int i = 0; i < vars.length; i++) {
+          if (Double.isNaN(point[i])) {
+            continue;
+          }
+          FloatVar v = (FloatVar) vars[i];
+          double g = point[i];
+          double tol = 1e-6 * Math.max(1, Math.abs(g));
+          // a value at a bound of its domain; a value inside comes from a row the point may miss
+          // by the tolerance of the simplex, and is left to the search
+          if (g <= v.min() + tol) {
+            v.domain.in(store.level, v, v.min(), v.min());
+            fixed++;
+          } else if (g >= v.max() - tol) {
+            v.domain.in(store.level, v, v.max(), v.max());
+            fixed++;
+          }
+        }
+        if (fixed == 0) {
+          return false;
+        }
+        // the first solution, within a few nodes
+        if (listener != null) {
+          listener.setSolutionLimit(listener.solutionsNo() + 1);
+        }
+        label.setNodesOut((long) label.getNodes() + POINT_PROBE_NODES);
+        result = label.labeling(store, select, cost);
+      }
+    } catch (FailException _) {
+      store.clearChanged();
+    } finally {
+      store.removeLevel(base + 1);
+      store.setLevel(base);
+      if (listener != null) {
+        listener.setSolutionLimit(solutionLimit);
+      }
+      label.setNodesOut(Long.MAX_VALUE);
+      // the node limit stops the search as a time-out does
+      if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+        label.timeOutOccured = false;
+      }
+    }
+    pointProbes++;
+    boolean better = result && label.getCostValueFloat() < before;
+    if (better) {
+      pointProbeSolutions++;
+    }
+    return better;
+  }
+
+  // the precision of the optimum: relative to its magnitude, as the gaps of Ibex and SCIP
+  // the precision is read at each use: the search sets the precision of its annotation when it
+  // starts
+  private static double gap(double best) {
+    return FloatDomain.precision() * Math.max(1, Math.abs(best));
+  }
+
+  private static final boolean FLOAT_BISECT_START =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatBisectStart", "true"));
+
+  private static final boolean FLOAT_RESTART =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatRestart", "true"));
+
+  // the nodes of a point probe
+  private static final int POINT_PROBE_NODES = 1000;
+
+  private long pointProbes;
+
+  private long pointProbeSolutions;
+
+  /**
+   * The bound for the next solution of a float cost minimised by bisection: the middle of [lo,
+   * best], or best minus the precision once that range is narrower than four times the precision.
+   * Far above lo (by more than {@link #FAR} times max(1, |best|), as for a cost with no finite
+   * bound), the bound is best minus max(1, |best|): a search that ends under it gives a lo to
+   * bisect from.
+   */
+  private static boolean far(double lo, double best, boolean off) {
+    return !off && best - lo > FAR * Math.max(1, Math.abs(best));
+  }
+
+  static double floatCostBound(double lo, double best, double eps) {
+    double exact = best - eps;
+    if (best - lo <= 4 * eps) {
+      return exact;
+    }
+    double scale = Math.max(1, Math.abs(best));
+    if (best - lo > FAR * scale) {
+      return Math.min(exact, best - scale);
+    }
+    return Math.min(exact, lo / 2 + best / 2);
   }
 
   /**
@@ -5240,6 +5877,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param result whether a solution was found
    */
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
+    if (floatRelaxation != null && options.getStatistics()) {
+      long[] c = floatRelaxation.counts();
+      IO.println("%%%mzn-stat: floatLpRows=" + floatRelaxation.rows());
+      IO.println("%%%mzn-stat: floatLpSolves=" + c[0]);
+      IO.println("%%%mzn-stat: floatLpBounds=" + c[1]);
+      IO.println("%%%mzn-stat: floatLpFailures=" + c[2]);
+      IO.println("%%%mzn-stat: floatLpPointProbes=" + pointProbes);
+      IO.println("%%%mzn-stat: floatLpPointSolutions=" + pointProbeSolutions);
+    }
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
@@ -6331,6 +6977,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (output.zeroSums != null) {
       eliminatedValues = new IdentityHashMap<>(eliminatedValues);
       output.zeroSums.addValues(eliminatedValues);
+    }
+    // and the index variables and results of the disjunctions from the arrays
+    if (output.indexDisjunctions != null) {
+      eliminatedValues = new IdentityHashMap<>(eliminatedValues);
+      output.indexDisjunctions.addValues(eliminatedValues);
     }
 
     if (!output.outputVariables.isEmpty()) {

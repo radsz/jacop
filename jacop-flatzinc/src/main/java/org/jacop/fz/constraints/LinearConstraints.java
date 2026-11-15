@@ -195,6 +195,15 @@ class LinearConstraints implements ParserTreeConstants {
     int_lin_relation_reif_imp(operation, node, false);
   }
 
+  void linearImplied(int operation, int[] a, IntVar[] x, int c, IntVar b) {
+    switch (operation) {
+      case Support.EQ -> intLinReifEq(a, x, c, b, false, 0, false);
+      case Support.NE -> intLinReifNe(a, x, c, b, false);
+      case Support.LE -> intLinReifLe(a, x, c, b, false);
+      default -> throw new IllegalArgumentException("relation " + operation);
+    }
+  }
+
   private void int_lin_relation_reif_imp(int operation, SimpleNode node, boolean isReified)
       throws FailException {
 

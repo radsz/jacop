@@ -244,6 +244,40 @@ class LinearRelaxationTest {
   }
 
   /**
+   * The statistics by source ({@code org.jacop.lp.sourceStats}) keep the optima, count the given
+   * rows (named by constraint class when the relaxation is built from a store) and the cuts by
+   * their separator, and are absent when off.
+   */
+  @Test
+  void reportsRowsBySource() {
+    boolean before = LpSources.on;
+    LpSources.on = true;
+    try {
+      java.util.Set<String> seen = new java.util.HashSet<>();
+      for (int run = 0; run < RUNS; run++) {
+        long[] expected = search(new Model(run));
+        Model model = new Model(run);
+        LinearRelaxation r = model.relaxation();
+        long[] actual = search(model);
+        assertThat(actual).as("seed %d", run).isEqualTo(expected);
+        String report = r.sourceReport();
+        assertThat(report).isNotNull();
+        for (String line : report.split("\n")) {
+          if (!line.isEmpty()) {
+            assertThat(line.split(" ")).as(line).hasSize(12);
+            seen.add(line.substring(0, line.indexOf(' ')));
+          }
+        }
+      }
+      assertThat(seen).contains("row");
+      assertThat(seen).anyMatch(s -> s.equals("gomory") || s.equals("mir"));
+    } finally {
+      LpSources.on = before;
+    }
+    assertThat(new Model(0).relaxation().sourceReport()).isNull();
+  }
+
+  /**
    * Restarts: each solution found tightens the bound of the cost at the root level, where the
    * relaxation propagates its root reduced costs and solves again with new cut rounds; whatever it
    * deduces there must keep the optimum.

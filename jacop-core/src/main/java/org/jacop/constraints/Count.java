@@ -189,7 +189,12 @@ public class Count extends AbstractCount
     return counter;
   }
 
-  int countedValue() {
+  /**
+   * Returns the counted value.
+   *
+   * @return the value
+   */
+  public int countedValue() {
     return value;
   }
 
@@ -239,6 +244,15 @@ public class Count extends AbstractCount
   @Override
   public IntVar functionalResult() {
     return counter;
+  }
+
+  /**
+   * Returns the counted variables.
+   *
+   * @return a copy of the list, in its current order
+   */
+  public IntVar[] countedVariables() {
+    return list.clone();
   }
 
   @Override

@@ -65,9 +65,10 @@ class SetUnionFlatzincTest {
 
   /**
    * A random set comprehension as MiniZinc flattens it: elements e_i with small domains (or
-   * constants, or 0/1 variables), the singletons {e_i}, constant sets, a chain of set_union
-   * constraints and constraints on the union: its cardinality, a membership, or a subset. An inner
-   * union is sometimes printed, which keeps its chain.
+   * constants, or 0/1 variables, or an element of an earlier singleton), the singletons {e_i},
+   * constant sets, a chain of set_union constraints and constraints on the union: its cardinality,
+   * a membership, or a subset. An inner union is sometimes printed, which keeps its chain. Some
+   * elements are also reified by the model (int_eq_reif).
    */
   private static String randomModel(Random random, boolean optimise) {
     StringBuilder fzn = new StringBuilder();
@@ -90,6 +91,9 @@ class SetUnionFlatzincTest {
         String elem;
         if (kind == 1) {
           elem = String.valueOf(random.nextInt(5));
+        } else if (kind == 3 && e > 0) {
+          // an element of an earlier singleton: its value literals are shared
+          elem = "e" + random.nextInt(e);
         } else {
           elem = "e" + e++;
           int lo = random.nextInt(3);
@@ -140,6 +144,14 @@ class SetUnionFlatzincTest {
           // only the cardinality
         }
       }
+    }
+    // a reification of the model on an element, which the membership clauses reuse
+    int reified = e > 0 ? random.nextInt(3) : 0;
+    for (int r = 0; r < reified; r++) {
+      String b = "r" + r;
+      fzn.append("var bool: ").append(b).append(":: output_var;\n");
+      constraints.add(
+          "constraint int_eq_reif(e" + random.nextInt(e) + "," + random.nextInt(4) + "," + b + ")");
     }
     for (String v : ints) {
       if (v.startsWith("e")) {
