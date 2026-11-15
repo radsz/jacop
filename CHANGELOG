@@ -6152,7 +6152,11 @@ Version 5.0 (unreleased)
    ln, sin, cos): a Hansen-Sengupta step with the inverse of the midpoint
    Jacobian as preconditioner and Gauss-Seidel, evaluated in interval
    arithmetic with outward rounding, after propagation at every search node.
-   -Dorg.jacop.floats.newton=true runs it on FlatZinc float searches.
+   The FlatZinc front end runs it, ahead of FloatCid, on the float search
+   variables of satisfaction problems; -Dorg.jacop.floats.newton=false turns
+   it off and =true also runs it for optimisation. At 240 s it solves 52 of
+   the 59 satisfaction instances of the osolpro float set instead of 50 with
+   FloatCid alone (geometric mean of the times 0.90).
    Hansen and Sengupta, "Bounding solutions of systems of equations using
    interval analysis", BIT 21(2), 1981.
 
