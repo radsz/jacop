@@ -73,13 +73,14 @@ public class Pruning extends Network {
   private final PruningStrategy strategy;
 
   // whether residual arcs of any capacity are decided by shortest paths when they can be, not only
-  // arcs of capacity one, -Dorg.jacop.netflow.generalArcs=false for the probe of every such arc;
-  // read when the network is made, so that a test can compare the two
+  // arcs of capacity one; setting the system property org.jacop.netflow.generalArcs to false probes
+  // every such arc instead. It is read when the network is made, so that a test can compare the two
   private final boolean generalArcs =
       !"false".equals(System.getProperty("org.jacop.netflow.generalArcs"));
 
   // whether the arcs left after the shortest paths are probed by successive shortest paths instead
-  // of pivots of the network simplex, -Dorg.jacop.netflow.shortestPaths=false for the pivots
+  // of pivots of the network simplex; setting the system property org.jacop.netflow.shortestPaths
+  // to false keeps the pivots
   private final boolean shortestPaths =
       !"false".equals(System.getProperty("org.jacop.netflow.shortestPaths"));
   public int numActiveArcs;

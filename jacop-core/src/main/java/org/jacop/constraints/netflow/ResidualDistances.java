@@ -221,35 +221,22 @@ final class ResidualDistances {
         if (reach == -2) {
           return -1;
         }
-        if (reach == UNREACHED) {
-          break;
-        }
-        // the cost of a unit along the path: the reduced costs of its arcs, which the potentials
-        // shift by the potential of the sink (the source keeps potential 0)
-        long cost = unitCost + reach + potential[sink.index];
-        int amount = Math.min(bottleneck[sink.index], capacity - flow);
-        if (cost > 0) {
-          amount = (int) Math.min(amount, budget / cost);
-        }
-        if (amount <= 0) {
-          break;
-        }
-        for (Node at = sink; at != source; ) {
-          Arc arc = predecessor[at.index];
-          if (changes == changed.length) {
-            changed = Arrays.copyOf(changed, 2 * changes);
-            pushed = Arrays.copyOf(pushed, 2 * changes);
+        int room = reach == UNREACHED ? 0 : Math.min(bottleneck[sink.index], capacity - flow);
+        int amount = room;
+        if (room > 0) {
+          // the cost of a unit along the path: the reduced costs of its arcs, which the potentials
+          // shift by the potential of the sink (the source keeps potential 0)
+          long cost = unitCost + reach + potential[sink.index];
+          if (cost > 0) {
+            amount = (int) Math.min(room, budget / cost);
           }
-          changed[changes] = arc;
-          pushed[changes++] = amount;
-          arc.capacity -= amount;
-          arc.sister.capacity += amount;
-          at = arc.tail();
+          if (amount > 0) {
+            changes = augment(source, sink, amount, changes);
+            flow += amount;
+            budget -= amount * cost;
+          }
         }
-        boolean limited = amount < Math.min(bottleneck[sink.index], capacity - flow);
-        flow += amount;
-        budget -= amount * cost;
-        if (limited) {
+        if (amount <= 0 || amount < room) {
           break;
         }
         for (int i = 0; i < nodes.length; i++) {
@@ -263,6 +250,35 @@ final class ResidualDistances {
         changed[k].sister.capacity -= pushed[k];
       }
     }
+  }
+
+  // pushes amount along the predecessor path from source to sink, recording each change after the
+  // first changes ones so that fits can undo them; returns the new number of changes
+  private int augment(Node source, Node sink, int amount, int changes) {
+    Node at = sink;
+    while (at != source) {
+      Arc arc = predecessor[at.index];
+      if (changes == changed.length) {
+        changed = Arrays.copyOf(changed, 2 * changes);
+        pushed = Arrays.copyOf(pushed, 2 * changes);
+      }
+      changed[changes] = arc;
+      pushed[changes++] = amount;
+      arc.capacity -= amount;
+      arc.sister.capacity += amount;
+      at = arc.tail();
+    }
+    return changes;
+  }
+
+  // the residual arc of arc leaving node with room left, or null when there is none or arc is
+  // deleted or excluded (or its sister)
+  private static Arc residualFrom(Node node, Arc arc, Arc excluded) {
+    if (arc.index == DELETED_ARC || arc == excluded || arc == excluded.sister) {
+      return null;
+    }
+    Arc residual = arc.head == node ? arc.sister : arc;
+    return residual.capacity > 0 ? residual : null;
   }
 
   // Dijkstra from source to sink over the residual arcs other than excluded (and its sister), with
@@ -284,11 +300,8 @@ final class ResidualDistances {
       long du = distance[u];
       Node node = nodes[u];
       for (Arc arc : node.incident) {
-        if (arc.index == DELETED_ARC || arc == excluded || arc == excluded.sister) {
-          continue;
-        }
-        Arc residual = arc.head == node ? arc.sister : arc;
-        if (residual.capacity <= 0) {
+        Arc residual = residualFrom(node, arc, excluded);
+        if (residual == null) {
           continue;
         }
         Node next = residual.head;

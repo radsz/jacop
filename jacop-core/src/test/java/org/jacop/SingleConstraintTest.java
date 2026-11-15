@@ -6436,9 +6436,9 @@ class SingleConstraintTest extends TestHelper {
       assertThat(ok1).as(network).isEqualTo(ok0);
       for (int step = 0; ok0 && step < 12; step++) {
         for (int i = 0; i <= arcCount; i++) {
-          assertThat(vars[1][i].dom().toString())
+          assertThat(vars[1][i].dom())
               .as("%s step %d var %d", network, step, i)
-              .isEqualTo(vars[0][i].dom().toString());
+              .hasToString(vars[0][i].dom().toString());
         }
         int i = random.nextInt(arcCount + 1);
         if (vars[0][i].singleton()) {
