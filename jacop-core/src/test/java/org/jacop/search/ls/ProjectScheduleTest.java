@@ -29,7 +29,6 @@
 package org.jacop.search.ls;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -127,6 +126,20 @@ class ProjectScheduleTest {
       return end;
     }
 
+    // whether no two tasks with a demand fit together on any resource
+    boolean machinesOnly() {
+      for (int r = 0; r < cap.length; r++) {
+        for (int a = 0; a < n; a++) {
+          for (int b = a + 1; b < n; b++) {
+            if (dem[r][a] > 0 && dem[r][b] > 0 && dem[r][a] + dem[r][b] <= cap[r]) {
+              return false;
+            }
+          }
+        }
+      }
+      return true;
+    }
+
     int optimum() {
       DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
       search.setPrintInfo(false);
@@ -142,11 +155,17 @@ class ProjectScheduleTest {
   @Test
   void schedulesKeepTheConstraints() {
     Random random = new Random(7);
+    int fired = 0;
     for (int trial = 0; trial < 60; trial++) {
       Project p = new Project(random, 4 + random.nextInt(5), 1 + random.nextInt(3));
       assertTrue(p.store.consistency());
       ProjectSchedule ps = ProjectSchedule.detect(p.cost, trial);
-      assertNotNull(ps, "trial " + trial);
+      if (ps == null) {
+        // every resource is a machine: left to the disjunctive scheduling of local search
+        assertTrue(p.machinesOnly(), "trial " + trial);
+        continue;
+      }
+      fired++;
       IntVar[] starts = ps.starts();
       int[] best = {Integer.MAX_VALUE};
       ps.run(
@@ -173,9 +192,39 @@ class ProjectScheduleTest {
             }
           },
           2000);
+      // the slices from another search's solution: a worse schedule (every task in list order,
+      // one after the other) gives a better one back, a valid one
+      int[] serial = new int[starts.length];
+      int[] at = new int[p.n];
+      int clock = 0;
+      for (int t = 0; t < p.n; t++) {
+        at[t] = clock;
+        clock += p.d[t];
+      }
+      for (int k = 0; k < starts.length; k++) {
+        for (int t = 0; t < p.n; t++) {
+          if (starts[k] == p.s[t]) {
+            serial[k] = at[t];
+          }
+        }
+      }
+      int[] better = ps.improve(serial, 500);
+      if (better != null) {
+        int[] byTask = new int[p.n];
+        for (int k = 0; k < starts.length; k++) {
+          for (int t = 0; t < p.n; t++) {
+            if (starts[k] == p.s[t]) {
+              byTask[t] = better[k];
+            }
+          }
+        }
+        int m = p.check(byTask);
+        assertTrue(m >= 0 && m < clock, "trial " + trial);
+      }
       int opt = p.optimum();
       assertTrue(best[0] >= opt, "trial " + trial + ": " + best[0] + " < optimum " + opt);
     }
+    assertTrue(fired >= 30, "fired " + fired);
   }
 
   @Test

@@ -155,6 +155,8 @@ public final class AdaptiveLns {
   // the proposer, its variables as indices of vars, and the values of the last proposal
   private Proposer proposer;
   private int[] proposerVars = new int[0];
+  // the values given to the proposer for its variables outside the neighbourhoods
+  private int[] proposerValue = new int[0];
   private int[] proposal;
 
   /** How a run in a neighbourhood ended. */
@@ -642,9 +644,10 @@ public final class AdaptiveLns {
    * solution ({@link Kind#PROPOSALS}). A proposal fixes those variables to the proposed values and
    * leaves every other variable free, for the search to complete.
    *
-   * @param xs the variables of the proposals, all among the variables of the neighbourhoods
+   * @param xs the variables of the proposals; those that are not variables of the neighbourhoods
+   *     are left to the search, and the proposer gets their smallest value
    * @param p the heuristic
-   * @return this object, or the object unchanged when a variable is not among them
+   * @return this object, unchanged when none of them is a variable of the neighbourhoods
    */
   public AdaptiveLns setProposer(IntVar[] xs, Proposer p) {
     Map<IntVar, Integer> at = new IdentityHashMap<>();
@@ -652,15 +655,22 @@ public final class AdaptiveLns {
       at.put(vars[i], i);
     }
     int[] idx = new int[xs.length];
+    int found = 0;
     for (int k = 0; k < xs.length; k++) {
       Integer i = at.get(xs[k]);
-      if (i == null) {
-        return this;
-      }
-      idx[k] = i;
+      // a variable that is not among them (fixed, or defined by others) is left to the search
+      idx[k] = i == null ? -1 : i;
+      found += i == null ? 0 : 1;
+    }
+    if (found == 0) {
+      return this;
     }
     proposer = p;
     proposerVars = idx;
+    proposerValue = new int[xs.length];
+    for (int k = 0; k < xs.length; k++) {
+      proposerValue[k] = xs[k].min();
+    }
     return this;
   }
 
@@ -835,7 +845,8 @@ public final class AdaptiveLns {
   private int[] proposed() {
     int[] current = new int[proposerVars.length];
     for (int k = 0; k < current.length; k++) {
-      current[k] = incumbent[proposerVars[k]];
+      int i = proposerVars[k];
+      current[k] = i >= 0 ? incumbent[i] : proposerValue[k];
     }
     int[] values = proposer.propose(current);
     if (values == null) {
@@ -852,12 +863,14 @@ public final class AdaptiveLns {
     proposal = new int[vars.length];
     Arrays.fill(proposal, Integer.MIN_VALUE);
     for (int k = 0; k < values.length; k++) {
-      proposal[proposerVars[k]] = values[k];
+      if (proposerVars[k] >= 0) {
+        proposal[proposerVars[k]] = values[k];
+      }
     }
     int[] fixed = new int[proposerVars.length];
     int m = 0;
     for (int i : proposerVars) {
-      if (!vars[i].singleton()) {
+      if (i >= 0 && !vars[i].singleton()) {
         fixed[m++] = i;
       }
     }

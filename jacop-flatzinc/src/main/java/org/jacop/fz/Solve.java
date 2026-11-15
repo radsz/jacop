@@ -2967,18 +2967,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
-    if (lns != null && projectSchedule != null) {
-      // the genetic algorithm goes on in slices from the solver's best solution, as a kind of
-      // neighbourhood whose runs fix the task starts of a better schedule
-      long slice =
-          Long.parseLong(
-              options.freeConfig(
-                  "sgs-lns", Long.toString(Math.max(1000, 20L * projectSchedule.tasks()))));
-      ProjectSchedule ps = projectSchedule;
-      if (slice > 0) {
-        lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
-      }
-    }
+    addScheduleProposer(lns);
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -4173,6 +4162,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Lets the genetic algorithm of the project schedule go on in slices from the best solution of
+   * the search, as a kind of neighbourhood whose runs fix the task starts of a better schedule.
+   */
+  private void addScheduleProposer(AdaptiveLns lns) {
+    if (lns == null || projectSchedule == null) {
+      return;
+    }
+    ProjectSchedule ps = projectSchedule;
+    long slice =
+        Long.parseLong(
+            options.freeConfig("sgs-lns", Long.toString(Math.max(1000, 20L * ps.tasks()))));
+    if (slice > 0) {
+      lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
+    }
+  }
+
   private static final class Hint {
     final IntVar[] vars;
     final int[] values;
@@ -4518,6 +4524,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.restartHook(dictionary.onRestart);
     } else if (restarts != null && !allSolutions) {
       freeLns = lnsNeighbourhoods(costVar);
+      addScheduleProposer(freeLns);
       if (freeLns != null && lcgHint != null) {
         // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
         // they waited for free search's own first solution, which must improve on it, and on
