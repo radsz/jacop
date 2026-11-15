@@ -348,7 +348,8 @@ class RevisedDualSimplexTest {
     // gap^1.2 / weight must reach the optimum of gap^2 / weight
     Random rnd = new Random(5);
     for (int run = 0; run < 40; run++) {
-      int nodes = 20 + rnd.nextInt(30);
+      // the first run is large enough for the automatic choice
+      int nodes = run == 0 ? RevisedDualSimplex.LINEAR_SCORE_COLUMNS / 2 : 20 + rnd.nextInt(30);
       int arcs = nodes * (2 + rnd.nextInt(2));
       int caps = 1 + rnd.nextInt(3);
       int[][] cols = new int[nodes + caps][];
@@ -401,19 +402,8 @@ class RevisedDualSimplexTest {
       }
       RevisedDualSimplex chosen = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
       RevisedDualSimplex squared = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
-      assertThat(chosen.linearScore())
-          .as(
-              "run "
-                  + run
-                  + " n "
-                  + arcs
-                  + " m "
-                  + (nodes + caps)
-                  + " "
-                  + chosen.rows()
-                  + " "
-                  + chosen.columns())
-          .isTrue();
+      assertThat(chosen.linearScore()).as("run " + run).isEqualTo(run == 0);
+      chosen.setLinearScore(true);
       squared.setLinearScore(false);
       for (int a = 0; a < arcs; a++) {
         chosen.setBounds(a, 0, 30);

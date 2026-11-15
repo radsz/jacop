@@ -177,10 +177,10 @@ public final class RevisedDualSimplex {
    * (the less sensitive dual steepest edge of Huangfu, High performance simplex solver, PhD thesis,
    * University of Edinburgh, 2013, section 3.3): squaring the gap favours dense rows of the
    * tableau, whose pivots fill the basis inverse and lose the hypersparse solves. On LPs whose
-   * columns have about two entries and that have at most four columns per row, the shape of the
-   * multicommodity flows of pds, fome and the n37 network design LPs, it halves the solve time;
-   * elsewhere it is slower as often as it is faster. Decided from the problem as given, before
-   * presolve and cut rows.
+   * columns have about two entries, that have at most four columns per row and at least 5000
+   * columns, the shape of the multicommodity flows of pds, fome and the n37 network design LPs, it
+   * halves the solve time; elsewhere it is slower as often as it is faster. Decided from the
+   * problem as given, before presolve and cut rows.
    */
   private boolean linearScore;
 
@@ -427,7 +427,10 @@ public final class RevisedDualSimplex {
     presolvePending = PRESOLVE;
     linearScore =
         "on".equals(LINEAR_SCORE)
-            || "auto".equals(LINEAR_SCORE) && m > 0 && nonzeros <= 2.2 * n && n <= 4L * m;
+            || "auto".equals(LINEAR_SCORE)
+                && n >= LINEAR_SCORE_COLUMNS
+                && nonzeros <= 2.2 * n
+                && n <= 4L * m;
   }
 
   // a deep copy of the state of another simplex
@@ -2255,6 +2258,8 @@ public final class RevisedDualSimplex {
   private static final String LINEAR_SCORE =
       System.getProperty("org.jacop.jalp.linearScore", "auto");
   private static final double LINEAR_SCORE_POWER = 1.2;
+  // the fewest columns for the automatic choice: below them the solves are short either way
+  static final int LINEAR_SCORE_COLUMNS = 5000;
 
   private int leavingRow() {
     if (!outsideValid) {
