@@ -102,6 +102,21 @@ import org.jacop.set.core.SetVar;
  */
 final class SymmetryBreaking implements ParserTreeConstants {
 
+  // names of constraints and properties used in several tables below
+  private static final String FALSE = "false";
+  private static final String REIF = "_reif";
+  private static final String IMP = "_imp";
+  private static final String SET_UNION = "set_union";
+  private static final String SET_INTERSECT = "set_intersect";
+  private static final String SET_SYMDIFF = "set_symdiff";
+  private static final String SET_EQ = "set_eq";
+  private static final String SET_NE = "set_ne";
+  private static final String DISJOINT = "jacop_disjoint";
+  private static final String[] SET_OPERATIONS = {
+    SET_UNION, SET_INTERSECT, "set_diff", SET_SYMDIFF
+  };
+  private static final String[] SET_COMPARISONS = {SET_EQ, SET_NE, "set_subset", "set_superset"};
+
   /** The most Schreier-Sims cuts posted. */
   static final int MAX_CUTS = 100_000;
 
@@ -113,7 +128,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * models whose search annotation branches on set variables. Without it every set variable has a
    * colour of its own.
    */
-  static final boolean SETS = !"false".equals(System.getProperty("org.jacop.fz.symmetrySets"));
+  static final boolean SETS = !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySets"));
 
   /**
    * The most element vertices that set variables add to the graph; the set variables met after that
@@ -125,8 +140,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * Whether value symmetries are also looked for in spaces joined through set variables and shared
    * values, when the plain value spaces give none (org.jacop.fz.symmetryEncoded, default true).
    */
-  static final boolean ENCODED =
-      !"false".equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
+  static final boolean ENCODED = !FALSE.equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
 
   /**
    * Whether the elements of set variables that only set operations, comparisons and cardinalities
@@ -135,7 +149,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * colour, so only whole set variables move.
    */
   static final boolean SET_VALUES =
-      !"false".equals(System.getProperty("org.jacop.fz.symmetrySetValues"));
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySetValues"));
 
   /** The n-ary union that a chain of binary unions stands for: {@code s = union(xs)}. */
   static final String UNION_N = "jacop_symmetry_union";
@@ -264,8 +278,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     for (String s : new String[] {"int_lin_eq", "int_lin_le", "int_lin_ne", "bool_lin_eq"}) {
       SPECS.put(s, Spec.grouped(new int[] {0, 1}));
-      SPECS.put(s + "_reif", Spec.grouped(new int[] {0, 1}));
-      SPECS.put(s + "_imp", Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + REIF, Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + IMP, Spec.grouped(new int[] {0, 1}));
     }
     SPECS.put("bool_lin_le", Spec.grouped(new int[] {0, 1}));
     for (String s :
@@ -315,16 +329,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // set operations whose two operands can be exchanged
     for (String s :
         new String[] {
-          "set_union",
-          "set_intersect",
-          "set_symdiff",
-          "set_eq",
-          "set_ne",
-          "set_eq_reif",
-          "set_ne_reif",
-          "set_eq_imp",
-          "set_ne_imp",
-          "jacop_disjoint"
+          SET_UNION,
+          SET_INTERSECT,
+          SET_SYMDIFF,
+          SET_EQ,
+          SET_NE,
+          SET_EQ + REIF,
+          SET_NE + REIF,
+          SET_EQ + IMP,
+          SET_NE + IMP,
+          DISJOINT
         }) {
       SPECS.put(s, Spec.sym(0, 1));
     }
@@ -1383,15 +1397,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     for (String s : new String[] {"set_in", "set_in_reif", "set_in_imp"}) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
     }
-    for (String s : new String[] {"set_union", "set_intersect", "set_diff", "set_symdiff"}) {
+    for (String s : SET_OPERATIONS) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1, 2));
     }
-    for (String s : new String[] {"set_eq", "set_ne", "set_subset", "set_superset"}) {
+    for (String s : SET_COMPARISONS) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
-      SET_VALUE_SPECS.put(s + "_reif", ValueSpec.of(0, 1));
-      SET_VALUE_SPECS.put(s + "_imp", ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + REIF, ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + IMP, ValueSpec.of(0, 1));
     }
-    SET_VALUE_SPECS.put("jacop_disjoint", ValueSpec.of(0, 1));
+    SET_VALUE_SPECS.put(DISJOINT, ValueSpec.of(0, 1));
     SET_VALUE_SPECS.put(UNION_N, ValueSpec.of(0, 1));
   }
 
@@ -1851,15 +1865,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private static final Map<String, int[]> SET_RENAMING = new HashMap<>();
 
   static {
-    for (String s : new String[] {"set_union", "set_intersect", "set_diff", "set_symdiff"}) {
+    for (String s : SET_OPERATIONS) {
       SET_RENAMING.put(s, new int[] {0, 1, 2});
     }
-    for (String s : new String[] {"set_eq", "set_ne", "set_subset", "set_superset"}) {
+    for (String s : SET_COMPARISONS) {
       SET_RENAMING.put(s, new int[] {0, 1});
-      SET_RENAMING.put(s + "_reif", new int[] {0, 1});
-      SET_RENAMING.put(s + "_imp", new int[] {0, 1});
+      SET_RENAMING.put(s + REIF, new int[] {0, 1});
+      SET_RENAMING.put(s + IMP, new int[] {0, 1});
     }
-    SET_RENAMING.put("jacop_disjoint", new int[] {0, 1});
+    SET_RENAMING.put(DISJOINT, new int[] {0, 1});
     SET_RENAMING.put("set_card", new int[] {0});
     SET_RENAMING.put(UNION_N, new int[] {0, 1});
   }
@@ -1949,7 +1963,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
           }
         }
       }
-      if (item.name().equals("set_union") && item.args().length == 3) {
+      if (item.name().equals(SET_UNION) && item.args().length == 3) {
         Var r = item.args()[2][0].other();
         if (r != null) {
           unionOf.put(r, item);
@@ -1976,7 +1990,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if (inlined.contains(item)) {
         continue;
       }
-      if (!item.name().equals("set_union")
+      if (!item.name().equals(SET_UNION)
           || item.args().length != 3
           || item.args()[2][0].other() == null
           || unionOf.get(item.args()[2][0].other()) != item) {

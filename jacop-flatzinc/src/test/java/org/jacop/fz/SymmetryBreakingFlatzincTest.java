@@ -637,7 +637,9 @@ class SymmetryBreakingFlatzincTest {
             c.append("constraint set_subset_reif(s").append(i).append(",s").append(j);
             c.append(",").append(b).append(");\n");
           }
-          default -> {}
+          default -> {
+            // the pair is left unconstrained
+          }
         }
       }
     }
@@ -665,7 +667,9 @@ class SymmetryBreakingFlatzincTest {
         m.append("var 1..").append(n).append(": y;\n");
         c.append("constraint set_in(y,s").append(random.nextInt(k)).append(");\n");
       }
-      default -> {}
+      default -> {
+        // nothing keeps the values in place
+      }
     }
     // the objective weighs the elements of one set: the weights keep values apart
     m.append("var 0..").append(n * n + k * n).append(": obj :: output_var;\n");
