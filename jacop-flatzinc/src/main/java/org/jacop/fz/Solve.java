@@ -234,10 +234,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Integer.getInteger("org.jacop.fz.lcgDomWdegLimit", 50_000);
 
   // free search without a search annotation branches on the variables that no defines_var
-  // annotation names before the defined ones (-Dorg.jacop.fz.definedLast=false: all in one
-  // order); see definedLast
-  static final boolean DEFINED_LAST =
-      !"false".equals(System.getProperty("org.jacop.fz.definedLast"));
+  // annotation names before the defined ones (see definedLast): "first" (default) until the first
+  // solution under LCG and always without learning, "always" also after it under LCG, "false"
+  // all in one order
+  static final String DEFINED_LAST = System.getProperty("org.jacop.fz.definedLast", "first");
 
   // fixed search's activity runs follow the relaxation's root solution, not its last one, which
   // comes from another branch
@@ -3700,11 +3700,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (vars.isEmpty()) {
       return null;
     }
-    if (DEFINED_LAST) {
+    if (!"false".equals(DEFINED_LAST)) {
       // the defined variables follow from the others, and activity completes them
       IntVar[][] split = definedLast(vars.toArray(new IntVar[0]), true);
-      vars = new ArrayList<>(Arrays.asList(split[0]));
+      if (split[1].length > 0) {
+        SelectChoicePoint<IntVar> undefined =
+            defaultIntSelect(new ArrayList<>(Arrays.asList(split[0])));
+        if ("always".equals(DEFINED_LAST)) {
+          return undefined;
+        }
+        // until the first solution: afterwards the defined variables, such as the costs of the
+        // objective, are branched on as before, smallest value first
+        return new SwitchingSelect(undefined, defaultIntSelect(vars), () -> numberSolutions == 0);
+      }
     }
+    return defaultIntSelect(vars);
+  }
+
+  /**
+   * The dom/wdeg, or input order, part of {@link #lcgDefaultIntSelect} over the given variables.
+   */
+  private SelectChoicePoint<IntVar> defaultIntSelect(List<IntVar> vars) {
     IntVar[] positions = elementPositions(vars);
     elementPositionCount = positions.length;
     if (positions.length > 0) {
@@ -4900,7 +4916,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
           withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
           null);
-    } else if (DEFINED_LAST) {
+    } else if (!"false".equals(DEFINED_LAST)) {
       // the variables named by no defines_var first, then the defined ones, which are fixed by
       // then in a model where every defined variable follows from the others
       IntVar[][] ints = definedLast(searchVars.getIntVars(), false);
