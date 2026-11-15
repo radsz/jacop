@@ -6290,7 +6290,29 @@ Version 5.0 (unreleased)
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
 
-351. Lazy clause generation explains an entailed reified <= or >= linear
+351. The tabulation of small flattened expressions (item 292) reaches
+   groups whose outer variables follow from one of them. Its small search
+   now infers through clauses, implications and reifications (a clause
+   with one unknown literal and the others false; a false relation makes
+   its literal false; a true literal of an equality gives the unknown
+   term), so a link of the XCSP 2026 Collatz chain, x mod 2 != 0 \/
+   y = x div 2 and x mod 2 = 0 \/ y = 3x + 1, is enumerated over x alone
+   instead of the x * y box. A group is tabulated when one branch of that
+   search multiplies the domain sizes of the outer variables it branches
+   on to at most the rows limit, which for a group with an outer variable
+   of more than 10,000 values is that domain size, up to 100,000. Groups
+   with the same constraints over variables with the same domains share
+   one tabulation and the index of one table, so more groups fit in the
+   node budget. On the 23 instances of the XCSP 2022-2026 competitions
+   where it changes the model, at 600 s: Collatz 12 of 12 decided in
+   1-8 s, 1 before (2 to 12 of the 23 solvers of 2026 decided each); Dominoes
+   (2023) 11 of 11 solved in 7-102 s, 2 before, among them the three
+   45-* instances that no 2023 solver solved, and a solution checked by
+   the XCSP3 SolutionChecker for 40-150, which sat4j+roundingsat claimed
+   unsatisfiable. On the wide benchmark set it changes one instance
+   (code-generator mips_gobmk, one more table).
+
+352. Lazy clause generation explains an entailed reified <= or >= linear
    constraint (int_lin_le_reif, int_lin_le_imp and the like) from one
    bound lookup per term: before, it read both bounds of every term and
    then looked up the entry of the bound it cites again. The reasons and
@@ -6300,7 +6322,7 @@ Version 5.0 (unreleased)
    instances solved with the same search in at least 10 s take 0.94x
    (default) and 0.93x (-f) of the time at 600 s.
 
-352. -Djacop.virtualClock=true also covers free search without learning
+353. -Djacop.virtualClock=true also covers free search without learning
    after LCG gives way (-f): its time limit, the time LCG left, counts
    jacop.virtualClock.propagationsPerMs (1000) propagations per
    millisecond, and the probes of the value impact heuristic take their
@@ -6311,7 +6333,7 @@ Version 5.0 (unreleased)
    work-task-variation) and, in one of three censuses, mapping.
    FreeSearch.Builder.virtualClock turns it on for one search.
 
-353. Free search with lazy clause generation on an optimisation model
+354. Free search with lazy clause generation on an optimisation model
    whose search variables all lie in one cardinality with fixed counts
    (jacop_count_values or global_cardinality posted as CountValuesBounds
    with equal bounds) first dives without learning through those
@@ -6333,7 +6355,7 @@ Version 5.0 (unreleased)
    slot-dive-share sets its share of the time; the statistics slotDiveSlots
    and slotDiveTime give its size and time.
 
-354. Under lazy clause generation the FlatZinc front end adds to a
+355. Under lazy clause generation the FlatZinc front end adds to a
    cumulative whose tasks have variable durations and fixed resource
    uses, and at most 4000 (task, time point) pairs, its time-resource
    decomposition: at each time point t the sum of the resource uses of
