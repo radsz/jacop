@@ -503,13 +503,6 @@ public final class LcgSolver implements ExternalPropagator {
   // OR-Tools set; either alone lost.
   private static final double CORE_NO_SOLUTION =
       Double.parseDouble(System.getProperty("jacop.lcg.coreNoSolution", "0.33"));
-  // the core phase without a solution of its own keeps its time when its lower bound, at its rate
-  // since the start of the phase, would meet the best solution of branch and bound by the end of
-  // the phase: the cores then prove that solution optimal (PB competition lion9-single-obj, a
-  // lexicographic objective of weights up to 2^29, whose cores reach the optimum after the first
-  // third of the phase); -Djacop.lcg.coreClosing=false turns it off
-  private static final boolean CORE_CLOSING =
-      !FALSE.equals(System.getProperty("jacop.lcg.coreClosing"));
   private double coreShare;
   private long coreBudget;
   private long coreCallLimit;
@@ -3718,12 +3711,7 @@ public final class LcgSolver implements ExternalPropagator {
         sat.setWorkLimit(now + (long) (CORE_NO_SOLUTION * (full - now)));
         result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
         if (result == CdclSolver.UNKNOWN && sat.work() >= sat.workLimit()) {
-          boolean closing =
-              !ownSolution() && CORE_CLOSING && coreSearch.rose() && coreSearch.closing(full);
-          if (closing) {
-            coreSearch.closingKeeps++;
-          }
-          if (ownSolution() || closing) {
+          if (ownSolution()) {
             sat.setWorkLimit(full);
             result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
           } else {

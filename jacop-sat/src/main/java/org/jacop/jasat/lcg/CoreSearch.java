@@ -153,12 +153,6 @@ public final class CoreSearch {
    */
   public long noSolutionStops;
 
-  /**
-   * Statistics: phases without a solution of their own that kept their time as their lower bound
-   * was closing on the best solution.
-   */
-  public long closingKeeps;
-
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
 
