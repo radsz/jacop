@@ -6195,9 +6195,11 @@ Version 5.0 (unreleased)
    jacop.virtualClock.propagationsPerMs (1000) propagations per
    millisecond, and the probes of the value impact heuristic take their
    share of the propagations instead of the time. Two runs of the 62
-   wide-quick instances at 10 s with -f, three at a time, now end
-   identically on 61 (55 before; the last differs by one node). FreeSearch
-   .Builder.virtualClock turns it on for one search.
+   wide-quick instances at 10 s with -f, three at a time, end identically
+   on 58 to 61 of them (55 before). The rest are symmetry detection
+   (whirlpool), presolve timers (a few propagations on monomatch and
+   work-task-variation) and, in one of three censuses, mapping.
+   FreeSearch.Builder.virtualClock turns it on for one search.
 
 Version 4.11
 =============
