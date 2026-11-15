@@ -794,11 +794,30 @@ public class Nooverlap extends Constraint
     return vars;
   }
 
+  // the trail that already records the rectangles' variables (see recordWith)
+  private AtomicTrail recordedBy;
+
+  /**
+   * Makes the trail record every origin and length before the first reason of this constraint. The
+   * trail takes a variable it has not seen yet with its current domain as the root, so the
+   * variables must be recorded at the same moment however few of them a reason reads; {@link
+   * DiffnExplanation} reads them lazily.
+   *
+   * @param trail the trail
+   */
+  protected final void recordWith(AtomicTrail trail) {
+    if (recordedBy != trail) {
+      DiffnExplanation.record(trail, rectangle);
+      recordedBy = trail;
+    }
+  }
+
   @Override
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     if (!explainable()) {
       return false;
     }
+    recordWith(trail);
     if (!DiffnExplanation.explain(trail, entry, rectangle, out)) {
       DiffnExplanation.bounds(trail, entry, rectangle, out);
       // a rule removes values up to a bound it computed, and the domain moves past the holes
@@ -817,6 +836,7 @@ public class Nooverlap extends Constraint
     if (!explainable()) {
       return false;
     }
+    recordWith(trail);
     if (!DiffnExplanation.explainFailure(trail, rectangle, out)) {
       DiffnExplanation.bounds(trail, trail.size(), rectangle, out);
     }

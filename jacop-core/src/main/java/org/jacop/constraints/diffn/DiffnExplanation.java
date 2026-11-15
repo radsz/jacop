@@ -85,6 +85,22 @@ final class DiffnExplanation {
     known = new byte[n];
   }
 
+  /**
+   * Makes the trail record the origins and lengths of the rectangles, as reading their bounds
+   * would.
+   *
+   * @param trail the trail
+   * @param rectangle the rectangles
+   */
+  static void record(AtomicTrail trail, Rectangle[] rectangle) {
+    for (Rectangle r : rectangle) {
+      for (int d = 0; d < 2; d++) {
+        trail.rootDomain(r.origin[d]);
+        trail.rootDomain(r.length[d]);
+      }
+    }
+  }
+
   private int lengthMin(int d, int k) {
     if ((known[k] & LENGTHS) == 0) {
       known[k] |= LENGTHS;

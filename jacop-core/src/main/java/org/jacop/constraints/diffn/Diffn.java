@@ -554,6 +554,7 @@ public class Diffn extends Nooverlap {
     if (getClass() != Diffn.class || !AREA_REASONS || est == null) {
       return super.explainFailure(trail, out);
     }
+    recordWith(trail);
     int mark = out.size();
     if (DiffnExplanation.explainFailure(trail, rectangle, out)) {
       return true;
