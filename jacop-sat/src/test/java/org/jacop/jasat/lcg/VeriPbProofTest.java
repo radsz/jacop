@@ -739,6 +739,26 @@ class VeriPbProofTest {
   }
 
   @Test
+  void sumIntoAHoleIsDerived() {
+    // d = z - x with x in 1..2 and z in {-1, 0, 2, 3}, a = |d|: fuzz seed 2010858
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar z = new IntVar(store, "z", -1, 0);
+    z.addDom(2, 3);
+    IntVar d = new IntVar(store, "d", -3, 2);
+    IntVar a = new IntVar(store, "a", 0, 3);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new XplusYeqZ(x, d, z));
+    store.imposeWithConsistency(new AbsXeqY(d, a));
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
     IntVar b = new IntVar(store, "b", 0, 1);

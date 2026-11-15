@@ -1765,8 +1765,9 @@ public final class LcgSolver implements ExternalPropagator {
       literals[j] = new StringBuilder();
     }
     boolean hole = false;
-    for (int j = 0; j < variables.length && proofTrail != trail; j++) {
-      // while the root propagation is logged, the values it removed are holes too
+    for (int j = 0; j < variables.length; j++) {
+      // a hole of the model's domains (and, while the root propagation is logged, a value it
+      // removed) hides a bound from unit propagation as much as a removed value of the reason does
       hole |= dom[j].getSize() < (long) dom[j].max() - dom[j].min() + 1;
     }
     for (int k = from; k < atoms.size(); k++) {
