@@ -140,6 +140,7 @@ public class LinearRelaxation extends Constraint
   // that one group that does not help no longer takes the others out with it
   private static final boolean GROUP_TRIAL = Boolean.getBoolean("org.jacop.lp.groupTrial");
   private static final int GROUP_TRIALS = Integer.getInteger("org.jacop.lp.groupTrials", 8);
+  private static final boolean GROUP_FIT = Boolean.getBoolean("org.jacop.lp.groupFit");
   private static final boolean GROUP_LOG = Boolean.getBoolean("org.jacop.lp.groupLog");
   // the extra rows before the value encodings of valueRows' tried rows, which come last; the others
   // are tried without them when all of them are not kept
@@ -1366,7 +1367,24 @@ public class LinearRelaxation extends Constraint
       // takes the rows before them
       further.clear();
       List<LinearForm> sorted = fitOrder(localForms, candidates, first, triedSet, flow, objective);
+      if (GROUP_FIT) {
+        sorted = interleave(sorted, first, tags);
+      }
       fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
+      if (GROUP_FIT) {
+        // the trial takes the rows before the tried ones, then those before the flow models
+        List<LinearForm> ordered = new ArrayList<>(further.size());
+        for (int pass = 0; pass < 3; pass++) {
+          for (LinearForm f : further) {
+            int kind = flow.contains(f) ? 2 : triedSet.contains(f) ? 1 : 0;
+            if (kind == pass) {
+              ordered.add(f);
+            }
+          }
+        }
+        further.clear();
+        further.addAll(ordered);
+      }
     }
     if (GROUP_LOG) {
       System.err.println(
@@ -1395,6 +1413,43 @@ public class LinearRelaxation extends Constraint
     r.hall = hall;
     r.trees = trees;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  // the group of a row by its source, as groupOf
+  private static String groupOfTag(String t) {
+    if (t == null) {
+      return "other";
+    }
+    if (t.startsWith("lin:")) {
+      return "lin";
+    }
+    return switch (t) {
+      case "encoding", "valueConj" -> "encoding";
+      default -> t;
+    };
+  }
+
+  /**
+   * Returns the rows with the first ones as they are and the others taken a row of each group in
+   * turn, each group in its order, so that a size cap that leaves out rows takes them from every
+   * group alike instead of leaving out the last groups whole.
+   */
+  static List<LinearForm> interleave(
+      List<LinearForm> rows, int first, Map<LinearForm, String> tags) {
+    Map<String, List<LinearForm>> groups = new LinkedHashMap<>();
+    for (LinearForm f : rows.subList(first, rows.size())) {
+      groups.computeIfAbsent(groupOfTag(tags.get(f)), g -> new ArrayList<>()).add(f);
+    }
+    List<LinearForm> out = new ArrayList<>(rows.subList(0, first));
+    List<List<LinearForm>> lists = new ArrayList<>(groups.values());
+    for (int i = 0; out.size() < rows.size(); i++) {
+      for (List<LinearForm> l : lists) {
+        if (i < l.size()) {
+          out.add(l.get(i));
+        }
+      }
+    }
+    return out;
   }
 
   private static String tagCounts(Map<LinearForm, String> tags, List<LinearForm> forms) {
@@ -5129,17 +5184,7 @@ public class LinearRelaxation extends Constraint
 
   // the group of an extra row: its source, the linearized rows of every constraint class one group
   private String groupOf(int q) {
-    String t = formSource.get(extraForms.get(q));
-    if (t == null) {
-      return "other";
-    }
-    if (t.startsWith("lin:")) {
-      return "lin";
-    }
-    return switch (t) {
-      case "encoding", "valueConj" -> "encoding";
-      default -> t;
-    };
+    return groupOfTag(formSource.get(extraForms.get(q)));
   }
 
   // the rows of each group among the extra rows from..to-1, for the log
