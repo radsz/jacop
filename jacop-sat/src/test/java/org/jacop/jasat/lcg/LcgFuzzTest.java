@@ -198,6 +198,7 @@ import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
@@ -513,6 +514,16 @@ class LcgFuzzTest {
       return resources == 1
           ? new CostRegular(v, transition, -1, 0, finals, costs[0], cost[0])
           : new MultiCostRegular(v, transition, -1, 0, finals, costs, cost);
+    }
+
+    /** A binary table of random pairs kept domain consistent with bit-sets. */
+    private BinaryBitTable binaryBitTable() {
+      IntVar[] v = pick(x, 2);
+      int[][] tuples = new int[2 + rnd.nextInt(8)][];
+      for (int t = 0; t < tuples.length; t++) {
+        tuples[t] = new int[] {value(), value()};
+      }
+      return new BinaryBitTable(v[0], v[1], tuples);
     }
 
     /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
@@ -1134,7 +1145,7 @@ class LcgFuzzTest {
         }
         case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
         case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
-        case 64 -> hybridTable();
+        case 64 -> rnd.nextInt(3) == 0 ? binaryBitTable() : hybridTable();
         case 65 -> regular();
         case 66 -> mdd();
         case 67 -> unaryTransition();
