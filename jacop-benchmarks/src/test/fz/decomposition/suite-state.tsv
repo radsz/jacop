@@ -11062,3 +11062,108 @@ C	mznc:upTo5min/2022_team-assignment/data1_6_6	d6d9196cb57a2803	obj1:lcg-f	PASS	
 C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-2-6-0_c24	e1c92e2ddde8c5ec	std	PARTIAL	INCOMPLETE	0	300323	2026-11-15T09:13:19Z	0 of 0 solutions before the limit
 P	mznc:above1hour/2026_surface-based-tsp/st70	c53ca69cbe2ad84d	minimize	675	INCOMPLETE	0	0	0	300180	300	2026-11-15T09:13:52Z	jacop_tree
 C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-2-6-0_c24	e1c92e2ddde8c5ec	std:f	PARTIAL	INCOMPLETE	0	300179	2026-11-15T09:18:20Z	0 of 0 solutions before the limit
+P	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	satisfy		COMPLETE	8	8	195a0f0edc7431c4	743	300	2026-11-15T09:20:31Z	jacop_link_set_to_booleans
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	all:f	PASS	COMPLETE	8	770	2026-11-15T09:20:32Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	decomp:jacop_link_set_to_booleans	PASS	COMPLETE	8	819	2026-11-15T09:20:32Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	std	PASS	COMPLETE	8	838	2026-11-15T09:20:33Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	std:f	PASS	COMPLETE	8	883	2026-11-15T09:20:34Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	objstd:lcg	PASS	COMPLETE	1	923	2026-11-15T09:20:35Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj0:plain	PASS	COMPLETE	1	552	2026-11-15T09:20:36Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj0:f	PASS	COMPLETE	1	698	2026-11-15T09:20:36Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj0:lcg	PASS	COMPLETE	1	713	2026-11-15T09:20:37Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj0:lcg-f	PASS	COMPLETE	1	760	2026-11-15T09:20:38Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj0:lcg:decomp:jacop_link_set_to_booleans	PASS	COMPLETE	1	513	2026-11-15T09:20:38Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj1:plain	PASS	COMPLETE	1	566	2026-11-15T09:20:39Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj1:f	PASS	COMPLETE	1	663	2026-11-15T09:20:40Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj1:lcg	PASS	COMPLETE	1	536	2026-11-15T09:20:40Z	
+C	jacop:allsolutions/m_link_set_bool/m_link_set_bool	21b93786a01e657a	obj1:lcg-f	PASS	COMPLETE	1	592	2026-11-15T09:20:41Z	
+P	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	satisfy		COMPLETE	0	0	0	37744	300	2026-11-15T09:21:08Z	jacop_alldiff,jacop_assignment,jacop_lex_chain_lesseq_int,jacop_strictly_increasing,jacop_table_int
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	all:f	PARTIAL	INCOMPLETE	0	300160	2026-11-15T09:26:08Z	0 of 0 solutions before the limit
+P	mznc:above1hour/2018_team-assignment/data2_4_15	138e1b5a2d959adb	maximize	9892	INCOMPLETE	0	0	0	300249	300	2026-11-15T09:27:19Z	jacop_alldiff,jacop_bin_packing,jacop_bin_packing_capacity,jacop_maximum,jacop_minimum
+P	mznc:above1hour/2022_tower/tower_070_070_15_070-09	54f06fad519673d7	maximize	42	INCOMPLETE	19138	19138	fc15c7e4a90d3b04	300245	300	2026-11-15T09:30:31Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	300166	2026-11-15T09:31:08Z	0 of 0 solutions before the limit
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	decomp:jacop_assignment	PASS	COMPLETE	0	89053	2026-11-15T09:32:37Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	decomp:jacop_lex_chain_lesseq_int	PASS	COMPLETE	0	39542	2026-11-15T09:33:17Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	decomp:jacop_strictly_increasing	PASS	COMPLETE	0	36625	2026-11-15T09:33:54Z	
+P	mznc:upTo30sec/2026_gbac/csplib12-gbac	30a85e2b4cc5e7c6	minimize	1908	INCOMPLETE	2000000	2000000	d81661a21ee955ee	112308	300	2026-11-15T09:34:12Z	jacop_bin_packing,jacop_count_values_bounds
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	decomp:jacop_table_int	PASS	COMPLETE	0	67431	2026-11-15T09:35:01Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	std	PARTIAL	INCOMPLETE	0	300159	2026-11-15T09:40:01Z	0 of 0 solutions before the limit
+P	mznc:above1hour/2020_tower_challenge/tower_070_070_15_070-06	0bbb2a3b957e673b	maximize	49	INCOMPLETE	0	0	0	300170	300	2026-11-15T09:40:31Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+P	mznc:above1hour/2022_team-assignment/data2_6_15	3e9aa5755b4f95ba	maximize	21745	INCOMPLETE	0	0	0	300167	300	2026-11-15T09:44:12Z	jacop_alldiff,jacop_bin_packing,jacop_bin_packing_capacity,jacop_maximum,jacop_minimum
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	std:f	PARTIAL	INCOMPLETE	0	300302	2026-11-15T09:45:01Z	0 of 0 solutions before the limit
+P	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	minimize	10	COMPLETE	895411	895411	4f0616646588bda9	245470	300	2026-11-15T09:48:20Z	jacop_among,jacop_maximum
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	all:f	PASS	COMPLETE	895411	84950	2026-11-15T09:49:45Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	objstd:lcg	PARTIAL	INCOMPLETE	0	300168	2026-11-15T09:50:02Z	
+P	mznc:above1hour/2025_tower/tower_070_070_15_070-08	38dd88cc19a2dd75	maximize	57	INCOMPLETE	0	0	0	300192	300	2026-11-15T09:50:32Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:plain	PASS	COMPLETE	0	36330	2026-11-15T09:50:38Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	decomp:jacop_maximum	PASS	COMPLETE	895411	248057	2026-11-15T09:53:53Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:f	PARTIAL	INCOMPLETE	0	300206	2026-11-15T09:55:38Z	
+P	mznc:upTo1hour/2025_tower/tower_070_070_15_070-02	d165791f20ad65e2	maximize	70	INCOMPLETE	0	0	0	300187	300	2026-11-15T09:58:05Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_maximum_arg_int
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	decomp:jacop_among	PARTIAL	INCOMPLETE	890632	300215	2026-11-15T09:58:54Z	890632 of 895411 solutions before the limit
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:lcg	PARTIAL	INCOMPLETE	0	300210	2026-11-15T10:00:38Z	
+P	mznc:upTo5sec/2021_mapping/mesh2x2_2	ac115ab8f3b4c9ad	minimize	970	INCOMPLETE	2000000	2000000	a0c021e9084bfced	248405	300	2026-11-15T10:02:15Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:lcg-f	PASS	COMPLETE	0	108478	2026-11-15T10:02:27Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	std	PARTIAL	INCOMPLETE	733034	300164	2026-11-15T10:03:54Z	733034 of 895411 solutions before the limit
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	0	133265	2026-11-15T10:04:40Z	
+P	mznc:upTo5sec/2016_mapping/mesh2x2_1	aeb1a05fda2360da	minimize	1000	INCOMPLETE	1671677	1671677	984388933f950088	300197	300	2026-11-15T10:07:16Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	std:f	PASS	COMPLETE	895411	291327	2026-11-15T10:08:46Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	objstd:lcg	PASS	COMPLETE	1	10574	2026-11-15T10:08:56Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:lcg:decomp:jacop_assignment	PARTIAL	INCOMPLETE	0	300217	2026-11-15T10:09:40Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj0:plain	PASS	COMPLETE	1	251787	2026-11-15T10:13:08Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj0:f	PASS	COMPLETE	1	7523	2026-11-15T10:13:16Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj0:lcg	PASS	COMPLETE	1	2138	2026-11-15T10:13:18Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj0:lcg-f	PASS	COMPLETE	1	3314	2026-11-15T10:13:21Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj0:lcg:decomp:jacop_maximum	PASS	COMPLETE	1	1877	2026-11-15T10:13:23Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj0:lcg:decomp:jacop_among	PASS	COMPLETE	1	10415	2026-11-15T10:13:33Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:lcg:decomp:jacop_lex_chain_lesseq_int	PARTIAL	INCOMPLETE	0	300181	2026-11-15T10:14:41Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj1:plain	PASS	COMPLETE	1	102499	2026-11-15T10:15:16Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj1:f	PASS	COMPLETE	1	2189	2026-11-15T10:15:18Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj1:lcg	PASS	COMPLETE	1	1490	2026-11-15T10:15:20Z	
+C	xcsp:2025/XCSP25/COP25/ButtonsScissors-01_c25	aae75e3143a8abf5	obj1:lcg-f	PASS	COMPLETE	1	1422	2026-11-15T10:15:21Z	
+P	mznc:above1hour/2024_peacable_queens/pq_n9	24410b2cc58a025f	maximize	10	INCOMPLETE	998	998	32df13b65ee08595	300162	300	2026-11-15T10:17:16Z	jacop_count,jacop_lex_lesseq_int,jacop_regular,jacop_value_precede_int
+P	mznc:upTo5sec/2015_mapping/full2x2	7664db68d7058073	minimize	793	INCOMPLETE	2000000	2000000	73ead8457af7cde2	208440	300	2026-11-15T10:18:51Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:lcg:decomp:jacop_strictly_increasing	PARTIAL	INCOMPLETE	0	300161	2026-11-15T10:19:41Z	
+P	mznc:upTo5sec/2018_mapping/full2x2_mp3	96534deb5cf2cf33	minimize	1100	INCOMPLETE	1288232	1288232	d505df2290bc98b4	300169	300	2026-11-15T10:23:54Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj0:lcg:decomp:jacop_table_int	PARTIAL	INCOMPLETE	0	300209	2026-11-15T10:24:41Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj1:plain	PASS	COMPLETE	0	36794	2026-11-15T10:25:18Z	
+P	mznc:above1hour/2021_peacable_queens/11	a978166a75418fde	maximize	12	INCOMPLETE	1041	1041	e9733b4d9cbb424c	300228	300	2026-11-15T10:27:17Z	jacop_count,jacop_lex_lesseq_int,jacop_regular,jacop_value_precede_int
+P	mznc:above1hour/2021_mapping/mesh3x3_4	bf3abe5f147c847a	minimize	1133	INCOMPLETE	930127	930127	a28cbbeb5bbb71be	300148	300	2026-11-15T10:29:47Z	jacop_bin_packing,jacop_count,jacop_maximum,jacop_networkflow
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj1:f	PARTIAL	INCOMPLETE	0	300241	2026-11-15T10:30:18Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj1:lcg	PARTIAL	INCOMPLETE	0	300447	2026-11-15T10:35:18Z	
+C	xcsp:2024/2024_V3/CSP/MisteryShopper-4-06-1-6-0_c24	4d7567e4cadf5c09	obj1:lcg-f	PASS	COMPLETE	0	9273	2026-11-15T10:35:28Z	
+P	mznc:above1hour/2025_cgt/cgt_8_h16_r0.05_s0.5_3	1e6f31db5d194dc0	minimize	-39910	INCOMPLETE	0	0	0	300185	300	2026-11-15T10:37:17Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_if_then_else_int,jacop_strictly_increasing
+P	mznc:above1hour/2017_gbac/reduced_UD4-gbac	57de25ef8d946795	minimize	3475	INCOMPLETE	0	0	0	300202	300	2026-11-15T10:39:48Z	jacop_bin_packing,jacop_count_values_bounds
+P	mznc:above1hour/2025_hitori/h14-1	51dde00ff7104e38	maximize	555	INCOMPLETE	1256	1256	3118bf6747185ce9	300285	300	2026-11-15T10:45:28Z	jacop_alldifferent_except,jacop_connected,jacop_if_then_else_int
+P	mznc:above1hour/2026_warehouse/olil4	9b892a9ff6b3eecb	minimize	74316	INCOMPLETE	154535	154535	831ead99bc47f720	300225	300	2026-11-15T10:47:19Z	jacop_array_var_int_element_nonshifted,jacop_count_values,jacop_disjoint,jacop_increasing
+P	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	satisfy		COMPLETE	805168	805168	a65df763baf792dc	22070	300	2026-11-15T10:47:42Z	jacop_cumulative,jacop_list_diff2
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	all:f	PASS	COMPLETE	805168	18320	2026-11-15T10:48:00Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	decomp:jacop_list_diff2	PASS	COMPLETE	805168	25133	2026-11-15T10:48:26Z	
+P	mznc:above1hour/2016_gbac/reduced_UD6-gbac	92e02d5e7fc2bbfc	minimize	451	INCOMPLETE	0	0	0	300224	300	2026-11-15T10:49:48Z	jacop_bin_packing,jacop_count_values_bounds
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	decomp:jacop_cumulative	PASS	COMPLETE	805168	96032	2026-11-15T10:50:02Z	
+P	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	minimize	79	COMPLETE	18	18	3ef0686fae48c67c	269423	300	2026-11-15T10:50:59Z	jacop_alldiff,jacop_strictly_increasing
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	std	PASS	COMPLETE	805168	73912	2026-11-15T10:51:16Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	std:f	PASS	COMPLETE	805168	151460	2026-11-15T10:53:48Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	objstd:lcg	PASS	COMPLETE	1	3714	2026-11-15T10:53:51Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj0:plain	PASS	COMPLETE	1	3122	2026-11-15T10:53:54Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj0:f	PASS	COMPLETE	1	1292	2026-11-15T10:53:56Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj0:lcg	PASS	COMPLETE	1	1604	2026-11-15T10:53:57Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj0:lcg-f	PASS	COMPLETE	1	2268	2026-11-15T10:54:00Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj0:lcg:decomp:jacop_list_diff2	PASS	COMPLETE	1	1164	2026-11-15T10:54:01Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj0:lcg:decomp:jacop_cumulative	PASS	COMPLETE	1	2112	2026-11-15T10:54:03Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj1:plain	PASS	COMPLETE	1	690	2026-11-15T10:54:03Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj1:f	PASS	COMPLETE	1	767	2026-11-15T10:54:04Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj1:lcg	PASS	COMPLETE	1	922	2026-11-15T10:54:05Z	
+C	xcsp:2023/XCSP23_V2/CSP23/SquarePackingSuite-15_c23	247be747f1afb131	obj1:lcg-f	PASS	COMPLETE	1	1060	2026-11-15T10:54:06Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	all:f	PASS	COMPLETE	18	263177	2026-11-15T10:55:23Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	decomp:jacop_alldiff	PARTIAL	INCOMPLETE	0	300142	2026-11-15T11:00:23Z	0 of 18 solutions before the limit
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	decomp:jacop_strictly_increasing	PASS	COMPLETE	18	252622	2026-11-15T11:04:35Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj0:plain	PASS	COMPLETE	1	104511	2026-11-15T11:06:20Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj0:f	PASS	COMPLETE	1	7022	2026-11-15T11:06:27Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj0:lcg	PASS	COMPLETE	1	21529	2026-11-15T11:06:48Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj0:lcg-f	PASS	COMPLETE	1	6597	2026-11-15T11:06:55Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	26602	2026-11-15T11:07:22Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj0:lcg:decomp:jacop_strictly_increasing	PASS	COMPLETE	1	22294	2026-11-15T11:07:44Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj1:plain	PASS	COMPLETE	1	265877	2026-11-15T11:12:10Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj1:f	PASS	COMPLETE	1	33971	2026-11-15T11:12:44Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj1:lcg	PASS	COMPLETE	1	43024	2026-11-15T11:13:27Z	
+C	mznc:above1hour/2025_gt-sort/n7_ub20_75.0_BEST	9bf08d011eb93c1f	obj1:lcg-f	PASS	COMPLETE	1	58639	2026-11-15T11:14:26Z	
