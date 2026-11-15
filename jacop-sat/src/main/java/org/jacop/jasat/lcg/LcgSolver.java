@@ -4397,11 +4397,13 @@ public final class LcgSolver implements ExternalPropagator {
       int[] fixed = lns.neighbourhood();
       int[] upper = lns.upperBounded();
       int[] assumed = new int[fixed.length + upper.length];
+      int[] assumedVar = new int[assumed.length];
       int n = 0;
       for (int k : fixed) {
         int i = lnsIds[k];
         int v = lns.value(k);
         if (i >= 0 && !vars[i].singleton() && vars[i].domain.contains(v)) {
+          assumedVar[n] = k;
           assumed[n++] = eqVar(i, v);
         }
       }
@@ -4409,6 +4411,7 @@ public final class LcgSolver implements ExternalPropagator {
         int i = lnsIds[k];
         int v = lns.value(k);
         if (i >= 0 && !vars[i].singleton() && v >= vars[i].min() && v < vars[i].max()) {
+          assumedVar[n] = k;
           assumed[n++] = -geVar(i, v + 1);
         }
       }
@@ -4442,6 +4445,7 @@ public final class LcgSolver implements ExternalPropagator {
         outcome = AdaptiveLns.Outcome.IMPROVED;
       } else if (result == CdclSolver.UNSAT) {
         outcome = AdaptiveLns.Outcome.EXHAUSTED;
+        explainNeighbourhood(assumed, assumedVar, n);
       } else {
         outcome = AdaptiveLns.Outcome.LIMIT;
       }
@@ -4449,6 +4453,41 @@ public final class LcgSolver implements ExternalPropagator {
     }
     sat.setConflictLimit(Long.MAX_VALUE);
     return CdclSolver.UNKNOWN;
+  }
+
+  /**
+   * Gives the neighbourhood search the variables of the failed assumptions of the last run, which
+   * ruled out a better solution with their values in the best one.
+   */
+  private void explainNeighbourhood(int[] assumed, int[] assumedVar, int n) {
+    int[] failed = sat.failedAssumptions();
+    if (failed.length == 0) {
+      return;
+    }
+    java.util.HashMap<Integer, Integer> varOf = new java.util.HashMap<>(2 * n);
+    for (int j = 0; j < n; j++) {
+      varOf.put(assumed[j], assumedVar[j]);
+    }
+    int[] indices = new int[failed.length];
+    int m = 0;
+    for (int lit : failed) {
+      Integer k = varOf.get(lit);
+      if (k != null) {
+        indices[m++] = k;
+      }
+    }
+    if (System.getProperty("jacop.lcg.lnsWorkDebug") != null) {
+      System.err.println(
+          "explain failed "
+              + failed.length
+              + " mapped "
+              + m
+              + " first "
+              + failed[0]
+              + " assumed0 "
+              + assumed[0]);
+    }
+    lns.explain(Arrays.copyOf(indices, m));
   }
 
   /**
