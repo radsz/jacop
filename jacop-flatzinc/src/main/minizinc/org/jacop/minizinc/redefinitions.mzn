@@ -1,28 +1,14 @@
 % This file contains redefinitions of standard builtins that can be overridden
 % by solvers.
 
-predicate float_sinh(var float: x, var float: y) =
-    y = (exp(x)-exp(-x))/2.0;
-
-predicate float_cosh(var float: x, var float: y) =
-    y = (exp(x)+exp(-x))/2.0;
-
-predicate float_tanh(var float: x, var float: y) =
-    let {
-      var float: e2x = exp(2.0*x),
-    } in
-    y = (e2x - 1.0)/(e2x + 1.0);
-
-predicate float_asinh(var float: x, var float: y) =
-    y = ln(x + sqrt(x^2.0 + 1));
-
-predicate float_acosh(var float: x, var float: y) =
-    x >= 1
-    /\
-    y = ln(x + sqrt(x^2.0 - 1));
-
-predicate float_atanh(var float: x, var float: y) =
-    y = 0.5 * (ln(1.0 + x) - ln(1.0 - x));
+% the hyperbolic functions and their inverses are built-in (org.jacop.floats.constraints.HyperbolicPeqR);
+% the exp/ln definitions of the MiniZinc library use x twice, which loses hull consistency
+predicate float_sinh(var float: x, var float: y);
+predicate float_cosh(var float: x, var float: y);
+predicate float_tanh(var float: x, var float: y);
+predicate float_asinh(var float: x, var float: y);
+predicate float_acosh(var float: x, var float: y);
+predicate float_atanh(var float: x, var float: y);
 
 
 predicate array_bool_and_imp(array [int] of var bool: as, var bool: r);
