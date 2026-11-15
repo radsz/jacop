@@ -7745,6 +7745,13 @@ public final class LcgSolver implements ExternalPropagator {
       return false;
     }
     completionTested = level;
+    for (Var v : mustBeFixed) {
+      // a printed variable need not be one of the store's variables (the Boolean b of
+      // bool2int(b, i) is printed while the store holds only i), so it is tested here
+      if (!v.singleton()) {
+        return false;
+      }
+    }
     for (int k = 0; k < store.size(); k++) {
       Var v = store.vars[k];
       if (v == null || v.singleton()) {

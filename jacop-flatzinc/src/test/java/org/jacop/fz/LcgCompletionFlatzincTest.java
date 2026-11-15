@@ -103,6 +103,34 @@ class LcgCompletionFlatzincTest {
     }
   }
 
+  @Test
+  void printedBooleanOfBool2intIsFixed() throws IOException {
+    // b of bool2int(b, i) is printed but the store holds only i: completion took i, free once its
+    // reified row is entailed, as done and printed b = false..true (MiniZinc fuzz seed 2012294);
+    // the tests run with jacop.lcg=off, so -f asks for LCG
+    String model =
+        "var 0..3: x1;\n"
+            + "var 0..3: x2;\n"
+            + "var 0..3: x3;\n"
+            + "var bool: b1;\n"
+            + "var 0..1: i:: var_is_introduced :: is_defined_var;\n"
+            + "var bool: r:: var_is_introduced :: is_defined_var;\n"
+            + "array [1..3] of var int: x:: output_array([1..3]) = [x1,x2,x3];\n"
+            + "array [1..1] of var bool: b:: output_array([1..1]) = [b1];\n"
+            + "constraint jacop_count_var_le([x2,x1,x3],0,x1,1);\n"
+            + "constraint int_lin_le_reif([1,-1],[x1,x3],0,r);\n"
+            + "constraint bool2int(b1,i):: defines_var(i);\n"
+            + "constraint int_lin_le_reif([1,-2],[x2,i],-5,r):: defines_var(r);\n"
+            + "solve :: int_search(x,smallest,indomain_min,complete) satisfy;\n";
+    for (String[] options : new String[][] {{"-f", "--lcg", "on"}, {"--lcg", "on"}}) {
+      String out = runModel(model, options);
+      assertTrue(out.contains("x = array1d(1..3, ["), out);
+      assertTrue(
+          out.contains("b = array1d(1..1, [false]);") || out.contains("b = array1d(1..1, [true]);"),
+          "b unfixed:\n" + out);
+    }
+  }
+
   private static long stat(String out, String name) {
     Matcher m =
         Pattern.compile("^%%%mzn-stat: " + name + "=(\\d+)$", Pattern.MULTILINE).matcher(out);
@@ -115,8 +143,12 @@ class LcgCompletionFlatzincTest {
   }
 
   private String run(String... options) throws IOException {
+    return runModel(model(), options);
+  }
+
+  private String runModel(String model, String... options) throws IOException {
     Path fzn = tmp.resolve("completion.fzn");
-    Files.writeString(fzn, model(), StandardCharsets.UTF_8);
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
     List<String> args = new ArrayList<>(Arrays.asList(options));
     args.add("-t");
     args.add("10000");
