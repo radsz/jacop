@@ -382,6 +382,7 @@ public final class LcgSolver implements ExternalPropagator {
   // whether the runs of activity branching take those turns only until the first solution, then
   // keep the order set before solving
   private boolean booleansFirstTurnsUntilSolution;
+  private long booleansFirstTurnsAfter;
   private boolean splitAtStart;
   // variables branched on only when every variable of heap and wide is fixed (defined variables)
   private final VarHeap lateHeap = new VarHeap();
@@ -4234,12 +4235,15 @@ public final class LcgSolver implements ExternalPropagator {
    * a first solution out of reach: on the traveling tournament (XCSP 2024, 24 to 40 teams) the
    * home/away pattern of the whole season and tens of thousands of half-reified Booleans are
    * decided before any opponent, and no solution came in 600 s; in turns the first one comes in 30
-   * to 90 s. Set it before solving.
+   * to 90 s. The turns start only after the given number of conflicts without a solution, so that a
+   * model whose first solution comes soon keeps its search. Set it before solving.
    *
    * @param turns true for turns until the first solution
+   * @param afterConflicts the conflicts without a solution before the first turn
    */
-  public void setBooleansFirstTurnsUntilSolution(boolean turns) {
+  public void setBooleansFirstTurnsUntilSolution(boolean turns, long afterConflicts) {
     booleansFirstTurnsUntilSolution = turns;
+    booleansFirstTurnsAfter = afterConflicts;
     splitAtStart = split;
   }
 
@@ -5751,7 +5755,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
     } else if (booleansFirstTurnsUntilSolution) {
-      if (best == null && activityBranching) {
+      if (best == null && activityBranching && sat.conflicts >= booleansFirstTurnsAfter) {
         setBooleansFirst(!split);
         booleansFirstTurnsBeforeSolution++;
       } else if (best != null) {

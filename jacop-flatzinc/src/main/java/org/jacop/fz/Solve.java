@@ -2897,7 +2897,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         case "on" -> lcg.setBooleansFirst(true);
         case "off" -> lcg.setBooleansFirst(false);
         case "turns" -> lcg.setBooleansFirstTurns(true);
-        case "", "until-solution" -> lcg.setBooleansFirstTurnsUntilSolution(true);
+        case "", "until-solution" ->
+            lcg.setBooleansFirstTurnsUntilSolution(
+                true, Long.parseLong(options.freeConfig("lcg-booleans-first-after", "20000")));
         default -> throw new IllegalArgumentException("lcg-booleans-first=" + booleansFirst);
       }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
