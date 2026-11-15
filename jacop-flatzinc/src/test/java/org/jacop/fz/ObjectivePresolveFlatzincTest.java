@@ -39,6 +39,8 @@ import java.util.List;
 import java.util.Random;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -53,7 +55,23 @@ import org.junit.jupiter.api.io.TempDir;
  */
 class ObjectivePresolveFlatzincTest {
 
+  private static final String DOMINANCE = "org.jacop.fz.dominance";
+
   @TempDir Path tmp;
+
+  /**
+   * Dominance nogoods (on by default for fixed search) cut dominated solutions and so change the
+   * sequence of intermediate solutions these tests compare; they are switched off here.
+   */
+  @BeforeEach
+  void dominanceOff() {
+    System.setProperty(DOMINANCE, "false");
+  }
+
+  @AfterEach
+  void dominanceDefault() {
+    System.clearProperty(DOMINANCE);
+  }
 
   private static final Pattern SHIFTED = Pattern.compile("presolveObjectiveShifted=(\\d+)");
   private static final Pattern EXPANDED = Pattern.compile("presolveObjectiveExpanded=(\\d+)");

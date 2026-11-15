@@ -5628,7 +5628,25 @@ Version 5.0 (unreleased)
    make 1,859 extra rows of mqueens n11 raise the bound from 0 to 1, and
    keeping them cost 12 s of LP in search (14.2 s against 3.2 s).
 
-324. The FlatZinc front end removes the control b of a half-reified
+324. The dominance nogoods of Lee and Zhong (org.jacop.fz.dominance, 5.0
+   entry on DominanceNogoods) are on by default for fixed search; they stay
+   off under -f and --proof, and org.jacop.fz.dominance=true/false
+   overrides. On the 39 MiniZinc Challenge instances where they fire
+   (trucking, spot5, shortest_path, pattern-set-mining, unit-commitment,
+   table-layout, maximum-dag, aircraft-disassembly), at 600 s fixed search
+   proves 26 instead of 24 (trucking 13 in 6 s, 14 in 4 s) and improves 10
+   objectives, 1 worse by 0.006 %; under -f they are neutral or worse (31 =
+   31 proved, 3 instances better, 6 worse, time 1.078), so -f keeps them
+   off. The pass runs on 156 of the 240 wide-set instances, 0.06 s on
+   average and at most 0.58 s; on easy instances solved at the root it
+   adds about 0.1 s. Its memo of moves is now an array instead of a boxed
+   map (pattern-set-mining-k2 audiology 0.30 s -> 0.12 s, same nogoods).
+   References: J. H. M. Lee and A. Z. Zhong, Automatic Generation of
+   Dominance Breaking Nogoods for a Class of Constraint Optimization
+   Problems, IJCAI 2020; Exploiting Functional Constraints in Automatic
+   Dominance Breaking for Constraint Optimization, CP 2022.
+
+325. The FlatZinc front end removes the control b of a half-reified
    constraint b -> C when b appears nowhere else but as a positive literal
    of clauses, as bounded variable elimination does in SAT preprocessing
    (Een and Biere, Effective preprocessing in SAT through variable and
@@ -5650,7 +5668,7 @@ Version 5.0 (unreleased)
    13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
    is off under --proof and when all solutions are asked for.
 
-325. The XorSystem detector of the FlatZinc front end also reads linear
+326. The XorSystem detector of the FlatZinc front end also reads linear
    equations whose odd-coefficient terms are 0/1 variables or variables of
    a single parity: sum(a_i * x_i) = s gives the GF(2) row of the x_i with
    odd a_i, its right-hand side the parity of s. Lights Out puzzles (each
@@ -5665,7 +5683,7 @@ Version 5.0 (unreleased)
    to the other propagators. Of the 240 instances of the wide benchmark
    set, it fires on whirlpool d29 and d30 only (unsolved both ways).
 
-326. Under free search an objective that the core-guided phase cannot take
+327. Under free search an objective that the core-guided phase cannot take
    (no linear definition: the index of an element, a maximum, a product)
    goes, after 100,000 conflicts of branch and bound with lower-bound
    runs, to dichotomic search on its bound until the bound meets the best
@@ -5677,7 +5695,7 @@ Version 5.0 (unreleased)
    off, -Djacop.lcg.bisectUncoredAfter sets the conflicts; statistic
    lcgBisectUncored.
 
-327. The LU factorization of JaLP takes a column singleton as its pivot
+328. The LU factorization of JaLP takes a column singleton as its pivot
    whatever its size against its row (Suhl and Suhl 1990): such a
    column eliminates nothing below it. Before, a triangular basis with
    many small column singletons took a quadratic pivot search: 8 s per
@@ -5687,7 +5705,7 @@ Version 5.0 (unreleased)
    connect 0086_02 takes 7 s instead of 52 s, wordpress Offers500 15 s
    instead of 221 s.
 
-328. The route neighbourhoods of free search (ROUTES, RELATED) now run on
+329. The route neighbourhoods of free search (ROUTES, RELATED) now run on
    models whose successors are numbered from 0, such as the XCSP3 VRP_LC
    models through MiniZinc: there the subcircuit is posted on copies
    succ + 1 that are not search variables, and AdaptiveLns built no
@@ -5701,7 +5719,7 @@ Version 5.0 (unreleased)
    others are equal. On the 13 wide-set instances with a circuit the
    change does not fire and the results are identical.
 
-329. Under free search (-f) with lazy clause generation and a search
+330. Under free search (-f) with lazy clause generation and a search
    annotation, once a first solution is known each turn of runs at
    restarts is the annotation, six runs of the SAT solver's own decisions
    on literals, then activity branching, instead of one run of each
@@ -5722,7 +5740,7 @@ Version 5.0 (unreleased)
    workforce-alloc 202 130 -> 45 s; steelmillslab bench_19_6 12 -> 30 s,
    evm-super-compilation 49 -> 108 s).
 
-330. -Djacop.virtualClock=true (default false) runs the clock of lazy
+331. -Djacop.virtualClock=true (default false) runs the clock of lazy
    clause generation on its work: the time limit, the shares of the -f
    phases, the time of the neighbourhood runs, the delayed root probe
    and the check of LCG's speed (lcg-slow-rate, which runs in the search
