@@ -6501,7 +6501,38 @@ Version 5.0 (unreleased)
    turns it off, =true posts it without lazy clause generation too, and
    -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
-361. The FlatZinc front end detects tilings of 0..n-1 by m arithmetic
+361. Large neighbourhood search under -f keeps to the variables that no
+   constraint defines when there are at least 3 of them, instead of 16
+   (item 290). Below 16 the neighbourhoods took every variable, which on
+   models with a few roots that define the rest, such as city-position
+   (8 and 12 roots), made each neighbourhood relax variables that the
+   fixed roots determine anyway. Found by bisecting a -f loss of the
+   second integration round (city-position city-5-06, 4 seeds: 26-42 s
+   before item 290, 66-98 s after). On the 10 wide instances with 3 to
+   15 roots, -f at 240 s, two seeds: city-position city-5-06 108/93 ->
+   48/29 s, city-7-04 proved in 107/126 s (before unproved at the
+   limit), fast-food ff58 47/28 -> 19/28 s, median-string p2_10_8-0
+   16/15 -> 11/12 s, the other six equal; total time 819 -> 409 s.
+   pattern-set-mining (1 and 2 roots) and atp-stage2 (2) still take
+   every variable.
+
+362. The core-guided phase of free search (-f) under lazy clause
+   generation probes the objective's own bound when its cores raise the
+   lower bound by about one each, as cores of two terms with large
+   domains do (a makespan and a tardiness that rise together). After 32,
+   64, 128... cores, if the cores' recent rate would need more than four
+   times as many cores again to meet the best solution, bounds of the
+   objective at doubling distances above the lower bound are assumed
+   with 100 conflicts each, and each one refuted becomes a clause. The
+   phase hands over to branch and bound once the probes leave less than
+   an eighth of the cores' gap; the probes' work is left out of the
+   phase's rates. MiniZinc Challenge 2021 ATSP instance5 is proved in
+   1.2 s instead of 2.3 s (1,978 cores of +1 before, 32 now); on the 13
+   of 187 wide optimisation instances where it fires, -f at 600 s takes
+   0.86 of the time with the same proofs (kitchen linear 305 -> 166 s).
+   -Djacop.lcg.coreObjectiveProbe=false turns it off.
+
+363. The FlatZinc front end detects tilings of 0..n-1 by m arithmetic
    progressions of k terms with pairwise distinct gaps (perfect rhythmic
    tilings, T. Johnson, "Tiling in my music", The Experimental Music
    Review, 1996; N. Alon, M. Debski, J. Grytczuk, J. Przybylo, "Perfect
@@ -6522,7 +6553,7 @@ Version 5.0 (unreleased)
    turns the detection off, -Dorg.jacop.fz.progressionTiling.search=false
    the search only.
 
-362. ElementVariableFast (MiniZinc element with a variable array) skips
+364. ElementVariableFast (MiniZinc element with a variable array) skips
    the calls woken by array positions the index can no longer select, and
    for a wake from a few selectable positions it checks residual supports
    (the changed positions, the bounds of the value and, for values spanning
@@ -6536,7 +6567,7 @@ Version 5.0 (unreleased)
    total time is unchanged (1.005 and 1.012, the same search under the
    virtual clock).
 
-363. Free search (-f) of a resource-constrained project scheduling model
+365. Free search (-f) of a resource-constrained project scheduling model
    (a makespan over CumulativeBasic resources with fixed durations,
    demands and capacities, and precedence rows) runs a project schedule
    heuristic, org.jacop.search.ls.ProjectSchedule: the serial schedule

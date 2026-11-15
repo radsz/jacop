@@ -4216,14 +4216,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "\n%%%mzn-stat: lcgHeldFailures="
         + lcg.heldFailures
         + "\n%%%mzn-stat: lcgCoreBound="
-        + (minimize ? core.lowerBound : -core.lowerBound);
+        + (minimize ? core.lowerBound : -core.lowerBound)
+        + "\n%%%mzn-stat: lcgCoreObjectiveProbes="
+        + core.objectiveProbes
+        + "\n%%%mzn-stat: lcgCoreProbeStops="
+        + core.probeStops;
   }
 
   // the fewest variables not defined by a constraint that the neighbourhoods keep to; with fewer,
   // nearly every variable is defined by a chain of constraints from a handful of roots (one bit of
-  // pattern-set-mining, two of ionosphere), and fixing them all or none is no neighbourhood: the
-  // neighbourhoods take every variable, as when none is independent
-  private static final int MIN_LNS_INDEPENDENT = 16;
+  // pattern-set-mining, two of ionosphere and atp-stage2), and fixing them all or none is no
+  // neighbourhood: the neighbourhoods take every variable, as when none is independent. Models with
+  // a few more roots are real neighbourhoods over them: city-position city-5-06 (8 roots) proves
+  // its
+  // optimum twice as fast under -f with its 8 roots as with every variable
+  static final int MIN_LNS_INDEPENDENT = 3;
+
+  /**
+   * It tells whether the neighbourhoods of large neighbourhood search keep to the variables that no
+   * constraint defines.
+   *
+   * @param independent the number of decision variables that no constraint defines
+   * @return true when there are enough of them to make neighbourhoods
+   */
+  static boolean lnsKeepsIndependent(int independent) {
+    return independent >= MIN_LNS_INDEPENDENT;
+  }
 
   /**
    * The neighbourhoods of large neighbourhood search over the decision variables of the model, or
@@ -4252,7 +4270,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           independent.add(x);
         }
       }
-      if (independent.size() >= MIN_LNS_INDEPENDENT) {
+      if (lnsKeepsIndependent(independent.size())) {
         vars = new LinkedHashSet<>(independent);
       }
     }
