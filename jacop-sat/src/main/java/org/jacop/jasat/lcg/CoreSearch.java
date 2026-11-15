@@ -558,8 +558,28 @@ public final class CoreSearch {
       Soft unit = core.length == 1 ? byLiteral.get(-core[0]) : null;
       if (unit != null && unit.term >= 0) {
         probe(unit.term, unit.level, phaseLimit);
+      } else if (OBJECTIVE_PROBE && cores >= nextObjectiveProbe && slowCores()) {
+        long before = sat.work();
+        boolean feasible = probeObjective(phaseLimit);
+        discount(sat.work() - before);
+        if (!feasible) {
+          return CdclSolver.SAT; // no solution better than the best one
+        }
+        long best = lcg.boundObjective();
+        if (best != Long.MAX_VALUE
+            && best > objectiveFloor
+            && PROBE_HANDOVER * (best - objectiveFloor) < best - lowerBound) {
+          // the probes proved much more than the cores: branch and bound, which keeps the
+          // objective's bound, closes the rest faster than cores of 1 each (ATSP 2021 instance10:
+          // 3,700 more cores for the last 23 units after the probes)
+          probeStops++;
+          return CdclSolver.UNKNOWN;
+        }
       }
-      lcg.reportBound(lowerBound);
+      if (lcg.boundObjective() <= objectiveFloor) {
+        return CdclSolver.SAT;
+      }
+      lcg.reportBound(Math.max(lowerBound, objectiveFloor));
       if (tooSlow()) {
         return CdclSolver.UNKNOWN;
       }
@@ -1225,6 +1245,129 @@ public final class CoreSearch {
       }
       lcg.addProvedClause(lit);
       termProven[t] = level;
+    }
+  }
+
+  // -Djacop.lcg.coreObjectiveProbe=false: no probes of the objective's own bound during the phase
+  static final boolean OBJECTIVE_PROBE =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreObjectiveProbe", "true"));
+
+  // the cores before the first check of their rate for the objective's probes, whose first probe
+  // comes at twice as many (-Djacop.lcg.coreObjectiveProbeAfter; 1 probes after every core)
+  static long objectiveProbeAfter = Long.getLong("jacop.lcg.coreObjectiveProbeAfter", 16);
+
+  // the cores found before the next probe of the objective's bound; doubled at each probe
+  private long nextObjectiveProbe = objectiveProbeAfter;
+
+  // the cores' bound when the cores last came to nextObjectiveProbe, Long.MIN_VALUE before
+  private long checkBound = Long.MIN_VALUE;
+
+  /**
+   * At 32, 64, 128... cores (see {@link #objectiveProbeAfter}): whether the cores, at the rate of
+   * their second half, would need more than four times as many cores again to meet the best
+   * solution. Only then are the objective's probes worth their work: on work-task-variation 2025
+   * seed-8 each core also raises the bound by 1, but a few more cores close the gap of 3 to its
+   * optimum, and probes there only change the run (the first test at 16 cores records the bound).
+   */
+  private boolean slowCores() {
+    long last = checkBound;
+    checkBound = lowerBound;
+    nextObjectiveProbe = 2 * cores;
+    long best = lcg.boundObjective();
+    if (best == Long.MAX_VALUE) {
+      return false;
+    }
+    if (objectiveProbeAfter <= 1) {
+      return true; // after every core (tests)
+    }
+    // the second half's cores, cores / 2, raised the bound by the gain: at that rate the gap needs
+    // gap / gain * cores / 2 cores, more than 4 * cores when the gap is above 8 gains
+    return last != Long.MIN_VALUE
+        && best - Math.max(lowerBound, objectiveFloor) > 8 * Math.max(0, lowerBound - last);
+  }
+
+  /** The objective's lower bound proved by the probes of {@link #probeObjective}. */
+  public long objectiveFloor = Long.MIN_VALUE;
+
+  // the phase stops once the probes leave less than this share of the cores' gap to the best
+  // solution
+  private static final long PROBE_HANDOVER = 8;
+
+  /** Statistics: phases stopped because the objective's probes proved more than the cores. */
+  public long probeStops;
+
+  /** Statistics: calls of the solver that probe the objective's bound. */
+  public long objectiveProbes;
+
+  /**
+   * Proves how far the objective itself must be above the cores' lower bound: bounds at doubling
+   * distances above it, up to the best solution, each assumed alone with a few conflicts, until one
+   * is not refuted. Cores of two or more terms with large domains, such as a makespan and a
+   * tardiness that rise together, each raise the cores' bound by 1 (ATSP 2021 instance5: 1,978
+   * cores of 2 literals for 20,000 units), while the objective's bound is often refuted at once.
+   * The bounds proved are clauses on the objective; they do not change the cores' own bound, which
+   * counts only the weights the cores took from the soft literals. Returns false when the solver
+   * becomes unsatisfiable: no solution is better than the best one.
+   */
+  private boolean probeObjective(long phaseLimit) {
+    long best = lcg.boundObjective();
+    if (best == Long.MAX_VALUE) {
+      return true;
+    }
+    long from = Math.max(lowerBound, objectiveFloor);
+    for (long step = 1; from < best; step *= 2) {
+      long target = Math.min(from + step, best);
+      IntVar x = lcg.variable(objective);
+      if (target <= x.min()) {
+        objectiveFloor = Math.max(objectiveFloor, x.min());
+        continue;
+      }
+      if (target > x.max() + 1L) {
+        return false;
+      }
+      int lit = lcg.geLiteral(objective, (int) target);
+      long cap = sat.conflicts + PROBE_CONFLICTS;
+      sat.setConflictLimit(Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap)));
+      objectiveProbes++;
+      int result = lcg.solveUnder(-lit);
+      if (result != CdclSolver.UNSAT) {
+        return true;
+      }
+      if (sat.failedAssumptions().length == 0) {
+        return false;
+      }
+      objectiveFloor = target;
+      if (!lcg.addProvedClause(lit)) {
+        return false;
+      }
+      if (target >= best) {
+        return true;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Leaves the given work of the objective's probes out of the phase: its rates, which measure the
+   * cores' own bound, and its work limit. With the probes counted, work-task-variation 2025 seed-8
+   * stopped as stalled at 214, three below the optimum that its cores prove two cores later (lost
+   * in 4 of 4 runs at 120 s).
+   */
+  private void discount(long work) {
+    if (work <= 0) {
+      return;
+    }
+    if (startWork >= 0) {
+      startWork += work;
+    }
+    for (int k = 0; k < samples; k++) {
+      sampleWork[k] += work;
+    }
+    if (markWork >= 0) {
+      markWork += work;
+    }
+    if (sat.workLimit() != Long.MAX_VALUE) {
+      sat.setWorkLimit(sat.workLimit() + work);
     }
   }
 

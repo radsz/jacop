@@ -5443,6 +5443,42 @@ class LcgSolverTest {
   }
 
   @Test
+  void objectiveProbesOfTheCorePhaseKeepItsOptimaAndBounds() {
+    // the probes of the objective's own bound after every core (32 cores by default): the optima
+    // and the reported lower bounds stay those of search
+    long saved = CoreSearch.objectiveProbeAfter;
+    CoreSearch.objectiveProbeAfter = 1;
+    try {
+      Random rnd = new Random(31);
+      int checked = 0;
+      long probes = 0;
+      for (int instance = 0; instance < 200; instance++) {
+        long seed = rnd.nextLong();
+        Integer expected = coreModelOptimum(seed, -1, new long[3]);
+        for (int mode = 0; mode < 4; mode++) {
+          long[] stats = new long[5];
+          long[] lower = new long[1];
+          Integer found = coreModelOptimum(seed, mode, stats, null, lower);
+          assertThat(found)
+              .as("instance %d (seed %d), mode %d", instance, seed, mode)
+              .isEqualTo(expected);
+          if (expected != null) {
+            assertThat(lower[0])
+                .as("instance %d (seed %d), mode %d", instance, seed, mode)
+                .isLessThanOrEqualTo(expected);
+          }
+          probes += stats[4];
+          checked++;
+        }
+      }
+      assertThat(checked).isPositive();
+      assertThat(probes).isPositive();
+    } finally {
+      CoreSearch.objectiveProbeAfter = saved;
+    }
+  }
+
+  @Test
   void coreGuidedSearchTakesTheDefinitionWithTheHigherRootBound() {
     // obj = a + b with a, b in 0..10, and obj = y0 + y1 with y0, y1 in {3, 5}, as presolve adds the
     // objective over cost variables next to its definition: the y's bound obj by 6 at the root
@@ -5605,6 +5641,9 @@ class LcgSolverTest {
     }
     if (stats.length > 3) {
       stats[3] += solver.solver().conflicts;
+    }
+    if (stats.length > 4 && solver.coreSearch() != null) {
+      stats[4] += solver.coreSearch().objectiveProbes;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
