@@ -5625,8 +5625,13 @@ Version 5.0 (unreleased)
    ihtc-2024-marte i14 (MiniZinc Challenge 2025) LCG makes about 10
    conflicts per second and found no solution in 1200 s; now -f finds
    24,783 at 600 s and 18,747 at 1200 s (CP-SAT par 16,165 in the
-   Challenge). Of the 240 wide instances it fires on one more
-   (rcpsp_max psp_ubo500_33, no solution either way).
+   Challenge). Fixed search (without -f), which also runs under LCG with
+   the decisions of the search annotation, gives way in the same case to
+   the annotation's search without learning; with a solution it keeps
+   LCG. On i14 it finds 35,036 at 600 s, where it found none before
+   (Gecode fixed search 35,626 in the Challenge). Of the 240 wide
+   instances each fires on one more (rcpsp_max psp_ubo500_33, no solution
+   either way).
 
 324. Binpacking skips the sort and uses a closed form of Shaw's NoSum
    test (CP 2004) and one elimination and commitment pass when the items
