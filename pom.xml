@@ -321,6 +321,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -565,6 +566,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -810,6 +812,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -1055,6 +1058,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>

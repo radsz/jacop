@@ -6323,6 +6323,26 @@ Version 5.0 (unreleased)
    slot-dive-share sets its share of the time; the statistics slotDiveSlots
    and slotDiveTime give its size and time.
 
+346. Under lazy clause generation the FlatZinc front end adds to a
+   cumulative whose tasks have variable durations and fixed resource
+   uses, and at most 4000 (task, time point) pairs, its time-resource
+   decomposition: at each time point t the sum of the resource uses of
+   the tasks with s <= t < s + d is at most the capacity (Schutt, Feydy,
+   Stuckey and Wallace, Why cumulative decomposition is not as bad as it
+   sounds, CP 2009). The cumulative propagators take the earliest end of
+   a task as its earliest start plus its shortest duration; when another
+   constraint bounds the end, such as a stockpile that stays until it is
+   reclaimed, they miss the part of the task between its latest start
+   and its earliest end, which the learnt clauses over the start and end
+   literals of the decomposition capture. XCSP 2024 Cargo at 600 s, two
+   seeds: Cargo-22 proved in 4 s and Cargo-10 in 154 and 62 s, which no
+   run proved before (CP-SAT, one thread: 0.5 and 59 s); Cargo-06 152
+   and 5 s instead of 332 and 132 s, Cargo-05 4 s instead of 19 s. Of the
+   240 wide instances it fires on two (stack-cuttingstock d3,
+   stripboard), unchanged. -Dorg.jacop.fz.cumulativeTimeIndexed=false
+   turns it off, =true posts it without lazy clause generation too, and
+   -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
+
 Version 4.11
 =============
 
