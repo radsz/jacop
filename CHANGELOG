@@ -6290,6 +6290,17 @@ Version 5.0 (unreleased)
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
 
+352. Under -f the set partitioning relaxations whose rows linear overlap
+   factoring (item 269) rewrote get LP-guided
+   branching again: the factoring turns the set rows into rows over the
+   shared sums, which LinearRelaxation.setRows does not recognise, so the
+   detector now checks the model's rows before it rewrites them. CSPLib bus
+   driver scheduling (crew schedules, 160-199 rows over up to 19,091
+   shifts) at 120 s with -f: r3 and r5 are proved optimal (16 and 29) in 29
+   and 28 s, unsolved in 240 s before, c1a in 39 s (70 s); CP-SAT 9.15
+   proves them in 25-63 s. It fires on none of the wide set; the statistic
+   lpGuided (-s -v) shows the decision.
+
 351. The FlatZinc front end removes from each difference t = x - y (any
    a*x - a*y + b*t = c) the value that x - y != d would give, for every
    disequality of the model, stated or implied, that AlldifferentDetector

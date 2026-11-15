@@ -202,6 +202,68 @@ class LinearOverlapFlatzincTest {
     }
   }
 
+  /**
+   * A set partitioning model whose first two rows share the sub-sum x0 + ... + x3, which the
+   * factoring takes out; weight 2 on x39 makes the third row a non-set row.
+   */
+  private static String setPartitioning(int lastWeight) {
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 40; i++) {
+      fzn.append("var 0..1: x").append(i).append(";\n");
+    }
+    fzn.append("var 0..40: obj:: output_var;\n");
+    fzn.append(row(IntStream.rangeClosed(0, 13), 0, 1));
+    fzn.append(
+        row(IntStream.concat(IntStream.rangeClosed(0, 3), IntStream.rangeClosed(14, 23)), 0, 1));
+    fzn.append(
+        row(IntStream.concat(IntStream.of(4, 14), IntStream.rangeClosed(24, 39)), lastWeight, 1));
+    String all = IntStream.range(0, 40).mapToObj(i -> "x" + i).collect(Collectors.joining(","));
+    fzn.append("constraint int_lin_eq([")
+        .append(IntStream.range(0, 40).mapToObj(i -> "1").collect(Collectors.joining(",")))
+        .append(",-1],[")
+        .append(all)
+        .append(",obj],0);\n");
+    fzn.append("solve :: int_search([").append(all).append("],input_order,indomain_max,complete)");
+    fzn.append(" minimize obj;\n");
+    return fzn.toString();
+  }
+
+  // the row sum(x[i]) = rhs, with weight lastWeight on its last variable when it is not 0
+  private static String row(IntStream columns, int lastWeight, int rhs) {
+    int[] cs = columns.toArray();
+    StringBuilder weights = new StringBuilder();
+    for (int k = 0; k < cs.length; k++) {
+      weights
+          .append(k > 0 ? "," : "")
+          .append(k == cs.length - 1 && lastWeight != 0 ? lastWeight : 1);
+    }
+    return "constraint int_lin_eq(["
+        + weights
+        + "],"
+        + Arrays.stream(cs).mapToObj(i -> "x" + i).collect(Collectors.joining(",", "[", "]"))
+        + ","
+        + rhs
+        + ");\n";
+  }
+
+  /**
+   * The set rows that the factoring rewrites still get the LP-guided branching of set partitioning
+   * relaxations under -f: the relaxation sees rows over the shared sums, so Solve asks the detector
+   * whether the model's rows were set rows (CSPLib bus driver scheduling r3, optimal in 17 s with
+   * it, not in 240 s without).
+   */
+  @Test
+  void factoredSetRowsKeepLpGuidedBranching() throws IOException {
+    String model = setPartitioning(0);
+    assertTrue(run(model, true, "-debug").contains("% linear overlap"), "not factored");
+    assertTrue(run(model, true, "--lcg", "-f", "-s", "-v").contains("lpGuided=true"), "factored");
+    assertTrue(
+        run(model, false, "--lcg", "-f", "-s", "-v").contains("lpGuided=true"), "not factored");
+    String other = setPartitioning(2);
+    assertTrue(run(other, true, "--lcg", "-f", "-s", "-v").contains("lpGuided=false"), "weight 2");
+    assertEquals(solutions(run(model, false, "-f")), solutions(run(model, true, "-f")));
+  }
+
   private String run(String model, boolean factoring, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

@@ -238,7 +238,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // at least this many columns (-Dorg.jacop.lp.largeGuideColumns)
 
   // whether the search follows the relaxation's solution by default (lcg-lp-branching auto)
-  private static boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
+  private boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
     if (r.simplexValueColumns() > 0) {
       return true;
     }
@@ -246,7 +246,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return r.treeConstraints() > 0
-        || r.objective() != null && r.setRows()
+        || r.objective() != null && (r.setRows() || dictionary.overlapSetRows(r.objective()))
         || r.largeByRows() && r.columns() >= LARGE_GUIDE_COLUMNS;
   }
 
@@ -2951,12 +2951,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // packing or covering relaxation (LinearRelaxation.setRows) of an optimisation problem, whose
     // root solution is almost integral: the crew schedules of XCSP 2025 BusScheduling c2 and r5a,
     // 199 rows over 14,773 columns, prove their optima 29 and 28 in 16-41 s with it; without it c2
-    // is not proved in 600 s and r5a takes 306 s
+    // is not proved in 600 s and r5a takes 306 s. The rows that linear overlap factoring rewrote
+    // into rows over shared sums are no set rows in the relaxation, so the detector tells whether
+    // the model's rows were (Tables.overlapSetRows): CSPLib bus driver scheduling r3 and r5 (160
+    // and 199 rows over 19,091 and 7,292 shifts) then prove their optima 16 and 29 in 29 s and 28
+    // s, unsolved in 240 s before
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
                 || "auto".equals(lpBranching) && lpGuidedByDefault(linearRelaxation, free));
+    if (linearRelaxation != null && options.searchStatistics()) {
+      FzConsole.println("%%%mzn-stat: lpGuided=" + lpGuided + "\n%%%mzn-stat-end");
+    }
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
