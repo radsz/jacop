@@ -5581,17 +5581,19 @@ Version 5.0 (unreleased)
    make 1,859 extra rows of mqueens n11 raise the bound from 0 to 1, and
    keeping them cost 12 s of LP in search (14.2 s against 3.2 s).
 
-320. The dominance nogoods of Lee and Zhong (org.jacop.fz.dominance, 5.0
+322. The dominance nogoods of Lee and Zhong (org.jacop.fz.dominance, 5.0
    entry on DominanceNogoods) are on by default for fixed search; they stay
    off under -f and --proof, and org.jacop.fz.dominance=true/false
    overrides. On the 39 MiniZinc Challenge instances where they fire
    (trucking, spot5, shortest_path, pattern-set-mining, unit-commitment,
    table-layout, maximum-dag, aircraft-disassembly), at 600 s fixed search
    proves 26 instead of 24 (trucking 13 in 6 s, 14 in 4 s) and improves 10
-   objectives, 1 worse by 0.006 %; under -f they are neutral (31 = 31
-   proved, 3 objectives better, 4 worse), so -f keeps them off. Their
-   presolve takes at most 0.58 s on the 240 wide-set instances, a few ms
-   on most.
+   objectives, 1 worse by 0.006 %; under -f they are neutral or worse (31 =
+   31 proved, 3 instances better, 6 worse, time 1.078), so -f keeps them
+   off. The pass runs on 156 of the 240 wide-set instances, 0.06 s on
+   average and at most 0.58 s; on easy instances solved at the root it
+   adds about 0.1 s. Its memo of moves is now an array instead of a boxed
+   map (pattern-set-mining-k2 audiology 0.30 s -> 0.12 s, same nogoods).
    References: J. H. M. Lee and A. Z. Zhong, Automatic Generation of
    Dominance Breaking Nogoods for a Class of Constraint Optimization
    Problems, IJCAI 2020; Exploiting Functional Constraints in Automatic
