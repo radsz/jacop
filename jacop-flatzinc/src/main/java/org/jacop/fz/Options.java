@@ -239,6 +239,9 @@ public class Options {
                 default 300; 0 = off),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
+                lcg-slow-unsolved=<conflicts per second> (with --lcg and an objective: LCG
+                without a solution that makes fewer conflicts per second by lcg-slow-at gives
+                way to free search without learning, default 30; 0 = off),
                 lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
                 this share of the time limit, it raised the bound or its best cost fell by
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),

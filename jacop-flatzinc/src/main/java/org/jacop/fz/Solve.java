@@ -3039,6 +3039,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private volatile boolean lcgSlow;
   // when LCG last raised the bound on the objective (System.nanoTime)
   private volatile long lcgBoundRaised;
+  // set when LCG free search gave way without a solution, for making too few conflicts
+  private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
   private volatile int lcgSlowDeferred;
   // the LCG solver free search took over from, for the statistics
@@ -3082,6 +3084,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * 7,304 to 7,186. On ma-path-finding LCG makes about 14 conflicts/s while core-guided search
    * raises the bound, so it goes on.
    *
+   * <p>Without a solution, LCG goes on at any rate above lcg-slow-unsolved (30 conflicts/s), since
+   * it may find a first solution that free search without learning misses (cutstock type16 TEST9).
+   * Below it, it gives way: on ihtc-2024-marte i14 (MiniZinc Challenge 2025) LCG makes about 10
+   * conflicts/s and found no solution in 1200 s, while the search annotation without learning finds
+   * one in under 30 s.
+   *
    * @return the thread of the check, or null when it is off
    */
   private Thread slowLcgCheck(Var costVar) {
@@ -3089,6 +3097,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
+    double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
@@ -3132,6 +3141,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                       solver.stop();
                       return;
                     }
+                  } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9) {
+                    lcgSlowUnsolved = true;
+                    lcgSlow = true;
+                    solver.stop();
+                    return;
                   }
                   Thread.sleep(500);
                 }
@@ -4834,6 +4848,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
+          IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
         }
       }
       return;
