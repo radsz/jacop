@@ -48,12 +48,13 @@ import org.jacop.lcg.LinearForm;
 /**
  * Rule 5 for order reifications: the reified comparisons of one integer variable with constants,
  * {@code b <=> x <= c} and its {@code <}, {@code >=} and {@code >} forms, become the items of one
- * {@link ChannelOrder} on x, as Chuffed and Huub turn them into literals of x.
+ * {@link ChannelOrder} on x, as Chuffed and Huub turn them into literals of x. The FlatZinc front
+ * end uses {@link #groups(List)} to post the channels in place of the reifications it posted.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-final class OrderLiterals implements Rule {
+public final class OrderLiterals implements Rule {
 
   // the smallest number of reifications of one variable that become a channel
   static final int MIN_GROUP = 2;
@@ -84,7 +85,7 @@ final class OrderLiterals implements Rule {
    * @param channel the channel.
    * @param reifications the reifications, in the order of the constraints.
    */
-  record Group(ChannelOrder channel, List<Reified> reifications) {}
+  public record Group(ChannelOrder channel, List<Reified> reifications) {}
 
   /**
    * Finds the groups of order reifications of one variable with at least {@link #MIN_GROUP}
@@ -93,7 +94,7 @@ final class OrderLiterals implements Rule {
    * @param constraints the constraints to look at.
    * @return the groups, in the order of their first reification.
    */
-  static List<Group> groups(List<Constraint> constraints) {
+  public static List<Group> groups(List<Constraint> constraints) {
     // variables do not override equals, so this groups by identity in the order of the constraints
     Map<IntVar, List<Item>> byVariable = new LinkedHashMap<>();
     for (Constraint c : constraints) {

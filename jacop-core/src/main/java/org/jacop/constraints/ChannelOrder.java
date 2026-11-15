@@ -36,12 +36,14 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -50,6 +52,9 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Channels the order literals of an integer variable: {@code b[i] <=> (x <= t[i])}, or {@code b[i]
@@ -57,15 +62,22 @@ import org.jacop.lcg.Explainable;
  * item does, with one propagator: the items are sorted by threshold, so a bound change of x fixes
  * the 0/1 variables of the thresholds it passes, and a fixed 0/1 variable moves a bound of x.
  *
- * <p>Presolve posts it for the {@code int_le_reif}, {@code int_lt_reif}, {@code int_ge_reif} and
- * {@code int_gt_reif} constraints of one variable with constants, the order counterpart of what
- * {@link ChannelReif} does for {@code int_eq_reif}.
+ * <p>The FlatZinc front end and presolve post it for the {@code int_le_reif}, {@code int_lt_reif},
+ * {@code int_ge_reif} and {@code int_gt_reif} constraints of one variable with constants, the order
+ * counterpart of what {@link ChannelReif} does for {@code int_eq_reif}. The linear relaxation and
+ * other readers of reifications see it as its {@link #reifications()}.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
 public class ChannelOrder extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Explainable, Copyable<ChannelOrder> {
+    implements UsesQueueVariable,
+        Stateful,
+        SatisfiedPresent,
+        Explainable,
+        Violation,
+        PbEncodable,
+        Copyable<ChannelOrder> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -370,6 +382,43 @@ public class ChannelOrder extends Constraint
       addLiteral(trail, highItem, now, out);
     } else {
       trail.addUpperBound(x, now, out);
+    }
+    return true;
+  }
+
+  /**
+   * Returns the items as the reified comparisons they replace, {@code b[i] <=> x <= t[i]} or {@code
+   * b[i] <=> x > t[i]}, for readers of reifications such as the linear relaxation. They are not
+   * imposed.
+   *
+   * @return one reification per item, in the order of the thresholds.
+   */
+  public List<Reified> reifications() {
+    List<Reified> result = new ArrayList<>(t.length);
+    for (int i = 0; i < t.length; i++) {
+      PrimitiveConstraint c = atMost[i] ? new XlteqC(x, t[i]) : new XgtC(x, t[i]);
+      result.add(new Reified(c, b[i]));
+    }
+    return result;
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int xv = value.applyAsInt(x);
+    long violated = 0;
+    for (int i = 0; i < t.length; i++) {
+      if ((value.applyAsInt(b[i]) == 1) != ((xv <= t[i]) == atMost[i])) {
+        violated++;
+      }
+    }
+    return violated;
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    for (int i = 0; i < t.length; i++) {
+      LinearForm le = new LinearForm(new IntVar[] {x}, new long[] {1}, t[i], LinearForm.LE);
+      model.reified(b[i], atMost[i] ? le : le.negated(), true);
     }
     return true;
   }

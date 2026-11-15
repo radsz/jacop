@@ -49,6 +49,7 @@ import java.util.stream.IntStream;
 import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Linearizations;
@@ -1597,6 +1598,18 @@ public class LinearRelaxation extends Constraint
       constraints.addAll(store.valueWatchers(v));
     }
     constraints.addAll(store.watchedLiteralConstraints());
+    // the readers of reifications (value links, encodings) see an order channel as its items
+    if (constraints.stream().anyMatch(c -> c.getClass() == ChannelOrder.class)) {
+      Set<Constraint> expanded = new LinkedHashSet<>();
+      for (Constraint c : constraints) {
+        if (c.getClass() == ChannelOrder.class) {
+          expanded.addAll(((ChannelOrder) c).reifications());
+        } else {
+          expanded.add(c);
+        }
+      }
+      return expanded;
+    }
     return constraints;
   }
 
