@@ -1203,6 +1203,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pairCliques
             + "\n%%%mzn-stat: lpTableClauses="
             + r.tableClauses
+            + "\n%%%mzn-stat: lpNearRows="
+            + r.nearRows
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootPrunings="
