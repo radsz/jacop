@@ -3183,9 +3183,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * it may find a first solution that free search without learning misses (cutstock type16 TEST9).
    * Below it, it gives way: on ihtc-2024-marte i14 (MiniZinc Challenge 2025) LCG makes about 10
    * conflicts/s and found no solution in 1200 s, while the search annotation without learning finds
-   * one in under 30 s. Fixed search (without -f) makes only this check: without a solution it gives
-   * way to the annotation's search without learning ({@link #continueFixedWithoutLcg}), and with
-   * one it keeps LCG.
+   * one in under 30 s. In fixed search few conflicts alone are no sign of a stuck search, so it
+   * also has to make fewer than lcg-slow-unsolved-dive (50) decisions per conflict: marte i14 makes
+   * about 6.5 (1,840 decisions for 282 conflicts in 30 s), while on ROADEF 2005 car sequencing
+   * (1,260 cars, input order) each dive assigns most of the sequence, about 127 decisions per
+   * conflict (8 conflicts a second, its first decision only 3.9 s after LCG starts), and LCG finds
+   * 27 solutions in 60 s, where the annotation without learning finds none. Fixed search (without
+   * -f) makes only this check: without a solution it gives way to the annotation's search without
+   * learning ({@link #continueFixedWithoutLcg}), and with one it keeps LCG.
    *
    * @param costVar the cost variable
    * @param unsolvedOnly true for fixed search, which gives way only without a solution
@@ -3197,6 +3202,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
+    double unsolvedDive = Double.parseDouble(options.freeConfig("lcg-slow-unsolved-dive", "50"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
@@ -3224,7 +3230,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       check[0] =
           () -> {
             if (slowLcgCheckOnce(
-                solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                solver, rate, unsolvedRate, unsolvedDive, unsolvedOnly, stallNanos, gain, costs)) {
               solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
             }
           };
@@ -3237,7 +3243,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               try {
                 Thread.sleep(wait);
                 while (slowLcgCheckOnce(
-                    solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                    solver,
+                    rate,
+                    unsolvedRate,
+                    unsolvedDive,
+                    unsolvedOnly,
+                    stallNanos,
+                    gain,
+                    costs)) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -3257,6 +3270,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       LcgSolver solver,
       double rate,
       double unsolvedRate,
+      double unsolvedDive,
       boolean unsolvedOnly,
       long stallNanos,
       double gain,
@@ -3285,7 +3299,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         solver.stop();
         return false;
       }
-    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9) {
+    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9
+        && (!unsolvedOnly
+            || unsolvedDive <= 0
+            || Math.max(solver.sat().decisions, solver.annotationDecisions)
+                < unsolvedDive * solver.sat().conflicts)) {
       lcgSlowUnsolved = true;
       lcgSlow = true;
       solver.stop();

@@ -243,6 +243,9 @@ public class Options {
                 without a solution that makes fewer conflicts per second by lcg-slow-at gives
                 way to free search without learning, and fixed search to the search
                 annotation without learning, default 30; 0 = off),
+                lcg-slow-unsolved-dive=<decisions per conflict> (fixed search gives way only when it
+                also makes fewer decisions per conflict: long dives that assign most variables
+                between conflicts go on; default 50; 0 = conflicts alone decide),
                 lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
                 this share of the time limit, it raised the bound or its best cost fell by
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),
