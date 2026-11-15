@@ -63,6 +63,7 @@ import org.jacop.floats.constraints.ElementFloat;
 import org.jacop.floats.constraints.ElementFloatVariable;
 import org.jacop.floats.constraints.ExpPeqR;
 import org.jacop.floats.constraints.FloorPeqX;
+import org.jacop.floats.constraints.HyperbolicPeqR;
 import org.jacop.floats.constraints.LinearFloat;
 import org.jacop.floats.constraints.LnPeqR;
 import org.jacop.floats.constraints.Max;
@@ -85,6 +86,7 @@ import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PmulQeqR;
 import org.jacop.floats.constraints.PneqC;
 import org.jacop.floats.constraints.PneqQ;
+import org.jacop.floats.constraints.PowPeqR;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
@@ -1217,6 +1219,57 @@ class FloatPropagationFuzzTest {
             x -> x[0] < 0 ? Double.NaN : Math.sqrt(x[0]),
             v -> new SqrtPeqR(fv(v[0]), fv(v[1])),
             false));
+    for (double e : new double[] {2, 3, 4, 5, 0.5, 1.5, 0.25}) {
+      boolean integral = e == Math.rint(e);
+      cases.add(
+          function(
+              "PowPeqR " + e,
+              kinds(F, F),
+              integral ? r(-4, -1100) : r(0, 0),
+              integral ? r(4, 1100) : r(20, 100),
+              1,
+              x -> !integral && x[0] < 0 ? Double.NaN : Math.pow(x[0], e),
+              v -> new PowPeqR(fv(v[0]), e, fv(v[1])),
+              false));
+    }
+    for (HyperbolicPeqR.Function h : HyperbolicPeqR.Function.values()) {
+      cases.add(
+          function(
+              "HyperbolicPeqR " + h,
+              kinds(F, F),
+              r(-4, -30),
+              r(4, 30),
+              1,
+              x ->
+                  switch (h) {
+                    case SINH -> Math.sinh(x[0]);
+                    case COSH -> Math.cosh(x[0]);
+                    case TANH -> Math.tanh(x[0]);
+                  },
+              v -> new HyperbolicPeqR(fv(v[0]), h, fv(v[1])),
+              false));
+      if (h == HyperbolicPeqR.Function.COSH) {
+        // acosh is cosh with the arguments swapped and a non-negative result, the case above
+        continue;
+      }
+      // the inverse function, asinh or atanh
+      cases.add(
+          function(
+              "HyperbolicPeqR inverse " + h,
+              kinds(F, F),
+              h == HyperbolicPeqR.Function.TANH ? r(-1, -4) : r(-30, -4),
+              h == HyperbolicPeqR.Function.TANH ? r(1, 4) : r(30, 4),
+              1,
+              x ->
+                  switch (h) {
+                    case SINH -> Math.log(x[0] + Math.sqrt(x[0] * x[0] + 1));
+                    case COSH -> Double.NaN;
+                    case TANH ->
+                        Math.abs(x[0]) >= 1 ? Double.NaN : 0.5 * Math.log((1 + x[0]) / (1 - x[0]));
+                  },
+              v -> new HyperbolicPeqR(fv(v[1]), h, fv(v[0])),
+              false));
+    }
     cases.add(
         function(
             "ExpPeqR",

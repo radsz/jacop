@@ -1,0 +1,7 @@
+var 0.0..1.0: V14:: output_var;
+var 0.0..1.0: V29:: output_var;
+var 0.0..1.0: V30:: output_var;
+constraint float_times(0.8,0.36,V14);
+constraint float_times(0.3,V14,V29);
+constraint float_times(0.2,V29,V30);
+solve  satisfy;

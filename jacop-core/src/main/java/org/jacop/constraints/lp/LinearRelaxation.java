@@ -330,6 +330,23 @@ public class LinearRelaxation extends Constraint
   /** Statistics: propagations stopped at the pivot limit. */
   public long limits;
 
+  /** The solves stopped at their limit whose duals were turned into a bound, and what it pruned. */
+  public long anytimeSolves;
+
+  /** The prunings by the bounds of solves stopped at their limit. */
+  public long anytimePrunings;
+
+  /** The failures found by the bounds of solves stopped at their limit. */
+  public long anytimeFailures;
+
+  private long anytimePruningsBefore = -1;
+  private long anytimeFailuresBefore;
+
+  // the duals of a solve stopped at its pivot limit bound the objective too
+  // (org.jacop.lp.anytimeBound)
+  private static final boolean ANYTIME_BOUND =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.anytimeBound", "true"));
+
   /** Statistics: the objective bound of the first optimal solve, or NaN. */
   public double rootBound = Double.NaN;
 
@@ -684,6 +701,9 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: zero-half cuts added (in the cut rounds and in search). */
   public long zeroHalfCuts;
+
+  /** Statistics: MIR cuts of the rows weighted by their dual values added (rounds and search). */
+  public long dualCuts;
 
   /** Statistics: MIR and Gomory cuts added in search. */
   public long mirSearchCuts;
@@ -2723,9 +2743,18 @@ public class LinearRelaxation extends Constraint
               || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
       }
-      return;
+      if (!ANYTIME_BOUND || objective == null) {
+        return;
+      }
+      // the duals of a dual simplex stopped at its limit are those of a basis that is dual
+      // feasible up to the tolerances: the certificate below cleans their signs and bounds the
+      // objective over the current domains, which holds whatever the multipliers
+      anytimeSolves++;
+      anytimePruningsBefore = prunings;
+      anytimeFailuresBefore = failures;
+    } else {
+      stalled = 0;
     }
-    stalled = 0;
     if (status == LpSolver.OPTIMAL && (keepSolutions || store.level <= rootSolutionLevel)) {
       // the last solution is kept also before keepSolutions: the selection that follows it is
       // made after the root propagation, and the solves of the search may never be optimal
@@ -2753,67 +2782,76 @@ public class LinearRelaxation extends Constraint
       infeasible++;
       y = byRow(lp.farkas());
     } else if (objective != null) {
-      if (Double.isNaN(rootBound)) {
+      if (Double.isNaN(rootBound) && status == LpSolver.OPTIMAL) {
         rootBound = lp.value(0);
       }
       y = byRow(lp.duals());
     } else {
       return;
     }
-    for (int s = 0; s < SCALES.length; s++) {
-      long[] lambda = scaled(y, SCALES[s]);
-      if (lambda == null) {
-        countUnproven(status);
-        return;
-      }
-      int[][] facts = new int[2][];
-      long[][] used = new long[2][];
-      LinearForm[] localForms = certificate(lambda, facts, used);
-      if (localForms == null) {
-        continue; // the combination overflows: try a smaller scale
-      }
-      if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
-        List<LinearForm> kept = new ArrayList<>();
-        List<Certificate> keptCertificates = new ArrayList<>();
-        List<int[]> keptFacts = new ArrayList<>();
-        for (int k = 0; k < localForms.length; k++) {
-          if (localForms[k] != null) {
-            kept.add(localForms[k]);
-            keptCertificates.add(certified(localForms[k], used[k], k == 0));
-            keptFacts.add(facts[k]);
+    try {
+      for (int s = 0; s < SCALES.length; s++) {
+        long[] lambda = scaled(y, SCALES[s]);
+        if (lambda == null) {
+          countUnproven(status);
+          return;
+        }
+        int[][] facts = new int[2][];
+        long[][] used = new long[2][];
+        LinearForm[] localForms = certificate(lambda, facts, used);
+        if (localForms == null) {
+          continue; // the combination overflows: try a smaller scale
+        }
+        if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
+          List<LinearForm> kept = new ArrayList<>();
+          List<Certificate> keptCertificates = new ArrayList<>();
+          List<int[]> keptFacts = new ArrayList<>();
+          for (int k = 0; k < localForms.length; k++) {
+            if (localForms[k] != null) {
+              kept.add(localForms[k]);
+              keptCertificates.add(certified(localForms[k], used[k], k == 0));
+              keptFacts.add(facts[k]);
+            }
+          }
+          rootForms = kept.toArray(new LinearForm[0]);
+          rootCertificates = keptCertificates.toArray(new Certificate[0]);
+          rootFacts = keptFacts.toArray(new int[0][]);
+          if (restartSolvesOn
+              && RESTART_FROM_ROOT
+              && simplex != Simplex.LAZY
+              && objective != null) {
+            rootSimplex = lp.copy();
+            rootSimplexRows = rows();
+            rootSimplexLpRows = lpRow.clone();
           }
         }
-        rootForms = kept.toArray(new LinearForm[0]);
-        rootCertificates = keptCertificates.toArray(new Certificate[0]);
-        rootFacts = keptFacts.toArray(new int[0][]);
-        if (restartSolvesOn && RESTART_FROM_ROOT && simplex != Simplex.LAZY && objective != null) {
-          rootSimplex = lp.copy();
-          rootSimplexRows = rows();
-          rootSimplexLpRows = lpRow.clone();
+        boolean fits = true;
+        for (LinearForm f : localForms) {
+          fits &= f == null || fits(f);
         }
-      }
-      boolean fits = true;
-      for (LinearForm f : localForms) {
-        fits &= f == null || fits(f);
-      }
-      if (fits || s == SCALES.length - 1) {
-        for (int k = 0; k < localForms.length; k++) {
-          if (localForms[k] != null) {
-            if (sources == null) {
+        if (fits || s == SCALES.length - 1) {
+          for (int k = 0; k < localForms.length; k++) {
+            if (localForms[k] != null && sources == null) {
               propagate(store, localForms[k], facts[k], certified(localForms[k], used[k], k == 0));
-            } else {
+            } else if (localForms[k] != null) {
               countedPropagate(store, localForms[k], facts[k], used[k], k == 0);
             }
           }
+          if (status != LpSolver.INFEASIBLE) {
+            return;
+          }
+          // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
         }
-        if (status != LpSolver.INFEASIBLE) {
-          return;
-        }
-        // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
+        // the bounds reasoning on the form would overflow: try a smaller scale
       }
-      // the bounds reasoning on the form would overflow: try a smaller scale
+      countUnproven(status);
+    } finally {
+      if (anytimePruningsBefore >= 0) {
+        anytimePrunings += prunings - anytimePruningsBefore;
+        anytimeFailures += failures - anytimeFailuresBefore;
+        anytimePruningsBefore = -1;
+      }
     }
-    countUnproven(status);
   }
 
   // adds the time since start to the separation time of the source
@@ -4659,6 +4697,12 @@ public class LinearRelaxation extends Constraint
       }
       labelled(found, foundBefore, "gomory");
     }
+    Set<MirCut> dual = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (dualAggregateOn) {
+      int before = found.size();
+      dualAggregate(value, lo, hi, found);
+      dual.addAll(found.subList(before, found.size()));
+    }
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
     if (zeroHalfOn) {
       int foundBefore = found.size();
@@ -4678,6 +4722,9 @@ public class LinearRelaxation extends Constraint
           small.add(d);
           if (d != c && zeroHalf.contains(c)) {
             zeroHalf.add(d);
+          }
+          if (d != c && dual.contains(c)) {
+            dual.add(d);
           }
         }
       }
@@ -4701,6 +4748,9 @@ public class LinearRelaxation extends Constraint
         chosen.add(c);
         if (zeroHalf.contains(c)) {
           zeroHalfCuts++;
+        }
+        if (dual.contains(c)) {
+          dualCuts++;
         }
       }
     }
@@ -4851,6 +4901,43 @@ public class LinearRelaxation extends Constraint
       }
     }
     return true;
+  }
+
+  // the MIR cuts of the dual-weighted rows, on by default (-Dorg.jacop.lp.dualAggregate=false: off)
+  static boolean dualAggregateOn =
+      !Boolean.FALSE.toString().equals(System.getProperty("org.jacop.lp.dualAggregate"));
+
+  /**
+   * Adds the MIR cuts of the rows weighted by their dual values, without the rows of the objective
+   * (column 0): {@code sum y_i a_i x >= y b} is the row whose bound the LP proves, and its rounding
+   * by a divisor near the objective's coefficients counts the columns a solution needs (a
+   * Chvatal-Gomory cut with the LP's own multipliers). On covers with near-equal costs this is the
+   * cut that proves the optimum (MiniZinc Challenge 2021 wmsmc-int).
+   *
+   * <p>V. Chvatal, Edmonds polytopes and a hierarchy of combinatorial problems, Discrete
+   * Mathematics 4(4), 1973; H. Marchand and L. A. Wolsey, Aggregation and mixed integer rounding to
+   * solve MIPs, Operations Research 49(3), 2001.
+   */
+  private void dualAggregate(double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    double[] y = byRow(lp.duals());
+    boolean any = false;
+    for (int i = 0; i < y.length; i++) {
+      int[] cs = rowColumns[i];
+      for (int c : cs) {
+        if (c == 0) {
+          y[i] = 0;
+          break;
+        }
+      }
+      any |= y[i] != 0;
+    }
+    if (!any) {
+      return;
+    }
+    long[] lambda = scaled(y, gomoryScale);
+    if (lambda != null) {
+      mir(aggregate(lambda), value, lo, hi, found);
+    }
   }
 
   private static void mir(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {

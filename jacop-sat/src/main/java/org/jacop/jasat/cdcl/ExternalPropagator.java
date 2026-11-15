@@ -174,7 +174,8 @@ public interface ExternalPropagator {
 
   /**
    * Notifies the first decision below the assumptions (or at the root without them), just before it
-   * is assigned.
+   * is assigned, and the next decision below it after a call of {@link
+   * CdclSolver#notifyNextDecision}.
    *
    * @param lit the decision literal
    */

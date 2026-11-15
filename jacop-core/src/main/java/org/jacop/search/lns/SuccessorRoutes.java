@@ -202,4 +202,19 @@ final class SuccessorRoutes extends RouteStructure {
       }
     }
   }
+
+  /**
+   * Relaxes the links between the routes and their depots, so that a route can move to another
+   * vehicle.
+   *
+   * @param relax the variables to relax, by index, updated.
+   */
+  void relaxDepotLinks(boolean[] relax) {
+    for (int v = 0; v < n; v++) {
+      int w = next[v];
+      if (varIndex[v] >= 0 && w >= 0 && w < n && w != v && (depot[v] || depot[w])) {
+        relax[varIndex[v]] = true;
+      }
+    }
+  }
 }
