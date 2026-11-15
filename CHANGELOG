@@ -6596,6 +6596,23 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. The FlatZinc front end posts the reified comparisons of one variable
+   with constants (int_le_reif, int_lt_reif with a constant on either
+   side) and their half-reifications (int_le_imp, int_lt_imp) as one
+   ChannelOrder per variable with two or more of them, in place of one
+   Reified or Implies each, as presolve rule 5 (OrderLiterals) already
+   did under --presolve on. ChannelOrder gets implied items
+   (b => x <= t, b => x > t), a violation for local search and a
+   pseudo-Boolean encoding for proofs; the linear relaxation and the
+   dominance nogoods read it as the reifications it replaces. On the
+   41 wide instances where it fires (2,596 channels for 21,321
+   constraints) at 600 s the same instances are proved; the proved
+   instances take 0.976 of the time by default and 0.736 under -f
+   (2026_kitchen 288 -> 174 s, neighbours-new-6 152 -> 98 s), total time
+   0.997 and 0.982. -Dorg.jacop.fz.orderChannels=false keeps the
+   reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
+   half-reifications.
+
 Version 4.11
 =============
 
