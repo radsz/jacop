@@ -1931,7 +1931,13 @@ public final class LcgSolver implements ExternalPropagator {
         if (hi < d.max()) {
           changed += proofBound(variables[k], clause, (int) Math.max(hi, d.min() - 1L), false);
         }
-        dom[k] = d.intersect((int) Math.max(lo, d.min()), (int) Math.min(hi, d.max()));
+        long newMin = Math.max(lo, d.min());
+        long newMax = Math.min(hi, d.max());
+        // 2 x = 5 leaves x in [3, 2]: the bounds written above refute the row
+        if (newMin > newMax) {
+          return;
+        }
+        dom[k] = d.intersect((int) newMin, (int) newMax);
         if (dom[k].isEmpty()) {
           return;
         }
