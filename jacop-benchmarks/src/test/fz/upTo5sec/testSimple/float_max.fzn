@@ -1,0 +1,4 @@
+% RUNS ON flatzinc
+% RUNS ON fzn_fdlp_canon
+constraint float_max(1.0, 2.0, 2.0);
+solve satisfy;
