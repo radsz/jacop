@@ -330,6 +330,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
@@ -570,6 +571,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
@@ -810,6 +812,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
@@ -1048,6 +1051,7 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
