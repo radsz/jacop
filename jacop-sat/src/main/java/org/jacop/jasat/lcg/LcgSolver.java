@@ -38,6 +38,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.BitSet;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -426,6 +427,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int numAnnotationIndices;
   private static final int ANNOTATION_DONE = -1;
   private boolean annotationRun;
+  // the backjump length above which the runs of the annotation backtrack one level instead, see
+  // setAnnotationChrono; negative: never
+  private int annotationChrono = -1;
   // restarts under fixed search, see setFixedRestarts
   private FixedRestarts fixedRestarts = FixedRestarts.OFF;
   // restarts wait for the first solution
@@ -4350,6 +4354,33 @@ public final class LcgSolver implements ExternalPropagator {
     if (annotationRun && branching == Branching.ALTERNATE) {
       activityBranching = true;
     }
+    applyAnnotationChrono();
+  }
+
+  /**
+   * Sets when the runs that follow the annotation (or the default branching of free search)
+   * backtrack one level after a conflict instead of backjumping ({@link
+   * CdclSolver#setLazyChronoLimit}). Such a run decides its variables in a fixed order, so after a
+   * backjump it takes again every decision between the backjump level and the conflict: on
+   * gardner_dinner, whose learnt clauses join the deepest level with one 17 to 66 levels up, 2,242
+   * decisions for 90 conflicts, against 266 nodes without learning and 175 decisions with one-level
+   * backtracking (193 with the FlatZinc default limit of 10). Shorter backjumps are kept, as in
+   * Nadel and Ryvchin's rule with its threshold lowered from 100: with first_fail they reorder the
+   * decisions after the asserted literal, and backtracking one level on every conflict found no
+   * solution of 2026 orthorio challenge_12 in 600 s (backjumps up to 10 levels: 95 at 300 s, as
+   * develop-5.0). Runs of activity branching or of the solver's own decisions keep backjumping,
+   * which reorders their decisions.
+   *
+   * @param limit the backjump length above which the annotation's runs backtrack one level, 0 for
+   *     always, or a negative number for never
+   */
+  public void setAnnotationChrono(int limit) {
+    annotationChrono = limit;
+    applyAnnotationChrono();
+  }
+
+  private void applyAnnotationChrono() {
+    sat.setLazyChronoLimit(annotation != null && annotationRun ? annotationChrono : -1);
   }
 
   /**
@@ -4534,6 +4565,7 @@ public final class LcgSolver implements ExternalPropagator {
       annotationRun = false;
       activityBranching = false;
       pureClauses = true;
+      applyAnnotationChrono();
     }
   }
 
@@ -5538,6 +5570,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyNewDecisionLevel() {
+    completed = false; // the solver did not take the model completedByAnnotation offered
     if (onBound != null && objective >= 0 && store.level == baseLevel) {
       rootBound();
     }
@@ -5652,6 +5685,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     numPending = kept;
     failed = false;
+    completed = false;
+    if (completionTested > level) {
+      completionTested = -1;
+    }
     pushed = Math.min(pushed, trail.size());
     numImplied = 0;
     release(level);
@@ -5881,6 +5918,7 @@ public final class LcgSolver implements ExternalPropagator {
       annotationRun = runs % 3 == 0;
       activityBranching = runs % 3 != 1;
     }
+    applyAnnotationChrono();
     if (booleansFirstTurns && activityBranching) {
       setBooleansFirst(!split);
     } else if (booleansFirstTurnsUntilSolution) {
@@ -7015,6 +7053,9 @@ public final class LcgSolver implements ExternalPropagator {
         annotationDecisions++;
         return lit;
       }
+      if (completedByAnnotation()) {
+        return 0; // modelComplete: the solver offers the assignment as it is
+      }
     }
     if (activityBranching) {
       if (activityGuide != null && !freeSearch && annotation != null) {
@@ -7027,6 +7068,80 @@ public final class LcgSolver implements ExternalPropagator {
       return activityDecision();
     }
     return 0;
+  }
+
+  // the decision level of the last test of completedByAnnotation on the current branch, or -1
+  private int completionTested = -1;
+  // completedByAnnotation found a model: the unfixed variables take their minimum in checkModel
+  private boolean completed;
+
+  /** The models that completedByAnnotation offered without deciding the variables left. */
+  public long completedModels;
+
+  // the variables that the callers of onSolution read from the store, which completedByAnnotation
+  // must find fixed; null: completedByAnnotation is off
+  private Set<Var> mustBeFixed;
+
+  /**
+   * Lets the runs of the annotation take the assignment as a model once the annotation has fixed
+   * its variables and the variables left are free (see completedByAnnotation). The given variables,
+   * those that the solution callback reads from the store (the output variables, for example), must
+   * be fixed for that. Off by default: the store then holds a solution with every variable fixed.
+   *
+   * @param vars the variables that must be fixed, or null to turn it off
+   */
+  public void setCompletion(Collection<? extends Var> vars) {
+    mustBeFixed = vars == null ? null : Collections.newSetFromMap(new IdentityHashMap<>());
+    if (vars != null) {
+      mustBeFixed.addAll(vars);
+    }
+  }
+
+  /**
+   * Returns whether the assignment is a model once the annotation (and the output variables after
+   * it) has fixed its variables: every variable still unfixed is an integer variable of the solver
+   * with no constraint of the store that is not entailed, so any of its values satisfies the store,
+   * and the solver's clauses then need none of them ({@link CdclSolver#clausesSatisfied}, tested by
+   * the solver). Without the test the activity branching decided those variables one decision level
+   * at a time: on a_card_trick_1 (first_fail, satisfaction), 1,014 decisions on 0/1 variables whose
+   * constraints all became clauses, after 29 decisions of the annotation, where the search without
+   * learning stops after its annotation (37 nodes). Tested once on each branch after the annotation
+   * ends; not with a proof, whose solution must give every variable.
+   */
+  private boolean completedByAnnotation() {
+    int level = sat.decisionLevel();
+    if (mustBeFixed == null
+        || proof != null
+        || lns != null
+        || objective >= 0 && !vars[objective].singleton()
+        || completionTested >= 0 && completionTested <= level) {
+      return false;
+    }
+    completionTested = level;
+    for (int k = 0; k < store.size(); k++) {
+      Var v = store.vars[k];
+      if (v == null || v.singleton()) {
+        continue;
+      }
+      if (!(v instanceof IntVar x) || idOf(x) < 0 || mustBeFixed.contains(v)) {
+        return false;
+      }
+      for (Constraint c : v.dom().constraints()) {
+        if (!c.isEntailed()) {
+          return false;
+        }
+      }
+    }
+    completed = true;
+    return true;
+  }
+
+  @Override
+  public boolean modelComplete() {
+    if (completed) {
+      completedModels++;
+    }
+    return completed;
   }
 
   /** The next decision of the selection that starts the activity runs, or 0 when it has none. */
@@ -7347,16 +7462,14 @@ public final class LcgSolver implements ExternalPropagator {
     solution = new int[vars.length];
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] != null) {
-        if (unused[i] && !vars[i].singleton()) {
-          solution[i] = vars[i].min();
-          continue;
-        }
-        if (!vars[i].singleton()) {
+        // an unused variable, or one with no constraint left that is not entailed, takes its min
+        if (!vars[i].singleton() && !unused[i] && !completed) {
           throw new IllegalStateException(vars[i] + " is not fixed in a model");
         }
-        solution[i] = vars[i].value();
+        solution[i] = vars[i].min();
       }
     }
+    completed = false;
     // under core-guided search a solution need not improve on the best one
     boolean improving = objective < 0 || best == null || solution[objective] < best[objective];
     if (proof != null && improving) {

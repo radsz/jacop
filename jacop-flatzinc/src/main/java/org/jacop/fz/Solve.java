@@ -2830,6 +2830,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     String interleave = options.freeConfig("interleave", literalsOnly ? "none" : "restart");
     // the assumptions of core-guided, neighbourhood and lower-bound runs on one decision level
     lcg.sat().setAssumptionsOnOneLevel(!"0".equals(options.freeConfig("lcg-assume-level", "1")));
+    // runs of the annotation (or the default branching) backtrack one level after a conflict
+    // instead of backjumping (see LcgSolver.setAnnotationChrono)
+    lcg.setAnnotationChrono(Integer.parseInt(options.freeConfig("lcg-chrono", "10")));
     if (free) {
       lcg.setBranching(branching);
       if (branching != LcgSolver.Branching.ACTIVITY) {
@@ -2922,6 +2925,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
     lcg.setAnnotation(annotated, free);
+    if (presolve == null) {
+      // the annotation's runs take the assignment as a solution once the variables left are free;
+      // the printed variables must be fixed (presolve rebuilds its removed variables from the
+      // store's values, so not with it)
+      List<Var> printed = new ArrayList<>(output.outputVariables);
+      for (OutputArrayAnnotation a : output.outputArray) {
+        printed.addAll(Arrays.asList(a.getArray()));
+      }
+      lcg.setCompletion(printed);
+    }
     if (free && !"none".equals(System.getProperty("jacop.lcg.late", "defined"))) {
       // defined variables follow from the others: activity branches on them last. A defined 0/1
       // variable is the truth of a reified constraint, a literal CP-SAT's search branches on as on
@@ -3644,6 +3657,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().unkeptReasons
             + "\n%%%mzn-stat: lcgExpandedLiterals="
             + lcg.sat().expandedLiterals
+            + "\n%%%mzn-stat: lcgChronoBacktracks="
+            + lcg.sat().lazyChronoBacktracks
+            + "\n%%%mzn-stat: lcgCompletedModels="
+            + lcg.completedModels
             + "\n%%%mzn-stat: lcgSatPropagations="
             + lcg.sat().propagations
             + "\n%%%mzn-stat: lcgExplanations="

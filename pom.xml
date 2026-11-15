@@ -379,6 +379,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -621,6 +622,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -859,6 +861,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -1095,6 +1098,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>

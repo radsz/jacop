@@ -130,6 +130,12 @@ public final class CdclSolver {
   private boolean chrono;
   // backtrack chronologically when a backjump would undo more levels than this; negative: never
   private int chronoLimit = 100;
+  // with an external propagator, backtrack one level instead of backjumping when the backjump
+  // would undo more levels than this, asserting the learnt literal at the level kept; negative:
+  // never
+  private int lazyChronoLimit = -1;
+  // the conflicts that backtracked one level instead of backjumping
+  public long lazyChronoBacktracks;
   private int targetAssigned;
   private double[] activity = new double[0];
 
@@ -843,6 +849,24 @@ public final class CdclSolver {
    */
   public void setChronoLimit(int limit) {
     chronoLimit = limit;
+  }
+
+  /**
+   * Sets when {@link #solve}, with an external propagator and without assumptions, backtracks one
+   * level instead of backjumping. The learnt clause's asserting literal is then assigned at the
+   * level kept, above the levels of the clause's other literals, and the clause is remembered so
+   * that a later backtrack between those levels asserts it again (the missed lower implications of
+   * A. Nadel and V. Ryvchin, "Chronological Backtracking", SAT 2018, LNCS 10929, handled lazily, as
+   * in A. Möhle and A. Biere, "Backing Backtracking", SAT 2019, LNCS 11628). The literals are not
+   * assigned out of order, which the level notifications of the external propagator could not
+   * express. A search that follows a fixed order of decisions otherwise redoes, after each
+   * backjump, every decision between the backjump level and the conflict.
+   *
+   * @param limit the backjump length above which search backtracks one level, 0 for always, or a
+   *     negative number for never (default)
+   */
+  public void setLazyChronoLimit(int limit) {
+    lazyChronoLimit = limit;
   }
 
   /**
@@ -2811,8 +2835,18 @@ public final class CdclSolver {
         if (chrono && learntSize > 1 && decisionLevel - btLevel > chronoLimit) {
           btLevel = decisionLevel - 1;
         }
+        boolean lazy =
+            !chrono
+                && lazyChronoLimit >= 0
+                && assumptions.length == 0
+                && learntSize > 1
+                && decisionLevel - btLevel > lazyChronoLimit;
+        if (lazy) {
+          btLevel = decisionLevel - 1;
+          lazyChronoBacktracks++;
+        }
         backtrack(btLevel);
-        learnClause();
+        learnClause(lazy);
         if (wasted > (1 << 20) && wasted > memSize / 2) {
           purge(); // temporary external reasons freed by the backtrack
         }
@@ -2890,9 +2924,12 @@ public final class CdclSolver {
           next = vals[l] == 0 && !eliminatedVar[l >> 1] ? l : -1;
         }
       }
+      // the external propagator may hold a model whatever the unassigned variables take
+      boolean complete =
+          next == -1 && external != null && external.modelComplete() && clausesSatisfied();
       if (next == -1) {
-        next = pickBranch();
-        if (next == -1 && external != null) {
+        next = complete ? -1 : pickBranch();
+        if (next == -1 && external != null && !complete) {
           int d = external.decideLast();
           if (d != 0 && Math.abs(d) <= numVars) {
             int l = toLit(d);
@@ -2919,6 +2956,46 @@ public final class CdclSolver {
       newSearchLevel();
       assign(next, NO_REASON);
     }
+  }
+
+  /**
+   * Returns whether every clause of the solver, unit, binary, original or learnt, has a true
+   * literal under the current assignment, so that any values of the unassigned variables extend it
+   * to a model of the clauses.
+   *
+   * @return true when every clause is satisfied
+   */
+  public boolean clausesSatisfied() {
+    for (int i = 0; i < numUnits; i++) {
+      if (vals[units[i]] <= 0) {
+        return false;
+      }
+    }
+    for (int[] binaries : new int[][] {originalBinaries, learntBinaries}) {
+      int n = binaries == originalBinaries ? numOriginalBinaries : numLearntBinaries;
+      for (int i = 0; i < n; i += 2) {
+        if (vals[binaries[i]] <= 0 && vals[binaries[i + 1]] <= 0) {
+          return false;
+        }
+      }
+    }
+    for (int[] refs : new int[][] {originals, learnts}) {
+      int n = refs == originals ? numOriginals : numLearnts;
+      for (int i = 0; i < n; i++) {
+        int ref = refs[i];
+        if ((mem[ref + META] & DELETED) != 0) {
+          continue;
+        }
+        boolean satisfied = false;
+        for (int k = 0, size = mem[ref + SIZE]; k < size && !satisfied; k++) {
+          satisfied = vals[mem[ref + HEADER + k]] > 0;
+        }
+        if (!satisfied) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   /** Asks the external propagator to check the complete assignment. */
@@ -3387,7 +3464,13 @@ public final class CdclSolver {
     walking = on;
   }
 
-  private void learnClause() {
+  /**
+   * Learns the clause of the last conflict and asserts its first literal. When lazy, the solver
+   * backtracked one level only: the literal is asserted at the current level, above the level of
+   * the rest of the clause, and the clause is remembered with noteLowWatched, so that a later
+   * backtrack below the current level asserts it again.
+   */
+  private void learnClause(boolean lazy) {
     int lbd;
     if (learntSize == 1) {
       lbd = 1;
@@ -3401,7 +3484,12 @@ public final class CdclSolver {
         proof.add(learnt, 0, 2);
       }
       addLearntBinary(learnt[0], learnt[1]);
-      assignAt(learnt[0], -2 - learnt[1], litLevel(learnt[1]));
+      if (lazy) {
+        assign(learnt[0], -2 - learnt[1]);
+        noteLowWatched(BINARY, learnt[0], learnt[1]);
+      } else {
+        assignAt(learnt[0], -2 - learnt[1], litLevel(learnt[1]));
+      }
     } else {
       lbd = computeLbd(learnt, 0, learntSize);
       if (proof != null) {
@@ -3411,7 +3499,12 @@ public final class CdclSolver {
       learnts = push(learnts, numLearnts++, ref);
       attach(ref);
       bumpClause(ref);
-      assignAt(learnt[0], ref, litLevel(learnt[1]));
+      if (lazy) {
+        assign(learnt[0], ref);
+        noteLowWatched(ref, learnt[0], learnt[1]);
+      } else {
+        assignAt(learnt[0], ref, litLevel(learnt[1]));
+      }
     }
     if (learntSize <= exportSize && lbd <= exportLbd && external != null) {
       int[] dimacs = new int[learntSize];
