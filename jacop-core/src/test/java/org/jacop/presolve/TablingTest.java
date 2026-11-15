@@ -49,6 +49,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -111,6 +112,24 @@ class TablingTest {
     Run run = solveThroughTabling(model, true, Tabling.Limits.DEFAULT);
     assertThat(run.statistics().tables()).isEqualTo(1);
     assertThat(run.statistics().replaced()).isEqualTo(2);
+    assertThat(run.solutions()).containsExactlyInAnyOrderElementsOf(solveDirectly(model));
+  }
+
+  @Test
+  void aConstraintThatCannotBeCopiedStaysOutOfTheGroups() {
+    // BinaryBitTable is not Copyable: tabulating a group with it threw ClassCastException
+    // (fuzz seed 2011307, --presolve on --presolve-tabling)
+    Function<Store, IntVar[]> model =
+        s -> {
+          IntVar x = new IntVar(s, "x", 0, 3);
+          IntVar y = new IntVar(s, "y", 0, 3);
+          IntVar t = new IntVar(s, "t", 0, 6);
+          s.impose(new BinaryBitTable(x, y, new int[][] {{0, 1}, {1, 2}, {2, 3}, {3, 0}}));
+          s.impose(new XplusYeqZ(x, y, t));
+          s.impose(new XmulYeqZ(x, y, new IntVar(s, "p", 0, 9)));
+          return new IntVar[] {x, y, t};
+        };
+    Run run = solveThroughTabling(model, true, ALWAYS);
     assertThat(run.solutions()).containsExactlyInAnyOrderElementsOf(solveDirectly(model));
   }
 

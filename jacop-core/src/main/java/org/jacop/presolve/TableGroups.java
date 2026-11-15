@@ -205,6 +205,10 @@ final class TableGroups {
   }
 
   private int[] unfixedScope(Constraint c) {
+    // a group is tabulated over copies of its constraints in a scratch store
+    if (!Copyable.canCopy(c)) {
+      return null;
+    }
     List<Integer> result = new ArrayList<>();
     for (Var v : c.arguments()) {
       if (!(v instanceof IntVar)) {
