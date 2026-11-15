@@ -2247,6 +2247,7 @@ class LcgFuzzTest {
     long bisectProbes = 0;
     long probes = 0;
     long probeFacts = 0;
+    long bound = 0;
     long heldFailures = 0;
     int referenceTimeouts = 0;
     for (int run = 0; run < RUNS; run++) {
@@ -2280,6 +2281,10 @@ class LcgFuzzTest {
         if (!LcgSolver.PUSH_BEFORE_CONFLICT_SET) {
           // every other pair of runs pushes the fixpoint's atoms before a failure's conflict
           solver.setPushBeforeConflict(seed / 2 % 2 == 0);
+        }
+        // every other run binds the controls of the value reifications to their atoms
+        if (seed % 2 == 0) {
+          bound += solver.bindValueControls("all", null);
         }
         annotate(solver, model, seed);
         // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT
@@ -2337,6 +2342,7 @@ class LcgFuzzTest {
           bisectProbes,
           referenceTimeouts);
       System.out.printf("  root probing: %d probes, %d facts%n", probes, probeFacts);
+      System.out.printf("  value controls bound: %d%n", bound);
       statistics.forEach(
           (k, v) ->
               System.out.printf(

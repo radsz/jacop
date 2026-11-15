@@ -262,6 +262,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LcgBindControlsTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -502,6 +503,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LcgBindControlsTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -743,6 +745,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LcgBindControlsTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>
@@ -984,6 +987,7 @@ setup to run configuration. -->
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
+                                <include>**/LcgBindControlsTest.java</include>
                                 <include>**/ConvexAllocationLcgTest.java</include>
                                 <include>**/ConvexAllocationFlatzincTest.java</include>
                                 <include>**/ProbTest.java</include>

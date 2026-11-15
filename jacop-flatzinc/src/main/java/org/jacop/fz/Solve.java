@@ -2791,6 +2791,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       worker.onStop(lcg::stop);
       shareClauses(worker);
     }
+    lcg.bindValueControls(LcgSolver.BIND_CONTROLS, costVar instanceof IntVar cost ? cost : null);
+    if (options.getStatistics() && lcg.controlsBound > 0) {
+      // printed here: a run stopped before its search ends prints no LCG statistics
+      IO.print(
+          "%%%mzn-stat: lcgControlsBound="
+              + lcg.controlsBound
+              + "\n%%%mzn-stat: lcgChannelsBound="
+              + lcg.channelsBound
+              + "\n");
+    }
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }

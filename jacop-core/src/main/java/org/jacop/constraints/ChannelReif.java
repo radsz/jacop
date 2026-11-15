@@ -118,6 +118,38 @@ public class ChannelReif extends AbstractChannel implements Copyable<ChannelReif
     return on == equal;
   }
 
+  /**
+   * Returns the variable whose values the 0/1 variables stand for.
+   *
+   * @return the variable x
+   */
+  public IntVar variable() {
+    return x;
+  }
+
+  /**
+   * Returns the 0/1 variables, each 1 exactly when x takes the value at the same index of {@link
+   * #values()}.
+   *
+   * @return a new array of the 0/1 variables
+   */
+  public IntVar[] controls() {
+    IntVar[] bs = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      bs[i] = item[i].b();
+    }
+    return bs;
+  }
+
+  /**
+   * Returns the values of the 0/1 variables, in the order of {@link #controls()}.
+   *
+   * @return a new array of the values
+   */
+  public int[] values() {
+    return itemValues();
+  }
+
   @Override
   public String toString() {
     return id() + " : ChannelReif(" + x + ", " + Arrays.asList(item) + " )";

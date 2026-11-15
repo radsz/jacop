@@ -637,6 +637,11 @@ Literals and clauses:
   default one per 1 KB of the maximum heap.
 - jacop.lcg.releaseLiterals: release literals created only to push a
   bound (Chuffed's lazy literals); default true.
+- jacop.lcg.bindControls: bind the controls b of value reifications
+  b <-> x = c (ChannelReif) to the literal of the atom [x = c], so b has
+  no solver variable of its own and a channel whose controls are all
+  bound leaves the store: off, clauses (b in no other propagator),
+  controls (also controls of reified constraints) or all; default off.
 - jacop.lcg.liftLiterals: cite a weaker existing literal for a lifted
   bound; default true.
 - jacop.lcg.holeLimit: domains with more values than this keep only

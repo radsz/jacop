@@ -56,10 +56,15 @@ import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
+import org.jacop.constraints.Xor;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -204,6 +209,19 @@ public final class LcgSolver implements ExternalPropagator {
   // semantic minimisation: learnt literals sorted by variable, and those removed
   private long[] minimizeKeys = new long[16];
   private boolean[] minimizeRemoved = new boolean[16];
+
+  // per variable (by trail id): for a 0/1 control bound by bindValueControls, the variable and the
+  // value of the atom [x = c] whose literal is its own [b >= 1]; null while nothing is bound
+  private int[] boundTo;
+  private int[] boundValue;
+  // per DIMACS variable of such an atom: the controls bound to it, fixed whenever it is applied
+  private final Map<Integer, int[]> boundControls = new HashMap<>();
+
+  /** Statistics: 0/1 controls bound to an atom [x = c] by {@link #bindValueControls}. */
+  public long controlsBound;
+
+  /** Statistics: channels removed from the store because all their controls were bound. */
+  public long channelsBound;
 
   // clauses linking new literals, added through externalClause
   private final ArrayDeque<int[]> structural = new ArrayDeque<>();
@@ -2271,6 +2289,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** The variable of [x >= v] for v in (root min, root max], created when missing, linked. */
   private int geVar(int i, int v) {
+    if (boundTo != null && boundTo[i] >= 0) {
+      return eqVar(boundTo[i], boundValue[i]);
+    }
     int d = ge[i].get(v);
     if (d != LiteralMap.NONE) {
       if (transientLit[d]) {
@@ -2333,6 +2354,9 @@ public final class LcgSolver implements ExternalPropagator {
    * linked; the caller pushes the nearest linked literal it implies.
    */
   private int geEntryVar(int i, int v) {
+    if (boundTo != null && boundTo[i] >= 0) {
+      return eqVar(boundTo[i], boundValue[i]);
+    }
     int d = ge[i].get(v);
     if (d != LiteralMap.NONE) {
       return d;
@@ -4410,6 +4434,127 @@ public final class LcgSolver implements ExternalPropagator {
     fixedRestarts = mode;
     restartsAfterSolution = mode != FixedRestarts.OFF && afterSolution;
     sat.setRestarts(mode != FixedRestarts.OFF && !afterSolution);
+  }
+
+  /**
+   * The value reifications {@code b <-> [x = c]} of {@link ChannelReif} whose controls b take the
+   * literal of the atom {@code [x = c]} as their own {@code [b >= 1]}, by the system property
+   * {@code jacop.lcg.bindControls}: {@code off}, {@code clauses} (b is in no other propagator, only
+   * in clauses), {@code controls} (also the control of other reified constraints) or {@code all}.
+   */
+  public static final String BIND_CONTROLS = System.getProperty("jacop.lcg.bindControls", "off");
+
+  /**
+   * Binds the controls of value reifications {@code b <-> [x = c]} to the literal of the atom
+   * {@code [x = c]}, as Chuffed's and CP-SAT's encodings do (Feydy and Stuckey, Lazy clause
+   * generation reengineered, CP 2009): the clauses over b are then clauses over that atom, b has no
+   * solver variable of its own, and applying the atom fixes b, so the {@link ChannelReif} items of
+   * bound controls no longer propagate; a channel whose controls are all bound leaves the store
+   * until {@link #release}. The controls stay variables of the store, so every other constraint on
+   * b still reads its domain. Not under a proof. Call it before {@link #addClause} and before any
+   * literal of the controls exists.
+   *
+   * @param mode which controls to bind (see {@link #BIND_CONTROLS})
+   * @param excluded a variable never bound, such as the objective, or null
+   * @return the controls bound
+   */
+  public long bindValueControls(String mode, IntVar excluded) {
+    if (proof != null || rootFailed || mode == null || "off".equals(mode)) {
+      return 0;
+    }
+    if (boundTo == null) {
+      boundTo = new int[vars.length];
+      boundValue = new int[vars.length];
+      Arrays.fill(boundTo, -1);
+    }
+    long before = controlsBound;
+    for (Constraint c : new ArrayList<>(store.getConstraints())) {
+      if (c.getClass() != ChannelReif.class || c.isEntailed()) {
+        continue;
+      }
+      ChannelReif ch = (ChannelReif) c;
+      IntVar x = ch.variable();
+      int ix = index(x);
+      if (ix < 0 || x.singleton() || root[ix].min() >= 0 && root[ix].max() <= 1) {
+        continue;
+      }
+      IntVar[] bs = ch.controls();
+      int[] vs = ch.values();
+      Set<IntVar> seen = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+      Set<IntVar> repeated = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
+      for (IntVar b : bs) {
+        if (!seen.add(b)) {
+          repeated.add(b);
+        }
+      }
+      boolean all = bs.length > 0;
+      for (int k = 0; k < bs.length; k++) {
+        IntVar b = bs[k];
+        int ib = index(b);
+        boolean ok =
+            ib >= 0
+                && b != x
+                && b != excluded
+                && !repeated.contains(b)
+                && !b.singleton()
+                && root[ib].min() == 0
+                && root[ib].max() == 1
+                && boundTo[ib] < 0
+                && ge[ib].get(1) == LiteralMap.NONE
+                && eq[ib].get(0) == LiteralMap.NONE
+                && eq[ib].get(1) == LiteralMap.NONE
+                && x.domain.contains(vs[k])
+                && bindable(mode, b, ch);
+        if (ok) {
+          int d = eqVar(ix, vs[k]);
+          if (sat.value(d) != 0) {
+            ok = false;
+          } else {
+            boundTo[ib] = ix;
+            boundValue[ib] = vs[k];
+            int[] old = boundControls.get(d);
+            int[] now = old == null ? new int[1] : Arrays.copyOf(old, old.length + 1);
+            now[now.length - 1] = ib;
+            boundControls.put(d, now);
+            controlsBound++;
+            // b follows its atom: branching on x decides it
+            setUnusedVariables(List.of(b));
+          }
+        }
+        all &= ok;
+      }
+      if (all) {
+        c.removeConstraint();
+        encodedConstraints.add(c);
+        channelsBound++;
+      }
+    }
+    return controlsBound - before;
+  }
+
+  // whether a control b of a channel may be bound under a mode of bindValueControls
+  private static boolean bindable(String mode, IntVar b, ChannelReif channel) {
+    if ("all".equals(mode)) {
+      return true;
+    }
+    boolean controls = "controls".equals(mode);
+    if (!controls && !"clauses".equals(mode)) {
+      throw new IllegalArgumentException("jacop.lcg.bindControls: unknown mode " + mode);
+    }
+    for (Constraint c : b.dom().constraints()) {
+      if (c == channel) {
+        continue;
+      }
+      if (!controls
+          || !(c instanceof Reified
+              || c instanceof Implies
+              || c instanceof Xor
+              || c instanceof ChannelReif
+              || c instanceof ChannelImply)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -6741,7 +6886,8 @@ public final class LcgSolver implements ExternalPropagator {
         try {
           apply(lit);
         } catch (FailException _) {
-          IntVar x = vars[litVar[Math.abs(lit)]];
+          IntVar x = vars[failingControl >= 0 ? failingControl : litVar[Math.abs(lit)]];
+          failingControl = -1;
           EntryList atoms = failureAtoms;
           atoms.clear();
           trail.atomsBefore(x, trail.size(), atoms);
@@ -7044,7 +7190,24 @@ public final class LcgSolver implements ExternalPropagator {
     } else if (x.domain.contains(v)) {
       x.domain.inComplement(store.level, x, v);
     }
+    if (!boundControls.isEmpty()) {
+      int[] controls = boundControls.get(dimacsVar);
+      if (controls != null) {
+        int value = lit > 0 ? 1 : 0;
+        for (int b : controls) {
+          IntVar y = vars[b];
+          if (!y.singleton(value)) {
+            failingControl = b;
+            y.domain.in(store.level, y, value, value);
+          }
+        }
+        failingControl = -1;
+      }
+    }
   }
+
+  // the bound control whose fixing by apply is under way, or -1: a failure there is its own
+  private int failingControl = -1;
 
   /**
    * Returns the reason of a literal: the conflict clause just returned by {@link #propagate}, or
