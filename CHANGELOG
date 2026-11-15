@@ -6178,6 +6178,21 @@ Version 5.0 (unreleased)
    ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
    6.6 % and 3 % more nodes.
 
+346. A solve of the linear relaxation in search that stops at its pivot or
+   work limit now bounds the objective by its dual multipliers. They are
+   not optimal but still valid: the exact certificate (Neumaier and
+   Shcherbina, Safe bounds in linear and mixed-integer linear programming,
+   Mathematical Programming 99, 2004) turns any multipliers into a sound
+   bound and the same bounds reasoning as an optimal solve. Such solves
+   used to give nothing. They are rare (0.1 % of the solves of the wide
+   benchmark set, on 43 of 184 runs with a relaxation), but where they
+   happen they prune: at 600 s on those runs the best solution of ptv
+   pax_period_20_3b goes from 4324 to 3860 and of surface-based-tsp ch130
+   from 8202 to 8032, and vaccine v857 is proved in 19.9 s instead of
+   26.4 s. -Dorg.jacop.lp.anytimeBound=false turns it off; with -s -v the
+   statistics lpAnytime, lpAnytimePrunings and lpAnytimeFailures give the
+   stopped solves and what they pruned.
+
 Version 4.11
 =============
 
