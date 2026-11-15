@@ -96,7 +96,41 @@ public class ZeroSumDetector implements ParserTreeConstants {
   private final Set<IntVar> solveItem;
 
   /** A sum defining s: its node, the variables, their weights (as s = sum(w * x)) and m. */
-  private record Definition(ASTConstElem node, IntVar s, IntVar[] x, int[] w, long least) {}
+  private static final class Definition {
+    private final ASTConstElem node;
+    private final IntVar s;
+    private final IntVar[] x;
+    private final int[] w;
+    private final long least;
+
+    Definition(ASTConstElem node, IntVar s, IntVar[] x, int[] w, long least) {
+      this.node = node;
+      this.s = s;
+      this.x = x;
+      this.w = w;
+      this.least = least;
+    }
+
+    ASTConstElem node() {
+      return node;
+    }
+
+    IntVar s() {
+      return s;
+    }
+
+    IntVar[] x() {
+      return x;
+    }
+
+    int[] w() {
+      return w;
+    }
+
+    long least() {
+      return least;
+    }
+  }
 
   /** A half-reification of s: its node, its control and the bound, with eq or le. */
   private record Use(ASTConstElem node, IntVar b, int value) {}
