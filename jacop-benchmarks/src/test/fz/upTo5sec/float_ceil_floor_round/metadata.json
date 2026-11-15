@@ -1,0 +1,12 @@
+{
+  "fznBuiltins": [
+    "float_ceil",
+    "float_floor",
+    "float_round"
+  ],
+  "constraintFamilies": [
+    "float",
+    "arithmetic"
+  ],
+  "domains": []
+}

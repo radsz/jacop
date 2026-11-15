@@ -299,6 +299,9 @@ public final class CdclSolver {
   // --- external propagator (see ExternalPropagator)
   private ExternalPropagator external;
   private int externalReasonKeep = 2;
+  // the next decision below the first one is notified to the external propagator as a top
+  // decision too
+  private boolean notifyNext;
   private boolean[] observed = new boolean[0];
   // the trail prefix whose observed assignments the propagator has seen
   private int notified;
@@ -896,6 +899,16 @@ public final class CdclSolver {
    */
   public void setAnalysedNotify(boolean on) {
     analysedNotify = on;
+  }
+
+  /**
+   * Notifies the next decision below the first one under the assumptions to the external propagator
+   * too, with {@link ExternalPropagator#notifyTopDecision}: for a propagator that could not use the
+   * decision it was told about (a split on a variable it does not share). Decisions on assumptions
+   * are never notified.
+   */
+  public void notifyNextDecision() {
+    notifyNext = true;
   }
 
   /**
@@ -2950,7 +2963,9 @@ public final class CdclSolver {
       if (workLimit != Long.MAX_VALUE && work() >= workLimit) {
         return UNKNOWN;
       }
-      if (decisionLevel == assumptionLevels && external != null) {
+      if ((decisionLevel == assumptionLevels || notifyNext && decisionLevel > assumptionLevels)
+          && external != null) {
+        notifyNext = false;
         external.notifyTopDecision(toDimacs(next));
       }
       newSearchLevel();
