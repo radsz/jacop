@@ -654,6 +654,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
     options = opt;
+    initProbe();
     dictionary = table;
     output = table;
     solveSideComponents(node);
@@ -2543,9 +2544,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return null;
   }
 
-  // -Djacop.lcg.probe=share: root probing of the 0/1 variables before LCG search, for at most
-  // this share of the time left (0, the default, is off)
-  private final double lcgProbe = Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
+  // -Djacop.lcg.probe=share: root probing of the 0/1 variables and small domains before LCG
+  // search, for at most this share of the time left; 0 is off, the default of model search
+  // the share of free search (-f) when jacop.lcg.probe is not given, with a cap of
+  // FREE_PROBE_CAP ms: java-routing of the MiniZinc Challenge proves 8 of 10 instances in 240 s
+  // instead of 5, as probing finds the parity of the positions of the stops and the stops that
+  // cannot follow each other, which propagation does not; the 62 instances of wide-quick take 9 %
+  // less time in all (2,609 s instead of 2,866 s), most of it one instance. Without the cap the 2 %
+  // took up to 12 s of a 600 s run on easy instances
+  private static final double FREE_PROBE = 0.02;
+
+  private static final long FREE_PROBE_CAP = 1_000L;
+
+  private double lcgProbe;
+
+  private long lcgProbeCap;
+
+  // sets the share and cap of root probing from the options and the properties;
+  // -Djacop.lcg.probe.cap=ms is the most time root probing takes, whatever its share (0 is no cap,
+  // FREE_PROBE_CAP for the default probing of free search)
+  private void initProbe() {
+    String share = System.getProperty("jacop.lcg.probe");
+    Long cap = Long.getLong("jacop.lcg.probe.cap");
+    if (share != null) {
+      lcgProbe = Double.parseDouble(share);
+      lcgProbeCap = cap == null ? 0L : cap;
+    } else if (options.freeSearch()) {
+      lcgProbe = FREE_PROBE;
+      lcgProbeCap = cap == null ? FREE_PROBE_CAP : cap;
+    }
+  }
+
+  // the time root probing may take, in nanoseconds: its share of the time left, at most the cap
+  private long probeBudget(long leftMillis) {
+    long nanos = (long) (lcgProbe * leftMillis * 1_000_000L);
+    return lcgProbeCap > 0 ? Math.min(nanos, lcgProbeCap * 1_000_000L) : nanos;
+  }
 
   // -Djacop.lcg.probe.delay=share: probe between runs of the search from the root, once this share
   // of the time limit has passed, instead of before the search
@@ -2660,7 +2694,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
     long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
-    probeRefuted = !early.probeRoot((long) (lcgProbe * left * 1_000_000L));
+    probeRefuted = !early.probeRoot(probeBudget(left));
     List<LinearForm> rows =
         probeRefuted
             ? List.of()
@@ -3084,7 +3118,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (!"none".equals(lcgProbeLp)) {
         lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
       }
-      boolean feasible = lcg.probeRoot((long) (lcgProbe * left * 1_000_000L));
+      boolean feasible = lcg.probeRoot(probeBudget(left));
       printProbeStatistics(lcg);
       if (feasible && lcgProbeOnly && !"none".equals(lcgProbeLp)) {
         probedRootBound();
