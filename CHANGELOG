@@ -5603,6 +5603,22 @@ Version 5.0 (unreleased)
    13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
    is off under --proof and when all solutions are asked for.
 
+322. New constraint BinaryBitTable(x, y, tuples): a table of two variables
+   kept domain consistent with bit-sets, AC3-bit with residues (C.
+   Lecoutre, J. Vion, Enforcing arc consistency using bitwise operations,
+   Constraint Programming Letters 2 (2008) 21-35). The supports of each
+   value are a bit-set over the values of the other variable; a revision
+   costs about a word per value and trails only the domains, where the
+   compact table trails the words of its tuple set. Under LCG it explains
+   a removal by the removals of the supports, with the bound atoms of the
+   other variable for supports beyond its bounds. The FlatZinc front end
+   posts it for positive tables of two variables whose ranges span at most
+   4096 values, and for negative ones whose domains hold at most 1M pairs
+   (on the pairs they allow). On XCSP 2024 Subisomorphism it searches the
+   same tree as the compact table at 3.4 times the nodes a second without
+   LCG and 1.9 times with LCG; FRB 3x. -Dorg.jacop.fz.binaryBitTable=false
+   turns it off.
+
 Version 4.11
 =============
 
