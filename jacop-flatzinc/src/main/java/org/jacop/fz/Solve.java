@@ -2486,10 +2486,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Searches a tiling by arithmetic progressions: each start in the order of the starts at its
    * smallest value, which is the first value no fixed progression covers, then its gap at a random
-   * value, under Luby restarts of 100 failures, without LCG. On XCSP3 PerfectRythmicTiling n = 80
-   * (20 progressions of 4 terms) the search found tilings in 39 to 244 s over 3 seeds, the default
-   * search under LCG none in 600 s: the conflicts of the cover give long reasons (50 atoms) and the
-   * run reaches 2,000 nodes per second instead of 100,000.
+   * value that places its terms on free cells, under Luby restarts of 100 failures, without LCG. On
+   * XCSP3 PerfectRythmicTiling n = 80 (20 progressions of 4 terms) the search found tilings in 39
+   * to 244 s over 3 seeds, the default search under LCG none in 600 s: the conflicts of the cover
+   * give long reasons (50 atoms) and the run reaches 2,000 nodes per second instead of 100,000.
    */
   @SuppressWarnings("unchecked")
   private boolean executeProgressionSearch(DepthFirstSearch<T> label, Var costVar, String type) {
@@ -2508,11 +2508,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       postCollectedClauses();
     }
     List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
+    ProgressionGapIndomain gapValue = new ProgressionGapIndomain(tiling);
     for (int i = 0; i < tiling.starts().length; i++) {
       selects.add(new SimpleSelect<>(new IntVar[] {tiling.starts()[i]}, null, new IndomainMin<>()));
-      selects.add(
-          new SimpleSelect<>(
-              new IntVar[] {tiling.gaps()[i]}, null, new org.jacop.search.IndomainRandom<>()));
+      selects.add(new SimpleSelect<>(new IntVar[] {tiling.gaps()[i]}, null, gapValue));
     }
     List<IntVar> rest = new ArrayList<>();
     for (int i = 0; i < store.size(); i++) {

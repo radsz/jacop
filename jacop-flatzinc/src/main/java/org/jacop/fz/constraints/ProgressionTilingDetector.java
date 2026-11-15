@@ -122,8 +122,9 @@ public class ProgressionTilingDetector {
    * @param starts the starts, ascending in every solution.
    * @param gaps the gap of each start.
    * @param terms the number of terms k of each progression.
+   * @param positions the start and the terms of each progression, in the order of their offsets.
    */
-  public record Tiling(IntVar[] starts, IntVar[] gaps, int terms) {}
+  public record Tiling(IntVar[] starts, IntVar[] gaps, int terms, IntVar[][] positions) {}
 
   /** The starts and terms of all progressions of the last tiling found. */
   private List<IntVar> positions = List.of();
@@ -244,7 +245,11 @@ public class ProgressionTilingDetector {
         IntVar[] gaps = new IntVar[m];
         int k = progressions(starts, gapVars, gaps);
         if (k > 0 && distinct(gaps, k)) {
-          return new Tiling(starts.clone(), gaps, k);
+          IntVar[][] byProgression = new IntVar[m][];
+          for (int i = 0; i < m; i++) {
+            byProgression[i] = positions.subList(i * k, (i + 1) * k).toArray(new IntVar[0]);
+          }
+          return new Tiling(starts.clone(), gaps, k, byProgression);
         }
       }
     }
