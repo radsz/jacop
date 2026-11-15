@@ -187,6 +187,16 @@ public class Constraints implements ParserTreeConstants {
     } else if (manySolutions) {
       // LCG on by default is left out where it would be ignored; the model is solved as before
       options.dropDefaultLcg();
+    } else if (options.lcg()
+        && MaxCliqueDetector.enabled()
+        && !MaxCliqueDetector.keepsLcg()
+        && options.proof() == null
+        && new MaxCliqueDetector(support).pure(astTree)) {
+      // maximum clique alone: branch and bound with the coloring bound, without learning
+      options.dropDefaultLcg();
+      if (options.debug()) {
+        FzConsole.println("% maximum clique model: LCG on by default left out");
+      }
     }
     if (options.lcg() || options.useSat() && options.presolve() != Options.Presolve.OFF) {
       // Boolean constraints become clauses of the LCG solver, or of the SAT solver of -sat once

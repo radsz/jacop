@@ -53,7 +53,10 @@ import org.jacop.fz.SimpleNode;
  * coloring bound of maximum clique algorithms, which a linear sum over pairwise constraints does
  * not see.
  *
- * <p>Setting the system property {@code org.jacop.fz.maxClique} to false turns the detection off.
+ * <p>Setting the system property {@code org.jacop.fz.maxClique} to false turns the detection off. A
+ * model that is maximum clique and nothing else is solved without LCG unless {@code --lcg} is given
+ * ({@link #pure}); the system property {@code org.jacop.fz.maxClique.lcg} set to true keeps LCG on
+ * by default for it.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -76,6 +79,9 @@ public class MaxCliqueDetector implements ParserTreeConstants {
 
   private IntVar objective;
 
+  // the constraints that are neither conflicts, nor bool2int, nor a sum
+  private int others;
+
   /**
    * It creates a detector reading variables through the given support.
    *
@@ -95,14 +101,48 @@ public class MaxCliqueDetector implements ParserTreeConstants {
   }
 
   /**
+   * It tells if a model of maximum clique only keeps LCG on by default.
+   *
+   * @return true if the system property org.jacop.fz.maxClique.lcg is true.
+   */
+  public static boolean keepsLcg() {
+    return Boolean.getBoolean("org.jacop.fz.maxClique.lcg");
+  }
+
+  /**
    * It scans the model and posts the bound on a maximized sum of 0/1 variables in conflict.
    *
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
+    IntVar[] vertices = scan(astTree);
+    if (vertices != null) {
+      post(vertices);
+    }
+  }
+
+  /**
+   * It tells if the model is a maximum clique model and nothing else: the maximized sum, its
+   * conflicts and the bool2int of its variables. Such a model is solved best by branch and bound
+   * with the coloring bound and without learning, as maximum clique algorithms do; the reasons of
+   * the bound, which cite the zeros of the vertices, make the clauses that LCG learns weak.
+   *
+   * @param astTree the root of the parsed model.
+   * @return true for a model of maximum clique only
+   */
+  public boolean pure(SimpleNode astTree) {
+    IntVar[] vertices = scan(astTree);
+    return vertices != null
+        && others == 0
+        && linears.size() == 1
+        && pairs.size() >= vertices.length;
+  }
+
+  // the vertices of the maximized sum with conflicts, or null
+  private IntVar[] scan(SimpleNode astTree) {
     objective(astTree);
     if (objective == null) {
-      return;
+      return null;
     }
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
@@ -116,15 +156,15 @@ public class MaxCliqueDetector implements ParserTreeConstants {
       }
     }
     if (pairs.isEmpty()) {
-      return;
+      return null;
     }
     for (ASTConstElem node : linears) {
       IntVar[] vertices = objectiveSum(node);
       if (vertices != null) {
-        post(vertices);
-        return;
+        return vertices;
       }
     }
+    return null;
   }
 
   private static SimpleNode child(SimpleNode node, int i) {
@@ -148,6 +188,8 @@ public class MaxCliqueDetector implements ParserTreeConstants {
   private void pair(IntVar a, IntVar b) {
     if (a != b && zeroOne(a) && zeroOne(b)) {
       pairs.add(new IntVar[] {a, b});
+    } else {
+      others++;
     }
   }
 
@@ -166,6 +208,8 @@ public class MaxCliqueDetector implements ParserTreeConstants {
         int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
         if (a != null && a.length == 2 && x.length == 2 && a[0] == 1 && a[1] == 1 && c == 1) {
           pair(x[0], x[1]);
+        } else {
+          others++;
         }
       }
       case "bool_clause" -> {
@@ -173,6 +217,8 @@ public class MaxCliqueDetector implements ParserTreeConstants {
         IntVar[] neg = support.getVarArray(child(node, 1));
         if (pos.length == 0 && neg.length == 2) {
           pair(neg[0], neg[1]);
+        } else {
+          others++;
         }
       }
       case "array_bool_and" -> {
@@ -180,12 +226,12 @@ public class MaxCliqueDetector implements ParserTreeConstants {
         IntVar r = variable(node, 1);
         if (x.length == 2 && r.singleton(0)) {
           pair(x[0], x[1]);
+        } else {
+          others++;
         }
       }
       case "int_lin_eq" -> linears.add(node);
-      default -> {
-        // not part of a maximum clique model
-      }
+      default -> others++;
     }
   }
 
