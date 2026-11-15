@@ -388,6 +388,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -644,6 +645,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -896,6 +898,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -1146,6 +1149,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
