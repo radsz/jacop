@@ -1108,6 +1108,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.lazyRemoved
             + "\n%%%mzn-stat: lpRootBound="
             + r.rootBound
+            + "\n%%%mzn-stat: lpRootExtendTime="
+            + r.rootExtendNanos() / 1e9
             + "\n%%%mzn-stat: lpCuts="
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
@@ -2916,16 +2918,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // dolphin and mario with), and no feature of the model tells which, neither the kinds of its
       // output and annotation variables nor the share of 0/1 variables. On mznbench (60 s,
       // lcg-split=0, two runs each) turns did better than Booleans first on 23 instances and worse
-      // on 10 in both runs. Not the default yet: with lcg-split=40, the core-guided phase stalls on
-      // celar graph05 without Booleans first (proved in 13 s with them, not in 60 s in turns)
+      // on 10 in both runs. Not the default: with lcg-split=40, the core-guided phase stalls on
+      // celar graph05 without Booleans first (proved in 13 s with them, not in 60 s in turns).
+      // The default, until-solution, takes those turns only until the first solution: Booleans
+      // first found none in 600 s on the traveling tournament of XCSP 2024 with 24 to 40 teams,
+      // whose whole home/away pattern it decides before any opponent
       String booleansFirst = options.freeConfig("lcg-booleans-first", "");
       switch (booleansFirst) {
         case "on" -> lcg.setBooleansFirst(true);
         case "off" -> lcg.setBooleansFirst(false);
         case "turns" -> lcg.setBooleansFirstTurns(true);
-        case "" -> {
-          // not set: the solver default
-        }
+        case "", "until-solution" ->
+            lcg.setBooleansFirstTurnsUntilSolution(
+                true, Long.parseLong(options.freeConfig("lcg-booleans-first-after", "2000")));
         default -> throw new IllegalArgumentException("lcg-booleans-first=" + booleansFirst);
       }
       // objective lower-bound search: conflicts of its runs per conflict of branch and bound
@@ -3633,6 +3638,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.wideVariables
             + "\n%%%mzn-stat: lcgBooleansFirst="
             + lcg.booleansFirst()
+            + "\n%%%mzn-stat: lcgBooleansFirstTurns="
+            + lcg.booleansFirstTurnsBeforeSolution
             + "\n%%%mzn-stat: lcgFullFixpoint="
             + lcg.fullFixpoint()
             + "\n%%%mzn-stat: lcgLateVariables="
