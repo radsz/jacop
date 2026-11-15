@@ -77,6 +77,7 @@ import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
+import org.jacop.fz.constraints.MaxCliqueDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -519,6 +520,12 @@ public class Constraints implements ParserTreeConstants {
       // --proof does not encode it
       if (ConjunctionSumDetector.enabled() && options.proof() == null) {
         new ConjunctionSumDetector(support).detect(astTree);
+      }
+
+      // the coloring bound of a maximized sum of 0/1 variables with pairwise conflicts (maximum
+      // clique), redundant; --proof does not encode it
+      if (MaxCliqueDetector.enabled() && options.proof() == null) {
+        new MaxCliqueDetector(support).detect(astTree);
       }
 
       // each variable whose values are all counted at least twice equals one of its few partners
