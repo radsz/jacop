@@ -6079,7 +6079,19 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
-340. NetworkFlow prunes its arcs without the pivots of the network simplex
+340. The routes neighbourhood of the adaptive LNS (route removal on
+   circuits and subcircuits) also frees the links between every route
+   and its depots, so that a route can move to another vehicle.
+   With identical vehicles and symmetry breaking such as "vehicle k
+   unused implies vehicle k + 1 unused", a route other than the last
+   could not be emptied while the routes after it kept their vehicles.
+   XCSP 2024 VRP_LC-10-05-20-s3 at 600 s finds 267, 288 and 269 over
+   three seeds instead of 288, 289 and 288 (the better solutions use
+   one vehicle fewer; the 2024 competition best was 277), and MiniZinc
+   Challenge 2026 vrplc10_5_15_s4 with -f 207 (the best known), 209 and
+   216 instead of 216 three times. -Djacop.lns.depotLinks=false turns it off.
+
+341. NetworkFlow prunes its arcs without the pivots of the network simplex
    when it can, with the same pruning. A residual arc (u, v) whose
    shortest residual cycle back from v to u has room for the flow the
    cost limit allows (limit / cycle cost, or all its capacity at cost 0)
@@ -6097,7 +6109,7 @@ Version 5.0 (unreleased)
    the same 27, 0.86 the time. -Dorg.jacop.netflow.generalArcs=false and
    -Dorg.jacop.netflow.shortestPaths=false bring back the probes.
 
-341. Under lazy clause generation a constraint failure first hands the SAT
+342. Under lazy clause generation a constraint failure first hands the SAT
    solver the atoms its fixpoint recorded and had not pushed yet, and only
    then the conflict, whose clause cites those atoms instead of their
    explanations (as with literals created on demand in lazy clause
@@ -6123,7 +6135,7 @@ Version 5.0 (unreleased)
    the first is on the objective, which is not shared; otherwise a
    knapsack whose first decision was always the objective never split.
 
-342. CountValues and CountValuesBounds read again only the domains whose
+343. CountValues and CountValuesBounds read again only the domains whose
    size changed since their last call, with the same pruning, and
    Assignment queues changed variables in arrays instead of a hashed set
    and map. On the 31 wide instances that post one of them (fixed
