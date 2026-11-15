@@ -664,6 +664,97 @@ class LinearizationsTest {
     return c;
   }
 
+  @Test
+  void selectedValueAndCountRowsHoldForEverySolution() {
+    // b_v <-> s /\ [x = v] as and constraints or as the clause rows of LCG, a select y = if s then
+    // x + c else d, and counts of 0/1 variables, as in ihtc-2024-kletzander
+    Random rnd = new Random(17);
+    int rows = 0;
+    int selections = 0;
+    int selects = 0;
+    for (int run = 0; run < 600; run++) {
+      Store store = new Store();
+      IntervalDomain d = new IntervalDomain();
+      for (int v = 0; v < 6; v++) {
+        if (rnd.nextInt(3) > 0) {
+          d.unionAdapt(v, v);
+        }
+      }
+      if (d.getSize() < 2) {
+        d.unionAdapt(0, 1);
+      }
+      IntVar x = new IntVar(store, "x", d);
+      IntVar s = new IntVar(store, "s", 0, 1);
+      IntVar one = new IntVar(store, "one", 1, 1);
+      List<IntVar> scope = new ArrayList<>(List.of(x, s, one));
+      List<Constraint> cs = new ArrayList<>();
+      List<LinearForm> extra = new ArrayList<>();
+      List<IntVar> values = new ArrayList<>();
+      List<IntVar> conjunctions = new ArrayList<>();
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        IntVar ev = new IntVar(store, "e" + v, 0, 1);
+        scope.add(ev);
+        values.add(ev);
+        cs.add(new Reified(new XeqC(x, v), ev));
+        if (rnd.nextInt(5) > 0) {
+          IntVar b = new IntVar(store, "b" + v, 0, 1);
+          scope.add(b);
+          conjunctions.add(b);
+          cs.add(new AndBoolSimple(s, ev, b));
+          if (rnd.nextBoolean()) {
+            // as LCG posts it: b - s - e >= -1, s - b >= 0, e - b >= 0, the and left to clauses
+            cs.removeLast();
+            cs.add(new AndBoolVector(new IntVar[] {s, ev, one}, b));
+            extra.add(
+                new LinearForm(new IntVar[] {b, s, ev}, new long[] {1, -1, -1}, -1, LinearForm.GE));
+            extra.add(new LinearForm(new IntVar[] {s, b}, new long[] {1, -1}, 0, LinearForm.GE));
+            extra.add(new LinearForm(new IntVar[] {ev, b}, new long[] {1, -1}, 0, LinearForm.GE));
+          }
+        } else if (rnd.nextBoolean()) {
+          // never s /\ x = v
+          cs.add(new LinearInt(new IntVar[] {s, ev}, new int[] {1, 1}, "<=", 1));
+          extra.add(new LinearForm(new IntVar[] {s, ev}, new long[] {-1, -1}, -1, LinearForm.GE));
+        }
+      }
+      int c = rnd.nextInt(5) - 2;
+      IntVar z = new IntVar(store, "z", -10, 10);
+      cs.add(rnd.nextBoolean() ? new XplusCeqZ(x, c, z) : new XplusCeqZ(z, -c, x));
+      IntVar dc = new IntVar(store, "d", c - 1, c - 1);
+      IntVar y = new IntVar(store, "y", -20, 20);
+      cs.add(new ConditionalSelect(new IntVar[] {s, one}, new IntVar[] {z, dc}, y));
+      IntVar counter = new IntVar(store, "n", 0, values.size());
+      IntVar zeros = new IntVar(store, "m", 0, values.size());
+      Count ones = new Count(values, counter, 1);
+      Count none = new Count(conjunctions, zeros, 0);
+      cs.add(ones);
+      cs.add(none);
+      scope.addAll(List.of(z, dc, y, counter, zeros));
+      List<LinearForm> made = new ArrayList<>(Linearizations.selectedValueRows(cs, extra));
+      for (LinearForm f : made) {
+        selections += f.relation() == LinearForm.EQ && Arrays.asList(f.vars()).contains(s) ? 1 : 0;
+        selects += Arrays.asList(f.vars()).contains(y) ? 1 : 0;
+      }
+      made.addAll(Linearizations.of(ones));
+      made.addAll(Linearizations.of(none));
+      rows += made.size();
+      for (Constraint k : cs) {
+        store.impose(k);
+      }
+      IntVar[] all = scope.toArray(new IntVar[0]);
+      for (long[] solution : solutions(store, all)) {
+        for (LinearForm f : made) {
+          assertThat(holds(f, all, solution))
+              .as("run %d %s at %s", run, f, Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+    }
+    assertThat(rows).isGreaterThan(1500);
+    assertThat(selections).isGreaterThan(50);
+    assertThat(selects).isGreaterThan(50);
+  }
+
   private static boolean holds(LinearForm f, IntVar[] scope, long[] value) {
     Function<IntVar, Long> v =
         aVar -> {

@@ -2418,6 +2418,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       }
       if (useLcg(costVar)) {
+        fixedLabel = label;
+        fixedSelect = select;
+        fixedSolveType = solveType;
         return executeLcgSearch(costVar);
       }
       if (lpProbing && useFreeSearchEngine(costVar)) {
@@ -3095,7 +3098,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return false;
       }
     }
-    Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
+    // fixed search gives way only without a solution, to the annotation's search without learning
+    Thread slowCheck =
+        worker == null && (free || fixedLabel != null) ? slowLcgCheck(costVar, !free) : null;
     if (lpProbing) {
       linearRelaxation.rememberSearchStart();
       lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
@@ -3114,7 +3119,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       slowCheck.interrupt();
     }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
-      return continueWithoutLcg(costVar);
+      return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
     }
     return numberSolutions > 0;
   }
@@ -3123,6 +3128,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private volatile boolean lcgSlow;
   // when LCG last raised the bound on the objective (CdclSolver.now of the LCG solver)
   private volatile long lcgBoundRaised;
+  // set when LCG free search gave way without a solution, for making too few conflicts
+  private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
   private volatile int lcgSlowDeferred;
   // the LCG solver free search took over from, for the statistics
@@ -3172,13 +3179,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * 7,304 to 7,186. On ma-path-finding LCG makes about 14 conflicts/s while core-guided search
    * raises the bound, so it goes on.
    *
+   * <p>Without a solution, LCG goes on at any rate above lcg-slow-unsolved (30 conflicts/s), since
+   * it may find a first solution that free search without learning misses (cutstock type16 TEST9).
+   * Below it, it gives way: on ihtc-2024-marte i14 (MiniZinc Challenge 2025) LCG makes about 10
+   * conflicts/s and found no solution in 1200 s, while the search annotation without learning finds
+   * one in under 30 s. Fixed search (without -f) makes only this check: without a solution it gives
+   * way to the annotation's search without learning ({@link #continueFixedWithoutLcg}), and with
+   * one it keeps LCG.
+   *
+   * @param costVar the cost variable
+   * @param unsolvedOnly true for fixed search, which gives way only without a solution
    * @return the thread of the check, or null when it is off
    */
-  private Thread slowLcgCheck(Var costVar) {
+  private Thread slowLcgCheck(Var costVar, boolean unsolvedOnly) {
     double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "300"));
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
+    double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
@@ -3205,7 +3223,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Runnable[] check = new Runnable[1];
       check[0] =
           () -> {
-            if (slowLcgCheckOnce(solver, rate, stallNanos, gain, costs)) {
+            if (slowLcgCheckOnce(
+                solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
               solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
             }
           };
@@ -3217,7 +3236,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 Thread.sleep(wait);
-                while (slowLcgCheckOnce(solver, rate, stallNanos, gain, costs)) {
+                while (slowLcgCheckOnce(
+                    solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -3234,7 +3254,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return true if the check is to be made again later
    */
   private boolean slowLcgCheckOnce(
-      LcgSolver solver, double rate, long stallNanos, double gain, ArrayDeque<long[]> costs) {
+      LcgSolver solver,
+      double rate,
+      double unsolvedRate,
+      boolean unsolvedOnly,
+      long stallNanos,
+      double gain,
+      ArrayDeque<long[]> costs) {
     long now = solver.sat().now();
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
@@ -3247,7 +3273,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     while (costs.size() > 1 && now - costs.peekFirst()[0] > stallNanos) {
       costs.removeFirst();
     }
-    if (solutionFound) {
+    if (solutionFound && unsolvedOnly) {
+      // fixed search keeps LCG once it has a solution
+      return false;
+    } else if (solutionFound) {
       long before = costs.peekFirst()[1];
       if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
         lcgSlowDeferred++;
@@ -3256,6 +3285,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         solver.stop();
         return false;
       }
+    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9) {
+      lcgSlowUnsolved = true;
+      lcgSlow = true;
+      solver.stop();
+      return false;
     }
     return true;
   }
@@ -3321,6 +3355,37 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + " s; free search without learning");
     }
     return executeFreeSearch(costVar) || numberSolutions > 0;
+  }
+
+  // the search of the annotation, for fixed search when LCG gives way to it
+  private DepthFirstSearch<T> fixedLabel;
+  private SelectChoicePoint<T> fixedSelect;
+  private String fixedSolveType;
+
+  /**
+   * Goes on with the search of the annotation without learning after LCG fixed search gave way
+   * without a solution ({@link #slowLcgCheck}). On ihtc-2024-marte i14 (MiniZinc Challenge 2025)
+   * LCG fixed search makes about 10 conflicts/s and found no solution in 1200 s; the annotation's
+   * search without learning finds one in under 30 s, as Gecode's does.
+   *
+   * @param costVar the cost variable, or null
+   * @return whether a solution was found
+   */
+  private boolean continueFixedWithoutLcg(Var costVar) {
+    slowLcg = lcg;
+    lcg = null;
+    slowLcg.release();
+    postCollectedClauses();
+    if (options.debug()) {
+      IO.println(
+          "%% LCG stopped after "
+              + slowLcg.sat().conflicts
+              + " conflicts without a solution; the annotation's search without learning");
+    }
+    if (restartCalculator != null) {
+      return executeRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
+    }
+    return executeNonRestartSearch(fixedLabel, fixedSelect, costVar, fixedSolveType);
   }
 
   // the best solution of LCG free search before it gave way to free search without learning
@@ -5116,6 +5181,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           // the conflicts of LCG free search before it gave way
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
+          IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
         }
       }
       return;
