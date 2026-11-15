@@ -4229,6 +4229,33 @@ class LcgSolverTest {
     }
   }
 
+  /**
+   * Activity decisions take the guide's value, rounded and moved into the domain; a NaN guide and a
+   * set phase (without overSolution) leave the default value.
+   */
+  @Test
+  void valueGuideSetsActivityDecisions() {
+    double[][] cases = {{37.4, 37}, {150, 100}, {-3, 10}, {Double.NaN, 10}};
+    for (double[] c : cases) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 10, 100);
+      LcgSolver solver = new LcgSolver(store);
+      solver.setBranching(LcgSolver.Branching.ACTIVITY);
+      solver.setValueGuide(new IntVar[] {x}, k -> c[0], false);
+      solver.setChecking(true);
+      assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(x)).as("guide %s", c[0]).isEqualTo((int) c[1]);
+    }
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 10, 100);
+    LcgSolver solver = new LcgSolver(store);
+    solver.setBranching(LcgSolver.Branching.ACTIVITY);
+    solver.setValueGuide(new IntVar[] {x}, k -> 37, false);
+    solver.setPhase(new IntVar[] {x}, new int[] {60});
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(x)).as("the phase comes first").isEqualTo(60);
+  }
+
   /** With turns, each restart into activity branching switches Booleans first. */
   @Test
   void booleansFirstTurnsSwitchAtRestarts() {

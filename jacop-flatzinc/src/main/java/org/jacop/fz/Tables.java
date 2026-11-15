@@ -130,6 +130,10 @@ public class Tables {
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
 
+  // the start times with earliness costs of the objective, whose values the root solution of the
+  // linear relaxation guides (see temporalStarts)
+  final ArrayList<IntVar> temporalStarts = new ArrayList<>();
+
   // the tables of the model, for the clique rows of the linear relaxation
   private final ArrayList<TableCliques.Table> tables = new ArrayList<>();
 
@@ -650,6 +654,7 @@ public class Tables {
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
+    t.temporalStarts.addAll(map.get(temporalStarts));
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.objectiveScale = objectiveScale;
@@ -1112,6 +1117,27 @@ public class Tables {
    */
   public List<IntVar> splitSums() {
     return splitSums;
+  }
+
+  /**
+   * Records start times of tasks whose objective terms are not monotone in them: a sum of earliness
+   * and tardiness costs, as PrecedenceCostDetector reads them. Search takes their values from the
+   * solution of the linear relaxation (temporal linear relaxation guidance, Laborie and Rogerie
+   * 2016).
+   *
+   * @param starts the start times
+   */
+  public void temporalStarts(List<IntVar> starts) {
+    temporalStarts.addAll(starts);
+  }
+
+  /**
+   * Returns the start times recorded by {@link #temporalStarts(List)}.
+   *
+   * @return the start times
+   */
+  public List<IntVar> temporalStarts() {
+    return temporalStarts;
   }
 
   /**

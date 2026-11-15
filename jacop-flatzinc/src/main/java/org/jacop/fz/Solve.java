@@ -58,6 +58,7 @@ import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntFunction;
+import java.util.function.IntToDoubleFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
@@ -2674,6 +2675,61 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n");
   }
 
+  // temporal linear relaxation guidance (org.jacop.lp.temporalGuide root or last, off by default):
+  // activity decisions on start times with earliness costs take their values from the solution of
+  // the linear relaxation (P. Laborie, J. Rogerie, Temporal linear relaxation in IBM ILOG CP
+  // Optimizer, Journal of Scheduling 19(4), 391-400, 2016, where the relaxation guides the values
+  // of start times in the automatic search; with earliness costs the smallest start is a poor
+  // value). root: the root solution, until the first solution; last: the last solution of the
+  // relaxation, which follows the branches of search and the objective bound, also after solutions
+  private static final String TEMPORAL_GUIDE =
+      System.getProperty("org.jacop.lp.temporalGuide", "off");
+
+  // the start times the relaxation guides, for the statistics
+  private int temporalStarts;
+
+  private void temporalGuide() {
+    LinearRelaxation r = linearRelaxation;
+    if (r == null || dictionary.temporalStarts().isEmpty()) {
+      return;
+    }
+    boolean last = "last".equals(TEMPORAL_GUIDE);
+    if (!last && !"root".equals(TEMPORAL_GUIDE)) {
+      return;
+    }
+    Map<IntVar, Integer> column = new IdentityHashMap<>();
+    for (int j = 0; j < r.columns(); j++) {
+      column.putIfAbsent(r.column(j), j);
+    }
+    List<IntVar> xs = new ArrayList<>();
+    List<Integer> js = new ArrayList<>();
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar s : dictionary.temporalStarts()) {
+      Integer j = column.get(s);
+      if (j != null && !s.singleton() && seen.add(s)) {
+        xs.add(s);
+        js.add(j);
+      }
+    }
+    if (xs.isEmpty() || r.solutionColumns() == 0) {
+      return;
+    }
+    int[] col = js.stream().mapToInt(Integer::intValue).toArray();
+    IntToDoubleFunction value;
+    if (last) {
+      value = k -> col[k] < r.solutionColumns() ? r.solutionValue(col[k]) : Double.NaN;
+    } else {
+      // the solution of the root solve, kept before search starts
+      double[] root = new double[col.length];
+      for (int k = 0; k < col.length; k++) {
+        root[k] = col[k] < r.solutionColumns() ? r.solutionValue(col[k]) : Double.NaN;
+      }
+      value = k -> root[k];
+    }
+    temporalStarts = xs.size();
+    lcg.setValueGuide(xs.toArray(new IntVar[0]), value, last);
+  }
+
   /**
    * Solves with lazy clause generation: JaSAT searches, the store's constraints propagate and
    * explain their prunings. Solutions are printed when found, with the domains fixed to them.
@@ -2882,6 +2938,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search: the runs of activity branching between the annotation's runs start from it
       lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
     }
+    temporalGuide();
     if (defaultSearch && constraintHint != null) {
       // no search annotation: the runs of the default search start with the values of the hints
       IndomainLastSolution hinted =
@@ -3655,6 +3712,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + inputOrderCount
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
+            + "\n%%%mzn-stat: lcgValueGuideDecisions="
+            + lcg.valueGuideDecisions
+            + "\n%%%mzn-stat: lpTemporalStarts="
+            + temporalStarts
             + "\n%%%mzn-stat: lcgTargetDecisions="
             + lcg.targetDecisions
             + "\n%%%mzn-stat: lcgTargetSnapshots="

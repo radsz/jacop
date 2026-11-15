@@ -52,6 +52,7 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.function.IntSupplier;
+import java.util.function.IntToDoubleFunction;
 import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.Alldistinct;
@@ -413,6 +414,15 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: activity decisions that took a target phase's value. */
   public long targetDecisions;
+
+  // values that activity branching prefers for some variables (see setValueGuide): guideOf[i] - 1
+  // is the variable's index for guide, 0 for a variable without one
+  private int[] guideOf;
+  private IntToDoubleFunction guide;
+  private boolean guideOverSolution;
+
+  /** Statistics: activity decisions that took a value of the guide (see {@link #setValueGuide}). */
+  public long valueGuideDecisions;
 
   // the model's search annotation: used in every run, or in every other run when free
   private SelectChoicePoint<? extends Var> annotation;
@@ -6145,6 +6155,55 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Gives values that activity branching prefers for some variables, read at each decision on one
+   * of them, for example from the solution of a linear relaxation that the search solves again
+   * (temporal linear relaxation guidance of start times, Laborie and Rogerie, Journal of Scheduling
+   * 19(4), 2016). A decision takes the value of the domain nearest to the guide's, rounded; a guide
+   * value of NaN gives no preference. Without overSolution the guide counts only as long as no
+   * phase is set: before the first solution and without {@link #setPhase}.
+   *
+   * @param xs variables of the store
+   * @param value the preferred value of xs[k] for k, or NaN for none
+   * @param overSolution true to prefer the guide's values also to those of the last solution
+   */
+  public void setValueGuide(IntVar[] xs, IntToDoubleFunction value, boolean overSolution) {
+    int[] of = new int[vars.length];
+    boolean any = false;
+    for (int k = 0; k < xs.length; k++) {
+      int i = index(xs[k]);
+      if (i >= 0) {
+        of[i] = k + 1;
+        any = true;
+      }
+    }
+    guideOf = any ? of : null;
+    guide = value;
+    guideOverSolution = overSolution;
+  }
+
+  // the decision on unfixed variable i that the guide prefers, or 0 for none
+  private int guideLit(int i) {
+    if (guideOf == null || i >= guideOf.length || guideOf[i] == 0) {
+      return 0;
+    }
+    if (phase != null && !guideOverSolution) {
+      return 0;
+    }
+    double g = guide.applyAsDouble(guideOf[i] - 1);
+    if (Double.isNaN(g)) {
+      return 0;
+    }
+    IntDomain d = vars[i].domain;
+    long v = Math.round(g);
+    int w = v <= d.min() ? d.min() : v >= d.max() ? d.max() : (int) v;
+    if (!d.contains(w)) {
+      return 0;
+    }
+    valueGuideDecisions++;
+    return assignLit(i, w);
+  }
+
+  /**
    * Hands the store back for search without learning: its changes are no longer recorded, and the
    * layered-graph constraints that went to the solver as clauses are in the store again. The solver
    * cannot solve again afterwards; its best solution stays readable.
@@ -7112,6 +7171,10 @@ public final class LcgSolver implements ExternalPropagator {
     }
     IntVar x = vars[i];
     searchDecisions++;
+    int guided = guideLit(i);
+    if (guided != 0) {
+      return guided;
+    }
     if (phase != null && x.domain.contains(phase[i])) {
       return assignLit(i, phase[i]);
     }
@@ -7224,6 +7287,12 @@ public final class LcgSolver implements ExternalPropagator {
       int i = idOf(v);
       if (i < 0) {
         return 0;
+      }
+      // free search keeps the annotation's variable but may take the guide's value; fixed search
+      // follows the annotation
+      int guided = freeSearch ? guideLit(i) : 0;
+      if (guided != 0) {
+        return guided;
       }
       int value = annotation.getChoiceValue();
       return vars[i].domain.contains(value) ? assignLit(i, value) : 0;

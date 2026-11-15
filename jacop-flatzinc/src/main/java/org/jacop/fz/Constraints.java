@@ -591,9 +591,12 @@ public class Constraints implements ParserTreeConstants {
       // earliness and tardiness costs under precedences, redundant; --proof does not encode it
       boolean precedenceCost = PrecedenceCostDetector.enabled(options.freeSearch());
       boolean unaryCost = PrecedenceCostDetector.unaryEnabled(options.freeSearch());
-      if ((precedenceCost || unaryCost) && options.proof() == null) {
+      boolean temporal = PrecedenceCostDetector.temporalEnabled() && options.lp();
+      if ((precedenceCost || unaryCost || temporal) && options.proof() == null) {
         support.implied(
-            () -> new PrecedenceCostDetector(support, precedenceCost, unaryCost).detect(astTree));
+            () ->
+                new PrecedenceCostDetector(support, precedenceCost, unaryCost, temporal)
+                    .detect(astTree));
       }
 
       // spanning trees with limits on the edges of disjoint sets (common bases of two matroids),

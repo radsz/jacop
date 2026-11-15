@@ -101,6 +101,7 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
 
   private final boolean precedenceCost;
   private final boolean unary;
+  private final boolean temporal;
 
   /**
    * It creates a detector reading variables through the given support.
@@ -119,9 +120,38 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
    * @param unary whether it posts {@link UnaryEarlinessTardiness}.
    */
   public PrecedenceCostDetector(Support support, boolean precedenceCost, boolean unary) {
+    this(support, precedenceCost, unary, false);
+  }
+
+  /**
+   * It creates a detector reading variables through the given support.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param precedenceCost whether it posts {@link PrecedenceCost}.
+   * @param unary whether it posts {@link UnaryEarlinessTardiness}.
+   * @param temporal whether it records the start times of sums with earliness costs for the
+   *     guidance of search by the linear relaxation (see {@link #temporalEnabled()}).
+   */
+  public PrecedenceCostDetector(
+      Support support, boolean precedenceCost, boolean unary, boolean temporal) {
     this.support = support;
     this.precedenceCost = precedenceCost;
     this.unary = unary;
+    this.temporal = temporal;
+  }
+
+  /**
+   * It tells if search follows the solution of the linear relaxation on start times with earliness
+   * costs (temporal linear relaxation guidance; P. Laborie, J. Rogerie, Temporal linear relaxation
+   * in IBM ILOG CP Optimizer, Journal of Scheduling 19(4), 391-400, 2016): when the system property
+   * org.jacop.lp.temporalGuide is root (the root solution, until the first solution) or last (the
+   * last solution of the relaxation, also after solutions). Off by default.
+   *
+   * @return true if the system property org.jacop.lp.temporalGuide is root or last.
+   */
+  public static boolean temporalEnabled() {
+    String p = System.getProperty("org.jacop.lp.temporalGuide", "off");
+    return "root".equals(p) || "last".equals(p);
   }
 
   /**
@@ -364,6 +394,11 @@ public class PrecedenceCostDetector implements ParserTreeConstants {
     }
     if (terms.size() < 2 || (z != null && task.containsKey(z)) || (z == null && c < 0)) {
       return;
+    }
+    if (temporal && terms.stream().anyMatch(t -> t[2] > 0)) {
+      // earliness costs: the objective is not regular, so the starts the relaxation's solution
+      // gives are a better guide than their smallest values
+      support.dictionary.temporalStarts(starts);
     }
     UnaryPlan plan = unary ? unaryPlan(starts, terms) : null;
     List<int[]> precedences =
