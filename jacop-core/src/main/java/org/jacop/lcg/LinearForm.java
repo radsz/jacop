@@ -114,6 +114,9 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
    *     its holes), or a sum overflows a {@code long}
    */
   public boolean explainEntailed(AtomicTrail trail, int position, EntryList out) {
+    if (relation == LE || relation == GE) {
+      return explainEntailedSide(trail, position, relation == GE, out);
+    }
     long smallest = 0;
     long largest = 0;
     try {
@@ -157,6 +160,35 @@ public record LinearForm(IntVar[] vars, long[] weights, long c, int relation) {
         }
       }
     }
+    return true;
+  }
+
+  /*
+   * explainEntailed for <= (the largest sum is at most c) or >= (the smallest sum is at least c):
+   * only the bound of each term on that side is read, once, and its entry is handed to the lifting.
+   */
+  private boolean explainEntailedSide(
+      AtomicTrail trail, int position, boolean lowerSum, EntryList out) {
+    int n = vars.length;
+    int[] entries = new int[n];
+    long sum = 0;
+    try {
+      for (int i = 0; i < n; i++) {
+        long w = weights[i];
+        boolean lower = lowerSum == w > 0;
+        int e = trail.boundEntry(vars[i], position, lower);
+        entries[i] = e;
+        sum = Math.addExact(sum, Math.multiplyExact(w, trail.boundValue(vars[i], e, lower)));
+      }
+    } catch (ArithmeticException _) {
+      return false;
+    }
+    long slack = lowerSum ? sum - c : c - sum;
+    if (slack < 0) {
+      return false;
+    }
+    LinearExplanation.addLiftedBounds(
+        trail, position, vars, weights, -1, null, lowerSum, slack, entries, out);
     return true;
   }
 

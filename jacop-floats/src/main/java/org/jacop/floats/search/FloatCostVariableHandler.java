@@ -80,6 +80,15 @@ public class FloatCostVariableHandler implements CostVariableHandler {
   }
 
   @Override
+  public void boundCostDomain(Store store, Var v, double bound) {
+    if (v instanceof FloatVar floatVar) {
+      floatVar.domain.inMax(store.level, floatVar, bound);
+      return;
+    }
+    throw new IllegalArgumentException("FloatCostVariableHandler can only handle FloatVar");
+  }
+
+  @Override
   public double getMinCostValue(Var v) {
     if (v instanceof FloatVar floatVar) {
       return floatVar.dom().min();

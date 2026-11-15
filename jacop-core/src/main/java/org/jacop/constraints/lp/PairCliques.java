@@ -126,6 +126,29 @@ final class PairCliques {
     for (int l = 0; l < literals; l++) {
       neighbours[l] = adjacent.get(l).stream().mapToInt(Integer::intValue).distinct().toArray();
     }
+    // every neighbour list in the order grow tries them: more neighbours first, then by literal
+    Integer[] boxed = new Integer[0];
+    for (int l = 0; l < literals; l++) {
+      int[] list = neighbours[l];
+      if (boxed.length < list.length) {
+        boxed = new Integer[list.length];
+      }
+      for (int k = 0; k < list.length; k++) {
+        boxed[k] = list[k];
+      }
+      Arrays.sort(
+          boxed,
+          0,
+          list.length,
+          (a, b) ->
+              neighbours[a].length != neighbours[b].length
+                  ? Integer.compare(neighbours[b].length, neighbours[a].length)
+                  : Integer.compare(a, b));
+      for (int k = 0; k < list.length; k++) {
+        list[k] = boxed[k];
+      }
+    }
+    Conflicts conflicts = new Conflicts(neighbours, edges);
     Set<Long> covered = new HashSet<>();
     List<int[]> found = new ArrayList<>();
     long entries = 0;
@@ -134,7 +157,7 @@ final class PairCliques {
       if (p == null || covered.contains(key(p[0], p[1]))) {
         continue;
       }
-      int[] clique = grow(p[0], p[1], neighbours, edges);
+      int[] clique = grow(p[0], p[1], neighbours, conflicts);
       if (clique.length < 3) {
         continue;
       }
@@ -163,29 +186,55 @@ final class PairCliques {
     return new PairCliques(rows, further, found.size());
   }
 
-  // a maximal clique with the conflict of u and v, greedily over their common neighbours
-  private static int[] grow(int u, int v, int[][] neighbours, Map<Long, Integer> edges) {
+  /**
+   * The conflicts between literals: bit sets of the neighbours when they take at most {@link
+   * #MAX_BITS} bits, the map of the edges otherwise.
+   */
+  private static final class Conflicts {
+
+    private static final long MAX_BITS = 64L << 20;
+
+    private final Map<Long, Integer> edges;
+
+    private final long[][] bits;
+
+    Conflicts(int[][] neighbours, Map<Long, Integer> edges) {
+      this.edges = edges;
+      int literals = neighbours.length;
+      int words = (literals + 63) >>> 6;
+      if ((long) literals * words * 64 <= MAX_BITS) {
+        bits = new long[literals][words];
+        for (int l = 0; l < literals; l++) {
+          for (int w : neighbours[l]) {
+            bits[l][w >>> 6] |= 1L << w;
+          }
+        }
+      } else {
+        bits = null;
+      }
+    }
+
+    boolean contains(int a, int b) {
+      return bits != null ? (bits[a][b >>> 6] & (1L << b)) != 0 : edges.containsKey(key(a, b));
+    }
+  }
+
+  // a maximal clique with the conflict of u and v, greedily over their common neighbours, those
+  // with more neighbours first
+  private static int[] grow(int u, int v, int[][] neighbours, Conflicts conflicts) {
     List<Integer> clique = new ArrayList<>(List.of(u, v));
     int[] candidates = neighbours[u].length <= neighbours[v].length ? neighbours[u] : neighbours[v];
     int other = candidates == neighbours[u] ? v : u;
-    Integer[] order =
-        Arrays.stream(candidates)
-            .filter(w -> w != other && edges.containsKey(key(w, other)))
-            .boxed()
-            .toArray(Integer[]::new);
-    Arrays.sort(
-        order,
-        (a, b) ->
-            neighbours[a].length != neighbours[b].length
-                ? Integer.compare(neighbours[b].length, neighbours[a].length)
-                : Integer.compare(a, b));
-    for (int w : order) {
+    for (int w : candidates) {
       if (clique.size() >= MAX_CLIQUE) {
         break;
       }
+      if (w == other || !conflicts.contains(w, other)) {
+        continue;
+      }
       boolean all = true;
       for (int c : clique) {
-        if (c == (w ^ 1) || !edges.containsKey(key(w, c))) {
+        if (c == (w ^ 1) || !conflicts.contains(w, c)) {
           all = false;
           break;
         }

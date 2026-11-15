@@ -1162,7 +1162,7 @@ final class OpbEncoder implements PbModel {
     line(s.append(">= 1").toString());
   }
 
-  private static String negate(String lit) {
+  static String negate(String lit) {
     return switch (lit) {
       case "0" -> "1";
       case "1" -> "0";
