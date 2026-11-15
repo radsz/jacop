@@ -410,6 +410,12 @@ public class LinearRelaxation extends Constraint
   /** Statistics: whether those rows were dropped in search, as too many solves hit the limit. */
   public boolean extraDropped;
 
+  /**
+   * Statistics: whether those rows moved the dense tableau to the sparse simplex, as it left too
+   * few pivots for a solve in search.
+   */
+  public boolean extraSparse;
+
   /** Statistics: the auxiliary columns ({@link LpColumn}) of the relaxation. */
   public int valueColumns;
 
@@ -482,6 +488,17 @@ public class LinearRelaxation extends Constraint
   private int baseRows;
   private long extraLimits;
   private static final int EXTRA_LIMITS = 3;
+
+  // the extra rows of a dense tableau whose search solves get fewer pivots than this move to the
+  // sparse simplex when it costs at most a quarter of the tableau per pivot (moveExtraToSparse)
+  private static final boolean EXTRA_SPARSE =
+      !"false".equals(System.getProperty("org.jacop.lp.extraSparse"));
+  private static final long EXTRA_SPARSE_PIVOTS = 100;
+  private static final long EXTRA_SPARSE_GAIN = 4;
+
+  // whether the extra rows carry the bound of the relaxation: without them it does not cut the
+  // domain of the objective
+  private boolean extraCarry;
   // the call at which the extra rows were added
   private long extraCall;
 
@@ -2892,6 +2909,7 @@ public class LinearRelaxation extends Constraint
       // 60-190 s instead of 13 s)
       if (beforeExtra != null
           && !keepEncodings
+          && !extraCarry
           && trees.isEmpty()
           && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
               || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
@@ -3985,6 +4003,32 @@ public class LinearRelaxation extends Constraint
     if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
       return false;
     }
+    LpSolver s = sparseCopy();
+    if (s == null) {
+      return false;
+    }
+    droppedPivots += lp.pivots();
+    denseBeforeCuts = lp;
+    denseLpRow = lpRow.clone();
+    denseInLp = inLp.clone();
+    denseInactive = inactive.clone();
+    denseIdentity = identityRows;
+    denseRows = rows();
+    denseDormant = dormant;
+    lp = s;
+    simplex = Simplex.SPARSE;
+    sparseCuts = true;
+    return true;
+  }
+
+  /**
+   * Returns the sparse simplex of JaLP over the rows of the dense tableau, in the same order,
+   * solved from scratch with the root budget, when it reaches the optimum of the dense one; null
+   * otherwise (its pivots are counted as dropped).
+   */
+  private LpSolver sparseCopy() {
+    int m = lp.rows();
+    int n = lp.columns();
     int[][] cs = new int[m][];
     double[][] ws = new double[m][];
     double[] lo = new double[m];
@@ -4002,7 +4046,7 @@ public class LinearRelaxation extends Constraint
       hi[k] = hasHi[i] ? (double) rowHi[i] : Double.POSITIVE_INFINITY;
     }
     if (nonzeros > MAX_NONZEROS) {
-      return false;
+      return null;
     }
     double[] cost = new double[n];
     cost[0] = maximize ? -1 : 1;
@@ -4016,20 +4060,38 @@ public class LinearRelaxation extends Constraint
     if (status != LpSolver.OPTIMAL
         || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
       droppedPivots += s.pivots();
-      return false;
+      return null;
+    }
+    return s;
+  }
+
+  /**
+   * Moves a dense tableau that the extra rows made too large for search to the sparse simplex: a
+   * solve in search takes WORK / pivotWork pivots, and a tableau of a few hundred clause rows over
+   * thousands of columns gets only tens of them, so that nearly every solve stops at its limit
+   * (scpa1 of the OR-Library set covering, 300 clauses over 3,000 columns: 311 x 3,312 entries, 19
+   * pivots a call, 32 of 33 solves at the limit). The sparse simplex costs its nonzeros per pivot,
+   * a seventh of the tableau there. {@code -Dorg.jacop.lp.extraSparse=false} turns the move off.
+   */
+  private void moveExtraToSparse() {
+    if (!EXTRA_SPARSE
+        || simplex != Simplex.DENSE
+        || objective == null
+        || WORK / Math.max(1, lp.pivotWork()) >= EXTRA_SPARSE_PIVOTS) {
+      return;
+    }
+    LpSolver s = sparseCopy();
+    if (s == null) {
+      return;
+    }
+    if (s.pivotWork() * EXTRA_SPARSE_GAIN > lp.pivotWork()) {
+      droppedPivots += s.pivots();
+      return;
     }
     droppedPivots += lp.pivots();
-    denseBeforeCuts = lp;
-    denseLpRow = lpRow.clone();
-    denseInLp = inLp.clone();
-    denseInactive = inactive.clone();
-    denseIdentity = identityRows;
-    denseRows = rows();
-    denseDormant = dormant;
     lp = s;
     simplex = Simplex.SPARSE;
-    sparseCuts = true;
-    return true;
+    extraSparse = true;
   }
 
   // whether the MIR of a row of the tableau also tries the weight of its basic column as divisor,
@@ -5209,11 +5271,35 @@ public class LinearRelaxation extends Constraint
       droppedPivots += lp.pivots();
       lp = full;
       allRowsInSimplex(m + k);
+      extraCarry = carriesBound(status, before, keptStatus);
+      if (keptStatus == LpSolver.OPTIMAL) {
+        moveExtraToSparse();
+      }
       return keptStatus;
     }
     // the rows of the last trial are the m + last rows
     poolExtraRows(m, last);
     return status;
+  }
+
+  // whether the extra rows kept carry the bound: the relaxation without them is optimal at a bound
+  // that does not cut the domain of the objective, and with them it is infeasible or cuts it
+  // (set covering: the objective row alone is bounded by 0, the clauses make it 246.8 on scpa1)
+  private boolean carriesBound(int status, double before, int keptStatus) {
+    if (objective == null || status != LpSolver.OPTIMAL || Double.isNaN(before)) {
+      return false;
+    }
+    long domain = maximize ? objective.max() : objective.min();
+    boolean baseCuts = maximize ? integerBound(before) < domain : integerBound(before) > domain;
+    if (baseCuts) {
+      return false;
+    }
+    if (keptStatus == LpSolver.INFEASIBLE) {
+      return true;
+    }
+    double with = lp.value(0);
+    return keptStatus == LpSolver.OPTIMAL
+        && (maximize ? integerBound(with) < domain : integerBound(with) > domain);
   }
 
   // the columns of the base rows and the first p extra rows
@@ -5792,6 +5878,7 @@ public class LinearRelaxation extends Constraint
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
+    c.extraCarry = extraCarry;
     c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));
