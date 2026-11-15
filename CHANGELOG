@@ -6565,6 +6565,19 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+364. Symmetry breaking posts value precedence in models whose own
+   lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
+   hid that their values are interchangeable. Each such constraint
+   X <=lex sigma(X) must compare a prefix of one common order, with sigma
+   a permutation of the variables that keeps their domains, fixes the
+   objective and maps every other constraint to one of the model; the
+   lexicographically smallest solution of an orbit of all symmetries then
+   satisfies them and the precedence chain in that order (Law and Lee,
+   CP 2004; Walsh, CP 2006). XCSP 2026 ColoredGrid-09 (9 disjoint
+   9-queens solutions, UNSAT) is refuted in 3.7 s, no answer at 300 s
+   before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
+   -Dorg.jacop.fz.symmetryModelLex=false turns it off.
+
 Version 4.11
 =============
 
