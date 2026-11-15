@@ -51,6 +51,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ValueExclusion;
 import org.jacop.lcg.ValueIndicator;
 
 /**
@@ -360,6 +361,16 @@ public final class Linearizations {
       Collection<LinearForm> extra,
       boolean tried,
       boolean sets) {
+    return valueRows(constraints, extra, tried, sets, null);
+  }
+
+  // valueRows, with the columns of every encoded variable by value put in columns when given
+  private static ValueRows valueRows(
+      Collection<Constraint> constraints,
+      Collection<LinearForm> extra,
+      boolean tried,
+      boolean sets,
+      Map<IntVar, Map<Integer, IntVar>> columns) {
     Map<IntVar, Map<Integer, IntVar>> given = valueBooleans(constraints);
     Set<IntVar> byModel = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : given.entrySet()) {
@@ -388,6 +399,15 @@ public final class Linearizations {
       e.rows(c);
     }
     e.links(constraints);
+    if (columns != null) {
+      columns.putAll(encoded);
+      e.full.forEach(
+          (x, m) -> {
+            if (m != null) {
+              columns.put(x, m);
+            }
+          });
+    }
     List<LinearForm> tiered = e.out;
     if (!FLOW_ENCODINGS) {
       return new ValueRows(kept, tiered);
@@ -404,6 +424,117 @@ public final class Linearizations {
     }
     e.links(constraints);
     return new ValueRows(kept, tiered, e.out);
+  }
+
+  /**
+   * Returns the rows with which the linear relaxation tries to refute a satisfaction model at the
+   * root: the value encodings of {@link #valueRows(Collection, Collection)} (without flow models),
+   * and the given clause rows with each 0/1 variable b of a half-reified exclusion {@code b -> x !=
+   * c} ({@link ValueExclusion}, or {@link Implies} and {@link Reified} of {@link XneqC}) replaced
+   * by {@code 1 - [x = c]} where the row needs b large, which the exclusion bounds. A clause {@code
+   * (x != c) \/ (y != c)} that MiniZinc states over two such Booleans becomes {@code [x = c] + [y =
+   * c] <= 1}, the conflict of two value columns that the clique rows merge: the social golfers of
+   * the XCSP competition state "two players meet at most once" so, and a player who meets three
+   * others a week cannot meet 33 of the 31 others in 11 weeks, which only the cliques over the
+   * weeks and the counts of the groups show. Clause rows with a variable that no other row has are
+   * left out, since alone they cannot make the relaxation infeasible.
+   *
+   * @param constraints the constraints
+   * @param clauses the rows of the model to state over the value columns: its linear rows and the
+   *     clauses that lazy clause generation took
+   * @return the rows, empty when no variable is value-encoded
+   */
+  public static List<LinearForm> refutationRows(
+      Collection<Constraint> constraints, Collection<LinearForm> clauses) {
+    Map<IntVar, Map<Integer, IntVar>> columns = new IdentityHashMap<>();
+    ValueRows encodings = valueRows(constraints, clauses, true, true, columns);
+    List<LinearForm> out = new ArrayList<>(encodings.kept());
+    out.addAll(encodings.tried());
+    if (out.isEmpty()) {
+      return out;
+    }
+    // the exclusions b -> x != c bound b <= 1 - [x = c]; with a negated control, not z -> x != c
+    // (ImpliesNot, the control the front end eliminated from a binary clause), they bound z >=
+    // [x = c]. The first upper bound replaces b where a row needs it large, the first lower bound
+    // replaces z where a row needs it small, and an upper and a lower bound of the same variable
+    // give the conflict of their columns, [x = c] + [y = d] <= 1
+    Map<IntVar, List<IntVar>> upper = new IdentityHashMap<>();
+    Map<IntVar, List<IntVar>> lower = new IdentityHashMap<>();
+    for (Constraint c : constraints) {
+      IntVar b = null;
+      IntVar x = null;
+      int v = 0;
+      boolean negated = false;
+      if (c instanceof ValueExclusion e) {
+        b = e.control();
+        x = e.variable();
+        v = e.value();
+      } else if ((c.getClass() == Implies.class
+              || c.getClass() == Reified.class
+              || c.getClass() == ImpliesNot.class)
+          && ((AbstractReifiedConstraint) c).c.getClass() == XneqC.class) {
+        XneqC ne = (XneqC) ((AbstractReifiedConstraint) c).c;
+        b = ((AbstractReifiedConstraint) c).b;
+        x = ne.x;
+        v = ne.c;
+        negated = c.getClass() == ImpliesNot.class;
+      }
+      Map<Integer, IntVar> m = x == null ? null : columns.get(x);
+      IntVar col = m == null ? null : m.get(v);
+      if (b != null && boolean01(b) && col != null && col != b) {
+        (negated ? lower : upper).computeIfAbsent(b, k -> new ArrayList<>()).add(col);
+      }
+    }
+    Set<IntVar> known = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (LinearForm f : out) {
+      known.addAll(Arrays.asList(f.vars()));
+    }
+    for (Map.Entry<IntVar, List<IntVar>> e : upper.entrySet()) {
+      for (IntVar l : lower.getOrDefault(e.getKey(), List.of())) {
+        for (IntVar u : e.getValue()) {
+          if (u != l) {
+            out.add(new LinearForm(new IntVar[] {u, l}, new long[] {1, 1}, 1, LinearForm.LE));
+          }
+        }
+      }
+    }
+    for (LinearForm f : clauses) {
+      if (f == null || f.relation() == LinearForm.EQ || f.relation() == LinearForm.NE) {
+        continue;
+      }
+      LinearForm g = boundSubstituted(f, upper, lower);
+      if (Arrays.stream(g.vars()).allMatch(v -> v.singleton() || known.contains(v))) {
+        out.add(g);
+      }
+    }
+    return out;
+  }
+
+  // f with each variable b that f needs large (a positive weight in a row >=, a negative one in a
+  // row <=) replaced by its first upper bound 1 - [x = c], and each that f needs small by its first
+  // lower bound [x = c]
+  private static LinearForm boundSubstituted(
+      LinearForm f, Map<IntVar, List<IntVar>> upper, Map<IntVar, List<IntVar>> lower) {
+    int sign = f.relation() == LinearForm.GE ? 1 : -1;
+    IntVar[] vars = f.vars().clone();
+    long[] w = f.weights().clone();
+    long c = f.c();
+    boolean changed = false;
+    for (int i = 0; i < vars.length; i++) {
+      boolean large = Long.signum(w[i]) == sign;
+      List<IntVar> bounds = (large ? upper : lower).get(vars[i]);
+      if (bounds == null) {
+        continue;
+      }
+      vars[i] = bounds.get(0);
+      if (large) {
+        // w b, with b <= 1 - col, becomes w - w col
+        c -= w[i];
+        w[i] = -w[i];
+      }
+      changed = true;
+    }
+    return changed ? new LinearForm(vars, w, c, f.relation()) : f;
   }
 
   // the rows of valueColumns, with the columns of each encoded variable put in encoded

@@ -438,6 +438,12 @@ public class LinearRelaxation extends Constraint
   // a relaxation over the size caps of the sparse simplex in search: solved at the root only
   private boolean large;
 
+  // made by refutation(): solved once at the root, then removed
+  private boolean refutation;
+  private int refutationStatus = -1;
+  // the status of the last solve
+  private int lastSolveStatus = -1;
+
   // the solutions kept so far, which tells a reader of the last solution when it changed
   private int solutionVersion;
 
@@ -1412,6 +1418,78 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Creates the relaxation that tries to refute a satisfaction model at the root: the value
+   * encodings of the counting, all-different and element constraints ({@link
+   * Linearizations#refutationRows}), the linear rows and clause rows of the model restated over the
+   * value columns, and the conflicts of pairs of 0/1 literals merged into cliques. It is solved
+   * once, at the root, and then removed: an infeasible relaxation proves that the model has no
+   * solution, and a feasible one would only slow every node down. The relaxation of the model
+   * ({@link #of}) keeps these encodings only for an objective, since without one they can only make
+   * an LP infeasible, and kept for one infeasible LP in search they slow every solve (see there);
+   * here they cost one root solve.
+   *
+   * <p>A pigeonhole count is what the relaxation sees and propagation does not: in the social
+   * golfers of the XCSP 2024 competition with 32 players in 8 groups of 4 over 11 weeks, player 0
+   * meets 3 players a week, 33 in all, but only 31 others exist. The counts of the groups and the
+   * cliques of "meets player 0 in week w" over the weeks give the LP 30 meetings for 28 players
+   * after the fixed first week, and the LP is infeasible at once; the search found nothing in 600
+   * s.
+   *
+   * @param store the store
+   * @param clauses the clause rows of the clauses that lazy clause generation took
+   * @return the relaxation, or null when there is no value encoding or the rows are too many
+   */
+  public static LinearRelaxation refutation(Store store, Collection<LinearForm> clauses) {
+    if (!ROOT_REFUTATION || !LINEARIZE) {
+      return null;
+    }
+    Set<Constraint> constraints = constraintsOf(store);
+    constraints.removeIf(c -> c instanceof LinearRelaxation);
+    List<LinearForm> given = new ArrayList<>();
+    for (Constraint c : constraints) {
+      LinearForm f = LinearForms.of(c);
+      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+        given.add(f);
+      }
+    }
+    for (LinearForm f : clauses) {
+      if (f != null) {
+        given.add(f);
+      }
+    }
+    List<LinearForm> rows = Linearizations.refutationRows(constraints, given);
+    if (rows.isEmpty()) {
+      return null;
+    }
+    PairCliques merged = PairCliques.merge(rows, List.of());
+    rows = merged.rows;
+    Simplex simplex = sparseTakes(rows) ? Simplex.SPARSE : Simplex.DENSE;
+    if (tooLarge(rows, simplex)) {
+      return null;
+    }
+    LinearRelaxation r = new LinearRelaxation(rows, List.of(), null, false, simplex);
+    r.refutation = true;
+    r.pairCliques = merged.cliques;
+    r.cutsTried = true;
+    return r.rows() < 2 ? null : r;
+  }
+
+  /**
+   * Returns the outcome of the root solve of a relaxation made by {@link #refutation}.
+   *
+   * @return "refuted" when it proved that the model has no solution, "feasible", "limit" when it
+   *     stopped at its pivot limit, "unsolved" before its solve
+   */
+  public String refutationOutcome() {
+    return switch (refutationStatus) {
+      case -1 -> "unsolved";
+      case LpSolver.INFEASIBLE -> "refuted";
+      case LpSolver.OPTIMAL -> "feasible";
+      default -> "limit";
+    };
+  }
+
+  /**
    * Returns the rows of this relaxation over the variables of the model: the given rows and the
    * further rows tried at the first solve.
    *
@@ -1563,6 +1641,11 @@ public class LinearRelaxation extends Constraint
   // the conflicts of pairs of 0/1 literals merged into clique rows
   private static final boolean PAIR_CLIQUES =
       !"false".equals(System.getProperty("org.jacop.lp.pairCliques"));
+
+  // satisfaction models: a relaxation of the value encodings solved once at the root, to refute
+  // the model (refutation)
+  private static final boolean ROOT_REFUTATION =
+      !"false".equals(System.getProperty("org.jacop.lp.rootRefutation"));
 
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
@@ -2170,6 +2253,9 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void consistency(Store store) {
+    if (refutation && calls > 0) {
+      return; // solved once at the root, see refutation()
+    }
     if (large && calls > 0 && store.level > rootLevel && !restarting) {
       // a large relaxation does nothing in search once it is solved: it never prunes there, so
       // the constraints of its rows hold an assignment to them, and checking the ground columns
@@ -2219,7 +2305,16 @@ public class LinearRelaxation extends Constraint
     }
     long started = System.nanoTime();
     try {
+      if (refutation) {
+        refutationStatus = LpSolver.INFEASIBLE;
+      }
       solveAndPropagate(store);
+      if (refutation) {
+        // feasible, or stopped at its limit: it has done its part
+        refutationStatus = lastSolveStatus;
+        removeConstraint();
+        return;
+      }
       if (first) {
         rememberRootBounds();
         if (large && !boundsObjective(domainBound)) {
@@ -2518,6 +2613,7 @@ public class LinearRelaxation extends Constraint
       status = searchEnergyCuts(limit);
     }
     lastSolveLevel = store.level;
+    lastSolveStatus = status;
     if (jump) {
       jumpSolves++;
       jumpPivots += lp.pivots() - pivotsBefore;
@@ -5094,6 +5190,7 @@ public class LinearRelaxation extends Constraint
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
+    c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));
     }
