@@ -6424,6 +6424,22 @@ Version 5.0 (unreleased)
    turns it off, =true posts it without lazy clause generation too, and
    -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
+358. The core-guided phase of free search (-f) under lazy clause
+   generation probes the objective's own bound when its cores raise the
+   lower bound by about one each, as cores of two terms with large
+   domains do (a makespan and a tardiness that rise together). After 32,
+   64, 128... cores, if the cores' recent rate would need more than four
+   times as many cores again to meet the best solution, bounds of the
+   objective at doubling distances above the lower bound are assumed
+   with 100 conflicts each, and each one refuted becomes a clause. The
+   phase hands over to branch and bound once the probes leave less than
+   an eighth of the cores' gap; the probes' work is left out of the
+   phase's rates. MiniZinc Challenge 2021 ATSP instance5 is proved in
+   1.2 s instead of 2.3 s (1,978 cores of +1 before, 32 now); on the 13
+   of 187 wide optimisation instances where it fires, -f at 600 s takes
+   0.86 of the time with the same proofs (kitchen linear 305 -> 166 s).
+   -Djacop.lcg.coreObjectiveProbe=false turns it off.
+
 Version 4.11
 =============
 
