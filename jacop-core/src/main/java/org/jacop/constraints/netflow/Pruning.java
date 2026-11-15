@@ -71,6 +71,12 @@ public class Pruning extends Network {
   private final Statistics statistics;
   private final PriorityQueue<ArcCompanion> queue;
   private final PruningStrategy strategy;
+
+  // whether residual arcs of any capacity are decided by shortest paths when they can be, not only
+  // arcs of capacity one, -Dorg.jacop.netflow.generalArcs=false for the probe of every such arc;
+  // read when the network is made, so that a test can compare the two
+  private final boolean generalArcs =
+      !"false".equals(System.getProperty("org.jacop.netflow.generalArcs"));
   public int numActiveArcs;
 
   /** Shortest paths that decide residual arcs of capacity one without probing them. */
@@ -435,20 +441,56 @@ public class Pruning extends Network {
       distances.compute(
           nodes[key >> 1], reverse, (long) costLimit - minimumReducedCost, targets, arcs.size());
       for (Arc arc : arcs) {
-        arc.decidedPass = pass;
-        long distance = distances.distance(reverse ? arc.head : arc.tail());
-        if ((distance == ResidualDistances.UNREACHED || arc.reducedCost() + distance > costLimit)
-            && arc.capacity > 0) {
-          // no unit of flow fits through the arc
-          pruneArc(arc.capacity, arc.sister.capacity, arc.forward, arc.getCompanion());
-        }
+        decide(arc, reverse ? arc.head : arc.tail(), costLimit);
       }
       arcs.clear();
     }
   }
 
   private boolean isUnitArc(Arc arc) {
-    return arc.capacity == 1 && arc.sister.capacity == 0 && arc.decidedPass != pass;
+    return arc.capacity > 0
+        && arc.decidedPass != pass
+        && (generalArcs || arc.capacity == 1 && arc.sister.capacity == 0);
+  }
+
+  /**
+   * Decides a residual arc (u, v) from the shortest residual path from v back to u, whose end the
+   * last distance computation reached as the given node, when that path gives the exact answer of
+   * the probe of analyzeArc. Pushing flow around the cycle of the arc and a path costs, per unit,
+   * the reduced cost of the arc plus the length of the path, and the successive shortest paths of a
+   * minimum cost flow cost no less per unit as more flow is pushed (Ahuja, Magnanti and Orlin,
+   * Network Flows, 1993, ch. 9). So the shortest cycle of length L bounds the flow the arc can take
+   * within the cost limit by limit / L, and when that flow (or all the residual capacity, for L =
+   * 0) fits along the shortest path itself, it is exactly what the probe finds. An arc that no path
+   * reaches within the limit takes no flow. Other arcs, and paths that go back through the arc
+   * itself, are left to the probe.
+   *
+   * @param arc the residual arc
+   * @param end the node at which a path from the head of the arc reaches its tail
+   * @param costLimit the maximum cost increase allowed
+   */
+  private void decide(Arc arc, Node end, int costLimit) {
+    long distance = distances.distance(end);
+    if (distance == ResidualDistances.UNREACHED || arc.reducedCost() + distance > costLimit) {
+      // no unit of flow fits through the arc
+      arc.decidedPass = pass;
+      pruneArc(arc.capacity, arc.sister.capacity, arc.forward, arc.getCompanion());
+      return;
+    }
+    if (arc.capacity == 1 && arc.sister.capacity == 0) {
+      // the one unit fits
+      arc.decidedPass = pass;
+      return;
+    }
+    long unitCost = arc.reducedCost() + distance;
+    int fits = unitCost == 0 ? arc.capacity : (int) Math.min(arc.capacity, costLimit / unitCost);
+    if (fits > distances.room(end, arc)) {
+      return;
+    }
+    arc.decidedPass = pass;
+    if (fits < arc.capacity) {
+      pruneArc(arc.capacity - fits, arc.sister.capacity + fits, arc.forward, arc.getCompanion());
+    }
   }
 
   private void recordInstrumentationMax(ArcCompanion companion) {

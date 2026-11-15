@@ -58,6 +58,12 @@ final class ResidualDistances {
   private final int[] targetMark;
   private int mark;
 
+  /** The residual arc that reaches each node on its shortest path, or null for the origin. */
+  private final Arc[] predecessor;
+
+  /** The least residual capacity on the shortest path of each node, ties broken towards more. */
+  private final int[] bottleneck;
+
   /**
    * Prepares the distance computation for a network.
    *
@@ -69,6 +75,8 @@ final class ResidualDistances {
     this.heap = new int[nodes.length];
     this.heapPosition = new int[nodes.length];
     this.targetMark = new int[nodes.length];
+    this.predecessor = new Arc[nodes.length];
+    this.bottleneck = new int[nodes.length];
   }
 
   /**
@@ -94,6 +102,8 @@ final class ResidualDistances {
       }
     }
     distance[origin.index] = 0;
+    predecessor[origin.index] = null;
+    bottleneck[origin.index] = Integer.MAX_VALUE;
     push(origin.index);
     while (heapSize > 0) {
       int u = pop();
@@ -113,13 +123,22 @@ final class ResidualDistances {
         }
         Node next = reverse ? residual.tail() : residual.head;
         long d = du + residual.reducedCost();
+        int b = Math.min(bottleneck[u], residual.capacity);
         if (d <= limit && d < distance[next.index]) {
           distance[next.index] = d;
+          predecessor[next.index] = residual;
+          bottleneck[next.index] = b;
           if (heapPosition[next.index] == -1) {
             push(next.index);
           } else {
             siftUp(heapPosition[next.index]);
           }
+        } else if (d == distance[next.index]
+            && heapPosition[next.index] >= 0
+            && b > bottleneck[next.index]) {
+          // an equally short path with more room, while the node is not settled yet
+          predecessor[next.index] = residual;
+          bottleneck[next.index] = b;
         }
       }
     }
@@ -133,6 +152,36 @@ final class ResidualDistances {
    */
   long distance(Node node) {
     return distance[node.index];
+  }
+
+  /**
+   * Returns the least residual capacity on the shortest path that the last computation found for a
+   * node, or 0 when the path uses one of the excluded arcs (an arc or its sister) or the node was
+   * not reached. Following the path is the cost of its length.
+   *
+   * @param node a node of the network
+   * @param excluded an arc whose two directions the path must not use
+   * @return the capacity a flow along that path can take, or 0
+   */
+  int room(Node node, Arc excluded) {
+    if (distance[node.index] == UNREACHED) {
+      return 0;
+    }
+    int room = Integer.MAX_VALUE;
+    int at = node.index;
+    Arc arc = predecessor[at];
+    while (arc != null) {
+      if (arc == excluded || arc == excluded.sister) {
+        return 0;
+      }
+      room = Math.min(room, arc.capacity);
+      // the path is followed back from the node: from the head when it leaves the origin, from
+      // the tail when it enters it
+      Node previous = arc.head.index == at ? arc.tail() : arc.head;
+      at = previous.index;
+      arc = predecessor[at];
+    }
+    return room;
   }
 
   private void push(int u) {
