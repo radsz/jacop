@@ -6346,6 +6346,9 @@ public final class LcgSolver implements ExternalPropagator {
   // run once at the first restart to the root, see atRootAfter
   private Runnable rootAction;
   private long rootActionDelay;
+  // the time from which the action may run: an earlier restart (free search restarts often) leaves
+  // it pending
+  private long rootActionAt;
 
   /**
    * Restarts the search to the root once the given time has passed, also under fixed search without
@@ -6359,7 +6362,8 @@ public final class LcgSolver implements ExternalPropagator {
   public void atRootAfter(long nanos, Runnable action) {
     rootAction = action;
     rootActionDelay = nanos;
-    sat.restartAt(sat.now() + nanos);
+    rootActionAt = sat.now() + nanos;
+    sat.restartAt(rootActionAt);
   }
 
   /**
@@ -6373,7 +6377,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyRestart() {
-    if (rootAction != null) {
+    if (rootAction != null && sat.now() >= rootActionAt) {
       if (store.level == baseLevel) {
         Runnable action = rootAction;
         rootAction = null;

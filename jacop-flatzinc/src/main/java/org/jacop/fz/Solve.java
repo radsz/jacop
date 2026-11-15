@@ -993,7 +993,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
       if (lpProbeMs > 0
-          && !options.freeSearch()
+          && (!options.freeSearch() || FREE_LP_PROBE)
           && options.portfolioWorker == null
           && linearRelaxation.rootTrialSize() >= lpProbeSize) {
         // the root solve waits for a short search without it: see executeSearch
@@ -2882,6 +2882,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
       searchVars.defaultVars();
       ls = runLocalSearch(costVar, searchVars, worker, true);
+      if (lpProbing) {
+        // local search resumes the relaxations it suspended
+        linearRelaxation.suspend(true);
+      }
     }
     // the pump dives in the store, before the solver takes it over
     Hint pumped = options.freeSearch() && ls == null ? pumpHint() : null;
@@ -5282,6 +5286,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // columns, LinearRelaxation.rootTrialSize) that the probe waits for; below it the root solve is
   // cheap, and a restart costs more than it saves (multiple-constant-multiplication XU07_28)
   private final long lpProbeSize = Long.getLong("org.jacop.fz.lpProbeSize", 1_000_000);
+
+  // -Dorg.jacop.fz.freeLpProbe=false: free search solves a large root relaxation at once, without
+  // the search of org.jacop.fz.lpProbe before it
+  private static final boolean FREE_LP_PROBE =
+      !"false".equals(System.getProperty("org.jacop.fz.freeLpProbe"));
 
   // the relaxation is suspended until the probe ends
   private boolean lpProbing;

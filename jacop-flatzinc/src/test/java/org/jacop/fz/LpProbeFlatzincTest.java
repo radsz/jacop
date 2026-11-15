@@ -70,6 +70,11 @@ class LpProbeFlatzincTest {
     check(new Random(20261115), 40, "--lcg", "off");
   }
 
+  @Test
+  void probedSearchKeepsTheOptimumUnderFreeSearch() throws IOException {
+    check(new Random(20261116), 30, "-f", "--lcg", "on");
+  }
+
   private void check(Random random, int models, String... options) throws IOException {
     int finished = 0;
     int restarted = 0;
@@ -86,7 +91,8 @@ class LpProbeFlatzincTest {
         assertEquals(objective(off), objective(on), fzn + "\n" + off + "\n" + on);
         assertTrue(on.contains("==========") || on.contains(UNSAT), fzn + "\n" + on);
         String state = group(PROBE, on);
-        states.append(probe).append(':').append(state).append(' ');
+        if (probe > 1 && "solved".equals(state))
+          states.append(probe).append(':').append(state).append(' ');
         finished += probe > 1 && "finished".equals(state) ? 1 : 0;
         restarted += probe == 1 && "solved".equals(state) ? 1 : 0;
       }
