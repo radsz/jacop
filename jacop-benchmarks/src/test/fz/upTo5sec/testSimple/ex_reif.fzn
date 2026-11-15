@@ -1,0 +1,9 @@
+var 1..10: x:: output_var;
+var 0..1: X_INTRODUCED_0_ ::var_is_introduced :: output_var;
+var 0..1: X_INTRODUCED_1_;
+var 0..1: X_INTRODUCED_2_;
+constraint int_lin_eq([1,1],[X_INTRODUCED_1_,X_INTRODUCED_2_],1);
+constraint int_lin_le([1,4,-1],[X_INTRODUCED_1_,X_INTRODUCED_2_,x],0);
+constraint int_lin_le([-3,-10,1],[X_INTRODUCED_1_,X_INTRODUCED_2_,x],0);
+constraint int_lin_eq([-1,1],[X_INTRODUCED_2_,X_INTRODUCED_0_],0);
+solve  satisfy;

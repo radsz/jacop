@@ -2777,3 +2777,10 @@ testSimple/float_plus
 testSimple/float_times
 testSimple/int2float
 test_globals_float/test_globals_float
+testSimple/ex_reif
+testSimple/float_wrong_example
+testSimple/gecode_wrong
+testSimple/power_test
+testSimple/test_fzn_arith
+testSimple/test_fzn_arrays
+testSimple/test_fzn_comparison
