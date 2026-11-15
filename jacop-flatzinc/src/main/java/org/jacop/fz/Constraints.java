@@ -48,6 +48,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
@@ -163,6 +164,15 @@ public class Constraints implements ParserTreeConstants {
     Options options = support.options;
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
+    // the exchanges of values that symmetry breaking breaks in a satisfaction problem compare the
+    // domains of inverse channels as declared
+    if (options.symmetry()
+        && ConditionalValueSwaps.ENABLED
+        && !options.freeSearch()
+        && !manySolutions
+        && satisfaction(astTree)) {
+      support.recordChannelDomains(astTree);
+    }
     if (hasFloatVariables()) {
       // the model is built as without LCG, also when --lcg was given: LcgSolver has no atoms for
       // float variables, and a model built for LCG (clauses, split sums, no views) and then solved
@@ -466,6 +476,16 @@ public class Constraints implements ParserTreeConstants {
       // each variable whose values are all counted at least twice equals one of its few partners
       if (CountPartnersDetector.enabled() && options.proof() == null) {
         new CountPartnersDetector(support).detect(astTree);
+      }
+
+      // the pigeonhole bound on the equal pairs of variables whose pairs all have equality
+      // indicators, redundant; --proof does not encode it
+      if (AgreementCountDetector.enabled() && options.proof() == null) {
+        AgreementCountDetector agreements = new AgreementCountDetector(support);
+        agreements.detect(astTree);
+        if (agreements.infeasible()) {
+          throw Store.failException;
+        }
       }
 
       if (increasing != null && IncreasingDetector.sumEnabled()) {
