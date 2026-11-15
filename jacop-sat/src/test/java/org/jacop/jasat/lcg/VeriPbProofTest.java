@@ -89,6 +89,7 @@ import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
@@ -784,6 +785,39 @@ class VeriPbProofTest {
     assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void countIntoAHoleOfItsCounterIsDerived() {
+    // the count of 2 in [x3, x6, x4, x1] goes to 2 when x1 = 2 > x4 = 1, a hole of the counter
+    // c in {0, 1, 3}: the flow of the cardinality lines sees 0..3 only (fuzz seed 3001554)
+    Store store = new Store();
+    IntVar x0 = var(store, "x0", 1, 2, 4);
+    IntVar x1 = var(store, "x1", 0, 2, 3, 4);
+    IntVar x3 = var(store, "x3", 1, 2);
+    IntVar x4 = var(store, "x4", 1, 2);
+    IntVar x5 = var(store, "x5", 1, 2);
+    IntVar x6 = var(store, "x6", -1, 0, 1, 2, 3);
+    IntVar c = var(store, "c", 0, 1, 3);
+    IntVar d = var(store, "d", 0, 1, 2, 3);
+    store.impose(new CountValues(new IntVar[] {x6, x3}, new IntVar[] {x0, x5}, new int[] {2, 0}));
+    store.impose(new XgtY(x1, x4));
+    store.impose(
+        new CountValues(new IntVar[] {x3, x6, x4, x1}, new IntVar[] {c, d}, new int[] {2, 0}));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  private static IntVar var(Store store, String name, int... values) {
+    IntVar x = new IntVar(store, name);
+    for (int v : values) {
+      x.addDom(v, v);
+    }
+    return x;
   }
 
   @Test

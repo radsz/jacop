@@ -1105,6 +1105,7 @@ public final class LcgSolver implements ExternalPropagator {
       for (int k = 0; k < m; k++) {
         if (freeCounter[k] >= 0) {
           count[k] = restricted[k];
+          proofCounterBounds(freeCounter[k], values[k], dom, literals, counterLiterals[k]);
         }
       }
     }
@@ -1237,6 +1238,35 @@ public final class LcgSolver implements ExternalPropagator {
     if (operands >= 2) {
       proof.pol(pol);
     }
+  }
+
+  /**
+   * Writes the bounds of a counter with a hole in its domain under the hypotheses of a clause: at
+   * least the variables fixed to its value and at most those that can take it. The flow of {@link
+   * #proofCardinality} sees the counter's interval only, and unit propagation over the order
+   * literals of the counter does not reach a bound from the count of the value literals (the count
+   * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}).
+   */
+  private void proofCounterBounds(
+      int counter, int value, IntDomain[] dom, StringBuilder[] literals, StringBuilder own) {
+    IntDomain d = proofDomains[counter];
+    if (d.getSize() == (long) d.max() - d.min() + 1) {
+      return;
+    }
+    int fixed = 0;
+    int possible = 0;
+    StringBuilder clause = new StringBuilder(own == null ? "" : own);
+    for (int j = 0; j < dom.length; j++) {
+      if (dom[j].contains(value)) {
+        possible++;
+        if (dom[j].singleton()) {
+          fixed++;
+        }
+      }
+      clause.append(literals[j]);
+    }
+    proofBound(counter, clause, fixed, true);
+    proofBound(counter, clause, possible, false);
   }
 
   /**
