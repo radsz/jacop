@@ -6078,7 +6078,8 @@ Version 5.0 (unreleased)
 339. Binpacking skips the sort and uses a closed form of Shaw's NoSum
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
-340. Under lazy clause generation a constraint failure first hands the SAT
+
+346. Under lazy clause generation a constraint failure first hands the SAT
    solver the atoms its fixpoint recorded and had not pushed yet, and only
    then the conflict, whose clause cites those atoms instead of their
    explanations (as with literals created on demand in lazy clause
