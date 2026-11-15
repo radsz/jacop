@@ -72,6 +72,7 @@ import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cfn.CostNetworkBound;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.lp.TimeIndexedBound;
@@ -125,6 +126,7 @@ import org.jacop.search.LastConflictSelect;
 import org.jacop.search.Lds;
 import org.jacop.search.LpGuidedSelect;
 import org.jacop.search.PrioritySearch;
+import org.jacop.search.RectanglePlacementSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SequenceSelect;
@@ -3281,7 +3283,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the free search without learning.
    */
   private SelectChoicePoint<? extends Var> lcgDefaultSelect(Var costVar) {
-    SelectChoicePoint<IntVar> ints = lcgDefaultIntSelect(costVar);
+    SelectChoicePoint<? extends Var> ints = lcgDefaultIntSelect(costVar);
+    IntVar[][] rectangles = openRectangles();
+    rectangleCount = rectangles.length;
+    if (rectangles.length > 0 && !"off".equals(options.freeConfig("rect-placement", "first"))) {
+      // a packing model: the rectangles placed one at a time, bottom-left, before the rest. On the
+      // coal stockyard of XCSP 2024 Cargo (stockpiles as rectangles of day by pad position with a
+      // variable stay) set times on the stacking starts found no first solution in 600 s on
+      // Cargo-16, 19 and 20: the early starts make the stays long and the pads overflow
+      boolean always = "always".equals(options.freeConfig("rect-placement", "first"));
+      // until the first solution only: placed in every run of this branching, Cargo-07 lost its
+      // proof and Cargo-10 ended at 25,850 and 7,750 instead of 5,645 (two seeds at 240 s)
+      RectanglePlacementSelect place =
+          new RectanglePlacementSelect(rectangles, () -> always || numberSolutions == 0);
+      ints = ints == null ? place : new SequenceSelect(List.of(place, ints));
+    }
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     List<SetVar> sets = new ArrayList<>();
@@ -3298,6 +3314,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // to activity, and found no solution in 30 s (input order on the sets: 2,242 nodes)
     SelectChoicePoint<SetVar> setSelect = defaultSetSelect(sets.toArray(new SetVar[0]));
     return ints == null ? setSelect : new SequenceSelect(List.of(setSelect, ints));
+  }
+
+  // the rectangles lcgDefaultSelect places first, for the statistics
+  private int rectangleCount;
+
+  /**
+   * Returns the rectangles of the store's non-overlap constraints, each once, that are not yet
+   * placed, in the order the store meets them, in the layout of {@link Nooverlap#rectangles()}.
+   */
+  private IntVar[][] openRectangles() {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar[]> open = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if (c instanceof Nooverlap diffn && seen.add(c)) {
+          for (IntVar[] r : diffn.rectangles()) {
+            for (IntVar x : r) {
+              if (!x.singleton()) {
+                open.add(r);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    return open.toArray(new IntVar[0][]);
   }
 
   /** The integer and Boolean part of {@link #lcgDefaultSelect}. */
@@ -3581,6 +3624,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgSetTimesStarts="
             + setTimesStarts
+            + "\n%%%mzn-stat: lcgRectangles="
+            + rectangleCount
             + "\n%%%mzn-stat: lcgElementPositions="
             + elementPositionCount
             + "\n%%%mzn-stat: lcgInputOrder="
