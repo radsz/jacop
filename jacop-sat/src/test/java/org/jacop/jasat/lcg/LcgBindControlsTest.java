@@ -41,6 +41,7 @@ import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XneqY;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -133,6 +134,15 @@ class LcgBindControlsTest {
         sums.add(s);
         store.impose(new LinearInt(bs, ones, "<=", s.bound));
       }
+      List<int[]> different = new ArrayList<>();
+      for (int i = 0; i + 1 < n; i++) {
+        if (rnd.nextBoolean()) {
+          // x and a control fixed by different propagators before either sees the other: the
+          // second push of their shared literal is a conflict (vrplc9_5_10_s2)
+          different.add(new int[] {i, i + 1});
+          store.impose(new XneqY(x[i], x[i + 1]));
+        }
+      }
       List<int[]> fixed = new ArrayList<>();
       if (rnd.nextInt(4) == 0) {
         // a control fixed by a constraint of its own
@@ -150,11 +160,13 @@ class LcgBindControlsTest {
       terms[n] = cost;
       store.impose(new LinearInt(terms, w, "==", 0));
 
-      long best = minimum(x, items, clauses, orders, sums, w, fixed);
+      long best = minimum(x, items, clauses, orders, sums, different, w, fixed);
 
       LcgSolver solver = new LcgSolver(store);
       solver.setChecking(true);
       solver.setSeed(run % 3);
+      // lazy (the channels stay, atoms' literals when first needed) and eager binding
+      solver.setBindLazy(run / MODES.length % 2 == 0);
       long now = solver.bindValueControls(mode, cost);
       bound += now;
       removed += solver.channelsBound;
@@ -189,6 +201,9 @@ class LcgBindControlsTest {
             .isEqualTo(t[it.var] == it.value ? 1 : 0);
       }
       assertThat(holds(t, items, clauses, orders, sums)).as(where).isTrue();
+      for (int[] d : different) {
+        assertThat(t[d[0]]).as(where).isNotEqualTo(t[d[1]]);
+      }
     }
     System.out.printf(
         "lcg bind controls: %d controls bound, %d channels removed%n", bound, removed);
@@ -201,6 +216,7 @@ class LcgBindControlsTest {
       List<Clause> clauses,
       List<OrderControl> orders,
       List<ControlSum> sums,
+      List<int[]> different,
       int[] w,
       List<int[]> fixedControls) {
     int n = x.length;
@@ -219,6 +235,9 @@ class LcgBindControlsTest {
         c /= 5;
         in &= x[i].domain.contains(t[i]);
         sum += (long) w[i] * t[i];
+      }
+      for (int[] d : different) {
+        in &= t[d[0]] != t[d[1]];
       }
       if (!in || sum < -100 || sum > 100 || !holds(t, items, clauses, orders, sums)) {
         continue;

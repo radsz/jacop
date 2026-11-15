@@ -214,6 +214,7 @@ public final class LcgSolver implements ExternalPropagator {
   // value of the atom [x = c] whose literal is its own [b >= 1]; null while nothing is bound
   private int[] boundTo;
   private int[] boundValue;
+  private boolean[] boundRegistered;
   // per DIMACS variable of such an atom: the controls bound to it, fixed whenever it is applied
   private final Map<Integer, int[]> boundControls = new HashMap<>();
 
@@ -2290,7 +2291,7 @@ public final class LcgSolver implements ExternalPropagator {
   /** The variable of [x >= v] for v in (root min, root max], created when missing, linked. */
   private int geVar(int i, int v) {
     if (boundTo != null && boundTo[i] >= 0) {
-      return eqVar(boundTo[i], boundValue[i]);
+      return boundLiteral(i);
     }
     int d = ge[i].get(v);
     if (d != LiteralMap.NONE) {
@@ -2355,7 +2356,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int geEntryVar(int i, int v) {
     if (boundTo != null && boundTo[i] >= 0) {
-      return eqVar(boundTo[i], boundValue[i]);
+      return boundLiteral(i);
     }
     int d = ge[i].get(v);
     if (d != LiteralMap.NONE) {
@@ -4465,6 +4466,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (boundTo == null) {
       boundTo = new int[vars.length];
       boundValue = new int[vars.length];
+      boundRegistered = new boolean[vars.length];
       Arrays.fill(boundTo, -1);
     }
     long before = controlsBound;
@@ -4505,31 +4507,62 @@ public final class LcgSolver implements ExternalPropagator {
                 && eq[ib].get(1) == LiteralMap.NONE
                 && x.domain.contains(vs[k])
                 && bindable(mode, b, ch);
+        if (ok && !bindLazy && sat.value(eqVar(ix, vs[k])) != 0) {
+          ok = false;
+        }
         if (ok) {
-          int d = eqVar(ix, vs[k]);
-          if (sat.value(d) != 0) {
-            ok = false;
-          } else {
-            boundTo[ib] = ix;
-            boundValue[ib] = vs[k];
-            int[] old = boundControls.get(d);
-            int[] now = old == null ? new int[1] : Arrays.copyOf(old, old.length + 1);
-            now[now.length - 1] = ib;
-            boundControls.put(d, now);
-            controlsBound++;
-            // b follows its atom: branching on x decides it
-            setUnusedVariables(List.of(b));
+          boundTo[ib] = ix;
+          boundValue[ib] = vs[k];
+          if (!bindLazy) {
+            boundLiteral(ib);
           }
+          controlsBound++;
+          // b follows its atom: branching on x decides it
+          setUnusedVariables(List.of(b));
         }
         all &= ok;
       }
-      if (all) {
+      if (all && !bindLazy) {
         c.removeConstraint();
         encodedConstraints.add(c);
         channelsBound++;
       }
     }
     return controlsBound - before;
+  }
+
+  /**
+   * Whether {@link #bindValueControls} keeps the channels and creates the literal of a bound
+   * control's atom only when the control's literal is first needed, by the system property {@code
+   * jacop.lcg.bindLazy}. Binding eagerly creates [x = c] with its two bound literals for every
+   * control, which raised the solver variables of nmseq and skill-allocation by a fifth.
+   */
+  static final boolean BIND_LAZY = !FALSE.equals(System.getProperty("jacop.lcg.bindLazy"));
+
+  // whether bound controls get the literals of their atoms only when first needed
+  private boolean bindLazy = BIND_LAZY;
+
+  /**
+   * Sets whether {@link #bindValueControls} binds lazily (see {@link #BIND_LAZY}); before binding.
+   *
+   * @param lazy true to keep the channels and create the atoms' literals when first needed
+   */
+  public void setBindLazy(boolean lazy) {
+    bindLazy = lazy;
+  }
+
+  // the literal of a bound control's atom, created and registered for apply when first needed
+  private int boundLiteral(int i) {
+    int d = eqVar(boundTo[i], boundValue[i]);
+    if (boundRegistered[i]) {
+      return d;
+    }
+    boundRegistered[i] = true;
+    int[] old = boundControls.get(d);
+    int[] now = old == null ? new int[1] : Arrays.copyOf(old, old.length + 1);
+    now[now.length - 1] = i;
+    boundControls.put(d, now);
+    return d;
   }
 
   // whether a control b of a channel may be bound under a mode of bindValueControls
@@ -6324,6 +6357,10 @@ public final class LcgSolver implements ExternalPropagator {
     return orZero(d, 1);
   }
 
+  // the variable and the trail entry of the last literal pushed while false (a conflict)
+  private int falsePushVar;
+  private int falsePushEntry;
+
   private static int orZero(int d, int sign) {
     return d == LiteralMap.NONE ? 0 : sign * d;
   }
@@ -6331,6 +6368,14 @@ public final class LcgSolver implements ExternalPropagator {
   private void setPropagated(int dimacsVar, int e) {
     if (dimacsVar >= propagated.length) {
       propagated = Arrays.copyOf(propagated, Math.max(dimacsVar + 1, 2 * propagated.length));
+    }
+    if (sat.value(dimacsVar) != 0) {
+      // the literal is false: a conflict, whose reason must not replace the reason of the literal
+      // that made it false. Two variables of the store share a literal once controls are bound, so
+      // b >= 1 and x != c can both be on the trail
+      falsePushVar = dimacsVar;
+      falsePushEntry = e;
+      return;
     }
     propagated[dimacsVar] = e;
   }
@@ -7220,7 +7265,10 @@ public final class LcgSolver implements ExternalPropagator {
       pushedReason = null;
       return r;
     }
-    int e = propagated[Math.abs(lit)];
+    int e =
+        Math.abs(lit) == falsePushVar && sat.value(lit) < 0
+            ? falsePushEntry
+            : propagated[Math.abs(lit)];
     if (linear != null && linear.usable(trail.reason(e))) {
       noteOrigin(lit, trail.reason(e));
     }
