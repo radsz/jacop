@@ -169,6 +169,141 @@ public final class Linearizations {
     return out;
   }
 
+  // the clique rows over value Booleans lifted from implications (valueCliques); off with
+  // -Dorg.jacop.lp.valueCliques=false
+  private static final boolean VALUE_CLIQUES =
+      !"false".equals(System.getProperty("org.jacop.lp.valueCliques"));
+
+  /**
+   * Returns the set packing rows of the given rows with their Booleans replaced by the value
+   * Booleans that imply them. When value Booleans {@code b_v <-> x = v} of one variable x (from
+   * {@link #valueBooleans}) each imply a Boolean a (rows {@code b_v - a <= 0}), at most one of them
+   * holds, so {@code sum b_v <= a}: the implications lifted over a clique of the conflict graph
+   * (Atamtürk, Nemhauser and Savelsbergh, Conflict graphs in solving integer programming problems,
+   * EJOR 121(1), 2000). A set packing row {@code a_1 + ... + a_k <= 1} then holds with each a_i
+   * replaced by the sum of its value Booleans; with the encodings {@code sum b_v = 1} these rows
+   * are the cliques of the conflict graph over the values, which the implications through the
+   * auxiliary a_i state only pairwise. A model that says "two tasks are not in progress at the same
+   * time" through {@code exists} over the starts of each task (the ROADEF 2020 maintenance planning
+   * exclusions) gets the LP bound of its clique formulation: A_01 31,737,934 with the encodings
+   * alone, 31,795,919 with these rows (optimum 31,820,680).
+   *
+   * <p>For each a, the largest set of the value Booleans of one variable that imply it is taken
+   * (the first variable among equal sizes, in the order of the rows); a row with no replaced
+   * Boolean is not returned, and each returned row is returned once.
+   *
+   * @param constraints the constraints, whose value Booleans are used
+   * @param rowLists the rows to read the implications and the set packing rows from, in order
+   * @return the rows, empty when off or none qualifies
+   */
+  public static List<LinearForm> valueCliques(
+      Collection<Constraint> constraints, List<List<LinearForm>> rowLists) {
+    if (!VALUE_CLIQUES) {
+      return List.of();
+    }
+    Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
+    Map<IntVar, IntVar> owner = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : byVar.entrySet()) {
+      IntVar x = e.getKey();
+      for (IntVar b : e.getValue().values()) {
+        if (b != x && boolean01(b)) {
+          owner.putIfAbsent(b, x);
+        }
+      }
+    }
+    if (owner.isEmpty()) {
+      return List.of();
+    }
+    // for each implied Boolean a, the value Booleans that imply it, by their variable, in order
+    Map<IntVar, Map<IntVar, List<IntVar>>> implying = new IdentityHashMap<>();
+    Map<IntVar, Set<IntVar>> seenImplying = new IdentityHashMap<>();
+    List<LinearForm> packing = new ArrayList<>();
+    for (List<LinearForm> rows : rowLists) {
+      for (LinearForm f : rows) {
+        int sign;
+        if (f == null || f.relation() == LinearForm.EQ || f.relation() == LinearForm.NE) {
+          continue;
+        }
+        sign = f.relation() == LinearForm.LE ? 1 : -1;
+        IntVar[] v = f.vars();
+        long[] w = f.weights();
+        long c = sign * f.c();
+        if (v.length == 2 && c == 0 && sign * w[0] == -sign * w[1] && Math.abs(w[0]) == 1) {
+          // b - a <= 0
+          int pb = sign * w[0] == 1 ? 0 : 1;
+          IntVar b = v[pb];
+          IntVar a = v[1 - pb];
+          IntVar x = owner.get(b);
+          if (x != null
+              && x != a
+              && boolean01(a)
+              && seenImplying
+                  .computeIfAbsent(a, k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+                  .add(b)) {
+            implying
+                .computeIfAbsent(a, k -> new LinkedHashMap<>())
+                .computeIfAbsent(x, k -> new ArrayList<>())
+                .add(b);
+          }
+        } else if (v.length >= 2 && c == 1) {
+          boolean ones = true;
+          for (int k = 0; k < v.length && ones; k++) {
+            ones = sign * w[k] == 1 && boolean01(v[k]);
+          }
+          if (ones) {
+            packing.add(f);
+          }
+        }
+      }
+    }
+    if (implying.isEmpty() || packing.isEmpty()) {
+      return List.of();
+    }
+    Map<IntVar, List<IntVar>> lifted = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<IntVar, List<IntVar>>> e : implying.entrySet()) {
+      List<IntVar> best = null;
+      for (List<IntVar> bs : e.getValue().values()) {
+        if (bs.size() >= 2 && (best == null || bs.size() > best.size())) {
+          best = bs;
+        }
+      }
+      if (best != null) {
+        lifted.put(e.getKey(), best);
+      }
+    }
+    if (lifted.isEmpty()) {
+      return List.of();
+    }
+    List<LinearForm> out = new ArrayList<>();
+    Set<List<IntVar>> made = new java.util.HashSet<>();
+    for (LinearForm f : packing) {
+      Map<IntVar, Long> weight = new LinkedHashMap<>();
+      boolean replaced = false;
+      for (IntVar a : f.vars()) {
+        List<IntVar> bs = lifted.get(a);
+        if (bs == null) {
+          weight.merge(a, 1L, Long::sum);
+        } else {
+          replaced = true;
+          for (IntVar b : bs) {
+            weight.merge(b, 1L, Long::sum);
+          }
+        }
+      }
+      if (!replaced || weight.size() < 2 || !made.add(new ArrayList<>(weight.keySet()))) {
+        continue;
+      }
+      IntVar[] vars = weight.keySet().toArray(new IntVar[0]);
+      long[] ws = new long[vars.length];
+      int k = 0;
+      for (long q : weight.values()) {
+        ws[k++] = q;
+      }
+      out.add(new LinearForm(vars, ws, 1, LinearForm.LE));
+    }
+    return out;
+  }
+
   /**
    * Returns the rows of the value conjunctions ({@link #selectedValues}), with the conjunctions
    * {@code b <-> s /\ e} that the clause rows among the further rows of the relaxation state

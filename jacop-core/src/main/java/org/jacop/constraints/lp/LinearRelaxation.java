@@ -140,6 +140,11 @@ public class LinearRelaxation extends Constraint
   // value encodings; the rows before them are tried without them when all are not kept, and are
   // kept instead of all when they give the same bound
   private int triedExtra = Integer.MAX_VALUE;
+  // the value encodings ahead of the other extra rows, tried alone first when not every candidate
+  // row fits the share (see of)
+  private int leadExtra = 0;
+  private static final boolean LEAD_ENCODINGS =
+      !"false".equals(System.getProperty("org.jacop.lp.leadEncodings"));
   // the rows, the cuts last
   private int[][] rowColumns;
   private long[][] rowWeights;
@@ -356,6 +361,18 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
   public int pairCliques;
+
+  /**
+   * The value encodings that went ahead of the other extra rows, which did not all fit the share of
+   * the trial; 0 when none did.
+   */
+  public int leadEncodings;
+
+  /** The clique rows over value Booleans among the candidates (Linearizations.valueCliques). */
+  public int valueCliques;
+
+  /** Whether the value encodings ahead of the other extra rows were kept alone at their trial. */
+  public boolean leadKept;
 
   /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
   public int tableClauses;
@@ -1127,6 +1144,10 @@ public class LinearRelaxation extends Constraint
     List<LinearForm> relaxed = new ArrayList<>();
     // the rows of relaxed that go ahead of the others when not all fit
     Set<LinearForm> leading = Set.of();
+    // the value encodings of the model's variables (sum b_v = 1, x = sum v b_v)
+    Set<LinearForm> encodingSet = Collections.newSetFromMap(new IdentityHashMap<>());
+    boolean encodingsLead = false;
+    int valueCliqueRows = 0;
     List<CapacityCuts> separations = new ArrayList<>();
     List<EnergyCuts> resources = new ArrayList<>();
     List<AlldifferentCuts> hall = new ArrayList<>();
@@ -1178,7 +1199,14 @@ public class LinearRelaxation extends Constraint
       localForms = substitute(localForms, substituted, objective);
     }
     if (LINEARIZE) {
-      List<LinearForm> encodings = Linearizations.encodings(constraints);
+      List<LinearForm> encodings = new ArrayList<>(Linearizations.encodings(constraints));
+      if (objective != null) {
+        List<LinearForm> cliques =
+            Linearizations.valueCliques(constraints, List.of(localForms, relaxed));
+        valueCliqueRows = cliques.size();
+        encodings.addAll(cliques);
+      }
+      encodingSet.addAll(encodings);
       List<LinearForm> selected = Linearizations.selectedValueRows(constraints, extra);
       if (selected.isEmpty()) {
         relaxed.addAll(encodings);
@@ -1326,6 +1354,27 @@ public class LinearRelaxation extends Constraint
       // takes the rows before them
       further.clear();
       List<LinearForm> sorted = fitOrder(localForms, candidates, first, triedSet, flow, objective);
+      if (LEAD_ENCODINGS && !encodingSet.isEmpty() && first < candidates.size()) {
+        // the value encodings of the model's variables go right after the leading rows: they are
+        // the rows of the model as a MIP states it (each variable takes one value), and among
+        // many linearized rows they come late by distance and miss the share. Without them the
+        // relaxation can leave every Boolean of a variable at 0 (ROADEF 2020 maintenance
+        // planning A_01: 27,276 candidates for a share of 3,484 rows, the 543 encodings left
+        // out, root bound the domain bound 31,652,095 with zero duals; with them 31,737,934)
+        List<LinearForm> head = new ArrayList<>(sorted.subList(0, first));
+        List<LinearForm> enc = new ArrayList<>();
+        List<LinearForm> rest = new ArrayList<>();
+        for (LinearForm f : sorted.subList(first, sorted.size())) {
+          (encodingSet.contains(f) ? enc : rest).add(f);
+        }
+        if (!enc.isEmpty() && head.isEmpty()) {
+          sorted = new ArrayList<>(enc);
+          sorted.addAll(rest);
+          encodingsLead = true;
+          // they are counted like the leading rows, outside the share of the others
+          share = share == Long.MAX_VALUE ? share : share + enc.size();
+        }
+      }
       fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
     }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
@@ -1334,6 +1383,15 @@ public class LinearRelaxation extends Constraint
     r.keepEncodings = exempt > 0;
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
+    if (encodingsLead) {
+      int lead = 0;
+      while (lead < r.extraForms.size() && encodingSet.contains(r.extraForms.get(lead))) {
+        lead++;
+      }
+      r.leadExtra = lead;
+      r.leadEncodings = lead;
+    }
+    r.valueCliques = valueCliqueRows;
     r.pairCliques = pairCliques;
     r.tableClauses = tableClauses;
     r.capacity = separations;
@@ -1705,11 +1763,14 @@ public class LinearRelaxation extends Constraint
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
   // EASY_200_50, 57,505 rows: 52 ms a pivot; rcpsp-wet-diverse j60_19_6, 140,925 columns), and the
   // largest that helped in the Challenge has 19,141 rows (table-layout) and 23,242 columns
-  // (physician-scheduling)
+  // (physician-scheduling). The column cap was 30,000: the ROADEF 2020 maintenance planning A_06
+  // (35,742 columns, 3,040 rows) then became a large relaxation, solved at the root only, and was
+  // dropped since its bound without the value encodings did not cut the objective's domain; with
+  // them and search solves its bound is 21,377,570 and more (optimum 21,498,698)
   // not final, so that tests can make a small relaxation large
   static int sparseMaxRows = Integer.getInteger("org.jacop.lp.sparseMaxRows", 25_000);
   private static final int SPARSE_MAX_COLUMNS =
-      Integer.getInteger("org.jacop.lp.sparseMaxColumns", 30_000);
+      Integer.getInteger("org.jacop.lp.sparseMaxColumns", 50_000);
 
   // large relaxations: those over the size caps of the sparse simplex up to these many rows and
   // columns (and org.jacop.lp.maxNonzeros nonzeros) are solved at the root only, with a time budget
@@ -4801,17 +4862,30 @@ public class LinearRelaxation extends Constraint
     // rows over many columns: they are kept only when they make the relaxation infeasible or raise
     // its bound, not for being few. Once a prefix is kept, only the flow models are tried without:
     // they are kept only when they do better than the rows before them
-    int[] prefixes = IntStream.of(k, tiered, plain).filter(q -> q > 0).distinct().toArray();
+    int lead = Math.min(leadExtra, k);
+    // with the value encodings ahead of rows that did not all fit, the encodings alone are tried
+    // first: the rows after them are only a share of the candidates, and a trial over all of them
+    // can spend the root budget without an optimal solve (ROADEF 2020 A_06: 6,720 rows over 39,003
+    // columns stopped at the limit, and the encodings tried after them got no time)
+    int[] prefixes =
+        lead > 0 && lead < k
+            ? IntStream.of(lead, k, tiered, plain).filter(q -> q > 0).distinct().toArray()
+            : IntStream.of(k, tiered, plain).filter(q -> q > 0).distinct().toArray();
     LpSolver full = null;
     int kept = 0;
     int keptStatus = status;
     int last = k;
     for (int p : prefixes) {
-      if (full != null && p < tiered) {
+      if (full != null && (p < tiered || kept == lead)) {
         break;
       }
       LpSolver trial = trialRows(status, before, m, p, columnsOf(p), p == plain);
       last = p;
+      if (trial == null && p == lead && lead < k && trialStatus == LpSolver.LIMIT) {
+        // the value encodings alone stopped at the time of a large root solve: the longer
+        // prefixes, which hold them, would only spend more of it
+        break;
+      }
       if (trial == null) {
         if (full != null) {
           // the shorter prefix does not help: the longer one kept stays
@@ -4833,6 +4907,7 @@ public class LinearRelaxation extends Constraint
     }
     searchStartMin = null;
     searchStartMax = null;
+    leadKept = full != null && lead > 0 && kept == lead;
     if (full != null && kept != last) {
       // a shorter prefix was tried after the one kept
       setExtraRows(m, kept);
@@ -4950,7 +5025,13 @@ public class LinearRelaxation extends Constraint
     } else {
       keep = false;
     }
-    int withExtra = extendRootSolve(full, rootSolve(full, pivots, rootWork()), true);
+    int first = rootSolve(full, pivots, rootWork());
+    if (k == leadExtra && first == LpSolver.LIMIT) {
+      // the value encodings alone are the model's own rows: their trial gets the time of a large
+      // root solve, a share of the time limit of the run, from now
+      extendDeadline = Math.max(extendDeadline, System.nanoTime() + largeRootNanos);
+    }
+    int withExtra = extendRootSolve(full, first, true);
     if (searchStartMin == null) {
       keep = keepRows(withExtra, status, before, full, few, k);
     } else if (withExtra == LpSolver.LIMIT) {
@@ -4961,8 +5042,8 @@ public class LinearRelaxation extends Constraint
     // the other rows of a model with trees are kept: alone they rarely move the bound, but with
     // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
     keep |= keepExtra || !trees.isEmpty();
+    trialStatus = withExtra;
     if (keep) {
-      trialStatus = withExtra;
       return full;
     }
     droppedPivots += full.pivots();
