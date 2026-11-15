@@ -6596,6 +6596,22 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+364. JaLP's presolve also removes forcing rows and fixes dominated columns
+   (Andersen and Andersen, "Presolving in linear programming",
+   Mathematical Programming 71 (1995), sections 3.2 and 3.5; part of the
+   Gurobi catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger,
+   "Presolve reductions in mixed integer programming", INFORMS J. Comput.
+   32 (2020)). A row whose activity reaches its bound only with every column
+   at one of its bounds fixes those columns; the postsolve gives the row
+   the dual that keeps their reduced costs feasible and makes the column
+   that sets it basic. Bounds on the duals from the row sides and from
+   column singletons without a bound fix columns whose reduced cost cannot
+   be 0. -Dorg.jacop.jalp.presolveForcing=false and
+   -Dorg.jacop.jalp.presolveDominated=false turn them off. They fire on
+   149 of the 687 LPs of the LP bench (pivots 0.92x there, time 0.96-0.97x
+   above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
+   build an LP, where results stay the same.
+
 Version 4.11
 =============
 

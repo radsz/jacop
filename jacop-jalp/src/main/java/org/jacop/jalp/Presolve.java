@@ -41,8 +41,13 @@ import java.util.HashMap;
  * and dominated columns (dual fixing: a column whose cost and entries all pull it to one bound is
  * fixed there), implied free column singletons, doubleton equations (one column of the equation is
  * substituted by the other), parallel rows (a row that is a multiple of another gives its bounds to
- * the other and goes) and parallel columns (a column that is a multiple of another, in its entries
- * and its cost, is merged into it, which then stands for their sum).
+ * the other and goes), parallel columns (a column that is a multiple of another, in its entries and
+ * its cost, is merged into it, which then stands for their sum), forcing rows (a row whose activity
+ * reaches its bound only with every column at one of its bounds fixes them there) and dominated
+ * columns (bounds on the duals from the row sides and from column singletons keep the reduced cost
+ * of a column away from 0, so it is fixed at the bound its sign asks for). The last two are also in
+ * the catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger, "Presolve reductions in mixed
+ * integer programming", INFORMS Journal on Computing 32 (2020) 473-506.
  *
  * <p>The problem is the internal one of the simplex, already scaled: the rows {@code L_i <= a_i x
  * <= U_i} with the slack of row i as column {@code n + i}, and the perturbed costs. The reduced
