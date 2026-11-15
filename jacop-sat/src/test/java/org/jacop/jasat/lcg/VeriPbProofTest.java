@@ -930,6 +930,32 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
   }
 
+  @Test
+  void increasingSumIntoAHoleIsDerived() {
+    // x2 = -1 < x0 = 0 < x1 = 3 sum to 2, a hole of s: the clause needs the bounds of the sum's
+    // row, which IncreasingSum's reasons did not write (fuzz seed 7000052)
+    Store store = new Store();
+    IntVar x0 = var(store, "x0", 0, 1, 4);
+    IntVar x1 = var(store, "x1", -1, 0, 1, 3);
+    IntVar x2 = var(store, "x2", -1, 2);
+    IntVar x3 = var(store, "x3", -1, 0, 2, 3, 4);
+    IntVar x4 = var(store, "x4", 1, 4);
+    IntVar x5 = var(store, "x5", 1, 2, 4);
+    IntVar s = var(store, "s", -2, -1, 0, 1, 3, 4, 6, 7, 8);
+    IntVar obj = new IntVar(store, "obj", -30, -16);
+    obj.addDom(-14, 30);
+    store.impose(new Alldiff(new IntVar[] {x3, x4, x0, x5}));
+    store.impose(new IncreasingSum(new IntVar[] {x2, x0, x1}, s, true));
+    store.impose(new LinearInt(new IntVar[] {x5, x3, x1}, new int[] {1, 2, -1}, "!=", 1));
+    store.impose(new LinearInt(new IntVar[] {x2, x5, x3, obj}, new int[] {2, -2, 1, -1}, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
   private static IntVar var(Store store, String name, int... values) {
     IntVar x = new IntVar(store, name);
     for (int v : values) {

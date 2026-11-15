@@ -59,6 +59,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
@@ -1978,6 +1979,10 @@ public final class LcgSolver implements ExternalPropagator {
     LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
     if (f == null && proofStarted && c instanceof Knapsack k) {
       f = proofKnapsackRow(k);
+    }
+    if (f == null && proofStarted && c.getClass() == IncreasingSum.class) {
+      // the sum's row, which a hole of the sum hides from unit propagation
+      f = ((IncreasingSum) c).sumRow();
     }
     proofLinearBounds(f, atoms, from, entry, "");
   }
