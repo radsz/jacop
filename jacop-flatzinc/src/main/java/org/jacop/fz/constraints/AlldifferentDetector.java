@@ -82,6 +82,15 @@ import org.jacop.fz.SimpleNode;
  * <p>Each clique is recorded with its offsets in {@link Support#allDifferentOffsets}, where {@link
  * LinearSystemDetector} finds the cliques that are permutations of the union of their domains.
  *
+ * <p>The disequalities, stated or implied, also prune the differences of their variables at the
+ * root: {@code a*x - a*y + b*t = c} with {@code x - y != d} removes {@code (c - a*d)/b} from t. A
+ * difference of two all-different variables is not 0, so with t = s[i+1] - s[i] the result d of
+ * {@code int_abs(t, d)} starts at 1 (set here too: bounds consistency of {@link
+ * org.jacop.constraints.AbsXeqY} does not see the hole of t at 0), which CP-SAT's presolve also
+ * finds; over the CSPLib all-interval series, alldifferent of the n-1 absolute differences then
+ * ranges over n-1 values (n = 40: no solution in 240 s before, none of 0 failures after). Not with
+ * {@code --proof}.
+ *
  * <p>Setting the system property {@code org.jacop.fz.alldifferent} to false turns the detection
  * off.
  *
@@ -135,6 +144,17 @@ public class AlldifferentDetector implements ParserTreeConstants {
 
   private record ElementUse(IntVar index, int base, IntVar result) {}
 
+  // a * (x - y) + b * t = c, the differences whose results lose the values of disequalities
+  private record Difference(IntVar x, IntVar y, long a, IntVar t, long b, long c) {}
+
+  private final List<Difference> differences = new ArrayList<>();
+
+  // int_abs(t, d) with t a difference: {t, d}
+  private final List<IntVar[]> absolutes = new ArrayList<>();
+
+  /** Statistics: the values removed from differences of variables that are different. */
+  int differenceValues;
+
   /** Statistics: the implied disequalities collected. */
   int impliedEdges;
 
@@ -177,6 +197,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
     long start = System.nanoTime();
     support.forEachConstraint(astTree, this::collect);
     elementEdges();
+    pruneDifferences();
     if (nodes.size() < MIN_CLIQUE_SIZE) {
       return;
     }
@@ -191,6 +212,10 @@ public class AlldifferentDetector implements ParserTreeConstants {
               + "\n%%%mzn-stat: alldifferentImpliedCliques="
               + impliedCliques
               + "\n%%%mzn-stat-end");
+    }
+    if (differenceValues > 0 && (support.options.debug() || support.options.searchStatistics())) {
+      FzConsole.println(
+          "%%%mzn-stat: alldifferentDifferenceValues=" + differenceValues + "\n%%%mzn-stat-end");
     }
     if (support.options.debug()) {
       FzConsole.println(
@@ -229,7 +254,17 @@ public class AlldifferentDetector implements ParserTreeConstants {
           edge(x[0], x[1], c / a[0], node);
         }
       }
-      case "int_lin_eq" -> linearEquality(node);
+      case "int_lin_eq" -> {
+        linearEquality(node);
+        difference(node);
+      }
+      case "int_abs" -> {
+        ASTScalarFlatExpr p1 = (ASTScalarFlatExpr) node.jjtGetChild(0);
+        ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
+        if (p1.getType() != 0 && p2.getType() != 0) {
+          absolutes.add(new IntVar[] {support.getVariable(p1), support.getVariable(p2)});
+        }
+      }
       case "array_var_int_element", "array_var_bool_element" -> element(node, 1);
       case "jacop_array_var_int_element_nonshifted", "jacop_array_var_bool_element_nonshifted" ->
           element(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
@@ -253,6 +288,78 @@ public class AlldifferentDetector implements ParserTreeConstants {
     if (x != null && x.length == 2 && c != 0) {
       edge(x[0], x[1], 0, null);
     }
+  }
+
+  // a * x - a * y + b * t = c: when x - y != d, t != (c - a * d) / b
+  private void difference(ASTConstElem node) {
+    if (support.options.proof() != null) {
+      return;
+    }
+    int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+    if (a == null || a.length != 3) {
+      return;
+    }
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    if (x == null || x.length != 3) {
+      return;
+    }
+    long c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    for (int r = 0; r < 3; r++) {
+      int p = (r + 1) % 3;
+      int q = (r + 2) % 3;
+      if (a[p] != 0 && a[p] == -a[q] && a[r] != 0 && !x[r].singleton()) {
+        differences.add(new Difference(x[p], x[q], a[p], x[r], a[r], c));
+      }
+    }
+  }
+
+  // removes from each difference t the values that only x - y = d would give, for x - y != d
+  private void pruneDifferences() {
+    Set<IntVar> pruned = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Difference f : differences) {
+      Integer i = id.get(f.x());
+      Integer j = id.get(f.y());
+      if (i == null || j == null) {
+        continue;
+      }
+      Set<Integer> ds = adjacency.get(i).get(j);
+      if (ds == null) {
+        continue;
+      }
+      for (int d : ds) {
+        long rest = f.c() - f.a() * d;
+        if (rest % f.b() != 0) {
+          continue;
+        }
+        long v = rest / f.b();
+        IntVar t = f.t();
+        if (!t.singleton() && v >= t.min() && v <= t.max() && t.domain.contains((int) v)) {
+          t.domain.inComplement(support.store.level, t, (int) v);
+          pruned.add(t);
+          differenceValues++;
+        }
+      }
+    }
+    differences.clear();
+    if (pruned.isEmpty()) {
+      absolutes.clear();
+      return;
+    }
+    // abs(t) = d starts at the smallest absolute value left in t, which bounds consistency of
+    // AbsXeqY does not give when t has values on both sides of 0
+    for (IntVar[] abs : absolutes) {
+      IntVar t = abs[0];
+      IntVar d = abs[1];
+      if (!pruned.contains(t) || t.domain.contains(0) || t.min() > 0 || t.max() < 0) {
+        continue;
+      }
+      int smallest = Math.min(t.domain.nextValue(0), -t.domain.previousValue(0));
+      if (d.min() < smallest && smallest <= d.max()) {
+        d.domain.inMin(support.store.level, d, smallest);
+        differenceValues++;
+      }
+    }
+    absolutes.clear();
   }
 
   private void element(ASTConstElem node, int base) {
