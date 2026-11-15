@@ -6079,6 +6079,35 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
+346. Free search (-f) of a resource-constrained project scheduling model
+   (a makespan over CumulativeBasic resources with fixed durations,
+   demands and capacities, and precedence rows) runs a project schedule
+   heuristic, org.jacop.search.ls.ProjectSchedule: the serial schedule
+   generation scheme (R. Kolisch, Serial and parallel resource-constrained
+   project scheduling methods revisited, EJOR 90, 1996), forward-backward
+   improvement (K. Y. Li and R. J. Willis, An iterative scheduling
+   technique for resource-constrained project scheduling, EJOR 56, 1992;
+   V. Valls, F. Ballestin and S. Quintanilla, Justification and RCPSP: a
+   technique that pays, EJOR 165, 2005) and the activity list genetic
+   algorithm of S. Hartmann (A competitive genetic algorithm for
+   resource-constrained project scheduling, NRL 45, 1998), with shift
+   moves and restarts. A short burst runs first; its best schedule is
+   checked in the store, printed and given to lazy clause generation as
+   its first solution (LcgSolver.setIncumbent), so LNS starts from it.
+   Then the algorithm continues in slices as a new LNS kind (PROPOSALS),
+   also in free search without learning after the lcg-slow hand-over.
+   Models whose resources are all machines are left to local search.
+   On the 20 PSPLIB j60/j120 instances of the MiniZinc benchmarks at
+   600 s, -f is at or below CP-SAT (240 s) on 14, before 7; the mean gap
+   to CP-SAT goes from +0.97 % to -0.80 % on j120 and from +1.49 % to
+   +0.71 % on j60 (j120_31 216 -> 204, CP-SAT 208). On the 35 instances
+   where it fires, 16 are better and 8 worse (proof times of 18 proved
+   both ways: geometric mean 1.013). Of the 240 wide instances it fires
+   on one. --free-config sgs=0 turns it off; sgs-share (0.03, share of
+   the time limit), sgs-max (60000 ms), sgs-patience (20000 schedules)
+   bound the first burst and sgs-lns (20 schedules per task, at least
+   1000) the slices.
+
 Version 4.11
 =============
 
