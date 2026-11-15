@@ -31,6 +31,8 @@
 package org.jacop.constraints;
 
 import java.util.concurrent.atomic.AtomicInteger;
+import org.jacop.api.Copyable;
+import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -43,7 +45,7 @@ import org.jacop.lcg.LinearForm;
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
  */
-public class XneqC extends AbstractXcompC implements LinearExplainable {
+public class XneqC extends AbstractXcompC implements Copyable<XneqC>, LinearExplainable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -91,6 +93,11 @@ public class XneqC extends AbstractXcompC implements LinearExplainable {
   @Override
   public String toString() {
     return id() + " : XneqC(" + x + ", " + c + " )";
+  }
+
+  @Override
+  public XneqC copy(VarMap map) {
+    return new XneqC(map.get(x), c);
   }
 
   @Override
