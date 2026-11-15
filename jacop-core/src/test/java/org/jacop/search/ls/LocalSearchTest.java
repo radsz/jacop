@@ -47,6 +47,7 @@ import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
 import org.jacop.constraints.XplusCeqZ;
@@ -686,6 +687,51 @@ class LocalSearchTest {
     for (int k = 1; k < costs.size(); k++) {
       assertTrue(costs.get(k) < costs.get(k - 1), costs.toString());
     }
+  }
+
+  /**
+   * The scheduling search alone (as fz runs it without ls on a disjunctive scheduling model) finds
+   * the optimum of ft06, and is not applicable to a model without unary resources.
+   */
+  @Test
+  void runsTheSchedulingSearchAlone() {
+    Store store = new Store();
+    IntVar[][] s = jobShop(store);
+    IntVar makespan = new IntVar(store, "makespan", 0, 300);
+    for (int j = 0; j < s.length; j++) {
+      store.impose(
+          new LinearInt(
+              new IntVar[] {s[j][5], makespan}, new int[] {1, -1}, "<=", -FT06_DURATION[j][5]));
+    }
+    assertTrue(store.consistency());
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .minimize(makespan)
+            .scheduleOnly(true)
+            .timeLimit(Duration.ofSeconds(5))
+            .patience(Duration.ofMillis(300))
+            .seed(3)
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertEquals(55, ls.getCostValue());
+    assertEquals(55, checkedMakespan(starts(ls, s)));
+
+    Store other = new Store();
+    IntVar[] x = new IntVar[6];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(other, "x" + i, 0, 9);
+    }
+    IntVar sum = new IntVar(other, "sum", 0, 60);
+    other.impose(new SumInt(x, "==", sum));
+    assertTrue(other.consistency());
+    LocalSearch none =
+        LocalSearch.builder(other)
+            .minimize(sum)
+            .scheduleOnly(true)
+            .timeLimit(Duration.ofSeconds(1))
+            .build();
+    assertEquals(LocalSearch.Status.NOT_APPLICABLE, none.solve());
+    assertEquals(0, none.getSteps());
   }
 
   /**
