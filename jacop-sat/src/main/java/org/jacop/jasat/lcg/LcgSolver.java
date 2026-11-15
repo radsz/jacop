@@ -1977,6 +1977,62 @@ public final class LcgSolver implements ExternalPropagator {
     for (StringBuilder l : literals) {
       clause.append(l);
     }
+    if (!proofRowBounds(f, variables, w, dom, clause)) {
+      proofRowSplit(f, variables, w, dom, clause, PROOF_SPLIT_LEAVES);
+    }
+  }
+
+  // the most cases a row's bounds are split into, for a domain consistent row (LinearIntDom)
+  private static final int PROOF_SPLIT_LEAVES = 64;
+
+  /**
+   * Splits a row that its bounds do not refute on the values of its smallest domain, and writes the
+   * bounds of each case with the negated value literal added to the clause: a domain consistent row
+   * is refuted by values, not by bounds (3 x + 3 y - 2 z = 1 with z in {0, 3} has no solution,
+   * since 1 + 2 z is not a multiple of 3, while its bounds hold). Each case's clause, and then the
+   * clause, follows by unit propagation once every case is refuted.
+   *
+   * @return whether every case was refuted
+   */
+  private boolean proofRowSplit(
+      LinearForm f, int[] variables, long[] w, IntDomain[] dom, CharSequence clause, int leaves) {
+    int best = -1;
+    for (int k = 0; k < dom.length; k++) {
+      if (w[k] != 0
+          && dom[k].getSize() > 1
+          && (best < 0 || dom[k].getSize() < dom[best].getSize())) {
+        best = k;
+      }
+    }
+    if (best < 0 || dom[best].getSize() > leaves) {
+      return false;
+    }
+    int cases = dom[best].getSize();
+    for (ValueEnumeration e = dom[best].valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      IntDomain[] fixed = dom.clone();
+      fixed[best] = new IntervalDomain(v, v);
+      StringBuilder caseClause = new StringBuilder(clause);
+      if (proofDomains[variables[best]].contains(v) && !proofDomains[variables[best]].singleton()) {
+        caseClause.append(" 1 ~").append(OpbEncoder.eq(variables[best], v));
+      }
+      if (!proofRowBounds(f, variables, w, fixed, caseClause)
+          && !proofRowSplit(f, variables, w, fixed, caseClause, leaves / cases)) {
+        return false;
+      }
+      proof.lemma("rup" + caseClause + " >= 1 ;\n");
+    }
+    return true;
+  }
+
+  /**
+   * Writes the bounds of a row over dom as lemmas with clause, until a fixpoint.
+   *
+   * @return whether the bounds refute the row
+   */
+  private boolean proofRowBounds(
+      LinearForm f, int[] variables, long[] w, IntDomain[] dom, CharSequence clause) {
+    int n = variables.length;
     int changed = 1;
     for (int round = 0; changed > 0 && round < 4 * n; round++) {
       changed = 0;
@@ -2024,11 +2080,11 @@ public final class LcgSolver implements ExternalPropagator {
         long newMax = Math.min(hi, d.max());
         // 2 x = 5 leaves x in [3, 2]: the bounds written above refute the row
         if (newMin > newMax) {
-          return;
+          return true;
         }
         dom[k] = d.intersect((int) newMin, (int) newMax);
         if (dom[k].isEmpty()) {
-          return;
+          return true;
         }
         if (dom[k].min() > Math.max(lo, d.min())) {
           proofBound(variables[k], clause, dom[k].min(), true);
@@ -2038,6 +2094,7 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
+    return false;
   }
 
   /**

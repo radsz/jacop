@@ -72,6 +72,7 @@ import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
@@ -808,6 +809,28 @@ class VeriPbProofTest {
     LcgSolver lcg = new LcgSolver(store);
     lcg.setProof(model, proof);
     assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void rowRefutedByValuesIsDerived() {
+    // x0 = 0 and x1 = 1 leave 3 x3 + 3 x4 - 2 x2 = 1, where 1 + 2 x2 is 1 or 7 for x2 in {0, 3}:
+    // no multiple of 3, while every bound has a support (LinearIntDom, fuzz seed 4008078)
+    Store store = new Store();
+    IntVar x0 = var(store, "x0", 0, 1, 3);
+    IntVar x1 = var(store, "x1", 1, 2);
+    IntVar x2 = var(store, "x2", -1, 0, 3);
+    IntVar x3 = var(store, "x3", 1, 3, 4);
+    IntVar x4 = var(store, "x4", -1, 0, 1, 2, 3);
+    IntVar x5 = var(store, "x5", 1, 3);
+    store.impose(
+        new LinearIntDom(new IntVar[] {x3, x0, x4, x1, x2}, new int[] {3, 1, 3, -2, -2}, "==", -1));
+    store.impose(new Increasing(new IntVar[] {x5, x1}));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x1)).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
