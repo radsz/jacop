@@ -2889,8 +2889,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
       // jumps of branch and bound a doubling step below the best solution (connect 2021: 465
-      // solutions that each improved by 1 to 80, 19 s, with jumps 9 s; carpet-cutting 2.7 to 1.8 s)
-      lcg.setJumps(!"0".equals(options.freeConfig("lcg-jumps", "1")));
+      // solutions that each improved by 1 to 80, 19 s, with jumps 9 s; carpet-cutting 2.7 to 1.8
+      // s);
+      // off by default: on the wide set at 600 s the 35 instances where jumps fire take 1.6 % more
+      // time in total (city-position city-7-04 265 to 401 s, peacable_queens 8 loses its proof)
+      lcg.setJumps("1".equals(options.freeConfig("lcg-jumps", "0")));
       // once a solution is known, more literal runs per turn (CHANGELOG 320):
       // multi-agent-graph-coverage rnd_n10 proofs need half the conflicts with literals alone
       lcg.setLiteralRuns(

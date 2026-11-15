@@ -6301,6 +6301,23 @@ Version 5.0 (unreleased)
    work-task-variation) and, in one of three censuses, mapping.
    FreeSearch.Builder.virtualClock turns it on for one search.
 
+351. LCG branch and bound under -f can jump below the best solution
+   (--free-config lcg-jumps=1, off by default; LcgSolver.setJumps):
+   after a streak of quick improving solutions (jacop.lcg.jumpAfter, 4,
+   each within jacop.lcg.jumpFast, 20, conflicts of the one before) the
+   run stops and probes obj <= best - step under a limit of
+   jacop.lcg.jumpConflicts (100) conflicts, doubling the step after
+   every solution and halving it after every refutation, which proves
+   obj >= target + 1 as a clause. The core-guided phase steps the same
+   way. Models with hundreds of tiny improvements gain: MiniZinc
+   Challenge 2021 connect 0086_02 25.5 -> 13.5 s and carpet-cutting
+   mzn_rnd_test.01/.02 about 2x faster (600 s, -f). On the wide set at
+   600 s with -f it is neutral (13 instances better, 12 worse) and the
+   35 where jumps fire take 1.6 % more time in total (city-position
+   city-7-04 265 -> 401 s, peacable_queens 8 loses its proof), hence
+   off by default. Statistics lcgJumpRuns, lcgJumpSolutions,
+   lcgJumpsRaised and lcgJumpLimits.
+
 Version 4.11
 =============
 
