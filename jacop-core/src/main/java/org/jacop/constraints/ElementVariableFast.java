@@ -165,6 +165,9 @@ public class ElementVariableFast extends AbstractElement
 
   private int valueSupportBase;
 
+  /** A selectable position whose variable is not fixed to the fixed value, or -1; a residue. */
+  private int openPosition = -1;
+
   /**
    * It constructs an element constraint.
    *
@@ -327,7 +330,22 @@ public class ElementVariableFast extends AbstractElement
       }
     }
     if (value.singleton()) {
-      // every supported position has the value: its bounds hold, and it has no other values
+      // every supported position has the value, so its bounds hold and it has no other values.
+      // When no selectable position is left open, the full scan finds the constraint entailed and
+      // removes it, which spares the later wakes: a residue keeps an open position
+      int v = value.value();
+      if (!open(openPosition, v)) {
+        // the search goes on after the last open position, round to the start: the positions
+        // before it are mostly the ones fixed since
+        int from = Math.max(openPosition, 0) + 1 + indexOffset;
+        openPosition = nextOpen(from, index.max(), v);
+        if (openPosition < 0) {
+          openPosition = nextOpen(index.min(), from - 1, v);
+        }
+        if (openPosition < 0) {
+          return false;
+        }
+      }
       return true;
     }
     int min = value.min();
@@ -364,6 +382,30 @@ public class ElementVariableFast extends AbstractElement
       }
     }
     return true;
+  }
+
+  /** The first open position whose index value is in lo..hi, or -1. */
+  private int nextOpen(int lo, int hi, int v) {
+    IntDomain d = index.domain;
+    for (int i = d.contains(lo) ? lo : d.nextValue(lo); i <= hi && i >= lo; ) {
+      int q = i - 1 - indexOffset;
+      if (open(q, v)) {
+        return q;
+      }
+      int next = d.nextValue(i);
+      if (next <= i) {
+        break;
+      }
+      i = next;
+    }
+    return -1;
+  }
+
+  /** Whether position q is selectable and its variable is not fixed to v. */
+  private boolean open(int q, int v) {
+    return q >= 0
+        && index.domain.contains(q + 1 + indexOffset)
+        && !(list[q].singleton() && list[q].value() == v);
   }
 
   /** Whether selectable position q has a common value with the value and reaches bound v. */
