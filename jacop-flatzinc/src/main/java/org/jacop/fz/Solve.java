@@ -64,6 +64,7 @@ import org.jacop.api.VarMap;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.Routes;
@@ -84,9 +85,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.floats.constraints.FloatNewton;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.FloatCid;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
@@ -115,6 +118,7 @@ import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
 import org.jacop.search.ComparatorVariable;
+import org.jacop.search.ConsistencyListener;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
@@ -655,6 +659,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
     options = opt;
+    initProbe();
     dictionary = table;
     output = table;
     solveSideComponents(node);
@@ -2552,9 +2557,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return null;
   }
 
-  // -Djacop.lcg.probe=share: root probing of the 0/1 variables before LCG search, for at most
-  // this share of the time left (0, the default, is off)
-  private final double lcgProbe = Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
+  // -Djacop.lcg.probe=share: root probing of the 0/1 variables and small domains before LCG
+  // search, for at most this share of the time left; 0 is off, the default of model search
+  // the share of free search (-f) when jacop.lcg.probe is not given, with a cap of
+  // FREE_PROBE_CAP ms: java-routing of the MiniZinc Challenge proves 8 of 10 instances in 240 s
+  // instead of 5, as probing finds the parity of the positions of the stops and the stops that
+  // cannot follow each other, which propagation does not; the 62 instances of wide-quick take 9 %
+  // less time in all (2,609 s instead of 2,866 s), most of it one instance. Without the cap the 2 %
+  // took up to 12 s of a 600 s run on easy instances
+  private static final double FREE_PROBE = 0.02;
+
+  private static final long FREE_PROBE_CAP = 1_000L;
+
+  private double lcgProbe;
+
+  private long lcgProbeCap;
+
+  // sets the share and cap of root probing from the options and the properties;
+  // -Djacop.lcg.probe.cap=ms is the most time root probing takes, whatever its share (0 is no cap,
+  // FREE_PROBE_CAP for the default probing of free search)
+  private void initProbe() {
+    String share = System.getProperty("jacop.lcg.probe");
+    Long cap = Long.getLong("jacop.lcg.probe.cap");
+    if (share != null) {
+      lcgProbe = Double.parseDouble(share);
+      lcgProbeCap = cap == null ? 0L : cap;
+    } else if (options.freeSearch()) {
+      lcgProbe = FREE_PROBE;
+      lcgProbeCap = cap == null ? FREE_PROBE_CAP : cap;
+    }
+  }
+
+  // the time root probing may take, in nanoseconds: its share of the time left, at most the cap
+  private long probeBudget(long leftMillis) {
+    long nanos = (long) (lcgProbe * leftMillis * 1_000_000L);
+    return lcgProbeCap > 0 ? Math.min(nanos, lcgProbeCap * 1_000_000L) : nanos;
+  }
 
   // -Djacop.lcg.probe.delay=share: probe between runs of the search from the root, once this share
   // of the time limit has passed, instead of before the search
@@ -2669,7 +2707,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
     long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
-    probeRefuted = !early.probeRoot((long) (lcgProbe * left * 1_000_000L));
+    probeRefuted = !early.probeRoot(probeBudget(left));
     List<LinearForm> rows =
         probeRefuted
             ? List.of()
@@ -2733,6 +2771,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     // the pump dives in the store, before the solver takes it over
     Hint pumped = options.freeSearch() && ls == null ? pumpHint() : null;
+    // the dive that fills the slots of a fixed multiset, largest value first
+    Hint dived = options.freeSearch() && ls == null ? slotDive(costVar) : null;
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -2761,6 +2801,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (pumped != null) {
       lcg.setPhase(pumped.vars, pumped.values);
+    }
+    if (dived != null) {
+      lcg.setPhase(dived.vars, dived.values);
     }
     DecompositionBound.Primal columns =
         decomposition == null || !options.freeSearch() ? null : decomposition.primal();
@@ -2928,12 +2971,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search: the runs of activity branching between the annotation's runs start from it
       lcg.setActivityGuide(new LpGuidedSelect(linearRelaxation, null, LP_GUIDE_ROOT));
     }
-    if (defaultSearch && constraintHint != null) {
+    // the hints of the constraints, or else the slots of the dive
+    Hint firstHint = constraintHint != null ? constraintHint : dived;
+    if (defaultSearch && firstHint != null) {
       // no search annotation: the runs of the default search start with the values of the hints
-      IndomainLastSolution hinted =
-          new IndomainLastSolution(constraintHint.vars, new IndomainMin<>());
-      hinted.hint(constraintHint.vars, constraintHint.values);
-      SelectChoicePoint<IntVar> first = new SimpleSelect<>(constraintHint.vars, null, hinted);
+      IndomainLastSolution hinted = new IndomainLastSolution(firstHint.vars, new IndomainMin<>());
+      hinted.hint(firstHint.vars, firstHint.values);
+      SelectChoicePoint<IntVar> first = new SimpleSelect<>(firstHint.vars, null, hinted);
       annotated = annotated == null ? first : new SequenceSelect(List.of(first, annotated));
     }
     lcg.setAnnotation(annotated, free);
@@ -3093,7 +3137,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (!"none".equals(lcgProbeLp)) {
         lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
       }
-      boolean feasible = lcg.probeRoot((long) (lcgProbe * left * 1_000_000L));
+      boolean feasible = lcg.probeRoot(probeBudget(left));
       printProbeStatistics(lcg);
       if (feasible && lcgProbeOnly && !"none".equals(lcgProbeLp)) {
         probedRootBound();
@@ -3537,6 +3581,116 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return select;
   }
 
+  // the slots of a cardinality with fixed counts that slotDive fills, for the statistics
+  private int countSlotCount;
+
+  // the time of slotDive in milliseconds, for the statistics
+  private long countSlotDiveTime;
+
+  /**
+   * Dives through the slots of a cardinality with fixed counts before free search with learning, as
+   * first fit decreasing does: input order, largest value first, without learning, until the first
+   * solution or a share of the time. On the slot model of XCSP 2024 BinPacking, where x[i][j] is
+   * the weight of the j-th item in bin i and every weight occurs a fixed number of times, LCG free
+   * search made about 30 conflicts a second (each explanation of the cardinality about 85 literals)
+   * and found no solution in 600 s on n3c2w1a and n3c3w4a; this dive finds 91, the optimum of
+   * n3c2w1a, at once. Under LCG the reifications and the objective live in SAT clauses, which the
+   * store does not see, so the dive keeps the values of the slots only: they become the phase of
+   * LCG and the start of the default branching's runs, and the first run completes the solution.
+   *
+   * @return the hint of the dive's solution, or null when there is no such cardinality or none was
+   *     found
+   */
+  private Hint slotDive(Var costVar) {
+    if (!(costVar instanceof IntVar) || "off".equals(options.freeConfig("slot-dive", "on"))) {
+      return null;
+    }
+    DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
+    searchVars.defaultVars();
+    // the defined variables, such as the truth of x[i][0] != 0 of a bin in use, follow the slots
+    Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+    defined.addAll(dictionary.definedVariables);
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar[] group : List.of(searchVars.getIntVars(), searchVars.getBoolVars())) {
+      for (IntVar x : group) {
+        if (x != costVar && !defined.contains(x)) {
+          vars.add(x);
+        }
+      }
+    }
+    IntVar[] slots = fixedCountSlots(vars);
+    countSlotCount = slots.length;
+    if (slots.length == 0) {
+      return null;
+    }
+    long budget =
+        options.getTimeOut() > 0
+            ? (long)
+                (Double.parseDouble(options.freeConfig("slot-dive-share", "0.05"))
+                    * options.getRemainingTimeOut())
+            : 10_000;
+    long start = System.currentTimeMillis();
+    int[][] found = new int[1][];
+    DepthFirstSearch<IntVar> dive = new DepthFirstSearch<>();
+    dive.setPrintInfo(false);
+    dive.setAssignSolution(false);
+    dive.setTimeOutMilliseconds(Math.max(1, budget));
+    dive.setSolutionListener(
+        new SimpleSolutionListener<>() {
+          @Override
+          public boolean executeAfterSolution(
+              Search<IntVar> search, SelectChoicePoint<IntVar> select) {
+            int[] values = new int[slots.length];
+            for (int i = 0; i < slots.length; i++) {
+              values[i] = slots[i].value();
+            }
+            found[0] = values;
+            return true;
+          }
+        });
+    dive.labeling(store, new SimpleSelect<>(slots, null, new IndomainMax<>()));
+    countSlotDiveTime = System.currentTimeMillis() - start;
+    if (options.debug()) {
+      IO.println(
+          "% slot dive: "
+              + slots.length
+              + " slots, "
+              + (found[0] == null ? "no solution" : "a solution")
+              + " in "
+              + countSlotDiveTime
+              + " ms");
+    }
+    return found[0] == null ? null : new Hint(slots, found[0]);
+  }
+
+  /**
+   * Returns the list of a cardinality constraint with fixed counts, in the order of the model, when
+   * it holds every one of the given variables that is not fixed; otherwise none.
+   */
+  private IntVar[] fixedCountSlots(List<IntVar> vars) {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if (c instanceof CountValuesBounds count && seen.add(c) && count.fixedCounts()) {
+          IntVar[] list = count.list();
+          Set<IntVar> in = Collections.newSetFromMap(new IdentityHashMap<>());
+          in.addAll(Arrays.asList(list));
+          boolean covers = true;
+          for (IntVar x : vars) {
+            if (!x.singleton() && !in.contains(x)) {
+              covers = false;
+              break;
+            }
+          }
+          if (covers) {
+            return list;
+          }
+        }
+      }
+    }
+    return new IntVar[0];
+  }
+
   /**
    * Returns the index variables, not yet fixed, of the element constraints over variable lists, in
    * the order the store meets them, when every one of the given variables that is not fixed is in
@@ -3771,6 +3925,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + setTimesStarts
             + "\n%%%mzn-stat: lcgRectangles="
             + rectangleCount
+            + "\n%%%mzn-stat: slotDiveSlots="
+            + countSlotCount
+            + "\n%%%mzn-stat: slotDiveTime="
+            + countSlotDiveTime / 1e3
             + "\n%%%mzn-stat: lcgElementPositions="
             + elementPositionCount
             + "\n%%%mzn-stat: lcgInputOrder="
@@ -4470,7 +4628,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       builder.mainBranchingFirst(true);
     }
-    if (options.getTimeOut() > 0) {
+    if (options.getTimeOut() > 0 && FreeSearch.VIRTUAL_CLOCK) {
+      // the virtual clock counts work only: the time LCG left when it gave way, or the whole
+      // time-out, counted in propagations, so that the run repeats whatever the load
+      long left =
+          slowLcg != null
+              ? Math.max(1, (slowLcg.sat().deadline() - slowLcg.sat().now()) / 1_000_000L)
+              : options.getTimeOut();
+      builder.timeLimit(Duration.ofMillis(left));
+    } else if (options.getTimeOut() > 0) {
       // the time left now, not when the search starts: building the neighbourhoods and the
       // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
       builder.deadline(System.currentTimeMillis() + options.getRemainingTimeOut());
@@ -5446,6 +5612,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         variableSelection = (SelectChoicePoint<T>) floatSelect;
       }
       floatSearch.setSelectChoicePoint((SelectChoicePoint<T>) floatSelect);
+      attachFloatCid(floatSearch, floatSearchVariables);
       floatSearch.setPrintInfo(false);
       if (lastSearch != null) {
         lastSearch.addChildSearch(floatSearch);
@@ -6052,8 +6219,56 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       label.setInitializeListener(new PrecisionSetting(si.precision));
     }
+    attachFloatCid(label, si.vars());
 
     return label;
+  }
+
+  /**
+   * Adds the 3BCID contractor ({@link FloatCid}) and the interval Newton contractor ({@link
+   * FloatNewton}) over the float variables of a search. System property org.jacop.floats.newton
+   * (true or false) chooses Newton, by default on for satisfaction problems only. System property
+   * org.jacop.floats.cid is "s3b[,variablesPerNode]"; without it satisfaction problems use "10"
+   * (all variables at every node) and optimisation problems none, and "off" turns it off.
+   */
+  private void attachFloatCid(DepthFirstSearch<T> label, Var[] vars) {
+    FloatVar[] floats =
+        Arrays.stream(vars).filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
+    if (floats.length == 0) {
+      return;
+    }
+    String spec = System.getProperty("org.jacop.floats.cid");
+    if (spec == null || spec.isBlank()) {
+      spec = solveKind == 0 ? "10" : "off";
+    }
+    if (!"off".equals(spec.trim())) {
+      String[] p = spec.split(",");
+      FloatCid cid =
+          new FloatCid(
+              store,
+              floats,
+              Integer.parseInt(p[0].trim()),
+              p.length > 1 ? Integer.parseInt(p[1].trim()) : floats.length);
+      chainListener(label, cid);
+    }
+    String newtonSpec = System.getProperty("org.jacop.floats.newton");
+    if (newtonSpec == null || newtonSpec.isBlank()) {
+      newtonSpec = solveKind == 0 ? "true" : "false";
+    }
+    if (Boolean.parseBoolean(newtonSpec.trim())) {
+      FloatNewton newton = new FloatNewton(store, floats);
+      if (newton.isSquare()) {
+        chainListener(label, newton);
+      }
+    }
+  }
+
+  /** Makes the listener the first consistency listener of the search, ahead of the existing one. */
+  private void chainListener(DepthFirstSearch<T> label, ConsistencyListener listener) {
+    if (label.getConsistencyListener() != null) {
+      listener.setChildrenListeners(label.getConsistencyListener());
+    }
+    label.setConsistencyListener(listener);
   }
 
   @SuppressWarnings("unchecked")

@@ -265,6 +265,11 @@ public class Options {
                 branching place the rectangles of diffn constraints one at a time, bottom-left,
                 before the other decisions until the first solution (first, default), in all
                 of them (always), or never),
+                slot-dive=on|off (with --lcg, optimisation: before the search a dive without
+                learning fills the variables of a cardinality with fixed counts that covers the
+                search variables in model order, largest value first, and its solution starts
+                the default branching; default on), slot-dive-share=<share> (its share of the
+                time limit, default 0.05),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
                 lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an

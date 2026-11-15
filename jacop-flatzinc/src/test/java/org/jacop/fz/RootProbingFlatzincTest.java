@@ -84,6 +84,28 @@ class RootProbingFlatzincTest {
     assertFalse(out.contains("UNSATISFIABLE"), out);
   }
 
+  private static final String SMALL_MINIMISATION =
+      """
+      array [1..6] of var 1..6: x :: output_array([1..6]);
+      var 0..100: z :: output_var;
+      constraint jacop_alldiff(x);
+      constraint int_lin_eq([1,2,3,4,5,6,-1],[x[1],x[2],x[3],x[4],x[5],x[6],z],0);
+      solve minimize z;
+      """;
+
+  /**
+   * Free search probes the root by default (a capped share of the time left); model search does
+   * not.
+   */
+  @Test
+  void freeSearchProbesByDefault() throws IOException {
+    String free = solve(SMALL_MINIMISATION, "-f", "--lcg", "-s", "-t", "5000");
+    assertTrue(free.contains("lcgProbeTime="), free);
+    assertTrue(free.contains("=========="), free);
+    String model = solve(SMALL_MINIMISATION, "--lcg", "-s", "-t", "5000");
+    assertFalse(model.contains("lcgProbeTime="), model);
+  }
+
   private String solveWith(String model, String property, String value) throws IOException {
     System.setProperty("jacop.lcg.probe", "0.5");
     System.setProperty(property, value);

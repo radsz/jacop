@@ -6189,8 +6189,70 @@ Version 5.0 (unreleased)
    search, 600 s) time is 0.976 of before over the 18 solved by both;
    ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
    6.6 % and 3 % more nodes.
+346. New float constraint PowPeqR(x, c, z), x^c = z for a constant c > 0:
+   hull consistent for any sign of x with an integer c (an even c keeps the
+   hole around 0, an odd c the sign), and for x >= 0 with a real c. The
+   FlatZinc front end posts it for float_pow with a constant exponent (a
+   negative one as 1 / x^-c), which MiniZinc emits for x^2.0 and pow; 425 of
+   the 747 instances of the osolpro float set use it. Benhamou and Older,
+   "Applying interval arithmetic to real, integer and boolean constraints",
+   J. Logic Programming 32(1), 1997.
 
-347. A solve of the linear relaxation in search that stops at its pivot or
+347. New float constraint HyperbolicPeqR(x, f, z) for f = sinh, cosh and
+   tanh, hull consistent with outward rounding; the FlatZinc front end posts
+   float_sinh, float_cosh, float_tanh and their inverses (the inverse as the
+   same constraint with the arguments swapped) instead of the MiniZinc
+   library decompositions through exp and ln, which use x twice and are not
+   hull consistent. Benhamou, Goualard, Granvilliers and Puget, "Revising
+   hull and box consistency", ICLP 1999.
+
+348. New float contractor FloatCid (org.jacop.floats.search), 3B shaving and
+   constructive interval disjunction (3BCID) run after propagation at every
+   search node as a ConsistencyListener. The FlatZinc front end runs it on
+   the float search variables of satisfaction problems (10 shaving slices,
+   every variable at every node); -Dorg.jacop.floats.cid=s3b[,variablesPerNode]
+   sets it and -Dorg.jacop.floats.cid=off turns it off. At 600 s it solves
+   52 of the 59 satisfaction instances of the osolpro float set instead of
+   45 (geometric mean of the times 0.92). It is off for optimisation, where
+   it is slower. Lhomme, "Consistency techniques for numeric CSPs", IJCAI
+   1993; Trombettoni and Chabert, "Constructive interval disjunction", CP
+   2007.
+
+349. Float propagation can skip narrowings smaller than a given part of the
+   domain width (a weak fixpoint, against slow convergence):
+   -Dorg.jacop.floats.minReduction=r or FloatDomain.setMinReduction(r),
+   default 0 (off). Lhomme, IJCAI 1993.
+
+350. New float contractor FloatNewton (org.jacop.floats.constraints), the
+   interval Newton method on the square system formed by the float
+   equations of a model (linear equalities, sums, products, powers, exp,
+   ln, sin, cos): a Hansen-Sengupta step with the inverse of the midpoint
+   Jacobian as preconditioner and Gauss-Seidel, evaluated in interval
+   arithmetic with outward rounding, after propagation at every search node.
+   The FlatZinc front end runs it, ahead of FloatCid, on the float search
+   variables of satisfaction problems; -Dorg.jacop.floats.newton=false turns
+   it off and =true also runs it for optimisation. At 240 s it solves 52 of
+   the 59 satisfaction instances of the osolpro float set instead of 50 with
+   FloatCid alone (geometric mean of the times 0.90).
+   Hansen and Sengupta, "Bounding solutions of systems of equations using
+   interval analysis", BIT 21(2), 1981.
+
+347. Free search (-f) probes the root before lazy clause generation search
+   by default: failed literals on the 0/1 variables and on the values of
+   small domains, for 2 % of the time left and at most 1 s (new
+   -Djacop.lcg.probe.cap=ms; -Djacop.lcg.probe=0 turns probing off, and
+   an explicit -Djacop.lcg.probe=share keeps its uncapped budget as
+   before). On java-routing of the MiniZinc Challenge (2013, 2021) it
+   finds the parity of the positions of the stops and the stops that
+   cannot follow each other, which propagation does not, and proves 8 of
+   10 instances in 240 s instead of 5 (2.6 times faster over three
+   seeds). The 62 wide-quick instances (-f, 240 s) take 2,609 s instead
+   of 2,866 s in all and solve 52 instead of 51 (work-task-variation
+   seed-8); easy instances where probing finds nothing are up to a few
+   seconds slower, as the literals it makes move the search. Model
+   search does not probe by default.
+
+348. A solve of the linear relaxation in search that stops at its pivot or
    work limit now bounds the objective by its dual multipliers. They are
    not optimal but still valid: the exact certificate (Neumaier and
    Shcherbina, Safe bounds in linear and mixed-integer linear programming,
@@ -6205,7 +6267,7 @@ Version 5.0 (unreleased)
    statistics lpAnytime, lpAnytimePrunings and lpAnytimeFailures give the
    stopped solves and what they pruned.
 
-348. New redundant constraints at FlatZinc posting (PairCoverDetector): when
+349. New redundant constraints at FlatZinc posting (PairCoverDetector): when
    pairs of items must share bins of bounded capacity (0/1 x[g][i], rows
    sum(i) x[g][i] <= c, demands sum(g) b[g] >= k with b[g] -> x[g][i] /\
    x[g][j]), each item i is in at least ceil(D(i) / (c - 1)) bins, D(i)
@@ -6216,7 +6278,7 @@ Version 5.0 (unreleased)
    It fires on none of the wide set; -Dorg.jacop.fz.pairCover=false turns
    it off.
 
-349. SumWeight reads the whole queue of changed variables and reuses its set
+350. SumWeight reads the whole queue of changed variables and reuses its set
    between calls; it stopped at the first variable already behind its
    pointer, which never left a value unpruned (100,000 WakeUpFixpointTest
    trials with a new SumWeight case). ElementInteger with an index smaller
@@ -6228,7 +6290,7 @@ Version 5.0 (unreleased)
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
 
-350. Lazy clause generation explains an entailed reified <= or >= linear
+351. Lazy clause generation explains an entailed reified <= or >= linear
    constraint (int_lin_le_reif, int_lin_le_imp and the like) from one
    bound lookup per term: before, it read both bounds of every term and
    then looked up the entry of the bound it cites again. The reasons and
@@ -6237,6 +6299,59 @@ Version 5.0 (unreleased)
    over the 53 wide instances with int_lin_le_reif or int_lin_le_imp, the
    instances solved with the same search in at least 10 s take 0.94x
    (default) and 0.93x (-f) of the time at 600 s.
+
+352. -Djacop.virtualClock=true also covers free search without learning
+   after LCG gives way (-f): its time limit, the time LCG left, counts
+   jacop.virtualClock.propagationsPerMs (1000) propagations per
+   millisecond, and the probes of the value impact heuristic take their
+   share of the propagations instead of the time. Two runs of the 62
+   wide-quick instances at 10 s with -f, three at a time, end identically
+   on 58 to 61 of them (55 before). The rest are symmetry detection
+   (whirlpool), presolve timers (a few propagations on monomatch and
+   work-task-variation) and, in one of three censuses, mapping.
+   FreeSearch.Builder.virtualClock turns it on for one search.
+
+353. Free search with lazy clause generation on an optimisation model
+   whose search variables all lie in one cardinality with fixed counts
+   (jacop_count_values or global_cardinality posted as CountValuesBounds
+   with equal bounds) first dives without learning through those
+   variables in model order, largest value first, for at most 5 % of the
+   time limit; the values of its first solution start the default
+   branching of LCG. On the slot model of bin packing (x[i][j] the weight
+   of the j-th item in bin i) this fills bin after bin with the largest
+   item that fits, the packing of first fit decreasing (D. S. Johnson,
+   A. Demers, J. D. Ullman, M. R. Garey and R. L. Graham, "Worst-case
+   performance bounds for simple one-dimensional packing algorithms",
+   SIAM Journal on Computing 3, 1974). LCG made about 30 conflicts a second
+   there and found no solution of 8 of the 15 BinPacking instances of the
+   XCSP 2024 competition in 240 s; with the dive all 8 have one (n3c2w1a
+   91, the best of the field; n3c3w1a proved optimal in 4 s), and the
+   other 7 are unchanged. It fires on none of the instances of the wide
+   benchmark set. Under LCG the reifications and the objective
+   live in SAT clauses, so the dive does not print its solution: the first
+   run of LCG completes it. --free-config slot-dive=off turns it off and
+   slot-dive-share sets its share of the time; the statistics slotDiveSlots
+   and slotDiveTime give its size and time.
+
+354. Under lazy clause generation the FlatZinc front end adds to a
+   cumulative whose tasks have variable durations and fixed resource
+   uses, and at most 4000 (task, time point) pairs, its time-resource
+   decomposition: at each time point t the sum of the resource uses of
+   the tasks with s <= t < s + d is at most the capacity (Schutt, Feydy,
+   Stuckey and Wallace, Why cumulative decomposition is not as bad as it
+   sounds, CP 2009). The cumulative propagators take the earliest end of
+   a task as its earliest start plus its shortest duration; when another
+   constraint bounds the end, such as a stockpile that stays until it is
+   reclaimed, they miss the part of the task between its latest start
+   and its earliest end, which the learnt clauses over the start and end
+   literals of the decomposition capture. XCSP 2024 Cargo at 600 s, two
+   seeds: Cargo-22 proved in 4 s and Cargo-10 in 154 and 62 s, which no
+   run proved before (CP-SAT, one thread: 0.5 and 59 s); Cargo-06 152
+   and 5 s instead of 332 and 132 s, Cargo-05 4 s instead of 19 s. Of the
+   240 wide instances it fires on two (stack-cuttingstock d3,
+   stripboard), unchanged. -Dorg.jacop.fz.cumulativeTimeIndexed=false
+   turns it off, =true posts it without lazy clause generation too, and
+   -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
 Version 4.11
 =============
