@@ -1916,18 +1916,25 @@ public final class LcgSolver implements ExternalPropagator {
     if (f == null || f.relation() == LinearForm.NE) {
       return;
     }
-    int n = f.vars().length;
-    int[] variables = new int[n];
+    // a variable in two terms (sum([x, y], x)) is one term with the weights added
+    int[] variables = new int[f.vars().length];
+    long[] w = new long[f.vars().length];
     Map<Integer, Integer> position = new HashMap<>();
-    for (int j = 0; j < n; j++) {
-      variables[j] = trail.id(f.vars()[j]);
-      if (position.put(variables[j], j) != null) {
-        return;
+    int n = 0;
+    for (int j = 0; j < f.vars().length; j++) {
+      int id = trail.id(f.vars()[j]);
+      Integer at = position.putIfAbsent(id, n);
+      if (at == null) {
+        variables[n] = id;
+        w[n++] = f.weights()[j];
+      } else {
+        w[at] += f.weights()[j];
       }
     }
+    variables = Arrays.copyOf(variables, n);
+    w = Arrays.copyOf(w, n);
     IntDomain[] dom = new IntDomain[n];
     StringBuilder[] literals = new StringBuilder[n];
-    long[] w = f.weights();
     boolean rounds = false;
     for (long weight : w) {
       // unit propagation over weight times the order literals does not round a bound

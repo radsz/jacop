@@ -82,6 +82,7 @@ import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.ValuePrecede;
@@ -752,6 +753,33 @@ class VeriPbProofTest {
     store.imposeWithConsistency(new AbsXeqY(d, a));
     LcgSolver lcg = new LcgSolver(store);
     lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void sumWithARepeatedVariableIsDerived() {
+    // sum([z, x, w, y]) = z is x + w + y = 0, where x = -1 and w = 0 need y = 1, a hole of y:
+    // the bound lemmas of the row were skipped for the repeated z (fuzz seed 4000226)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, -1);
+    x.addDom(1, 2);
+    IntVar y = new IntVar(store, "y", -1, 0);
+    y.addDom(2, 2);
+    IntVar z = new IntVar(store, "z", 1, 1);
+    z.addDom(3, 3);
+    IntVar v = new IntVar(store, "v", 0, 3);
+    IntVar w = new IntVar(store, "w", 0, 0);
+    w.addDom(2, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Sum(new IntVar[] {z, x, w, y}, z));
+    store.impose(new LinearInt(new IntVar[] {y, v, z}, new int[] {2, 3, -1}, ">=", 3));
+    store.impose(new Alldifferent(new IntVar[] {y, v}));
+    store.impose(new Reified(new XlteqY(z, w), b));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
     lcg.setProof(model, proof);
     assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
