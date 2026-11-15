@@ -931,9 +931,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         linearRelaxation.suspend(true);
         lpProbing = true;
       }
-      if (TIME_INDEXED && objective != null) {
+      if ((TIME_INDEXED || TimeIndexedBound.ARC_FLOW) && objective != null) {
         timeIndexedBound =
-            TimeIndexedBound.of(store, objective, maximize, linearRelaxation.allRows());
+            TimeIndexedBound.of(
+                store,
+                objective,
+                maximize,
+                linearRelaxation.allRows(),
+                TIME_INDEXED,
+                TimeIndexedBound.ARC_FLOW,
+                dictionary.loadFunctions);
         if (timeIndexedBound != null) {
           store.impose(timeIndexedBound);
         }
@@ -1044,6 +1051,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + t.lastColumns
               + "\n%%%mzn-stat: tiRows="
               + t.lastRows
+              + "\n%%%mzn-stat: tiArcs="
+              + t.lastArcs
               + "\n%%%mzn-stat: tiTime="
               + t.seconds);
     }
