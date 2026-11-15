@@ -135,42 +135,34 @@ public class PmulQeqR extends Constraint
       double max = computeSquareRangeMaximum();
       r.domain.in(store.level, r, min, max);
 
-      double pMin = r.min() <= 0.0 ? 0.0 : Math.sqrt(r.min());
+      // |p| in [sqrt(r.min), sqrt(r.max)], rounded outward
+      double pMin = r.min() <= 0.0 ? 0.0 : FloatDomain.sqrtDown(r.min());
       double pMax;
       if (r.max() < 0.0) {
         throw Store.failException;
       }
-      pMax = Math.sqrt(r.max());
+      pMax = FloatDomain.sqrtUp(r.max());
 
       if (pMin > pMax) {
         throw Store.failException;
       }
 
-      FloatDomain dom = new FloatIntervalDomain(FloatDomain.down(-pMax), FloatDomain.up(-pMin));
-      dom.unionAdapt(FloatDomain.down(pMin), FloatDomain.up(pMax));
+      FloatDomain dom = new FloatIntervalDomain(-pMax, -pMin);
+      dom.unionAdapt(pMin, pMax);
       p.domain.in(store.level, p, dom);
 
     } while (store.propagationHasOccurred);
   }
 
   private double computeSquareRangeMinimum() {
-    double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
-    double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
-    double min = Math.min(p1, p2);
     if (p.min() <= 0.0 && p.max() >= 0.0) {
       return 0.0;
     }
-    return FloatDomain.down(min);
+    return Math.min(FloatDomain.mulDown(p.min(), p.min()), FloatDomain.mulDown(p.max(), p.max()));
   }
 
   private double computeSquareRangeMaximum() {
-    double p1 = Math.min(p.min() * p.min(), p.max() * p.max());
-    double p2 = Math.max(p.min() * p.min(), p.max() * p.max());
-    double max = Math.max(p1, p2);
-    if (p.min() <= 0.0 && p.max() >= 0.0) {
-      return FloatDomain.up(max);
-    }
-    return FloatDomain.up(max);
+    return Math.max(FloatDomain.mulUp(p.min(), p.min()), FloatDomain.mulUp(p.max(), p.max()));
   }
 
   private void consistencyProduct(Store store) {
