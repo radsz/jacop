@@ -6596,6 +6596,23 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. The FlatZinc front end posts the aggregated flow of a regular
+   constraint whose sequence is counted by cardinality constraints, one
+   per residue class i mod p of its positions (RegularFlowDetector): the
+   automaton's layers of one class are merged, the cardinalities give the
+   number of arcs per value, and flow conservation links consecutive
+   classes (flow formulations of regular: G. Pesant, CP 2004;
+   M.-C. Cote, B. Gendron and L.-M. Rousseau, CPAIOR 2007). Rotating
+   workforce scheduling (MiniZinc Challenge 2018, 2019, 2022) is the
+   case: one regular over the cyclic schedule and a global cardinality per
+   weekday. 2019 Example1370, which CP-SAT proves infeasible in 38 s and
+   JaCoP did not in 600 s, fails at the root; Example1174 and 2018
+   Example1780 (210 s) are proved in about 2 s, by default and with -f.
+   It fires on 15 of the 127 Challenge instances with a regular
+   constraint, all of them rotating workforce, and the solved satisfiable
+   ones keep their times. -Dorg.jacop.fz.regularFlow=false turns it off;
+   --proof does not post it.
+
 Version 4.11
 =============
 
