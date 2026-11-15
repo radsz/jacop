@@ -5790,6 +5790,20 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
+334. Free search with lazy clause generation (-f) no longer decides only
+   0/1 variables before a first solution: once 2,000 conflicts pass
+   without a solution, its activity runs take turns at restarts with and
+   without the 0/1 variables first, until the first solution
+   (--free-config lcg-booleans-first=until-solution, the new default;
+   lcg-booleans-first-after sets the conflicts; on restores the old
+   order). On the XCSP 2024 traveling tournament with 24 to 40 teams,
+   Booleans first decided the whole home/away pattern before any
+   opponent and found no solution in 600 s; now the first one comes in
+   30 to 60 s. Adaptive LNS has a new kind LINES, which relaxes the
+   scopes of random all-different constraints (such as the rounds of a
+   round-robin schedule) with the variables that small constraints tie to
+   them alone.
+
 Version 4.11
 =============
 
