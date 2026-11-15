@@ -94,6 +94,7 @@ import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.fz.constraints.TranslationTilingDetector;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
+import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.satwrapper.SatTranslation;
@@ -351,9 +352,30 @@ public class Constraints implements ParserTreeConstants {
         new DifferenceBoundsDetector(support).detect(astTree);
       }
 
-      // common sub-sums of linear constraints become variables; --proof encodes the rows as given
+      // half-reified sums at their least value become implications on their terms, before the
+      // sums are factored; --proof encodes the rows as given
+      Set<SimpleNode> zeroSumNodes = Set.of();
+      if (ZeroSumDetector.enabled() && options.proof() == null) {
+        ZeroSumDetector zeroSums =
+            new ZeroSumDetector(
+                support, cf, replaced, keptVariables(astTree), solveItemVariables(astTree));
+        zeroSums.detect(astTree);
+        if (!zeroSums.replaced().isEmpty()) {
+          zeroSumNodes = zeroSums.replaced();
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(zeroSums.replaced());
+          dictionary.removeFromDefaultSearch(zeroSums.unconstrained());
+          dictionary.unusedVariables.addAll(zeroSums.unconstrained());
+          if (!zeroSums.outputSums().isEmpty()) {
+            dictionary.zeroSums = zeroSums.outputSums();
+          }
+        }
+      }
+
+      // common sub-sums of linear constraints become variables, not of the rows zero-sum detection
+      // took out; --proof encodes the rows as given
       if (LinearOverlapDetector.enabled() && options.proof() == null) {
-        new LinearOverlapDetector(support).detect(astTree);
+        new LinearOverlapDetector(support, zeroSumNodes).detect(astTree);
       }
 
       // the unary and binary cost functions the objective sums, for the cost network bound that
