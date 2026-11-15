@@ -6033,12 +6033,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds the 3BCID contractor ({@link FloatCid}) over the float variables of a search when system
-   * property org.jacop.floats.cid is set to "s3b,variablesPerNode".
+   * Adds the 3BCID contractor ({@link FloatCid}) over the float variables of a search. System
+   * property org.jacop.floats.cid is "s3b[,variablesPerNode]"; without it satisfaction problems use
+   * "10" (all variables at every node) and optimisation problems none, and "off" turns it off.
    */
   private void attachFloatCid(DepthFirstSearch<T> label, Var[] vars) {
     String spec = System.getProperty("org.jacop.floats.cid");
     if (spec == null || spec.isBlank()) {
+      if (solveKind != 0) {
+        return;
+      }
+      spec = "10";
+    }
+    if ("off".equals(spec.trim())) {
       return;
     }
     FloatVar[] floats =
