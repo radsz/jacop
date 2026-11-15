@@ -6358,7 +6358,31 @@ Version 5.0 (unreleased)
    work-task-variation) and, in one of three censuses, mapping.
    FreeSearch.Builder.virtualClock turns it on for one search.
 
-355. Free search with lazy clause generation on an optimisation model
+355. Float optimisation in fzn-jacop is faster and proves more optima.
+   Once branch and bound has found 1000 solutions
+   (-Dorg.jacop.fz.floatCrawl) improving by a few ulps, the objective is
+   bisected between a lower bound and the best cost, each step with a
+   budget of nodes (-Dorg.jacop.fz.floatStepNodes, 100000, or the nodes
+   used so far) after which branch and bound takes over again; steps far
+   below the best cost are tried only under such a budget. Under free
+   search (-f) bisection starts at once (-Dorg.jacop.fz.floatBisectStart)
+   and each solution restarts the search (-Dorg.jacop.fz.floatRestart).
+   The lower bound comes from a new LinearFloatRelaxation
+   (org.jacop.floats.constraints) of the linear float rows, McCormick
+   envelopes of products (G. P. McCormick, Mathematical Programming 10
+   (1976) 147-175) and secant and tangent rows of squares, solved by JaLP
+   with exact duals and made safe by the bound of A. Neumaier and O.
+   Shcherbina (Mathematical Programming 99 (2004) 283-296), so rounding
+   never cuts off a solution; an infeasible relaxation is confirmed by a
+   Farkas certificate. The LP point is probed as a candidate solution
+   (-Dorg.jacop.fz.floatLpPoint). -Dorg.jacop.fz.floatBisection=false and
+   -Dorg.jacop.fz.floatLp=false turn the parts off. On 46 float
+   optimisation instances (Ibex benchmarks, hakank, jacop-benchmarks) at
+   600 s, three at a time, default search proves 25 optima instead of 18
+   and -f 25 instead of 17; no instance with float variables is in the
+   wide benchmark set.
+
+356. Free search with lazy clause generation on an optimisation model
    whose search variables all lie in one cardinality with fixed counts
    (jacop_count_values or global_cardinality posted as CountValuesBounds
    with equal bounds) first dives without learning through those
@@ -6380,7 +6404,7 @@ Version 5.0 (unreleased)
    slot-dive-share sets its share of the time; the statistics slotDiveSlots
    and slotDiveTime give its size and time.
 
-356. Under lazy clause generation the FlatZinc front end adds to a
+357. Under lazy clause generation the FlatZinc front end adds to a
    cumulative whose tasks have variable durations and fixed resource
    uses, and at most 4000 (task, time point) pairs, its time-resource
    decomposition: at each time point t the sum of the resource uses of

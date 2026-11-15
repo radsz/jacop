@@ -235,6 +235,8 @@ setup to run configuration. -->
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -481,6 +483,8 @@ setup to run configuration. -->
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -728,6 +732,8 @@ setup to run configuration. -->
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -975,6 +981,8 @@ setup to run configuration. -->
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
@@ -1597,6 +1605,8 @@ setup to run configuration. -->
                         <include>**/SmokeSetTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>
                         <include>**/FloatDomainOperationsTest.java</include>
+                        <include>**/LinearFloatRelaxationTest.java</include>
+                        <include>**/FloatOptimizationFlatzincTest.java</include>
                         <include>**/LazyBitSetDomainTest.java</include>
                         <include>**/VarIntMapTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
