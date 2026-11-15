@@ -6603,14 +6603,14 @@ Version 5.0 (unreleased)
    Marques-Silva, RC2: an Efficient MaxSAT Solver, JSAT 11, 2019). A
    smaller core raises the lower bound by as much and leaves its other
    soft literals to later cores. Under -f it fires on 34 of the 240 wide
-   instances; at 600 s on those, two seeds each, the total time is
-   11534 s instead of 12019 s (0.960) with the same 27 proved:
-   workforce-alloc 202 in 47 and 49 s instead of 163 and 170 s,
-   neighbours-new-6 80 and 76 s instead of 158 and 157 s, city-position
-   5-06 46 and 41 s instead of 101 and 81 s; work-task-variation seed 8
-   takes 38 and 89 s instead of 12 and 16 s, and gbac UD3 ends with a
-   worse objective. On the 62 wide-quick instances at 240 s: -f 3
-   families better, none worse; fixed search unchanged.
+   instances; at 600 s on those the total time is 5988 s instead of
+   6153 s (0.973) with the same 26 proved: workforce-alloc 202 50 s
+   instead of 97 s, neighbours-new-6 83 s instead of 158 s, city-position
+   7-04 88 s instead of 174 s, pattern-set-mining ionosphere 7 s instead
+   of 14 s; city-position 5-06 43 s instead of 27 s, kitchen linear 170 s
+   instead of 143 s. Two earlier rounds before entry 362 gave 0.937 and
+   0.983. On the 62 wide-quick instances at 240 s: -f 3 families better,
+   none worse; fixed search unchanged.
    -Djacop.lcg.coreTrim=n sets the calls per core, 0 turns it off
    (LcgSolver.setCoreTrim); the statistic lcgCoreShrunk counts the
    literals it took out of cores.
