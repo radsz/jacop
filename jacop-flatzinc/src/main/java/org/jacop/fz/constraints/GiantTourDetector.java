@@ -38,6 +38,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearInt;
@@ -134,6 +135,9 @@ public class GiantTourDetector implements ParserTreeConstants {
 
   // the most arcs of one tour: one Boolean each
   private static final int MAX_ARCS = 20_000;
+
+  // the successors removed by the time window reduction
+  private int windowArcs;
 
   // the most arcs of such a tour
   private static final int MAX_TSP_ARCS = Integer.getInteger("org.jacop.fz.tspArcs", 40_000);
@@ -401,7 +405,30 @@ public class GiantTourDetector implements ParserTreeConstants {
     long capacity = 0;
     double best = 0;
     int sums = 0;
-    for (Chain c : chains(x, offset, fixed, target, customers)) {
+    List<Chain> chainList = chains(x, offset, fixed, target, customers);
+    // the time windows of the chains whose lags depend on the arcs, reduced together
+    Chain timed = null;
+    long[][] windows = null;
+    if (!"false".equals(System.getProperty("org.jacop.fz.timeWindows"))) {
+      for (int pass = 0; pass < 2; pass++) {
+        for (Chain c : chainList) {
+          if (c.lag != null) {
+            long[][] w = reduceWindows(x, offset, fixed, c);
+            if (w == null) {
+              timed = null;
+              windows = null;
+              pass = 2;
+              break;
+            }
+            if (timed == null || timed == c) {
+              timed = c;
+              windows = w;
+            }
+          }
+        }
+      }
+    }
+    for (Chain c : chainList) {
       posted.add(c.sum);
       sums++;
       if (c.demand == null) {
@@ -541,6 +568,12 @@ public class GiantTourDetector implements ParserTreeConstants {
         new Routes(tails, heads, literals.toArray(new IntVar[0]), demands, (int) capacity);
     // the degree rows keep the degrees
     routes.setDegrees(false);
+    if (timed != null) {
+      timeWindows(routes, x, offset, customers, starts, end, timed, windows);
+      if (!"false".equals(System.getProperty("org.jacop.fz.arcTimes"))) {
+        posted.add(new ArcTimes(x, offset, timed.t, timed.lag));
+      }
+    }
     routes.setDegreeWeight(0);
     posted.add(routes);
     if (support.options.debug()) {
@@ -557,7 +590,8 @@ public class GiantTourDetector implements ParserTreeConstants {
               + costs
               + " cost rows, "
               + sums
-              + " tour sums");
+              + " tour sums"
+              + (timed == null ? "" : ", time windows, " + windowArcs + " successors removed"));
     }
     support.delayedConstraints.addAll(posted);
     support.dictionary.addAuxiliaryVariables(literals);
@@ -789,6 +823,11 @@ public class GiantTourDetector implements ParserTreeConstants {
     final IntVar[] t;
     final long[] demand;
     final Constraint sum;
+    // the value T[x[v]] read through the successor of each node v not fixed
+    IntVar[] a;
+    // lag[v][w]: a row forces T[w] >= T[v] + lag[v][w] when x[v] = w, NO_LAG when none does; null
+    // for a node v without such rows, and for all nodes when no lag depends on the successor
+    long[][] lag;
 
     Chain(IntVar[] t, long[] demand, Constraint sum) {
       this.t = t;
@@ -879,7 +918,10 @@ public class GiantTourDetector implements ParserTreeConstants {
                   "==",
                   (int) rhs)
               .setDegreeWeight(0);
-      out.add(new Chain(t, nonNegative ? demand : null, sum));
+      Chain chain = new Chain(t, nonNegative ? demand : null, sum);
+      chain.a = a;
+      chain.lag = lags(x, offset, fixed, a, t);
+      out.add(chain);
     }
     return out;
   }
@@ -916,6 +958,292 @@ public class GiantTourDetector implements ParserTreeConstants {
       t[v] = e.vars[i];
     }
     return t;
+  }
+
+  // the time windows of the nodes of the routes (customer i is node customers.get(i), 0 the
+  // depot) and the least travel time of each arc, for the infeasible path cuts of the relaxation:
+  // the depot is left at time 0 and its arcs to a customer take the least arrival from a start
+  // node; the arcs back take the least lag to an end node, which is due at the latest end
+  private static void timeWindows(
+      Routes routes,
+      IntVar[] x,
+      int offset,
+      List<Integer> customers,
+      List<Integer> starts,
+      boolean[] end,
+      Chain c,
+      long[][] windows) {
+    int n = x.length;
+    int k = customers.size() - 1;
+    long[] lo = windows[0];
+    long[] hi = windows[1];
+    long[] earliest = new long[k + 1];
+    long[] latest = new long[k + 1];
+    long due = Long.MIN_VALUE;
+    for (int v = 0; v < n; v++) {
+      if (end[v]) {
+        due = Math.max(due, hi[v]);
+      }
+    }
+    latest[0] = due;
+    for (int i = 1; i <= k; i++) {
+      earliest[i] = lo[customers.get(i)];
+      latest[i] = hi[customers.get(i)];
+    }
+    long[] travel = new long[routes.tails.length];
+    for (int a = 0; a < travel.length; a++) {
+      int i = routes.tails[a];
+      int j = routes.heads[a];
+      long t = Long.MAX_VALUE;
+      if (i > 0 && j > 0) {
+        long[] l = c.lag[customers.get(i)];
+        t = l == null ? NO_LAG : l[customers.get(j)];
+      } else if (i > 0) {
+        long[] l = c.lag[customers.get(i)];
+        for (int w = 0; w < n && t != NO_LAG; w++) {
+          if (end[w] && x[customers.get(i)].domain.contains(w + offset)) {
+            t = l == null || l[w] == NO_LAG ? NO_LAG : Math.min(t, l[w]);
+          }
+        }
+      } else if (j > 0) {
+        int w = customers.get(j);
+        for (int s : starts) {
+          if (t != NO_LAG && x[s].domain.contains(w + offset)) {
+            long[] l = c.lag[s];
+            t = l == null || l[w] == NO_LAG ? NO_LAG : Math.min(t, lo[s] + l[w]);
+          }
+        }
+      }
+      travel[a] = t == Long.MAX_VALUE ? NO_LAG : t;
+    }
+    routes.setTimeWindows(earliest, latest, travel);
+  }
+
+  // no row forces a lag on the arc
+  private static final long NO_LAG = ArcTimes.NO_LAG;
+
+  // the most rounds of the time window reduction
+  private static final int WINDOW_ROUNDS = 20;
+
+  // the lags lag[v][w] of the chain: T[x[v]] >= T[v] + lag[v][w] when x[v] = w, from the rows
+  // alpha (a - t) + sum gamma y (==, or <= with alpha < 0) rhs over a[v] = T[x[v]], t = T[v] and
+  // other variables y, where a y that is an element c[x[v]] over a constant array takes the value
+  // c[w] of the arc (an arc cost, as a travel time) and the others their bounds; null when no lag
+  // depends on the successor
+  private long[][] lags(IntVar[] x, int offset, boolean[] fixed, IntVar[] a, IntVar[] t) {
+    int n = x.length;
+    long[][] lag = new long[n][];
+    boolean varies = false;
+    for (int v = 0; v < n; v++) {
+      if (fixed[v] || a[v] == null || a[v] == t[v] || a[v].singleton()) {
+        continue;
+      }
+      // the arc costs read through x[v]
+      Map<IntVar, Element> costs = new IdentityHashMap<>();
+      for (Element e : elements.getOrDefault(x[v], List.of())) {
+        if (e.values != null) {
+          costs.putIfAbsent(e.value, e);
+        }
+      }
+      long[] best = null;
+      for (Row r : rows.getOrDefault(a[v], List.of())) {
+        long[] l = lag(r, a[v], t[v], x[v], offset, n, costs);
+        if (l == null) {
+          continue;
+        }
+        if (best == null) {
+          best = l;
+        } else {
+          for (int w = 0; w < n; w++) {
+            best[w] = Math.max(best[w], l[w]);
+          }
+        }
+      }
+      if (best == null) {
+        continue;
+      }
+      lag[v] = best;
+      long first = NO_LAG;
+      for (int w = 0; w < n && !varies; w++) {
+        if (best[w] != NO_LAG) {
+          if (first == NO_LAG) {
+            first = best[w];
+          } else {
+            varies = first != best[w];
+          }
+        }
+      }
+    }
+    return varies ? lag : null;
+  }
+
+  // the lags of one row over the successors w of v, NO_LAG where the row gives none; null when
+  // the row does not bound a - t from below
+  private static long[] lag(
+      Row r, IntVar a, IntVar t, IntVar xv, int offset, int n, Map<IntVar, Element> costs) {
+    long alpha = 0;
+    long beta = 0;
+    for (int i = 0; i < r.x.length; i++) {
+      if (r.x[i] == a) {
+        alpha += r.a[i];
+      } else if (r.x[i] == t) {
+        beta += r.a[i];
+      }
+    }
+    // a fixed t was folded into the right-hand side by row()
+    if (alpha == 0 || (t.singleton() ? beta != 0 : beta != -alpha) || !r.equation && alpha > 0) {
+      return null;
+    }
+    long rest = r.rhs;
+    List<Element> arcCosts = new ArrayList<>();
+    List<Long> gammas = new ArrayList<>();
+    for (int i = 0; i < r.x.length; i++) {
+      if (r.x[i] == a || r.x[i] == t) {
+        continue;
+      }
+      long gamma = r.a[i];
+      Element e = costs.get(r.x[i]);
+      if (e != null) {
+        arcCosts.add(e);
+        gammas.add(gamma);
+      } else {
+        // the least numerator over a positive alpha, the largest over a negative one
+        boolean low = gamma > 0 == alpha > 0;
+        rest -= gamma * (low ? r.x[i].max() : r.x[i].min());
+      }
+    }
+    if (arcCosts.isEmpty()) {
+      return null;
+    }
+    long shift = t.singleton() ? t.value() : 0;
+    long[] l = new long[n];
+    Arrays.fill(l, NO_LAG);
+    for (ValueEnumeration en = xv.domain.valueEnumeration(); en.hasMoreElements(); ) {
+      int w = en.nextElement() - offset;
+      if (w < 0 || w >= n) {
+        continue;
+      }
+      long numerator = rest;
+      boolean known = true;
+      for (int k = 0; k < arcCosts.size() && known; k++) {
+        Element e = arcCosts.get(k);
+        int index = w + offset - e.first;
+        known = index >= 0 && index < e.values.length;
+        if (known) {
+          numerator -= gammas.get(k) * e.values[index];
+        }
+      }
+      if (known) {
+        l[w] = Math.ceilDiv(numerator, alpha) - shift;
+      }
+    }
+    return l;
+  }
+
+  // the time window reduction of a chain with lags (Desrochers, Desrosiers and Solomon): the
+  // successor w of v is removed when T[v] + lag[v][w] exceeds the latest T[w] (or a[v]), the
+  // earliest T[w] rises to the least arrival over its predecessors and the latest T[v] falls to the
+  // latest departure over its successors, until nothing changes; the bounds go into the domains
+  // of x and T. It returns the earliest and latest T of each node, or null when nothing holds.
+  private long[][] reduceWindows(IntVar[] x, int offset, boolean[] fixed, Chain c) {
+    int n = x.length;
+    long[][] lag = c.lag;
+    long[] lo = new long[n];
+    long[] hi = new long[n];
+    for (int v = 0; v < n; v++) {
+      lo[v] = c.t[v].min();
+      hi[v] = c.t[v].max();
+    }
+    boolean[][] gone = new boolean[n][];
+    for (int v = 0; v < n; v++) {
+      if (lag[v] != null) {
+        gone[v] = new boolean[n];
+      }
+    }
+    int removed = 0;
+    boolean changed = true;
+    for (int round = 0; changed && round < WINDOW_ROUNDS; round++) {
+      changed = false;
+      for (int v = 0; v < n; v++) {
+        if (lag[v] == null) {
+          continue;
+        }
+        long top = c.a[v].max();
+        for (int w = 0; w < n; w++) {
+          if (lag[v][w] != NO_LAG
+              && !gone[v][w]
+              && x[v].domain.contains(w + offset)
+              && lo[v] + lag[v][w] > Math.min(hi[w], top)) {
+            gone[v][w] = true;
+            removed++;
+            changed = true;
+          }
+        }
+      }
+      // the predecessors of each node: none of them may lack a lag
+      long[] arrival = new long[n];
+      Arrays.fill(arrival, Long.MAX_VALUE);
+      boolean[] unknown = new boolean[n];
+      for (int v = 0; v < n; v++) {
+        long latest = Long.MIN_VALUE;
+        boolean open = lag[v] == null;
+        for (ValueEnumeration en = x[v].domain.valueEnumeration(); en.hasMoreElements(); ) {
+          int w = en.nextElement() - offset;
+          if (w < 0 || w >= n || w == v || gone[v] != null && gone[v][w]) {
+            continue;
+          }
+          if (lag[v] == null || lag[v][w] == NO_LAG) {
+            unknown[w] = true;
+            open = true;
+          } else {
+            arrival[w] = Math.min(arrival[w], lo[v] + lag[v][w]);
+            latest = Math.max(latest, hi[w] - lag[v][w]);
+          }
+        }
+        if (!open && !fixed[v] && latest < hi[v]) {
+          hi[v] = latest;
+          changed = true;
+        }
+      }
+      for (int w = 0; w < n; w++) {
+        if (!unknown[w] && arrival[w] != Long.MAX_VALUE && arrival[w] > lo[w]) {
+          lo[w] = arrival[w];
+          changed = true;
+        }
+      }
+      for (int v = 0; v < n; v++) {
+        if (lo[v] > hi[v] || lo[v] > Integer.MAX_VALUE || hi[v] < Integer.MIN_VALUE) {
+          // the model has no solution, which the search finds out itself
+          return null;
+        }
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      if (gone[v] != null) {
+        int left = 0;
+        for (ValueEnumeration en = x[v].domain.valueEnumeration(); en.hasMoreElements(); ) {
+          int w = en.nextElement() - offset;
+          left += w >= 0 && w < n && gone[v][w] ? 0 : 1;
+        }
+        if (left == 0) {
+          return null;
+        }
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      if (gone[v] != null) {
+        for (int w = 0; w < n; w++) {
+          if (gone[v][w] && x[v].domain.contains(w + offset)) {
+            x[v].domain.inComplement(support.store.level, x[v], w + offset);
+          }
+        }
+      }
+      if (lo[v] > c.t[v].min() || hi[v] < c.t[v].max()) {
+        c.t[v].domain.in(support.store.level, c.t[v], (int) lo[v], (int) hi[v]);
+      }
+    }
+    windowArcs += removed;
+    return new long[][] {lo, hi};
   }
 
   // the least value of a - t that a row of the model forces, or null

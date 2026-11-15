@@ -53,6 +53,7 @@ import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
@@ -574,7 +575,7 @@ class LcgFuzzTest {
 
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(43);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(44);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -723,8 +724,26 @@ class LcgFuzzTest {
                 pick(x, 2),
                 new IntVar[] {intVar("my", -1, 3), rnd.nextBoolean() ? null : intVar("mz", 0, 2)},
                 intVar("mm", -2, 7));
+        case 43 -> arcTimes();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // arc-time precedences of 3 or 4 nodes over successors and times among the variables
+    private ArcTimes arcTimes() {
+      int n = 3 + rnd.nextInt(2);
+      IntVar[] succ = chain("as", n, 0, n - 1);
+      IntVar[] times = pick(x, n);
+      long[][] lag = new long[n][];
+      for (int v = 0; v < n; v++) {
+        if (rnd.nextInt(4) > 0) {
+          lag[v] = new long[n];
+          for (int w = 0; w < n; w++) {
+            lag[v][w] = rnd.nextInt(4) == 0 ? ArcTimes.NO_LAG : rnd.nextInt(4) - 1;
+          }
+        }
+      }
+      return new ArcTimes(succ, 0, times, lag);
     }
 
     // a 2 x 2 or 2 x 3 matrix of the 0/1 variables and the variables, with counted rows and columns
