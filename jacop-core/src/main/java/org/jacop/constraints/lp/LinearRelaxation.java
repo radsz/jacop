@@ -670,6 +670,9 @@ public class LinearRelaxation extends Constraint
   /** Statistics: zero-half cuts added (in the cut rounds and in search). */
   public long zeroHalfCuts;
 
+  /** Statistics: MIR cuts of the rows weighted by their dual values added (rounds and search). */
+  public long dualCuts;
+
   /** Statistics: MIR and Gomory cuts added in search. */
   public long mirSearchCuts;
 
@@ -4288,6 +4291,12 @@ public class LinearRelaxation extends Constraint
         mir(g, value, lo, hi, found);
       }
     }
+    Set<MirCut> dual = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (DUAL_AGGREGATE) {
+      int before = found.size();
+      dualAggregate(value, lo, hi, found);
+      dual.addAll(found.subList(before, found.size()));
+    }
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
     if (zeroHalfOn) {
       zeroHalf(value, lo, hi, found, zeroHalf);
@@ -4303,6 +4312,9 @@ public class LinearRelaxation extends Constraint
           small.add(d);
           if (d != c && zeroHalf.contains(c)) {
             zeroHalf.add(d);
+          }
+          if (d != c && dual.contains(c)) {
+            dual.add(d);
           }
         }
       }
@@ -4326,6 +4338,9 @@ public class LinearRelaxation extends Constraint
         chosen.add(c);
         if (zeroHalf.contains(c)) {
           zeroHalfCuts++;
+        }
+        if (dual.contains(c)) {
+          dualCuts++;
         }
       }
     }
@@ -4469,6 +4484,37 @@ public class LinearRelaxation extends Constraint
       }
     }
     return true;
+  }
+
+  static final boolean DUAL_AGGREGATE =
+      !"false".equals(System.getProperty("org.jacop.lp.dualAggregate"));
+
+  /**
+   * Adds the MIR cuts of the rows weighted by their dual values, without the rows of the objective
+   * (column 0): {@code sum y_i a_i x >= y b} is the row whose bound the LP proves, and its rounding
+   * by a divisor near the objective's coefficients counts the columns a solution needs (a
+   * Chvatal-Gomory cut with the LP's own multipliers).
+   */
+  private void dualAggregate(double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    double[] y = byRow(lp.duals());
+    boolean any = false;
+    for (int i = 0; i < y.length; i++) {
+      int[] cs = rowColumns[i];
+      for (int c : cs) {
+        if (c == 0) {
+          y[i] = 0;
+          break;
+        }
+      }
+      any |= y[i] != 0;
+    }
+    if (!any) {
+      return;
+    }
+    long[] lambda = scaled(y, gomoryScale);
+    if (lambda != null) {
+      mir(aggregate(lambda), value, lo, hi, found);
+    }
   }
 
   private static void mir(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
