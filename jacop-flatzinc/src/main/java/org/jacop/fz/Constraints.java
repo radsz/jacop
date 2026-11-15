@@ -330,12 +330,14 @@ public class Constraints implements ParserTreeConstants {
 
       // half-reified sums at their least value become implications on their terms, before the
       // sums are factored; --proof encodes the rows as given
+      Set<SimpleNode> zeroSumNodes = Set.of();
       if (ZeroSumDetector.enabled() && options.proof() == null) {
         ZeroSumDetector zeroSums =
             new ZeroSumDetector(
                 support, cf, replaced, keptVariables(astTree), solveItemVariables(astTree));
         zeroSums.detect(astTree);
         if (!zeroSums.replaced().isEmpty()) {
+          zeroSumNodes = zeroSums.replaced();
           replaced = new HashSet<>(replaced);
           replaced.addAll(zeroSums.replaced());
           dictionary.removeFromDefaultSearch(zeroSums.unconstrained());
@@ -346,9 +348,10 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
-      // common sub-sums of linear constraints become variables; --proof encodes the rows as given
+      // common sub-sums of linear constraints become variables, not of the rows zero-sum detection
+      // took out; --proof encodes the rows as given
       if (LinearOverlapDetector.enabled() && options.proof() == null) {
-        new LinearOverlapDetector(support, replaced).detect(astTree);
+        new LinearOverlapDetector(support, zeroSumNodes).detect(astTree);
       }
 
       // the unary and binary cost functions the objective sums, for the cost network bound that
