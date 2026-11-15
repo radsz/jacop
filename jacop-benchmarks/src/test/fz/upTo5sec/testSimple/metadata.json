@@ -1,5 +1,35 @@
 {
-  "fznBuiltins": ["float_lin_eq_reif"],
-  "constraintFamilies": ["float"],
+  "fznBuiltins": [
+    "float_abs",
+    "float_div",
+    "float_eq",
+    "float_eq_reif",
+    "float_le",
+    "float_le_reif",
+    "float_lin_eq",
+    "float_lin_eq_reif",
+    "float_lin_le",
+    "float_lin_le_reif",
+    "float_lin_lt",
+    "float_lin_lt_reif",
+    "float_lin_ne",
+    "float_lin_ne_reif",
+    "float_lt",
+    "float_lt_reif",
+    "float_max",
+    "float_min",
+    "float_ne",
+    "float_ne_reif",
+    "float_plus",
+    "float_times",
+    "int2float"
+  ],
+  "constraintFamilies": [
+    "float",
+    "linear",
+    "reified",
+    "comparison",
+    "arithmetic"
+  ],
   "domains": []
 }
