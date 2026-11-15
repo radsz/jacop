@@ -145,6 +145,7 @@ import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.NegativeTable;
 import org.jacop.constraints.table.Restriction;
@@ -1994,8 +1995,35 @@ class GlobalConstraints implements ParserTreeConstants {
       nv[0].domain.in(store.level, nv[0], nv[0].domain.subtract(d));
       return;
     }
+    if (nv.length == 2
+        && BINARY_BIT_TABLE
+        && BinaryBitTable.fits(nv[0], nv[1])
+        && (long) nv[0].getSize() * nv[1].getSize() <= NEGATIVE_BIT_PAIRS) {
+      // the allowed pairs within the domains: no trailed tuple set and no replayed explanations,
+      // where NegativeTable (CT-neg) spent most of the time on FRB (XCSP 2024)
+      Set<Long> forbidden = new HashSet<>();
+      for (int[] row : kept) {
+        forbidden.add(((long) row[0] << 32) ^ (row[1] & 0xffffffffL));
+      }
+      List<int[]> allowed = new ArrayList<>();
+      for (ValueEnumeration a = nv[0].dom().valueEnumeration(); a.hasMoreElements(); ) {
+        int va = a.nextElement();
+        for (ValueEnumeration b = nv[1].dom().valueEnumeration(); b.hasMoreElements(); ) {
+          int vb = b.nextElement();
+          if (!forbidden.contains(((long) va << 32) ^ (vb & 0xffffffffL))) {
+            allowed.add(new int[] {va, vb});
+          }
+        }
+      }
+      support.pose(new BinaryBitTable(nv[0], nv[1], allowed.toArray(new int[0][])));
+      return;
+    }
     support.pose(new NegativeTable(nv, deduplicateTableRows(kept.toArray(new int[0][]))));
   }
+
+  /** The most pairs of values of a negative table of two variables posted as a BinaryBitTable. */
+  static final long NEGATIVE_BIT_PAIRS =
+      Long.getLong("org.jacop.fz.binaryBitTable.negativePairs", 1_000_000L);
 
   /**
    * It posts a reified (b = 1 if and only if x is a tuple) or half-reified (b = 1 implies that x is
@@ -2257,7 +2285,20 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  /**
+   * Whether tables of two variables with small ranges are posted as {@link BinaryBitTable}, {@code
+   * org.jacop.fz.binaryBitTable} (default true).
+   */
+  static final boolean BINARY_BIT_TABLE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.binaryBitTable", "true"));
+
   private void poseTableBySizePlain(IntVar[] v, int[][] t) {
+    // a table of two variables over at most 4096 values each: AC3-bit with residues, about three
+    // times as many nodes a second as the compact table on Subisomorphism (XCSP 2024)
+    if (v.length == 2 && BINARY_BIT_TABLE && BinaryBitTable.fits(v[0], v[1])) {
+      support.pose(new BinaryBitTable(v[0], v[1], t));
+      return;
+    }
     // Merging the tuples that differ in one column only (-Djacop.table=star into *, or =sets into
     // sets of values) shrinks the tables that MiniZinc expanded from short tables, but it measured
     // slower overall on the FlatZinc benchmarks, so it is off by default.
