@@ -135,6 +135,32 @@ public abstract class FloatDomain extends Domain {
   static double precision = DEFAULT_PRECISION;
 
   /**
+   * The smallest relative reduction of a float domain that is applied; smaller narrowings are
+   * skipped. Zero (the default) applies every narrowing. Set by system property {@code
+   * org.jacop.floats.minReduction}.
+   */
+  static double minReduction =
+      Double.parseDouble(System.getProperty("org.jacop.floats.minReduction", "0"));
+
+  /**
+   * It returns the smallest relative reduction of a float domain that is applied.
+   *
+   * @return the ratio, zero when every narrowing is applied
+   */
+  public static double minReduction() {
+    return minReduction;
+  }
+
+  /**
+   * It sets the smallest relative reduction of a float domain that is applied.
+   *
+   * @param ratio the ratio in [0, 1), zero to apply every narrowing
+   */
+  public static void setMinReduction(double ratio) {
+    minReduction = ratio;
+  }
+
+  /**
    * It specifies the previous domain which was used by this domain. The old domain is stored here
    * and can be easily restored if necessary.
    */

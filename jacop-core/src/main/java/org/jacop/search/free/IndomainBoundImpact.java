@@ -69,7 +69,8 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
   private boolean tiesToFallback;
   private double timeShare = 1;
   private long start = -1;
-  private long probeNanos;
+  // the time of the probes, on the clock of clock()
+  private long probeTime;
 
   /**
    * Creates the heuristic.
@@ -89,6 +90,12 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
     this.fallback = fallback;
   }
 
+  // nanoseconds, or under the virtual clock of free search the propagations, so that the share of
+  // the probes does not depend on the load of the machine
+  private long clock() {
+    return FreeSearch.VIRTUAL_CLOCK ? store.numberConsistencyCalls : System.nanoTime();
+  }
+
   @Override
   public int indomain(IntVar v) {
     if ((untilFirstSolution && solved)
@@ -98,11 +105,11 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
         || v.singleton()) {
       return fallback.indomain(v);
     }
-    long now = System.nanoTime();
+    long now = clock();
     if (start < 0) {
       start = now;
     }
-    if (timeShare < 1 && probeNanos > timeShare * (now - start)) {
+    if (timeShare < 1 && probeTime > timeShare * (now - start)) {
       return fallback.indomain(v);
     }
     // among equally good values, a search guided by the last solution keeps its value
@@ -136,7 +143,7 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
     }
     // the probes are not failures of the search
     store.recentlyFailedConstraint = null;
-    probeNanos += System.nanoTime() - now;
+    probeTime += clock() - now;
     return found ? bestValue : fallback.indomain(v);
   }
 
@@ -179,6 +186,9 @@ public class IndomainBoundImpact implements Indomain<IntVar>, SearchMonitor {
    * the first value this heuristic chose, the wrapped heuristic chooses until they are below it
    * again. A search that proves optimality, where the probes rarely help, is then slowed down by at
    * most that share.
+   *
+   * <p>Under {@link FreeSearch#VIRTUAL_CLOCK} the share is one of the propagations instead of the
+   * time.
    *
    * @param share the share of the time, from 0 to 1; 1 does not bound it.
    * @return this heuristic.

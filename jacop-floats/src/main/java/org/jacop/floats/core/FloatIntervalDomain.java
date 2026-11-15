@@ -2254,6 +2254,52 @@ public class FloatIntervalDomain extends FloatDomain {
     }
   }
 
+  /**
+   * Tells whether narrowing this domain to [newMin, newMax] is too small to apply: it removes less
+   * than {@link FloatDomain#minReduction()} of the width and does not make the domain a singleton.
+   * Skipping such narrowings is sound (the domain stays a superset) and stops the slow convergence
+   * of interval propagation (O. Lhomme, "Consistency techniques for numeric CSPs", IJCAI 1993).
+   */
+  private boolean negligible(double newMin, double newMax) {
+    double ratio = FloatDomain.minReduction;
+    if (ratio <= 0) {
+      return false;
+    }
+    double oldMin = intervals[0].min();
+    double oldMax = intervals[size - 1].max();
+    newMin = Math.max(newMin, oldMin);
+    newMax = Math.min(newMax, oldMax);
+    if (newMin > newMax || newMax - newMin <= FloatDomain.epsilon(newMin)) {
+      return false;
+    }
+    double width = oldMax - oldMin;
+    if (Double.isInfinite(width)) {
+      return false;
+    }
+    return (newMin - oldMin) + (oldMax - newMax) < ratio * width;
+  }
+
+  /**
+   * Tells whether replacing this domain by result removes less than {@link
+   * FloatDomain#minReduction()} of its measure (the summed width of its intervals) without making
+   * it a singleton.
+   */
+  private boolean negligible(FloatIntervalDomain result) {
+    double ratio = FloatDomain.minReduction;
+    if (ratio <= 0 || result.singleton()) {
+      return false;
+    }
+    double before = 0;
+    for (int i = 0; i < size; i++) {
+      before += intervals[i].max() - intervals[i].min();
+    }
+    double after = 0;
+    for (int i = 0; i < result.size; i++) {
+      after += result.intervals[i].max() - result.intervals[i].min();
+    }
+    return Double.isFinite(before) && before - after < ratio * before;
+  }
+
   @Override
   public void inMin(int storeLevel, Var v, double min) {
 
@@ -2265,7 +2311,7 @@ public class FloatIntervalDomain extends FloatDomain {
       throw failException;
     }
 
-    if (min <= intervals[0].min()) {
+    if (min <= intervals[0].min() || negligible(min, intervals[size - 1].max())) {
       return;
     }
 
@@ -2330,7 +2376,7 @@ public class FloatIntervalDomain extends FloatDomain {
     }
 
     double currentMax = intervals[size - 1].max();
-    if (max >= currentMax) {
+    if (max >= currentMax || negligible(intervals[0].min(), max)) {
       return;
     }
 
@@ -2400,7 +2446,7 @@ public class FloatIntervalDomain extends FloatDomain {
       throw failException;
     }
 
-    if (min <= intervals[0].min() && max >= currentMax) {
+    if (min <= intervals[0].min() && max >= currentMax || negligible(min, max)) {
       return;
     }
 
@@ -2471,7 +2517,7 @@ public class FloatIntervalDomain extends FloatDomain {
 
     FloatIntervalDomain result = computeIntersection(input.intervals, input.size, 0.0);
 
-    if (result == null) {
+    if (result == null || negligible(result)) {
       return;
     }
 
