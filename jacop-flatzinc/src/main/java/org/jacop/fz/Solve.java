@@ -2483,6 +2483,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (progressionSearch(costVar)) {
         return executeProgressionSearch(label, costVar, solveType);
       }
+      if (cliqueSearch(costVar)) {
+        return executeCliqueSearch(label, costVar, solveType);
+      }
       if (useLcg(costVar)) {
         fixedLabel = label;
         fixedSelect = select;
@@ -2544,6 +2547,40 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && dictionary.onRestart == null
         && options.proof() == null
         && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.progressionTiling.search"));
+  }
+
+  /**
+   * Whether the search is the branching of maximum clique algorithms ({@link
+   * org.jacop.search.MaxCliqueSelect}): a model of maximum clique and nothing else, maximized
+   * without an annotation to follow (or under -f), without LCG, restarts or on_restart built-ins.
+   * The system property org.jacop.fz.maxClique.search=false keeps the default search.
+   */
+  private boolean cliqueSearch(Var costVar) {
+    return dictionary.maxClique != null
+        && costVar != null
+        && options.freeSearch()
+        && !options.lcg()
+        && !options.getAll()
+        && dictionary.onRestart == null
+        && restartCalculator == null
+        && options.proof() == null
+        && org.jacop.fz.constraints.MaxCliqueDetector.searches();
+  }
+
+  /**
+   * Branch and bound of maximum clique: the vertex of the last color class first, at 1 first, as
+   * MCQ and MCS do, under the bound of {@link org.jacop.constraints.MaxCliqueBound}.
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeCliqueSearch(DepthFirstSearch<T> label, Var costVar, String type) {
+    if (options.debug()) {
+      IO.println("%% maximum clique search over " + dictionary.maxClique.x.length + " vertices");
+    }
+    return executeNonRestartSearch(
+        label,
+        (SelectChoicePoint<T>) new org.jacop.search.MaxCliqueSelect(dictionary.maxClique),
+        costVar,
+        type);
   }
 
   /**

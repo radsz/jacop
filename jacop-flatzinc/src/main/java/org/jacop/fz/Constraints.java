@@ -235,6 +235,15 @@ public class Constraints implements ParserTreeConstants {
       // merged copies of partial function results
       Set<SimpleNode> replaced = Set.of();
       Set<IntVar> tabled = Set.of();
+      // the conflicts of a model of maximum clique alone are enforced by its bound
+      boolean pureClique = false;
+      if (MaxCliqueDetector.enabled() && options.proof() == null) {
+        Set<SimpleNode> pairs = new MaxCliqueDetector(support).replacedPairs(astTree);
+        if (!pairs.isEmpty()) {
+          replaced = new HashSet<>(pairs);
+          pureClique = true;
+        }
+      }
       // a search variable that became an alias is searched as its Boolean
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
@@ -400,7 +409,7 @@ public class Constraints implements ParserTreeConstants {
       // a redundant Sequence over sliding-window sums, which --proof does not encode
       // its window rows are still posted, but marked implied: local search evaluates the sequence
       Set<SimpleNode> impliedRows = Set.of();
-      if (SequenceDetector.enabled() && options.proof() == null) {
+      if (SequenceDetector.enabled() && options.proof() == null && !pureClique) {
         SequenceDetector sequences = new SequenceDetector(support);
         sequences.detect(astTree);
         impliedRows = sequences.impliedRows();

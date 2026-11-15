@@ -103,8 +103,53 @@ public class MaxCliqueBound extends Constraint
   // the zeros a reason needs, as positions
   private final long[] needed;
 
-  // the members of each class of the last coloring, as positions
+  // the members of each class of the last coloring, as positions; after absorb(), the first
+  // classCount of them are the soft clauses of the MaxSAT view
   private long[][] classes;
+
+  private int classCount;
+
+  // per class after absorb(): FREE, FAILED, or USED (in an inconsistent subset)
+  private int[] state;
+
+  // per class in an inconsistent subset: the vertices its derivation holds false before the class
+  // itself is used, so a zero there can join it in a reason
+  private long[][] earlierFalse;
+
+  // unit propagation scratch: the false vertices, the sequence of units, the class each unit came
+  // from and the place of each class in that sequence (-1 when not a unit)
+  private final long[] falsified;
+  private int[] unitVertex;
+  private int[] unitClass;
+  private int[] unitAt;
+  private boolean[] inSubset;
+  private int[] stack;
+
+  // the vertices of the classes beyond the limit
+  private final int[] beyond;
+
+  // the vertex, as a position, absorb() could not cover; -1 when none or more than one
+  private int uncovered;
+
+  private static final int FREE = -1;
+  private static final int FAILED = -2;
+  private static final int USED = 0;
+
+  /** Whether the bound tries to cover the vertices beyond the limit by re-coloring (MCS). */
+  public static final boolean RENUMBER =
+      Boolean.parseBoolean(System.getProperty("org.jacop.maxClique.renumber", "true"));
+
+  /** Whether the bound tries to cover them by MaxSAT failed-literal reasoning (Li and Quan). */
+  public static final boolean MAXSAT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.maxClique.maxsat", "true"));
+
+  /** Whether the vertices are colored in the minimum width order of MCS instead of by degree. */
+  public static final boolean DEGENERACY =
+      Boolean.parseBoolean(System.getProperty("org.jacop.maxClique.degeneracy", "false"));
+
+  /** Whether the one vertex left uncovered is set to 1. */
+  public static final boolean FORCE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.maxClique.force", "true"));
 
   /**
    * It creates the bound.
@@ -162,6 +207,9 @@ public class MaxCliqueBound extends Constraint
       sorted[i] = i;
     }
     Arrays.sort(sorted, (a, b) -> degree[a] != degree[b] ? degree[b] - degree[a] : a - b);
+    if (DEGENERACY) {
+      degeneracyOrder(sorted, conflict, degree);
+    }
     this.order = new int[n];
     this.position = new int[n];
     for (int p = 0; p < n; p++) {
@@ -181,7 +229,45 @@ public class MaxCliqueBound extends Constraint
     this.candidates = new long[words];
     this.needed = new long[words];
     this.classes = new long[8][words];
+    this.state = new int[8];
+    this.earlierFalse = new long[8][];
+    this.falsified = new long[words];
+    this.unitVertex = new int[8];
+    this.unitClass = new int[8];
+    this.unitAt = new int[8];
+    this.inSubset = new boolean[8];
+    this.stack = new int[8];
+    this.beyond = new int[n];
     setScope(Stream.concat(Arrays.stream(this.x), Stream.of(sum)));
+  }
+
+  /**
+   * Reorders the vertices by the minimum width order of MCS: the vertex of least degree among those
+   * left goes last, and its edges are removed, until no vertex is left; ties keep the decreasing
+   * degree order.
+   */
+  private static void degeneracyOrder(Integer[] sorted, long[][] conflict, int[] degree) {
+    int n = sorted.length;
+    int[] left = degree.clone();
+    boolean[] placed = new boolean[n];
+    Integer[] out = new Integer[n];
+    for (int slot = n - 1; slot >= 0; slot--) {
+      int best = -1;
+      for (Integer v : sorted) {
+        if (!placed[v] && (best < 0 || left[v] < left[best])) {
+          best = v;
+        }
+      }
+      placed[best] = true;
+      out[slot] = best;
+      long[] c = conflict[best];
+      for (int u = 0; u < n; u++) {
+        if (!placed[u] && u != best && (c[u >>> 6] & (1L << u)) == 0) {
+          left[u]--;
+        }
+      }
+    }
+    System.arraycopy(out, 0, sorted, 0, n);
   }
 
   private static boolean empty(long[] set) {
@@ -220,12 +306,7 @@ public class MaxCliqueBound extends Constraint
       if (first < 0) {
         return k;
       }
-      if (k == classes.length) {
-        classes = Arrays.copyOf(classes, 2 * k);
-        for (int c = k; c < classes.length; c++) {
-          classes[c] = new long[words];
-        }
-      }
+      ensureClasses(k + 1);
       long[] members = classes[k];
       Arrays.fill(members, 0L);
       System.arraycopy(left, 0, candidates, 0, words);
@@ -247,6 +328,265 @@ public class MaxCliqueBound extends Constraint
     }
   }
 
+  private void ensureClasses(int size) {
+    if (size <= classes.length) {
+      return;
+    }
+    int old = classes.length;
+    int grown = Math.max(size, 2 * old);
+    classes = Arrays.copyOf(classes, grown);
+    for (int c = old; c < grown; c++) {
+      classes[c] = new long[words];
+    }
+    state = Arrays.copyOf(state, grown);
+    earlierFalse = Arrays.copyOf(earlierFalse, grown);
+    unitVertex = Arrays.copyOf(unitVertex, grown);
+    unitClass = Arrays.copyOf(unitClass, grown);
+    unitAt = Arrays.copyOf(unitAt, grown);
+    inSubset = Arrays.copyOf(inSubset, grown);
+    stack = Arrays.copyOf(stack, grown);
+  }
+
+  /**
+   * Tries to cover, after color() made k classes, the vertices of the classes beyond {@code limit}
+   * so that the vertices left need only limit classes: each such vertex is moved into one of the
+   * first limit classes by the re-coloring of MCS (Tomita et al., WALCOM 2010), or is shown to add
+   * nothing to the bound by MaxSAT reasoning on the classes as soft clauses (C.-M. Li and Z. Quan,
+   * An efficient branch-and-bound algorithm based on MaxSAT for the maximum clique problem, AAAI
+   * 2010; C.-M. Li, Z. Fang and K. Xu, Combining MaxSAT reasoning and incremental upper bound for
+   * the maximum clique problem, ICTAI 2013): a unit soft clause of the vertex, propagated over the
+   * classes, empties a class, and the clauses of that derivation form an inconsistent subset of
+   * which at most all but one hold. Each subset found lowers the bound by one and its clauses are
+   * not used again.
+   *
+   * <p>It stops at the second vertex it cannot cover. It records the one vertex it could not cover
+   * in {@code uncovered}, -1 otherwise; that vertex is kept out of every subset, so without it the
+   * other vertices need at most limit classes.
+   *
+   * @return the number of vertices it could not cover, 0, 1 or 2 (meaning at least 2)
+   */
+  private int absorb(int k, int limit) {
+    uncovered = -1;
+    int b = 0;
+    for (int c = limit; c < k; c++) {
+      long[] members = classes[c];
+      for (int w = 0; w < words; w++) {
+        for (long bits = members[w]; bits != 0; bits &= bits - 1) {
+          beyond[b++] = (w << 6) | Long.numberOfTrailingZeros(bits);
+        }
+      }
+    }
+    Arrays.sort(beyond, 0, b);
+    classCount = limit;
+    Arrays.fill(state, 0, limit, FREE);
+    int fails = 0;
+    for (int i = 0; i < b; i++) {
+      int p = beyond[i];
+      if (RENUMBER && renumber(p)) {
+        continue;
+      }
+      int r = classCount++;
+      ensureClasses(classCount);
+      Arrays.fill(classes[r], 0L);
+      classes[r][p >>> 6] = 1L << p;
+      state[r] = FREE;
+      if (MAXSAT && failedLiteral(r, p)) {
+        continue;
+      }
+      state[r] = FAILED;
+      fails++;
+      if (fails > 1) {
+        uncovered = -1;
+        return 2;
+      }
+      uncovered = p;
+    }
+    return fails;
+  }
+
+  // moves p into a free class with no member compatible with it, or with exactly one, q, that can
+  // move to another free class with no member compatible with q
+  private boolean renumber(int p) {
+    long[] c = compatible[p];
+    for (int k1 = 0; k1 < classCount; k1++) {
+      if (state[k1] != FREE) {
+        continue;
+      }
+      long[] members = classes[k1];
+      int count = 0;
+      int q = -1;
+      for (int w = 0; w < words && count < 2; w++) {
+        long both = members[w] & c[w];
+        if (both != 0) {
+          count += Long.bitCount(both);
+          q = (w << 6) | Long.numberOfTrailingZeros(both);
+        }
+      }
+      if (count == 0) {
+        members[p >>> 6] |= 1L << p;
+        return true;
+      }
+      if (count > 1) {
+        continue;
+      }
+      long[] cq = compatible[q];
+      for (int k2 = 0; k2 < classCount; k2++) {
+        if (k2 == k1 || state[k2] != FREE) {
+          continue;
+        }
+        long[] other = classes[k2];
+        boolean disjoint = true;
+        for (int w = 0; w < words && disjoint; w++) {
+          disjoint = (other[w] & cq[w]) == 0;
+        }
+        if (disjoint) {
+          members[q >>> 6] &= ~(1L << q);
+          other[q >>> 6] |= 1L << q;
+          members[p >>> 6] |= 1L << p;
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private void addUnit(int count, int c, int u) {
+    unitVertex[count] = u;
+    unitClass[count] = c;
+    unitAt[c] = count;
+    long[] cu = compatible[u];
+    for (int w = 0; w < words; w++) {
+      falsified[w] |= ~cu[w];
+    }
+    falsified[u >>> 6] &= ~(1L << u);
+  }
+
+  // whether vertex u is false through the unit at place j
+  private boolean falseBy(int j, int u) {
+    int v = unitVertex[j];
+    return v != u && (compatible[v][u >>> 6] & (1L << u)) == 0;
+  }
+
+  /**
+   * Propagates the unit soft clause r = {p} over the free classes. When a class empties, it marks
+   * the clauses its derivation uses as USED and returns true.
+   */
+  private boolean failedLiteral(int r, int p) {
+    Arrays.fill(falsified, 0L);
+    for (int c = 0; c < classCount; c++) {
+      unitAt[c] = -1;
+    }
+    int units = 0;
+    addUnit(units++, r, p);
+    int conflict = -1;
+    boolean changed = true;
+    while (changed && conflict < 0) {
+      changed = false;
+      for (int c = 0; c < classCount && conflict < 0; c++) {
+        if (state[c] != FREE) {
+          continue;
+        }
+        long[] members = classes[c];
+        int count = 0;
+        int u = -1;
+        for (int w = 0; w < words && count < 2; w++) {
+          long live = members[w] & ~falsified[w];
+          if (live != 0) {
+            count += Long.bitCount(live);
+            u = (w << 6) | Long.numberOfTrailingZeros(live);
+          }
+        }
+        if (count == 0) {
+          conflict = c;
+        } else if (count == 1 && unitAt[c] < 0) {
+          addUnit(units++, c, u);
+          changed = true;
+        }
+      }
+    }
+    if (conflict < 0) {
+      return false;
+    }
+    // the clauses the empty class depends on, back through the units that falsified its members
+    for (int c = 0; c < classCount; c++) {
+      inSubset[c] = false;
+    }
+    int top = 0;
+    inSubset[conflict] = true;
+    stack[top++] = conflict;
+    while (top > 0) {
+      int c = stack[--top];
+      int before = unitAt[c] < 0 || c == conflict ? units : unitAt[c];
+      int own = unitAt[c] >= 0 && c != conflict ? unitVertex[unitAt[c]] : -1;
+      long[] members = classes[c];
+      for (int w = 0; w < words; w++) {
+        for (long bits = members[w]; bits != 0; bits &= bits - 1) {
+          int u = (w << 6) | Long.numberOfTrailingZeros(bits);
+          if (u == own) {
+            continue;
+          }
+          int j = 0;
+          while (j < before && !falseBy(j, u)) {
+            j++;
+          }
+          assert j < before : "a member of a class in the derivation is not false";
+          int d = unitClass[j];
+          if (!inSubset[d]) {
+            inSubset[d] = true;
+            stack[top++] = d;
+          }
+        }
+      }
+    }
+    for (int c = 0; c < classCount; c++) {
+      if (!inSubset[c]) {
+        continue;
+      }
+      state[c] = USED;
+      if (earlierFalse[c] == null) {
+        earlierFalse[c] = new long[words];
+      }
+      long[] early = earlierFalse[c];
+      Arrays.fill(early, 0L);
+      // a zero joining a class that became a unit must be false before it did
+      int before = unitAt[c] < 0 ? units : unitAt[c];
+      for (int j = 0; j < before; j++) {
+        if (inSubset[unitClass[j]]) {
+          long[] cu = compatible[unitVertex[j]];
+          for (int w = 0; w < words; w++) {
+            early[w] |= ~cu[w];
+          }
+          early[unitVertex[j] >>> 6] &= ~(1L << unitVertex[j]);
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * The vertex to branch on next, as maximum clique algorithms choose it (MCQ, MCS): a vertex not
+   * yet fixed of the last class of the coloring of the vertices that can still be 1, the one of
+   * smallest degree there. A clique larger than the number of classes before it needs a vertex of
+   * that class or a later one.
+   *
+   * @return the index in x of the vertex, or -1 when every vertex is fixed
+   */
+  public int branchVertex() {
+    int k = boundNow();
+    for (int c = k - 1; c >= 0; c--) {
+      long[] members = classes[c];
+      for (int w = words - 1; w >= 0; w--) {
+        for (long bits = members[w]; bits != 0; bits &= ~Long.highestOneBit(bits)) {
+          int p = (w << 6) | (63 - Long.numberOfLeadingZeros(bits));
+          if (x[order[p]].min() == 0) {
+            return order[p];
+          }
+        }
+      }
+    }
+    return -1;
+  }
+
   // the number of classes over the vertices that can be 1 now
   private int boundNow() {
     Arrays.fill(left, 0L);
@@ -260,15 +600,34 @@ public class MaxCliqueBound extends Constraint
 
   @Override
   public void consistency(Store store) {
-    for (int i = 0; i < x.length; i++) {
-      if (x[i].min() > 0) {
-        for (int j : conflicts[i]) {
-          x[j].domain.inMax(store.level, x[j], 0);
+    boolean again = true;
+    while (again) {
+      again = false;
+      for (int i = 0; i < x.length; i++) {
+        if (x[i].min() > 0) {
+          for (int j : conflicts[i]) {
+            if (x[j].max() > 0) {
+              x[j].domain.inMax(store.level, x[j], 0);
+            }
+          }
         }
       }
+      int k = boundNow();
+      int least = sum.min();
+      if (k >= least && (RENUMBER || MAXSAT || FORCE) && least > 0) {
+        int fails = absorb(k, least - 1);
+        if (fails == 0) {
+          sum.domain.inMax(store.level, sum, least - 1);
+        } else if (fails == 1 && FORCE) {
+          IntVar v = x[order[uncovered]];
+          if (v.min() == 0) {
+            v.domain.inMin(store.level, v, 1);
+            again = true;
+          }
+        }
+      }
+      sum.domain.inMax(store.level, sum, k);
     }
-    int k = boundNow();
-    sum.domain.inMax(store.level, sum, k);
   }
 
   @Override
@@ -301,33 +660,44 @@ public class MaxCliqueBound extends Constraint
   // ---- reasons ---------------------------------------------------------------------------
 
   /**
-   * Colors the vertices that could be 1 just before a trail position and adds to {@code out} the
-   * zeros of the other vertices that the coloring needs to keep at most {@code limit} classes.
+   * Colors the vertices that could be 1 just before a trail position, but for vertex {@code
+   * excluded} (a position, or -1), and adds to {@code out} the zeros of the other vertices that the
+   * bound needs to keep at most {@code limit} classes. It repeats the computation of consistency,
+   * so it finds the same classes and subsets.
    *
-   * @return false when the coloring needs more than limit classes
+   * @return false when the bound is above limit
    */
-  private boolean reason(AtomicTrail trail, int at, long limit, EntryList out) {
+  private boolean reason(AtomicTrail trail, int at, long limit, int excluded, EntryList out) {
     int n = x.length;
     Arrays.fill(needed, 0L);
     Arrays.fill(left, 0L);
     for (int p = 0; p < n; p++) {
-      if (trail.maxBefore(x[order[p]], at) > 0) {
+      if (p != excluded && trail.maxBefore(x[order[p]], at) > 0) {
         left[p >>> 6] |= 1L << p;
       }
     }
     int k = color();
     if (k > limit) {
-      return false;
+      if (limit < 0 || absorb(k, (int) limit) != 0) {
+        return false;
+      }
+    } else {
+      classCount = k;
+      Arrays.fill(state, 0, k, FREE);
     }
-    // a zero in conflict with every member of a class joins it, and is then not needed
+    // a zero in conflict with every member of a class joins it, and is then not needed; a class of
+    // an inconsistent subset takes only zeros its derivation holds false before using it
     for (int p = 0; p < n; p++) {
       IntVar v = x[order[p]];
-      if (trail.maxBefore(v, at) > 0) {
+      if (p == excluded || trail.maxBefore(v, at) > 0) {
         continue;
       }
       long[] c = compatible[p];
       boolean joined = false;
-      for (int j = 0; j < k && !joined; j++) {
+      for (int j = 0; j < classCount && !joined; j++) {
+        if (state[j] == FAILED || state[j] == USED && (earlierFalse[j][p >>> 6] & (1L << p)) == 0) {
+          continue;
+        }
         long[] members = classes[j];
         boolean disjoint = true;
         for (int w = 0; w < words && disjoint; w++) {
@@ -375,16 +745,42 @@ public class MaxCliqueBound extends Constraint
   public boolean explain(AtomicTrail trail, int entry, EntryList out) {
     IntVar y = trail.variable(entry);
     if (y != sum) {
+      if (trail.kind(entry) == AtomicTrail.GE) {
+        return forcedReason(trail, entry, y, out);
+      }
       return conflictReason(trail, entry, y, out);
     }
     if (trail.kind(entry) != AtomicTrail.LE) {
       return false;
     }
     int mark = out.size();
-    if (!reason(trail, entry, trail.value(entry), out)) {
+    if (!reason(trail, entry, trail.value(entry), -1, out)) {
       out.truncate(mark);
       return false;
     }
+    out.sortUnique(mark);
+    return true;
+  }
+
+  // the reason of a vertex set to 1: the other vertices need at most sum.min - 1 classes
+  private boolean forcedReason(AtomicTrail trail, int entry, IntVar y, EntryList out) {
+    if (trail.value(entry) != 1) {
+      return false;
+    }
+    int excluded = -1;
+    for (int j = 0; j < x.length; j++) {
+      if (x[j] == y) {
+        excluded = position[j];
+        break;
+      }
+    }
+    int least = trail.minBefore(sum, entry);
+    int mark = out.size();
+    if (excluded < 0 || !reason(trail, entry, least - 1L, excluded, out)) {
+      out.truncate(mark);
+      return false;
+    }
+    trail.addLowerBound(sum, entry, out);
     out.sortUnique(mark);
     return true;
   }
@@ -412,7 +808,7 @@ public class MaxCliqueBound extends Constraint
     int mark = out.size();
     int at = trail.size();
     int least = trail.minBefore(sum, at);
-    if (!reason(trail, at, least - 1L, out)) {
+    if (!reason(trail, at, least - 1L, -1, out)) {
       out.truncate(mark);
       return false;
     }
