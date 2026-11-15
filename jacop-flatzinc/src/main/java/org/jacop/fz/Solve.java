@@ -57,6 +57,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntFunction;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SolutionHint;
@@ -85,6 +86,7 @@ import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.floats.constraints.FloatNewton;
+import org.jacop.floats.constraints.LinearFloatRelaxation;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -257,6 +259,32 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // turns them off)
   // the time-indexed bound of the cumulative resources (TimeIndexedBound), off by default
   private static final boolean TIME_INDEXED = Boolean.getBoolean("org.jacop.lp.timeIndexed");
+  // a float objective searched by bisection of its range (executeFloatBisection), not by asking
+  // each solution to improve by the next float below the last one
+  private static final boolean FLOAT_BISECTION =
+      !"false".equals(System.getProperty("org.jacop.fz.floatBisection"));
+
+  // the LP relaxation of the linear float rows of a float objective (LinearFloatRelaxation)
+  private static final boolean FLOAT_LP =
+      !"false".equals(System.getProperty("org.jacop.fz.floatLp"));
+
+  private static final int FLOAT_LP_ROWS = Integer.getInteger("org.jacop.fz.floatLpRows", 5000);
+
+  private LinearFloatRelaxation floatRelaxation;
+
+  // the bisection of a float objective first tries the point of the relaxation (pointProbe)
+  private static final boolean FLOAT_LP_POINT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatLpPoint", "true"));
+
+  // the solutions of a float objective's branch and bound before it turns to bisection
+  // the node budget of a run of the bisection, at least the nodes so far
+  private static final long STEP_NODES = Long.getLong("org.jacop.fz.floatStepNodes", 100_000);
+
+  private static final int FLOAT_CRAWL = Integer.getInteger("org.jacop.fz.floatCrawl", 1000);
+
+  // how far above lo, relative to max(1, |best|), a float cost steps down by max(1, |best|) in
+  // place of bisecting
+  private static final double FAR = 1e6;
 
   private TimeIndexedBound timeIndexedBound;
 
@@ -2164,6 +2192,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Var costVar = null;
     if (solveKind > 0) {
       costVar = setupCostVariable(kind, solveKind);
+      if (costVar instanceof FloatVar floatCost && FLOAT_LP) {
+        floatRelaxation = LinearFloatRelaxation.ofModel(store, floatCost, FLOAT_LP_ROWS);
+        if (floatRelaxation != null) {
+          store.impose(floatRelaxation);
+        }
+      }
     }
 
     // adds child search for cost; to be sure that all variables get a value
@@ -5019,10 +5053,298 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             }
           });
     }
+    if (costVar instanceof FloatVar floatCost && FLOAT_BISECTION) {
+      return executeFloatBisection(label, select, floatCost);
+    }
     if (costVar != null) {
       return label.labeling(store, select, costVar);
     }
     return label.labeling(store, select);
+  }
+
+  /**
+   * Minimises a float cost, by branch and bound until it crawls and by bisection of the cost range
+   * after that. Branch and bound asks each solution only to cost less than the last one, by one
+   * float, so on a float objective each solution can improve on the last by a few ulps: the
+   * 3-variable linear program mip1 found 16 million solutions in 60 s and was still at a cost of
+   * 1e-9 against the optimum 39. So once the search has found {@link #FLOAT_CRAWL} solutions, each
+   * further solution must cost at most the middle of [lo, best], where lo is the lowest cost not
+   * yet refuted. A search that ends under that bound proves that no solution costs at most the
+   * bound, so lo moves above it and the search runs again from the root, until the range is
+   * narrower than the precision: the last search then asks for a cost of at most best minus the
+   * precision and its end proves best optimal within the precision. A cost far above lo steps down
+   * at once ({@link #floatCostBound}). Otherwise, below that many solutions nothing changes: a run
+   * from the root under a bound can cost far more than the branch and bound it replaces (box: 15.7
+   * million nodes to refute a cost of 50.9 from the root, 38,000 for the whole branch and bound to
+   * the optimum 50.94).
+   *
+   * @param label the search
+   * @param select the choice points
+   * @param cost the cost, minimised
+   * @return true if a solution was found
+   */
+  private boolean executeFloatBisection(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, FloatVar cost) {
+    double[] lo = {cost.min()};
+    // the solutions of the first run so far, and the cost of the last one; no bisection in the
+    // first run until it crawls
+    int[] solutions = {0};
+    double[] last = {Double.NaN};
+    // a cost far above any bound known (mip2: 6 solutions in 60 s, the last of 1.7e14 with the
+    // optimum 18.6) steps down at once. Each run under a step of the bisection or a far step has a
+    // node budget, the nodes so far and at least STEP_NODES: a run from the root under a step can
+    // cost more than the whole branch and bound (arbitrage_loops5: z >= 2 not refuted in 90 s, 32
+    // solutions of branch and bound to the optimum 1.000000000000003 in 42 s). Out of its budget,
+    // branch and bound goes on from the best solution and bisects again once it crawls
+    boolean[] farOff = {false};
+    boolean[] farRun = {false};
+    // with a relaxation, its point probes give the solutions to bisect from at once (ex2_1_10
+    // under -f: the probe found 49,400 and branch and bound nothing better in 17 s)
+    // only with a finite bound to bisect from (mip2, unbounded columns: the points of the
+    // relaxation ran off to -1e143)
+    // only under free search: the annotated searches of ex2_1_10 (input_order, split) and box prove
+    // the optimum in 4 s and 0.8 s by branch and bound to 1000 solutions, and in 59 s and 53 s by
+    // bisection from the start
+    boolean[] bisect = {
+      FLOAT_BISECT_START
+          && options.freeSearch()
+          && FLOAT_LP_POINT
+          && floatRelaxation != null
+          && lo[0] > -1e12
+    };
+    DoubleUnaryOperator bound =
+        best -> {
+          if (best != last[0]) {
+            last[0] = best;
+            bisect[0] |= ++solutions[0] > FLOAT_CRAWL;
+          }
+          return bisect[0] || far(lo[0], best, farOff[0] || !farRun[0])
+              ? floatCostBound(lo[0], best, gap(best))
+              : FloatDomain.previousForMinimization(best);
+        };
+    label.setFloatCostBound(bound);
+    SimpleSolutionListener<T> listener =
+        label.getSolutionListener() instanceof SimpleSolutionListener<T> l ? l : null;
+    int solutionLimit = listener == null ? -1 : listener.solutionLimit;
+    int base = store.level;
+    boolean found = false;
+    while (true) {
+      double best = label.getCostValueFloat();
+      boolean farStep = !bisect[0] && best != Double.MAX_VALUE && far(lo[0], best, farOff[0]);
+      farRun[0] = farStep;
+      double limit = best == Double.MAX_VALUE ? Double.MAX_VALUE : bound.applyAsDouble(best);
+      if (FLOAT_LP_POINT
+          && (bisect[0] || best == Double.MAX_VALUE)
+          && floatRelaxation != null
+          && select instanceof SplitSelectFloat<?> split
+          && pointProbe(
+              label, select, cost, split.searchVariables, limit, base, listener, solutionLimit)) {
+        found = true;
+        if (label.timeOutOccured) {
+          break;
+        }
+        continue;
+      }
+      boolean result = false;
+      // the first run stops after FLOAT_CRAWL solutions and a run of the bisection at its first
+      // solution, to start again from the root under the next bound: a depth-first search that
+      // goes on from where it found a solution stays in its subtree (ackley5, default search: 1001
+      // solutions and then none under the middle bound in 18 s; with a restart 0.4 s)
+      // a run under a step of the bisection, or far below the best cost, has a node budget
+      boolean budget = bisect[0] || farStep;
+      if (budget) {
+        label.setNodesOut(label.getNodes() + Math.max(STEP_NODES, label.getNodes()));
+      }
+      int stopAt = -1;
+      if (listener != null && FLOAT_RESTART) {
+        // a cost that can be far below its first solution stops there, to step down within a
+        // budget
+        boolean step = bisect[0] || farStep || (best == Double.MAX_VALUE && lo[0] < 1 - FAR);
+        stopAt = listener.solutionsNo() + (step ? 1 : FLOAT_CRAWL + 1);
+        listener.setSolutionLimit(Math.min(stopAt, solutionLimit));
+      }
+      store.setLevel(base + 1);
+      try {
+        // only the upper bound: with a lower bound too, a run that ends without a solution has to
+        // split the boxes whose cost straddles lo down to the precision (box: 3.9 million nodes to
+        // refute [25.9, 38.8], 2,800 with no lower bound)
+        cost.domain.inMax(store.level, cost, limit);
+        result = label.labeling(store, select, cost);
+      } catch (FailException _) {
+        store.clearChanged();
+      }
+      store.removeLevel(base + 1);
+      store.setLevel(base);
+      // a run that found a solution and failed after it, as when it assigns the solution, still
+      // found it
+      result |= label.getCostValueFloat() < best;
+      found |= result;
+      if (budget) {
+        label.setNodesOut(Long.MAX_VALUE);
+        if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+          // out of the node budget: branch and bound from the best solution, and bisect again
+          // once it crawls
+          label.timeOutOccured = false;
+          farOff[0] |= farStep;
+          bisect[0] = false;
+          solutions[0] = 0;
+          continue;
+        }
+      }
+      if (label.timeOutOccured) {
+        break;
+      }
+      best = label.getCostValueFloat();
+      // a search that does not stop at the solution limit (free search with -a) ran to its end
+      if (stopAt >= 0 && stopAt <= solutionLimit && listener.solutionsNo() == stopAt) {
+        // stopped at a solution: bisect from it once the first run crawls, step down from it when
+        // its cost is far above lo, and branch and bound from it otherwise
+        bisect[0] |= solutions[0] > FLOAT_CRAWL;
+        continue;
+      }
+      if (farStep) {
+        // the step is refuted: bisect from it
+        bisect[0] = true;
+      }
+      if (best == Double.MAX_VALUE || !bisect[0]) {
+        break; // no solution, or branch and bound to the end
+      }
+      double end = floatCostBound(lo[0], best, gap(best));
+      if (end >= best - gap(best)) {
+        break; // nothing costs best - eps or less: best is optimal within the precision
+      }
+      // nothing costs at most end: the lowest cost left is above it
+      lo[0] = Math.nextUp(end);
+    }
+    label.setFloatCostBound(null);
+    if (listener != null) {
+      listener.setSolutionLimit(solutionLimit);
+    }
+    return found;
+  }
+
+  /**
+   * Tries the point of the relaxation: under the cost bound, fixes each search variable to its
+   * value at the optimum of the relaxation and searches the rest. On a model whose constraints are
+   * linear inequalities that point is a solution whenever it is in the domains (Ibex's upper
+   * bounding at the vertex of a linear relaxation): ex2_1_10, whose depth-first search found
+   * nothing under 277,717 in 13 s, has its optimum 49,318 near the point of the root.
+   *
+   * @return true when the search found a better solution
+   */
+  private boolean pointProbe(
+      DepthFirstSearch<T> label,
+      SelectChoicePoint<T> select,
+      FloatVar cost,
+      Var[] vars,
+      double limit,
+      int base,
+      SimpleSolutionListener<T> listener,
+      int solutionLimit) {
+    double before = label.getCostValueFloat();
+    boolean result = false;
+    store.setLevel(base + 1);
+    try {
+      cost.domain.inMax(store.level, cost, limit);
+      if (store.consistency()) {
+        double[] point = new double[vars.length];
+        for (int i = 0; i < vars.length; i++) {
+          point[i] =
+              vars[i] instanceof FloatVar v && v != cost
+                  ? floatRelaxation.pointValue(v, store.level)
+                  : Double.NaN;
+        }
+        int fixed = 0;
+        for (int i = 0; i < vars.length; i++) {
+          if (Double.isNaN(point[i])) {
+            continue;
+          }
+          FloatVar v = (FloatVar) vars[i];
+          double g = point[i];
+          double tol = 1e-6 * Math.max(1, Math.abs(g));
+          // a value at a bound of its domain; a value inside comes from a row the point may miss
+          // by the tolerance of the simplex, and is left to the search
+          if (g <= v.min() + tol) {
+            v.domain.in(store.level, v, v.min(), v.min());
+            fixed++;
+          } else if (g >= v.max() - tol) {
+            v.domain.in(store.level, v, v.max(), v.max());
+            fixed++;
+          }
+        }
+        if (fixed == 0) {
+          return false;
+        }
+        // the first solution, within a few nodes
+        if (listener != null) {
+          listener.setSolutionLimit(listener.solutionsNo() + 1);
+        }
+        label.setNodesOut(label.getNodes() + POINT_PROBE_NODES);
+        result = label.labeling(store, select, cost);
+      }
+    } catch (FailException _) {
+      store.clearChanged();
+    } finally {
+      store.removeLevel(base + 1);
+      store.setLevel(base);
+      if (listener != null) {
+        listener.setSolutionLimit(solutionLimit);
+      }
+      label.setNodesOut(Long.MAX_VALUE);
+      // the node limit stops the search as a time-out does
+      if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+        label.timeOutOccured = false;
+      }
+    }
+    pointProbes++;
+    boolean better = result && label.getCostValueFloat() < before;
+    if (better) {
+      pointProbeSolutions++;
+    }
+    return better;
+  }
+
+  // the precision of the optimum: relative to its magnitude, as the gaps of Ibex and SCIP
+  // the precision is read at each use: the search sets the precision of its annotation when it
+  // starts
+  private static double gap(double best) {
+    return FloatDomain.precision() * Math.max(1, Math.abs(best));
+  }
+
+  private static final boolean FLOAT_BISECT_START =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatBisectStart", "true"));
+
+  private static final boolean FLOAT_RESTART =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatRestart", "true"));
+
+  // the nodes of a point probe
+  private static final int POINT_PROBE_NODES = 1000;
+
+  private long pointProbes;
+
+  private long pointProbeSolutions;
+
+  /**
+   * The bound for the next solution of a float cost minimised by bisection: the middle of [lo,
+   * best], or best minus the precision once that range is narrower than four times the precision.
+   * Far above lo (by more than {@link #FAR} times max(1, |best|), as for a cost with no finite
+   * bound), the bound is best minus max(1, |best|): a search that ends under it gives a lo to
+   * bisect from.
+   */
+  private static boolean far(double lo, double best, boolean off) {
+    return !off && best - lo > FAR * Math.max(1, Math.abs(best));
+  }
+
+  static double floatCostBound(double lo, double best, double eps) {
+    double exact = best - eps;
+    if (best - lo <= 4 * eps) {
+      return exact;
+    }
+    double scale = Math.max(1, Math.abs(best));
+    if (best - lo > FAR * scale) {
+      return Math.min(exact, best - scale);
+    }
+    return Math.min(exact, lo / 2 + best / 2);
   }
 
   /**
@@ -5219,6 +5541,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param result whether a solution was found
    */
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
+    if (floatRelaxation != null && options.getStatistics()) {
+      long[] c = floatRelaxation.counts();
+      IO.println("%%%mzn-stat: floatLpRows=" + floatRelaxation.rows());
+      IO.println("%%%mzn-stat: floatLpSolves=" + c[0]);
+      IO.println("%%%mzn-stat: floatLpBounds=" + c[1]);
+      IO.println("%%%mzn-stat: floatLpFailures=" + c[2]);
+      IO.println("%%%mzn-stat: floatLpPointProbes=" + pointProbes);
+      IO.println("%%%mzn-stat: floatLpPointSolutions=" + pointProbeSolutions);
+    }
 
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();

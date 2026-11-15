@@ -1,0 +1,15 @@
+array [1..3] of float: X_INTRODUCED_0 = [2.0,2.0,1.0];
+array [1..3] of float: X_INTRODUCED_2 = [2.0,1.0,3.0];
+array [1..3] of float: X_INTRODUCED_4 = [1.0,2.0,1.0];
+var float: B:: output_var;
+var float: C:: output_var;
+var float: D:: output_var;
+var float: X_INTRODUCED_7 ::var_is_introduced :: is_defined_var;
+constraint float_lin_le(X_INTRODUCED_0,[C,B,D],30.0);
+constraint float_lin_le(X_INTRODUCED_2,[C,B,D],25.0);
+constraint float_lin_le(X_INTRODUCED_4,[C,B,D],20.0);
+constraint float_le(0.0,D);
+constraint float_le(0.0,C);
+constraint float_le(0.0,B);
+constraint float_lin_eq([1.0,3.0,3.0,-1.0],[C,B,D,X_INTRODUCED_7],0.0):: defines_var(X_INTRODUCED_7);
+solve  maximize X_INTRODUCED_7;

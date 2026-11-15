@@ -1,0 +1,23 @@
+% Ibex benchs/optim/easy/ex2_1_1.bch, as converted by osolpro benchmarks/float-set, squares as float_times
+
+array [1..5] of float: X_INTRODUCED_7_ = [7.0,11.0,12.0,20.0,4.0];
+var 0.0..1.0: x1:: output_var;
+var 0.0..1.0: x2:: output_var;
+var 0.0..1.0: x3:: output_var;
+var 0.0..1.0: x4:: output_var;
+var 0.0..1.0: x5:: output_var;
+var float: objective:: is_defined_var :: output_var;
+var float: X_INTRODUCED_0_ ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_1_ ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_2_ ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_3_ ::var_is_introduced :: is_defined_var;
+var float: X_INTRODUCED_4_ ::var_is_introduced :: is_defined_var;
+array [1..5] of var float: X_INTRODUCED_9_ ::var_is_introduced  = [x1,x2,x3,x4,x5];
+constraint float_times(x1,x1,X_INTRODUCED_0_):: defines_var(X_INTRODUCED_0_);
+constraint float_times(x2,x2,X_INTRODUCED_1_):: defines_var(X_INTRODUCED_1_);
+constraint float_times(x3,x3,X_INTRODUCED_2_):: defines_var(X_INTRODUCED_2_);
+constraint float_times(x4,x4,X_INTRODUCED_3_):: defines_var(X_INTRODUCED_3_);
+constraint float_times(x5,x5,X_INTRODUCED_4_):: defines_var(X_INTRODUCED_4_);
+constraint float_lin_le(X_INTRODUCED_7_,[x4,x3,x2,x1,x5],40.0);
+constraint float_lin_eq([47.0,45.0,44.0,-50.0,-50.0,-50.0,-50.0,-50.0,42.0,47.5,-1.0],[x4,x3,x2,X_INTRODUCED_4_,X_INTRODUCED_3_,X_INTRODUCED_2_,X_INTRODUCED_1_,X_INTRODUCED_0_,x1,x5,objective],-0.0):: defines_var(objective);
+solve :: float_search(X_INTRODUCED_9_,1e-06,input_order,indomain_split,complete) minimize objective;
