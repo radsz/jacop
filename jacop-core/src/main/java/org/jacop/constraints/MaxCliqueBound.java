@@ -61,6 +61,19 @@ import org.jacop.lcg.Explainable;
  * constraint programming to solve the maximum clique problem, CP 2003, LNCS 2833, posts the same
  * bound as a constraint.
  *
+ * <p>When the coloring needs more classes than the sum may still gain, that is more than {@code
+ * sum.min() - 1}, the vertices of the classes beyond that limit are covered one by one: first by
+ * the re-coloring of MCS (a vertex with one compatible member in a class moves in when that member
+ * can move to another class), then by MaxSAT reasoning on the classes as soft clauses, a failed
+ * literal test of the vertex by unit propagation as in C.-M. Li and Z. Quan, An efficient
+ * branch-and-bound algorithm based on MaxSAT for the maximum clique problem, AAAI 2010, and C.-M.
+ * Li, Z. Fang and K. Xu, Combining MaxSAT reasoning and incremental upper bound for the maximum
+ * clique problem, ICTAI 2013. When every vertex is covered the sum cannot reach its minimum and the
+ * constraint fails; when exactly one vertex is left uncovered, every clique large enough holds it,
+ * and it is set to 1. The system properties {@code org.jacop.maxClique.renumber}, {@code
+ * org.jacop.maxClique.maxsat} and {@code org.jacop.maxClique.force} set to false turn the parts
+ * off.
+ *
  * <p>The bound depends only on the variables that are 0, since every class holds at most one 1
  * whatever the other variables are. Its reason for lazy clause generation is the set of those
  * variables at 0 that the coloring needs: a variable at 0 that is in conflict with every member of
@@ -143,9 +156,12 @@ public class MaxCliqueBound extends Constraint
   public static final boolean MAXSAT =
       Boolean.parseBoolean(System.getProperty("org.jacop.maxClique.maxsat", "true"));
 
-  /** Whether the vertices are colored in the minimum width order of MCS instead of by degree. */
+  /**
+   * Whether the vertices are colored in the minimum width order of MCS (default) instead of by
+   * decreasing degree.
+   */
   public static final boolean DEGENERACY =
-      Boolean.parseBoolean(System.getProperty("org.jacop.maxClique.degeneracy", "false"));
+      Boolean.parseBoolean(System.getProperty("org.jacop.maxClique.degeneracy", "true"));
 
   /** Whether the one vertex left uncovered is set to 1. */
   public static final boolean FORCE =
@@ -586,6 +602,101 @@ public class MaxCliqueBound extends Constraint
     }
     return -1;
   }
+
+  /**
+   * A large clique of the vertices that can still be 1, by greedy construction from each vertex: it
+   * takes the vertex, then every next vertex of the coloring order compatible with all taken ones,
+   * and keeps the largest clique over all starting vertices, as the initial heuristic clique of
+   * exact maximum clique algorithms (San Segundo et al., C&amp;OR 38(2), 2011). It takes O(n (n/64
+   * + k n/64)) word operations for a clique of k vertices.
+   *
+   * @return the indices in x of the clique's vertices
+   */
+  public int[] greedyClique() {
+    int n = x.length;
+    long[] candidates = new long[words];
+    long[] all = new long[words];
+    for (int p = 0; p < n; p++) {
+      if (x[order[p]].max() > 0) {
+        all[p >>> 6] |= 1L << p;
+      }
+    }
+    int[] best = new int[0];
+    int[] clique = new int[n];
+    for (int s = 0; s < n; s++) {
+      if ((all[s >>> 6] & (1L << s)) == 0) {
+        continue;
+      }
+      int size = 0;
+      clique[size++] = s;
+      long[] cs = compatible[s];
+      for (int w = 0; w < words; w++) {
+        candidates[w] = all[w] & cs[w];
+      }
+      for (int w = 0; w < words; w++) {
+        while (candidates[w] != 0) {
+          int p = (w << 6) | Long.numberOfTrailingZeros(candidates[w]);
+          clique[size++] = p;
+          long[] c = compatible[p];
+          for (int u = w; u < words; u++) {
+            candidates[u] &= c[u];
+          }
+        }
+      }
+      if (size > best.length) {
+        best = new int[size];
+        for (int i = 0; i < size; i++) {
+          best[i] = order[clique[i]];
+        }
+      }
+    }
+    // from the first vertices of the order, the candidate with the most compatible candidates
+    for (int s = 0, starts = 0; s < n && starts < GREEDY_STARTS; s++) {
+      if ((all[s >>> 6] & (1L << s)) == 0) {
+        continue;
+      }
+      starts++;
+      int size = 0;
+      int p = s;
+      for (int w = 0; w < words; w++) {
+        candidates[w] = all[w];
+      }
+      while (p >= 0) {
+        clique[size++] = p;
+        long[] c = compatible[p];
+        for (int w = 0; w < words; w++) {
+          candidates[w] &= c[w];
+        }
+        p = -1;
+        int most = -1;
+        for (int w = 0; w < words; w++) {
+          for (long bits = candidates[w]; bits != 0; bits &= bits - 1) {
+            int q = (w << 6) | Long.numberOfTrailingZeros(bits);
+            long[] cq = compatible[q];
+            int count = 0;
+            for (int u = 0; u < words; u++) {
+              count += Long.bitCount(candidates[u] & cq[u]);
+            }
+            if (count > most) {
+              most = count;
+              p = q;
+            }
+          }
+        }
+      }
+      if (size > best.length) {
+        best = new int[size];
+        for (int i = 0; i < size; i++) {
+          best[i] = order[clique[i]];
+        }
+      }
+    }
+    return best;
+  }
+
+  // the starting vertices of the greedy clique that picks the best connected candidate
+  private static final int GREEDY_STARTS =
+      Integer.getInteger("org.jacop.maxClique.greedyStarts", 100);
 
   // the number of classes over the vertices that can be 1 now
   private int boundNow() {

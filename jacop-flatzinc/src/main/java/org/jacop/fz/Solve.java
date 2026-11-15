@@ -2560,7 +2560,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && costVar != null
         && options.freeSearch()
         && !options.lcg()
-        && !options.getAll()
         && dictionary.onRestart == null
         && restartCalculator == null
         && options.proof() == null
@@ -2576,11 +2575,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.debug()) {
       IO.println("%% maximum clique search over " + dictionary.maxClique.x.length + " vertices");
     }
-    return executeNonRestartSearch(
-        label,
-        (SelectChoicePoint<T>) new org.jacop.search.MaxCliqueSelect(dictionary.maxClique),
-        costVar,
-        type);
+    org.jacop.search.MaxCliqueSelect select =
+        new org.jacop.search.MaxCliqueSelect(dictionary.maxClique);
+    if (!"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.maxClique.greedy"))) {
+      // the greedy clique is the incumbent of a run from the root: as the top decisions of the
+      // tree, its vertices of large degree keep the search away from the hidden clique of brock
+      int[] clique = dictionary.maxClique.greedyClique();
+      select.firstDive(clique);
+      if (options.debug()) {
+        IO.println("%% greedy clique of " + clique.length + " vertices for the first run");
+      }
+      restartCalculator = new org.jacop.search.restart.FirstRunCalculator(0);
+      return executeRestartSearch(label, (SelectChoicePoint<T>) select, costVar, type);
+    }
+    return executeNonRestartSearch(label, (SelectChoicePoint<T>) select, costVar, type);
   }
 
   /**

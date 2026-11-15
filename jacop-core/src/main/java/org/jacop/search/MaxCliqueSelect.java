@@ -52,6 +52,9 @@ public class MaxCliqueSelect implements SelectChoicePoint<IntVar> {
 
   private final Map<IntVar, Integer> positions = new IdentityHashMap<>();
 
+  // the vertices of a heuristic clique the first dive sets to 1, null once it left them
+  private int[] dive;
+
   /**
    * It creates the branching.
    *
@@ -64,8 +67,31 @@ public class MaxCliqueSelect implements SelectChoicePoint<IntVar> {
     }
   }
 
+  /**
+   * It makes the first dive set the vertices of a clique to 1 before branching as usual, so the
+   * first solution is that clique.
+   *
+   * @param clique the indices of the vertices in the bound's variables
+   */
+  public void firstDive(int[] clique) {
+    this.dive = clique.clone();
+  }
+
   @Override
   public IntVar getChoiceVariable(int index) {
+    if (dive != null) {
+      for (int v : dive) {
+        IntVar y = bound.x[v];
+        if (y.max() == 0) {
+          dive = null;
+          break;
+        }
+        if (y.min() == 0) {
+          return y;
+        }
+      }
+      dive = null;
+    }
     int v = bound.branchVertex();
     return v < 0 ? null : bound.x[v];
   }
