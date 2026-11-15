@@ -6301,6 +6301,28 @@ Version 5.0 (unreleased)
    work-task-variation) and, in one of three censuses, mapping.
    FreeSearch.Builder.virtualClock turns it on for one search.
 
+347. Free search with lazy clause generation on an optimisation model
+   whose search variables all lie in one cardinality with fixed counts
+   (jacop_count_values or global_cardinality posted as CountValuesBounds
+   with equal bounds) first dives without learning through those
+   variables in model order, largest value first, for at most 5 % of the
+   time limit; the values of its first solution start the default
+   branching of LCG. On the slot model of bin packing (x[i][j] the weight
+   of the j-th item in bin i) this fills bin after bin with the largest
+   item that fits, the packing of first fit decreasing (D. S. Johnson,
+   A. Demers, J. D. Ullman, M. R. Garey and R. L. Graham, "Worst-case
+   performance bounds for simple one-dimensional packing algorithms",
+   SIAM Journal on Computing 3, 1974). LCG made about 30 conflicts a second
+   there and found no solution of 8 of the 15 BinPacking instances of the
+   XCSP 2024 competition in 240 s; with the dive all 8 have one (n3c2w1a
+   91, the best of the field; n3c3w1a proved optimal in 4 s), and the
+   other 7 are unchanged. It fires on none of the instances of the wide
+   benchmark set. Under LCG the reifications and the objective
+   live in SAT clauses, so the dive does not print its solution: the first
+   run of LCG completes it. --free-config slot-dive=off turns it off and
+   slot-dive-share sets its share of the time; the statistics slotDiveSlots
+   and slotDiveTime give its size and time.
+
 Version 4.11
 =============
 
