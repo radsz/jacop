@@ -882,6 +882,33 @@ class VeriPbProofTest {
   }
 
   @Test
+  void gccCountsWithHolesAreSplit() {
+    // x0 = -1 leaves x1, x2 and x4 to values 0..2 with counts g1, g2 in {0, 2, 3} and g3 in
+    // {0, 3}: only 2 three times fits, which the flow over the counts' intervals 0..3 misses
+    // (fuzz seed 5043342)
+    Store store = new Store();
+    IntVar x0 = var(store, "x0", -1, 2);
+    IntVar x1 = var(store, "x1", 0, 1, 2, 4);
+    IntVar x2 = var(store, "x2", 0, 2);
+    IntVar x3 = var(store, "x3", -1, 0, 1, 2, 4);
+    IntVar x4 = var(store, "x4", 1, 2, 4);
+    IntVar x5 = var(store, "x5", 0, 2, 3, 4);
+    IntVar g0 = var(store, "g0", 0, 1, 2, 3);
+    IntVar g1 = var(store, "g1", 0, 2, 3);
+    IntVar g2 = var(store, "g2", 0, 2, 3);
+    IntVar g3 = var(store, "g3", 0, 3);
+    IntVar g4 = var(store, "g4", 0, 1, 3);
+    store.impose(new GCC(new IntVar[] {x1, x2, x0, x4}, new IntVar[] {g0, g1, g2, g3, g4}, -1));
+    store.impose(new ElementInteger(x3, new int[] {3, -1, 1, -1}, x5, 0));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x2)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void reifiedRowUnderARootFixedBIsDerived() {
     // b = 0 at the root (b -> x5 = 1 with 1 not in x5) holds 2 x1 + 2 x5 - x0 = 5, which has no
     // solution by parity, but b is in no reason (fuzz seed 6060968)

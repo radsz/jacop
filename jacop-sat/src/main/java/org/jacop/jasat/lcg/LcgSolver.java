@@ -1093,12 +1093,12 @@ public final class LcgSolver implements ExternalPropagator {
               ? new IntervalDomain(lines.low[k], lines.up[k])
               : proofDomains[counters[k]];
     }
+    int[] freeCounter = new int[m];
+    Arrays.fill(freeCounter, -1);
+    StringBuilder[] counterLiterals = new StringBuilder[m];
     if (!lines.counterPosition.isEmpty()) {
-      int[] freeCounter = new int[m];
-      Arrays.fill(freeCounter, -1);
       lines.counterPosition.forEach((i, k) -> freeCounter[k] = i);
       IntDomain[] restricted = new IntDomain[m];
-      StringBuilder[] counterLiterals = new StringBuilder[m];
       int[] ids = new int[m];
       for (int k = 0; k < m; k++) {
         ids[k] = freeCounter[k] < 0 ? counters[k] : freeCounter[k];
@@ -1128,6 +1128,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     IntDomain restDomain = null;
+    StringBuilder[] restLiterals = new StringBuilder[1];
     if (lines.rest >= 0) {
       IntDomain[] restricted = new IntDomain[1];
       hypotheses(
@@ -1137,12 +1138,102 @@ public final class LcgSolver implements ExternalPropagator {
           from,
           entry,
           restricted,
-          new StringBuilder[1]);
+          restLiterals);
       restDomain = restricted[0];
       if (restDomain.isEmpty()) {
         return;
       }
     }
+    Cardinality cardinality =
+        new Cardinality(lines, dom, literals, valueIndex, freeValues, restDomain, restNode);
+    if (!proofCardinalityCut(cardinality, count)) {
+      StringBuilder clause = new StringBuilder();
+      for (StringBuilder l : literals) {
+        clause.append(l);
+      }
+      for (StringBuilder l : counterLiterals) {
+        clause.append(l == null ? "" : l);
+      }
+      clause.append(restLiterals[0] == null ? "" : restLiterals[0]);
+      proofCardinalitySplit(cardinality, count, freeCounter, clause, PROOF_SPLIT_LEAVES);
+    }
+  }
+
+  /** What the flow of a cardinality reason is built from, but the counts. */
+  private record Cardinality(
+      OpbEncoder.CardinalityLines lines,
+      IntDomain[] dom,
+      StringBuilder[] literals,
+      Map<Integer, Integer> valueIndex,
+      Map<Integer, Integer> freeValues,
+      IntDomain restDomain,
+      int restNode) {}
+
+  /**
+   * Splits a cardinality reason whose flow has no violated cut on the values of a counter with a
+   * hole, as {@link #proofRowSplit} splits a row: the flow sees the counter's interval only (the
+   * counts of 0, 1 and 2 in {0, 2, 3}, {0, 2, 3} and {0, 3} over three variables leave only 2 three
+   * times, while 0..3 leaves more). Each case is a cut with the counter at one value, then a lemma
+   * with the negated value literal.
+   *
+   * @return whether every case was refuted
+   */
+  private boolean proofCardinalitySplit(
+      Cardinality cardinality,
+      IntDomain[] count,
+      int[] freeCounter,
+      CharSequence clause,
+      int leaves) {
+    int best = -1;
+    for (int k = 0; k < count.length; k++) {
+      IntDomain d = count[k];
+      if (freeCounter[k] >= 0
+          && d.getSize() > 1
+          && d.getSize() < (long) d.max() - d.min() + 1
+          && (best < 0 || d.getSize() < count[best].getSize())) {
+        best = k;
+      }
+    }
+    if (best < 0 || count[best].getSize() > leaves) {
+      return false;
+    }
+    int counter = freeCounter[best];
+    int cases = count[best].getSize();
+    for (ValueEnumeration e = count[best].valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      IntDomain[] fixed = count.clone();
+      fixed[best] = new IntervalDomain(v, v);
+      StringBuilder caseClause = new StringBuilder(clause);
+      if (proofDomains[counter].contains(v) && !proofDomains[counter].singleton()) {
+        caseClause.append(" 1 ~").append(OpbEncoder.eq(counter, v));
+      }
+      if (!proofCardinalityCut(cardinality, fixed)
+          && !proofCardinalitySplit(cardinality, fixed, freeCounter, caseClause, leaves / cases)) {
+        return false;
+      }
+      proof.lemma("rup" + caseClause + " >= 1 ;\n");
+    }
+    return true;
+  }
+
+  /**
+   * Writes the pol step of a violated cut of the flow of a cardinality reason with the given
+   * counts.
+   *
+   * @return whether the counts are refuted: a count out of range or a violated cut
+   */
+  private boolean proofCardinalityCut(Cardinality cardinality, IntDomain[] count) {
+    OpbEncoder.CardinalityLines lines = cardinality.lines();
+    int[] variables = lines.variables;
+    int[] values = lines.values;
+    int n = variables.length;
+    int m = values.length;
+    IntDomain[] dom = cardinality.dom();
+    StringBuilder[] literals = cardinality.literals();
+    Map<Integer, Integer> valueIndex = cardinality.valueIndex();
+    Map<Integer, Integer> freeValues = cardinality.freeValues();
+    IntDomain restDomain = cardinality.restDomain();
+    int restNode = cardinality.restNode();
     int freeNodes = lines.rest >= 0 ? 1 : freeValues.size();
     // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
     int source = n + m + 2 + freeNodes;
@@ -1170,19 +1261,19 @@ public final class LcgSolver implements ExternalPropagator {
     }
     for (int k = 0; k < m; k++) {
       if (count[k].isEmpty()) {
-        return;
+        return true;
       }
       int lo = Math.max(0, count[k].min());
       int hi = Math.min(n, count[k].max());
       if (lo > hi) {
-        return;
+        return true;
       }
       flow.add(2 + n + k, 1, lo, hi);
     }
     flow.add(1, 0, 0, n + 1);
     boolean[] cut = flow.violatedCut(source, sink);
     if (cut == null) {
-      return;
+      return false;
     }
     StringBuilder pol = new StringBuilder();
     int operands = 0;
@@ -1240,6 +1331,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (operands >= 2) {
       proof.pol(pol);
     }
+    return true;
   }
 
   /**
