@@ -33,6 +33,7 @@ package org.jacop.fz.constraints;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -80,10 +81,24 @@ import org.jacop.fz.SimpleNode;
  *       and its internal variables leave the default search.
  * </ol>
  *
- * The table is equivalent to the group projected onto the outer variables, so every solution of the
- * outer variables is kept. It is not used when all solutions are searched for, since solutions that
- * differ only in internal variables would merge, nor under {@code --proof}. The system property
- * {@code org.jacop.fz.intensionTable=false} turns it off.
+ * The small search also infers through clauses (a clause with one unknown literal and the others
+ * false), implications and reifications (a false relation makes its literal false; a true literal
+ * of an equality gives the value of its unknown term). A group such as the XCSP 2026 Collatz link
+ * {@code x mod 2 != 0 \/ y = x div 2} and {@code x mod 2 = 0 \/ y = 3 x + 1} then has one row per
+ * value of {@code x}: its outer box is not enumerated, the search branches on {@code x} only. Such
+ * a group is tabulated when one branch of the search, followed to its end, multiplies the domain
+ * sizes of the outer variables it branches on to at most the rows limit. That limit is {@value
+ * #MAX_TUPLES}, or for two or three outer variables twice the domain size of the smallest one when
+ * that is larger, up to {@value #MAX_LARGE_TUPLES}: a large table is kept for a relation with few
+ * supports per value in every column, as a Collatz link, and not for one like {@code d = x div 10
+ * mod 10}, where every digit has thousands of supports and bounds reasoning on the decomposition is
+ * cheaper. Groups with the same constraints over variables with the same domains share one
+ * tabulation and the index of one table.
+ *
+ * <p>The table is equivalent to the group projected onto the outer variables, so every solution of
+ * the outer variables is kept. It is not used when all solutions are searched for, since solutions
+ * that differ only in internal variables would merge, nor under {@code --proof}. The system
+ * property {@code org.jacop.fz.intensionTable=false} turns it off.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -99,7 +114,14 @@ public class IntensionTableDetector implements ParserTreeConstants {
   /** At most this many tuples in one table. */
   static final int MAX_TUPLES = 10_000;
 
-  /** At most this many search nodes to tabulate one group. */
+  /**
+   * At most this many tuples in a table larger than {@value #MAX_TUPLES}, allowed when the table
+   * has two or three columns and every outer variable has at least half as many values as the table
+   * has rows.
+   */
+  static final int MAX_LARGE_TUPLES = 100_000;
+
+  /** At most this many search nodes to tabulate one group (more for a group with many rows). */
   static final long MAX_NODES = 200_000;
 
   /** At most this many search nodes over all groups. */
@@ -115,6 +137,12 @@ public class IntensionTableDetector implements ParserTreeConstants {
   private final Set<Var> internal = new HashSet<>();
 
   private final Set<IntVar> tabled = Collections.newSetFromMap(new IdentityHashMap<>());
+
+  /** The rows of the groups tabulated so far, by signature. */
+  private final Map<String, int[][]> cache = new HashMap<>();
+
+  /** The first table posted over each array of rows, whose index the later tables share. */
+  private final Map<int[][], HybridTable> posted = new IdentityHashMap<>();
 
   private int tables;
 
@@ -362,14 +390,31 @@ public class IntensionTableDetector implements ParserTreeConstants {
         defined = Math.max(defined, vars[b.at[r]].getSize());
       }
     }
-    if (space / defined > MAX_TUPLES) {
-      return;
+    // a large group whose outer variables follow from each other, as y = f(x) for an f that takes
+    // few values more than twice, may have as many rows as twice its smallest outer domain
+    long smallest = Long.MAX_VALUE;
+    for (IntVar v : outer) {
+      smallest = Math.min(smallest, v.getSize());
     }
-    Tabulator t = new Tabulator(vars, outer.size(), bound, Math.min(MAX_NODES, BUDGET - nodes));
-    int[][] rows = t.run();
-    nodes += t.nodes;
+    // a single outer variable gets a large table of its values only by the old limit: dozens of
+    // primality tests p mod k > 0 over 90,000 values of p slowed limerick_primes 60 times
+    int rowLimit =
+        outer.size() < 2 ? MAX_TUPLES : Math.clamp(2 * smallest, MAX_TUPLES, MAX_LARGE_TUPLES);
+    long wanted = Math.max(MAX_NODES, 4L * rowLimit);
+    long nodeLimit = Math.min(wanted, BUDGET - nodes);
+    String key = signature(bound, vars);
+    int[][] rows = cache.get(key);
     if (rows == null) {
-      return;
+      Tabulator t = new Tabulator(vars, outer.size(), bound, nodeLimit, rowLimit);
+      if (space / defined > MAX_TUPLES && t.estimate() > rowLimit) {
+        return;
+      }
+      rows = t.run();
+      nodes += t.nodes;
+      if (rows == null) {
+        return;
+      }
+      cache.put(key, rows);
     }
     IntVar[] scope = outer.toArray(new IntVar[0]);
     for (Item it : group) {
@@ -385,11 +430,43 @@ public class IntensionTableDetector implements ParserTreeConstants {
       FzConsole.println(sig.append(", ").append(rows.length).append(" rows").toString());
     }
     if (rows.length < space) {
-      support.pose(new HybridTable(scope, rows));
+      HybridTable first = posted.get(rows);
+      HybridTable table =
+          first == null ? new HybridTable(scope, rows) : new HybridTable(scope, first);
+      posted.putIfAbsent(rows, table);
+      support.pose(table);
       Collections.addAll(tabled, scope);
       tables++;
       tuples += rows.length;
     }
+  }
+
+  // the group with its variables replaced by their places and domains: groups with the same
+  // signature have the same rows
+  private static String signature(Bound[] bounds, IntVar[] vars) {
+    StringBuilder key = new StringBuilder();
+    for (Bound b : bounds) {
+      key.append(b.item.op.ordinal()).append('(');
+      for (int i = 0; i < b.at.length; i++) {
+        if (b.at[i] < 0) {
+          key.append('c').append(b.constant[i]);
+        } else {
+          key.append('v').append(b.at[i]);
+        }
+        key.append(',');
+      }
+      if (b.item.coefficients != null) {
+        key.append(Arrays.toString(b.item.coefficients));
+      }
+      if (b.item.set != null) {
+        key.append(b.item.set);
+      }
+      key.append(')');
+    }
+    for (IntVar v : vars) {
+      key.append(v.dom()).append(';');
+    }
+    return key.toString();
   }
 
   private static int find(int[] parent, int i) {
@@ -652,11 +729,13 @@ public class IntensionTableDetector implements ParserTreeConstants {
   static final class Tabulator {
     private static final long FAIL = Long.MIN_VALUE;
     private static final long MANY = Long.MAX_VALUE;
+    private static final int PROBE_TRIES = 64;
 
     private final IntVar[] vars;
     private final int outer;
     private final Bound[] bounds;
     private final long limit;
+    private final int rowLimit;
     private final long[] value;
     private final boolean[] known;
     private final int[] trail;
@@ -667,6 +746,11 @@ public class IntensionTableDetector implements ParserTreeConstants {
     private boolean aborted;
 
     Tabulator(IntVar[] vars, int outer, Bound[] bounds, long limit) {
+      this(vars, outer, bounds, limit, MAX_TUPLES);
+    }
+
+    Tabulator(IntVar[] vars, int outer, Bound[] bounds, long limit, int rowLimit) {
+      this.rowLimit = rowLimit;
       this.vars = vars;
       this.outer = outer;
       this.bounds = bounds;
@@ -697,6 +781,58 @@ public class IntensionTableDetector implements ParserTreeConstants {
       return rows.toArray(new int[0][]);
     }
 
+    /**
+     * Estimates the outer tuples the search enumerates: it follows one branch, taking at each outer
+     * variable it branches on the first value that propagates, and multiplies the domain sizes of
+     * those variables. The variables that propagation computes from them do not count.
+     *
+     * @return the product of the domain sizes of the outer variables branched on.
+     */
+    double estimate() {
+      int mark = top;
+      double product = 1;
+      boolean going = propagate();
+      while (going) {
+        int pick = pickOuter();
+        if (pick < 0) {
+          break;
+        }
+        product *= vars[pick].getSize();
+        going = placeFirst(pick);
+      }
+      undo(mark);
+      return product;
+    }
+
+    // assigns to the variable the first of its values that propagates, among the first few
+    private boolean placeFirst(int pick) {
+      int tries = 0;
+      for (ValueEnumeration e = vars[pick].dom().valueEnumeration();
+          e.hasMoreElements() && tries < PROBE_TRIES;
+          tries++) {
+        int m = top;
+        assign(pick, e.nextElement());
+        if (propagate()) {
+          return true;
+        }
+        undo(m);
+      }
+      return false;
+    }
+
+    private int pickOuter() {
+      int pick = -1;
+      for (int i = 0; i < outer; i++) {
+        if (!known[i]
+            && (pick < 0
+                || vars[i].getSize() < vars[pick].getSize()
+                || vars[i].getSize() == vars[pick].getSize() && result[pick] && !result[i])) {
+          pick = i;
+        }
+      }
+      return pick;
+    }
+
     private void outerSearch() {
       if (aborted || ++nodes > limit) {
         aborted = true;
@@ -704,15 +840,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
       }
       int mark = top;
       if (propagate()) {
-        int pick = -1;
-        for (int i = 0; i < outer; i++) {
-          if (!known[i]
-              && (pick < 0
-                  || vars[i].getSize() < vars[pick].getSize()
-                  || vars[i].getSize() == vars[pick].getSize() && result[pick] && !result[i])) {
-            pick = i;
-          }
-        }
+        int pick = pickOuter();
         if (pick < 0) {
           if (innerSearch()) {
             int[] row = new int[outer];
@@ -720,7 +848,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
               row[i] = (int) value[i];
             }
             rows.add(row);
-            if (rows.size() > MAX_TUPLES) {
+            if (rows.size() > rowLimit) {
               aborted = true;
             }
           }
@@ -851,6 +979,45 @@ public class IntensionTableDetector implements ParserTreeConstants {
         case LIN_EQ, PLUS -> {
           return solveLinear(b, i);
         }
+        case CLAUSE -> {
+          return unitLiteral(b, i);
+        }
+        case INT_EQ_IMP,
+            INT_NE_IMP,
+            INT_LE_IMP,
+            INT_LT_IMP,
+            SET_IN_IMP,
+            LIN_EQ_IMP,
+            LIN_NE_IMP,
+            LIN_LE_IMP -> {
+          int last = b.at.length - 1;
+          if (i == last) {
+            // the relation is known: when it is false, the implication sets its literal false
+            return holds(b, last) ? MANY : 0;
+          }
+          // the literal is true: an equality gives the value of its unknown term
+          if (term(b, last) == 0) {
+            return MANY;
+          }
+          return equalityTerm(b, i, it.op == Op.INT_EQ_IMP, it.op == Op.LIN_EQ_IMP);
+        }
+        case INT_EQ_REIF, INT_NE_REIF, LIN_EQ_REIF, LIN_NE_REIF -> {
+          int last = b.at.length - 1;
+          if (i == last) {
+            return evaluate(b);
+          }
+          // the truth of the relation is known: when it states an equality, it gives the term
+          long r = term(b, last);
+          boolean equal = it.op == Op.INT_EQ_REIF || it.op == Op.LIN_EQ_REIF ? r != 0 : r == 0;
+          if (!equal) {
+            return MANY;
+          }
+          return equalityTerm(
+              b,
+              i,
+              it.op == Op.INT_EQ_REIF || it.op == Op.INT_NE_REIF,
+              it.op == Op.LIN_EQ_REIF || it.op == Op.LIN_NE_REIF);
+        }
         default -> {
           int r = resultTerm(it);
           if (r == i) {
@@ -865,6 +1032,42 @@ public class IntensionTableDetector implements ParserTreeConstants {
           return MANY;
         }
       }
+    }
+
+    // a clause whose other literals are known: the last literal is forced when they are all false
+    private long unitLiteral(Bound b, int i) {
+      int positives = b.item.coefficients[0];
+      for (int k = 0; k < b.at.length; k++) {
+        if (k != i && (k < positives ? term(b, k) != 0 : term(b, k) == 0)) {
+          return MANY;
+        }
+      }
+      return i < positives ? 1 : 0;
+    }
+
+    // the unknown term i of an equality that holds (x = y, or a linear sum = c before the literal)
+    private long equalityTerm(Bound b, int i, boolean binary, boolean linear) {
+      if (binary) {
+        return term(b, 1 - i);
+      }
+      if (!linear) {
+        return MANY;
+      }
+      int[] c = b.item.coefficients;
+      int end = c.length - 1;
+      long rest = c[end];
+      long a = 0;
+      for (int k = 0; k < end; k++) {
+        if (b.at[k] >= 0 && b.at[k] == b.at[i]) {
+          a += c[k];
+        } else {
+          rest -= c[k] * term(b, k);
+        }
+      }
+      if (a == 0) {
+        return rest == 0 ? MANY : FAIL;
+      }
+      return rest % a == 0 ? rest / a : FAIL;
     }
 
     private long solveLinear(Bound b, int i) {

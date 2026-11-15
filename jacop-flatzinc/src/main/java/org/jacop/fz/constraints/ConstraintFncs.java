@@ -1402,6 +1402,36 @@ public final class ConstraintFncs {
     foc.gen_float_log2(n);
   }
 
+  /** Handles the float_sinh FlatZinc constraint. */
+  public void float_sinh(SimpleNode n) {
+    foc.gen_float_sinh(n);
+  }
+
+  /** Handles the float_cosh FlatZinc constraint. */
+  public void float_cosh(SimpleNode n) {
+    foc.gen_float_cosh(n);
+  }
+
+  /** Handles the float_tanh FlatZinc constraint. */
+  public void float_tanh(SimpleNode n) {
+    foc.gen_float_tanh(n);
+  }
+
+  /** Handles the float_asinh FlatZinc constraint. */
+  public void float_asinh(SimpleNode n) {
+    foc.gen_float_asinh(n);
+  }
+
+  /** Handles the float_acosh FlatZinc constraint. */
+  public void float_acosh(SimpleNode n) {
+    foc.gen_float_acosh(n);
+  }
+
+  /** Handles the float_atanh FlatZinc constraint. */
+  public void float_atanh(SimpleNode n) {
+    foc.gen_float_atanh(n);
+  }
+
   /** Handles the float_sqrt FlatZinc constraint. */
   public void float_sqrt(SimpleNode n) {
     foc.gen_float_sqrt(n);

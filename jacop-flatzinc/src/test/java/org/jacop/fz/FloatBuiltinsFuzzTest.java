@@ -80,8 +80,16 @@ class FloatBuiltinsFuzzTest {
 
   @TempDir Path tmp;
 
-  /** A float function of the integer values, NaN where it is undefined (the call fails). */
-  private record Function(String name, int arity, ToDoubleFunction<double[]> f, int lo, int hi) {}
+  /**
+   * A float function of the integer values, NaN where it is undefined (the call fails); constants
+   * are further arguments written after the variables (the exponent of a constant power).
+   */
+  private record Function(
+      String name, int arity, ToDoubleFunction<double[]> f, int lo, int hi, String constants) {
+    Function(String name, int arity, ToDoubleFunction<double[]> f, int lo, int hi) {
+      this(name, arity, f, lo, hi, "");
+    }
+  }
 
   private static final Function[] FUNCTIONS = {
     new Function("float_plus", 2, x -> x[0] + x[1], -3, 3),
@@ -103,6 +111,30 @@ class FloatBuiltinsFuzzTest {
     new Function("float_asin", 1, x -> Math.abs(x[0]) > 1 ? Double.NaN : Math.asin(x[0]), -2, 2),
     new Function("float_acos", 1, x -> Math.abs(x[0]) > 1 ? Double.NaN : Math.acos(x[0]), -2, 2),
     new Function("float_atan", 1, x -> Math.atan(x[0]), -4, 4),
+    // constant exponents (PowPeqR): MiniZinc's x^2.0, odd, real and negative powers
+    new Function("float_pow", 1, x -> Math.pow(x[0], 2), -3, 3, ",2.0"),
+    new Function("float_pow", 1, x -> Math.pow(x[0], 3), -3, 3, ",3.0"),
+    new Function("float_pow", 1, x -> Math.pow(x[0], 4), -3, 3, ",4.0"),
+    new Function("float_pow", 1, x -> x[0] < 0 ? Double.NaN : Math.pow(x[0], 1.5), -1, 5, ",1.5"),
+    new Function("float_pow", 1, x -> x[0] == 0 ? Double.NaN : Math.pow(x[0], -2), -3, 3, ",-2.0"),
+    new Function("float_pow", 1, x -> x[0] == 0 ? Double.NaN : Math.pow(x[0], -3), -3, 3, ",-3.0"),
+    // HyperbolicPeqR, and the inverses as the same constraint with the arguments swapped
+    new Function("float_sinh", 1, x -> Math.sinh(x[0]), -3, 3),
+    new Function("float_cosh", 1, x -> Math.cosh(x[0]), -3, 3),
+    new Function("float_tanh", 1, x -> Math.tanh(x[0]), -3, 3),
+    new Function("float_asinh", 1, x -> Math.log(x[0] + Math.sqrt(x[0] * x[0] + 1)), -4, 4),
+    new Function(
+        "float_acosh",
+        1,
+        x -> x[0] < 1 ? Double.NaN : Math.log(x[0] + Math.sqrt(x[0] * x[0] - 1)),
+        -1,
+        5),
+    new Function(
+        "float_atanh",
+        1,
+        x -> Math.abs(x[0]) >= 1 ? Double.NaN : 0.5 * Math.log((1 + x[0]) / (1 - x[0])),
+        -2,
+        2),
   };
 
   private record Model(String fzn, Set<String> expected) {}
@@ -382,7 +414,12 @@ class FloatBuiltinsFuzzTest {
       constraints.append("constraint float_lin_eq([").append(ws).append(",-1.0],[").append(args);
       constraints.append(",r],0.0):: defines_var(r);\n");
     } else {
-      constraints.append("constraint ").append(fn.name()).append("(").append(args);
+      constraints
+          .append("constraint ")
+          .append(fn.name())
+          .append("(")
+          .append(args)
+          .append(fn.constants());
       constraints.append(",r):: defines_var(r);\n");
     }
     boolean minimise = random.nextBoolean();
@@ -587,7 +624,12 @@ class FloatBuiltinsFuzzTest {
         for (int i = 0; i < n; i++) {
           args.add("f" + aVar[i]);
         }
-        constraints.append("constraint ").append(fn.name()).append("(").append(args);
+        constraints
+            .append("constraint ")
+            .append(fn.name())
+            .append("(")
+            .append(args)
+            .append(fn.constants());
         constraints.append(",r);\n");
         boolean resultFirst = random.nextBoolean();
         constraints

@@ -78,8 +78,10 @@ import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
+import org.jacop.fz.constraints.MaxCliqueDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
+import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
@@ -187,6 +189,16 @@ public class Constraints implements ParserTreeConstants {
     } else if (manySolutions) {
       // LCG on by default is left out where it would be ignored; the model is solved as before
       options.dropDefaultLcg();
+    } else if (options.lcg()
+        && MaxCliqueDetector.enabled()
+        && !MaxCliqueDetector.keepsLcg()
+        && options.proof() == null
+        && new MaxCliqueDetector(support).pure(astTree)) {
+      // maximum clique alone: branch and bound with the coloring bound, without learning
+      options.dropDefaultLcg();
+      if (options.debug()) {
+        FzConsole.println("% maximum clique model: LCG on by default left out");
+      }
     }
     if (options.lcg() || options.useSat() && options.presolve() != Options.Presolve.OFF) {
       // Boolean constraints become clauses of the LCG solver, or of the SAT solver of -sat once
@@ -534,9 +546,21 @@ public class Constraints implements ParserTreeConstants {
         new ConjunctionSumDetector(support).detect(astTree);
       }
 
+      // the coloring bound of a maximized sum of 0/1 variables with pairwise conflicts (maximum
+      // clique), redundant; --proof does not encode it
+      if (MaxCliqueDetector.enabled() && options.proof() == null) {
+        new MaxCliqueDetector(support).detect(astTree);
+      }
+
       // each variable whose values are all counted at least twice equals one of its few partners
       if (CountPartnersDetector.enabled() && options.proof() == null) {
         new CountPartnersDetector(support).detect(astTree);
+      }
+
+      // the least number of bins of each item whose pairs must share a bin (SONET rings),
+      // redundant; --proof does not encode it
+      if (PairCoverDetector.enabled() && options.proof() == null) {
+        new PairCoverDetector(support).detect(astTree);
       }
 
       // the pigeonhole bound on the equal pairs of variables whose pairs all have equality

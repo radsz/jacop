@@ -55,11 +55,15 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Count;
+import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -1094,12 +1098,12 @@ public final class LcgSolver implements ExternalPropagator {
               ? new IntervalDomain(lines.low[k], lines.up[k])
               : proofDomains[counters[k]];
     }
+    int[] freeCounter = new int[m];
+    Arrays.fill(freeCounter, -1);
+    StringBuilder[] counterLiterals = new StringBuilder[m];
     if (!lines.counterPosition.isEmpty()) {
-      int[] freeCounter = new int[m];
-      Arrays.fill(freeCounter, -1);
       lines.counterPosition.forEach((i, k) -> freeCounter[k] = i);
       IntDomain[] restricted = new IntDomain[m];
-      StringBuilder[] counterLiterals = new StringBuilder[m];
       int[] ids = new int[m];
       for (int k = 0; k < m; k++) {
         ids[k] = freeCounter[k] < 0 ? counters[k] : freeCounter[k];
@@ -1108,6 +1112,7 @@ public final class LcgSolver implements ExternalPropagator {
       for (int k = 0; k < m; k++) {
         if (freeCounter[k] >= 0) {
           count[k] = restricted[k];
+          proofCounterBounds(freeCounter[k], values[k], dom, literals, counterLiterals[k]);
         }
       }
     }
@@ -1128,6 +1133,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     IntDomain restDomain = null;
+    StringBuilder[] restLiterals = new StringBuilder[1];
     if (lines.rest >= 0) {
       IntDomain[] restricted = new IntDomain[1];
       hypotheses(
@@ -1137,12 +1143,120 @@ public final class LcgSolver implements ExternalPropagator {
           from,
           entry,
           restricted,
-          new StringBuilder[1]);
+          restLiterals);
       restDomain = restricted[0];
       if (restDomain.isEmpty()) {
         return;
       }
     }
+    Cardinality cardinality =
+        new Cardinality(lines, dom, literals, valueIndex, freeValues, restDomain, restNode);
+    if (!proofCardinalityCut(cardinality, count)) {
+      StringBuilder clause = new StringBuilder();
+      for (StringBuilder l : literals) {
+        clause.append(l);
+      }
+      for (StringBuilder l : counterLiterals) {
+        clause.append(l == null ? "" : l);
+      }
+      clause.append(restLiterals[0] == null ? "" : restLiterals[0]);
+      proofCardinalitySplit(cardinality, count, freeCounter, clause, PROOF_SPLIT_LEAVES);
+    }
+  }
+
+  /** What the flow of a cardinality reason is built from, but the counts. */
+  private static final class Cardinality {
+    private final OpbEncoder.CardinalityLines lines;
+    private final IntDomain[] dom;
+    private final StringBuilder[] literals;
+    private final Map<Integer, Integer> valueIndex;
+    private final Map<Integer, Integer> freeValues;
+    private final IntDomain restDomain;
+    private final int restNode;
+
+    Cardinality(
+        OpbEncoder.CardinalityLines lines,
+        IntDomain[] dom,
+        StringBuilder[] literals,
+        Map<Integer, Integer> valueIndex,
+        Map<Integer, Integer> freeValues,
+        IntDomain restDomain,
+        int restNode) {
+      this.lines = lines;
+      this.dom = dom;
+      this.literals = literals;
+      this.valueIndex = valueIndex;
+      this.freeValues = freeValues;
+      this.restDomain = restDomain;
+      this.restNode = restNode;
+    }
+  }
+
+  /**
+   * Splits a cardinality reason whose flow has no violated cut on the values of a counter with a
+   * hole, as {@link #proofRowSplit} splits a row: the flow sees the counter's interval only (the
+   * counts of 0, 1 and 2 in {0, 2, 3}, {0, 2, 3} and {0, 3} over three variables leave only 2 three
+   * times, while 0..3 leaves more). Each case is a cut with the counter at one value, then a lemma
+   * with the negated value literal.
+   *
+   * @return whether every case was refuted
+   */
+  private boolean proofCardinalitySplit(
+      Cardinality cardinality,
+      IntDomain[] count,
+      int[] freeCounter,
+      CharSequence clause,
+      int leaves) {
+    int pick = -1;
+    for (int k = 0; k < count.length; k++) {
+      IntDomain d = count[k];
+      if (freeCounter[k] >= 0
+          && d.getSize() > 1
+          && d.getSize() < (long) d.max() - d.min() + 1
+          && (pick < 0 || d.getSize() < count[pick].getSize())) {
+        pick = k;
+      }
+    }
+    if (pick < 0 || count[pick].getSize() > leaves) {
+      return false;
+    }
+    int counter = freeCounter[pick];
+    int cases = count[pick].getSize();
+    for (ValueEnumeration e = count[pick].valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      IntDomain[] fixed = count.clone();
+      fixed[pick] = new IntervalDomain(v, v);
+      StringBuilder caseClause = new StringBuilder(clause);
+      if (proofDomains[counter].contains(v) && !proofDomains[counter].singleton()) {
+        caseClause.append(" 1 ~").append(OpbEncoder.eq(counter, v));
+      }
+      if (!proofCardinalityCut(cardinality, fixed)
+          && !proofCardinalitySplit(cardinality, fixed, freeCounter, caseClause, leaves / cases)) {
+        return false;
+      }
+      proof.lemma("rup" + caseClause + " >= 1 ;\n");
+    }
+    return true;
+  }
+
+  /**
+   * Writes the pol step of a violated cut of the flow of a cardinality reason with the given
+   * counts.
+   *
+   * @return whether the counts are refuted: a count out of range or a violated cut
+   */
+  private boolean proofCardinalityCut(Cardinality cardinality, IntDomain[] count) {
+    OpbEncoder.CardinalityLines lines = cardinality.lines;
+    int[] variables = lines.variables;
+    int[] values = lines.values;
+    int n = variables.length;
+    int m = values.length;
+    IntDomain[] dom = cardinality.dom;
+    StringBuilder[] literals = cardinality.literals;
+    Map<Integer, Integer> valueIndex = cardinality.valueIndex;
+    Map<Integer, Integer> freeValues = cardinality.freeValues;
+    IntDomain restDomain = cardinality.restDomain;
+    int restNode = cardinality.restNode;
     int freeNodes = lines.rest >= 0 ? 1 : freeValues.size();
     // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
     int source = n + m + 2 + freeNodes;
@@ -1170,19 +1284,19 @@ public final class LcgSolver implements ExternalPropagator {
     }
     for (int k = 0; k < m; k++) {
       if (count[k].isEmpty()) {
-        return;
+        return true;
       }
       int lo = Math.max(0, count[k].min());
       int hi = Math.min(n, count[k].max());
       if (lo > hi) {
-        return;
+        return true;
       }
       flow.add(2 + n + k, 1, lo, hi);
     }
     flow.add(1, 0, 0, n + 1);
     boolean[] cut = flow.violatedCut(source, sink);
     if (cut == null) {
-      return;
+      return false;
     }
     StringBuilder pol = new StringBuilder();
     int operands = 0;
@@ -1240,6 +1354,59 @@ public final class LcgSolver implements ExternalPropagator {
     if (operands >= 2) {
       proof.pol(pol);
     }
+    return true;
+  }
+
+  /**
+   * Writes the bounds of the counter of a {@link Count} under the hypotheses of a clause, when the
+   * counter has a hole: its row sum [x_j = v] - counter = 0 counts value literals, which unit
+   * propagation does not round into the counter's order literals.
+   */
+  private void proofCountBounds(Count c, EntryList atoms, int from, int entry) {
+    IntVar[] list = c.countedVariables();
+    int n = list.length;
+    int[] ids = new int[n + 1];
+    Map<Integer, Integer> position = new HashMap<>();
+    for (int j = 0; j <= n; j++) {
+      ids[j] = trail.id(j < n ? list[j] : c.functionalResult());
+      if (position.put(ids[j], j) != null) {
+        return; // the counter in the list, or a variable twice: not encoded as one row
+      }
+    }
+    IntDomain[] dom = new IntDomain[n + 1];
+    StringBuilder[] literals = new StringBuilder[n + 1];
+    hypotheses(position, ids, atoms, from, entry, dom, literals);
+    proofCounterBounds(
+        ids[n], c.countedValue(), Arrays.copyOf(dom, n), Arrays.copyOf(literals, n), literals[n]);
+  }
+
+  /**
+   * Writes the bounds of a counter with a hole in its domain under the hypotheses of a clause: at
+   * least the variables fixed to its value and at most those that can take it. The flow of {@link
+   * #proofCardinality} sees the counter's interval only, and unit propagation over the order
+   * literals of the counter does not reach a bound from the count of the value literals (the count
+   * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}).
+   */
+  private void proofCounterBounds(
+      int counter, int value, IntDomain[] dom, StringBuilder[] literals, StringBuilder own) {
+    IntDomain d = proofDomains[counter];
+    if (d.getSize() == (long) d.max() - d.min() + 1) {
+      return;
+    }
+    int fixed = 0;
+    int possible = 0;
+    StringBuilder clause = new StringBuilder(own == null ? "" : own);
+    for (int j = 0; j < dom.length; j++) {
+      if (dom[j].contains(value)) {
+        possible++;
+        if (dom[j].singleton()) {
+          fixed++;
+        }
+      }
+      clause.append(literals[j]);
+    }
+    proofBound(counter, clause, fixed, true);
+    proofBound(counter, clause, possible, false);
   }
 
   /**
@@ -1769,8 +1936,9 @@ public final class LcgSolver implements ExternalPropagator {
       literals[j] = new StringBuilder();
     }
     boolean hole = false;
-    for (int j = 0; j < variables.length && proofTrail != trail; j++) {
-      // while the root propagation is logged, the values it removed are holes too
+    for (int j = 0; j < variables.length; j++) {
+      // a hole of the model's domains (and, while the root propagation is logged, a value it
+      // removed) hides a bound from unit propagation as much as a removed value of the reason does
       hole |= dom[j].getSize() < (long) dom[j].max() - dom[j].min() + 1;
     }
     for (int k = from; k < atoms.size(); k++) {
@@ -1822,11 +1990,71 @@ public final class LcgSolver implements ExternalPropagator {
     if (proofStarted && c instanceof Binpacking b) {
       proofBinLoads(b, atoms, from, entry);
     }
+    if (proofStarted && c instanceof AbstractReifiedConstraint r) {
+      proofReifiedBounds(r, atoms, from, entry);
+      return;
+    }
+    if (proofStarted && c.getClass() == Count.class) {
+      proofCountBounds((Count) c, atoms, from, entry);
+      return;
+    }
     LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
     if (f == null && proofStarted && c instanceof Knapsack k) {
       f = proofKnapsackRow(k);
     }
-    proofLinearBounds(f, atoms, from, entry);
+    if (f == null && proofStarted && c.getClass() == IncreasingSum.class) {
+      // the sum's row, which a hole of the sum hides from unit propagation
+      f = ((IncreasingSum) c).sumRow();
+    }
+    proofLinearBounds(f, atoms, from, entry, "");
+  }
+
+  /**
+   * Writes the bounds of a reified linear constraint b &lt;=&gt; row under b: when the reason sets
+   * b to 0 (the row fails under the hypotheses and b) or holds b = 1 (the row prunes), the bounds
+   * of the row are lemmas guarded by b, as for the row alone ({@code b <=> -3 x = -4} sets b to 0,
+   * and unit propagation over three times the order literals of x does not round). For a {@link
+   * Reified} the same holds for the negated row under not b.
+   */
+  private void proofReifiedBounds(
+      AbstractReifiedConstraint r, EntryList atoms, int from, int entry) {
+    LinearForm f = OpbEncoder.form(r.c);
+    if (f == null) {
+      return;
+    }
+    int b = trail.id(r.b);
+    if (entry >= 0
+        && trail.id(proofTrail.variable(entry)) == b
+        && (proofTrail.kind(entry) == AtomicTrail.LE
+            || proofTrail.kind(entry) == AtomicTrail.GE && r instanceof Reified)) {
+      // the clause "hypotheses imply b = 0" is the row's failure under b, and "hypotheses imply
+      // b = 1" that of its negation under not b
+      boolean zero = proofTrail.kind(entry) == AtomicTrail.LE;
+      proofLinearBounds(zero ? f : f.negated(), atoms, from, -1, " 1 " + proofAtom(entry, 0));
+      return;
+    }
+    for (int k = from; k < atoms.size(); k++) {
+      int e = atoms.get(k);
+      if (trail.id(proofTrail.variable(e)) == b
+          && (proofTrail.kind(e) == AtomicTrail.GE
+              || proofTrail.kind(e) == AtomicTrail.LE && r instanceof Reified)) {
+        // b = 1 holds the row and b = 0 its negation (x != 4 under b is x = 4 under not b)
+        String atom = proofAtom(e, atoms.slack(k));
+        String guard = "1".equals(atom) ? "" : " 1 " + OpbEncoder.negate(atom);
+        proofLinearBounds(
+            proofTrail.kind(e) == AtomicTrail.GE ? f : f.negated(), atoms, from, entry, guard);
+        return;
+      }
+    }
+    // b fixed at the root is not among the hypotheses: the row, or its negation, holds under b's
+    // root literal (b <=> 2 x + 2 y - z != 5 with b = 0 at the root)
+    if (r.b.singleton() && (r.b.value() == 1 || r instanceof Reified)) {
+      boolean one = r.b.value() == 1;
+      // b = 1 is the clause literal b < 1, b = 0 the literal b >= 1
+      String literal = one ? OpbEncoder.negate(OpbEncoder.ge(b, 1)) : OpbEncoder.ge(b, 1);
+      String guard = proofDomains[b].singleton() ? "" : " 1 " + literal;
+      proofLinearBounds(one ? f : f.negated(), atoms, from, entry, guard);
+    }
   }
 
   /**
@@ -1870,28 +2098,104 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry) {
+    proofLinearBounds(f, atoms, from, entry, "");
+  }
+
+  /**
+   * Writes the bounds of a row under the hypotheses of a clause, as above; guard is added to every
+   * lemma (the literal of a reification's b, or empty).
+   */
+  private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry, String guard) {
     if (f == null || f.relation() == LinearForm.NE) {
       return;
     }
-    int n = f.vars().length;
-    int[] variables = new int[n];
+    // a variable in two terms (sum([x, y], x)) is one term with the weights added
+    int[] variables = new int[f.vars().length];
+    long[] w = new long[f.vars().length];
     Map<Integer, Integer> position = new HashMap<>();
-    for (int j = 0; j < n; j++) {
-      variables[j] = trail.id(f.vars()[j]);
-      if (position.put(variables[j], j) != null) {
-        return;
+    int n = 0;
+    for (int j = 0; j < f.vars().length; j++) {
+      int id = trail.id(f.vars()[j]);
+      Integer at = position.putIfAbsent(id, n);
+      if (at == null) {
+        variables[n] = id;
+        w[n++] = f.weights()[j];
+      } else {
+        w[at] += f.weights()[j];
       }
     }
+    variables = Arrays.copyOf(variables, n);
+    w = Arrays.copyOf(w, n);
     IntDomain[] dom = new IntDomain[n];
     StringBuilder[] literals = new StringBuilder[n];
-    if (!hypotheses(position, variables, atoms, from, entry, dom, literals)) {
+    boolean rounds = false;
+    for (long weight : w) {
+      // unit propagation over weight times the order literals does not round a bound
+      rounds |= Math.abs(weight) > 1;
+    }
+    if (!hypotheses(position, variables, atoms, from, entry, dom, literals) && !rounds) {
       return;
     }
-    StringBuilder clause = new StringBuilder();
+    StringBuilder clause = new StringBuilder(guard);
     for (StringBuilder l : literals) {
       clause.append(l);
     }
-    long[] w = f.weights();
+    if (!proofRowBounds(f, variables, w, dom, clause)) {
+      proofRowSplit(f, variables, w, dom, clause, PROOF_SPLIT_LEAVES);
+    }
+  }
+
+  // the most cases a row's bounds are split into, for a domain consistent row (LinearIntDom)
+  private static final int PROOF_SPLIT_LEAVES = 64;
+
+  /**
+   * Splits a row that its bounds do not refute on the values of its smallest domain, and writes the
+   * bounds of each case with the negated value literal added to the clause: a domain consistent row
+   * is refuted by values, not by bounds (3 x + 3 y - 2 z = 1 with z in {0, 3} has no solution,
+   * since 1 + 2 z is not a multiple of 3, while its bounds hold). Each case's clause, and then the
+   * clause, follows by unit propagation once every case is refuted.
+   *
+   * @return whether every case was refuted
+   */
+  private boolean proofRowSplit(
+      LinearForm f, int[] variables, long[] w, IntDomain[] dom, CharSequence clause, int leaves) {
+    int pick = -1;
+    for (int k = 0; k < dom.length; k++) {
+      if (w[k] != 0
+          && dom[k].getSize() > 1
+          && (pick < 0 || dom[k].getSize() < dom[pick].getSize())) {
+        pick = k;
+      }
+    }
+    if (pick < 0 || dom[pick].getSize() > leaves) {
+      return false;
+    }
+    int cases = dom[pick].getSize();
+    for (ValueEnumeration e = dom[pick].valueEnumeration(); e.hasMoreElements(); ) {
+      int v = e.nextElement();
+      IntDomain[] fixed = dom.clone();
+      fixed[pick] = new IntervalDomain(v, v);
+      StringBuilder caseClause = new StringBuilder(clause);
+      if (proofDomains[variables[pick]].contains(v) && !proofDomains[variables[pick]].singleton()) {
+        caseClause.append(" 1 ~").append(OpbEncoder.eq(variables[pick], v));
+      }
+      if (!proofRowBounds(f, variables, w, fixed, caseClause)
+          && !proofRowSplit(f, variables, w, fixed, caseClause, leaves / cases)) {
+        return false;
+      }
+      proof.lemma("rup" + caseClause + " >= 1 ;\n");
+    }
+    return true;
+  }
+
+  /**
+   * Writes the bounds of a row over dom as lemmas with clause, until a fixpoint.
+   *
+   * @return whether the bounds refute the row
+   */
+  private boolean proofRowBounds(
+      LinearForm f, int[] variables, long[] w, IntDomain[] dom, CharSequence clause) {
+    int n = variables.length;
     int changed = 1;
     for (int round = 0; changed > 0 && round < 4 * n; round++) {
       changed = 0;
@@ -1939,11 +2243,11 @@ public final class LcgSolver implements ExternalPropagator {
         long newMax = Math.min(hi, d.max());
         // 2 x = 5 leaves x in [3, 2]: the bounds written above refute the row
         if (newMin > newMax) {
-          return;
+          return true;
         }
         dom[k] = d.intersect((int) newMin, (int) newMax);
         if (dom[k].isEmpty()) {
-          return;
+          return true;
         }
         if (dom[k].min() > Math.max(lo, d.min())) {
           proofBound(variables[k], clause, dom[k].min(), true);
@@ -1953,6 +2257,7 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
     }
+    return false;
   }
 
   /**
