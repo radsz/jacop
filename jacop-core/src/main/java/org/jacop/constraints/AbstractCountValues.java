@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.api.Stateful;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -100,6 +101,50 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
    */
   protected TrailedInts state;
 
+  /*
+   * The counted values each undecided variable can take, kept between calls so that a call reads
+   * again only the domains that changed, as GlobalCardinality keeps its value lists (#582). A slot
+   * is the position of a variable in the list as given; the list is permuted, origin follows it.
+   * mayBeBits holds words bit sets over the sorted values per slot, cachedSize the domain size they
+   * were read at (-1 when none), mayBeCount their sum over the undecided variables and restCount the
+   * undecided variables with a value that is not counted. Within one path of the search domains
+   * only shrink, so an unchanged size means an unchanged domain; when a level at which the cache
+   * changed is removed, the cache is dropped and read again (stale). Null when too large.
+   */
+  private int[] origin;
+
+  private long[] mayBeBits;
+
+  private int[] cachedSize;
+
+  private boolean[] cachedRest;
+
+  private int[] mayBeCount;
+
+  private int restCount;
+
+  private int words;
+
+  private long[] scratch;
+
+  private boolean stale = true;
+
+  private Store cacheStore;
+
+  private int recordedLevel = -1;
+
+  /** Drops the cache when a level at which it changed is removed. */
+  private final Stateful cacheReset =
+      level -> {
+        stale = true;
+        recordedLevel = -1;
+      };
+
+  /**
+   * The most words of cached bit sets over all variables; above it every call reads all domains.
+   */
+  private static final int CACHE_WORDS_LIMIT = 1 << 20;
+
   /**
    * Constructs the common parts of a CountValues constraint.
    *
@@ -149,6 +194,20 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     super.impose(store);
 
     state = new TrailedInts(store, EQUAL + values.length);
+
+    cacheStore = store;
+    words = (values.length + 63) >>> 6;
+    if (values.length > 0 && (long) n * words <= CACHE_WORDS_LIMIT) {
+      origin = new int[n];
+      for (int i = 0; i < n; i++) {
+        origin[i] = i;
+      }
+      mayBeBits = new long[n * words];
+      cachedSize = new int[n];
+      cachedRest = new boolean[n];
+      mayBeCount = new int[values.length];
+      scratch = new long[words];
+    }
   }
 
   /**
@@ -162,6 +221,11 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
       IntVar tmp = list[i];
       list[i] = list[j];
       list[j] = tmp;
+      if (origin != null) {
+        int o = origin[i];
+        origin[i] = origin[j];
+        origin[j] = o;
+      }
     }
   }
 
@@ -345,6 +409,9 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
    * without any counted value) are moved before the new start and counted for good.
    */
   private int scanListAndCount(int start, int[] numberEq, int[] numberMayBe) {
+    if (origin != null) {
+      return scanChanged(start, numberEq, numberMayBe);
+    }
     Arrays.fill(mayBeDifference, 0);
     for (int i = start; i < n; i++) {
       IntVar v = list[i];
@@ -376,6 +443,101 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     }
     return start;
   }
+
+  /**
+   * Does what the scan below does, with the same counts, reading again only the variables whose
+   * domain size changed since their counted values were cached.
+   */
+  private int scanChanged(int start, int[] numberEq, int[] numberMayBe) {
+    if (stale) {
+      Arrays.fill(mayBeBits, 0L);
+      Arrays.fill(cachedSize, -1);
+      Arrays.fill(cachedRest, false);
+      Arrays.fill(mayBeCount, 0);
+      restCount = 0;
+      stale = false;
+    }
+    if (recordedLevel != cacheStore.level) {
+      cacheStore.recordChange(cacheReset);
+      recordedLevel = cacheStore.level;
+    }
+    for (int i = start; i < n; i++) {
+      IntVar v = list[i];
+      int slot = origin[i];
+      if (v.singleton()) {
+        int k = sortedPosition(v.value());
+        if (k >= 0) {
+          numberEq[indexOfSorted[k]]++;
+        } else {
+          restEq++;
+        }
+        dropCached(slot);
+        swap(start, i);
+        start++;
+        continue;
+      }
+      int size = v.getSize();
+      if (cachedSize[slot] == size) {
+        continue;
+      }
+      Arrays.fill(scratch, 0L);
+      bitsMode = true;
+      int matched = countMayBe(v.domain);
+      bitsMode = false;
+      if (matched == 0) {
+        dropCached(slot);
+        swap(start, i);
+        start++;
+        restEq++;
+        continue;
+      }
+      int base = slot * words;
+      for (int w = 0; w < words; w++) {
+        long old = mayBeBits[base + w];
+        long now = scratch[w];
+        for (long gone = old & ~now; gone != 0; gone &= gone - 1) {
+          mayBeCount[(w << 6) + Long.numberOfTrailingZeros(gone)]--;
+        }
+        for (long fresh = now & ~old; fresh != 0; fresh &= fresh - 1) {
+          mayBeCount[(w << 6) + Long.numberOfTrailingZeros(fresh)]++;
+        }
+        mayBeBits[base + w] = now;
+      }
+      boolean rest = matched < v.domain.getSize();
+      if (rest != cachedRest[slot]) {
+        restCount += rest ? 1 : -1;
+        cachedRest[slot] = rest;
+      }
+      cachedSize[slot] = size;
+    }
+    restMayBe = restCount;
+    for (int k = 0; k < sortedValues.length; k++) {
+      numberMayBe[indexOfSorted[k]] = mayBeCount[k];
+    }
+    return start;
+  }
+
+  /** Takes the cached counted values of a slot out of the counts, as its variable is decided. */
+  private void dropCached(int slot) {
+    if (cachedSize[slot] < 0) {
+      return;
+    }
+    int base = slot * words;
+    for (int w = 0; w < words; w++) {
+      for (long gone = mayBeBits[base + w]; gone != 0; gone &= gone - 1) {
+        mayBeCount[(w << 6) + Long.numberOfTrailingZeros(gone)]--;
+      }
+      mayBeBits[base + w] = 0L;
+    }
+    if (cachedRest[slot]) {
+      restCount--;
+      cachedRest[slot] = false;
+    }
+    cachedSize[slot] = -1;
+  }
+
+  /** Whether mayBeRange records into scratch, as bits, instead of into mayBeDifference. */
+  private boolean bitsMode;
 
   /**
    * Records in mayBeDifference that the counted values of the domain may be taken, looking at the
@@ -434,9 +596,30 @@ public abstract class AbstractCountValues extends Constraint implements Satisfie
     if (from >= to) {
       return 0;
     }
+    if (bitsMode) {
+      setBits(from, to);
+      return to - from;
+    }
     mayBeDifference[from]++;
     mayBeDifference[to]--;
     return to - from;
+  }
+
+  /** Sets the bits from (inclusive) to to (exclusive) of scratch. */
+  private void setBits(int from, int to) {
+    int first = from >>> 6;
+    int last = (to - 1) >>> 6;
+    long firstMask = -1L << from;
+    long lastMask = -1L >>> (63 - ((to - 1) & 63));
+    if (first == last) {
+      scratch[first] |= firstMask & lastMask;
+      return;
+    }
+    scratch[first] |= firstMask;
+    for (int w = first + 1; w < last; w++) {
+      scratch[w] = -1L;
+    }
+    scratch[last] |= lastMask;
   }
 
   /** Returns the position of value among the sorted values, or a negative number if not counted. */
