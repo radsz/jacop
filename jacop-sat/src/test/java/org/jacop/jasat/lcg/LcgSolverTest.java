@@ -5047,6 +5047,9 @@ class LcgSolverTest {
       w[n] = -1;
       store.impose(new LinearInt(terms, w, "==", 0));
       LcgSolver solver = new LcgSolver(store);
+      // with the fixpoint's atoms pushed before a conflict, branch and bound proves this instance
+      // before the core-guided phase starts (3,186 conflicts, no core), which the test needs
+      solver.setPushBeforeConflict(false);
       solver.setCoreSearch(0.5, 100_000, 5_000);
       solver.setTimeLimit(100); // 100 ms of work at the nominal rate
       // a deadline far away: only the work ends the phases

@@ -1,0 +1,4 @@
+% RUNS ON flatzinc
+constraint float_abs(1.0, 1.0);
+constraint float_abs(-1.0, 1.0);
+solve satisfy;
