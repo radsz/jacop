@@ -5481,7 +5481,7 @@ Version 5.0 (unreleased)
    and work-task-variation). The FlatZinc statistics print
    lcgUnkeptReasons and lcgExpandedLiterals.
 
-317. Under --lcg, a permutation (a domain consistent all different over as
+316. Under --lcg, a permutation (a domain consistent all different over as
    many values as variables) whose variables are terms of the objective's
    sum also becomes clauses (item 293): the linear forms that define the
    objective (its sum and the blocks of a split sum) no longer count as
@@ -5501,7 +5501,7 @@ Version 5.0 (unreleased)
    on the 102 wide instances with a first_fail search it makes 18 worse
    and 9 better at 600 s, so it is not the default.
 
-316. AllDifferentLists(x, except) takes excepted tuples (XCSP3 allDifferent
+317. AllDifferentLists(x, except) takes excepted tuples (XCSP3 allDifferent
    over lists with except): two rows may be equal when their tuple is one
    of them. A fixed row with an excepted tuple is not hashed, so it neither
    fails nor prunes; explanations are unchanged. JaCoP's MiniZinc library
@@ -5512,7 +5512,7 @@ Version 5.0 (unreleased)
    ConsistencyChecker has AllDifferentLists cases (no wrong pruning over
    230,000 nodes; forward checking, so no consistency level is claimed).
 
-317. DifferenceCycles finds the arcs that a literal fixed to a value makes
+318. DifferenceCycles finds the arcs that a literal fixed to a value makes
     hold by binary search over the literal's arcs sorted by value, and keeps
     a flag for each conditional arc in its potential, so that neither the
     literal events nor the potential repair test the literals of all arcs.
@@ -5523,7 +5523,7 @@ Version 5.0 (unreleased)
     instances (57 by default, 62 with -f) and the times and timed-out
     objectives are within noise.
 
-318. fzn-jacop searches before an expensive root LP. When the first solve
+319. fzn-jacop searches before an expensive root LP. When the first solve
    of the linear relaxation is large (its rows and the rows of the other
    constraints that it tries, times those rows and the columns: at least
    1,000,000 tableau entries, -Dorg.jacop.fz.lpProbeSize), a fixed search
@@ -5542,7 +5542,7 @@ Version 5.0 (unreleased)
    nside MEDIUM_5_3 3.6 -> 1.9 s, harmony canon 179 -> 117 s); orthorio
    challenge_12 loses its only solution, found at 400 s without the probe.
 
-319. New constraint CostNetworkBound (org.jacop.constraints.cfn): a lower
+320. New constraint CostNetworkBound (org.jacop.constraints.cfn): a lower
    bound of an objective that sums unary and binary cost tables, the form
    of weighted constraint satisfaction problems (frequency assignment,
    satellite photograph selection, protein design). At the root the cost
@@ -5573,7 +5573,54 @@ Version 5.0 (unreleased)
    the gate. Of the 187 optimisation instances of the wide benchmark set,
    the detector reads cost terms in 52 and 1 passes the gate.
 
-320. After the search before an expensive root LP (317), the first solve of
+321. Under --lcg, a table's explanations remember the values the reason
+   already covers: a tuple with such a value is dead at no cost, where
+   each tuple re-evaluated its values and their alternatives before. The
+   reasons are unchanged. On the crosswords grid-05.04 instance
+   explanations took 39 % of the time and the search runs 1.18x the
+   nodes in 240 s. On the 49 wide-set instances with a table at 600 s,
+   default search solves 32 instead of 31 (time 0.985 on both solved)
+   and -f 37 = 37 (time 0.992).
+
+322. TimeIndexedBound gets arc-flow blocks for bin packing
+   (-Dorg.jacop.lp.arcFlow=true, off by default): each bin of a Binpacking
+   constraint is a network over its reachable loads, with an arc per
+   distinct item weight in decreasing order (so a multiset of items is one
+   path) and a sink arc per load value, carrying one unit of flow; its flow
+   projects onto the convex hull of the bin's knapsacks (J. M. Valerio de
+   Carvalho, Exact solution of bin-packing problems using column
+   generation and branch-and-bound, Annals of Operations Research 86
+   (1999) 629-659; M. Delorme and M. Iori, Enhanced pseudo-polynomial
+   formulations for bin packing and cutting stock problems, INFORMS
+   Journal on Computing 32(1) (2020) 101-119; column elimination, A.
+   Yamin, W.-J. van Hoeve and T. Ralphs, arXiv 2602.22589). The FlatZinc
+   front end (LoadFunctionDetector) finds the variables the model defines
+   from a load alone (int_lin_eq over two variables, plus, minus, times,
+   max, min, abs, pow, element over constant tables) and gives them exact
+   rows y = sum(L) g(L) [load = L] over the sink arcs, which carry the hull
+   to the objective: the squared distance of a load to its band in gbac,
+   the loss table of a slab in steelmillslab. Without these rows the flow
+   moves nothing. Arcs and columns are capped (-Dorg.jacop.lp.arcFlow.arcs,
+   .columns); the solves get their own pivot and time limits (.firstMs,
+   .solveMs, .pivotsPerColumn). The FlatZinc statistics print tiArcs.
+   Two fixes apply to the time-indexed bound too: a solve is used only
+   while the current bounds lie within the root bounds it assumed (free
+   search goes back above the level where they were captured), and a
+   failure is explained by the objective below the solve's bound instead
+   of the objective limit the solve assumed; a reused solve had assumed
+   a looser limit, often the root one, and the probes of core-guided lower
+   bound runs then learnt an unsound clause (a wrong optimum of gbac
+   reduced_UD9 under -f). On the 46 instances of the MiniZinc Challenge
+   gbac, mapping, steelmillslab, team-assignment, ihtc and kidney-exchange
+   problems and the 7 wide benchmark set instances that post bin packing,
+   at 600 s with model search, the proven bound rises on 17 and falls on
+   none, solved 21 = 21 (gbac mean gap 0.932 -> 0.323; gbac
+   reduced_UD2 and reduced_UD6 bounds reach the optimum, UD4 0 -> 324,
+   steelmillslab bench_2_19 0 -> 34); with -f at 240 s it rises on 11 and
+   falls on 5 (gbac instances whose first solve does not finish), solved
+   28 = 28.
+
+323. After the search before an expensive root LP (317), the first solve of
    the linear relaxation keeps the rows of the other constraints as a
    first solve at the start of that search would: the trial compares the
    bounds with and without them at the variable bounds the search started
@@ -5581,7 +5628,25 @@ Version 5.0 (unreleased)
    make 1,859 extra rows of mqueens n11 raise the bound from 0 to 1, and
    keeping them cost 12 s of LP in search (14.2 s against 3.2 s).
 
-321. The FlatZinc front end removes the control b of a half-reified
+324. The dominance nogoods of Lee and Zhong (org.jacop.fz.dominance, 5.0
+   entry on DominanceNogoods) are on by default for fixed search; they stay
+   off under -f and --proof, and org.jacop.fz.dominance=true/false
+   overrides. On the 39 MiniZinc Challenge instances where they fire
+   (trucking, spot5, shortest_path, pattern-set-mining, unit-commitment,
+   table-layout, maximum-dag, aircraft-disassembly), at 600 s fixed search
+   proves 26 instead of 24 (trucking 13 in 6 s, 14 in 4 s) and improves 10
+   objectives, 1 worse by 0.006 %; under -f they are neutral or worse (31 =
+   31 proved, 3 instances better, 6 worse, time 1.078), so -f keeps them
+   off. The pass runs on 156 of the 240 wide-set instances, 0.06 s on
+   average and at most 0.58 s; on easy instances solved at the root it
+   adds about 0.1 s. Its memo of moves is now an array instead of a boxed
+   map (pattern-set-mining-k2 audiology 0.30 s -> 0.12 s, same nogoods).
+   References: J. H. M. Lee and A. Z. Zhong, Automatic Generation of
+   Dominance Breaking Nogoods for a Class of Constraint Optimization
+   Problems, IJCAI 2020; Exploiting Functional Constraints in Automatic
+   Dominance Breaking for Constraint Optimization, CP 2022.
+
+325. The FlatZinc front end removes the control b of a half-reified
    constraint b -> C when b appears nowhere else but as a positive literal
    of clauses, as bounded variable elimination does in SAT preprocessing
    (Een and Biere, Effective preprocessing in SAT through variable and
@@ -5603,7 +5668,7 @@ Version 5.0 (unreleased)
    13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
    is off under --proof and when all solutions are asked for.
 
-322. The FlatZinc front end checks the pigeonhole count of agreements
+326. The FlatZinc front end checks the pigeonhole count of agreements
    (M. Plotkin, IRE Trans. Information Theory 6 (1960) 445-450; B. M.
    Smith, "Symmetry and search in a network design problem", CPAIOR 2005,
    on counting arguments for codes and designs). Where a group of m
@@ -5619,6 +5684,111 @@ Version 5.0 (unreleased)
    it) are proved unsatisfiable in 1.4 and 2.9 s and 20-10-03-08 in 2.5 s
    instead of 41 s; the detector also fires on EFPA, TravelingTournament,
    SocialGolfers and three wide-set instances without changing the search.
+
+327. New constraint BinaryBitTable(x, y, tuples): a table of two variables
+   kept domain consistent with bit-sets, AC3-bit with residues (C.
+   Lecoutre, J. Vion, Enforcing arc consistency using bitwise operations,
+   Constraint Programming Letters 2 (2008) 21-35). The supports of each
+   value are a bit-set over the values of the other variable; a revision
+   costs about a word per value and trails only the domains, where the
+   compact table trails the words of its tuple set. Under LCG it explains
+   a removal by the removals of the supports, with the bound atoms of the
+   other variable for supports beyond its bounds. The FlatZinc front end
+   posts it for positive tables of two variables whose ranges span at most
+   4096 values, and for negative ones whose domains hold at most 1M pairs
+   (on the pairs they allow). On XCSP 2024 Subisomorphism it searches the
+   same tree as the compact table at 3.4 times the nodes a second without
+   LCG and 1.9 times with LCG; FRB 3x. -Dorg.jacop.fz.binaryBitTable=false
+   turns it off.
+
+328. The XorSystem detector of the FlatZinc front end also reads linear
+   equations whose odd-coefficient terms are 0/1 variables or variables of
+   a single parity: sum(a_i * x_i) = s gives the GF(2) row of the x_i with
+   odd a_i, its right-hand side the parity of s. Lights Out puzzles (each
+   cell's neighbour sum in {1, 3, 5}) are then solved by Gauss-Jordan
+   elimination at the root (M. Soos, K. Nohl and C. Castelluccia,
+   Extending SAT solvers to cryptographic problems, SAT 2009; Lights
+   Out: K. Sutner, Linear
+   cellular automata and the Garden-of-Eden, Math. Intelligencer 11
+   (1989) 49-53). XCSP 2024 LitPuzzle at 600 s with -f: 9 of 10 proved
+   instead of 5 (sizes 20, 25, 40 and 50 in 1-21 s), LitPuzzle-30 376
+   instead of 414. A plain sum of 0/1 variables equal to a constant is left
+   to the other propagators. Of the 240 instances of the wide benchmark
+   set, it fires on whirlpool d29 and d30 only (unsolved both ways).
+
+329. Under free search an objective that the core-guided phase cannot take
+   (no linear definition: the index of an element, a maximum, a product)
+   goes, after 100,000 conflicts of branch and bound with lower-bound
+   runs, to dichotomic search on its bound until the bound meets the best
+   solution, as CP-SAT's objective shaving does (L. Perron, F. Didier and
+   S. Gay, The CP-SAT-LP solver, CP 2023). XCSP 2024 FoolSolitaire at
+   600 s: 17 of 17 proved instead of 13. On the 27 instances of the wide
+   benchmark set where it can fire (-f, 600 s) nothing is solved or lost
+   and no family gets worse. -Djacop.lcg.bisectUncored=false turns it
+   off, -Djacop.lcg.bisectUncoredAfter sets the conflicts; statistic
+   lcgBisectUncored.
+
+330. The LU factorization of JaLP takes a column singleton as its pivot
+   whatever its size against its row (Suhl and Suhl 1990): such a
+   column eliminates nothing below it. Before, a triangular basis with
+   many small column singletons took a quadratic pivot search: 8 s per
+   factorization on the LP relaxation of MIPLIB 2017 app1-2 (the solve
+   from over 120 s to 14 s). On the 687 LPs of the LP bench 644 = 644
+   are solved; on the wide-set instances where the change applies, -f
+   connect 0086_02 takes 7 s instead of 52 s, wordpress Offers500 15 s
+   instead of 221 s.
+
+331. The route neighbourhoods of free search (ROUTES, RELATED) now run on
+   models whose successors are numbered from 0, such as the XCSP3 VRP_LC
+   models through MiniZinc: there the subcircuit is posted on copies
+   succ + 1 that are not search variables, and AdaptiveLns built no
+   routes. It maps such copies back to the successors and reads the arc
+   costs from the elements on them. Customers that must share a route (a
+   label element label[succ[v]] = label[v] with two labels equal, such as
+   a pickup and its delivery) are removed together by Shaw removal. On the
+   10 VRP_LC instances of the XCSP 2024 competition with -f, 240 s, two
+   seeds, 11-05-15-s4 reaches 332 instead of 352/346 and 13-11-20-s4 606
+   instead of 634/606; at 600 s 11-05-15-s3 332 instead of 340; the
+   others are equal. On the 13 wide-set instances with a circuit the
+   change does not fire and the results are identical.
+
+332. Under free search (-f) with lazy clause generation and a search
+   annotation, once a first solution is known each turn of runs at
+   restarts is the annotation, six runs of the SAT solver's own decisions
+   on literals, then activity branching, instead of one run of each
+   (--free-config lcg-literal-runs-solved=<n>, default 6;
+   lcg-literal-runs=<n> before a solution, default 1). Literal runs can
+   prove much faster than the others: on MiniZinc Challenge 2023
+   multi-agent-graph-coverage rnd_n10, literal decisions alone prove the
+   optimum with 34k-49k conflicts in 8-10 s (CP-SAT 9.15 -f -p 1: 31k,
+   9 s) against 89k-111k conflicts in 26-32 s for the turns; first
+   solutions keep the old turns, since literal runs alone lose them on
+   cargo, linear-to-program and p1f. Wide benchmark set at 240 s: 186 ->
+   189 solved, 5 families better and 3 worse, runtime on solved instances
+   1.03 (instances solved within 5 s slower); 600 s on the 118
+   optimisation instances not solved within 5 s by both: 78 -> 81 solved
+   (celar graph11, crosswords grid-05.04, physician-scheduling
+   instance10), 7 families better and 2 worse, runtime on solved
+   instances 0.88 (vrplc9 112 -> 18 s, javarouting trip_7_2 363 -> 139 s,
+   workforce-alloc 202 130 -> 45 s; steelmillslab bench_19_6 12 -> 30 s,
+   evm-super-compilation 49 -> 108 s).
+
+333. -Djacop.virtualClock=true (default false) runs the clock of lazy
+   clause generation on its work: the time limit, the shares of the -f
+   phases, the time of the neighbourhood runs, the delayed root probe
+   and the check of LCG's speed (lcg-slow-rate, which runs in the search
+   instead of a thread that sleeps) count jacop.lcg.workPerMs (2000) of
+   the solver's work per millisecond, so a run makes the same choices
+   and stops at the same point whatever the load of the machine. It is
+   meant for benchmarks of search changes: the wall time of a run then
+   differs from its limit (median 1.04 times the wall-clock run on the
+   wide-quick set), and the watchdog waits 10 times the time-out
+   (jacop.virtualClock.wallFactor). Two runs of the 62 wide-quick
+   instances at 240 s with -f, two at a time, ended identically (nodes,
+   failures, work, answer) on 58 instances, against 45 with the wall
+   clock. The rest come from time limits outside LCG: symmetry detection
+   (ptv, steelmillslab) and search without learning after LCG gave way
+   (celar graph11, whirlpool d29).
 
 Version 4.11
 =============

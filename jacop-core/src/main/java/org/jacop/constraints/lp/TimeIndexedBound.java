@@ -33,16 +33,19 @@ package org.jacop.constraints.lp;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
@@ -84,6 +87,23 @@ import org.jacop.lcg.LinearForm;
  * it holds whatever the rounding of the simplex; an infeasible program is checked the same way with
  * its Farkas ray. Its reason is the bound of the objective and the root bounds it used.
  *
+ * <p>With {@code org.jacop.lp.arcFlow} it also has, for every bin of a bin packing, the arc-flow
+ * columns of the bin: a node per reachable load d, an arc (d, d + v) per distinct weight v of the
+ * items that may go to the bin (only from loads reachable with items of weight at least v, so that
+ * each multiset of weights is one path), and a sink arc per load value L of the bin, the column
+ * [load = L]. One unit of flow runs from the load of the items fixed to the bin to the sink, the
+ * flow on the arcs of weight v is the number of items of weight v in the bin, and the load is
+ * &Sigma; L [load = L]. The knapsack of a bin depends only on the counts of each weight, so the
+ * flow projects onto the convex hull of the bin's 0/1 knapsacks (J. M. Valério de Carvalho, Exact
+ * solution of bin-packing problems using column generation and branch-and-bound, Annals of
+ * Operations Research 86 (1999) 629-659; M. Delorme and M. Iori, Enhanced pseudo-polynomial
+ * formulations for bin packing and cutting stock problems, INFORMS Journal on Computing 32 (2020)
+ * 101-119). A variable y that the model defines as a function g of a load ({@link LoadFunction},
+ * such as a squared deviation or a loss table) gets the exact row y = &Sigma; g(L) [load = L],
+ * which carries the hull to the objective. The relaxation keeps the load bounds per bin, as the
+ * decision diagram relaxations of A. Yamin, W.-J. van Hoeve and T. Ralphs (column elimination,
+ * 2026) do before refinement.
+ *
  * <p>It is solved again when the objective bound has dropped, within a share of the run time
  * ({@code org.jacop.lp.timeIndexed.share}, 0.2) plus an allowance ({@code
  * org.jacop.lp.timeIndexed.allowance}, 1,000 ms).
@@ -121,6 +141,31 @@ public final class TimeIndexedBound extends Constraint
   // the pivots of one solve at most
   private static final int PIVOTS = Integer.getInteger("org.jacop.lp.timeIndexed.pivots", 50_000);
 
+  /** Whether the arc-flow blocks of the bin packings are built, {@code org.jacop.lp.arcFlow}. */
+  public static final boolean ARC_FLOW = Boolean.getBoolean("org.jacop.lp.arcFlow");
+
+  /** The arcs of all arc-flow blocks at most, {@code org.jacop.lp.arcFlow.arcs}. */
+  static final int MAX_ARCS = Integer.getInteger("org.jacop.lp.arcFlow.arcs", 200_000);
+
+  /**
+   * The columns of the program at most for one more bin packing, {@code
+   * org.jacop.lp.arcFlow.columns}.
+   */
+  static final int MAX_ARC_COLUMNS = Integer.getInteger("org.jacop.lp.arcFlow.columns", 100_000);
+
+  // the time of the first and of later solves with arc-flow blocks, in milliseconds, and the
+  // pivots per column: the arc-flow programs of gbac (20,000 to 70,000 columns) need 100,000 and
+  // more pivots
+  private static final long ARC_FIRST_MS = Long.getLong("org.jacop.lp.arcFlow.firstMs", 30_000L);
+
+  private static final long ARC_SOLVE_MS = Long.getLong("org.jacop.lp.arcFlow.solveMs", 20_000L);
+
+  private static final int ARC_PIVOTS_PER_COLUMN =
+      Integer.getInteger("org.jacop.lp.arcFlow.pivotsPerColumn", 20);
+
+  /** The value of a {@link LoadFunction} at a load value where it is not defined. */
+  public static final long NONE = Long.MIN_VALUE;
+
   // the duals are rounded to multiples of 2^-SCALE before the exact bound is computed
   private static final int SCALE = 30;
 
@@ -157,10 +202,81 @@ public final class TimeIndexedBound extends Constraint
     }
   }
 
+  /**
+   * A bin packing: the bin of each item of positive weight, its weight, and the load of each bin,
+   * the first for bin minBin.
+   *
+   * @param bins the bins of the items
+   * @param weights the weights of the items
+   * @param loads the loads of the bins
+   * @param minBin the number of the first bin
+   */
+  public record Packing(IntVar[] bins, long[] weights, IntVar[] loads, int minBin) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Packing r
+          && Arrays.equals(bins, r.bins)
+          && Arrays.equals(weights, r.weights)
+          && Arrays.equals(loads, r.loads)
+          && minBin == r.minBin;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          Arrays.hashCode(bins), Arrays.hashCode(weights), Arrays.hashCode(loads), minBin);
+    }
+
+    @Override
+    public String toString() {
+      return "Packing[items=" + bins.length + ", bins=" + loads.length + ", minBin=" + minBin + "]";
+    }
+  }
+
+  /**
+   * A variable that the model defines as a function of a bin load: out = values[load - offset], or
+   * no solution when that is {@link #NONE} or the load is outside the values.
+   *
+   * @param out the defined variable
+   * @param load the load
+   * @param offset the load value of the first entry
+   * @param values the value of out for each load value
+   */
+  public record LoadFunction(IntVar out, IntVar load, long offset, long[] values) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof LoadFunction r
+          && out == r.out
+          && load == r.load
+          && offset == r.offset
+          && Arrays.equals(values, r.values);
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(out, load, offset, Arrays.hashCode(values));
+    }
+
+    @Override
+    public String toString() {
+      return "LoadFunction[" + out + " of " + load + "]";
+    }
+
+    // the value at load value v, NONE when not defined
+    long at(long v) {
+      long i = v - offset;
+      return i < 0 || i >= values.length ? NONE : values[(int) i];
+    }
+  }
+
   private final IntVar objective;
   private final boolean maximize;
   private final List<LinearForm> rows;
   private final List<Resource> resources;
+  private final List<Packing> packings;
+  private final List<LoadFunction> functions;
 
   // the variables of the program: the objective first
   private final IntVar[] vars;
@@ -222,6 +338,9 @@ public final class TimeIndexedBound extends Constraint
   /** The rows of the last program. */
   public int lastRows;
 
+  /** The arcs of the arc-flow blocks of the last program. */
+  public int lastArcs;
+
   /** The time of all solves in seconds. */
   public double seconds;
 
@@ -235,6 +354,26 @@ public final class TimeIndexedBound extends Constraint
    */
   public TimeIndexedBound(
       IntVar objective, boolean maximize, Collection<LinearForm> rows, List<Resource> resources) {
+    this(objective, maximize, rows, resources, List.of(), List.of());
+  }
+
+  /**
+   * Creates the bound with arc-flow blocks.
+   *
+   * @param objective the objective variable
+   * @param maximize whether the objective is maximized
+   * @param rows the rows of the relaxation of the model (rows over LP-only columns are left out)
+   * @param resources the cumulative resources
+   * @param packings the bin packings
+   * @param functions the variables defined as functions of the loads of the bin packings
+   */
+  public TimeIndexedBound(
+      IntVar objective,
+      boolean maximize,
+      Collection<LinearForm> rows,
+      List<Resource> resources,
+      List<Packing> packings,
+      List<LoadFunction> functions) {
     this.numberId = idNumber.incrementAndGet();
     this.objective = objective;
     this.maximize = maximize;
@@ -247,6 +386,8 @@ public final class TimeIndexedBound extends Constraint
       }
     }
     this.resources = List.copyOf(resources);
+    this.packings = List.copyOf(packings);
+    this.functions = List.copyOf(functions);
     List<IntVar> vs = new ArrayList<>();
     add(objective, vs);
     for (LinearForm f : this.rows) {
@@ -259,6 +400,18 @@ public final class TimeIndexedBound extends Constraint
         add(s, vs);
       }
       add(r.cap(), vs);
+    }
+    for (Packing q : this.packings) {
+      for (IntVar b : q.bins()) {
+        add(b, vs);
+      }
+      for (IntVar l : q.loads()) {
+        add(l, vs);
+      }
+    }
+    for (LoadFunction f : this.functions) {
+      add(f.load(), vs);
+      add(f.out(), vs);
     }
     this.vars = vs.toArray(new IntVar[0]);
     this.bestBound = maximize ? Long.MAX_VALUE : Long.MIN_VALUE;
@@ -285,14 +438,63 @@ public final class TimeIndexedBound extends Constraint
    */
   public static TimeIndexedBound of(
       Store store, IntVar objective, boolean maximize, Collection<LinearForm> rows) {
+    return of(store, objective, maximize, rows, true, false, List.of());
+  }
+
+  /**
+   * Returns the bound over the cumulative resources and the bin packings of the store, or null when
+   * it has neither.
+   *
+   * @param store the store
+   * @param objective the objective
+   * @param maximize whether it is maximized
+   * @param rows the rows of the relaxation of the model
+   * @param timeIndexed whether the cumulative resources get time-indexed columns
+   * @param arcFlow whether the bin packings get arc-flow columns
+   * @param functions the variables defined as functions of bin loads
+   * @return the bound, not imposed, or null
+   */
+  public static TimeIndexedBound of(
+      Store store,
+      IntVar objective,
+      boolean maximize,
+      Collection<LinearForm> rows,
+      boolean timeIndexed,
+      boolean arcFlow,
+      List<LoadFunction> functions) {
     List<Resource> resources = new ArrayList<>();
+    List<Packing> packings = new ArrayList<>();
     for (Constraint c : LinearRelaxation.constraintsOf(store)) {
-      Resource r = resource(c);
+      Resource r = timeIndexed ? resource(c) : null;
       if (r != null) {
         resources.add(r);
       }
+      if (arcFlow && c instanceof Binpacking b) {
+        int[] w = b.itemWeights();
+        packings.add(
+            new Packing(
+                b.binVariables(),
+                Arrays.stream(w).asLongStream().toArray(),
+                b.loads(),
+                b.minBin()));
+      }
     }
-    return resources.isEmpty() ? null : new TimeIndexedBound(objective, maximize, rows, resources);
+    if (resources.isEmpty() && packings.isEmpty()) {
+      return null;
+    }
+    Map<IntVar, Boolean> loads = new IdentityHashMap<>();
+    for (Packing q : packings) {
+      for (IntVar l : q.loads()) {
+        loads.put(l, Boolean.TRUE);
+      }
+    }
+    List<LoadFunction> fs = new ArrayList<>();
+    for (LoadFunction f : functions) {
+      if (loads.containsKey(f.load())) {
+        fs.add(f);
+      }
+    }
+    return new TimeIndexedBound(objective, maximize, rows, resources, packings, fs);
   }
 
   // the tasks of positive least duration and usage of a cumulative resource, or null
@@ -373,10 +575,11 @@ public final class TimeIndexedBound extends Constraint
         }
       }
     }
-    if (current == null || limit > current.assumed()) {
+    Solve s = applicable(limit);
+    if (s == null) {
       return;
     }
-    long bound = current.bound();
+    long bound = s.bound();
     if (bound > limit) {
       throw Store.failException;
     }
@@ -387,6 +590,41 @@ public final class TimeIndexedBound extends Constraint
     } else if (bound > objective.min()) {
       objective.domain.inMin(store.level, objective, (int) bound);
     }
+  }
+
+  // a solve that holds now: it assumed an objective limit at least the current one and root bounds
+  // that contain the current bounds. Search can be back above the level where the root bounds were
+  // captured (lazy clause generation: phases and neighbourhoods of free search, restarts), where
+  // the bounds are looser than those a solve used, and its bound does not hold there
+  private Solve applicable(long limit) {
+    if (current != null && limit <= current.assumed() && contains(current)) {
+      return current;
+    }
+    Solve best = null;
+    for (int k = proved.size() - 1; k >= 0; k--) {
+      Solve s = proved.get(k);
+      if (limit <= s.assumed()
+          && (best == null || s.bound() > best.bound())
+          && s.bound() > (maximize ? -(long) objective.max() : objective.min())
+          && contains(s)) {
+        best = s;
+      }
+    }
+    return best;
+  }
+
+  // whether the current bounds lie in the root bounds of a solve (the objective's limit side is
+  // checked by its assumed limit)
+  private boolean contains(Solve s) {
+    for (int j = 0; j < vars.length; j++) {
+      if ((j != 0 || !maximize) && vars[j].min() < s.lo()[j]) {
+        return false;
+      }
+      if ((j != 0 || maximize) && vars[j].max() > s.hi()[j]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private boolean mayResolve() {
@@ -482,9 +720,219 @@ public final class TimeIndexedBound extends Constraint
       windows(p, r, lo, hi, widths, buckets);
     }
     precedences(p, lo, hi, widths, buckets);
+    if (!packings.isEmpty()) {
+      Map<Integer, int[]> loadColumns = new HashMap<>();
+      long arcs = 0;
+      for (Packing q : packings) {
+        arcs += arcFlow(p, q, lo, hi, widths, buckets, loadColumns, MAX_ARCS - arcs);
+      }
+      lastArcs = (int) arcs;
+      loadFunctions(p, lo, hi, loadColumns);
+    }
     lastColumns = p.columns();
     lastRows = p.rowLo.size();
-    return p.bound(maximize, solvedOnce ? SOLVE_MS : FIRST_MS);
+    if (packings.isEmpty()) {
+      return p.bound(maximize, solvedOnce ? SOLVE_MS : FIRST_MS, PIVOTS);
+    }
+    long pivots = Math.max(PIVOTS, (long) ARC_PIVOTS_PER_COLUMN * p.columns());
+    return p.bound(
+        maximize,
+        solvedOnce ? Math.max(SOLVE_MS, ARC_SOLVE_MS) : Math.max(FIRST_MS, ARC_FIRST_MS),
+        (int) Math.min(Integer.MAX_VALUE, pivots));
+  }
+
+  // the arc-flow columns of the bins of a packing, within a budget of arcs; the arcs made. The
+  // value columns of each load go to loadColumns (by the load's index): entry 0 is the least value,
+  // then a column per value up to the largest, -1 for a value no path reaches
+  private long arcFlow(
+      Program p,
+      Packing q,
+      long[] lo,
+      long[] hi,
+      Map<Integer, Integer> widths,
+      Map<Integer, int[]> buckets,
+      Map<Integer, int[]> loadColumns,
+      long budget) {
+    int[] item = new int[q.bins().length];
+    for (int i = 0; i < item.length; i++) {
+      item[i] = index.get(q.bins()[i]);
+      if (hi[item[i]] - lo[item[i]] >= q.loads().length + 1L) {
+        return 0;
+      }
+    }
+    long more = 0;
+    for (int j : item) {
+      if (!buckets.containsKey(j)) {
+        more += hi[j] - lo[j] + 1;
+      }
+    }
+    if (p.columns() + more > MAX_ARC_COLUMNS) {
+      return 0;
+    }
+    // the value columns of the bins of the items, shared with the time-indexed blocks at width 1
+    for (int j : item) {
+      if (lo[j] < hi[j] && !buckets.containsKey(j)) {
+        widths.put(j, 1);
+        buckets.put(j, p.buckets(j, lo[j], hi[j], 1));
+      } else if (lo[j] < hi[j] && widths.get(j) != 1) {
+        return 0;
+      }
+    }
+    long made = 0;
+    for (int k = 0; k < q.loads().length; k++) {
+      long b = (long) q.minBin() + k;
+      int load = index.get(q.loads()[k]);
+      long fixed = 0;
+      long open = 0;
+      TreeMap<Long, List<Integer>> byWeight = new TreeMap<>();
+      for (int i = 0; i < item.length; i++) {
+        int j = item[i];
+        if (lo[j] == b && hi[j] == b) {
+          fixed += q.weights()[i];
+        } else if (lo[j] <= b && b <= hi[j]) {
+          open += q.weights()[i];
+          byWeight.computeIfAbsent(q.weights()[i], v -> new ArrayList<>()).add(i);
+        }
+      }
+      long llo = Math.max(lo[load], fixed);
+      long lhi = Math.min(hi[load], fixed + open);
+      if (llo > lhi || lhi > 10_000_000L || fixed < 0) {
+        continue;
+      }
+      int top = (int) lhi;
+      // the reachable loads, weights from the largest down, and the arcs leaving each load
+      BitSet reach = new BitSet(top + 1);
+      reach.set((int) fixed);
+      List<Long> weights = new ArrayList<>(byWeight.descendingKeySet());
+      List<BitSet> from = new ArrayList<>();
+      long arcs = 0;
+      for (long v : weights) {
+        int count = byWeight.get(v).size();
+        BitSet leave = new BitSet(top + 1);
+        BitSet frontier = (BitSet) reach.clone();
+        for (int r = 0; r < count && !frontier.isEmpty(); r++) {
+          BitSet next = new BitSet(top + 1);
+          for (int d = frontier.nextSetBit(0);
+              d >= 0 && d + v <= top;
+              d = frontier.nextSetBit(d + 1)) {
+            leave.set(d);
+            next.set((int) (d + v));
+          }
+          next.andNot(reach);
+          reach.or(next);
+          frontier = next;
+        }
+        from.add(leave);
+        arcs += leave.cardinality();
+      }
+      if (made + arcs > budget || p.columns() + arcs > MAX_ARC_COLUMNS) {
+        break;
+      }
+      made += arcs;
+      // node d: out - in = 1 at the start, 0 elsewhere
+      Map<Integer, List<Integer>> out = new HashMap<>();
+      Map<Integer, List<Integer>> in = new HashMap<>();
+      for (int w = 0; w < weights.size(); w++) {
+        long v = weights.get(w);
+        BitSet leave = from.get(w);
+        List<Integer> cols = new ArrayList<>();
+        for (int d = leave.nextSetBit(0); d >= 0; d = leave.nextSetBit(d + 1)) {
+          int c = p.columns();
+          p.colLo.add(0.0);
+          p.colHi.add(1.0);
+          out.computeIfAbsent(d, x -> new ArrayList<>()).add(c);
+          in.computeIfAbsent((int) (d + v), x -> new ArrayList<>()).add(c);
+          cols.add(c);
+        }
+        // the flow on the arcs of weight v is the number of items of weight v in the bin
+        List<Integer> link = new ArrayList<>(cols);
+        List<Double> lw = new ArrayList<>();
+        for (int i = 0; i < cols.size(); i++) {
+          lw.add(1.0);
+        }
+        for (int i : byWeight.get(v)) {
+          int j = item[i];
+          link.add(buckets.get(j)[(int) (b - lo[j])]);
+          lw.add(-1.0);
+        }
+        p.row(ints(link), doubles(lw), 0, 0);
+      }
+      int[] values = new int[(int) (lhi - llo) + 2];
+      Arrays.fill(values, -1);
+      values[0] = (int) llo;
+      List<Integer> sinkCols = new ArrayList<>();
+      List<Double> sinkValues = new ArrayList<>();
+      for (int d = reach.nextSetBit((int) llo); d >= 0 && d <= lhi; d = reach.nextSetBit(d + 1)) {
+        int c = p.columns();
+        p.colLo.add(0.0);
+        p.colHi.add(1.0);
+        out.computeIfAbsent(d, x -> new ArrayList<>()).add(c);
+        values[(int) (d - llo) + 1] = c;
+        sinkCols.add(c);
+        sinkValues.add((double) d);
+      }
+      for (int d = reach.nextSetBit(0); d >= 0; d = reach.nextSetBit(d + 1)) {
+        List<Integer> cs = new ArrayList<>();
+        List<Double> ws = new ArrayList<>();
+        for (int c : out.getOrDefault(d, List.of())) {
+          cs.add(c);
+          ws.add(1.0);
+        }
+        for (int c : in.getOrDefault(d, List.of())) {
+          cs.add(c);
+          ws.add(-1.0);
+        }
+        double side = d == fixed ? 1 : 0;
+        if (!cs.isEmpty()) {
+          p.row(ints(cs), doubles(ws), side, side);
+        } else if (side != 0) {
+          p.row(new int[] {0}, new double[] {0}, side, side);
+        }
+      }
+      // load = sum L [load = L]
+      sinkCols.add(load);
+      sinkValues.add(-1.0);
+      p.row(ints(sinkCols), doubles(sinkValues), 0, 0);
+      loadColumns.putIfAbsent(load, values);
+    }
+    return made;
+  }
+
+  // y = sum g(L) [load = L] for the functions of the loads with value columns
+  private void loadFunctions(Program p, long[] lo, long[] hi, Map<Integer, int[]> loadColumns) {
+    for (LoadFunction f : functions) {
+      int load = index.get(f.load());
+      int[] values = loadColumns.get(load);
+      if (values == null) {
+        continue;
+      }
+      List<Integer> cs = new ArrayList<>();
+      List<Double> ws = new ArrayList<>();
+      for (int i = 1; i < values.length; i++) {
+        int c = values[i];
+        if (c < 0) {
+          continue;
+        }
+        long g = f.at((long) values[0] + i - 1);
+        if (g == NONE) {
+          p.colHi.set(c, 0.0);
+        } else if (g != 0) {
+          cs.add(c);
+          ws.add((double) g);
+        }
+      }
+      cs.add(index.get(f.out()));
+      ws.add(-1.0);
+      p.row(ints(cs), doubles(ws), 0, 0);
+    }
+  }
+
+  private static int[] ints(List<Integer> xs) {
+    return xs.stream().mapToInt(Integer::intValue).toArray();
+  }
+
+  private static double[] doubles(List<Double> xs) {
+    return xs.stream().mapToDouble(Double::doubleValue).toArray();
   }
 
   // the smallest bucket width that keeps the columns and window nonzeros of a resource in the caps
@@ -818,7 +1266,7 @@ public final class TimeIndexedBound extends Constraint
     }
 
     // the exact bound of the program in the minimized direction (column 0, negated when maximizing)
-    long bound(boolean maximize, long millis) {
+    long bound(boolean maximize, long millis, int pivots) {
       int m = rowLo.size();
       int n = columns();
       int[][] cs = rowCols.toArray(new int[0][]);
@@ -838,7 +1286,7 @@ public final class TimeIndexedBound extends Constraint
       // in slices of pivots, until the time of one solve is up
       long deadline = System.nanoTime() + millis * 1_000_000L;
       int status = RevisedDualSimplex.LIMIT;
-      for (int done = 0; done < PIVOTS && status == RevisedDualSimplex.LIMIT; done += SLICE) {
+      for (int done = 0; done < pivots && status == RevisedDualSimplex.LIMIT; done += SLICE) {
         status = lp.solve(SLICE);
         if (System.nanoTime() > deadline) {
           break;
@@ -967,7 +1415,7 @@ public final class TimeIndexedBound extends Constraint
     if (s == null) {
       return false;
     }
-    reason(s, trail, entry, out);
+    reason(s, s.assumed(), trail, entry, out);
     return true;
   }
 
@@ -982,7 +1430,11 @@ public final class TimeIndexedBound extends Constraint
     if (s == null) {
       return false;
     }
-    reason(s, trail, position, out);
+    // the solve proved the objective at least its bound: a failure is explained by the objective
+    // below that bound, not by the looser limit the solve assumed (core-guided lower bound runs
+    // probe limits below the bound, and the assumed limit there gave a wrong optimum on gbac)
+    long cap = s.bound() == Long.MAX_VALUE ? s.assumed() : Math.min(s.assumed(), s.bound() - 1);
+    reason(s, cap, trail, position, out);
     return true;
   }
 
@@ -1001,15 +1453,16 @@ public final class TimeIndexedBound extends Constraint
     return null;
   }
 
-  // the objective bound a solve assumed, and every root bound it used that is not initial
-  private void reason(Solve s, AtomicTrail trail, int position, EntryList out) {
+  // the objective at most cap (the limit the solve assumed, or below its bound for a failure),
+  // and every root bound the solve used that is not initial
+  private void reason(Solve s, long cap, AtomicTrail trail, int position, EntryList out) {
     if (maximize) {
-      long limit = Math.max(-s.assumed(), s.lo()[0]);
+      long limit = Math.max(-cap, s.lo()[0]);
       if (trail.rootDomain(objective).min() < limit) {
         trail.addBoundReaching(objective, position, true, limit, out);
       }
     } else {
-      long limit = Math.min(s.assumed(), s.hi()[0]);
+      long limit = Math.min(cap, s.hi()[0]);
       if (trail.rootDomain(objective).max() > limit) {
         trail.addBoundReaching(objective, position, false, limit, out);
       }
@@ -1035,7 +1488,15 @@ public final class TimeIndexedBound extends Constraint
     for (Resource r : resources) {
       res.add(new Resource(map.get(r.starts()), r.dur(), r.use(), map.get(r.cap())));
     }
-    return new TimeIndexedBound(map.get(objective), maximize, rs, res);
+    List<Packing> ps = new ArrayList<>();
+    for (Packing q : packings) {
+      ps.add(new Packing(map.get(q.bins()), q.weights(), map.get(q.loads()), q.minBin()));
+    }
+    List<LoadFunction> fs = new ArrayList<>();
+    for (LoadFunction f : functions) {
+      fs.add(new LoadFunction(map.get(f.out()), map.get(f.load()), f.offset(), f.values()));
+    }
+    return new TimeIndexedBound(map.get(objective), maximize, rs, res, ps, fs);
   }
 
   @Override
@@ -1048,6 +1509,8 @@ public final class TimeIndexedBound extends Constraint
         + rows.size()
         + ", resources "
         + resources.size()
+        + ", packings "
+        + packings.size()
         + ")";
   }
 }

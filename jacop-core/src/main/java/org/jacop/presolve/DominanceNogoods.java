@@ -331,7 +331,11 @@ public final class DominanceNogoods {
     // without functional constraints read by value, whether a move is valid depends only on the
     // changes, so it is computed once for each pair of changes
     boolean byChange = !valueInput[x] && !valueInput[y];
-    Map<Long, Boolean> moves = new HashMap<>();
+    int[][] changeX = byChange ? changes(dx) : null;
+    int[][] changeY = byChange ? changes(dy) : null;
+    int widthY = byChange ? changeY[dy.length][0] : 0;
+    // 0 = not computed, 1 = invalid, 2 = valid; indexed by the two changes
+    byte[] moves = byChange ? new byte[changeX[dx.length][0] * widthY] : null;
     List<int[]> found = new ArrayList<>();
     for (int i = 0; i < dx.length; i++) {
       if (dominated[x] != null && dominated[x][i]) {
@@ -352,13 +356,11 @@ public final class DominanceNogoods {
             }
             boolean ok;
             if (byChange) {
-              long key = ((long) (dx[a] - dx[i]) << 32) ^ ((dy[b] - dy[j]) & 0xffffffffL);
-              Boolean known = moves.get(key);
-              if (known == null) {
-                known = valid(x, dx[i], dx[a], y, dy[j], dy[b]);
-                moves.put(key, known);
+              int key = changeX[i][a] * widthY + changeY[j][b];
+              if (moves[key] == 0) {
+                moves[key] = valid(x, dx[i], dx[a], y, dy[j], dy[b]) ? (byte) 2 : (byte) 1;
               }
-              ok = known;
+              ok = moves[key] == 2;
             } else {
               ok = valid(x, dx[i], dx[a], y, dy[j], dy[b]);
             }
@@ -371,6 +373,23 @@ public final class DominanceNogoods {
       }
     }
     return found;
+  }
+
+  /**
+   * Numbers the changes between the values of a domain: entry [i][a] is the number of the change
+   * d[a] - d[i], and entry [d.length][0] is how many distinct changes there are.
+   */
+  private static int[][] changes(int[] d) {
+    Map<Integer, Integer> number = new HashMap<>();
+    int[][] result = new int[d.length + 1][];
+    for (int i = 0; i < d.length; i++) {
+      result[i] = new int[d.length];
+      for (int a = 0; a < d.length; a++) {
+        result[i][a] = number.computeIfAbsent(d[a] - d[i], k -> number.size());
+      }
+    }
+    result[d.length] = new int[] {number.size()};
+    return result;
   }
 
   private static List<Constraint> constraints(IntVar x, IntVar y, List<int[]> nogoods) {

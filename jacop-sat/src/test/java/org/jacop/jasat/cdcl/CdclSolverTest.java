@@ -353,6 +353,48 @@ class CdclSolverTest {
   }
 
   @Test
+  void virtualClockDeadlineStopsTheSearchAtTheSameConflictInEveryRun() {
+    // under the virtual clock a time limit is a work limit: -f under jacop.virtualClock repeats
+    // its phases, neighbourhoods and stops whatever the load of the machine
+    long[] conflicts = new long[2];
+    for (int run = 0; run < 2; run++) {
+      CdclSolver s = new CdclSolver();
+      s.setVirtualClock(true);
+      pigeonhole(s, 10);
+      long start = s.now();
+      assertEquals(s.work() * 1_000_000L / CdclSolver.VIRTUAL_WORK_PER_MS, start);
+      s.setDeadline(start + 10 * 1_000_000L);
+      assertEquals(CdclSolver.UNKNOWN, s.solve());
+      assertTrue(s.now() > s.deadline(), "stopped before the deadline");
+      conflicts[run] = s.conflicts;
+    }
+    assertTrue(conflicts[0] > 0);
+    assertEquals(conflicts[0], conflicts[1]);
+  }
+
+  @Test
+  void alarmRunsOnceAndCanStopTheSearch() {
+    // the check of LCG's speed runs as an alarm under the virtual clock, in place of a thread
+    long[] conflicts = new long[2];
+    for (int run = 0; run < 2; run++) {
+      CdclSolver s = new CdclSolver();
+      s.setVirtualClock(true);
+      pigeonhole(s, 10);
+      int[] calls = new int[1];
+      s.setAlarm(
+          s.now() + 5 * 1_000_000L,
+          () -> {
+            calls[0]++;
+            s.interrupt();
+          });
+      assertEquals(CdclSolver.UNKNOWN, s.solve());
+      assertEquals(1, calls[0]);
+      conflicts[run] = s.conflicts;
+    }
+    assertEquals(conflicts[0], conflicts[1]);
+  }
+
+  @Test
   void deadlineStopsTheSearchOnExternalDecisions() {
     // The deadline was checked only on conflicts and on the solver's own decisions, so a search
     // driven by the external propagator's decisions ran past it.
