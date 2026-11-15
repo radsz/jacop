@@ -5179,6 +5179,8 @@ public class LinearRelaxation extends Constraint
 
   // the status of the last root solve of trialRows
   private int trialStatus;
+  // the status of the solve of trialRows over the bounds of the search start
+  private int trialStatusAtStart = LpSolver.OPTIMAL;
 
   /**
    * Solves the given rows and the first k extra rows over the first n columns at the root, and
@@ -5215,12 +5217,20 @@ public class LinearRelaxation extends Constraint
         extendDeadline = Math.max(extendDeadline, System.nanoTime() + largeRootNanos);
         startStatus = extendRootSolve(full, startStatus, true);
       }
+      trialStatusAtStart = startStatus;
       keep = keepRows(startStatus, baseStatus, startBound, full, few, k);
       for (int j = 0; j < n; j++) {
         setBounds(full, j);
       }
     } else {
       keep = false;
+    }
+    if (searchStartMin != null && k == leadExtra && !keep && trialStatusAtStart == LpSolver.LIMIT) {
+      // the value encodings alone did not finish over the bounds of the search start: a second
+      // solve over the current bounds would spend the same time again
+      trialStatus = LpSolver.LIMIT;
+      droppedPivots += full.pivots();
+      return null;
     }
     int first = rootSolve(full, pivots, rootWork());
     if (k == leadExtra && first == LpSolver.LIMIT) {
