@@ -1,0 +1,3 @@
+% RUNS ON flatzinc
+constraint float_ne(2.0, 3.0);
+solve satisfy;
