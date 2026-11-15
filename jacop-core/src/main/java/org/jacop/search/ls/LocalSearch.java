@@ -155,6 +155,7 @@ public final class LocalSearch {
   private final boolean jump;
   private final boolean permutations;
   private final int scheduling;
+  private final boolean scheduleOnly;
   private final boolean skipImplied;
   private final boolean tableKeys;
   private final boolean follow;
@@ -324,6 +325,7 @@ public final class LocalSearch {
     jump = b.jump;
     permutations = b.permutations;
     scheduling = b.scheduling;
+    scheduleOnly = b.scheduleOnly;
     skipImplied = b.skipImplied;
     tableKeys = b.tableKeys;
     follow = b.follow;
@@ -373,10 +375,14 @@ public final class LocalSearch {
    */
   public Status solve() {
     deadline = timeLimitMillis > 0 ? System.currentTimeMillis() + timeLimitMillis : Long.MAX_VALUE;
-    if (!applicable()) {
+    if ((scheduleOnly && (scheduling == 0 || cost == null || !ScheduleResources.hasResource(store)))
+        || !applicable()) {
       return Status.NOT_APPLICABLE;
     }
     build();
+    if (scheduleOnly && schedule == null) {
+      return Status.NOT_APPLICABLE;
+    }
     if (timeUp()) {
       return Status.UNKNOWN;
     }
@@ -1259,6 +1265,10 @@ public final class LocalSearch {
     }
     if (!bounded) {
       // no row cost >= s[t] + lag: the cost is not a makespan of these tasks
+      return;
+    }
+    if (scheduleOnly && arcs.isEmpty()) {
+      // no precedences (an open shop): run alone, the machine sequences lose to the search
       return;
     }
     int[] aVar = new int[n];
@@ -2891,6 +2901,10 @@ public final class LocalSearch {
     if (schedule != null && scheduleSearch()) {
       return;
     }
+    if (scheduleOnly) {
+      // the schedules gave way: the general moves are not asked for
+      return;
+    }
     double bestScore = Double.MAX_VALUE;
     long lastImprovement = 0;
     int[] candidates = new int[64];
@@ -3826,6 +3840,7 @@ public final class LocalSearch {
     private boolean jump;
     private boolean permutations = true;
     private int scheduling = SCHEDULE_NS | SCHEDULE_N4;
+    private boolean scheduleOnly;
     private boolean skipImplied = true;
     private boolean tableKeys = true;
     private boolean follow = true;
@@ -3947,6 +3962,20 @@ public final class LocalSearch {
      */
     public Builder scheduling(int kinds) {
       this.scheduling = kinds;
+      return this;
+    }
+
+    /**
+     * Runs only the scheduling search of {@link #scheduling(int)}: the search is not applicable
+     * when the model has no unary resource (a {@code CumulativeBasic}), no disjunctive schedule
+     * whose makespan is the cost or no precedences between the tasks (an open shop), and it ends
+     * when the schedules give way instead of going on with the general moves.
+     *
+     * @param scheduleOnly true for the scheduling search only.
+     * @return this builder.
+     */
+    public Builder scheduleOnly(boolean scheduleOnly) {
+      this.scheduleOnly = scheduleOnly;
       return this;
     }
 

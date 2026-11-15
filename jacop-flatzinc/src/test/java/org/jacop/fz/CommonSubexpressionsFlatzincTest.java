@@ -297,6 +297,25 @@ class CommonSubexpressionsFlatzincTest {
     assertEquals(4, solutions(run(model, false, "-a")));
   }
 
+  /** An element of a float array in a constraint is not an integer variable to count. */
+  @Test
+  void floatArrayElementsAreSkipped() throws IOException {
+    String model =
+        """
+        array [1..2] of var 0.0..1.0: f:: output_array([1..2]);
+        var 0..3: x:: output_var;
+        var 0..3: y:: output_var;
+        constraint float_lin_eq([1.0,1.0],[f[1],f[2]],1.0);
+        constraint float_le(0.5,f[1]);
+        constraint int_le(x,y);
+        constraint int_le(x,y);
+        solve satisfy;
+        """;
+    String out = run(model, true, "-debug");
+    assertTrue(out.contains("1 duplicate constraints removed"), out);
+    assertEquals(1, solutions(out), out);
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }
