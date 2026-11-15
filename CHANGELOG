@@ -5875,7 +5875,28 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
-338. JaLP chooses the leaving row of the dual simplex by gap^1.2 / weight
+338. The FlatZinc front end merges common subexpressions before posting
+   (as CP-SAT's presolve does, DetectDuplicateConstraints: Perron, Didier
+   and Gay, The CP-SAT-LP solver, CP 2023; and the duplicate-row presolver
+   of MIP solvers: Achterberg, Bixby, Gu, Rothberg and Weninger, Presolve
+   reductions in mixed integer programming, INFORMS Journal on Computing
+   32(2), 2020). Two constraints that define their outputs by the same function
+   of the same arguments (reified comparisons, Boolean connectives,
+   int_times/plus/min/max/div/mod/abs, reified linear constraints,
+   elements) give one output, the other becomes its alias; a plain
+   equality of two variables (int_eq, bool_eq, x - y = 0, a conjunction
+   of one literal) aliases them; a repeated constraint is posted once, and
+   a linear constraint adds the coefficients of a repeated variable. It
+   repeats until nothing changes (at most 6 rounds). It changes the model
+   of 56 of the 240 instances of the wide benchmark set
+   (community-detection rnd_n100: 5,190 -> 211 constraints, 6.6 -> 4.1 s).
+   At 600 s against the build with enforcement inlining it solves 44 of
+   them as before in default mode (time geomean 1.007, cable-tree-wiring
+   A041 finds a worse best value on another search tree) and 48 as before
+   with -f (geomean 1.002). -Dorg.jacop.fz.cse=false turns it off; it is
+   off under --proof.
+
+339. JaLP chooses the leaving row of the dual simplex by gap^1.2 / weight
    instead of gap^2 / weight (dual steepest edge) on LPs shaped like
    multicommodity flows: at least 5000 columns, at most 2.2 nonzeros per
    column and at most 4 columns per row (the less sensitive dual steepest
@@ -5890,7 +5911,7 @@ Version 5.0 (unreleased)
    wide-set runs where it applies (600 s) nothing is solved or lost.
    -Dorg.jacop.jalp.linearScore=on|off overrides the choice.
 
-339. The -p portfolio can split one depth-first search over its threads by
+340. The -p portfolio can split one depth-first search over its threads by
    work stealing with recomputation (Schulte, "Parallel search made
    simple", TRICS 2000; Chu, Schulte and Stuckey, "Confidence-based work
    stealing in parallel constraint programming", CP 2009): a thread that
@@ -5909,7 +5930,7 @@ Version 5.0 (unreleased)
    from that cube. Statistics portfolioDfsSplitThreads, portfolioDfsSplits,
    portfolioDfsCubesClosed, portfolioDfsSplitWaitMillis.
 
-340. The FlatZinc front end rewrites a variable s defined by a sum
+341. The FlatZinc front end rewrites a variable s defined by a sum
    s = sum(i) a[i] * x[i] that is used otherwise only in half-reifications
    b -> s = m or b -> s <= m, where m is the least value of the sum: each
    becomes the clauses not b \/ x[i] = v[i], with v[i] the bound at which
@@ -5927,7 +5948,7 @@ Version 5.0 (unreleased)
    fires on none of the 240 instances of the wide benchmark set.
    -Dorg.jacop.fz.zeroSum=false turns it off; it is off under --proof.
 
-341. A root solve of the linear relaxation of an optimisation model in the
+342. A root solve of the linear relaxation of an optimisation model in the
    sparse simplex (the first solve, or the trial of the extra rows such as
    value encodings) that stops at its pivot or work budget now goes on
    within half of the time a large relaxation gets for its root solves
