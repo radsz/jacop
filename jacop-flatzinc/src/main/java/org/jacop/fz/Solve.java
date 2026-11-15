@@ -2417,6 +2417,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           return executeRestartSearch(label, select, costVar, solveType);
         }
       }
+      if (progressionSearch(costVar)) {
+        return executeProgressionSearch(label, costVar, solveType);
+      }
       if (useLcg(costVar)) {
         fixedLabel = label;
         fixedSelect = select;
@@ -2461,6 +2464,68 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return store.consistency();
+  }
+
+  /**
+   * Whether the search is the branching of a tiling by arithmetic progressions ({@link
+   * org.jacop.fz.constraints.ProgressionTilingDetector}): one solution of a satisfaction model
+   * without an annotation to follow (or under -f), without on_restart built-ins. The system
+   * property org.jacop.fz.progressionTiling.search=false keeps the default search.
+   */
+  private boolean progressionSearch(Var costVar) {
+    return dictionary.progressionTiling != null
+        && costVar == null
+        && options.freeSearch()
+        && !options.getAll()
+        && options.getNumberSolutions() <= 1
+        && dictionary.onRestart == null
+        && options.proof() == null
+        && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.progressionTiling.search"));
+  }
+
+  /**
+   * Searches a tiling by arithmetic progressions: each start in the order of the starts at its
+   * smallest value, which is the first value no fixed progression covers, then its gap at a random
+   * value, under Luby restarts of 100 failures, without LCG. On XCSP3 PerfectRythmicTiling n = 80
+   * (20 progressions of 4 terms) the search found tilings in 39 to 244 s over 3 seeds, the default
+   * search under LCG none in 600 s: the conflicts of the cover give long reasons (50 atoms) and the
+   * run reaches 2,000 nodes per second instead of 100,000.
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeProgressionSearch(DepthFirstSearch<T> label, Var costVar, String type) {
+    org.jacop.fz.constraints.ProgressionTilingDetector.Tiling tiling = dictionary.progressionTiling;
+    IO.println(
+        "%% progression tiling search: "
+            + tiling.starts().length
+            + " progressions of "
+            + tiling.terms()
+            + " terms, without LCG");
+    if (options.lcg()) {
+      if (dictionary.rootTrail != null) {
+        dictionary.rootTrail.detach();
+        dictionary.rootTrail = null;
+      }
+      postCollectedClauses();
+    }
+    List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
+    for (int i = 0; i < tiling.starts().length; i++) {
+      selects.add(new SimpleSelect<>(new IntVar[] {tiling.starts()[i]}, null, new IndomainMin<>()));
+      selects.add(
+          new SimpleSelect<>(
+              new IntVar[] {tiling.gaps()[i]}, null, new org.jacop.search.IndomainRandom<>()));
+    }
+    List<IntVar> rest = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof IntVar x && !x.singleton()) {
+        rest.add(x);
+      }
+    }
+    if (!rest.isEmpty()) {
+      selects.add(new SimpleSelect<>(rest.toArray(new IntVar[0]), null, new IndomainMin<>()));
+    }
+    restartCalculator = new LubyCalculator(100);
+    return executeRestartSearch(
+        label, (SelectChoicePoint<T>) new SequenceSelect(selects), costVar, type);
   }
 
   private boolean useLcg(Var costVar) {

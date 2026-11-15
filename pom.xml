@@ -368,6 +368,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
@@ -612,6 +613,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
@@ -852,6 +854,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
@@ -1090,6 +1093,7 @@ setup to run configuration. -->
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
