@@ -70,6 +70,9 @@ public class CountValuesBounds extends AbstractCountValues
 
   final int[] ub;
 
+  // the list in the order given, which propagation does not change
+  private final IntVar[] given;
+
   /**
    * It constructs a CountValuesBounds constraint.
    *
@@ -78,27 +81,6 @@ public class CountValuesBounds extends AbstractCountValues
    * @param lb minimal number of variables equal to a value.
    * @param ub maximal number of variables equal to a value.
    */
-  /**
-   * Tells whether every value must occur a fixed number of times.
-   *
-   * @return true when each lower bound equals its upper bound.
-   */
-  public boolean fixedCounts() {
-    return Arrays.equals(lb, ub);
-  }
-
-  // the list in the order given, which propagation does not change
-  private final IntVar[] given;
-
-  /**
-   * Returns the variables that are counted, in the order they were given.
-   *
-   * @return a copy of the counted variables.
-   */
-  public IntVar[] list() {
-    return given.clone();
-  }
-
   public CountValuesBounds(IntVar[] list, int[] lb, int[] ub, int[] values) {
 
     super(idNumber, list, values);
@@ -131,6 +113,24 @@ public class CountValuesBounds extends AbstractCountValues
     extendedCounter[counter.length] = counterRest;
 
     setScope(Arrays.stream(this.list));
+  }
+
+  /**
+   * Tells whether every value must occur a fixed number of times.
+   *
+   * @return true when each lower bound equals its upper bound.
+   */
+  public boolean fixedCounts() {
+    return Arrays.equals(lb, ub);
+  }
+
+  /**
+   * Returns the variables that are counted, in the order they were given.
+   *
+   * @return a copy of the counted variables.
+   */
+  public IntVar[] list() {
+    return given.clone();
   }
 
   /**
