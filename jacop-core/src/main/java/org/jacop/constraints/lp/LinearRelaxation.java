@@ -5018,7 +5018,13 @@ public class LinearRelaxation extends Constraint
       double startBound =
           baseStatus == LpSolver.OPTIMAL && objective != null ? base.value(0) : Double.NaN;
       droppedPivots += base.pivots();
-      keep = keepRows(rootSolve(full, pivots, rootWork()), baseStatus, startBound, full, few, k);
+      int startStatus = rootSolve(full, pivots, rootWork());
+      if (k == leadExtra && startStatus == LpSolver.LIMIT) {
+        // as below: the value encodings alone get the time of a large root solve
+        extendDeadline = Math.max(extendDeadline, System.nanoTime() + largeRootNanos);
+        startStatus = extendRootSolve(full, startStatus, true);
+      }
+      keep = keepRows(startStatus, baseStatus, startBound, full, few, k);
       for (int j = 0; j < n; j++) {
         setBounds(full, j);
       }
