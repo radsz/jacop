@@ -6290,7 +6290,64 @@ Version 5.0 (unreleased)
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
 
-347. -Djacop.virtualClock=true also covers free search without learning
+351. New constraint MaxCliqueBound(x, conflicts, sum): x are 0/1
+   variables, no two variables in conflict are both 1, and sum <= x[1] +
+   ... + x[n]. It bounds sum by a greedy coloring of the vertices that can
+   still be 1 (classes of pairwise conflicting vertices, kept as bit sets
+   in decreasing degree order) as maximum clique algorithms do: E. Tomita
+   and T. Seki, "An efficient branch-and-bound algorithm for finding a
+   maximum clique", DMTCS 2003, LNCS 2731; E. Tomita, Y. Sutani, T.
+   Higashi, S. Takahashi and M. Wakatsuki, "A simple and faster
+   branch-and-bound algorithm for finding a maximum clique", WALCOM 2010,
+   LNCS 5942; P. San Segundo, D. Rodriguez-Losada and A. Jimenez, "An
+   exact bit-parallel algorithm for the maximum clique problem", Computers
+   & Operations Research 38(2), 2011; as a constraint, J.-C. Regin, "Using
+   constraint programming to solve the maximum clique problem", CP 2003,
+   LNCS 2833. Under LCG its reason cites only the zeros that do not join a
+   color class, or a vertex at 1 in conflict with them. The FlatZinc front
+   end posts it as a redundant constraint on a maximized sum of 0/1
+   variables with pairwise conflicts (x[i] + x[j] <= 1, bool_clause or
+   array_bool_and of two); -Dorg.jacop.fz.maxClique=false turns this off.
+   A model that is maximum clique and nothing else is solved by branch and
+   bound without LCG unless --lcg is given (-Dorg.jacop.fz.maxClique.lcg=true
+   keeps LCG). Of the 15 Clique instances of the XCSP 2026 competition it
+   proves 6 at 600 s (brock200-4 in 14 s), where develop-5.0 proved 2. The
+   LP pair cliques test conflicts on bit sets, so p-hat1500-1 builds its
+   model in 35 s instead of more than 300 s, with the same cliques.
+
+352. The tabulation of small flattened expressions (item 292) reaches
+   groups whose outer variables follow from one of them. Its small search
+   now infers through clauses, implications and reifications (a clause
+   with one unknown literal and the others false; a false relation makes
+   its literal false; a true literal of an equality gives the unknown
+   term), so a link of the XCSP 2026 Collatz chain, x mod 2 != 0 \/
+   y = x div 2 and x mod 2 = 0 \/ y = 3x + 1, is enumerated over x alone
+   instead of the x * y box. A group is tabulated when one branch of that
+   search multiplies the domain sizes of the outer variables it branches
+   on to at most the rows limit, which for a group with an outer variable
+   of more than 10,000 values is that domain size, up to 100,000. Groups
+   with the same constraints over variables with the same domains share
+   one tabulation and the index of one table, so more groups fit in the
+   node budget. On the 23 instances of the XCSP 2022-2026 competitions
+   where it changes the model, at 600 s: Collatz 12 of 12 decided in
+   1-8 s, 1 before (2 to 12 of the 23 solvers of 2026 decided each); Dominoes
+   (2023) 11 of 11 solved in 7-102 s, 2 before, among them the three
+   45-* instances that no 2023 solver solved, and a solution checked by
+   the XCSP3 SolutionChecker for 40-150, which sat4j+roundingsat claimed
+   unsatisfiable. On the wide benchmark set it changes one instance
+   (code-generator mips_gobmk, one more table).
+
+353. Lazy clause generation explains an entailed reified <= or >= linear
+   constraint (int_lin_le_reif, int_lin_le_imp and the like) from one
+   bound lookup per term: before, it read both bounds of every term and
+   then looked up the entry of the bound it cites again. The reasons and
+   the search are the same. bnn-planner navigation_5x5_10s, where these
+   reasons took 22 % of the time, solves in 5.35 s instead of 6.29 s;
+   over the 53 wide instances with int_lin_le_reif or int_lin_le_imp, the
+   instances solved with the same search in at least 10 s take 0.94x
+   (default) and 0.93x (-f) of the time at 600 s.
+
+354. -Djacop.virtualClock=true also covers free search without learning
    after LCG gives way (-f): its time limit, the time LCG left, counts
    jacop.virtualClock.propagationsPerMs (1000) propagations per
    millisecond, and the probes of the value impact heuristic take their
@@ -6301,7 +6358,7 @@ Version 5.0 (unreleased)
    work-task-variation) and, in one of three censuses, mapping.
    FreeSearch.Builder.virtualClock turns it on for one search.
 
-351. Float optimisation in fzn-jacop is faster and proves more optima.
+355. Float optimisation in fzn-jacop is faster and proves more optima.
    Once branch and bound has found 1000 solutions
    (-Dorg.jacop.fz.floatCrawl) improving by a few ulps, the objective is
    bisected between a lower bound and the best cost, each step with a
@@ -6324,6 +6381,48 @@ Version 5.0 (unreleased)
    600 s, three at a time, default search proves 25 optima instead of 18
    and -f 25 instead of 17; no instance with float variables is in the
    wide benchmark set.
+
+356. Free search with lazy clause generation on an optimisation model
+   whose search variables all lie in one cardinality with fixed counts
+   (jacop_count_values or global_cardinality posted as CountValuesBounds
+   with equal bounds) first dives without learning through those
+   variables in model order, largest value first, for at most 5 % of the
+   time limit; the values of its first solution start the default
+   branching of LCG. On the slot model of bin packing (x[i][j] the weight
+   of the j-th item in bin i) this fills bin after bin with the largest
+   item that fits, the packing of first fit decreasing (D. S. Johnson,
+   A. Demers, J. D. Ullman, M. R. Garey and R. L. Graham, "Worst-case
+   performance bounds for simple one-dimensional packing algorithms",
+   SIAM Journal on Computing 3, 1974). LCG made about 30 conflicts a second
+   there and found no solution of 8 of the 15 BinPacking instances of the
+   XCSP 2024 competition in 240 s; with the dive all 8 have one (n3c2w1a
+   91, the best of the field; n3c3w1a proved optimal in 4 s), and the
+   other 7 are unchanged. It fires on none of the instances of the wide
+   benchmark set. Under LCG the reifications and the objective
+   live in SAT clauses, so the dive does not print its solution: the first
+   run of LCG completes it. --free-config slot-dive=off turns it off and
+   slot-dive-share sets its share of the time; the statistics slotDiveSlots
+   and slotDiveTime give its size and time.
+
+357. Under lazy clause generation the FlatZinc front end adds to a
+   cumulative whose tasks have variable durations and fixed resource
+   uses, and at most 4000 (task, time point) pairs, its time-resource
+   decomposition: at each time point t the sum of the resource uses of
+   the tasks with s <= t < s + d is at most the capacity (Schutt, Feydy,
+   Stuckey and Wallace, Why cumulative decomposition is not as bad as it
+   sounds, CP 2009). The cumulative propagators take the earliest end of
+   a task as its earliest start plus its shortest duration; when another
+   constraint bounds the end, such as a stockpile that stays until it is
+   reclaimed, they miss the part of the task between its latest start
+   and its earliest end, which the learnt clauses over the start and end
+   literals of the decomposition capture. XCSP 2024 Cargo at 600 s, two
+   seeds: Cargo-22 proved in 4 s and Cargo-10 in 154 and 62 s, which no
+   run proved before (CP-SAT, one thread: 0.5 and 59 s); Cargo-06 152
+   and 5 s instead of 332 and 132 s, Cargo-05 4 s instead of 19 s. Of the
+   240 wide instances it fires on two (stack-cuttingstock d3,
+   stripboard), unchanged. -Dorg.jacop.fz.cumulativeTimeIndexed=false
+   turns it off, =true posts it without lazy clause generation too, and
+   -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
 Version 4.11
 =============

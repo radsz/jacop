@@ -72,7 +72,31 @@ class CumulativeTest {
   @Test
   @Timeout(TIMEOUT_MS)
   void allSolutionsMatchBruteForce() throws IOException {
-    Random random = new Random(2026);
+    checkTrials(new Random(2026));
+  }
+
+  /**
+   * The same check with the time-indexed decomposition of cumulatives with variable durations,
+   * which is otherwise posted only under lazy clause generation.
+   */
+  @Test
+  @Timeout(TIMEOUT_MS)
+  void timeIndexedDecompositionKeepsAllSolutions() throws IOException {
+    String key = "org.jacop.fz.cumulativeTimeIndexed";
+    String before = System.getProperty(key);
+    System.setProperty(key, "true");
+    try {
+      checkTrials(new Random(2027));
+    } finally {
+      if (before == null) {
+        System.clearProperty(key);
+      } else {
+        System.setProperty(key, before);
+      }
+    }
+  }
+
+  private void checkTrials(Random random) throws IOException {
     for (int trial = 0; trial < TRIALS; trial++) {
       int n = 1 + random.nextInt(3);
       boolean groundDurations = random.nextBoolean();

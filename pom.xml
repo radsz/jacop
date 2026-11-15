@@ -275,6 +275,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -323,6 +324,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -406,6 +408,7 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -520,6 +523,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -568,6 +572,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -656,6 +661,7 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -766,6 +772,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -814,6 +821,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -902,6 +910,7 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -1012,6 +1021,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -1060,6 +1070,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -1146,6 +1157,7 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
