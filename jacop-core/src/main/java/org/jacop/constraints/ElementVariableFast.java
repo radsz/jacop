@@ -167,6 +167,24 @@ public class ElementVariableFast extends AbstractElement
     this(index, list, value, 0);
   }
 
+  /**
+   * Returns the variable that equals the list variable the index selects.
+   *
+   * @return the value variable.
+   */
+  public IntVar value() {
+    return value;
+  }
+
+  /**
+   * Returns a copy of the list variables; index - indexOffset = 1 selects the first one.
+   *
+   * @return the list.
+   */
+  public IntVar[] variables() {
+    return list.clone();
+  }
+
   @Override
   protected int listLength() {
     return list.length;

@@ -41,12 +41,14 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
@@ -72,6 +74,7 @@ import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
+import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -475,6 +478,16 @@ public class Constraints implements ParserTreeConstants {
         new CountPartnersDetector(support).detect(astTree);
       }
 
+      // the pigeonhole bound on the equal pairs of variables whose pairs all have equality
+      // indicators, redundant; --proof does not encode it
+      if (AgreementCountDetector.enabled() && options.proof() == null) {
+        AgreementCountDetector agreements = new AgreementCountDetector(support);
+        agreements.detect(astTree);
+        if (agreements.infeasible()) {
+          throw Store.failException;
+        }
+      }
+
       if (increasing != null && IncreasingDetector.sumEnabled()) {
         increasing.postSums();
       }
@@ -489,6 +502,10 @@ public class Constraints implements ParserTreeConstants {
       // the allocations it adds are redundant, and --proof does not encode them
       if (ConvexAllocationDetector.enabled(options.lcg()) && options.proof() == null) {
         new ConvexAllocationDetector(support, balanced).detect(astTree);
+      }
+
+      if (TimeIndexedBound.ARC_FLOW) {
+        dictionary.loadFunctions = new LoadFunctionDetector(support).detect(astTree);
       }
 
       // the stocking cost it adds is redundant, and --proof does not encode it

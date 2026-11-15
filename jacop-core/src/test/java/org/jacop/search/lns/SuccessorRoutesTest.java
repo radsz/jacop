@@ -40,8 +40,12 @@ import java.util.Random;
 import java.util.Set;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.XeqC;
+import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XplusCeqZ;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.junit.jupiter.api.Test;
@@ -217,5 +221,95 @@ class SuccessorRoutesTest {
       count += b ? 1 : 0;
     }
     assertEquals(2, count);
+  }
+
+  /**
+   * A model numbered from 0 (XCSP VRP_LC through MiniZinc) posts its subcircuit on copies x[v] =
+   * y[v] + 1 of its successors y: the routes must still be found over y, with the costs of the
+   * elements on y and the pickup and delivery pairs of the vehicle labels.
+   */
+  @Test
+  void aSubcircuitOnShiftedCopiesOfTheSuccessorsHasRoutes() {
+    Store s = new Store();
+    IntVar[] y = new IntVar[N];
+    IntVar[] x = new IntVar[N];
+    IntVar[] veh = new IntVar[N];
+    IntVar[] d = new IntVar[N];
+    for (int v = 0; v < N; v++) {
+      y[v] = new IntVar(s, "succ" + v, 0, N - 1);
+      x[v] = new IntVar(s, "x" + v, 1, N);
+      veh[v] = new IntVar(s, "veh" + v, 0, V - 1);
+      s.impose(new XplusCeqZ(y[v], 1, x[v]));
+    }
+    s.impose(new Subcircuit(x));
+    for (int k = 0; k < V; k++) {
+      s.impose(new XeqC(y[C + V + k], C + (k + 1) % V));
+    }
+    for (int v = 0; v < N; v++) {
+      int[] row = new int[N];
+      for (int w = 0; w < N; w++) {
+        row[w] = Math.abs(position(v) - position(w));
+      }
+      d[v] = new IntVar(s, "d" + v, 0, 100);
+      // the lists are numbered from 0: y = 0 reads the first value
+      s.impose(new ElementInteger(y[v], row, d[v], -1));
+      if (v < C + V) {
+        // the vehicle along its route; an end depot is followed by the next vehicle's start
+        s.impose(new ElementVariable(y[v], veh, veh[v], -1));
+      }
+    }
+    // customers 0 and 1 share a vehicle (a pickup and its delivery)
+    s.impose(new XeqY(veh[0], veh[1]));
+    IntVar c = new IntVar(s, "cost", 0, 10000);
+    IntVar[] terms = Arrays.copyOf(d, N + 1);
+    int[] w = new int[N + 1];
+    Arrays.fill(w, 1);
+    terms[N] = c;
+    w[N] = -1;
+    s.impose(new LinearInt(terms, w, "==", 0));
+    assertTrue(s.consistency());
+    IntVar[] decisions = Arrays.copyOf(y, 2 * N);
+    System.arraycopy(veh, 0, decisions, N, N);
+    AdaptiveLns lns = new AdaptiveLns(s, decisions, c, new Random(9));
+    int level = s.level;
+    s.setLevel(level + 1);
+    for (int v = 0; v < N; v++) {
+      y[v].domain.inValue(s.level, y[v], NEXT[v]);
+      // vehicle k starts at C + k, visits 2k and 2k + 1 and ends at C + V + k
+      int k = v < C ? v / 2 : (v - C) % V;
+      veh[v].domain.inValue(s.level, veh[v], k);
+    }
+    assertTrue(s.consistency());
+    lns.solution();
+    s.removeLevel(level + 1);
+    s.setLevel(level);
+
+    assertEquals(1, lns.routings().size());
+    RouteStructure r = lns.routings().get(0);
+    assertEquals(C, r.customerCount());
+    Set<String> found = new HashSet<>();
+    for (int[] route : r.bestRoutes()) {
+      found.add(Arrays.toString(route));
+    }
+    assertEquals(Set.of("[0, 1]", "[2, 3]", "[4, 5]"), found);
+    // the costs come from the elements on y: customer 1 is nearest to 0
+    assertEquals(1, r.near[0][0]);
+    assertEquals("[1]", Arrays.toString(r.partners[0]));
+    assertEquals("[0]", Arrays.toString(r.partners[1]));
+    assertEquals(0, r.partners[2].length);
+    // removing a customer relaxes the successors y around it
+    boolean[] removed = new boolean[N];
+    removed[2] = true;
+    boolean[] relax = new boolean[2 * N];
+    r.relax(removed, relax);
+    for (int v = 0; v < N; v++) {
+      assertEquals(v == 2 || NEXT[v] == 2, relax[v], "succ of " + v);
+    }
+    // Shaw removal takes the partner with the customer
+    Random random = new Random(10);
+    for (int t = 0; t < 50; t++) {
+      boolean[] shaw = r.relatedRemoval(1.0 / C, random);
+      assertEquals(shaw[0], shaw[1], "a pair is removed together");
+    }
   }
 }
