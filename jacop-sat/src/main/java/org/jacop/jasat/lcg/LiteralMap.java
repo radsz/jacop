@@ -64,6 +64,9 @@ final class LiteralMap {
   private int[] values = EMPTY;
   private int[] literals = EMPTY;
   private int size;
+  // the index of the last value found: reasons cite the same atoms again and again, and on
+  // connect about half of the lookups in sorted maps are for the value found just before
+  private int last;
 
   // indexed form, null while sorted: the DIMACS variable of value min + k at k, and k in present
   private int[] byValue;
@@ -81,8 +84,23 @@ final class LiteralMap {
       long k = (long) v - min;
       return k >= 0 && k < span ? byValue[(int) k] : NONE;
     }
-    int k = Arrays.binarySearch(values, 0, size, v);
-    return k >= 0 ? literals[k] : NONE;
+    int n = size;
+    if (n == 0) {
+      return NONE;
+    }
+    int l = last;
+    if (l < n && values[l] == v) {
+      return literals[l];
+    }
+    if (v < values[0] || v > values[n - 1]) {
+      return NONE;
+    }
+    int k = Arrays.binarySearch(values, 0, n, v);
+    if (k < 0) {
+      return NONE;
+    }
+    last = k;
+    return literals[k];
   }
 
   /** Returns the DIMACS variable of the largest value below v, or {@link #NONE}. */
@@ -197,7 +215,7 @@ final class LiteralMap {
       values = Arrays.copyOf(values, length);
       literals = Arrays.copyOf(literals, length);
     }
-    int k = -Arrays.binarySearch(values, 0, size, v) - 1;
+    int k = size == 0 || v > values[size - 1] ? size : -Arrays.binarySearch(values, 0, size, v) - 1;
     System.arraycopy(values, k, values, k + 1, size - k);
     System.arraycopy(literals, k, literals, k + 1, size - k);
     values[k] = v;
