@@ -253,6 +253,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
@@ -486,6 +487,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
@@ -720,6 +722,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
@@ -954,6 +957,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
