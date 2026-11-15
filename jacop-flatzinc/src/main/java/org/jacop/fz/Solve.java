@@ -1237,6 +1237,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.extraRows
             + "\n%%%mzn-stat: lpExtraDropped="
             + r.extraDropped
+            + "\n%%%mzn-stat: lpProbationKept="
+            + r.probationKept
+            + "\n%%%mzn-stat: lpFailingSolves="
+            + r.failingSolves
             + "\n%%%mzn-stat: lpPooledExtra="
             + r.pooledExtra
             + "\n%%%mzn-stat: lpPooledCuts="

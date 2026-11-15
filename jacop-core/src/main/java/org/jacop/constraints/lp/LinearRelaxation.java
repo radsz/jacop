@@ -383,6 +383,12 @@ public class LinearRelaxation extends Constraint
   /** Statistics: whether those rows were dropped in search, as too many solves hit the limit. */
   public boolean extraDropped;
 
+  /** Statistics: the extra rows of a satisfaction model kept on probation at the root. */
+  public boolean probationKept;
+
+  /** Statistics: the solves charged as pruning ones because the relaxation failed nodes often. */
+  public long failingSolves;
+
   /** Statistics: the auxiliary columns ({@link LpColumn}) of the relaxation. */
   public int valueColumns;
 
@@ -2452,6 +2458,9 @@ public class LinearRelaxation extends Constraint
         period = Math.max(1, period / 2);
         credit = WORK;
       } else if (prunings > pruned || FAIL_RATE > 0 && recentFailures >= FAIL_RATE) {
+        if (prunings == pruned) {
+          failingSolves++;
+        }
         idle = 0;
         period = Math.max(1, period / 2);
         credit -= PRUNE_DISCOUNT == 0 ? 0 : cost / PRUNE_DISCOUNT;
@@ -5193,6 +5202,7 @@ public class LinearRelaxation extends Constraint
       // window rows fail one in twenty and the proof takes 295 s and 1.2 million conflicts)
       keep = true;
       probation = true;
+      probationKept = true;
     }
     if (keep) {
       trialStatus = withExtra;
