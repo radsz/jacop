@@ -3584,15 +3584,20 @@ public final class LcgSolver implements ExternalPropagator {
 
   private boolean jumpsArmed; // whether solutions of branch and bound may request jumps
   private boolean jumpRequested; // set when a run of branch and bound stopped for jumps
-  private int runSolutions; // solutions of the current run of branch and bound
+  private int runSolutions; // the streak of quick solutions of the current run of branch and bound
+  private long lastSolutionConflicts; // the conflicts at the last solution of the run
+
+  // -Djacop.lcg.jumpFast=<n>: the most conflicts after the last solution for a solution to extend
+  // the streak of quick ones after which branch and bound jumps
+  private static final long JUMP_FAST = Long.getLong("jacop.lcg.jumpFast", 20);
   private int jumpAfter = JUMP_AFTER; // the solutions of a run before it stops for jumps
 
   /**
    * Branch and bound in one search ({@link #solve}) under the limits the caller set, where a run
-   * that finds {@link #JUMP_AFTER} solutions stops for {@link #jumps}: each improving solution
-   * otherwise costs a descent of the search, and connect (Challenge 2021) took 465 solutions that
-   * each improved the best by 1 to 80. When the jumps find nothing, a run needs twice as many
-   * solutions before the next ones.
+   * that finds {@link #JUMP_AFTER} solutions in a row, each within {@link #JUMP_FAST} conflicts of
+   * the last, stops for {@link #jumps}: each improving solution otherwise costs a descent of the
+   * search, and connect (Challenge 2021) took 465 solutions that each improved the best by 1 to 80.
+   * When the jumps find nothing, a run needs twice as many solutions before the next ones.
    */
   private int branchAndBound() {
     if (!jumping || JUMP_AFTER <= 0 || JUMP_CONFLICTS <= 0 || objective < 0 || tree != null) {
@@ -3600,6 +3605,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     while (true) {
       runSolutions = 0;
+      lastSolutionConflicts = sat.conflicts;
       jumpRequested = false;
       jumpsArmed = true;
       int result;
@@ -3699,6 +3705,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     coreMode = true; // a solution ends the call of the solver without a clause
     long step = 1; // how far below the best solution the next call assumes the objective
+    int streak = 0; // solutions in a row that each took at most JUMP_FAST conflicts
     int raised = Integer.MIN_VALUE; // the bound the jumps proved, which the root may not show yet
     try {
       while (true) {
@@ -3719,6 +3726,9 @@ public final class LcgSolver implements ExternalPropagator {
         // objective <= target: one below the best solution, or a step further below it while
         // the steps succeed (jumps): connect (Challenge 2021) took 300 to 500 solutions that each
         // improved the best by 1 to 80
+        if (streak < JUMP_AFTER) {
+          step = 1;
+        }
         int target = (int) Math.max(lb, Math.min(best[objective] - 1L, best[objective] - step));
         boolean jump = target < best[objective] - 1;
         long cap = sat.conflictLimit();
@@ -3726,6 +3736,7 @@ public final class LcgSolver implements ExternalPropagator {
           sat.setConflictLimit(Math.min(cap, sat.conflicts + JUMP_CONFLICTS));
         }
         int result;
+        long before = sat.conflicts;
         try {
           result = solve(-geLit(objective, target + 1));
         } finally {
@@ -3734,7 +3745,8 @@ public final class LcgSolver implements ExternalPropagator {
           }
         }
         if (result == CdclSolver.SAT) {
-          if (jumping && JUMP_CONFLICTS > 0) {
+          streak = sat.conflicts - before <= JUMP_FAST ? streak + 1 : 0;
+          if (jumping && JUMP_CONFLICTS > 0 && streak >= JUMP_AFTER) {
             step = Math.min(2 * step, 1L << 30);
           }
           continue;
@@ -3755,9 +3767,10 @@ public final class LcgSolver implements ExternalPropagator {
             && sat.conflicts < cap
             && sat.now() <= sat.deadline()
             && sat.work() < sat.workLimit()) {
-          // the jump ran out of its conflicts: nearer the best solution next
+          // the jump ran out of its conflicts: one below the best solution until the next streak
           jumpLimits++;
-          step = Math.max(1, step / 4);
+          step = 1;
+          streak = 0;
           continue;
         }
         return result;
@@ -7745,10 +7758,16 @@ public final class LcgSolver implements ExternalPropagator {
     if (coreMode) {
       return true;
     }
-    if (improving && jumpsArmed && ++runSolutions >= jumpAfter) {
-      // many solutions in one run of branch and bound: stop it for jumps below the best solution
-      jumpRequested = true;
-      sat.interrupt();
+    if (improving && jumpsArmed) {
+      // a streak of solutions in one run of branch and bound that each took few conflicts: stop
+      // it for jumps below the best solution. Solutions further apart are left alone, as jumps
+      // that run out of conflicts only cost time there
+      runSolutions = sat.conflicts - lastSolutionConflicts <= JUMP_FAST ? runSolutions + 1 : 1;
+      lastSolutionConflicts = sat.conflicts;
+      if (runSolutions >= jumpAfter) {
+        jumpRequested = true;
+        sat.interrupt();
+      }
     }
     int v = solution[objective];
     if (v <= root[objective].min()) {

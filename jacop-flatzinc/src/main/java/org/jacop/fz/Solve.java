@@ -3902,10 +3902,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.sharedPhases;
   }
 
+  private String jumpStatistics() {
+    if (lcg.jumpRuns + lcg.jumpsRaised + lcg.jumpLimits == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lcgJumpRuns="
+        + lcg.jumpRuns
+        + "\n%%%mzn-stat: lcgJumpSolutions="
+        + lcg.jumpSolutions
+        + "\n%%%mzn-stat: lcgJumpsRaised="
+        + lcg.jumpsRaised
+        + "\n%%%mzn-stat: lcgJumpLimits="
+        + lcg.jumpLimits;
+  }
+
   private String coreStatistics() {
     CoreSearch core = lcg.coreSearch();
     if (core == null) {
-      return "";
+      return jumpStatistics();
     }
     return "\n%%%mzn-stat: lcgCores="
         + core.cores
@@ -3931,14 +3945,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.boundDives
         + "\n%%%mzn-stat: lcgBoundDiveSolutions="
         + lcg.boundDiveSolutions
-        + "\n%%%mzn-stat: lcgJumpRuns="
-        + lcg.jumpRuns
-        + "\n%%%mzn-stat: lcgJumpSolutions="
-        + lcg.jumpSolutions
-        + "\n%%%mzn-stat: lcgJumpsRaised="
-        + lcg.jumpsRaised
-        + "\n%%%mzn-stat: lcgJumpLimits="
-        + lcg.jumpLimits
+        + jumpStatistics()
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="
