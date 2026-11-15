@@ -2825,6 +2825,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (free && annotated != null) {
       annotated = withObjectiveCosts(annotated);
     }
+    if (free) {
+      // failure-directed search (Vilim, Laborie and Shaw, CPAIOR 2015) on the start times of the
+      // resources' tasks: off, in the activity runs once a solution is known, in every run once a
+      // solution is known (proof), or from the start (always)
+      String fds = options.freeConfig("lcg-fds", "off");
+      if (!"off".equals(fds)) {
+        lcg.setFailureDirected(
+            Arrays.asList(resourceStarts()),
+            LcgSolver.FailureDirectedMode.valueOf(fds.toUpperCase()));
+      }
+    }
     if (!free
         && annotated != null
         && !"activity".equals(options.freeConfig("fixed-completion", "output"))) {
@@ -3647,6 +3658,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgSetTimesStarts="
             + setTimesStarts
+            + "\n%%%mzn-stat: lcgFdsStarts="
+            + lcg.failureDirectedStarts()
+            + "\n%%%mzn-stat: lcgFdsDecisions="
+            + lcg.failureDirectedDecisions()
+            + "\n%%%mzn-stat: lcgFdsFailures="
+            + lcg.failureDirectedFailures()
             + "\n%%%mzn-stat: lcgRectangles="
             + rectangleCount
             + "\n%%%mzn-stat: lcgElementPositions="

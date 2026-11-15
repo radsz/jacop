@@ -6962,6 +6962,12 @@ public final class LcgSolver implements ExternalPropagator {
         return lit;
       }
     }
+    if (failureDirected != null) {
+      int lit = failureDirectedDecision();
+      if (lit != 0) {
+        return lit;
+      }
+    }
     if (activityBranching) {
       if (activityGuide != null && !freeSearch && annotation != null) {
         int lit = guideDecision();
@@ -6973,6 +6979,105 @@ public final class LcgSolver implements ExternalPropagator {
       return activityDecision();
     }
     return 0;
+  }
+
+  /** When failure-directed search takes the decisions (see {@link #setFailureDirected}). */
+  public enum FailureDirectedMode {
+    /** Never. */
+    OFF,
+    /** In the runs of activity branching, once a solution is known. */
+    ACTIVITY,
+    /** In every run outside the annotation's decisions, once a solution is known. */
+    PROOF,
+    /** In every run outside the annotation's decisions, from the start. */
+    ALWAYS
+  }
+
+  private FailureDirected failureDirected;
+  private FailureDirectedMode failureDirectedMode = FailureDirectedMode.OFF;
+
+  /**
+   * Sets failure-directed search (Vilím, Laborie and Shaw, CPAIOR 2015; see {@link
+   * FailureDirected}) on the given variables, the start times of a scheduling model's tasks: while
+   * any of them is unfixed, the decisions of the chosen runs split their domains, the start whose
+   * choices failed most often first, with the choice more likely to fail first. The other variables
+   * are then decided as before. Set it before solving.
+   *
+   * @param starts the start variables
+   * @param mode the runs that take these decisions
+   */
+  public void setFailureDirected(Iterable<? extends IntVar> starts, FailureDirectedMode mode) {
+    failureDirectedMode = mode;
+    if (mode == FailureDirectedMode.OFF) {
+      failureDirected = null;
+      return;
+    }
+    Set<Integer> ids = new LinkedHashSet<>();
+    for (IntVar x : starts) {
+      int i = idOf(x);
+      if (i >= 0 && !unused[i] && !root[i].singleton()) {
+        ids.add(i);
+      }
+    }
+    if (ids.isEmpty()) {
+      failureDirected = null;
+      return;
+    }
+    int[] idArray = new int[ids.size()];
+    int[][] bounds = new int[ids.size()][];
+    int k = 0;
+    for (int i : ids) {
+      idArray[k] = i;
+      bounds[k++] = new int[] {root[i].min(), root[i].max()};
+    }
+    failureDirected = new FailureDirected(idArray, bounds);
+  }
+
+  /**
+   * Statistics: the decisions of failure-directed search.
+   *
+   * @return the decisions, 0 without it.
+   */
+  public long failureDirectedDecisions() {
+    return failureDirected == null ? 0 : failureDirected.decisions;
+  }
+
+  /**
+   * Statistics: the decisions of failure-directed search whose propagation failed.
+   *
+   * @return the failures, 0 without it.
+   */
+  public long failureDirectedFailures() {
+    return failureDirected == null ? 0 : failureDirected.failures;
+  }
+
+  /**
+   * Statistics: the start variables of failure-directed search.
+   *
+   * @return their number, 0 without it.
+   */
+  public int failureDirectedStarts() {
+    return failureDirected == null ? 0 : failureDirected.size();
+  }
+
+  // the next decision of failure-directed search in the runs of its mode, or 0
+  private int failureDirectedDecision() {
+    FailureDirected f = failureDirected;
+    int pending = f.pendingLiteral();
+    if (pending != 0) {
+      f.settle(vars, sat.decisionLevel(), sat.value(pending) > 0);
+    }
+    boolean on =
+        switch (failureDirectedMode) {
+          case ACTIVITY -> best != null && activityBranching;
+          case PROOF -> best != null;
+          case ALWAYS -> true;
+          default -> false;
+        };
+    if (!on) {
+      return 0;
+    }
+    return f.choose(vars, sat.decisionLevel() + 1, this::geLit);
   }
 
   /** The next decision of the selection that starts the activity runs, or 0 when it has none. */

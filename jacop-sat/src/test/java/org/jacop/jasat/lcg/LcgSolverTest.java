@@ -600,6 +600,72 @@ class LcgSolverTest {
    * annotation) find the brute-force optimum of a weighted sum. A variable that no constraint
    * mentions has no literal, so the last decisions are on it.
    */
+  /**
+   * Failure-directed search (in every mode, with each branching) finds the brute-force optimum of a
+   * weighted sum, its starts being the variables of the constraints, cumulative among them.
+   */
+  @Test
+  void failureDirectedAgreesWithBruteForce() {
+    Random rnd = new Random(29);
+    int proved = 0;
+    long decisions = 0;
+    LcgSolver.FailureDirectedMode[] modes = {
+      LcgSolver.FailureDirectedMode.ALWAYS,
+      LcgSolver.FailureDirectedMode.PROOF,
+      LcgSolver.FailureDirectedMode.ACTIVITY
+    };
+    for (int instance = 0; instance < 900; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(3);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = newVar(store, "x" + i, rnd);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        relations.add(relation(x, rnd));
+      }
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(7) - 3;
+      }
+      long best = minimum(x, relations, w, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      int[] weights = Arrays.copyOf(w, n + 1);
+      weights[n] = -1;
+      store.impose(new LinearInt(terms, weights, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setBranching(
+          instance % 2 == 0 ? LcgSolver.Branching.ALTERNATE : LcgSolver.Branching.ACTIVITY);
+      solver.setFailureDirected(Arrays.asList(x), modes[instance % modes.length]);
+      solver.setSeed(instance % 3);
+      int status = solver.minimize(cost);
+      decisions += solver.failureDirectedDecisions();
+      if (best == Long.MAX_VALUE) {
+        assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.UNSAT);
+        continue;
+      }
+      assertThat(status).as("instance %d", instance).isEqualTo(CdclSolver.SAT);
+      assertThat((long) solver.value(cost)).as("instance %d", instance).isEqualTo(best);
+      int[] t = new int[n];
+      for (int i = 0; i < n; i++) {
+        t[i] = solver.value(x[i]);
+      }
+      for (Relation r : relations) {
+        assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+      }
+      proved++;
+    }
+    assertThat(proved).isGreaterThan(200);
+    assertThat(decisions).isGreaterThan(1000);
+  }
+
   @Test
   void literalBranchingAgreesWithBruteForce() {
     Random rnd = new Random(23);
