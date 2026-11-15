@@ -554,7 +554,7 @@ public final class CoreSearch {
       if (core.length > 1 && lcg.coreTrim() > 0) {
         core = trim(core, phaseLimit);
       }
-      if (core.length == 0 || !relax(core, true)) {
+      if (core.length == 0 || !relax(core, true) || !exhaust(core.length, phaseLimit)) {
         // no solution better than the best one, if there is one
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
@@ -1421,6 +1421,48 @@ public final class CoreSearch {
     return core;
   }
 
+  // -Djacop.lcg.coreExhaust=K: after relaxing a core of at least two literals, its totalizer's
+  // outputs [at least j of them] for j = 2, 3, ... are each tested alone, up to K of them, and
+  // relaxed as unit cores while they are refuted (core exhaustion, RC2)
+  static final int EXHAUST = Integer.getInteger("jacop.lcg.coreExhaust", 0);
+
+  /** Statistics: totalizer outputs that core exhaustion proved. */
+  public long exhaustedOutputs;
+
+  private Totalizer lastTotalizer;
+
+  // returns false when the solver became unsatisfiable at the root
+  private boolean exhaust(int size, long phaseLimit) {
+    if (EXHAUST <= 0 || size < 2 || lastTotalizer == null) {
+      return true;
+    }
+    Totalizer tot = lastTotalizer;
+    for (int k = 2; k <= tot.inputs.length && k <= EXHAUST + 1; k++) {
+      if (k > tot.outputs.length) {
+        break;
+      }
+      Soft s = byLiteral.get(tot.outputs[k - 1]);
+      if (s == null || s.weight <= 0) {
+        break;
+      }
+      long cap = sat.conflicts + TRIM_CONFLICTS;
+      sat.setConflictLimit(
+          Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
+      if (lcg.solveUnder(-s.lit) != CdclSolver.UNSAT) {
+        break;
+      }
+      int[] failed = sat.failedAssumptions();
+      if (failed.length != 1) {
+        return failed.length != 0;
+      }
+      exhaustedOutputs++;
+      if (!relax(failed, true)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   /** Relaxes a core of assumptions; returns false when the solver is unsatisfiable at the root. */
   private boolean relax(int[] core, boolean bound) {
     cores++;
@@ -1454,6 +1496,7 @@ public final class CoreSearch {
     if (lits.length > 1) {
       Totalizer tot = new Totalizer(lits, min);
       addTotalizerSoft(tot, 2);
+      lastTotalizer = tot;
       if (proof != null) {
         proof.core(tot.outputs, min);
       }
