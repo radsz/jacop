@@ -974,6 +974,14 @@ public class Support implements ParserTreeConstants {
   private final boolean orderChannelsOn =
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.orderChannels", "true"));
 
+  /**
+   * Whether the half-reified comparisons ({@code int_le_imp} and its kin) join the order channels
+   * as implied items; the system property org.jacop.fz.orderChannels.implied=false leaves them as
+   * implications.
+   */
+  private final boolean orderChannelsImplied =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.orderChannels.implied", "true"));
+
   // the order reifications b <-> x op c posted so far, for poseOrderChannels
   private final List<Constraint> orderReifications = new ArrayList<>();
 
@@ -983,13 +991,17 @@ public class Support implements ParserTreeConstants {
   int orderChannelItems;
 
   /**
-   * Poses a reified comparison {@code b <-> x op c} of a variable with a constant, and keeps it for
-   * {@link #poseOrderChannels()} unless a negated control substitution changes it.
+   * Poses a reified comparison {@code b <-> x op c} of a variable with a constant, or its
+   * half-reification {@code b -> x op c}, and keeps it for {@link #poseOrderChannels()} unless a
+   * negated control substitution changes it.
    *
-   * @param r the reification.
+   * @param r the reification or implication.
    */
-  void poseOrderReification(Reified r) {
-    boolean kept = orderChannelsOn && (activeControl == null || !activeControl.negated());
+  void poseOrderReification(Constraint r) {
+    boolean kept =
+        orderChannelsOn
+            && (r instanceof Reified || orderChannelsImplied)
+            && (activeControl == null || !activeControl.negated());
     pose(r);
     if (kept) {
       orderReifications.add(r);
@@ -1005,7 +1017,7 @@ public class Support implements ParserTreeConstants {
     if (orderReifications.isEmpty()) {
       return;
     }
-    for (OrderLiterals.Group g : OrderLiterals.groups(orderReifications)) {
+    for (OrderLiterals.Group g : OrderLiterals.groups(orderReifications, orderChannelsImplied)) {
       g.reifications().forEach(Constraint::removeConstraint);
       store.imposeWithConsistency(g.channel());
       orderChannels++;

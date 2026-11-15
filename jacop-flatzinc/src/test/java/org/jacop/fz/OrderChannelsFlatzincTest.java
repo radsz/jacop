@@ -50,8 +50,9 @@ import org.junit.jupiter.api.io.TempDir;
  * Checks the order channels of the FlatZinc front end (flag org.jacop.fz.orderChannels): the
  * reified comparisons of one variable with constants become one ChannelOrder, and the solutions and
  * the optimum stay the same with the default search, all-solutions search, LCG and free search. The
- * items cover the four comparisons, constants on either side, one Boolean for two items and a
- * variable with a single reification, which stays a reification.
+ * items cover the four comparisons, constants on either side, one Boolean for two items,
+ * half-reifications (int_le_imp, int_lt_imp) as implied items, and a variable with a single
+ * reification, which stays a reification.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -70,6 +71,8 @@ class OrderChannelsFlatzincTest {
       var bool: d:: output_var;
       var bool: e:: output_var;
       var bool: f:: output_var;
+      var bool: g:: output_var;
+      var bool: h:: output_var;
       var 0..20: cost:: output_var;
       constraint int_le_reif(x,2,a);
       constraint int_lt_reif(x,5,b);
@@ -79,6 +82,9 @@ class OrderChannelsFlatzincTest {
       constraint int_le_reif(y,1,e);
       constraint int_lt_reif(y,3,f);
       constraint int_le_reif(x,y,e);
+      constraint int_le_imp(x,4,g);
+      constraint int_lt_imp(2,x,h);
+      constraint bool_clause([g,h],[]);
       constraint bool_clause([a,c,f],[b]);
       constraint int_lin_eq([2,1,-1],[x,y,cost],-3);
       """;
