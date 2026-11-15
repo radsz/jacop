@@ -5573,7 +5573,16 @@ Version 5.0 (unreleased)
    the gate. Of the 187 optimisation instances of the wide benchmark set,
    the detector reads cost terms in 52 and 1 passes the gate.
 
-320. TimeIndexedBound gets arc-flow blocks for bin packing
+320. Under --lcg, a table's explanations remember the values the reason
+   already covers: a tuple with such a value is dead at no cost, where
+   each tuple re-evaluated its values and their alternatives before. The
+   reasons are unchanged. On the crosswords grid-05.04 instance
+   explanations took 39 % of the time and the search runs 1.18x the
+   nodes in 240 s. On the 49 wide-set instances with a table at 600 s,
+   default search solves 32 instead of 31 (time 0.985 on both solved)
+   and -f 37 = 37 (time 0.992).
+
+321. TimeIndexedBound gets arc-flow blocks for bin packing
    (-Dorg.jacop.lp.arcFlow=true, off by default): each bin of a Binpacking
    constraint is a network over its reachable loads, with an arc per
    distinct item weight in decreasing order (so a multiset of items is one
@@ -5611,7 +5620,7 @@ Version 5.0 (unreleased)
    falls on 5 (gbac instances whose first solve does not finish), solved
    28 = 28.
 
-321. After the search before an expensive root LP (317), the first solve of
+322. After the search before an expensive root LP (317), the first solve of
    the linear relaxation keeps the rows of the other constraints as a
    first solve at the start of that search would: the trial compares the
    bounds with and without them at the variable bounds the search started
@@ -5619,7 +5628,7 @@ Version 5.0 (unreleased)
    make 1,859 extra rows of mqueens n11 raise the bound from 0 to 1, and
    keeping them cost 12 s of LP in search (14.2 s against 3.2 s).
 
-322. The FlatZinc front end removes the control b of a half-reified
+323. The FlatZinc front end removes the control b of a half-reified
    constraint b -> C when b appears nowhere else but as a positive literal
    of clauses, as bounded variable elimination does in SAT preprocessing
    (Een and Biere, Effective preprocessing in SAT through variable and
@@ -5641,7 +5650,7 @@ Version 5.0 (unreleased)
    13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
    is off under --proof and when all solutions are asked for.
 
-323. Under free search (-f) with lazy clause generation and a search
+324. Under free search (-f) with lazy clause generation and a search
    annotation, once a first solution is known each turn of runs at
    restarts is the annotation, six runs of the SAT solver's own decisions
    on literals, then activity branching, instead of one run of each
@@ -5662,7 +5671,7 @@ Version 5.0 (unreleased)
    workforce-alloc 202 130 -> 45 s; steelmillslab bench_19_6 12 -> 30 s,
    evm-super-compilation 49 -> 108 s).
 
-324. -Djacop.virtualClock=true (default false) runs the clock of lazy
+325. -Djacop.virtualClock=true (default false) runs the clock of lazy
    clause generation on its work: the time limit, the shares of the -f
    phases, the time of the neighbourhood runs, the delayed root probe
    and the check of LCG's speed (lcg-slow-rate, which runs in the search
