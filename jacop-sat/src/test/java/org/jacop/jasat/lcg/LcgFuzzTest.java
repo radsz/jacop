@@ -2247,6 +2247,7 @@ class LcgFuzzTest {
     long bisectProbes = 0;
     long probes = 0;
     long probeFacts = 0;
+    long heldFailures = 0;
     int referenceTimeouts = 0;
     for (int run = 0; run < RUNS; run++) {
       long seed = SEED + (long) run;
@@ -2276,6 +2277,10 @@ class LcgFuzzTest {
           // one run in five keeps bound-literal chains of 1 to 4 literals (unkept reasons)
           solver.setChainLimit(1 + (int) (seed / 5 % 4));
         }
+        if (!LcgSolver.PUSH_BEFORE_CONFLICT_SET) {
+          // every other pair of runs pushes the fixpoint's atoms before a failure's conflict
+          solver.setPushBeforeConflict(seed / 2 % 2 == 0);
+        }
         annotate(solver, model, seed);
         // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT
         boolean refuted = seed % 4 == 3 && !solver.probeRoot(Long.MAX_VALUE);
@@ -2290,6 +2295,7 @@ class LcgFuzzTest {
         lowerBoundRuns += solver.lowerBoundRuns;
         lowerBoundRaised += solver.lowerBoundRaised;
         bisectProbes += solver.bisectProbes;
+        heldFailures += solver.heldFailures;
         IntVar[] vars = model.decisionVars();
         values = new int[vars.length];
         if (status == CdclSolver.SAT) {
@@ -2340,6 +2346,11 @@ class LcgFuzzTest {
     assertThat(sat).isPositive();
     assertThat(unsat).isPositive();
     assertThat(checked).isPositive();
+    if (RUNS >= 100) {
+      assertThat(heldFailures)
+          .as("failures held while their fixpoint's atoms were pushed")
+          .isPositive();
+    }
   }
 
   /**
