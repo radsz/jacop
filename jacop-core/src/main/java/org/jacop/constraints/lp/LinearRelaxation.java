@@ -1433,7 +1433,11 @@ public class LinearRelaxation extends Constraint
    * meets 3 players a week, 33 in all, but only 31 others exist. The counts of the groups and the
    * cliques of "meets player 0 in week w" over the weeks give the LP 30 meetings for 28 players
    * after the fixed first week, and the LP is infeasible at once; the search found nothing in 600
-   * s.
+   * s. Such counts are pigeonhole arguments, which resolution, and so lazy clause generation,
+   * refutes only in exponentially many steps (A. Haken, "The intractability of resolution", TCS 39,
+   * 1985), while the LP of the assignment rows with the clique rows of the conflict graph (A.
+   * Atamtürk, G. L. Nemhauser and M. W. P. Savelsbergh, "Conflict graphs in solving integer
+   * programming problems", EJOR 121, 2000) refutes them at once.
    *
    * @param store the store
    * @param clauses the clause rows of the clauses that lazy clause generation took
@@ -1646,6 +1650,12 @@ public class LinearRelaxation extends Constraint
   // the model (refutation)
   private static final boolean ROOT_REFUTATION =
       !"false".equals(System.getProperty("org.jacop.lp.rootRefutation"));
+
+  // the pivots of the root solve of the refutation: the social golfers refute in 1,442; on the 351
+  // XCSP 2022-2025 satisfaction instances it does not refute, the root solve took up to 1.7 s
+  // (7,362 pivots) without a limit
+  private static final int REFUTATION_PIVOTS =
+      Integer.getInteger("org.jacop.lp.rootRefutationPivots", 2_500);
 
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
@@ -2555,6 +2565,9 @@ public class LinearRelaxation extends Constraint
         calls == 1 || restarting
             ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
+    if (refutation) {
+      limit = Math.min(limit, REFUTATION_PIVOTS);
+    }
     int status =
         (calls == 1 || restarting) && simplex != Simplex.LAZY
             ? rootSolve(lp, limit, rootWork())

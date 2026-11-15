@@ -215,6 +215,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the relaxation that tries to refute a satisfaction model at the root
   // (LinearRelaxation.refutation)
   private LinearRelaxation refutation;
+  private long refutationBuildNanos;
 
   // above this many default search variables, the default search under --lcg branches in input
   // order instead of dom/wdeg, whose scan over all of them at every decision costs too much
@@ -927,7 +928,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (objective == null && options.proof() == null) {
       // a satisfaction model gets the value encodings for one root solve, which can refute it
+      long built = System.nanoTime();
       refutation = LinearRelaxation.refutation(store, refutationClauses);
+      refutationBuildNanos = System.nanoTime() - built;
       if (refutation != null) {
         refutation.setTimeLimit(options.getTimeOut());
         store.impose(refutation);
@@ -1049,7 +1052,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + "\n%%%mzn-stat: lpRefutationCliques="
               + refutation.pairCliques
               + "\n%%%mzn-stat: lpRefutation="
-              + refutation.refutationOutcome());
+              + refutation.refutationOutcome()
+              + "\n%%%mzn-stat: lpRefutationTime="
+              + (refutationBuildNanos + refutation.solveNanos) / 1e9
+              + "\n%%%mzn-stat: lpRefutationSolveTime="
+              + refutation.solveNanos / 1e9
+              + "\n%%%mzn-stat: lpRefutationPivots="
+              + refutation.pivots());
     }
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {

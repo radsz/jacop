@@ -428,16 +428,21 @@ public final class Linearizations {
 
   /**
    * Returns the rows with which the linear relaxation tries to refute a satisfaction model at the
-   * root: the value encodings of {@link #valueRows(Collection, Collection)} (without flow models),
-   * and the given clause rows with each 0/1 variable b of a half-reified exclusion {@code b -> x !=
-   * c} ({@link ValueExclusion}, or {@link Implies} and {@link Reified} of {@link XneqC}) replaced
-   * by {@code 1 - [x = c]} where the row needs b large, which the exclusion bounds. A clause {@code
-   * (x != c) \/ (y != c)} that MiniZinc states over two such Booleans becomes {@code [x = c] + [y =
-   * c] <= 1}, the conflict of two value columns that the clique rows merge: the social golfers of
-   * the XCSP competition state "two players meet at most once" so, and a player who meets three
-   * others a week cannot meet 33 of the 31 others in 11 weeks, which only the cliques over the
-   * weeks and the counts of the groups show. Clause rows with a variable that no other row has are
-   * left out, since alone they cannot make the relaxation infeasible.
+   * root: the value encodings of {@link #valueRows(Collection, Collection, boolean, boolean)} with
+   * the count bounds (without flow models), and the given rows restated over the value columns.
+   * Each 0/1 control b of a half-reified exclusion {@code b -> x != c} ({@link ValueExclusion}, or
+   * {@link Implies} and {@link Reified} of {@link XneqC}) is bounded by {@code b <= 1 - [x = c]},
+   * and each z of {@code not z -> x != c} ({@link ImpliesNot}, the control that the front end
+   * eliminated from a binary clause) by {@code z >= [x = c]}; a row that needs such a variable
+   * large or small gets the bound in its place, and an upper and a lower bound of one variable give
+   * the conflict {@code [x = c] + [y = d] <= 1} of their columns. A clause {@code (x != c) \/ (y !=
+   * c)} that MiniZinc states over two such controls so becomes the conflict of two value columns,
+   * which the clique rows of the relaxation merge ({@link
+   * org.jacop.constraints.lp.LinearRelaxation#refutation}): the social golfers of the XCSP
+   * competition state "two players meet at most once" so, and a player who meets three others a
+   * week cannot meet 33 of the 31 others in 11 weeks, which only the cliques over the weeks and the
+   * counts of the groups show. Rows with a variable that the encodings do not have are left out:
+   * they cannot tie the encodings together.
    *
    * @param constraints the constraints
    * @param clauses the rows of the model to state over the value columns: its linear rows and the
