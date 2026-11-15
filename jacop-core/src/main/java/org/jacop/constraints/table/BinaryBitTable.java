@@ -106,8 +106,24 @@ public class BinaryBitTable extends Constraint
 
   private boolean yChanged;
 
-  private record Masks(
-      int xBase, int xSpan, int yBase, int ySpan, long[][] forward, long[][] backward) {}
+  /** Support bit-sets of one table over fixed value ranges, compared by identity. */
+  private static final class Masks {
+    final int xBase;
+    final int xSpan;
+    final int yBase;
+    final int ySpan;
+    final long[][] forward;
+    final long[][] backward;
+
+    Masks(int xBase, int xSpan, int yBase, int ySpan, long[][] forward, long[][] backward) {
+      this.xBase = xBase;
+      this.xSpan = xSpan;
+      this.yBase = yBase;
+      this.ySpan = ySpan;
+      this.forward = forward;
+      this.backward = backward;
+    }
+  }
 
   /** Bit-sets per tuple array, then per value ranges. */
   private static final Map<int[][], Map<String, Masks>> SHARED = new WeakHashMap<>();
@@ -406,10 +422,9 @@ public class BinaryBitTable extends Constraint
         // no tuple has w: the table alone removes it
         continue;
       }
-      if (!supportsExcluded(trail, other, otherBase, otherRoot, otherSpan, s, position, out)) {
-        if (!trail.excludedBefore(v, w, position, out)) {
-          return false;
-        }
+      if (!supportsExcluded(trail, other, otherBase, otherRoot, otherSpan, s, position, out)
+          && !trail.excludedBefore(v, w, position, out)) {
+        return false;
       }
     }
     if (belowMax != Integer.MIN_VALUE) {
