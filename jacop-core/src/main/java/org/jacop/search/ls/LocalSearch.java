@@ -375,7 +375,8 @@ public final class LocalSearch {
    */
   public Status solve() {
     deadline = timeLimitMillis > 0 ? System.currentTimeMillis() + timeLimitMillis : Long.MAX_VALUE;
-    if (!applicable() || (scheduleOnly && (scheduling == 0 || cost == null || !hasResource()))) {
+    if ((scheduleOnly && (scheduling == 0 || cost == null || !ScheduleResources.hasResource(store)))
+        || !applicable()) {
       return Status.NOT_APPLICABLE;
     }
     build();
@@ -522,18 +523,6 @@ public final class LocalSearch {
   }
 
   // ---------------------------------------------------------------- model
-
-  // a resource that the scheduling search can read as a machine, checked before the model is built
-  private boolean hasResource() {
-    for (Var v : storeVariables()) {
-      for (Constraint c : v.dom().constraints()) {
-        if (c instanceof CumulativeBasic && !className(c).contains("Optional")) {
-          return true;
-        }
-      }
-    }
-    return false;
-  }
 
   private boolean applicable() {
     for (Var v : storeVariables()) {

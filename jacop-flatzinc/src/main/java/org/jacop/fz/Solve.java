@@ -145,6 +145,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.ls.ScheduleResources;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -4047,6 +4048,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && worker == null
             && costVar instanceof IntVar
             && !"0".equals(options.freeConfig("ls-auto", "1"));
+    // the task starts are decision variables: only their constraints are looked at
+    if (auto && !ScheduleResources.hasResource(searchVars.getIntVars())) {
+      return null;
+    }
     double share = auto ? AUTO_LS_SHARE : Double.parseDouble(given == null ? "0" : given);
     if (share <= 0 || (costVar != null && !(costVar instanceof IntVar))) {
       return null;
