@@ -6957,6 +6957,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       eliminatedValues = new IdentityHashMap<>(eliminatedValues);
       output.zeroSums.addValues(eliminatedValues);
     }
+    // and the index variables and results of the disjunctions from the arrays
+    if (output.indexDisjunctions != null) {
+      eliminatedValues = new IdentityHashMap<>(eliminatedValues);
+      output.indexDisjunctions.addValues(eliminatedValues);
+    }
 
     if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);

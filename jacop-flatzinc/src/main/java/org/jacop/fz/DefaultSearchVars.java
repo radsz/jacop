@@ -161,6 +161,10 @@ public class DefaultSearchVars {
     if (dictionary.zeroSums != null) {
       intVarSet.removeAll(dictionary.zeroSums.variables());
     }
+    // and the index variables and results of the disjunctions
+    if (dictionary.indexDisjunctions != null) {
+      intVarSet.removeAll(dictionary.indexDisjunctions.variables());
+    }
 
     intVars = intVarSet.toArray(new IntVar[0]);
     boolVars = boolVarSet.toArray(new BooleanVar[0]);

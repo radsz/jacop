@@ -6049,6 +6049,39 @@ Version 5.0 (unreleased)
    set. -Dorg.jacop.lp.rootExtendShare=0 turns it off; the statistic
    lpRootExtendTime gives its time.
 
+351. Value symmetry breaking also looks at index variables of element
+   constraints: when no value symmetry is found on the model as written,
+   each element constraint x = A[k] is read as k selecting a position of
+   A, so that permuting the values of k permutes the arrays it selects
+   from (and with them their rows). A value symmetry found on k is broken
+   by value precedence (Law and Lee, CP 2004; Puget, CP 2005, "Breaking
+   all value symmetries in surjection problems"). The pass gets at most
+   half of the time left for symmetry detection. On the XCSP 2026
+   competition it proves HIPP (haplotype inference by pure parsimony)
+   I0-gus-15, I1-gus-14, I2-gus-21, brown-I0-bro-15, brown-I1-bro-14 and
+   brown-I2-bro-21 unsatisfiable in 1.5 to 12 s at 600 s (none before;
+   I2-gus-21 was proved by no competition solver), and Antichain2 085 and
+   086 in 58 and 82 s (198 and 244 s before). It fires on CoveringArray
+   (XCSP 2023) and Wordpress (XCSP 2024) and on 3 of the 240 instances of
+   the wide benchmark set (wordpress, open-stacks, stable-goods).
+   -Dorg.jacop.fz.symmetryIndexValues=false turns it off.
+
+352. The FlatZinc front end posts an "exists k" pattern of XCSP3
+   translations, an index variable k used only by element constraints
+   r_i = A_i[k] whose results are used only by one linear relation
+   C(r_1, ..., r_n), as the disjunction over the positions p of
+   C(A_1[p], ..., A_n[p]): half-reified linear constraints b_p ->
+   C(A_1[p], ...) and the clause of the b_p (at most 64 positions,
+   org.jacop.fz.indexDisjunction.max). k and the r_i are no longer posted
+   and get their values from the first position that holds when a
+   solution is printed. Before, the element constraints only propagated
+   bounds of the r_i through k. On Antichain2 of the XCSP 2026
+   competition (with the value symmetry above) 100-3-10 is solved in 37 s
+   instead of 172 s and 120-3-10 in 85 s instead of 162 s. It fires on none
+   of the 240 instances of the wide benchmark set or of the XCSP 2022-2025
+   instances. -Dorg.jacop.fz.indexDisjunction=false turns it off; it is
+   off under --proof and presolve.
+
 337. The linear relaxation gets the rows of an assignment model for
    conjunctions b_v <-> s /\ [x = v] of a Boolean s with the value
    Booleans of a variable x: sum_v b_v = s (<= s when the values do not

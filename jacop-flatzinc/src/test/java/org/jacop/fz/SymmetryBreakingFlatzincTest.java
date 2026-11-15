@@ -962,6 +962,123 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void haplotypesChosenByIndexAreInterchangeable() throws IOException {
+    // pure parsimony haplotyping: three genotypes, each explained by two of k binary haplotypes
+    // chosen by index; renaming the haplotypes renames the rows of h with the index values, so the
+    // index variables get a value precedence chain. Two haplotypes cannot explain the genotypes
+    // 22, 01 and 00 (22 needs 01 with 10, or 00 with 11), three can.
+    int[][] genotypes = {{2, 2}, {0, 1}, {0, 0}};
+    for (int k = 2; k <= 3; k++) {
+      String model = haplotypeModel(genotypes, k, k == 2);
+      String off =
+          FlatzincTestRunner.run(
+              tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      assertEquals(1, precedences(on), on);
+      assertEquals(
+          off.contains("=====UNSATISFIABLE====="), on.contains("=====UNSATISFIABLE====="), on);
+      assertEquals(k == 2, on.contains("=====UNSATISFIABLE====="), on);
+      if (k == 3) {
+        // the first genotype takes the first two haplotypes (1-based indices here)
+        assertTrue(on.contains("s_0_0 = 1;") && on.contains("s_0_1 = 2;"), on);
+      }
+    }
+  }
+
+  @Test
+  void randomHaplotypeModelsKeepSatisfiability() throws IOException {
+    Random random = new Random(11);
+    int trials = Integer.getInteger("symmetry.trials", 300) / 10;
+    int unsat = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      int[][] genotypes = new int[2 + random.nextInt(4)][2 + random.nextInt(3)];
+      for (int[] g : genotypes) {
+        for (int j = 0; j < g.length; j++) {
+          g[j] = random.nextInt(3);
+        }
+      }
+      String model = haplotypeModel(genotypes, 2 + random.nextInt(3), random.nextBoolean());
+      String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      String lcg = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--lcg");
+      boolean refuted = off.contains("=====UNSATISFIABLE=====");
+      assertEquals(refuted, on.contains("=====UNSATISFIABLE====="), model + "\n" + on);
+      assertEquals(refuted, lcg.contains("=====UNSATISFIABLE====="), model + "\n" + lcg);
+      if (refuted) {
+        unsat++;
+      }
+    }
+    assertTrue(unsat > 0 && unsat < trials, "unsatisfiable " + unsat + " of " + trials);
+  }
+
+  /**
+   * A haplotype inference model: binary haplotypes {@code h_i_j}, and for each genotype two
+   * haplotype indices {@code s_g_0, s_g_1}; a site of value 0 or 1 takes that value in both chosen
+   * haplotypes, a site of value 2 takes different values. The elements are 0-based ({@code
+   * jacop_array_var_int_element_nonshifted}) or 1-based ({@code array_var_int_element}).
+   */
+  private static String haplotypeModel(int[][] genotypes, int k, boolean nonshifted) {
+    int sites = genotypes[0].length;
+    int low = nonshifted ? 0 : 1;
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < sites; j++) {
+        fzn.append("var 0..1: h_").append(i).append('_').append(j).append(" :: output_var;\n");
+      }
+    }
+    StringBuilder constraints = new StringBuilder();
+    for (int g = 0; g < genotypes.length; g++) {
+      for (int p = 0; p < 2; p++) {
+        fzn.append("var ")
+            .append(low)
+            .append("..")
+            .append(low + k - 1)
+            .append(": s_")
+            .append(g)
+            .append('_')
+            .append(p)
+            .append(" :: output_var;\n");
+      }
+      for (int j = 0; j < sites; j++) {
+        StringBuilder column = new StringBuilder("[");
+        for (int i = 0; i < k; i++) {
+          column.append(i > 0 ? "," : "").append("h_").append(i).append('_').append(j);
+        }
+        column.append(']');
+        String[] result = new String[2];
+        for (int p = 0; p < 2; p++) {
+          if (genotypes[g][j] < 2) {
+            result[p] = String.valueOf(genotypes[g][j]);
+          } else {
+            result[p] = "r_" + g + "_" + j + "_" + p;
+            fzn.append("var 0..1: ").append(result[p]).append(";\n");
+          }
+          String index = "s_" + g + "_" + p;
+          constraints
+              .append("constraint ")
+              .append(
+                  nonshifted ? "jacop_array_var_int_element_nonshifted(" : "array_var_int_element(")
+              .append(index)
+              .append(',')
+              .append(column)
+              .append(',')
+              .append(result[p])
+              .append(nonshifted ? ",0);\n" : ");\n");
+        }
+        if (genotypes[g][j] == 2) {
+          constraints
+              .append("constraint int_lin_eq([1,1],[")
+              .append(result[0])
+              .append(',')
+              .append(result[1])
+              .append("],1);\n");
+        }
+      }
+    }
+    return fzn.append(constraints).append("solve satisfy;\n").toString();
+  }
+
+  @Test
   void identicalBinsAreInterchangeable() throws IOException {
     String model =
         """
