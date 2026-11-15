@@ -6578,6 +6578,20 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
+365. Free search (-f) of an optimisation model without a search
+   annotation, after slow lazy clause generation gave way without a
+   solution, takes turns until its first solution with runs that fix the
+   search variables in the model's order, least value first
+   (FreeSearch.Alternation.EVERY_RESTART_UNTIL_FIRST_SOLUTION,
+   --free-config first-input=<runs>, one run in 2, 0 = off): the root
+   bounds can make dom/wdeg start at the far end of a chain (GolombRuler:
+   the last mark first). LCG slower than lcg-slow-rate without a solution
+   at half the time limit now gives way too (lcg-slow-unsolved-late,
+   default 0.5). XCSP 2026 GolombRuler-a3-32: 1348 at 600 s, no solution
+   before; on 26 XCSP 2025/2026 instances where it can fire, two more
+   with a solution and 7 better against 3 worse (seed spread); neutral on
+   the wide set.
+
 Version 4.11
 =============
 
