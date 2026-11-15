@@ -6424,6 +6424,27 @@ Version 5.0 (unreleased)
    turns it off, =true posts it without lazy clause generation too, and
    -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
+358. The FlatZinc front end detects tilings of 0..n-1 by m arithmetic
+   progressions of k terms with pairwise distinct gaps (perfect rhythmic
+   tilings, T. Johnson, "Tiling in my music", The Experimental Music
+   Review, 1996; N. Alon, M. Debski, J. Grytczuk, J. Przybylo, "Perfect
+   rhythmic tilings", arXiv 2603.02786): strictly increasing starts, an
+   all_different over the gaps and terms t = s + j g given by int_lin_eq
+   chains, offset sums or the columns of tables. A model that places the
+   terms with element constraints on a cell array gets the implied
+   all_different over the terms. Free search (-f) of a satisfaction model
+   for one solution then branches as Knuth's algorithm X with the leftmost
+   column (D. E. Knuth, "Dancing links", 2000): each start at its smallest
+   value, its gap at a random value whose terms fall on free cells, under
+   Luby restarts of 100 failures and without LCG. On the 24
+   PerfectRythmicTiling instances of the XCSP 2026 competition JaCoP finds
+   15 tilings at 600 s instead of 9, among them 1-4-20, which no solver
+   of the competition solved; total time 6,947 s instead of 10,499 s. It
+   fires on none of the 240 instances of the wide benchmark set or of the
+   XCSP 2022-2025 FlatZinc instances. -Dorg.jacop.fz.progressionTiling=false
+   turns the detection off, -Dorg.jacop.fz.progressionTiling.search=false
+   the search only.
+
 Version 4.11
 =============
 
