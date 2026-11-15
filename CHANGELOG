@@ -6190,7 +6190,18 @@ Version 5.0 (unreleased)
    ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
    6.6 % and 3 % more nodes.
 
-346. SumWeight reads the whole queue of changed variables and reuses its set
+347. New redundant constraints at FlatZinc posting (PairCoverDetector): when
+   pairs of items must share bins of bounded capacity (0/1 x[g][i], rows
+   sum(i) x[g][i] <= c, demands sum(g) b[g] >= k with b[g] -> x[g][i] /\
+   x[g][j]), each item i is in at least ceil(D(i) / (c - 1)) bins, D(i)
+   its demanded pairs (B. M. Smith, Symmetry and Search in a Network
+   Design Problem, CPAIOR 2005). On the 16 XCSP 2026 Sonet2 (SONET ring)
+   instances at 600 s, 6 -> 12 proved: 3-4, 5-5 and 6-5 optimal in 2-4 s,
+   6-4 (unsolved in the competition), 7-4 and 8-4 infeasible at the root.
+   It fires on none of the wide set; -Dorg.jacop.fz.pairCover=false turns
+   it off.
+
+348. SumWeight reads the whole queue of changed variables and reuses its set
    between calls; it stopped at the first variable already behind its
    pointer, which never left a value unpruned (100,000 WakeUpFixpointTest
    trials with a new SumWeight case). ElementInteger with an index smaller
