@@ -6099,7 +6099,10 @@ Version 5.0 (unreleased)
    mode: 4 better, 2 worse, geomean 0.90, one more solved. It is off with
    --proof; -Djacop.lcg.pushBeforeConflict=false turns it off
    (LcgSolver.setPushBeforeConflict). The statistic lcgHeldFailures
-   counts the failures held back.
+   counts the failures held back. With it, the shared tree of
+   portfolio-split splits on the next decision below the first one when
+   the first is on the objective, which is not shared; otherwise a
+   knapsack whose first decision was always the objective never split.
 
 Version 4.11
 =============
