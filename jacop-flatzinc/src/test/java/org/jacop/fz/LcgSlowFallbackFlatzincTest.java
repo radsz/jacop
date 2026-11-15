@@ -191,6 +191,16 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void aBoundRaiseCountsOnlyWhenItClosesAShareOfTheGap() {
+    // CVRPLIB X-n110-k13: the bound rose from 4 to 5 against a best cost of 59,211
+    assertFalse(Solve.boundClosesGap(4, 5, 0.005, 59_211));
+    assertTrue(Solve.boundClosesGap(4, 400, 0.005, 59_211));
+    assertFalse(Solve.boundClosesGap(5, 5, 0.005, 59_211));
+    // without a solution any raise counts
+    assertTrue(Solve.boundClosesGap(4, 5, 0.005, Integer.MAX_VALUE));
+  }
+
+  @Test
   void slowLcgKeptWhenTheWindowCoversTheRun() throws IOException {
     // every check finds LCG slow (rate far above any solver), but the window is the whole time
     // limit and the first solution counts as progress until it is that old: LCG never gives way

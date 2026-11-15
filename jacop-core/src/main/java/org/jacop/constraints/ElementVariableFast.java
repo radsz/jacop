@@ -295,6 +295,17 @@ public class ElementVariableFast extends AbstractElement
     wake = Math.max(wake, kind);
   }
 
+  /**
+   * A change of list variables only at positions the index cannot select ({@code WAKE_IDLE}) is not
+   * queued. In the giant-tour model of CVRP (MiniZinc Challenge 2015) each arrival time, load and
+   * vehicle variable is in the list of about 330 elements {@code a[successor[i]]}, and once the
+   * successors are fixed nearly all of them are idle for any change.
+   */
+  @Override
+  public boolean wakeNeeded() {
+    return wake != WAKE_IDLE;
+  }
+
   private void indexWakePositions() {
     long[] packed = new long[list.length];
     int n = 0;

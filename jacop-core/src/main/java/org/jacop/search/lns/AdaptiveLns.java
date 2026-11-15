@@ -699,6 +699,15 @@ public final class AdaptiveLns {
     return this;
   }
 
+  /**
+   * Returns whether the neighbourhoods follow vehicle routes (route and related removal).
+   *
+   * @return true when the variables hold the successors or arcs of routes.
+   */
+  public boolean hasRoutes() {
+    return !routings.isEmpty();
+  }
+
   /** The routing structures, for tests. */
   List<RouteStructure> routings() {
     return routings;

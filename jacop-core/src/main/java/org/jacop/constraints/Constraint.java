@@ -561,6 +561,17 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   public void queueVariable(final int level, final Var v) {}
 
   /**
+   * Tells the store, right after {@link #queueVariable(int, Var)}, whether the change just reported
+   * can make the constraint prune. When it cannot, the store does not queue the constraint for that
+   * change, so a constraint that would return at once from its consistency is not polled.
+   *
+   * @return false when the changes reported since the last consistency call cannot prune.
+   */
+  public boolean wakeNeeded() {
+    return true;
+  }
+
+  /**
    * It is called when a variable this constraint watches with {@link Store#watchValue(Var, int,
    * Constraint, int)} gets the watched value.
    *
