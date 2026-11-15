@@ -1161,14 +1161,32 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /** What the flow of a cardinality reason is built from, but the counts. */
-  private record Cardinality(
-      OpbEncoder.CardinalityLines lines,
-      IntDomain[] dom,
-      StringBuilder[] literals,
-      Map<Integer, Integer> valueIndex,
-      Map<Integer, Integer> freeValues,
-      IntDomain restDomain,
-      int restNode) {}
+  private static final class Cardinality {
+    private final OpbEncoder.CardinalityLines lines;
+    private final IntDomain[] dom;
+    private final StringBuilder[] literals;
+    private final Map<Integer, Integer> valueIndex;
+    private final Map<Integer, Integer> freeValues;
+    private final IntDomain restDomain;
+    private final int restNode;
+
+    Cardinality(
+        OpbEncoder.CardinalityLines lines,
+        IntDomain[] dom,
+        StringBuilder[] literals,
+        Map<Integer, Integer> valueIndex,
+        Map<Integer, Integer> freeValues,
+        IntDomain restDomain,
+        int restNode) {
+      this.lines = lines;
+      this.dom = dom;
+      this.literals = literals;
+      this.valueIndex = valueIndex;
+      this.freeValues = freeValues;
+      this.restDomain = restDomain;
+      this.restNode = restNode;
+    }
+  }
 
   /**
    * Splits a cardinality reason whose flow has no violated cut on the values of a counter with a
@@ -1185,25 +1203,25 @@ public final class LcgSolver implements ExternalPropagator {
       int[] freeCounter,
       CharSequence clause,
       int leaves) {
-    int best = -1;
+    int pick = -1;
     for (int k = 0; k < count.length; k++) {
       IntDomain d = count[k];
       if (freeCounter[k] >= 0
           && d.getSize() > 1
           && d.getSize() < (long) d.max() - d.min() + 1
-          && (best < 0 || d.getSize() < count[best].getSize())) {
-        best = k;
+          && (pick < 0 || d.getSize() < count[pick].getSize())) {
+        pick = k;
       }
     }
-    if (best < 0 || count[best].getSize() > leaves) {
+    if (pick < 0 || count[pick].getSize() > leaves) {
       return false;
     }
-    int counter = freeCounter[best];
-    int cases = count[best].getSize();
-    for (ValueEnumeration e = count[best].valueEnumeration(); e.hasMoreElements(); ) {
+    int counter = freeCounter[pick];
+    int cases = count[pick].getSize();
+    for (ValueEnumeration e = count[pick].valueEnumeration(); e.hasMoreElements(); ) {
       int v = e.nextElement();
       IntDomain[] fixed = count.clone();
-      fixed[best] = new IntervalDomain(v, v);
+      fixed[pick] = new IntervalDomain(v, v);
       StringBuilder caseClause = new StringBuilder(clause);
       if (proofDomains[counter].contains(v) && !proofDomains[counter].singleton()) {
         caseClause.append(" 1 ~").append(OpbEncoder.eq(counter, v));
@@ -1224,17 +1242,17 @@ public final class LcgSolver implements ExternalPropagator {
    * @return whether the counts are refuted: a count out of range or a violated cut
    */
   private boolean proofCardinalityCut(Cardinality cardinality, IntDomain[] count) {
-    OpbEncoder.CardinalityLines lines = cardinality.lines();
+    OpbEncoder.CardinalityLines lines = cardinality.lines;
     int[] variables = lines.variables;
     int[] values = lines.values;
     int n = variables.length;
     int m = values.length;
-    IntDomain[] dom = cardinality.dom();
-    StringBuilder[] literals = cardinality.literals();
-    Map<Integer, Integer> valueIndex = cardinality.valueIndex();
-    Map<Integer, Integer> freeValues = cardinality.freeValues();
-    IntDomain restDomain = cardinality.restDomain();
-    int restNode = cardinality.restNode();
+    IntDomain[] dom = cardinality.dom;
+    StringBuilder[] literals = cardinality.literals;
+    Map<Integer, Integer> valueIndex = cardinality.valueIndex;
+    Map<Integer, Integer> freeValues = cardinality.freeValues;
+    IntDomain restDomain = cardinality.restDomain;
+    int restNode = cardinality.restNode;
     int freeNodes = lines.rest >= 0 ? 1 : freeValues.size();
     // nodes: source 0, sink 1, variables, values, free values, the source and sink of lower bounds
     int source = n + m + 2 + freeNodes;
@@ -2018,8 +2036,7 @@ public final class LcgSolver implements ExternalPropagator {
               || proofTrail.kind(e) == AtomicTrail.LE && r instanceof Reified)) {
         // b = 1 holds the row and b = 0 its negation (x != 4 under b is x = 4 under not b)
         String atom = proofAtom(e, atoms.slack(k));
-        String guard =
-            "1".equals(atom) ? "" : " 1 " + (atom.startsWith("~") ? atom.substring(1) : "~" + atom);
+        String guard = "1".equals(atom) ? "" : " 1 " + OpbEncoder.negate(atom);
         proofLinearBounds(
             proofTrail.kind(e) == AtomicTrail.GE ? f : f.negated(), atoms, from, entry, guard);
         return;
@@ -2029,8 +2046,9 @@ public final class LcgSolver implements ExternalPropagator {
     // root literal (b <=> 2 x + 2 y - z != 5 with b = 0 at the root)
     if (r.b.singleton() && (r.b.value() == 1 || r instanceof Reified)) {
       boolean one = r.b.value() == 1;
-      String guard =
-          proofDomains[b].singleton() ? "" : " 1 " + (one ? "~" : "") + OpbEncoder.ge(b, 1);
+      // b = 1 is the clause literal b < 1, b = 0 the literal b >= 1
+      String literal = one ? OpbEncoder.negate(OpbEncoder.ge(b, 1)) : OpbEncoder.ge(b, 1);
+      String guard = proofDomains[b].singleton() ? "" : " 1 " + literal;
       proofLinearBounds(one ? f : f.negated(), atoms, from, entry, guard);
     }
   }
@@ -2137,25 +2155,25 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private boolean proofRowSplit(
       LinearForm f, int[] variables, long[] w, IntDomain[] dom, CharSequence clause, int leaves) {
-    int best = -1;
+    int pick = -1;
     for (int k = 0; k < dom.length; k++) {
       if (w[k] != 0
           && dom[k].getSize() > 1
-          && (best < 0 || dom[k].getSize() < dom[best].getSize())) {
-        best = k;
+          && (pick < 0 || dom[k].getSize() < dom[pick].getSize())) {
+        pick = k;
       }
     }
-    if (best < 0 || dom[best].getSize() > leaves) {
+    if (pick < 0 || dom[pick].getSize() > leaves) {
       return false;
     }
-    int cases = dom[best].getSize();
-    for (ValueEnumeration e = dom[best].valueEnumeration(); e.hasMoreElements(); ) {
+    int cases = dom[pick].getSize();
+    for (ValueEnumeration e = dom[pick].valueEnumeration(); e.hasMoreElements(); ) {
       int v = e.nextElement();
       IntDomain[] fixed = dom.clone();
-      fixed[best] = new IntervalDomain(v, v);
+      fixed[pick] = new IntervalDomain(v, v);
       StringBuilder caseClause = new StringBuilder(clause);
-      if (proofDomains[variables[best]].contains(v) && !proofDomains[variables[best]].singleton()) {
-        caseClause.append(" 1 ~").append(OpbEncoder.eq(variables[best], v));
+      if (proofDomains[variables[pick]].contains(v) && !proofDomains[variables[pick]].singleton()) {
+        caseClause.append(" 1 ~").append(OpbEncoder.eq(variables[pick], v));
       }
       if (!proofRowBounds(f, variables, w, fixed, caseClause)
           && !proofRowSplit(f, variables, w, fixed, caseClause, leaves / cases)) {

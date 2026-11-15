@@ -731,7 +731,7 @@ class VeriPbProofTest {
     // attached after the variables: the model states their domains before the root propagation
     AtomicTrail rootTrail = new AtomicTrail(store);
     store.imposeWithConsistency(new Reified(new XeqY(x, y), b));
-    assertThat(b.max()).isEqualTo(0);
+    assertThat(b.max()).isZero();
     LcgSolver lcg = new LcgSolver(store);
     lcg.setRootTrail(rootTrail);
     lcg.setProof(model, proof);
@@ -793,14 +793,14 @@ class VeriPbProofTest {
     // the count of 2 in [x3, x6, x4, x1] goes to 2 when x1 = 2 > x4 = 1, a hole of the counter
     // c in {0, 1, 3}: the flow of the cardinality lines sees 0..3 only (fuzz seed 3001554)
     Store store = new Store();
-    IntVar x0 = var(store, "x0", 1, 2, 4);
-    IntVar x1 = var(store, "x1", 0, 2, 3, 4);
-    IntVar x3 = var(store, "x3", 1, 2);
-    IntVar x4 = var(store, "x4", 1, 2);
-    IntVar x5 = var(store, "x5", 1, 2);
-    IntVar x6 = var(store, "x6", -1, 0, 1, 2, 3);
-    IntVar c = var(store, "c", 0, 1, 3);
-    IntVar d = var(store, "d", 0, 1, 2, 3);
+    IntVar x0 = values(store, "x0", 1, 2, 4);
+    IntVar x1 = values(store, "x1", 0, 2, 3, 4);
+    IntVar x3 = values(store, "x3", 1, 2);
+    IntVar x4 = values(store, "x4", 1, 2);
+    IntVar x5 = values(store, "x5", 1, 2);
+    IntVar x6 = values(store, "x6", -1, 0, 1, 2, 3);
+    IntVar c = values(store, "c", 0, 1, 3);
+    IntVar d = values(store, "d", 0, 1, 2, 3);
     store.impose(new CountValues(new IntVar[] {x6, x3}, new IntVar[] {x0, x5}, new int[] {2, 0}));
     store.impose(new XgtY(x1, x4));
     store.impose(
@@ -818,12 +818,12 @@ class VeriPbProofTest {
     // x0 = 0 and x1 = 1 leave 3 x3 + 3 x4 - 2 x2 = 1, where 1 + 2 x2 is 1 or 7 for x2 in {0, 3}:
     // no multiple of 3, while every bound has a support (LinearIntDom, fuzz seed 4008078)
     Store store = new Store();
-    IntVar x0 = var(store, "x0", 0, 1, 3);
-    IntVar x1 = var(store, "x1", 1, 2);
-    IntVar x2 = var(store, "x2", -1, 0, 3);
-    IntVar x3 = var(store, "x3", 1, 3, 4);
-    IntVar x4 = var(store, "x4", -1, 0, 1, 2, 3);
-    IntVar x5 = var(store, "x5", 1, 3);
+    IntVar x0 = values(store, "x0", 0, 1, 3);
+    IntVar x1 = values(store, "x1", 1, 2);
+    IntVar x2 = values(store, "x2", -1, 0, 3);
+    IntVar x3 = values(store, "x3", 1, 3, 4);
+    IntVar x4 = values(store, "x4", -1, 0, 1, 2, 3);
+    IntVar x5 = values(store, "x5", 1, 3);
     store.impose(
         new LinearIntDom(new IntVar[] {x3, x0, x4, x1, x2}, new int[] {3, 1, 3, -2, -2}, "==", -1));
     store.impose(new Increasing(new IntVar[] {x5, x1}));
@@ -841,8 +841,8 @@ class VeriPbProofTest {
     // row under not b were not written (fuzz seed 4038106)
     Store store = new Store();
     IntVar x1 = new IntVar(store, "x1", 0, 4);
-    IntVar x2 = var(store, "x2", -1, 0, 1, 3);
-    IntVar x3 = var(store, "x3", 1, 4);
+    IntVar x2 = values(store, "x2", -1, 0, 1, 3);
+    IntVar x3 = values(store, "x3", 1, 4);
     IntVar x5 = new IntVar(store, "x5", -1, 4);
     IntVar b = new IntVar(store, "b", 0, 1);
     store.impose(new XplusYeqZ(x1, x3, x5));
@@ -862,8 +862,8 @@ class VeriPbProofTest {
     // value literals, which unit propagation does not round into c's order literals (fuzz seed
     // 2047046)
     Store store = new Store();
-    IntVar c = var(store, "c", 0, 2);
-    IntVar x1 = var(store, "x1", -1, 2, 3, 4);
+    IntVar c = values(store, "c", 0, 2);
+    IntVar x1 = values(store, "x1", -1, 2, 3, 4);
     IntVar x2 = new IntVar(store, "x2", -1, 3);
     IntVar x4 = new IntVar(store, "x4", 1, 3);
     IntVar x5 = new IntVar(store, "x5", 0, 3);
@@ -887,17 +887,17 @@ class VeriPbProofTest {
     // {0, 3}: only 2 three times fits, which the flow over the counts' intervals 0..3 misses
     // (fuzz seed 5043342)
     Store store = new Store();
-    IntVar x0 = var(store, "x0", -1, 2);
-    IntVar x1 = var(store, "x1", 0, 1, 2, 4);
-    IntVar x2 = var(store, "x2", 0, 2);
-    IntVar x3 = var(store, "x3", -1, 0, 1, 2, 4);
-    IntVar x4 = var(store, "x4", 1, 2, 4);
-    IntVar x5 = var(store, "x5", 0, 2, 3, 4);
-    IntVar g0 = var(store, "g0", 0, 1, 2, 3);
-    IntVar g1 = var(store, "g1", 0, 2, 3);
-    IntVar g2 = var(store, "g2", 0, 2, 3);
-    IntVar g3 = var(store, "g3", 0, 3);
-    IntVar g4 = var(store, "g4", 0, 1, 3);
+    IntVar x0 = values(store, "x0", -1, 2);
+    IntVar x1 = values(store, "x1", 0, 1, 2, 4);
+    IntVar x2 = values(store, "x2", 0, 2);
+    IntVar x3 = values(store, "x3", -1, 0, 1, 2, 4);
+    IntVar x4 = values(store, "x4", 1, 2, 4);
+    IntVar x5 = values(store, "x5", 0, 2, 3, 4);
+    IntVar g0 = values(store, "g0", 0, 1, 2, 3);
+    IntVar g1 = values(store, "g1", 0, 2, 3);
+    IntVar g2 = values(store, "g2", 0, 2, 3);
+    IntVar g3 = values(store, "g3", 0, 3);
+    IntVar g4 = values(store, "g4", 0, 1, 3);
     store.impose(new GCC(new IntVar[] {x1, x2, x0, x4}, new IntVar[] {g0, g1, g2, g3, g4}, -1));
     store.impose(new ElementInteger(x3, new int[] {3, -1, 1, -1}, x5, 0));
     assertThat(store.consistency()).isTrue();
@@ -913,15 +913,15 @@ class VeriPbProofTest {
     // b = 0 at the root (b -> x5 = 1 with 1 not in x5) holds 2 x1 + 2 x5 - x0 = 5, which has no
     // solution by parity, but b is in no reason (fuzz seed 6060968)
     Store store = new Store();
-    IntVar x0 = var(store, "x0", 0, 4);
-    IntVar x1 = var(store, "x1", 1, 3);
-    IntVar x5 = var(store, "x5", -1, 0, 2);
+    IntVar x0 = values(store, "x0", 0, 4);
+    IntVar x1 = values(store, "x1", 1, 3);
+    IntVar x5 = values(store, "x5", -1, 0, 2);
     IntVar b = new IntVar(store, "b", 0, 1);
     store.impose(new Implies(b, new XeqC(x5, 1)));
     store.impose(
         new Reified(new LinearInt(new IntVar[] {x1, x5, x0}, new int[] {2, 2, -1}, "!=", 5), b));
     assertThat(store.consistency()).isTrue();
-    assertThat(b.max()).isEqualTo(0);
+    assertThat(b.max()).isZero();
     LcgSolver lcg = new LcgSolver(store);
     lcg.setProof(model, proof);
     assertThat(lcg.minimize(x0)).isEqualTo(CdclSolver.UNSAT);
@@ -935,13 +935,13 @@ class VeriPbProofTest {
     // x2 = -1 < x0 = 0 < x1 = 3 sum to 2, a hole of s: the clause needs the bounds of the sum's
     // row, which IncreasingSum's reasons did not write (fuzz seed 7000052)
     Store store = new Store();
-    IntVar x0 = var(store, "x0", 0, 1, 4);
-    IntVar x1 = var(store, "x1", -1, 0, 1, 3);
-    IntVar x2 = var(store, "x2", -1, 2);
-    IntVar x3 = var(store, "x3", -1, 0, 2, 3, 4);
-    IntVar x4 = var(store, "x4", 1, 4);
-    IntVar x5 = var(store, "x5", 1, 2, 4);
-    IntVar s = var(store, "s", -2, -1, 0, 1, 3, 4, 6, 7, 8);
+    IntVar x0 = values(store, "x0", 0, 1, 4);
+    IntVar x1 = values(store, "x1", -1, 0, 1, 3);
+    IntVar x2 = values(store, "x2", -1, 2);
+    IntVar x3 = values(store, "x3", -1, 0, 2, 3, 4);
+    IntVar x4 = values(store, "x4", 1, 4);
+    IntVar x5 = values(store, "x5", 1, 2, 4);
+    IntVar s = values(store, "s", -2, -1, 0, 1, 3, 4, 6, 7, 8);
     IntVar obj = new IntVar(store, "obj", -30, -16);
     obj.addDom(-14, 30);
     store.impose(new Alldiff(new IntVar[] {x3, x4, x0, x5}));
@@ -956,7 +956,7 @@ class VeriPbProofTest {
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
 
-  private static IntVar var(Store store, String name, int... values) {
+  private static IntVar values(Store store, String name, int... values) {
     IntVar x = new IntVar(store, name);
     for (int v : values) {
       x.addDom(v, v);
@@ -980,7 +980,7 @@ class VeriPbProofTest {
       AtomicTrail rootTrail = new AtomicTrail(store);
       store.imposeWithConsistency(
           new Reified(new XmulCeqZ(x, -3, new IntVar(store, "c", -4, -4)), b));
-      assertThat(b.max()).isEqualTo(0);
+      assertThat(b.max()).isZero();
       ByteArrayOutputStream opb = new ByteArrayOutputStream();
       ByteArrayOutputStream pbp = new ByteArrayOutputStream();
       LcgSolver lcg = new LcgSolver(store);
