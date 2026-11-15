@@ -399,10 +399,9 @@ public class IntensionTableDetector implements ParserTreeConstants {
     // a single outer variable gets a large table of its values only by the old limit: dozens of
     // primality tests p mod k > 0 over 90,000 values of p slowed limerick_primes 60 times
     int rowLimit =
-        outer.size() < 2
-            ? MAX_TUPLES
-            : (int) Math.max(MAX_TUPLES, Math.min(MAX_LARGE_TUPLES, 2 * smallest));
-    long nodeLimit = Math.min(Math.max(MAX_NODES, 4L * rowLimit), BUDGET - nodes);
+        outer.size() < 2 ? MAX_TUPLES : Math.clamp(2 * smallest, MAX_TUPLES, MAX_LARGE_TUPLES);
+    long wanted = Math.max(MAX_NODES, 4L * rowLimit);
+    long nodeLimit = Math.min(wanted, BUDGET - nodes);
     String key = signature(bound, vars);
     int[][] rows = cache.get(key);
     if (rows == null) {
@@ -792,31 +791,33 @@ public class IntensionTableDetector implements ParserTreeConstants {
     double estimate() {
       int mark = top;
       double product = 1;
-      while (propagate()) {
+      boolean going = propagate();
+      while (going) {
         int pick = pickOuter();
         if (pick < 0) {
           break;
         }
         product *= vars[pick].getSize();
-        int tries = 0;
-        boolean placed = false;
-        for (ValueEnumeration e = vars[pick].dom().valueEnumeration();
-            e.hasMoreElements() && tries < PROBE_TRIES;
-            tries++) {
-          int m = top;
-          assign(pick, e.nextElement());
-          if (propagate()) {
-            placed = true;
-            break;
-          }
-          undo(m);
-        }
-        if (!placed) {
-          break;
-        }
+        going = placeFirst(pick);
       }
       undo(mark);
       return product;
+    }
+
+    // assigns to the variable the first of its values that propagates, among the first few
+    private boolean placeFirst(int pick) {
+      int tries = 0;
+      for (ValueEnumeration e = vars[pick].dom().valueEnumeration();
+          e.hasMoreElements() && tries < PROBE_TRIES;
+          tries++) {
+        int m = top;
+        assign(pick, e.nextElement());
+        if (propagate()) {
+          return true;
+        }
+        undo(m);
+      }
+      return false;
     }
 
     private int pickOuter() {
