@@ -273,6 +273,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -518,6 +519,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -764,6 +766,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -1010,6 +1013,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
