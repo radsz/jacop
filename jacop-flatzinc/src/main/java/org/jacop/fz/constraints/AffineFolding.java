@@ -76,9 +76,11 @@ import org.jacop.fz.SimpleNode;
  */
 public class AffineFolding implements ParserTreeConstants {
 
+  private static final String LIN_EQ = "int_lin_eq";
+
   private static final Set<String> ROWS =
       Set.of(
-          "int_lin_eq",
+          LIN_EQ,
           "int_lin_le",
           "int_lin_ne",
           "int_lin_eq_reif",
@@ -186,9 +188,9 @@ public class AffineFolding implements ParserTreeConstants {
     // an x that is itself folded would need its own definition: keep such z
     folded.values().removeIf(d -> folded.containsKey(d.x()));
     Set<ASTConstElem> rows = new HashSet<>();
-    for (IntVar z : folded.keySet()) {
-      for (ASTConstElem c : occurrences.get(z)) {
-        if (c != folded.get(z).node()) {
+    for (Map.Entry<IntVar, Definition> e : folded.entrySet()) {
+      for (ASTConstElem c : occurrences.get(e.getKey())) {
+        if (c != e.getValue().node()) {
           rows.add(c);
         }
       }
@@ -244,9 +246,9 @@ public class AffineFolding implements ParserTreeConstants {
   // the defined variable of a definition
   private IntVar output(ASTConstElem c, Definition d) {
     String name = c.getName();
-    if (name.equals("int_lin_eq")) {
+    if (name.equals(LIN_EQ)) {
       IntVar[] v = support.getVarArray((SimpleNode) c.jjtGetChild(1));
-      return v[0] == d.x() ? v[1] : v[0];
+      return v[v[0] == d.x() ? 1 : 0];
     }
     return support.getVariable((ASTScalarFlatExpr) c.jjtGetChild(2));
   }
@@ -261,7 +263,12 @@ public class AffineFolding implements ParserTreeConstants {
           || z.getType() == 0) {
         return null;
       }
-      ASTScalarFlatExpr constant = a.getType() == 0 ? a : b.getType() == 0 ? b : null;
+      ASTScalarFlatExpr constant = null;
+      if (a.getType() == 0) {
+        constant = a;
+      } else if (b.getType() == 0) {
+        constant = b;
+      }
       ASTScalarFlatExpr variable = constant == a ? b : a;
       if (constant == null || variable.getType() == 0) {
         return null;
@@ -273,7 +280,7 @@ public class AffineFolding implements ParserTreeConstants {
       }
       return new Definition(c, x, 1, k);
     }
-    if (name.equals("int_lin_eq")) {
+    if (name.equals(LIN_EQ)) {
       int[] a = support.getIntArray((SimpleNode) c.jjtGetChild(0));
       IntVar[] v = support.getVarArray((SimpleNode) c.jjtGetChild(1));
       if (a == null || a.length != 2 || v[0] == v[1]) {
@@ -283,7 +290,7 @@ public class AffineFolding implements ParserTreeConstants {
       // the first term with a unit coefficient defines it: z = a*r - a*b*x since 1/a = a
       for (int t = 0; t < 2; t++) {
         if (Math.abs(a[t]) == 1 && a[1 - t] != 0) {
-          return new Definition(c, v[1 - t], -(long) a[t] * a[1 - t], (long) a[t] * r);
+          return new Definition(c, v[1 - t], -a[t] * (long) a[1 - t], a[t] * r);
         }
       }
     }
@@ -307,7 +314,9 @@ public class AffineFolding implements ParserTreeConstants {
       if (c != d.node() && !ROWS.contains(c.getName())) {
         return false;
       }
-      rows += c != d.node() ? 1 : 0;
+      if (c != d.node()) {
+        rows++;
+      }
     }
     if (rows > maxRows) {
       // a variable shared by several rows is a common sub-term: its literals carry what LCG learns
@@ -341,7 +350,29 @@ public class AffineFolding implements ParserTreeConstants {
   }
 
   /** A linear constraint after folding: coefficients, variables and the new constant. */
-  private record Row(int[] coefficients, IntVar[] vars, int constant) {}
+  private static final class Row {
+    private final int[] coefficients;
+    private final IntVar[] vars;
+    private final int constant;
+
+    Row(int[] coefficients, IntVar[] vars, int constant) {
+      this.coefficients = coefficients;
+      this.vars = vars;
+      this.constant = constant;
+    }
+
+    int[] coefficients() {
+      return coefficients;
+    }
+
+    IntVar[] vars() {
+      return vars;
+    }
+
+    int constant() {
+      return constant;
+    }
+  }
 
   // the row with every folded z replaced, or null if a coefficient or the constant overflows
   private Row fold(ASTConstElem c, Map<IntVar, Definition> folded) {
