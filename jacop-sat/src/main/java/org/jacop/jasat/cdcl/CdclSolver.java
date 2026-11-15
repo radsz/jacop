@@ -2924,16 +2924,12 @@ public final class CdclSolver {
           next = vals[l] == 0 && !eliminatedVar[l >> 1] ? l : -1;
         }
       }
-      if (next == -1 && external != null && external.modelComplete() && clausesSatisfied()) {
-        // the external propagator holds a model whatever the unassigned variables take
-        if (!modelAccepted()) {
-          continue;
-        }
-        return SAT;
-      }
+      // the external propagator may hold a model whatever the unassigned variables take
+      boolean complete =
+          next == -1 && external != null && external.modelComplete() && clausesSatisfied();
       if (next == -1) {
-        next = pickBranch();
-        if (next == -1 && external != null) {
+        next = complete ? -1 : pickBranch();
+        if (next == -1 && external != null && !complete) {
           int d = external.decideLast();
           if (d != 0 && Math.abs(d) <= numVars) {
             int l = toLit(d);

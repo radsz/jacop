@@ -7371,18 +7371,11 @@ public final class LcgSolver implements ExternalPropagator {
     solution = new int[vars.length];
     for (int i = 0; i < vars.length; i++) {
       if (vars[i] != null) {
-        if (unused[i] && !vars[i].singleton()) {
-          solution[i] = vars[i].min();
-          continue;
-        }
-        if (!vars[i].singleton() && completed) {
-          solution[i] = vars[i].min(); // no constraint left that is not entailed
-          continue;
-        }
-        if (!vars[i].singleton()) {
+        // an unused variable, or one with no constraint left that is not entailed, takes its min
+        if (!vars[i].singleton() && !unused[i] && !completed) {
           throw new IllegalStateException(vars[i] + " is not fixed in a model");
         }
-        solution[i] = vars[i].value();
+        solution[i] = vars[i].min();
       }
     }
     completed = false;
