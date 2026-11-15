@@ -1654,4 +1654,18 @@ public final class ConstraintFncs {
   public void poseClause(IntVar[] a1, IntVar[] a2) {
     bc.poseClause(a1, a2);
   }
+
+  /**
+   * Posts the half-reified linear relation {@code b -> sum(a * x) op c}, as int_lin_eq_imp,
+   * int_lin_ne_imp or int_lin_le_imp would.
+   *
+   * @param operation Support.EQ, Support.NE or Support.LE.
+   * @param a the weights.
+   * @param x the variables, distinct and not fixed.
+   * @param c the right-hand side.
+   * @param b the control.
+   */
+  public void poseLinearImplied(int operation, int[] a, IntVar[] x, int c, IntVar b) {
+    lc.linearImplied(operation, a, x, c, b);
+  }
 }
