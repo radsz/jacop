@@ -6079,6 +6079,28 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
+346. The FlatZinc front end folds a variable z that is an affine function
+   of another variable x into the linear constraint that uses it (free
+   column substitution of MIP presolve: Achterberg, Bixby, Gu, Rothberg
+   and Weninger, Presolve reductions in mixed integer programming,
+   INFORMS Journal on Computing 32(2), 2020; as CP-SAT's presolve does:
+   Perron, Didier and Gay, The CP-SAT-LP solver, CP 2023). z is defined
+   by int_times(c, x, z), int_plus(x, c, z) or a two-term int_lin_eq
+   with a unit coefficient on z, is not an output or solve variable, its
+   domain allows every value of the function, and it occurs in one
+   linear constraint besides its definition: the term a*z becomes a*p*x,
+   a*q moves to the constant and the definition is not posted. A z in
+   several rows stays, since with lazy clause generation it is a shared
+   sub-term whose literals carry learning from row to row (code-generator
+   mips_gobmk of the 2019 Challenge: 7 such variables in 49 rows, 34 ->
+   63 s when folded; -Dorg.jacop.fz.affineFoldingRows=n allows n rows).
+   It fires on 4 of the 240 instances of the wide benchmark set: nside
+   EASY_200_50 folds 54,504 products by constants into its sums
+   (propagators 61,579 -> 7,075), the same search tree in 85 -> 46 s at
+   240 s; the other three are unchanged within noise.
+   -Dorg.jacop.fz.affineFolding=false turns it off; it is off under
+   --proof.
+
 Version 4.11
 =============
 
