@@ -1782,7 +1782,8 @@ public class LinearRelaxation extends Constraint
 
   // the rows over the terms of the objective that do not fit the dense tableau are all taken by
   // the sparse simplex (not final: a test hook)
-  static boolean nearRowsOn = !"false".equals(System.getProperty("org.jacop.lp.nearRows"));
+  static boolean nearRowsOn =
+      !Boolean.FALSE.toString().equals(System.getProperty("org.jacop.lp.nearRows"));
 
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
