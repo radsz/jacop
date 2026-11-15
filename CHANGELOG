@@ -5875,7 +5875,35 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
-338. The FlatZinc front end merges common subexpressions before posting
+338. Satisfaction models get a second linear relaxation, solved once at
+   the root and then removed, that can refute them. It holds the value
+   encodings of the counting, all-different and element constraints
+   (with the count bounds of global_cardinality), the model's linear and
+   clause rows restated over the value columns, and the pair conflicts
+   merged into cliques (Atamturk, Nemhauser and Savelsbergh, Conflict
+   graphs in solving integer programming problems, EJOR 2000). A control
+   b of a half-reified b -> x != c (MiniZinc's translation of a
+   disequality in a disjunction) is bounded by 1 - [x = c], and the z of
+   not z -> x != c by [x = c], so the clause (x != c) \/ (y != c) becomes
+   [x = c] + [y = c] <= 1. Such counts are pigeonhole arguments, which
+   resolution and so lazy clause generation refute only in exponentially
+   many steps (Haken, The intractability of resolution, TCS 1985). The
+   main relaxation keeps these encodings only for an objective. The
+   social golfers 08-04-11 of the XCSP 2024 competition (32 players in 8
+   groups of 4 for 11 weeks: each player meets 3 others a week, 33 in
+   all, but there are 31) were UNKNOWN at 600 s and are now refuted at
+   the root in under 2 s; only LP-based solvers proved them in the
+   competition. The root solve is capped at 2,500 pivots
+   (org.jacop.lp.rootRefutationPivots). It fires on 353 of the 792 XCSP
+   2022-2025 satisfaction instances (median 0.4 s more on the 2024 ones
+   both versions solve) and on 15 of the 53 satisfaction instances of
+   the wide benchmark set, with the same answers and, under -f, the same
+   search trees. -Dorg.jacop.lp.rootRefutation=false turns it off;
+   --search-statistics prints lpRefutationRows, lpRefutationCliques,
+   lpRefutation (refuted, feasible, limit), lpRefutationTime and
+   lpRefutationPivots.
+
+339. The FlatZinc front end merges common subexpressions before posting
    (as CP-SAT's presolve does, DetectDuplicateConstraints: Perron, Didier
    and Gay, The CP-SAT-LP solver, CP 2023; and the duplicate-row presolver
    of MIP solvers: Achterberg, Bixby, Gu, Rothberg and Weninger, Presolve
@@ -5896,7 +5924,7 @@ Version 5.0 (unreleased)
    with -f (geomean 1.002). -Dorg.jacop.fz.cse=false turns it off; it is
    off under --proof.
 
-339. JaLP chooses the leaving row of the dual simplex by gap^1.2 / weight
+340. JaLP chooses the leaving row of the dual simplex by gap^1.2 / weight
    instead of gap^2 / weight (dual steepest edge) on LPs shaped like
    multicommodity flows: at least 5000 columns, at most 2.2 nonzeros per
    column and at most 4 columns per row (the less sensitive dual steepest
@@ -5911,7 +5939,7 @@ Version 5.0 (unreleased)
    wide-set runs where it applies (600 s) nothing is solved or lost.
    -Dorg.jacop.jalp.linearScore=on|off overrides the choice.
 
-340. The -p portfolio can split one depth-first search over its threads by
+341. The -p portfolio can split one depth-first search over its threads by
    work stealing with recomputation (Schulte, "Parallel search made
    simple", TRICS 2000; Chu, Schulte and Stuckey, "Confidence-based work
    stealing in parallel constraint programming", CP 2009): a thread that
@@ -5930,7 +5958,7 @@ Version 5.0 (unreleased)
    from that cube. Statistics portfolioDfsSplitThreads, portfolioDfsSplits,
    portfolioDfsCubesClosed, portfolioDfsSplitWaitMillis.
 
-341. The FlatZinc front end rewrites a variable s defined by a sum
+342. The FlatZinc front end rewrites a variable s defined by a sum
    s = sum(i) a[i] * x[i] that is used otherwise only in half-reifications
    b -> s = m or b -> s <= m, where m is the least value of the sum: each
    becomes the clauses not b \/ x[i] = v[i], with v[i] the bound at which
@@ -5948,7 +5976,7 @@ Version 5.0 (unreleased)
    fires on none of the 240 instances of the wide benchmark set.
    -Dorg.jacop.fz.zeroSum=false turns it off; it is off under --proof.
 
-342. A root solve of the linear relaxation of an optimisation model in the
+343. A root solve of the linear relaxation of an optimisation model in the
    sparse simplex (the first solve, or the trial of the extra rows such as
    value encodings) that stops at its pivot or work budget now goes on
    within half of the time a large relaxation gets for its root solves
