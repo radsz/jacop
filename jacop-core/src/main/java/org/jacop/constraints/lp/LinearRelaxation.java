@@ -4677,7 +4677,7 @@ public class LinearRelaxation extends Constraint
 
   // the MIR cuts of the dual-weighted rows, on by default (-Dorg.jacop.lp.dualAggregate=false: off)
   static boolean dualAggregateOn =
-      !"false".equals(System.getProperty("org.jacop.lp.dualAggregate"));
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.dualAggregate", "true"));
 
   /**
    * Adds the MIR cuts of the rows weighted by their dual values, without the rows of the objective
