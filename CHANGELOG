@@ -6796,6 +6796,17 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
+378. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
+   watch-list entry back to the same place while every entry before it
+   stayed where it was, and a conflict leaves the rest of the list as it
+   is instead of copying it onto itself. A visit that only checks the
+   blocker literal now only reads the list, so the cache lines of long
+   watch lists stay clean. The search is the same. Pure SAT on 90 CNFs
+   runs 1.3 % faster (geomean 0.987, a copy of the base jar 1.003);
+   FlatZinc on the 240 wide-set instances at 600 s solves the same
+   instances by default, with total time on them 0.971 by default and
+   0.972 under -f.
+
 Version 4.11
 =============
 
