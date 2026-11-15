@@ -3395,7 +3395,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     if (costVar == null) {
-      return satisfactionProbe(lcg);
+      // fixed search backtracks the annotation's decisions about one level a conflict whatever
+      // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
+      // at 240 s it lost 2 instances and 9 % of the time there
+      return unsolvedOnly ? null : satisfactionProbe(lcg);
     }
     if (rate <= 0 || options.getTimeOut() <= 0) {
       return null;
@@ -3449,20 +3452,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Starts the probe of a satisfaction search with learning (no objective): at shares of the time
-   * limit (lcg-sat-at, then doubling), it reads how far the conflicts of LCG jump back and gives
-   * way to search without learning when learning does not cut the tree (see {@link
-   * #learningCutsLittle}).
+   * limit (lcg-sat-at, then doubling; 0 gives way at once, a negative share turns it off), it reads
+   * how far the conflicts of LCG jump back and gives way to search without learning when learning
+   * does not cut the tree (see {@link #learningCutsLittle}).
    *
    * @param solver the LCG solver
    * @return the thread of the probe, or null when it is off or runs on the virtual clock
    */
   private Thread satisfactionProbe(LcgSolver solver) {
     String mode = options.freeConfig("lcg-sat-probe", "on");
-    double at = Double.parseDouble(options.freeConfig("lcg-sat-at", "0.05"));
-    if ("off".equals(mode) || at <= 0 || options.getTimeOut() <= 0) {
+    double at = Double.parseDouble(options.freeConfig("lcg-sat-at", "0.1"));
+    if ("off".equals(mode) || at < 0 || options.getTimeOut() <= 0) {
       return null;
     }
     boolean act = !"report".equals(mode);
+    if (at == 0 && act) {
+      // lcg-sat-at=0: search without learning from the start, after LCG's root propagation
+      lcgSlow = true;
+      lcgSlowUnsolved = true;
+      solver.stop();
+      return null;
+    }
     boolean report = !act || options.debug() || options.searchStatistics();
     lcgStart = solver.sat().now();
     long limit = CdclSolver.VIRTUAL_CLOCK ? options.getTimeOut() : options.getRemainingTimeOut();
