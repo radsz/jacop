@@ -251,6 +251,36 @@ class LcgSolverTest {
     return false;
   }
 
+  /**
+   * A solution given by setIncumbent is the best one of minimize: only better solutions are
+   * reported, and an optimal incumbent is the answer without any report.
+   */
+  @Test
+  void incumbentIsTheFirstSolution() {
+    for (int start = 0; start <= 4; start++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 5);
+      IntVar y = new IntVar(store, "y", 0, 5);
+      IntVar cost = new IntVar(store, "cost", 0, 100);
+      store.impose(new LinearInt(new IntVar[] {x, y}, new int[] {1, 1}, ">=", 4));
+      store.impose(new LinearInt(new IntVar[] {x, y, cost}, new int[] {2, 3, -1}, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      // x + y = 4 with y = start: cost 8 + start, optimal for start 0
+      int given = 8 + start;
+      solver.setIncumbent(new IntVar[] {x, y, cost}, new int[] {4 - start, start, given});
+      List<Integer> reported = new ArrayList<>();
+      solver.onSolution(() -> reported.add(cost.value()));
+      assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(cost)).isEqualTo(8);
+      assertThat(reported).allMatch(c -> c < given);
+      if (start == 0) {
+        assertThat(reported).isEmpty();
+        assertThat(solver.value(x)).isEqualTo(4);
+      }
+    }
+  }
+
   @Test
   void deferredValueRemovalsAgreeWithBruteForce() {
     // with no literal budget every value removal without a literal stays out of the solver, and

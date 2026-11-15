@@ -151,6 +151,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.ls.ProjectSchedule;
 import org.jacop.search.ls.ScheduleResources;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
@@ -2807,6 +2808,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Hint pumped = options.freeSearch() && ls == null ? pumpHint() : null;
     // the dive that fills the slots of a fixed multiset, largest value first
     Hint dived = options.freeSearch() && ls == null ? slotDive(costVar) : null;
+    // a project schedule of the cumulative resources, before the solver takes the store over
+    Hint scheduled =
+        options.freeSearch() && ls == null && costVar instanceof IntVar c
+            ? projectScheduleHint(c, worker)
+            : null;
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -2858,6 +2864,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = ls.getCostValue();
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    } else if (scheduled != null) {
+      // the schedule is the solver's first solution: branch and bound and neighbourhood search
+      // go on from it (as a bound and phase alone, neighbourhood search never ran: j60_45_1)
+      lcg.setIncumbent(scheduled.vars, scheduled.values);
+      lcgLastCost = scheduledCost;
+      if (worker != null) {
+        lcg.setSharedBound(worker::sharedBound);
+      }
     } else if (worker != null && costVar != null) {
       lcg.setSharedBound(worker::sharedBound);
     }
@@ -2877,7 +2891,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if (ls != null && costVar instanceof IntVar cost) {
+    if ((ls != null || scheduled != null) && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better
       lcg.onSolution(
@@ -3093,6 +3107,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
+    addScheduleProposer(lns);
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -4349,6 +4364,163 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the integer variables of the store not fixed at the root, which a solution hint covers
   /** Variables with the values a hint prefers for them. */
+  // the cost of the best project schedule, printed before the solver starts
+  private int scheduledCost;
+
+  // the project schedule of the cumulative resources, or null
+  private ProjectSchedule projectSchedule;
+  private long projectScheduleMillis;
+
+  /**
+   * Runs the project scheduling heuristic ({@link ProjectSchedule}) when the cost is the makespan
+   * of cumulative resources with fixed durations, demands and capacities, not all of them machines:
+   * serial schedule generation with forward-backward improvement inside a genetic algorithm. Each
+   * better schedule is checked in the store and printed, and the best becomes the first solution of
+   * the solver. The genetic algorithm then goes on in slices of sgs-lns schedules (default twenty
+   * per task) as a kind of neighbourhood of large neighbourhood search. --free-config sgs=0 turns
+   * it off, sgs-share gives the first run its share of the time (default 0.03), sgs-max caps it in
+   * milliseconds (default 60000) and sgs-patience is the number of schedules without improvement
+   * after which it ends (default 20000).
+   *
+   * @return the best schedule found, as a hint of all variables, or null
+   */
+  private Hint projectScheduleHint(IntVar cost, Portfolio.Worker worker) {
+    if ("0".equals(options.freeConfig("sgs", "1"))) {
+      return null;
+    }
+    long begin = System.currentTimeMillis();
+    ProjectSchedule ps = ProjectSchedule.detect(cost, options.getRandomSeed());
+    if (ps == null) {
+      return null;
+    }
+    projectSchedule = ps;
+    long budget = Long.parseLong(options.freeConfig("sgs-max", "60000"));
+    if (options.getTimeOut() > 0) {
+      budget =
+          Math.min(
+              budget,
+              (long)
+                  (Double.parseDouble(options.freeConfig("sgs-share", "0.03"))
+                      * options.getRemainingTimeOut()));
+    }
+    long deadline = begin + budget;
+    long patience = Long.parseLong(options.freeConfig("sgs-patience", "20000"));
+    IntVar[] starts = ps.starts();
+    IntVar[] hinted = hintedVariables();
+    int[][] best = {null};
+    boolean[] stopped = {false};
+    if (worker != null) {
+      worker.onStop(() -> stopped[0] = true);
+    }
+    ProjectSchedule.Listener listener =
+        new ProjectSchedule.Listener() {
+          @Override
+          public boolean improved(int[] start, int makespan) {
+            int[] values = checkSchedule(starts, start, cost, makespan, hinted);
+            if (values == null) {
+              // the other constraints reject it, or the cost is not this makespan
+              return false;
+            }
+            best[0] = values;
+            scheduledCost = makespan;
+            return true;
+          }
+
+          @Override
+          public boolean stop() {
+            return stopped[0] || System.currentTimeMillis() > deadline;
+          }
+
+          @Override
+          public long bound() {
+            return worker == null
+                ? bestPrintedCost.get()
+                : Math.min(bestPrintedCost.get(), worker.sharedBound());
+          }
+        };
+    ps.run(listener, patience);
+    projectScheduleMillis = System.currentTimeMillis() - begin;
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: sgsTasks="
+              + ps.tasks()
+              + "\n%%%mzn-stat: sgsResources="
+              + ps.resources()
+              + "\n%%%mzn-stat: sgsSchedules="
+              + ps.schedules()
+              + "\n%%%mzn-stat: sgsImprovements="
+              + ps.improvements()
+              + "\n%%%mzn-stat: sgsRestarts="
+              + ps.restarts()
+              + "\n%%%mzn-stat: sgsTime="
+              + projectScheduleMillis / 1000.0
+              + (best[0] == null ? "" : "\n%%%mzn-stat: sgsBest=" + scheduledCost));
+    }
+    return best[0] == null ? null : new Hint(hinted, best[0]);
+  }
+
+  /**
+   * Fixes the task starts of a schedule in the store, the cost to the makespan and the other
+   * variables to their smallest values with propagation, and prints the solution.
+   *
+   * @return the values of the hinted variables, or null when the store rejects the schedule
+   */
+  private int[] checkSchedule(
+      IntVar[] starts, int[] start, IntVar cost, int makespan, IntVar[] hinted) {
+    int base = store.level;
+    store.setLevel(base + 1);
+    try {
+      for (int k = 0; k < starts.length; k++) {
+        starts[k].domain.in(store.level, starts[k], start[k], start[k]);
+      }
+      if (!store.consistency() || !cost.domain.contains(makespan) || cost.min() != makespan) {
+        return null;
+      }
+      cost.domain.in(store.level, cost, makespan, makespan);
+      if (!store.consistency()) {
+        return null;
+      }
+      for (IntVar x : hinted) {
+        if (!x.singleton()) {
+          x.domain.in(store.level, x, x.min(), x.min());
+          if (!store.consistency()) {
+            return null;
+          }
+        }
+      }
+      int[] values = new int[hinted.length];
+      for (int k = 0; k < hinted.length; k++) {
+        values[k] = hinted[k].value();
+      }
+      printSolution();
+      return values;
+    } catch (FailException e) {
+      return null;
+    } finally {
+      while (store.level > base) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+    }
+  }
+
+  /**
+   * Lets the genetic algorithm of the project schedule go on in slices from the best solution of
+   * the search, as a kind of neighbourhood whose runs fix the task starts of a better schedule.
+   */
+  private void addScheduleProposer(AdaptiveLns lns) {
+    if (lns == null || projectSchedule == null) {
+      return;
+    }
+    ProjectSchedule ps = projectSchedule;
+    long slice =
+        Long.parseLong(
+            options.freeConfig("sgs-lns", Long.toString(Math.max(1000, 20L * ps.tasks()))));
+    if (slice > 0) {
+      lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
+    }
+  }
+
   private static final class Hint {
     final IntVar[] vars;
     final int[] values;
@@ -4702,6 +4874,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.restartHook(dictionary.onRestart);
     } else if (restarts != null && !allSolutions) {
       freeLns = lnsNeighbourhoods(costVar);
+      addScheduleProposer(freeLns);
       if (freeLns != null && lcgHint != null) {
         // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
         // they waited for free search's own first solution, which must improve on it, and on
