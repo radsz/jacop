@@ -5845,6 +5845,41 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
+336. Lazy clause generation follows a search annotation (or the default
+   branching of a model without one) with fewer decisions. Such a run
+   decides its variables in a fixed order, so after a backjump it took
+   again every decision between the backjump level and the conflict:
+   gardner_dinner made 2,242 decisions for 90 conflicts, against 266 nodes
+   without learning. The runs that follow the annotation now backtrack one
+   level after a backjump over more than 10 levels, assert the learnt
+   literal on the level kept, and assert it again if a later backtrack
+   goes below it (chronological backtracking: A. Nadel and V. Ryvchin,
+   "Chronological Backtracking", SAT 2018, LNCS 10929; the missed lower
+   implications handled lazily as in A. Moehle and A. Biere, "Backing
+   Backtracking", SAT 2019, LNCS 11628; the threshold is lowered from
+   their 100). gardner_dinner takes 193 decisions. Backtracking one level
+   after every conflict lost the only solution of 2026 orthorio
+   challenge_12 in 600 s, since with first_fail a short backjump reorders
+   the decisions after the learnt literal. --free-config lcg-chrono=<n>
+   sets the threshold (0 always, -1 never); the statistic
+   lcgChronoBacktracks counts these backtracks.
+   When the annotation has fixed all its variables, the run also takes the
+   assignment as a solution if the printed variables and the objective
+   are fixed, every variable left has no constraint that is not entailed,
+   and every clause is satisfied; the variables left take their smallest
+   values. Before, activity decisions went on over the variables left: on
+   a_card_trick_1 (a 4 x 13 card layout with set channels), 1,014
+   decisions on 0/1 variables that no constraint used after the 29 of the
+   annotation, against 37 nodes without learning. It now takes 29. It is
+   off with neighbourhood search, presolve and proof logging; the
+   statistic lcgCompletedModels counts these solutions. On the 240
+   wide-set instances at 600 s, default search solves 170 instead of 169
+   and finds a solution of 203 instead of 202, 7 families better and none
+   worse (ptv pax_period_20_3b proved in 486 s, unit-commitment
+   L12-T48G15L10 a first solution, physician-scheduling instance10
+   10810 -> 9015); free search (-f) solves the same 193, 3 families
+   better and 2 worse.
+
 Version 4.11
 =============
 
