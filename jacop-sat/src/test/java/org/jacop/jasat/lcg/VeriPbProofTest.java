@@ -91,6 +91,7 @@ import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
@@ -1520,6 +1521,22 @@ class VeriPbProofTest {
     // x + y = 9 gives x >= 4, so x = 5 past the hole, and y = x fails
     store.impose(new XeqY(x, y));
     store.impose(new XplusYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+    LcgSolver.proveRootFailure(store, rootTrail, model, proof);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void linearRowWithNoIntegerSolutionIsRefuted() {
+    // 2 x = 5 bounds x to [3, 2]: the row's bound pass must stop at the empty range (it crashed
+    // intersecting with min above max), fuzz seed 2010107
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, -1);
+    x.addDom(2, 4);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.impose(new XmulCeqZ(x, 2, new IntVar(store, "five", 5, 5)));
     assertThat(store.consistency()).isFalse();
     LcgSolver.proveRootFailure(store, rootTrail, model, proof);
     RupChecker checker = new RupChecker();

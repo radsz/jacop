@@ -887,6 +887,12 @@ Simplex choice and bases:
   sparse simplex; default 4000000000.
 - org.jacop.lp.sparseRootSeconds: the most time of such a solve, in
   seconds; default 3.
+- org.jacop.lp.rootExtendShare: a root solve of an optimisation
+  relaxation in the sparse simplex (the first solve or the trial of the
+  extra rows) that stops at its pivots or work goes on, the extended
+  solves sharing this share of the time of a large relaxation's root
+  solves (largeRootShare of -t); stat lpRootExtendTime (negative when
+  the time ran out); 0 = off; default 0.5.
 - org.jacop.lp.large: relaxations of an optimisation model over
   sparseMaxRows or sparseMaxColumns, up to largeMaxRows rows,
   largeMaxColumns columns and maxNonzeros nonzeros, are kept as large

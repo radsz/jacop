@@ -61,14 +61,12 @@ public class RoundPeqX extends AbstractRoundPeqX implements Copyable<RoundPeqX> 
   public void consistency(Store store) {
 
     do {
-      int min = round(p.min());
-      int max = round(p.max());
-
-      x.domain.in(store.level, x, min, max);
+      // p first: its bounds are then within the integer range of x, which round(p) needs
+      p.domain.in(store.level, p, lowest(x.min()), highest(x.max()));
 
       store.propagationHasOccurred = false;
 
-      p.domain.in(store.level, p, lowest(x.min()), highest(x.max()));
+      x.domain.in(store.level, x, round(p.min()), round(p.max()));
 
     } while (store.propagationHasOccurred);
   }

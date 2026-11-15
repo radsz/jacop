@@ -138,17 +138,23 @@ public class VariablesParameters implements ParserTreeConstants {
    * MiniZinc evaluates such a bound in double arithmetic and prints it as a decimal, so the exact
    * value of the defining expression can lie just outside it: for b = 1.0 + 0.1 * i with i in 1..5
    * it writes 1.1..1.5, but 1.0 + 0.1 * 1 is below the double 1.1, and sound propagation then
-   * removes i = 1. A bound that is exact in binary (such as 1.5) is kept.
+   * removes i = 1. A bound that is exact in binary (such as 1.5) is kept, and so is a bound next to
+   * one: MiniZinc writes a strict bound x &gt; c (from x != c or x &gt; c) as the double after c,
+   * such as 4.940656458412465e-324 for x &gt; 0, and widening it gave x = c back.
    */
   private void widenComputedFloatBounds() {
     if (lowFloatInterval == highFloatInterval) {
       return;
     }
-    if (!isShortDecimal(lowFloatInterval) && lowFloatInterval > MIN_FLOAT) {
+    if (!isShortDecimal(lowFloatInterval)
+        && !isShortDecimal(Math.nextDown(lowFloatInterval))
+        && lowFloatInterval > MIN_FLOAT) {
       lowFloatInterval =
           Math.max(MIN_FLOAT, lowFloatInterval - FloatDomain.epsilon(lowFloatInterval));
     }
-    if (!isShortDecimal(highFloatInterval) && highFloatInterval < MAX_FLOAT) {
+    if (!isShortDecimal(highFloatInterval)
+        && !isShortDecimal(Math.nextUp(highFloatInterval))
+        && highFloatInterval < MAX_FLOAT) {
       highFloatInterval =
           Math.min(MAX_FLOAT, highFloatInterval + FloatDomain.epsilon(highFloatInterval));
     }
