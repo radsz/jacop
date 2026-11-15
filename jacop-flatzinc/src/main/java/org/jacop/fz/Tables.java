@@ -52,6 +52,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.TableVariableElimination;
+import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -112,6 +113,9 @@ public class Tables {
 
   /** The variables that table variable elimination joined out of the model, or null. */
   TableVariableElimination tableElimination;
+
+  // the output variables whose defining sums ZeroSumDetector dropped, null if none
+  ZeroSumDetector.OutputSums zeroSums;
 
   // the cost function network of the objective (-Dorg.jacop.fz.costNetwork=true), until Solve
   // builds
@@ -616,6 +620,7 @@ public class Tables {
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
+    t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.objectiveScale = objectiveScale;
     t.scaledIdents.addAll(scaledIdents);
     t.numberBoolVariables = numberBoolVariables;

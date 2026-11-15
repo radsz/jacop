@@ -5835,6 +5835,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the variables that table variable elimination removed get values from the others
     eliminatedValues =
         output.tableElimination == null ? Map.of() : output.tableElimination.values();
+    // and those of the sums that zero-sum detection dropped from the terms
+    if (output.zeroSums != null) {
+      eliminatedValues = new IdentityHashMap<>(eliminatedValues);
+      output.zeroSums.addValues(eliminatedValues);
+    }
 
     if (!output.outputVariables.isEmpty()) {
       appendOutputVariablesToBuffer(printBuffer);
