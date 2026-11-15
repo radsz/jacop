@@ -703,13 +703,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
     if (values.posted() == 0 && INDEX_VALUES) {
       List<Item> indexItems = indexElements(items);
       if (indexItems != items && indexSpace(indexItems, goal, ranked)) {
-        // a quarter of the time at most, building the graph included, so that the variable
-        // symmetries keep theirs
+        // half of the time left at most, building the graph included, so that the variable
+        // symmetries keep the other half
         long whole = deadline;
-        deadline = Math.min(whole, clock.getAsLong() + maxNanos / 4);
+        long half = Math.max(0, whole - clock.getAsLong()) / 2;
+        deadline = clock.getAsLong() + half;
         ValueOutcome indexValues;
         try {
-          indexValues = breakValueSymmetries(indexItems, goal, minimize, ranked, maxNanos / 4);
+          indexValues = breakValueSymmetries(indexItems, goal, minimize, ranked, half);
         } finally {
           deadline = whole;
         }
