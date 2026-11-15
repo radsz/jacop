@@ -2933,7 +2933,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IntVar[] hinted = hintedVariables();
       int[] hintValues = ls.getSolution(hinted);
       if (hintValues != null) {
-        lcg.setPhase(hinted, hintValues);
+        if (costVar != null && !"0".equals(options.freeConfig("ls-incumbent", "1"))) {
+          // the solution of local search is the solver's first solution, as the project schedule
+          // below: with a phase and a bound alone neighbourhood search never ran (lnsRuns 0)
+          lcg.setIncumbent(hinted, hintValues);
+        } else {
+          lcg.setPhase(hinted, hintValues);
+        }
       }
       if (costVar == null) {
         // the solution of local search, printed already, is the answer

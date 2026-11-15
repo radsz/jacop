@@ -329,7 +329,9 @@ public class Options {
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
                 violated constraints, default 1000; 5000 for ls-auto), ls-auto=1|0 (1, the default:
                 without ls, a disjunctive scheduling model whose cost is the makespan gets the
-                critical-path tabu search alone for half of the time left, until it stalls), ls-moves=fj|walk (fj, the default:
+                critical-path tabu search alone for half of the time left, until it stalls), ls-incumbent=1|0 (1, the default:
+                the best solution of local search is the first solution of --lcg, which large
+                neighbourhood search relaxes; 0: only its phase and bound), ls-moves=fj|walk (fj, the default:
                 feasibility jump, the best jump of a sample of variables, all violated constraints
                 weigh more at a minimum; walk: a step moves a variable of one violated constraint),
                 ls-perm=1|0 (1, the default: an all different constraint over one domain of as many
