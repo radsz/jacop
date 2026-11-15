@@ -391,14 +391,15 @@ class CostNetworkBoundTest {
       for (int step = 0; consistent && step < 8; step++) {
         store.setLevel(store.level + 1);
         try {
-          if (rnd.nextInt(3) == 0) {
+          int pick = rnd.nextInt(9);
+          if (pick < 3) {
             int v = z.min() + rnd.nextInt(z.max() - z.min() + 1);
             if (maximize) {
               z.domain.inMin(store.level, z, v);
             } else {
               z.domain.inMax(store.level, z, v);
             }
-          } else if (rnd.nextInt(3) == 0) {
+          } else if (pick < 5) {
             // fixed variables: their reasons are bound atoms
             IntVar y = x[rnd.nextInt(x.length)];
             int v = rnd.nextBoolean() ? y.min() : y.max();

@@ -616,11 +616,11 @@ public final class CostNetworkBound extends Constraint
   }
 
   @Override
-  public void queueVariable(int level, Var var) {
+  public void queueVariable(int level, Var variable) {
     if (indexOf == null) {
       return;
     }
-    Integer at = indexOf.get(var);
+    Integer at = indexOf.get(variable);
     if (at == null) {
       return;
     }
