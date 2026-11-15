@@ -155,6 +155,33 @@ class CdclFuzzTest {
     return mode == 0 ? 0 : mode == 1 ? 100 : -1;
   }
 
+  /**
+   * Connects an external propagator that decides the variables in input order, each with a phase
+   * fixed by the seed, as a fixed search annotation does under LCG, and backtracks one level
+   * instead of backjumping always or above a few levels ({@link CdclSolver#setLazyChronoLimit}).
+   */
+  private static void inputOrderDecisions(CdclSolver s, int vars, long seed) {
+    Random phases = new Random(seed);
+    boolean[] positive = new boolean[vars + 1];
+    for (int v = 1; v <= vars; v++) {
+      positive[v] = phases.nextBoolean();
+      s.observe(v);
+    }
+    s.setLazyChronoLimit(Math.floorMod(seed, 2L) == 0 ? 0 : 3);
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int decide() {
+            for (int v = 1; v <= vars; v++) {
+              if (s.value(v) == 0) {
+                return positive[v] ? v : -v;
+              }
+            }
+            return 0;
+          }
+        });
+  }
+
   /** Solves with a DRAT proof and checks the answer; returns the answer. */
   private static int solveChecked(List<int[]> f, int vars, long seed) throws IOException {
     CdclSolver s = new CdclSolver();
@@ -169,6 +196,9 @@ class CdclFuzzTest {
     s.ensureVars(vars);
     for (int[] c : f) {
       s.addClause(c);
+    }
+    if (Math.floorMod(seed, 5L) == 3) {
+      inputOrderDecisions(s, vars, seed);
     }
     int result = s.solve();
     drat.close();

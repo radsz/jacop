@@ -257,6 +257,7 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -379,6 +380,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -495,6 +497,7 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -622,6 +625,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -734,6 +738,7 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -861,6 +866,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -973,6 +979,7 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -1098,6 +1105,7 @@ setup to run configuration. -->
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>

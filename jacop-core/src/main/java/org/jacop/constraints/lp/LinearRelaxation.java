@@ -1105,6 +1105,8 @@ public class LinearRelaxation extends Constraint
     Set<Constraint> constraints = constraintsOf(store);
     List<LinearForm> localForms = new ArrayList<>();
     List<LinearForm> relaxed = new ArrayList<>();
+    // the rows of relaxed that go ahead of the others when not all fit
+    Set<LinearForm> leading = Set.of();
     List<CapacityCuts> separations = new ArrayList<>();
     List<EnergyCuts> resources = new ArrayList<>();
     List<AlldifferentCuts> hall = new ArrayList<>();
@@ -1156,7 +1158,22 @@ public class LinearRelaxation extends Constraint
       localForms = substitute(localForms, substituted, objective);
     }
     if (LINEARIZE) {
-      relaxed.addAll(Linearizations.encodings(constraints));
+      List<LinearForm> encodings = Linearizations.encodings(constraints);
+      List<LinearForm> selected = Linearizations.selectedValueRows(constraints, extra);
+      if (selected.isEmpty()) {
+        relaxed.addAll(encodings);
+      } else {
+        // the rows of the value conjunctions first, and the value encodings with them, also when
+        // not all rows fit: at the distance of the clause rows of their Booleans from the
+        // objective they came after those and did not fit the share (ihtc-2024-kletzander: root
+        // bound 0, and 4,757 with the conjunction rows alone, since sum e_v = 1 of the patients
+        // that must be admitted was left out)
+        relaxed.addAll(0, encodings);
+        relaxed.addAll(0, selected);
+        leading = Collections.newSetFromMap(new IdentityHashMap<>());
+        leading.addAll(selected);
+        leading.addAll(encodings);
+      }
     }
     // the value encodings over auxiliary columns come first, so that a size cap leaves out other
     // rows before them; they are many rows by nature (a row per value and constraint) and are not
@@ -1217,12 +1234,15 @@ public class LinearRelaxation extends Constraint
     if (LINEARIZE && objective != null) {
       triedRows.addAll(Linearizations.alldifferentNetworks(constraints));
     }
+    // the candidates that keep their place ahead of the others when not all fit
+    int first = exempt;
     for (List<LinearForm> rows : List.of(relaxed, triedRows, valueRows.flow())) {
       for (LinearForm f : rows) {
         if (f.relation() != LinearForm.NE
             && f.vars().length >= 2
             && Arrays.stream(f.vars()).noneMatch(substituted::contains)) {
           candidates.add(f);
+          first += leading.contains(f) && first == candidates.size() - 1 ? 1 : 0;
         }
       }
     }
@@ -1273,7 +1293,10 @@ public class LinearRelaxation extends Constraint
     // a model with trees takes all its other rows: the tree cuts need them (st70 of
     // surface-based-tsp: 388 of its 561 other rows fit the share, root bound 490 and 633 after
     // the tree cuts; all of them, 656 and 675, the optimum)
-    long share = trees.isEmpty() ? 2L * localForms.size() + SPARSE_ROWS + exempt : Long.MAX_VALUE;
+    // the leading rows of the value conjunctions are counted like the exempt ones, outside the
+    // share of the others (ihtc-2024-kletzander test05: 412 leading rows of a share of 472 left out
+    // the count row of the objective, and the root bound stayed 0)
+    long share = trees.isEmpty() ? 2L * localForms.size() + SPARSE_ROWS + first : Long.MAX_VALUE;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
@@ -1282,7 +1305,7 @@ public class LinearRelaxation extends Constraint
       // to fit); the tried value encodings stay after the other rows, since the retry without them
       // takes the rows before them
       further.clear();
-      List<LinearForm> sorted = fitOrder(localForms, candidates, exempt, triedSet, flow, objective);
+      List<LinearForm> sorted = fitOrder(localForms, candidates, first, triedSet, flow, objective);
       fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
     }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
