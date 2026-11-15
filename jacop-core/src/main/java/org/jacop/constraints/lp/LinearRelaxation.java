@@ -322,6 +322,23 @@ public class LinearRelaxation extends Constraint
   /** Statistics: propagations stopped at the pivot limit. */
   public long limits;
 
+  /** The solves stopped at their limit whose duals were turned into a bound, and what it pruned. */
+  public long anytimeSolves;
+
+  /** The prunings by the bounds of solves stopped at their limit. */
+  public long anytimePrunings;
+
+  /** The failures found by the bounds of solves stopped at their limit. */
+  public long anytimeFailures;
+
+  private long anytimePruningsBefore = -1;
+  private long anytimeFailuresBefore;
+
+  // the duals of a solve stopped at its pivot limit bound the objective too
+  // (org.jacop.lp.anytimeBound)
+  private static final boolean ANYTIME_BOUND =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.anytimeBound", "true"));
+
   /** Statistics: the objective bound of the first optimal solve, or NaN. */
   public double rootBound = Double.NaN;
 
@@ -2678,9 +2695,18 @@ public class LinearRelaxation extends Constraint
               || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
       }
-      return;
+      if (!ANYTIME_BOUND || objective == null) {
+        return;
+      }
+      // the duals of a dual simplex stopped at its limit are those of a basis that is dual
+      // feasible up to the tolerances: the certificate below cleans their signs and bounds the
+      // objective over the current domains, which holds whatever the multipliers
+      anytimeSolves++;
+      anytimePruningsBefore = prunings;
+      anytimeFailuresBefore = failures;
+    } else {
+      stalled = 0;
     }
-    stalled = 0;
     if (status == LpSolver.OPTIMAL && (keepSolutions || store.level <= rootSolutionLevel)) {
       // the last solution is kept also before keepSolutions: the selection that follows it is
       // made after the root propagation, and the solves of the search may never be optimal
@@ -2708,63 +2734,74 @@ public class LinearRelaxation extends Constraint
       infeasible++;
       y = byRow(lp.farkas());
     } else if (objective != null) {
-      if (Double.isNaN(rootBound)) {
+      if (Double.isNaN(rootBound) && status == LpSolver.OPTIMAL) {
         rootBound = lp.value(0);
       }
       y = byRow(lp.duals());
     } else {
       return;
     }
-    for (int s = 0; s < SCALES.length; s++) {
-      long[] lambda = scaled(y, SCALES[s]);
-      if (lambda == null) {
-        countUnproven(status);
-        return;
-      }
-      int[][] facts = new int[2][];
-      long[][] used = new long[2][];
-      LinearForm[] localForms = certificate(lambda, facts, used);
-      if (localForms == null) {
-        continue; // the combination overflows: try a smaller scale
-      }
-      if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
-        List<LinearForm> kept = new ArrayList<>();
-        List<Certificate> keptCertificates = new ArrayList<>();
-        List<int[]> keptFacts = new ArrayList<>();
-        for (int k = 0; k < localForms.length; k++) {
-          if (localForms[k] != null) {
-            kept.add(localForms[k]);
-            keptCertificates.add(certified(localForms[k], used[k], k == 0));
-            keptFacts.add(facts[k]);
-          }
-        }
-        rootForms = kept.toArray(new LinearForm[0]);
-        rootCertificates = keptCertificates.toArray(new Certificate[0]);
-        rootFacts = keptFacts.toArray(new int[0][]);
-        if (restartSolvesOn && RESTART_FROM_ROOT && simplex != Simplex.LAZY && objective != null) {
-          rootSimplex = lp.copy();
-          rootSimplexRows = rows();
-          rootSimplexLpRows = lpRow.clone();
-        }
-      }
-      boolean fits = true;
-      for (LinearForm f : localForms) {
-        fits &= f == null || fits(f);
-      }
-      if (fits || s == SCALES.length - 1) {
-        for (int k = 0; k < localForms.length; k++) {
-          if (localForms[k] != null) {
-            propagate(store, localForms[k], facts[k], certified(localForms[k], used[k], k == 0));
-          }
-        }
-        if (status != LpSolver.INFEASIBLE) {
+    try {
+      for (int s = 0; s < SCALES.length; s++) {
+        long[] lambda = scaled(y, SCALES[s]);
+        if (lambda == null) {
+          countUnproven(status);
           return;
         }
-        // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
+        int[][] facts = new int[2][];
+        long[][] used = new long[2][];
+        LinearForm[] localForms = certificate(lambda, facts, used);
+        if (localForms == null) {
+          continue; // the combination overflows: try a smaller scale
+        }
+        if (status == LpSolver.OPTIMAL && (calls == 1 || restarting)) {
+          List<LinearForm> kept = new ArrayList<>();
+          List<Certificate> keptCertificates = new ArrayList<>();
+          List<int[]> keptFacts = new ArrayList<>();
+          for (int k = 0; k < localForms.length; k++) {
+            if (localForms[k] != null) {
+              kept.add(localForms[k]);
+              keptCertificates.add(certified(localForms[k], used[k], k == 0));
+              keptFacts.add(facts[k]);
+            }
+          }
+          rootForms = kept.toArray(new LinearForm[0]);
+          rootCertificates = keptCertificates.toArray(new Certificate[0]);
+          rootFacts = keptFacts.toArray(new int[0][]);
+          if (restartSolvesOn
+              && RESTART_FROM_ROOT
+              && simplex != Simplex.LAZY
+              && objective != null) {
+            rootSimplex = lp.copy();
+            rootSimplexRows = rows();
+            rootSimplexLpRows = lpRow.clone();
+          }
+        }
+        boolean fits = true;
+        for (LinearForm f : localForms) {
+          fits &= f == null || fits(f);
+        }
+        if (fits || s == SCALES.length - 1) {
+          for (int k = 0; k < localForms.length; k++) {
+            if (localForms[k] != null) {
+              propagate(store, localForms[k], facts[k], certified(localForms[k], used[k], k == 0));
+            }
+          }
+          if (status != LpSolver.INFEASIBLE) {
+            return;
+          }
+          // the rounded Farkas multipliers did not prove the infeasibility: try a smaller scale
+        }
+        // the bounds reasoning on the form would overflow: try a smaller scale
       }
-      // the bounds reasoning on the form would overflow: try a smaller scale
+      countUnproven(status);
+    } finally {
+      if (anytimePruningsBefore >= 0) {
+        anytimePrunings += prunings - anytimePruningsBefore;
+        anytimeFailures += failures - anytimeFailuresBefore;
+        anytimePruningsBefore = -1;
+      }
     }
-    countUnproven(status);
   }
 
   // an infeasible LP solve that ends without an integer certificate

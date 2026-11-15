@@ -1112,6 +1112,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pivots()
             + "\n%%%mzn-stat: lpLimits="
             + r.limits
+            + "\n%%%mzn-stat: lpAnytime="
+            + r.anytimeSolves
+            + "\n%%%mzn-stat: lpAnytimePrunings="
+            + r.anytimePrunings
+            + "\n%%%mzn-stat: lpAnytimeFailures="
+            + r.anytimeFailures
             + "\n%%%mzn-stat: lpInfeasible="
             + r.infeasible
             + "\n%%%mzn-stat: lpUnproven="
