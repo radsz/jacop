@@ -217,12 +217,10 @@ class AntichainFlatzincTest {
           for (int c = 0; c < 4; c++) {
             String b = "l" + i + "_" + j + "_" + c;
             fzn.append("var bool: ").append(b).append(";\n");
-            con.append(
+            String less =
                 String.format(
-                    "constraint " + LESS[random.nextInt(LESS.length)] + ";%n",
-                    "x" + i + "_" + c,
-                    "x" + j + "_" + c,
-                    b));
+                    LESS[random.nextInt(LESS.length)], "x" + i + "_" + c, "x" + j + "_" + c, b);
+            con.append("constraint ").append(less).append(";\n");
             literals.add(b);
           }
           con.append("constraint bool_clause(")

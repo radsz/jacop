@@ -113,7 +113,29 @@ public class AntichainDetector {
   private final List<IntVar[]> clauses = new ArrayList<>();
 
   // the element constraints a = list[k]
-  private record Element(IntVar index, IntVar[] list, int offset) {}
+  private static final class Element {
+    private final IntVar index;
+    private final IntVar[] list;
+    private final int offset;
+
+    Element(IntVar index, IntVar[] list, int offset) {
+      this.index = index;
+      this.list = list;
+      this.offset = offset;
+    }
+
+    IntVar index() {
+      return index;
+    }
+
+    IntVar[] list() {
+      return list;
+    }
+
+    int offset() {
+      return offset;
+    }
+  }
 
   private final Map<IntVar, Element> elementOf = new IdentityHashMap<>();
 
@@ -474,8 +496,8 @@ public class AntichainDetector {
     }
     long most = (long) width;
     // S, a multiple of the largest rank, with n * S an int
-    long scale = most * Math.max(1, (Integer.MAX_VALUE / 2) / ((long) n * most));
-    if (scale / most < 1 || (long) n * scale > Integer.MAX_VALUE / 2) {
+    long scale = most * Math.max(1, (Integer.MAX_VALUE / 2) / (n * most));
+    if (scale / most < 1 || n * scale > Integer.MAX_VALUE / 2) {
       return;
     }
     int[] weight = new int[length + 1];
