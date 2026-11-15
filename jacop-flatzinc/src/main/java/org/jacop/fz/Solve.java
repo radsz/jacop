@@ -4214,7 +4214,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + "\n%%%mzn-stat: lcgHeldFailures="
         + lcg.heldFailures
         + "\n%%%mzn-stat: lcgCoreBound="
-        + (minimize ? core.lowerBound : -core.lowerBound);
+        + (minimize ? core.lowerBound : -core.lowerBound)
+        + "\n%%%mzn-stat: lcgCoreObjectiveProbes="
+        + core.objectiveProbes
+        + "\n%%%mzn-stat: lcgCoreProbeStops="
+        + core.probeStops;
   }
 
   // the fewest variables not defined by a constraint that the neighbourhoods keep to; with fewer,
