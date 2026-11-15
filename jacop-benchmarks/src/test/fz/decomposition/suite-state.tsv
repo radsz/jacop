@@ -11635,3 +11635,96 @@ C	mznc:above1hour/2023_evm-super-compilation/BDARUMA_run_code_of_0_block_284_170
 C	mznc:upTo5sec/2017_rel2onto/5_28	56778b558f734422	obj1:f	PASS	COMPLETE	1	223412	2026-11-15T16:48:14Z	
 C	mznc:upTo5sec/2017_rel2onto/5_28	56778b558f734422	obj1:lcg	PASS	COMPLETE	1	74820	2026-11-15T16:49:29Z	
 C	mznc:upTo5sec/2017_rel2onto/5_28	56778b558f734422	obj1:lcg-f	PASS	COMPLETE	1	21281	2026-11-15T16:49:51Z	
+P	mznc:upTo30sec/2018_rotating-workforce/Example1479	f6547ba3c776681b	satisfy		INCOMPLETE	0	0	0	300272	300	2026-11-15T16:56:14Z	jacop_count_values_bounds,jacop_regular
+P	mznc:above1hour/2024_portal/small_3	74e3538b149fb2bd	minimize	20	INCOMPLETE	0	0	0	300219	300	2026-11-15T16:59:59Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_if_then_else_bool,jacop_if_then_else_int,jacop_minimum,jacop_table_int
+P	mznc:above1hour/2024_neighbours/neightbours-new-6	ba8711ff8d6519ed	maximize	76	INCOMPLETE	16	16	fdefc4f1f9b24393	300213	300	2026-11-15T17:01:14Z	jacop_lex_lesseq_int
+P	mznc:above1hour/2022_rotating-workforce-scheduling/rws-instance-e-30-s-9	68189ded28a29211	satisfy		INCOMPLETE	0	0	0	300220	300	2026-11-15T17:01:14Z	jacop_count_values_bounds,jacop_regular
+P	mznc:above1hour/2023_evm-super-compilation/isolated_block_6_0_input	37a9e6007e969770	minimize	13	INCOMPLETE	0	0	0	300184	300	2026-11-15T17:05:35Z	jacop_array_var_bool_element_nonshifted,jacop_array_var_int_element_nonshifted,jacop_count_values_bounds,jacop_if_then_else_bool,jacop_if_then_else_int
+P	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	maximize	48	COMPLETE	218	218	58a694c34574c64b	209922	300	2026-11-15T17:06:01Z	jacop_array_var_int_element_nonshifted,jacop_count_values,jacop_lex_lesseq_int
+P	mznc:upTo5min/2026_gcc-benchmark/instance-l42_3	9d16f9e00a0c1f4e	satisfy		INCOMPLETE	0	0	0	300157	300	2026-11-15T17:10:35Z	jacop_count_values_bounds
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	all:f	PARTIAL	INCOMPLETE	151	300154	2026-11-15T17:11:01Z	151 of 218 solutions before the limit
+P	mznc:above1hour/2021_neighbours/neightbours-new-20	6b40331c41431535	maximize	93	INCOMPLETE	0	0	0	300189	300	2026-11-15T17:11:15Z	jacop_lex_lesseq_int
+P	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	maximize	34	COMPLETE	48	48	e22c7beb1f843c3f	52555	300	2026-11-15T17:12:11Z	jacop_array_var_bool_element_nonshifted,jacop_if_then_else_bool
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	decomp:jacop_count_values	PASS	COMPLETE	218	232242	2026-11-15T17:14:53Z	
+P	jacop:upTo30sec/rotating-workforce/Example1479	0ae81c1866212947	satisfy		INCOMPLETE	0	0	0	300171	300	2026-11-15T17:15:36Z	jacop_count_values_bounds,jacop_regular
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	all:f	PARTIAL	INCOMPLETE	48	300170	2026-11-15T17:17:11Z	48 of 48 solutions before the limit
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	decomp:jacop_array_var_bool_element_nonshifted	PASS	COMPLETE	48	55266	2026-11-15T17:18:07Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	218	227223	2026-11-15T17:18:40Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	decomp:jacop_if_then_else_bool	PASS	COMPLETE	48	62705	2026-11-15T17:19:09Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj0:plain	PASS	COMPLETE	1	57154	2026-11-15T17:20:07Z	
+P	mznc:upTo10min/2022_rotating-workforce-scheduling/rws-instance-e-80-s-1	578d0d0fc5c87607	satisfy		INCOMPLETE	6204	6204	8ff1f7ebd937fec7	300201	300	2026-11-15T17:20:36Z	jacop_count_values_bounds,jacop_regular
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj0:f	PASS	COMPLETE	1	139562	2026-11-15T17:22:26Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj0:lcg	PASS	COMPLETE	1	4845	2026-11-15T17:22:31Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj0:lcg-f	PASS	COMPLETE	1	3143	2026-11-15T17:22:34Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj0:lcg:decomp:jacop_array_var_bool_element_nonshifted	PASS	COMPLETE	1	4351	2026-11-15T17:22:39Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj0:lcg:decomp:jacop_if_then_else_bool	PASS	COMPLETE	1	4669	2026-11-15T17:22:43Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj1:plain	PASS	COMPLETE	1	39014	2026-11-15T17:23:22Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	decomp:jacop_lex_lesseq_int	PARTIAL	INCOMPLETE	195	300205	2026-11-15T17:23:41Z	195 of 218 solutions before the limit
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj1:f	PASS	COMPLETE	1	96220	2026-11-15T17:24:58Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj1:lcg	PASS	COMPLETE	1	4100	2026-11-15T17:25:03Z	
+C	mznc:upTo1min/2023_valve-network/horizon6	61341258492b2f66	obj1:lcg-f	PASS	COMPLETE	1	4158	2026-11-15T17:25:07Z	
+P	mznc:upTo5sec/2022_rotating-workforce-scheduling/rws-instance-e-90-s-2	5fafd795774b868c	satisfy		INCOMPLETE	652703	652703	5106750c936fe6d4	300303	300	2026-11-15T17:25:36Z	jacop_count_values_bounds,jacop_regular
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	std	PARTIAL	INCOMPLETE	178	300230	2026-11-15T17:28:41Z	1 of 1 solutions before the limit
+P	mznc:upTo5sec/2019_zephyrus/12__6__6__3	cedb3033d2e99017	minimize	780	INCOMPLETE	1107754	1107754	b9582b0a581a9250	300190	300	2026-11-15T17:30:08Z	jacop_lex_lesseq_int
+P	jacop:upTo5sec/rotating-workforce-scheduling/rws-instance-e-90-s-2	312ddaaa61045d7f	satisfy		INCOMPLETE	644836	644836	2e1dc1f0bb382c86	300219	300	2026-11-15T17:30:37Z	jacop_count_values_bounds,jacop_regular
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	std:f	PARTIAL	INCOMPLETE	0	300196	2026-11-15T17:33:41Z	0 of 1 solutions before the limit
+P	mznc:upTo10min/2016_zephyrus/12__8__6__3	f8cbebd2479c22de	minimize	1300	INCOMPLETE	1222344	1222344	ce132d07f9d66d1e	300266	300	2026-11-15T17:35:10Z	jacop_lex_lesseq_int
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	objstd:lcg	PASS	COMPLETE	1	165053	2026-11-15T17:36:26Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj0:plain	PASS	COMPLETE	1	15910	2026-11-15T17:36:42Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj0:f	PASS	COMPLETE	1	39186	2026-11-15T17:37:21Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj0:lcg	PASS	COMPLETE	1	8305	2026-11-15T17:37:29Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj0:lcg-f	PASS	COMPLETE	1	6008	2026-11-15T17:37:35Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj0:lcg:decomp:jacop_count_values	PASS	COMPLETE	1	11349	2026-11-15T17:37:47Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	8926	2026-11-15T17:37:56Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj0:lcg:decomp:jacop_lex_lesseq_int	PASS	COMPLETE	1	11914	2026-11-15T17:38:08Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj1:plain	PASS	COMPLETE	1	22002	2026-11-15T17:38:30Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj1:f	PASS	COMPLETE	1	66550	2026-11-15T17:39:36Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj1:lcg	PASS	COMPLETE	1	10505	2026-11-15T17:39:47Z	
+C	mznc:upTo10min/2023_chessboard/chessboard3	5541c7475968ae5d	obj1:lcg-f	PASS	COMPLETE	1	5021	2026-11-15T17:39:52Z	
+P	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	satisfy		COMPLETE	9	9	686102cb7334b072	574	300	2026-11-15T17:39:52Z	jacop_circuit
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	all:f	PASS	COMPLETE	9	537	2026-11-15T17:39:53Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	decomp:jacop_circuit	PASS	COMPLETE	9	595	2026-11-15T17:39:54Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	std	PASS	COMPLETE	9	559	2026-11-15T17:39:54Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	std:f	PASS	COMPLETE	9	672	2026-11-15T17:39:55Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	objstd:lcg	PASS	COMPLETE	1	714	2026-11-15T17:39:56Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj0:plain	PASS	COMPLETE	1	624	2026-11-15T17:39:56Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj0:f	PASS	COMPLETE	1	689	2026-11-15T17:39:57Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj0:lcg	PASS	COMPLETE	1	703	2026-11-15T17:39:58Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj0:lcg-f	PASS	COMPLETE	1	585	2026-11-15T17:39:58Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj0:lcg:decomp:jacop_circuit	PASS	COMPLETE	1	796	2026-11-15T17:39:59Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj1:plain	PASS	COMPLETE	1	573	2026-11-15T17:39:59Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj1:f	PASS	COMPLETE	1	638	2026-11-15T17:40:00Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj1:lcg	PASS	COMPLETE	1	572	2026-11-15T17:40:01Z	
+C	jacop:allsolutions/m_circuit/m_circuit	3bb083d4f4add123	obj1:lcg-f	PASS	COMPLETE	1	616	2026-11-15T17:40:01Z	
+P	mznc:above1hour/2016_zephyrus/12__6__8__3	40493b514b7b6b4a	minimize	1300	INCOMPLETE	646496	646496	3dd93214d0acd002	300194	300	2026-11-15T17:40:12Z	jacop_lex_lesseq_int
+P	mznc:above1hour/2023_valve-network/horizon12	9d0739e88cc84bf9	maximize	314	INCOMPLETE	0	0	0	300245	300	2026-11-15T17:40:37Z	jacop_array_var_bool_element_nonshifted,jacop_if_then_else_bool
+P	mznc:above1hour/2021_vrp-submission/toy_D_2v_4l_w_reload	605fb697bbf11cea	minimize	107	INCOMPLETE	2000000	2000000	35e60ab89acd0e34	83768	300	2026-11-15T17:42:02Z	jacop_array_var_int_element_nonshifted,jacop_circuit
+P	mznc:upTo1hour/2021_vrp-submission/A_1v_7l_w_reload	4569fc27b85f1d9b	minimize	257	INCOMPLETE	2000000	2000000	d8b39314112fe56	116711	300	2026-11-15T17:44:01Z	jacop_array_var_int_element_nonshifted,jacop_circuit
+P	mznc:above1hour/2019_zephyrus/12__10__8__3	c753d1ad2e5443a4	minimize	3120	INCOMPLETE	0	0	0	300250	300	2026-11-15T17:45:03Z	jacop_lex_lesseq_int
+P	mznc:upTo5sec/2026_zephyrus-2016/12__6__10__3	67bd3682aaaace3a	minimize	1820	INCOMPLETE	0	0	0	300215	300	2026-11-15T17:45:13Z	jacop_lex_lesseq_int
+P	mznc:upTo5sec/2026_zephyrus-2016/12__10__10__3	3f145fa5eeb1c156	minimize	4940	INCOMPLETE	0	0	0	300171	300	2026-11-15T17:50:05Z	jacop_lex_lesseq_int
+P	mznc:upTo1min/2016_zephyrus/14__8__6__3	31de675b13c104b2	minimize	1170	INCOMPLETE	1161395	1161395	d22187bcfc0d3742	300143	300	2026-11-15T17:50:15Z	jacop_lex_lesseq_int
+P	mznc:above1hour/2025_tsptw/n20w180.004	13a0ebac85d22965	minimize	286	INCOMPLETE	3	3	db12bb04f9f808b3	300217	300	2026-11-15T17:51:34Z	jacop_array_var_int_element_nonshifted,jacop_circuit
+P	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	minimize	190	COMPLETE	790656	790656	828251986db233cd	48847	300	2026-11-15T17:52:32Z	jacop_array_var_int_element_nonshifted,jacop_circuit,jacop_maximum
+P	mznc:upTo10min/2017_opd/small_bibd_06_50_25	3f980183c1854696	minimize	10	INCOMPLETE	39	39	5e19449f881f8b32	300172	300	2026-11-15T17:55:27Z	jacop_lex_lesseq_int
+P	mznc:upTo5min/2017_opd/small_bibd_08_28_14	e842a19d27af6633	minimize	6	INCOMPLETE	677	677	6ffbd44dd8fe049f	300190	300	2026-11-15T17:56:39Z	jacop_lex_lesseq_int
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	all:f	PARTIAL	INCOMPLETE	619096	300205	2026-11-15T17:57:32Z	619096 of 790656 solutions before the limit
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	790656	45609	2026-11-15T17:58:18Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	decomp:jacop_circuit	PASS	COMPLETE	790656	283845	2026-11-15T18:03:02Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	decomp:jacop_maximum	PASS	COMPLETE	790656	42662	2026-11-15T18:03:45Z	
+P	mznc:above1hour/2014_mqueens/n13	e553e3112440017d	minimize	7	INCOMPLETE	3	3	3c2081b902243adc	300161	300	2026-11-15T18:03:53Z	jacop_lex_lesseq_int
+P	mznc:above1hour/2023_chessboard/chessboard_n9_1	2d72012f45deb2d0	maximize	190	INCOMPLETE	5	5	2cc1f822eed11d76	300172	300	2026-11-15T18:06:40Z	jacop_array_var_int_element_nonshifted,jacop_count_values,jacop_lex_lesseq_int
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	std	PASS	COMPLETE	790656	289393	2026-11-15T18:08:34Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	std:f	PARTIAL	INCOMPLETE	395328	300132	2026-11-15T18:13:35Z	1 of 2 solutions before the limit
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	objstd:lcg	PASS	COMPLETE	1	74321	2026-11-15T18:14:49Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj0:plain	PASS	COMPLETE	1	2798	2026-11-15T18:14:52Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj0:f	PASS	COMPLETE	1	6233	2026-11-15T18:14:58Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj0:lcg	PASS	COMPLETE	1	3160	2026-11-15T18:15:01Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj0:lcg-f	PASS	COMPLETE	1	4817	2026-11-15T18:15:06Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	3332	2026-11-15T18:15:09Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj0:lcg:decomp:jacop_circuit	PASS	COMPLETE	1	45333	2026-11-15T18:15:55Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj0:lcg:decomp:jacop_maximum	PASS	COMPLETE	1	3135	2026-11-15T18:15:58Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj1:plain	PASS	COMPLETE	1	6674	2026-11-15T18:16:04Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj1:f	PASS	COMPLETE	1	13345	2026-11-15T18:16:18Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj1:lcg	PASS	COMPLETE	1	5868	2026-11-15T18:16:24Z	
+C	mznc:above1hour/2019_stochastic-vrp/vrp-s2-v2-c9_vrp-v2-c9_det	c945eee88d856cfc	obj1:lcg-f	PASS	COMPLETE	1	48618	2026-11-15T18:17:12Z	
