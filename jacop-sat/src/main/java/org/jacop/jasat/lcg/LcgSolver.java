@@ -4230,6 +4230,24 @@ public final class LcgSolver implements ExternalPropagator {
     coresWithoutSolutionOnly = only;
   }
 
+  // -Djacop.lcg.coreTrim=R: the times each core of the core-guided phase is solved again under its
+  // own literals while that shrinks it; 0 = never
+  private int coreTrim = Integer.getInteger("jacop.lcg.coreTrim", 3);
+
+  /**
+   * Sets how many times the core-guided phase solves each core again under its own literals while
+   * that shrinks it (core trimming); 0 takes each core as the solver gives it.
+   *
+   * @param rounds the most calls per core, 3 by default (property {@code jacop.lcg.coreTrim})
+   */
+  public void setCoreTrim(int rounds) {
+    coreTrim = rounds;
+  }
+
+  int coreTrim() {
+    return coreTrim;
+  }
+
   /**
    * Sets whether the core-guided phase of {@link #minimize} is skipped after branch and bound when
    * its probe ({@link #setCoreDelay}) stopped without a solution of its own and branch and bound
