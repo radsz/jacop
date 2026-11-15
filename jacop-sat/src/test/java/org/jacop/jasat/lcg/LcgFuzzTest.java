@@ -69,6 +69,7 @@ import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ConvexAllocation;
 import org.jacop.constraints.ConvexCost;
+import org.jacop.constraints.CostAlldifferent;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
@@ -105,6 +106,7 @@ import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinOfSums;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.NoGood;
@@ -196,6 +198,7 @@ import org.jacop.constraints.regular.CostMdd;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.MultiCostRegular;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
@@ -513,6 +516,16 @@ class LcgFuzzTest {
           : new MultiCostRegular(v, transition, -1, 0, finals, costs, cost);
     }
 
+    /** A binary table of random pairs kept domain consistent with bit-sets. */
+    private BinaryBitTable binaryBitTable() {
+      IntVar[] v = pick(x, 2);
+      int[][] tuples = new int[2 + rnd.nextInt(8)][];
+      for (int t = 0; t < tuples.length; t++) {
+        tuples[t] = new int[] {value(), value()};
+      }
+      return new BinaryBitTable(v[0], v[1], tuples);
+    }
+
     /** A hybrid table of 2 or 3 columns with random unary restrictions and, rarely, binary ones. */
     private HybridTable hybridTable() {
       IntVar[] v = pick(x, 2 + rnd.nextInt(2));
@@ -540,7 +553,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(41);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(43);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -678,6 +691,17 @@ class LcgFuzzTest {
             new AllDifferentLists(
                 new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)},
                 rnd.nextBoolean() ? new int[0][] : new int[][] {{rnd.nextInt(3), rnd.nextInt(3)}});
+        case 41 -> {
+          IntVar[] ca = chain("ca", 3, 1, 4);
+          post(new Alldifferent(ca));
+          int[][] c = costs(4);
+          yield new CostAlldifferent(ca, new int[][] {c[0], c[1], c[2]}, intVar("cc", 0, 15));
+        }
+        case 42 ->
+            new MinOfSums(
+                pick(x, 2),
+                new IntVar[] {intVar("my", -1, 3), rnd.nextBoolean() ? null : intVar("mz", 0, 2)},
+                intVar("mm", -2, 7));
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
@@ -1121,7 +1145,7 @@ class LcgFuzzTest {
         }
         case 61 -> new XplusClteqZImplied(bool(), p[0], value(), p[1]);
         case 62 -> rnd.nextBoolean() ? new Not(primitive(0)) : new Reified(primitive(0), bool());
-        case 64 -> hybridTable();
+        case 64 -> rnd.nextInt(3) == 0 ? binaryBitTable() : hybridTable();
         case 65 -> regular();
         case 66 -> mdd();
         case 67 -> unaryTransition();

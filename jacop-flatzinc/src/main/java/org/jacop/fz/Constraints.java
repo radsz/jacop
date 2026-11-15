@@ -34,17 +34,21 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.UncheckedIOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Set;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
@@ -61,6 +65,7 @@ import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
 import org.jacop.fz.constraints.ElementTableDetector;
+import org.jacop.fz.constraints.EnforcementInliner;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
@@ -69,6 +74,7 @@ import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
+import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -337,6 +343,17 @@ public class Constraints implements ParserTreeConstants {
         dictionary.costNetwork = costNetwork;
       }
 
+      // controls of half-reified constraints that only clauses want true are replaced by literals
+      EnforcementInliner inliner = null;
+      if (EnforcementInliner.enabled() && options.proof() == null && !manySolutions) {
+        inliner = new EnforcementInliner(support, replaced, keptVariables(astTree));
+        inliner.detect(astTree, cf);
+        if (!inliner.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(inliner.replaced());
+        }
+      }
+
       if (!"false".equals(AlldiffChannels.rule())) {
         support.alldiffChannels = AlldiffChannels.collect(support, astTree);
         support.alldiffChannels.addAll(tabled);
@@ -356,10 +373,27 @@ public class Constraints implements ParserTreeConstants {
             }
             SimpleNode snode = (SimpleNode) node.jjtGetChild(j);
             if (!replaced.contains(snode.jjtGetChild(0))) {
-              generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
+              Support.ControlSubstitution control =
+                  support.controlSubstitution((SimpleNode) snode.jjtGetChild(0));
+              if (control == null) {
+                generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
+              } else {
+                support.beginControlSubstitution(control);
+                try {
+                  generateConstraint(snode, impliedRows.contains(snode.jjtGetChild(0)));
+                } finally {
+                  support.endControlSubstitution();
+                }
+              }
             }
           }
         }
+      }
+
+      if (inliner != null && !inliner.eliminated().isEmpty()) {
+        Set<Var> free = inliner.unconstrained();
+        dictionary.removeFromDefaultSearch(free);
+        dictionary.unusedVariables.addAll(free);
       }
 
       support.releaseLinearRewrites();
@@ -435,6 +469,16 @@ public class Constraints implements ParserTreeConstants {
         new CountPartnersDetector(support).detect(astTree);
       }
 
+      // the pigeonhole bound on the equal pairs of variables whose pairs all have equality
+      // indicators, redundant; --proof does not encode it
+      if (AgreementCountDetector.enabled() && options.proof() == null) {
+        AgreementCountDetector agreements = new AgreementCountDetector(support);
+        agreements.detect(astTree);
+        if (agreements.infeasible()) {
+          throw Store.failException;
+        }
+      }
+
       if (increasing != null && IncreasingDetector.sumEnabled()) {
         increasing.postSums();
       }
@@ -449,6 +493,10 @@ public class Constraints implements ParserTreeConstants {
       // the allocations it adds are redundant, and --proof does not encode them
       if (ConvexAllocationDetector.enabled(options.lcg()) && options.proof() == null) {
         new ConvexAllocationDetector(support, balanced).detect(astTree);
+      }
+
+      if (TimeIndexedBound.ARC_FLOW) {
+        dictionary.loadFunctions = new LoadFunctionDetector(support).detect(astTree);
       }
 
       // the stocking cost it adds is redundant, and --proof does not encode it
@@ -547,6 +595,27 @@ public class Constraints implements ParserTreeConstants {
       if (node.getId() == JJTMODELEND) {
         namedVariables(node, vars);
       }
+    }
+    return vars;
+  }
+
+  /** The variables of the solve item and the output variables, with the Booleans of aliases. */
+  private Set<IntVar> keptVariables(SimpleNode astTree) {
+    Set<IntVar> vars = solveItemVariables(astTree);
+    for (Var v : dictionary.outputVariables) {
+      if (v instanceof IntVar x) {
+        vars.add(x);
+      }
+    }
+    for (Var[] a : dictionary.outputArrays()) {
+      for (Var v : a) {
+        if (v instanceof IntVar x) {
+          vars.add(x);
+        }
+      }
+    }
+    for (IntVar v : new ArrayList<>(vars)) {
+      vars.add(dictionary.getAlias(v));
     }
     return vars;
   }

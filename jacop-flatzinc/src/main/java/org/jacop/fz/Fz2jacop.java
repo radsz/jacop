@@ -40,6 +40,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.jacop.core.FailException;
 import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
+import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.VeriPbProof;
 
 /**
@@ -147,6 +148,10 @@ public class Fz2jacop {
     return new Fz2jacop().solve(opt, InputStream.nullInputStream(), model);
   }
 
+  // how many times the time-out the watchdog waits under the virtual clock
+  private static final long VIRTUAL_CLOCK_WALL_FACTOR =
+      Long.getLong("jacop.virtualClock.wallFactor", 10);
+
   private int solve(Options opt, InputStream file, SimpleNode model) {
 
     Parser parser = new Parser(file);
@@ -161,7 +166,11 @@ public class Fz2jacop {
     if (watchdog && opt.getTimeOut() > 0 && opt.portfolioWorker() == null) {
       watch =
           TimeLimitWatchdog.start(
-              opt.getRemainingTimeOut(),
+              // under the virtual clock the search stops on its work, which can take longer than
+              // the time-out on the wall clock: the watchdog only catches a run that hangs
+              CdclSolver.VIRTUAL_CLOCK
+                  ? VIRTUAL_CLOCK_WALL_FACTOR * opt.getRemainingTimeOut()
+                  : opt.getRemainingTimeOut(),
               report(opt, parser),
               () -> {
                 // a proof ends after its last whole step, so that it still checks

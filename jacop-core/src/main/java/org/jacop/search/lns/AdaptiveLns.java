@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,8 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.Subcircuit;
@@ -182,6 +185,9 @@ public final class AdaptiveLns {
   /** Circuits with more nodes than this get no costs, so Shaw removal follows the routes. */
   static final int MAX_COST_NODES = 4096;
 
+  // the largest number of partners a customer of a route removes with it
+  static final int MAX_PARTNERS = 3;
+
   private static final double FIRST_SHARE = 0.2;
   private static final double MAX_SHARE = 0.95;
   private static final double SHARE_STEP = 1.15;
@@ -298,10 +304,15 @@ public final class AdaptiveLns {
     if (n < MIN_CIRCUIT) {
       return;
     }
+    // a model numbered from 0 posts its subcircuit on copies x[v] = y[v] + shift of its successors
+    // y, which are the search variables and the indexes of the arc costs
+    IntVar[] y = new IntVar[n];
+    long shift = searchCopies(x, y);
+    int yOffset = (int) (offset - shift);
     int[] varIndex = new int[n];
     boolean any = false;
     for (int v = 0; v < n; v++) {
-      Integer node = nodeOf.get(x[v]);
+      Integer node = y[v] == null ? null : nodeOf.get(y[v]);
       varIndex[v] = node != null && node < vars.length ? node : -1;
       any |= varIndex[v] >= 0 && !x[v].singleton();
     }
@@ -317,8 +328,8 @@ public final class AdaptiveLns {
     for (int v = 0; v < n && n <= MAX_COST_NODES; v++) {
       int[] list = null;
       int listOffset = 0;
-      for (Constraint c : x[v].constraintsWithWatches()) {
-        if (!(c instanceof AbstractElement e) || e.index() != x[v]) {
+      for (Constraint c : y[v] == null ? List.<Constraint>of() : y[v].constraintsWithWatches()) {
+        if (!(c instanceof AbstractElement e) || e.index() != y[v]) {
           continue;
         }
         int[] values;
@@ -345,8 +356,8 @@ public final class AdaptiveLns {
       if (list != null) {
         localCost[v] = new long[n];
         for (int w = 0; w < n; w++) {
-          // node w is the value w + offset, read at w + offset - listOffset - 1
-          int k = w + offset - listOffset - 1;
+          // node w is the value w + yOffset of y, read at w + yOffset - listOffset - 1
+          int k = w + yOffset - listOffset - 1;
           localCost[v][w] = k >= 0 && k < list.length ? list[k] : Long.MAX_VALUE;
         }
         found = true;
@@ -354,6 +365,7 @@ public final class AdaptiveLns {
     }
     SuccessorRoutes r =
         new SuccessorRoutes(x, offset, varIndex, found ? localCost : null, NEAR_COUNT);
+    r.setPartners(routePartners(y, yOffset));
     if (r.customerCount() > 1) {
       routings.add(r);
       for (int i : varIndex) {
@@ -362,6 +374,173 @@ public final class AdaptiveLns {
         }
       }
     }
+  }
+
+  /**
+   * Finds the nodes that must share a route: a model labels the nodes of a route, as the vehicle
+   * that visits them, with an element {@code label[y[v]] = label[v]} over the successors y, and
+   * states that two nodes have equal labels (a pickup and its delivery). Groups larger than {@link
+   * #MAX_PARTNERS} + 1 nodes (a label fixed for many nodes) are left out.
+   *
+   * @param y the successors, null where a successor has no search variable.
+   * @param offset the number of the first node.
+   * @return the partners of each node.
+   */
+  private int[][] routePartners(IntVar[] y, int offset) {
+    int n = y.length;
+    int[][] partners = new int[n][0];
+    // the label variables of each array, by node
+    Map<Object, IntVar[]> labels = new LinkedHashMap<>();
+    for (int v = 0; v < n; v++) {
+      if (y[v] == null) {
+        continue;
+      }
+      for (Constraint c : y[v].constraintsWithWatches()) {
+        IntVar[] list;
+        IntVar value;
+        int listOffset;
+        if (c instanceof ElementVariable e && e.index() == y[v]) {
+          list = e.variables();
+          value = e.value();
+          listOffset = e.indexOffset();
+        } else if (c instanceof ElementVariableFast e && e.index() == y[v]) {
+          list = e.variables();
+          value = e.value();
+          listOffset = e.indexOffset();
+        } else {
+          continue;
+        }
+        // node w is the value w + offset of y, read at w + offset - listOffset - 1
+        int k = v + offset - listOffset - 1;
+        if (list.length != n || k < 0 || k >= n || list[k] != value) {
+          continue;
+        }
+        IntVar[] byNode = labels.computeIfAbsent(list[0], key -> new IntVar[n]);
+        byNode[v] = value;
+      }
+    }
+    for (IntVar[] byNode : labels.values()) {
+      Map<IntVar, Integer> nodeOfLabel = new IdentityHashMap<>();
+      int[] parent = new int[n];
+      for (int v = 0; v < n; v++) {
+        parent[v] = v;
+        if (byNode[v] != null) {
+          Integer w = nodeOfLabel.putIfAbsent(byNode[v], v);
+          if (w != null) {
+            union(parent, v, w);
+          }
+        }
+      }
+      for (int v = 0; v < n; v++) {
+        if (byNode[v] == null || byNode[v].singleton()) {
+          continue;
+        }
+        for (Constraint c : byNode[v].constraintsWithWatches()) {
+          LinearForm f = c.arguments().size() == 2 ? LinearForms.of(c) : null;
+          if (f != null
+              && f.relation() == LinearForm.EQ
+              && f.vars().length == 2
+              && f.c() == 0
+              && f.weights()[0] == -f.weights()[1]) {
+            Integer w = nodeOfLabel.get(f.vars()[f.vars()[0] == byNode[v] ? 1 : 0]);
+            if (w != null) {
+              union(parent, v, w);
+            }
+          }
+        }
+      }
+      Map<Integer, List<Integer>> groups = new LinkedHashMap<>();
+      for (int v = 0; v < n; v++) {
+        if (byNode[v] != null && !byNode[v].singleton()) {
+          groups.computeIfAbsent(find(parent, v), key -> new ArrayList<>()).add(v);
+        }
+      }
+      for (List<Integer> g : groups.values()) {
+        if (g.size() < 2 || g.size() > MAX_PARTNERS + 1) {
+          continue;
+        }
+        for (int v : g) {
+          int[] p = partners[v];
+          int[] more = g.stream().mapToInt(Integer::intValue).filter(w -> w != v).toArray();
+          int[] all = Arrays.copyOf(p, p.length + more.length);
+          System.arraycopy(more, 0, all, p.length, more.length);
+          partners[v] = all;
+        }
+      }
+    }
+    return partners;
+  }
+
+  private static int find(int[] parent, int v) {
+    while (parent[v] != v) {
+      parent[v] = parent[parent[v]];
+      v = parent[v];
+    }
+    return v;
+  }
+
+  private static void union(int[] parent, int v, int w) {
+    parent[find(parent, v)] = find(parent, w);
+  }
+
+  /**
+   * Finds the search variables y of a circuit's successors x. They are x itself when some x[v] is a
+   * search variable. Otherwise they are the variables of which x are copies x[v] = y[v] + shift,
+   * for one shift common to all v, read from two-variable linear equations: MiniZinc posts the
+   * subcircuit of successors numbered from 0 on y + 1. A successor fixed at the root may have no
+   * copy (y[v] null).
+   *
+   * @param x the successors of the circuit.
+   * @param y filled with the search variables, null where there is none.
+   * @return the shift, 0 when y is x or no successor is a copy.
+   */
+  private long searchCopies(IntVar[] x, IntVar[] y) {
+    for (IntVar v : x) {
+      Integer node = nodeOf.get(v);
+      if (node != null && node < vars.length) {
+        System.arraycopy(x, 0, y, 0, x.length);
+        return 0;
+      }
+    }
+    long shift = 0;
+    for (int v = 0; v < x.length; v++) {
+      long s = copyShift(x[v], y, v);
+      if (s == 0 && !x[v].singleton() || s != 0 && shift != 0 && s != shift) {
+        Arrays.fill(y, null);
+        return 0;
+      }
+      if (s != 0) {
+        shift = s;
+      }
+    }
+    return shift;
+  }
+
+  // the shift s of x = y[v] + s for a search variable y[v] linked to x by a two-variable equation,
+  // or 0 when there is none
+  private long copyShift(IntVar x, IntVar[] y, int v) {
+    for (Constraint c : x.constraintsWithWatches()) {
+      LinearForm f = c.arguments().size() == 2 ? LinearForms.of(c) : null;
+      if (f == null || f.relation() != LinearForm.EQ || f.vars().length != 2) {
+        continue;
+      }
+      int k = f.vars()[0] == x ? 0 : 1;
+      IntVar other = f.vars()[1 - k];
+      Integer otherNode = nodeOf.get(other);
+      long wx = f.weights()[k];
+      // wx * x - wx * other = c: x = other + c / wx
+      if (f.vars()[k] == x
+          && other != x
+          && otherNode != null
+          && otherNode < vars.length
+          && (wx == 1 || wx == -1)
+          && f.weights()[1 - k] == -wx
+          && f.c() != 0) {
+        y[v] = other;
+        return f.c() * wx;
+      }
+    }
+    return 0;
   }
 
   /**

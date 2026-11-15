@@ -101,4 +101,51 @@ public final class ReifiedExplanation {
     out.truncate(mark);
     return false;
   }
+
+  /**
+   * Adds to {@code out} the reason of an entry made by the implication {@code b = 0 => c}: b is
+   * explained by the disentailment of c, an atom of c's variables by c's own explanation and b = 0.
+   *
+   * @param trail the trail
+   * @param entry the entry
+   * @param b the 0/1 variable, not among c's variables
+   * @param c the explanations of the implied constraint
+   * @param out where the reason entries are added
+   * @return false when there is no such reason
+   */
+  public static boolean explainNegatedControl(
+      AtomicTrail trail, int entry, IntVar b, Explainable c, EntryList out) {
+    if (trail.variable(entry) == b) {
+      // b = 1 only ever follows from c failing
+      return c.explainEntailment(trail, entry, false, out);
+    }
+    if (trail.maxBefore(b, entry) <= 0) {
+      trail.addUpperBound(b, entry, out);
+      return c.explain(trail, entry, out);
+    }
+    return false;
+  }
+
+  /**
+   * Adds to {@code out} the reason of a failure of the implication {@code b = 0 => c} now.
+   *
+   * @param trail the trail
+   * @param b the 0/1 variable, not among c's variables
+   * @param c the explanations of the implied constraint
+   * @param out where the reason entries are added
+   * @return false when there is no such reason
+   */
+  public static boolean explainNegatedControlFailure(
+      AtomicTrail trail, IntVar b, Explainable c, EntryList out) {
+    int now = trail.size();
+    int mark = out.size();
+    if (trail.maxBefore(b, now) <= 0) {
+      trail.addUpperBound(b, now, out);
+      if (c.explainFailure(trail, out) || c.explainEntailment(trail, now, false, out)) {
+        return true;
+      }
+    }
+    out.truncate(mark);
+    return false;
+  }
 }

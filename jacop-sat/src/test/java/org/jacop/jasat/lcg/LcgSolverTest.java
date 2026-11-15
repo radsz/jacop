@@ -882,6 +882,64 @@ class LcgSolverTest {
   }
 
   /**
+   * An objective that the core-guided phase cannot take (the maximum of pairwise different values,
+   * no linear sum) is bisected to closure when core-guided search and lower-bound runs are on, as
+   * under free search, at once or after a few conflicts: it keeps the optimum of plain branch and
+   * bound and proves it.
+   */
+  @Test
+  void anUncoredObjectiveIsBisectedToClosure() {
+    Random rnd = new Random(61);
+    int bisected = 0;
+    for (int instance = 0; instance < 8; instance++) {
+      long seed = rnd.nextLong();
+      int[] status = new int[2];
+      int[] optimum = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 7;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 3 * n);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 3; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(5) - 2;
+          }
+          store.impose(new LinearInt(x, a, ">=", r.nextInt(6)));
+        }
+        IntVar max = new IntVar(store, "max", 0, 3 * n);
+        store.impose(new Max(x, max));
+        if (!store.consistency()) {
+          break;
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setSeed(instance);
+        if (run == 1) {
+          solver.setCoreSearch(0.5, 1000, 100);
+          solver.setLowerBoundSearch(0.5, 3);
+          // half of them after a few conflicts of branch and bound with lower-bound runs
+          solver.setUncoredBisectionDelay(instance % 2 == 0 ? 0 : 5);
+        }
+        status[run] = solver.minimize(max);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(max);
+        }
+        if (run == 1 && solver.uncoredBisection()) {
+          bisected++;
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(bisected).isPositive();
+  }
+
+  /**
    * Objective shaving keeps the optimum and raises the lower bound by steps of more than one: the
    * sum of pairwise different values, whose root bound is far below the optimum, is minimised with
    * and without shaving, on random linear side constraints, and both find the same optimum.

@@ -58,6 +58,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
+import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllDifferentLists;
@@ -110,6 +111,7 @@ import org.jacop.constraints.IfThenBool;
 import org.jacop.constraints.IfThenElse;
 import org.jacop.constraints.IfThenElseBool;
 import org.jacop.constraints.Implies;
+import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.In;
 import org.jacop.constraints.Increasing;
 import org.jacop.constraints.IncreasingNValue;
@@ -197,6 +199,7 @@ import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostRegular;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.constraints.table.Restriction;
 import org.jacop.constraints.table.SimpleTable;
@@ -393,6 +396,71 @@ class SingleConstraintTest extends TestHelper {
     int[][] tuples = {{0, 0, 0}, {1, 1, 1}, {2, 2, 2}, {1, 2, 1}, {2, 2, 1}, {2, 0, 0}};
 
     assertThatThrownBy(() -> new Table(x, tuples)).isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void testBinaryBitTableAgainstBruteForce() {
+    Random random = new Random(20261114);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      int span = 3 + random.nextInt(trial % 3 == 0 ? 70 : 6);
+      int n = 3 + random.nextInt(2);
+      IntVar[] v = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        v[i] = randomVar(store, "v" + i, -1, span - 2, random);
+      }
+      int tables = 1 + random.nextInt(4);
+      List<int[]> scopes = new ArrayList<>();
+      List<Set<Long>> relations = new ArrayList<>();
+      for (int t = 0; t < tables; t++) {
+        int a = random.nextInt(n);
+        int b = (a + 1 + random.nextInt(n - 1)) % n;
+        int[][] tuples = new int[1 + random.nextInt(4 * span)][];
+        Set<Long> pairs = new HashSet<>();
+        for (int k = 0; k < tuples.length; k++) {
+          tuples[k] = new int[] {random.nextInt(span + 2) - 2, random.nextInt(span + 2) - 2};
+          pairs.add(((long) tuples[k][0] << 32) ^ (tuples[k][1] & 0xffffffffL));
+        }
+        scopes.add(new int[] {a, b});
+        relations.add(pairs);
+        store.impose(new BinaryBitTable(v[a], v[b], tuples));
+      }
+      long expected =
+          bruteForce(
+                  v,
+                  assignment -> {
+                    for (int t = 0; t < scopes.size(); t++) {
+                      int[] sc = scopes.get(t);
+                      long key =
+                          ((long) assignment[sc[0]] << 32) ^ (assignment[sc[1]] & 0xffffffffL);
+                      if (!relations.get(t).contains(key)) {
+                        return false;
+                      }
+                    }
+                    return true;
+                  })
+              .size();
+      if (tables == 1 && store.consistency()) {
+        // a single table is domain consistent: every value left has a support
+        int[] sc = scopes.get(0);
+        for (int side = 0; side < 2; side++) {
+          IntVar p = v[sc[side]];
+          IntVar q = v[sc[1 - side]];
+          for (int value : valuesOf(p)) {
+            boolean supported = false;
+            for (int w : valuesOf(q)) {
+              long key =
+                  side == 0
+                      ? ((long) value << 32) ^ (w & 0xffffffffL)
+                      : ((long) w << 32) ^ (value & 0xffffffffL);
+              supported |= relations.get(0).contains(key);
+            }
+            assertThat(supported).as("trial " + trial + " value " + value + " of " + p).isTrue();
+          }
+        }
+      }
+      assertThat((long) countSolutions(store, v, random)).as("trial " + trial).isEqualTo(expected);
+    }
   }
 
   @Test
@@ -9880,6 +9948,43 @@ class SingleConstraintTest extends TestHelper {
     es[0].domain.in(store.level, es[0], 0, 0);
     // without edge 0 every tree weighs at least 5
     assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * Enforcement inlining posts {@code ImpliesNot(b, XneqC)} for {@code int_ne_imp} under a negated
+   * control; presolve copies every constraint, so XneqC must be copyable (hook_mdd-decomp.fzn).
+   */
+  @Test
+  void impliesNotOfXneqCCanBeCopied() {
+    Store store = new Store();
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar x = new IntVar(store, "x", 0, 2);
+    ImpliesNot c = new ImpliesNot(b, new XneqC(x, 2));
+    assertThat(Copyable.canCopy(c)).isTrue();
+
+    Store child = new Store();
+    IntVar cb = new IntVar(child, "b", 0, 1);
+    IntVar cx = new IntVar(child, "x", 0, 2);
+    Map<Var, Var> copies = Map.of(b, cb, x, cx);
+    child.impose(
+        c.copy(
+            new VarMap() {
+              @Override
+              public Store target() {
+                return child;
+              }
+
+              @Override
+              @SuppressWarnings("unchecked")
+              public <V extends Var> V get(V v) {
+                return (V) copies.get(v);
+              }
+            }));
+    assertThat(child.consistency()).isTrue();
+    child.setLevel(child.level + 1);
+    cb.domain.in(child.level, cb, 0, 0);
+    assertThat(child.consistency()).isTrue();
+    assertThat(cx.max()).isEqualTo(1);
   }
 
   private static int root(int[] parent, int v) {
