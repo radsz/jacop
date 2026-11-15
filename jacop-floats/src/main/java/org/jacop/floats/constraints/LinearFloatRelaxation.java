@@ -84,7 +84,7 @@ public class LinearFloatRelaxation extends Constraint {
   private static final double TINY = 1e-12;
 
   // whether the products of the model get their envelopes
-  private static final boolean PRODUCTS =
+  private static final boolean PRODUCT_ENVELOPES =
       !"false".equals(System.getProperty("org.jacop.floats.lpProducts"));
 
   private final FloatVar[] columns;
@@ -222,9 +222,9 @@ public class LinearFloatRelaxation extends Constraint {
     this.rowHi = rowHi.clone();
     this.cost = cost;
     this.objective = 0;
-    double[] c = new double[columns.length];
-    c[objective] = 1;
-    this.c = c;
+    double[] objectiveRow = new double[columns.length];
+    objectiveRow[objective] = 1;
+    this.c = objectiveRow;
     lp = newSimplex(rowColumns, this.rowWeights, this.rowLo, this.rowHi);
     pivotLimit = 50 * (m + 4 * products.length + columns.length) + 1000;
     queueIndex = 4;
@@ -247,7 +247,7 @@ public class LinearFloatRelaxation extends Constraint {
     List<FloatVar[]> products = new ArrayList<>();
     for (Constraint c : constraintsOf(store)) {
       addRow(c, vars, weights, sides);
-      if (PRODUCTS && c instanceof PmulQeqR p) {
+      if (PRODUCT_ENVELOPES && c instanceof PmulQeqR p) {
         // SqrtPeqR(x, r) is PmulQeqR(r, r, x)
         products.add(new FloatVar[] {p.p, p.q, p.r});
       }
@@ -348,11 +348,6 @@ public class LinearFloatRelaxation extends Constraint {
   @Override
   public int getDefaultConsistencyPruningEvent() {
     return IntDomain.BOUND;
-  }
-
-  @Override
-  public void impose(Store store) {
-    super.impose(store);
   }
 
   // solves without a bound or a failure after which the relaxation stops: on arbitrage_loops5 it
@@ -599,11 +594,9 @@ public class LinearFloatRelaxation extends Constraint {
     if (aLo == 0 && aHi == 0) {
       return 0;
     }
-    double p =
-        Math.min(
-            Math.min(mulDown(aLo, bLo), mulDown(aLo, bHi)),
-            Math.min(mulDown(aHi, bLo), mulDown(aHi, bHi)));
-    return p;
+    return Math.min(
+        Math.min(mulDown(aLo, bLo), mulDown(aLo, bHi)),
+        Math.min(mulDown(aHi, bLo), mulDown(aHi, bHi)));
   }
 
   private static double mulDown(double a, double b) {

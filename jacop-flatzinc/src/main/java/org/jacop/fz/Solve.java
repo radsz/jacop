@@ -5279,7 +5279,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         if (listener != null) {
           listener.setSolutionLimit(listener.solutionsNo() + 1);
         }
-        label.setNodesOut(label.getNodes() + POINT_PROBE_NODES);
+        label.setNodesOut((long) label.getNodes() + POINT_PROBE_NODES);
         result = label.labeling(store, select, cost);
       }
     } catch (FailException _) {
