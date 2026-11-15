@@ -97,6 +97,9 @@ import org.jacop.lcg.PbModel;
 public class LinearRelaxation extends Constraint
     implements Explainable, LinearReasons, PbEncodable, Stateful, Copyable<LinearRelaxation> {
 
+  /** The value of a system property that turns a default-on flag off. */
+  private static final String FALSE = "false";
+
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The simplex that solves the relaxation. */
@@ -111,7 +114,7 @@ public class LinearRelaxation extends Constraint
 
   // whether certificate() cleans the combination: drops the multipliers of a missing side and
   // divides each inequality by the gcd of its weights
-  private static final boolean CLEAN = !"false".equals(System.getProperty("org.jacop.lp.clean"));
+  private static final boolean CLEAN = !FALSE.equals(System.getProperty("org.jacop.lp.clean"));
 
   // multipliers below this share of the largest are taken as round-off of the simplex
   private static final double NOISE = 1e-11;
@@ -146,7 +149,7 @@ public class LinearRelaxation extends Constraint
   // row fits the share (see of)
   private int leadExtra = 0;
   private static final boolean LEAD_ENCODINGS =
-      !"false".equals(System.getProperty("org.jacop.lp.leadEncodings"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.leadEncodings"));
   // the rows, the cuts last
   private int[][] rowColumns;
   private long[][] rowWeights;
@@ -225,7 +228,7 @@ public class LinearRelaxation extends Constraint
   // the cuts of a round that does not move the bound, stay in the pool instead of being dropped.
   // Both are off: such rows come back at the first solves in search, as its solution breaks them,
   // which undoes the root's choice to leave them out, and neither moved a result on the wide set
-  private static final boolean POOL = !"false".equals(System.getProperty("org.jacop.lp.pool"));
+  private static final boolean POOL = !FALSE.equals(System.getProperty("org.jacop.lp.pool"));
   private static final int POOL_AGE = Integer.getInteger("org.jacop.lp.poolAge", 100);
   private static final boolean POOL_EXTRA = Boolean.getBoolean("org.jacop.lp.poolExtra");
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
@@ -426,7 +429,7 @@ public class LinearRelaxation extends Constraint
   // the basis the deeper node left is optimal for bounds far from the current ones, the kept one
   // for bounds close to them (roadmap A5)
   private static final boolean KEEP_BASES =
-      !"false".equals(System.getProperty("org.jacop.lp.keepBases"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.keepBases"));
   private static final int BASIS_JUMP = Integer.getInteger("org.jacop.lp.basisJump", 2);
   private static final int MAX_BASES = Integer.getInteger("org.jacop.lp.maxBases", 32);
   // the dense simplex saves a basis with a copy of its tableau, about one pivot, so it keeps the
@@ -447,7 +450,7 @@ public class LinearRelaxation extends Constraint
 
   // whether the rows of constraints that are not linear relations are added (Linearizations)
   private static final boolean LINEARIZE =
-      !"false".equals(System.getProperty("org.jacop.lp.linearize"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.linearize"));
 
   // the rows of constraints that are not linear relations (Linearizations) are added at the first
   // solve, and kept when they move the bound, find infeasibility or are few
@@ -499,7 +502,7 @@ public class LinearRelaxation extends Constraint
 
   // MIR cuts at the root: rounds, cuts per round, and the share of the rows they may add
   private static final boolean CUTS_ENABLED =
-      !"false".equals(System.getProperty("org.jacop.lp.cuts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.cuts"));
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
   // rounds after the first CUT_ROUNDS, while each still moves the bound: at most this many rounds
   // in all, within CUT_EXTRA_NANOS of the end of the first CUT_ROUNDS
@@ -515,7 +518,7 @@ public class LinearRelaxation extends Constraint
   // simplex, which has no tableau, for the cut rounds; they stay there, with the cuts, when the
   // cuts raise the bound of the integer objective, and go back to the dense tableau otherwise
   private static final boolean SPARSE_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.sparseCuts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.sparseCuts"));
 
   // the dense simplex whose rows moved to the sparse one for the cuts, and its rows in the pool,
   // until the cut rounds end
@@ -565,7 +568,7 @@ public class LinearRelaxation extends Constraint
   // the share of the rows they may add; the rounds stop when no cut is violated or the bound
   // stalls, and the cuts are dropped when they do not move the bound
   private static final boolean CAPACITY_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.capacityCuts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.capacityCuts"));
   private static final int CAPACITY_ROUNDS = Integer.getInteger("org.jacop.lp.capacityRounds", 50);
   private static final int CAPACITY_STALL = 3;
 
@@ -577,7 +580,7 @@ public class LinearRelaxation extends Constraint
 
   // energy cuts of the cumulative resources at the root, in the rounds of the capacity cuts
   private static final boolean ENERGY_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.energyCuts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.energyCuts"));
 
   // the separations of the energy cuts, one for each cumulative resource
   private List<EnergyCuts> energy = new ArrayList<>();
@@ -595,7 +598,7 @@ public class LinearRelaxation extends Constraint
   // Hall cuts of the all-different constraints ({@link AlldifferentCuts}) at the root, after the
   // capacity and energy cuts and before the MIR cuts, in rounds like those; for an objective only
   private static final boolean ALLDIFF_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.alldiffCuts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.alldiffCuts"));
 
   // the separations of the Hall cuts, one for each all-different
   private List<AlldifferentCuts> hall = new ArrayList<>();
@@ -609,7 +612,7 @@ public class LinearRelaxation extends Constraint
   // the Hall cuts of the all-different constraints with exceptions (alldifferent_except_0) and of
   // the global cardinality constraints (GCC, CountValues), with the copies of their values
   private static final boolean ALLDIFF_VARIANTS =
-      !"false".equals(System.getProperty("org.jacop.lp.alldiffVariants"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.alldiffVariants"));
 
   // Hall cuts in search, as the capacity cuts: separated from the solution of an optimal solve
   // every hallPeriod solves, the period doubling (up to CAPACITY_MAX_PERIOD) after a separation
@@ -641,7 +644,7 @@ public class LinearRelaxation extends Constraint
   // generalized subtour elimination cuts of the forests of Tree and Path ({@link TreeCuts}) at the
   // root, after the Hall cuts and before the MIR cuts, in rounds like those; for an objective only
   private static final boolean TREE_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.treeCuts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.treeCuts"));
 
   // the separations of the tree cuts, one for each acyclic Reachable
   private List<TreeCuts> trees = new ArrayList<>();
@@ -733,7 +736,7 @@ public class LinearRelaxation extends Constraint
   // finds no violated cut and halving after one that does. The cuts hold globally (root demands,
   // capacity and self loops), go into the row pool and leave the simplex when they age.
   private static final boolean CAPACITY_SEARCH =
-      !"false".equals(System.getProperty("org.jacop.lp.capacitySearch"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.capacitySearch"));
   private static final int CAPACITY_SEARCH_CUTS =
       Integer.getInteger("org.jacop.lp.capacitySearchCuts", 10);
   private static final int CAPACITY_MAX_PERIOD = 1024;
@@ -754,7 +757,7 @@ public class LinearRelaxation extends Constraint
   // none, so the period doubles, as violated cuts that do not tighten only make each solve dearer
   // (Hall cuts in search lost pigment20a's and cable-tree-wiring A022's optima to that cost)
   private static final boolean SEARCH_CUT_GATE =
-      !"false".equals(System.getProperty("org.jacop.lp.searchCutGate"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.searchCutGate"));
 
   /** Statistics: separations in search whose cuts moved the bound or made the LP infeasible. */
   public long searchSeparationsMoved;
@@ -795,7 +798,7 @@ public class LinearRelaxation extends Constraint
   // not final, so that tests can switch it on
   static boolean restartSolvesOn = "true".equals(System.getProperty("org.jacop.lp.restartSolves"));
   private static final boolean RESTART_CUTS =
-      !"false".equals(System.getProperty("org.jacop.lp.restartCuts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.restartCuts"));
   private int rootLevel = -1;
   private long rootObjective;
   private boolean restarting;
@@ -811,7 +814,7 @@ public class LinearRelaxation extends Constraint
   // the columns whose reduced cost no longer fits in the gap. Only there: propagated at every call
   // they cost more than they prune (bus_scheduling, osolpro #169)
   private static final boolean ROOT_REDUCED_COSTS =
-      !"false".equals(System.getProperty("org.jacop.lp.rootReducedCosts"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.rootReducedCosts"));
   private LinearForm[] rootForms = new LinearForm[0];
   // the certificate of each root form, for a proof, or null
   private Certificate[] rootCertificates = new Certificate[0];
@@ -824,7 +827,7 @@ public class LinearRelaxation extends Constraint
   // then: a solve at a restart starts from its basis instead of the one search left, which is far
   // from the root (table-layout: a restart solve took as long as the first one)
   private static final boolean RESTART_FROM_ROOT =
-      !"false".equals(System.getProperty("org.jacop.lp.restartFromRoot"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.restartFromRoot"));
   private int restartPeriod = 1;
   private int restartsWaited;
   private LpSolver rootSimplex;
@@ -1776,16 +1779,16 @@ public class LinearRelaxation extends Constraint
 
   // the clause rows of tables over 0/1 variables (HybridTable.clauseRows)
   private static final boolean TABLE_CLAUSES =
-      !"false".equals(System.getProperty("org.jacop.lp.tableClauseRows"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.tableClauseRows"));
 
   // the conflicts of pairs of 0/1 literals merged into clique rows
   private static final boolean PAIR_CLIQUES =
-      !"false".equals(System.getProperty("org.jacop.lp.pairCliques"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.pairCliques"));
 
   // satisfaction models: a relaxation of the value encodings solved once at the root, to refute
   // the model (refutation)
   private static final boolean ROOT_REFUTATION =
-      !"false".equals(System.getProperty("org.jacop.lp.rootRefutation"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.rootRefutation"));
 
   // the pivots of the root solve of the refutation: the social golfers refute in 1,442; on the 351
   // XCSP 2022-2025 satisfaction instances it does not refute, the root solve took up to 1.7 s
@@ -3942,10 +3945,10 @@ public class LinearRelaxation extends Constraint
   // whether the MIR of a row of the tableau also tries the weight of its basic column as divisor,
   // the divisor of the textbook Gomory mixed-integer cut
   private static final boolean GOMORY_DIVISOR =
-      !"false".equals(System.getProperty("org.jacop.lp.gomoryDivisor"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.gomoryDivisor"));
 
   private static final boolean SLACK_GOMORY =
-      !"false".equals(System.getProperty("org.jacop.lp.slackGomory"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.slackGomory"));
 
   private boolean slackGomory = SLACK_GOMORY;
 
@@ -5066,35 +5069,32 @@ public class LinearRelaxation extends Constraint
     int kept = 0;
     int keptStatus = status;
     int last = k;
-    for (int p : prefixes) {
+    boolean stop = false;
+    for (int i = 0; i < prefixes.length && !stop; i++) {
+      int p = prefixes[i];
       if (full != null && (p < tiered || kept == lead)) {
-        break;
-      }
-      LpSolver trial = trialRows(status, before, m, p, columnsOf(p), p == plain);
-      last = p;
-      if (trial == null && p == lead && lead < k && trialStatus == LpSolver.LIMIT) {
-        // the value encodings alone stopped at the time of a large root solve: the longer
-        // prefixes, which hold them, would only spend more of it
-        break;
-      }
-      if (trial == null) {
-        if (full != null) {
-          // the shorter prefix does not help: the longer one kept stays
-          break;
+        stop = true;
+      } else {
+        LpSolver trial = trialRows(status, before, m, p, columnsOf(p), p == plain);
+        last = p;
+        if (trial == null) {
+          // the shorter prefix does not help: the longer one kept stays. When the value encodings
+          // alone stopped at the time of a large root solve, the longer prefixes, which hold them,
+          // would only spend more of it
+          stop = full != null || p == lead && lead < k && trialStatus == LpSolver.LIMIT;
+        } else if (full != null && !sameBound(full, keptStatus, trial, trialStatus)) {
+          // the longer prefix does better
+          droppedPivots += trial.pivots();
+          stop = true;
+        } else {
+          if (full != null) {
+            droppedPivots += full.pivots();
+          }
+          full = trial;
+          kept = p;
+          keptStatus = trialStatus;
         }
-        continue;
       }
-      if (full != null && !sameBound(full, keptStatus, trial, trialStatus)) {
-        // the longer prefix does better
-        droppedPivots += trial.pivots();
-        break;
-      }
-      if (full != null) {
-        droppedPivots += full.pivots();
-      }
-      full = trial;
-      kept = p;
-      keptStatus = trialStatus;
     }
     searchStartMin = null;
     searchStartMax = null;

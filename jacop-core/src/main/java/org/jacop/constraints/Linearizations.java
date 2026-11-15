@@ -68,6 +68,9 @@ import org.jacop.lcg.ValueIndicator;
  */
 public final class Linearizations {
 
+  /** The value of a system property that turns a default-on flag off. */
+  private static final String FALSE = "false";
+
   private Linearizations() {}
 
   /**
@@ -172,7 +175,7 @@ public final class Linearizations {
   // the clique rows over value Booleans lifted from implications (valueCliques); off with
   // -Dorg.jacop.lp.valueCliques=false
   private static final boolean VALUE_CLIQUES =
-      !"false".equals(System.getProperty("org.jacop.lp.valueCliques"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.valueCliques"));
 
   /**
    * Returns the set packing rows of the given rows with their Booleans replaced by the value
@@ -663,7 +666,7 @@ public final class Linearizations {
   // value encodings over LP-only columns: on or off, the largest domain encoded, and the most
   // columns made for a model
   private static final boolean VALUE_COLUMNS =
-      !"false".equals(System.getProperty("org.jacop.lp.valueColumns"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.valueColumns"));
   private static final int VALUE_COLUMNS_DOMAIN =
       Integer.getInteger("org.jacop.lp.valueColumnsDomain", 128);
   private static final int VALUE_COLUMNS_MAX =
@@ -672,7 +675,7 @@ public final class Linearizations {
   // the value encodings of counting, all-different and element constraints: on or off, the
   // largest domain encoded, and the most columns made for a model
   private static final boolean VALUE_ENCODINGS =
-      !"false".equals(System.getProperty("org.jacop.lp.valueEncodings"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.valueEncodings"));
   private static final int VALUE_ENCODINGS_DOMAIN =
       Integer.getInteger("org.jacop.lp.valueEncodingsDomain", 64);
   private static final int VALUE_ENCODINGS_MAX =
@@ -681,7 +684,7 @@ public final class Linearizations {
   // whether valueRows gives the layered graphs of Regular and ExtensionalSupportMdd their flow
   // model
   private static final boolean FLOW_ENCODINGS =
-      !"false".equals(System.getProperty("org.jacop.lp.flowEncodings"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.flowEncodings"));
 
   /**
    * Returns the value encodings of the variables of all-different-except constraints over auxiliary
@@ -2237,7 +2240,7 @@ public final class Linearizations {
    */
   public static List<LinearForm> alldifferentNetworks(Collection<Constraint> constraints) {
     List<LinearForm> out = new ArrayList<>();
-    if ("false".equals(ALLDIFF_NETWORK)) {
+    if (FALSE.equals(ALLDIFF_NETWORK)) {
       return out;
     }
     boolean all = "all".equals(ALLDIFF_NETWORK);
