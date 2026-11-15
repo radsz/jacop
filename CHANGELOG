@@ -6596,6 +6596,23 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. CostNetworkBound (-Dorg.jacop.fz.costNetwork=true) cites each atom of a
+   lazy clause generation reason once and propagates incrementally.
+   A reason cited one atom per cheaper value of a fixed variable and the
+   bounds of a neighbour once per edge, so on celar scen07 a reason held
+   about 6,100 atoms of which 215 were distinct; it now cites the bound
+   atoms of the cheaper values outside a variable's bounds (for a fixed
+   variable the nearest cheaper value on each side) and each neighbour
+   once. During search only the variables whose domain or fixed
+   neighbours changed are evaluated again, and the received binary costs
+   of a variable are read once. Conflicts per second on scen07 rise
+   about 8 times. On the 19 MiniZinc Challenge instances where the bound
+   posts (celar, proteindesign12, one community-detection), at 600 s,
+   default search proves 14 instead of 13 (1UBI.13p.9aa 184 s), the
+   1HZ5.12p.19aa instances in 78-81 s instead of 280-307 s (total time
+   0.79), and improves the objective of all three celar instances; -f
+   proves 16 instead of 15 (total time 0.87).
+
 Version 4.11
 =============
 
