@@ -136,7 +136,9 @@ final class TableGroups {
     groupScope = new int[n][];
     for (int i = 0; i < n; i++) {
       parent[i] = i;
-      scope[i] = unfixedScope(constraints.get(i));
+      // a group is tabulated over copies of its constraints in a scratch store
+      Constraint c = constraints.get(i);
+      scope[i] = Copyable.canCopy(c) ? unfixedScope(c) : null;
       groupScope[i] = scope[i];
     }
   }
@@ -205,10 +207,6 @@ final class TableGroups {
   }
 
   private int[] unfixedScope(Constraint c) {
-    // a group is tabulated over copies of its constraints in a scratch store
-    if (!Copyable.canCopy(c)) {
-      return null;
-    }
     List<Integer> result = new ArrayList<>();
     for (Var v : c.arguments()) {
       if (!(v instanceof IntVar)) {
