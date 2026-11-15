@@ -6418,7 +6418,24 @@ Version 5.0 (unreleased)
    work-task-variation) and, in one of three censuses, mapping.
    FreeSearch.Builder.virtualClock turns it on for one search.
 
-357. Float optimisation in fzn-jacop is faster and proves more optima.
+357. LCG branch and bound under -f can jump below the best solution
+   (--free-config lcg-jumps=1, off by default; LcgSolver.setJumps):
+   after a streak of quick improving solutions (jacop.lcg.jumpAfter, 4,
+   each within jacop.lcg.jumpFast, 20, conflicts of the one before) the
+   run stops and probes obj <= best - step under a limit of
+   jacop.lcg.jumpConflicts (100) conflicts, doubling the step after
+   every solution and halving it after every refutation, which proves
+   obj >= target + 1 as a clause. The core-guided phase steps the same
+   way. Models with hundreds of tiny improvements gain: MiniZinc
+   Challenge 2021 connect 0086_02 25.5 -> 13.5 s and carpet-cutting
+   mzn_rnd_test.01/.02 about 2x faster (600 s, -f). On the wide set at
+   600 s with -f it is neutral (13 instances better, 12 worse) and the
+   35 where jumps fire take 1.6 % more time in total (city-position
+   city-7-04 265 -> 401 s, peacable_queens 8 loses its proof), hence
+   off by default. Statistics lcgJumpRuns, lcgJumpSolutions,
+   lcgJumpsRaised and lcgJumpLimits.
+
+358. Float optimisation in fzn-jacop is faster and proves more optima.
    Once branch and bound has found 1000 solutions
    (-Dorg.jacop.fz.floatCrawl) improving by a few ulps, the objective is
    bisected between a lower bound and the best cost, each step with a
@@ -6442,7 +6459,7 @@ Version 5.0 (unreleased)
    and -f 25 instead of 17; no instance with float variables is in the
    wide benchmark set.
 
-358. Free search with lazy clause generation on an optimisation model
+359. Free search with lazy clause generation on an optimisation model
    whose search variables all lie in one cardinality with fixed counts
    (jacop_count_values or global_cardinality posted as CountValuesBounds
    with equal bounds) first dives without learning through those
@@ -6464,7 +6481,7 @@ Version 5.0 (unreleased)
    slot-dive-share sets its share of the time; the statistics slotDiveSlots
    and slotDiveTime give its size and time.
 
-359. Under lazy clause generation the FlatZinc front end adds to a
+360. Under lazy clause generation the FlatZinc front end adds to a
    cumulative whose tasks have variable durations and fixed resource
    uses, and at most 4000 (task, time point) pairs, its time-resource
    decomposition: at each time point t the sum of the resource uses of
@@ -6484,7 +6501,7 @@ Version 5.0 (unreleased)
    turns it off, =true posts it without lazy clause generation too, and
    -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
-360. Free search (-f) of a resource-constrained project scheduling model
+361. Free search (-f) of a resource-constrained project scheduling model
    (a makespan over CumulativeBasic resources with fixed durations,
    demands and capacities, and precedence rows) runs a project schedule
    heuristic, org.jacop.search.ls.ProjectSchedule: the serial schedule

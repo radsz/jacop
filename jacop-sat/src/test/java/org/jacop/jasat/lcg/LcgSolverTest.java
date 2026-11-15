@@ -5208,6 +5208,39 @@ class LcgSolverTest {
   }
 
   /**
+   * Branch and bound that improves the best solution by one at each solution stops after a few
+   * solutions for jumps a doubling step below it, which reach the same optimum with fewer
+   * solutions; without jumps it walks down one by one.
+   */
+  @Test
+  void jumpsBelowTheBestSolution() {
+    long[] found = new long[2];
+    for (boolean jump : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[5];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 30);
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 150);
+      store.impose(new LinearInt(x, new int[] {1, 1, 1, 1, 1}, ">=", 37));
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[0], x[1], x[2], x[3], x[4], obj},
+              new int[] {1, 1, 1, 1, 1, -1},
+              "==",
+              0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMax<>()), true);
+      solver.setJumps(jump);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(obj)).isEqualTo(37);
+      assertThat(solver.jumpRuns > 0).isEqualTo(jump);
+      found[jump ? 1 : 0] = solver.solutions;
+    }
+    assertThat(found[1]).isLessThan(found[0] / 2);
+  }
+
+  /**
    * When the objective's root bound is above the cores' lower bound, a short search for a solution
    * at that bound runs before the core-guided probe and ends the search with it: on nfc (Challenge
    * 2022) the linear relaxation's bound is the optimum, which the probe delayed by 0.67 % of the
