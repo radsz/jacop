@@ -53,7 +53,7 @@ import java.util.Arrays;
  */
 final class BasisLu {
 
-  // a pivot must be at least this share of the largest entry of its column in the active matrix
+  // a pivot must be at least this share of the largest entry of its row in the active matrix
   private static final double THRESHOLD = 0.1;
 
   // entries this small are dropped during elimination and from the updates
@@ -299,7 +299,12 @@ final class BasisLu {
               continue;
             }
             double v = Math.abs(valueAt(i, k));
-            if (v > DROP && v >= THRESHOLD * rowMax[i]) {
+            // a column singleton eliminates nothing below it, so any nonzero is a stable pivot
+            // (the triangular part of Suhl and Suhl 1990); held to the threshold of its row it was
+            // rejected and looked at again at every step, so a triangular basis with many such
+            // columns took a quadratic search (app1-2 of MIPLIB 2017: 8 s per factorization of a
+            // basis with no fill, 80 % of the solve)
+            if (v > DROP && (c == 1 || v >= THRESHOLD * rowMax[i])) {
               long cost = (long) (rLen[i] - 1) * (c - 1);
               if (cost < bestCost || cost == bestCost && v > bestV) {
                 bestCost = cost;

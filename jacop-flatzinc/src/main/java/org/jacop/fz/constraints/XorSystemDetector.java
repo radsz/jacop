@@ -88,6 +88,8 @@ public class XorSystemDetector implements ParserTreeConstants {
   /** Statistics: the parity rows implied by tables. */
   int tableRows;
 
+  int linearRows;
+
   // the 0/1 columns of a table read, at most, for its implied parities
   static final int MAX_TABLE_COLUMNS = 63;
 
@@ -162,7 +164,9 @@ public class XorSystemDetector implements ParserTreeConstants {
               + systemRows
               + " rows, "
               + tableRows
-              + " rows from tables");
+              + " rows from tables, "
+              + linearRows
+              + " rows from linear equations");
     }
   }
 
@@ -185,6 +189,11 @@ public class XorSystemDetector implements ParserTreeConstants {
       case "bool_eq_reif" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 1);
       // r = (a != b): a xor b xor r = 0
       case "bool_ne_reif" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 0);
+      case "int_lin_eq" -> {
+        if (node.jjtGetNumChildren() == 3) {
+          linear(node);
+        }
+      }
       case "jacop_table_int", "jacop_table_bool" -> {
         if (node.jjtGetNumChildren() == 2) {
           table(node, false);
@@ -327,6 +336,63 @@ public class XorSystemDetector implements ParserTreeConstants {
       tableRows++;
       row(x, Long.bitCount(a & first) & 1);
     }
+  }
+
+  /**
+   * It adds the parity row of a_1 x_1 + ... + a_n x_n = k when every variable with an odd
+   * coefficient is a 0/1 variable or takes values of one parity only: taken modulo 2, the equation
+   * is the xor of the 0/1 variables with odd coefficients, and the other terms move to the parity
+   * (a count of lit neighbours that must be odd, as in the Lights Out puzzles).
+   */
+  private void linear(ASTConstElem node) {
+    int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    if (a.length != v.length || v.length < 2) {
+      return;
+    }
+    int parity = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) & 1;
+    // odd coefficients per variable; a variable listed twice adds its coefficients
+    Map<IntVar, Integer> odd = new IdentityHashMap<>();
+    for (int i = 0; i < v.length; i++) {
+      if ((a[i] & 1) != 0) {
+        odd.merge(v[i], 1, (p, q) -> p ^ q);
+      }
+    }
+    List<IntVar> x = new ArrayList<>();
+    boolean nonBinary = false;
+    for (Map.Entry<IntVar, Integer> e : odd.entrySet()) {
+      IntVar y = e.getKey();
+      if (e.getValue() == 0) {
+        continue;
+      }
+      if (y.min() >= 0 && y.max() <= 1) {
+        x.add(y);
+      } else {
+        int q = oneParity(y);
+        if (q < 0) {
+          return;
+        }
+        parity ^= q;
+        nonBinary = true;
+      }
+    }
+    // a plain 0/1 equation such as x_1 + ... + x_k = 1 is no parity information beyond itself
+    if (!nonBinary || x.size() < 2) {
+      return;
+    }
+    linearRows++;
+    row(x.toArray(new IntVar[0]), parity);
+  }
+
+  // the parity of all values of the domain of y, or -1 when it has values of both parities
+  private static int oneParity(IntVar y) {
+    int q = y.min() & 1;
+    for (var e = y.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      if ((e.nextElement() & 1) != q) {
+        return -1;
+      }
+    }
+    return q;
   }
 
   // reduces vector by the basis and adds it when it is independent
