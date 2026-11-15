@@ -3422,6 +3422,14 @@ public final class LcgSolver implements ExternalPropagator {
     best = null;
     lastBound = Long.MIN_VALUE;
     takeIncumbent();
+    if (best != null && best[this.objective] <= root[this.objective].min()) {
+      // the solution given before the search meets the objective's root bound: it is optimal (a
+      // search for a better one found none on jobshop ta51 within 12 s, branch and bound under the
+      // same bound fails at the root)
+      solution = best;
+      this.objective = -1;
+      return CdclSolver.SAT;
+    }
     if (proof != null && coreShare > 0) {
       // the core-guided phase sums the model's lines, so the proof starts before it
       startProof();
