@@ -6079,6 +6079,31 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
+340. New constraint MaxCliqueBound(x, conflicts, sum): x are 0/1
+   variables, no two variables in conflict are both 1, and sum <= x[1] +
+   ... + x[n]. It bounds sum by a greedy coloring of the vertices that can
+   still be 1 (classes of pairwise conflicting vertices, kept as bit sets
+   in decreasing degree order) as maximum clique algorithms do: E. Tomita
+   and T. Seki, "An efficient branch-and-bound algorithm for finding a
+   maximum clique", DMTCS 2003, LNCS 2731; E. Tomita, Y. Sutani, T.
+   Higashi, S. Takahashi and M. Wakatsuki, "A simple and faster
+   branch-and-bound algorithm for finding a maximum clique", WALCOM 2010,
+   LNCS 5942; P. San Segundo, D. Rodriguez-Losada and A. Jimenez, "An
+   exact bit-parallel algorithm for the maximum clique problem", Computers
+   & Operations Research 38(2), 2011; as a constraint, J.-C. Regin, "Using
+   constraint programming to solve the maximum clique problem", CP 2003,
+   LNCS 2833. Under LCG its reason cites only the zeros that do not join a
+   color class, or a vertex at 1 in conflict with them. The FlatZinc front
+   end posts it as a redundant constraint on a maximized sum of 0/1
+   variables with pairwise conflicts (x[i] + x[j] <= 1, bool_clause or
+   array_bool_and of two); -Dorg.jacop.fz.maxClique=false turns this off.
+   A model that is maximum clique and nothing else is solved by branch and
+   bound without LCG unless --lcg is given (-Dorg.jacop.fz.maxClique.lcg=true
+   keeps LCG). Of the 15 Clique instances of the XCSP 2026 competition it
+   proves 6 at 600 s (brock200-4 in 14 s), where develop-5.0 proved 2. The
+   LP pair cliques test conflicts on bit sets, so p-hat1500-1 builds its
+   model in 35 s instead of more than 300 s, with the same cliques.
+
 Version 4.11
 =============
 
