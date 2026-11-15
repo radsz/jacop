@@ -466,6 +466,8 @@ public class LinearRelaxation extends Constraint
 
   // made by refutation(): solved once at the root, then removed
   private boolean refutation;
+  // a refutation whose objective is a free column of the longest inequality of the model
+  private boolean pseudoObjective;
   private int refutationStatus = -1;
   // the status of the last solve
   private int lastSolveStatus = -1;
@@ -1541,7 +1543,7 @@ public class LinearRelaxation extends Constraint
     }
     List<LinearForm> rows = Linearizations.refutationRows(constraints, given);
     if (rows.isEmpty()) {
-      return null;
+      return PSEUDO_OBJECTIVE ? pseudoObjectiveRefutation(given) : null;
     }
     PairCliques merged = PairCliques.merge(rows, List.of());
     rows = merged.rows;
@@ -1553,6 +1555,82 @@ public class LinearRelaxation extends Constraint
     r.refutation = true;
     r.pairCliques = merged.cliques;
     r.cutsTried = true;
+    return r.rows() < 2 ? null : r;
+  }
+
+  /**
+   * The refutation of a model with no value encoding, such as a pseudo-Boolean model: its linear
+   * rows and clause rows, with the longest inequality {@code sum w x <= b} as the objective. The
+   * root solve minimizes {@code t = sum w x} over a free column t in [min, b] and its cut rounds
+   * raise that bound; the model has no solution when the relaxation, or the relaxation with its
+   * cuts, is infeasible. Without an objective a relaxation has no cut rounds, and its vertex is any
+   * point of the polytope; with the cardinality row of the model as the objective the cuts work on
+   * the point that comes nearest to breaking it.
+   *
+   * <p>The pseudo-Boolean competition has such cardinality refutations: a vertex cover of at most k
+   * vertices of a graph made of odd cycles (vc-lines), where the relaxation takes every vertex at
+   * 1/2 and the Chvátal-Gomory and MIR cuts of the cycles (the odd-cycle inequalities, M. W.
+   * Padberg, "On the facial structure of set packing polyhedra", Math. Programming 5, 1973) raise
+   * the bound past k; and the pigeonhole principle (php), whose relaxation is infeasible as it is,
+   * while resolution and so lazy clause generation refutes it only in exponentially many steps (A.
+   * Haken, "The intractability of resolution", TCS 39, 1985). The relaxation of such a model is
+   * often over the size caps of the relaxation in search (php 230/229: 52,670 columns); it is
+   * solved once at the root here, within the pivot limit of the refutation.
+   */
+  private static LinearRelaxation pseudoObjectiveRefutation(List<LinearForm> given) {
+    LinearForm longest = null;
+    for (LinearForm f : given) {
+      if ((f.relation() == LinearForm.LE || f.relation() == LinearForm.GE)
+          && (longest == null || f.vars().length > longest.vars().length)) {
+        longest = f;
+      }
+    }
+    if (longest == null || longest.vars().length < PSEUDO_OBJECTIVE_LENGTH) {
+      return null;
+    }
+    // sum w x <= b; a row >= is negated
+    long sign = longest.relation() == LinearForm.LE ? 1 : -1;
+    long[] w = new long[longest.vars().length];
+    long lo = 0;
+    long hi = 0;
+    try {
+      for (int k = 0; k < w.length; k++) {
+        w[k] = Math.multiplyExact(sign, longest.weights()[k]);
+        IntVar v = longest.vars()[k];
+        lo = Math.addExact(lo, Math.min(Math.multiplyExact(w[k], v.min()), w[k] * (long) v.max()));
+        hi = Math.addExact(hi, Math.max(Math.multiplyExact(w[k], v.min()), w[k] * (long) v.max()));
+      }
+    } catch (ArithmeticException _) {
+      return null;
+    }
+    long b = Math.multiplyExact(sign, longest.c());
+    if (lo < IntDomain.MIN_INT || Math.min(b, hi) > IntDomain.MAX_INT || lo > Math.min(b, hi)) {
+      return null;
+    }
+    LpColumn t = new LpColumn("refutationObjective", (int) lo, (int) Math.min(b, hi));
+    IntVar[] vars = Arrays.copyOf(longest.vars(), w.length + 1);
+    vars[w.length] = t;
+    long[] weights = Arrays.copyOf(w, w.length + 1);
+    weights[w.length] = -1;
+    List<LinearForm> rows = new ArrayList<>();
+    rows.add(new LinearForm(vars, weights, 0, LinearForm.EQ));
+    for (LinearForm f : given) {
+      if (f != longest) {
+        rows.add(f);
+      }
+    }
+    PairCliques merged = PairCliques.merge(rows, List.of());
+    rows = merged.rows;
+    // solved once, within the pivot limit of the refutation: the sparse simplex also over the size
+    // caps of the relaxation in search, up to those of a large relaxation
+    Simplex simplex = sparseTakes(rows) || largeTakes(rows) ? Simplex.SPARSE : Simplex.DENSE;
+    if (tooLarge(rows, simplex)) {
+      return null;
+    }
+    LinearRelaxation r = new LinearRelaxation(rows, List.of(), t, false, simplex);
+    r.refutation = true;
+    r.pseudoObjective = true;
+    r.pairCliques = merged.cliques;
     return r.rows() < 2 ? null : r;
   }
 
@@ -1734,6 +1812,13 @@ public class LinearRelaxation extends Constraint
   // (7,362 pivots) without a limit
   private static final int REFUTATION_PIVOTS =
       Integer.getInteger("org.jacop.lp.rootRefutationPivots", 2_500);
+
+  // a satisfaction model with no value encoding: the refutation minimizes its longest inequality
+  // with cut rounds (pseudoObjectiveRefutation), when that row has at least this many variables
+  private static final boolean PSEUDO_OBJECTIVE =
+      !"false".equals(System.getProperty("org.jacop.lp.refutationObjective"));
+  private static final int PSEUDO_OBJECTIVE_LENGTH =
+      Integer.getInteger("org.jacop.lp.refutationObjectiveLength", 3);
 
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
