@@ -168,6 +168,48 @@ class SuccessorRoutesTest {
   }
 
   @Test
+  void tailDepotLinksFreeAsManyOfTheLastRoutesAsTheRemovalTouches() {
+    AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(2)));
+    SuccessorRoutes r = (SuccessorRoutes) lns.routings().get(0);
+    // the tour from the first depot: 6-0-1-9, 7-2-3-10, 8-4-5-11
+    boolean[] removed = new boolean[N];
+    removed[0] = true;
+    removed[1] = true;
+    boolean[] relax = new boolean[2 * N];
+    r.relaxTailDepotLinks(removed, relax);
+    // one route touched: the last route 8-4-5-11 may move, its links are free
+    for (int v = 0; v < N; v++) {
+      assertEquals(v == 8 || v == 5, relax[v], "next of " + v);
+    }
+    // two routes touched, the first and the last: the second moves
+    removed[5] = true;
+    relax = new boolean[2 * N];
+    r.relaxTailDepotLinks(removed, relax);
+    for (int v = 0; v < N; v++) {
+      assertEquals(v == 7 || v == 3, relax[v], "next of " + v);
+    }
+  }
+
+  @Test
+  void routeRemovalDrawsHowManyRoutesItRemoves() {
+    AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(2)));
+    RouteStructure r = lns.routings().get(0);
+    Random random = new Random(7);
+    Set<Integer> counts = new HashSet<>();
+    for (int t = 0; t < 50; t++) {
+      boolean[] removed = r.routeRemoval(0.5, random);
+      int routes = 0;
+      for (int k = 0; k < V; k++) {
+        assertEquals(removed[2 * k], removed[2 * k + 1], "a route is removed whole");
+        routes += removed[2 * k] ? 1 : 0;
+      }
+      counts.add(routes);
+    }
+    // half of the customers: two or three routes of two
+    assertEquals(Set.of(2, 3), counts);
+  }
+
+  @Test
   void relatedRemovalPrefersCloseCustomers() {
     AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(4)));
     RouteStructure r = lns.routings().get(0);

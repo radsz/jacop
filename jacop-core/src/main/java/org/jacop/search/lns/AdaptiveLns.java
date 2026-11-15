@@ -215,13 +215,16 @@ public final class AdaptiveLns {
   private static final double FIRST_SHARE = 0.2;
   private static final double MAX_SHARE = 0.95;
   private static final double SHARE_STEP = 1.15;
-  // route removal also frees the links between routes and depots (CHANGELOG): with identical
-  // vehicles and the symmetry breaking "vehicle k unused implies vehicle k + 1 unused", a route
-  // other than the last cannot be emptied while the routes after it keep their vehicles. XCSP 2024
+  // route removal also frees links between routes and depots (CHANGELOG): with identical vehicles
+  // and the symmetry breaking "vehicle k unused implies vehicle k + 1 unused", a route other than
+  // the last cannot be emptied while the routes after it keep their vehicles. XCSP 2024
   // VRP_LC-10-05-20-s3 at 600 s: 267, 288, 269 over three seeds instead of 288, 289, 288 (the
-  // better solutions use one vehicle fewer)
-  private static final boolean DEPOT_LINKS =
-      !"false".equals(System.getProperty("jacop.lns.depotLinks"));
+  // better solutions use one vehicle fewer). "tail" (the default) frees the links of as many of
+  // the last routes as the removal touches, "all" those of every route, "false" none: with every
+  // route free to change vehicle a run never ends before its conflict limit (the vehicles are
+  // interchangeable), so the share of route removal fell to two routes; VRP_LC-13-11-15-s3 needs
+  // four routes merged into three (446 -> 434)
+  private static final String DEPOT_LINKS = System.getProperty("jacop.lns.depotLinks", "tail");
 
   private static final double DECAY = 0.2;
   private static final double FLOOR = 0.1;
@@ -1337,17 +1340,23 @@ public final class AdaptiveLns {
           }
         }
       }
-      relaxDepotLinks(kind, successors, relax);
+      relaxDepotLinks(kind, successors, removed, relax);
       return relax;
     }
     r.relax(removed, relax);
     return relax;
   }
 
-  // frees the links between the routes and their depots in a route removal (DEPOT_LINKS)
-  private static void relaxDepotLinks(Kind kind, SuccessorRoutes successors, boolean[] relax) {
-    if (kind == Kind.ROUTES && DEPOT_LINKS) {
-      successors.relaxDepotLinks(relax);
+  // frees links between the routes and their depots in a route removal (DEPOT_LINKS)
+  private static void relaxDepotLinks(
+      Kind kind, SuccessorRoutes successors, boolean[] removed, boolean[] relax) {
+    if (kind != Kind.ROUTES) {
+      return;
+    }
+    switch (DEPOT_LINKS) {
+      case "false" -> {}
+      case "all", "true" -> successors.relaxDepotLinks(relax);
+      default -> successors.relaxTailDepotLinks(removed, relax);
     }
   }
 

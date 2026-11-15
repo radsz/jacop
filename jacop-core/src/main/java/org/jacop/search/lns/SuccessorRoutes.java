@@ -57,6 +57,9 @@ final class SuccessorRoutes extends RouteStructure {
   // the index of each successor among the variables of the neighbourhoods, or -1
   private final int[] varIndex;
   private final boolean[] depot;
+  // the successors fixed at the root, such as the end depot of one vehicle followed by the start
+  // depot of the next
+  private final boolean[] fixedLink;
   private final int[] next;
 
   /**
@@ -75,10 +78,12 @@ final class SuccessorRoutes extends RouteStructure {
     this.offset = offset;
     this.varIndex = varIndex.clone();
     depot = new boolean[n];
+    fixedLink = new boolean[n];
     for (int v = 0; v < n; v++) {
       IntVar x = successors[v];
       if (x.singleton() && x.value() - offset != v) {
         depot[v] = true;
+        fixedLink[v] = true;
         int w = x.value() - offset;
         if (w >= 0 && w < n) {
           depot[w] = true;
@@ -213,6 +218,46 @@ final class SuccessorRoutes extends RouteStructure {
     for (int v = 0; v < n; v++) {
       int w = next[v];
       if (varIndex[v] >= 0 && w >= 0 && w < n && w != v && (depot[v] || depot[w])) {
+        relax[varIndex[v]] = true;
+      }
+    }
+  }
+
+  /**
+   * Relaxes the depot links of the last routes of the tour that the removal does not touch, as many
+   * as the routes it touches, and those of the empty routes: with the symmetry breaking "route k
+   * empty implies route k + 1 empty", a route can then be emptied while the routes after it move
+   * up, without freeing every route to change vehicle.
+   *
+   * @param removed the removed customers.
+   * @param relax the variables to relax, by index, updated.
+   */
+  void relaxTailDepotLinks(boolean[] removed, boolean[] relax) {
+    readRoutes();
+    boolean[] touched = new boolean[routes.length];
+    int count = 0;
+    for (int v = 0; v < n; v++) {
+      if (removed[v] && routeOf[v] >= 0 && !touched[routeOf[v]]) {
+        touched[routeOf[v]] = true;
+        count++;
+      }
+    }
+    boolean[] mobile = new boolean[n];
+    for (int r = routes.length - 1; r >= 0 && count > 0; r--) {
+      if (!touched[r]) {
+        mobile[routes[r][0]] = true;
+        mobile[routes[r][routes[r].length - 1]] = true;
+        count--;
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      int w = next[v];
+      if (varIndex[v] < 0 || fixedLink[v] || w < 0 || w >= n || w == v) {
+        continue;
+      }
+      boolean empty = depot[v] && depot[w];
+      boolean link = depot[v] && mobile[w] || mobile[v] && depot[w];
+      if (empty || link) {
         relax[varIndex[v]] = true;
       }
     }

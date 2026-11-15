@@ -51,6 +51,10 @@ abstract class RouteStructure {
   private static final double SHAW = 6;
   // and of the next route of route removal
   private static final double ROUTE_RANDOMNESS = 3;
+  // route removal draws how many routes it removes, as SISR draws the strings it cuts; false: the
+  // fewest routes that hold the share of customers
+  private static final boolean RANDOM_ROUTE_COUNT =
+      !"false".equals(System.getProperty("jacop.lns.routeCount"));
 
   /** The number of nodes. */
   final int n;
@@ -158,6 +162,12 @@ abstract class RouteStructure {
    * cost from the customers removed so far), at least two routes when there are two. With a single
    * route it is Shaw removal.
    *
+   * <p>The number of routes is drawn as SISR draws the number of strings it cuts (Christiaens and
+   * Vanden Berghe, Transportation Science 2020): uniform in 1 .. 4 c / (1 + l) - 1, for c the share
+   * of the customers and l the average route, so that runs over more routes than the share holds
+   * still come; the share alone kept the runs at the fewest routes when their larger neighbourhoods
+   * hit the conflict limit.
+   *
    * @param share the share of the customers to remove.
    * @param random the source of randomness.
    * @return the removed customers.
@@ -169,6 +179,15 @@ abstract class RouteStructure {
     }
     boolean[] removed = new boolean[n];
     int target = Math.max(2, (int) Math.round(share * customers.length));
+    if (RANDOM_ROUTE_COUNT) {
+      int onRoutes = 0;
+      for (int[] route : routes) {
+        onRoutes += route.length;
+      }
+      double maxRoutes = 4.0 * target / (1 + (double) onRoutes / routes.length) - 1;
+      int count = Math.max(2, (int) Math.floor(1 + random.nextDouble() * maxRoutes));
+      return removeRoutes(removed, count, random);
+    }
     boolean[] chosen = new boolean[routes.length];
     int count = 0;
     int routesChosen = 0;
@@ -182,6 +201,20 @@ abstract class RouteStructure {
       }
       if (count >= target && routesChosen >= 2) {
         break;
+      }
+      r = nextRoute(removed, chosen, random);
+    }
+    return removed;
+  }
+
+  // removes the customers of count routes: a random one, then each next one near those removed
+  private boolean[] removeRoutes(boolean[] removed, int count, Random random) {
+    boolean[] chosen = new boolean[routes.length];
+    int r = random.nextInt(routes.length);
+    for (int c = 0; c < count && r >= 0; c++) {
+      chosen[r] = true;
+      for (int v : routes[r]) {
+        removed[v] = true;
       }
       r = nextRoute(removed, chosen, random);
     }
