@@ -1101,7 +1101,7 @@ final class BasisLu {
       end[0] = endChild(start, kind);
       while (top >= 0) {
         int s = stack[top];
-        int[] a = adj == null ? urPos[s] : adj;
+        int[] a = kind == U_BTRAN ? urPos[s] : adj;
         int e = next[top];
         int last = end[top];
         int child = -1;
@@ -1178,7 +1178,7 @@ final class BasisLu {
     }
   }
 
-  // the rows of the entries of the factor of the solve kind, null for U_BTRAN, whose rows of U
+  // the rows of the entries of the factor of the solve kind, none for U_BTRAN, whose rows of U
   // are arrays of their own
   private int[] entriesOf(int kind) {
     switch (kind) {
@@ -1189,9 +1189,11 @@ final class BasisLu {
       case L_BTRAN:
         return lrRow;
       default:
-        return null;
+        return NO_ENTRIES;
     }
   }
+
+  private static final int[] NO_ENTRIES = new int[0];
 
   // the first entry of the factor of the solve kind that step s leads from
   private int firstChild(int s, int kind) {
