@@ -244,6 +244,27 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Branch and bound in one depth-first search never returns to the level of the first solve, the
+   * level of the initial propagation: the root reduced costs are still propagated in search, once
+   * per bound of the cost on a branch and again after a backtrack, and keep the optima.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void propagatesRootReducedCostsInSearch(LinearRelaxation.Simplex simplex) {
+    long rootPruned = 0;
+    for (int run = 0; run < RUNS; run++) {
+      long[] expected = search(new Model(run));
+      Model model = new Model(run);
+      model.simplex = simplex;
+      LinearRelaxation r = model.relaxation();
+      long[] actual = search(model);
+      assertThat(actual).as("seed %d", run).isEqualTo(expected);
+      rootPruned += r.rootPrunings;
+    }
+    assertThat(rootPruned).isPositive();
+  }
+
+  /**
    * The statistics by source ({@code org.jacop.lp.sourceStats}) keep the optima, count the given
    * rows (named by constraint class when the relaxation is built from a store) and the cuts by
    * their separator, and are absent when off.
