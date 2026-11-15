@@ -5790,6 +5790,27 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
+334. Symmetry breaking renames the elements of set variables: set
+   variables that only set operations, set comparisons other than the
+   lexicographic ones and cardinalities constrain (set_union,
+   set_intersect, set_diff, set_symdiff, set_eq, set_ne, set_subset,
+   set_superset and their reified forms, disjoint, set_card), with no
+   constant set among their arguments, form a set value space, whose
+   values may be permuted together in all its sets. Their elements join
+   one vertex per value in the variable graph, so the automorphisms find
+   the value symmetry next to the symmetry of the set variables, and the
+   card-symbol matrix of a model with both gets lex chains on its rows
+   and its columns (double lex, P. Flener, A. Frisch, B. Hnich, Z. Kiziltan,
+   I. Miguel, J. Pearson and T. Walsh, "Breaking row and column symmetries
+   in matrix models", CP 2002, LNCS 2470). As for the set symmetries of
+   item 241, only models whose search annotation branches on set
+   variables; -Dorg.jacop.fz.symmetrySetValues=false turns it off. Of the
+   65 Challenge instances with set variables it fires on the 5 of 2021
+   monomatch (Dobble cards), where it proves the 3 UNSAT instances in
+   under 2 s with and without -f (before: n3 in 52 s with -f and 144 s
+   without, the two n4 unknown at 240 s) and finds the n5 and n6
+   solutions in 1.5-3.8 s with -f (n6 without -f 82 -> 16 s).
+
 Version 4.11
 =============
 

@@ -491,6 +491,220 @@ class SymmetryBreakingFlatzincTest {
     assertTrue(broken > trials / 4, "broken " + broken);
   }
 
+  @Test
+  void elementsOfSetsAreInterchangeableValues() throws IOException {
+    // monomatch (MiniZinc Challenge 2021) with n = 3: 12 cards of 3 symbols out of 13, every two
+    // sharing exactly one symbol. Cards and symbols are both interchangeable: a row and a column
+    // orbitope of the card-symbol matrix. At most 7 such cards exist, so the model is UNSAT.
+    String fzn = monomatch(3, 12);
+    String out = FlatzincTestRunner.run(tmp, fzn, "--search-statistics", "--symmetry", "on", "-f");
+    // 11 generators permute the cards, 12 the symbols
+    assertEquals(23, generators(out), out);
+    assertTrue(out.contains("symmetryOrbitopes=2"), out);
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    // with 7 cards it is the Fano plane, which the symmetry breaking keeps
+    out = FlatzincTestRunner.run(tmp, monomatch(3, 7), "--search-statistics", "--symmetry", "on");
+    assertEquals(18, generators(out), out);
+    assertTrue(out.contains("----------"), out);
+  }
+
+  /**
+   * The monomatch model of order n with m cards, as MiniZinc flattens it for JaCoP: the cards,
+   * their cardinalities, the pairwise intersections and their cardinalities, then all_different.
+   */
+  private static String monomatch(int n, int m) {
+    int items = n * n + n + 1;
+    StringBuilder v = new StringBuilder();
+    StringBuilder cards = new StringBuilder("[");
+    StringBuilder cardinalities = new StringBuilder();
+    StringBuilder meets = new StringBuilder();
+    StringBuilder ones = new StringBuilder();
+    StringBuilder different = new StringBuilder();
+    for (int i = 0; i < m; i++) {
+      v.append("var set of 1..").append(items).append(": s").append(i).append(";\n");
+      cards.append(i > 0 ? "," : "").append("s").append(i);
+      cardinalities.append("constraint set_card(s").append(i).append(",").append(n);
+      cardinalities.append(");\n");
+    }
+    for (int i = 0; i < m; i++) {
+      for (int j = i + 1; j < m; j++) {
+        String x = "x" + i + "_" + j;
+        v.append("var set of 1..").append(items).append(": ").append(x);
+        v.append(" ::var_is_introduced :: is_defined_var;\n");
+        meets.append("constraint set_intersect(s").append(i).append(",s").append(j);
+        meets.append(",").append(x).append(") :: defines_var(").append(x).append(");\n");
+        ones.append("constraint set_card(").append(x).append(",1);\n");
+        different.append("constraint set_ne(s").append(i).append(",s").append(j);
+        different.append(");\n");
+      }
+    }
+    cards.append("]");
+    return v.toString()
+        + "array [1.."
+        + m
+        + "] of var set of 1.."
+        + items
+        + ": cards :: output_array([1.."
+        + m
+        + "]) = "
+        + cards
+        + ";\n"
+        + cardinalities
+        + meets
+        + ones
+        + different
+        + "solve :: set_search(cards, input_order, indomain_min, complete) satisfy;\n";
+  }
+
+  @Test
+  void randomSetValueModelsKeepSatisfiabilityAndOptimum() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 23));
+    int trials = Integer.getInteger("symmetry.trials", 300) / 2;
+    int broken = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      boolean optimise = random.nextBoolean();
+      String model = randomSetValueModel(random, optimise);
+      String what = "trial " + trial + "\n" + model;
+      String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      boolean unsat = off.contains("=====UNSATISFIABLE=====");
+      for (String[] options :
+          new String[][] {
+            {"--search-statistics", "--symmetry", "on"},
+            {"--search-statistics", "--symmetry", "on", "-f"},
+            {"--search-statistics", "--symmetry", "on", "--lcg"},
+          }) {
+        String on = FlatzincTestRunner.run(tmp, model, options);
+        String why = what + "\n" + String.join(" ", options) + "\n" + on;
+        assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), why);
+        if (optimise && !unsat) {
+          assertEquals(objective(off, "obj"), objective(on, "obj"), why);
+        }
+        if (options.length == 3 && generators(on) > 0) {
+          broken++;
+        }
+      }
+    }
+    assertTrue(broken > trials / 8, "broken " + broken);
+  }
+
+  /**
+   * Set variables over upper bounds that differ in some values, joined by set operations and
+   * comparisons whose results are bounded in cardinality. Some models also fix elements, compare
+   * sets lexicographically, give a constant set or link an element to an integer, which keeps
+   * values (or the whole group) in place. The objective is the weighted cardinality of a set or the
+   * sum of the cardinalities.
+   */
+  private static String randomSetValueModel(Random random, boolean optimise) {
+    int n = 3 + random.nextInt(3);
+    int k = 3 + random.nextInt(3);
+    StringBuilder m = new StringBuilder();
+    StringBuilder c = new StringBuilder();
+    for (int i = 0; i < k; i++) {
+      // most sets range over 1..n, some miss a value
+      int miss = random.nextInt(3) == 0 ? 1 + random.nextInt(n) : 0;
+      StringBuilder lub = new StringBuilder("{");
+      for (int e = 1, first = 1; e <= n; e++) {
+        if (e != miss) {
+          lub.append(first == 1 ? "" : ",").append(e);
+          first = 0;
+        }
+      }
+      lub.append("}");
+      m.append("var set of ").append(lub).append(": s").append(i).append(";\n");
+      int lo = random.nextInt(n);
+      m.append("var ").append(lo).append("..").append(lo + random.nextInt(2)).append(": c");
+      m.append(i).append(";\n");
+      c.append("constraint set_card(s").append(i).append(",c").append(i).append(");\n");
+    }
+    int aux = 0;
+    String[] ops = {"set_intersect", "set_union", "set_diff", "set_symdiff"};
+    for (int i = 0; i < k; i++) {
+      for (int j = i + 1; j < k; j++) {
+        switch (random.nextInt(5)) {
+          case 0, 1 -> {
+            String x = "x" + aux++;
+            m.append("var set of 1..").append(n).append(": ").append(x).append(";\n");
+            m.append("var 0..").append(1 + random.nextInt(2)).append(": d").append(x);
+            m.append(";\n");
+            c.append("constraint ").append(ops[random.nextInt(ops.length)]).append("(s");
+            c.append(i).append(",s").append(j).append(",").append(x).append(");\n");
+            c.append("constraint set_card(").append(x).append(",d").append(x).append(");\n");
+          }
+          case 2 -> c.append("constraint set_ne(s").append(i).append(",s").append(j).append(");\n");
+          case 3 -> {
+            String b = "b" + aux++;
+            m.append("var bool: ").append(b).append(";\n");
+            c.append("constraint set_subset_reif(s").append(i).append(",s").append(j);
+            c.append(",").append(b).append(");\n");
+          }
+          default -> {}
+        }
+      }
+    }
+    // what keeps values in place
+    switch (random.nextInt(6)) {
+      case 0 ->
+          c.append("constraint set_in(")
+              .append(1 + random.nextInt(n))
+              .append(",s")
+              .append(random.nextInt(k))
+              .append(");\n");
+      case 1 ->
+          c.append("constraint set_le(s")
+              .append(random.nextInt(k))
+              .append(",s")
+              .append(random.nextInt(k))
+              .append(");\n");
+      case 2 ->
+          c.append("constraint set_eq(s")
+              .append(random.nextInt(k))
+              .append(",{")
+              .append(1 + random.nextInt(n))
+              .append("});\n");
+      case 3 -> {
+        m.append("var 1..").append(n).append(": y;\n");
+        c.append("constraint set_in(y,s").append(random.nextInt(k)).append(");\n");
+      }
+      default -> {}
+    }
+    // the objective weighs the elements of one set: the weights keep values apart
+    m.append("var 0..").append(n * n + k * n).append(": obj :: output_var;\n");
+    StringBuilder vs = new StringBuilder("[");
+    StringBuilder w = new StringBuilder("[");
+    for (int e = 1; e <= n; e++) {
+      vs.append(e > 1 ? "," : "").append(e);
+      w.append(e > 1 ? "," : "").append(random.nextBoolean() ? 1 : e);
+    }
+    vs.append("]");
+    w.append("]");
+    if (random.nextBoolean()) {
+      c.append("constraint jacop_sum_set(").append(vs).append(",").append(w).append(",s");
+      c.append(random.nextInt(k)).append(",obj);\n");
+    } else {
+      // or counts the elements of all sets, which renaming them keeps
+      StringBuilder ones = new StringBuilder("[-1");
+      StringBuilder cs = new StringBuilder("[obj");
+      for (int i = 0; i < k; i++) {
+        ones.append(",1");
+        cs.append(",c").append(i);
+      }
+      c.append("constraint int_lin_eq(").append(ones).append("],").append(cs).append("],0);\n");
+    }
+    StringBuilder sets = new StringBuilder("[");
+    for (int i = 0; i < k; i++) {
+      sets.append(i > 0 ? "," : "").append("s").append(i);
+    }
+    sets.append("]");
+    String goal = optimise ? (random.nextBoolean() ? "minimize obj" : "maximize obj") : "satisfy";
+    return m.toString()
+        + c
+        + "solve :: set_search("
+        + sets
+        + ", input_order, indomain_min, complete) "
+        + goal
+        + ";\n";
+  }
+
   /**
    * Set variables s0.. over 1..n, interchangeable unless some of them are given elements: their
    * cardinalities, the cardinalities of their pairwise intersections, pairwise difference, and the
