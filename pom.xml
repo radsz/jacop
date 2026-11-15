@@ -1535,6 +1535,11 @@ setup to run configuration. -->
                              or loaded machine it can stop early and break other symmetries; give
                              it room so that the expected outputs do not depend on the machine -->
                         <org.jacop.fz.symmetryTime>20000</org.jacop.fz.symmetryTime>
+                        <!-- the probe before an expensive root LP runs a search for 200 ms of wall
+                             clock without the relaxation, so how far it gets, and which of several
+                             optimal solutions is printed last, depends on the machine
+                             (fair_split_into_3_groups); LpProbeFlatzincTest sets its own -->
+                        <org.jacop.fz.lpProbe>0</org.jacop.fz.lpProbe>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
                     <argLine>@{argLine} -Xss100m</argLine>
