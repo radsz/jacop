@@ -6242,6 +6242,7 @@ Version 5.0 (unreleased)
    and the 15 unsolved search 0.7 % more nodes; physician-scheduling
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
+
 351. The tabulation of small flattened expressions (item 292) reaches
    groups whose outer variables follow from one of them. Its small search
    now infers through clauses, implications and reifications (a clause
