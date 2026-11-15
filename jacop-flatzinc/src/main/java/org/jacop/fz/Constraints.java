@@ -48,6 +48,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AffineFolding;
 import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
@@ -79,6 +80,7 @@ import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
+import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
@@ -228,6 +230,18 @@ public class Constraints implements ParserTreeConstants {
         cse.detect(astTree);
         if (!cse.replaced().isEmpty()) {
           replaced = new HashSet<>(cse.replaced());
+        }
+      }
+      // variables that are affine functions of others and only terms of linear rows are folded
+      // into those rows, which the later detectors then read
+      if (AffineFolding.enabled() && options.proof() == null) {
+        AffineFolding folding = new AffineFolding(support, keptVariables(astTree));
+        folding.detect(astTree, replaced);
+        if (!folding.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(folding.replaced());
+          dictionary.removeFromDefaultSearch(folding.removed());
+          dictionary.unusedVariables.addAll(folding.removed());
         }
       }
       if (PartialCopyDetector.enabled()) {
@@ -524,6 +538,12 @@ public class Constraints implements ParserTreeConstants {
       // each variable whose values are all counted at least twice equals one of its few partners
       if (CountPartnersDetector.enabled() && options.proof() == null) {
         new CountPartnersDetector(support).detect(astTree);
+      }
+
+      // the least number of bins of each item whose pairs must share a bin (SONET rings),
+      // redundant; --proof does not encode it
+      if (PairCoverDetector.enabled() && options.proof() == null) {
+        new PairCoverDetector(support).detect(astTree);
       }
 
       // the pigeonhole bound on the equal pairs of variables whose pairs all have equality
