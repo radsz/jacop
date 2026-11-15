@@ -3074,12 +3074,9 @@ public final class LcgSolver implements ExternalPropagator {
     long start = sat.now();
     long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
     end = Math.min(end, sat.deadline());
-    if (proof != null) {
-      // probing is not logged: the search that follows derives a failure at the root in the proof
-      return true;
-    }
-    if (rootFailed) {
-      return false;
+    if (rootFailed || proof != null) {
+      // probing is not logged under a proof: the search that follows derives a failure at the root
+      return proof != null;
     }
     encodeGraphs();
     // the clauses added since the solver was made (graphs, collected clauses) propagate first, so
@@ -7739,6 +7736,15 @@ public final class LcgSolver implements ExternalPropagator {
    * learning stops after its annotation (37 nodes). Tested once on each branch after the annotation
    * ends; not with a proof, whose solution must give every variable.
    */
+  private static boolean allFixed(Collection<? extends Var> variables) {
+    for (Var v : variables) {
+      if (!v.singleton()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private boolean completedByAnnotation() {
     int level = sat.decisionLevel();
     if (mustBeFixed == null
@@ -7749,12 +7755,10 @@ public final class LcgSolver implements ExternalPropagator {
       return false;
     }
     completionTested = level;
-    for (Var v : mustBeFixed) {
+    if (!allFixed(mustBeFixed)) {
       // a printed variable need not be one of the store's variables (the Boolean b of
       // bool2int(b, i) is printed while the store holds only i), so it is tested here
-      if (!v.singleton()) {
-        return false;
-      }
+      return false;
     }
     for (int k = 0; k < store.size(); k++) {
       Var v = store.vars[k];

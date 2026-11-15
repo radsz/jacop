@@ -105,23 +105,26 @@ class LcgCompletionFlatzincTest {
 
   @Test
   void printedBooleanOfBool2intIsFixed() throws IOException {
-    // b of bool2int(b, i) is printed but the store holds only i: completion took i, free once its
-    // reified row is entailed, as done and printed b = false..true (MiniZinc fuzz seed 2012294);
-    // the tests run with jacop.lcg=off, so -f asks for LCG
+    // The Boolean of bool2int is printed but the store holds only its integer: completion took
+    // the integer, free once its reified row is entailed, as fixed and printed the Boolean as the
+    // range false..true (MiniZinc fuzz seed 2012294). The tests run with LCG off, so each run of
+    // this test asks for it.
     String model =
-        "var 0..3: x1;\n"
-            + "var 0..3: x2;\n"
-            + "var 0..3: x3;\n"
-            + "var bool: b1;\n"
-            + "var 0..1: i:: var_is_introduced :: is_defined_var;\n"
-            + "var bool: r:: var_is_introduced :: is_defined_var;\n"
-            + "array [1..3] of var int: x:: output_array([1..3]) = [x1,x2,x3];\n"
-            + "array [1..1] of var bool: b:: output_array([1..1]) = [b1];\n"
-            + "constraint jacop_count_var_le([x2,x1,x3],0,x1,1);\n"
-            + "constraint int_lin_le_reif([1,-1],[x1,x3],0,r);\n"
-            + "constraint bool2int(b1,i):: defines_var(i);\n"
-            + "constraint int_lin_le_reif([1,-2],[x2,i],-5,r):: defines_var(r);\n"
-            + "solve :: int_search(x,smallest,indomain_min,complete) satisfy;\n";
+        """
+        var 0..3: x1;
+        var 0..3: x2;
+        var 0..3: x3;
+        var bool: b1;
+        var 0..1: i:: var_is_introduced :: is_defined_var;
+        var bool: r:: var_is_introduced :: is_defined_var;
+        array [1..3] of var int: x:: output_array([1..3]) = [x1,x2,x3];
+        array [1..1] of var bool: b:: output_array([1..1]) = [b1];
+        constraint jacop_count_var_le([x2,x1,x3],0,x1,1);
+        constraint int_lin_le_reif([1,-1],[x1,x3],0,r);
+        constraint bool2int(b1,i):: defines_var(i);
+        constraint int_lin_le_reif([1,-2],[x2,i],-5,r):: defines_var(r);
+        solve :: int_search(x,smallest,indomain_min,complete) satisfy;
+        """;
     for (String[] options : new String[][] {{"-f", "--lcg", "on"}, {"--lcg", "on"}}) {
       String out = runModel(model, options);
       assertTrue(out.contains("x = array1d(1..3, ["), out);
