@@ -153,6 +153,13 @@ public class Tables {
   // MiniZinc on_restart built-ins of the model, or null
   OnRestart onRestart;
 
+  /**
+   * The tiling by arithmetic progressions found in the model ({@link
+   * org.jacop.fz.constraints.ProgressionTilingDetector}), whose branching satisfaction search
+   * without an annotation uses, or null.
+   */
+  public org.jacop.fz.constraints.ProgressionTilingDetector.Tiling progressionTiling;
+
   // the domains of the variables of inverse channels as declared, before the constraints prune
   // them, for ConditionalValueSwaps
   private final Map<IntVar, IntDomain> channelDomains = new IdentityHashMap<>();
