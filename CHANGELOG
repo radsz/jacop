@@ -6596,6 +6596,32 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. The FlatZinc front end posts the LYM inequality of vectors that are
+   pairwise incomparable in the product order (every ordered pair u, v
+   has "u[c] < v[c] for some c", as a clause of literals that imply
+   u[c] < v[c] or as two element constraints with the same index whose
+   results are in a < b): sum_i 1/N(rank(x_i)) <= 1, where N(r) is the
+   number of elements of rank r of the product of the chains of the
+   coordinates. Products of chains are LYM posets (L. H. Harper,
+   J. Combin. Theory A 17, 1974; W. N. Hsieh and D. J. Kleitman, Stud.
+   Appl. Math. 52, 1973), so the inequality is implied; for subsets it is
+   Lubell's (J. Combin. Theory 1, 1966) and gives Sperner's theorem (Math.
+   Z. 27, 1928) and its multiset form (de Bruijn, van Ebbenhorst
+   Tengbergen and Kruyswijk, 1951). It is posted as one rank variable and
+   one element of scaled weights per vector and a sum, only when it
+   removes a rank at the root; with more vectors than the largest rank the
+   model fails at the root. On Antichain1 and Antichain2 of the XCSP 2026
+   competition (-f, 600 s) it decides the six instances at Sperner's bound
+   that JaCoP did not decide before: 127-09 and 253-10 (C(9,4) + 1 and
+   C(10,5) + 1 subsets) and Antichain2-142-6-03 are proved unsatisfiable
+   in 12, 60 and 7 s, and 126-09, 252-10 and 141-6-03 are solved in 19, 78
+   and 79 s. Over the 24 Antichain instances 24 are decided instead of 18,
+   in 325 s instead of 4,126 s. The other UNSAT instances fall to 1-4 s (Antichain1-071-08
+   86 -> 3 s, Antichain2-086-4-05 73 -> 2 s). It fires on none of the 240
+   instances of the wide benchmark set or of the XCSP 2022-2025
+   instances. -Dorg.jacop.fz.antichain=false turns it off; it is off under
+   --proof.
+
 Version 4.11
 =============
 
