@@ -2377,6 +2377,8 @@ class LcgFuzzTest {
       // probes of 1 to 3 conflicts; branch and bound after them with or without lower-bound runs
       solver.setLowerBoundSearch(bisect.nextBoolean() ? 0.5 : 0, 1 + bisect.nextInt(3));
     }
+    // one run in two jumps below the best solution after streaks of quick solutions
+    solver.setJumps(new Random(seed * 19 + 11).nextBoolean());
     // one run in three starts with core-guided search, for a few conflicts
     Random core = new Random(seed * 17 + 3);
     if (core.nextInt(3) == 0) {

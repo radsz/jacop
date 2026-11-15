@@ -43,6 +43,7 @@ all_interval3/all_interval3
 all_interval4/all_interval4
 all_interval5/all_interval5
 all_interval6/all_interval6
+all_interval_n40/all_interval_n40
 all_min_dist/all_min_dist
 all_paths_graph/all_paths_graph
 alldifferent_consecutive_values/alldifferent_consecutive_values

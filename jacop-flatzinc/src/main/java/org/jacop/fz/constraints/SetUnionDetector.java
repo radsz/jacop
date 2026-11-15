@@ -112,6 +112,12 @@ public class SetUnionDetector implements ParserTreeConstants {
   // a leaf of a union chain: the singleton {element}, or a constant set
   private record Leaf(IntVar element, IntDomain constant, IntDomain lub) {}
 
+  // the literals [x = v] of all replaced chains, shared by the chains
+  private final Map<IntVar, Map<Integer, IntVar>> equal = new IdentityHashMap<>();
+
+  // the literals [x = v] this detector made, posted at the end of detect
+  private final Map<IntVar, Map<Integer, IntVar>> made = new LinkedHashMap<>();
+
   private int rewritten;
 
   private final int minSingletons = Integer.getInteger("org.jacop.fz.setUnion.min", MIN_SINGLETONS);
@@ -184,6 +190,7 @@ public class SetUnionDetector implements ParserTreeConstants {
         replace(e.getKey(), e.getValue());
       }
     }
+    poseLiterals();
     if (support.options.debug() && rewritten > 0) {
       FzConsole.println(
           "% set union detector: "
@@ -297,7 +304,6 @@ public class SetUnionDetector implements ParserTreeConstants {
     IntDomain lub = root.domain.lub();
     int min = lub.min();
     IntVar[] member = new IntVar[lub.max() - min + 1];
-    Map<IntVar, Map<Integer, IntVar>> equal = new IdentityHashMap<>();
     for (int k = 0; k < member.length; k++) {
       int v = min + k;
       if (!lub.contains(v)) {
@@ -310,7 +316,7 @@ public class SetUnionDetector implements ParserTreeConstants {
         if (l.element() == null) {
           in |= l.constant().contains(v);
         } else if (l.element().domain.contains(v)) {
-          or.add(valueLiteral(l.element(), v, equal));
+          or.add(valueLiteral(l.element(), v));
         }
       }
       if (in) {
@@ -335,29 +341,51 @@ public class SetUnionDetector implements ParserTreeConstants {
     rewritten++;
   }
 
-  /** The literal [x = v], one 0/1 variable per pair. */
-  private IntVar valueLiteral(IntVar x, int v, Map<IntVar, Map<Integer, IntVar>> equal) {
+  /**
+   * The literal [x = v], one 0/1 variable per pair: the one the model reifies, or a new one that
+   * {@link #poseLiterals} channels to x.
+   */
+  private IntVar valueLiteral(IntVar x, int v) {
     Map<Integer, IntVar> byValue = equal.computeIfAbsent(x, k -> new HashMap<>());
     IntVar b = byValue.get(v);
     if (b == null) {
+      Map<Integer, IntVar> reified = support.reif.cs.get(x);
       if (x.singleton(v)) {
         b = support.dictionary.getConstant(1);
-      } else if (x.min() >= 0 && x.max() <= 1) {
-        b = v == 1 ? x : negation(x, equal);
+      } else if (x.min() >= 0 && x.max() <= 1 && v == 1) {
+        b = x;
+      } else if (reified != null && reified.get(v) != null) {
+        b = reified.get(v);
       } else {
         b = new IntVar(support.store, 0, 1);
-        support.pose(support.fzXeqCreified(x, v, b));
+        made.computeIfAbsent(x, k -> new HashMap<>()).put(v, b);
       }
       byValue.put(v, b);
     }
     return b;
   }
 
-  private IntVar negation(IntVar x, Map<IntVar, Map<Integer, IntVar>> equal) {
-    IntVar b = new IntVar(support.store, 0, 1);
-    support.pose(support.fzXeqCreified(x, 0, b));
-    equal.computeIfAbsent(x, k -> new HashMap<>()).put(0, b);
-    return b;
+  /**
+   * Posts the new literals of each variable x: in the channel of x (one ChannelReif for all reified
+   * values of x, posted with the reifications of the model) when x has two or more reified values,
+   * and as one reified x = v otherwise. One reified constraint per pair made gt-sort n9_ub10_75.0
+   * post 100,884 propagators; with the channels it posts 31,358.
+   */
+  private void poseLiterals() {
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : made.entrySet()) {
+      IntVar x = e.getKey();
+      Map<Integer, IntVar> values = e.getValue();
+      if (values.size() + support.reif.size(x) > 1) {
+        for (Map.Entry<Integer, IntVar> vb : values.entrySet()) {
+          support.addReified(x, vb.getKey(), vb.getValue());
+        }
+      } else {
+        for (Map.Entry<Integer, IntVar> vb : values.entrySet()) {
+          support.pose(support.fzXeqCreified(x, vb.getKey(), vb.getValue()));
+        }
+      }
+    }
+    made.clear();
   }
 
   /** ChannelBoolSet takes each variable once; a repeated one gets a copy equal to it. */
