@@ -220,8 +220,9 @@ public class LinearRelaxation extends Constraint
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 
   // the most pivots of the first solve, which has the root budget instead of the pivot limit: a
-  // root LP that stops at the limit gives neither a bound nor cuts
-  private static final int ROOT_PIVOTS = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
+  // root LP that stops at the limit gives neither a bound nor cuts; not final, so that tests can
+  // make a root solve stop at it
+  static int rootPivots = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
 
   // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
   // its pivots update, a solve that only tightens bounds a PRUNE_DISCOUNT-th of them, and a solve
@@ -437,6 +438,12 @@ public class LinearRelaxation extends Constraint
 
   // a relaxation over the size caps of the sparse simplex in search: solved at the root only
   private boolean large;
+
+  // made by refutation(): solved once at the root, then removed
+  private boolean refutation;
+  private int refutationStatus = -1;
+  // the status of the last solve
+  private int lastSolveStatus = -1;
 
   // the solutions kept so far, which tells a reader of the last solution when it changed
   private int solutionVersion;
@@ -1412,6 +1419,82 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Creates the relaxation that tries to refute a satisfaction model at the root: the value
+   * encodings of the counting, all-different and element constraints ({@link
+   * Linearizations#refutationRows}), the linear rows and clause rows of the model restated over the
+   * value columns, and the conflicts of pairs of 0/1 literals merged into cliques. It is solved
+   * once, at the root, and then removed: an infeasible relaxation proves that the model has no
+   * solution, and a feasible one would only slow every node down. The relaxation of the model
+   * ({@link #of}) keeps these encodings only for an objective, since without one they can only make
+   * an LP infeasible, and kept for one infeasible LP in search they slow every solve (see there);
+   * here they cost one root solve.
+   *
+   * <p>A pigeonhole count is what the relaxation sees and propagation does not: in the social
+   * golfers of the XCSP 2024 competition with 32 players in 8 groups of 4 over 11 weeks, player 0
+   * meets 3 players a week, 33 in all, but only 31 others exist. The counts of the groups and the
+   * cliques of "meets player 0 in week w" over the weeks give the LP 30 meetings for 28 players
+   * after the fixed first week, and the LP is infeasible at once; the search found nothing in 600
+   * s. Such counts are pigeonhole arguments, which resolution, and so lazy clause generation,
+   * refutes only in exponentially many steps (A. Haken, "The intractability of resolution", TCS 39,
+   * 1985), while the LP of the assignment rows with the clique rows of the conflict graph (A.
+   * Atamtürk, G. L. Nemhauser and M. W. P. Savelsbergh, "Conflict graphs in solving integer
+   * programming problems", EJOR 121, 2000) refutes them at once.
+   *
+   * @param store the store
+   * @param clauses the clause rows of the clauses that lazy clause generation took
+   * @return the relaxation, or null when there is no value encoding or the rows are too many
+   */
+  public static LinearRelaxation refutation(Store store, Collection<LinearForm> clauses) {
+    if (!ROOT_REFUTATION || !LINEARIZE) {
+      return null;
+    }
+    Set<Constraint> constraints = constraintsOf(store);
+    constraints.removeIf(c -> c instanceof LinearRelaxation);
+    List<LinearForm> given = new ArrayList<>();
+    for (Constraint c : constraints) {
+      LinearForm f = LinearForms.of(c);
+      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+        given.add(f);
+      }
+    }
+    for (LinearForm f : clauses) {
+      if (f != null) {
+        given.add(f);
+      }
+    }
+    List<LinearForm> rows = Linearizations.refutationRows(constraints, given);
+    if (rows.isEmpty()) {
+      return null;
+    }
+    PairCliques merged = PairCliques.merge(rows, List.of());
+    rows = merged.rows;
+    Simplex simplex = sparseTakes(rows) ? Simplex.SPARSE : Simplex.DENSE;
+    if (tooLarge(rows, simplex)) {
+      return null;
+    }
+    LinearRelaxation r = new LinearRelaxation(rows, List.of(), null, false, simplex);
+    r.refutation = true;
+    r.pairCliques = merged.cliques;
+    r.cutsTried = true;
+    return r.rows() < 2 ? null : r;
+  }
+
+  /**
+   * Returns the outcome of the root solve of a relaxation made by {@link #refutation}.
+   *
+   * @return "refuted" when it proved that the model has no solution, "feasible", "limit" when it
+   *     stopped at its pivot limit, "unsolved" before its solve
+   */
+  public String refutationOutcome() {
+    return switch (refutationStatus) {
+      case -1 -> "unsolved";
+      case LpSolver.INFEASIBLE -> "refuted";
+      case LpSolver.OPTIMAL -> "feasible";
+      default -> "limit";
+    };
+  }
+
+  /**
    * Returns the rows of this relaxation over the variables of the model: the given rows and the
    * further rows tried at the first solve.
    *
@@ -1563,6 +1646,17 @@ public class LinearRelaxation extends Constraint
   // the conflicts of pairs of 0/1 literals merged into clique rows
   private static final boolean PAIR_CLIQUES =
       !"false".equals(System.getProperty("org.jacop.lp.pairCliques"));
+
+  // satisfaction models: a relaxation of the value encodings solved once at the root, to refute
+  // the model (refutation)
+  private static final boolean ROOT_REFUTATION =
+      !"false".equals(System.getProperty("org.jacop.lp.rootRefutation"));
+
+  // the pivots of the root solve of the refutation: the social golfers refute in 1,442; on the 351
+  // XCSP 2022-2025 satisfaction instances it does not refute, the root solve took up to 1.7 s
+  // (7,362 pivots) without a limit
+  private static final int REFUTATION_PIVOTS =
+      Integer.getInteger("org.jacop.lp.rootRefutationPivots", 2_500);
 
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
@@ -2170,6 +2264,9 @@ public class LinearRelaxation extends Constraint
 
   @Override
   public void consistency(Store store) {
+    if (refutation && calls > 0) {
+      return; // solved once at the root, see refutation()
+    }
     if (large && calls > 0 && store.level > rootLevel && !restarting) {
       // a large relaxation does nothing in search once it is solved: it never prunes there, so
       // the constraints of its rows hold an assignment to them, and checking the ground columns
@@ -2219,7 +2316,16 @@ public class LinearRelaxation extends Constraint
     }
     long started = System.nanoTime();
     try {
+      if (refutation) {
+        refutationStatus = LpSolver.INFEASIBLE;
+      }
       solveAndPropagate(store);
+      if (refutation) {
+        // feasible, or stopped at its limit: it has done its part
+        refutationStatus = lastSolveStatus;
+        removeConstraint();
+        return;
+      }
       if (first) {
         rememberRootBounds();
         if (large && !boundsObjective(domainBound)) {
@@ -2458,12 +2564,16 @@ public class LinearRelaxation extends Constraint
     }
     int limit =
         calls == 1 || restarting
-            ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
+            ? (int) Math.clamp(ROOT_WORK / size, 5, rootPivots)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
+    if (refutation) {
+      limit = Math.min(limit, REFUTATION_PIVOTS);
+    }
     int status =
         (calls == 1 || restarting) && simplex != Simplex.LAZY
             ? rootSolve(lp, limit, rootWork())
             : solvePool(limit);
+    status = extendRootSolve(lp, status, calls == 1);
     // the first solve happens in the root propagation, before search makes a decision (also in
     // the free search, which propagates its root a level up, and under lazy clause generation)
     if (calls == 1 && extraColumns.length > 0) {
@@ -2518,6 +2628,7 @@ public class LinearRelaxation extends Constraint
       status = searchEnergyCuts(limit);
     }
     lastSolveLevel = store.level;
+    lastSolveStatus = status;
     if (jump) {
       jumpSolves++;
       jumpPivots += lp.pivots() - pivotsBefore;
@@ -2808,6 +2919,61 @@ public class LinearRelaxation extends Constraint
   // pivots, past the time limit of the whole run); the limit only binds on such relaxations
   private static final long SPARSE_ROOT_NANOS =
       (long) (Double.parseDouble(System.getProperty("org.jacop.lp.sparseRootSeconds", "3")) * 1e9);
+
+  // the share of the time of a root solve of a large relaxation (org.jacop.lp.largeRootShare of the
+  // time limit) that the root solves of an optimisation relaxation in the sparse simplex share
+  // when they stop at their pivots or work: the first solve, and the trial of the extra rows. Such
+  // a solve gives neither a bound nor cuts nor a solution, while the relaxations under the size
+  // caps of the sparse simplex are cheap per pivot. Drinking-010000 of XCSP 2024 (13,142 rows and
+  // 12,570 extra rows of value encodings): the trial stops at its budget and is dropped, the bound
+  // stays 0; the extended trial takes 0.8 s more and bounds the objective at 1,000, the optimum,
+  // as on Drinking-020000, which is large and gets the time of a large relaxation. 0 turns it off;
+  // not final, so that tests can turn it off
+  static double rootExtendShare =
+      Double.parseDouble(System.getProperty("org.jacop.lp.rootExtendShare", "0.5"));
+
+  // the nanoseconds the extended root solves took; negative when the last stopped at its time too
+  private long rootExtendNanos;
+
+  // when the time of the extended root solves runs out (0 before the first one)
+  private long extendDeadline;
+
+  // continues a root solve of the sparse simplex that stopped at its pivots or work, within the
+  // time that the extended root solves share; only a root solve (root) that stopped at its limit
+  private int extendRootSolve(LpSolver s, int status, boolean root) {
+    if (!root
+        || status != LpSolver.LIMIT
+        || objective == null
+        || large
+        || rootExtendShare <= 0
+        || simplex == Simplex.LAZY
+        || s instanceof DualSimplex) {
+      return status;
+    }
+    long start = System.nanoTime();
+    if (extendDeadline == 0) {
+      extendDeadline = start + (long) (largeRootNanos * rootExtendShare);
+    }
+    if (start >= extendDeadline) {
+      return status;
+    }
+    int r = rootSolve(s, Integer.MAX_VALUE, Long.MAX_VALUE, extendDeadline - start);
+    long took = Math.max(1, System.nanoTime() - start);
+    rootExtendNanos = (Math.abs(rootExtendNanos) + took) * (r == LpSolver.LIMIT ? -1 : 1);
+    return r;
+  }
+
+  /**
+   * Returns the time of the extended root solves, which run when a root solve of an optimisation
+   * relaxation in the sparse simplex (the first one or the trial of the extra rows) stops at its
+   * pivots or work.
+   *
+   * @return the nanoseconds they took, negative when the last one stopped at its time limit, 0 when
+   *     none ran
+   */
+  public long rootExtendNanos() {
+    return rootExtendNanos;
+  }
 
   private long rootWork() {
     return objective == null ? ROOT_WORK : SPARSE_ROOT_WORK;
@@ -3349,7 +3515,7 @@ public class LinearRelaxation extends Constraint
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
@@ -3458,7 +3624,7 @@ public class LinearRelaxation extends Constraint
       setBounds(s, j);
     }
     long size = Math.max(1, s.pivotWork());
-    int status = rootSolve(s, (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
+    int status = rootSolve(s, Math.clamp(ROOT_WORK / size, 5, rootPivots), rootWork());
     double before = lp.value(0);
     if (status != LpSolver.OPTIMAL
         || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
@@ -3717,7 +3883,7 @@ public class LinearRelaxation extends Constraint
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
@@ -3944,7 +4110,7 @@ public class LinearRelaxation extends Constraint
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
@@ -4649,7 +4815,7 @@ public class LinearRelaxation extends Constraint
       setBounds(full, j);
     }
     long size = Math.max(1, full.pivotWork());
-    int pivots = Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS);
+    int pivots = Math.clamp(ROOT_WORK / size, 5, rootPivots);
     boolean keep;
     if (searchStartMin != null) {
       // solved after a search that started without it: the rows are kept as they would have been
@@ -4672,7 +4838,7 @@ public class LinearRelaxation extends Constraint
     } else {
       keep = false;
     }
-    int withExtra = rootSolve(full, pivots, rootWork());
+    int withExtra = extendRootSolve(full, rootSolve(full, pivots, rootWork()), true);
     if (searchStartMin == null) {
       keep = keepRows(withExtra, status, before, full, few, k);
     } else if (withExtra == LpSolver.LIMIT) {
@@ -5094,6 +5260,7 @@ public class LinearRelaxation extends Constraint
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
+    c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));
     }

@@ -31,6 +31,11 @@
 package org.jacop.fz.constraints;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearBool;
@@ -496,6 +501,16 @@ class LinearConstraints implements ParserTreeConstants {
       p2 = rewrite.vars();
     }
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    if (repeated(p2)) {
+      // merged aliases (CommonSubexpressions) can name a variable twice
+      Map<IntVar, Integer> terms = new LinkedHashMap<>();
+      for (int i = 0; i < p2.length; i++) {
+        terms.merge(p2[i], p1[i], Integer::sum);
+      }
+      terms.values().removeIf(c -> c == 0);
+      p2 = terms.keySet().toArray(new IntVar[0]);
+      p1 = terms.values().stream().mapToInt(Integer::intValue).toArray();
+    }
 
     Integer s = evaluateConstantLinearTerm(p1, p2);
     boolean p2Fixed = s != null;
@@ -1285,5 +1300,15 @@ class LinearConstraints implements ParserTreeConstants {
     int[] ones = new int[n];
     Arrays.fill(ones, 1);
     return ones;
+  }
+
+  private static boolean repeated(IntVar[] x) {
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : x) {
+      if (!v.singleton() && !seen.add(v)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

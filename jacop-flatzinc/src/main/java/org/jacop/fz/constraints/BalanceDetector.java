@@ -252,29 +252,33 @@ public class BalanceDetector implements ParserTreeConstants {
         return;
       }
     }
-    // the terms over their defining variables, or over the arguments themselves
-    if (balance(t, true, squares, node, equation, e, c, other)
-        || balance(t, false, squares, node, equation, e, c, other)) {
+    // the terms over their defining variables, a summed term as itself when the common
+    // subexpression pass aliased its definition x - t = 0 away, or the arguments themselves
+    if (balance(defined(t), squares, node, equation, e, c, other)
+        || balance(mixed(t), squares, node, equation, e, c, other)
+        || balance(itself(t), squares, node, equation, e, c, other)) {
       handled.add(node);
     }
   }
 
   private boolean balance(
-      IntVar[] t,
-      boolean defined,
+      Affine[] terms,
       boolean squares,
       ASTConstElem node,
       boolean equation,
       int e,
       long c,
       IntVar other) {
-    int n = t.length;
+    if (terms == null) {
+      return false;
+    }
+    int n = terms.length;
     IntVar[] x = new IntVar[n];
     long a = 0;
     long b = 0;
     Set<IntVar> set = new HashSet<>();
     for (int i = 0; i < n; i++) {
-      Affine f = defined ? definition(t[i]) : new Affine(t[i], 1, 0);
+      Affine f = terms[i];
       if (f == null) {
         return false;
       }
@@ -311,6 +315,69 @@ public class BalanceDetector implements ParserTreeConstants {
     }
     support.delayedConstraints.add(balance);
     return true;
+  }
+
+  // every term by its definition over a summed variable
+  private Affine[] defined(IntVar[] t) {
+    Affine[] f = new Affine[t.length];
+    for (int i = 0; i < t.length; i++) {
+      f[i] = definition(t[i]);
+    }
+    return f;
+  }
+
+  // every term as itself
+  private static Affine[] itself(IntVar[] t) {
+    Affine[] f = new Affine[t.length];
+    for (int i = 0; i < t.length; i++) {
+      f[i] = new Affine(t[i], 1, 0);
+    }
+    return f;
+  }
+
+  // a summed term may stand as itself next to terms with definitions, when the common
+  // subexpression pass aliased its definition x - t = 0 away: for the forms |a * y - b| of the
+  // first term, every term takes its first candidate of the same form over a new variable
+  private Affine[] mixed(IntVar[] t) {
+    for (Affine first : candidates(t[0])) {
+      Affine[] f = new Affine[t.length];
+      Set<IntVar> used = new HashSet<>();
+      boolean all = true;
+      for (int i = 0; i < t.length && all; i++) {
+        for (Affine g : candidates(t[i])) {
+          if (sameForm(first, g) && !used.contains(g.y())) {
+            f[i] = g;
+            used.add(g.y());
+            break;
+          }
+        }
+        all = f[i] != null;
+      }
+      if (all && sums.containsKey(used)) {
+        return f;
+      }
+    }
+    return null;
+  }
+
+  // the definitions of t over summed variables, and t itself if it is summed
+  private List<Affine> candidates(IntVar t) {
+    List<Affine> list = new ArrayList<>();
+    for (Affine f : definitions.getOrDefault(t, List.of())) {
+      if (f.p() != 0 && summed.contains(f.y())) {
+        list.add(f);
+      }
+    }
+    if (summed.contains(t)) {
+      list.add(new Affine(t, 1, 0));
+    }
+    return list;
+  }
+
+  // |p * y + q| has the form | |p| * y - b | with b = -sign(p) * q
+  private static boolean sameForm(Affine f, Affine g) {
+    return Math.abs(f.p()) == Math.abs(g.p())
+        && (f.p() > 0 ? -f.q() : f.q()) == (g.p() > 0 ? -g.q() : g.q());
   }
 
   // the definition of t over a variable whose sum is fixed
