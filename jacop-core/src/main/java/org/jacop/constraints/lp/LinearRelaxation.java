@@ -3225,6 +3225,12 @@ public class LinearRelaxation extends Constraint
       work = Long.MAX_VALUE;
       nanos = Math.max(0, largeDeadline - now);
     }
+    return solveWithin(s, pivots, work, nanos);
+  }
+
+  // a solve of the sparse simplex in chunks, until it is done, the pivots run out, its work passes
+  // the budget or its time the nanoseconds given
+  private static int solveWithin(LpSolver s, int pivots, long work, long nanos) {
     long startPivots = s.pivots();
     long startWork = s.work();
     long startTime = System.nanoTime();
@@ -5120,6 +5126,10 @@ public class LinearRelaxation extends Constraint
     long size = Math.max(1, full.pivotWork());
     int pivots = Math.clamp(ROOT_WORK / size, 5, rootPivots);
     boolean keep;
+    // the pivots and nanoseconds of the solve at the bounds of the start of the search, which cap
+    // the solve at the current bounds after it (Long.MAX_VALUE without it)
+    long startPivots = Long.MAX_VALUE;
+    long startNanos = Long.MAX_VALUE;
     if (searchStartMin != null) {
       // solved after a search that started without it: the rows are kept as they would have been
       // at the start of that search, not for a bound that the facts the search found raise
@@ -5134,14 +5144,41 @@ public class LinearRelaxation extends Constraint
       double startBound =
           baseStatus == LpSolver.OPTIMAL && objective != null ? base.value(0) : Double.NaN;
       droppedPivots += base.pivots();
-      keep = keepRows(rootSolve(full, pivots, rootWork()), baseStatus, startBound, full, few, k);
+      long before0 = full.pivots();
+      long started = System.nanoTime();
+      int startStatus = rootSolve(full, pivots, rootWork());
+      keep = keepRows(startStatus, baseStatus, startBound, full, few, k);
+      if (keep
+          && startStatus == LpSolver.OPTIMAL
+          && objective != null
+          && !(few && k <= SMALL_EXTRA)) {
+        // the bound that the rows raise at the start bounds is no better than the bound the search
+        // has found since: they are not kept for it. rna-alignment-k50-23-49 (MaxSAT Evaluation
+        // 2024): 13,579 clause rows raise 0 to 443, where the cores of LCG had 532 (the optimum is
+        // 536); keeping them took 16.6 s more of root LP before the rows and the LP were dropped
+        double b = integerBound(full.value(0));
+        keep = maximize ? b < objective.max() : b > objective.min();
+      }
+      startPivots = Math.max(MIN_RESOLVE_PIVOTS, full.pivots() - before0);
+      startNanos = Math.max(MIN_RESOLVE_NANOS, System.nanoTime() - started);
       for (int j = 0; j < n; j++) {
         setBounds(full, j);
       }
     } else {
       keep = false;
     }
-    int withExtra = extendRootSolve(full, rootSolve(full, pivots, rootWork()), true);
+    int withExtra;
+    if (searchStartMin != null && !keep && !keepExtra && trees.isEmpty()) {
+      // rows that the start bounds do not keep are kept at the current bounds only when they make
+      // the relaxation infeasible: that solve gets no more than the solve at the start bounds took,
+      // and is not extended (rna-alignment-k50-23-49: 4.5 s and 3,172 pivots at the start bounds,
+      // 16.6 s and 6,234 pivots at the current ones)
+      withExtra =
+          rootSolveCapped(
+              full, (int) Math.min(large ? Integer.MAX_VALUE : pivots, startPivots), startNanos);
+    } else {
+      withExtra = extendRootSolve(full, rootSolve(full, pivots, rootWork()), true);
+    }
     if (searchStartMin == null) {
       keep = keepRows(withExtra, status, before, full, few, k);
     } else if (withExtra == LpSolver.LIMIT) {
@@ -5158,6 +5195,27 @@ public class LinearRelaxation extends Constraint
     }
     droppedPivots += full.pivots();
     return null;
+  }
+
+  // the fewest pivots and nanoseconds that the solve of a trial at the current bounds gets
+  private static final long MIN_RESOLVE_PIVOTS = 100;
+  private static final long MIN_RESOLVE_NANOS = 100_000_000L;
+
+  // a root solve within at most the given pivots and nanoseconds, also on a large relaxation (whose
+  // root solves otherwise share the time of its root)
+  private int rootSolveCapped(LpSolver s, int pivots, long nanos) {
+    if (s instanceof DualSimplex) {
+      return s.solve(pivots);
+    }
+    long cap = nanos;
+    if (large) {
+      long now = System.nanoTime();
+      if (largeDeadline == 0) {
+        largeDeadline = now + largeRootNanos;
+      }
+      cap = Math.min(cap, Math.max(0, largeDeadline - now));
+    }
+    return solveWithin(s, pivots, rootWork(), cap);
   }
 
   // whether the rows of a trial that ends with the given status are kept, against the solve
