@@ -220,8 +220,9 @@ public class LinearRelaxation extends Constraint
   private static final long ROOT_WORK = Long.getLong("org.jacop.lp.rootWork", 1_000_000_000L);
 
   // the most pivots of the first solve, which has the root budget instead of the pivot limit: a
-  // root LP that stops at the limit gives neither a bound nor cuts
-  private static final int ROOT_PIVOTS = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
+  // root LP that stops at the limit gives neither a bound nor cuts; not final, so that tests can
+  // make a root solve stop at it
+  static int rootPivots = Integer.getInteger("org.jacop.lp.rootPivots", 20_000);
 
   // the tableau entries earned by each call of consistency, up to WORK; a solve spends the entries
   // its pivots update, a solve that only tightens bounds a PRUNE_DISCOUNT-th of them, and a solve
@@ -2563,7 +2564,7 @@ public class LinearRelaxation extends Constraint
     }
     int limit =
         calls == 1 || restarting
-            ? (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS)
+            ? (int) Math.clamp(ROOT_WORK / size, 5, rootPivots)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
     if (refutation) {
       limit = Math.min(limit, REFUTATION_PIVOTS);
@@ -2572,6 +2573,7 @@ public class LinearRelaxation extends Constraint
         (calls == 1 || restarting) && simplex != Simplex.LAZY
             ? rootSolve(lp, limit, rootWork())
             : solvePool(limit);
+    status = extendRootSolve(lp, status, calls == 1);
     // the first solve happens in the root propagation, before search makes a decision (also in
     // the free search, which propagates its root a level up, and under lazy clause generation)
     if (calls == 1 && extraColumns.length > 0) {
@@ -2917,6 +2919,61 @@ public class LinearRelaxation extends Constraint
   // pivots, past the time limit of the whole run); the limit only binds on such relaxations
   private static final long SPARSE_ROOT_NANOS =
       (long) (Double.parseDouble(System.getProperty("org.jacop.lp.sparseRootSeconds", "3")) * 1e9);
+
+  // the share of the time of a root solve of a large relaxation (org.jacop.lp.largeRootShare of the
+  // time limit) that the root solves of an optimisation relaxation in the sparse simplex share
+  // when they stop at their pivots or work: the first solve, and the trial of the extra rows. Such
+  // a solve gives neither a bound nor cuts nor a solution, while the relaxations under the size
+  // caps of the sparse simplex are cheap per pivot. Drinking-010000 of XCSP 2024 (13,142 rows and
+  // 12,570 extra rows of value encodings): the trial stops at its budget and is dropped, the bound
+  // stays 0; the extended trial takes 0.8 s more and bounds the objective at 1,000, the optimum,
+  // as on Drinking-020000, which is large and gets the time of a large relaxation. 0 turns it off;
+  // not final, so that tests can turn it off
+  static double rootExtendShare =
+      Double.parseDouble(System.getProperty("org.jacop.lp.rootExtendShare", "0.5"));
+
+  // the nanoseconds the extended root solves took; negative when the last stopped at its time too
+  private long rootExtendNanos;
+
+  // when the time of the extended root solves runs out (0 before the first one)
+  private long extendDeadline;
+
+  // continues a root solve of the sparse simplex that stopped at its pivots or work, within the
+  // time that the extended root solves share; only a root solve (root) that stopped at its limit
+  private int extendRootSolve(LpSolver s, int status, boolean root) {
+    if (!root
+        || status != LpSolver.LIMIT
+        || objective == null
+        || large
+        || rootExtendShare <= 0
+        || simplex == Simplex.LAZY
+        || s instanceof DualSimplex) {
+      return status;
+    }
+    long start = System.nanoTime();
+    if (extendDeadline == 0) {
+      extendDeadline = start + (long) (largeRootNanos * rootExtendShare);
+    }
+    if (start >= extendDeadline) {
+      return status;
+    }
+    int r = rootSolve(s, Integer.MAX_VALUE, Long.MAX_VALUE, extendDeadline - start);
+    long took = Math.max(1, System.nanoTime() - start);
+    rootExtendNanos = (Math.abs(rootExtendNanos) + took) * (r == LpSolver.LIMIT ? -1 : 1);
+    return r;
+  }
+
+  /**
+   * Returns the time of the extended root solves, which run when a root solve of an optimisation
+   * relaxation in the sparse simplex (the first one or the trial of the extra rows) stops at its
+   * pivots or work.
+   *
+   * @return the nanoseconds they took, negative when the last one stopped at its time limit, 0 when
+   *     none ran
+   */
+  public long rootExtendNanos() {
+    return rootExtendNanos;
+  }
 
   private long rootWork() {
     return objective == null ? ROOT_WORK : SPARSE_ROOT_WORK;
@@ -3458,7 +3515,7 @@ public class LinearRelaxation extends Constraint
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
@@ -3567,7 +3624,7 @@ public class LinearRelaxation extends Constraint
       setBounds(s, j);
     }
     long size = Math.max(1, s.pivotWork());
-    int status = rootSolve(s, (int) Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
+    int status = rootSolve(s, Math.clamp(ROOT_WORK / size, 5, rootPivots), rootWork());
     double before = lp.value(0);
     if (status != LpSolver.OPTIMAL
         || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
@@ -3826,7 +3883,7 @@ public class LinearRelaxation extends Constraint
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
@@ -4053,7 +4110,7 @@ public class LinearRelaxation extends Constraint
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, ROOT_PIVOTS),
+              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
@@ -4758,7 +4815,7 @@ public class LinearRelaxation extends Constraint
       setBounds(full, j);
     }
     long size = Math.max(1, full.pivotWork());
-    int pivots = Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS);
+    int pivots = Math.clamp(ROOT_WORK / size, 5, rootPivots);
     boolean keep;
     if (searchStartMin != null) {
       // solved after a search that started without it: the rows are kept as they would have been
@@ -4781,7 +4838,7 @@ public class LinearRelaxation extends Constraint
     } else {
       keep = false;
     }
-    int withExtra = rootSolve(full, pivots, rootWork());
+    int withExtra = extendRootSolve(full, rootSolve(full, pivots, rootWork()), true);
     if (searchStartMin == null) {
       keep = keepRows(withExtra, status, before, full, few, k);
     } else if (withExtra == LpSolver.LIMIT) {

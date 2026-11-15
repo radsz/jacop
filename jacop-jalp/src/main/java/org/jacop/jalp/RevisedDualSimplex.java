@@ -172,6 +172,18 @@ public final class RevisedDualSimplex {
   private final int[] colLen;
   private long nonzeros;
 
+  /**
+   * Whether the leaving row is the one of the largest gap^1.2 / weight rather than gap^2 / weight
+   * (the less sensitive dual steepest edge of Huangfu, High performance simplex solver, PhD thesis,
+   * University of Edinburgh, 2013, section 3.3): squaring the gap favours dense rows of the
+   * tableau, whose pivots fill the basis inverse and lose the hypersparse solves. On LPs whose
+   * columns have about two entries, that have at most four columns per row and at least 5000
+   * columns, the shape of the multicommodity flows of pds, fome and the n37 network design LPs, it
+   * halves the solve time; elsewhere it is slower as often as it is faster. Decided from the
+   * problem as given, before presolve and cut rows.
+   */
+  private boolean linearScore;
+
   // the scale of each row and structural column: the scaled problem is R A C
   private double[] rowScale;
   private final double[] colScale;
@@ -413,6 +425,12 @@ public final class RevisedDualSimplex {
     weightsFrom = m;
     crashPending = CRASH_ROWS >= 0;
     presolvePending = PRESOLVE;
+    linearScore =
+        "on".equals(LINEAR_SCORE)
+            || "auto".equals(LINEAR_SCORE)
+                && n >= LINEAR_SCORE_COLUMNS
+                && nonzeros <= 2.2 * n
+                && n <= 4L * m;
   }
 
   // a deep copy of the state of another simplex
@@ -431,6 +449,7 @@ public final class RevisedDualSimplex {
     }
     colLen = o.colLen.clone();
     nonzeros = o.nonzeros;
+    linearScore = o.linearScore;
     rowScale = o.rowScale.clone();
     colScale = o.colScale.clone();
     cost = o.cost.clone();
@@ -1298,6 +1317,15 @@ public final class RevisedDualSimplex {
   }
 
   // the relative size of reduced costs taken as round-off; 0 turns this off (tests of CycleGuard)
+  // whether the leaving row is chosen by gap^1.2 / weight, for tests
+  boolean linearScore() {
+    return linearScore;
+  }
+
+  void setLinearScore(boolean on) {
+    linearScore = on;
+  }
+
   void setRoundOff(double r) {
     roundOffShare = r;
   }
@@ -2225,6 +2253,14 @@ public final class RevisedDualSimplex {
     skippedRows = 0;
   }
 
+  // the leaving row by gap^1.2 / weight in place of gap^2 / weight on LPs shaped like
+  // multicommodity networks (org.jacop.jalp.linearScore: auto, on or off)
+  private static final String LINEAR_SCORE =
+      System.getProperty("org.jacop.jalp.linearScore", "auto");
+  private static final double LINEAR_SCORE_POWER = 1.2;
+  // the fewest columns for the automatic choice: below them the solves are short either way
+  static final int LINEAR_SCORE_COLUMNS = 5000;
+
   private int leavingRow() {
     if (!outsideValid) {
       outsideLen = 0;
@@ -2252,7 +2288,7 @@ public final class RevisedDualSimplex {
       if (skippedRows > 0 && skipped[i]) {
         continue;
       }
-      double score = gap * gap / weight[i];
+      double score = (linearScore ? Math.pow(gap, LINEAR_SCORE_POWER) : gap * gap) / weight[i];
       if (score > worst || score == worst && i < r) {
         worst = score;
         r = i;
@@ -2505,6 +2541,7 @@ public final class RevisedDualSimplex {
       RevisedDualSimplex red = new RevisedDualSimplex(rc, rw, rl, rh, rcost, false);
       red.crashPending = false;
       red.presolvePending = false;
+      red.linearScore = linearScore;
       // the costs as perturbed here, so that the reduced optimum is optimal here too
       System.arraycopy(rcost, 0, red.cost, 0, nr);
       System.arraycopy(rcost, 0, red.trueCost, 0, nr);

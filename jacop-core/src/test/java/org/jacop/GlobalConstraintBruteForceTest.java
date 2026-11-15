@@ -59,6 +59,7 @@ import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
@@ -321,6 +322,7 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("MaxSimple", maxOrMinSimple(true)),
         Arguments.of("MinSimple", maxOrMinSimple(false)),
         Arguments.of("ArgMax", argMaxOrMin(true)),
+        Arguments.of("ArgMaxMonotone", argMaxMonotone()),
         Arguments.of("ArgMin", argMaxOrMin(false)),
         Arguments.of("Increasing", monotonic(true)),
         Arguments.of("Decreasing", monotonic(false)),
@@ -2414,6 +2416,62 @@ class GlobalConstraintBruteForceTest {
             int best = 0;
             for (int i = 1; i < n; i++) {
               if (max ? x[i] > x[best] : x[i] < x[best]) {
+                best = i;
+              }
+            }
+            return x[n] == best + 1;
+          },
+          "");
+    };
+  }
+
+  // arg_max over nondecreasing tables of the arguments (with ties), some positions the identity,
+  // a table shorter than the domain, and an argument shared by two positions
+  private static Function<Random, Instance> argMaxMonotone() {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      int[][] f = new int[n][];
+      int[] first = new int[n];
+      for (int k = 0; k < n; k++) {
+        if (random.nextInt(4) == 0) {
+          continue;
+        }
+        first[k] = random.nextInt(2);
+        f[k] = new int[1 + random.nextInt(4)];
+        int v = random.nextInt(3) - 1;
+        for (int i = 0; i < f[k].length; i++) {
+          v += random.nextInt(3);
+          f[k][i] = v;
+        }
+      }
+      int[] arg = new int[n];
+      for (int k = 0; k < n; k++) {
+        arg[k] = k > 0 && random.nextInt(5) == 0 ? random.nextInt(k) : k;
+      }
+      return new Instance(
+          append(domains(random, n, 0, 3), domain(random, 0, n + 1)),
+          (store, x) -> {
+            IntVar[] list = new IntVar[n];
+            for (int k = 0; k < n; k++) {
+              list[k] = x[arg[k]];
+            }
+            store.impose(new ArgMaxMonotone(list, f, first, x[n], 0));
+          },
+          x -> {
+            long[] y = new long[n];
+            for (int k = 0; k < n; k++) {
+              int u = x[arg[k]];
+              if (f[k] == null) {
+                y[k] = u;
+              } else if (u < first[k] || u >= first[k] + f[k].length) {
+                return false;
+              } else {
+                y[k] = f[k][u - first[k]];
+              }
+            }
+            int best = 0;
+            for (int i = 1; i < n; i++) {
+              if (y[i] > y[best]) {
                 best = i;
               }
             }
