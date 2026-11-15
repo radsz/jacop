@@ -77,6 +77,11 @@ public class Pruning extends Network {
   // read when the network is made, so that a test can compare the two
   private final boolean generalArcs =
       !"false".equals(System.getProperty("org.jacop.netflow.generalArcs"));
+
+  // whether the arcs left after the shortest paths are probed by successive shortest paths instead
+  // of pivots of the network simplex, -Dorg.jacop.netflow.shortestPaths=false for the pivots
+  private final boolean shortestPaths =
+      !"false".equals(System.getProperty("org.jacop.netflow.shortestPaths"));
   public int numActiveArcs;
 
   /** Shortest paths that decide residual arcs of capacity one without probing them. */
@@ -527,6 +532,19 @@ public class Pruning extends Network {
   private void analyzeArcHelper(Arc arc, int costLimit) {
     if (arc.capacity == 0 || arc.decidedPass == pass) {
       return;
+    }
+
+    if (shortestPaths) {
+      int fits =
+          distances.fits(arc.head, arc.tail(), arc, arc.capacity, arc.reducedCost(), costLimit);
+      if (fits >= 0) {
+        arc.decidedPass = pass;
+        if (fits < arc.capacity) {
+          pruneArc(
+              arc.capacity - fits, arc.sister.capacity + fits, arc.forward, arc.getCompanion());
+        }
+        return;
+      }
     }
 
     int capacity = arc.capacity;

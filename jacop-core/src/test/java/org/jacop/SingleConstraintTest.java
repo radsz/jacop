@@ -6357,8 +6357,10 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
-  // Deciding residual arcs of any capacity by shortest paths (org.jacop.netflow.generalArcs) must
-  // prune exactly what the probe of each arc prunes: random dives over random networks with
+  // Deciding residual arcs of any capacity by shortest paths (org.jacop.netflow.generalArcs) and
+  // probing the others by successive shortest paths (org.jacop.netflow.shortestPaths) must prune
+  // exactly what the probe of each arc by pivots of the network simplex prunes: random dives over
+  // random networks with
   // parallel arcs, capacities up to 9 and a tight cost bound, compared domain by domain.
   @Test
   void testNetworkFlowShortestPathDecisionsMatchProbes() {
@@ -6386,9 +6388,11 @@ class SingleConstraintTest extends TestHelper {
       Store[] stores = new Store[2];
       IntVar[][] vars = new IntVar[2][];
       String previous = System.getProperty("org.jacop.netflow.generalArcs");
+      String previousPaths = System.getProperty("org.jacop.netflow.shortestPaths");
       try {
         for (int s = 0; s < 2; s++) {
           System.setProperty("org.jacop.netflow.generalArcs", s == 0 ? "false" : "true");
+          System.setProperty("org.jacop.netflow.shortestPaths", s == 0 ? "false" : "true");
           stores[s] = new Store();
           NetworkBuilder net = new NetworkBuilder();
           Node[] nodes = new Node[nodeCount];
@@ -6409,6 +6413,11 @@ class SingleConstraintTest extends TestHelper {
           System.clearProperty("org.jacop.netflow.generalArcs");
         } else {
           System.setProperty("org.jacop.netflow.generalArcs", previous);
+        }
+        if (previousPaths == null) {
+          System.clearProperty("org.jacop.netflow.shortestPaths");
+        } else {
+          System.setProperty("org.jacop.netflow.shortestPaths", previousPaths);
         }
       }
       String network =

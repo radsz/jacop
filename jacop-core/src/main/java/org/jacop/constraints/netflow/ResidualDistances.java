@@ -64,6 +64,15 @@ final class ResidualDistances {
   /** The least residual capacity on the shortest path of each node, ties broken towards more. */
   private final int[] bottleneck;
 
+  /** The node potentials of the successive shortest paths of {@link #fits}. */
+  private final long[] potential;
+
+  /** The arcs whose capacity {@link #fits} changed, to be restored. */
+  private Arc[] changed = new Arc[16];
+
+  /** The flow {@link #fits} pushed through each changed arc. */
+  private int[] pushed = new int[16];
+
   /**
    * Prepares the distance computation for a network.
    *
@@ -77,6 +86,7 @@ final class ResidualDistances {
     this.targetMark = new int[nodes.length];
     this.predecessor = new Arc[nodes.length];
     this.bottleneck = new int[nodes.length];
+    this.potential = new long[nodes.length];
   }
 
   /**
@@ -182,6 +192,124 @@ final class ResidualDistances {
       arc = predecessor[at];
     }
     return room;
+  }
+
+  /**
+   * Returns how much flow fits from a node to another through the residual graph without an arc
+   * (its two directions), when each unit costs the given cost plus the reduced costs along its path
+   * and all of them together at most the budget: the successive shortest paths of a minimum cost
+   * flow (Ahuja, Magnanti and Orlin, Network Flows, 1993, ch. 9), with node potentials that keep
+   * the arc lengths non-negative. This is the probe of {@link Pruning} for the arc from the second
+   * node to the first one, without pivots of the network simplex. The residual capacities are
+   * restored before it returns.
+   *
+   * @param source the node the flow leaves, the head of the arc
+   * @param sink the node the flow reaches, the tail of the arc
+   * @param excluded the arc
+   * @param capacity the most flow asked for
+   * @param unitCost the reduced cost of the arc, paid by each unit
+   * @param budget the cost the flow may have
+   * @return the flow that fits, or -1 when an arc length is negative (not at optimality)
+   */
+  int fits(Node source, Node sink, Arc excluded, int capacity, long unitCost, long budget) {
+    Arrays.fill(potential, 0);
+    int changes = 0;
+    int flow = 0;
+    try {
+      while (flow < capacity) {
+        long reach = shortestPath(source, sink, excluded);
+        if (reach == -2) {
+          return -1;
+        }
+        if (reach == UNREACHED) {
+          break;
+        }
+        // the cost of a unit along the path: the reduced costs of its arcs, which the potentials
+        // shift by the potential of the sink (the source keeps potential 0)
+        long cost = unitCost + reach + potential[sink.index];
+        int amount = Math.min(bottleneck[sink.index], capacity - flow);
+        if (cost > 0) {
+          amount = (int) Math.min(amount, budget / cost);
+        }
+        if (amount <= 0) {
+          break;
+        }
+        for (Node at = sink; at != source; ) {
+          Arc arc = predecessor[at.index];
+          if (changes == changed.length) {
+            changed = Arrays.copyOf(changed, 2 * changes);
+            pushed = Arrays.copyOf(pushed, 2 * changes);
+          }
+          changed[changes] = arc;
+          pushed[changes++] = amount;
+          arc.capacity -= amount;
+          arc.sister.capacity += amount;
+          at = arc.tail();
+        }
+        boolean limited = amount < Math.min(bottleneck[sink.index], capacity - flow);
+        flow += amount;
+        budget -= amount * cost;
+        if (limited) {
+          break;
+        }
+        for (int i = 0; i < nodes.length; i++) {
+          potential[i] += Math.min(distance[i], reach);
+        }
+      }
+      return flow;
+    } finally {
+      for (int k = changes - 1; k >= 0; k--) {
+        changed[k].capacity += pushed[k];
+        changed[k].sister.capacity -= pushed[k];
+      }
+    }
+  }
+
+  // Dijkstra from source to sink over the residual arcs other than excluded (and its sister), with
+  // the reduced costs shifted by the potentials as lengths: the distance of sink, UNREACHED, or -2
+  // for a negative length
+  private long shortestPath(Node source, Node sink, Arc excluded) {
+    Arrays.fill(distance, UNREACHED);
+    Arrays.fill(heapPosition, -1);
+    heapSize = 0;
+    distance[source.index] = 0;
+    predecessor[source.index] = null;
+    bottleneck[source.index] = Integer.MAX_VALUE;
+    push(source.index);
+    while (heapSize > 0) {
+      int u = pop();
+      if (u == sink.index) {
+        return distance[u];
+      }
+      long du = distance[u];
+      Node node = nodes[u];
+      for (Arc arc : node.incident) {
+        if (arc.index == DELETED_ARC || arc == excluded || arc == excluded.sister) {
+          continue;
+        }
+        Arc residual = arc.head == node ? arc.sister : arc;
+        if (residual.capacity <= 0) {
+          continue;
+        }
+        Node next = residual.head;
+        long length = residual.reducedCost() + potential[u] - potential[next.index];
+        if (length < 0) {
+          return -2;
+        }
+        long d = du + length;
+        if (d < distance[next.index]) {
+          distance[next.index] = d;
+          predecessor[next.index] = residual;
+          bottleneck[next.index] = Math.min(bottleneck[u], residual.capacity);
+          if (heapPosition[next.index] == -1) {
+            push(next.index);
+          } else if (heapPosition[next.index] >= 0) {
+            siftUp(heapPosition[next.index]);
+          }
+        }
+      }
+    }
+    return UNREACHED;
   }
 
   private void push(int u) {
