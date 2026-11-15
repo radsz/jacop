@@ -583,7 +583,8 @@ public class CommonSubexpressions implements ParserTreeConstants {
       // an identifier: a variable or an array of variables
       IntVar[] a = support.dictionary.getVariableArray(e.getIdent());
       vars = a != null ? a : identVariable(e);
-    } else if (e.getType() == 3) {
+    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
+      // an element of an array of integer variables; float and set arrays are not merged
       vars = new IntVar[] {support.getVariable(e)};
     } else {
       return;
