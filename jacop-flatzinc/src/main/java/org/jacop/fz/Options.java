@@ -265,6 +265,11 @@ public class Options {
                 branching place the rectangles of diffn constraints one at a time, bottom-left,
                 before the other decisions until the first solution (first, default), in all
                 of them (always), or never),
+                slot-dive=on|off (with --lcg, optimisation: before the search a dive without
+                learning fills the variables of a cardinality with fixed counts that covers the
+                search variables in model order, largest value first, and its solution starts
+                the default branching; default on), slot-dive-share=<share> (its share of the
+                time limit, default 0.05),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
                 lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an
@@ -322,7 +327,9 @@ public class Options {
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
-                violated constraints, default 1000), ls-moves=fj|walk (fj, the default:
+                violated constraints, default 1000; 5000 for ls-auto), ls-auto=1|0 (1, the default:
+                without ls, a disjunctive scheduling model whose cost is the makespan gets the
+                critical-path tabu search alone for half of the time left, until it stalls), ls-moves=fj|walk (fj, the default:
                 feasibility jump, the best jump of a sample of variables, all violated constraints
                 weigh more at a minimum; walk: a step moves a variable of one violated constraint),
                 ls-perm=1|0 (1, the default: an all different constraint over one domain of as many

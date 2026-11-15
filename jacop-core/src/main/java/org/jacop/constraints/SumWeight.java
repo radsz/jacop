@@ -83,6 +83,9 @@ public class SumWeight extends Constraint
 
   LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
 
+  // the queue of the previous round, cleared and reused so that a round allocates no set
+  private LinkedHashSet<IntVar> spareQueue = new LinkedHashSet<>();
+
   /** The sum of grounded variables. */
   private TimeStamp<Long> sumGrounded;
 
@@ -342,8 +345,11 @@ public class SumWeight extends Constraint
 
   private void treatChangedVariables() {
 
+    if (variableQueue.isEmpty()) {
+      return;
+    }
     LinkedHashSet<IntVar> fdvs = variableQueue;
-    variableQueue = new LinkedHashSet<>();
+    variableQueue = spareQueue;
 
     for (IntVar v : fdvs) {
 
@@ -354,7 +360,8 @@ public class SumWeight extends Constraint
         int pointer = nextGroundedPosition.value();
 
         if (i < pointer) {
-          return;
+          // already counted among the grounded variables; the rest of the queue still needs reading
+          continue;
         }
 
         long value = v.min();
@@ -418,6 +425,8 @@ public class SumWeight extends Constraint
         }
       }
     }
+    fdvs.clear();
+    spareQueue = fdvs;
   }
 
   @Override

@@ -324,6 +324,51 @@ class IntensionTableFlatzincTest {
     assertEquals(16, solutions(run(model, "false", "-a")).size());
   }
 
+  // the Collatz chain of XCSP 2026: x[i] even -> x[i+1] = x[i] div 2, x[i] odd -> x[i+1] = 3 x[i]
+  // + 1, flattened by MiniZinc into modulo, division, half-reified equalities and clauses
+  private static String collatz(int n, int max) {
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder cons = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      fzn.append("var ").append(i == n - 1 ? "1..1" : "2.." + max).append(": x").append(i);
+      fzn.append(":: output_var;\n");
+    }
+    for (int i = 0; i + 1 < n; i++) {
+      String x = "x" + i;
+      String y = "x" + (i + 1);
+      fzn.append("var 0..1: m").append(i).append(":: var_is_introduced :: is_defined_var;\n");
+      fzn.append("var 1..").append(max / 2).append(": d").append(i);
+      fzn.append(":: var_is_introduced :: is_defined_var;\n");
+      for (String b : new String[] {"p", "q", "r", "s"}) {
+        fzn.append("var bool: ").append(b).append(i);
+        fzn.append(":: var_is_introduced :: is_defined_var;\n");
+      }
+      cons.append("constraint int_mod(" + x + ",2,m" + i + "):: defines_var(m" + i + ");\n");
+      cons.append("constraint int_div(" + x + ",2,d" + i + "):: defines_var(d" + i + ");\n");
+      cons.append("constraint int_ne_imp(m" + i + ",0,p" + i + ");\n");
+      cons.append("constraint int_eq_imp(" + y + ",d" + i + ",q" + i + ");\n");
+      cons.append("constraint bool_clause([p" + i + ",q" + i + "],[]);\n");
+      cons.append("constraint int_lin_eq_imp([1,-3],[" + y + "," + x + "],1,r" + i + ");\n");
+      cons.append("constraint int_eq_imp(m" + i + ",0,s" + i + ");\n");
+      cons.append("constraint bool_clause([r" + i + ",s" + i + "],[]);\n");
+    }
+    return fzn + cons.toString() + "solve satisfy;\n";
+  }
+
+  @Test
+  void functionalChainBecomesTablesOfOneRowPerValue() throws IOException {
+    // the outer box of each link has 2.5e8 tuples, but propagation over the clauses and the
+    // implications computes x[i+1] from x[i]: about 13,300 rows, more than MAX_TUPLES, one
+    // tabulation shared by the links with the same domains
+    String model = collatz(8, 20000);
+    String out = run(model, "force", "-a", "-debug");
+    assertTrue(out.contains("intension table detector: 7 tables of 56 constraints"), out);
+    Set<String> expected = solutions(run(model, "false", "-a"));
+    // the starts of the 7-step trajectories to 1: 128, 21, 20 and 3
+    assertEquals(expected, solutions(out));
+    assertEquals(4, expected.size(), expected.toString());
+  }
+
   @Test
   void groupWithoutDivisionOrModuloStays() throws IOException {
     // x <= 3 \/ y >= 5: no division, modulo or variable-array element, so the group is posted as

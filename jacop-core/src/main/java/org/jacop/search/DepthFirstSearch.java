@@ -35,6 +35,7 @@ import static org.jacop.core.Store.ASSERTS_ENABLED;
 import java.lang.reflect.Array;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntSupplier;
 import lombok.Getter;
 import lombok.Setter;
@@ -78,6 +79,13 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** It represents the cost value of currently best solution for FloatVar cost. */
   @Getter public double costValueFloat = Double.MAX_VALUE;
+
+  /**
+   * The bound on a float cost after a solution of the given cost: the next solution must cost at
+   * most this much. Null (the default) asks only for the next float below, which on a float
+   * objective lets each solution improve by a few ulps (see {@link #setFloatCostBound}).
+   */
+  private DoubleUnaryOperator floatCostBound;
 
   /** It represents the cost variable. */
   @Getter public Var costVariable;
@@ -595,6 +603,15 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
   private boolean applyOptimizationCostWithHandler(CostVariableHandler costHandler) {
     double minCost = costHandler.getMinCostValue(costVariable);
     double currentBestCost = costVariable instanceof IntVar ? costValue : costValueFloat;
+    if (floatCostBound != null && !(costVariable instanceof IntVar)) {
+      double bound = floatCostBound.applyAsDouble(currentBestCost);
+      if (minCost <= bound) {
+        costHandler.boundCostDomain(store, costVariable, bound);
+        return true;
+      }
+      notifyConsistencyListener(false);
+      return false;
+    }
     double previousCost = costHandler.getPreviousCostValue(currentBestCost);
     boolean canImprove =
         costVariable instanceof IntVar ? minCost <= previousCost : minCost < previousCost;
@@ -751,6 +768,22 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
     if (costVariable != null) {
       childSearches[index].setCostVar(costVariable);
     }
+    if (floatCostBound != null && childSearches[index] instanceof DepthFirstSearch<?> child) {
+      child.setFloatCostBound(floatCostBound);
+    }
+  }
+
+  /**
+   * Sets the bound a float cost must meet after each solution, from the cost of the best solution
+   * so far, in place of the next float below it. A bound further below than the precision makes the
+   * search look for a much better solution, or prove that none exists below the bound, and so lets
+   * a caller search the objective by bisection ({@code Solve} in jacop-flatzinc): a search that
+   * ends under such a bound only proves that no solution costs at most the bound.
+   *
+   * @param bound the bound from the best cost, or null for the next float below it
+   */
+  public void setFloatCostBound(DoubleUnaryOperator bound) {
+    floatCostBound = bound;
   }
 
   /** Updates cost from child search in the loop. Returns true if the loop should break. */
@@ -767,6 +800,14 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
         updateCostValue(childCostValue);
       }
       double minCost = costHandler.getMinCostValue(costVariable);
+      if (floatCostBound != null && !(costVariable instanceof IntVar)) {
+        double bound = floatCostBound.applyAsDouble(getCurrentCostValue());
+        if (bound < minCost) {
+          return true;
+        }
+        costHandler.boundCostDomain(store, costVariable, bound);
+        return false;
+      }
       // the next cost must be at most the previous value of the child's cost (cost - 1 for an
       // integer, cost - step for a float with a minimization step), which may be below the minimum
       // even though the child's cost is above it

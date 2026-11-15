@@ -653,6 +653,49 @@ class FreeSearchTest {
     assertTrue(elapsed < 1000, "stopped after " + elapsed + " ms");
   }
 
+  /**
+   * On the virtual clock the time limit counts propagations: nodes of random cost stop the search
+   * at the same node in every run.
+   */
+  @Test
+  void virtualClockStopsAtTheSameNode() {
+    long[] nodes = new long[2];
+    java.util.Random random = new java.util.Random(1);
+    for (int run = 0; run < 2; run++) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[9];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, 0, x.length - 2);
+      }
+      for (int i = 0; i < x.length; i++) {
+        for (int j = i + 1; j < x.length; j++) {
+          store.impose(new XneqY(x[i], x[j]));
+        }
+      }
+      IndomainMin<IntVar> min = new IndomainMin<>();
+      // a node takes 0 to 2 ms, differently in each run
+      Indomain<IntVar> uneven =
+          v -> {
+            try {
+              Thread.sleep(random.nextInt(3));
+            } catch (InterruptedException _) {
+              Thread.currentThread().interrupt();
+            }
+            return min.indomain(v);
+          };
+      FreeSearch search =
+          FreeSearch.builder(store, new SimpleSelect<>(x, null, uneven))
+              .virtualClock(true)
+              .timeLimit(Duration.ofMillis(20))
+              .build();
+      assertEquals(Status.UNKNOWN, search.solve());
+      assertTrue(search.limitReached());
+      nodes[run] = search.getNodes();
+    }
+    assertTrue(nodes[0] > 0);
+    assertEquals(nodes[0], nodes[1]);
+  }
+
   @Test
   void deadlineCountsFromWhenItIsGiven() throws InterruptedException {
     // a time limit counts from solve(); fzn-jacop built the search for 2.1 s on ma-path-finding

@@ -186,6 +186,27 @@ class LargeRelaxationTest {
   }
 
   @Test
+  void solvesStoppedAtTheirLimitBoundTheObjectiveAndKeepTheOptimum() {
+    // with 5 pivots per solve most search solves stop at the limit: their duals still bound the
+    // objective through the certificate, which must never cut the optimum
+    long stopped = 0;
+    long pruned = 0;
+    for (int run = 0; run < INSTANCES; run++) {
+      long expected = new Model(run).optimum(null);
+      Model m = new Model(run);
+      LinearRelaxation r = LinearRelaxation.of(m.store, m.cost, false);
+      assertThat(r).as("run %d", run).isNotNull();
+      r.setPivotLimit(5);
+      m.store.impose(r);
+      assertThat(m.optimum(null)).as("run %d", run).isEqualTo(expected);
+      stopped += r.anytimeSolves;
+      pruned += r.anytimePrunings + r.anytimeFailures;
+    }
+    assertThat(stopped).isPositive();
+    assertThat(pruned).isPositive();
+  }
+
+  @Test
   void relaxationThatDoesNotCutTheObjectiveIsDropped() {
     for (int run = 0; run < 10; run++) {
       long expected = new Model(run).optimum(null);
