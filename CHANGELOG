@@ -5845,6 +5845,25 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
+336. The -p portfolio can split one depth-first search over its threads by
+   work stealing with recomputation (Schulte, "Parallel search made
+   simple", TRICS 2000; Chu, Schulte and Stuckey, "Confidence-based work
+   stealing in parallel constraint programming", CP 2009): a thread that
+   runs out of work takes an open right branch of another thread, given as
+   the decisions that lead to it, replays them in its own store and
+   searches below; the best bound is shared. With free search and at least
+   4 threads two threads do this by default, CP search (--lcg off) on the
+   model's annotation in place of the last two settings; option
+   --free-config portfolio-dfs-split=<threads> sets their number, 0 turns
+   it off. On the 240 instances of the wide set at 600 s (-f -p 4): 203
+   solved instead of 200, 7 families better, 3 worse; MiniZinc Challenge
+   2022 generalized-peacable-queens n9_q5 is proved in 484 s (not proved
+   in 600 s before, CP-SAT -p 4 264 s) and n8_q3 in 31 s instead of 53 s.
+   A split thread runs the propagation of the root before its first cube,
+   so the linear relaxation keeps root reduced costs from the root and not
+   from that cube. Statistics portfolioDfsSplitThreads, portfolioDfsSplits,
+   portfolioDfsCubesClosed, portfolioDfsSplitWaitMillis.
+
 Version 4.11
 =============
 

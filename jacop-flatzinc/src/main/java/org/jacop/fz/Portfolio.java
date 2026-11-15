@@ -118,9 +118,10 @@ final class Portfolio {
 
   /**
    * The setting of the threads that divide one depth-first search on the annotation by work
-   * stealing (option {@code --free-config portfolio-dfs-split=<threads>}); see {@link DfsSplit}.
-   * Symmetry breaking is off: its constraints may have variables with no name in the model, which a
-   * cube cannot name, and then no thread could join the tree and each would search all of it.
+   * stealing (option {@code --free-config portfolio-dfs-split=<threads>}, 2 by default with free
+   * search and at least 4 threads, 0 turns it off); see {@link DfsSplit}. Symmetry breaking is off:
+   * its constraints may have variables with no name in the model, which a cube cannot name, and
+   * then no thread could join the tree and each would search all of it.
    */
   static final String[] DFS_SPLIT_SETTING = {
     "dfs-split", LCG, "off", "--symmetry", "off", FREE_CONFIG, "dfs-split=1"
@@ -277,8 +278,14 @@ final class Portfolio {
     if (split < 2) {
       split = 0;
     }
+    // free search with 4 threads or more gives two threads to one split CP tree by default: on the
+    // wide set at 600 s (-f -p 4) it solved 203 instances against 200 with the plain settings
+    // (not next to LCG split threads)
+    String dfsDefault = options.freeSearch() && threads >= 4 && split == 0 ? "2" : "0";
     int dfsSplit =
-        Math.min(threads - split, Integer.parseInt(options.freeConfig("portfolio-dfs-split", "0")));
+        Math.min(
+            threads - split,
+            Integer.parseInt(options.freeConfig("portfolio-dfs-split", dfsDefault)));
     if (dfsSplit < 2) {
       dfsSplit = 0;
     }

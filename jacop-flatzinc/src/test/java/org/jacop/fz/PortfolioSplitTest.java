@@ -140,7 +140,8 @@ class PortfolioSplitTest {
     assertEquals(-5622, reference);
     String[][] layouts = {
       {"-p", "4", "--free-config", "portfolio-dfs-split=4"},
-      {"-f", "-p", "4", "--free-config", "portfolio-dfs-split=2"},
+      // free search with 4 threads splits by default
+      {"-f", "-p", "4"},
     };
     for (int r = 0; r < 10; r++) {
       for (String[] layout : layouts) {
