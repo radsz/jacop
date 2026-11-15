@@ -421,37 +421,4 @@ class LinearEqualitiesTest {
     search.labeling(store, select);
     return search.getSolutionListener().solutionsNo();
   }
-
-  /**
-   * Even colourings of a cycle, as in the pseudo-Boolean competition: every vertex has as many
-   * edges of each colour (x = 1 the first), so the two edges of each vertex sum to 1. Each edge is
-   * in two vertex rows, so the rows sum to twice the edges on the left and to the length of the
-   * cycle on the right: an odd cycle has no solution. Over the size limits of the normal form the
-   * component is checked modulo 2, which refutes the odd cycle and keeps the even one.
-   */
-  @Test
-  void parityRefutesLargeComponents() {
-    for (int length = 5; length <= 6; length++) {
-      Store store = new Store();
-      IntVar[] e = vars(store, length, 0, 1);
-      List<LinearEqualities.Row> rows = new ArrayList<>();
-      for (int vertex = 0; vertex < length; vertex++) {
-        IntVar[] incident = {e[(vertex + length - 1) % length], e[vertex]};
-        rows.add(new LinearEqualities.Row(incident, new int[] {1, 1}, 1));
-      }
-      LinearEqualities le = new LinearEqualities(store);
-      le.setLimits(2, 2);
-      boolean failed = false;
-      try {
-        le.apply(rows);
-      } catch (FailException _) {
-        failed = true;
-      }
-      boolean odd = length % 2 == 1;
-      assertThat(failed).as("length " + length).isEqualTo(odd);
-      assertThat(le.components).isZero();
-      assertThat(le.parityRefutations).isEqualTo(odd ? 1 : 0);
-      assertThat(le.parityComponents).isEqualTo(odd ? 0 : 1);
-    }
-  }
 }

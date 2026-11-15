@@ -62,9 +62,6 @@ import org.jacop.fz.SimpleNode;
  * Langford, Math. Gazette 42, 1958; the parity proof is R. O. Davies, Math. Gazette 43, 1959),
  * which search alone cannot. {@code org.jacop.fz.permutationSums=false} leaves these rows out.
  *
- * <p>A component over the size limits of the normal form is checked modulo 2 instead ({@link
- * LinearEqualities}), which proves the parity arguments of even colourings and Tseitin formulas.
- *
  * <p>System properties: {@code org.jacop.fz.lattice=false} turns it off; {@code
  * org.jacop.fz.latticeReformulate} is {@code auto} (default), {@code on} (every component) or
  * {@code off}; {@code jacop.fz.latticeVars} and {@code jacop.fz.latticeRows} (default 300 each)
@@ -154,8 +151,6 @@ public class LinearSystemDetector {
               + le.prunedValues
               + "\n%%%mzn-stat: latticeVars="
               + le.lattice.size()
-              + "\n%%%mzn-stat: latticeParityComponents="
-              + le.parityComponents
               + "\n%%%mzn-stat-end");
     }
   }

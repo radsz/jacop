@@ -136,14 +136,6 @@ public final class LinearEqualities {
 
   private final Store store;
 
-  // the check modulo 2 of the components too large for a Hermite normal form, and its most work
-  // in 64-bit word operations
-  private static final boolean PARITY =
-      !"false".equals(System.getProperty("org.jacop.fz.latticeParity"));
-
-  private static final long PARITY_WORK =
-      Long.getLong("org.jacop.fz.latticeParityWork", 500_000_000L);
-
   private int maxVars = 300;
 
   private int maxRows = 300;
@@ -167,12 +159,6 @@ public final class LinearEqualities {
 
   /** Statistics: the equalities in those components. */
   public int componentRows;
-
-  /** Statistics: the components too large for a normal form that were checked modulo 2. */
-  public int parityComponents;
-
-  /** Statistics: the components that the check modulo 2 proved to have no integer solution. */
-  public int parityRefutations;
 
   /** Statistics: the equalities set aside as definitions. */
   public int definitions;
@@ -391,76 +377,10 @@ public final class LinearEqualities {
         }
       }
       if (rows.size() > maxRows || local.size() > maxVars) {
-        parity(rows, local);
         continue;
       }
       solve(rows, local);
     }
-  }
-
-  /**
-   * It checks a component too large for a Hermite normal form modulo 2: an integer solution of the
-   * equalities is a solution of them over GF(2), so a system that Gaussian elimination over GF(2)
-   * finds inconsistent has none. That is the parity argument of the even colourings and Tseitin
-   * formulas of the pseudo-Boolean competition (each edge in two vertex equalities, their sum twice
-   * the edges on the left and odd on the right; G. S. Tseitin, "On the complexity of derivation in
-   * propositional calculus", 1968; A. Urquhart, "Hard examples for resolution", JACM 34(1), 1987),
-   * which resolution refutes only in exponentially many steps. The elimination works on bit rows
-   * and is skipped when its work, rows times rank times words, is over {@code
-   * org.jacop.fz.latticeParityWork} (5·10^8); {@code org.jacop.fz.latticeParity=false} turns it
-   * off.
-   */
-  private void parity(List<Integer> rows, Map<Integer, Integer> local) {
-    int n = local.size();
-    int words = (n >> 6) + 1;
-    long work = (long) rows.size() * Math.min(rows.size(), n) * words;
-    if (!PARITY || work > PARITY_WORK) {
-      return;
-    }
-    // the pivot row of each column, reduced to start at its column, and its right-hand side
-    long[][] pivot = new long[n][];
-    boolean[] rhsOf = new boolean[n];
-    for (int r : rows) {
-      long[] bits = new long[words];
-      int[] v = vars.get(r);
-      long[] c = coefs.get(r);
-      for (int k = 0; k < v.length; k++) {
-        if ((c[k] & 1) != 0) {
-          int j = local.get(v[k]);
-          bits[j >> 6] ^= 1L << j;
-        }
-      }
-      boolean odd = (rhs.get(r) & 1) != 0;
-      // a reduction by a pivot row clears its column and changes no bit before it, so the first
-      // set bit only moves forward
-      boolean placed = false;
-      int w = 0;
-      while (!placed) {
-        while (w < words && bits[w] == 0) {
-          w++;
-        }
-        if (w == words) {
-          break;
-        }
-        int j = (w << 6) + Long.numberOfTrailingZeros(bits[w]);
-        long[] p = pivot[j];
-        if (p == null) {
-          pivot[j] = bits;
-          rhsOf[j] = odd;
-          placed = true;
-        } else {
-          for (int q = w; q < words; q++) {
-            bits[q] ^= p[q];
-          }
-          odd ^= rhsOf[j];
-        }
-      }
-      if (!placed && odd) {
-        parityRefutations++;
-        throw Store.failException;
-      }
-    }
-    parityComponents++;
   }
 
   private void solve(List<Integer> rows, Map<Integer, Integer> local) {
