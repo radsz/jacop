@@ -44,6 +44,7 @@ import java.util.Set;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -137,6 +138,36 @@ public class Tables {
   int numberSetVariables;
   // MiniZinc on_restart built-ins of the model, or null
   OnRestart onRestart;
+
+  // the domains of the variables of inverse channels as declared, before the constraints prune
+  // them, for ConditionalValueSwaps
+  private final Map<IntVar, IntDomain> channelDomains = new IdentityHashMap<>();
+
+  /**
+   * Records the domain of a variable of an inverse channel before the constraints of the model
+   * prune it.
+   *
+   * @param v the variable
+   */
+  public void recordChannelDomain(IntVar v) {
+    channelDomains.computeIfAbsent(v, x -> x.dom().cloneLight());
+  }
+
+  /**
+   * The domain of a variable of an inverse channel as declared.
+   *
+   * @param v the variable
+   * @return its domain before the constraints were posted, or its current domain if it was not
+   *     recorded
+   */
+  IntDomain channelDomain(IntVar v) {
+    IntDomain d = channelDomains.get(v);
+    return d != null ? d : v.dom();
+  }
+
+  // the variables defined as functions of bin loads, for the arc-flow blocks of the time-indexed
+  // bound (org.jacop.lp.arcFlow)
+  List<TimeIndexedBound.LoadFunction> loadFunctions = List.of();
   // variables whose declared domain reached beyond JaCoP's integer range and was narrowed to it
   private final ArrayList<ClampedDomain> clampedDomains = new ArrayList<>();
 

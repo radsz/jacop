@@ -596,6 +596,13 @@ Core-guided phase (free search, --lcg -f):
 - jacop.lcg.workPerMs: the solver work per millisecond of a time limit,
   from which the phases take their shares, so that a run repeats
   with the same limit whatever the load of the machine; default 2000.
+- jacop.virtualClock: lazy clause generation reads a virtual clock that
+  counts its work (jacop.lcg.workPerMs per millisecond) instead of the
+  system clock, for the time limit, phase shares, neighbourhood runs,
+  probes and the check of LCG's speed, so that benchmark runs repeat;
+  default false.
+- jacop.virtualClock.wallFactor: under jacop.virtualClock, the watchdog
+  that ends a run waits this many times the time-out; default 10.
 - jacop.lcg.workPerCall: the work of one consistency call, in
   propagated literals; default 3.
 - jacop.lcg.clockSlack: a phase also stops at this many times its
@@ -820,6 +827,18 @@ Cuts:
   org.jacop.lp.timeIndexed.pivots: the time limit of the first and of
   later solves and the most pivots of one solve; default 10000 ms,
   3000 ms and 50000.
+- org.jacop.lp.arcFlow: arc-flow columns of the bins of each bin packing
+  in TimeIndexedBound, with exact rows for the variables the model
+  defines as functions of the loads; default false. It shares the
+  time share and allowance above.
+- org.jacop.lp.arcFlow.arcs, org.jacop.lp.arcFlow.columns: the most arcs
+  of all arc-flow blocks of one solve, and the most columns of the
+  program with them; default 200000 and 100000.
+- org.jacop.lp.arcFlow.firstMs, org.jacop.lp.arcFlow.solveMs,
+  org.jacop.lp.arcFlow.pivotsPerColumn: with arc-flow blocks, the time
+  limit of the first and of later solves (at least the time-indexed
+  ones) and the pivots allowed per column (at least
+  org.jacop.lp.timeIndexed.pivots); default 30000 ms, 20000 ms and 20.
 
 Row pool and lazy rows:
 

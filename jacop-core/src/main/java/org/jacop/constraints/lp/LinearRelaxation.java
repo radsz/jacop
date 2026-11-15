@@ -4685,10 +4685,10 @@ public class LinearRelaxation extends Constraint
         setSearchStartBounds(full, j);
       }
       int baseStatus = rootSolve(base, pivots, rootWork());
-      double baseBound =
-          baseStatus == DualSimplex.OPTIMAL && objective != null ? base.value(0) : Double.NaN;
+      double startBound =
+          baseStatus == LpSolver.OPTIMAL && objective != null ? base.value(0) : Double.NaN;
       droppedPivots += base.pivots();
-      keep = keepRows(rootSolve(full, pivots, rootWork()), baseStatus, baseBound, full, few, k);
+      keep = keepRows(rootSolve(full, pivots, rootWork()), baseStatus, startBound, full, few, k);
       for (int j = 0; j < n; j++) {
         setBounds(full, j);
       }
@@ -4698,10 +4698,10 @@ public class LinearRelaxation extends Constraint
     int withExtra = rootSolve(full, pivots, rootWork());
     if (searchStartMin == null) {
       keep = keepRows(withExtra, status, before, full, few, k);
-    } else if (withExtra == DualSimplex.LIMIT) {
+    } else if (withExtra == LpSolver.LIMIT) {
       keep = false;
     } else {
-      keep |= withExtra == DualSimplex.INFEASIBLE;
+      keep |= withExtra == LpSolver.INFEASIBLE;
     }
     // the other rows of a model with trees are kept: alone they rarely move the bound, but with
     // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
@@ -4718,14 +4718,14 @@ public class LinearRelaxation extends Constraint
   // without them that ends with status and bound before
   private boolean keepRows(
       int withExtra, int status, double before, LpSolver full, boolean few, int k) {
-    if (withExtra == DualSimplex.INFEASIBLE) {
+    if (withExtra == LpSolver.INFEASIBLE) {
       return true;
     }
-    if (withExtra == DualSimplex.LIMIT) {
+    if (withExtra == LpSolver.LIMIT) {
       return false;
     }
     boolean raised =
-        status != DualSimplex.OPTIMAL
+        status != LpSolver.OPTIMAL
             || !Double.isNaN(before)
                 && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
     return raised || few && k <= SMALL_EXTRA;

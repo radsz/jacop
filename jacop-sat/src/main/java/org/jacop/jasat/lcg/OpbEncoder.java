@@ -475,8 +475,10 @@ final class OpbEncoder implements PbModel {
     if (dx.singleton()) {
       return;
     }
-    grow(2L * (dx.max() - dx.min()));
-    for (int v = dx.min() + 1; v <= dx.max(); v++) {
+    grow(2L * (dx.max() - dx.min() + 2));
+    // from [x >= min x], which holds, to [x >= max x + 1], which does not: they bound y to the
+    // range of x, so that a value of y outside it (its holes skipped) is refuted by propagation
+    for (int v = dx.min(); v <= dx.max() + 1; v++) {
       long u = opposite ? c - v + 1 : v - c;
       // the literal of y that [x >= v] equals: a name, or "1" or "0" outside y's root domain
       String other;
@@ -487,7 +489,13 @@ final class OpbEncoder implements PbModel {
       } else {
         other = (opposite ? "~" : "") + ge(y, (int) u);
       }
-      equivalent(ge(x, v), other);
+      if (v == dx.min()) {
+        implication("1", other);
+      } else if (v > dx.max()) {
+        implication("1", negate(other));
+      } else {
+        equivalent(ge(x, v), other);
+      }
     }
   }
 

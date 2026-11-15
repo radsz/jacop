@@ -258,8 +258,15 @@ public class Options {
                 from the relaxation's solution in the annotation's runs under -f, and at the start
                 of the activity runs of fixed-restarts; auto, the default, uses them when the
                 relaxation has value columns, or under -f tree cuts),
+                rect-placement=first|always|off (with --lcg: the runs of the default
+                branching place the rectangles of diffn constraints one at a time, bottom-left,
+                before the other decisions until the first solution (first, default), in all
+                of them (always), or never),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
+                lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an
+                annotation: runs on literals in each turn of the annotation, the literals and
+                activity branching, before and after a first solution; defaults 1 and 6),
                 lcg-chain-limit=<n> (with --lcg: linked bound literals per variable past which
                 short reasons on its new bounds are used once, not kept, so its chain
                 [x >= v] -> [x >= u] stops growing; default 64, a huge value turns it off),
