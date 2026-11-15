@@ -2465,9 +2465,7 @@ public class LinearRelaxation extends Constraint
         (calls == 1 || restarting) && simplex != Simplex.LAZY
             ? rootSolve(lp, limit, rootWork())
             : solvePool(limit);
-    if (calls == 1 && status == LpSolver.LIMIT) {
-      status = extendRootSolve(lp, status);
-    }
+    status = extendRootSolve(lp, status, calls == 1);
     // the first solve happens in the root propagation, before search makes a decision (also in
     // the free search, which propagates its root a level up, and under lazy clause generation)
     if (calls == 1 && extraColumns.length > 0) {
@@ -2832,9 +2830,11 @@ public class LinearRelaxation extends Constraint
   private long extendDeadline;
 
   // continues a root solve of the sparse simplex that stopped at its pivots or work, within the
-  // time that the extended root solves share
-  private int extendRootSolve(LpSolver s, int status) {
-    if (objective == null
+  // time that the extended root solves share; only a root solve (root) that stopped at its limit
+  private int extendRootSolve(LpSolver s, int status, boolean root) {
+    if (!root
+        || status != LpSolver.LIMIT
+        || objective == null
         || large
         || rootExtendShare <= 0
         || simplex == Simplex.LAZY
@@ -3515,7 +3515,7 @@ public class LinearRelaxation extends Constraint
       setBounds(s, j);
     }
     long size = Math.max(1, s.pivotWork());
-    int status = rootSolve(s, (int) Math.clamp(ROOT_WORK / size, 5, rootPivots), rootWork());
+    int status = rootSolve(s, Math.clamp(ROOT_WORK / size, 5, rootPivots), rootWork());
     double before = lp.value(0);
     if (status != LpSolver.OPTIMAL
         || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
@@ -4729,10 +4729,7 @@ public class LinearRelaxation extends Constraint
     } else {
       keep = false;
     }
-    int withExtra = rootSolve(full, pivots, rootWork());
-    if (withExtra == DualSimplex.LIMIT) {
-      withExtra = extendRootSolve(full, withExtra);
-    }
+    int withExtra = extendRootSolve(full, rootSolve(full, pivots, rootWork()), true);
     if (searchStartMin == null) {
       keep = keepRows(withExtra, status, before, full, few, k);
     } else if (withExtra == LpSolver.LIMIT) {
