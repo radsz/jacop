@@ -11264,3 +11264,66 @@ C	jacop:allsolutions/m_network_flow/m_network_flow	0609c1b35f5ea448	obj1:plain	P
 C	jacop:allsolutions/m_network_flow/m_network_flow	0609c1b35f5ea448	obj1:f	PASS	COMPLETE	1	664	2026-11-15T11:56:15Z	
 C	jacop:allsolutions/m_network_flow/m_network_flow	0609c1b35f5ea448	obj1:lcg	PASS	COMPLETE	1	684	2026-11-15T11:56:15Z	
 C	jacop:allsolutions/m_network_flow/m_network_flow	0609c1b35f5ea448	obj1:lcg-f	PASS	COMPLETE	1	789	2026-11-15T11:56:16Z	
+P	mznc:above1hour/2025_ihtc-2024-marte/i01	2b2a6a5b6e0d813b	minimize	7749	INCOMPLETE	201751	201751	726c8fae7b7df906	300270	300	2026-11-15T11:58:23Z	jacop_array_var_int_element_nonshifted,jacop_bin_packing,jacop_cumulative,jacop_if_then_else_int,jacop_nvalue
+P	xcsp:2024/2024_V3/COP/AztecDiamondSym-03_c24	c37c1b82a0b3bd6f	minimize	69	INCOMPLETE	0	0	0	300203	300	2026-11-15T12:01:22Z	jacop_count_values,jacop_short_table_int
+P	mznc:above1hour/2025_ihtc-2024-marte/i03	14aec17e5cb0ce84	minimize	13560	INCOMPLETE	0	0	0	300275	300	2026-11-15T12:02:38Z	jacop_array_var_int_element_nonshifted,jacop_bin_packing,jacop_cumulative,jacop_if_then_else_int,jacop_nvalue
+P	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	satisfy		COMPLETE	376	376	5e8f4b5450ca7429	532	300	2026-11-15T12:02:38Z	jacop_member_int,jacop_nvalue
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	all:f	PASS	COMPLETE	376	459	2026-11-15T12:02:39Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	decomp:jacop_member_int	PASS	COMPLETE	376	526	2026-11-15T12:02:39Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	decomp:jacop_nvalue	PASS	COMPLETE	376	598	2026-11-15T12:02:40Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	std	PASS	COMPLETE	376	602	2026-11-15T12:02:41Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	std:f	PASS	COMPLETE	376	577	2026-11-15T12:02:41Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	objstd:lcg	PASS	COMPLETE	1	543	2026-11-15T12:02:42Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj0:plain	PASS	COMPLETE	1	439	2026-11-15T12:02:42Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj0:f	PASS	COMPLETE	1	447	2026-11-15T12:02:43Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj0:lcg	PASS	COMPLETE	1	429	2026-11-15T12:02:43Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj0:lcg-f	PASS	COMPLETE	1	459	2026-11-15T12:02:43Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj0:lcg:decomp:jacop_member_int	PASS	COMPLETE	1	517	2026-11-15T12:02:44Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj0:lcg:decomp:jacop_nvalue	PASS	COMPLETE	1	523	2026-11-15T12:02:45Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj1:plain	PASS	COMPLETE	1	478	2026-11-15T12:02:45Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj1:f	PASS	COMPLETE	1	456	2026-11-15T12:02:45Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj1:lcg	PASS	COMPLETE	1	482	2026-11-15T12:02:46Z	
+C	jacop:allsolutions/m_member_nvalue/m_member_nvalue	15e6fbd9b1f61284	obj1:lcg-f	PASS	COMPLETE	1	448	2026-11-15T12:02:46Z	
+P	xcsp:2024/2024_V3/CSP/FastMatrixMultiplication-table-2-2-2-04	f4f3cb1f18dd83f2	satisfy		INCOMPLETE	0	0	0	300219	300	2026-11-15T12:06:22Z	jacop_short_table_int
+P	mznc:above1hour/2019_lot-sizing/pigment15d.psp	beb47a52ad725745	minimize	1657	INCOMPLETE	21775	21775	3d04677716ca3366	300186	300	2026-11-15T12:08:24Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_atleast,jacop_atmost,jacop_count_values,jacop_if_then_else_bool,jacop_table_int
+P	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	maximize	2	COMPLETE	2314	2314	ba35f2e362794e11	245076	300	2026-11-15T12:11:52Z	jacop_count_values_bounds,jacop_maximum,jacop_value_precede_chain_int
+P	mznc:above1hour/2018_seat-moving/sm-15-20-00	e893861967b7b737	minimize	206	INCOMPLETE	352	352	5aa4c907cd5ea32c	300231	300	2026-11-15T12:16:22Z	jacop_alldiff,jacop_alldifferent_except,jacop_array_var_int_element_nonshifted
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	all:f	PARTIAL	INCOMPLETE	262	300190	2026-11-15T12:16:52Z	262 of 2314 solutions before the limit
+P	mznc:upTo1hour/2020_lot-sizing/pigment15c.psp	f22465484a304529	minimize	1414	INCOMPLETE	84	84	2599765be16270d2	300164	300	2026-11-15T12:18:24Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_atleast,jacop_atmost,jacop_count_values,jacop_if_then_else_bool,jacop_table_int
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	decomp:jacop_maximum	PASS	COMPLETE	2314	234522	2026-11-15T12:20:46Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	decomp:jacop_value_precede_chain_int	PASS	COMPLETE	2314	249363	2026-11-15T12:24:56Z	
+P	mznc:above1hour/2021_seat-moving/sm-20-20-02	40129eed17022665	minimize	272	INCOMPLETE	0	0	0	300146	300	2026-11-15T12:26:23Z	jacop_alldiff,jacop_alldifferent_except,jacop_array_var_int_element_nonshifted
+P	mznc:above1hour/2020_lot-sizing/pigment20b.psp	341e87e4e618a1d1	minimize	2359	INCOMPLETE	1928	1928	f58772d32fb86df3	300162	300	2026-11-15T12:28:25Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_atleast,jacop_atmost,jacop_count_values,jacop_if_then_else_bool,jacop_table_int
+P	hakank:upTo5sec/hakank_examination_scheduling/examination_scheduling	59662b89738cbcec	minimize	3	INCOMPLETE	2000000	2000000	1ea6d7a8e7369108	161492	300	2026-11-15T12:29:06Z	jacop_alldifferent_except_0,jacop_array_var_int_element_nonshifted,jacop_count,jacop_value_precede_chain_int
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	decomp:jacop_count_values_bounds	PASS	COMPLETE	2314	293314	2026-11-15T12:29:49Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	std	PASS	COMPLETE	2314	291053	2026-11-15T12:34:40Z	
+P	mznc:upTo1hour/2019_lot-sizing/pigment20c.psp	f41903df9138c742	minimize	2256	INCOMPLETE	18	18	cb441151c3094669	300174	300	2026-11-15T12:38:25Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_atleast,jacop_atmost,jacop_count_values,jacop_if_then_else_bool,jacop_table_int
+P	mznc:above1hour/2014_liner-sf-repositioning/tp7_8	1ac1d1345a01b1ea	minimize	270799	INCOMPLETE	0	0	0	300205	300	2026-11-15T12:39:06Z	jacop_alldiff,jacop_alldifferent_except,jacop_array_var_int_element_nonshifted,jacop_maximum,jacop_minimum,jacop_table_int
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	std:f	PARTIAL	INCOMPLETE	192	300187	2026-11-15T12:39:40Z	192 of 2314 solutions before the limit
+P	mznc:above1hour/2015_roster/chicroster_dataset_2	8c74c2e606418a86	minimize	0	INCOMPLETE	0	0	0	300183	300	2026-11-15T12:43:26Z	jacop_atleast,jacop_atmost,jacop_count
+P	hakank:upTo5sec/hakank_kidney_exchange2/kidney_exchange_20_0.4_fz	df69d28e865265dd	maximize	20	INCOMPLETE	1144563	1144563	2aa789f1e51a1d74	300185	300	2026-11-15T12:44:07Z	jacop_alldifferent_except_0,jacop_array_var_int_element_nonshifted
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	objstd:lcg	PARTIAL	INCOMPLETE	1	300217	2026-11-15T12:44:41Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj0:plain	PASS	COMPLETE	1	15952	2026-11-15T12:44:57Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj0:f	PASS	COMPLETE	1	2879	2026-11-15T12:45:00Z	
+P	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	minimize	165922	COMPLETE	1	1	a7d13846cc5443eb	121677	300	2026-11-15T12:46:53Z	jacop_alldiff,jacop_alldifferent_except,jacop_array_var_int_element_nonshifted,jacop_maximum,jacop_minimum,jacop_table_int
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	all:f	PASS	COMPLETE	1	1757	2026-11-15T12:46:55Z	
+P	mznc:upTo5sec/2015_roster/chicroster_dataset_5	ed1c18b00b98e65f	minimize	6	INCOMPLETE	0	0	0	300166	300	2026-11-15T12:48:28Z	jacop_atleast,jacop_atmost,jacop_count
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	decomp:jacop_table_int	PASS	COMPLETE	1	148850	2026-11-15T12:49:24Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj0:lcg	PARTIAL	INCOMPLETE	1	300189	2026-11-15T12:50:00Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj0:lcg-f	PASS	COMPLETE	1	17151	2026-11-15T12:50:17Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	120541	2026-11-15T12:51:24Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	decomp:jacop_alldifferent_except	PASS	COMPLETE	1	120075	2026-11-15T12:53:24Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj0:lcg:decomp:jacop_maximum	PARTIAL	INCOMPLETE	1	300157	2026-11-15T12:55:17Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	decomp:jacop_alldiff	PASS	COMPLETE	1	122700	2026-11-15T12:55:27Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	decomp:jacop_minimum	PASS	COMPLETE	1	123234	2026-11-15T12:57:30Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	decomp:jacop_maximum	PASS	COMPLETE	1	121211	2026-11-15T12:59:31Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj0:lcg:decomp:jacop_value_precede_chain_int	PARTIAL	INCOMPLETE	1	300130	2026-11-15T13:00:17Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	std	PASS	COMPLETE	1	190383	2026-11-15T13:02:42Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	std:f	PASS	COMPLETE	1	1267	2026-11-15T13:02:43Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj0:lcg:decomp:jacop_count_values_bounds	PARTIAL	INCOMPLETE	1	300188	2026-11-15T13:05:17Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj1:plain	PASS	COMPLETE	1	42495	2026-11-15T13:06:00Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj1:f	PASS	COMPLETE	1	15249	2026-11-15T13:06:15Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	objstd:lcg	PARTIAL	INCOMPLETE	0	300274	2026-11-15T13:07:43Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	obj0:plain	PASS	COMPLETE	1	198621	2026-11-15T13:11:02Z	
+C	mznc:upTo30sec/2019_liner-sf-repositioning/fm3_3	d91fdd9dfad11bf5	obj0:f	PASS	COMPLETE	1	4892	2026-11-15T13:11:07Z	
+C	mznc:upTo1min/2017_community-detection/Sampson.s10.k3	47df86dda7349ab5	obj1:lcg	PARTIAL	INCOMPLETE	1	300154	2026-11-15T13:11:15Z	
