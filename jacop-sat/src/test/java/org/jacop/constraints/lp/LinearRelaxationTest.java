@@ -2621,4 +2621,76 @@ class LinearRelaxationTest {
       }
     }
   }
+
+  /**
+   * The cardinality refutations of pseudo-Boolean satisfaction models, which have no value
+   * encoding: a vertex cover of at most k vertices of three disjoint 5-cycles (each cycle needs 3,
+   * the relaxation takes every vertex at 1/2, 7.5 in all; the cuts of the cycles raise the bound
+   * past k = 8, so a cover of 8 is refuted and one of 9 is found), and a pigeonhole formula of 6
+   * pigeons in 5 holes, whose relaxation is infeasible as it is. The edges are clause rows, as lazy
+   * clause generation gives them, and the holes rows of the store. The refutation minimizes the
+   * cover row, whose variables are in the most rows.
+   */
+  @Test
+  void pseudoObjectiveRefutesCardinalityModels() {
+    for (int k = 8; k <= 9; k++) {
+      Store store = new Store();
+      IntVar[] v = new IntVar[15];
+      for (int i = 0; i < v.length; i++) {
+        v[i] = new IntVar(store, "v" + i, 0, 1);
+      }
+      List<LinearForm> clauses = new ArrayList<>();
+      for (int c = 0; c < 3; c++) {
+        for (int i = 0; i < 5; i++) {
+          IntVar a = v[5 * c + i];
+          IntVar b = v[5 * c + (i + 1) % 5];
+          store.impose(new BoolClause(new IntVar[] {a, b}, new IntVar[0]));
+          clauses.add(new LinearForm(new IntVar[] {a, b}, new long[] {1, 1}, 1, LinearForm.GE));
+        }
+      }
+      int[] ones = new int[v.length];
+      Arrays.fill(ones, 1);
+      store.impose(new LinearInt(v, ones, "<=", k));
+      assertThat(store.consistency()).isTrue();
+      LinearRelaxation r = LinearRelaxation.refutation(store, clauses);
+      assertThat(r).as("k " + k).isNotNull();
+      assertThat(r.hasPseudoObjective()).isTrue();
+      store.impose(r);
+      boolean consistent = store.consistency();
+      assertThat(consistent).as("cover of %d", k).isEqualTo(k == 9);
+      assertThat(r.refutationOutcome()).isEqualTo(k == 9 ? "feasible" : "refuted");
+      if (k == 9) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        assertThat(search.labeling(store, new SimpleSelect<>(v, null, new IndomainMin<>())))
+            .isTrue();
+      }
+    }
+    for (int holes = 5; holes <= 6; holes++) {
+      Store store = new Store();
+      int pigeons = 6;
+      IntVar[][] p = new IntVar[pigeons][holes];
+      List<LinearForm> clauses = new ArrayList<>();
+      for (int i = 0; i < pigeons; i++) {
+        for (int h = 0; h < holes; h++) {
+          p[i][h] = new IntVar(store, "p" + i + "_" + h, 0, 1);
+        }
+        store.impose(new BoolClause(p[i], new IntVar[0]));
+        long[] w = new long[holes];
+        Arrays.fill(w, 1);
+        clauses.add(new LinearForm(p[i], w, 1, LinearForm.GE));
+      }
+      for (int h = 0; h < holes; h++) {
+        IntVar[] column = new IntVar[pigeons];
+        for (int i = 0; i < pigeons; i++) {
+          column[i] = p[i][h];
+        }
+        store.impose(new SumBool(column, "<=", new IntVar(store, 1, 1)));
+      }
+      LinearRelaxation r = LinearRelaxation.refutation(store, clauses);
+      assertThat(r).isNotNull();
+      store.impose(r);
+      assertThat(store.consistency()).as("%d holes", holes).isEqualTo(holes == 6);
+    }
+  }
 }
