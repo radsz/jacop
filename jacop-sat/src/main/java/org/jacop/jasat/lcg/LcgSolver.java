@@ -4476,17 +4476,6 @@ public final class LcgSolver implements ExternalPropagator {
         indices[m++] = k;
       }
     }
-    if (System.getProperty("jacop.lcg.lnsWorkDebug") != null) {
-      System.err.println(
-          "explain failed "
-              + failed.length
-              + " mapped "
-              + m
-              + " first "
-              + failed[0]
-              + " assumed0 "
-              + assumed[0]);
-    }
     lns.explain(Arrays.copyOf(indices, m));
   }
 
