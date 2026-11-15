@@ -596,6 +596,13 @@ Core-guided phase (free search, --lcg -f):
 - jacop.lcg.workPerMs: the solver work per millisecond of a time limit,
   from which the phases take their shares, so that a run repeats
   with the same limit whatever the load of the machine; default 2000.
+- jacop.virtualClock: lazy clause generation reads a virtual clock that
+  counts its work (jacop.lcg.workPerMs per millisecond) instead of the
+  system clock, for the time limit, phase shares, neighbourhood runs,
+  probes and the check of LCG's speed, so that benchmark runs repeat;
+  default false.
+- jacop.virtualClock.wallFactor: under jacop.virtualClock, the watchdog
+  that ends a run waits this many times the time-out; default 10.
 - jacop.lcg.workPerCall: the work of one consistency call, in
   propagated literals; default 3.
 - jacop.lcg.clockSlack: a phase also stops at this many times its

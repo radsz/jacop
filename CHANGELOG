@@ -5641,6 +5641,23 @@ Version 5.0 (unreleased)
    13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
    is off under --proof and when all solutions are asked for.
 
+320. -Djacop.virtualClock=true (default false) runs the clock of lazy
+   clause generation on its work: the time limit, the shares of the -f
+   phases, the time of the neighbourhood runs, the delayed root probe
+   and the check of LCG's speed (lcg-slow-rate, which runs in the search
+   instead of a thread that sleeps) count jacop.lcg.workPerMs (2000) of
+   the solver's work per millisecond, so a run makes the same choices
+   and stops at the same point whatever the load of the machine. It is
+   meant for benchmarks of search changes: the wall time of a run then
+   differs from its limit (median 1.04 times the wall-clock run on the
+   wide-quick set), and the watchdog waits 10 times the time-out
+   (jacop.virtualClock.wallFactor). Two runs of the 62 wide-quick
+   instances at 240 s with -f, two at a time, ended identically (nodes,
+   failures, work, answer) on 58 instances, against 45 with the wall
+   clock. The rest come from time limits outside LCG: symmetry detection
+   (ptv, steelmillslab) and search without learning after LCG gave way
+   (celar graph11, whirlpool d29).
+
 Version 4.11
 =============
 
