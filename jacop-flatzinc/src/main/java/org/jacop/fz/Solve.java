@@ -3659,6 +3659,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.targetDecisions
             + "\n%%%mzn-stat: lcgTargetSnapshots="
             + lcg.targetSnapshots
+            + (lcg.landscapeProbes > 0
+                ? "\n%%%mzn-stat: lcgLandscapeProbes="
+                    + lcg.landscapeProbes
+                    + "\n%%%mzn-stat: lcgLandscapeVars="
+                    + lcg.landscapeVars
+                    + "\n%%%mzn-stat: lcgLandscapeDecisions="
+                    + lcg.landscapeDecisions
+                    + "\n%%%mzn-stat: lcgLandscapeMillis="
+                    + lcg.landscapeMillis
+                : "")
             + "\n%%%mzn-stat: lcgLearntAvg="
             + nf.format((double) lcg.sat().learntLiterals / Math.max(1, lcg.sat().conflicts))
             + "\n%%%mzn-stat: lcgSemanticallyRemoved="

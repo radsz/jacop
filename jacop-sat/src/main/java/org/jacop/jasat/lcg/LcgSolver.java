@@ -3106,6 +3106,7 @@ public final class LcgSolver implements ExternalPropagator {
     this.objective = trail.id(objective);
     best = null;
     lastBound = Long.MIN_VALUE;
+    buildLandscapes();
     if (proof != null && coreShare > 0) {
       // the core-guided phase sums the model's lines, so the proof starts before it
       startProof();
@@ -7112,8 +7113,13 @@ public final class LcgSolver implements ExternalPropagator {
     }
     IntVar x = vars[i];
     searchDecisions++;
-    if (phase != null && x.domain.contains(phase[i])) {
-      return assignLit(i, phase[i]);
+    int preferred = phase != null && x.domain.contains(phase[i]) ? phase[i] : Integer.MIN_VALUE;
+    int landscape = landscapeValue(i, preferred);
+    if (landscape != Integer.MIN_VALUE) {
+      return assignLit(i, landscape);
+    }
+    if (preferred != Integer.MIN_VALUE) {
+      return assignLit(i, preferred);
     }
     if (phase == null
         && targetSet != null
@@ -7226,7 +7232,11 @@ public final class LcgSolver implements ExternalPropagator {
         return 0;
       }
       int value = annotation.getChoiceValue();
-      return vars[i].domain.contains(value) ? assignLit(i, value) : 0;
+      if (!vars[i].domain.contains(value)) {
+        return 0;
+      }
+      int landscape = freeSearch ? landscapeValue(i, value) : Integer.MIN_VALUE;
+      return assignLit(i, landscape != Integer.MIN_VALUE ? landscape : value);
     }
     if (!(c instanceof LinearExplainable l)) {
       return 0;
@@ -7258,6 +7268,156 @@ public final class LcgSolver implements ExternalPropagator {
       case LinearForm.EQ -> d.contains(b) ? eqVar(i, b) : 0;
       default -> d.contains(b) ? -eqVar(i, b) : 0;
     };
+  }
+
+  // -Djacop.lcg.landscape=<n>: objective landscapes (Laborie, CPAIOR 2018) under free search.
+  // Once at the root, every value of each decision variable of at most n values is propagated on
+  // the store and the objective's lower bound is recorded; decisions then take the value with the
+  // smallest recorded bound, ties to the value the search would take. 0 off
+  static final int LANDSCAPE = Integer.getInteger("jacop.lcg.landscape", 0);
+  // the most share of the time left at the root spent on the landscape probes
+  static final double LANDSCAPE_TIME =
+      Double.parseDouble(System.getProperty("jacop.lcg.landscapeTime", "0.02"));
+  // the most probes, so that a run without a time limit stops too
+  static final long LANDSCAPE_PROBES = Long.getLong("jacop.lcg.landscapeProbes", 200_000);
+  // -Djacop.lcg.landscapeFirst=true: landscapes also before the first solution
+  static final boolean LANDSCAPE_FIRST = Boolean.getBoolean("jacop.lcg.landscapeFirst");
+
+  // per variable, the objective's lower bound after propagating x = landscapeMin[i] + k at the
+  // root, Integer.MAX_VALUE for a value out of the domain or whose propagation fails; null when
+  // the variable has no landscape or when every value gives the same bound
+  private int[][] landscapes;
+  private int[] landscapeMin;
+
+  /** Statistics: values propagated at the root for objective landscapes. */
+  public long landscapeProbes;
+
+  /** Statistics: variables whose landscape tells their values apart. */
+  public int landscapeVars;
+
+  /** Statistics: decisions whose value the landscapes changed. */
+  public long landscapeDecisions;
+
+  /** Statistics: milliseconds spent on the landscape probes. */
+  public long landscapeMillis;
+
+  /**
+   * Objective landscapes (P. Laborie, Objective Landscapes for Constraint Programming, CPAIOR 2018,
+   * LNCS 10848, 387-402): for each variable a decision can take, of at most {@link #LANDSCAPE}
+   * values, the lower bound the store's propagation leaves on the objective after fixing it to each
+   * of its values, probed once at the root. Laborie samples values and interpolates; here the small
+   * domains are probed in full. The store is left as it was: each probe raises its level and
+   * removes it again.
+   */
+  private void buildLandscapes() {
+    landscapes = null;
+    if (LANDSCAPE <= 0 || !freeSearch || objective < 0 || rootFailed) {
+      return;
+    }
+    long start = System.nanoTime();
+    long clock = sat.now();
+    long deadline = sat.deadline();
+    long until =
+        deadline == Long.MAX_VALUE
+            ? Long.MAX_VALUE
+            : clock + (long) (LANDSCAPE_TIME * Math.max(0, deadline - clock));
+    IntVar cost = vars[objective];
+    int level = store.level;
+    landscapes = new int[vars.length][];
+    landscapeMin = new int[vars.length];
+    int[] bounds = new int[0];
+    search:
+    for (int i = 0; i < vars.length; i++) {
+      IntVar x = vars[i];
+      if (x == null
+          || i == objective
+          || unused[i]
+          || late[i]
+          || x.singleton()
+          || x.getSize() > LANDSCAPE
+          || (long) x.max() - x.min() >= 4L * LANDSCAPE
+          || !(heap.contains(i) || wide.contains(i))) {
+        continue;
+      }
+      int min = x.min();
+      int span = x.max() - min + 1;
+      if (bounds.length < span) {
+        bounds = new int[Math.max(span, 2 * bounds.length)];
+      }
+      Arrays.fill(bounds, 0, span, Integer.MAX_VALUE);
+      int lo = Integer.MAX_VALUE;
+      int hi = Integer.MIN_VALUE;
+      for (ValueEnumeration e = x.dom().cloneLight().valueEnumeration(); e.hasMoreElements(); ) {
+        if (landscapeProbes >= LANDSCAPE_PROBES || sat.now() > until) {
+          break search;
+        }
+        int value = e.nextElement();
+        landscapeProbes++;
+        store.setLevel(level + 1);
+        boolean consistent;
+        try {
+          x.domain.in(store.level, x, value, value);
+          consistent = store.consistency();
+        } catch (FailException _) {
+          consistent = false;
+        }
+        int bound = cost.min();
+        store.removeLevel(level + 1);
+        store.setLevel(level);
+        if (consistent) {
+          bounds[value - min] = bound;
+          lo = Math.min(lo, bound);
+          hi = Math.max(hi, bound);
+        } else {
+          hi = Integer.MAX_VALUE; // a failing value tells the values apart too
+        }
+      }
+      if (lo != Integer.MAX_VALUE && lo != hi) {
+        landscapes[i] = Arrays.copyOf(bounds, span);
+        landscapeMin[i] = min;
+        landscapeVars++;
+      }
+    }
+    store.recentlyFailedConstraint = null;
+    landscapeMillis = (System.nanoTime() - start) / 1_000_000L;
+  }
+
+  /**
+   * The value of an unfixed variable with the smallest bound of its objective landscape, among the
+   * values left in its domain; ties go to the given value, then to the smallest value.
+   * Integer.MIN_VALUE when landscapes are off, before the first solution (unless {@link
+   * #LANDSCAPE_FIRST}), or when the variable has no landscape.
+   */
+  private int landscapeValue(int i, int preferred) {
+    int[] l;
+    if (landscapes == null
+        || (l = landscapes[i]) == null
+        || (best == null && !LANDSCAPE_FIRST)
+        || objective < 0) {
+      return Integer.MIN_VALUE;
+    }
+    IntVar x = vars[i];
+    int min = landscapeMin[i];
+    int bestValue = Integer.MIN_VALUE;
+    int bestBound = Integer.MAX_VALUE;
+    for (ValueEnumeration e = x.dom().valueEnumeration(); e.hasMoreElements(); ) {
+      int value = e.nextElement();
+      int k = value - min;
+      int bound = k >= 0 && k < l.length ? l[k] : Integer.MAX_VALUE;
+      if (bestValue == Integer.MIN_VALUE
+          || bound < bestBound
+          || (bound == bestBound && value == preferred)) {
+        bestValue = value;
+        bestBound = bound;
+      }
+    }
+    if (bestBound == Integer.MAX_VALUE) {
+      return Integer.MIN_VALUE; // no value left that the landscape knows
+    }
+    if (bestValue != preferred) {
+      landscapeDecisions++;
+    }
+    return bestValue;
   }
 
   /**
