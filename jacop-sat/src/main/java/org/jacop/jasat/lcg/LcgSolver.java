@@ -3106,7 +3106,11 @@ public final class LcgSolver implements ExternalPropagator {
     this.objective = trail.id(objective);
     best = null;
     lastBound = Long.MIN_VALUE;
-    buildLandscapes();
+    landscapes = null;
+    landscapeBuilt = false;
+    if (LANDSCAPE_GAP <= 0) {
+      buildLandscapes();
+    }
     if (proof != null && coreShare > 0) {
       // the core-guided phase sums the model's lines, so the proof starts before it
       startProof();
@@ -5488,6 +5492,14 @@ public final class LcgSolver implements ExternalPropagator {
     if (onBound != null && objective >= 0 && store.level == baseLevel) {
       rootBound();
     }
+    if (LANDSCAPE_GAP > 0
+        && !landscapeBuilt
+        && objective >= 0
+        && store.level == baseLevel
+        && (best != null || LANDSCAPE_FIRST)
+        && landscapeGapOpen()) {
+      buildLandscapes(); // at a root fixpoint, before the first decision of a run
+    }
     store.setLevel(store.level + 1);
   }
 
@@ -7282,6 +7294,25 @@ public final class LcgSolver implements ExternalPropagator {
   static final long LANDSCAPE_PROBES = Long.getLong("jacop.lcg.landscapeProbes", 200_000);
   // -Djacop.lcg.landscapeFirst=true: landscapes also before the first solution
   static final boolean LANDSCAPE_FIRST = Boolean.getBoolean("jacop.lcg.landscapeFirst");
+  // -Djacop.lcg.landscapeGap=<share>: the landscapes are built at the first root of a run after
+  // the first solution, and used, only while the best solution is more than this share of its
+  // absolute value above the objective's lower bound; 0 builds them before search and always uses
+  // them
+  static final double LANDSCAPE_GAP =
+      Double.parseDouble(System.getProperty("jacop.lcg.landscapeGap", "0"));
+  private boolean landscapeBuilt;
+
+  private boolean landscapeGapOpen() {
+    if (LANDSCAPE_GAP <= 0 || best == null) {
+      return true;
+    }
+    long lower = root[objective].min();
+    if (coreSearch != null) {
+      lower = Math.max(lower, coreSearch.lowerBound);
+    }
+    long incumbent = best[objective];
+    return (double) incumbent - lower > LANDSCAPE_GAP * Math.max(1.0, Math.abs((double) incumbent));
+  }
 
   // per variable, the objective's lower bound after propagating x = landscapeMin[i] + k at the
   // root, Integer.MAX_VALUE for a value out of the domain or whose propagation fails; null when
@@ -7311,6 +7342,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void buildLandscapes() {
     landscapes = null;
+    landscapeBuilt = true;
     if (LANDSCAPE <= 0 || !freeSearch || objective < 0 || rootFailed) {
       return;
     }
@@ -7393,7 +7425,8 @@ public final class LcgSolver implements ExternalPropagator {
     if (landscapes == null
         || (l = landscapes[i]) == null
         || (best == null && !LANDSCAPE_FIRST)
-        || objective < 0) {
+        || objective < 0
+        || !landscapeGapOpen()) {
       return Integer.MIN_VALUE;
     }
     IntVar x = vars[i];
