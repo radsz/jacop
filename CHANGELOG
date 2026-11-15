@@ -6079,6 +6079,24 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
+346. NetworkFlow prunes its arcs without the pivots of the network simplex
+   when it can, with the same pruning. A residual arc (u, v) whose
+   shortest residual cycle back from v to u has room for the flow the
+   cost limit allows (limit / cycle cost, or all its capacity at cost 0)
+   is decided by that shortest path alone, for arcs of any capacity, not
+   only of capacity one; the other arcs are probed by successive shortest
+   paths with node potentials instead of dual pivots (Ahuja, Magnanti and
+   Orlin, Network Flows: Theory, Algorithms, and Applications, Prentice
+   Hall 1993, ch. 9). The probing of arcs took 74 % of the time of -f on
+   MiniZinc Challenge 2021 mapping ring_3. A test compares the domains
+   with the pivot probes over 300 random networks and dives (20,000 when
+   checked by hand). On the 30 mapping and nfc instances of the Challenge
+   (2015-2022) at 600 s: -f proves the same 30, 0.85 the time (geometric
+   mean, instances over 1 s; ring_3 106 -> 51 s, mesh_star_mpeg 87 -> 35 s,
+   ring_mp3 41 -> 17 s, mesh_star_2 388 -> 248 s), default mode proves
+   the same 27, 0.86 the time. -Dorg.jacop.netflow.generalArcs=false and
+   -Dorg.jacop.netflow.shortestPaths=false bring back the probes.
+
 Version 4.11
 =============
 
