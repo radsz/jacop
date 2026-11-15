@@ -80,6 +80,7 @@ import org.jacop.fz.constraints.LinearSystemDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
+import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
@@ -537,6 +538,12 @@ public class Constraints implements ParserTreeConstants {
       // each variable whose values are all counted at least twice equals one of its few partners
       if (CountPartnersDetector.enabled() && options.proof() == null) {
         new CountPartnersDetector(support).detect(astTree);
+      }
+
+      // the least number of bins of each item whose pairs must share a bin (SONET rings),
+      // redundant; --proof does not encode it
+      if (PairCoverDetector.enabled() && options.proof() == null) {
+        new PairCoverDetector(support).detect(astTree);
       }
 
       // the pigeonhole bound on the equal pairs of variables whose pairs all have equality
