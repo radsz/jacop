@@ -102,6 +102,21 @@ import org.jacop.set.core.SetVar;
  */
 final class SymmetryBreaking implements ParserTreeConstants {
 
+  // names of constraints and properties used in several tables below
+  private static final String FALSE = "false";
+  private static final String REIF = "_reif";
+  private static final String IMP = "_imp";
+  private static final String SET_UNION = "set_union";
+  private static final String SET_INTERSECT = "set_intersect";
+  private static final String SET_SYMDIFF = "set_symdiff";
+  private static final String SET_EQ = "set_eq";
+  private static final String SET_NE = "set_ne";
+  private static final String DISJOINT = "jacop_disjoint";
+  private static final String[] SET_OPERATIONS = {
+    SET_UNION, SET_INTERSECT, "set_diff", SET_SYMDIFF
+  };
+  private static final String[] SET_COMPARISONS = {SET_EQ, SET_NE, "set_subset", "set_superset"};
+
   /** The most Schreier-Sims cuts posted. */
   static final int MAX_CUTS = 100_000;
 
@@ -113,7 +128,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * models whose search annotation branches on set variables. Without it every set variable has a
    * colour of its own.
    */
-  static final boolean SETS = !"false".equals(System.getProperty("org.jacop.fz.symmetrySets"));
+  static final boolean SETS = !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySets"));
 
   /**
    * The most element vertices that set variables add to the graph; the set variables met after that
@@ -125,8 +140,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * Whether value symmetries are also looked for in spaces joined through set variables and shared
    * values, when the plain value spaces give none (org.jacop.fz.symmetryEncoded, default true).
    */
-  static final boolean ENCODED =
-      !"false".equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
+  static final boolean ENCODED = !FALSE.equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
+
+  /**
+   * Whether the elements of set variables that only set operations, comparisons and cardinalities
+   * constrain may be renamed by symmetries, together in all those sets
+   * (org.jacop.fz.symmetrySetValues, default true). Without it each element keeps its value as its
+   * colour, so only whole set variables move.
+   */
+  static final boolean SET_VALUES =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySetValues"));
 
   /** The n-ary union that a chain of binary unions stands for: {@code s = union(xs)}. */
   static final String UNION_N = "jacop_symmetry_union";
@@ -255,8 +278,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     for (String s : new String[] {"int_lin_eq", "int_lin_le", "int_lin_ne", "bool_lin_eq"}) {
       SPECS.put(s, Spec.grouped(new int[] {0, 1}));
-      SPECS.put(s + "_reif", Spec.grouped(new int[] {0, 1}));
-      SPECS.put(s + "_imp", Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + REIF, Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + IMP, Spec.grouped(new int[] {0, 1}));
     }
     SPECS.put("bool_lin_le", Spec.grouped(new int[] {0, 1}));
     for (String s :
@@ -306,16 +329,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // set operations whose two operands can be exchanged
     for (String s :
         new String[] {
-          "set_union",
-          "set_intersect",
-          "set_symdiff",
-          "set_eq",
-          "set_ne",
-          "set_eq_reif",
-          "set_ne_reif",
-          "set_eq_imp",
-          "set_ne_imp",
-          "jacop_disjoint"
+          SET_UNION,
+          SET_INTERSECT,
+          SET_SYMDIFF,
+          SET_EQ,
+          SET_NE,
+          SET_EQ + REIF,
+          SET_NE + REIF,
+          SET_EQ + IMP,
+          SET_NE + IMP,
+          DISJOINT
         }) {
       SPECS.put(s, Spec.sym(0, 1));
     }
@@ -685,9 +708,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
 
     Graph graph = new Graph(goal, null);
+    List<Item> graphItems = setsMove ? flattenUnions(items) : items;
+    if (setsMove && SET_VALUES) {
+      graph.setValueSpaces = setValueSpaces(graphItems);
+    }
     try {
       // a chain of set unions is one n-ary union, whose operands can be exchanged
-      for (Item item : setsMove ? flattenUnions(items) : items) {
+      for (Item item : graphItems) {
         checkTime();
         graph.addConstraint(item);
       }
@@ -1370,15 +1397,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     for (String s : new String[] {"set_in", "set_in_reif", "set_in_imp"}) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
     }
-    for (String s : new String[] {"set_union", "set_intersect", "set_diff", "set_symdiff"}) {
+    for (String s : SET_OPERATIONS) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1, 2));
     }
-    for (String s : new String[] {"set_eq", "set_ne", "set_subset", "set_superset"}) {
+    for (String s : SET_COMPARISONS) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
-      SET_VALUE_SPECS.put(s + "_reif", ValueSpec.of(0, 1));
-      SET_VALUE_SPECS.put(s + "_imp", ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + REIF, ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + IMP, ValueSpec.of(0, 1));
     }
-    SET_VALUE_SPECS.put("jacop_disjoint", ValueSpec.of(0, 1));
+    SET_VALUE_SPECS.put(DISJOINT, ValueSpec.of(0, 1));
     SET_VALUE_SPECS.put(UNION_N, ValueSpec.of(0, 1));
   }
 
@@ -1830,6 +1857,96 @@ final class SymmetryBreaking implements ParserTreeConstants {
   }
 
   /**
+   * Set constraints that hold after a permutation of the values is applied to the elements of every
+   * set: the set operations and the comparisons other than the lexicographic ones. Their arguments
+   * at these positions are sets; the others (a cardinality, a Boolean of a reified comparison) do
+   * not depend on which values the elements are.
+   */
+  private static final Map<String, int[]> SET_RENAMING = new HashMap<>();
+
+  static {
+    for (String s : SET_OPERATIONS) {
+      SET_RENAMING.put(s, new int[] {0, 1, 2});
+    }
+    for (String s : SET_COMPARISONS) {
+      SET_RENAMING.put(s, new int[] {0, 1});
+      SET_RENAMING.put(s + REIF, new int[] {0, 1});
+      SET_RENAMING.put(s + IMP, new int[] {0, 1});
+    }
+    SET_RENAMING.put(DISJOINT, new int[] {0, 1});
+    SET_RENAMING.put("set_card", new int[] {0});
+    SET_RENAMING.put(UNION_N, new int[] {0, 1});
+  }
+
+  /**
+   * The set value spaces: the set variables joined by the constraints of {@link #SET_RENAMING}, in
+   * groups whose every constraint is one of them with set variables at the set positions. A
+   * permutation of the values applied to the elements of every set of a group maps the solutions of
+   * the model to solutions, as in a matrix model with interchangeable columns (Flener et al.,
+   * "Breaking row and column symmetries in matrix models", CP 2002, LNCS 2470): the cards of a
+   * Dobble game and their symbols. A group with a set used anywhere else, or with a constant set in
+   * one of its constraints, is not a space.
+   *
+   * @return the space of each set variable of a space.
+   */
+  private static Map<SetVar, Integer> setValueSpaces(List<Item> items) {
+    Map<Var, Var> parent = new IdentityHashMap<>();
+    Set<Var> tainted = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<SetVar> order = new ArrayList<>();
+    for (Item item : items) {
+      int[] sets = SET_RENAMING.get(item.name());
+      boolean[] isSet = new boolean[item.args().length];
+      boolean renaming = sets != null && sets[sets.length - 1] < item.args().length;
+      if (renaming) {
+        for (int a : sets) {
+          isSet[a] = true;
+        }
+      }
+      Var first = null;
+      boolean constant = false;
+      for (int a = 0; a < item.args().length; a++) {
+        for (Atom atom : item.args()[a]) {
+          if (atom.other() instanceof SetVar sv) {
+            if (parent.putIfAbsent(sv, sv) == null) {
+              order.add(sv);
+            }
+            if (!isSet[a]) {
+              tainted.add(sv);
+            } else if (first == null) {
+              first = sv;
+            } else {
+              unionVar(parent, first, sv);
+            }
+          } else if (isSet[a]) {
+            constant = true;
+          }
+        }
+      }
+      if (constant && first != null) {
+        tainted.add(first);
+      }
+    }
+    Set<Var> taintedRoots = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Var x : tainted) {
+      taintedRoots.add(rootVar(parent, x));
+    }
+    Map<Var, Integer> spaceOfRoot = new IdentityHashMap<>();
+    Map<Var, IntDomain> values = new IdentityHashMap<>();
+    for (SetVar x : order) {
+      values.merge(rootVar(parent, x), x.dom().lub(), IntDomain::union);
+    }
+    Map<SetVar, Integer> spaces = new IdentityHashMap<>();
+    for (SetVar x : order) {
+      Var root = rootVar(parent, x);
+      if (taintedRoots.contains(root) || values.get(root).getSize() < 2) {
+        continue;
+      }
+      spaces.put(x, spaceOfRoot.computeIfAbsent(root, r -> spaceOfRoot.size()));
+    }
+    return spaces;
+  }
+
+  /**
    * The items with each chain of binary set unions {@code u1 = x1 union x2, u2 = u1 union x3, ...}
    * whose intermediate results are used nowhere else replaced by one n-ary union.
    */
@@ -1846,7 +1963,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
           }
         }
       }
-      if (item.name().equals("set_union") && item.args().length == 3) {
+      if (item.name().equals(SET_UNION) && item.args().length == 3) {
         Var r = item.args()[2][0].other();
         if (r != null) {
           unionOf.put(r, item);
@@ -1873,7 +1990,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if (inlined.contains(item)) {
         continue;
       }
-      if (!item.name().equals("set_union")
+      if (!item.name().equals(SET_UNION)
           || item.args().length != 3
           || item.args()[2][0].other() == null
           || unionOf.get(item.args()[2][0].other()) != item) {
@@ -2550,6 +2667,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
     final Map<Integer, SetVar> setOfElement = new HashMap<>();
     // the set variables with element vertices, in the order the graph met them
     final List<SetVar> sets = new ArrayList<>();
+    // the set value space of each set variable whose elements may be renamed ({@link
+    // #setValueSpaces}); its element vertices are joined to one vertex per value of the space
+    Map<SetVar, Integer> setValueSpaces = Map.of();
+    private final Map<Long, Integer> setValueVertex = new HashMap<>();
     private int setElements;
 
     Graph(IntVar objective, Map<IntVar, Integer> spaceOf) {
@@ -2843,17 +2964,30 @@ final class SymmetryBreaking implements ParserTreeConstants {
         int free = d.lub().getSize() - d.glb().getSize();
         if (setElements + free <= MAX_SET_ELEMENTS) {
           setElements += free;
-          v = vertex("S|" + d.glb() + "|" + d.lub() + "|" + d.card());
+          Integer space = setValueSpaces.get(s);
+          // in a set value space the edges to the value vertices tell the bounds
+          v =
+              vertex(
+                  space != null
+                      ? "S|" + space + "|" + d.card()
+                      : "S|" + d.glb() + "|" + d.lub() + "|" + d.card());
           otherVertex.put(s, v);
           int[] elements = new int[free];
           int k = 0;
           for (ValueEnumeration e = d.lub().valueEnumeration(); e.hasMoreElements(); ) {
             int value = e.nextElement();
             if (!d.glb().contains(value)) {
-              int w = vertex("E|" + value);
+              int w = vertex(space != null ? "E|" + space : "E|" + value);
               edge(v, w);
+              if (space != null) {
+                edge(w, setValueVertex(space, value));
+              }
               elements[k++] = w;
               setOfElement.put(w, s);
+            } else if (space != null) {
+              int g = vertex("G|" + space);
+              edge(v, g);
+              edge(g, setValueVertex(space, value));
             }
           }
           elementVertices.put(s, elements);
@@ -2863,6 +2997,17 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       // a float or set variable is kept in place: a colour of its own
       return otherVertex.computeIfAbsent(atom.other(), v -> vertex("u|" + otherVertex.size()));
+    }
+
+    /** The vertex of a value of a set value space, joined to its element in every set there. */
+    private int setValueVertex(int space, int value) {
+      long key = ((long) space << 32) | (value & 0xffffffffL);
+      Integer w = setValueVertex.get(key);
+      if (w == null) {
+        w = vertex("V|" + space);
+        setValueVertex.put(key, w);
+      }
+      return w;
     }
 
     /**
