@@ -713,6 +713,31 @@ class VeriPbProofTest {
   // if b then y = z else y = 0, with 0 a hole of y: the root propagation sets b, and the proof
   // derives it only if the else branch states the value literal of y (its bounds allow 0)
   @Test
+  void reifiedEqualityOfDisjointDomainsIsDerived() {
+    // b <=> x = y with x in 2..3 and y in {1, 4..6}: the root propagation sets b to 0, and the
+    // proof derives it only if the equality bounds y to the range of x (the sum alone is two bounds
+    // and the holes of y hide that no value of y is in 2..3)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 3);
+    IntVar y = new IntVar(store, "y", 1, 6);
+    for (int v = 2; v <= 3; v++) {
+      y.domain.inComplement(0, y, v);
+    }
+    IntVar b = new IntVar(store, "b", 0, 1);
+    // attached after the variables: the model states their domains before the root propagation
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new Reified(new XeqY(x, y), b));
+    assertThat(b.max()).isEqualTo(0);
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("root changes derived, 0 taken into");
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
     IntVar b = new IntVar(store, "b", 0, 1);
