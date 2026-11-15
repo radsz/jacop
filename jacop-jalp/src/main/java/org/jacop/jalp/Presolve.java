@@ -84,6 +84,8 @@ final class Presolve {
   private static final byte DOUBLETON = 4;
   static final byte PARALLEL_ROW = 5;
   private static final byte PARALLEL_COLUMN = 6;
+  static final byte FORCING_ROW = 7;
+  static final byte DOMINATED_COLUMN = 8;
 
   // entries of parallel rows or columns, and costs of parallel columns, that differ by more than
   // this, relative, from the multiple are not parallel
@@ -95,6 +97,19 @@ final class Presolve {
   // whether parallel rows and columns are looked for (org.jacop.jalp.presolveParallel)
   private static final boolean PARALLEL_RULES =
       Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveParallel", "true"));
+
+  // whether forcing rows are removed (org.jacop.jalp.presolveForcing)
+  private static final boolean FORCING_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveForcing", "true"));
+
+  // whether columns dominated over the bounds of the duals are fixed
+  // (org.jacop.jalp.presolveDominated)
+  private static final boolean DOMINATED_RULE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.jalp.presolveDominated", "true"));
+
+  // a reduced cost bound farther than this from 0, relative to the cost, proves a column dominated;
+  // above the cost perturbation (about 1e-6 relative), which alone fixes nothing
+  private static final double DOMINATED = 1e-5;
 
   private final int n;
   private final int m;
@@ -149,6 +164,18 @@ final class Presolve {
 
   // the value of each removed column
   private final double[] fixedAt;
+
+  // the columns of each forcing row, their entries, costs and history lengths at the time
+  private int[][] forcingCols = new int[4][];
+  private double[][] forcingVals = new double[4][];
+  private double[][] forcingCosts = new double[4][];
+  private int[][] forcingLens = new int[4][];
+  private int forcingRows;
+
+  // the bounds of the duals of the rows (the reduced costs of their slacks) that the column
+  // singletons and the row bounds imply, for the dominated columns
+  private double[] yLo;
+  private double[] yHi;
 
   private int rowsLeft;
   private int colsLeft;
@@ -304,8 +331,116 @@ final class Presolve {
           changed |= r > 0;
         }
       }
+      if (DOMINATED_RULE && !changed) {
+        changed = dominatedColumns() > 0;
+      }
     }
     return true;
+  }
+
+  // dominated columns (Andersen and Andersen, section 3.5): the bounds of the rows give the signs
+  // of their duals, and a column singleton without an upper (lower) bound, whose reduced cost
+  // must then be at least (most) 0, bounds the dual of its row. A column whose reduced cost these
+  // bounds keep away from 0 is at the bound its sign asks for in every optimum, and is fixed there.
+  // The number of columns fixed
+  private int dominatedColumns() {
+    if (yLo == null) {
+      yLo = new double[m];
+      yHi = new double[m];
+    }
+    for (int i = 0; i < m; i++) {
+      // the slack of a row without a lower bound sits at its upper bound: y_i <= 0
+      yLo[i] = rowHi[i] == Double.POSITIVE_INFINITY ? 0 : Double.NEGATIVE_INFINITY;
+      yHi[i] = rowLo[i] == Double.NEGATIVE_INFINITY ? 0 : Double.POSITIVE_INFINITY;
+    }
+    for (int j = 0; j < n; j++) {
+      if (!colAlive[j] || colCount[j] != 1) {
+        continue;
+      }
+      boolean noHi = hi[j] == Double.POSITIVE_INFINITY;
+      boolean noLo = lo[j] == Double.NEGATIVE_INFINITY;
+      if (!noHi && !noLo) {
+        continue;
+      }
+      int e = onlyEntry(j);
+      int i = cIdx[j][e];
+      double a = cVal[j][e];
+      if (Math.abs(a) < SMALL_ENTRY) {
+        continue;
+      }
+      double r = wcost[j] / a;
+      // no upper bound: d_j = c_j - y_i a >= 0; no lower bound: d_j <= 0
+      if (noHi) {
+        if (a > 0) {
+          yHi[i] = Math.min(yHi[i], r);
+        } else {
+          yLo[i] = Math.max(yLo[i], r);
+        }
+      }
+      if (noLo) {
+        if (a > 0) {
+          yLo[i] = Math.max(yLo[i], r);
+        } else {
+          yHi[i] = Math.min(yHi[i], r);
+        }
+      }
+    }
+    ops += m + n;
+    int found = 0;
+    for (int j = 0; j < n; j++) {
+      if (!colAlive[j]) {
+        continue;
+      }
+      boolean hasLo = lo[j] != Double.NEGATIVE_INFINITY;
+      boolean hasHi = hi[j] != Double.POSITIVE_INFINITY;
+      if (!hasLo && !hasHi) {
+        continue;
+      }
+      // the range of y a_j over the dual bounds
+      double min = 0;
+      double max = 0;
+      int minInf = 0;
+      int maxInf = 0;
+      int[] ci = cIdx[j];
+      double[] cv = cVal[j];
+      ops += cLen[j];
+      for (int e = 0; e < cLen[j] && (minInf == 0 || maxInf == 0); e++) {
+        int i = ci[e];
+        double a = cv[e];
+        if (!rowAlive[i] || a == 0) {
+          continue;
+        }
+        double l = a > 0 ? yLo[i] : yHi[i];
+        double h = a > 0 ? yHi[i] : yLo[i];
+        if (Double.isInfinite(l)) {
+          minInf++;
+        } else {
+          min += a * l;
+        }
+        if (Double.isInfinite(h)) {
+          maxInf++;
+        } else {
+          max += a * h;
+        }
+      }
+      double c = wcost[j];
+      double tol = DOMINATED * (1 + Math.abs(c));
+      // d_j = c_j - y a_j: at least c_j - max, at most c_j - min
+      if (hasLo && maxInf == 0 && c - max > tol) {
+        dominated(j, lo[j]);
+        found++;
+      } else if (hasHi && minInf == 0 && c - min < -tol) {
+        dominated(j, hi[j]);
+        found++;
+      }
+    }
+    return found;
+  }
+
+  // the dominated column is removed at value v
+  private void dominated(int j, double v) {
+    fixColumn(j, v);
+    kind[records - 1] = DOMINATED_COLUMN;
   }
 
   /**
@@ -327,12 +462,13 @@ final class Presolve {
 
   /**
    * Returns how many reductions of each kind were made: rows dropped, singleton rows, columns
-   * fixed, free columns, doubletons, parallel rows, parallel columns.
+   * fixed, free columns, doubletons, parallel rows, parallel columns, forcing rows, dominated
+   * columns.
    *
    * @return the counts
    */
   int[] counts() {
-    int[] c = new int[7];
+    int[] c = new int[9];
     for (int t = 0; t < records; t++) {
       c[kind[t]]++;
     }
@@ -399,6 +535,18 @@ final class Presolve {
       dropRow(i);
       return 1;
     }
+    if (FORCING_RULE) {
+      if (minInf == 0
+          && rowHi[i] != Double.POSITIVE_INFINITY
+          && min >= rowHi[i] - SAME * (1 + Math.abs(rowHi[i]))) {
+        return forcing(i, true);
+      }
+      if (maxInf == 0
+          && rowLo[i] != Double.NEGATIVE_INFINITY
+          && max <= rowLo[i] + SAME * (1 + Math.abs(rowLo[i]))) {
+        return forcing(i, false);
+      }
+    }
     int r = 0;
     if (loHolds && rowLo[i] != Double.NEGATIVE_INFINITY) {
       rowLo[i] = Double.NEGATIVE_INFINITY;
@@ -414,6 +562,51 @@ final class Presolve {
       return doubleton(i);
     }
     return r;
+  }
+
+  // a forcing row (Andersen and Andersen, section 3.2): its activity can reach its upper bound
+  // only with every column at the bound that gives the minimum (atMin), or its lower bound only
+  // with every column at the bound that gives the maximum; the columns are fixed there and the row
+  // goes
+  private int forcing(int i, boolean atMin) {
+    int[] idx = rIdx[i];
+    double[] val = rVal[i];
+    int count = rowCount[i];
+    int[] fc = new int[count];
+    double[] fv = new double[count];
+    double[] fcost = new double[count];
+    int[] flen = new int[count];
+    int c = 0;
+    for (int e = 0; e < rLen[i]; e++) {
+      int j = idx[e];
+      if (colAlive[j] && val[e] != 0) {
+        fc[c] = j;
+        fv[c] = val[e];
+        fcost[c] = wcost[j];
+        flen[c++] = logLen[j];
+      }
+    }
+    if (forcingRows == forcingCols.length) {
+      int cap = forcingRows * 2;
+      forcingCols = Arrays.copyOf(forcingCols, cap);
+      forcingVals = Arrays.copyOf(forcingVals, cap);
+      forcingCosts = Arrays.copyOf(forcingCosts, cap);
+      forcingLens = Arrays.copyOf(forcingLens, cap);
+    }
+    forcingCols[forcingRows] = Arrays.copyOf(fc, c);
+    forcingVals[forcingRows] = Arrays.copyOf(fv, c);
+    forcingCosts[forcingRows] = Arrays.copyOf(fcost, c);
+    forcingLens[forcingRows] = Arrays.copyOf(flen, c);
+    // recorded before the columns, so that the postsolve sees their fixings first
+    int t = record(FORCING_ROW, i, -1);
+    recOther[t] = forcingRows++;
+    recFlag[t] = (byte) (atMin ? 1 : 0);
+    for (int q = 0; q < c; q++) {
+      int j = fc[q];
+      fixColumn(j, fv[q] > 0 == atMin ? lo[j] : hi[j]);
+    }
+    removeRow(i);
+    return 1;
   }
 
   // the row of one column a x in [L, U] becomes bounds of the column
@@ -1172,6 +1365,14 @@ final class Presolve {
         case PARALLEL_COLUMN:
           parallelColumnBasis(t, j, recOther[t], y, value, basic, upper);
           break;
+        case FORCING_ROW:
+          forcingBasis(t, i, y, basic, upper);
+          break;
+        case DOMINATED_COLUMN:
+          basic[j] = false;
+          value[j] = fixedAt[j];
+          upper[j] = fixedAt[j] == givenHi[j] && givenHi[j] != givenLo[j];
+          break;
         default:
           doubletonBasis(t, i, j, recOther[t], y, value, basic, upper);
           break;
@@ -1215,6 +1416,44 @@ final class Presolve {
     }
     ops += len;
     return d;
+  }
+
+  // the forcing row i: its columns are nonbasic at the bounds it fixed them to. Its slack is at the
+  // bound the row was forced to, with the dual that keeps the reduced costs of those columns
+  // feasible and the smallest; the column whose reduced cost that dual makes 0 is basic in place of
+  // the slack. When no reduced cost needs a dual, the slack is basic (Andersen and Andersen,
+  // section 4)
+  private void forcingBasis(int t, int i, double[] y, boolean[] basic, boolean[] upper) {
+    int f = recOther[t];
+    boolean atMin = recFlag[t] != 0;
+    int[] fc = forcingCols[f];
+    double[] fv = forcingVals[f];
+    y[i] = 0;
+    double best = 0;
+    int at = -1;
+    for (int q = 0; q < fc.length; q++) {
+      double a = fv[q];
+      double d = reducedCost(forcingCosts[f][q], fc[q], forcingLens[f][q], y);
+      // at its lower bound (a > 0 at the minimum, a < 0 at the maximum) the column needs d - y a
+      // >= 0, at its upper bound d - y a <= 0; atMin asks for y <= 0, else y >= 0
+      boolean atLower = a > 0 == atMin;
+      if (atLower ? d >= 0 : d <= 0) {
+        continue;
+      }
+      double r = d / a;
+      if (atMin ? r < best : r > best) {
+        best = r;
+        at = fc[q];
+      }
+    }
+    if (at < 0) {
+      basic[n + i] = true;
+      return;
+    }
+    basic[n + i] = false;
+    upper[n + i] = atMin;
+    basic[at] = true;
+    y[i] = best;
   }
 
   // the column of a singleton row, nonbasic: basic in place of the row's slack when it sits at a
