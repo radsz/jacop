@@ -6190,7 +6190,22 @@ Version 5.0 (unreleased)
    ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
    6.6 % and 3 % more nodes.
 
-347. A solve of the linear relaxation in search that stops at its pivot or
+347. Free search (-f) probes the root before lazy clause generation search
+   by default: failed literals on the 0/1 variables and on the values of
+   small domains, for 2 % of the time left and at most 1 s (new
+   -Djacop.lcg.probe.cap=ms; -Djacop.lcg.probe=0 turns probing off, and
+   an explicit -Djacop.lcg.probe=share keeps its uncapped budget as
+   before). On java-routing of the MiniZinc Challenge (2013, 2021) it
+   finds the parity of the positions of the stops and the stops that
+   cannot follow each other, which propagation does not, and proves 8 of
+   10 instances in 240 s instead of 5 (2.6 times faster over three
+   seeds). The 62 wide-quick instances (-f, 240 s) take 2,609 s instead
+   of 2,866 s in all and solve 52 instead of 51 (work-task-variation
+   seed-8); easy instances where probing finds nothing are up to a few
+   seconds slower, as the literals it makes move the search. Model
+   search does not probe by default.
+
+348. A solve of the linear relaxation in search that stops at its pivot or
    work limit now bounds the objective by its dual multipliers. They are
    not optimal but still valid: the exact certificate (Neumaier and
    Shcherbina, Safe bounds in linear and mixed-integer linear programming,
@@ -6205,7 +6220,7 @@ Version 5.0 (unreleased)
    statistics lpAnytime, lpAnytimePrunings and lpAnytimeFailures give the
    stopped solves and what they pruned.
 
-348. New redundant constraints at FlatZinc posting (PairCoverDetector): when
+349. New redundant constraints at FlatZinc posting (PairCoverDetector): when
    pairs of items must share bins of bounded capacity (0/1 x[g][i], rows
    sum(i) x[g][i] <= c, demands sum(g) b[g] >= k with b[g] -> x[g][i] /\
    x[g][j]), each item i is in at least ceil(D(i) / (c - 1)) bins, D(i)
@@ -6216,7 +6231,7 @@ Version 5.0 (unreleased)
    It fires on none of the wide set; -Dorg.jacop.fz.pairCover=false turns
    it off.
 
-349. SumWeight reads the whole queue of changed variables and reuses its set
+350. SumWeight reads the whole queue of changed variables and reuses its set
    between calls; it stopped at the first variable already behind its
    pointer, which never left a value unpruned (100,000 WakeUpFixpointTest
    trials with a new SumWeight case). ElementInteger with an index smaller
