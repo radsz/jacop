@@ -617,8 +617,10 @@ public class DepthFirstSearch<T extends Var> implements Search<T> {
 
   /** Takes the cost of a better solution found elsewhere as the bound on the cost. */
   private void importSharedBound() {
-    int shared = sharedBound.getAsInt();
-    if (shared < costValue) {
+    int shared = Math.min(sharedBound.getAsInt(), costValue);
+    // a new labeling clears the cost constraint but keeps costValue: a split search that labels
+    // one part of the tree after another takes the bound again
+    if (shared < costValue || cost == null && shared != Integer.MAX_VALUE) {
       updateCostValue(shared);
     }
   }
