@@ -825,6 +825,26 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * Records the domains of the variables of the inverse channels ({@code jacop_assignment}) before
+   * any constraint prunes them; symmetry breaking compares them as the model declares them.
+   *
+   * @param astTree the root of the parsed model.
+   */
+  public void recordChannelDomains(SimpleNode astTree) {
+    forEachConstraint(
+        astTree,
+        node -> {
+          if ("jacop_assignment".equals(node.getName())) {
+            for (int i = 0; i < 2; i++) {
+              for (IntVar v : getVarArray((SimpleNode) node.jjtGetChild(i))) {
+                dictionary.recordChannelDomain(v);
+              }
+            }
+          }
+        });
+  }
+
+  /**
    * Stops building the model once the time-out has passed.
    *
    * @throws ModelTimeOut when it has passed

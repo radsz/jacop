@@ -5806,6 +5806,39 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.argMaxFunctions=false turns it off; it is off under
    --proof.
 
+335. Symmetry breaking in the FlatZinc front end breaks the conditional
+   symmetry of interchangeable values in a sequence ordered by
+   precedences (new class org.jacop.fz.ConditionalValueSwaps), as in the
+   patience game Black Hole (I. P. Gent, C. Jefferson, T. Kelsey, I.
+   Lynce, I. Miguel, P. Nightingale, B. M. Smith and S. A. Tarim, "Search
+   in the patience game 'Black Hole'", AI Communications 20(3), 2007;
+   conditional symmetry: I. P. Gent, T. Kelsey, S. A. Linton, I.
+   McDonald, I. Miguel and B. M. Smith, "Conditional symmetry breaking",
+   CP 2005). The model has inverse(x, y), tables on x whose relation is
+   the same after two values a and b are exchanged, and precedences
+   y[u] < y[v]. Exchanging a and b in a solution keeps it a solution when
+   the predecessors of the value moved forward still come before it and
+   the successors of the value moved back still come after it, so
+   y[b] < y[a] -> OR(u before a) y[u] > y[b] \/ OR(s after b) y[s] < y[a]
+   is posted for a the value the lex-leader order prefers (Crawford,
+   Ginsberg, Luks and Roy, KR 1996). The constraints are lex-leader
+   constraints over x in the order of the other symmetry breaking
+   constraints, whose first variables are those of the search
+   annotation: with int_search(x, input_order, indomain_min, complete)
+   the search finds the same first solution as without them, takes the
+   same decisions, and fails sooner, so fixed search still follows the
+   annotation. On the 25 black-hole instances of the MiniZinc Challenges
+   2009-2025 at 600 s, fixed search solves 25 instead of 17
+   (2025 layout_3 40 s, layout_14 17 s, layout_17 9 s, all three unknown
+   before; 2009 instance 19 proved unsatisfiable in 38 s); the 17 that
+   both solve take 2.1x less time in geomean, and the 12 satisfiable ones
+   among them print the same first solution. It fires on 2 of the 240
+   instances of the wide benchmark set, both black-hole. It is used for
+   satisfaction problems that ask for one solution, not under free search
+   (-f), which solves all 25 within 13 s without it and was up to 5.8x
+   slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
+   statistic symmetryValueSwaps counts the pairs of values.
+
 Version 4.11
 =============
 
