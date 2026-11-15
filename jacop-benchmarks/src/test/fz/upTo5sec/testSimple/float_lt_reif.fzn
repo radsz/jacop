@@ -1,0 +1,5 @@
+% RUNS ON flatzinc
+% RUNS ON fzn_fdlp_canon
+constraint float_lt_reif(2.0, 3.0, true);
+constraint float_lt_reif(10.0, 3.0, false);
+solve satisfy;

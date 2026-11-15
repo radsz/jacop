@@ -31,7 +31,6 @@
 package org.jacop.constraints;
 
 import java.util.Arrays;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -51,6 +50,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.util.VarIntMap;
 
 /**
  * Assignment constraint implements facility to improve channeling constraints between dual
@@ -79,7 +79,35 @@ public class Assignment extends Constraint
 
   final Map<IntVar, Integer> ds;
   final Map<IntVar, Integer> xs;
-  LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+
+  /*
+   * The changed variables, as slots of the distinct variables of xs and ds, in the order of their
+   * first change: a round of consistency takes the variables queued so far (current) and the
+   * changes it makes are queued for the next round, as with the LinkedHashSet swapped per round
+   * that this replaces. queueVariable runs for every change of every variable, and hashing the
+   * variable into a set and looking it up in xs and ds cost about a tenth of the time of the
+   * constraint on black-hole; the order, and so the pruning and its explanations, is the same.
+   */
+  private final VarIntMap slotOf = new VarIntMap();
+
+  private final IntVar[] slotVar;
+
+  // the value of xs (and ds) for the variable of a slot, valid where inX (inD) is set
+  private final int[] slotX;
+
+  private final int[] slotD;
+
+  private final boolean[] inX;
+
+  private final boolean[] inD;
+
+  private int[] queued;
+
+  private int queuedSize;
+
+  private final boolean[] isQueued;
+
+  private int[] current;
 
   /** One-time work of the first consistency call. */
   final InitOnce init = new InitOnce();
@@ -122,6 +150,35 @@ public class Assignment extends Constraint
       this.xs.put(x[i], i + shiftX);
       this.ds.put(d[i], i + shiftD);
     }
+
+    int slots = 0;
+    IntVar[] vars = new IntVar[2 * x.length];
+    for (IntVar v : Stream.concat(Arrays.stream(x), Arrays.stream(d)).toList()) {
+      if (slotOf.get(v) == VarIntMap.ABSENT) {
+        slotOf.put(v, slots);
+        vars[slots++] = v;
+      }
+    }
+    slotVar = Arrays.copyOf(vars, slots);
+    slotX = new int[slots];
+    slotD = new int[slots];
+    inX = new boolean[slots];
+    inD = new boolean[slots];
+    for (int k = 0; k < slots; k++) {
+      Integer px = this.xs.get(slotVar[k]);
+      if (px != null) {
+        inX[k] = true;
+        slotX[k] = px;
+      }
+      Integer pd = this.ds.get(slotVar[k]);
+      if (pd != null) {
+        inD[k] = true;
+        slotD[k] = pd;
+      }
+    }
+    queued = new int[slots];
+    current = new int[slots];
+    isQueued = new boolean[slots];
 
     setScope(Stream.concat(Arrays.stream(xs), Arrays.stream(ds)));
   }
@@ -173,7 +230,14 @@ public class Assignment extends Constraint
 
   @Override
   public void removeLevel(int level) {
-    variableQueue.clear();
+    clearQueue();
+  }
+
+  private void clearQueue() {
+    for (int k = 0; k < queuedSize; k++) {
+      isQueued[queued[k]] = false;
+    }
+    queuedSize = 0;
   }
 
   @Override
@@ -183,14 +247,19 @@ public class Assignment extends Constraint
       initRangesAndPropagateInitial(store);
     }
 
-    while (!variableQueue.isEmpty()) {
+    while (queuedSize > 0) {
 
-      LinkedHashSet<IntVar> fdvs = variableQueue;
+      int[] round = queued;
+      int roundSize = queuedSize;
+      queued = current;
+      current = round;
+      for (int k = 0; k < roundSize; k++) {
+        isQueued[round[k]] = false;
+      }
+      queuedSize = 0;
 
-      variableQueue = new LinkedHashSet<>();
-
-      for (IntVar v : fdvs) {
-        propagateFromPrunedVariable(store, v);
+      for (int k = 0; k < roundSize; k++) {
+        propagateFromPrunedVariable(store, round[k]);
       }
     }
   }
@@ -242,54 +311,43 @@ public class Assignment extends Constraint
     }
   }
 
-  private void propagateFromPrunedVariable(Store store, IntVar v) {
+  private void propagateFromPrunedVariable(Store store, int slot) {
+    IntVar v = slotVar[slot];
     IntDomain vPrunedDomain = v.recentDomainPruning();
     if (vPrunedDomain.isEmpty()) {
       return;
     }
     // a variable may occur in both xs and ds (e.g. inverse(x, x)); it is then propagated in both
     // roles
-    Integer positionX = xs.get(v);
-    if (positionX != null) {
-      propagateFromPrunedX(store, v, vPrunedDomain, positionX);
+    if (inX[slot]) {
+      propagateFromPruned(store, v, vPrunedDomain, slotX[slot], shiftD, d);
     }
-    Integer positionD = ds.get(v);
-    if (positionD != null) {
-      propagateFromPrunedD(store, v, vPrunedDomain, positionD);
+    if (inD[slot]) {
+      propagateFromPruned(store, v, vPrunedDomain, slotD[slot], shiftX, x);
     }
   }
 
-  private void propagateFromPrunedD(
-      Store store, IntVar v, IntDomain vprunedDomain, Integer position) {
-    vprunedDomain = vprunedDomain.intersect(rangeX);
-    if (vprunedDomain.isEmpty()) {
-      return;
-    }
-    for (ValueEnumeration enumer = vprunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
-      int dValue = enumer.nextElement() - shiftX;
-      if (dValue >= 0 && dValue < x.length) {
-        x[dValue].domain.inComplement(store.level, x[dValue], position);
+  /**
+   * Removes the position of v from the variables of the other list indexed by the values pruned
+   * from v, and fixes the one indexed by v once v is fixed. The pruned values outside the index
+   * range of the other list are skipped; when there is none inside it, nothing is done, as when the
+   * pruned values were intersected with that range first.
+   */
+  private static void propagateFromPruned(
+      Store store, IntVar v, IntDomain pruned, int position, int shift, IntVar[] other) {
+    boolean any = false;
+    for (ValueEnumeration enumer = pruned.valueEnumeration(); enumer.hasMoreElements(); ) {
+      int index = enumer.nextElement() - shift;
+      if (index >= 0 && index < other.length) {
+        any = true;
+        other[index].domain.inComplement(store.level, other[index], position);
       }
     }
-    if (v.singleton()) {
-      x[v.value() - shiftX].domain.in(store.level, x[v.value() - shiftX], position, position);
-    }
-  }
-
-  private void propagateFromPrunedX(
-      Store store, IntVar v, IntDomain vprunedDomain, Integer position) {
-    vprunedDomain = vprunedDomain.intersect(rangeD);
-    if (vprunedDomain.isEmpty()) {
+    if (!any) {
       return;
     }
-    for (ValueEnumeration enumer = vprunedDomain.valueEnumeration(); enumer.hasMoreElements(); ) {
-      int xValue = enumer.nextElement() - shiftD;
-      if (xValue >= 0 && xValue < d.length) {
-        d[xValue].domain.inComplement(store.level, d[xValue], position);
-      }
-    }
     if (v.singleton()) {
-      d[v.value() - shiftD].domain.in(store.level, d[v.value() - shiftD], position, position);
+      other[v.value() - shift].domain.in(store.level, other[v.value() - shift], position, position);
     }
   }
 
@@ -327,7 +385,11 @@ public class Assignment extends Constraint
 
   @Override
   public void queueVariable(int level, Var v) {
-    variableQueue.add((IntVar) v);
+    int slot = slotOf.get(v);
+    if (slot != VarIntMap.ABSENT && !isQueued[slot]) {
+      isQueued[slot] = true;
+      queued[queuedSize++] = slot;
+    }
   }
 
   @Override
