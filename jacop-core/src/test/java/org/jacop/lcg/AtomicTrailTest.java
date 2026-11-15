@@ -574,6 +574,34 @@ class AtomicTrailTest {
     return p == t[2];
   }
 
+  /** The one-lookup bound queries agree with minBefore and maxBefore at every position. */
+  @Test
+  void packedBoundsAndFixedToAgreeWithMinAndMaxBefore() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -5, 5);
+    BooleanVar b = new BooleanVar(store, "b");
+    AtomicTrail trail = new AtomicTrail(store);
+    store.setLevel(1);
+    x.domain.in(store.level, x, -3, 5);
+    b.domain.in(store.level, b, 1, 1);
+    x.domain.in(store.level, x, -3, 2);
+    x.domain.in(store.level, x, 2, 2);
+    for (int p = 0; p <= trail.size(); p++) {
+      for (IntVar z : new IntVar[] {x, b}) {
+        long packed = trail.boundsBefore(z, p);
+        assertThat(AtomicTrail.packedMin(packed)).isEqualTo(trail.minBefore(z, p));
+        assertThat(AtomicTrail.packedMax(packed)).isEqualTo(trail.maxBefore(z, p));
+        for (int v = -6; v <= 6; v++) {
+          assertThat(trail.fixedToBefore(z, v, p))
+              .isEqualTo(trail.minBefore(z, p) == v && trail.maxBefore(z, p) == v);
+        }
+      }
+    }
+    assertThat(trail.fixedToBefore(x, 2, trail.size())).isTrue();
+    assertThat(trail.fixedToBefore(b, 1, trail.size())).isTrue();
+    trail.detach();
+  }
+
   /**
    * The entry marks are one array per trail, shared by the table explanations: each new mark covers
    * the position asked for and differs from every earlier mark, so stale flags of another

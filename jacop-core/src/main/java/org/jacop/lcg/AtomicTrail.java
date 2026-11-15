@@ -992,6 +992,65 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   }
 
   /**
+   * Returns whether a variable was fixed to a value just before a trail position: {@link
+   * #minBefore} and {@link #maxBefore} both equal to it, with one lookup of the variable. Reasons
+   * that ask this for every variable of a constraint (cardinality networks) spent a quarter of the
+   * run time in the two lookups on ptv.
+   *
+   * @param x the variable
+   * @param v the value
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return true when the variable's bounds were both v then
+   */
+  public boolean fixedToBefore(IntVar x, int v, int position) {
+    int i = slot(x);
+    int e = latestBound(2 * i + GE, position);
+    if ((e >= 0 ? value[e] : root[i].min()) != v) {
+      return false;
+    }
+    int f = latestBound(2 * i + LE, position);
+    return (f >= 0 ? value[f] : root[i].max()) == v;
+  }
+
+  /**
+   * Returns a variable's bounds just before a trail position, with one lookup of the variable: the
+   * minimum in the high 32 bits and the maximum in the low 32 bits; {@link #packedMin} and {@link
+   * #packedMax} read them.
+   *
+   * @param x the variable
+   * @param position the trail position (an entry index, or {@link #size()} for now)
+   * @return the packed bounds
+   */
+  public long boundsBefore(IntVar x, int position) {
+    int i = slot(x);
+    int e = latestBound(2 * i + GE, position);
+    int f = latestBound(2 * i + LE, position);
+    int min = e >= 0 ? value[e] : root[i].min();
+    int max = f >= 0 ? value[f] : root[i].max();
+    return ((long) min << 32) | (max & 0xffffffffL);
+  }
+
+  /**
+   * Returns the minimum of bounds packed by {@link #boundsBefore}.
+   *
+   * @param bounds the packed bounds
+   * @return the minimum
+   */
+  public static int packedMin(long bounds) {
+    return (int) (bounds >> 32);
+  }
+
+  /**
+   * Returns the maximum of bounds packed by {@link #boundsBefore}.
+   *
+   * @param bounds the packed bounds
+   * @return the maximum
+   */
+  public static int packedMax(long bounds) {
+    return (int) bounds;
+  }
+
+  /**
    * Returns the earliest entry whose atom gives {@code x >= v} just before a trail position: the
    * weakest {@code >=} atom recorded for x that implies the bound, so a reason built on it is as
    * general and as early as it can be with the atoms on the trail.
