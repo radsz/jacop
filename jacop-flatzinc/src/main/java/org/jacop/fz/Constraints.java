@@ -51,6 +51,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.ArgMaxFunctionDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
@@ -164,6 +165,15 @@ public class Constraints implements ParserTreeConstants {
     Options options = support.options;
     boolean manySolutions =
         (options.getAll() || options.getNumberSolutions() > 1) && satisfaction(astTree);
+    // the exchanges of values that symmetry breaking breaks in a satisfaction problem compare the
+    // domains of inverse channels as declared
+    if (options.symmetry()
+        && ConditionalValueSwaps.ENABLED
+        && !options.freeSearch()
+        && !manySolutions
+        && satisfaction(astTree)) {
+      support.recordChannelDomains(astTree);
+    }
     if (hasFloatVariables()) {
       // the model is built as without LCG, also when --lcg was given: LcgSolver has no atoms for
       // float variables, and a model built for LCG (clauses, split sums, no views) and then solved
@@ -277,6 +287,17 @@ public class Constraints implements ParserTreeConstants {
           for (Map.Entry<IntVar[], int[][]> t : elimination.tables()) {
             cf.poseTable(t.getKey(), t.getValue());
           }
+        }
+      }
+
+      // an arg_max over functions of other variables runs on those variables, whose bounds its
+      // explanations then share across arg_max constraints
+      if (ArgMaxFunctionDetector.enabled() && options.proof() == null) {
+        ArgMaxFunctionDetector argMax = new ArgMaxFunctionDetector(support, replaced);
+        argMax.detect(astTree);
+        if (!argMax.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(argMax.replaced());
         }
       }
 
