@@ -1365,11 +1365,15 @@ public class LinearRelaxation extends Constraint
         // its own, and their share left out the rows that bound the objective (CSPLib warehouses
         // cap131: 2 rows of its own, and the clauses b[i,j] -> open[j] with the element costs as
         // value encodings, 3,826 rows, raise the root bound from 626,300 to 914,788, opt 915,059)
+        // at most as many as a sparse relaxation in search has rows: pattern-set-mining-k1
+        // ionosphere has 110,602 such rows, whose trial took 15 s and did not raise the bound
         Set<LinearForm> near = nearObjective(localForms, sorted, triedSet, objective);
         List<LinearForm> sparse = new ArrayList<>();
         long nearShare = Math.max(share, (long) first + near.size());
         fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse);
-        if (containsAll(sparse, near) && !containsAll(further, near)) {
+        if (localForms.size() + near.size() <= sparseMaxRows
+            && containsAll(sparse, near)
+            && !containsAll(further, near)) {
           further = sparse;
           simplex = Simplex.SPARSE;
           nearRows = near.size();
