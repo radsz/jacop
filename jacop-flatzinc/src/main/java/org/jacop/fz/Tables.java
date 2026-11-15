@@ -44,6 +44,7 @@ import java.util.Set;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.lp.TimeIndexedBound;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -113,6 +114,11 @@ public class Tables {
   /** The variables that table variable elimination joined out of the model, or null. */
   TableVariableElimination tableElimination;
 
+  // the cost function network of the objective (-Dorg.jacop.fz.costNetwork=true), until Solve
+  // builds
+  // its bound
+  org.jacop.fz.constraints.CostNetworkDetector costNetwork;
+
   // variables the detectors add for redundant constraints, which follow from the model's own: the
   // search of lazy clause generation branches on them last
   final ArrayList<Var> auxiliaryVariables = new ArrayList<>();
@@ -132,6 +138,9 @@ public class Tables {
   int numberSetVariables;
   // MiniZinc on_restart built-ins of the model, or null
   OnRestart onRestart;
+  // the variables defined as functions of bin loads, for the arc-flow blocks of the time-indexed
+  // bound (org.jacop.lp.arcFlow)
+  List<TimeIndexedBound.LoadFunction> loadFunctions = List.of();
   // variables whose declared domain reached beyond JaCoP's integer range and was narrowed to it
   private final ArrayList<ClampedDomain> clampedDomains = new ArrayList<>();
 
@@ -557,7 +566,7 @@ public class Tables {
    * @param b the variable to look up
    * @return the alias variable or the original variable
    */
-  IntVar getAlias(IntVar b) {
+  public IntVar getAlias(IntVar b) {
     IntVar v = aliasTable.get(b);
     if (v == null) {
       return b;

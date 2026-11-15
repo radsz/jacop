@@ -70,6 +70,7 @@ import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.cfn.CostNetworkBound;
 import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -87,6 +88,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.ObjectiveDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.jasat.cdcl.CdclSolver;
@@ -145,6 +147,7 @@ import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
 import org.jacop.search.restart.LinearCalculator;
 import org.jacop.search.restart.LubyCalculator;
+import org.jacop.search.restart.ProbeCalculator;
 import org.jacop.search.restart.RestartHook;
 import org.jacop.search.restart.RestartSearch;
 import org.jacop.set.constraints.SetMirror;
@@ -502,6 +505,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // the dominance nogoods are on by default for fixed search: on the 39 instances where they fire
+  // (trucking, spot5, shortest_path, pattern-set-mining, unit-commitment, table-layout,
+  // maximum-dag, aircraft-disassembly) at 600 s they prove 26 instead of 24 and improve 10
+  // objectives, 1 worse; under -f they are neutral (3 better, 4 worse, 31 = 31 proved), so they
+  // stay off there. A proof does not log them. org.jacop.fz.dominance=true or false overrides
+  private boolean dominanceOn() {
+    String p = System.getProperty("org.jacop.fz.dominance");
+    if (p != null) {
+      return Boolean.parseBoolean(p);
+    }
+    return !options.freeSearch() && options.proof() == null;
+  }
+
   /**
    * Imposes the automatic dominance breaking nogoods of {@link DominanceNogoods} (Lee and Zhong,
    * IJCAI 2020; CP 2022) for an integer objective. They keep every optimum but drop solutions that
@@ -644,12 +660,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
-    if (Boolean.getBoolean("org.jacop.fz.dominance") && store.consistency()) {
+    if (dominanceOn() && store.consistency()) {
       dominanceNogoods(node);
+    }
+
+    if (dictionary.costNetwork != null) {
+      if (opt.presolve() == Options.Presolve.OFF && store.consistency()) {
+        costNetworkBound(node);
+      }
+      dictionary.costNetwork = null;
     }
 
     if (opt.lp()) {
       imposeLinearRelaxation(node);
+    }
+
+    if (costNetworkBound != null) {
+      imposeCostNetworkBound();
     }
 
     if (DecompositionBound.on() && opt.proof() == null) {
@@ -731,6 +758,109 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // what the decomposition bound did, for the statistics
   private DecompositionBound.Outcome decomposition;
 
+  // the cost network bound (-Dorg.jacop.fz.costNetwork=true), for the statistics
+  private CostNetworkBound costNetworkBound;
+
+  private boolean costNetworkPosted;
+
+  private CostNetworkDetector costNetworkDetector;
+
+  /**
+   * Bounds the objective by the cost function network of its unary and binary cost functions
+   * ({@code -Dorg.jacop.fz.costNetwork=true}), see {@link CostNetworkDetector}.
+   *
+   * @param node the solve item.
+   */
+  private void costNetworkBound(ASTSolveItem node) {
+    if (!(node.jjtGetChild(node.jjtGetNumChildren() - 1) instanceof ASTSolveKind kind)) {
+      return;
+    }
+    int k = getKind(kind.getKind());
+    if (k == 0 || !(kind.jjtGetChild(0) instanceof ASTSolveExpr expr)) {
+      return;
+    }
+    IntVar objective =
+        switch (expr.getType()) {
+          case 0 -> dictionary.getVariable(expr.getIdent());
+          case 1 -> {
+            IntVar[] a = dictionary.getVariableArray(expr.getIdent());
+            yield a == null ? null : a[expr.getIndex()];
+          }
+          default -> null;
+        };
+    if (objective == null) {
+      return;
+    }
+    CostNetworkDetector d = dictionary.costNetwork;
+    CostNetworkBound b = d.build(objective, k == 2, dictionary::isOutput, options.debug());
+    costNetworkDetector = d;
+    costNetworkBound = b;
+  }
+
+  /**
+   * Posts the cost network bound when its root bound is above the bound the objective already has
+   * at the root (from the linear relaxation, for example), or always with
+   * -Dorg.jacop.cfn.gate=false.
+   */
+  private void imposeCostNetworkBound() {
+    CostNetworkBound b = costNetworkBound;
+    IntVar z = b.objective();
+    if (!store.consistency()) {
+      return;
+    }
+    long before = b.maximize() ? -(long) z.max() : z.min();
+    b.prepare(store);
+    if (!Boolean.parseBoolean(System.getProperty("org.jacop.cfn.gate", "true"))
+        || b.rootBound > before) {
+      store.impose(b);
+      costNetworkPosted = true;
+    }
+  }
+
+  /** Prints what the cost network bound did. */
+  private void printCostNetworkStatistics() {
+    CostNetworkDetector d = costNetworkDetector;
+    if (d == null || !options.searchStatistics()) {
+      return;
+    }
+    CostNetworkBound b = costNetworkBound;
+    IO.println(
+        "%%%mzn-stat: cfnTerms="
+            + d.terms
+            + "\n%%%mzn-stat: cfnTermsLeft="
+            + d.termsLeft
+            + "\n%%%mzn-stat: cfnBinaryTerms="
+            + d.binaryTerms
+            + "\n%%%mzn-stat: cfnHard="
+            + d.hard
+            + "\n%%%mzn-stat: cfnDetectTime="
+            + d.seconds
+            + (b == null
+                ? ""
+                : "\n%%%mzn-stat: cfnStartBound="
+                    + (b.startBound == Long.MIN_VALUE ? "none" : sign(b.startBound))
+                    + "\n%%%mzn-stat: cfnRootBound="
+                    + (b.rootBound == Long.MIN_VALUE ? "none" : sign(b.rootBound))
+                    + "\n%%%mzn-stat: cfnPosted="
+                    + costNetworkPosted
+                    + "\n%%%mzn-stat: cfnSweeps="
+                    + b.sweeps
+                    + "\n%%%mzn-stat: cfnMerged="
+                    + b.merged
+                    + "\n%%%mzn-stat: cfnPrunings="
+                    + b.prunings
+                    + "\n%%%mzn-stat: cfnTime="
+                    + b.seconds));
+  }
+
+  // a bound of the network (of minus a maximised objective) in the objective's own direction
+  private String sign(long bound) {
+    if (bound == Long.MAX_VALUE) {
+      return "infeasible";
+    }
+    return Long.toString(costNetworkBound.maximize() ? -bound : bound);
+  }
+
   /**
    * Imposes the linear relaxation of the linear constraints of the store as a propagator (--lp),
    * with the objective of the solve item.
@@ -806,9 +936,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (linearRelaxation != null) {
       linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
-      if (TIME_INDEXED && objective != null) {
+      if (lpProbeMs > 0
+          && !options.freeSearch()
+          && options.portfolioWorker == null
+          && linearRelaxation.rootTrialSize() >= lpProbeSize) {
+        // the root solve waits for a short search without it: see executeSearch
+        linearRelaxation.suspend(true);
+        lpProbing = true;
+      }
+      if ((TIME_INDEXED || TimeIndexedBound.ARC_FLOW) && objective != null) {
         timeIndexedBound =
-            TimeIndexedBound.of(store, objective, maximize, linearRelaxation.allRows());
+            TimeIndexedBound.of(
+                store,
+                objective,
+                maximize,
+                linearRelaxation.allRows(),
+                TIME_INDEXED,
+                TimeIndexedBound.ARC_FLOW,
+                dictionary.loadFunctions);
         if (timeIndexedBound != null) {
           store.impose(timeIndexedBound);
         }
@@ -919,6 +1064,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + t.lastColumns
               + "\n%%%mzn-stat: tiRows="
               + t.lastRows
+              + "\n%%%mzn-stat: tiArcs="
+              + t.lastArcs
               + "\n%%%mzn-stat: tiTime="
               + t.seconds);
     }
@@ -943,6 +1090,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.columns()
             + "\n%%%mzn-stat: lpLarge="
             + (r.largeDropped() ? "dropped" : r.large())
+            + "\n%%%mzn-stat: lpProbe="
+            + lpProbeState(r)
+            + "\n%%%mzn-stat: lpRootTrialSize="
+            + r.rootTrialSize()
             + "\n%%%mzn-stat: lpPivotWork="
             + r.pivotWork()
             + "\n%%%mzn-stat: lpSimplexRows="
@@ -2199,6 +2350,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   @SuppressWarnings("unchecked")
   private boolean executeSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    if (lpProbing && !probeTakes(costVar)) {
+      resumeRelaxation();
+    }
     if (!options.runSearch()) {
       flatzincDfs = label;
       flatzincVariableSelection = select;
@@ -2228,11 +2382,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (useLcg(costVar)) {
         return executeLcgSearch(costVar);
       }
+      if (lpProbing && useFreeSearchEngine(costVar)) {
+        resumeRelaxation();
+      }
       if (useFreeSearchEngine(costVar)) {
         return executeFreeSearch(costVar);
       }
       if (restartCalculator != null) {
         return executeRestartSearch(label, select, costVar, solveType);
+      }
+      if (lpProbing) {
+        return executeProbeSearch(label, select, costVar, solveType);
       }
       return executeNonRestartSearch(label, select, costVar, solveType);
     } catch (NumberSolutionsReached _) {
@@ -2606,7 +2766,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       LcgSolver solver = lcg;
       lcg.onBound(
           lower -> {
-            lcgBoundRaised = System.nanoTime();
+            lcgBoundRaised = solver.sat().now();
             if (reportBound(lower)) {
               solver.stop();
             }
@@ -2638,6 +2798,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      // once a solution is known, more literal runs per turn (CHANGELOG 320):
+      // multi-agent-graph-coverage rnd_n10 proofs need half the conflicts with literals alone
+      lcg.setLiteralRuns(
+          Integer.parseInt(options.freeConfig("lcg-literal-runs", "1")),
+          Integer.parseInt(options.freeConfig("lcg-literal-runs-solved", "6")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
@@ -2826,7 +2991,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.setCoresWithoutSolutionOnly(true);
       }
     }
-    if (options.getTimeOut() > 0) {
+    if (options.getTimeOut() > 0 && CdclSolver.VIRTUAL_CLOCK) {
+      // the virtual clock counts the search's work only: the whole time-out goes to the search
+      lcg.sat().setDeadline(lcg.sat().now() + options.getTimeOut() * 1_000_000L);
+    } else if (options.getTimeOut() > 0) {
       // the time-out covers the whole run: reading and setting up the model took part of it
       lcg.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
     }
@@ -2851,7 +3019,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else if (lcgProbe > 0 && lcgProbeDelay > 0) {
       long limit = options.getTimeOut() > 0 ? options.getTimeOut() : 60_000L;
       lcg.setDelayedProbe(
-          System.nanoTime() + (long) (lcgProbeDelay * limit * 1_000_000L),
+          lcg.sat().now() + (long) (lcgProbeDelay * limit * 1_000_000L),
           (long) (lcgProbe * limit * 1_000_000L));
     } else if (lcgProbe > 0) {
       // root probing of the 0/1 variables: facts only, the model stays as it is
@@ -2874,14 +3042,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
+    if (lpProbing) {
+      linearRelaxation.rememberSearchStart();
+      lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
+    }
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
+    if (lpProbing) {
+      // the probe finished the search: the relaxation was never solved
+      linearRelaxation.suspend(false);
+      lpProbing = false;
+      lpProbeFinished = true;
+    }
     if (lcgProbe > 0 && lcgProbeDelay > 0 && lcg.probePasses > 0) {
       printProbeStatistics(lcg);
     }
     if (slowCheck != null) {
       slowCheck.interrupt();
     }
-    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch()) {
+    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return continueWithoutLcg(costVar);
     }
     return numberSolutions > 0;
@@ -2889,7 +3067,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // set when LCG free search was stopped for making too few conflicts
   private volatile boolean lcgSlow;
-  // when LCG last raised the bound on the objective (System.nanoTime)
+  // when LCG last raised the bound on the objective (CdclSolver.now of the LCG solver)
   private volatile long lcgBoundRaised;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
   private volatile int lcgSlowDeferred;
@@ -2904,9 +3082,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // Setting up free search on a large model takes seconds: nside MEDIUM_1000_100 gave way 0.5 s
   // before a time-out of 20 s and ended 2.9 s after it. The check used to be that some time was
   // left, which always held, so free search also started after the time-out.
-  private boolean tooLateForFreeSearch() {
-    return options.getTimeOut() > 0
-        && options.getRemainingTimeOut() < SLOW_LCG_MIN_LEFT * options.getTimeOut();
+  private boolean tooLateForFreeSearch(LcgSolver solver) {
+    if (options.getTimeOut() <= 0) {
+      return false;
+    }
+    long left =
+        CdclSolver.VIRTUAL_CLOCK
+            ? (solver.sat().deadline() - solver.sat().now()) / 1_000_000L
+            : options.getRemainingTimeOut();
+    return left < SLOW_LCG_MIN_LEFT * options.getTimeOut();
   }
 
   /**
@@ -2944,15 +3128,34 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
-    lcgStart = System.nanoTime();
+    LcgSolver solver = lcg;
+    lcgStart = solver.sat().now();
     lcgBoundRaised = Long.MIN_VALUE;
     long stallNanos = (long) (stall * options.getTimeOut() * 1_000_000L);
-    long wait = (long) (at * options.getRemainingTimeOut());
-    LcgSolver solver = lcg;
+    long wait =
+        (long)
+            (at
+                * (CdclSolver.VIRTUAL_CLOCK
+                    ? options.getTimeOut()
+                    : options.getRemainingTimeOut()));
     if (wait <= 0) {
       // lcg-slow-at=0: free search without learning from the start, after LCG's root propagation
       lcgSlow = true;
       solver.stop();
+      return null;
+    }
+    // the best cost printed at each check, to measure the gain over the last window
+    ArrayDeque<long[]> costs = new ArrayDeque<>();
+    if (CdclSolver.VIRTUAL_CLOCK) {
+      // the checks run in the search, at times of its work, so that a run repeats
+      Runnable[] check = new Runnable[1];
+      check[0] =
+          () -> {
+            if (slowLcgCheckOnce(solver, rate, stallNanos, gain, costs)) {
+              solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
+            }
+          };
+      solver.sat().setAlarm(lcgStart + wait * 1_000_000L, check[0]);
       return null;
     }
     return Thread.ofVirtual()
@@ -2960,31 +3163,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 Thread.sleep(wait);
-                // the best cost printed at each check, to measure the gain over the last window
-                ArrayDeque<long[]> costs = new ArrayDeque<>();
-                // LCG gives way only with a solution to hand over: without one, the check is
-                // made again until LCG has one or is no longer slow. cutstock type16 TEST9
-                // found its first solution with LCG at 37 s and none without
-                while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
-                  if (tooLateForFreeSearch()) {
-                    return;
-                  }
-                  long now = System.nanoTime();
-                  long cost = bestPrintedCost.get();
-                  costs.addLast(new long[] {now, cost});
-                  while (costs.size() > 1 && now - costs.peekFirst()[0] > stallNanos) {
-                    costs.removeFirst();
-                  }
-                  if (solutionFound) {
-                    long before = costs.peekFirst()[1];
-                    if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
-                      lcgSlowDeferred++;
-                    } else {
-                      lcgSlow = true;
-                      solver.stop();
-                      return;
-                    }
-                  }
+                while (slowLcgCheckOnce(solver, rate, stallNanos, gain, costs)) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -2992,6 +3171,39 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  /**
+   * Makes one check of LCG free search's speed, and stops the search when it is slow and makes no
+   * progress.
+   *
+   * @return true if the check is to be made again later
+   */
+  private boolean slowLcgCheckOnce(
+      LcgSolver solver, double rate, long stallNanos, double gain, ArrayDeque<long[]> costs) {
+    long now = solver.sat().now();
+    // LCG gives way only with a solution to hand over: without one, the check is made again until
+    // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
+    // 37 s and none without
+    if (solver.sat().conflicts >= rate * (now - lcgStart) / 1e9 || tooLateForFreeSearch(solver)) {
+      return false;
+    }
+    long cost = bestPrintedCost.get();
+    costs.addLast(new long[] {now, cost});
+    while (costs.size() > 1 && now - costs.peekFirst()[0] > stallNanos) {
+      costs.removeFirst();
+    }
+    if (solutionFound) {
+      long before = costs.peekFirst()[1];
+      if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
+        lcgSlowDeferred++;
+      } else {
+        lcgSlow = true;
+        solver.stop();
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -3003,7 +3215,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * search without learning never proves. On unit-commitment LCG improves its best solution by
    * under 0.5 % per 30 s, and free search without learning ends 30 to 60 % lower.
    *
-   * @param now the time of the check (System.nanoTime)
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
    * @param window the length of the window, in nanoseconds
    * @param gain the share of the cost the best cost must fall by over the window
    * @param boundRaised when LCG last raised the bound, or {@code Long.MIN_VALUE} if never
@@ -3051,7 +3263,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           "%% LCG stopped after "
               + slowLcg.sat().conflicts
               + " conflicts in "
-              + String.format(Locale.ROOT, "%.1f", (System.nanoTime() - lcgStart) / 1e9)
+              + String.format(Locale.ROOT, "%.1f", (slowLcg.sat().now() - lcgStart) / 1e9)
               + " s; free search without learning");
     }
     return executeFreeSearch(costVar) || numberSolutions > 0;
@@ -3444,10 +3656,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the probes of dichotomic bound search (lcg-bisect), when it ran
   private static String bisectStatistics(LcgSolver lcg) {
-    if (lcg.bisectProbes == 0) {
+    if (lcg.bisectProbes == 0 && !lcg.uncoredBisection()) {
       return "";
     }
-    return "\n%%%mzn-stat: lcgBisectProbes="
+    return "\n%%%mzn-stat: lcgBisectUncored="
+        + lcg.uncoredBisection()
+        + "\n%%%mzn-stat: lcgBisectProbes="
         + lcg.bisectProbes
         + "\n%%%mzn-stat: lcgBisectRaised="
         + lcg.bisectRaised
@@ -4361,6 +4575,77 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
+  // -Dorg.jacop.fz.lpProbe=ms: a fixed search whose root linear relaxation is large first runs for
+  // this long without the relaxation; if it has not finished, it starts again from the root with
+  // the
+  // relaxation, which is then solved at the root as without the probe (0: off). nside MEDIUM_5_3 of
+  // the 2026 Challenge: 1.3 s of root LP and cut rounds, and 391 nodes of search, 0.04 s, without
+  // it
+  private final long lpProbeMs = Long.getLong("org.jacop.fz.lpProbe", 200);
+
+  // -Dorg.jacop.fz.lpProbeSize=n: the smallest tableau of the first solve (rows times rows and
+  // columns, LinearRelaxation.rootTrialSize) that the probe waits for; below it the root solve is
+  // cheap, and a restart costs more than it saves (multiple-constant-multiplication XU07_28)
+  private final long lpProbeSize = Long.getLong("org.jacop.fz.lpProbeSize", 1_000_000);
+
+  // the relaxation is suspended until the probe ends
+  private boolean lpProbing;
+
+  // whether the search of the probe can run: a single depth-first search with nothing that needs
+  // its own run structure
+  private boolean probeTakes(Var costVar) {
+    return options.runSearch()
+        && dictionary.onRestart == null
+        && restartCalculator == null
+        && !(costVar == null && options.getAll());
+  }
+
+  private String lpProbeState(LinearRelaxation r) {
+    if (lpProbeMs == 0) {
+      return "off";
+    }
+    if (lpProbeFinished) {
+      return "finished";
+    }
+    return r.solved() ? "solved" : "unsolved";
+  }
+
+  private void resumeRelaxation() {
+    lpProbing = false;
+    linearRelaxation.suspend(false);
+    store.addChanged(linearRelaxation);
+  }
+
+  /** The fixed search, first for a short time without the relaxation (org.jacop.fz.lpProbe). */
+  @SuppressWarnings("unchecked")
+  private boolean executeProbeSearch(
+      DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
+    if (options.debug()) {
+      IO.print("% probe of " + lpProbeMs + " ms without the relaxation, ");
+      label.setSelectChoicePoint(select);
+      IO.print(" " + solveType + (costVar != null ? " (" + costVar + ") " : " "));
+      printSearch(label);
+    }
+    ProbeCalculator calculator =
+        new ProbeCalculator(lpProbeMs * 1_000_000L, this::resumeRelaxation);
+    rs =
+        new RestartSearch<>(store, label, select, calculator, costVar != null ? (T) costVar : null);
+    setSearchTimeout(rs);
+    linearRelaxation.rememberSearchStart();
+    calculator.start();
+    boolean found = rs.labeling();
+    if (lpProbing) {
+      // the probe finished the search: the relaxation was never solved
+      linearRelaxation.suspend(false);
+      lpProbing = false;
+      lpProbeFinished = true;
+    }
+    return found;
+  }
+
+  // whether the probe finished the search
+  private boolean lpProbeFinished;
+
   private boolean executeNonRestartSearch(
       DepthFirstSearch<T> label, SelectChoicePoint<T> select, Var costVar, String solveType) {
     if (options.debug()) {
@@ -4581,6 +4866,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void printStatisticsForSingleSearch(boolean interrupted, boolean result) {
 
     printLinearRelaxationStatistics();
+    printCostNetworkStatistics();
 
     if (label == null) {
       IO.println("%% =====INTERRUPTED=====\n%% Model not yet posed..");
@@ -5139,6 +5425,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   void printStatisticsForSeqSearch(boolean interrupted, boolean result) {
 
     printLinearRelaxationStatistics();
+    printCostNetworkStatistics();
 
     if (lcg != null) {
       printLcgStatistics(interrupted);

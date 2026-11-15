@@ -120,12 +120,22 @@ class XorSystemFuzzTest {
       sb.append("var 0..1: y").append(c).append(";\n");
     }
     sb.append("var 0..").append(m.n).append(": obj :: output_var;\n");
+    // the sums of the rows posted as linear equations take values of the row's parity only
+    for (int i = 3; i < m.rows.length; i += 5) {
+      StringBuilder values = new StringBuilder();
+      for (int v = m.parities[i]; v <= 3 * m.rows[i].length + 2; v += 2) {
+        values.append(values.length() > 0 ? "," : "").append(v);
+      }
+      sb.append("var {").append(values).append("}: s").append(i).append(";\n");
+    }
     for (int i = 0; i < m.rows.length; i++) {
       int[] row = m.rows[i];
       String[] names = Arrays.stream(row).mapToObj(XorSystemFuzzTest::name).toArray(String[]::new);
       int p = m.parities[i];
       if (i % 5 == 4) {
         sb.append(table(row, p, i % 2 == 0 ? -1 : (i * 7) % m.n));
+      } else if (i % 5 == 3) {
+        sb.append(linear(row, i, (i * 3) % m.n));
       } else if (row.length == 2 && i % 3 == 0) {
         // a xor b = p
         sb.append(p == 1 ? "constraint bool_not(" : "constraint bool_eq(")
@@ -168,6 +178,27 @@ class XorSystemFuzzTest {
         .append(", obj], 0);\n");
     sb.append("solve minimize obj;\n");
     return sb.toString();
+  }
+
+  // xor(row) = p as y_row_1 + ... + y_row_k + 2 y_even - s = 0 with s taking the values of parity
+  // p only; every third such row has the coefficient 3 on its first variable
+  private static String linear(int[] row, int i, int even) {
+    int k = row.length;
+    StringBuilder coefficients = new StringBuilder();
+    StringBuilder vars = new StringBuilder();
+    for (int j = 0; j < k; j++) {
+      coefficients.append(j == 0 && i % 3 == 0 ? "3" : "1").append(", ");
+      vars.append("y").append(row[j]).append(", ");
+    }
+    return "constraint int_lin_eq(["
+        + coefficients
+        + "2, -1], ["
+        + vars
+        + "y"
+        + even
+        + ", s"
+        + i
+        + "], 0);\n";
   }
 
   // xor(row) = p as a table over the 0/1 integers y, all tuples of that parity; with a star
@@ -252,6 +283,30 @@ class XorSystemFuzzTest {
             + "constraint jacop_table_int([b, c, d], [0,0,1, 1,1,1, 0,1,0, 1,0,0]);\n"
             + "solve satisfy;\n";
     assertTrue(!run(truncated, "-debug").contains("% XorSystem:"));
+  }
+
+  // a sum of 0/1 variables equal to a variable with odd values only (the lit-neighbour counts of
+  // Lights Out) gives its row, and so does an odd coefficient; an even coefficient or a variable
+  // with values of both parities gives none
+  @Test
+  void linearEquationsGiveTheParitiesTheyImply() throws IOException {
+    String vars =
+        "var 0..1: a :: output_var;\nvar 0..1: b;\nvar 0..1: c;\nvar 0..1: d;\n"
+            + "var {1,3}: s;\nvar {0,2,4,6}: t;\nvar 0..5: u;\n";
+    String parities =
+        vars
+            + "constraint int_lin_eq([1, 1, 1, -1], [a, b, c, s], 0);\n"
+            + "constraint int_lin_eq([3, 1, 2, -1], [b, c, d, t], 1);\n"
+            + "solve satisfy;\n";
+    assertTrue(
+        run(parities, "-debug")
+            .contains("% XorSystem: 1 systems, 2 rows, 0 rows from tables, 2 rows from linear"));
+    String mixed =
+        vars
+            + "constraint int_lin_eq([1, 1, 1, -1], [a, b, c, u], 0);\n"
+            + "constraint int_lin_eq([1, 1, 1, 1], [b, c, d, a], 2);\n"
+            + "solve satisfy;\n";
+    assertTrue(!run(mixed, "-debug").contains("% XorSystem:"));
   }
 
   @Test

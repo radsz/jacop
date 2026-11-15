@@ -2147,6 +2147,27 @@ public class LinearRelaxation extends Constraint
     suspended = suspend;
   }
 
+  /**
+   * Returns the size of the dense tableau of the first solve, its rows and the rows of the other
+   * constraints that the first solve tries, times those rows and the columns: an estimate of the
+   * cost of the root solve and its cut rounds, known before it runs.
+   *
+   * @return rows times (rows plus columns) of the first solve.
+   */
+  public long rootTrialSize() {
+    long m = (long) rows() + extraColumns.length;
+    return m * (m + columns());
+  }
+
+  /**
+   * Tells whether the relaxation was solved at least once.
+   *
+   * @return true after the first solve.
+   */
+  public boolean solved() {
+    return calls > 0;
+  }
+
   @Override
   public void consistency(Store store) {
     if (large && calls > 0 && store.level > rootLevel && !restarting) {
@@ -4532,6 +4553,8 @@ public class LinearRelaxation extends Constraint
       kept = p;
       keptStatus = trialStatus;
     }
+    searchStartMin = null;
+    searchStartMax = null;
     if (full != null && kept != last) {
       // a shorter prefix was tried after the one kept
       setExtraRows(m, kept);
@@ -4621,44 +4644,41 @@ public class LinearRelaxation extends Constraint
    */
   private LpSolver trialRows(int status, double before, int m, int k, int n, boolean few) {
     setExtraRows(m, k);
-    double[] lo = new double[m + k];
-    double[] hi = new double[m + k];
-    for (int i = 0; i < m + k; i++) {
-      lo[i] = hasLo[i] ? (double) rowLo[i] : Double.NEGATIVE_INFINITY;
-      hi[i] = hasHi[i] ? (double) rowHi[i] : Double.POSITIVE_INFINITY;
-    }
-    double[] cost = new double[n];
-    if (objective != null) {
-      cost[0] = maximize ? -1 : 1;
-    }
-    LpSolver full;
-    if (simplex == Simplex.DENSE) {
-      double[][] a = new double[m + k][n];
-      for (int i = 0; i < m + k; i++) {
-        for (int t = 0; t < rowColumns[i].length; t++) {
-          a[i][rowColumns[i][t]] = (double) rowWeights[i][t];
-        }
-      }
-      full = new DualSimplex(a, lo, hi, cost);
-    } else {
-      full = sparse(sparseRows(m + k), doubles(m + k), lo, hi, cost);
-    }
+    LpSolver full = rowSolver(m + k, n);
     for (int j = 0; j < n; j++) {
       setBounds(full, j);
     }
     long size = Math.max(1, full.pivotWork());
-    int withExtra = rootSolve(full, Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS), rootWork());
+    int pivots = Math.clamp(ROOT_WORK / size, 5, ROOT_PIVOTS);
     boolean keep;
-    if (withExtra == DualSimplex.INFEASIBLE) {
-      keep = true;
-    } else if (withExtra == DualSimplex.LIMIT) {
+    if (searchStartMin != null) {
+      // solved after a search that started without it: the rows are kept as they would have been
+      // at the start of that search, not for a bound that the facts the search found raise
+      // (mqueens n11: 1,859 extra rows kept for a bound 0 -> 1, 12 s of LP in search instead of
+      // 0.3 s)
+      LpSolver base = rowSolver(m, n);
+      for (int j = 0; j < n; j++) {
+        setSearchStartBounds(base, j);
+        setSearchStartBounds(full, j);
+      }
+      int baseStatus = rootSolve(base, pivots, rootWork());
+      double startBound =
+          baseStatus == LpSolver.OPTIMAL && objective != null ? base.value(0) : Double.NaN;
+      droppedPivots += base.pivots();
+      keep = keepRows(rootSolve(full, pivots, rootWork()), baseStatus, startBound, full, few, k);
+      for (int j = 0; j < n; j++) {
+        setBounds(full, j);
+      }
+    } else {
+      keep = false;
+    }
+    int withExtra = rootSolve(full, pivots, rootWork());
+    if (searchStartMin == null) {
+      keep = keepRows(withExtra, status, before, full, few, k);
+    } else if (withExtra == LpSolver.LIMIT) {
       keep = false;
     } else {
-      boolean raised =
-          status != DualSimplex.OPTIMAL
-              || !Double.isNaN(before)
-                  && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
-      keep = raised || few && k <= SMALL_EXTRA;
+      keep |= withExtra == LpSolver.INFEASIBLE;
     }
     // the other rows of a model with trees are kept: alone they rarely move the bound, but with
     // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
@@ -4669,6 +4689,78 @@ public class LinearRelaxation extends Constraint
     }
     droppedPivots += full.pivots();
     return null;
+  }
+
+  // whether the rows of a trial that ends with the given status are kept, against the solve
+  // without them that ends with status and bound before
+  private boolean keepRows(
+      int withExtra, int status, double before, LpSolver full, boolean few, int k) {
+    if (withExtra == LpSolver.INFEASIBLE) {
+      return true;
+    }
+    if (withExtra == LpSolver.LIMIT) {
+      return false;
+    }
+    boolean raised =
+        status != LpSolver.OPTIMAL
+            || !Double.isNaN(before)
+                && Math.abs(full.value(0) - before) > 1e-6 * (1 + Math.abs(before));
+    return raised || few && k <= SMALL_EXTRA;
+  }
+
+  // a simplex over the first rows given and the first n columns, without bounds on the columns
+  private LpSolver rowSolver(int rows, int n) {
+    double[] lo = new double[rows];
+    double[] hi = new double[rows];
+    for (int i = 0; i < rows; i++) {
+      lo[i] = hasLo[i] ? (double) rowLo[i] : Double.NEGATIVE_INFINITY;
+      hi[i] = hasHi[i] ? (double) rowHi[i] : Double.POSITIVE_INFINITY;
+    }
+    double[] cost = new double[n];
+    if (objective != null) {
+      cost[0] = maximize ? -1 : 1;
+    }
+    if (simplex == Simplex.DENSE) {
+      double[][] a = new double[rows][n];
+      for (int i = 0; i < rows; i++) {
+        for (int t = 0; t < rowColumns[i].length; t++) {
+          a[i][rowColumns[i][t]] = (double) rowWeights[i][t];
+        }
+      }
+      return new DualSimplex(a, lo, hi, cost);
+    }
+    return sparse(sparseRows(rows), doubles(rows), lo, hi, cost);
+  }
+
+  // the bounds of the variables when a search started with the relaxation suspended
+  private int[] searchStartMin;
+  private int[] searchStartMax;
+
+  /**
+   * Records the bounds of the variables now, at the start of a search during which the relaxation
+   * is suspended, so that its first solve after the search keeps the rows of the other constraints
+   * as a first solve now would.
+   */
+  public void rememberSearchStart() {
+    if (calls > 0) {
+      return;
+    }
+    searchStartMin = new int[x.length];
+    searchStartMax = new int[x.length];
+    for (int j = 0; j < x.length; j++) {
+      if (!lpOnly[j]) {
+        searchStartMin[j] = x[j].min();
+        searchStartMax[j] = x[j].max();
+      }
+    }
+  }
+
+  private void setSearchStartBounds(LpSolver solver, int j) {
+    if (lpOnly[j]) {
+      setBounds(solver, j);
+    } else {
+      solver.setBounds(j, searchStartMin[j], searchStartMax[j]);
+    }
   }
 
   // the rows of the other constraints after the first m rows, which the root trial did not keep:

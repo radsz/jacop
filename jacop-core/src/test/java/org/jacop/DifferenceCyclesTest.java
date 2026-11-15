@@ -266,7 +266,19 @@ class DifferenceCyclesTest {
 
   @Test
   void failsExactlyOnNegativeCyclesOfTheArcsThatHold() {
-    Random r = new Random(20261106);
+    failsExactlyOnNegativeCycles(20261106, 2);
+  }
+
+  // literals of four values, as the index of an element: the arcs of one literal hold for
+  // different values, and those of a value must leave the potential when the level that fixed the
+  // literal is removed
+  @Test
+  void failsExactlyOnNegativeCyclesOfArcsOfWideLiterals() {
+    failsExactlyOnNegativeCycles(20261114, 4);
+  }
+
+  private static void failsExactlyOnNegativeCycles(long seed, int values) {
+    Random r = new Random(seed);
     int checks = 0;
     for (int run = 0; run < 300; run++) {
       Store store = new Store();
@@ -278,7 +290,7 @@ class DifferenceCyclesTest {
       int nb = 1 + r.nextInt(5);
       IntVar[] lits = new IntVar[nb];
       for (int i = 0; i < nb; i++) {
-        lits[i] = new IntVar(store, "b" + i, 0, 1);
+        lits[i] = new IntVar(store, "b" + i, 0, values - 1);
       }
       int m = n + r.nextInt(3 * n);
       IntVar[] x = new IntVar[m];
@@ -296,7 +308,7 @@ class DifferenceCyclesTest {
         c[k] = r.nextInt(9) - 3;
         if (r.nextInt(3) > 0) {
           b[k] = lits[r.nextInt(nb)];
-          val[k] = r.nextInt(2);
+          val[k] = r.nextInt(values);
         }
       }
       if (negativeCycle(n, t, h, c, b, val)) {
@@ -323,7 +335,7 @@ class DifferenceCyclesTest {
         }
         IntVar l = open.get(r.nextInt(open.size()));
         store.setLevel(store.level + 1);
-        int value = r.nextInt(2);
+        int value = r.nextInt(values);
         l.domain.in(store.level, l, value, value);
         boolean expected = !negativeCycle(n, t, h, c, b, val);
         assertEquals(expected, store.consistency(), "run " + run + " step " + step);

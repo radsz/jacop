@@ -74,4 +74,23 @@ class SimpleSelectTieBreakTest {
     // x2 moved to the front and x0 to its place: x2, x1, x0
     assertSame(x[0], select.getChoiceVariable(1));
   }
+
+  @Test
+  void smallestSpanBreaksTiesOfSmallestDomain() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    // three values each: x0 = {0, 4, 8} spans 9, x1 = {1, 2, 3} spans 3, x2 = {0..9} has ten
+    x[0] = new IntVar(store, "x0", 0, 0);
+    x[0].addDom(4, 4);
+    x[0].addDom(8, 8);
+    x[1] = new IntVar(store, "x1", 1, 3);
+    x[2] = new IntVar(store, "x2", 0, 9);
+    SimpleSelect<IntVar> select =
+        new SimpleSelect<>(x, new SmallestDomain<>(), new SmallestSpan<>(), new IndomainMin<>());
+    assertSame(x[1], select.getChoiceVariable(0));
+
+    // without the tie-breaker the first of the smallest domains is chosen
+    SimpleSelect<IntVar> plain = new SimpleSelect<>(x, new SmallestDomain<>(), new IndomainMin<>());
+    assertSame(x[0], plain.getChoiceVariable(0));
+  }
 }

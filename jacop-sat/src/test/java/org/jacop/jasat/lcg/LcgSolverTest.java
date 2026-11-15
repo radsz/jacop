@@ -882,6 +882,64 @@ class LcgSolverTest {
   }
 
   /**
+   * An objective that the core-guided phase cannot take (the maximum of pairwise different values,
+   * no linear sum) is bisected to closure when core-guided search and lower-bound runs are on, as
+   * under free search, at once or after a few conflicts: it keeps the optimum of plain branch and
+   * bound and proves it.
+   */
+  @Test
+  void anUncoredObjectiveIsBisectedToClosure() {
+    Random rnd = new Random(61);
+    int bisected = 0;
+    for (int instance = 0; instance < 8; instance++) {
+      long seed = rnd.nextLong();
+      int[] status = new int[2];
+      int[] optimum = new int[2];
+      for (int run = 0; run < 2; run++) {
+        Random r = new Random(seed);
+        Store store = new Store();
+        int n = 7;
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 3 * n);
+        }
+        store.impose(new Alldistinct(x));
+        for (int c = 0; c < 3; c++) {
+          int[] a = new int[n];
+          for (int i = 0; i < n; i++) {
+            a[i] = r.nextInt(5) - 2;
+          }
+          store.impose(new LinearInt(x, a, ">=", r.nextInt(6)));
+        }
+        IntVar max = new IntVar(store, "max", 0, 3 * n);
+        store.impose(new Max(x, max));
+        if (!store.consistency()) {
+          break;
+        }
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setSeed(instance);
+        if (run == 1) {
+          solver.setCoreSearch(0.5, 1000, 100);
+          solver.setLowerBoundSearch(0.5, 3);
+          // half of them after a few conflicts of branch and bound with lower-bound runs
+          solver.setUncoredBisectionDelay(instance % 2 == 0 ? 0 : 5);
+        }
+        status[run] = solver.minimize(max);
+        if (status[run] == CdclSolver.SAT) {
+          optimum[run] = solver.value(max);
+        }
+        if (run == 1 && solver.uncoredBisection()) {
+          bisected++;
+        }
+      }
+      assertThat(status[1]).as("instance %d", instance).isEqualTo(status[0]);
+      assertThat(optimum[1]).as("instance %d", instance).isEqualTo(optimum[0]);
+    }
+    assertThat(bisected).isPositive();
+  }
+
+  /**
    * Objective shaving keeps the optimum and raises the lower bound by steps of more than one: the
    * sum of pairwise different values, whose root bound is far below the optimum, is minimised with
    * and without shaving, on random linear side constraints, and both find the same optimum.
@@ -2536,6 +2594,94 @@ class LcgSolverTest {
       for (int b = a + 1; b < at.length; b++) {
         if (t[at[a]] == t[at[b]]) {
           return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Permutations over the terms of the objective's sum become clauses too (sudoku_opt of the
+   * MiniZinc Challenge 2022): on a 3x3 Latin square minimising a signed sum of its cells, split
+   * into two blocks as the FlatZinc front end splits long sums, all six rows and columns become
+   * clauses and the optimum is the one of brute force.
+   */
+  @Test
+  void permutationsOverObjectiveTermsBecomeClauses() {
+    int n = 3;
+    Store store = new Store();
+    IntVar[] x = new IntVar[n * n];
+    int[] sign = new int[n * n];
+    for (int k = 0; k < x.length; k++) {
+      x[k] = new IntVar(store, "x" + k, 1, n);
+      sign[k] = (k / n + k % n) % 2 == 0 ? 1 : -1;
+    }
+    for (int i = 0; i < n; i++) {
+      IntVar[] row = new IntVar[n];
+      IntVar[] col = new IntVar[n];
+      for (int j = 0; j < n; j++) {
+        row[j] = x[i * n + j];
+        col[j] = x[j * n + i];
+      }
+      store.impose(new Alldistinct(row));
+      store.impose(new Alldistinct(col));
+    }
+    // b1 = the signed first row, b2 = the signed rest, obj = b1 + b2
+    IntVar b1 = new IntVar(store, "b1", -n * n, n * n);
+    IntVar b2 = new IntVar(store, "b2", -n * n * n, n * n * n);
+    IntVar obj = new IntVar(store, "obj", -n * n * n, n * n * n);
+    IntVar[] first = new IntVar[n + 1];
+    int[] w1 = new int[n + 1];
+    IntVar[] rest = new IntVar[n * n - n + 1];
+    int[] w2 = new int[n * n - n + 1];
+    for (int k = 0; k < n * n; k++) {
+      if (k < n) {
+        first[k] = x[k];
+        w1[k] = sign[k];
+      } else {
+        rest[k - n] = x[k];
+        w2[k - n] = sign[k];
+      }
+    }
+    first[n] = b1;
+    w1[n] = -1;
+    rest[n * n - n] = b2;
+    w2[n * n - n] = -1;
+    store.impose(new LinearInt(first, w1, "==", 0));
+    store.impose(new LinearInt(rest, w2, "==", 0));
+    store.impose(new LinearInt(new IntVar[] {b1, b2, obj}, new int[] {1, 1, -1}, "==", 0));
+    // brute force over all assignments of the cells
+    int best = Integer.MAX_VALUE;
+    int[] t = new int[n * n];
+    for (int code = 0; code < Math.pow(n, n * n); code++) {
+      int c = code;
+      for (int k = 0; k < t.length; k++) {
+        t[k] = 1 + c % n;
+        c /= n;
+      }
+      if (latin(t, n)) {
+        int sum = 0;
+        for (int k = 0; k < t.length; k++) {
+          sum += sign[k] * t[k];
+        }
+        best = Math.min(best, sum);
+      }
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMin<>()), true);
+    assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(obj)).isEqualTo(best);
+    assertThat(solver.permutationsAsClauses).isEqualTo(2L * n);
+  }
+
+  private static boolean latin(int[] t, int n) {
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        for (int k = j + 1; k < n; k++) {
+          if (t[i * n + j] == t[i * n + k] || t[j * n + i] == t[k * n + i]) {
+            return false;
+          }
         }
       }
     }

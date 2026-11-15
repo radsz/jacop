@@ -691,18 +691,86 @@ public final class CdclSolver {
   }
 
   /**
-   * Sets a wall-clock deadline for {@link #solve}.
+   * Whether the clock of the solver is virtual (system property {@code jacop.virtualClock}): {@link
+   * #now} then counts {@link #work}, {@link #VIRTUAL_WORK_PER_MS} per millisecond, instead of
+   * reading the system clock, so that a run with a time limit stops at the same point and makes the
+   * same choices whatever the load of the machine. It is meant for benchmarks that compare two
+   * versions of the search: the wall time a run takes then differs from its limit.
+   */
+  public static final boolean VIRTUAL_CLOCK = Boolean.getBoolean("jacop.virtualClock");
+
+  /**
+   * The work that counts as one millisecond of the virtual clock (system property {@code
+   * jacop.lcg.workPerMs}, the same rate at which lazy clause generation turns time shares into
+   * work).
+   */
+  public static final long VIRTUAL_WORK_PER_MS = Long.getLong("jacop.lcg.workPerMs", 2_000);
+
+  /**
+   * Returns the time of the solver's clock: {@link System#nanoTime()}, or under {@link
+   * #VIRTUAL_CLOCK} the work done so far in nanoseconds of the virtual clock. Deadlines and other
+   * times given to the solver are times of this clock.
    *
-   * @param nanoTime a {@link System#nanoTime()} value, or {@link Long#MAX_VALUE} for none
+   * @return the time in nanoseconds
+   */
+  public long now() {
+    if (virtualClock) {
+      return work() * 1_000_000L / VIRTUAL_WORK_PER_MS;
+    }
+    return System.nanoTime();
+  }
+
+  /**
+   * Turns the virtual clock of this solver on or off; it is on by default under {@link
+   * #VIRTUAL_CLOCK}. Set it before the deadline, which is a time of {@link #now}.
+   *
+   * @param on true for the virtual clock, false for {@link System#nanoTime()}
+   */
+  public void setVirtualClock(boolean on) {
+    virtualClock = on;
+  }
+
+  private boolean virtualClock = VIRTUAL_CLOCK;
+
+  /**
+   * Runs an action once, at the first check of the deadline at or after the given time of {@link
+   * #now}; the action may {@link #interrupt} the search. Under {@link #VIRTUAL_CLOCK} it takes the
+   * place of a thread that sleeps, whose wake-up would depend on the machine.
+   *
+   * @param nanoTime the time of {@link #now} at which the action runs
+   * @param action the action
+   */
+  public void setAlarm(long nanoTime, Runnable action) {
+    alarmAt = nanoTime;
+    alarm = action;
+  }
+
+  private long alarmAt = Long.MAX_VALUE;
+  private Runnable alarm;
+
+  // the deadline check of the search loop: runs a due alarm first, which may stop the search
+  private boolean pastDeadline() {
+    long now = now();
+    if (now >= alarmAt) {
+      alarmAt = Long.MAX_VALUE;
+      alarm.run();
+    }
+    return interrupted || now > deadline;
+  }
+
+  /**
+   * Sets a deadline for {@link #solve}, a time of {@link #now}.
+   *
+   * @param nanoTime a time of {@link #now}, or {@link Long#MAX_VALUE} for none
    */
   public void setDeadline(long nanoTime) {
     deadline = nanoTime;
   }
 
   /**
-   * Returns the wall-clock deadline of {@link #solve}.
+   * Returns the deadline of {@link #solve}.
    *
-   * @return a {@link System#nanoTime()} value, or {@link Long#MAX_VALUE} for none
+   * @return a time of {@link #now}, or {@link Long#MAX_VALUE} for none
    */
   public long deadline() {
     return deadline;
@@ -2755,7 +2823,7 @@ public final class CdclSolver {
         }
         if (conflicts >= conflictLimit
             || interrupted
-            || System.nanoTime() > deadline
+            || pastDeadline()
             || workLimit != Long.MAX_VALUE && work() >= workLimit) {
           return UNKNOWN;
         }
@@ -2839,8 +2907,7 @@ public final class CdclSolver {
         }
       }
       // under an external propagator one decision can take milliseconds: read the clock on each
-      if (((++decisions & 1023) == 0 || external != null)
-          && (interrupted || System.nanoTime() > deadline)) {
+      if (((++decisions & 1023) == 0 || external != null) && pastDeadline()) {
         return UNKNOWN;
       }
       if (workLimit != Long.MAX_VALUE && work() >= workLimit) {
@@ -2894,7 +2961,7 @@ public final class CdclSolver {
       // A round can be slow: on vrp-submission toy_D (arrival times up to 460,588) under the
       // core-guided probe 1,024 rounds took minutes, the probe kept the whole -t 600 s run and
       // found no solution, which branch and bound finds in 0.2 s
-      if ((rounds & CLOCK_ROUNDS) == 0 && (interrupted || System.nanoTime() > deadline)) {
+      if ((rounds & CLOCK_ROUNDS) == 0 && pastDeadline()) {
         outOfTime = true;
         return NO_CONFLICT;
       }
@@ -3389,6 +3456,11 @@ public final class CdclSolver {
   }
 
   private boolean shouldRestart() {
+    if (forcedRestartAt != Long.MAX_VALUE && decisionLevel > 0 && now() >= forcedRestartAt) {
+      forcedRestartAt = Long.MAX_VALUE;
+      forcedRestart = true;
+      return true;
+    }
     if (!restartsOn || decisionLevel <= assumptionLevels) {
       return false;
     }
@@ -3411,7 +3483,9 @@ public final class CdclSolver {
   private void restart() {
     restarts++;
     // vivification and elimination work at the root; other restarts keep the assumption level
-    boolean root = vivifyDue || conflicts >= nextElimination && elimination && !externalUsed;
+    boolean root =
+        forcedRestart || vivifyDue || conflicts >= nextElimination && elimination && !externalUsed;
+    forcedRestart = false;
     backtrack(root ? 0 : Math.min(decisionLevel, assumptionLevels));
     if (external != null) {
       external.notifyRestart();
@@ -3847,6 +3921,20 @@ public final class CdclSolver {
    */
   public void setRestarts(boolean on) {
     restartsOn = on;
+  }
+
+  // a restart to the root at this time, also without restarts (see restartAt)
+  private long forcedRestartAt = Long.MAX_VALUE;
+  private boolean forcedRestart;
+
+  /**
+   * Restarts the search once, back to level 0, at the first decision after the given time, also
+   * when restarts are off.
+   *
+   * @param nanoTime the time, as {@link #now} gives it.
+   */
+  public void restartAt(long nanoTime) {
+    forcedRestartAt = nanoTime;
   }
 
   /** Removes satisfied clauses at level 0. */

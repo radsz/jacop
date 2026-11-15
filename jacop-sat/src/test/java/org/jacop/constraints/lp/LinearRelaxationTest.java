@@ -2470,4 +2470,46 @@ class LinearRelaxationTest {
                 List.of(def), List.of(kept, encoding, far, near), 1, tried, obj))
         .containsExactly(kept, near, far, encoding);
   }
+
+  /**
+   * After a search that ran with the relaxation suspended (the probe of fzn-jacop before an
+   * expensive root LP), the first solve keeps the rows of the other constraints as it would have at
+   * the start of that search: mqueens n11 kept 1,859 extra rows for a bound that the facts the
+   * search found raised from 0 to 1, and spent 12 s of LP on them instead of 0.3 s.
+   */
+  @Test
+  void extraRowsAfterASuspendedSearchAreKeptAsAtItsStart() {
+    for (boolean remember : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar o = new IntVar(store, "o", 0, 10);
+      IntVar x = new IntVar(store, "x", 0, 10);
+      IntVar[] y = new IntVar[120];
+      List<LinearForm> extra = new ArrayList<>();
+      for (int i = 0; i < y.length; i++) {
+        y[i] = new IntVar(store, "y" + i, 0, 10);
+        // x + y[i] >= 1: no bound on o while y[i] can be 1
+        extra.add(new LinearForm(new IntVar[] {x, y[i]}, new long[] {1, 1}, 1, LinearForm.GE));
+      }
+      List<LinearForm> forms = new ArrayList<>();
+      // o >= x
+      forms.add(new LinearForm(new IntVar[] {o, x}, new long[] {1, -1}, 0, LinearForm.GE));
+      LinearRelaxation r =
+          new LinearRelaxation(forms, extra, o, false, LinearRelaxation.Simplex.DENSE);
+      store.impose(r);
+      r.suspend(true);
+      assertThat(store.consistency()).isTrue();
+      if (remember) {
+        r.rememberSearchStart();
+      }
+      // the facts the search found: every y[i] is 0, so the extra rows give o >= 1
+      store.setLevel(store.level + 1);
+      for (IntVar v : y) {
+        v.domain.in(store.level, v, 0, 0);
+      }
+      r.suspend(false);
+      store.addChanged(r);
+      assertThat(store.consistency()).isTrue();
+      assertThat(r.extraRows).as("remember " + remember).isEqualTo(remember ? 0 : y.length);
+    }
+  }
 }

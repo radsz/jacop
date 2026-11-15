@@ -70,12 +70,30 @@ abstract class RouteStructure {
   /** The customers of each route in the best solution, in order; null until read. */
   int[][] routes;
 
+  /**
+   * The customers that must share a route with each customer (a pickup and its delivery), removed
+   * with it by Shaw removal; empty when there are none.
+   */
+  int[][] partners;
+
   RouteStructure(int n) {
     this.n = n;
     near = new int[n][0];
     nearCost = new long[n][0];
     routeOf = new int[n];
     Arrays.fill(routeOf, -1);
+    partners = new int[n][0];
+  }
+
+  /**
+   * Sets the customers that must share a route with each customer.
+   *
+   * @param partners the partners of each node; a row may be empty.
+   */
+  final void setPartners(int[][] partners) {
+    for (int v = 0; v < n; v++) {
+      this.partners[v] = partners[v].clone();
+    }
   }
 
   /** Records the routes of the best solution, while the store holds it. */
@@ -222,8 +240,7 @@ abstract class RouteStructure {
     int[] list = new int[customers.length];
     int count = 0;
     int seed = customers[random.nextInt(customers.length)];
-    removed[seed] = true;
-    list[count++] = seed;
+    count = remove(seed, customer, removed, list, count);
     int[] candidates = new int[n];
     while (count < target && count < customers.length) {
       int from = list[random.nextInt(count)];
@@ -247,10 +264,22 @@ abstract class RouteStructure {
       if (pick < 0) {
         break;
       }
-      removed[pick] = true;
-      list[count++] = pick;
+      count = remove(pick, customer, removed, list, count);
     }
     return removed;
+  }
+
+  // removes a customer and its partners, returning the new count of removed customers
+  private int remove(int v, boolean[] customer, boolean[] removed, int[] list, int count) {
+    removed[v] = true;
+    list[count++] = v;
+    for (int w : partners[v]) {
+      if (customer[w] && !removed[w]) {
+        removed[w] = true;
+        list[count++] = w;
+      }
+    }
+    return count;
   }
 
   /** The position of each node on its route. */

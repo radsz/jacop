@@ -2404,6 +2404,29 @@ public class FloatIntervalDomain extends FloatDomain {
       return;
     }
 
+    if (size == 1) {
+      // the common case of a domain that is one interval: no intermediate domain, the same bounds
+      // (with their signed zeros) as computeRangeIntersection
+      FloatInterval current = intervals[0];
+      FloatInterval narrowed =
+          new FloatInterval(
+              current.min() >= min ? current.min() : min,
+              current.max() <= max ? current.max() : max);
+      if (stamp == storeLevel) {
+        intervals[0] = narrowed;
+      } else {
+        if (ASSERTS_ENABLED && stamp >= storeLevel) {
+          throw new IllegalStateException("Assertion failed");
+        }
+        FloatIntervalDomain result = new FloatIntervalDomain(2);
+        result.intervals[0] = narrowed;
+        result.size = 1;
+        installResultDomain(result, storeLevel, v);
+      }
+      v.domainHasChanged(narrowed.singleton() ? IntDomain.GROUND : IntDomain.BOUND);
+      return;
+    }
+
     FloatIntervalDomain result = computeRangeIntersection(min, max);
 
     applyResultAndNotify(
@@ -2437,6 +2460,13 @@ public class FloatIntervalDomain extends FloatDomain {
 
     if (ASSERTS_ENABLED && size == 0) {
       throw new IllegalStateException("Assertion failed");
+    }
+
+    if (input.size == 1 && size == 1) {
+      // an interval narrowing an interval (the bounds that propagators compute): no intersection
+      // walk and no intermediate domain
+      in(storeLevel, v, input.intervals[0].min(), input.intervals[0].max());
+      return;
     }
 
     FloatIntervalDomain result = computeIntersection(input.intervals, input.size, 0.0);

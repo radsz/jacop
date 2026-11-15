@@ -76,6 +76,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SmallestDomain;
 import org.jacop.search.SmallestMax;
 import org.jacop.search.SmallestMin;
+import org.jacop.search.SmallestSpan;
 import org.jacop.search.SplitRandomSelect;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
@@ -854,6 +855,26 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * How {@code first_fail} breaks the ties between variables with the fewest values, the system
+   * property {@code org.jacop.fz.firstFailTie}: {@code none} (default) takes the first in the
+   * annotation's order, {@code span} the smallest max - min + 1 ({@link SmallestSpan}). The
+   * variable chosen always has the smallest domain, as {@code first_fail} asks; only the order
+   * among equally small domains changes, and only when they have holes. With {@code span}, the
+   * fixed search of the 25x25 sudokus of sudoku_opt (MiniZinc Challenge 2022) makes the tree of
+   * OR-Tools CP-SAT's fixed search (p23: 668k to 74k failures); on the wide benchmark set it makes
+   * 18 of the 102 instances it reaches worse and 9 better at 600 s (osolpro benchmarks/sudoku-opt),
+   * so it is off.
+   */
+  static final String FIRST_FAIL_TIE = System.getProperty("org.jacop.fz.firstFailTie", "none");
+
+  private static ComparatorVariable<IntVar> firstFailTie() {
+    return switch (FIRST_FAIL_TIE) {
+      case "span" -> new SmallestSpan<>();
+      default -> null;
+    };
+  }
+
+  /**
    * Gets the variable selection comparator for integer variables.
    *
    * @return the comparator for variable selection
@@ -866,7 +887,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
       return switch (varSelectionHeuristic) {
         case INPUT_ORDER -> new ComparatorsVar<>(null);
         case RANDOM -> new ComparatorsVar<>(new RandomVar<>());
-        case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomain<>());
+        case FIRST_FAIL -> new ComparatorsVar<>(new SmallestDomain<>(), firstFailTie());
         case ANTI_FIRST_FAIL -> new ComparatorsVar<>(new LargestDomain<>());
         case MOST_CONSTRAINED ->
             new ComparatorsVar<>(new SmallestDomain<>(), new MostConstrainedStatic<>());
