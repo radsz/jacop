@@ -72,6 +72,7 @@ import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.cfn.CostNetworkBound;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.lp.FeasibilityPump;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.lp.TimeIndexedBound;
@@ -125,6 +126,7 @@ import org.jacop.search.LastConflictSelect;
 import org.jacop.search.Lds;
 import org.jacop.search.LpGuidedSelect;
 import org.jacop.search.PrioritySearch;
+import org.jacop.search.RectanglePlacementSelect;
 import org.jacop.search.Search;
 import org.jacop.search.SelectChoicePoint;
 import org.jacop.search.SequenceSelect;
@@ -498,11 +500,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + o.cuts()
               + "\n%%%mzn-stat: symmetrySchreierSimsImplied="
               + o.impliedCuts()
+              + "\n%%%mzn-stat: symmetryValueSwaps="
+              + symmetry.swaps()
               + "\n%%%mzn-stat: symmetrySearchComplete="
               + o.complete()
               + (o.skipped() != null ? "\n%% symmetry: model not handled, " + o.skipped() : "")
               + "\n%%%mzn-stat-end");
     }
+  }
+
+  // the dominance nogoods are on by default for fixed search: on the 39 instances where they fire
+  // (trucking, spot5, shortest_path, pattern-set-mining, unit-commitment, table-layout,
+  // maximum-dag, aircraft-disassembly) at 600 s they prove 26 instead of 24 and improve 10
+  // objectives, 1 worse; under -f they are neutral (3 better, 4 worse, 31 = 31 proved), so they
+  // stay off there. A proof does not log them. org.jacop.fz.dominance=true or false overrides
+  private boolean dominanceOn() {
+    String p = System.getProperty("org.jacop.fz.dominance");
+    if (p != null) {
+      return Boolean.parseBoolean(p);
+    }
+    return !options.freeSearch() && options.proof() == null;
   }
 
   /**
@@ -647,7 +664,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       imposeObjective(objective, store, store::impose, Constraint::removeConstraint);
     }
 
-    if (Boolean.getBoolean("org.jacop.fz.dominance") && store.consistency()) {
+    if (dominanceOn() && store.consistency()) {
       dominanceNogoods(node);
     }
 
@@ -931,9 +948,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         linearRelaxation.suspend(true);
         lpProbing = true;
       }
-      if (TIME_INDEXED && objective != null) {
+      if ((TIME_INDEXED || TimeIndexedBound.ARC_FLOW) && objective != null) {
         timeIndexedBound =
-            TimeIndexedBound.of(store, objective, maximize, linearRelaxation.allRows());
+            TimeIndexedBound.of(
+                store,
+                objective,
+                maximize,
+                linearRelaxation.allRows(),
+                TIME_INDEXED,
+                TimeIndexedBound.ARC_FLOW,
+                dictionary.loadFunctions);
         if (timeIndexedBound != null) {
           store.impose(timeIndexedBound);
         }
@@ -1044,6 +1068,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + t.lastColumns
               + "\n%%%mzn-stat: tiRows="
               + t.lastRows
+              + "\n%%%mzn-stat: tiArcs="
+              + t.lastArcs
               + "\n%%%mzn-stat: tiTime="
               + t.seconds);
     }
@@ -2744,7 +2770,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       LcgSolver solver = lcg;
       lcg.onBound(
           lower -> {
-            lcgBoundRaised = System.nanoTime();
+            lcgBoundRaised = solver.sat().now();
             if (reportBound(lower)) {
               solver.stop();
             }
@@ -2776,6 +2802,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      // once a solution is known, more literal runs per turn (CHANGELOG 320):
+      // multi-agent-graph-coverage rnd_n10 proofs need half the conflicts with literals alone
+      lcg.setLiteralRuns(
+          Integer.parseInt(options.freeConfig("lcg-literal-runs", "1")),
+          Integer.parseInt(options.freeConfig("lcg-literal-runs-solved", "6")));
       if (!LcgSolver.CHAIN_LIMIT_SET) {
         // short bound-literal chains (CHANGELOG 311): multi-agent-graph-coverage proofs about 2x
         // faster, two paired 600 s rounds 6/0 and 4/2 families better/worse with one more proof;
@@ -2964,7 +2995,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.setCoresWithoutSolutionOnly(true);
       }
     }
-    if (options.getTimeOut() > 0) {
+    if (options.getTimeOut() > 0 && CdclSolver.VIRTUAL_CLOCK) {
+      // the virtual clock counts the search's work only: the whole time-out goes to the search
+      lcg.sat().setDeadline(lcg.sat().now() + options.getTimeOut() * 1_000_000L);
+    } else if (options.getTimeOut() > 0) {
       // the time-out covers the whole run: reading and setting up the model took part of it
       lcg.sat().setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
     }
@@ -2989,7 +3023,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else if (lcgProbe > 0 && lcgProbeDelay > 0) {
       long limit = options.getTimeOut() > 0 ? options.getTimeOut() : 60_000L;
       lcg.setDelayedProbe(
-          System.nanoTime() + (long) (lcgProbeDelay * limit * 1_000_000L),
+          lcg.sat().now() + (long) (lcgProbeDelay * limit * 1_000_000L),
           (long) (lcgProbe * limit * 1_000_000L));
     } else if (lcgProbe > 0) {
       // root probing of the 0/1 variables: facts only, the model stays as it is
@@ -3029,7 +3063,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (slowCheck != null) {
       slowCheck.interrupt();
     }
-    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch()) {
+    if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return continueWithoutLcg(costVar);
     }
     return numberSolutions > 0;
@@ -3037,7 +3071,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // set when LCG free search was stopped for making too few conflicts
   private volatile boolean lcgSlow;
-  // when LCG last raised the bound on the objective (System.nanoTime)
+  // when LCG last raised the bound on the objective (CdclSolver.now of the LCG solver)
   private volatile long lcgBoundRaised;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
   private volatile int lcgSlowDeferred;
@@ -3052,9 +3086,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // Setting up free search on a large model takes seconds: nside MEDIUM_1000_100 gave way 0.5 s
   // before a time-out of 20 s and ended 2.9 s after it. The check used to be that some time was
   // left, which always held, so free search also started after the time-out.
-  private boolean tooLateForFreeSearch() {
-    return options.getTimeOut() > 0
-        && options.getRemainingTimeOut() < SLOW_LCG_MIN_LEFT * options.getTimeOut();
+  private boolean tooLateForFreeSearch(LcgSolver solver) {
+    if (options.getTimeOut() <= 0) {
+      return false;
+    }
+    long left =
+        CdclSolver.VIRTUAL_CLOCK
+            ? (solver.sat().deadline() - solver.sat().now()) / 1_000_000L
+            : options.getRemainingTimeOut();
+    return left < SLOW_LCG_MIN_LEFT * options.getTimeOut();
   }
 
   /**
@@ -3092,15 +3132,34 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
-    lcgStart = System.nanoTime();
+    LcgSolver solver = lcg;
+    lcgStart = solver.sat().now();
     lcgBoundRaised = Long.MIN_VALUE;
     long stallNanos = (long) (stall * options.getTimeOut() * 1_000_000L);
-    long wait = (long) (at * options.getRemainingTimeOut());
-    LcgSolver solver = lcg;
+    long wait =
+        (long)
+            (at
+                * (CdclSolver.VIRTUAL_CLOCK
+                    ? options.getTimeOut()
+                    : options.getRemainingTimeOut()));
     if (wait <= 0) {
       // lcg-slow-at=0: free search without learning from the start, after LCG's root propagation
       lcgSlow = true;
       solver.stop();
+      return null;
+    }
+    // the best cost printed at each check, to measure the gain over the last window
+    ArrayDeque<long[]> costs = new ArrayDeque<>();
+    if (CdclSolver.VIRTUAL_CLOCK) {
+      // the checks run in the search, at times of its work, so that a run repeats
+      Runnable[] check = new Runnable[1];
+      check[0] =
+          () -> {
+            if (slowLcgCheckOnce(solver, rate, stallNanos, gain, costs)) {
+              solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
+            }
+          };
+      solver.sat().setAlarm(lcgStart + wait * 1_000_000L, check[0]);
       return null;
     }
     return Thread.ofVirtual()
@@ -3108,31 +3167,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             () -> {
               try {
                 Thread.sleep(wait);
-                // the best cost printed at each check, to measure the gain over the last window
-                ArrayDeque<long[]> costs = new ArrayDeque<>();
-                // LCG gives way only with a solution to hand over: without one, the check is
-                // made again until LCG has one or is no longer slow. cutstock type16 TEST9
-                // found its first solution with LCG at 37 s and none without
-                while (solver.sat().conflicts < rate * (System.nanoTime() - lcgStart) / 1e9) {
-                  if (tooLateForFreeSearch()) {
-                    return;
-                  }
-                  long now = System.nanoTime();
-                  long cost = bestPrintedCost.get();
-                  costs.addLast(new long[] {now, cost});
-                  while (costs.size() > 1 && now - costs.peekFirst()[0] > stallNanos) {
-                    costs.removeFirst();
-                  }
-                  if (solutionFound) {
-                    long before = costs.peekFirst()[1];
-                    if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
-                      lcgSlowDeferred++;
-                    } else {
-                      lcgSlow = true;
-                      solver.stop();
-                      return;
-                    }
-                  }
+                while (slowLcgCheckOnce(solver, rate, stallNanos, gain, costs)) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -3140,6 +3175,39 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  /**
+   * Makes one check of LCG free search's speed, and stops the search when it is slow and makes no
+   * progress.
+   *
+   * @return true if the check is to be made again later
+   */
+  private boolean slowLcgCheckOnce(
+      LcgSolver solver, double rate, long stallNanos, double gain, ArrayDeque<long[]> costs) {
+    long now = solver.sat().now();
+    // LCG gives way only with a solution to hand over: without one, the check is made again until
+    // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
+    // 37 s and none without
+    if (solver.sat().conflicts >= rate * (now - lcgStart) / 1e9 || tooLateForFreeSearch(solver)) {
+      return false;
+    }
+    long cost = bestPrintedCost.get();
+    costs.addLast(new long[] {now, cost});
+    while (costs.size() > 1 && now - costs.peekFirst()[0] > stallNanos) {
+      costs.removeFirst();
+    }
+    if (solutionFound) {
+      long before = costs.peekFirst()[1];
+      if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
+        lcgSlowDeferred++;
+      } else {
+        lcgSlow = true;
+        solver.stop();
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -3151,7 +3219,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * search without learning never proves. On unit-commitment LCG improves its best solution by
    * under 0.5 % per 30 s, and free search without learning ends 30 to 60 % lower.
    *
-   * @param now the time of the check (System.nanoTime)
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
    * @param window the length of the window, in nanoseconds
    * @param gain the share of the cost the best cost must fall by over the window
    * @param boundRaised when LCG last raised the bound, or {@code Long.MIN_VALUE} if never
@@ -3199,7 +3267,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           "%% LCG stopped after "
               + slowLcg.sat().conflicts
               + " conflicts in "
-              + String.format(Locale.ROOT, "%.1f", (System.nanoTime() - lcgStart) / 1e9)
+              + String.format(Locale.ROOT, "%.1f", (slowLcg.sat().now() - lcgStart) / 1e9)
               + " s; free search without learning");
     }
     return executeFreeSearch(costVar) || numberSolutions > 0;
@@ -3230,7 +3298,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the free search without learning.
    */
   private SelectChoicePoint<? extends Var> lcgDefaultSelect(Var costVar) {
-    SelectChoicePoint<IntVar> ints = lcgDefaultIntSelect(costVar);
+    SelectChoicePoint<? extends Var> ints = lcgDefaultIntSelect(costVar);
+    IntVar[][] rectangles = openRectangles();
+    rectangleCount = rectangles.length;
+    if (rectangles.length > 0 && !"off".equals(options.freeConfig("rect-placement", "first"))) {
+      // a packing model: the rectangles placed one at a time, bottom-left, before the rest. On the
+      // coal stockyard of XCSP 2024 Cargo (stockpiles as rectangles of day by pad position with a
+      // variable stay) set times on the stacking starts found no first solution in 600 s on
+      // Cargo-16, 19 and 20: the early starts make the stays long and the pads overflow
+      boolean always = "always".equals(options.freeConfig("rect-placement", "first"));
+      // until the first solution only: placed in every run of this branching, Cargo-07 lost its
+      // proof and Cargo-10 ended at 25,850 and 7,750 instead of 5,645 (two seeds at 240 s)
+      RectanglePlacementSelect place =
+          new RectanglePlacementSelect(rectangles, () -> always || numberSolutions == 0);
+      ints = ints == null ? place : new SequenceSelect(List.of(place, ints));
+    }
     DefaultSearchVars searchVars = new DefaultSearchVars(dictionary);
     searchVars.defaultVars();
     List<SetVar> sets = new ArrayList<>();
@@ -3247,6 +3329,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // to activity, and found no solution in 30 s (input order on the sets: 2,242 nodes)
     SelectChoicePoint<SetVar> setSelect = defaultSetSelect(sets.toArray(new SetVar[0]));
     return ints == null ? setSelect : new SequenceSelect(List.of(setSelect, ints));
+  }
+
+  // the rectangles lcgDefaultSelect places first, for the statistics
+  private int rectangleCount;
+
+  /**
+   * Returns the rectangles of the store's non-overlap constraints, each once, that are not yet
+   * placed, in the order the store meets them, in the layout of {@link Nooverlap#rectangles()}.
+   */
+  private IntVar[][] openRectangles() {
+    Set<Constraint> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar[]> open = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      for (Constraint c : store.vars[i].dom().constraints()) {
+        if (c instanceof Nooverlap diffn && seen.add(c)) {
+          for (IntVar[] r : diffn.rectangles()) {
+            for (IntVar x : r) {
+              if (!x.singleton()) {
+                open.add(r);
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+    return open.toArray(new IntVar[0][]);
   }
 
   /** The integer and Boolean part of {@link #lcgDefaultSelect}. */
@@ -3530,6 +3639,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.lateVariables
             + "\n%%%mzn-stat: lcgSetTimesStarts="
             + setTimesStarts
+            + "\n%%%mzn-stat: lcgRectangles="
+            + rectangleCount
             + "\n%%%mzn-stat: lcgElementPositions="
             + elementPositionCount
             + "\n%%%mzn-stat: lcgInputOrder="
@@ -3592,10 +3703,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the probes of dichotomic bound search (lcg-bisect), when it ran
   private static String bisectStatistics(LcgSolver lcg) {
-    if (lcg.bisectProbes == 0) {
+    if (lcg.bisectProbes == 0 && !lcg.uncoredBisection()) {
       return "";
     }
-    return "\n%%%mzn-stat: lcgBisectProbes="
+    return "\n%%%mzn-stat: lcgBisectUncored="
+        + lcg.uncoredBisection()
+        + "\n%%%mzn-stat: lcgBisectProbes="
         + lcg.bisectProbes
         + "\n%%%mzn-stat: lcgBisectRaised="
         + lcg.bisectRaised

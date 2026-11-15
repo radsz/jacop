@@ -46,6 +46,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.io.TempDir;
@@ -126,7 +128,23 @@ class ObjectiveGapFlatzincTest {
   private static final Pattern OBJECTIVE = Pattern.compile("(?m)^obj = (-?\\d+);");
   private static final Pattern BOUND = Pattern.compile("%%%mzn-stat: objectiveBound=(-?\\d+)");
 
+  private static final String DOMINANCE = "org.jacop.fz.dominance";
+
   @TempDir Path tmp;
+
+  /**
+   * Dominance nogoods (on by default for fixed search) cut dominated solutions and so change the
+   * sequence of intermediate solutions these tests compare; they are switched off here.
+   */
+  @BeforeEach
+  void dominanceOff() {
+    System.setProperty(DOMINANCE, "false");
+  }
+
+  @AfterEach
+  void dominanceDefault() {
+    System.clearProperty(DOMINANCE);
+  }
 
   @Test
   void minimisationStopsWithinTheGap() throws IOException {
