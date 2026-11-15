@@ -108,6 +108,11 @@ public final class CoreSearch {
 
   // the conflicts of one probe of a term's level
   private static final long PROBE_CONFLICTS = 100;
+  // the sums of a split objective replace their terms only when the terms span more than this many
+  // times their levels (see #of)
+  private static final double SPAN_RATIO =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreSpanRatio", "2"));
+  static final boolean TRACE = Boolean.getBoolean("jacop.lcg.coreTrace");
   // the lower bound's rate, per unit of the solver's work (CdclSolver#work, never the clock, so a
   // run repeats), is measured once this much work was done (about two seconds), and may grow this
   // many times
@@ -152,6 +157,12 @@ public final class CoreSearch {
    * own after a third of its time.
    */
   public long noSolutionStops;
+
+  /**
+   * Statistics: whether the terms of the sums replace the sums although they span more levels, by
+   * less than {@link #SPAN_RATIO} times.
+   */
+  public boolean termsBySpanRatio;
 
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
@@ -262,12 +273,34 @@ public final class CoreSearch {
     }
     // the terms of the sums replace the sums when they have fewer levels for the cores to relax:
     // 0-1 terms (trucking, celar, spot5), not wide ones whose span is that of the sums (atsp: 405
-    // terms, 151 cores on its 3 sums against 2,285 on the terms)
-    if (span(lcg, terms) > span(lcg, blocks)) {
+    // terms, 151 cores on its 3 sums against 2,285 on the terms). Not when the terms span only a
+    // little more: the root propagation of a long run tightens a sum's bounds beyond the sum of its
+    // terms' bounds, and MaxSAT Evaluation 2024's xai-mindset2 iris, 564 0-1 terms and sums
+    // spanning
+    // 525 levels at -t 60 s (the same 1,061 at -t 3 s), had cores of 3 assumptions on 4 wide sums
+    // and a bound of 49 after 240 s, against the optimum 87 proved in 4 s on the terms
+    if (TRACE) {
+      System.err.println(
+          "%core-trace of terms="
+              + terms.size()
+              + " span="
+              + span(lcg, terms)
+              + " blocks="
+              + blocks.size()
+              + " span="
+              + span(lcg, blocks));
+    }
+    long termSpan = span(lcg, terms);
+    long blockSpan = span(lcg, blocks);
+    if (termSpan > SPAN_RATIO * blockSpan) {
       CoreSearch search = new CoreSearch(lcg, objective, blocks, blocksConstant);
       return search.startProof(blockDefinitions) ? search : null;
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
+    search.termsBySpanRatio = termSpan > blockSpan;
+    if (TRACE && search.termsBySpanRatio) {
+      System.err.println("%core-fire span " + termSpan + " " + blockSpan);
+    }
     if (!search.startProof(definitions)) {
       return null;
     }
@@ -523,6 +556,26 @@ public final class CoreSearch {
       sat.setConflictLimit(
           Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
       int result = lcg.solveUnder(assumed.stream().mapToInt(Integer::intValue).toArray());
+      if (TRACE) {
+        System.err.println(
+            "%core-trace t="
+                + (System.nanoTime() / 1_000_000)
+                + " assumed="
+                + assumed.size()
+                + " thr="
+                + threshold
+                + " lb="
+                + lowerBound
+                + " best="
+                + lcg.bestObjective()
+                + " conflicts="
+                + sat.conflicts
+                + " work="
+                + sat.work()
+                + " result="
+                + result
+                + (result == CdclSolver.UNSAT ? " core=" + sat.failedAssumptions().length : ""));
+      }
       if (result == CdclSolver.UNKNOWN) {
         if (sat.conflicts < cap || cap >= phaseLimit || !rising()) {
           return result;

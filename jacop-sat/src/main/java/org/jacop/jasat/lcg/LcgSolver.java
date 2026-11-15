@@ -3501,11 +3501,40 @@ public final class LcgSolver implements ExternalPropagator {
 
   // -Djacop.lcg.coreProbeSkip=false: the core-guided phase runs after branch and bound also when
   // its probe stopped without a solution of its own
+  // -Djacop.lcg.coreProbeHalfWay=false: the probe skip also when the probe raised the cores' lower
+  // bound at least as far as it is still below the best solution of branch and bound
+  private static final boolean PROBE_HALF_WAY =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreProbeHalfWay", "true"));
+
   private boolean coreProbeSkip =
       Boolean.parseBoolean(System.getProperty("jacop.lcg.coreProbeSkip", Boolean.TRUE.toString()));
 
   /** Statistics: core-guided phases skipped as their probe found no solution of its own. */
   public long probeSkips;
+
+  /**
+   * Statistics: core-guided phases that ran after a probe without a solution of its own, as the
+   * probe raised the lower bound at least as far as it is still below the best solution.
+   */
+  public long probeHalfWays;
+
+  /**
+   * Whether the core-guided probe raised the lower bound at least as far as it is still below the
+   * best solution, so that the rest of the phase runs even without a solution of the probe's own:
+   * the cores of the MaxSAT Evaluation 2024's xai-mindset2 iris took the bound from 0 to 77 in 0.4
+   * s, the optimum is 87, and skipping the phase left the bound at 49 after 240 s, while the phase
+   * proves the optimum in 4 s.
+   */
+  private boolean halfWayAfterProbe() {
+    if (!PROBE_HALF_WAY || !coreSearch.halfWay()) {
+      return false;
+    }
+    probeHalfWays++;
+    if (CoreSearch.TRACE) {
+      System.err.println("%core-fire halfway");
+    }
+    return true;
+  }
 
   // -Djacop.lcg.boundDive=<share>: share of the work left for a search for a solution at the
   // objective's root bound before the core-guided probe, when that bound is above the cores' lower
@@ -3625,7 +3654,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
         return result;
       }
-      if (coreProbeSkip && probeWithoutSolution && best != null) {
+      if (coreProbeSkip && probeWithoutSolution && best != null && !halfWayAfterProbe()) {
         // the probe found no solution of its own while branch and bound did: the rest of the phase
         // stops the same way after a third of its work and gives the time back
         probeSkips++;
