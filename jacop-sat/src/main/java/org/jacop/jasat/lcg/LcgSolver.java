@@ -5654,6 +5654,7 @@ public final class LcgSolver implements ExternalPropagator {
         saveTarget();
       }
     }
+    heldFailure = null;
     trail.beginBacktrack();
     try {
       while (store.level > baseLevel + level) {
@@ -6511,7 +6512,16 @@ public final class LcgSolver implements ExternalPropagator {
     int d = Math.abs(lit);
     int i = d < litVar.length ? litVar[d] : -1;
     if (i < 0 || sharedId[i] < 0) {
-      return; // an auxiliary literal or a variable of this store only: no split this time
+      // an auxiliary literal or a variable of this store only, such as the objective: no split on
+      // it. With the fixpoint's atoms pushed before a conflict, the objective's atoms stay in the
+      // conflict clauses, and every run of a 60-item knapsack under portfolio-split=4 decided on
+      // the objective first, so the tree never split (30 s instead of 2 s); the split is then on
+      // the next decision on a shared variable (30 of 30 runs in 1-2 s). Without the push the
+      // split waits for the next run, as before: deferred, it timed out in 3 of 34 runs
+      if (pushBeforeConflict) {
+        sat.notifyNextDecision();
+      }
+      return;
     }
     int kind = litKind[d] + (lit < 0 ? SharedClauses.NEGATED : 0);
     int negatedKind = litKind[d] + (lit < 0 ? 0 : SharedClauses.NEGATED);
@@ -6706,6 +6716,38 @@ public final class LcgSolver implements ExternalPropagator {
    * store. A failure is returned as a false literal whose reason is the conflict clause, which the
    * solver takes as a conflict.
    */
+  // whether a constraint failure first pushes the atoms of its fixpoint (see setPushBeforeConflict)
+  private boolean pushBeforeConflict =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.pushBeforeConflict", "true"));
+
+  /**
+   * Whether the system property jacop.lcg.pushBeforeConflict is set (tests leave it alone then).
+   */
+  public static final boolean PUSH_BEFORE_CONFLICT_SET =
+      System.getProperty("jacop.lcg.pushBeforeConflict") != null;
+
+  // the atoms of a failure held back while the atoms of its fixpoint are pushed, or null
+  private EntryList heldFailure;
+  private final EntryList heldAtoms = new EntryList();
+
+  /**
+   * Sets whether a constraint failure first hands the solver the atoms its fixpoint recorded and
+   * did not push yet, and only then the conflict, whose clause cites those atoms instead of their
+   * explanations. Conflict analysis resolves them lazily and can stop at one of them, as in lazy
+   * clause generation with literals created on demand (Feydy and Stuckey, Lazy Clause Generation
+   * Reengineered, CP 2009). Expanded at once, the conflict clauses of a failure of Alldiff on
+   * ghoulomb had 406 literals on average and those of XplusYeqZ 187. Off with proof logging. The
+   * default is the system property jacop.lcg.pushBeforeConflict, true when unset.
+   *
+   * @param on whether to push the fixpoint's atoms before the conflict
+   */
+  public void setPushBeforeConflict(boolean on) {
+    pushBeforeConflict = on;
+  }
+
+  /** Statistics: failures whose fixpoint atoms were pushed before the conflict. */
+  public long heldFailures;
+
   @Override
   public int propagate() {
     if (failed) {
@@ -6748,6 +6790,11 @@ public final class LcgSolver implements ExternalPropagator {
         }
         atomsPropagated++;
         return lit;
+      }
+      if (heldFailure != null) {
+        EntryList atoms = heldFailure;
+        heldFailure = null;
+        return conflict(atoms, 0);
       }
       if (numPending == 0 && !store.hasPendingConstraints()) {
         return 0;
@@ -6795,6 +6842,16 @@ public final class LcgSolver implements ExternalPropagator {
         measure(store.recentlyFailedConstraint, own, -1, atoms, 0);
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
+        }
+        if (pushBeforeConflict && pushed < trail.size() && proof == null) {
+          heldFailures++;
+          heldAtoms.clear();
+          for (int k = 0; k < atoms.size(); k++) {
+            heldAtoms.addFrom(atoms, k);
+          }
+          heldFailure = heldAtoms;
+          numPending = 0;
+          continue;
         }
         return conflict(atoms, 0);
       }

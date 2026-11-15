@@ -155,6 +155,19 @@ class SuccessorRoutesTest {
   }
 
   @Test
+  void depotLinksOfEveryRouteCanBeFreed() {
+    AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(2)));
+    SuccessorRoutes r = (SuccessorRoutes) lns.routings().get(0);
+    boolean[] relax = new boolean[2 * N];
+    r.relaxDepotLinks(relax);
+    // the start depots and the last customer of each route; the links inside a route stay
+    for (int v = 0; v < C + V; v++) {
+      boolean link = v >= C || NEXT[v] >= C;
+      assertEquals(link, relax[v], "next of " + v);
+    }
+  }
+
+  @Test
   void relatedRemovalPrefersCloseCustomers() {
     AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(4)));
     RouteStructure r = lns.routings().get(0);

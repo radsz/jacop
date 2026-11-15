@@ -6079,7 +6079,118 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
-346. Free search (-f) of a resource-constrained project scheduling model
+
+340. Under -f, a model whose cost is the makespan of a disjunctive
+   schedule (unary resources and precedences between the task starts,
+   such as job shops, also with decomposed disjunctions) first runs the
+   critical-path tabu search of local search alone, for half of the time
+   left until it stalls for 5 s, without --free-config ls. On the 50x10
+   job shops swv11-swv14 (240 s) the makespans drop by 2-13 % and beat
+   CP-SAT; open shops (no precedences) and portfolio workers are left out.
+   --free-config ls-auto=0 turns it off. Nowicki and Smutnicki, A fast
+   taboo search algorithm for the job shop problem, Management Science
+   1996; Dell'Amico and Trubian, Applying tabu search to the job-shop
+   scheduling problem, Annals of OR 1993.
+
+341. The linear relaxation rounds the row it proves its bound with: each cut
+   round adds the mixed-integer rounding (MIR) cut of the rows weighted by
+   their LP dual values, without the objective's own rows (a Chvatal-Gomory
+   cut with the LP's multipliers, V. Chvatal, Edmonds polytopes and a
+   hierarchy of combinatorial problems, Discrete Math. 4, 1973; MIR of an
+   aggregated row as in H. Marchand and L. A. Wolsey, Aggregation and mixed
+   integer rounding to solve MIPs, Oper. Res. 49(3), 2001). On covers with
+   near-equal costs this row counts the sets a cover needs: MiniZinc
+   Challenge 2021 wmsmc-int batch_0_case_115_instance_0 has root bound
+   509,697 instead of 500,353 (optimum 509,704) and -f proves it in 10 s
+   instead of not in 600 s. -Dorg.jacop.lp.dualAggregate=false turns it off.
+
+342. The FlatZinc front end folds a variable z that is an affine function
+   of another variable x into the linear constraint that uses it (free
+   column substitution of MIP presolve: Achterberg, Bixby, Gu, Rothberg
+   and Weninger, Presolve reductions in mixed integer programming,
+   INFORMS Journal on Computing 32(2), 2020; as CP-SAT's presolve does:
+   Perron, Didier and Gay, The CP-SAT-LP solver, CP 2023). z is defined
+   by int_times(c, x, z), int_plus(x, c, z) or a two-term int_lin_eq
+   with a unit coefficient on z, is not an output or solve variable, its
+   domain allows every value of the function, and it occurs in one
+   linear constraint besides its definition: the term a*z becomes a*p*x,
+   a*q moves to the constant and the definition is not posted. A z in
+   several rows stays, since with lazy clause generation it is a shared
+   sub-term whose literals carry learning from row to row (code-generator
+   mips_gobmk of the 2019 Challenge: 7 such variables in 49 rows, 34 ->
+   63 s when folded; -Dorg.jacop.fz.affineFoldingRows=n allows n rows).
+   It fires on 4 of the 240 instances of the wide benchmark set: nside
+   EASY_200_50 folds 54,504 products by constants into its sums
+   (propagators 61,579 -> 7,075), the same search tree in 85 -> 46 s at
+   240 s; the other three are unchanged within noise.
+   -Dorg.jacop.fz.affineFolding=false turns it off; it is off under
+   --proof.
+
+343. The routes neighbourhood of the adaptive LNS (route removal on
+   circuits and subcircuits) also frees the links between every route
+   and its depots, so that a route can move to another vehicle.
+   With identical vehicles and symmetry breaking such as "vehicle k
+   unused implies vehicle k + 1 unused", a route other than the last
+   could not be emptied while the routes after it kept their vehicles.
+   XCSP 2024 VRP_LC-10-05-20-s3 at 600 s finds 267, 288 and 269 over
+   three seeds instead of 288, 289 and 288 (the better solutions use
+   one vehicle fewer; the 2024 competition best was 277), and MiniZinc
+   Challenge 2026 vrplc10_5_15_s4 with -f 207 (the best known), 209 and
+   216 instead of 216 three times. -Djacop.lns.depotLinks=false turns it off.
+
+344. NetworkFlow prunes its arcs without the pivots of the network simplex
+   when it can, with the same pruning. A residual arc (u, v) whose
+   shortest residual cycle back from v to u has room for the flow the
+   cost limit allows (limit / cycle cost, or all its capacity at cost 0)
+   is decided by that shortest path alone, for arcs of any capacity, not
+   only of capacity one; the other arcs are probed by successive shortest
+   paths with node potentials instead of dual pivots (Ahuja, Magnanti and
+   Orlin, Network Flows: Theory, Algorithms, and Applications, Prentice
+   Hall 1993, ch. 9). The probing of arcs took 74 % of the time of -f on
+   MiniZinc Challenge 2021 mapping ring_3. A test compares the domains
+   with the pivot probes over 300 random networks and dives (20,000 when
+   checked by hand). On the 30 mapping and nfc instances of the Challenge
+   (2015-2022) at 600 s: -f proves the same 30, 0.85 the time (geometric
+   mean, instances over 1 s; ring_3 106 -> 51 s, mesh_star_mpeg 87 -> 35 s,
+   ring_mp3 41 -> 17 s, mesh_star_2 388 -> 248 s), default mode proves
+   the same 27, 0.86 the time. -Dorg.jacop.netflow.generalArcs=false and
+   -Dorg.jacop.netflow.shortestPaths=false bring back the probes.
+
+345. Under lazy clause generation a constraint failure first hands the SAT
+   solver the atoms its fixpoint recorded and had not pushed yet, and only
+   then the conflict, whose clause cites those atoms instead of their
+   explanations (as with literals created on demand in lazy clause
+   generation, T. Feydy and P. J. Stuckey, "Lazy clause generation
+   reengineered", CP 2009). Conflict analysis then resolves them lazily
+   and can stop at one of them; before, each was replaced by its own
+   explanation at once, down to atoms the solver had, and the conflict
+   clauses of an Alldiff failure on ghoulomb had 406 literals on average
+   (XplusYeqZ 187). Fixed search on ghoulomb makes 2x the conflicts in
+   30 s. On the wide benchmark set with -f at 600 s (240 instances): 21
+   better, 16 worse, families 5 better, 1 worse, geomean 0.934 over the
+   144 solved by either (mapping mesh_star 128 -> 21 s, vrplc9_5_10_s2
+   118 -> 24 s, community-detection Sampson 374 -> 83 s; fast-food ff58
+   32 -> 114 s, and work-task-variation seed-8 lost its proof, a core
+   phase that is cut by the clock and times out in 2 of 3 runs on the
+   base too). On the 62 wide-quick instances at 240 s, -f: families
+   7 better, 2 worse, geomean 0.80 (base against base 0.95); default
+   mode: 4 better, 2 worse, geomean 0.90, one more solved. It is off with
+   --proof; -Djacop.lcg.pushBeforeConflict=false turns it off
+   (LcgSolver.setPushBeforeConflict). The statistic lcgHeldFailures
+   counts the failures held back. With it, the shared tree of
+   portfolio-split splits on the next decision below the first one when
+   the first is on the objective, which is not shared; otherwise a
+   knapsack whose first decision was always the objective never split.
+
+346. CountValues and CountValuesBounds read again only the domains whose
+   size changed since their last call, with the same pruning, and
+   Assignment queues changed variables in arrays instead of a hashed set
+   and map. On the 31 wide instances that post one of them (fixed
+   search, 600 s) time is 0.976 of before over the 18 solved by both;
+   ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
+   6.6 % and 3 % more nodes.
+
+347. Free search (-f) of a resource-constrained project scheduling model
    (a makespan over CumulativeBasic resources with fixed durations,
    demands and capacities, and precedence rows) runs a project schedule
    heuristic, org.jacop.search.ls.ProjectSchedule: the serial schedule
