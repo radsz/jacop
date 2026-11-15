@@ -6596,6 +6596,24 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. The XOR system of the FlatZinc front end (XorSystemDetector, Gauss-
+   Jordan elimination over GF(2)) also takes the parity rows of linear
+   equations over 0/1 variables only, and of equations written as two
+   opposite inequalities a x <= k and -a x <= -k (as OPB files do).
+   Exactly-one rows and other cardinalities of value 1 or n - 1 stay out.
+   Together these rows give the parity arguments of even colouring
+   models (Markstrom, "Locality and hard SAT-instances", JSAT 2, 2006;
+   PB competition evencolouring and ec_* families): the sum of all vertex
+   rows is odd, so the slacks of an optimisation model must sum to an odd
+   number and an exact model has no solution. In the PB competition
+   evencolouring_opt_linear_random6regular_nvert_071 and _unit_..._351
+   are proved optimal in 1.5 s and 3.7 s (before not at 600 s, CP-SAT
+   5 s), ec_stargrid_04_021 and _06_012 unsatisfiable in 1.5 s (before
+   and CP-SAT unknown at 240 s), ECgrid5x40split, ECgrid5x130split and
+   ec_random_rational_random8reg_split_750 unsatisfiable in under 2 s
+   (before unknown). It changes 15 of 222 PB and 9 of 240 wide instances.
+   -Dorg.jacop.fz.xorZeroOne=false turns it off.
+
 Version 4.11
 =============
 

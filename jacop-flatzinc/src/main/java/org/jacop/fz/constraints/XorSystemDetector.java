@@ -56,6 +56,10 @@ import org.jacop.fz.SimpleNode;
  * clauses), as CryptoMiniSat keeps the clauses of the XORs it gives its Gauss-Jordan elimination
  * (Soos, Nohl and Castelluccia, SAT 2009; Soos, Gocht and Meel, CAV 2020; see {@link XorSystem}).
  *
+ * <p>Linear equations whose odd-coefficient variables are 0/1 (or of one parity) give rows too,
+ * also when written as two opposite inequalities; {@code org.jacop.fz.xorZeroOne=false} leaves out
+ * the equations over 0/1 variables only.
+ *
  * <p>Setting the system property {@code org.jacop.fz.xorSystem} to false turns it off. A component
  * with more than {@code jacop.fz.xorSystemCells} (default 50 million) row-column cells is left out,
  * as is a component of more than {@code jacop.fz.xorSystemRows} rows (default 20,000).
@@ -426,8 +430,9 @@ public class XorSystemDetector implements ParserTreeConstants {
    * equation over 0/1 variables only enters (with {@code org.jacop.fz.xorZeroOne}, on by default)
    * unless it is a cardinality of value 1 or n - 1 over n variables: x_1 + ... + x_7 = 3 over the
    * edges of a vertex is one row of the parity argument of an even colouring (PB competition
-   * evencolouring, ec_*), which the rows of the whole graph give together, while exactly-one rows,
-   * common in assignment models, are left out.
+   * evencolouring, ec_*; even colouring formulas are from K. Markstrom, "Locality and hard
+   * SAT-instances", JSAT 2, 2006), which the rows of the whole graph give together, while
+   * exactly-one rows, common in assignment models, are left out.
    */
   private void linear(int[] a, IntVar[] v, int rhs) {
     if (a.length != v.length || v.length < 2) {
