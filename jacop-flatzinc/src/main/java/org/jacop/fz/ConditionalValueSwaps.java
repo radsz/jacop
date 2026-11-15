@@ -84,8 +84,8 @@ import org.jacop.fz.SymmetryBreaking.Item;
  * order of the annotation, and only fails sooner.
  *
  * <p>It is not used under free search (-f), where the restarts and activity-based branching of
- * black-hole were 2-5x slower with these constraints on the hard instances. Setting the system
- * property {@code org.jacop.fz.symmetrySwaps} to false turns it off.
+ * black-hole were up to 5.8x slower with these constraints on the hard instances. Setting the
+ * system property {@code org.jacop.fz.symmetrySwaps} to false turns it off.
  *
  * @author Radoslaw Szymanek
  * @version 5.0

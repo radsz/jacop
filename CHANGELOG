@@ -5627,12 +5627,13 @@ Version 5.0 (unreleased)
    annotation. On the 25 black-hole instances of the MiniZinc Challenges
    2009-2025 at 600 s, fixed search solves 25 instead of 17
    (2025 layout_3 40 s, layout_14 17 s, layout_17 9 s, all three unknown
-   before; 2009 instance 19 proved unsatisfiable in 38 s; the 12 instances
-   both solve give the same first solution, 2.1x faster in geomean). It fires on 2
-   of the 240 instances of the wide benchmark set, both black-hole. It is
-   used for satisfaction problems that ask for one solution, not under
-   free search (-f), where the hard black-hole instances were 2-5x slower
-   with it; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
+   before; 2009 instance 19 proved unsatisfiable in 38 s); the 17 that
+   both solve take 2.1x less time in geomean, and the 12 satisfiable ones
+   among them print the same first solution. It fires on 2 of the 240
+   instances of the wide benchmark set, both black-hole. It is used for
+   satisfaction problems that ask for one solution, not under free search
+   (-f), which solves all 25 within 13 s without it and was up to 5.8x
+   slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
 Version 4.11
