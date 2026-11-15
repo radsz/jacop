@@ -252,7 +252,7 @@ public class Options {
                 of activity (off); turns changes between the two at each restart, and
                 until-solution (default) does so only until the first solution, then is on,
                 and only once lcg-booleans-first-after=<conflicts> passed without a solution,
-                default 20000),
+                default 2000),
                 lcg-lp-branching=auto|on|off (with --lcg and a linear relaxation: decisions
                 from the relaxation's solution in the annotation's runs under -f, and at the start
                 of the activity runs of fixed-restarts; auto, the default, uses them when the
