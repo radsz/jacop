@@ -5790,7 +5790,21 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
-334. New constraint ArgMaxMonotone(x, f, first, index, offset): index is the
+334. Free search with lazy clause generation (-f) no longer decides only
+   0/1 variables before a first solution: once 2,000 conflicts pass
+   without a solution, its activity runs take turns at restarts with and
+   without the 0/1 variables first, until the first solution
+   (--free-config lcg-booleans-first=until-solution, the new default;
+   lcg-booleans-first-after sets the conflicts; on restores the old
+   order). On the XCSP 2024 traveling tournament with 24 to 40 teams,
+   Booleans first decided the whole home/away pattern before any
+   opponent and found no solution in 600 s; now the first one comes in
+   30 to 60 s. Adaptive LNS has a new kind LINES, which relaxes the
+   scopes of random all-different constraints (such as the rounds of a
+   round-robin schedule) with the variables that small constraints tie to
+   them alone.
+
+335. New constraint ArgMaxMonotone(x, f, first, index, offset): index is the
    first position k of the largest f[k](x[k]), for nondecreasing functions
    f[k] given as tables. It runs the ArgMax rules (Gange and Stuckey, CP
    2020) through the functions, in the spirit of views (Schulte and Tack,
@@ -5806,7 +5820,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.argMaxFunctions=false turns it off; it is off under
    --proof.
 
-335. In free search with lazy clause generation, the runs of the default
+336. In free search with lazy clause generation, the runs of the default
    branching of a model without search annotation place the rectangles
    of its diffn constraints first, one at a time, bottom-left: the
    rectangle that can start first in the first dimension (ties to the one
@@ -5828,7 +5842,7 @@ Version 5.0 (unreleased)
    run lost Cargo-07's proof and Cargo-10's best solution. None of the 14
    wide-set models with diffn is affected: all have a search annotation.
 
-336. Symmetry breaking in the FlatZinc front end breaks the conditional
+337. Symmetry breaking in the FlatZinc front end breaks the conditional
    symmetry of interchangeable values in a sequence ordered by
    precedences (new class org.jacop.fz.ConditionalValueSwaps), as in the
    patience game Black Hole (I. P. Gent, C. Jefferson, T. Kelsey, I.
@@ -5861,7 +5875,7 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
-335. A root solve of the linear relaxation of an optimisation model in the
+338. A root solve of the linear relaxation of an optimisation model in the
    sparse simplex (the first solve, or the trial of the extra rows such as
    value encodings) that stops at its pivot or work budget now goes on
    within half of the time a large relaxation gets for its root solves
