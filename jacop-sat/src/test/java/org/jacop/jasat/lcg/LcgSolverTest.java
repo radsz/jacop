@@ -4685,6 +4685,68 @@ class LcgSolverTest {
   }
 
   /**
+   * A stop during the runs in large neighbourhoods ends them: the runs that follow return at once
+   * without a conflict and must not count as neighbourhoods too large. The slow-LCG hand-over of
+   * free search stopped LCG in its runs on MaximumAgreementForest2-exact12 (XCSP 2026), which went
+   * on for the rest of their share of the time: 7,000 runs shrank every neighbourhood to 2
+   * variables.
+   */
+  @Test
+  void stopEndsLargeNeighbourhoodRuns() {
+    Random rnd = new Random(29);
+    int stopped = 0;
+    for (int k = 0; k < 60; k++) {
+      Store store = new Store();
+      int n = 8;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            store.impose(new XneqY(x[i], x[j]));
+          }
+        }
+      }
+      int[] w = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(11) - 3;
+      }
+      w[n] = -1;
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      store.impose(new LinearInt(terms, w, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setLowerBoundSearch(0.5, 2);
+      AdaptiveLns lns = new AdaptiveLns(store, x, cost, new Random(k));
+      solver.setLns(lns, 1000.0, 2);
+      long[] runsAtStop = {-1};
+      // the first better solution found in a neighbourhood stops the search
+      solver.onSolution(
+          () -> {
+            if (solver.lnsRuns > 0 && runsAtStop[0] < 0) {
+              runsAtStop[0] = solver.lnsRuns;
+              solver.stop();
+            }
+          });
+      String shares = lns.statistics();
+      int result = solver.minimize(cost);
+      if (runsAtStop[0] < 0) {
+        continue;
+      }
+      stopped++;
+      assertThat(result).isNotEqualTo(CdclSolver.UNSAT);
+      // at most the run that the stop came in
+      assertThat(solver.lnsRuns).isEqualTo(runsAtStop[0]);
+      assertThat(lns.statistics()).doesNotContain("0.000");
+      assertThat(shares).doesNotContain("0.000");
+    }
+    assertThat(stopped).isPositive();
+  }
+
+  /**
    * A solver that adds constraints to the shared model (symmetry breaking) reads the clauses of
    * solvers that added none or the same ones; its own reach only the latter.
    */
