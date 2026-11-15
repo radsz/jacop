@@ -38,6 +38,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntVar;
@@ -88,10 +89,64 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
   private final Set<IntVar> solveItem;
 
   /** An element r = A[k], with A[j] the element at index value first + j. */
-  private record Element(ASTConstElem node, IntVar k, IntVar[] a, IntVar r, int first) {}
+  private record Element(ASTConstElem node, IntVar k, IntVar[] a, IntVar r, int first) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Element e
+          && node == e.node
+          && k == e.k
+          && Arrays.equals(a, e.a)
+          && r == e.r
+          && first == e.first;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          System.identityHashCode(node),
+          System.identityHashCode(k),
+          Arrays.hashCode(a),
+          System.identityHashCode(r),
+          first);
+    }
+
+    @Override
+    public String toString() {
+      return "Element[" + r + " = " + Arrays.toString(a) + "[" + k + "], first " + first + "]";
+    }
+  }
 
   /** A linear relation sum(w * x) op c over results of elements, op one of Support.EQ/NE/LE. */
-  private record Relation(ASTConstElem node, int op, int[] w, IntVar[] x, int c) {}
+  private record Relation(ASTConstElem node, int op, int[] w, IntVar[] x, int c) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Relation e
+          && node == e.node
+          && op == e.op
+          && Arrays.equals(w, e.w)
+          && Arrays.equals(x, e.x)
+          && c == e.c;
+    }
+
+    @Override
+    public int hashCode() {
+      return Objects.hash(
+          System.identityHashCode(node), op, Arrays.hashCode(w), Arrays.hashCode(x), c);
+    }
+
+    @Override
+    public String toString() {
+      return "Relation["
+          + Arrays.toString(w)
+          + " * "
+          + Arrays.toString(x)
+          + " op "
+          + op
+          + " "
+          + c
+          + "]";
+    }
+  }
 
   private final Map<IntVar, List<Element>> elements = new LinkedHashMap<>();
 
