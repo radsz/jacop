@@ -5573,6 +5573,23 @@ Version 5.0 (unreleased)
    the gate. Of the 187 optimisation instances of the wide benchmark set,
    the detector reads cost terms in 52 and 1 passes the gate.
 
+320. The FlatZinc front end checks the pigeonhole count of agreements
+   (M. Plotkin, IRE Trans. Information Theory 6 (1960) 445-450; B. M.
+   Smith, "Symmetry and search in a network design problem", CPAIOR 2005,
+   on counting arguments for codes and designs). Where a group of m
+   variables over q values has an equality or difference indicator for
+   every pair, at least r C(b+1,2) + (q-r) C(b,2) of the pairs are equal
+   (m = bq + r). The detector sums these bounds and the model's rows that
+   bound agreements from above (int_lin_le over the indicators) with all
+   multipliers one; when the sum is infeasible the model fails at load.
+   -Dorg.jacop.fz.agreementCount=true (default), false turns it off,
+   rows also posts the bounds as constraints (slower: with the root LP
+   they make the LP run at every node). On the XCSP 2024 Hamming
+   instances at 600 s, 20-10-05-09 and 30-15-07-14 (no 2024 solver solved
+   it) are proved unsatisfiable in 1.4 and 2.9 s and 20-10-03-08 in 2.5 s
+   instead of 41 s; the detector also fires on EFPA, TravelingTournament,
+   SocialGolfers and three wide-set instances without changing the search.
+
 Version 4.11
 =============
 

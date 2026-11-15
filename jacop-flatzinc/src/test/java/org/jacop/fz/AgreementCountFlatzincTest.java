@@ -49,13 +49,16 @@ import org.junit.jupiter.api.io.TempDir;
 /**
  * The pigeonhole bounds of {@link org.jacop.fz.constraints.AgreementCountDetector} keep the optima
  * of random models whose pairs of variables have equality indicators, and prove a small code
- * unsatisfiable at the root.
+ * unsatisfiable at the root by the check of the bounds against the distance rows.
  */
 class AgreementCountFlatzincTest {
 
   private static final String PROPERTY = "org.jacop.fz.agreementCount";
 
   @TempDir Path tmp;
+
+  // whether the bounds are also posted as constraints (the property's value rows)
+  private boolean rows;
 
   // the forms of an indicator b of the pair (x, y); the first two are b <-> x = y, the others
   // b <-> x != y or b -> x != y
@@ -167,6 +170,15 @@ class AgreementCountFlatzincTest {
           expected,
           optimum(run(model, true, "--lcg", "off"), model),
           "trial " + trial + " cp\n" + model);
+      rows = true;
+      try {
+        assertEquals(
+            expected,
+            optimum(run(model, true, "--lcg", "on", "-f"), model),
+            "trial " + trial + " rows lcg -f\n" + model);
+      } finally {
+        rows = false;
+      }
     }
     assertTrue(posted > trials / 2, "posted " + posted);
     assertTrue(unsatisfiable > 0 && unsatisfiable < trials, "unsatisfiable " + unsatisfiable);
@@ -175,7 +187,7 @@ class AgreementCountFlatzincTest {
   /**
    * Five binary words of length 4 at distance at least 3 from each other agree in at most one
    * position per pair, 10 agreements, while each position of five binary letters has at least 4
-   * equal pairs, 16 in all: the root relaxation fails with the bounds, without them search does.
+   * equal pairs, 16 in all: the root check fails the model, without it search does.
    */
   @Test
   void smallCodeFailsAtTheRoot() throws IOException {
@@ -212,9 +224,8 @@ class AgreementCountFlatzincTest {
     }
     String model = fzn.append(con).append("solve satisfy;\n").toString();
     String with = run(model, true, "-debug", "-s");
-    assertTrue(with.contains("% agreement count: 4 groups"), with);
+    assertTrue(with.contains("% agreement count: 4 groups, infeasible"), with);
     assertTrue(with.contains("=====UNSATISFIABLE====="), with);
-    assertTrue(with.contains("%%%mzn-stat: nodes=0"), with);
     assertTrue(run(model, false).contains("=====UNSATISFIABLE====="));
   }
 
@@ -225,7 +236,7 @@ class AgreementCountFlatzincTest {
     PrintStream originalOut = System.out;
     String[] args = Arrays.copyOf(options, options.length + 1);
     args[options.length] = fzn.toString();
-    System.setProperty(PROPERTY, Boolean.toString(bounds));
+    System.setProperty(PROPERTY, bounds && rows ? "rows" : Boolean.toString(bounds));
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
       new Fz2jacop().callMain(args);

@@ -439,7 +439,11 @@ public class Constraints implements ParserTreeConstants {
       // the pigeonhole bound on the equal pairs of variables whose pairs all have equality
       // indicators, redundant; --proof does not encode it
       if (AgreementCountDetector.enabled() && options.proof() == null) {
-        new AgreementCountDetector(support).detect(astTree);
+        AgreementCountDetector agreements = new AgreementCountDetector(support);
+        agreements.detect(astTree);
+        if (agreements.infeasible()) {
+          throw Store.failException;
+        }
       }
 
       if (increasing != null && IncreasingDetector.sumEnabled()) {

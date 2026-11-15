@@ -55,11 +55,10 @@ import org.jacop.fz.SimpleNode;
  * indicators of their letters, such as the codes of the XCSP3 problem Hamming (2024 competition,
  * {@code sum(k) (x[i][k] != x[j][k]) >= d} for every pair of words i, j), never states that bound:
  * summed over the letters of each position it contradicts the distance constraints summed over the
- * pairs of words, which the root linear relaxation then finds at once. With it JaCoP proves
- * Hamming-20-10-05-09 and Hamming-30-15-07-14 unsatisfiable at the root, where before it found no
- * answer in 600 s. The argument is the counting bound of coding theory (the Plotkin bound, M.
- * Plotkin, Binary codes with specified minimum distance, IRE Transactions on Information Theory
- * 6(4), 1960, pp. 445-450, in its q-ary form).
+ * pairs of words. With it JaCoP proves Hamming-20-10-05-09 and Hamming-30-15-07-14 unsatisfiable at
+ * the root, where before it found no answer in 600 s. The argument is the counting bound of coding
+ * theory (the Plotkin bound, M. Plotkin, Binary codes with specified minimum distance, IRE
+ * Transactions on Information Theory 6(4), 1960, pp. 445-450, in its q-ary form).
  *
  * <p>An indicator a of {@code x = y} only needs {@code x = y -> a}: it is {@code r} of {@code
  * int_eq_reif(x, y, r)} or {@code int_lin_eq_reif([c, -c], [x, y], 0, r)}, and {@code 1 - r} of
@@ -70,6 +69,14 @@ import org.jacop.fz.SimpleNode;
  * Constraint Programming, Elsevier, 2006, chapter 11). The groups are the connected components of
  * the graph of the indicated pairs that are complete graphs, with fewer distinct values than
  * variables.
+ *
+ * <p>By default the bounds are only checked at the root: they are added, with multiplier one, to
+ * the model's {@code int_lin_le} rows that bound agreements over the same indicators from above
+ * (the distance constraints), and when the sum has no solution in the domains, a Farkas certificate
+ * checked in exact arithmetic, the model is infeasible. Posted as constraints for search the bounds
+ * made the satisfiable Hamming instances slower (the linear relaxation is called at every node and
+ * changes the search), so they are posted only when the property {@code
+ * org.jacop.fz.agreementCount} is {@code rows}.
  *
  * <p>Setting the system property {@code org.jacop.fz.agreementCount} to false turns the detection
  * off.
@@ -90,6 +97,21 @@ public class AgreementCountDetector {
   // the first indicator of each pair, by both of its variables
   private final Map<IntVar, Map<IntVar, Indicator>> pairs = new IdentityHashMap<>();
 
+  // the indicators, by their Boolean
+  private final Map<IntVar, Indicator> indicators = new IdentityHashMap<>();
+
+  // the model's rows a * v <= c, kept when every v is an indicator
+  private record Row(IntVar[] v, int[] a, long c) {}
+
+  private final List<Row> rows = new ArrayList<>();
+
+  // the sum of the bounds and of the model's upper bounds on agreements over the same indicators,
+  // as sum(k * v) <= rhs: the Farkas combination of all of them with multiplier one
+  private final Map<IntVar, Long> combination = new IdentityHashMap<>();
+  private long rhs;
+
+  private boolean infeasible;
+
   /**
    * It creates a detector reading variables through the given support.
    *
@@ -106,6 +128,21 @@ public class AgreementCountDetector {
    */
   public static boolean enabled() {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.agreementCount"));
+  }
+
+  // rows: the bounds are also posted as constraints for search, not only checked at the root
+  private static boolean postRows() {
+    return "rows".equalsIgnoreCase(System.getProperty("org.jacop.fz.agreementCount"));
+  }
+
+  /**
+   * It tells whether the bounds contradict the model's upper bounds on agreements at the root. It
+   * is valid after {@link #detect}.
+   *
+   * @return true when the model has no solution.
+   */
+  public boolean infeasible() {
+    return infeasible;
   }
 
   /**
@@ -142,8 +179,12 @@ public class AgreementCountDetector {
         groups++;
       }
     }
+    if (groups > 0) {
+      check();
+    }
     if (support.options.debug()) {
-      FzConsole.println("% agreement count: " + groups + " groups");
+      FzConsole.println(
+          "% agreement count: " + groups + " groups" + (infeasible ? ", infeasible" : ""));
     }
   }
 
@@ -153,6 +194,13 @@ public class AgreementCountDetector {
       case "int_ne_reif", "int_ne_imp" -> scalars(node, false);
       case "int_lin_eq_reif" -> linear(node, true);
       case "int_lin_ne_reif", "int_lin_ne_imp" -> linear(node, false);
+      case "int_lin_le" -> {
+        int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+        IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+        if (a != null && v != null && a.length == v.length && a.length > 1) {
+          rows.add(new Row(v, a, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2))));
+        }
+      }
       default -> {
         // not read
       }
@@ -189,6 +237,9 @@ public class AgreementCountDetector {
       return;
     }
     Indicator i = new Indicator(r, positive);
+    if (indicators.putIfAbsent(r, i) != null && indicators.get(r).positive() != positive) {
+      return; // one Boolean as two indicators of opposite senses: not read
+    }
     if (pairs.computeIfAbsent(x, k -> new IdentityHashMap<>()).putIfAbsent(y, i) == null) {
       pairs.computeIfAbsent(y, k -> new IdentityHashMap<>()).put(x, i);
     }
@@ -217,14 +268,14 @@ public class AgreementCountDetector {
     long bound = r * (b + 1) * b / 2 + (q - r) * b * (b - 1) / 2;
     // sum of the positive indicators - sum of the negative ones >= bound - (negative ones)
     Map<IntVar, Integer> weights = new LinkedHashMap<>();
-    long rhs = bound;
+    long limit = bound;
     for (int i = 0; i < m; i++) {
       Map<IntVar, Indicator> row = pairs.get(group.get(i));
       for (int j = i + 1; j < m; j++) {
         Indicator a = row.get(group.get(j));
         weights.merge(a.r(), a.positive() ? 1 : -1, Integer::sum);
         if (!a.positive()) {
-          rhs--;
+          limit--;
         }
       }
     }
@@ -239,8 +290,50 @@ public class AgreementCountDetector {
     if (vars.isEmpty()) {
       return false;
     }
-    int[] w = coefficients.stream().mapToInt(Integer::intValue).toArray();
-    support.pose(new LinearInt(vars.toArray(new IntVar[0]), w, ">=", (int) rhs));
+    // the bound as -sum(w * r) <= -limit in the combination
+    for (int k = 0; k < vars.size(); k++) {
+      combination.merge(vars.get(k), (long) -coefficients.get(k), Long::sum);
+      grouped.put(vars.get(k), true);
+    }
+    rhs -= limit;
+    if (postRows()) {
+      int[] w = coefficients.stream().mapToInt(Integer::intValue).toArray();
+      support.pose(new LinearInt(vars.toArray(new IntVar[0]), w, ">=", (int) limit));
+    }
     return true;
+  }
+
+  // the indicators of the groups with a bound
+  private final Map<IntVar, Boolean> grouped = new IdentityHashMap<>();
+
+  // adds the model's upper bounds on agreements over the grouped indicators to the combination
+  // and tells whether it has no solution in the domains (all multipliers one: a Farkas certificate
+  // checked in exact arithmetic)
+  private void check() {
+    for (Row row : rows) {
+      boolean upper = true;
+      for (int k = 0; k < row.v().length && upper; k++) {
+        Indicator i = indicators.get(row.v()[k]);
+        // an upper bound on agreements: positive weights on equality indicators, negative ones on
+        // difference indicators
+        upper =
+            grouped.containsKey(row.v()[k])
+                && i != null
+                && (i.positive() ? row.a()[k] >= 0 : row.a()[k] <= 0);
+      }
+      if (!upper) {
+        continue;
+      }
+      for (int k = 0; k < row.v().length; k++) {
+        combination.merge(row.v()[k], (long) row.a()[k], Long::sum);
+      }
+      rhs += row.c();
+    }
+    long least = 0;
+    for (Map.Entry<IntVar, Long> e : combination.entrySet()) {
+      long k = e.getValue();
+      least += k > 0 ? k * e.getKey().min() : k * e.getKey().max();
+    }
+    infeasible = least > rhs;
   }
 }
