@@ -84,4 +84,15 @@ class DefinedVariablesFlatzincTest {
       System.setOut(out);
     }
   }
+
+  // city-position city-5-06 has 8 decision variables that no constraint defines: neighbourhoods
+  // over every variable (the rule of jacop #642 for fewer than 16) proved its optimum twice as
+  // slowly under -f; only a model of one or two roots (pattern-set-mining) takes every variable
+  @Test
+  void neighbourhoodsKeepToAFewRoots() {
+    assertThat(Solve.lnsKeepsIndependent(8)).isTrue();
+    assertThat(Solve.lnsKeepsIndependent(3)).isTrue();
+    assertThat(Solve.lnsKeepsIndependent(2)).isFalse();
+    assertThat(Solve.lnsKeepsIndependent(1)).isFalse();
+  }
 }
