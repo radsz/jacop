@@ -6644,7 +6644,8 @@ public final class LcgSolver implements ExternalPropagator {
    * solver takes as a conflict.
    */
   // whether a constraint failure first pushes the atoms of its fixpoint (see setPushBeforeConflict)
-  private boolean pushBeforeConflict = Boolean.getBoolean("jacop.lcg.pushBeforeConflict");
+  private boolean pushBeforeConflict =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.pushBeforeConflict", "true"));
 
   /**
    * Whether the system property jacop.lcg.pushBeforeConflict is set (tests leave it alone then).
@@ -6663,7 +6664,7 @@ public final class LcgSolver implements ExternalPropagator {
    * clause generation with literals created on demand (Feydy and Stuckey, Lazy Clause Generation
    * Reengineered, CP 2009). Expanded at once, the conflict clauses of a failure of Alldiff on
    * ghoulomb had 406 literals on average and those of XplusYeqZ 187. Off with proof logging. The
-   * default is the system property jacop.lcg.pushBeforeConflict, false when unset.
+   * default is the system property jacop.lcg.pushBeforeConflict, true when unset.
    *
    * @param on whether to push the fixpoint's atoms before the conflict
    */
