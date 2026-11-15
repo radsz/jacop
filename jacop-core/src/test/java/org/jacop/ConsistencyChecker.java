@@ -1281,6 +1281,15 @@ class ConsistencyChecker {
                   new AbsXeqY(x, y, false), t -> Math.abs(t[0]) == t[1], new IntVar[] {x, y});
             }),
         new Case(
+            "AbsXeqY (domain)",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -5, 5, r);
+              IntVar y = aVar(s, "y", -2, 6, r);
+              return new Model(
+                  new AbsXeqY(x, y, true), t -> Math.abs(t[0]) == t[1], new IntVar[] {x, y});
+            }),
+        new Case(
             "Distance",
             Level.BOUNDS_Z,
             (s, r) ->
