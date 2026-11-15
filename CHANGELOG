@@ -5790,6 +5790,21 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
+334. JaLP chooses the leaving row of the dual simplex by gap^1.2 / weight
+   instead of gap^2 / weight (dual steepest edge) on LPs shaped like
+   multicommodity flows: at least 5000 columns, at most 2.2 nonzeros per
+   column and at most 4 columns per row (the less sensitive dual steepest
+   edge of Q. Huangfu, High performance simplex solver, PhD thesis,
+   University of Edinburgh, 2013, section 3.3). Squaring the gap favours
+   dense rows of the tableau, whose pivots lose the hypersparse solves.
+   On the 659 LPs of the LP bench at 120 s: 643 -> 644 solved, 0 wrong,
+   solve time 0.98 overall and 0.83 on the Mittelmann LPs, 18 LPs faster
+   and 1 slower (pds-30 39 -> 20 s, pds-50 112 -> 57 s, pds-60 proved in
+   74 s, the n37 network design LPs 0.45-0.8; snp-02-004-104 1.9 slower).
+   Without the shape gate it is 1.13 slower over the bench. On the 11
+   wide-set runs where it applies (600 s) nothing is solved or lost.
+   -Dorg.jacop.jalp.linearScore=on|off overrides the choice.
+
 Version 4.11
 =============
 
