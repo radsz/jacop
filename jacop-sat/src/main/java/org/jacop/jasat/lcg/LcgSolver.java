@@ -54,6 +54,7 @@ import java.util.function.Function;
 import java.util.function.IntSupplier;
 import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
+import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
@@ -1819,11 +1820,48 @@ public final class LcgSolver implements ExternalPropagator {
     if (proofStarted && c instanceof Binpacking b) {
       proofBinLoads(b, atoms, from, entry);
     }
+    if (proofStarted && c instanceof AbstractReifiedConstraint r) {
+      proofReifiedBounds(r, atoms, from, entry);
+      return;
+    }
     LinearForm f = proofStarted ? OpbEncoder.form(c) : null;
     if (f == null && proofStarted && c instanceof Knapsack k) {
       f = proofKnapsackRow(k);
     }
-    proofLinearBounds(f, atoms, from, entry);
+    proofLinearBounds(f, atoms, from, entry, "");
+  }
+
+  /**
+   * Writes the bounds of a reified linear constraint b &lt;=&gt; row under b: when the reason sets
+   * b to 0 (the row fails under the hypotheses and b) or holds b = 1 (the row prunes), the bounds
+   * of the row are lemmas guarded by b, as for the row alone ({@code b <=> -3 x = -4} sets b to 0,
+   * and unit propagation over three times the order literals of x does not round).
+   */
+  private void proofReifiedBounds(
+      AbstractReifiedConstraint r, EntryList atoms, int from, int entry) {
+    LinearForm f = OpbEncoder.form(r.c);
+    if (f == null) {
+      return;
+    }
+    int b = trail.id(r.b);
+    if (entry >= 0
+        && trail.id(proofTrail.variable(entry)) == b
+        && proofTrail.kind(entry) == AtomicTrail.LE
+        && proofTrail.value(entry) == 0) {
+      // the clause "hypotheses imply b = 0" is the row's failure under b
+      proofLinearBounds(f, atoms, from, -1, " 1 " + proofAtom(entry, 0));
+      return;
+    }
+    for (int k = from; k < atoms.size(); k++) {
+      int e = atoms.get(k);
+      if (trail.id(proofTrail.variable(e)) == b && proofTrail.kind(e) == AtomicTrail.GE) {
+        String atom = proofAtom(e, atoms.slack(k));
+        String guard =
+            "1".equals(atom) ? "" : " 1 " + (atom.startsWith("~") ? atom.substring(1) : "~" + atom);
+        proofLinearBounds(f, atoms, from, entry, guard);
+        return;
+      }
+    }
   }
 
   /**
@@ -1867,6 +1905,14 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry) {
+    proofLinearBounds(f, atoms, from, entry, "");
+  }
+
+  /**
+   * Writes the bounds of a row under the hypotheses of a clause, as above; guard is added to every
+   * lemma (the literal of a reification's b, or empty).
+   */
+  private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry, String guard) {
     if (f == null || f.relation() == LinearForm.NE) {
       return;
     }
@@ -1881,14 +1927,19 @@ public final class LcgSolver implements ExternalPropagator {
     }
     IntDomain[] dom = new IntDomain[n];
     StringBuilder[] literals = new StringBuilder[n];
-    if (!hypotheses(position, variables, atoms, from, entry, dom, literals)) {
+    long[] w = f.weights();
+    boolean rounds = false;
+    for (long weight : w) {
+      // unit propagation over weight times the order literals does not round a bound
+      rounds |= Math.abs(weight) > 1;
+    }
+    if (!hypotheses(position, variables, atoms, from, entry, dom, literals) && !rounds) {
       return;
     }
-    StringBuilder clause = new StringBuilder();
+    StringBuilder clause = new StringBuilder(guard);
     for (StringBuilder l : literals) {
       clause.append(l);
     }
-    long[] w = f.weights();
     int changed = 1;
     for (int round = 0; changed > 0 && round < 4 * n; round++) {
       changed = 0;

@@ -759,6 +759,39 @@ class VeriPbProofTest {
   }
 
   @Test
+  void reifiedRowWithNoIntegerSolutionIsDerived() {
+    // b <=> -3 x = -4 has no integer x, so the root sets b to 0: the proof needs the bounds of x
+    // under b, since unit propagation over 3 times the order literals does not round (fuzz seed
+    // 2011548); with and without holes in x
+    for (boolean holes : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", -3, 5);
+      if (holes) {
+        x.domain.inComplement(0, x, -2);
+        x.domain.inComplement(0, x, 4);
+      }
+      IntVar b = new IntVar(store, "b", 0, 1);
+      AtomicTrail rootTrail = new AtomicTrail(store);
+      store.imposeWithConsistency(
+          new Reified(new XmulCeqZ(x, -3, new IntVar(store, "c", -4, -4)), b));
+      assertThat(b.max()).isEqualTo(0);
+      ByteArrayOutputStream opb = new ByteArrayOutputStream();
+      ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+      LcgSolver lcg = new LcgSolver(store);
+      lcg.setRootTrail(rootTrail);
+      lcg.setProof(opb, pbp);
+      assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(
+              new RupChecker()
+                  .check(
+                      opb.toString(StandardCharsets.US_ASCII),
+                      pbp.toString(StandardCharsets.US_ASCII)))
+          .as("holes %b", holes)
+          .isNull();
+    }
+  }
+
+  @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
     IntVar b = new IntVar(store, "b", 0, 1);
