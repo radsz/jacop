@@ -178,20 +178,15 @@ public class LinearOverlapDetector implements ParserTreeConstants {
     // the bounds of the new variables cost propagation at every node: pattern-set-mining-k1 and
     // bnn-planner make the same trees 3 to 4 times slower with them
     boolean reified = Boolean.getBoolean("org.jacop.fz.linearOverlap.reified");
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM
-              && !skipped.contains(item)
-              && (PLAIN.contains(((ASTConstElem) item).getName())
-                  || reified && HALF_OR_REIFIED.contains(((ASTConstElem) item).getName()))) {
+    support.forEachConstraint(
+        astTree,
+        item -> {
+          if (!skipped.contains(item)
+              && (PLAIN.contains(item.getName())
+                  || reified && HALF_OR_REIFIED.contains(item.getName()))) {
             collect(item);
           }
-        }
-      }
-    }
+        });
     if (rows.size() < 2) {
       return;
     }
@@ -268,31 +263,31 @@ public class LinearOverlapDetector implements ParserTreeConstants {
     if (a == null || x == null || a.length != x.length) {
       return null;
     }
-    IntVar integer = null;
-    int integerWeight = 0;
+    int integer = -1;
     int sign = 0;
     for (int i = 0; i < x.length; i++) {
+      boolean binary = x[i].min() >= 0 && x[i].max() <= 1;
       if (x[i].singleton()) {
         continue;
       }
-      if (x[i].min() < 0 || x[i].max() > 1) {
-        if (integer != null || Math.abs(a[i]) != 1) {
-          return null;
-        }
-        integer = x[i];
-        integerWeight = a[i];
-      } else if (Math.abs(a[i]) != 1 || sign != 0 && a[i] != sign) {
+      if (Math.abs(a[i]) != 1 || !binary && integer >= 0 || binary && sign != 0 && a[i] != sign) {
         return null;
-      } else {
+      }
+      if (binary) {
         sign = a[i];
+      } else {
+        integer = i;
       }
     }
-    if (integer == null) {
+    if (integer < 0) {
       return new SetRow(null);
     }
-    boolean definition =
-        "int_lin_eq".equals(node.getName()) && (sign == 0 || integerWeight == -sign);
-    return definition ? new SetRow(integer) : null;
+    return defines(node, sign, a[integer]) ? new SetRow(x[integer]) : null;
+  }
+
+  // an equality whose integer variable has the sign opposite to its 0/1 variables
+  private static boolean defines(ASTConstElem node, int sign, int integerWeight) {
+    return "int_lin_eq".equals(node.getName()) && (sign == 0 || integerWeight == -sign);
   }
 
   private void collect(SimpleNode node) {
