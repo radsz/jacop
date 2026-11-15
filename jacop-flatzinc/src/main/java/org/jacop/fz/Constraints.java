@@ -51,6 +51,7 @@ import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.ArgMaxFunctionDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
@@ -93,6 +94,7 @@ import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.fz.constraints.TranslationTilingDetector;
 import org.jacop.fz.constraints.WeightedCompletionDetector;
 import org.jacop.fz.constraints.XorSystemDetector;
+import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.satwrapper.SatTranslation;
@@ -289,6 +291,17 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // an arg_max over functions of other variables runs on those variables, whose bounds its
+      // explanations then share across arg_max constraints
+      if (ArgMaxFunctionDetector.enabled() && options.proof() == null) {
+        ArgMaxFunctionDetector argMax = new ArgMaxFunctionDetector(support, replaced);
+        argMax.detect(astTree);
+        if (!argMax.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(argMax.replaced());
+        }
+      }
+
       // the membership clauses replace set unions, which --proof encodes as they are
       if (SetUnionDetector.enabled() && options.proof() == null) {
         SetUnionDetector unions = new SetUnionDetector(support);
@@ -339,9 +352,30 @@ public class Constraints implements ParserTreeConstants {
         new DifferenceBoundsDetector(support).detect(astTree);
       }
 
-      // common sub-sums of linear constraints become variables; --proof encodes the rows as given
+      // half-reified sums at their least value become implications on their terms, before the
+      // sums are factored; --proof encodes the rows as given
+      Set<SimpleNode> zeroSumNodes = Set.of();
+      if (ZeroSumDetector.enabled() && options.proof() == null) {
+        ZeroSumDetector zeroSums =
+            new ZeroSumDetector(
+                support, cf, replaced, keptVariables(astTree), solveItemVariables(astTree));
+        zeroSums.detect(astTree);
+        if (!zeroSums.replaced().isEmpty()) {
+          zeroSumNodes = zeroSums.replaced();
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(zeroSums.replaced());
+          dictionary.removeFromDefaultSearch(zeroSums.unconstrained());
+          dictionary.unusedVariables.addAll(zeroSums.unconstrained());
+          if (!zeroSums.outputSums().isEmpty()) {
+            dictionary.zeroSums = zeroSums.outputSums();
+          }
+        }
+      }
+
+      // common sub-sums of linear constraints become variables, not of the rows zero-sum detection
+      // took out; --proof encodes the rows as given
       if (LinearOverlapDetector.enabled() && options.proof() == null) {
-        new LinearOverlapDetector(support).detect(astTree);
+        new LinearOverlapDetector(support, zeroSumNodes).detect(astTree);
       }
 
       // the unary and binary cost functions the objective sums, for the cost network bound that

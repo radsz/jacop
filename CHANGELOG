@@ -5790,7 +5790,37 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
-334. In free search with lazy clause generation, the runs of the default
+334. Free search with lazy clause generation (-f) no longer decides only
+   0/1 variables before a first solution: once 2,000 conflicts pass
+   without a solution, its activity runs take turns at restarts with and
+   without the 0/1 variables first, until the first solution
+   (--free-config lcg-booleans-first=until-solution, the new default;
+   lcg-booleans-first-after sets the conflicts; on restores the old
+   order). On the XCSP 2024 traveling tournament with 24 to 40 teams,
+   Booleans first decided the whole home/away pattern before any
+   opponent and found no solution in 600 s; now the first one comes in
+   30 to 60 s. Adaptive LNS has a new kind LINES, which relaxes the
+   scopes of random all-different constraints (such as the rounds of a
+   round-robin schedule) with the variables that small constraints tie to
+   them alone.
+
+335. New constraint ArgMaxMonotone(x, f, first, index, offset): index is the
+   first position k of the largest f[k](x[k]), for nondecreasing functions
+   f[k] given as tables. It runs the ArgMax rules (Gange and Stuckey, CP
+   2020) through the functions, in the spirit of views (Schulte and Tack,
+   CP 2005), and under LCG explains with the bounds of the x[k]. The
+   FlatZinc front end posts it for an arg_max whose values are defined by
+   y = m * v + c and v = e[p] over a constant array: MiniZinc flattens
+   arg_max(t)(a[h, t] * e[p[t]]) with one variable per value, whose bounds
+   ArgMax explained, so learnt clauses about one arg_max did not apply to
+   another. On the 15 tower instances of the MiniZinc Challenge (2020,
+   2022, 2025), the only Challenge model with arg_max, -f at 600 s proves
+   10 instead of 9 (tower_070_070_15_070-08 in 250 s, unproved before;
+   learnt clauses 72 -> 38 literals) and 6 others about twice as fast.
+   -Dorg.jacop.fz.argMaxFunctions=false turns it off; it is off under
+   --proof.
+
+336. In free search with lazy clause generation, the runs of the default
    branching of a model without search annotation place the rectangles
    of its diffn constraints first, one at a time, bottom-left: the
    rectangle that can start first in the first dimension (ties to the one
@@ -5812,7 +5842,7 @@ Version 5.0 (unreleased)
    run lost Cargo-07's proof and Cargo-10's best solution. None of the 14
    wide-set models with diffn is affected: all have a search annotation.
 
-335. Symmetry breaking in the FlatZinc front end breaks the conditional
+337. Symmetry breaking in the FlatZinc front end breaks the conditional
    symmetry of interchangeable values in a sequence ordered by
    precedences (new class org.jacop.fz.ConditionalValueSwaps), as in the
    patience game Black Hole (I. P. Gent, C. Jefferson, T. Kelsey, I.
@@ -5845,7 +5875,7 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
-336. The -p portfolio can split one depth-first search over its threads by
+338. The -p portfolio can split one depth-first search over its threads by
    work stealing with recomputation (Schulte, "Parallel search made
    simple", TRICS 2000; Chu, Schulte and Stuckey, "Confidence-based work
    stealing in parallel constraint programming", CP 2009): a thread that
@@ -5863,6 +5893,37 @@ Version 5.0 (unreleased)
    so the linear relaxation keeps root reduced costs from the root and not
    from that cube. Statistics portfolioDfsSplitThreads, portfolioDfsSplits,
    portfolioDfsCubesClosed, portfolioDfsSplitWaitMillis.
+
+339. The FlatZinc front end rewrites a variable s defined by a sum
+   s = sum(i) a[i] * x[i] that is used otherwise only in half-reifications
+   b -> s = m or b -> s <= m, where m is the least value of the sum: each
+   becomes the clauses not b \/ x[i] = v[i], with v[i] the bound at which
+   the term is least, and the sum is no longer posted (an output s gets its
+   value from the terms when a solution is printed; under presolve the sum
+   stays, woken only when a term is fixed). This is the presolve rule that a
+   linear constraint at its minimum activity fixes every term at its
+   minimum (CP-SAT, OR-Tools cp_model_presolve.cc), under the enforcement
+   literal. XCSP3 translations write it as or(ne(x, v), eq(aux, 0)) with aux
+   the sum of the variables around x; in SameQueensKnights (XCSP 2024) the
+   2,450 to 11,250 sums of up to 300 terms took 80 % of the time. At 600 s
+   all 15 instances improve or stay: b-10 is proved optimal (490 s), and 8
+   instances reach values above the best of the 2024 competition (b-75 133
+   instead of 94, field best 86; b-70 125 instead of 110, field 115). It
+   fires on none of the 240 instances of the wide benchmark set.
+   -Dorg.jacop.fz.zeroSum=false turns it off; it is off under --proof.
+
+340. A root solve of the linear relaxation of an optimisation model in the
+   sparse simplex (the first solve, or the trial of the extra rows such as
+   value encodings) that stops at its pivot or work budget now goes on
+   within half of the time a large relaxation gets for its root solves
+   (org.jacop.lp.largeRootShare of the time limit). Such a solve gave no
+   bound and its rows were dropped. On Drinking-010000 of the XCSP 2024
+   competition (13,142 rows and 12,570 extra rows) the trial stopped at its
+   budget and the bound stayed 0; it now takes 0.8 s more and the bound is
+   1,000, the optimum, as Drinking-020000, a large relaxation, already had.
+   It fires on none of the optimisation instances of the wide benchmark
+   set. -Dorg.jacop.lp.rootExtendShare=0 turns it off; the statistic
+   lpRootExtendTime gives its time.
 
 Version 4.11
 =============

@@ -247,9 +247,12 @@ public class Options {
                 objective cost variables; 0 = off),
                 lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
                 more, default 5000),
-                lcg-booleans-first=on|off|turns (with --lcg: activity branching decides the 0/1
-                variables before the others (on, default), or all variables in one order of
-                activity (off); turns changes between the two at each restart),
+                lcg-booleans-first=on|off|turns|until-solution (with --lcg: activity branching
+                decides the 0/1 variables before the others (on), or all variables in one order
+                of activity (off); turns changes between the two at each restart, and
+                until-solution (default) does so only until the first solution, then is on,
+                and only once lcg-booleans-first-after=<conflicts> passed without a solution,
+                default 2000),
                 lcg-lp-branching=auto|on|off (with --lcg and a linear relaxation: decisions
                 from the relaxation's solution in the annotation's runs under -f, and at the start
                 of the activity runs of fixed-restarts; auto, the default, uses them when the
