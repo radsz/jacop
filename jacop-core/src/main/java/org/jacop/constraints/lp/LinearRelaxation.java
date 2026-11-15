@@ -36,6 +36,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -56,6 +57,7 @@ import org.jacop.constraints.cumulative.CumulativeBasic;
 import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -185,6 +187,12 @@ public class LinearRelaxation extends Constraint
 
   // the rows as given, and the sense of the objective, for copies
   private final List<LinearForm> forms = new ArrayList<>();
+
+  // the source of the given and further rows ({@link LpSources}), and of each cut row by its row
+  // (null for a row that is not a cut); the statistics by source, null unless they are kept
+  private Map<LinearForm, String> formSource = Map.of();
+  private String[] cutSource = new String[0];
+  private final LpSources sources = LpSources.on ? new LpSources() : null;
   private final boolean maximize;
 
   /** The most simplex pivots per propagation. */
@@ -1152,6 +1160,7 @@ public class LinearRelaxation extends Constraint
     List<EnergyCuts> resources = new ArrayList<>();
     List<AlldifferentCuts> hall = new ArrayList<>();
     List<TreeCuts> trees = new ArrayList<>();
+    Map<LinearForm, String> tags = new IdentityHashMap<>();
     for (Constraint c : constraints) {
       TreeCuts forest = TREE_CUTS && objective != null ? TreeCuts.of(c) : null;
       if (forest != null) {
@@ -1174,8 +1183,11 @@ public class LinearRelaxation extends Constraint
       LinearForm f = LinearForms.of(c);
       if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
         localForms.add(f);
+        tags.put(f, "row:" + c.getClass().getSimpleName());
       } else if (f == null && LINEARIZE) {
-        relaxed.addAll(Linearizations.of(c));
+        List<LinearForm> rows = Linearizations.of(c);
+        relaxed.addAll(rows);
+        tag(tags, rows, "lin:" + c.getClass().getSimpleName());
       }
     }
     // like the linearized rows, they are kept only when they help the root relaxation: the
@@ -1184,6 +1196,7 @@ public class LinearRelaxation extends Constraint
     for (LinearForm f : extra) {
       if (f != null) {
         relaxed.add(f);
+        tags.putIfAbsent(f, "given");
       }
     }
     int pairCliques = 0;
@@ -1194,9 +1207,12 @@ public class LinearRelaxation extends Constraint
       localForms = merged.rows;
       relaxed = merged.further;
       pairCliques = merged.cliques;
+      tag(tags, localForms, "clique");
+      tag(tags, relaxed, "clique");
     }
     if (!substituted.isEmpty()) {
       localForms = substitute(localForms, substituted, objective);
+      tag(tags, localForms, "substituted");
     }
     if (LINEARIZE) {
       List<LinearForm> encodings = new ArrayList<>(Linearizations.encodings(constraints));
@@ -1208,6 +1224,8 @@ public class LinearRelaxation extends Constraint
       }
       encodingSet.addAll(encodings);
       List<LinearForm> selected = Linearizations.selectedValueRows(constraints, extra);
+      tag(tags, encodings, "encoding");
+      tag(tags, selected, "valueConj");
       if (selected.isEmpty()) {
         relaxed.addAll(encodings);
       } else {
@@ -1234,6 +1252,10 @@ public class LinearRelaxation extends Constraint
             ? Linearizations.valueRows(constraints, extra, objective != null)
             : new Linearizations.ValueRows(List.of(), List.of());
     List<LinearForm> columnRows = valueRows.kept();
+    tag(tags, columnRows, "valueColumns");
+    tag(tags, valueRows.tried(), "valueTried");
+    tag(tags, valueRows.flow(), "flow");
+    tag(tags, tried, "tableCliques");
     List<LinearForm> candidates = new ArrayList<>();
     int exempt = 0;
     for (LinearForm f : columnRows) {
@@ -1266,6 +1288,7 @@ public class LinearRelaxation extends Constraint
                 .allMatch(v -> v.singleton() || v instanceof IntVar i && inTried.contains(i))) {
           List<LinearForm> rows = h.clauseRows();
           clauseRows.addAll(rows);
+          tag(tags, rows, "tableClause");
         }
       }
       // more rows than the trial takes in proportion: DC-midori r14, 76,036 rows over the tables
@@ -1280,7 +1303,9 @@ public class LinearRelaxation extends Constraint
     // the sorting networks of the all-different permutations are tried like the value encodings,
     // for an objective only, whose bound they raise
     if (LINEARIZE && objective != null) {
-      triedRows.addAll(Linearizations.alldifferentNetworks(constraints));
+      List<LinearForm> networks = Linearizations.alldifferentNetworks(constraints);
+      triedRows.addAll(networks);
+      tag(tags, networks, "alldiffNetwork");
     }
     // the candidates that keep their place ahead of the others when not all fit
     int first = exempt;
@@ -1394,11 +1419,20 @@ public class LinearRelaxation extends Constraint
     r.valueCliques = valueCliqueRows;
     r.pairCliques = pairCliques;
     r.tableClauses = tableClauses;
+    r.formSource = tags;
     r.capacity = separations;
     r.energy = resources;
     r.hall = hall;
     r.trees = trees;
     return r.rows() + r.extraColumns.length < 2 ? null : r;
+  }
+
+  // the source of each of the forms that has none yet
+  private static void tag(
+      Map<LinearForm, String> tags, Collection<LinearForm> forms, String source) {
+    for (LinearForm f : forms) {
+      tags.putIfAbsent(f, source);
+    }
   }
 
   /**
@@ -2699,7 +2733,9 @@ public class LinearRelaxation extends Constraint
         && !restarting
         && ++mirWaited >= mirPeriod) {
       mirWaited = 0;
+      long t0 = System.nanoTime();
       status = searchMirCuts(limit);
+      timed("s-mir", t0);
     }
     if (status == LpSolver.OPTIMAL
         && CAPACITY_SEARCH
@@ -2709,7 +2745,9 @@ public class LinearRelaxation extends Constraint
         && !restarting
         && ++capacityWaited >= capacityPeriod) {
       capacityWaited = 0;
+      long t0 = System.nanoTime();
       status = searchCapacityCuts(limit);
+      timed("s-capacity", t0);
     }
     if (status == LpSolver.OPTIMAL
         && alldiffSearch
@@ -2719,7 +2757,9 @@ public class LinearRelaxation extends Constraint
         && !restarting
         && ++hallWaited >= hallPeriod) {
       hallWaited = 0;
+      long t0 = System.nanoTime();
       status = searchHallCuts(limit);
+      timed("s-hall", t0);
     }
     if (status == LpSolver.OPTIMAL
         && energySearch
@@ -2729,7 +2769,12 @@ public class LinearRelaxation extends Constraint
         && !restarting
         && ++energyWaited >= energyPeriod) {
       energyWaited = 0;
+      long t0 = System.nanoTime();
       status = searchEnergyCuts(limit);
+      timed("s-energy", t0);
+    }
+    if (sources != null) {
+      countRowSolves(status);
     }
     lastSolveLevel = store.level;
     lastSolveStatus = status;
@@ -2847,8 +2892,10 @@ public class LinearRelaxation extends Constraint
         }
         if (fits || s == SCALES.length - 1) {
           for (int k = 0; k < localForms.length; k++) {
-            if (localForms[k] != null) {
+            if (localForms[k] != null && sources == null) {
               propagate(store, localForms[k], facts[k], certified(localForms[k], used[k], k == 0));
+            } else if (localForms[k] != null) {
+              countedPropagate(store, localForms[k], facts[k], used[k], k == 0);
             }
           }
           if (status != LpSolver.INFEASIBLE) {
@@ -2865,6 +2912,115 @@ public class LinearRelaxation extends Constraint
         anytimeFailures += failures - anytimeFailuresBefore;
         anytimePruningsBefore = -1;
       }
+    }
+  }
+
+  // adds the time since start to the separation time of the source
+  private void timed(String source, long start) {
+    if (sources != null) {
+      sources.of(source).nanos += System.nanoTime() - start;
+    }
+  }
+
+  // the rows of each source in the simplex count one solve each; after the first solve (and its
+  // cut rounds) the rows in the simplex are counted, and each source is left out once to see what
+  // the root bound loses without it
+  private void countRowSolves(int status) {
+    int m = Math.min(lpRow.length, lp.rows());
+    for (int k = 0; k < m; k++) {
+      sources.of(source(lpRow[k])).rowSolves++;
+    }
+    if (calls != 1 || restarting || status != LpSolver.OPTIMAL || objective == null) {
+      return;
+    }
+    Map<String, List<Integer>> bySource = new java.util.TreeMap<>();
+    for (int k = 0; k < m; k++) {
+      String src = source(lpRow[k]);
+      sources.of(src).rootRows++;
+      bySource.computeIfAbsent(src, q -> new ArrayList<>()).add(lpRow[k]);
+    }
+    double full = lp.value(0);
+    for (Map.Entry<String, List<Integer>> e : bySource.entrySet()) {
+      List<Integer> others = new ArrayList<>();
+      for (int k = 0; k < m; k++) {
+        if (!e.getValue().contains(lpRow[k])) {
+          others.add(lpRow[k]);
+        }
+      }
+      LpSolver without = subsetSolver(others, lp.columns());
+      for (int j = 0; j < lp.columns(); j++) {
+        setBounds(without, j);
+      }
+      int st = rootSolve(without, rootPivots, rootWork());
+      LpSources.Stat stat = sources.of(e.getKey());
+      if (st == LpSolver.OPTIMAL) {
+        double v = without.value(0);
+        stat.rootLoss = maximize ? v - full : full - v;
+        stat.rootIntLoss = Math.abs((long) integerBound(full) - (long) integerBound(v));
+      } else {
+        stat.rootLoss = st == LpSolver.INFEASIBLE ? Double.NaN : Double.POSITIVE_INFINITY;
+      }
+    }
+  }
+
+  // a simplex over the given rows of the pool and the first n columns, without column bounds
+  private LpSolver subsetSolver(List<Integer> rows, int n) {
+    int m = rows.size();
+    double[] lo = new double[m];
+    double[] hi = new double[m];
+    int[][] cs = new int[m][];
+    double[][] ws = new double[m][];
+    for (int q = 0; q < m; q++) {
+      int i = rows.get(q);
+      lo[q] = hasLo[i] ? (double) rowLo[i] : Double.NEGATIVE_INFINITY;
+      hi[q] = hasHi[i] ? (double) rowHi[i] : Double.POSITIVE_INFINITY;
+      cs[q] = rowColumns[i];
+      ws[q] = new double[rowWeights[i].length];
+      for (int t = 0; t < ws[q].length; t++) {
+        ws[q][t] = (double) rowWeights[i][t];
+      }
+    }
+    double[] cost = new double[n];
+    if (objective != null) {
+      cost[0] = maximize ? -1 : 1;
+    }
+    return sparse(cs, ws, lo, hi, cost);
+  }
+
+  // propagate() of a form of the combination by lambda, which counts for the source of each row
+  // with a multiplier when it prunes or fails
+  private void countedPropagate(
+      Store store, LinearForm f, int[] facts, long[] lambda, boolean upper) {
+    long before = prunings;
+    try {
+      propagate(store, f, facts, certified(f, lambda, upper));
+    } catch (FailException e) {
+      credit(lambda, true);
+      throw e;
+    }
+    if (prunings > before) {
+      credit(lambda, false);
+    }
+  }
+
+  private void credit(long[] lambda, boolean failure) {
+    Map<String, Double> mass = new HashMap<>();
+    double total = 0;
+    for (int i = 0; i < lambda.length; i++) {
+      if (lambda[i] != 0) {
+        double a = Math.abs((double) lambda[i]);
+        mass.merge(source(i), a, Double::sum);
+        total += a;
+      }
+    }
+    for (Map.Entry<String, Double> e : mass.entrySet()) {
+      LpSources.Stat st = sources.of(e.getKey());
+      if (failure) {
+        st.failUses++;
+      } else {
+        st.uses++;
+      }
+      st.share += e.getValue() / total;
     }
   }
 
@@ -3271,6 +3427,9 @@ public class LinearRelaxation extends Constraint
       hi[q] = hasHi[i] ? rowHi[i] : Double.POSITIVE_INFINITY;
       lpRow[l + q] = i;
       inLp[i] = true;
+      if (sources != null) {
+        sources.of(source(i)).returns++;
+      }
       if (simplex != Simplex.LAZY) {
         if (i >= returns.length) {
           returns = Arrays.copyOf(returns, Math.max(i + 1, 2 * returns.length));
@@ -3316,6 +3475,9 @@ public class LinearRelaxation extends Constraint
     for (int k = baseCount; k < lpRow.length; k++) {
       if (inactive[k] >= ageOf(lpRow[k], age)) {
         gone[old++] = k;
+        if (sources != null) {
+          sources.of(source(lpRow[k])).agedOut++;
+        }
       }
     }
     int[] kept = lp.removeRows(gone);
@@ -3577,19 +3739,25 @@ public class LinearRelaxation extends Constraint
       }
       // the capacity, energy and Hall cuts are made once, at the first solve
       if (!capacity.isEmpty() || !energy.isEmpty()) {
+        long t0 = System.nanoTime();
         int status = capacityRounds();
+        timed("capacity", t0);
         if (status != DualSimplex.OPTIMAL) {
           return status;
         }
       }
       if (!hall.isEmpty()) {
+        long t0 = System.nanoTime();
         int status = hallRounds();
+        timed("hall", t0);
         if (status != DualSimplex.OPTIMAL) {
           return status;
         }
       }
       if (!trees.isEmpty()) {
+        long t0 = System.nanoTime();
         int status = treeRounds();
+        timed("tree", t0);
         if (status != DualSimplex.OPTIMAL) {
           return status;
         }
@@ -3612,6 +3780,7 @@ public class LinearRelaxation extends Constraint
     }
     int status = DualSimplex.OPTIMAL;
     long cutsBefore = cuts;
+    long mirStart = System.nanoTime();
     boolean moved = !restarting && moveToSparse();
     boolean slack = slackGomory;
     double start = lp.value(0);
@@ -3675,6 +3844,7 @@ public class LinearRelaxation extends Constraint
       }
     }
     slackGomory = slack;
+    timed("mir", mirStart);
     if (moved
         && status == DualSimplex.OPTIMAL
         && (cuts == cutsBefore
@@ -3984,6 +4154,7 @@ public class LinearRelaxation extends Constraint
         for (int k = 0; k < energy.size(); k++) {
           found.addAll(energy.get(k).separate(energyColumns[k], value, lo, hi, CUTS_PER_ROUND));
         }
+        labelled(found, 0, "energy");
         found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
         for (MirCut row : found) {
           long m = (long) lp.rows() + chosen.size() + 1;
@@ -4124,6 +4295,7 @@ public class LinearRelaxation extends Constraint
                 for (TreeCuts.Cut cut : t.separate(value, CUTS_PER_ROUND)) {
                   MirCut row = row(cut, t, columns[c]);
                   if (row != null) {
+                    row.source = "tree";
                     found.add(row);
                   }
                 }
@@ -4270,7 +4442,9 @@ public class LinearRelaxation extends Constraint
         value[a] = column[a] < 0 ? Double.NaN : lp.value(column[a]);
       }
       for (AlldifferentCuts.Cut cut : hall.get(c).separate(value, limit)) {
-        found.add(row(cut, column));
+        MirCut row = row(cut, column);
+        row.source = "hall";
+        found.add(row);
       }
     }
     return found;
@@ -4367,6 +4541,7 @@ public class LinearRelaxation extends Constraint
       found.addAll(
           energy.get(k).separate(energyColumns[k], value, energyLo, energyHi, CUTS_PER_ROUND));
     }
+    labelled(found, 0, "energy");
     found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
     List<MirCut> chosen = new ArrayList<>();
     for (MirCut row : found) {
@@ -4426,6 +4601,9 @@ public class LinearRelaxation extends Constraint
       }
       for (CapacityCuts.Cut cut : cc.separate(value, limit, root || COMB_SEARCH)) {
         MirCut row = row(cut, column);
+        if (row != null) {
+          row.source = "capacity";
+        }
         long m = (long) lp.rows() + chosen.size() + 1;
         if (chosen.size() >= limit || simplex == Simplex.DENSE && m * (m + n) > MAX_TABLEAU) {
           break;
@@ -4563,6 +4741,7 @@ public class LinearRelaxation extends Constraint
     }
     sources.sort(Comparator.comparingDouble(j -> Math.abs(value[j] - Math.floor(value[j]) - 0.5)));
     for (int j : sources.subList(0, Math.min(MAX_SOURCES, sources.size()))) {
+      int foundBefore = found.size();
       double[] y = byRow(lp.inverseRow(lp.basicRow(j)));
       long[] lambda = scaled(y, gomoryScale);
       if (lambda != null) {
@@ -4577,6 +4756,7 @@ public class LinearRelaxation extends Constraint
         }
         mir(g, value, lo, hi, found);
       }
+      labelled(found, foundBefore, "gomory");
     }
     Set<MirCut> dual = Collections.newSetFromMap(new IdentityHashMap<>());
     if (dualAggregateOn) {
@@ -4586,11 +4766,15 @@ public class LinearRelaxation extends Constraint
     }
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
     if (zeroHalfOn) {
+      int foundBefore = found.size();
       zeroHalf(value, lo, hi, found, zeroHalf);
+      labelled(found, foundBefore, "zerohalf");
     }
+    int unitBefore = found.size();
     for (Aggregate row : unitRows) {
       mir(row, value, lo, hi, found);
     }
+    labelled(found, unitBefore, "mir");
     if (maxWeight < Long.MAX_VALUE) {
       List<MirCut> small = new ArrayList<>(found.size());
       for (MirCut c : found) {
@@ -4632,6 +4816,13 @@ public class LinearRelaxation extends Constraint
       }
     }
     return chosen;
+  }
+
+  // names the source of the cuts of found from index from on
+  private static void labelled(List<MirCut> found, int from, String source) {
+    for (int k = from; k < found.size(); k++) {
+      found.get(k).source = source;
+    }
   }
 
   /**
@@ -5202,9 +5393,43 @@ public class LinearRelaxation extends Constraint
     }
   }
 
+  // the source of row i of the pool: its cut separator, or the source of its given or further form
+  private String source(int i) {
+    if (i < cutSource.length && cutSource[i] != null) {
+      return cutSource[i];
+    }
+    LinearForm f;
+    if (i < forms.size()) {
+      f = forms.get(i);
+    } else {
+      List<LinearForm> further = keptExtraForms.isEmpty() ? extraForms : keptExtraForms;
+      int q = i - forms.size();
+      f = q < further.size() ? further.get(q) : null;
+      if (f == null) {
+        return "further";
+      }
+    }
+    String s = formSource.get(f);
+    if (s != null) {
+      return s;
+    }
+    return i < forms.size() ? "row" : "further";
+  }
+
+  /**
+   * The statistics of the rows by their source, one line per source (see {@link LpSources}), or
+   * null unless {@code -Dorg.jacop.lp.sourceStats=true}.
+   *
+   * @return the lines, or null
+   */
+  public String sourceReport() {
+    return sources == null ? null : sources.report();
+  }
+
   // keeps the first m rows
   private void truncateRows(int m) {
     returns = Arrays.copyOf(returns, Math.min(returns.length, m));
+    cutSource = Arrays.copyOf(cutSource, Math.min(cutSource.length, m));
     rowColumns = Arrays.copyOf(rowColumns, m);
     rowWeights = Arrays.copyOf(rowWeights, m);
     rowLo = Arrays.copyOf(rowLo, m);
@@ -5282,6 +5507,14 @@ public class LinearRelaxation extends Constraint
     }
     lp.addRows(cs, ws, lo, hi);
     cuts += k;
+    cutSource = Arrays.copyOf(cutSource, m + k);
+    for (int q = 0; q < k; q++) {
+      String source = chosen.get(q).source;
+      cutSource[m + q] = (calls > 1 && !restarting ? "s-" : "") + (source == null ? "cut" : source);
+      if (sources != null) {
+        sources.of(cutSource[m + q]).rows++;
+      }
+    }
   }
 
   // bounds propagation of sum w x <= c, exact; nothing on overflow

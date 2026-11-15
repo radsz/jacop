@@ -85,6 +85,9 @@ final class MirCut {
   /** The Euclidean norm of the weights. */
   final double norm;
 
+  /** The separator the cut came from (see {@link LpSources}), or null. */
+  String source;
+
   private MirCut(int[] columns, long[] weights, long rhs, double efficacy, double norm) {
     this.columns = columns;
     this.weights = weights;
@@ -448,7 +451,11 @@ final class MirCut {
     try {
       long[] w = c.weights.clone();
       long rhs = reduce(c.columns, w, c.rhs, divisor, (double) largest / MAX_RATIO, value, lo, hi);
-      return finishCut(c.columns, w, rhs, value, lo, hi, false, 1);
+      MirCut d = finishCut(c.columns, w, rhs, value, lo, hi, false, 1);
+      if (d != null) {
+        d.source = c.source;
+      }
+      return d;
     } catch (ArithmeticException _) {
       return null;
     }

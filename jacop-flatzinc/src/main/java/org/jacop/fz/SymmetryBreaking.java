@@ -154,6 +154,28 @@ final class SymmetryBreaking implements ParserTreeConstants {
   /** The n-ary union that a chain of binary unions stands for: {@code s = union(xs)}. */
   static final String UNION_N = "jacop_symmetry_union";
 
+  /**
+   * Whether value symmetries are also looked for among the index variables of element constraints,
+   * whose values select array positions, when the plain value spaces give none
+   * (org.jacop.fz.symmetryIndexValues, default true).
+   */
+  static final boolean INDEX_VALUES =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetryIndexValues"));
+
+  /**
+   * An element constraint {@code y = xs[i]} read with its index as a value: {@code (i, xs, y,
+   * first)}, with {@code first} the index of the first element of {@code xs}.
+   */
+  static final String INDEX_ELEMENT = "jacop_symmetry_index_element";
+
+  private static final String[] SHIFTED_ELEMENTS = {
+    "array_int_element", "array_var_int_element", "array_bool_element", "array_var_bool_element"
+  };
+
+  private static final String[] NONSHIFTED_ELEMENTS = {
+    "jacop_array_var_int_element_nonshifted", "jacop_array_var_bool_element_nonshifted"
+  };
+
   /** Graphs with more vertices are not searched. */
   static final int MAX_VERTICES = 2_000_000;
 
@@ -423,6 +445,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     VALUE_SPECS.put("jacop_gcc", new ValueSpec(new int[] {0}, 1, 2));
     VALUE_SPECS.put("jacop_bin_packing", new ValueSpec(new int[] {0}, 1, 3));
     VALUE_SPECS.put("jacop_bin_packing_capacity", new ValueSpec(new int[] {0}, 1, 3));
+    // the index selects the element of its value, wherever the value goes; the elements and the
+    // result are numbers
+    VALUE_SPECS.put(INDEX_ELEMENT, new ValueSpec(new int[] {0}, 1, 3));
   }
 
   /** Value spaces with more values are not searched for value symmetries. */
@@ -675,6 +700,25 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
 
     ValueOutcome values = breakValueSymmetries(items, goal, minimize, ranked, maxNanos / 2);
+    if (values.posted() == 0 && INDEX_VALUES) {
+      List<Item> indexItems = indexElements(items);
+      if (indexItems != items && indexSpace(indexItems, goal, ranked)) {
+        // half of the time left at most, building the graph included, so that the variable
+        // symmetries keep the other half
+        long whole = deadline;
+        long half = Math.max(0, whole - clock.getAsLong()) / 2;
+        deadline = clock.getAsLong() + half;
+        ValueOutcome indexValues;
+        try {
+          indexValues = breakValueSymmetries(indexItems, goal, minimize, ranked, half);
+        } finally {
+          deadline = whole;
+        }
+        if (indexValues.posted() > 0) {
+          values = indexValues;
+        }
+      }
+    }
     if (values.posted() == 0 && ENCODED && !(free && minimize && largestLoad(items, goal))) {
       Set<IntVar> annotated = Collections.newSetFromMap(new IdentityHashMap<>());
       for (Var v : order) {
@@ -1944,6 +1988,61 @@ final class SymmetryBreaking implements ParserTreeConstants {
       spaces.put(x, spaceOfRoot.computeIfAbsent(root, r -> spaceOfRoot.size()));
     }
     return spaces;
+  }
+
+  /**
+   * Whether the index of some element is in a value space of the second reading; building its graph
+   * takes time from the variable symmetries, so it is built only then.
+   */
+  private static boolean indexSpace(List<Item> items, IntVar objective, List<IntVar> ranked) {
+    Map<IntVar, Integer> spaceOf = valueSpaces(items, objective, ranked, new ArrayList<>());
+    for (Item item : items) {
+      if (item.name().equals(INDEX_ELEMENT) && spaceOf.containsKey(item.args()[0][0].aVar())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The items with every element constraint whose index is a variable read as {@link
+   * #INDEX_ELEMENT}, or the items themselves if there is none. An element constraint {@code y =
+   * xs[i]} holds for an assignment exactly when it holds after a permutation of the values of
+   * {@code i} is applied to {@code i} and to the positions of {@code xs}, so the index variables
+   * can make a value space whose values move the elements of the arrays with them: the haplotypes
+   * of a haplotype inference model, chosen by index for each genotype, can be renamed in any order
+   * when the rows of the haplotype matrix are renamed with them. The value of the index is then not
+   * a number, so this is a second reading of the model, tried when the first gives no value
+   * symmetry.
+   */
+  private List<Item> indexElements(List<Item> items) {
+    List<Item> out = new ArrayList<>(items.size());
+    boolean any = false;
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      boolean shifted = Arrays.asList(SHIFTED_ELEMENTS).contains(item.name()) && args.length == 3;
+      boolean nonshifted =
+          Arrays.asList(NONSHIFTED_ELEMENTS).contains(item.name())
+              && args.length == 4
+              && args[3].length == 1
+              && args[3][0].isInt();
+      if ((!shifted && !nonshifted)
+          || args[0].length != 1
+          || args[0][0].aVar() == null
+          || !item.array()[1]
+          || item.array()[2]) {
+        out.add(item);
+        continue;
+      }
+      any = true;
+      Atom[] first = nonshifted ? args[3] : new Atom[] {intConstant(1)};
+      out.add(
+          new Item(
+              INDEX_ELEMENT,
+              new Atom[][] {args[0], args[1], args[2], first},
+              new boolean[] {false, true, false, false}));
+    }
+    return any ? out : items;
   }
 
   /**
