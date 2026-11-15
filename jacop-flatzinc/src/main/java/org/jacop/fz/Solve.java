@@ -145,6 +145,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.ls.ScheduleResources;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -4031,16 +4032,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     fs.mainBranchingFirst(true);
   }
 
+  // the share of the time left for the scheduling search that runs without ls
+  private static final double AUTO_LS_SHARE = 0.5;
+
   /**
    * Runs local search when --free-config ls gives it a share of the time left (ls-max caps it in
-   * milliseconds). Solutions of optimisation, and of satisfaction when asked, are printed as they
-   * are found.
+   * milliseconds), or the scheduling search alone on a disjunctive scheduling model without ls.
+   * Solutions of optimisation, and of satisfaction when asked, are printed as they are found.
    *
    * @return the local search when it found a solution, otherwise null
    */
   private LocalSearch runLocalSearch(
       Var costVar, DefaultSearchVars searchVars, Portfolio.Worker worker, boolean printSatisfied) {
-    double share = Double.parseDouble(options.freeConfig("ls", "0"));
+    String given = options.freeConfig("ls", null);
+    // without ls, a disjunctive scheduling model whose cost is the makespan still gets the
+    // critical-path tabu search alone (ls-auto=0 turns that off); not in portfolio workers
+    boolean auto =
+        given == null
+            && worker == null
+            && costVar instanceof IntVar
+            && !"0".equals(options.freeConfig("ls-auto", "1"));
+    // the task starts are decision variables: only their constraints are looked at
+    if (auto && !ScheduleResources.hasResource(searchVars.getIntVars())) {
+      return null;
+    }
+    double share = auto ? AUTO_LS_SHARE : Double.parseDouble(given == null ? "0" : given);
     if (share <= 0 || (costVar != null && !(costVar instanceof IntVar))) {
       return null;
     }
@@ -4058,7 +4074,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .order(order.toArray(new IntVar[0]))
             .defined(dictionary.definedVariables)
             .timeLimit(Duration.ofMillis(budget))
-            .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
+            .patience(
+                Duration.ofMillis(
+                    Long.parseLong(options.freeConfig("ls-patience", auto ? "5000" : "1000"))))
+            .scheduleOnly(auto)
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
             .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))
