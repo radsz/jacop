@@ -149,7 +149,7 @@ public class AlldifferentDetector implements ParserTreeConstants {
 
   private final List<Difference> differences = new ArrayList<>();
 
-  // int_abs(t, d) with t a difference: {t, d}
+  // the argument and the result of each absolute value constraint, as pairs
   private final List<IntVar[]> absolutes = new ArrayList<>();
 
   /** Statistics: the values removed from differences of variables that are different. */
@@ -317,49 +317,52 @@ public class AlldifferentDetector implements ParserTreeConstants {
   private void pruneDifferences() {
     Set<IntVar> pruned = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Difference f : differences) {
-      Integer i = id.get(f.x());
-      Integer j = id.get(f.y());
-      if (i == null || j == null) {
-        continue;
-      }
-      Set<Integer> ds = adjacency.get(i).get(j);
-      if (ds == null) {
-        continue;
-      }
-      for (int d : ds) {
-        long rest = f.c() - f.a() * d;
-        if (rest % f.b() != 0) {
-          continue;
-        }
-        long v = rest / f.b();
-        IntVar t = f.t();
-        if (!t.singleton() && v >= t.min() && v <= t.max() && t.domain.contains((int) v)) {
-          t.domain.inComplement(support.store.level, t, (int) v);
-          pruned.add(t);
-          differenceValues++;
-        }
+      for (int d : disequalities(f.x(), f.y())) {
+        prune(f, d, pruned);
       }
     }
     differences.clear();
-    if (pruned.isEmpty()) {
-      absolutes.clear();
-      return;
-    }
     // abs(t) = d starts at the smallest absolute value left in t, which bounds consistency of
     // AbsXeqY does not give when t has values on both sides of 0
     for (IntVar[] abs : absolutes) {
-      IntVar t = abs[0];
-      IntVar d = abs[1];
-      if (!pruned.contains(t) || t.domain.contains(0) || t.min() > 0 || t.max() < 0) {
-        continue;
-      }
-      int smallest = Math.min(t.domain.nextValue(0), -t.domain.previousValue(0));
-      if (d.min() < smallest && smallest <= d.max()) {
-        d.domain.inMin(support.store.level, d, smallest);
-        differenceValues++;
+      if (pruned.contains(abs[0])) {
+        raiseAbsolute(abs[0], abs[1]);
       }
     }
     absolutes.clear();
+  }
+
+  // every d with x - y != d
+  private Set<Integer> disequalities(IntVar x, IntVar y) {
+    Integer i = id.get(x);
+    Integer j = id.get(y);
+    Set<Integer> ds = i == null || j == null ? null : adjacency.get(i).get(j);
+    return ds == null ? Collections.emptySet() : ds;
+  }
+
+  // x - y != d: t != (c - a * d) / b when that is an integer
+  private void prune(Difference f, int d, Set<IntVar> pruned) {
+    long rest = f.c() - f.a() * d;
+    IntVar t = f.t();
+    if (rest % f.b() == 0 && !t.singleton()) {
+      long v = rest / f.b();
+      if (v >= t.min() && v <= t.max() && t.domain.contains((int) v)) {
+        t.domain.inComplement(support.store.level, t, (int) v);
+        pruned.add(t);
+        differenceValues++;
+      }
+    }
+  }
+
+  private void raiseAbsolute(IntVar t, IntVar d) {
+    if (t.domain.contains(0) || t.min() > 0 || t.max() < 0) {
+      return;
+    }
+    int smallest = Math.min(t.domain.nextValue(0), -t.domain.previousValue(0));
+    if (d.min() < smallest && smallest <= d.max()) {
+      d.domain.inMin(support.store.level, d, smallest);
+      differenceValues++;
+    }
   }
 
   private void element(ASTConstElem node, int base) {
