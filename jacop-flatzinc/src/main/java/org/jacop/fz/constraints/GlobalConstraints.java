@@ -164,6 +164,7 @@ import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
+import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.prob.constraints.ChanceSum;
 import org.jacop.prob.constraints.ChanceTable;
 import org.jacop.prob.constraints.ProbMdd;
@@ -2292,10 +2293,33 @@ class GlobalConstraints implements ParserTreeConstants {
   static final boolean BINARY_BIT_TABLE =
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.binaryBitTable", "true"));
 
+  // whether at most one tuple valid in the domains has each value of x[0], or each of x[1]
+  private static boolean functionOfOneColumn(IntVar[] x, int[][] t) {
+    Set<Integer> first = new HashSet<>();
+    Set<Integer> second = new HashSet<>();
+    boolean firstUnique = true;
+    boolean secondUnique = true;
+    for (int[] row : t) {
+      if (x[0].domain.contains(row[0]) && x[1].domain.contains(row[1])) {
+        firstUnique &= first.add(row[0]);
+        secondUnique &= second.add(row[1]);
+      }
+    }
+    return firstUnique || secondUnique;
+  }
+
   private void poseTableBySizePlain(IntVar[] v, int[][] t) {
     // a table of two variables over at most 4096 values each: AC3-bit with residues, about three
     // times as many nodes a second as the compact table on Subisomorphism (XCSP 2024)
-    if (v.length == 2 && BINARY_BIT_TABLE && BinaryBitTable.fits(v[0], v[1])) {
+    // under LCG a table that becomes clauses of its compressed form stays a HybridTable: the
+    // clauses explain themselves, and black-hole searched 2x slower with BinaryBitTable; a
+    // function of one column stays a BinaryBitTable (code-generator 1.7x slower as clauses)
+    if (v.length == 2
+        && BINARY_BIT_TABLE
+        && BinaryBitTable.fits(v[0], v[1])
+        && !(support.options.lcg()
+            && !functionOfOneColumn(v, t)
+            && LcgSolver.compressedTableClauses(v, t))) {
       support.pose(new BinaryBitTable(v[0], v[1], t));
       return;
     }
