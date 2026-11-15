@@ -3643,10 +3643,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the probes of dichotomic bound search (lcg-bisect), when it ran
   private static String bisectStatistics(LcgSolver lcg) {
-    if (lcg.bisectProbes == 0) {
+    if (lcg.bisectProbes == 0 && !lcg.uncoredBisection()) {
       return "";
     }
-    return "\n%%%mzn-stat: lcgBisectProbes="
+    return "\n%%%mzn-stat: lcgBisectUncored="
+        + lcg.uncoredBisection()
+        + "\n%%%mzn-stat: lcgBisectProbes="
         + lcg.bisectProbes
         + "\n%%%mzn-stat: lcgBisectRaised="
         + lcg.bisectRaised
