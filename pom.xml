@@ -284,6 +284,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -517,6 +518,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -751,6 +753,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -985,6 +988,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -1546,6 +1550,7 @@ setup to run configuration. -->
                         <include>**/FreeSearchTest.java</include>
                         <include>**/AdaptiveLnsTest.java</include>
                         <include>**/SuccessorRoutesTest.java</include>
+                        <include>**/RectanglePlacementSelectTest.java</include>
                         <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>

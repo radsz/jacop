@@ -5806,7 +5806,29 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.argMaxFunctions=false turns it off; it is off under
    --proof.
 
-335. Symmetry breaking in the FlatZinc front end breaks the conditional
+335. In free search with lazy clause generation, the runs of the default
+   branching of a model without search annotation place the rectangles
+   of its diffn constraints first, one at a time, bottom-left: the
+   rectangle that can start first in the first dimension (ties to the one
+   that can start first in the second) gets its origins and lengths set
+   to their smallest values, then the next (the bottom-left rule of
+   B. S. Baker, E. G. Coffman and R. L. Rivest, "Orthogonal packings in
+   two dimensions", SIAM Journal on Computing 9(4), 1980; one rectangle
+   at a time as in H. Simonis and B. O'Sullivan, "Search strategies for
+   rectangle packing", CP 2008). Set times on the cumulative starts
+   follows, as before. The rectangles are placed until the first
+   solution (--free-config rect-placement=first, the default; always in
+   every such run, off never). On the coal stockyard of XCSP 2024 Cargo,
+   where stockpiles are rectangles of days by pad positions with a
+   variable stay, set times alone found no solution of Cargo-16 and 20 in
+   600 s and one of Cargo-19 at 220 s; with the placement, 132,939,
+   114,274 and 112,584 at 600 s, below the best of the 2024 competition
+   (248,754, 295,975 and 256,274 in 1800 s), and Cargo-12 24,404 instead
+   of 27,966; the other 12 Cargo instances end the same. Placing in every
+   run lost Cargo-07's proof and Cargo-10's best solution. None of the 14
+   wide-set models with diffn is affected: all have a search annotation.
+
+336. Symmetry breaking in the FlatZinc front end breaks the conditional
    symmetry of interchangeable values in a sequence ordered by
    precedences (new class org.jacop.fz.ConditionalValueSwaps), as in the
    patience game Black Hole (I. P. Gent, C. Jefferson, T. Kelsey, I.
