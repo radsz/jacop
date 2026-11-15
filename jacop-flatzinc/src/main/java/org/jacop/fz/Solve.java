@@ -84,6 +84,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.floats.constraints.FloatNewton;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
@@ -116,6 +117,7 @@ import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
 import org.jacop.search.ComparatorVariable;
+import org.jacop.search.ConsistencyListener;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
@@ -6038,32 +6040,39 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * "10" (all variables at every node) and optimisation problems none, and "off" turns it off.
    */
   private void attachFloatCid(DepthFirstSearch<T> label, Var[] vars) {
-    String spec = System.getProperty("org.jacop.floats.cid");
-    if (spec == null || spec.isBlank()) {
-      if (solveKind != 0) {
-        return;
-      }
-      spec = "10";
-    }
-    if ("off".equals(spec.trim())) {
-      return;
-    }
     FloatVar[] floats =
         Arrays.stream(vars).filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
     if (floats.length == 0) {
       return;
     }
-    String[] p = spec.split(",");
-    FloatCid cid =
-        new FloatCid(
-            store,
-            floats,
-            Integer.parseInt(p[0].trim()),
-            p.length > 1 ? Integer.parseInt(p[1].trim()) : floats.length);
-    if (label.getConsistencyListener() != null) {
-      cid.setChildrenListeners(label.getConsistencyListener());
+    String spec = System.getProperty("org.jacop.floats.cid");
+    if (spec == null || spec.isBlank()) {
+      spec = solveKind == 0 ? "10" : "off";
     }
-    label.setConsistencyListener(cid);
+    if (!"off".equals(spec.trim())) {
+      String[] p = spec.split(",");
+      FloatCid cid =
+          new FloatCid(
+              store,
+              floats,
+              Integer.parseInt(p[0].trim()),
+              p.length > 1 ? Integer.parseInt(p[1].trim()) : floats.length);
+      chainListener(label, cid);
+    }
+    if (Boolean.parseBoolean(System.getProperty("org.jacop.floats.newton", "false"))) {
+      FloatNewton newton = new FloatNewton(store, floats);
+      if (newton.isSquare()) {
+        chainListener(label, newton);
+      }
+    }
+  }
+
+  /** Makes the listener the first consistency listener of the search, ahead of the existing one. */
+  private void chainListener(DepthFirstSearch<T> label, ConsistencyListener listener) {
+    if (label.getConsistencyListener() != null) {
+      listener.setChildrenListeners(label.getConsistencyListener());
+    }
+    label.setConsistencyListener(listener);
   }
 
   @SuppressWarnings("unchecked")
