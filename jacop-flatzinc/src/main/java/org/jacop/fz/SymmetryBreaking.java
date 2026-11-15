@@ -702,9 +702,17 @@ final class SymmetryBreaking implements ParserTreeConstants {
     ValueOutcome values = breakValueSymmetries(items, goal, minimize, ranked, maxNanos / 2);
     if (values.posted() == 0 && INDEX_VALUES) {
       List<Item> indexItems = indexElements(items);
-      if (indexItems != items) {
-        ValueOutcome indexValues =
-            breakValueSymmetries(indexItems, goal, minimize, ranked, maxNanos / 4);
+      if (indexItems != items && indexSpace(indexItems, goal, ranked)) {
+        // a quarter of the time at most, building the graph included, so that the variable
+        // symmetries keep theirs
+        long whole = deadline;
+        deadline = Math.min(whole, clock.getAsLong() + maxNanos / 4);
+        ValueOutcome indexValues;
+        try {
+          indexValues = breakValueSymmetries(indexItems, goal, minimize, ranked, maxNanos / 4);
+        } finally {
+          deadline = whole;
+        }
         if (indexValues.posted() > 0) {
           values = indexValues;
         }
@@ -1979,6 +1987,20 @@ final class SymmetryBreaking implements ParserTreeConstants {
       spaces.put(x, spaceOfRoot.computeIfAbsent(root, r -> spaceOfRoot.size()));
     }
     return spaces;
+  }
+
+  /**
+   * Whether the index of some element is in a value space of the second reading; building its graph
+   * takes time from the variable symmetries, so it is built only then.
+   */
+  private static boolean indexSpace(List<Item> items, IntVar objective, List<IntVar> ranked) {
+    Map<IntVar, Integer> spaceOf = valueSpaces(items, objective, ranked, new ArrayList<>());
+    for (Item item : items) {
+      if (item.name().equals(INDEX_ELEMENT) && spaceOf.containsKey(item.args()[0][0].aVar())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
