@@ -1,0 +1,6 @@
+% RUNS ON flatzinc
+% RUNS ON fzn_lp_canon
+% RUNS ON fzn_fdlp_canon
+constraint float_le(2.0, 3.0);
+constraint float_le(2.0, 2.0);
+solve satisfy;

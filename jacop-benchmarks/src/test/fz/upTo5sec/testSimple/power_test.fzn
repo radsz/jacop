@@ -1,0 +1,5 @@
+var -2.0..2.0: x:: output_var;
+var -2.0..2.0: y:: output_var;
+var -100.0..100.0: z:: output_var;
+constraint float_pow(x,y,z);
+solve :: float_search([x],1e-06,input_order,indomain_split,complete) satisfy;

@@ -145,6 +145,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.ls.ScheduleResources;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
 import org.jacop.search.restart.GeometricCalculator;
@@ -654,6 +655,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
     options = opt;
+    initProbe();
     dictionary = table;
     output = table;
     solveSideComponents(node);
@@ -1112,6 +1114,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pivots()
             + "\n%%%mzn-stat: lpLimits="
             + r.limits
+            + "\n%%%mzn-stat: lpAnytime="
+            + r.anytimeSolves
+            + "\n%%%mzn-stat: lpAnytimePrunings="
+            + r.anytimePrunings
+            + "\n%%%mzn-stat: lpAnytimeFailures="
+            + r.anytimeFailures
             + "\n%%%mzn-stat: lpInfeasible="
             + r.infeasible
             + "\n%%%mzn-stat: lpUnproven="
@@ -1166,6 +1174,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cutLimits
             + "\n%%%mzn-stat: lpZeroHalfCuts="
             + r.zeroHalfCuts
+            + "\n%%%mzn-stat: lpDualCuts="
+            + r.dualCuts
             + "\n%%%mzn-stat: lpMirSearchCuts="
             + r.mirSearchCuts
             + "\n%%%mzn-stat: lpMirSeparations="
@@ -2543,9 +2553,42 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return null;
   }
 
-  // -Djacop.lcg.probe=share: root probing of the 0/1 variables before LCG search, for at most
-  // this share of the time left (0, the default, is off)
-  private final double lcgProbe = Double.parseDouble(System.getProperty("jacop.lcg.probe", "0"));
+  // -Djacop.lcg.probe=share: root probing of the 0/1 variables and small domains before LCG
+  // search, for at most this share of the time left; 0 is off, the default of model search
+  // the share of free search (-f) when jacop.lcg.probe is not given, with a cap of
+  // FREE_PROBE_CAP ms: java-routing of the MiniZinc Challenge proves 8 of 10 instances in 240 s
+  // instead of 5, as probing finds the parity of the positions of the stops and the stops that
+  // cannot follow each other, which propagation does not; the 62 instances of wide-quick take 9 %
+  // less time in all (2,609 s instead of 2,866 s), most of it one instance. Without the cap the 2 %
+  // took up to 12 s of a 600 s run on easy instances
+  private static final double FREE_PROBE = 0.02;
+
+  private static final long FREE_PROBE_CAP = 1_000L;
+
+  private double lcgProbe;
+
+  private long lcgProbeCap;
+
+  // sets the share and cap of root probing from the options and the properties;
+  // -Djacop.lcg.probe.cap=ms is the most time root probing takes, whatever its share (0 is no cap,
+  // FREE_PROBE_CAP for the default probing of free search)
+  private void initProbe() {
+    String share = System.getProperty("jacop.lcg.probe");
+    Long cap = Long.getLong("jacop.lcg.probe.cap");
+    if (share != null) {
+      lcgProbe = Double.parseDouble(share);
+      lcgProbeCap = cap == null ? 0L : cap;
+    } else if (options.freeSearch()) {
+      lcgProbe = FREE_PROBE;
+      lcgProbeCap = cap == null ? FREE_PROBE_CAP : cap;
+    }
+  }
+
+  // the time root probing may take, in nanoseconds: its share of the time left, at most the cap
+  private long probeBudget(long leftMillis) {
+    long nanos = (long) (lcgProbe * leftMillis * 1_000_000L);
+    return lcgProbeCap > 0 ? Math.min(nanos, lcgProbeCap * 1_000_000L) : nanos;
+  }
 
   // -Djacop.lcg.probe.delay=share: probe between runs of the search from the root, once this share
   // of the time limit has passed, instead of before the search
@@ -2660,7 +2703,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     early.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
     long left = options.getTimeOut() > 0 ? options.getRemainingTimeOut() : 60_000L;
-    probeRefuted = !early.probeRoot((long) (lcgProbe * left * 1_000_000L));
+    probeRefuted = !early.probeRoot(probeBudget(left));
     List<LinearForm> rows =
         probeRefuted
             ? List.of()
@@ -3084,7 +3127,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (!"none".equals(lcgProbeLp)) {
         lcg.keepProbeConflicts(Integer.getInteger("jacop.lcg.probe.conflicts", 100_000));
       }
-      boolean feasible = lcg.probeRoot((long) (lcgProbe * left * 1_000_000L));
+      boolean feasible = lcg.probeRoot(probeBudget(left));
       printProbeStatistics(lcg);
       if (feasible && lcgProbeOnly && !"none".equals(lcgProbeLp)) {
         probedRootBound();
@@ -3888,6 +3931,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.sat().propagations
         + "\n%%%mzn-stat: lcgConsistencyCalls="
         + store.numberConsistencyCalls
+        + "\n%%%mzn-stat: lcgHeldFailures="
+        + lcg.heldFailures
         + "\n%%%mzn-stat: lcgCoreBound="
         + (minimize ? core.lowerBound : -core.lowerBound);
   }
@@ -4027,16 +4072,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     fs.mainBranchingFirst(true);
   }
 
+  // the share of the time left for the scheduling search that runs without ls
+  private static final double AUTO_LS_SHARE = 0.5;
+
   /**
    * Runs local search when --free-config ls gives it a share of the time left (ls-max caps it in
-   * milliseconds). Solutions of optimisation, and of satisfaction when asked, are printed as they
-   * are found.
+   * milliseconds), or the scheduling search alone on a disjunctive scheduling model without ls.
+   * Solutions of optimisation, and of satisfaction when asked, are printed as they are found.
    *
    * @return the local search when it found a solution, otherwise null
    */
   private LocalSearch runLocalSearch(
       Var costVar, DefaultSearchVars searchVars, Portfolio.Worker worker, boolean printSatisfied) {
-    double share = Double.parseDouble(options.freeConfig("ls", "0"));
+    String given = options.freeConfig("ls", null);
+    // without ls, a disjunctive scheduling model whose cost is the makespan still gets the
+    // critical-path tabu search alone (ls-auto=0 turns that off); not in portfolio workers
+    boolean auto =
+        given == null
+            && worker == null
+            && costVar instanceof IntVar
+            && !"0".equals(options.freeConfig("ls-auto", "1"));
+    // the task starts are decision variables: only their constraints are looked at
+    if (auto && !ScheduleResources.hasResource(searchVars.getIntVars())) {
+      return null;
+    }
+    double share = auto ? AUTO_LS_SHARE : Double.parseDouble(given == null ? "0" : given);
     if (share <= 0 || (costVar != null && !(costVar instanceof IntVar))) {
       return null;
     }
@@ -4054,7 +4114,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             .order(order.toArray(new IntVar[0]))
             .defined(dictionary.definedVariables)
             .timeLimit(Duration.ofMillis(budget))
-            .patience(Duration.ofMillis(Long.parseLong(options.freeConfig("ls-patience", "1000"))))
+            .patience(
+                Duration.ofMillis(
+                    Long.parseLong(options.freeConfig("ls-patience", auto ? "5000" : "1000"))))
+            .scheduleOnly(auto)
             .jump(!"walk".equals(options.freeConfig("ls-moves", "fj")))
             .permutations(!"0".equals(options.freeConfig("ls-perm", "1")))
             .scheduling(scheduleKinds(options.freeConfig("ls-sched", "ns+n4")))
