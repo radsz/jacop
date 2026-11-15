@@ -6079,7 +6079,7 @@ Version 5.0 (unreleased)
    test (CP 2004) and one elimination and commitment pass when the items
    not yet placed have the same weight, with the same pruning.
 
-346. Under lazy clause generation a constraint failure first hands the SAT
+340. Under lazy clause generation a constraint failure first hands the SAT
    solver the atoms its fixpoint recorded and had not pushed yet, and only
    then the conflict, whose clause cites those atoms instead of their
    explanations (as with literals created on demand in lazy clause
@@ -6104,6 +6104,14 @@ Version 5.0 (unreleased)
    portfolio-split splits on the next decision below the first one when
    the first is on the objective, which is not shared; otherwise a
    knapsack whose first decision was always the objective never split.
+
+341. CountValues and CountValuesBounds read again only the domains whose
+   size changed since their last call, with the same pruning, and
+   Assignment queues changed variables in arrays instead of a hashed set
+   and map. On the 31 wide instances that post one of them (fixed
+   search, 600 s) time is 0.976 of before over the 18 solved by both;
+   ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
+   6.6 % and 3 % more nodes.
 
 Version 4.11
 =============
