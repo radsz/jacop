@@ -68,9 +68,13 @@ class FloatNewtonTest {
   private static final double MARGIN = 1e-6;
 
   @BeforeEach
+  void weakFixpoint() {
+    FloatDomain.setMinReduction(0.01);
+  }
+
   @AfterEach
   void restore() {
-    FloatDomain.setMinReduction(0.01);
+    FloatDomain.setMinReduction(0);
   }
 
   @Test

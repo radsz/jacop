@@ -126,7 +126,9 @@ public class PowPeqR extends Constraint
     do {
       store.propagationHasOccurred = false;
 
-      double lo = p.min();
+      // without integrality the base is >= 0 (the inMin above may be skipped as a small
+      // narrowing, see FloatDomain.minReduction)
+      double lo = integral ? p.min() : Math.max(p.min(), 0.0);
       double hi = p.max();
       double rMin;
       double rMax;

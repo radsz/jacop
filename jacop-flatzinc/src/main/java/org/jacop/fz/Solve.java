@@ -6035,9 +6035,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds the 3BCID contractor ({@link FloatCid}) over the float variables of a search. System
-   * property org.jacop.floats.cid is "s3b[,variablesPerNode]"; without it satisfaction problems use
-   * "10" (all variables at every node) and optimisation problems none, and "off" turns it off.
+   * Adds the 3BCID contractor ({@link FloatCid}) and the interval Newton contractor ({@link
+   * FloatNewton}) over the float variables of a search. System property org.jacop.floats.newton
+   * (true or false) chooses Newton, by default on for satisfaction problems only. System property
+   * org.jacop.floats.cid is "s3b[,variablesPerNode]"; without it satisfaction problems use "10"
+   * (all variables at every node) and optimisation problems none, and "off" turns it off.
    */
   private void attachFloatCid(DepthFirstSearch<T> label, Var[] vars) {
     FloatVar[] floats =
@@ -6059,7 +6061,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               p.length > 1 ? Integer.parseInt(p[1].trim()) : floats.length);
       chainListener(label, cid);
     }
-    if (Boolean.parseBoolean(System.getProperty("org.jacop.floats.newton", "false"))) {
+    String newtonSpec = System.getProperty("org.jacop.floats.newton");
+    if (newtonSpec == null || newtonSpec.isBlank()) {
+      newtonSpec = solveKind == 0 ? "true" : "false";
+    }
+    if (Boolean.parseBoolean(newtonSpec.trim())) {
       FloatNewton newton = new FloatNewton(store, floats);
       if (newton.isSquare()) {
         chainListener(label, newton);

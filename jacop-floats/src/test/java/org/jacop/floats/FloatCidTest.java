@@ -88,6 +88,19 @@ class FloatCidTest {
     }
   }
 
+  @Test
+  void skippedNarrowingKeepsRealPowersDefined() {
+    // p >= 0 removes 0.1 % of p's width, so with a minimal reduction of 1 % it is skipped; the
+    // power must still read p as non-negative instead of computing (-0.01)^0.25 = NaN
+    FloatDomain.setMinReduction(0.01);
+    Store store = new Store();
+    FloatVar p = new FloatVar(store, "p", -0.01, 10);
+    FloatVar r = new FloatVar(store, "r", -100, 100);
+    store.impose(new PowPeqR(p, 0.25, r));
+    assertTimeoutPreemptively(Duration.ofSeconds(10), () -> assertTrue(store.consistency()));
+    assertTrue(r.min() >= 0 && r.max() <= 1.7783, r.toString());
+  }
+
   private static void trial(Random random, double ratio, int t) {
     Store store = new Store();
     int n = 2 + random.nextInt(3);
