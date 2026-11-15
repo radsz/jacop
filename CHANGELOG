@@ -6190,6 +6190,15 @@ Version 5.0 (unreleased)
    ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
    6.6 % and 3 % more nodes.
 
+347. -Djacop.virtualClock=true also covers free search without learning
+   after LCG gives way (-f): its time limit, the time LCG left, counts
+   jacop.virtualClock.propagationsPerMs (1000) propagations per
+   millisecond, and the probes of the value impact heuristic take their
+   share of the propagations instead of the time. Two runs of the 62
+   wide-quick instances at 10 s with -f, three at a time, now end
+   identically on 61 (55 before; the last differs by one node). FreeSearch
+   .Builder.virtualClock turns it on for one search.
+
 Version 4.11
 =============
 

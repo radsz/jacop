@@ -157,6 +157,7 @@ public final class FreeSearch {
   private final long failLimit;
   private final long timeLimitMillis;
   private final long deadlineMillis;
+  private final boolean virtualClock;
   private final Var[] recorded;
   private final Set<Var> projection;
   private final List<SearchMonitor> monitors;
@@ -216,11 +217,11 @@ public final class FreeSearch {
    * jacop.virtualClock.propagationsPerMs}).
    */
   public static final long VIRTUAL_PROPAGATIONS_PER_MS =
-      Math.max(1, Long.getLong("jacop.virtualClock.propagationsPerMs", 200));
+      Math.max(1, Long.getLong("jacop.virtualClock.propagationsPerMs", 1000));
 
   // the time of the clock of the time limit, in milliseconds
   private long clock() {
-    return VIRTUAL_CLOCK
+    return virtualClock
         ? store.numberConsistencyCalls / VIRTUAL_PROPAGATIONS_PER_MS
         : System.currentTimeMillis();
   }
@@ -271,6 +272,7 @@ public final class FreeSearch {
     failLimit = builder.failLimit;
     timeLimitMillis = builder.timeLimitMillis;
     deadlineMillis = builder.deadlineMillis;
+    virtualClock = builder.virtualClock;
     recorded = builder.recorded == null ? new Var[0] : builder.recorded;
     projection =
         builder.projection == null ? null : Collections.newSetFromMap(new IdentityHashMap<>());
@@ -342,7 +344,7 @@ public final class FreeSearch {
   public Status solve() {
     limitDeadline = timeLimitMillis > 0 ? clock() + timeLimitMillis : Long.MAX_VALUE;
     deadline = deadlineMillis > 0 ? deadlineMillis : Long.MAX_VALUE;
-    if (!VIRTUAL_CLOCK) {
+    if (!virtualClock) {
       deadline = Math.min(deadline, limitDeadline);
     }
     int startLevel = store.level;
@@ -987,7 +989,7 @@ public final class FreeSearch {
     if ((failLimit > 0 && failures >= failLimit)
         // the clock is read at every node: one node can take seconds when propagation is costly
         || System.currentTimeMillis() > deadline
-        || (VIRTUAL_CLOCK && clock() > limitDeadline)) {
+        || (virtualClock && clock() > limitDeadline)) {
       limitReached = true;
       return true;
     }
@@ -1197,6 +1199,7 @@ public final class FreeSearch {
     private long failLimit;
     private long timeLimitMillis;
     private long deadlineMillis;
+    private boolean virtualClock = VIRTUAL_CLOCK;
     private Var[] recorded;
     private Var[] projection;
     private final List<SearchMonitor> monitors = new ArrayList<>();
@@ -1455,6 +1458,18 @@ public final class FreeSearch {
      */
     public Builder deadline(long epochMillis) {
       this.deadlineMillis = epochMillis;
+      return this;
+    }
+
+    /**
+     * Counts the {@link #timeLimit} on the virtual clock ({@link FreeSearch#VIRTUAL_CLOCK}, the
+     * default under {@code jacop.virtualClock}): propagations instead of milliseconds.
+     *
+     * @param on true for the virtual clock, false for the wall clock.
+     * @return this builder.
+     */
+    public Builder virtualClock(boolean on) {
+      this.virtualClock = on;
       return this;
     }
 
