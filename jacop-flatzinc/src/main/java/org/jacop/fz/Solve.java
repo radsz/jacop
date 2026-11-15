@@ -1078,9 +1078,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + "\n%%%mzn-stat: lpLarge="
             + (r.largeDropped() ? "dropped" : r.large())
             + "\n%%%mzn-stat: lpProbe="
-            + (lpProbeMs == 0
-                ? "off"
-                : lpProbeFinished ? "finished" : r.solved() ? "solved" : "unsolved")
+            + lpProbeState(r)
             + "\n%%%mzn-stat: lpRootTrialSize="
             + r.rootTrialSize()
             + "\n%%%mzn-stat: lpPivotWork="
@@ -3024,6 +3022,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     Thread slowCheck = free && worker == null ? slowLcgCheck(costVar) : null;
     if (lpProbing) {
+      linearRelaxation.rememberSearchStart();
       lcg.atRootAfter(lpProbeMs * 1_000_000L, this::resumeRelaxation);
     }
     lcgStatus = costVar == null ? lcg.solve() : lcg.minimize((IntVar) costVar);
@@ -4544,6 +4543,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !(costVar == null && options.getAll());
   }
 
+  private String lpProbeState(LinearRelaxation r) {
+    if (lpProbeMs == 0) {
+      return "off";
+    }
+    if (lpProbeFinished) {
+      return "finished";
+    }
+    return r.solved() ? "solved" : "unsolved";
+  }
+
   private void resumeRelaxation() {
     lpProbing = false;
     linearRelaxation.suspend(false);
@@ -4565,6 +4574,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     rs =
         new RestartSearch<>(store, label, select, calculator, costVar != null ? (T) costVar : null);
     setSearchTimeout(rs);
+    linearRelaxation.rememberSearchStart();
     calculator.start();
     boolean found = rs.labeling();
     if (lpProbing) {

@@ -299,6 +299,22 @@ class BoolConstraints implements ParserTreeConstants {
 
     IntVar[] a1 = support.unique(support.getVarArray((SimpleNode) node.jjtGetChild(0)));
     IntVar[] a2 = support.unique(support.getVarArray((SimpleNode) node.jjtGetChild(1)));
+    clauseGeneration(node, a1, a2);
+  }
+
+  /**
+   * Posts the clause {@code a1[0] \/ ... \/ not a2[0] \/ ...}, as a bool_clause constraint.
+   *
+   * @param a1 the positive literals.
+   * @param a2 the negative literals.
+   */
+  void poseClause(IntVar[] a1, IntVar[] a2) {
+    reified = false;
+    implied = false;
+    clauseGeneration(null, support.unique(a1), support.unique(a2));
+  }
+
+  private void clauseGeneration(SimpleNode node, IntVar[] a1, IntVar[] a2) {
 
     if (clauseHasSameVarInBothSides(a1, a2)) {
       clauseSatisfied(node);
