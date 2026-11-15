@@ -1596,6 +1596,26 @@ public class LinearRelaxation extends Constraint
    * often over the size caps of the relaxation in search (php 230/229: 52,670 columns); it is
    * solved once at the root here, within the pivot limit of the refutation.
    */
+  // whether f states a clause over 0/1 variables: unit weights and the right-hand side that makes
+  // one literal true enough, sum(positive) - sum(negative) >= 1 - |negative|, or its negation
+  private static boolean isClause(LinearForm f) {
+    long positive = 0;
+    long negative = 0;
+    for (int k = 0; k < f.vars().length; k++) {
+      IntVar v = f.vars()[k];
+      long w = f.weights()[k];
+      if (Math.abs(w) != 1 || v.min() < 0 || v.max() > 1) {
+        return false;
+      }
+      if (w > 0) {
+        positive++;
+      } else {
+        negative++;
+      }
+    }
+    return f.relation() == LinearForm.GE ? f.c() == 1 - negative : f.c() == positive - 1;
+  }
+
   private static LinearRelaxation pseudoObjectiveRefutation(List<LinearForm> given) {
     // the inequality whose variables are in the most rows: the cardinality row over every vertex
     // of a vertex cover, the row that bounds the exits of the blocks of a pigeonhole formula with
@@ -1610,7 +1630,8 @@ public class LinearRelaxation extends Constraint
     long most = 0;
     for (LinearForm f : given) {
       if ((f.relation() == LinearForm.LE || f.relation() == LinearForm.GE)
-          && f.vars().length >= PSEUDO_OBJECTIVE_LENGTH) {
+          && f.vars().length >= PSEUDO_OBJECTIVE_LENGTH
+          && !isClause(f)) {
         long incidence = 0;
         for (IntVar v : f.vars()) {
           incidence += occurrences.get(v);
@@ -1621,6 +1642,9 @@ public class LinearRelaxation extends Constraint
         }
       }
     }
+    // no row but clauses: the relaxation of a formula in conjunctive normal form with clauses of at
+    // least two literals takes every variable at 1/2, and its cuts are no stronger than resolution
+    // (rubik of the Challenge, 22,410 clauses: 4.5 s for nothing)
     if (longest == null) {
       return null;
     }
