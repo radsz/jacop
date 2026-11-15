@@ -199,6 +199,32 @@ public final class FreeSearch {
   private int stackSize;
   private int rootLevel;
   private long deadline;
+  // the end of the time limit on the clock of the search (virtual or wall-clock milliseconds)
+  private long limitDeadline;
+
+  /**
+   * Whether the time limit of the search ({@link Builder#timeLimit}) counts propagation (system
+   * property {@code jacop.virtualClock}, as for lazy clause generation): {@link
+   * #VIRTUAL_PROPAGATIONS_PER_MS} constraint propagations count as one millisecond, so that a run
+   * stops at the same point whatever the load of the machine. A {@link Builder#deadline} stays a
+   * wall-clock time.
+   */
+  public static final boolean VIRTUAL_CLOCK = Boolean.getBoolean("jacop.virtualClock");
+
+  /**
+   * The propagations that count as one millisecond of the virtual clock (system property {@code
+   * jacop.virtualClock.propagationsPerMs}).
+   */
+  public static final long VIRTUAL_PROPAGATIONS_PER_MS =
+      Math.max(1, Long.getLong("jacop.virtualClock.propagationsPerMs", 200));
+
+  // the time of the clock of the time limit, in milliseconds
+  private long clock() {
+    return VIRTUAL_CLOCK
+        ? store.numberConsistencyCalls / VIRTUAL_PROPAGATIONS_PER_MS
+        : System.currentTimeMillis();
+  }
+
   // set by stop(), possibly from another thread
   private volatile boolean stopRequested;
   private boolean limitReached;
@@ -314,9 +340,10 @@ public final class FreeSearch {
    * @return how the search ended.
    */
   public Status solve() {
-    deadline = timeLimitMillis > 0 ? System.currentTimeMillis() + timeLimitMillis : Long.MAX_VALUE;
-    if (deadlineMillis > 0) {
-      deadline = Math.min(deadline, deadlineMillis);
+    limitDeadline = timeLimitMillis > 0 ? clock() + timeLimitMillis : Long.MAX_VALUE;
+    deadline = deadlineMillis > 0 ? deadlineMillis : Long.MAX_VALUE;
+    if (!VIRTUAL_CLOCK) {
+      deadline = Math.min(deadline, limitDeadline);
     }
     int startLevel = store.level;
     boolean exhausted = false;
@@ -959,7 +986,8 @@ public final class FreeSearch {
     }
     if ((failLimit > 0 && failures >= failLimit)
         // the clock is read at every node: one node can take seconds when propagation is costly
-        || System.currentTimeMillis() > deadline) {
+        || System.currentTimeMillis() > deadline
+        || (VIRTUAL_CLOCK && clock() > limitDeadline)) {
       limitReached = true;
       return true;
     }
