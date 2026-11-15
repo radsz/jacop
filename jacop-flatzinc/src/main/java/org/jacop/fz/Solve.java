@@ -233,6 +233,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private static final int DOM_WDEG_LIMIT =
       Integer.getInteger("org.jacop.fz.lcgDomWdegLimit", 50_000);
 
+  // free search without a search annotation branches on the variables that no defines_var
+  // annotation names before the defined ones (-Dorg.jacop.fz.definedLast=false: all in one
+  // order); see definedLast
+  static final boolean DEFINED_LAST =
+      !"false".equals(System.getProperty("org.jacop.fz.definedLast"));
+
   // fixed search's activity runs follow the relaxation's root solution, not its last one, which
   // comes from another branch
   private static final boolean LP_GUIDE_ROOT =
@@ -3694,6 +3700,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (vars.isEmpty()) {
       return null;
     }
+    if (DEFINED_LAST) {
+      // the defined variables follow from the others, and activity completes them
+      IntVar[][] split = definedLast(vars.toArray(new IntVar[0]), true);
+      vars = new ArrayList<>(Arrays.asList(split[0]));
+    }
     IntVar[] positions = elementPositions(vars);
     elementPositionCount = positions.length;
     if (positions.length > 0) {
@@ -4889,6 +4900,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
           withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
           null);
+    } else if (DEFINED_LAST) {
+      // the variables named by no defines_var first, then the defined ones, which are fixed by
+      // then in a model where every defined variable follows from the others
+      IntVar[][] ints = definedLast(searchVars.getIntVars(), false);
+      IntVar[][] bools = definedLast(searchVars.getBoolVars(), false);
+      if (ints[0].length + bools[0].length == 0) {
+        ints = new IntVar[][] {ints[1], ints[0]};
+        bools = new IntVar[][] {bools[1], bools[0]};
+      }
+      addFreeSelects(
+          selects,
+          monitors,
+          searchVars.getSetVars(),
+          ints[0],
+          Arrays.copyOf(bools[0], bools[0].length, BooleanVar[].class),
+          searchVars.getFloatVars(),
+          null);
+      addFreeSelects(
+          selects,
+          monitors,
+          new SetVar[0],
+          ints[1],
+          Arrays.copyOf(bools[1], bools[1].length, BooleanVar[].class),
+          new FloatVar[0],
+          objective);
     } else {
       addFreeSelects(
           selects,
@@ -5131,6 +5167,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (floats.length > 0) {
       selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
     }
+  }
+
+  /**
+   * Splits the variables of the default search into those that no defines_var annotation names and
+   * the defined ones, each part in the given order. A defined variable is a function of others, so
+   * the first part decides the model wherever the defining constraints hold; branching on a defined
+   * variable instead fixes a value the others must then reach. On the feedback arc models of XCSP
+   * 2026 (Feedback, x a permutation of the nodes, z_k = max(0, x_i - x_j) for each arc, minimise
+   * the sum of z) dom/wdeg, smallest value first, chose penalties z: z = 0 orders an arc, and z = v
+   * &gt; 0 pins the distance x_i - x_j = v; the dives went 4,000 decisions deep and failed on the
+   * all-different over x, and no solution came in 600 s on 1,000 nodes with 3,000 or 5,000 arcs and
+   * on 500 nodes with 6,500 arcs. On x alone any assignment is a solution. When every variable is
+   * defined and allDefined is true, all of them are in the first part.
+   *
+   * @param vars the variables, in the order of the default search
+   * @param allDefined true to put all variables in the first part when every one is defined
+   * @return the variables named by no defines_var annotation, and the defined ones
+   */
+  private IntVar[][] definedLast(IntVar[] vars, boolean allDefined) {
+    Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+    defined.addAll(dictionary.definedVariables);
+    List<IntVar> first = new ArrayList<>();
+    List<IntVar> last = new ArrayList<>();
+    for (IntVar x : vars) {
+      (defined.contains(x) ? last : first).add(x);
+    }
+    if (allDefined && first.isEmpty()) {
+      return new IntVar[][] {vars, new IntVar[0]};
+    }
+    return new IntVar[][] {first.toArray(new IntVar[0]), last.toArray(new IntVar[0])};
   }
 
   private static <V extends Var> V[] withoutVars(
