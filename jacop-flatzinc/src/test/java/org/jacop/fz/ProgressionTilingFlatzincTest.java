@@ -33,6 +33,7 @@ package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -206,7 +207,7 @@ class ProgressionTilingFlatzincTest {
     boolean[] covered = new boolean[k * m];
     for (int i = 0; i < m; i++) {
       for (int j = 0; j < i; j++) {
-        assertTrue(g[i] != g[j], out);
+        assertNotEquals(g[i], g[j], out);
       }
       for (int j = 0; j < k; j++) {
         int p = s[i] + j * g[i];

@@ -37,6 +37,7 @@ import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import org.jacop.constraints.Alldistinct;
@@ -94,7 +95,25 @@ public class ProgressionTilingDetector {
   private final Map<IntVar, List<Step>> steps = new IdentityHashMap<>();
 
   /** Tables: the variables and the tuples, row-major, star for any value. */
-  private record Table(IntVar[] vars, int[] tuples, Integer star) {}
+  private record Table(IntVar[] vars, int[] tuples, Integer star) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Table t
+          && Arrays.equals(vars, t.vars)
+          && Arrays.equals(tuples, t.tuples)
+          && Objects.equals(star, t.star);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * (31 * Arrays.hashCode(vars) + Arrays.hashCode(tuples)) + Objects.hashCode(star);
+    }
+
+    @Override
+    public String toString() {
+      return "Table" + Arrays.toString(vars) + " star " + star;
+    }
+  }
 
   private final List<Table> tables = new ArrayList<>();
 
@@ -124,7 +143,34 @@ public class ProgressionTilingDetector {
    * @param terms the number of terms k of each progression.
    * @param positions the start and the terms of each progression, in the order of their offsets.
    */
-  public record Tiling(IntVar[] starts, IntVar[] gaps, int terms, IntVar[][] positions) {}
+  public record Tiling(IntVar[] starts, IntVar[] gaps, int terms, IntVar[][] positions) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Tiling t
+          && terms == t.terms
+          && Arrays.equals(starts, t.starts)
+          && Arrays.equals(gaps, t.gaps)
+          && Arrays.deepEquals(positions, t.positions);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31
+              * (31 * (31 * Arrays.hashCode(starts) + Arrays.hashCode(gaps))
+                  + Arrays.deepHashCode(positions))
+          + terms;
+    }
+
+    @Override
+    public String toString() {
+      return "Tiling starts "
+          + Arrays.toString(starts)
+          + " gaps "
+          + Arrays.toString(gaps)
+          + " terms "
+          + terms;
+    }
+  }
 
   /** The starts and terms of all progressions of the last tiling found. */
   private List<IntVar> positions = List.of();
@@ -200,7 +246,22 @@ public class ProgressionTilingDetector {
   }
 
   /** cover[t] = c with a constant c: the index t is one of the cells progression c covers. */
-  private record Cover(IntVar[] cover, int value) {}
+  private record Cover(IntVar[] cover, int value) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Cover c && value == c.value && Arrays.equals(cover, c.cover);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Arrays.hashCode(cover) + value;
+    }
+
+    @Override
+    public String toString() {
+      return "Cover" + Arrays.toString(cover) + " = " + value;
+    }
+  }
 
   private final Map<IntVar, List<Cover>> covers = new IdentityHashMap<>();
 
@@ -261,7 +322,7 @@ public class ProgressionTilingDetector {
     int k = 0;
     long maxPosition = 0;
     Set<IntVar> used = Collections.newSetFromMap(new IdentityHashMap<>());
-    List<IntVar> positions = new ArrayList<>();
+    List<IntVar> found = new ArrayList<>();
     for (int i = 0; i < starts.length; i++) {
       IntVar s = starts[i];
       Progression p = progression(s, gapVars);
@@ -270,10 +331,10 @@ public class ProgressionTilingDetector {
       }
       k = p.terms.size() + 1;
       gaps[i] = p.gap;
-      positions.add(s);
-      positions.addAll(p.terms);
+      found.add(s);
+      found.addAll(p.terms);
     }
-    for (IntVar x : positions) {
+    for (IntVar x : found) {
       if (x.min() < 0) {
         return 0;
       }
@@ -282,7 +343,7 @@ public class ProgressionTilingDetector {
     if (k < 2 || maxPosition + 1 != (long) k * starts.length) {
       return 0;
     }
-    this.positions = positions;
+    this.positions = found;
     return k;
   }
 
