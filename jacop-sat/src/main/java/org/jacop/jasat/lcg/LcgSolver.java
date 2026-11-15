@@ -440,6 +440,24 @@ public final class LcgSolver implements ExternalPropagator {
   // dichotomic bound search: the relative gap below which it gives way to branch and bound; 0 = off
   private double bisectGap;
 
+  // -Djacop.lcg.bisectUncored=false: an objective that the core-guided phase cannot take (no
+  // linear sum, such as the index of an element, a maximum or a product) keeps branch and bound
+  // with lower-bound runs instead of dichotomic probes of its bound
+  private static final boolean BISECT_UNCORED =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.bisectUncored", Boolean.TRUE.toString()));
+
+  // -Djacop.lcg.bisectUncoredAfter: the conflicts of branch and bound with lower-bound runs before
+  // such an objective goes to bisection; easy models end before it
+  private long bisectUncoredAfter = Long.getLong("jacop.lcg.bisectUncoredAfter", 100_000L);
+
+  // the bisection runs for an objective the core-guided phase cannot take, until the bound meets
+  // the best solution
+  private boolean uncoredBisection;
+
+  // the conflict count at which branch and bound with lower-bound runs gives way to bisection, for
+  // an objective the core-guided phase cannot take; Long.MAX_VALUE = never
+  private long uncoredSwitch = Long.MAX_VALUE;
+
   /** Statistics: probes of dichotomic bound search. */
   public long bisectProbes;
 
@@ -3082,6 +3100,8 @@ public final class LcgSolver implements ExternalPropagator {
       startProof();
     }
     coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
+    uncoredBisection = false;
+    uncoredSwitch = Long.MAX_VALUE;
     int result;
     // a conflict limit set before bounds the core-guided phase and branch and bound
     conflictCap = sat.conflictLimit();
@@ -3090,6 +3110,16 @@ public final class LcgSolver implements ExternalPropagator {
         result = solveInTree();
       } else if (bisectGap > 0 && proof == null) {
         result = minimizeByBisection();
+      } else if (coreSearch == null
+          && coreShare > 0
+          && BISECT_UNCORED
+          && lowerBoundShare > 0
+          && proof == null) {
+        // an objective that is no linear sum, so the core-guided phase cannot take it: after some
+        // conflicts of branch and bound with lower-bound runs, dichotomic probes of its bound until
+        // the bound meets the best solution
+        uncoredSwitch = sat.conflicts + bisectUncoredAfter;
+        result = minimizeWithLowerBoundSearch();
       } else if (coreSearch != null) {
         result = minimizeWithCores();
       } else {
@@ -3843,6 +3873,11 @@ public final class LcgSolver implements ExternalPropagator {
           early = lowerBoundRaised > raisedBefore ? 1 : early / 2;
         }
       }
+      if (sat.conflicts >= uncoredSwitch) {
+        uncoredSwitch = Long.MAX_VALUE;
+        uncoredBisection = true;
+        return minimizeByBisection();
+      }
       budget += budget / 2;
     }
   }
@@ -3949,7 +3984,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       // after solve the domains are those of level 0
       long lb = Math.max(vars[objective].min(), raised);
-      if (lb >= ub || ub - lb <= bisectGap * Math.abs((double) ub)) {
+      if (lb >= ub || (!uncoredBisection && ub - lb <= bisectGap * Math.abs((double) ub))) {
         // closed, or within the gap: branch and bound from here, which also proves lb >= ub
         return interleaved() ? minimizeWithLowerBoundSearch() : solve();
       }
@@ -3987,6 +4022,27 @@ public final class LcgSolver implements ExternalPropagator {
       reportBound(target + 1L);
       fraction = Math.min(0.5, 2 * fraction);
     }
+  }
+
+  /**
+   * Tells whether the last {@link #minimize} bisected the bound of an objective that the
+   * core-guided phase cannot take.
+   *
+   * @return true when it did
+   */
+  public boolean uncoredBisection() {
+    return uncoredBisection;
+  }
+
+  /**
+   * Sets the conflicts of branch and bound with lower-bound runs after which {@link #minimize} goes
+   * to dichotomic bound search, to closure, for an objective that the core-guided phase cannot take
+   * (core-guided search and lower-bound runs on, as under free search).
+   *
+   * @param conflicts the conflicts before the switch, 0 to bisect from the start
+   */
+  public void setUncoredBisectionDelay(long conflicts) {
+    bisectUncoredAfter = Math.max(0, conflicts);
   }
 
   /**

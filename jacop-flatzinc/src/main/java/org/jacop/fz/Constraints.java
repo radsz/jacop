@@ -48,6 +48,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.BalanceDetector;
@@ -466,6 +467,16 @@ public class Constraints implements ParserTreeConstants {
       // each variable whose values are all counted at least twice equals one of its few partners
       if (CountPartnersDetector.enabled() && options.proof() == null) {
         new CountPartnersDetector(support).detect(astTree);
+      }
+
+      // the pigeonhole bound on the equal pairs of variables whose pairs all have equality
+      // indicators, redundant; --proof does not encode it
+      if (AgreementCountDetector.enabled() && options.proof() == null) {
+        AgreementCountDetector agreements = new AgreementCountDetector(support);
+        agreements.detect(astTree);
+        if (agreements.infeasible()) {
+          throw Store.failException;
+        }
       }
 
       if (increasing != null && IncreasingDetector.sumEnabled()) {

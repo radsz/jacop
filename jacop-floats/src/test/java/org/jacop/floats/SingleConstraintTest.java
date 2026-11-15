@@ -93,6 +93,42 @@ import org.junit.jupiter.api.Test;
 /** Tests of single float constraints. */
 class SingleConstraintTest {
 
+  /**
+   * LinearFloat finds a changed variable by scanning short lists and through a table of store
+   * indices for lists longer than eight; either way the change of any variable, at any level, must
+   * reach the propagation.
+   */
+  @Test
+  void testLinearFloatPropagatesChangesOfEveryVariable() {
+    for (int n : new int[] {3, 12, 40}) {
+      Store store = new Store();
+      FloatVar[] x = new FloatVar[n];
+      double[] w = new double[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new FloatVar(store, "x" + i, 0, 10);
+        w[i] = 1;
+      }
+      store.impose(new LinearFloat(x, w, "==", 5));
+      assertThat(store.consistency()).isTrue();
+      assertThat(x[0].max()).isCloseTo(5, offset(1e-9));
+      for (int changed = 0; changed < n; changed++) {
+        store.setLevel(store.level + 1);
+        x[changed].domain.inMin(store.level, x[changed], 3);
+        assertThat(store.consistency()).isTrue();
+        for (int i = 0; i < n; i++) {
+          if (i != changed) {
+            assertThat(x[i].max())
+                .as("n=%d changed=%d i=%d", n, changed, i)
+                .isCloseTo(2, offset(1e-9));
+          }
+        }
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+        assertThat(x[(changed + 1) % n].max()).isCloseTo(5, offset(1e-9));
+      }
+    }
+  }
+
   @Test
   void testComparisonsRejectNaNConstant() {
     Store store = new Store();

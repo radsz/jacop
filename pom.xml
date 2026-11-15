@@ -371,6 +371,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
@@ -388,6 +389,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -608,6 +610,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
@@ -625,6 +628,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -841,6 +845,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
@@ -858,6 +863,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
@@ -1072,6 +1078,7 @@ setup to run configuration. -->
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
@@ -1089,6 +1096,7 @@ setup to run configuration. -->
                                 <include>**/DecompositionBoundFlatzincTest.java</include>
                                 <include>**/LinearRelaxationCheckTest.java</include>
                                 <include>**/LpProbeFlatzincTest.java</include>
+                                <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
