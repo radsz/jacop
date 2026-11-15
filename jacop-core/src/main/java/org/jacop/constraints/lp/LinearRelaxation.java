@@ -2878,7 +2878,7 @@ public class LinearRelaxation extends Constraint
       cs[q] = rowColumns[i];
       ws[q] = new double[rowWeights[i].length];
       for (int t = 0; t < ws[q].length; t++) {
-        ws[q][t] = rowWeights[i][t];
+        ws[q][t] = (double) rowWeights[i][t];
       }
     }
     double[] cost = new double[n];
@@ -5236,7 +5236,10 @@ public class LinearRelaxation extends Constraint
       }
     }
     String s = formSource.get(f);
-    return s != null ? s : i < forms.size() ? "row" : "further";
+    if (s != null) {
+      return s;
+    }
+    return i < forms.size() ? "row" : "further";
   }
 
   /**
