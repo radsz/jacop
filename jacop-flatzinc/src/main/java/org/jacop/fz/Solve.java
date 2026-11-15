@@ -1089,6 +1089,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (r == null || !options.searchStatistics()) {
       return;
     }
+    String bySource = r.sourceReport();
+    if (bySource != null) {
+      // -Dorg.jacop.lp.sourceStats=true: what the rows of each source gave (LpSources)
+      for (String line : bySource.split("\n")) {
+        int space = line.indexOf(' ');
+        if (space > 0) {
+          IO.println(
+              "%%%mzn-stat: lpSource_"
+                  + line.substring(0, space).replaceAll("\\W", "_")
+                  + "="
+                  + line.substring(space + 1));
+        }
+      }
+    }
     TimeIndexedBound t = timeIndexedBound;
     if (t != null) {
       IO.println(
