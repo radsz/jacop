@@ -1044,6 +1044,7 @@ final class BasisLu {
   // the depth-first search: its stack, with the next entry of each node, and the visited marks
   private int[] stack;
   private int[] next;
+  private int[] stackEnd;
   private int[] mark;
   private int stamp;
 
@@ -1071,6 +1072,7 @@ final class BasisLu {
       mark = new int[m];
       stack = new int[m];
       next = new int[m];
+      stackEnd = new int[m];
     }
     if (reach.length < limit + 1) {
       reach = new int[limit + 1];
@@ -1081,6 +1083,12 @@ final class BasisLu {
     }
     int found = 0;
     long work = 0;
+    boolean byRank = kind == U_FTRAN || kind == U_BTRAN;
+    // the entries of the factor of the solve: one array of rows for all steps but in U_BTRAN,
+    // whose rows of U are arrays of positions of their own
+    int[] adj = kind == L_FTRAN ? lRow : kind == U_FTRAN ? ucRow : kind == L_BTRAN ? lrRow : null;
+    int[] map = kind == U_BTRAN ? posStep : rowStep;
+    int[] end = stackEnd;
     for (int k = 0; k < count; k++) {
       int start = kind == U_BTRAN ? posStep[from[k]] : rowStep[from[k]];
       if (mark[start] == stamp) {
@@ -1089,56 +1097,115 @@ final class BasisLu {
       mark[start] = stamp;
       int top = 0;
       stack[0] = start;
-      next[0] = 0;
+      next[0] = firstChild(start, kind);
+      end[0] = endChild(start, kind);
       while (top >= 0) {
         int s = stack[top];
-        int child = child(s, next[top]++, kind);
-        work++;
-        if (child == -1) {
+        int[] a = adj == null ? urPos[s] : adj;
+        int e = next[top];
+        int last = end[top];
+        int child = -1;
+        while (e < last) {
+          int c = map[a[e++]];
+          work++;
+          if (mark[c] != stamp) {
+            child = c;
+            break;
+          }
+        }
+        if (child < 0) {
           // s is done
+          work++;
           if (found == limit) {
             density[slot] = 1;
             ops += work;
             return -1;
           }
-          reach[found++] = kind == U_FTRAN || kind == U_BTRAN ? rank[s] : s;
+          reach[found++] = byRank ? rank[s] : s;
           top--;
-        } else if (child >= 0 && mark[child] != stamp) {
+        } else {
+          next[top] = e;
           mark[child] = stamp;
           stack[++top] = child;
-          next[top] = 0;
+          next[top] = firstChild(child, kind);
+          end[top] = endChild(child, kind);
         }
       }
     }
     // the order of the dense solve: by step for L, by slot of the order for U (each solve walks
     // the sorted list in its own direction)
-    Arrays.sort(reach, 0, found);
+    sortReached(found);
     ops += work + found + (long) found * (32 - Integer.numberOfLeadingZeros(found + 1));
     density[slot] = 0.9 * density[slot] + 0.1 * found / m;
     return found;
   }
 
-  // the e-th step that step s leads to in the factor of the solve kind: -1 after the last, -2
-  // for an entry to skip
-  private int child(int s, int e, int kind) {
+  // the bits of the steps or slots of a sort of the reached steps
+  private long[] sortBits;
+
+  /**
+   * Sorts the first {@code found} entries of {@link #reach}, which are distinct and below the
+   * length of the order: a quicksort for few entries, otherwise by setting their bits and reading
+   * the words between the smallest and the largest, which takes a pass over at most m / 64 words in
+   * place of found log found comparisons.
+   */
+  private void sortReached(int found) {
+    if (found < 64) {
+      Arrays.sort(reach, 0, found);
+      return;
+    }
+    int size = Math.max(m, orderLen);
+    if (sortBits == null || sortBits.length * 64 < size) {
+      sortBits = new long[(size + 63) / 64];
+    }
+    long[] bits = sortBits;
+    int low = Integer.MAX_VALUE;
+    int high = 0;
+    for (int k = 0; k < found; k++) {
+      int v = reach[k];
+      bits[v >>> 6] |= 1L << v;
+      low = Math.min(low, v);
+      high = Math.max(high, v);
+    }
+    int k = 0;
+    for (int w = low >>> 6; w <= high >>> 6; w++) {
+      long b = bits[w];
+      bits[w] = 0;
+      while (b != 0) {
+        reach[k++] = (w << 6) + Long.numberOfTrailingZeros(b);
+        b &= b - 1;
+      }
+    }
+  }
+
+  // the first entry of the factor of the solve kind that step s leads from
+  private int firstChild(int s, int kind) {
     switch (kind) {
       case L_FTRAN:
-        {
-          int f = lStart[s] + e;
-          return f < lStart[s + 1] ? rowStep[lRow[f]] : -1;
-        }
+        return lStart[s];
+      case U_FTRAN:
+        return slotStart[rank[s]];
+      case U_BTRAN:
+        return 0;
+      default:
+        return lrStart[s];
+    }
+  }
+
+  // the end of the entries of the factor of the solve kind that step s leads from
+  private int endChild(int s, int kind) {
+    switch (kind) {
+      case L_FTRAN:
+        return lStart[s + 1];
       case U_FTRAN:
         {
           int idx = rank[s];
-          return e < slotLen[idx] ? rowStep[ucRow[slotStart[idx] + e]] : -1;
+          return slotStart[idx] + slotLen[idx];
         }
       case U_BTRAN:
-        return e < urLen[s] ? posStep[urPos[s][e]] : -1;
+        return urLen[s];
       default:
-        {
-          int f = lrStart[s] + e;
-          return f < lrStart[s + 1] ? rowStep[lrRow[f]] : -1;
-        }
+        return lrStart[s + 1];
     }
   }
 
