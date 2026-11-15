@@ -2742,10 +2742,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
     } else if (scheduled != null) {
-      lcg.setPhase(scheduled.vars, scheduled.values);
+      // the schedule is the solver's first solution: branch and bound and neighbourhood search
+      // go on from it (as a bound and phase alone, neighbourhood search never ran: j60_45_1)
+      lcg.setIncumbent(scheduled.vars, scheduled.values);
       lcgLastCost = scheduledCost;
-      int sgsCost = scheduledCost;
-      lcg.setSharedBound(() -> worker == null ? sgsCost : Math.min(sgsCost, worker.sharedBound()));
+      if (worker != null) {
+        lcg.setSharedBound(worker::sharedBound);
+      }
     } else if (worker != null && costVar != null) {
       lcg.setSharedBound(worker::sharedBound);
     }
@@ -2964,6 +2967,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
+    if (lns != null && projectSchedule != null) {
+      // the genetic algorithm goes on in slices from the solver's best solution, as a kind of
+      // neighbourhood whose runs fix the task starts of a better schedule
+      long slice =
+          Long.parseLong(
+              options.freeConfig(
+                  "sgs-lns", Long.toString(Math.max(1000, 20L * projectSchedule.tasks()))));
+      ProjectSchedule ps = projectSchedule;
+      if (slice > 0) {
+        lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
+      }
+    }
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -4027,12 +4042,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Runs the project scheduling heuristic ({@link ProjectSchedule}) when the cost is the makespan
-   * of cumulative resources with fixed durations, demands and capacities: serial schedule
-   * generation with forward-backward improvement inside a genetic algorithm. Each better schedule
-   * is checked in the store and printed. --free-config sgs=0 turns it off, sgs-share gives its
-   * share of the time (default 0.15), sgs-max caps it in milliseconds (default 120000) and
-   * sgs-patience is the number of schedules without improvement after which it ends (default
-   * 300000).
+   * of cumulative resources with fixed durations, demands and capacities, not all of them machines:
+   * serial schedule generation with forward-backward improvement inside a genetic algorithm. Each
+   * better schedule is checked in the store and printed, and the best becomes the first solution of
+   * the solver. The genetic algorithm then goes on in slices of sgs-lns schedules (default twenty
+   * per task) as a kind of neighbourhood of large neighbourhood search. --free-config sgs=0 turns
+   * it off, sgs-share gives the first run its share of the time (default 0.03), sgs-max caps it in
+   * milliseconds (default 60000) and sgs-patience is the number of schedules without improvement
+   * after which it ends (default 20000).
    *
    * @return the best schedule found, as a hint of all variables, or null
    */
@@ -4046,17 +4063,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return null;
     }
     projectSchedule = ps;
-    long budget = Long.parseLong(options.freeConfig("sgs-max", "120000"));
+    long budget = Long.parseLong(options.freeConfig("sgs-max", "60000"));
     if (options.getTimeOut() > 0) {
       budget =
           Math.min(
               budget,
               (long)
-                  (Double.parseDouble(options.freeConfig("sgs-share", "0.15"))
+                  (Double.parseDouble(options.freeConfig("sgs-share", "0.03"))
                       * options.getRemainingTimeOut()));
     }
     long deadline = begin + budget;
-    long patience = Long.parseLong(options.freeConfig("sgs-patience", "300000"));
+    long patience = Long.parseLong(options.freeConfig("sgs-patience", "20000"));
     IntVar[] starts = ps.starts();
     IntVar[] hinted = hintedVariables();
     int[][] best = {null};

@@ -132,8 +132,30 @@ public final class AdaptiveLns {
      */
     SHIFT,
     /** Whole groups of variables, such as the blocks of a decomposition. */
-    BLOCKS
+    BLOCKS,
+    /**
+     * A whole new assignment of some variables proposed by a heuristic from the best solution, such
+     * as a schedule of the tasks built by a genetic algorithm; the others keep their values.
+     */
+    PROPOSALS
   }
+
+  /** Proposes new values of some variables from their values in the best solution. */
+  @FunctionalInterface
+  public interface Proposer {
+    /**
+     * A proposal.
+     *
+     * @param incumbent the values of the proposer's variables in the best solution
+     * @return their proposed values, or null for none
+     */
+    int[] propose(int[] incumbent);
+  }
+
+  // the proposer, its variables as indices of vars, and the values of the last proposal
+  private Proposer proposer;
+  private int[] proposerVars = new int[0];
+  private int[] proposal;
 
   /** How a run in a neighbourhood ended. */
   public enum Outcome {
@@ -615,6 +637,33 @@ public final class AdaptiveLns {
     return this;
   }
 
+  /**
+   * Adds a heuristic that proposes new values of some variables from their values in the best
+   * solution ({@link Kind#PROPOSALS}). A proposal fixes those variables to the proposed values and
+   * leaves every other variable free, for the search to complete.
+   *
+   * @param xs the variables of the proposals, all among the variables of the neighbourhoods
+   * @param p the heuristic
+   * @return this object, or the object unchanged when a variable is not among them
+   */
+  public AdaptiveLns setProposer(IntVar[] xs, Proposer p) {
+    Map<IntVar, Integer> at = new IdentityHashMap<>();
+    for (int i = 0; i < vars.length; i++) {
+      at.put(vars[i], i);
+    }
+    int[] idx = new int[xs.length];
+    for (int k = 0; k < xs.length; k++) {
+      Integer i = at.get(xs[k]);
+      if (i == null) {
+        return this;
+      }
+      idx[k] = i;
+    }
+    proposer = p;
+    proposerVars = idx;
+    return this;
+  }
+
   /** The routing structures, for tests. */
   List<RouteStructure> routings() {
     return routings;
@@ -730,6 +779,12 @@ public final class AdaptiveLns {
   int[] neighbourhood(Kind kind) {
     last = kind;
     bounded = new int[0];
+    proposal = null;
+    if (kind == Kind.PROPOSALS) {
+      runs[kind.ordinal()]++;
+      totalRuns++;
+      return proposed();
+    }
     runs[kind.ordinal()]++;
     totalRuns++;
     int free = 0;
@@ -770,7 +825,43 @@ public final class AdaptiveLns {
    * @return its value in the best solution.
    */
   public int value(int i) {
-    return incumbent[i];
+    return proposal != null && proposal[i] != Integer.MIN_VALUE ? proposal[i] : incumbent[i];
+  }
+
+  /**
+   * The neighbourhood of a proposal: its variables fixed to the proposed values, every other
+   * variable free. Without a proposal, a random neighbourhood.
+   */
+  private int[] proposed() {
+    int[] current = new int[proposerVars.length];
+    for (int k = 0; k < current.length; k++) {
+      current[k] = incumbent[proposerVars[k]];
+    }
+    int[] values = proposer.propose(current);
+    if (values == null) {
+      // nothing better to propose: the run is a random neighbourhood
+      int free = 0;
+      for (IntVar x : vars) {
+        if (!x.singleton()) {
+          free++;
+        }
+      }
+      int relaxed = Math.max(2, (int) Math.round(share[Kind.RANDOM.ordinal()] * free));
+      return relaxed >= free ? new int[0] : fixedOutside(randomRelax(relaxed));
+    }
+    proposal = new int[vars.length];
+    Arrays.fill(proposal, Integer.MIN_VALUE);
+    for (int k = 0; k < values.length; k++) {
+      proposal[proposerVars[k]] = values[k];
+    }
+    int[] fixed = new int[proposerVars.length];
+    int m = 0;
+    for (int i : proposerVars) {
+      if (!vars[i].singleton()) {
+        fixed[m++] = i;
+      }
+    }
+    return Arrays.copyOf(fixed, m);
   }
 
   /**
@@ -880,6 +971,7 @@ public final class AdaptiveLns {
       case PACKING -> packings.length > 0;
       case BLOCKS -> groups.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
+      case PROPOSALS -> proposer != null;
       default -> true;
     };
   }

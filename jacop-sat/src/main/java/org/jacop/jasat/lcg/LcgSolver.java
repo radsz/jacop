@@ -3095,6 +3095,7 @@ public final class LcgSolver implements ExternalPropagator {
     this.objective = trail.id(objective);
     best = null;
     lastBound = Long.MIN_VALUE;
+    takeIncumbent();
     if (proof != null && coreShare > 0) {
       // the core-guided phase sums the model's lines, so the proof starts before it
       startProof();
@@ -6084,6 +6085,69 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public void setSharedPhase(SharedSolution solution) {
     sharedPhase = solution;
+  }
+
+  /**
+   * Gives a solution found before the search, for example by a heuristic, that {@link #minimize}
+   * takes as its best one: it searches only for better solutions, prefers the values of this one,
+   * and its neighbourhood search relaxes around it. The solution must have been reported already;
+   * the solver does not report it again. With a proof log it only gives the values as a phase.
+   *
+   * @param xs variables of the store, the objective among them
+   * @param values their values in the solution
+   */
+  public void setIncumbent(IntVar[] xs, int[] values) {
+    if (proof != null) {
+      // a proof logs every solution it relies on
+      setPhase(xs, values);
+      return;
+    }
+    int[] p = new int[vars.length];
+    for (int i = 0; i < vars.length; i++) {
+      p[i] = vars[i] == null ? 0 : vars[i].min();
+    }
+    for (int k = 0; k < xs.length; k++) {
+      int i = index(xs[k]);
+      if (i >= 0) {
+        p[i] = values[k];
+      }
+    }
+    incumbent = p;
+    incumbentVars = xs.clone();
+    incumbentValues = values.clone();
+    phase = p;
+  }
+
+  // a solution found before the search, which minimize takes as its best one, or null
+  private int[] incumbent;
+  private IntVar[] incumbentVars;
+  private int[] incumbentValues;
+
+  /**
+   * Makes the solution given by {@link #setIncumbent} the best one of {@link #minimize}: its bound
+   * clause is added, and neighbourhood search relaxes around it as around a solution of its own.
+   */
+  private void takeIncumbent() {
+    int[] s = incumbent;
+    incumbent = null;
+    if (s == null || objective < 0 || objective >= s.length || vars[objective] == null) {
+      return;
+    }
+    int v = s[objective];
+    if (v < root[objective].min() || v > root[objective].max()) {
+      return;
+    }
+    best = s;
+    phase = s;
+    if (lns != null) {
+      // the store does not hold the solution: the neighbourhoods take its values
+      lns.solution(incumbentVars, incumbentValues);
+    }
+    if (v > root[objective].min()) {
+      // the literal first, so that its linking clauses come before the bound
+      int lit = geLit(objective, v);
+      structural.add(new int[] {-lit}); // objective <= v - 1
+    }
   }
 
   /**

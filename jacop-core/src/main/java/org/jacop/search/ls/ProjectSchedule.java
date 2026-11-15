@@ -315,6 +315,10 @@ public final class ProjectSchedule {
       resTaskList.add(Arrays.copyOf(ts, m));
       resDemList.add(Arrays.copyOf(ds, m));
     }
+    if (!cumulative(resDemList, cap)) {
+      // machines only: the disjunctive scheduling of local search is the heuristic for them
+      return null;
+    }
     List<int[]> arcs = new ArrayList<>();
     for (int k = 0; k < arcVars.size(); k++) {
       arcs.add(
@@ -360,6 +364,26 @@ public final class ProjectSchedule {
             cost.min(),
             seed);
     return ps.topological(ps.identityKeys(), false) == null ? null : ps;
+  }
+
+  // whether some resource lets two of its tasks run together: not every resource is a machine
+  private static boolean cumulative(List<int[]> demands, int[] cap) {
+    for (int r = 0; r < cap.length; r++) {
+      int smallest = Integer.MAX_VALUE;
+      int second = Integer.MAX_VALUE;
+      for (int d : demands.get(r)) {
+        if (d < smallest) {
+          second = smallest;
+          smallest = d;
+        } else if (d < second) {
+          second = d;
+        }
+      }
+      if (second != Integer.MAX_VALUE && (long) smallest + second <= cap[r]) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static boolean addTask(
@@ -771,6 +795,23 @@ public final class ProjectSchedule {
 
   // ------------------------------------------------------------ genetic algorithm
 
+  // the population: lists and makespans, the better half first
+  private int pop;
+  private int[][] lists;
+  private long[] fit;
+  private long best = Long.MAX_VALUE;
+  private int[] bestStart;
+  private long lastImprovement;
+  private long lastRestart;
+  private long[] lf;
+  private int[] work;
+  private int[] child;
+  private int[] child2;
+  private boolean[] taken;
+  // the listener of the current search, null while improving a solution of another search
+  private Listener listener;
+  private boolean over;
+
   /**
    * Searches for short schedules until the listener stops it, no better schedule was found in
    * {@code patience} schedules, or the makespan reaches the lower bound of the cost.
@@ -779,16 +820,81 @@ public final class ProjectSchedule {
    * @param patience the schedules without improvement after which the search ends
    */
   public void run(Listener listener, long patience) {
-    int pop = n <= 60 ? 30 : 40;
-    int[][] lists = new int[2 * pop][];
-    long[] fit = new long[2 * pop];
-    int[] start = new int[n];
-    long best = Long.MAX_VALUE;
-    long lastImprovement = 0;
-    long[] lf = latestFinish();
+    this.listener = listener;
+    try {
+      if (!initialise()) {
+        return;
+      }
+      while (!over && !listener.stop() && schedules - lastImprovement <= patience) {
+        generation();
+      }
+    } finally {
+      this.listener = null;
+    }
+  }
+
+  /**
+   * Goes on with the genetic algorithm from a solution found by another search, for a number of
+   * schedules: the list of that solution joins the population.
+   *
+   * @param incumbent the start of each task in that solution, in the order of {@link #starts()}
+   * @param budget the schedules to build
+   * @return a schedule with a shorter makespan than the incumbent's, or null
+   */
+  public int[] improve(int[] incumbent, long budget) {
+    long m = Long.MIN_VALUE;
+    for (int t = 0; t < n; t++) {
+      if (incumbent[t] < release[t] || incumbent[t] > latest[t]) {
+        return null;
+      }
+      if (sinkLag[t] != Integer.MIN_VALUE) {
+        m = Math.max(m, (long) incumbent[t] + sinkLag[t]);
+      }
+    }
+    over = false;
+    if (lists == null && !initialise()) {
+      return null;
+    }
+    if (m < best) {
+      // the other search is ahead: its list replaces the worst one
+      int[] l = listOf(incumbent);
+      long f = decode(l, work);
+      lists[2 * pop - 1] = l;
+      fit[2 * pop - 1] = f;
+      consider(f, work);
+      if (f >= m) {
+        best = m;
+        bestStart = incumbent.clone();
+        lastImprovement = schedules;
+      }
+      sort(lists, fit);
+    }
+    long end = schedules + budget;
+    while (!over && schedules < end) {
+      generation();
+    }
+    return best < m ? bestStart.clone() : null;
+  }
+
+  /**
+   * The first population: priority rules (latest finish, most total successors, latest start), then
+   * biased random sampling around latest finish.
+   *
+   * @return false when the search is over
+   */
+  private boolean initialise() {
+    if (lists != null) {
+      return !over;
+    }
+    pop = n <= 60 ? 30 : 40;
+    lists = new int[2 * pop][];
+    fit = new long[2 * pop];
+    work = new int[n];
+    child = new int[n];
+    child2 = new int[n];
+    taken = new boolean[n];
+    lf = latestFinish();
     int[] mts = successorsCount();
-    // the first lists: priority rules (latest finish, most total successors), then biased random
-    // sampling around latest finish
     for (int i = 0; i < 2 * pop; i++) {
       double[] key = new double[n];
       for (int t = 0; t < n; t++) {
@@ -801,100 +907,94 @@ public final class ProjectSchedule {
             };
       }
       lists[i] = topological(key, false);
-      fit[i] = decode(lists[i], start);
-      if (fit[i] < best) {
-        best = fit[i];
-        lastImprovement = schedules;
-        if (best < listener.bound() && !report(listener, start, best)) {
-          return;
+      fit[i] = decode(lists[i], work);
+      consider(fit[i], work);
+      if (over || (listener != null && listener.stop())) {
+        // the population is complete enough to go on later
+        for (int j = i + 1; j < 2 * pop; j++) {
+          lists[j] = lists[i].clone();
+          fit[j] = fit[i];
         }
-        if (best <= lowerBound) {
-          return;
-        }
-      }
-      if (listener.stop()) {
-        return;
+        sort(lists, fit);
+        return false;
       }
     }
     sort(lists, fit);
-    int[] child = new int[n];
-    int[] child2 = new int[n];
-    boolean[] taken = new boolean[n];
-    // a population that found nothing better for this many schedules starts again around the best
+    lastRestart = schedules;
+    return true;
+  }
+
+  // a decoded schedule: the best one so far is kept and reported
+  private void consider(long f, int[] start) {
+    if (f >= best) {
+      return;
+    }
+    best = f;
+    bestStart = start.clone();
+    lastImprovement = schedules;
+    if (listener != null && f < listener.bound() && !report(listener, start, f)) {
+      over = true;
+    }
+    if (f <= lowerBound) {
+      over = true;
+    }
+  }
+
+  /**
+   * One generation: the children of random pairs replace the worse half; a population that found
+   * nothing better for a while starts again around the best list, half of it by shifts of that list
+   * and half by biased random sampling.
+   */
+  private void generation() {
     long restartAfter = Math.max(5_000, 100L * n);
-    long lastRestart = schedules;
-    while (!listener.stop()) {
-      if (schedules - lastImprovement > patience) {
-        return;
-      }
-      if (schedules - Math.max(lastImprovement, lastRestart) > restartAfter) {
-        restarts++;
-        lastRestart = schedules;
-        for (int i = 1; i < 2 * pop; i++) {
-          int[] l;
-          if (i % 2 == 0) {
-            double[] key = new double[n];
-            for (int t = 0; t < n; t++) {
-              key[t] = lf[t] * (1 + 0.5 * random.nextDouble()) + random.nextDouble();
-            }
-            l = topological(key, false);
-          } else {
-            l = lists[0].clone();
-            int shifts = 1 + random.nextInt(Math.max(1, n / 8));
-            for (int k = 0; k < shifts; k++) {
-              shift(l);
-            }
+    if (schedules - Math.max(lastImprovement, lastRestart) > restartAfter) {
+      restarts++;
+      lastRestart = schedules;
+      for (int i = 1; i < 2 * pop && !over; i++) {
+        int[] l;
+        if (i % 2 == 0) {
+          double[] key = new double[n];
+          for (int t = 0; t < n; t++) {
+            key[t] = lf[t] * (1 + 0.5 * random.nextDouble()) + random.nextDouble();
           }
-          fit[i] = decode(l, start);
-          lists[i] = l;
-          if (fit[i] < best) {
-            best = fit[i];
-            lastImprovement = schedules;
-            if (best < listener.bound() && !report(listener, start, best)) {
-              return;
-            }
-            if (best <= lowerBound) {
-              return;
-            }
-          }
-        }
-        sort(lists, fit);
-        continue;
-      }
-      // children replace the worse half
-      for (int c = pop; c < 2 * pop; c += 2) {
-        int a = random.nextInt(pop);
-        int b = random.nextInt(pop);
-        while (b == a) {
-          b = random.nextInt(pop);
-        }
-        int q1 = random.nextInt(n);
-        int q2 = q1 + random.nextInt(n - q1 + 1);
-        crossover(lists[a], lists[b], q1, q2, child, taken);
-        crossover(lists[b], lists[a], q1, q2, child2, taken);
-        for (int which = 0; which < 2 && c + which < 2 * pop; which++) {
-          int[] l = (which == 0 ? child : child2).clone();
-          mutate(l);
-          if (random.nextInt(4) == 0) {
+          l = topological(key, false);
+        } else {
+          l = lists[0].clone();
+          int shifts = 1 + random.nextInt(Math.max(1, n / 8));
+          for (int k = 0; k < shifts; k++) {
             shift(l);
           }
-          long f = decode(l, start);
-          lists[c + which] = l;
-          fit[c + which] = f;
-          if (f < best) {
-            best = f;
-            lastImprovement = schedules;
-            if (best < listener.bound() && !report(listener, start, best)) {
-              return;
-            }
-            if (best <= lowerBound) {
-              return;
-            }
-          }
         }
+        fit[i] = decode(l, work);
+        lists[i] = l;
+        consider(fit[i], work);
       }
       sort(lists, fit);
+      return;
     }
+    for (int c = pop; c < 2 * pop && !over; c += 2) {
+      int a = random.nextInt(pop);
+      int b = random.nextInt(pop);
+      while (b == a) {
+        b = random.nextInt(pop);
+      }
+      int q1 = random.nextInt(n);
+      int q2 = q1 + random.nextInt(n - q1 + 1);
+      crossover(lists[a], lists[b], q1, q2, child, taken);
+      crossover(lists[b], lists[a], q1, q2, child2, taken);
+      for (int which = 0; which < 2 && c + which < 2 * pop; which++) {
+        int[] l = (which == 0 ? child : child2).clone();
+        mutate(l);
+        if (random.nextInt(4) == 0) {
+          shift(l);
+        }
+        long f = decode(l, work);
+        lists[c + which] = l;
+        fit[c + which] = f;
+        consider(f, work);
+      }
+    }
+    sort(lists, fit);
   }
 
   /**
