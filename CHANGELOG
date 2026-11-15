@@ -6290,7 +6290,17 @@ Version 5.0 (unreleased)
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
 
-347. -Djacop.virtualClock=true also covers free search without learning
+351. Lazy clause generation explains an entailed reified <= or >= linear
+   constraint (int_lin_le_reif, int_lin_le_imp and the like) from one
+   bound lookup per term: before, it read both bounds of every term and
+   then looked up the entry of the bound it cites again. The reasons and
+   the search are the same. bnn-planner navigation_5x5_10s, where these
+   reasons took 22 % of the time, solves in 5.35 s instead of 6.29 s;
+   over the 53 wide instances with int_lin_le_reif or int_lin_le_imp, the
+   instances solved with the same search in at least 10 s take 0.94x
+   (default) and 0.93x (-f) of the time at 600 s.
+
+352. -Djacop.virtualClock=true also covers free search without learning
    after LCG gives way (-f): its time limit, the time LCG left, counts
    jacop.virtualClock.propagationsPerMs (1000) propagations per
    millisecond, and the probes of the value impact heuristic take their
@@ -6301,7 +6311,7 @@ Version 5.0 (unreleased)
    work-task-variation) and, in one of three censuses, mapping.
    FreeSearch.Builder.virtualClock turns it on for one search.
 
-347. Free search with lazy clause generation on an optimisation model
+353. Free search with lazy clause generation on an optimisation model
    whose search variables all lie in one cardinality with fixed counts
    (jacop_count_values or global_cardinality posted as CountValuesBounds
    with equal bounds) first dives without learning through those
@@ -6323,7 +6333,7 @@ Version 5.0 (unreleased)
    slot-dive-share sets its share of the time; the statistics slotDiveSlots
    and slotDiveTime give its size and time.
 
-346. Under lazy clause generation the FlatZinc front end adds to a
+354. Under lazy clause generation the FlatZinc front end adds to a
    cumulative whose tasks have variable durations and fixed resource
    uses, and at most 4000 (task, time point) pairs, its time-resource
    decomposition: at each time point t the sum of the resource uses of
