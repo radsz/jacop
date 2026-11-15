@@ -130,6 +130,12 @@ public class Tables {
   // the block sums of linear constraints split for lazy clause generation
   final ArrayList<IntVar> splitSums = new ArrayList<>();
 
+  // whether the linear rows of the model were set rows before linear overlap factoring rewrote
+  // them (LinearOverlapDetector.setRows), and the integer variables they define
+  boolean overlapSetRows;
+
+  final ArrayList<IntVar> overlapSetRowsDefined = new ArrayList<>();
+
   // the tables of the model, for the clique rows of the linear relaxation
   private final ArrayList<TableCliques.Table> tables = new ArrayList<>();
 
@@ -668,6 +674,8 @@ public class Tables {
     t.unusedVariables.addAll(map.get(unusedVariables));
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
+    t.overlapSetRows = overlapSetRows;
+    t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.objectiveScale = objectiveScale;
@@ -1130,6 +1138,28 @@ public class Tables {
    */
   public List<IntVar> splitSums() {
     return splitSums;
+  }
+
+  /**
+   * Records that the linear rows of the model were set rows over 0/1 variables before linear
+   * overlap factoring rewrote them, apart from rows defining the given integer variables.
+   *
+   * @param defined the integer variables that rows define, such as the objective of a set cover
+   */
+  public void setOverlapSetRows(List<IntVar> defined) {
+    overlapSetRows = true;
+    overlapSetRowsDefined.addAll(defined);
+  }
+
+  /**
+   * Tells whether the linear rows of the model were set rows over 0/1 variables before linear
+   * overlap factoring rewrote them, apart from a row defining the objective.
+   *
+   * @param objective the variable minimized or maximized
+   * @return whether the model's linear rows were set rows before the factoring
+   */
+  public boolean overlapSetRows(IntVar objective) {
+    return overlapSetRows && overlapSetRowsDefined.stream().allMatch(v -> v == objective);
   }
 
   /**
