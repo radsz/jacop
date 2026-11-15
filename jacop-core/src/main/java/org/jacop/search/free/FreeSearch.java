@@ -157,6 +157,7 @@ public final class FreeSearch {
   private final long failLimit;
   private final long timeLimitMillis;
   private final long deadlineMillis;
+  private final boolean virtualClock;
   private final Var[] recorded;
   private final Set<Var> projection;
   private final List<SearchMonitor> monitors;
@@ -199,6 +200,32 @@ public final class FreeSearch {
   private int stackSize;
   private int rootLevel;
   private long deadline;
+  // the end of the time limit on the clock of the search (virtual or wall-clock milliseconds)
+  private long limitDeadline;
+
+  /**
+   * Whether the time limit of the search ({@link Builder#timeLimit}) counts propagation (system
+   * property {@code jacop.virtualClock}, as for lazy clause generation): {@link
+   * #VIRTUAL_PROPAGATIONS_PER_MS} constraint propagations count as one millisecond, so that a run
+   * stops at the same point whatever the load of the machine. A {@link Builder#deadline} stays a
+   * wall-clock time.
+   */
+  public static final boolean VIRTUAL_CLOCK = Boolean.getBoolean("jacop.virtualClock");
+
+  /**
+   * The propagations that count as one millisecond of the virtual clock (system property {@code
+   * jacop.virtualClock.propagationsPerMs}).
+   */
+  public static final long VIRTUAL_PROPAGATIONS_PER_MS =
+      Math.max(1, Long.getLong("jacop.virtualClock.propagationsPerMs", 1000));
+
+  // the time of the clock of the time limit, in milliseconds
+  private long clock() {
+    return virtualClock
+        ? store.numberConsistencyCalls / VIRTUAL_PROPAGATIONS_PER_MS
+        : System.currentTimeMillis();
+  }
+
   // set by stop(), possibly from another thread
   private volatile boolean stopRequested;
   private boolean limitReached;
@@ -245,6 +272,7 @@ public final class FreeSearch {
     failLimit = builder.failLimit;
     timeLimitMillis = builder.timeLimitMillis;
     deadlineMillis = builder.deadlineMillis;
+    virtualClock = builder.virtualClock;
     recorded = builder.recorded == null ? new Var[0] : builder.recorded;
     projection =
         builder.projection == null ? null : Collections.newSetFromMap(new IdentityHashMap<>());
@@ -314,9 +342,10 @@ public final class FreeSearch {
    * @return how the search ended.
    */
   public Status solve() {
-    deadline = timeLimitMillis > 0 ? System.currentTimeMillis() + timeLimitMillis : Long.MAX_VALUE;
-    if (deadlineMillis > 0) {
-      deadline = Math.min(deadline, deadlineMillis);
+    limitDeadline = timeLimitMillis > 0 ? clock() + timeLimitMillis : Long.MAX_VALUE;
+    deadline = deadlineMillis > 0 ? deadlineMillis : Long.MAX_VALUE;
+    if (!virtualClock) {
+      deadline = Math.min(deadline, limitDeadline);
     }
     int startLevel = store.level;
     boolean exhausted = false;
@@ -959,7 +988,8 @@ public final class FreeSearch {
     }
     if ((failLimit > 0 && failures >= failLimit)
         // the clock is read at every node: one node can take seconds when propagation is costly
-        || System.currentTimeMillis() > deadline) {
+        || System.currentTimeMillis() > deadline
+        || (virtualClock && clock() > limitDeadline)) {
       limitReached = true;
       return true;
     }
@@ -1169,6 +1199,7 @@ public final class FreeSearch {
     private long failLimit;
     private long timeLimitMillis;
     private long deadlineMillis;
+    private boolean virtualClock = VIRTUAL_CLOCK;
     private Var[] recorded;
     private Var[] projection;
     private final List<SearchMonitor> monitors = new ArrayList<>();
@@ -1427,6 +1458,18 @@ public final class FreeSearch {
      */
     public Builder deadline(long epochMillis) {
       this.deadlineMillis = epochMillis;
+      return this;
+    }
+
+    /**
+     * Counts the {@link #timeLimit} on the virtual clock ({@link FreeSearch#VIRTUAL_CLOCK}, the
+     * default under {@code jacop.virtualClock}): propagations instead of milliseconds.
+     *
+     * @param on true for the virtual clock, false for the wall clock.
+     * @return this builder.
+     */
+    public Builder virtualClock(boolean on) {
+      this.virtualClock = on;
       return this;
     }
 

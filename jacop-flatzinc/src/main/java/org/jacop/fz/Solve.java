@@ -4507,7 +4507,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       builder.mainBranchingFirst(true);
     }
-    if (options.getTimeOut() > 0) {
+    if (options.getTimeOut() > 0 && FreeSearch.VIRTUAL_CLOCK) {
+      // the virtual clock counts work only: the time LCG left when it gave way, or the whole
+      // time-out, counted in propagations, so that the run repeats whatever the load
+      long left =
+          slowLcg != null
+              ? Math.max(1, (slowLcg.sat().deadline() - slowLcg.sat().now()) / 1_000_000L)
+              : options.getTimeOut();
+      builder.timeLimit(Duration.ofMillis(left));
+    } else if (options.getTimeOut() > 0) {
       // the time left now, not when the search starts: building the neighbourhoods and the
       // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
       builder.deadline(System.currentTimeMillis() + options.getRemainingTimeOut());

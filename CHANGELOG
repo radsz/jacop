@@ -6290,6 +6290,17 @@ Version 5.0 (unreleased)
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
 
+347. -Djacop.virtualClock=true also covers free search without learning
+   after LCG gives way (-f): its time limit, the time LCG left, counts
+   jacop.virtualClock.propagationsPerMs (1000) propagations per
+   millisecond, and the probes of the value impact heuristic take their
+   share of the propagations instead of the time. Two runs of the 62
+   wide-quick instances at 10 s with -f, three at a time, end identically
+   on 58 to 61 of them (55 before). The rest are symmetry detection
+   (whirlpool), presolve timers (a few propagations on monomatch and
+   work-task-variation) and, in one of three censuses, mapping.
+   FreeSearch.Builder.virtualClock turns it on for one search.
+
 Version 4.11
 =============
 
