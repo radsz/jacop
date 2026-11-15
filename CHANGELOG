@@ -5861,6 +5861,19 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
+335. A root solve of the linear relaxation of an optimisation model in the
+   sparse simplex (the first solve, or the trial of the extra rows such as
+   value encodings) that stops at its pivot or work budget now goes on
+   within half of the time a large relaxation gets for its root solves
+   (org.jacop.lp.largeRootShare of the time limit). Such a solve gave no
+   bound and its rows were dropped. On Drinking-010000 of the XCSP 2024
+   competition (13,142 rows and 12,570 extra rows) the trial stopped at its
+   budget and the bound stayed 0; it now takes 0.8 s more and the bound is
+   1,000, the optimum, as Drinking-020000, a large relaxation, already had.
+   It fires on none of the optimisation instances of the wide benchmark
+   set. -Dorg.jacop.lp.rootExtendShare=0 turns it off; the statistic
+   lpRootExtendTime gives its time.
+
 Version 4.11
 =============
 

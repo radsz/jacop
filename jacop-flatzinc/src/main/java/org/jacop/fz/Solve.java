@@ -1108,6 +1108,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.lazyRemoved
             + "\n%%%mzn-stat: lpRootBound="
             + r.rootBound
+            + "\n%%%mzn-stat: lpRootExtendTime="
+            + r.rootExtendNanos() / 1e9
             + "\n%%%mzn-stat: lpCuts="
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
