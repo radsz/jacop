@@ -5603,6 +5603,35 @@ Version 5.0 (unreleased)
    13 -> 23 s). -Dorg.jacop.fz.enforcementInlining=false turns it off; it
    is off under --proof and when all solutions are asked for.
 
+322. The linear relaxation gets the rows of an assignment model for
+   conjunctions b_v <-> s /\ [x = v] of a Boolean s with the value
+   Booleans of a variable x: sum_v b_v = s (<= s when the values do not
+   cover the domain of x), and y = d + sum_v (v + c - d) b_v for
+   y = if s then x + c else d (ConditionalSelect). Under lazy clause
+   generation the conjunctions are read from their clause rows. Count over
+   0/1 variables gets its exact row. Before, these were big-M rows only,
+   which let a fractional s keep every b_v at 0. On ihtc-2024-kletzander
+   (MiniZinc Challenge 2025) the root bound rises from 0 to 9,151 on
+   test03 (optimum 9,385, proved with -f in 5 s at 600 s, before never)
+   and to 13,639 on test05 (bound 13,798 at 600 s, before 4,128). Of the
+   240 instances of the wide benchmark set they reach 10, with no change
+   in solved instances at 600 s. -Dorg.jacop.lp.selectedValues=false and
+   -Dorg.jacop.lp.booleanCount=false turn them off.
+
+323. Free search (-f) with lazy clause generation that has no solution and
+   makes fewer than 30 conflicts per second at lcg-slow-at gives way to
+   free search without learning (--free-config lcg-slow-unsolved=<rate>,
+   0 = off). Before, a slow LCG without a solution never gave way. On
+   ihtc-2024-marte i14 (MiniZinc Challenge 2025) LCG makes about 10
+   conflicts per second and found no solution in 1200 s; now -f finds
+   24,783 at 600 s and 18,747 at 1200 s (CP-SAT par 16,165 in the
+   Challenge). Of the 240 wide instances it fires on one more
+   (rcpsp_max psp_ubo500_33, no solution either way).
+
+324. Binpacking skips the sort and uses a closed form of Shaw's NoSum
+   test (CP 2004) and one elimination and commitment pass when the items
+   not yet placed have the same weight, with the same pruning.
+
 Version 4.11
 =============
 
