@@ -1,0 +1,18 @@
+predicate jacop_float_minimum(array [int] of var float: x,var float: m);
+predicate jacop_float_maximum(array [int] of var float: x,var float: m);
+array [1..5] of float: X_INTRODUCED_1 = [5.5,3.2999999999999998,8.8000000000000007,0.0,4.4000000000000004];
+array [1..5] of float: X_INTRODUCED_3 = [5.5,3.2999999999999998,8.8000000000000007,9.9000000000000004,4.4000000000000004];
+var float: X_INTRODUCED_0;
+var 0.0..20.0: min_vf1:: output_var;
+var 0.0..20.0: min_vf2:: output_var;
+var 0.0..20.0: max_vf1:: output_var;
+var 0.0..20.0: max_vf2:: output_var;
+array [1..3] of var float: inc_avf:: output_array([1..3]) = [1.0,2.0,X_INTRODUCED_0];
+array [1..5] of var float: X_INTRODUCED_2 ::var_is_introduced  = [5.5,3.2999999999999998,8.8000000000000007,min_vf2,4.4000000000000004];
+array [1..5] of var float: X_INTRODUCED_4 ::var_is_introduced  = [5.5,3.2999999999999998,8.8000000000000007,max_vf2,4.4000000000000004];
+constraint float_le(2.0,X_INTRODUCED_0);
+constraint jacop_float_minimum(X_INTRODUCED_1,min_vf1);
+constraint jacop_float_minimum(X_INTRODUCED_2,0.0);
+constraint jacop_float_maximum(X_INTRODUCED_3,max_vf1);
+constraint jacop_float_maximum(X_INTRODUCED_4,9.9000000000000004);
+solve  satisfy;
