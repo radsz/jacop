@@ -6424,6 +6424,21 @@ Version 5.0 (unreleased)
    turns it off, =true posts it without lazy clause generation too, and
    -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
+358. Large neighbourhood search under -f keeps to the variables that no
+   constraint defines when there are at least 3 of them, instead of 16
+   (item 290). Below 16 the neighbourhoods took every variable, which on
+   models with a few roots that define the rest, such as city-position
+   (8 and 12 roots), made each neighbourhood relax variables that the
+   fixed roots determine anyway. Found by bisecting a -f loss of the
+   second integration round (city-position city-5-06, 4 seeds: 26-42 s
+   before item 290, 66-98 s after). On the 10 wide instances with 3 to
+   15 roots, -f at 240 s, two seeds: city-position city-5-06 108/93 ->
+   48/29 s, city-7-04 proved in 107/126 s (before unproved at the
+   limit), fast-food ff58 47/28 -> 19/28 s, median-string p2_10_8-0
+   16/15 -> 11/12 s, the other six equal; total time 819 -> 409 s.
+   pattern-set-mining (1 and 2 roots) and atp-stage2 (2) still take
+   every variable.
+
 Version 4.11
 =============
 
