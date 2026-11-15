@@ -84,9 +84,11 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
+import org.jacop.floats.constraints.FloatNewton;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
+import org.jacop.floats.search.FloatCid;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
@@ -115,6 +117,7 @@ import org.jacop.satwrapper.SatTranslation;
 import org.jacop.search.AfcMax;
 import org.jacop.search.AfcMaxDeg;
 import org.jacop.search.ComparatorVariable;
+import org.jacop.search.ConsistencyListener;
 import org.jacop.search.CreditCalculator;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.FailConstraintsStatistics;
@@ -5480,6 +5483,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         variableSelection = (SelectChoicePoint<T>) floatSelect;
       }
       floatSearch.setSelectChoicePoint((SelectChoicePoint<T>) floatSelect);
+      attachFloatCid(floatSearch, floatSearchVariables);
       floatSearch.setPrintInfo(false);
       if (lastSearch != null) {
         lastSearch.addChildSearch(floatSearch);
@@ -6086,8 +6090,56 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       label.setInitializeListener(new PrecisionSetting(si.precision));
     }
+    attachFloatCid(label, si.vars());
 
     return label;
+  }
+
+  /**
+   * Adds the 3BCID contractor ({@link FloatCid}) and the interval Newton contractor ({@link
+   * FloatNewton}) over the float variables of a search. System property org.jacop.floats.newton
+   * (true or false) chooses Newton, by default on for satisfaction problems only. System property
+   * org.jacop.floats.cid is "s3b[,variablesPerNode]"; without it satisfaction problems use "10"
+   * (all variables at every node) and optimisation problems none, and "off" turns it off.
+   */
+  private void attachFloatCid(DepthFirstSearch<T> label, Var[] vars) {
+    FloatVar[] floats =
+        Arrays.stream(vars).filter(FloatVar.class::isInstance).toArray(FloatVar[]::new);
+    if (floats.length == 0) {
+      return;
+    }
+    String spec = System.getProperty("org.jacop.floats.cid");
+    if (spec == null || spec.isBlank()) {
+      spec = solveKind == 0 ? "10" : "off";
+    }
+    if (!"off".equals(spec.trim())) {
+      String[] p = spec.split(",");
+      FloatCid cid =
+          new FloatCid(
+              store,
+              floats,
+              Integer.parseInt(p[0].trim()),
+              p.length > 1 ? Integer.parseInt(p[1].trim()) : floats.length);
+      chainListener(label, cid);
+    }
+    String newtonSpec = System.getProperty("org.jacop.floats.newton");
+    if (newtonSpec == null || newtonSpec.isBlank()) {
+      newtonSpec = solveKind == 0 ? "true" : "false";
+    }
+    if (Boolean.parseBoolean(newtonSpec.trim())) {
+      FloatNewton newton = new FloatNewton(store, floats);
+      if (newton.isSquare()) {
+        chainListener(label, newton);
+      }
+    }
+  }
+
+  /** Makes the listener the first consistency listener of the search, ahead of the existing one. */
+  private void chainListener(DepthFirstSearch<T> label, ConsistencyListener listener) {
+    if (label.getConsistencyListener() != null) {
+      listener.setChildrenListeners(label.getConsistencyListener());
+    }
+    label.setConsistencyListener(listener);
   }
 
   @SuppressWarnings("unchecked")

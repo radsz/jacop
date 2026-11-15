@@ -36,6 +36,7 @@ import org.jacop.floats.constraints.CeilPeqX;
 import org.jacop.floats.constraints.CosPeqR;
 import org.jacop.floats.constraints.ExpPeqR;
 import org.jacop.floats.constraints.FloorPeqX;
+import org.jacop.floats.constraints.HyperbolicPeqR;
 import org.jacop.floats.constraints.LnPeqR;
 import org.jacop.floats.constraints.Max;
 import org.jacop.floats.constraints.Min;
@@ -44,8 +45,10 @@ import org.jacop.floats.constraints.PdivQeqR;
 import org.jacop.floats.constraints.PeqC;
 import org.jacop.floats.constraints.PeqQ;
 import org.jacop.floats.constraints.PgtC;
+import org.jacop.floats.constraints.PgteqC;
 import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.PowPeqR;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
@@ -137,6 +140,47 @@ class FloatOperationConstraints implements ParserTreeConstants {
     FloatVar tmp = new FloatVar(store, -1e150, 1e150);
     support.pose(new LnPeqR(support.getFloatVariable(p1), tmp));
     support.pose(new PdivCeqR(tmp, Math.log(2), support.getFloatVariable(p2)));
+  }
+
+  /**
+   * Posts f(x) = y for a hyperbolic function f, or x = f(y) for its inverse (asinh, acosh with y
+   * &gt;= 0, atanh).
+   */
+  private void hyperbolic(SimpleNode node, HyperbolicPeqR.Function function, boolean inverse) {
+    FloatVar x = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    FloatVar y = support.getFloatVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+    if (inverse) {
+      if (function == HyperbolicPeqR.Function.COSH) {
+        support.pose(new PgteqC(y, 0.0));
+      }
+      support.pose(new HyperbolicPeqR(y, function, x));
+    } else {
+      support.pose(new HyperbolicPeqR(x, function, y));
+    }
+  }
+
+  void gen_float_sinh(SimpleNode node) {
+    hyperbolic(node, HyperbolicPeqR.Function.SINH, false);
+  }
+
+  void gen_float_cosh(SimpleNode node) {
+    hyperbolic(node, HyperbolicPeqR.Function.COSH, false);
+  }
+
+  void gen_float_tanh(SimpleNode node) {
+    hyperbolic(node, HyperbolicPeqR.Function.TANH, false);
+  }
+
+  void gen_float_asinh(SimpleNode node) {
+    hyperbolic(node, HyperbolicPeqR.Function.SINH, true);
+  }
+
+  void gen_float_acosh(SimpleNode node) {
+    hyperbolic(node, HyperbolicPeqR.Function.COSH, true);
+  }
+
+  void gen_float_atanh(SimpleNode node) {
+    hyperbolic(node, HyperbolicPeqR.Function.TANH, true);
   }
 
   void gen_float_sqrt(SimpleNode node) {
@@ -267,71 +311,24 @@ class FloatOperationConstraints implements ParserTreeConstants {
                 new PeqC(v2, 0), new PeqC(v3, 1), new And(new PgtC(v2, 0), new PeqC(v3, 0)))));
   }
 
-  /** Poses x^c = z for a constant exponent c. */
+  /**
+   * Poses x^c = z for a constant exponent c: a native power propagator (PowPeqR) keeps the sign of
+   * the base and the hole around zero of an even power; x^-n is 1 / x^n.
+   */
   private void powConstantExponent(FloatVar x, double c, FloatVar z) {
     if (c == 0) {
       // x^0 = 1 for every x, 0^0 included
       z.domain.in(store.level, z, 1.0, 1.0);
       return;
     }
-    if (c == Math.rint(c) && Math.abs(c) <= 1L << 30) {
-      // an integer exponent: repeated multiplication, exact for small integers and defined for a
-      // negative or zero base, unlike exp(c*ln(x))
-      int n = (int) Math.abs(c);
-      if (c > 0) {
-        integerPower(x, n, z);
-      } else {
-        // x^-n = 1 / x^n, undefined for x = 0 (z * x^n = 1 has no solution with x^n = 0)
-        FloatVar xn = new FloatVar(store, -1e150, 1e150);
-        integerPower(x, n, xn);
-        support.pose(new PmulQeqR(z, xn, new FloatVar(store, 1.0, 1.0)));
-      }
+    if (c > 0) {
+      support.pose(new PowPeqR(x, c, z));
       return;
     }
-    // a fractional exponent needs x >= 0, and x > 0 for a negative one
-    if (x.min() < 0) {
-      System.err.println(
-          "%% WARNING: constraint float_pow is not defined for negative numbers as first argument"
-              + " and a fractional exponent; "
-              + x
-              + " has minimal value negative (will be pruned).");
-    }
-    x.domain.inMin(store.level, x, 0.0);
-    if (c < 0 || x.min() > 0) {
-      powByLogarithm(x, new FloatVar(store, c, c), z);
-      return;
-    }
-    // 0^c = 0 for c > 0; z >= 0 also holds while the condition x > 0 is not decided yet
-    z.domain.inMin(store.level, z, 0.0);
-    FloatVar base = positiveBaseOrOne(x);
-    FloatVar power = new FloatVar(store, 0.0, 1e150);
-    powByLogarithm(base, new FloatVar(store, c, c), power);
-    support.pose(new IfThenElse(new PgtC(x, 0), new PeqQ(z, power), new PeqC(z, 0)));
-  }
-
-  /**
-   * Poses x^n = z for an integer n &gt;= 1 by squaring: x^(2k) = (x^k)^2, where PmulQeqR of a
-   * variable with itself is a square (z &gt;= 0, x = +-sqrt(z)), and x^(2k+1) = x * x^(2k).
-   */
-  private void integerPower(FloatVar x, int n, FloatVar z) {
-    if (n == 1) {
-      support.pose(new PeqQ(x, z));
-      return;
-    }
-    if (n % 2 == 0) {
-      FloatVar half = x;
-      int halfExponent = n / 2;
-      if (halfExponent > 1) {
-        double low = halfExponent % 2 == 0 ? 0.0 : -1e150;
-        half = new FloatVar(store, low, 1e150);
-        integerPower(x, halfExponent, half);
-      }
-      support.pose(new PmulQeqR(half, half, z));
-    } else {
-      FloatVar even = new FloatVar(store, 0, 1e150);
-      integerPower(x, n - 1, even);
-      support.pose(new PmulQeqR(x, even, z));
-    }
+    // x^-n = 1 / x^n, undefined for x = 0 (z * x^n = 1 has no solution with x^n = 0)
+    FloatVar xn = new FloatVar(store, -1e150, 1e150);
+    support.pose(new PowPeqR(x, -c, xn));
+    support.pose(new PmulQeqR(z, xn, new FloatVar(store, 1.0, 1.0)));
   }
 
   /** Poses x^y = z as exp(y * ln(x)) = z, which needs x > 0. */
