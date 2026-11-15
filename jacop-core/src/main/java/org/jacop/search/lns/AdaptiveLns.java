@@ -1232,13 +1232,18 @@ public final class AdaptiveLns {
           }
         }
       }
-      if (kind == Kind.ROUTES && DEPOT_LINKS) {
-        successors.relaxDepotLinks(relax);
-      }
+      relaxDepotLinks(kind, successors, relax);
       return relax;
     }
     r.relax(removed, relax);
     return relax;
+  }
+
+  // frees the links between the routes and their depots in a route removal (DEPOT_LINKS)
+  private static void relaxDepotLinks(Kind kind, SuccessorRoutes successors, boolean[] relax) {
+    if (kind == Kind.ROUTES && DEPOT_LINKS) {
+      successors.relaxDepotLinks(relax);
+    }
   }
 
   private boolean[] randomRelax(int relaxed) {
