@@ -2120,6 +2120,10 @@ Version 5.0 (unreleased)
      turns it off. gt-sort, 60 s, model search: 3 of 5 optimal (none
      before), the optimum found on all 4 instances with a known one.
      Only gt-sort changes model on the wide set.
+     The [e_i = v] literals are shared by all chains, reuse the model's
+     own int_eq_reif Booleans and go into one ChannelReif per element
+     variable instead of one reified x = v each (gt-sort n13: 688k ->
+     52k propagators; 600 s -f: 22 % less time on the 4 proved).
 
 140. LP duals are those of the costs as given. Both dual simplex engines
      perturb the costs by about 1e-7 against dual degeneracy, and the
