@@ -6424,6 +6424,20 @@ Version 5.0 (unreleased)
    turns it off, =true posts it without lazy clause generation too, and
    -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
+358. ElementVariableFast (MiniZinc element with a variable array) skips
+   the calls woken by array positions the index can no longer select, and
+   for a wake from a few selectable positions it checks residual supports
+   (the changed positions, the bounds of the value and, for values spanning
+   fewer than 64, each value) instead of scanning the whole index domain.
+   On XCSP 2026 TelecomScheduling, where each task selects its day in the
+   team array of every agent (100-200 days), the scans took 70-85 % of the
+   time; at 600 s B-10 now reaches 178920 and B-01 1045380, where JaCoP
+   found no solution before, and A-10 104404 instead of 140534 at 240 s.
+   On the 82 wide instances with an element over a variable array the
+   same instances are proved (56 by default, 62 under -f, 600 s) and the
+   total time is unchanged (1.005 and 1.012, the same search under the
+   virtual clock).
+
 Version 4.11
 =============
 
