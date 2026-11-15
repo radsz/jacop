@@ -282,6 +282,52 @@ class TableReformulationFlatzincTest {
     }
   }
 
+  /**
+   * A binary table whose compressed form LCG writes as clauses (the neighbour ranks of black-hole)
+   * must stay a table LCG encodes, not a BinaryBitTable it cannot: black-hole searched twice as
+   * many nodes after the BinaryBitTable change (PR #685) lost these clauses.
+   */
+  @Test
+  void compressibleBinaryTablesStayClausesUnderLcg() throws IOException {
+    StringBuilder pairs = new StringBuilder();
+    int count = 0;
+    for (int a = 0; a < 16; a++) {
+      for (int b = 0; b < 16; b++) {
+        if (Math.floorMod(a % 4 - b % 4, 4) == 1 || Math.floorMod(b % 4 - a % 4, 4) == 1) {
+          pairs.append(count++ == 0 ? "" : ",").append(a).append(',').append(b);
+        }
+      }
+    }
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("array [1..")
+        .append(2 * count)
+        .append("] of int: t = [")
+        .append(pairs)
+        .append("];\n");
+    for (int i = 0; i < 4; i++) {
+      fzn.append("var 0..15: x").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i < 3; i++) {
+      fzn.append("constraint jacop_table_int([x").append(i).append(",x").append(i + 1);
+      fzn.append("], t);\n");
+    }
+    fzn.append("constraint int_lt(x0, x3);\n");
+    fzn.append("solve satisfy;\n");
+    String model = fzn.toString();
+    String out = run(model, true, "--lcg", "on", "--search-statistics");
+    String stat = "%%%mzn-stat: lcgCompressedTablesAsClauses=";
+    long clauses =
+        Arrays.stream(out.split("\\R"))
+            .filter(l -> l.startsWith(stat))
+            .mapToLong(l -> Long.parseLong(l.substring(stat.length()).strip()))
+            .sum();
+    assertTrue(clauses > 0, out);
+    assertEquals(
+        solutions(run(model, true, "-a", "--lcg", "off")),
+        solutions(run(model, true, "-a", "--lcg", "on")),
+        model);
+  }
+
   private String run(String model, boolean reformulation, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
