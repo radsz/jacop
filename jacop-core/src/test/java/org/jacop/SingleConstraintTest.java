@@ -73,6 +73,7 @@ import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
@@ -4808,6 +4809,24 @@ class SingleConstraintTest extends TestHelper {
     other.impose(new ArgMin(new IntVar[] {y0, y1, y2}, position, -1));
     assertThat(other.consistency()).isTrue();
     assertThat(y1.min()).isEqualTo(1);
+
+    // the same for ArgMaxMonotone, with x2 read through a doubling table
+    Store third = new Store();
+    IntVar z0 = new IntVar(third, "z0", 0, 3);
+    IntVar z1 = new IntVar(third, "z1", 0, 0);
+    z1.addDom(3, 8);
+    IntVar z2 = new IntVar(third, "z2", 1, 2);
+    IntVar at = new IntVar(third, "at", 0, 0);
+    at.addDom(2, 2);
+    third.impose(
+        new ArgMaxMonotone(
+            new IntVar[] {z0, z1, z2},
+            new int[][] {null, null, {2, 4}},
+            new int[] {0, 0, 1},
+            at,
+            -1));
+    assertThat(third.consistency()).isTrue();
+    assertThat(z1.max()).isEqualTo(3);
   }
 
   @Test

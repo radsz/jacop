@@ -1675,7 +1675,7 @@ class ConsistencyChecker {
                   },
                   concat(x, new IntVar[] {index}));
             }),
-        new Case("ArgMaxMonotone", Level.BOUNDS_Z, (s, r) -> argMaxMonotone(s, r, true)),
+        new Case("ArgMaxMonotone", Level.DOMAIN, (s, r) -> argMaxMonotone(s, r, true)),
         new Case("ConditionalSelect", Level.BOUNDS_Z, ConsistencyChecker::conditionalSelect),
         new Case("MaxSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, false)),
         new Case("MinSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, true)),
