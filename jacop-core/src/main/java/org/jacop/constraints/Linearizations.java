@@ -168,6 +168,305 @@ public final class Linearizations {
     return out;
   }
 
+  /**
+   * Returns the rows of the value conjunctions ({@link #selectedValues}), with the conjunctions
+   * {@code b <-> s /\ e} that the clause rows among the further rows of the relaxation state
+   * ({@code b -> s}, {@code b -> e} and {@code s /\ e -> b}, as lazy clause generation posts an and
+   * of two Booleans) taken like the and constraints of the store; {@code
+   * -Dorg.jacop.lp.selectedValues=false} turns them off.
+   *
+   * @param constraints the constraints
+   * @param extra the further rows of the relaxation, among them the clauses as rows (null entries
+   *     are skipped)
+   * @return the rows, empty when no conjunction qualifies
+   */
+  public static List<LinearForm> selectedValueRows(
+      Collection<Constraint> constraints, Collection<LinearForm> extra) {
+    List<LinearForm> out = new ArrayList<>();
+    if (SELECTED_VALUES) {
+      Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
+      for (Map.Entry<IntVar, Map<Integer, IntVar>> e : byVar.entrySet()) {
+        IntVar x = e.getKey();
+        e.getValue().keySet().removeIf(v -> !x.domain.contains(v));
+      }
+      selectedValues(constraints, extra, byVar, out);
+    }
+    return out;
+  }
+
+  // the rows of selectedValues: on or off
+  private static final boolean SELECTED_VALUES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.selectedValues", "true"));
+
+  /**
+   * Adds the rows of the conjunctions {@code b_v <-> s /\ e_v} of one Boolean s with the value
+   * Booleans {@code e_v <-> x = v} of one variable x (from {@link #valueBooleans}): {@code sum_v
+   * b_v <= s}, and {@code sum_v b_v = s} when the values cover the domain of x, since x takes one
+   * value. Then, for each {@code y = if s then x + c else d} ({@link ConditionalSelect} with a
+   * constant else branch, and {@code x + c} x itself or a variable z with a linear equality z - x =
+   * c) whose conjunctions cover the domain of x, {@code y = d + sum_v (v + c - d) b_v}. These are
+   * the rows of the assignment model of a MIP ({@code b_v} = item assigned to v): the big-M rows of
+   * the conjunctions alone let a fractional s keep every {@code b_v} at 0, and the big-M rows of
+   * the select let y take any value between its branches. On ihtc-2024-kletzander (MiniZinc
+   * Challenge 2025), where {@code b_pd} says that patient p is selected and admitted on day d, the
+   * surgeon capacity of each day is a sum of the {@code b_pd} and the delay of p is {@code if s_p
+   * then a_p - r_p else 0}, the root bound was 0 without them.
+   *
+   * @param constraints the constraints
+   * @param extra the further rows of the relaxation, whose clause rows may state conjunctions
+   * @param byVar the equivalent Booleans by variable and value, values outside the domain removed
+   * @param out the list the rows are added to
+   */
+  private static void selectedValues(
+      Collection<Constraint> constraints,
+      Collection<LinearForm> extra,
+      Map<IntVar, Map<Integer, IntVar>> byVar,
+      List<LinearForm> out) {
+    // the variable and value of each value Boolean
+    Map<IntVar, IntVar> ofVar = new IdentityHashMap<>();
+    Map<IntVar, Integer> ofValue = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : byVar.entrySet()) {
+      for (Map.Entry<Integer, IntVar> v : e.getValue().entrySet()) {
+        if (v.getValue() != e.getKey() && ofVar.putIfAbsent(v.getValue(), e.getKey()) == null) {
+          ofValue.put(v.getValue(), v.getKey());
+        }
+      }
+    }
+    if (ofVar.isEmpty()) {
+      return;
+    }
+    // the conjunctions b_v by selector s and variable x, then by value
+    Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> bySelector = new IdentityHashMap<>();
+    for (Constraint c : constraints) {
+      IntVar p;
+      IntVar q;
+      IntVar r;
+      if (c.getClass() == AndBoolSimple.class) {
+        AndBoolSimple a = (AndBoolSimple) c;
+        p = a.a;
+        q = a.b;
+        r = a.result;
+      } else if (c.getClass() == AndBoolVector.class && ((AndBoolVector) c).list.length == 2) {
+        AndBoolVector a = (AndBoolVector) c;
+        p = a.list[0];
+        q = a.list[1];
+        r = a.result;
+      } else {
+        continue;
+      }
+      if (p == q || r == p || r == q || r.singleton() || !boolean01(r)) {
+        continue;
+      }
+      conjunction(p, q, r, ofVar, ofValue, bySelector);
+      conjunction(q, p, r, ofVar, ofValue, bySelector);
+    }
+    ClauseFacts facts = clauseFacts(extra);
+    for (IntVar[] t : facts.conjunctions()) {
+      conjunction(t[1], t[2], t[0], ofVar, ofValue, bySelector);
+      conjunction(t[2], t[1], t[0], ofVar, ofValue, bySelector);
+    }
+    Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> covered = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<IntVar, Map<Integer, IntVar>>> e : bySelector.entrySet()) {
+      IntVar s = e.getKey();
+      for (Map.Entry<IntVar, Map<Integer, IntVar>> g : e.getValue().entrySet()) {
+        IntVar x = g.getKey();
+        Map<Integer, IntVar> m = g.getValue();
+        m.keySet().removeIf(v -> !x.domain.contains(v));
+        if (m.size() < 2) {
+          continue;
+        }
+        // the values whose conjunction is false, s /\ x = v never holding: they add 0 to the sum
+        Set<IntVar> never = facts.exclusive().getOrDefault(s, Set.of());
+        int excluded = 0;
+        for (Map.Entry<Integer, IntVar> v : byVar.get(x).entrySet()) {
+          if (!m.containsKey(v.getKey())
+              && x.domain.contains(v.getKey())
+              && never.contains(v.getValue())) {
+            excluded++;
+          }
+        }
+        boolean covers = m.size() + excluded == x.getSize();
+        IntVar[] vars = new IntVar[m.size() + 1];
+        long[] w = new long[vars.length];
+        int i = 0;
+        for (IntVar b : m.values()) {
+          vars[i] = b;
+          w[i++] = 1;
+        }
+        vars[i] = s;
+        w[i] = -1;
+        out.add(new LinearForm(vars, w, 0, covers ? LinearForm.EQ : LinearForm.LE));
+        if (covers) {
+          covered.computeIfAbsent(s, k -> new IdentityHashMap<>()).put(x, m);
+        }
+      }
+    }
+    if (covered.isEmpty()) {
+      return;
+    }
+    // z = x + c from the linear equalities z - x = c, for the then branches of the selects
+    Map<IntVar, IntVar> shiftOf = new IdentityHashMap<>();
+    Map<IntVar, Long> shiftBy = new IdentityHashMap<>();
+    for (Constraint c : constraints) {
+      LinearForm f = LinearForms.of(c);
+      if (f != null
+          && f.relation() == LinearForm.EQ
+          && f.vars().length == 2
+          && f.vars()[0] != f.vars()[1]
+          && f.weights()[0] + f.weights()[1] == 0
+          && Math.abs(f.weights()[0]) == 1) {
+        // w0 (v0 - v1) = c: v0 = v1 + c w0, v1 = v0 - c w0
+        IntVar v0 = f.vars()[0];
+        IntVar v1 = f.vars()[1];
+        long k = f.c() * f.weights()[0];
+        if (shiftOf.putIfAbsent(v0, v1) == null) {
+          shiftBy.put(v0, k);
+        }
+        if (shiftOf.putIfAbsent(v1, v0) == null) {
+          shiftBy.put(v1, -k);
+        }
+      }
+    }
+    for (Constraint c : constraints) {
+      if (c.getClass() == ConditionalSelect.class) {
+        ConditionalSelect cs = (ConditionalSelect) c;
+        selectedValue(cs, covered, shiftOf, shiftBy, out);
+      }
+    }
+  }
+
+  /**
+   * What clause rows state about pairs of Booleans for {@link #selectedValues}.
+   *
+   * @param conjunctions the triples {b, s, e} of {@code b <-> s /\ e}
+   * @param exclusive for each Boolean, the Booleans it is never 1 together with
+   */
+  record ClauseFacts(List<IntVar[]> conjunctions, Map<IntVar, Set<IntVar>> exclusive) {}
+
+  /**
+   * The conjunctions {@code b <-> s /\ e} of Booleans that clause rows state: {@code s /\ e -> b}
+   * (the row {@code b - s - e >= -1}) with {@code b -> s} and {@code b -> e} (the rows {@code s - b
+   * >= 0} and {@code e - b >= 0}); and the pairs of Booleans never 1 together ({@code -s - e >=
+   * -1}), as a conjunction fixed to 0 leaves them.
+   *
+   * @param rows the rows, null entries skipped
+   * @return the conjunctions and the exclusive pairs
+   */
+  static ClauseFacts clauseFacts(Collection<LinearForm> rows) {
+    Map<IntVar, Set<IntVar>> implied = new IdentityHashMap<>();
+    Map<IntVar, Set<IntVar>> exclusive = new IdentityHashMap<>();
+    List<IntVar[]> ternary = new ArrayList<>();
+    for (LinearForm f : rows) {
+      if (f == null || f.relation() != LinearForm.GE) {
+        continue;
+      }
+      IntVar[] v = f.vars();
+      long[] w = f.weights();
+      if (v.length == 2 && w[0] + w[1] == 0 && Math.abs(w[0]) == 1 && f.c() == 0) {
+        // p - n >= 0: n -> p
+        IntVar p = w[0] == 1 ? v[0] : v[1];
+        IntVar n = w[0] == 1 ? v[1] : v[0];
+        if (p != n && boolean01(p) && boolean01(n)) {
+          implied
+              .computeIfAbsent(n, k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+              .add(p);
+        }
+      } else if (v.length == 2 && w[0] == -1 && w[1] == -1 && f.c() == -1) {
+        // -a - b >= -1: not both
+        if (v[0] != v[1] && boolean01(v[0]) && boolean01(v[1])) {
+          exclusive
+              .computeIfAbsent(v[0], k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+              .add(v[1]);
+          exclusive
+              .computeIfAbsent(v[1], k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+              .add(v[0]);
+        }
+      } else if (v.length == 3 && f.c() == -1) {
+        int pos = -1;
+        int negatives = 0;
+        for (int i = 0; i < 3; i++) {
+          if (w[i] == 1) {
+            pos = pos < 0 ? i : 3;
+          } else if (w[i] == -1) {
+            negatives++;
+          }
+        }
+        if (pos >= 0 && pos < 3 && negatives == 2) {
+          IntVar b = v[pos];
+          IntVar s = v[(pos + 1) % 3];
+          IntVar e = v[(pos + 2) % 3];
+          if (b != s && b != e && s != e && boolean01(b) && boolean01(s) && boolean01(e)) {
+            ternary.add(new IntVar[] {b, s, e});
+          }
+        }
+      }
+    }
+    List<IntVar[]> out = new ArrayList<>();
+    for (IntVar[] t : ternary) {
+      Set<IntVar> of = implied.get(t[0]);
+      if (of != null && of.contains(t[1]) && of.contains(t[2])) {
+        out.add(t);
+      }
+    }
+    return new ClauseFacts(out, exclusive);
+  }
+
+  // records b = s /\ e when e is a value Boolean of a variable other than s
+  private static void conjunction(
+      IntVar s,
+      IntVar e,
+      IntVar b,
+      Map<IntVar, IntVar> ofVar,
+      Map<IntVar, Integer> ofValue,
+      Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> bySelector) {
+    IntVar x = ofVar.get(e);
+    if (x == null || x == s || x == b || s.singleton() || !boolean01(s)) {
+      return;
+    }
+    bySelector
+        .computeIfAbsent(s, k -> new IdentityHashMap<>())
+        .computeIfAbsent(x, k -> new LinkedHashMap<>())
+        .putIfAbsent(ofValue.get(e), b);
+  }
+
+  // y = d + sum_v (v + c - d) b_v for y = if s then x + c else d over the conjunctions b_v
+  private static void selectedValue(
+      ConditionalSelect cs,
+      Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> covered,
+      Map<IntVar, IntVar> shiftOf,
+      Map<IntVar, Long> shiftBy,
+      List<LinearForm> out) {
+    if (cs.b.length != 2 || cs.b[1].min() != 1 || !cs.x[1].singleton()) {
+      return;
+    }
+    Map<IntVar, Map<Integer, IntVar>> bySel = covered.get(cs.b[0]);
+    if (bySel == null) {
+      return;
+    }
+    IntVar x = cs.x[0];
+    long c = 0;
+    Map<Integer, IntVar> m = bySel.get(x);
+    if (m == null && shiftOf.containsKey(x)) {
+      c = shiftBy.get(x);
+      x = shiftOf.get(x);
+      m = bySel.get(x);
+    }
+    if (m == null || x == cs.y || m.containsValue(cs.y)) {
+      return;
+    }
+    long d = cs.x[1].value();
+    IntVar[] vars = new IntVar[m.size() + 1];
+    long[] w = new long[vars.length];
+    int i = 0;
+    for (Map.Entry<Integer, IntVar> v : m.entrySet()) {
+      vars[i] = v.getValue();
+      w[i++] = Math.subtractExact(Math.addExact(v.getKey(), c), d);
+    }
+    vars[i] = cs.y;
+    w[i] = -1;
+    out.add(new LinearForm(vars, w, -d, LinearForm.EQ));
+  }
+
   // the clique rows that join the Booleans of ChannelImply (b_v -> x = v) with the Booleans b_v
   // <-> x = v of the same variable
   private static final boolean IMPLIED_VALUES =
@@ -1104,6 +1403,9 @@ public final class Linearizations {
     } else if (k == ConditionalSelect.class) {
       ConditionalSelect s = (ConditionalSelect) c;
       select(s.b, s.x, s.y, out);
+    } else if (k == Count.class && BOOLEAN_COUNT) {
+      Count ct = (Count) c;
+      booleanCount(ct.list, ct.countedValue(), ct.counter(), out);
     } else if (k == ChannelImply.class) {
       // b_v -> x = v: at most one of the Booleans
       AbstractChannel ch = (AbstractChannel) c;
@@ -1119,6 +1421,48 @@ public final class Linearizations {
         out.add(new LinearForm(bs.toArray(new IntVar[0]), ones, 1, LinearForm.LE));
       }
     }
+  }
+
+  // the rows of booleanCount: on or off
+  private static final boolean BOOLEAN_COUNT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.booleanCount", "true"));
+
+  /**
+   * The row of a count of 0 or 1 over 0/1 variables, which is linear: {@code c = sum x_i} for the
+   * value 1 and {@code c = n - sum x_i} for the value 0 (variables fixed to the value count 1,
+   * others 0). Without it an objective over the number of unselected items ({@code count(selection,
+   * false)} of ihtc-2024-kletzander, MiniZinc Challenge 2025) had no lower bound in the relaxation.
+   */
+  private static void booleanCount(IntVar[] list, int value, IntVar counter, List<LinearForm> out) {
+    if (value != 0 && value != 1) {
+      return;
+    }
+    List<IntVar> vars = new ArrayList<>();
+    long fixed = 0;
+    for (IntVar x : list) {
+      if (x == counter || !boolean01(x)) {
+        return;
+      }
+      if (x.singleton()) {
+        fixed += x.value() == value ? 1 : 0;
+      } else {
+        vars.add(x);
+        fixed += value == 0 ? 1 : 0;
+      }
+    }
+    if (vars.isEmpty()) {
+      return;
+    }
+    // counter - sum (+-1) x_i = fixed: + for the value 1, - for 0 (with 1 counted per variable)
+    IntVar[] vs = new IntVar[vars.size() + 1];
+    long[] w = new long[vs.length];
+    for (int i = 0; i < vars.size(); i++) {
+      vs[i] = vars.get(i);
+      w[i] = value == 1 ? -1 : 1;
+    }
+    vs[vars.size()] = counter;
+    w[vars.size()] = 1;
+    out.add(new LinearForm(vs, w, fixed, LinearForm.EQ));
   }
 
   /**
