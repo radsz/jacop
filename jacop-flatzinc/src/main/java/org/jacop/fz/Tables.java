@@ -53,6 +53,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.TableVariableElimination;
+import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -114,6 +115,9 @@ public class Tables {
   /** The variables that table variable elimination joined out of the model, or null. */
   TableVariableElimination tableElimination;
 
+  // the output variables whose defining sums ZeroSumDetector dropped, null if none
+  ZeroSumDetector.OutputSums zeroSums;
+
   // the cost function network of the objective (-Dorg.jacop.fz.costNetwork=true), until Solve
   // builds
   // its bound
@@ -138,6 +142,33 @@ public class Tables {
   int numberSetVariables;
   // MiniZinc on_restart built-ins of the model, or null
   OnRestart onRestart;
+
+  // the domains of the variables of inverse channels as declared, before the constraints prune
+  // them, for ConditionalValueSwaps
+  private final Map<IntVar, IntDomain> channelDomains = new IdentityHashMap<>();
+
+  /**
+   * Records the domain of a variable of an inverse channel before the constraints of the model
+   * prune it.
+   *
+   * @param v the variable
+   */
+  public void recordChannelDomain(IntVar v) {
+    channelDomains.computeIfAbsent(v, x -> x.dom().cloneLight());
+  }
+
+  /**
+   * The domain of a variable of an inverse channel as declared.
+   *
+   * @param v the variable
+   * @return its domain before the constraints were posted, or its current domain if it was not
+   *     recorded
+   */
+  IntDomain channelDomain(IntVar v) {
+    IntDomain d = channelDomains.get(v);
+    return d != null ? d : v.dom();
+  }
+
   // the variables defined as functions of bin loads, for the arc-flow blocks of the time-indexed
   // bound (org.jacop.lp.arcFlow)
   List<TimeIndexedBound.LoadFunction> loadFunctions = List.of();
@@ -539,12 +570,30 @@ public class Tables {
   }
 
   /**
+   * Makes a variable an alias of another one, together with the variables that are aliases of it.
+   *
+   * @param to the variable that stays.
+   * @param from the variable that becomes an alias of {@code to}.
+   * @param aliasesOfFrom the variables whose alias is {@code from}.
+   */
+  public void mergeAlias(IntVar to, IntVar from, List<IntVar> aliasesOfFrom) {
+    for (IntVar v : aliasesOfFrom) {
+      aliasTable.put(v, to);
+    }
+    aliasTargets.remove(from);
+    if (!aliasesOfFrom.isEmpty()) {
+      aliasTargets.add(to);
+    }
+    addAlias(to, from);
+  }
+
+  /**
    * Tells whether integer variables are aliases of a variable.
    *
    * @param b the variable
    * @return true if some integer variable is an alias of b
    */
-  boolean isAliasTarget(IntVar b) {
+  public boolean isAliasTarget(IntVar b) {
     return aliasTargets.contains(b);
   }
 
@@ -620,6 +669,7 @@ public class Tables {
     t.auxiliaryVariables.addAll(map.get(auxiliaryVariables));
     t.splitSums.addAll(map.get(splitSums));
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
+    t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.objectiveScale = objectiveScale;
     t.scaledIdents.addAll(scaledIdents);
     t.numberBoolVariables = numberBoolVariables;
@@ -683,7 +733,7 @@ public class Tables {
   }
 
   /** Removes aliased variables from the search variable collection. */
-  void removeAliasFromSearch() {
+  public void removeAliasFromSearch() {
 
     defaultSearchVariables.removeIf(aliasTable::containsKey);
   }

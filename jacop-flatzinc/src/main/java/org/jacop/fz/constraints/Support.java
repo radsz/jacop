@@ -96,6 +96,7 @@ import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 import org.jacop.lcg.ReifiedExplanation;
+import org.jacop.lcg.ValueExclusion;
 import org.jacop.lcg.ValueIndicator;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
@@ -822,6 +823,26 @@ public class Support implements ParserTreeConstants {
         }
       }
     }
+  }
+
+  /**
+   * Records the domains of the variables of the inverse channels ({@code jacop_assignment}) before
+   * any constraint prunes them; symmetry breaking compares them as the model declares them.
+   *
+   * @param astTree the root of the parsed model.
+   */
+  public void recordChannelDomains(SimpleNode astTree) {
+    forEachConstraint(
+        astTree,
+        node -> {
+          if ("jacop_assignment".equals(node.getName())) {
+            for (int i = 0; i < 2; i++) {
+              for (IntVar v : getVarArray((SimpleNode) node.jjtGetChild(i))) {
+                dictionary.recordChannelDomain(v);
+              }
+            }
+          }
+        });
   }
 
   /**
@@ -1803,7 +1824,12 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x != c, reified with b or implied by b. */
   final class FzXneqC extends Constraint
-      implements Violation, Copyable<FzXneqC>, Explainable, PbEncodable, Linearizations.Relaxable {
+      implements Violation,
+          Copyable<FzXneqC>,
+          Explainable,
+          PbEncodable,
+          ValueExclusion,
+          Linearizations.Relaxable {
 
     final IntVar x;
     final int c;
@@ -1839,6 +1865,21 @@ public class Support implements ParserTreeConstants {
     @Override
     public List<LinearForm> relaxation() {
       return Linearizations.valueRows(x, c, b, isReified, false);
+    }
+
+    @Override
+    public IntVar control() {
+      return x == b ? null : b;
+    }
+
+    @Override
+    public IntVar variable() {
+      return x;
+    }
+
+    @Override
+    public int value() {
+      return c;
     }
 
     @Override

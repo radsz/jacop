@@ -291,7 +291,7 @@ public final class SharedTree {
    * @param value the atom's value
    * @return the longer cube
    */
-  static int[] extend(int[] cube, int id, int kind, int value) {
+  public static int[] extend(int[] cube, int id, int kind, int value) {
     int[] c = Arrays.copyOf(cube, cube.length + 3);
     c[cube.length] = id;
     c[cube.length + 1] = kind;

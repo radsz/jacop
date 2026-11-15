@@ -116,6 +116,32 @@ public class Binpacking extends Constraint
   /** True when no two items share a bin variable, so the weight-based cardinality rules apply. */
   private final boolean unitItems;
 
+  // the weight of every item whose bin is not fixed when all of them weigh the same, 0 otherwise:
+  // only those are ever candidates of a bin, whose order is then irrelevant and for which NoSum has
+  // a closed form (sameWeightNoSum)
+  private final int sameWeight;
+
+  // whether the rules take the equal-weight shortcuts; off only in the tests that compare them
+  static boolean sameWeightShortcuts = true;
+
+  // the common weight of the items whose bin is not fixed, 0 when they differ or there are none
+  private static int sameWeight(BinItem[] item) {
+    if (!sameWeightShortcuts) {
+      return 0;
+    }
+    int w = 0;
+    for (BinItem it : item) {
+      if (!it.bin().singleton()) {
+        if (w == 0) {
+          w = it.weight();
+        } else if (w != it.weight()) {
+          return 0;
+        }
+      }
+    }
+    return w;
+  }
+
   /**
    * True if the cardinality rules also run without card variables. Off by default: on bin packing
    * benchmarks without cardinalities they cut few failures and cost 10-15% per node with many bins.
@@ -289,6 +315,7 @@ public class Binpacking extends Constraint
     this.zeroWeightCount = Arrays.stream(zeroWeightBins).mapToInt(occurrences::get).toArray();
     this.totalCount = bin.length;
     this.unitItems = Arrays.stream(itemCount).allMatch(c -> c == 1);
+    this.sameWeight = sameWeight(item);
     int m = load.length;
     this.packedCount = new int[m];
     this.required = new long[m];
@@ -694,7 +721,13 @@ public class Binpacking extends Constraint
       // the candidates in the order of item, by decreasing weight, as the rules expect: sorted
       // when they are few, read from a bit set over all items when there are many of them
       long[] mark = binCandidateMarks;
-      if (candidatesLength <= mark.length) {
+      if (sameWeight > 0) {
+        // equal weights: any order is descending, and the rules give the same prunings in it
+        for (int c = 0; c < candidatesLength; c++) {
+          weights[c] = sameWeight;
+          localCandidates[c] = item[candidateItems[c]];
+        }
+      } else if (candidatesLength <= mark.length) {
         Arrays.sort(candidateItems, 0, candidatesLength);
         for (int c = 0; c < candidatesLength; c++) {
           BinItem itemEl = item[candidateItems[c]];
@@ -777,6 +810,34 @@ public class Binpacking extends Constraint
     }
     long loadMin = load[i].min();
     long loadMax = load[i].max();
+    if (sameWeight > 0) {
+      // the others of every candidate are the same multiset: both tests hold for all or for none
+      long w = sameWeight;
+      long sumOthers = w * (candidatesLength - 1);
+      boolean remove =
+          noSum(
+              candidateWeights,
+              candidatesLength - 1,
+              sumOthers,
+              loadMin - required - w,
+              loadMax - required - w);
+      boolean assign =
+          noSum(
+              candidateWeights,
+              candidatesLength - 1,
+              sumOthers,
+              loadMin - required,
+              loadMax - required);
+      for (int j = 0; (remove || assign) && j < candidatesLength; j++) {
+        if (remove) {
+          removeBin(store, candidates[j].bin(), binIdx);
+        }
+        if (assign) {
+          assignBin(store, candidates[j].bin(), binIdx);
+        }
+      }
+      return;
+    }
     long sumCandidates = sum(candidateWeights, candidatesLength);
     // candidate weights without candidate j, kept in descending order; moving from j to j + 1 only
     // puts weight j back at position j
@@ -1660,7 +1721,37 @@ public class Binpacking extends Constraint
    * sumX.
    */
   private boolean noSum(int[] x, int len, long sumX, long alpha, long beta) {
+    if (sameWeight > 0) {
+      return sameWeightNoSum(sameWeight, len, alpha, beta, noSumBounds);
+    }
     return noSum(x, len, sumX, alpha, beta, noSumBounds);
+  }
+
+  /**
+   * NoSum (Shaw 2004) for len weights that all equal w, in constant time: the subset sums are the
+   * multiples k w, 0 &lt;= k &lt;= len, so no sum is in [alpha, beta] exactly when the smallest
+   * multiple of w at or above alpha is above beta. It stores in bounds the largest sum below alpha
+   * and the smallest above beta, as {@link #noSum(int[], int, long, long, long, long[])} does for
+   * equal weights.
+   *
+   * @param w the weight of every item, at least 1
+   * @param len the number of weights
+   * @param alpha the lower end of the interval
+   * @param beta the upper end of the interval
+   * @param bounds the two sums found when no sum is in the interval
+   * @return whether no subset of the weights sums to a value in [alpha, beta]
+   */
+  static boolean sameWeightNoSum(int w, int len, long alpha, long beta, long[] bounds) {
+    if (alpha <= 0 || beta >= (long) w * len) {
+      return false;
+    }
+    long k = (alpha + w - 1) / w;
+    if (k * w <= beta) {
+      return false;
+    }
+    bounds[0] = (k - 1) * w;
+    bounds[1] = k * w;
+    return true;
   }
 
   /**

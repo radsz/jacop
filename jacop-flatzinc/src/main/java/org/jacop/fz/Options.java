@@ -239,6 +239,10 @@ public class Options {
                 default 300; 0 = off),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
+                lcg-slow-unsolved=<conflicts per second> (with --lcg and an objective: LCG
+                without a solution that makes fewer conflicts per second by lcg-slow-at gives
+                way to free search without learning, and fixed search to the search
+                annotation without learning, default 30; 0 = off),
                 lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
                 this share of the time limit, it raised the bound or its best cost fell by
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),
@@ -247,13 +251,20 @@ public class Options {
                 objective cost variables; 0 = off),
                 lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
                 more, default 5000),
-                lcg-booleans-first=on|off|turns (with --lcg: activity branching decides the 0/1
-                variables before the others (on, default), or all variables in one order of
-                activity (off); turns changes between the two at each restart),
+                lcg-booleans-first=on|off|turns|until-solution (with --lcg: activity branching
+                decides the 0/1 variables before the others (on), or all variables in one order
+                of activity (off); turns changes between the two at each restart, and
+                until-solution (default) does so only until the first solution, then is on,
+                and only once lcg-booleans-first-after=<conflicts> passed without a solution,
+                default 2000),
                 lcg-lp-branching=auto|on|off (with --lcg and a linear relaxation: decisions
                 from the relaxation's solution in the annotation's runs under -f, and at the start
                 of the activity runs of fixed-restarts; auto, the default, uses them when the
                 relaxation has value columns, or under -f tree cuts),
+                rect-placement=first|always|off (with --lcg: the runs of the default
+                branching place the rectangles of diffn constraints one at a time, bottom-left,
+                before the other decisions until the first solution (first, default), in all
+                of them (always), or never),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
                 lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an
@@ -265,6 +276,9 @@ public class Options {
                 lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
                 neighbourhood and lower-bound runs on one decision level, kept at restarts;
                 0 gives each its own level, default 1),
+                lcg-chrono=<n> (with --lcg: runs that follow the search annotation, or the
+                default branching of free search, backtrack one level after a conflict
+                instead of a backjump over more than n levels; default 10, 0 always, -1 never),
                 lcg-bisect=<gap> (with --lcg and an objective: dichotomic probes of the
                 objective's bound, obj <= the middle of [lower bound, best - 1], until the
                 relative gap is at most this share of the best solution, then branch and bound;

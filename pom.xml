@@ -211,6 +211,7 @@ setup to run configuration. -->
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
                                 <enforcementInlining.trials>100</enforcementInlining.trials>
+                                <cse.trials>100</cse.trials>
                                 <convex.lcg.runs>300</convex.lcg.runs>
                                 <convex.fz.trials>100</convex.fz.trials>
                                 <prob.trials>300</prob.trials>
@@ -253,8 +254,10 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -284,6 +287,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -367,13 +371,16 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -486,8 +493,10 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -517,6 +526,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -605,13 +615,16 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -720,8 +733,10 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -751,6 +766,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -839,13 +855,16 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -954,8 +973,10 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -985,6 +1006,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -1071,13 +1093,16 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
@@ -1522,6 +1547,15 @@ setup to run configuration. -->
                         <!-- and without the default symmetry breaking (presolve-off runs); with
                              presolve the tests break symmetries as before -->
                         <jacop.symmetry>presolve</jacop.symmetry>
+                        <!-- the automorphism search stops after a wall-clock budget, so on a slow
+                             or loaded machine it can stop early and break other symmetries; give
+                             it room so that the expected outputs do not depend on the machine -->
+                        <org.jacop.fz.symmetryTime>20000</org.jacop.fz.symmetryTime>
+                        <!-- the probe before an expensive root LP runs a search for 200 ms of wall
+                             clock without the relaxation, so how far it gets, and which of several
+                             optimal solutions is printed last, depends on the machine
+                             (fair_split_into_3_groups); LpProbeFlatzincTest sets its own -->
+                        <org.jacop.fz.lpProbe>0</org.jacop.fz.lpProbe>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
                     <argLine>@{argLine} -Xss100m</argLine>
@@ -1546,6 +1580,7 @@ setup to run configuration. -->
                         <include>**/FreeSearchTest.java</include>
                         <include>**/AdaptiveLnsTest.java</include>
                         <include>**/SuccessorRoutesTest.java</include>
+                        <include>**/RectanglePlacementSelectTest.java</include>
                         <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>

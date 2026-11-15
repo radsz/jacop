@@ -91,6 +91,7 @@ import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
@@ -712,6 +713,31 @@ class VeriPbProofTest {
 
   // if b then y = z else y = 0, with 0 a hole of y: the root propagation sets b, and the proof
   // derives it only if the else branch states the value literal of y (its bounds allow 0)
+  @Test
+  void reifiedEqualityOfDisjointDomainsIsDerived() {
+    // b <=> x = y with x in 2..3 and y in {1, 4..6}: the root propagation sets b to 0, and the
+    // proof derives it only if the equality bounds y to the range of x (the sum alone is two bounds
+    // and the holes of y hide that no value of y is in 2..3)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 3);
+    IntVar y = new IntVar(store, "y", 1, 6);
+    for (int v = 2; v <= 3; v++) {
+      y.domain.inComplement(0, y, v);
+    }
+    IntVar b = new IntVar(store, "b", 0, 1);
+    // attached after the variables: the model states their domains before the root propagation
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new Reified(new XeqY(x, y), b));
+    assertThat(b.max()).isEqualTo(0);
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("root changes derived, 0 taken into");
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
   @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
@@ -1495,6 +1521,22 @@ class VeriPbProofTest {
     // x + y = 9 gives x >= 4, so x = 5 past the hole, and y = x fails
     store.impose(new XeqY(x, y));
     store.impose(new XplusYeqZ(x, y, z));
+    assertThat(store.consistency()).isFalse();
+    LcgSolver.proveRootFailure(store, rootTrail, model, proof);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void linearRowWithNoIntegerSolutionIsRefuted() {
+    // 2 x = 5 bounds x to [3, 2]: the row's bound pass must stop at the empty range (it crashed
+    // intersecting with min above max), fuzz seed 2010107
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, -1);
+    x.addDom(2, 4);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.impose(new XmulCeqZ(x, 2, new IntVar(store, "five", 5, 5)));
     assertThat(store.consistency()).isFalse();
     LcgSolver.proveRootFailure(store, rootTrail, model, proof);
     RupChecker checker = new RupChecker();
