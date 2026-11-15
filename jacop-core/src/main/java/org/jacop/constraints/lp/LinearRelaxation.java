@@ -1524,6 +1524,22 @@ public class LinearRelaxation extends Constraint
    * @return the relaxation, or null when there is no value encoding or the rows are too many
    */
   public static LinearRelaxation refutation(Store store, Collection<LinearForm> clauses) {
+    return refutation(store, clauses, Set.of());
+  }
+
+  /**
+   * Creates the relaxation that tries to refute a satisfaction model at the root, as {@link
+   * #refutation(Store, Collection)}, with the block sums of split linear constraints replaced by
+   * their definitions in the rows of a model with no value encoding ({@link
+   * #pseudoObjectiveRefutation}), so that a long row of the model is one row again.
+   *
+   * @param store the store
+   * @param clauses the clause rows of the clauses that lazy clause generation took
+   * @param substituted variables to replace by their definitions
+   * @return the relaxation, or null when there is no value encoding or the rows are too many
+   */
+  public static LinearRelaxation refutation(
+      Store store, Collection<LinearForm> clauses, Set<? extends IntVar> substituted) {
     if (!ROOT_REFUTATION || !LINEARIZE) {
       return null;
     }
@@ -1543,7 +1559,10 @@ public class LinearRelaxation extends Constraint
     }
     List<LinearForm> rows = Linearizations.refutationRows(constraints, given);
     if (rows.isEmpty()) {
-      return PSEUDO_OBJECTIVE ? pseudoObjectiveRefutation(given) : null;
+      return PSEUDO_OBJECTIVE
+          ? pseudoObjectiveRefutation(
+              substituted.isEmpty() ? given : substitute(given, substituted, null))
+          : null;
     }
     PairCliques merged = PairCliques.merge(rows, List.of());
     rows = merged.rows;
@@ -1560,12 +1579,12 @@ public class LinearRelaxation extends Constraint
 
   /**
    * The refutation of a model with no value encoding, such as a pseudo-Boolean model: its linear
-   * rows and clause rows, with the longest inequality {@code sum w x <= b} as the objective. The
-   * root solve minimizes {@code t = sum w x} over a free column t in [min, b] and its cut rounds
-   * raise that bound; the model has no solution when the relaxation, or the relaxation with its
-   * cuts, is infeasible. Without an objective a relaxation has no cut rounds, and its vertex is any
-   * point of the polytope; with the cardinality row of the model as the objective the cuts work on
-   * the point that comes nearest to breaking it.
+   * rows and clause rows, with the inequality {@code sum w x <= b} whose variables are in the most
+   * rows as the objective. The root solve minimizes {@code t = sum w x} over a free column t in
+   * [min, b] and its cut rounds raise that bound; the model has no solution when the relaxation, or
+   * the relaxation with its cuts, is infeasible. Without an objective a relaxation has no cut
+   * rounds, and its vertex is any point of the polytope; with the cardinality row of the model as
+   * the objective the cuts work on the point that comes nearest to breaking it.
    *
    * <p>The pseudo-Boolean competition has such cardinality refutations: a vertex cover of at most k
    * vertices of a graph made of odd cycles (vc-lines), where the relaxation takes every vertex at
@@ -1578,14 +1597,31 @@ public class LinearRelaxation extends Constraint
    * solved once at the root here, within the pivot limit of the refutation.
    */
   private static LinearRelaxation pseudoObjectiveRefutation(List<LinearForm> given) {
-    LinearForm longest = null;
+    // the inequality whose variables are in the most rows: the cardinality row over every vertex
+    // of a vertex cover, the row that bounds the exits of the blocks of a pigeonhole formula with
+    // exits (php-exit, each exit in the 93 pigeon rows of its block), not one of those rows
+    Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
     for (LinearForm f : given) {
-      if ((f.relation() == LinearForm.LE || f.relation() == LinearForm.GE)
-          && (longest == null || f.vars().length > longest.vars().length)) {
-        longest = f;
+      for (IntVar v : f.vars()) {
+        occurrences.merge(v, 1, Integer::sum);
       }
     }
-    if (longest == null || longest.vars().length < PSEUDO_OBJECTIVE_LENGTH) {
+    LinearForm longest = null;
+    long most = 0;
+    for (LinearForm f : given) {
+      if ((f.relation() == LinearForm.LE || f.relation() == LinearForm.GE)
+          && f.vars().length >= PSEUDO_OBJECTIVE_LENGTH) {
+        long incidence = 0;
+        for (IntVar v : f.vars()) {
+          incidence += occurrences.get(v);
+        }
+        if (incidence > most) {
+          most = incidence;
+          longest = f;
+        }
+      }
+    }
+    if (longest == null) {
       return null;
     }
     // sum w x <= b; a row >= is negated
@@ -1632,6 +1668,16 @@ public class LinearRelaxation extends Constraint
     r.pseudoObjective = true;
     r.pairCliques = merged.cliques;
     return r.rows() < 2 ? null : r;
+  }
+
+  /**
+   * Tells whether this refutation minimizes an inequality of the model ({@link
+   * #pseudoObjectiveRefutation}).
+   *
+   * @return true for a refutation with an objective
+   */
+  public boolean hasPseudoObjective() {
+    return pseudoObjective;
   }
 
   /**
@@ -3829,10 +3875,14 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
+      // a refutation is solved once: its rounds may take the pivots of its root solve, since a
+      // round stopped at the limit is dropped and the refutation then fails (php-exit: 4,454
+      // pivots in all)
+      int roundPivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
+              pseudoObjective ? Math.max(roundPivots, REFUTATION_PIVOTS) : roundPivots,
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
@@ -4199,10 +4249,14 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
+      // a refutation is solved once: its rounds may take the pivots of its root solve, since a
+      // round stopped at the limit is dropped and the refutation then fails (php-exit: 4,454
+      // pivots in all)
+      int roundPivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
+              pseudoObjective ? Math.max(roundPivots, REFUTATION_PIVOTS) : roundPivots,
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
@@ -4427,10 +4481,14 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
+      // a refutation is solved once: its rounds may take the pivots of its root solve, since a
+      // round stopped at the limit is dropped and the refutation then fails (php-exit: 4,454
+      // pivots in all)
+      int roundPivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
       status =
           rootSolve(
               lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
+              pseudoObjective ? Math.max(roundPivots, REFUTATION_PIVOTS) : roundPivots,
               rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
@@ -4789,7 +4847,9 @@ public class LinearRelaxation extends Constraint
       dual.addAll(found.subList(before, found.size()));
     }
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (zeroHalfOn) {
+    // a refutation also takes the zero-half cuts: they are the odd-cycle inequalities of the
+    // cardinality refutations (domset hexgrid)
+    if (zeroHalfOn || pseudoObjective) {
       int foundBefore = found.size();
       zeroHalf(value, lo, hi, found, zeroHalf);
       labelled(found, foundBefore, "zerohalf");
