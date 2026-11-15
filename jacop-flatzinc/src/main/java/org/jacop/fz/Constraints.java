@@ -57,6 +57,7 @@ import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.ColouredTreeDetector;
+import org.jacop.fz.constraints.CommonSubexpressions;
 import org.jacop.fz.constraints.ConjunctionSumDetector;
 import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
@@ -221,8 +222,21 @@ public class Constraints implements ParserTreeConstants {
       Set<IntVar> tabled = Set.of();
       // a search variable that became an alias is searched as its Boolean
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
+      // the same function of the same inputs is computed once; --proof encodes the model as given
+      if (CommonSubexpressions.enabled() && options.proof() == null) {
+        CommonSubexpressions cse = new CommonSubexpressions(support, solveItemVariables(astTree));
+        cse.detect(astTree);
+        if (!cse.replaced().isEmpty()) {
+          replaced = new HashSet<>(cse.replaced());
+        }
+      }
       if (PartialCopyDetector.enabled()) {
-        replaced = new PartialCopyDetector(support).detect(astTree);
+        Set<SimpleNode> copies = new PartialCopyDetector(support).detect(astTree);
+        if (replaced.isEmpty()) {
+          replaced = copies;
+        } else {
+          replaced.addAll(copies);
+        }
         dictionary.removeAliasFromSearch();
       }
       if (AlldifferentDetector.enabled()) {

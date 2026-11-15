@@ -1935,7 +1935,13 @@ public final class LcgSolver implements ExternalPropagator {
         if (hi < d.max()) {
           changed += proofBound(variables[k], clause, (int) Math.max(hi, d.min() - 1L), false);
         }
-        dom[k] = d.intersect((int) Math.max(lo, d.min()), (int) Math.min(hi, d.max()));
+        long newMin = Math.max(lo, d.min());
+        long newMax = Math.min(hi, d.max());
+        // 2 x = 5 leaves x in [3, 2]: the bounds written above refute the row
+        if (newMin > newMax) {
+          return;
+        }
+        dom[k] = d.intersect((int) newMin, (int) newMax);
         if (dom[k].isEmpty()) {
           return;
         }
@@ -5252,6 +5258,54 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: tables written as clauses of their compressed form. */
   public long compressedTablesAsClauses;
+
+  /**
+   * Whether a table over these variables becomes clauses of its compressed form under LCG, by the
+   * rules LCG uses to write compressed tables as clauses on the current domains, so that the
+   * FlatZinc front end can keep it a {@link HybridTable} instead of a propagator LCG does not
+   * encode (BinaryBitTable).
+   *
+   * @param x the variables of the table
+   * @param tuples its tuples
+   * @return true if it would be written as clauses
+   */
+  public static boolean compressedTableClauses(IntVar[] x, int[][] tuples) {
+    if (!COMPRESSED_TABLES
+        || tuples.length < COMPRESSED_RATIO
+        || tuples.length > COMPRESSED_INPUT) {
+      return false;
+    }
+    int free = 0;
+    for (IntVar v : x) {
+      if (v.getSize() > COMPRESSED_DOM) {
+        return false;
+      }
+      if (!v.singleton()) {
+        free++;
+      }
+    }
+    if (free < 2) {
+      return false;
+    }
+    List<int[]> plain = new ArrayList<>();
+    for (int[] t : tuples) {
+      boolean valid = true;
+      for (int k = 0; k < x.length && valid; k++) {
+        valid = x[k].domain.contains(t[k]);
+      }
+      if (valid) {
+        plain.add(t);
+      }
+    }
+    if (plain.size() < COMPRESSED_RATIO) {
+      return false;
+    }
+    org.jacop.constraints.table.Restriction[][] compressed =
+        org.jacop.constraints.table.TableCompressor.compress(x, plain.toArray(new int[0][]), true);
+    return compressed != null
+        && compressed.length <= COMPRESSED_TUPLES
+        && (long) compressed.length * COMPRESSED_RATIO <= plain.size();
+  }
 
   /**
    * Writes a table of plain tuples as the support clauses of its compressed form when that has at

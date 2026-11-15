@@ -270,6 +270,178 @@ public abstract class FloatDomain extends Domain {
     }
   }
 
+  // Directed rounding of one operation. Double arithmetic rounds to nearest, so the computed value
+  // is within an ulp of the exact one; down(x op y) and up(x op y) step one ulp out even when the
+  // operation is exact (2.0 + 3.0, 0.5 * 4.0, -2.0 + 2.0), which turned exact integer values into
+  // two-ulp intervals: floor(x + y) of x = -2, y = 2 then admitted -1 as well as 0. These versions
+  // compute the rounding error exactly (Knuth's TwoSum, the fused multiply-add for products,
+  // quotients and square roots) and step out only on the side where the exact value lies. Results
+  // that are infinite or near the underflow range (where the error itself rounds) keep the step.
+
+  /** Below this magnitude the error of a product or quotient may itself be inexact. */
+  private static final double EXACT_ERROR_MIN = 0x1.0p-960;
+
+  /**
+   * The largest double at most a + b.
+   *
+   * @param a the first summand
+   * @param b the second summand
+   * @return a lower bound of a + b
+   */
+  public static double addDown(double a, double b) {
+    double s = a + b;
+    if (!outward) {
+      return s;
+    }
+    // TwoSum: the exact error of s, without branches; it is NaN when s overflows or an operand is
+    // infinite, which also steps out
+    double bb = s - a;
+    double err = (a - (s - bb)) + (b - bb);
+    return err >= 0 ? s : Math.nextDown(s);
+  }
+
+  /**
+   * The smallest double at least a + b.
+   *
+   * @param a the first summand
+   * @param b the second summand
+   * @return an upper bound of a + b
+   */
+  public static double addUp(double a, double b) {
+    double s = a + b;
+    if (!outward) {
+      return s;
+    }
+    // TwoSum: the exact error of s, without branches; it is NaN when s overflows or an operand is
+    // infinite, which also steps out
+    double bb = s - a;
+    double err = (a - (s - bb)) + (b - bb);
+    return err <= 0 ? s : Math.nextUp(s);
+  }
+
+  /**
+   * The largest double at most a * b.
+   *
+   * @param a the first factor
+   * @param b the second factor
+   * @return a lower bound of a * b
+   */
+  public static double mulDown(double a, double b) {
+    double p = a * b;
+    if (!outward) {
+      return p;
+    }
+    if (!exactErrorRange(p, a, b)) {
+      return Math.nextDown(p);
+    }
+    return Math.fma(a, b, -p) >= 0 ? p : Math.nextDown(p);
+  }
+
+  /**
+   * The smallest double at least a * b.
+   *
+   * @param a the first factor
+   * @param b the second factor
+   * @return an upper bound of a * b
+   */
+  public static double mulUp(double a, double b) {
+    double p = a * b;
+    if (!outward) {
+      return p;
+    }
+    if (!exactErrorRange(p, a, b)) {
+      return Math.nextUp(p);
+    }
+    return Math.fma(a, b, -p) <= 0 ? p : Math.nextUp(p);
+  }
+
+  /**
+   * The largest double at most a / b.
+   *
+   * @param a the dividend
+   * @param b the divisor
+   * @return a lower bound of a / b
+   */
+  public static double divDown(double a, double b) {
+    double q = a / b;
+    if (!outward) {
+      return q;
+    }
+    if (!exactErrorRange(q, a, b)) {
+      return Math.nextDown(q);
+    }
+    // a - q * b, exact; the exact quotient is above q when it has the sign of b
+    double rem = Math.fma(-q, b, a);
+    return rem == 0 || (rem > 0) == (b > 0) ? q : Math.nextDown(q);
+  }
+
+  /**
+   * The smallest double at least a / b.
+   *
+   * @param a the dividend
+   * @param b the divisor
+   * @return an upper bound of a / b
+   */
+  public static double divUp(double a, double b) {
+    double q = a / b;
+    if (!outward) {
+      return q;
+    }
+    if (!exactErrorRange(q, a, b)) {
+      return Math.nextUp(q);
+    }
+    double rem = Math.fma(-q, b, a);
+    return rem == 0 || (rem > 0) != (b > 0) ? q : Math.nextUp(q);
+  }
+
+  /**
+   * The largest double at most the square root of a (a &gt;= 0).
+   *
+   * @param a the argument
+   * @return a lower bound of sqrt(a)
+   */
+  public static double sqrtDown(double a) {
+    double r = Math.sqrt(a);
+    if (!outward) {
+      return r;
+    }
+    if (!exactErrorRange(r, a, r)) {
+      return Math.nextDown(r);
+    }
+    return Math.fma(r, r, -a) <= 0 ? r : Math.nextDown(r);
+  }
+
+  /**
+   * The smallest double at least the square root of a (a &gt;= 0).
+   *
+   * @param a the argument
+   * @return an upper bound of sqrt(a)
+   */
+  public static double sqrtUp(double a) {
+    double r = Math.sqrt(a);
+    if (!outward) {
+      return r;
+    }
+    if (!exactErrorRange(r, a, r)) {
+      return Math.nextUp(r);
+    }
+    return Math.fma(r, r, -a) >= 0 ? r : Math.nextUp(r);
+  }
+
+  // the result and the operands are finite and the result is zero only for a zero operand, far
+  // enough from the underflow range for the error term to be exact
+  private static boolean exactErrorRange(double result, double a, double b) {
+    if (Double.isInfinite(result) || Double.isNaN(result)) {
+      return false;
+    }
+    if (result == 0) {
+      return a == 0 || b == 0 && !Double.isInfinite(a);
+    }
+    return Math.abs(result) >= EXACT_ERROR_MIN
+        && Math.abs(a) >= EXACT_ERROR_MIN
+        && Math.abs(b) >= EXACT_ERROR_MIN;
+  }
+
   /**
    * It returns the previous floating-point number toward negative infinity before d. This method is
    * supposed to be used by methods for domain computations.
@@ -327,26 +499,8 @@ public abstract class FloatDomain extends Domain {
    */
   public static FloatIntervalDomain addBounds(double a, double b, double c, double d) {
 
-    // Changing constants to smallest encapsulating intervals to
-    // limit rounding effects problem
-    double min = down(a + c);
-    double max = up(b + d);
-
-    if (d == 0.0) {
-      max = b;
-    }
-    if (c == 0.0) {
-      min = a;
-    }
-
-    if (a == 0.0) {
-      min = c;
-    }
-    if (b == 0.0) {
-      max = d;
-    }
-
-    return new FloatIntervalDomain(min, max);
+    // directed rounding keeps exact sums (such as x + 0.0) exact
+    return new FloatIntervalDomain(addDown(a, c), addUp(b, d));
   }
 
   /**
@@ -359,31 +513,7 @@ public abstract class FloatDomain extends Domain {
    * @return the interval domain representing the result of the subtraction
    */
   public static FloatIntervalDomain subBounds(double a, double b, double c, double d) {
-    double min = subBoundsMin(a, d);
-    double max = subBoundsMax(b, c);
-    return new FloatIntervalDomain(min, max);
-  }
-
-  private static double subBoundsMin(double a, double d) {
-    double min = down(a - d);
-    if (d == 0.0) {
-      min = a;
-    }
-    if (a == 0.0) {
-      min = -d;
-    }
-    return min;
-  }
-
-  private static double subBoundsMax(double b, double c) {
-    double max = up(b - c);
-    if (c == 0.0) {
-      max = b;
-    }
-    if (b == 0.0) {
-      max = -c;
-    }
-    return max;
+    return new FloatIntervalDomain(addDown(a, -d), addUp(b, -c));
   }
 
   /**
@@ -474,19 +604,19 @@ public abstract class FloatDomain extends Domain {
       boolean n02,
       boolean n12) {
     if (p12) {
-      return new FloatIntervalDomain(down(a * c), up(b * d));
+      return new FloatIntervalDomain(mulDown(a, c), mulUp(b, d));
     }
     if (p02) {
-      return new FloatIntervalDomain(0.0, up(b * d));
+      return new FloatIntervalDomain(0.0, mulUp(b, d));
     }
     if (m2) {
-      return new FloatIntervalDomain(down(b * c), up(b * d));
+      return new FloatIntervalDomain(mulDown(b, c), mulUp(b, d));
     }
     if (n12) {
-      return new FloatIntervalDomain(down(b * c), up(a * d));
+      return new FloatIntervalDomain(mulDown(b, c), mulUp(a, d));
     }
     if (n02) {
-      return new FloatIntervalDomain(down(b * c), 0.0);
+      return new FloatIntervalDomain(mulDown(b, c), 0.0);
     }
     return new FloatIntervalDomain(0.0, 0.0);
   }
@@ -501,13 +631,13 @@ public abstract class FloatDomain extends Domain {
       boolean n02,
       boolean n12) {
     if (p12 || p02) {
-      return new FloatIntervalDomain(0.0, up(b * d));
+      return new FloatIntervalDomain(0.0, mulUp(b, d));
     }
     if (n12 || n02) {
-      return new FloatIntervalDomain(down(b * c), 0.0);
+      return new FloatIntervalDomain(mulDown(b, c), 0.0);
     }
     if (m2) {
-      return new FloatIntervalDomain(down(b * c), up(b * d));
+      return new FloatIntervalDomain(mulDown(b, c), mulUp(b, d));
     }
     return new FloatIntervalDomain(0.0, 0.0);
   }
@@ -523,13 +653,14 @@ public abstract class FloatDomain extends Domain {
       boolean n02,
       boolean n12) {
     if (p02 || p12) {
-      return new FloatIntervalDomain(down(a * d), up(b * d));
+      return new FloatIntervalDomain(mulDown(a, d), mulUp(b, d));
     }
     if (n02 || n12) {
-      return new FloatIntervalDomain(down(b * c), up(a * c));
+      return new FloatIntervalDomain(mulDown(b, c), mulUp(a, c));
     }
     if (m2) {
-      return new FloatIntervalDomain(down(Math.min(a * d, b * c)), up(Math.max(a * c, b * d)));
+      return new FloatIntervalDomain(
+          Math.min(mulDown(a, d), mulDown(b, c)), Math.max(mulUp(a, c), mulUp(b, d)));
     }
     return new FloatIntervalDomain(0.0, 0.0);
   }
@@ -545,19 +676,19 @@ public abstract class FloatDomain extends Domain {
       boolean n02,
       boolean n12) {
     if (p12) {
-      return new FloatIntervalDomain(down(a * d), up(b * c));
+      return new FloatIntervalDomain(mulDown(a, d), mulUp(b, c));
     }
     if (p02) {
-      return new FloatIntervalDomain(down(a * d), 0.0);
+      return new FloatIntervalDomain(mulDown(a, d), 0.0);
     }
     if (m2) {
-      return new FloatIntervalDomain(down(a * d), up(a * c));
+      return new FloatIntervalDomain(mulDown(a, d), mulUp(a, c));
     }
     if (n12) {
-      return new FloatIntervalDomain(down(b * d), up(a * c));
+      return new FloatIntervalDomain(mulDown(b, d), mulUp(a, c));
     }
     if (n02) {
-      return new FloatIntervalDomain(0.0, up(a * c));
+      return new FloatIntervalDomain(0.0, mulUp(a, c));
     }
     return new FloatIntervalDomain(0.0, 0.0);
   }
@@ -572,13 +703,13 @@ public abstract class FloatDomain extends Domain {
       boolean n02,
       boolean n12) {
     if (p02 || p12) {
-      return new FloatIntervalDomain(down(a * d), 0.0);
+      return new FloatIntervalDomain(mulDown(a, d), 0.0);
     }
     if (n02 || n12) {
-      return new FloatIntervalDomain(0.0, up(a * c));
+      return new FloatIntervalDomain(0.0, mulUp(a, c));
     }
     if (m2) {
-      return new FloatIntervalDomain(down(a * d), up(a * c));
+      return new FloatIntervalDomain(mulDown(a, d), mulUp(a, c));
     }
     return new FloatIntervalDomain(0.0, 0.0);
   }
@@ -676,22 +807,22 @@ public abstract class FloatDomain extends Domain {
       boolean n02,
       boolean n12) {
     if (p12) {
-      return new FloatIntervalDomain(down(a / d), up(b / c));
+      return new FloatIntervalDomain(divDown(a, d), divUp(b, c));
     }
     if (p02) {
-      return new FloatIntervalDomain(down(a / d), MAX_FLOAT);
+      return new FloatIntervalDomain(divDown(a, d), MAX_FLOAT);
     }
     if (m2) {
-      double min = down(a / d);
-      double max = up(a / c);
+      double min = divDown(a, d);
+      double max = divUp(a, c);
       return (FloatIntervalDomain)
           new FloatIntervalDomain(MIN_FLOAT, max).union(new FloatIntervalDomain(min, MAX_FLOAT));
     }
     if (n12) {
-      return new FloatIntervalDomain(down(b / d), up(a / c));
+      return new FloatIntervalDomain(divDown(b, d), divUp(a, c));
     }
     if (n02) {
-      return new FloatIntervalDomain(MIN_FLOAT, up(a / c));
+      return new FloatIntervalDomain(MIN_FLOAT, divUp(a, c));
     }
     throw Store.failException;
   }
@@ -699,10 +830,10 @@ public abstract class FloatDomain extends Domain {
   private static FloatIntervalDomain divBoundsP0(
       double b, double c, double d, boolean p12, boolean n12) {
     if (p12) {
-      return new FloatIntervalDomain(0.0, up(b / c));
+      return new FloatIntervalDomain(0.0, divUp(b, c));
     }
     if (n12) {
-      return new FloatIntervalDomain(down(b / d), 0.0);
+      return new FloatIntervalDomain(divDown(b, d), 0.0);
     }
     return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
   }
@@ -710,10 +841,10 @@ public abstract class FloatDomain extends Domain {
   private static FloatIntervalDomain divBoundsM(
       double a, double b, double c, double d, boolean p12, boolean n12) {
     if (p12) {
-      return new FloatIntervalDomain(down(a / c), up(b / c));
+      return new FloatIntervalDomain(divDown(a, c), divUp(b, c));
     }
     if (n12) {
-      return new FloatIntervalDomain(down(b / d), up(a / d));
+      return new FloatIntervalDomain(divDown(b, d), divUp(a, d));
     }
     return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
   }
@@ -729,22 +860,22 @@ public abstract class FloatDomain extends Domain {
       boolean n02,
       boolean n12) {
     if (p12) {
-      return new FloatIntervalDomain(down(a / c), up(b / d));
+      return new FloatIntervalDomain(divDown(a, c), divUp(b, d));
     }
     if (p02) {
-      return new FloatIntervalDomain(MIN_FLOAT, up(b / d));
+      return new FloatIntervalDomain(MIN_FLOAT, divUp(b, d));
     }
     if (m2) {
-      double min = down(b / c);
-      double max = up(b / d);
+      double min = divDown(b, c);
+      double max = divUp(b, d);
       return (FloatIntervalDomain)
           new FloatIntervalDomain(MIN_FLOAT, max).union(new FloatIntervalDomain(min, MAX_FLOAT));
     }
     if (n12) {
-      return new FloatIntervalDomain(down(b / c), up(a / d));
+      return new FloatIntervalDomain(divDown(b, c), divUp(a, d));
     }
     if (n02) {
-      return new FloatIntervalDomain(down(b / c), MAX_FLOAT);
+      return new FloatIntervalDomain(divDown(b, c), MAX_FLOAT);
     }
     throw Store.failException;
   }
@@ -752,10 +883,10 @@ public abstract class FloatDomain extends Domain {
   private static FloatIntervalDomain divBoundsN0(
       double a, double c, double d, boolean p12, boolean n12) {
     if (p12) {
-      return new FloatIntervalDomain(down(a / c), 0.0);
+      return new FloatIntervalDomain(divDown(a, c), 0.0);
     }
     if (n12) {
-      return new FloatIntervalDomain(0.0, up(a / d));
+      return new FloatIntervalDomain(0.0, divUp(a, d));
     }
     return new FloatIntervalDomain(MIN_FLOAT, MAX_FLOAT);
   }

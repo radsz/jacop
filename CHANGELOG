@@ -5910,7 +5910,111 @@ Version 5.0 (unreleased)
    10810 -> 9015); free search (-f) solves the same 193, 3 families
    better and 2 worse.
 
-339. The FlatZinc front end rewrites a variable s defined by a sum
+339. Symmetry breaking renames the elements of set variables: set
+   variables that only set operations, set comparisons other than the
+   lexicographic ones and cardinalities constrain (set_union,
+   set_intersect, set_diff, set_symdiff, set_eq, set_ne, set_subset,
+   set_superset and their reified forms, disjoint, set_card), with no
+   constant set among their arguments, form a set value space, whose
+   values may be permuted together in all its sets. Their elements join
+   one vertex per value in the variable graph, so the automorphisms find
+   the value symmetry next to the symmetry of the set variables, and the
+   card-symbol matrix of a model with both gets lex chains on its rows
+   and its columns (double lex, P. Flener, A. Frisch, B. Hnich, Z. Kiziltan,
+   I. Miguel, J. Pearson and T. Walsh, "Breaking row and column symmetries
+   in matrix models", CP 2002, LNCS 2470). As for the set symmetries of
+   item 241, only models whose search annotation branches on set
+   variables; -Dorg.jacop.fz.symmetrySetValues=false turns it off. Of the
+   65 Challenge instances with set variables it fires on the 5 of 2021
+   monomatch (Dobble cards), where it proves the 3 UNSAT instances in
+   under 3 s with and without -f (before, at 600 s: n3 in 50 s with -f
+   and 155 s without, the two n4 unknown) and finds the n5 and n6
+   solutions in 2.0-3.5 s with -f (n6 without -f 85 -> 14 s).
+
+340. Satisfaction models get a second linear relaxation, solved once at
+   the root and then removed, that can refute them. It holds the value
+   encodings of the counting, all-different and element constraints
+   (with the count bounds of global_cardinality), the model's linear and
+   clause rows restated over the value columns, and the pair conflicts
+   merged into cliques (Atamturk, Nemhauser and Savelsbergh, Conflict
+   graphs in solving integer programming problems, EJOR 2000). A control
+   b of a half-reified b -> x != c (MiniZinc's translation of a
+   disequality in a disjunction) is bounded by 1 - [x = c], and the z of
+   not z -> x != c by [x = c], so the clause (x != c) \/ (y != c) becomes
+   [x = c] + [y = c] <= 1. Such counts are pigeonhole arguments, which
+   resolution and so lazy clause generation refute only in exponentially
+   many steps (Haken, The intractability of resolution, TCS 1985). The
+   main relaxation keeps these encodings only for an objective. The
+   social golfers 08-04-11 of the XCSP 2024 competition (32 players in 8
+   groups of 4 for 11 weeks: each player meets 3 others a week, 33 in
+   all, but there are 31) were UNKNOWN at 600 s and are now refuted at
+   the root in under 2 s; only LP-based solvers proved them in the
+   competition. The root solve is capped at 2,500 pivots
+   (org.jacop.lp.rootRefutationPivots). It fires on 353 of the 792 XCSP
+   2022-2025 satisfaction instances (median 0.4 s more on the 2024 ones
+   both versions solve) and on 15 of the 53 satisfaction instances of
+   the wide benchmark set, with the same answers and, under -f, the same
+   search trees. -Dorg.jacop.lp.rootRefutation=false turns it off;
+   --search-statistics prints lpRefutationRows, lpRefutationCliques,
+   lpRefutation (refuted, feasible, limit), lpRefutationTime and
+   lpRefutationPivots.
+
+341. The FlatZinc front end merges common subexpressions before posting
+   (as CP-SAT's presolve does, DetectDuplicateConstraints: Perron, Didier
+   and Gay, The CP-SAT-LP solver, CP 2023; and the duplicate-row presolver
+   of MIP solvers: Achterberg, Bixby, Gu, Rothberg and Weninger, Presolve
+   reductions in mixed integer programming, INFORMS Journal on Computing
+   32(2), 2020). Two constraints that define their outputs by the same function
+   of the same arguments (reified comparisons, Boolean connectives,
+   int_times/plus/min/max/div/mod/abs, reified linear constraints,
+   elements) give one output, the other becomes its alias; a plain
+   equality of two variables (int_eq, bool_eq, x - y = 0, a conjunction
+   of one literal) aliases them; a repeated constraint is posted once, and
+   a linear constraint adds the coefficients of a repeated variable. It
+   repeats until nothing changes (at most 6 rounds). It changes the model
+   of 56 of the 240 instances of the wide benchmark set
+   (community-detection rnd_n100: 5,190 -> 211 constraints, 6.6 -> 4.1 s).
+   At 600 s against the build with enforcement inlining it solves 44 of
+   them as before in default mode (time geomean 1.007, cable-tree-wiring
+   A041 finds a worse best value on another search tree) and 48 as before
+   with -f (geomean 1.002). -Dorg.jacop.fz.cse=false turns it off; it is
+   off under --proof.
+
+342. JaLP chooses the leaving row of the dual simplex by gap^1.2 / weight
+   instead of gap^2 / weight (dual steepest edge) on LPs shaped like
+   multicommodity flows: at least 5000 columns, at most 2.2 nonzeros per
+   column and at most 4 columns per row (the less sensitive dual steepest
+   edge of Q. Huangfu, High performance simplex solver, PhD thesis,
+   University of Edinburgh, 2013, section 3.3). Squaring the gap favours
+   dense rows of the tableau, whose pivots lose the hypersparse solves.
+   On the 659 LPs of the LP bench at 120 s: 643 -> 644 solved, 0 wrong,
+   solve time 0.98 overall and 0.83 on the Mittelmann LPs, 18 LPs faster
+   and 1 slower (pds-30 39 -> 20 s, pds-50 112 -> 57 s, pds-60 proved in
+   74 s, the n37 network design LPs 0.45-0.8; snp-02-004-104 1.9 slower).
+   Without the shape gate it is 1.13 slower over the bench. On the 11
+   wide-set runs where it applies (600 s) nothing is solved or lost.
+   -Dorg.jacop.jalp.linearScore=on|off overrides the choice.
+
+343. The -p portfolio can split one depth-first search over its threads by
+   work stealing with recomputation (Schulte, "Parallel search made
+   simple", TRICS 2000; Chu, Schulte and Stuckey, "Confidence-based work
+   stealing in parallel constraint programming", CP 2009): a thread that
+   runs out of work takes an open right branch of another thread, given as
+   the decisions that lead to it, replays them in its own store and
+   searches below; the best bound is shared. With free search and at least
+   4 threads two threads do this by default, CP search (--lcg off) on the
+   model's annotation in place of the last two settings; option
+   --free-config portfolio-dfs-split=<threads> sets their number, 0 turns
+   it off. On the 240 instances of the wide set at 600 s (-f -p 4): 203
+   solved instead of 200, 7 families better, 3 worse; MiniZinc Challenge
+   2022 generalized-peacable-queens n9_q5 is proved in 484 s (not proved
+   in 600 s before, CP-SAT -p 4 264 s) and n8_q3 in 31 s instead of 53 s.
+   A split thread runs the propagation of the root before its first cube,
+   so the linear relaxation keeps root reduced costs from the root and not
+   from that cube. Statistics portfolioDfsSplitThreads, portfolioDfsSplits,
+   portfolioDfsCubesClosed, portfolioDfsSplitWaitMillis.
+
+344. The FlatZinc front end rewrites a variable s defined by a sum
    s = sum(i) a[i] * x[i] that is used otherwise only in half-reifications
    b -> s = m or b -> s <= m, where m is the least value of the sum: each
    becomes the clauses not b \/ x[i] = v[i], with v[i] the bound at which
@@ -5928,7 +6032,7 @@ Version 5.0 (unreleased)
    fires on none of the 240 instances of the wide benchmark set.
    -Dorg.jacop.fz.zeroSum=false turns it off; it is off under --proof.
 
-340. A root solve of the linear relaxation of an optimisation model in the
+345. A root solve of the linear relaxation of an optimisation model in the
    sparse simplex (the first solve, or the trial of the extra rows such as
    value encodings) that stops at its pivot or work budget now goes on
    within half of the time a large relaxation gets for its root solves

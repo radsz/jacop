@@ -118,7 +118,7 @@ public class PplusQeqR extends PrimitiveConstraint
   private void consistencyTwice(Store store) {
     do {
       store.propagationHasOccurred = false;
-      p.domain.in(store.level, p, FloatDomain.down(r.min() / 2), FloatDomain.up(r.max() / 2));
+      p.domain.in(store.level, p, FloatDomain.divDown(r.min(), 2), FloatDomain.divUp(r.max(), 2));
       FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), p.min(), p.max());
       r.domain.in(store.level, r, rDom.min(), rDom.max());
     } while (store.propagationHasOccurred);

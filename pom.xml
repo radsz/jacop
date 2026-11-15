@@ -211,6 +211,7 @@ setup to run configuration. -->
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
                                 <enforcementInlining.trials>100</enforcementInlining.trials>
+                                <cse.trials>100</cse.trials>
                                 <convex.lcg.runs>300</convex.lcg.runs>
                                 <convex.fz.trials>100</convex.fz.trials>
                                 <prob.trials>300</prob.trials>
@@ -375,6 +376,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>
@@ -617,6 +619,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>
@@ -855,6 +858,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>
@@ -1091,6 +1095,7 @@ setup to run configuration. -->
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>
@@ -1538,6 +1543,15 @@ setup to run configuration. -->
                         <!-- and without the default symmetry breaking (presolve-off runs); with
                              presolve the tests break symmetries as before -->
                         <jacop.symmetry>presolve</jacop.symmetry>
+                        <!-- the automorphism search stops after a wall-clock budget, so on a slow
+                             or loaded machine it can stop early and break other symmetries; give
+                             it room so that the expected outputs do not depend on the machine -->
+                        <org.jacop.fz.symmetryTime>20000</org.jacop.fz.symmetryTime>
+                        <!-- the probe before an expensive root LP runs a search for 200 ms of wall
+                             clock without the relaxation, so how far it gets, and which of several
+                             optimal solutions is printed last, depends on the machine
+                             (fair_split_into_3_groups); LpProbeFlatzincTest sets its own -->
+                        <org.jacop.fz.lpProbe>0</org.jacop.fz.lpProbe>
                     </systemPropertyVariables>
                     <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
                     <argLine>@{argLine} -Xss100m</argLine>
