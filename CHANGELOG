@@ -5790,7 +5790,62 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
-334. Symmetry breaking renames the elements of set variables: set
+334. In free search with lazy clause generation, the runs of the default
+   branching of a model without search annotation place the rectangles
+   of its diffn constraints first, one at a time, bottom-left: the
+   rectangle that can start first in the first dimension (ties to the one
+   that can start first in the second) gets its origins and lengths set
+   to their smallest values, then the next (the bottom-left rule of
+   B. S. Baker, E. G. Coffman and R. L. Rivest, "Orthogonal packings in
+   two dimensions", SIAM Journal on Computing 9(4), 1980; one rectangle
+   at a time as in H. Simonis and B. O'Sullivan, "Search strategies for
+   rectangle packing", CP 2008). Set times on the cumulative starts
+   follows, as before. The rectangles are placed until the first
+   solution (--free-config rect-placement=first, the default; always in
+   every such run, off never). On the coal stockyard of XCSP 2024 Cargo,
+   where stockpiles are rectangles of days by pad positions with a
+   variable stay, set times alone found no solution of Cargo-16 and 20 in
+   600 s and one of Cargo-19 at 220 s; with the placement, 132,939,
+   114,274 and 112,584 at 600 s, below the best of the 2024 competition
+   (248,754, 295,975 and 256,274 in 1800 s), and Cargo-12 24,404 instead
+   of 27,966; the other 12 Cargo instances end the same. Placing in every
+   run lost Cargo-07's proof and Cargo-10's best solution. None of the 14
+   wide-set models with diffn is affected: all have a search annotation.
+
+335. Symmetry breaking in the FlatZinc front end breaks the conditional
+   symmetry of interchangeable values in a sequence ordered by
+   precedences (new class org.jacop.fz.ConditionalValueSwaps), as in the
+   patience game Black Hole (I. P. Gent, C. Jefferson, T. Kelsey, I.
+   Lynce, I. Miguel, P. Nightingale, B. M. Smith and S. A. Tarim, "Search
+   in the patience game 'Black Hole'", AI Communications 20(3), 2007;
+   conditional symmetry: I. P. Gent, T. Kelsey, S. A. Linton, I.
+   McDonald, I. Miguel and B. M. Smith, "Conditional symmetry breaking",
+   CP 2005). The model has inverse(x, y), tables on x whose relation is
+   the same after two values a and b are exchanged, and precedences
+   y[u] < y[v]. Exchanging a and b in a solution keeps it a solution when
+   the predecessors of the value moved forward still come before it and
+   the successors of the value moved back still come after it, so
+   y[b] < y[a] -> OR(u before a) y[u] > y[b] \/ OR(s after b) y[s] < y[a]
+   is posted for a the value the lex-leader order prefers (Crawford,
+   Ginsberg, Luks and Roy, KR 1996). The constraints are lex-leader
+   constraints over x in the order of the other symmetry breaking
+   constraints, whose first variables are those of the search
+   annotation: with int_search(x, input_order, indomain_min, complete)
+   the search finds the same first solution as without them, takes the
+   same decisions, and fails sooner, so fixed search still follows the
+   annotation. On the 25 black-hole instances of the MiniZinc Challenges
+   2009-2025 at 600 s, fixed search solves 25 instead of 17
+   (2025 layout_3 40 s, layout_14 17 s, layout_17 9 s, all three unknown
+   before; 2009 instance 19 proved unsatisfiable in 38 s); the 17 that
+   both solve take 2.1x less time in geomean, and the 12 satisfiable ones
+   among them print the same first solution. It fires on 2 of the 240
+   instances of the wide benchmark set, both black-hole. It is used for
+   satisfaction problems that ask for one solution, not under free search
+   (-f), which solves all 25 within 13 s without it and was up to 5.8x
+   slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
+   statistic symmetryValueSwaps counts the pairs of values.
+
+336. Symmetry breaking renames the elements of set variables: set
    variables that only set operations, set comparisons other than the
    lexicographic ones and cardinalities constrain (set_union,
    set_intersect, set_diff, set_symdiff, set_eq, set_ne, set_subset,
@@ -5807,9 +5862,9 @@ Version 5.0 (unreleased)
    variables; -Dorg.jacop.fz.symmetrySetValues=false turns it off. Of the
    65 Challenge instances with set variables it fires on the 5 of 2021
    monomatch (Dobble cards), where it proves the 3 UNSAT instances in
-   under 2 s with and without -f (before: n3 in 52 s with -f and 144 s
-   without, the two n4 unknown at 240 s) and finds the n5 and n6
-   solutions in 1.5-3.8 s with -f (n6 without -f 82 -> 16 s).
+   under 3 s with and without -f (before, at 600 s: n3 in 50 s with -f
+   and 155 s without, the two n4 unknown) and finds the n5 and n6
+   solutions in 2.0-3.5 s with -f (n6 without -f 85 -> 14 s).
 
 Version 4.11
 =============
