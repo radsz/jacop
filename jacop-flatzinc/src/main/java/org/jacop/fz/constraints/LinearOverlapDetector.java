@@ -140,8 +140,21 @@ public class LinearOverlapDetector implements ParserTreeConstants {
    * @param support the support of the FlatZinc front end.
    */
   public LinearOverlapDetector(Support support) {
-    this.support = support;
+    this(support, Set.of());
   }
+
+  /**
+   * It creates the factoring, leaving out the rows of the given nodes.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param skipped constraint nodes that earlier detectors replaced; they are not posted.
+   */
+  public LinearOverlapDetector(Support support, Set<SimpleNode> skipped) {
+    this.support = support;
+    this.skipped = skipped;
+  }
+
+  private final Set<SimpleNode> skipped;
 
   /**
    * It tells if the factoring is on.
@@ -169,6 +182,7 @@ public class LinearOverlapDetector implements ParserTreeConstants {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM
+              && !skipped.contains(item)
               && (PLAIN.contains(((ASTConstElem) item).getName())
                   || reified && HALF_OR_REIFIED.contains(((ASTConstElem) item).getName()))) {
             collect(item);

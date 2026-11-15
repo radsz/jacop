@@ -54,6 +54,7 @@ import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
@@ -551,6 +552,26 @@ class LcgFuzzTest {
     }
 
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
+    // arg_max over random nondecreasing tables (ties, offsets, identity positions) of q
+    private Constraint argMaxMonotone(IntVar[] q) {
+      int n = q.length;
+      int[][] f = new int[n][];
+      int[] first = new int[n];
+      for (int k = 0; k < n; k++) {
+        if (rnd.nextInt(4) == 0) {
+          continue;
+        }
+        first[k] = q[k].min() + rnd.nextInt(2) - 1;
+        f[k] = new int[2 + rnd.nextInt(q[k].max() - q[k].min() + 2)];
+        int v = rnd.nextInt(5) - 2;
+        for (int i = 0; i < f[k].length; i++) {
+          v += rnd.nextInt(3);
+          f[k][i] = v;
+        }
+      }
+      return new ArgMaxMonotone(q, f, first, intVar("i", 0, n + 1), -1);
+    }
+
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
       int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(43);
@@ -1028,9 +1049,11 @@ class LcgFuzzTest {
                 // indexes from 0, index domain wider than the indexes
                 : new ArgMin(q, intVar("i", -1, q.length), -1);
         case 16 ->
-            rnd.nextBoolean()
-                ? new ArgMax(q, intVar("i", 1, q.length))
-                : new ArgMax(q, intVar("i", -1, q.length), -1);
+            switch (rnd.nextInt(3)) {
+              case 0 -> new ArgMax(q, intVar("i", 1, q.length));
+              case 1 -> new ArgMax(q, intVar("i", -1, q.length), -1);
+              default -> argMaxMonotone(q);
+            };
         case 17 ->
             new ElementInteger(one(), new int[] {value(), value(), value(), value()}, one(), 0);
         case 18 -> new ElementVariable(one(), q, one(), 0);
