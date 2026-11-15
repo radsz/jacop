@@ -2745,7 +2745,7 @@ public final class LcgSolver implements ExternalPropagator {
    * @return false when probing proved that the constraints have no solution
    */
   public boolean probeRoot(long budgetNanos) {
-    long start = System.nanoTime();
+    long start = sat.now();
     long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
     end = Math.min(end, sat.deadline());
     if (rootFailed || proof != null) {
@@ -2779,7 +2779,7 @@ public final class LcgSolver implements ExternalPropagator {
         probePasses++;
         for (List<Integer> group : List.of(booleans, valued)) {
           for (int i : group) {
-            long now = System.nanoTime();
+            long now = sat.now();
             if (now > end) {
               probeExhausted = true;
               return true;
@@ -2800,7 +2800,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       return true;
     } finally {
-      probeNanos += System.nanoTime() - start;
+      probeNanos += sat.now() - start;
       if (!rootFailed && !propagateRoot()) {
         rootFailed = true;
       }
@@ -2890,7 +2890,7 @@ public final class LcgSolver implements ExternalPropagator {
   private List<int[]> probeConflictValues;
   private int probeConflictCap;
 
-  // when (System.nanoTime()) the next run of the search from the root probes it first, or 0
+  // when (sat.now()) the next run of the search from the root probes it first, or 0
   private long delayedProbeAt;
   private long delayedProbeBudget;
 
@@ -2899,7 +2899,7 @@ public final class LcgSolver implements ExternalPropagator {
    * after a time, between runs of branch and bound, so that instances solved before it do not pay
    * for probing. A satisfaction search is one run and is not probed.
    *
-   * @param atNanos the {@link System#nanoTime()} after which the next run probes first
+   * @param atNanos the time of {@link CdclSolver#now} after which the next run probes first
    * @param budgetNanos the time probing may take
    */
   public void setDelayedProbe(long atNanos, long budgetNanos) {
@@ -2950,7 +2950,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (!vars[i].dom().contains(v)) {
         continue;
       }
-      if (vars[i].singleton() || System.nanoTime() > end) {
+      if (vars[i].singleton() || sat.now() > end) {
         complete = false;
         break;
       }
@@ -3044,7 +3044,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (rootFailed) {
       return CdclSolver.UNSAT;
     }
-    if (delayedProbeAt != 0 && assumed.length == 0 && System.nanoTime() >= delayedProbeAt) {
+    if (delayedProbeAt != 0 && assumed.length == 0 && sat.now() >= delayedProbeAt) {
       // the search has run for a while without an answer: probe the root, now with the learnt
       // clauses and the bound of the best solution
       delayedProbeAt = 0;
@@ -3254,7 +3254,7 @@ public final class LcgSolver implements ExternalPropagator {
   private int minimizeWithCores() {
     long millis = timeLimitMillis;
     if (millis <= 0 && sat.deadline() != Long.MAX_VALUE) {
-      millis = Math.max(1, (sat.deadline() - System.nanoTime()) / 1_000_000L);
+      millis = Math.max(1, (sat.deadline() - sat.now()) / 1_000_000L);
     }
     workEnd = millis > 0 ? sat.work() + millis * WORK_PER_MS : Long.MAX_VALUE;
     int result;
@@ -3267,7 +3267,7 @@ public final class LcgSolver implements ExternalPropagator {
         // a solution: branch and bound goes on, as without the core-guided phase
         return interleaved() ? minimizeWithLowerBoundSearch() : solve();
       }
-      if (System.nanoTime() > sat.deadline()) {
+      if (sat.now() > sat.deadline()) {
         return result;
       }
     } else if (coreDelayShare > 0) {
@@ -3282,20 +3282,20 @@ public final class LcgSolver implements ExternalPropagator {
         // is optimal. The cores start below what is already proved: on nfc (Challenge 2022) the
         // relaxation's bound is the optimum, which the probe delayed by 0.67 % of the time limit
         result = diveAtRootBound();
-        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+        if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
           return result;
         }
       }
       if (coreProbeShare > 0) {
         long stops = coreSearch.noSolutionStops;
         result = runCores(coreProbeShare, coreDelayBudget, false);
-        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+        if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
           return result;
         }
         probeWithoutSolution = coreSearch.noSolutionStops > stops;
       }
       result = minimizeBeforeCores();
-      if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+      if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
         return result;
       }
       if (coreProbeSkip && probeWithoutSolution && best != null) {
@@ -3420,7 +3420,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private long setPhaseLimits(double share, long deadline) {
     if (deadline != Long.MAX_VALUE) {
-      long now = System.nanoTime();
+      long now = sat.now();
       double slack = Math.min(1, CLOCK_SLACK * share);
       sat.setDeadline(now + (long) (slack * Math.max(0, deadline - now)));
     }
@@ -3431,7 +3431,7 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Restores the limits of the run after a phase of the core-guided schedule. */
   private void endPhase(long deadline) {
-    if (sat.deadline() < deadline && System.nanoTime() > sat.deadline()) {
+    if (sat.deadline() < deadline && sat.now() > sat.deadline()) {
       clockStops++;
     }
     sat.setDeadline(deadline);
@@ -3495,7 +3495,7 @@ public final class LcgSolver implements ExternalPropagator {
    * (2023, -f, 1200 s) gave a 426 s extension that raised the bound by 3 of the 13 it lacked.
    */
   private boolean extendCores(long deadline) {
-    if (System.nanoTime() > deadline || !coreSearch.rose() || !coreSearch.closing(workEnd)) {
+    if (sat.now() > deadline || !coreSearch.rose() || !coreSearch.closing(workEnd)) {
       return false;
     }
     if (CORE_EXTEND_RECENT && !coreSearch.closingRecently(workEnd)) {
@@ -3847,14 +3847,14 @@ public final class LcgSolver implements ExternalPropagator {
       long before = best == null ? Long.MAX_VALUE : best[objective];
       long limit = sat.conflicts + budget;
       sat.setConflictLimit(limit);
-      long start = System.nanoTime();
+      long start = sat.now();
       int result = solve();
       if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
         return result; // done, or stopped by the deadline
       }
       if (lns != null && best != null) {
-        result = neighbourhoodRuns((long) (lnsShare * (System.nanoTime() - start)));
-        if (result != CdclSolver.UNKNOWN || System.nanoTime() > sat.deadline()) {
+        result = neighbourhoodRuns((long) (lnsShare * (sat.now() - start)));
+        if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
           return result;
         }
       }
@@ -4066,8 +4066,8 @@ public final class LcgSolver implements ExternalPropagator {
    *     smallest value)
    */
   private int neighbourhoodRuns(long nanos) {
-    long end = Math.min(System.nanoTime() + nanos, sat.deadline());
-    while (System.nanoTime() < end) {
+    long end = Math.min(sat.now() + nanos, sat.deadline());
+    while (sat.now() < end) {
       int[] fixed = lns.neighbourhood();
       int[] upper = lns.upperBounded();
       int[] assumed = new int[fixed.length + upper.length];
@@ -4209,6 +4209,23 @@ public final class LcgSolver implements ExternalPropagator {
    */
   public void setKeepImprovingRun(boolean keep) {
     keepImprovingRun = keep;
+  }
+
+  // literal runs per turn of Branching.ALTERNATE with an annotation, before and after a solution
+  private int literalRuns = 1;
+  private int literalRunsSolved = 1;
+
+  /**
+   * Sets the runs on literals in each turn of {@link Branching#ALTERNATE} under free search with an
+   * annotation (the annotation, then this many literal runs, then activity branching), before and
+   * after the first solution.
+   *
+   * @param before literal runs per turn before a solution, at least 1
+   * @param solved literal runs per turn once a solution is known, at least 1
+   */
+  public void setLiteralRuns(int before, int solved) {
+    literalRuns = Math.max(1, before);
+    literalRunsSolved = Math.max(1, solved);
   }
 
   /**
@@ -5713,7 +5730,7 @@ public final class LcgSolver implements ExternalPropagator {
   public void atRootAfter(long nanos, Runnable action) {
     rootAction = action;
     rootActionDelay = nanos;
-    sat.restartAt(System.nanoTime() + nanos);
+    sat.restartAt(sat.now() + nanos);
   }
 
   /**
@@ -5734,7 +5751,7 @@ public final class LcgSolver implements ExternalPropagator {
         action.run();
       } else {
         // under assumptions: at a later restart to the root
-        sat.restartAt(System.nanoTime() + rootActionDelay);
+        sat.restartAt(sat.now() + rootActionDelay);
       }
     }
     // a restart under assumptions keeps their level, whose bounds hold only under them
@@ -5765,8 +5782,10 @@ public final class LcgSolver implements ExternalPropagator {
       // the annotation, the literals and the activity in turn, with the activity completing the
       // annotation's runs
       runs++;
-      annotationRun = runs % 3 == 0;
-      activityBranching = runs % 3 != 1;
+      int turn = 2 + (best == null ? literalRuns : literalRunsSolved);
+      long r = runs % turn;
+      annotationRun = r == 0;
+      activityBranching = r == 0 || r == turn - 1;
     } else if (branching == Branching.ALTERNATE) {
       activityBranching = !activityBranching;
     } else if (annotation != null && freeSearch) {
@@ -6193,7 +6212,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int solveInTree() {
     while (true) {
-      int[] taken = tree.take(() -> stopRequested || System.nanoTime() > sat.deadline());
+      int[] taken = tree.take(() -> stopRequested || sat.now() > sat.deadline());
       if (taken == null) {
         return tree.isComplete() ? CdclSolver.UNSAT : CdclSolver.UNKNOWN;
       }
@@ -6249,7 +6268,7 @@ public final class LcgSolver implements ExternalPropagator {
       if (sharedBoundUnreachable) {
         return UNSAT_ALL; // no solution beats the shared bound at all
       }
-      if (splitAtom == null || stopRequested || System.nanoTime() > sat.deadline()) {
+      if (splitAtom == null || stopRequested || sat.now() > sat.deadline()) {
         return result;
       }
       cube = SharedTree.extend(cube, splitAtom[0], splitAtom[1], splitAtom[2]);

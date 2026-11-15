@@ -106,6 +106,10 @@ final class TableExplanation {
   private final int[][] valueStatus;
   private final int[][] valueAlt;
   private final int[] valueBase;
+  // The values whose requirement is met by the reason built so far, or that were out at the root,
+  // have valueCovered == call: a tuple with such a value is dead at no cost. The reason only grows
+  // during a call, so a covered value stays covered.
+  private final int[][] valueCovered;
 
   // Requirements of a column restriction (or of a restriction between columns): each is a set of
   // alternative entries, one of which must be in the reason. Requirement q has alternatives
@@ -139,6 +143,7 @@ final class TableExplanation {
     valueStatus = new int[arity][];
     valueAlt = new int[arity][];
     valueBase = new int[arity];
+    valueCovered = new int[arity][];
   }
 
   /**
@@ -225,6 +230,11 @@ final class TableExplanation {
           Arrays.fill(stamp, 0);
         }
       }
+      for (int[] stamp : valueCovered) {
+        if (stamp != null) {
+          Arrays.fill(stamp, 0);
+        }
+      }
     }
     mark = trail.newEntryMark(position);
     chosen = trail.entryMarks();
@@ -244,9 +254,16 @@ final class TableExplanation {
     int arity = table.x.length;
     int base = t * arity;
     Restriction[] cells = table.cells;
+    // a value covered earlier in this call kills the tuple with no entry, as the checks below would
+    for (int j = 0; j < arity; j++) {
+      if (coveredSlot(cells[base + j], j) >= 0) {
+        return true;
+      }
+    }
     if (i >= 0) {
       int status = evaluate(cells[base + i], i, i, rlo, rhi);
       if (status == FREE || status > 0 && cost() == 0) {
+        cover(cells[base + i], i);
         return true;
       }
     }
@@ -254,6 +271,7 @@ final class TableExplanation {
       if (j != i && columnChosen[j] == call) {
         int status = evaluate(cells[base + j], j, i, rlo, rhi);
         if (status == FREE || status > 0 && cost() == 0) {
+          cover(cells[base + j], j);
           return true;
         }
       }
@@ -292,7 +310,44 @@ final class TableExplanation {
         choose(alt[reqStart[q]], out);
       }
     }
+    if (bestColumn < arity) {
+      cover(cells[base + bestColumn], bestColumn);
+    }
     return true;
+  }
+
+  /**
+   * The cache slot of the equality r on column j when its value was evaluated in this call and is
+   * covered, or -1.
+   */
+  private int coveredSlot(Restriction r, int j) {
+    if (r.kind != Restriction.Kind.EQ) {
+      return -1;
+    }
+    int[] covered = valueCovered[j];
+    if (covered == null) {
+      return -1;
+    }
+    int k = r.value - valueBase[j];
+    return k >= 0 && k < covered.length && covered[k] == call ? k : -1;
+  }
+
+  /**
+   * Records that the equality r on column j, just evaluated as dead with all its requirements in
+   * the reason, is covered for the rest of the call.
+   */
+  private void cover(Restriction r, int j) {
+    if (r.kind != Restriction.Kind.EQ) {
+      return;
+    }
+    int[] stamp = valueStamp[j];
+    if (stamp == null) {
+      return;
+    }
+    int k = r.value - valueBase[j];
+    if (k >= 0 && k < stamp.length && stamp[k] == call) {
+      valueCovered[j][k] = call;
+    }
   }
 
   /**
@@ -665,6 +720,7 @@ final class TableExplanation {
       valueStamp[j] = new int[span];
       valueStatus[j] = new int[span];
       valueAlt[j] = new int[3 * span];
+      valueCovered[j] = new int[span];
     }
   }
 
