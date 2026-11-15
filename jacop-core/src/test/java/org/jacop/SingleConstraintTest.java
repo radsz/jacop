@@ -4783,6 +4783,34 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void argMaxAndArgMinBoundPositionsMissingFromTheIndex() {
+    // a position the index no longer holds cannot be the first extremum, so it is bounded by the
+    // index positions around it; before, only the positions before the smallest index were
+    // bounded tighter than the others (x1 kept 4 below, 0 in the second store)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 3);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    x1.addDom(3, 4);
+    IntVar x2 = new IntVar(store, "x2", 1, 4);
+    IntVar index = new IntVar(store, "index", 0, 0);
+    index.addDom(2, 2);
+    store.impose(new ArgMax(new IntVar[] {x0, x1, x2}, index, -1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.max()).isEqualTo(3);
+
+    Store other = new Store();
+    IntVar y0 = new IntVar(other, "y0", 1, 3);
+    IntVar y1 = new IntVar(other, "y1", 0, 2);
+    IntVar y2 = new IntVar(other, "y2", 0, 2);
+    y2.addDom(4, 4);
+    IntVar position = new IntVar(other, "position", 0, 0);
+    position.addDom(2, 2);
+    other.impose(new ArgMin(new IntVar[] {y0, y1, y2}, position, -1));
+    assertThat(other.consistency()).isTrue();
+    assertThat(y1.min()).isEqualTo(1);
+  }
+
+  @Test
   void argMinMaxSatisfiedRespectsFirstIndexTieBreak() {
     // satisfied() accepted an index whose value ties with an earlier element, and ArgMax read the
     // value of a non-singleton index.

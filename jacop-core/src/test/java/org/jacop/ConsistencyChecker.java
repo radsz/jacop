@@ -53,6 +53,9 @@ import org.jacop.constraints.AlldifferentExceptZero;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongSeq;
+import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMaxMonotone;
+import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ConvexAllocation;
@@ -94,9 +97,11 @@ import org.jacop.constraints.WeightedCompletion;
 import org.jacop.constraints.XdivYeqZ;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
+import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusCneqZ;
@@ -1150,6 +1155,22 @@ class ConsistencyChecker {
               return new Model(new XeqY(x, y), t -> t[0] == t[1], new IntVar[] {x, y});
             }),
         new Case(
+            "XlteqY",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -6, 6, r);
+              IntVar y = aVar(s, "y", -6, 6, r);
+              return new Model(new XlteqY(x, y), t -> t[0] <= t[1], new IntVar[] {x, y});
+            }),
+        new Case(
+            "XneqY",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -3, 3, r);
+              IntVar y = aVar(s, "y", -3, 3, r);
+              return new Model(new XneqY(x, y), t -> t[0] != t[1], new IntVar[] {x, y});
+            }),
+        new Case(
             "XplusCeqZ",
             Level.DOMAIN,
             (s, r) -> {
@@ -1632,6 +1653,29 @@ class ConsistencyChecker {
         new Case("LexOrder", Level.DOMAIN, ConsistencyChecker::lexOrder),
         new Case("HybridTable", Level.DOMAIN, (s, r) -> hybridTable(s, r, false)),
         new Case("HybridTableShort", Level.DOMAIN, (s, r) -> hybridTable(s, r, true)),
+        // constraint audit, 2026-11-15: constraints added to develop-5.0 since the last round
+        new Case("BinaryBitTable", Level.DOMAIN, ConsistencyChecker::binaryBitTable),
+        new Case("ArgMax", Level.DOMAIN, (s, r) -> argMaxMonotone(s, r, false)),
+        new Case(
+            "ArgMin",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar[] x = vars(s, "x", 2 + r.nextInt(3), 0, 4, r);
+              IntVar index = aVar(s, "i", 0, x.length - 1, r);
+              return new Model(
+                  new ArgMin(x, index, -1),
+                  t -> {
+                    int best = 0;
+                    for (int k = 1; k < x.length; k++) {
+                      if (t[k] < t[best]) {
+                        best = k;
+                      }
+                    }
+                    return t[x.length] == best;
+                  },
+                  concat(x, new IntVar[] {index}));
+            }),
+        new Case("ArgMaxMonotone", Level.BOUNDS_Z, (s, r) -> argMaxMonotone(s, r, true)),
         new Case("ConditionalSelect", Level.BOUNDS_Z, ConsistencyChecker::conditionalSelect),
         new Case("MaxSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, false)),
         new Case("MinSimple", Level.BOUNDS_Z, (s, r) -> minMaxSimple(s, r, true)),
@@ -2268,6 +2312,66 @@ class ConsistencyChecker {
   /**
    * A random table of 2 to 4 columns, plain or with unary restrictions (short and smart tables).
    */
+  private static Model binaryBitTable(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 2, -1, 4, random);
+    int[][] tuples = new int[1 + random.nextInt(12)][];
+    for (int t = 0; t < tuples.length; t++) {
+      tuples[t] = new int[] {random.nextInt(7) - 1, random.nextInt(7) - 1};
+    }
+    return new Model(
+        new org.jacop.constraints.table.BinaryBitTable(x[0], x[1], tuples),
+        t -> Arrays.stream(tuples).anyMatch(row -> row[0] == t[0] && row[1] == t[1]),
+        x);
+  }
+
+  /*
+   * index = the first k with the largest f[k](x[k]); with monotone, f[k] is a random
+   * nondecreasing table over an interval of x[k] (values of x[k] outside it are not allowed), and
+   * otherwise ArgMax over x itself.
+   */
+  private static Model argMaxMonotone(Store store, Random random, boolean monotone) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 4, random);
+    IntVar index = aVar(store, "i", 0, n - 1, random);
+    int[][] f = new int[n][];
+    int[] first = new int[n];
+    for (int k = 0; k < n && monotone; k++) {
+      if (random.nextInt(4) == 0) {
+        continue;
+      }
+      first[k] = random.nextInt(2);
+      f[k] = new int[3 + random.nextInt(3)];
+      int v = random.nextInt(3);
+      for (int u = 0; u < f[k].length; u++) {
+        v += random.nextInt(3) == 0 ? 0 : random.nextInt(3);
+        f[k][u] = v;
+      }
+    }
+    Constraint c = monotone ? new ArgMaxMonotone(x, f, first, index, -1) : new ArgMax(x, index, -1);
+    return new Model(
+        c,
+        t -> {
+          int best = -1;
+          long bestValue = Long.MIN_VALUE;
+          for (int k = 0; k < n; k++) {
+            long value;
+            if (f[k] == null) {
+              value = t[k];
+            } else if (t[k] < first[k] || t[k] >= first[k] + f[k].length) {
+              return false;
+            } else {
+              value = f[k][t[k] - first[k]];
+            }
+            if (value > bestValue) {
+              bestValue = value;
+              best = k;
+            }
+          }
+          return t[n] == best;
+        },
+        concat(x, new IntVar[] {index}));
+  }
+
   private static Model hybridTable(Store store, Random random, boolean restrictions) {
     int n = 2 + random.nextInt(3);
     IntVar[] x = vars(store, "x", n, 0, 3, random);
