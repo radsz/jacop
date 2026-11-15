@@ -1086,7 +1086,7 @@ final class BasisLu {
     boolean byRank = kind == U_FTRAN || kind == U_BTRAN;
     // the entries of the factor of the solve: one array of rows for all steps but in U_BTRAN,
     // whose rows of U are arrays of positions of their own
-    int[] adj = kind == L_FTRAN ? lRow : kind == U_FTRAN ? ucRow : kind == L_BTRAN ? lrRow : null;
+    int[] adj = entriesOf(kind);
     int[] map = kind == U_BTRAN ? posStep : rowStep;
     int[] end = stackEnd;
     for (int k = 0; k < count; k++) {
@@ -1175,6 +1175,21 @@ final class BasisLu {
         reach[k++] = (w << 6) + Long.numberOfTrailingZeros(b);
         b &= b - 1;
       }
+    }
+  }
+
+  // the rows of the entries of the factor of the solve kind, null for U_BTRAN, whose rows of U
+  // are arrays of their own
+  private int[] entriesOf(int kind) {
+    switch (kind) {
+      case L_FTRAN:
+        return lRow;
+      case U_FTRAN:
+        return ucRow;
+      case L_BTRAN:
+        return lrRow;
+      default:
+        return null;
     }
   }
 
