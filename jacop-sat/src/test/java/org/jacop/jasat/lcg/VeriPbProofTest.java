@@ -881,6 +881,28 @@ class VeriPbProofTest {
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
 
+  @Test
+  void reifiedRowUnderARootFixedBIsDerived() {
+    // b = 0 at the root (b -> x5 = 1 with 1 not in x5) holds 2 x1 + 2 x5 - x0 = 5, which has no
+    // solution by parity, but b is in no reason (fuzz seed 6060968)
+    Store store = new Store();
+    IntVar x0 = var(store, "x0", 0, 4);
+    IntVar x1 = var(store, "x1", 1, 3);
+    IntVar x5 = var(store, "x5", -1, 0, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Implies(b, new XeqC(x5, 1)));
+    store.impose(
+        new Reified(new LinearInt(new IntVar[] {x1, x5, x0}, new int[] {2, 2, -1}, "!=", 5), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isEqualTo(0);
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x0)).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
+  }
+
   private static IntVar var(Store store, String name, int... values) {
     IntVar x = new IntVar(store, name);
     for (int v : values) {

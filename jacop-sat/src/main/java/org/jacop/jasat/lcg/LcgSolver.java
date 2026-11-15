@@ -1928,6 +1928,14 @@ public final class LcgSolver implements ExternalPropagator {
         return;
       }
     }
+    // b fixed at the root is not among the hypotheses: the row, or its negation, holds under b's
+    // root literal (b <=> 2 x + 2 y - z != 5 with b = 0 at the root)
+    if (r.b.singleton() && (r.b.value() == 1 || r instanceof Reified)) {
+      boolean one = r.b.value() == 1;
+      String guard =
+          proofDomains[b].singleton() ? "" : " 1 " + (one ? "~" : "") + OpbEncoder.ge(b, 1);
+      proofLinearBounds(one ? f : f.negated(), atoms, from, entry, guard);
+    }
   }
 
   /**
