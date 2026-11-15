@@ -139,19 +139,10 @@ final class ConditionalValueSwaps {
    */
   int run(List<Item> items, List<IntVar> ranked, boolean descending) {
     for (Item item : items) {
-      if (!"jacop_assignment".equals(item.name()) || item.args().length != 4) {
+      if (!isChannel(item)) {
         continue;
       }
       Atom[][] a = item.args();
-      if (a[0].length != a[1].length
-          || a[0].length < 3
-          || a[0].length > MAX_LENGTH
-          || a[2].length != 1
-          || a[3].length != 1
-          || !a[2][0].isInt()
-          || !a[3][0].isInt()) {
-        continue;
-      }
       for (int side = 0; side < 2; side++) {
         Atom[] x = a[side];
         Atom[] y = a[1 - side];
@@ -165,6 +156,21 @@ final class ConditionalValueSwaps {
       }
     }
     return posted;
+  }
+
+  /** Whether the item is an inverse channel of two arrays of the same length that is handled. */
+  private static boolean isChannel(Item item) {
+    if (!"jacop_assignment".equals(item.name()) || item.args().length != 4) {
+      return false;
+    }
+    Atom[][] a = item.args();
+    return a[0].length == a[1].length
+        && a[0].length >= 3
+        && a[0].length <= MAX_LENGTH
+        && a[2].length == 1
+        && a[3].length == 1
+        && a[2][0].isInt()
+        && a[3][0].isInt();
   }
 
   /** A channel inverse(x, y) read as a sequence of values x with the positions y. */
@@ -284,7 +290,8 @@ final class ConditionalValueSwaps {
       for (int t = 0; t < tuples.length; t += k) {
         int[] row = new int[columns];
         boolean matches = true;
-        for (int c = 0, r = 0; c < k; c++) {
+        int r = 0;
+        for (int c = 0; c < k; c++) {
           Atom e = tuples[t + c];
           if (!e.isInt()) {
             return false;
@@ -309,33 +316,28 @@ final class ConditionalValueSwaps {
       Atom[][] a = item.args();
       int u = -1;
       int v = -1;
-      switch (item.name()) {
-        case "int_lt", "int_le" -> {
-          if (a.length == 2 && a[0].length == 1 && a[1].length == 1) {
-            u = position(a[0][0]);
-            v = position(a[1][0]);
-          }
-        }
-        case "int_lin_le" -> {
-          if (a.length == 3
-              && a[0].length == 2
-              && a[1].length == 2
-              && a[2].length == 1
-              && a[0][0].isInt()
-              && a[0][1].isInt()
-              && a[2][0].isInt()
-              && (a[2][0].value() == 0 || a[2][0].value() == -1)) {
-            if (a[0][0].value() == 1 && a[0][1].value() == -1) {
-              u = position(a[1][0]);
-              v = position(a[1][1]);
-            } else if (a[0][0].value() == -1 && a[0][1].value() == 1) {
-              u = position(a[1][1]);
-              v = position(a[1][0]);
-            }
-          }
-        }
-        default -> {
-          // not a precedence
+      String name = item.name();
+      if ((name.equals("int_lt") || name.equals("int_le"))
+          && a.length == 2
+          && a[0].length == 1
+          && a[1].length == 1) {
+        u = position(a[0][0]);
+        v = position(a[1][0]);
+      } else if (name.equals("int_lin_le")
+          && a.length == 3
+          && a[0].length == 2
+          && a[1].length == 2
+          && a[2].length == 1
+          && a[0][0].isInt()
+          && a[0][1].isInt()
+          && a[2][0].isInt()
+          && (a[2][0].value() == 0 || a[2][0].value() == -1)) {
+        if (a[0][0].value() == 1 && a[0][1].value() == -1) {
+          u = position(a[1][0]);
+          v = position(a[1][1]);
+        } else if (a[0][0].value() == -1 && a[0][1].value() == 1) {
+          u = position(a[1][1]);
+          v = position(a[1][0]);
         }
       }
       if (u >= 0 && v >= 0 && u != v) {

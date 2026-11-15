@@ -677,10 +677,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // satisfaction problem under the search of its annotation; free search (black-hole) is up to
     // 5.8x slower with them on the hard instances
     if (objective == null && !free && ConditionalValueSwaps.ENABLED) {
-      ConditionalValueSwaps swaps = new ConditionalValueSwaps(store, dictionary);
-      this.swaps = swaps.run(items, ranked, largest && values.posted() == 0);
-      if (this.swaps > 0) {
-        note("swaps", swaps.pairs().toArray(new IntVar[0][]));
+      ConditionalValueSwaps finder = new ConditionalValueSwaps(store, dictionary);
+      swaps = finder.run(items, ranked, largest && values.posted() == 0);
+      if (swaps > 0) {
+        note("swaps", finder.pairs().toArray(new IntVar[0][]));
       }
     }
 
