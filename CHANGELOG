@@ -6290,6 +6290,18 @@ Version 5.0 (unreleased)
    instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
    objectives, none worse.
 
+351. The FlatZinc front end removes from each difference t = x - y (any
+   a*x - a*y + b*t = c) the value that x - y != d would give, for every
+   disequality of the model, stated or implied, that AlldifferentDetector
+   collects, and raises abs(t) to the smallest absolute value left in t,
+   which AbsXeqY's bounds consistency misses when t has values on both
+   sides of 0. A difference of two all-different variables is not 0, so in
+   the CSPLib all-interval series the absolute differences start at 1 and
+   their all-different ranges over exactly n-1 values: n = 40, 60 and 100
+   found no solution in 240 s (default and -f) and now solve with 0
+   failures, as CP-SAT does through the same presolve reduction. It fires
+   on none of the wide set. Not with --proof.
+
 347. -Djacop.virtualClock=true also covers free search without learning
    after LCG gives way (-f): its time limit, the time LCG left, counts
    jacop.virtualClock.propagationsPerMs (1000) propagations per
