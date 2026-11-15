@@ -60,6 +60,7 @@ import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.PrimitiveConstraint;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
@@ -1865,7 +1866,8 @@ public final class LcgSolver implements ExternalPropagator {
    * Writes the bounds of a reified linear constraint b &lt;=&gt; row under b: when the reason sets
    * b to 0 (the row fails under the hypotheses and b) or holds b = 1 (the row prunes), the bounds
    * of the row are lemmas guarded by b, as for the row alone ({@code b <=> -3 x = -4} sets b to 0,
-   * and unit propagation over three times the order literals of x does not round).
+   * and unit propagation over three times the order literals of x does not round). For a {@link
+   * Reified} the same holds for the negated row under not b.
    */
   private void proofReifiedBounds(
       AbstractReifiedConstraint r, EntryList atoms, int from, int entry) {
@@ -1876,19 +1878,25 @@ public final class LcgSolver implements ExternalPropagator {
     int b = trail.id(r.b);
     if (entry >= 0
         && trail.id(proofTrail.variable(entry)) == b
-        && proofTrail.kind(entry) == AtomicTrail.LE
-        && proofTrail.value(entry) == 0) {
-      // the clause "hypotheses imply b = 0" is the row's failure under b
-      proofLinearBounds(f, atoms, from, -1, " 1 " + proofAtom(entry, 0));
+        && (proofTrail.kind(entry) == AtomicTrail.LE
+            || proofTrail.kind(entry) == AtomicTrail.GE && r instanceof Reified)) {
+      // the clause "hypotheses imply b = 0" is the row's failure under b, and "hypotheses imply
+      // b = 1" that of its negation under not b
+      boolean zero = proofTrail.kind(entry) == AtomicTrail.LE;
+      proofLinearBounds(zero ? f : f.negated(), atoms, from, -1, " 1 " + proofAtom(entry, 0));
       return;
     }
     for (int k = from; k < atoms.size(); k++) {
       int e = atoms.get(k);
-      if (trail.id(proofTrail.variable(e)) == b && proofTrail.kind(e) == AtomicTrail.GE) {
+      if (trail.id(proofTrail.variable(e)) == b
+          && (proofTrail.kind(e) == AtomicTrail.GE
+              || proofTrail.kind(e) == AtomicTrail.LE && r instanceof Reified)) {
+        // b = 1 holds the row and b = 0 its negation (x != 4 under b is x = 4 under not b)
         String atom = proofAtom(e, atoms.slack(k));
         String guard =
             "1".equals(atom) ? "" : " 1 " + (atom.startsWith("~") ? atom.substring(1) : "~" + atom);
-        proofLinearBounds(f, atoms, from, entry, guard);
+        proofLinearBounds(
+            proofTrail.kind(e) == AtomicTrail.GE ? f : f.negated(), atoms, from, entry, guard);
         return;
       }
     }

@@ -835,6 +835,27 @@ class VeriPbProofTest {
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
 
+  @Test
+  void reifiedDisequalityUnderNotBIsDerived() {
+    // not b holds 2 x1 + 2 x2 - x3 = 4, which x3 = 1 refutes by parity: the bounds of the negated
+    // row under not b were not written (fuzz seed 4038106)
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", 0, 4);
+    IntVar x2 = var(store, "x2", -1, 0, 1, 3);
+    IntVar x3 = var(store, "x3", 1, 4);
+    IntVar x5 = new IntVar(store, "x5", -1, 4);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new XplusYeqZ(x1, x3, x5));
+    store.impose(
+        new Reified(new LinearInt(new IntVar[] {x1, x2, x3}, new int[] {2, 2, -1}, "!=", 4), b));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x1)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
   private static IntVar var(Store store, String name, int... values) {
     IntVar x = new IntVar(store, name);
     for (int v : values) {
