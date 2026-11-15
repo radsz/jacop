@@ -87,15 +87,18 @@ import org.jacop.fz.SimpleNode;
  * {@code x mod 2 != 0 \/ y = x div 2} and {@code x mod 2 = 0 \/ y = 3 x + 1} then has one row per
  * value of {@code x}: its outer box is not enumerated, the search branches on {@code x} only. Such
  * a group is tabulated when one branch of the search, followed to its end, multiplies the domain
- * sizes of the outer variables it branches on to at most the rows limit, which for a group whose
- * largest outer variable has more values than {@value #MAX_TUPLES} is that domain size, up to
- * {@value #MAX_LARGE_TUPLES}. Groups with the same constraints over variables with the same domains
- * share one tabulation and the index of one table.
+ * sizes of the outer variables it branches on to at most the rows limit. That limit is {@value
+ * #MAX_TUPLES}, or for two or three outer variables twice the domain size of the smallest one when
+ * that is larger, up to {@value #MAX_LARGE_TUPLES}: a large table is kept for a relation with few
+ * supports per value in every column, as a Collatz link, and not for one like {@code d = x div 10
+ * mod 10}, where every digit has thousands of supports and bounds reasoning on the decomposition is
+ * cheaper. Groups with the same constraints over variables with the same domains share one
+ * tabulation and the index of one table.
  *
- * The table is equivalent to the group projected onto the outer variables, so every solution of the
- * outer variables is kept. It is not used when all solutions are searched for, since solutions that
- * differ only in internal variables would merge, nor under {@code --proof}. The system property
- * {@code org.jacop.fz.intensionTable=false} turns it off.
+ * <p>The table is equivalent to the group projected onto the outer variables, so every solution of
+ * the outer variables is kept. It is not used when all solutions are searched for, since solutions
+ * that differ only in internal variables would merge, nor under {@code --proof}. The system
+ * property {@code org.jacop.fz.intensionTable=false} turns it off.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -112,8 +115,9 @@ public class IntensionTableDetector implements ParserTreeConstants {
   static final int MAX_TUPLES = 10_000;
 
   /**
-   * At most this many tuples in a table whose outer variables follow from one of them: the rows
-   * limit of such a group is the domain size of its largest outer variable, up to this.
+   * At most this many tuples in a table larger than {@value #MAX_TUPLES}, allowed when the table
+   * has two or three columns and every outer variable has at least half as many values as the table
+   * has rows.
    */
   static final int MAX_LARGE_TUPLES = 100_000;
 
@@ -386,13 +390,18 @@ public class IntensionTableDetector implements ParserTreeConstants {
         defined = Math.max(defined, vars[b.at[r]].getSize());
       }
     }
-    // a group whose outer variables follow from one of them, as y = f(x) stated by implications,
-    // may have as many rows as that variable has values
-    int largest = 0;
+    // a large group whose outer variables follow from each other, as y = f(x) for an f that takes
+    // few values more than twice, may have as many rows as twice its smallest outer domain
+    long smallest = Long.MAX_VALUE;
     for (IntVar v : outer) {
-      largest = Math.max(largest, v.getSize());
+      smallest = Math.min(smallest, v.getSize());
     }
-    int rowLimit = Math.max(MAX_TUPLES, Math.min(MAX_LARGE_TUPLES, largest));
+    // a single outer variable gets a large table of its values only by the old limit: dozens of
+    // primality tests p mod k > 0 over 90,000 values of p slowed limerick_primes 60 times
+    int rowLimit =
+        outer.size() < 2
+            ? MAX_TUPLES
+            : (int) Math.max(MAX_TUPLES, Math.min(MAX_LARGE_TUPLES, 2 * smallest));
     long nodeLimit = Math.min(Math.max(MAX_NODES, 4L * rowLimit), BUDGET - nodes);
     String key = signature(bound, vars);
     int[][] rows = cache.get(key);
