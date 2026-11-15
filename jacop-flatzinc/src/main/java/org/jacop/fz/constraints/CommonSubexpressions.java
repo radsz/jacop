@@ -495,11 +495,12 @@ public class CommonSubexpressions implements ParserTreeConstants {
     return t;
   }
 
-  // the tokens as a set, constants (Integer) before variables (Long)
-  private static SortedSet<Object> sorted(List<Object> tokens) {
+  // the tokens as a sorted list without repetitions, constants (Integer) before variables (Long);
+  // a list since the hash code of a set adds up its elements and collides for most sets
+  private static List<Object> sorted(List<Object> tokens) {
     SortedSet<Object> set = new TreeSet<>(CommonSubexpressions::compare);
     set.addAll(tokens);
-    return set;
+    return new ArrayList<>(set);
   }
 
   private static boolean constant(Object t) {
@@ -528,7 +529,14 @@ public class CommonSubexpressions implements ParserTreeConstants {
       }
     }
     terms.values().removeIf(v -> v == 0);
-    return List.of(terms, constant);
+    // a flat list: the hash code of a map adds up its entries and collides for most sums
+    List<Long> key = new ArrayList<>(2 * terms.size() + 1);
+    for (Map.Entry<Long, Long> t : terms.entrySet()) {
+      key.add(t.getKey());
+      key.add(t.getValue());
+    }
+    key.add(constant);
+    return key;
   }
 
   // the constraints in which each variable occurs, over every constraint of the model
