@@ -5845,6 +5845,27 @@ Version 5.0 (unreleased)
    slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
    statistic symmetryValueSwaps counts the pairs of values.
 
+336. The FlatZinc front end merges common subexpressions before posting
+   (as CP-SAT's presolve does, DetectDuplicateConstraints: Perron, Didier
+   and Gay, The CP-SAT-LP solver, CP 2023; and the duplicate-row presolver
+   of MIP solvers: Achterberg, Bixby, Gu, Rothberg and Weninger, Presolve
+   reductions in mixed integer programming, INFORMS Journal on Computing
+   32(2), 2020). Two constraints that define their outputs by the same function
+   of the same arguments (reified comparisons, Boolean connectives,
+   int_times/plus/min/max/div/mod/abs, reified linear constraints,
+   elements) give one output, the other becomes its alias; a plain
+   equality of two variables (int_eq, bool_eq, x - y = 0, a conjunction
+   of one literal) aliases them; a repeated constraint is posted once, and
+   a linear constraint adds the coefficients of a repeated variable. It
+   repeats until nothing changes (at most 6 rounds). It changes the model
+   of 56 of the 240 instances of the wide benchmark set
+   (community-detection rnd_n100: 5,190 -> 211 constraints, 6.6 -> 4.1 s).
+   At 600 s against the build with enforcement inlining it solves 44 of
+   them as before in default mode (time geomean 1.007, cable-tree-wiring
+   A041 finds a worse best value on another search tree) and 48 as before
+   with -f (geomean 1.002). -Dorg.jacop.fz.cse=false turns it off; it is
+   off under --proof.
+
 Version 4.11
 =============
 
