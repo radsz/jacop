@@ -627,7 +627,7 @@ class WakeUpFixpointTest {
       }
       String rel = new String[] {"==", "<=", ">="}[random.nextInt(3)];
       int element = (l + 1) % INTS == i ? j : (l + 1) % INTS;
-      return switch (random.nextInt(37)) {
+      return switch (random.nextInt(38)) {
         case 0 -> (x, b, r) -> new XmulYeqZ(x[i], x[j], x[k]);
         case 1 -> (x, b, r) -> new XdivYeqZ(x[i], x[j], x[k]);
         case 2 -> (x, b, r) -> new XmodYeqZ(x[i], x[j], x[k]);
@@ -679,6 +679,10 @@ class WakeUpFixpointTest {
         case 33 -> (x, b, r) -> new IncreasingNValue(new IntVar[] {x[i], x[j], x[k]}, x[l]);
         case 34 -> (x, b, r) -> new NoGood(new IntVar[] {x[i], x[j]}, new int[] {c, c + 1});
         case 35 -> (x, b, r) -> new AbsXeqY(x[i], x[j], true);
+        case 36 -> {
+          int[] weights = {nonZero(3), nonZero(3), nonZero(3), nonZero(3)};
+          yield (x, b, r) -> new SumWeight(new IntVar[] {x[i], x[j], x[k], x[l]}, weights, c);
+        }
         default -> {
           PrimitiveBuilder c1 = composed(1);
           PrimitiveBuilder c2 = composed(1);
