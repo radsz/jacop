@@ -10,7 +10,7 @@ bench in its instances.tsv.
 usage: make_twins.py TWINS NAME=ROOT[:mznc] ... [--max-bytes N] [--jobs N]
 env: MZN (minizinc), MZN_SOLVER_PATH with a solver org.std whose mznlib is an empty directory.
 """
-import argparse, concurrent.futures, csv, gzip, os, subprocess, sys
+import argparse, concurrent.futures, csv, gzip, os, re, subprocess, sys
 
 MZN = os.environ.get("MZN", "minizinc")
 SHIMS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "shims")
@@ -53,8 +53,17 @@ def sources(name, root, mznc):
                 yield rel, p, os.path.join(dirpath, mzns[0]), data
 
 
+RANDOM = re.compile(r"\b(uniform|normal|bernoulli|binomial|poisson|gamma|weibull|exponential|lognormal|chisquared|cauchy|fdistribution|tdistribution|discrete_distribution)\s*\(")
+
+
 def flatten(job):
     out, mzn, dzn = job
+    # A model drawing random data flattens to different data on every run, so its twin
+    # would not be the same problem as the benchmark's FlatZinc.
+    for src in [mzn] + ([dzn] if dzn else []):
+        with open(src, errors="replace") as f:
+            if RANDOM.search(re.sub(r"%.*", "", f.read())):
+                return out, "random"
     os.makedirs(os.path.dirname(out), exist_ok=True)
     cmd = [MZN, "-c", "--solver", "org.std", "-I", SHIMS, mzn] + ([dzn] if dzn else [])
     cmd += ["--fzn", out + ".tmp", "--no-output-ozn"]
