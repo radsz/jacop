@@ -32,6 +32,7 @@ package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -112,6 +113,9 @@ public class ZeroSumDetector implements ParserTreeConstants {
   private final Set<Var> dropped = Collections.newSetFromMap(new IdentityHashMap<>());
 
   private final OutputSums outputs = new OutputSums();
+
+  // the literals of x = v made here and posted on their own
+  private final Map<IntVar, Map<Integer, IntVar>> own = new IdentityHashMap<>();
 
   /**
    * The output variables whose defining sums were dropped, with their terms: their values are
@@ -339,13 +343,25 @@ public class ZeroSumDetector implements ParserTreeConstants {
     fncs.poseClause(new IntVar[] {literal(x, v)}, new IntVar[] {b});
   }
 
-  // the 0/1 variable of x = v: the one the model reifies, or a new one in the channel of x
+  // the 0/1 variable of x = v: the one the model reifies, or a new one, posted in the channel of x
+  // when the model reifies other values of x (the channel holds only variables with two or more
+  // reified values) and on its own otherwise
   private IntVar literal(IntVar x, int v) {
     Map<Integer, IntVar> values = support.reif.cs.get(x);
     IntVar b = values == null ? null : values.get(v);
+    if (b != null) {
+      return b;
+    }
+    Map<Integer, IntVar> mine = own.computeIfAbsent(x, k -> new HashMap<>());
+    b = mine.get(v);
     if (b == null) {
       b = new IntVar(support.store, 0, 1);
-      support.addReified(x, v, b);
+      if (values != null && !values.isEmpty()) {
+        support.addReified(x, v, b);
+      } else {
+        support.pose(support.fzXeqCreified(x, v, b));
+        mine.put(v, b);
+      }
       literals++;
     }
     return b;

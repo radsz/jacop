@@ -365,6 +365,7 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
@@ -599,6 +600,7 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
@@ -829,6 +831,7 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
@@ -1057,6 +1060,7 @@ setup to run configuration. -->
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
