@@ -3074,8 +3074,12 @@ public final class LcgSolver implements ExternalPropagator {
     long start = sat.now();
     long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
     end = Math.min(end, sat.deadline());
-    if (rootFailed || proof != null) {
-      return !rootFailed;
+    if (proof != null) {
+      // probing is not logged: the search that follows derives a failure at the root in the proof
+      return true;
+    }
+    if (rootFailed) {
+      return false;
     }
     encodeGraphs();
     // the clauses added since the solver was made (graphs, collected clauses) propagate first, so
