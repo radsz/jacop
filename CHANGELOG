@@ -5773,6 +5773,34 @@ Version 5.0 (unreleased)
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
 
+335. Satisfaction models get a second linear relaxation, solved once at
+   the root and then removed, that can refute them. It holds the value
+   encodings of the counting, all-different and element constraints
+   (with the count bounds of global_cardinality), the model's linear and
+   clause rows restated over the value columns, and the pair conflicts
+   merged into cliques (Atamturk, Nemhauser and Savelsbergh, Conflict
+   graphs in solving integer programming problems, EJOR 2000). A control
+   b of a half-reified b -> x != c (MiniZinc's translation of a
+   disequality in a disjunction) is bounded by 1 - [x = c], and the z of
+   not z -> x != c by [x = c], so the clause (x != c) \/ (y != c) becomes
+   [x = c] + [y = c] <= 1. Such counts are pigeonhole arguments, which
+   resolution and so lazy clause generation refute only in exponentially
+   many steps (Haken, The intractability of resolution, TCS 1985). The
+   main relaxation keeps these encodings only for an objective. The
+   social golfers 08-04-11 of the XCSP 2024 competition (32 players in 8
+   groups of 4 for 11 weeks: each player meets 3 others a week, 33 in
+   all, but there are 31) were UNKNOWN at 600 s and are now refuted at
+   the root in under 2 s; only LP-based solvers proved them in the
+   competition. The root solve is capped at 2,500 pivots
+   (org.jacop.lp.rootRefutationPivots). It fires on 353 of the 792 XCSP
+   2022-2025 satisfaction instances (median 0.4 s more on the 2024 ones
+   both versions solve) and on 15 of the 53 satisfaction instances of
+   the wide benchmark set, with the same answers and, under -f, the same
+   search trees. -Dorg.jacop.lp.rootRefutation=false turns it off;
+   --search-statistics prints lpRefutationRows, lpRefutationCliques,
+   lpRefutation (refuted, feasible, limit), lpRefutationTime and
+   lpRefutationPivots.
+
 Version 4.11
 =============
 
