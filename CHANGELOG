@@ -6596,6 +6596,20 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. The linear relaxation takes the rows over the terms of the objective on
+   the sparse simplex when they do not fit the dense tableau. A model
+   stated in clauses and elements has few rows of its own (CSPLib
+   warehouses, prob034: 2), so the dense simplex was chosen and the clause
+   rows b[i,j] -> open[j] and the value encodings of the element costs did
+   not fit it; the root bound of cap131 stayed at 626,300 (optimum
+   915,059). Now the rows at distance at most 1 from the objective, and
+   the rows over no other columns, go to the sparse simplex when they are
+   at most org.jacop.lp.sparseMaxRows (25,000): cap131 root bound 914,788,
+   free search proves the optimum in 4 s instead of not in 600 s (CP-SAT
+   4.5 s), and traveling-tppv circ20fnonbal (MiniZinc Challenge 2022) is
+   proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
+   turns it off; the statistic lpNearRows gives the rows taken.
+
 Version 4.11
 =============
 
