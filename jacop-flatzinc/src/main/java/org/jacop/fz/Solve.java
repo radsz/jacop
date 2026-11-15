@@ -151,6 +151,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.ls.ProjectSchedule;
 import org.jacop.search.ls.ScheduleResources;
 import org.jacop.search.restart.Calculator;
 import org.jacop.search.restart.ConstantCalculator;
@@ -241,7 +242,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // at least this many columns (-Dorg.jacop.lp.largeGuideColumns)
 
   // whether the search follows the relaxation's solution by default (lcg-lp-branching auto)
-  private static boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
+  private boolean lpGuidedByDefault(LinearRelaxation r, boolean free) {
     if (r.simplexValueColumns() > 0) {
       return true;
     }
@@ -249,7 +250,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return r.treeConstraints() > 0
-        || r.objective() != null && r.setRows()
+        || r.objective() != null && (r.setRows() || dictionary.overlapSetRows(r.objective()))
         || r.largeByRows() && r.columns() >= LARGE_GUIDE_COLUMNS;
   }
 
@@ -1122,6 +1123,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
       return;
+    }
+    String bySource = r.sourceReport();
+    if (bySource != null) {
+      // -Dorg.jacop.lp.sourceStats=true: what the rows of each source gave (LpSources)
+      for (String line : bySource.split("\n")) {
+        int space = line.indexOf(' ');
+        if (space > 0) {
+          IO.println(
+              "%%%mzn-stat: lpSource_"
+                  + line.substring(0, space).replaceAll("\\W", "_")
+                  + "="
+                  + line.substring(space + 1));
+        }
+      }
     }
     TimeIndexedBound t = timeIndexedBound;
     if (t != null) {
@@ -2465,6 +2480,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           return executeRestartSearch(label, select, costVar, solveType);
         }
       }
+      if (progressionSearch(costVar)) {
+        return executeProgressionSearch(label, costVar, solveType);
+      }
       if (useLcg(costVar)) {
         fixedLabel = label;
         fixedSelect = select;
@@ -2509,6 +2527,68 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return store.consistency();
+  }
+
+  /**
+   * Whether the search is the branching of a tiling by arithmetic progressions ({@link
+   * org.jacop.fz.constraints.ProgressionTilingDetector}): one solution of a satisfaction model
+   * without an annotation to follow (or under -f), without on_restart built-ins. The system
+   * property org.jacop.fz.progressionTiling.search=false keeps the default search.
+   */
+  private boolean progressionSearch(Var costVar) {
+    return dictionary.progressionTiling != null
+        && costVar == null
+        && options.freeSearch()
+        && !options.getAll()
+        && options.getNumberSolutions() <= 1
+        && dictionary.onRestart == null
+        && options.proof() == null
+        && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.progressionTiling.search"));
+  }
+
+  /**
+   * Searches a tiling by arithmetic progressions: each start in the order of the starts at its
+   * smallest value, which is the first value no fixed progression covers, then its gap at a random
+   * value that places its terms on free cells, under Luby restarts of 100 failures, without LCG. On
+   * the 24 XCSP3 PerfectRythmicTiling instances of the 2026 competition it finds 15 tilings in 600
+   * s instead of 9 (n = 80 in 47 to 426 s), the default search under LCG none for n = 80: the
+   * conflicts of the cover give long reasons (50 atoms) and the run reaches 2,000 nodes per second
+   * instead of 100,000.
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeProgressionSearch(DepthFirstSearch<T> label, Var costVar, String type) {
+    org.jacop.fz.constraints.ProgressionTilingDetector.Tiling tiling = dictionary.progressionTiling;
+    IO.println(
+        "%% progression tiling search: "
+            + tiling.starts().length
+            + " progressions of "
+            + tiling.terms()
+            + " terms, without LCG");
+    if (options.lcg()) {
+      if (dictionary.rootTrail != null) {
+        dictionary.rootTrail.detach();
+        dictionary.rootTrail = null;
+      }
+      postCollectedClauses();
+    }
+    List<SelectChoicePoint<? extends Var>> selects = new ArrayList<>();
+    ProgressionGapIndomain gapValue = new ProgressionGapIndomain(tiling);
+    for (int i = 0; i < tiling.starts().length; i++) {
+      selects.add(new SimpleSelect<>(new IntVar[] {tiling.starts()[i]}, null, new IndomainMin<>()));
+      selects.add(new SimpleSelect<>(new IntVar[] {tiling.gaps()[i]}, null, gapValue));
+    }
+    List<IntVar> rest = new ArrayList<>();
+    for (int i = 0; i < store.size(); i++) {
+      if (store.vars[i] instanceof IntVar x && !x.singleton()) {
+        rest.add(x);
+      }
+    }
+    if (!rest.isEmpty()) {
+      selects.add(new SimpleSelect<>(rest.toArray(new IntVar[0]), null, new IndomainMin<>()));
+    }
+    restartCalculator = new LubyCalculator(100);
+    return executeRestartSearch(
+        label, (SelectChoicePoint<T>) new SequenceSelect(selects), costVar, type);
   }
 
   private boolean useLcg(Var costVar) {
@@ -2807,6 +2887,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Hint pumped = options.freeSearch() && ls == null ? pumpHint() : null;
     // the dive that fills the slots of a fixed multiset, largest value first
     Hint dived = options.freeSearch() && ls == null ? slotDive(costVar) : null;
+    // a project schedule of the cumulative resources, before the solver takes the store over
+    Hint scheduled =
+        options.freeSearch() && ls == null && costVar instanceof IntVar c
+            ? projectScheduleHint(c, worker)
+            : null;
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -2858,6 +2943,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = ls.getCostValue();
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    } else if (scheduled != null) {
+      // the schedule is the solver's first solution: branch and bound and neighbourhood search
+      // go on from it (as a bound and phase alone, neighbourhood search never ran: j60_45_1)
+      lcg.setIncumbent(scheduled.vars, scheduled.values);
+      lcgLastCost = scheduledCost;
+      if (worker != null) {
+        lcg.setSharedBound(worker::sharedBound);
+      }
     } else if (worker != null && costVar != null) {
       lcg.setSharedBound(worker::sharedBound);
     }
@@ -2877,7 +2970,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if (ls != null && costVar instanceof IntVar cost) {
+    if ((ls != null || scheduled != null) && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better
       lcg.onSolution(
@@ -2928,6 +3021,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      // jumps of branch and bound a doubling step below the best solution (connect 2021: 465
+      // solutions that each improved by 1 to 80, 19 s, with jumps 9 s; carpet-cutting 2.7 to 1.8
+      // s);
+      // off by default: on the wide set at 600 s the 35 instances where jumps fire take 1.6 % more
+      // time in total (city-position city-7-04 265 to 401 s, peacable_queens 8 loses its proof)
+      lcg.setJumps("1".equals(options.freeConfig("lcg-jumps", "0")));
       // once a solution is known, more literal runs per turn (CHANGELOG 320):
       // multi-agent-graph-coverage rnd_n10 proofs need half the conflicts with literals alone
       lcg.setLiteralRuns(
@@ -2991,12 +3090,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // packing or covering relaxation (LinearRelaxation.setRows) of an optimisation problem, whose
     // root solution is almost integral: the crew schedules of XCSP 2025 BusScheduling c2 and r5a,
     // 199 rows over 14,773 columns, prove their optima 29 and 28 in 16-41 s with it; without it c2
-    // is not proved in 600 s and r5a takes 306 s
+    // is not proved in 600 s and r5a takes 306 s. The rows that linear overlap factoring rewrote
+    // into rows over shared sums are no set rows in the relaxation, so the detector tells whether
+    // the model's rows were (Tables.overlapSetRows): CSPLib bus driver scheduling r3 and r5 (160
+    // and 199 rows over 19,091 and 7,292 shifts) then prove their optima 16 and 29 in 29 s and 28
+    // s, unsolved in 240 s before
     String lpBranching = options.freeConfig("lcg-lp-branching", "auto");
     boolean lpGuided =
         linearRelaxation != null
             && ("on".equals(lpBranching)
                 || "auto".equals(lpBranching) && lpGuidedByDefault(linearRelaxation, free));
+    if (linearRelaxation != null && options.searchStatistics()) {
+      FzConsole.println("%%%mzn-stat: lpGuided=" + lpGuided + "\n%%%mzn-stat-end");
+    }
     if (free && lpGuided && annotated != null) {
       // the runs of the annotation follow the solution of the linear relaxation
       annotated = new LpGuidedSelect(linearRelaxation, annotated);
@@ -3093,6 +3199,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           Double.parseDouble(options.freeConfig("lcg-core-probe", "0.02")));
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
+    addScheduleProposer(lns);
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -4054,10 +4161,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.sharedPhases;
   }
 
+  private String jumpStatistics() {
+    if (lcg.jumpRuns + lcg.jumpsRaised + lcg.jumpLimits == 0) {
+      return "";
+    }
+    return "\n%%%mzn-stat: lcgJumpRuns="
+        + lcg.jumpRuns
+        + "\n%%%mzn-stat: lcgJumpSolutions="
+        + lcg.jumpSolutions
+        + "\n%%%mzn-stat: lcgJumpsRaised="
+        + lcg.jumpsRaised
+        + "\n%%%mzn-stat: lcgJumpLimits="
+        + lcg.jumpLimits;
+  }
+
   private String coreStatistics() {
     CoreSearch core = lcg.coreSearch();
     if (core == null) {
-      return "";
+      return jumpStatistics();
     }
     return "\n%%%mzn-stat: lcgCores="
         + core.cores
@@ -4083,6 +4204,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.boundDives
         + "\n%%%mzn-stat: lcgBoundDiveSolutions="
         + lcg.boundDiveSolutions
+        + jumpStatistics()
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="
@@ -4353,6 +4475,163 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   // the integer variables of the store not fixed at the root, which a solution hint covers
   /** Variables with the values a hint prefers for them. */
+  // the cost of the best project schedule, printed before the solver starts
+  private int scheduledCost;
+
+  // the project schedule of the cumulative resources, or null
+  private ProjectSchedule projectSchedule;
+  private long projectScheduleMillis;
+
+  /**
+   * Runs the project scheduling heuristic ({@link ProjectSchedule}) when the cost is the makespan
+   * of cumulative resources with fixed durations, demands and capacities, not all of them machines:
+   * serial schedule generation with forward-backward improvement inside a genetic algorithm. Each
+   * better schedule is checked in the store and printed, and the best becomes the first solution of
+   * the solver. The genetic algorithm then goes on in slices of sgs-lns schedules (default twenty
+   * per task) as a kind of neighbourhood of large neighbourhood search. --free-config sgs=0 turns
+   * it off, sgs-share gives the first run its share of the time (default 0.03), sgs-max caps it in
+   * milliseconds (default 60000) and sgs-patience is the number of schedules without improvement
+   * after which it ends (default 20000).
+   *
+   * @return the best schedule found, as a hint of all variables, or null
+   */
+  private Hint projectScheduleHint(IntVar cost, Portfolio.Worker worker) {
+    if ("0".equals(options.freeConfig("sgs", "1"))) {
+      return null;
+    }
+    long begin = System.currentTimeMillis();
+    ProjectSchedule ps = ProjectSchedule.detect(cost, options.getRandomSeed());
+    if (ps == null) {
+      return null;
+    }
+    projectSchedule = ps;
+    long budget = Long.parseLong(options.freeConfig("sgs-max", "60000"));
+    if (options.getTimeOut() > 0) {
+      budget =
+          Math.min(
+              budget,
+              (long)
+                  (Double.parseDouble(options.freeConfig("sgs-share", "0.03"))
+                      * options.getRemainingTimeOut()));
+    }
+    long deadline = begin + budget;
+    long patience = Long.parseLong(options.freeConfig("sgs-patience", "20000"));
+    IntVar[] starts = ps.starts();
+    IntVar[] hinted = hintedVariables();
+    int[][] best = {null};
+    boolean[] stopped = {false};
+    if (worker != null) {
+      worker.onStop(() -> stopped[0] = true);
+    }
+    ProjectSchedule.Listener listener =
+        new ProjectSchedule.Listener() {
+          @Override
+          public boolean improved(int[] start, int makespan) {
+            int[] values = checkSchedule(starts, start, cost, makespan, hinted);
+            if (values == null) {
+              // the other constraints reject it, or the cost is not this makespan
+              return false;
+            }
+            best[0] = values;
+            scheduledCost = makespan;
+            return true;
+          }
+
+          @Override
+          public boolean stop() {
+            return stopped[0] || System.currentTimeMillis() > deadline;
+          }
+
+          @Override
+          public long bound() {
+            return worker == null
+                ? bestPrintedCost.get()
+                : Math.min(bestPrintedCost.get(), worker.sharedBound());
+          }
+        };
+    ps.run(listener, patience);
+    projectScheduleMillis = System.currentTimeMillis() - begin;
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: sgsTasks="
+              + ps.tasks()
+              + "\n%%%mzn-stat: sgsResources="
+              + ps.resources()
+              + "\n%%%mzn-stat: sgsSchedules="
+              + ps.schedules()
+              + "\n%%%mzn-stat: sgsImprovements="
+              + ps.improvements()
+              + "\n%%%mzn-stat: sgsRestarts="
+              + ps.restarts()
+              + "\n%%%mzn-stat: sgsTime="
+              + projectScheduleMillis / 1000.0
+              + (best[0] == null ? "" : "\n%%%mzn-stat: sgsBest=" + scheduledCost));
+    }
+    return best[0] == null ? null : new Hint(hinted, best[0]);
+  }
+
+  /**
+   * Fixes the task starts of a schedule in the store, the cost to the makespan and the other
+   * variables to their smallest values with propagation, and prints the solution.
+   *
+   * @return the values of the hinted variables, or null when the store rejects the schedule
+   */
+  private int[] checkSchedule(
+      IntVar[] starts, int[] start, IntVar cost, int makespan, IntVar[] hinted) {
+    int base = store.level;
+    store.setLevel(base + 1);
+    try {
+      for (int k = 0; k < starts.length; k++) {
+        starts[k].domain.in(store.level, starts[k], start[k], start[k]);
+      }
+      if (!store.consistency() || !cost.domain.contains(makespan) || cost.min() != makespan) {
+        return null;
+      }
+      cost.domain.in(store.level, cost, makespan, makespan);
+      if (!store.consistency()) {
+        return null;
+      }
+      for (IntVar x : hinted) {
+        if (!x.singleton()) {
+          x.domain.in(store.level, x, x.min(), x.min());
+          if (!store.consistency()) {
+            return null;
+          }
+        }
+      }
+      int[] values = new int[hinted.length];
+      for (int k = 0; k < hinted.length; k++) {
+        values[k] = hinted[k].value();
+      }
+      printSolution();
+      return values;
+    } catch (FailException e) {
+      return null;
+    } finally {
+      while (store.level > base) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
+      }
+    }
+  }
+
+  /**
+   * Lets the genetic algorithm of the project schedule go on in slices from the best solution of
+   * the search, as a kind of neighbourhood whose runs fix the task starts of a better schedule.
+   */
+  private void addScheduleProposer(AdaptiveLns lns) {
+    if (lns == null || projectSchedule == null) {
+      return;
+    }
+    ProjectSchedule ps = projectSchedule;
+    long slice =
+        Long.parseLong(
+            options.freeConfig("sgs-lns", Long.toString(Math.max(1000, 20L * ps.tasks()))));
+    if (slice > 0) {
+      lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
+    }
+  }
+
   private static final class Hint {
     final IntVar[] vars;
     final int[] values;
@@ -4706,6 +4985,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       builder.restartHook(dictionary.onRestart);
     } else if (restarts != null && !allSolutions) {
       freeLns = lnsNeighbourhoods(costVar);
+      addScheduleProposer(freeLns);
       if (freeLns != null && lcgHint != null) {
         // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
         // they waited for free search's own first solution, which must improve on it, and on
@@ -6766,6 +7046,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (output.zeroSums != null) {
       eliminatedValues = new IdentityHashMap<>(eliminatedValues);
       output.zeroSums.addValues(eliminatedValues);
+    }
+    // and the index variables and results of the disjunctions from the arrays
+    if (output.indexDisjunctions != null) {
+      eliminatedValues = new IdentityHashMap<>(eliminatedValues);
+      output.indexDisjunctions.addValues(eliminatedValues);
     }
 
     if (!output.outputVariables.isEmpty()) {
