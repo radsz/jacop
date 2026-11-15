@@ -2888,6 +2888,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcg.sat().setInitialPhase(false);
       }
       lcg.setKeepImprovingRun("1".equals(options.freeConfig("lcg-keep", "0")));
+      // jumps of branch and bound a doubling step below the best solution (connect 2021: 465
+      // solutions that each improved by 1 to 80, 19 s, with jumps 9 s; carpet-cutting 2.7 to 1.8 s)
+      lcg.setJumps(!"0".equals(options.freeConfig("lcg-jumps", "1")));
       // once a solution is known, more literal runs per turn (CHANGELOG 320):
       // multi-agent-graph-coverage rnd_n10 proofs need half the conflicts with literals alone
       lcg.setLiteralRuns(
@@ -3928,6 +3931,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.boundDives
         + "\n%%%mzn-stat: lcgBoundDiveSolutions="
         + lcg.boundDiveSolutions
+        + "\n%%%mzn-stat: lcgJumpRuns="
+        + lcg.jumpRuns
+        + "\n%%%mzn-stat: lcgJumpSolutions="
+        + lcg.jumpSolutions
+        + "\n%%%mzn-stat: lcgJumpsRaised="
+        + lcg.jumpsRaised
+        + "\n%%%mzn-stat: lcgJumpLimits="
+        + lcg.jumpLimits
         + "\n%%%mzn-stat: lcgWork="
         + lcg.sat().work()
         + "\n%%%mzn-stat: lcgSatPropagations="

@@ -3144,7 +3144,7 @@ public final class LcgSolver implements ExternalPropagator {
       } else if (coreSearch != null) {
         result = minimizeWithCores();
       } else {
-        result = interleaved() ? minimizeWithLowerBoundSearch() : solve();
+        result = interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
       }
     } finally {
       this.objective = -1;
@@ -3286,7 +3286,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       if (best != null) {
         // a solution: branch and bound goes on, as without the core-guided phase
-        return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+        return interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
       }
       if (sat.now() > sat.deadline()) {
         return result;
@@ -3370,7 +3370,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (!requireBetter()) {
       return CdclSolver.SAT;
     }
-    return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+    return interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
   }
 
   /** Whether runs of branch and bound alternate with lower-bound or neighbourhood runs. */
@@ -3546,11 +3546,149 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
     }
     try {
-      return solve();
+      return branchAndBound();
     } finally {
       endPhase(deadline);
     }
   }
+
+  // -Djacop.lcg.jumpConflicts=<n>: the conflicts of a call of branch and bound before the
+  // core-guided phase that assumes the objective more than one below the best solution; 0 turns
+  // the jumps off
+  private static final long JUMP_CONFLICTS = Long.getLong("jacop.lcg.jumpConflicts", 100);
+
+  /** Statistics: jumps of branch and bound below the best solution that raised the lower bound. */
+  public long jumpsRaised;
+
+  /** Statistics: jumps of branch and bound below the best solution that ran out of conflicts. */
+  public long jumpLimits;
+
+  // -Djacop.lcg.jumpAfter=<n>: the solutions of one run of branch and bound after which it
+  // stops for jumps; 0 turns the jumps of branch and bound off
+  private static final int JUMP_AFTER = Integer.getInteger("jacop.lcg.jumpAfter", 4);
+
+  private boolean jumping; // whether branch and bound jumps, see setJumps
+
+  /**
+   * Turns on jumps below the best solution in branch and bound ({@link #minimize}): a run that
+   * finds several solutions stops for calls that assume the objective a doubling step below the
+   * best solution. Each call is under an assumption, so its learnt clauses hold without it, and a
+   * call that proves its step impossible raises the objective's lower bound. Free search only: the
+   * calls leave the order of fixed search.
+   *
+   * @param on true to jump
+   */
+  public void setJumps(boolean on) {
+    jumping = on;
+  }
+
+  private boolean jumpsArmed; // whether solutions of branch and bound may request jumps
+  private boolean jumpRequested; // set when a run of branch and bound stopped for jumps
+  private int runSolutions; // solutions of the current run of branch and bound
+  private int jumpAfter = JUMP_AFTER; // the solutions of a run before it stops for jumps
+
+  /**
+   * Branch and bound in one search ({@link #solve}) under the limits the caller set, where a run
+   * that finds {@link #JUMP_AFTER} solutions stops for {@link #jumps}: each improving solution
+   * otherwise costs a descent of the search, and connect (Challenge 2021) took 465 solutions that
+   * each improved the best by 1 to 80. When the jumps find nothing, a run needs twice as many
+   * solutions before the next ones.
+   */
+  private int branchAndBound() {
+    if (!jumping || JUMP_AFTER <= 0 || JUMP_CONFLICTS <= 0 || objective < 0 || tree != null) {
+      return solve();
+    }
+    while (true) {
+      runSolutions = 0;
+      jumpRequested = false;
+      jumpsArmed = true;
+      int result;
+      try {
+        result = solve();
+      } finally {
+        jumpsArmed = false;
+      }
+      if (result != CdclSolver.UNKNOWN || !jumpRequested || stopRequested) {
+        return result;
+      }
+      jumpRequested = false;
+      if (sat.now() > sat.deadline()
+          || sat.conflicts >= sat.conflictLimit()
+          || sat.work() >= sat.workLimit()) {
+        return result;
+      }
+      jumpRuns++;
+      long before = best[objective];
+      result = jumps();
+      if (result != CdclSolver.UNKNOWN) {
+        return result;
+      }
+      if (sat.now() > sat.deadline()
+          || sat.conflicts >= sat.conflictLimit()
+          || sat.work() >= sat.workLimit()) {
+        return result;
+      }
+      jumpAfter = best[objective] < before ? JUMP_AFTER : Math.min(2 * jumpAfter, 1 << 20);
+    }
+  }
+
+  /**
+   * Calls of the solver that each end at a solution with the objective at most a step below the
+   * best solution (an assumption), the step doubling from 2 while they succeed. A call that proves
+   * the step impossible raises the objective's lower bound and halves the step; the jumps end when
+   * a call runs out of its {@link #JUMP_CONFLICTS} conflicts or the step is back to 1.
+   *
+   * @return {@link CdclSolver#UNKNOWN} to go on with branch and bound, else the result of the
+   *     search: SAT when the best solution is optimal
+   */
+  private int jumps() {
+    long step = 2;
+    int raised = Integer.MIN_VALUE; // the bound proved here, which the root may not show yet
+    boolean saved = coreMode;
+    coreMode = true; // a solution ends the call of the solver without a clause
+    try {
+      while (step > 1) {
+        int lb = Math.max(vars[objective].min(), raised);
+        if (lb >= best[objective]) {
+          return CdclSolver.SAT;
+        }
+        int target = (int) Math.max(lb, best[objective] - step);
+        long cap = sat.conflictLimit();
+        sat.setConflictLimit(Math.min(cap, sat.conflicts + JUMP_CONFLICTS));
+        int result;
+        try {
+          result = solve(-geLit(objective, target + 1));
+        } finally {
+          sat.setConflictLimit(cap);
+        }
+        if (result == CdclSolver.SAT) {
+          jumpSolutions++;
+          step = Math.min(2 * step, 1L << 30);
+        } else if (result == CdclSolver.UNSAT) {
+          if (sat.failedAssumptions().length == 0) {
+            return CdclSolver.SAT; // no solution better than the best one
+          }
+          addProvedClause(geLit(objective, target + 1)); // objective >= target + 1
+          jumpsRaised++;
+          raised = target + 1;
+          reportBound(target + 1L);
+          step = Math.max(1, step / 2);
+        } else {
+          jumpLimits++;
+          return CdclSolver.UNKNOWN;
+        }
+      }
+      return CdclSolver.UNKNOWN;
+    } finally {
+      coreMode = saved;
+    }
+  }
+
+  /** Statistics: runs of branch and bound stopped for jumps below the best solution. */
+  public long jumpRuns;
+
+  /** Statistics: solutions found by jumps below the best solution. */
+  public long jumpSolutions;
 
   private int minimizeBeforeCores() {
     long deadline = sat.deadline();
@@ -3560,19 +3698,69 @@ public final class LcgSolver implements ExternalPropagator {
       sat.setConflictLimit(Math.min(conflictCap, sat.conflicts + coreDelayBudget));
     }
     coreMode = true; // a solution ends the call of the solver without a clause
+    long step = 1; // how far below the best solution the next call assumes the objective
+    int raised = Integer.MIN_VALUE; // the bound the jumps proved, which the root may not show yet
     try {
       while (true) {
         if (best != null && best[objective] <= root[objective].min()) {
           return CdclSolver.SAT;
         }
-        int result = best == null ? solve() : solve(-geLit(objective, best[objective]));
+        if (best == null) {
+          int result = solve();
+          if (result != CdclSolver.SAT) {
+            return result;
+          }
+          continue;
+        }
+        int lb = Math.max(vars[objective].min(), raised);
+        if (lb >= best[objective]) {
+          return CdclSolver.SAT;
+        }
+        // objective <= target: one below the best solution, or a step further below it while
+        // the steps succeed (jumps): connect (Challenge 2021) took 300 to 500 solutions that each
+        // improved the best by 1 to 80
+        int target = (int) Math.max(lb, Math.min(best[objective] - 1L, best[objective] - step));
+        boolean jump = target < best[objective] - 1;
+        long cap = sat.conflictLimit();
+        if (jump) {
+          sat.setConflictLimit(Math.min(cap, sat.conflicts + JUMP_CONFLICTS));
+        }
+        int result;
+        try {
+          result = solve(-geLit(objective, target + 1));
+        } finally {
+          if (jump) {
+            sat.setConflictLimit(cap);
+          }
+        }
+        if (result == CdclSolver.SAT) {
+          if (jumping && JUMP_CONFLICTS > 0) {
+            step = Math.min(2 * step, 1L << 30);
+          }
+          continue;
+        }
         if (result == CdclSolver.UNSAT) {
-          // with a best solution: none is better, whether or not the bound took part
-          return best == null ? CdclSolver.UNSAT : CdclSolver.SAT;
+          if (!jump || sat.failedAssumptions().length == 0) {
+            // with a best solution: none is better, whether or not the bound took part
+            return CdclSolver.SAT;
+          }
+          addProvedClause(geLit(objective, target + 1)); // objective >= target + 1
+          jumpsRaised++;
+          raised = target + 1;
+          reportBound(target + 1L);
+          step = Math.max(1, step / 2);
+          continue;
         }
-        if (result == CdclSolver.UNKNOWN) {
-          return result;
+        if (jump
+            && sat.conflicts < cap
+            && sat.now() <= sat.deadline()
+            && sat.work() < sat.workLimit()) {
+          // the jump ran out of its conflicts: nearer the best solution next
+          jumpLimits++;
+          step = Math.max(1, step / 4);
+          continue;
         }
+        return result;
       }
     } finally {
       coreMode = false;
@@ -3869,7 +4057,7 @@ public final class LcgSolver implements ExternalPropagator {
       long limit = sat.conflicts + budget;
       sat.setConflictLimit(limit);
       long start = sat.now();
-      int result = solve();
+      int result = branchAndBound();
       if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
         return result; // done, or stopped by the deadline
       }
@@ -4007,7 +4195,7 @@ public final class LcgSolver implements ExternalPropagator {
       long lb = Math.max(vars[objective].min(), raised);
       if (lb >= ub || (!uncoredBisection && ub - lb <= bisectGap * Math.abs((double) ub))) {
         // closed, or within the gap: branch and bound from here, which also proves lb >= ub
-        return interleaved() ? minimizeWithLowerBoundSearch() : solve();
+        return interleaved() ? minimizeWithLowerBoundSearch() : branchAndBound();
       }
       long hi = ub - 1; // a better solution has the objective at most hi
       int target = (int) Math.min(hi, lb + (long) Math.floor(fraction * (hi - lb)));
@@ -7556,6 +7744,11 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (coreMode) {
       return true;
+    }
+    if (improving && jumpsArmed && ++runSolutions >= jumpAfter) {
+      // many solutions in one run of branch and bound: stop it for jumps below the best solution
+      jumpRequested = true;
+      sat.interrupt();
     }
     int v = solution[objective];
     if (v <= root[objective].min()) {
