@@ -69,6 +69,7 @@ import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ConvexAllocation;
 import org.jacop.constraints.ConvexCost;
+import org.jacop.constraints.CostAlldifferent;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountBounds;
 import org.jacop.constraints.CountValues;
@@ -105,6 +106,7 @@ import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
+import org.jacop.constraints.MinOfSums;
 import org.jacop.constraints.MinSimple;
 import org.jacop.constraints.MultiInterDistance;
 import org.jacop.constraints.NoGood;
@@ -540,7 +542,7 @@ class LcgFuzzTest {
     // the globals added in 5.0, most with no explanation of their own (explained by replay)
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(41);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(43);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -678,6 +680,17 @@ class LcgFuzzTest {
             new AllDifferentLists(
                 new IntVar[][] {pick(x, 2), pick(x, 2), pick(x, 2)},
                 rnd.nextBoolean() ? new int[0][] : new int[][] {{rnd.nextInt(3), rnd.nextInt(3)}});
+        case 41 -> {
+          IntVar[] ca = chain("ca", 3, 1, 4);
+          post(new Alldifferent(ca));
+          int[][] c = costs(4);
+          yield new CostAlldifferent(ca, new int[][] {c[0], c[1], c[2]}, intVar("cc", 0, 15));
+        }
+        case 42 ->
+            new MinOfSums(
+                pick(x, 2),
+                new IntVar[] {intVar("my", -1, 3), rnd.nextBoolean() ? null : intVar("mz", 0, 2)},
+                intVar("mm", -2, 7));
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
     }
