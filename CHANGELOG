@@ -7244,6 +7244,22 @@ Version 5.0 (unreleased)
    as the objective. The statistic lpRefutationObjective tells when it
    was built.
 
+403. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+   that linear overlap factoring (272) reduces to the shared sum alone.
+   A row k * S rel c whose whole sum S became the new variable z is
+   k * z rel c, which the FlatZinc front end posts as a bound of z or as
+   XmulCeqZ, so the relaxation, which substitutes S for z, never saw it.
+   These rows are now recorded at posting and given to the relaxation,
+   which expands them back into the original row. On MIPLIB p0548 (pure
+   integer, generic MPS model) the root cut bound goes from 464 to 7,325
+   (optimum 8,691) and -f proves it in 26 s instead of 297 s. At 600 s,
+   on the 18 MIPLIB and wide instances where the extra rows exist and
+   240 s results differed, the 7 proved instances take 7,271 s against
+   7,624 s in total (all 7 faster), and 8 of the 11 others end with a
+   better objective (mitre and p2756 at the optimum), 3 worse (air04,
+   warehouse olil4, cap6000). The rows are counted in the statistic
+   lpUnitRows.
+
 Version 4.11
 =============
 
