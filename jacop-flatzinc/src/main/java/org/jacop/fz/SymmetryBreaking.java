@@ -151,6 +151,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
       !FALSE.equals(System.getProperty("org.jacop.fz.symmetryEmptiedBins"));
 
   /**
+   * Whether lex-leader constraints of the model ({@code X <=lex sigma(X)}) that are verified to
+   * compare the variables in one order under symmetries of the rest of the model let value
+   * precedence be posted on those variables too (org.jacop.fz.symmetryModelLex, default true).
+   * Otherwise the lex constraints use the values as numbers and no value space contains their
+   * variables.
+   */
+  static final boolean MODEL_LEX =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetryModelLex"));
+
+  /**
    * Whether the elements of set variables that only set operations, comparisons and cardinalities
    * constrain may be renamed by symmetries, together in all those sets
    * (org.jacop.fz.symmetrySetValues, default true). Without it each element keeps its value as its
@@ -707,7 +717,32 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
 
-    ValueOutcome values = breakValueSymmetries(items, goal, minimize, ranked, maxNanos / 2);
+    // lex-leader constraints of the model leave the values interchangeable when every one of them
+    // compares the variables in one order under a symmetry of the rest of the model: the
+    // lexicographically smallest solution of an orbit of all the symmetries then satisfies them,
+    // value precedence in that order and the lex-leader constraints posted here alike
+    List<Item> valueItems = items;
+    List<IntVar> plainRanked = ranked;
+    ModelLex modelLex = MODEL_LEX ? modelLexLeaders(items, goal) : null;
+    if (modelLex != null) {
+      List<IntVar> lexRanked = lexFirst(ranked, modelLex.order(), order);
+      if (lexRanked == null) {
+        modelLex = null;
+      } else {
+        ranked = lexRanked;
+        valueItems = new ArrayList<>();
+        for (Item item : items) {
+          if (!modelLex.items().contains(item)) {
+            valueItems.add(item);
+          }
+        }
+      }
+    }
+    ValueOutcome values = breakValueSymmetries(valueItems, goal, minimize, ranked, maxNanos / 2);
+    if (modelLex != null && values.posted() == 0) {
+      modelLex = null;
+      ranked = plainRanked;
+    }
     if (values.posted() == 0 && INDEX_VALUES) {
       List<Item> indexItems = indexElements(items);
       if (indexItems != items && indexSpace(indexItems, goal, ranked)) {
@@ -736,7 +771,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       values = breakEncodedValueSymmetries(items, goal, ranked, annotated, maxNanos / 2);
     }
-    if (!values.first().isEmpty()) {
+    // with lex-leader constraints of the model the order stays theirs
+    if (!values.first().isEmpty() && modelLex == null) {
       List<IntVar> reordered = new ArrayList<>(values.first());
       Set<IntVar> front = Collections.newSetFromMap(new IdentityHashMap<>());
       front.addAll(values.first());
@@ -751,7 +787,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // exchanges of interchangeable values of a sequence that its precedences allow, for a
     // satisfaction problem under the search of its annotation; free search (black-hole) is up to
     // 5.8x slower with them on the hard instances
-    if (objective == null && !free && ConditionalValueSwaps.ENABLED) {
+    if (objective == null && !free && ConditionalValueSwaps.ENABLED && modelLex == null) {
       ConditionalValueSwaps finder = new ConditionalValueSwaps(store, dictionary);
       swaps = finder.run(items, ranked, largest && values.posted() == 0);
       if (swaps > 0) {
@@ -1507,6 +1543,222 @@ final class SymmetryBreaking implements ParserTreeConstants {
         && item.array()[spec.indexed()]
         && args[spec.offsetArg()].length == 1
         && args[spec.offsetArg()][0].isInt();
+  }
+
+  /**
+   * Lex-leader constraints of the model: their items and the order in which they compare the
+   * variables.
+   */
+  private record ModelLex(List<IntVar> order, Set<Item> items) {}
+
+  /**
+   * The lex-leader constraints of the model, {@code X <=lex sigma(X)} for permutations sigma of the
+   * variables of X, when there is at least one and each of them is verified: every X is a prefix of
+   * the longest one, and sigma, with the other variables fixed, keeps the domains and maps every
+   * other constraint of the model to one of them (with the arguments that the constraint may
+   * permute sorted). Null otherwise. The lexicographically smallest solution of an orbit of the
+   * group of these variable symmetries and the value permutations satisfies every lex-leader
+   * constraint of the group in one order, so the model's and the value precedence posted in the
+   * same order keep it (T. Walsh, General Symmetry Breaking Constraints, CP 2006; Y. C. Law and J.
+   * H. M. Lee, Global Constraints for Integer and Set Value Precedence, CP 2004).
+   */
+  private static ModelLex modelLexLeaders(List<Item> items, IntVar objective) {
+    Set<Item> lexItems = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar[][]> pairs = new ArrayList<>();
+    for (Item item : items) {
+      IntVar[][] pair = lexPair(item);
+      if (pair.length > 0) {
+        lexItems.add(item);
+        pairs.add(pair);
+      }
+    }
+    if (pairs.isEmpty()) {
+      return null;
+    }
+    IntVar[] longest = pairs.get(0)[0];
+    for (IntVar[][] pair : pairs) {
+      if (pair[0].length > longest.length) {
+        longest = pair[0];
+      }
+    }
+    Map<Object, Integer> ids = new IdentityHashMap<>();
+    Set<String> keys = new HashSet<>();
+    for (Item item : items) {
+      if (!lexItems.contains(item)) {
+        keys.add(itemKey(item, null, ids));
+      }
+    }
+    for (IntVar[][] pair : pairs) {
+      IntVar[] x = pair[0];
+      IntVar[] y = pair[1];
+      Map<IntVar, IntVar> sigma = new IdentityHashMap<>();
+      Set<IntVar> image = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (int i = 0; i < x.length; i++) {
+        if (x[i] != longest[i] || sigma.put(x[i], y[i]) != null || !image.add(y[i])) {
+          return null;
+        }
+        if (!x[i].dom().eq(y[i].dom())) {
+          return null;
+        }
+      }
+      if (!sigma.keySet().containsAll(image)
+          || objective != null && sigma.getOrDefault(objective, objective) != objective) {
+        return null;
+      }
+      for (Item item : items) {
+        if (!lexItems.contains(item) && !keys.contains(itemKey(item, sigma, ids))) {
+          return null;
+        }
+      }
+    }
+    return new ModelLex(Arrays.asList(longest), lexItems);
+  }
+
+  /** The vectors X and Y of a constraint {@code X <=lex Y} on integer variables, or none. */
+  private static IntVar[][] lexPair(Item item) {
+    Atom[][] args = item.args();
+    Atom[] xs;
+    Atom[] ys;
+    if (item.name().equals("jacop_lex_chain_lesseq_int")
+        && args.length == 2
+        && args[1].length == 1
+        && args[1][0].isInt()
+        && args[1][0].value() == 2
+        && args[0].length % 2 == 0) {
+      int n = args[0].length / 2;
+      xs = new Atom[n];
+      ys = new Atom[n];
+      // the vectors are the columns of a matrix listed row by row
+      for (int i = 0; i < n; i++) {
+        xs[i] = args[0][2 * i];
+        ys[i] = args[0][2 * i + 1];
+      }
+    } else if (item.name().equals("jacop_lex_lesseq_int")
+        && args.length == 2
+        && args[0].length == args[1].length) {
+      xs = args[0];
+      ys = args[1];
+    } else {
+      return new IntVar[0][];
+    }
+    if (xs.length == 0) {
+      return new IntVar[0][];
+    }
+    IntVar[][] pair = new IntVar[2][xs.length];
+    for (int i = 0; i < xs.length; i++) {
+      if (xs[i].aVar() == null || ys[i].aVar() == null) {
+        return new IntVar[0][];
+      }
+      pair[0][i] = xs[i].aVar();
+      pair[1][i] = ys[i].aVar();
+    }
+    return pair;
+  }
+
+  /**
+   * A key of a constraint with its integer variables renamed by sigma (null for none), the same for
+   * two constraints that differ only in an order of arguments that the constraint may permute.
+   */
+  private static String itemKey(Item item, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
+    Atom[][] args = item.args();
+    String[][] atoms = new String[args.length][];
+    for (int a = 0; a < args.length; a++) {
+      atoms[a] = new String[args[a].length];
+      for (int i = 0; i < args[a].length; i++) {
+        atoms[a][i] = atomKey(args[a][i], sigma, ids);
+      }
+    }
+    String[] parts = new String[args.length];
+    for (int a = 0; a < args.length; a++) {
+      parts[a] = (item.array()[a] ? "[" : "") + String.join(",", atoms[a]);
+    }
+    Spec spec = SPECS.get(item.name());
+    if (spec != null) {
+      for (int[] bag : spec.bags) {
+        if (bag[bag.length - 1] >= args.length) {
+          continue;
+        }
+        int n = args[bag[0]].length;
+        boolean aligned = true;
+        for (int b : bag) {
+          aligned &= args[b].length == n;
+        }
+        if (!aligned) {
+          continue;
+        }
+        List<String> tuples = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+          StringBuilder t = new StringBuilder();
+          for (int b : bag) {
+            t.append(atoms[b][i]).append('/');
+          }
+          tuples.add(t.toString());
+        }
+        tuples.sort(null);
+        parts[bag[0]] = "{" + String.join(",", tuples);
+        for (int k = 1; k < bag.length; k++) {
+          parts[bag[k]] = "";
+        }
+      }
+      if (spec.symmetric.length > 0 && spec.symmetric[spec.symmetric.length - 1] < args.length) {
+        List<String> sym = new ArrayList<>();
+        for (int a : spec.symmetric) {
+          sym.add(parts[a]);
+        }
+        sym.sort(null);
+        for (int k = 0; k < spec.symmetric.length; k++) {
+          parts[spec.symmetric[k]] = sym.get(k);
+        }
+      }
+    }
+    return item.name() + "(" + String.join("|", parts) + ")";
+  }
+
+  private static String atomKey(Atom atom, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
+    if (atom.aVar() != null) {
+      IntVar x = sigma == null ? atom.aVar() : sigma.getOrDefault(atom.aVar(), atom.aVar());
+      return "v" + ids.computeIfAbsent(x, k -> ids.size());
+    }
+    if (atom.other() != null) {
+      return "o" + ids.computeIfAbsent(atom.other(), k -> ids.size());
+    }
+    return "c" + atom.constant() + "/" + atom.space() + "/" + atom.value();
+  }
+
+  /**
+   * The lex-leader order with the variables of the model's lex-leader constraints first, in their
+   * order, or null when the search annotation puts other variables first.
+   */
+  private static List<IntVar> lexFirst(
+      List<IntVar> ranked, List<IntVar> lexOrder, List<Var> order) {
+    boolean annotated = false;
+    for (Var v : order) {
+      annotated |= v instanceof IntVar iv && !iv.singleton();
+    }
+    if (annotated) {
+      return ranked.size() >= lexOrder.size()
+              && sameVars(ranked.subList(0, lexOrder.size()), lexOrder)
+          ? ranked
+          : null;
+    }
+    List<IntVar> result = new ArrayList<>(lexOrder);
+    Set<IntVar> front = Collections.newSetFromMap(new IdentityHashMap<>());
+    front.addAll(lexOrder);
+    for (IntVar v : ranked) {
+      if (front.add(v)) {
+        result.add(v);
+      }
+    }
+    return result;
+  }
+
+  private static boolean sameVars(List<IntVar> a, List<IntVar> b) {
+    for (int i = 0; i < a.size(); i++) {
+      if (a.get(i) != b.get(i)) {
+        return false;
+      }
+    }
+    return a.size() == b.size();
   }
 
   /**

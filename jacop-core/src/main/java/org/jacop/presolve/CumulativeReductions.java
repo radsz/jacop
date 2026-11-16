@@ -494,6 +494,8 @@ public final class CumulativeReductions implements Rule {
     if (!unary && a.limit.min() < b.limit.max()) {
       return false;
     }
+    // each task of b stands for one task of a: a task listed twice in a uses a twice
+    boolean[] matched = new boolean[b.size()];
     for (int i = 0; i < a.size(); i++) {
       if (!a.uses(i)) {
         continue;
@@ -504,7 +506,12 @@ public final class CumulativeReductions implements Rule {
       }
       boolean found = false;
       for (int j = 0; j < b.size() && !found; j++) {
-        found = b.s[j] == a.s[i] && same(b.d[j], a.d[i]) && (unary || same(b.r[j], a.r[i]));
+        found =
+            !matched[j]
+                && b.s[j] == a.s[i]
+                && same(b.d[j], a.d[i])
+                && (unary || same(b.r[j], a.r[i]));
+        matched[j] = found;
       }
       if (!found) {
         return false;

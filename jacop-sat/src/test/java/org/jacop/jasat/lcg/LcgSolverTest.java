@@ -4715,6 +4715,68 @@ class LcgSolverTest {
   }
 
   /**
+   * A stop during the runs in large neighbourhoods ends them: the runs that follow return at once
+   * without a conflict and must not count as neighbourhoods too large. The slow-LCG hand-over of
+   * free search stopped LCG in its runs on MaximumAgreementForest2-exact12 (XCSP 2026), which went
+   * on for the rest of their share of the time: 7,000 runs shrank every neighbourhood to 2
+   * variables.
+   */
+  @Test
+  void stopEndsLargeNeighbourhoodRuns() {
+    Random rnd = new Random(29);
+    int stopped = 0;
+    for (int k = 0; k < 60; k++) {
+      Store store = new Store();
+      int n = 8;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            store.impose(new XneqY(x[i], x[j]));
+          }
+        }
+      }
+      int[] w = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(11) - 3;
+      }
+      w[n] = -1;
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      store.impose(new LinearInt(terms, w, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setLowerBoundSearch(0.5, 2);
+      AdaptiveLns lns = new AdaptiveLns(store, x, cost, new Random(k));
+      solver.setLns(lns, 1000.0, 2);
+      long[] runsAtStop = {-1};
+      // the first better solution found in a neighbourhood stops the search
+      solver.onSolution(
+          () -> {
+            if (solver.lnsRuns > 0 && runsAtStop[0] < 0) {
+              runsAtStop[0] = solver.lnsRuns;
+              solver.stop();
+            }
+          });
+      String shares = lns.statistics();
+      int result = solver.minimize(cost);
+      if (runsAtStop[0] < 0) {
+        continue;
+      }
+      stopped++;
+      assertThat(result).isNotEqualTo(CdclSolver.UNSAT);
+      // at most the run that the stop came in
+      assertThat(solver.lnsRuns).isEqualTo(runsAtStop[0]);
+      assertThat(lns.statistics()).doesNotContain("0.000");
+      assertThat(shares).doesNotContain("0.000");
+    }
+    assertThat(stopped).isPositive();
+  }
+
+  /**
    * A solver that adds constraints to the shared model (symmetry breaking) reads the clauses of
    * solvers that added none or the same ones; its own reach only the latter.
    */
@@ -4826,6 +4888,114 @@ class LcgSolverTest {
       assertThat(bound.get()).as("instance %d", instance).isEqualTo(optimum);
     }
     assertThat(imported).isPositive();
+  }
+
+  /**
+   * Core-guided search proves the same optima with and without trimming its cores, and trimming
+   * takes literals out of some of them.
+   */
+  @Test
+  void trimmedCoresKeepTheOptimum() {
+    Random rnd = new Random(23);
+    long shrunk = 0;
+    long untrimmed = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = coreModelOptimum(seed, -1, new long[3]);
+      long[] trimmed = new long[6];
+      assertThat(coreModelOptimum(seed, 0, trimmed))
+          .as("instance %d (seed %d), trimmed", instance, seed)
+          .isEqualTo(expected);
+      long[] plain = new long[6];
+      assertThat(coreModelOptimum(seed, 4, plain))
+          .as("instance %d (seed %d), untrimmed", instance, seed)
+          .isEqualTo(expected);
+      shrunk += trimmed[5];
+      untrimmed += plain[5];
+    }
+    assertThat(shrunk).isPositive();
+    assertThat(untrimmed).isZero();
+  }
+
+  /**
+   * Core-guided search proves the same optima of random partial MaxSAT models (3-literal hard
+   * clauses, every variable a unit-cost soft) with and without core exhaustion, the optima of
+   * search, and exhaustion proves totalizer outputs on some of them.
+   */
+  @Test
+  void exhaustedCoresKeepTheOptimum() {
+    Random rnd = new Random(29);
+    long exhausted = 0;
+    for (int instance = 0; instance < 150; instance++) {
+      long seed = rnd.nextLong();
+      long[] stats = new long[1];
+      Integer expected = maxSatOptimum(seed, -1, stats);
+      assertThat(maxSatOptimum(seed, 0, stats))
+          .as("instance %d (seed %d), without exhaustion", instance, seed)
+          .isEqualTo(expected);
+      assertThat(stats[0]).isZero();
+      assertThat(maxSatOptimum(seed, 1 + instance % 8, stats))
+          .as("instance %d (seed %d), exhausted", instance, seed)
+          .isEqualTo(expected);
+      exhausted += stats[0];
+    }
+    assertThat(exhausted).isPositive();
+  }
+
+  /**
+   * Minimises the number of true variables under random 3-literal clauses: by depth-first search
+   * when {@code exhaust} is negative, otherwise by core-guided search with that many outputs
+   * exhausted per core; adds the exhausted outputs to {@code stats[0]}.
+   */
+  private static Integer maxSatOptimum(long seed, int exhaust, long[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 14 + rnd.nextInt(8);
+    IntVar[] x = new IntVar[n + 1];
+    int[] w = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      w[i] = 1;
+    }
+    int m = 2 * n + rnd.nextInt(2 * n);
+    for (int k = 0; k < m; k++) {
+      int a = rnd.nextInt(n);
+      int b = (a + 1 + rnd.nextInt(n - 1)) % n;
+      int c = rnd.nextInt(n);
+      if (c == a || c == b) {
+        continue;
+      }
+      // x[a] or x[b] or x[c], each literal negative with probability 1/3
+      int[] coefficients = new int[3];
+      int rhs = 1;
+      for (int t = 0; t < 3; t++) {
+        coefficients[t] = rnd.nextInt(3) == 0 ? -1 : 1;
+        rhs -= coefficients[t] < 0 ? 1 : 0;
+      }
+      store.impose(new LinearInt(new IntVar[] {x[a], x[b], x[c]}, coefficients, ">=", rhs));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, n);
+    x[n] = cost;
+    w[n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    if (exhaust < 0) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(
+              store, new SimpleSelect<>(Arrays.copyOf(x, n), null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    solver.setCoreExhaust(exhaust);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    if (solver.coreSearch() != null) {
+      stats[0] += solver.coreSearch().exhaustedOutputs;
+    }
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 
   @Test
@@ -5325,6 +5495,91 @@ class LcgSolverTest {
   }
 
   /**
+   * 0-1 terms replace the sums of a split objective also when the sums span fewer levels than the
+   * terms, up to twice: a long run's root propagation tightens the sums beyond their terms' bounds,
+   * and on the sums the cores of xai-mindset2 iris (MaxSAT Evaluation 2024) had 3 assumptions and
+   * reached 49 of 87 in 240 s, while on the terms the optimum is proved in 4 s. Wide terms keep the
+   * sums when they span more.
+   */
+  @Test
+  void zeroOneTermsReplaceTighterSums() {
+    for (int width : new int[] {1, 3}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[6];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, width);
+      }
+      // each sum spans two thirds of its terms' levels
+      IntVar s1 = new IntVar(store, "s1", 0, 2 * width);
+      IntVar s2 = new IntVar(store, "s2", 0, 2 * width);
+      IntVar obj = new IntVar(store, "obj", 0, 4 * width);
+      store.impose(
+          new LinearInt(new IntVar[] {x[0], x[1], x[2], s1}, new int[] {1, 1, 1, -1}, "==", 0));
+      store.impose(
+          new LinearInt(new IntVar[] {x[3], x[4], x[5], s2}, new int[] {1, 1, 1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {x[0], x[3]}, new int[] {1, 1}, ">=", 1));
+      store.impose(new LinearInt(new IntVar[] {x[1], x[4]}, new int[] {1, 1}, ">=", 1));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setCoreSearch(1, 1_000_000, 100_000);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(obj)).isEqualTo(2);
+      assertThat(solver.coreSearch().proved).isTrue();
+      assertThat(solver.coreSearch().termCount()).isEqualTo(width == 1 ? 6 : 2);
+      assertThat(solver.coreSearch().termsBySpanRatio).isEqualTo(width == 1);
+    }
+  }
+
+  /**
+   * The core-guided phase is not skipped after a probe without a solution of its own when the probe
+   * raised the lower bound at least as far as it is still below the solution of branch and bound:
+   * the probe of xai-mindset2 iris (MaxSAT Evaluation 2024) took the bound from 0 to 77 of 87 in
+   * 0.4 s, and the skip left it at 49 after 240 s.
+   */
+  @Test
+  void corePhaseNotSkippedAfterAProbeHalfWay() {
+    // the pigeons of corePhaseSkippedWhenItsProbeFoundNoSolution, whose core is too hard, and 16
+    // pairs of Booleans of which one at least is true and costs 1, whose cores are easy: the probe
+    // raises the bound to 16, and branch and bound finds solutions of 16 + the pigeons in hole 0
+    Store store = new Store();
+    int n = 12;
+    int pairs = 16;
+    IntVar[] p = new IntVar[n];
+    BooleanVar[] c = new BooleanVar[n + 2 * pairs];
+    for (int i = 0; i < n; i++) {
+      p[i] = new IntVar(store, "p" + i, 0, n - 1);
+      c[i] = new BooleanVar(store, "c" + i);
+      store.impose(new Reified(new XeqC(p[i], 0), c[i]));
+      for (int j = 0; j < i; j++) {
+        store.impose(new Or(new XneqY(p[j], p[i]), new XeqC(p[i], 0)));
+      }
+    }
+    for (int k = 0; k < pairs; k++) {
+      c[n + 2 * k] = new BooleanVar(store, "a" + k);
+      c[n + 2 * k + 1] = new BooleanVar(store, "b" + k);
+      store.impose(
+          new LinearInt(new IntVar[] {c[n + 2 * k], c[n + 2 * k + 1]}, new int[] {1, 1}, ">=", 1));
+    }
+    IntVar obj = new IntVar(store, "obj", 0, c.length);
+    store.impose(new SumBool(c, "==", obj));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setAnnotation(new SimpleSelect<>(p, null, new IndomainMin<>()), true);
+    solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+    solver.setCoreDelay(0.05, 1_000_000, 0.05);
+    solver.setTimeLimit(200);
+    // a clock cap of 1.5 times the probe's share of 3 s: the share of the work ends the probe, not
+    // the clock of a cold JVM
+    solver.sat().setDeadline(System.nanoTime() + 3_000_000_000L);
+    solver.minimize(obj);
+    assertThat(solver.coreSearch().lowerBound).isEqualTo(pairs);
+    assertThat(solver.value(obj)).isBetween(pairs + 1, pairs + 12);
+    assertThat(solver.coreSearch().noSolutionStops).isPositive();
+    assertThat(solver.probeHalfWays).isEqualTo(1);
+    assertThat(solver.probeSkips).isZero();
+  }
+
+  /**
    * Under fixed search the core-guided phase runs only when branch and bound under the annotation
    * found no solution in its share of the time (setCoresWithoutSolutionOnly): with one, branch and
    * bound keeps the time and proves the optimum without a core.
@@ -5681,6 +5936,10 @@ class LcgSolverTest {
     solver.setChecking(true);
     solver.setCoreSearch(
         1, mode == 1 ? 1 + rnd.nextInt(10) : 1_000_000, mode == 1 ? 1 + rnd.nextInt(5) : 100_000);
+    if (mode == 4) {
+      // core-guided search alone, each core as the solver gives it
+      solver.setCoreTrim(0);
+    }
     if (mode == 3) {
       // a few conflicts of branch and bound, after a few of core-guided search or none, then the
       // core-guided phase picks up where it stopped
@@ -5707,6 +5966,9 @@ class LcgSolverTest {
     }
     if (stats.length > 4 && solver.coreSearch() != null) {
       stats[4] += solver.coreSearch().objectiveProbes;
+    }
+    if (stats.length > 5 && solver.coreSearch() != null) {
+      stats[5] += solver.coreSearch().coreShrunk;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
