@@ -91,6 +91,7 @@ import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
 import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
+import org.jacop.fz.constraints.SaturatedProducts;
 import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
@@ -170,6 +171,9 @@ public class Constraints implements ParserTreeConstants {
     if (dictionary.domainsClamped()) {
       System.err.println(dictionary.clampedDomainsWarning());
       dictionary.recordDeclaredDomains();
+      dictionary.setSaturationCandidates(
+          SaturatedProducts.find(
+              support, astTree, ObjectiveScaling.objective(dictionary, astTree)));
     }
 
     Options options = support.options;
@@ -526,7 +530,11 @@ public class Constraints implements ParserTreeConstants {
         // reads the rows as declared, to show the narrowing of domains harmless at the end
         dictionary.setClampedBounds(
             new ClampedBounds(
-                support, astTree, dictionary.narrowedVariables(), dictionary::declaredBounds));
+                support,
+                astTree,
+                dictionary.narrowedVariables(),
+                dictionary::declaredBounds,
+                dictionary.saturatedProducts()));
       }
       cf.poseCounts();
       cf.poseDiffnProjections();
