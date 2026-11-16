@@ -6781,6 +6781,22 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
+377. The core-guided phase of LCG free search keeps the 0-1 terms of a split
+   objective (lcg-split) also when their sums span up to twice fewer
+   levels (-Djacop.lcg.coreSpanRatio=2); wide terms keep the sums as
+   before. A long run's root propagation tightens the sums beyond their
+   terms' bounds, and the cores then ran on a few wide sums. The probe
+   skip of the phase (jacop #597) no longer fires when the
+   probe raised the lower bound at least as far as it is still below the
+   best solution (-Djacop.lcg.coreProbeHalfWay=false restores it). Stats
+   lcgCoreTermsBySpanRatio and lcgCoreProbeHalfWays. On 23 MaxSAT
+   Evaluation 2024 instances where JaCoP had a gap to CP-SAT, -f at 600 s
+   proves 11 instead of 9 (xai-mindset2 iris 8 s, packup-rand892 263 ->
+   8 s) and raises the bounds of logic-synthesis max1024 (154 -> 256 of
+   259) and optic-gen (45 -> 100); total time 9374 -> 8328 s. On the 11
+   wide-set instances where it fires (none in default mode), -f at 600 s
+   proves the same 10, total time 974 -> 897 s.
+
 Version 4.11
 =============
 
