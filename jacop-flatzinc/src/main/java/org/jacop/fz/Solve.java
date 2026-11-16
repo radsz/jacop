@@ -237,7 +237,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // annotation names before the defined ones (see definedLast): "first" (default) until the first
   // solution under LCG and always without learning, "always" also after it under LCG, "false"
   // all in one order
-  static final String DEFINED_LAST = System.getProperty("org.jacop.fz.definedLast", "first");
+  static final boolean DEFINED_LAST =
+      !"false".equals(System.getProperty("org.jacop.fz.definedLast"));
+
+  // with org.jacop.fz.definedLast=always the LCG default search keeps the defined variables out
+  // also after the first solution
+  static final boolean DEFINED_LAST_ALWAYS =
+      "always".equals(System.getProperty("org.jacop.fz.definedLast"));
 
   // fixed search's activity runs follow the relaxation's root solution, not its last one, which
   // comes from another branch
@@ -3700,13 +3706,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (vars.isEmpty()) {
       return null;
     }
-    if (!"false".equals(DEFINED_LAST)) {
+    if (DEFINED_LAST) {
       // the defined variables follow from the others, and activity completes them
       IntVar[][] split = definedLast(vars.toArray(new IntVar[0]), true);
       if (split[1].length > 0) {
         SelectChoicePoint<IntVar> undefined =
             defaultIntSelect(new ArrayList<>(Arrays.asList(split[0])));
-        if ("always".equals(DEFINED_LAST)) {
+        if (DEFINED_LAST_ALWAYS) {
           return undefined;
         }
         // until the first solution: afterwards the defined variables, such as the costs of the
@@ -4916,31 +4922,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
           withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
           null);
-    } else if (!"false".equals(DEFINED_LAST)) {
-      // the variables named by no defines_var first, then the defined ones, which are fixed by
-      // then in a model where every defined variable follows from the others
-      IntVar[][] ints = definedLast(searchVars.getIntVars(), false);
-      IntVar[][] bools = definedLast(searchVars.getBoolVars(), false);
-      if (ints[0].length + bools[0].length == 0) {
-        ints = new IntVar[][] {ints[1], ints[0]};
-        bools = new IntVar[][] {bools[1], bools[0]};
-      }
-      addFreeSelects(
-          selects,
-          monitors,
-          searchVars.getSetVars(),
-          ints[0],
-          Arrays.copyOf(bools[0], bools[0].length, BooleanVar[].class),
-          searchVars.getFloatVars(),
-          null);
-      addFreeSelects(
-          selects,
-          monitors,
-          new SetVar[0],
-          ints[1],
-          Arrays.copyOf(bools[1], bools[1].length, BooleanVar[].class),
-          new FloatVar[0],
-          objective);
+    } else if (DEFINED_LAST) {
+      addDefinedLastSelects(selects, monitors, searchVars, objective);
     } else {
       addFreeSelects(
           selects,
@@ -5078,10 +5061,39 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds the free search branching on the given variables: the set variables first, then the
-   * integer and Boolean variables, then the objective and the float variables. The settings of
-   * --free-config select the heuristics.
+   * Adds the free search selects of {@link #executeFreeSearch} over the variables that no
+   * defines_var annotation names, then over the defined ones, which are fixed by then in a model
+   * where every defined variable follows from the others.
    */
+  private void addDefinedLastSelects(
+      List<SelectChoicePoint<? extends Var>> selects,
+      List<SearchMonitor> monitors,
+      DefaultSearchVars searchVars,
+      IntVar objective) {
+    IntVar[][] ints = definedLast(searchVars.getIntVars(), false);
+    IntVar[][] bools = definedLast(searchVars.getBoolVars(), false);
+    if (ints[0].length + bools[0].length == 0) {
+      ints = new IntVar[][] {ints[1], ints[0]};
+      bools = new IntVar[][] {bools[1], bools[0]};
+    }
+    addFreeSelects(
+        selects,
+        monitors,
+        searchVars.getSetVars(),
+        ints[0],
+        Arrays.copyOf(bools[0], bools[0].length, BooleanVar[].class),
+        searchVars.getFloatVars(),
+        null);
+    addFreeSelects(
+        selects,
+        monitors,
+        new SetVar[0],
+        ints[1],
+        Arrays.copyOf(bools[1], bools[1].length, BooleanVar[].class),
+        new FloatVar[0],
+        objective);
+  }
+
   /**
    * The free search's branching on the set variables of the default search: input order, smallest
    * element in first, as the default search of JaCoP 4 and Gecode; set-heuristic=afc picks the set
@@ -5099,6 +5111,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
+  /**
+   * Adds the free search branching on the given variables: the set variables first, then the
+   * integer and Boolean variables, then the objective and the float variables. The settings of
+   * --free-config select the heuristics.
+   */
   private void addFreeSelects(
       List<SelectChoicePoint<? extends Var>> selects,
       List<SearchMonitor> monitors,
