@@ -1672,6 +1672,69 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Creates the relaxation that tries to refute a model stated in clauses over 0/1 variables at the
+   * root, as {@link #refutation} does for models with value encodings: the clause rows and the
+   * linear rows of the model, with the conflicts of pairs of literals (the binary clauses) merged
+   * into clique rows. It is made only when the binary clauses hold at-most-one structure, at least
+   * {@code org.jacop.lp.clauseRefutationCliques} cliques of three or more literals: pigeonhole and
+   * mutilated chessboard formulas state each at-most-one as its pairs, and the clauses alone have
+   * an LP that is always feasible (each literal at 1/2).
+   *
+   * @param store the store
+   * @param clauses the clause rows of the clauses that lazy clause generation took
+   * @return the relaxation, or null when it is off, the model has too few cliques or too many rows
+   */
+  public static LinearRelaxation clauseRefutation(Store store, Collection<LinearForm> clauses) {
+    if (!CLAUSE_REFUTATION || !ROOT_REFUTATION || clauses.isEmpty()) {
+      return null;
+    }
+    List<LinearForm> given = new ArrayList<>();
+    for (Constraint c : constraintsOf(store)) {
+      if (c instanceof LinearRelaxation) {
+        continue;
+      }
+      LinearForm f = LinearForms.of(c);
+      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+        given.add(f);
+      }
+    }
+    List<LinearForm> clauseRows = new ArrayList<>();
+    for (LinearForm f : clauses) {
+      if (f == null) {
+        continue;
+      }
+      if (ClauseSimplification.isClause(f)) {
+        clauseRows.add(f);
+      } else {
+        given.add(f);
+      }
+    }
+    ClauseSimplification simplified = ClauseSimplification.of(clauseRows);
+    if (simplified.refuted) {
+      // unit propagation refutes the clauses: lazy clause generation does so at its root
+      return null;
+    }
+    given.addAll(simplified.rows);
+    PairCliques merged = PairCliques.merge(given, List.of());
+    if (merged.cliques < CLAUSE_REFUTATION_CLIQUES) {
+      return null;
+    }
+    List<LinearForm> rows = merged.rows;
+    Simplex simplex = sparseTakes(rows) ? Simplex.SPARSE : Simplex.DENSE;
+    if (tooLarge(rows, simplex)) {
+      return null;
+    }
+    LinearRelaxation r = new LinearRelaxation(rows, List.of(), null, false, simplex);
+    r.refutation = true;
+    r.pairCliques = merged.cliques;
+    r.clauseRefutation = true;
+    r.clauseUnits = simplified.units;
+    r.clauseEquivalences = simplified.equivalences;
+    r.cutsTried = true;
+    return r.rows() < 2 ? null : r;
+  }
+
+  /**
    * Returns the outcome of the root solve of a relaxation made by {@link #refutation}.
    *
    * @return "refuted" when it proved that the model has no solution, "feasible", "limit" when it
@@ -1904,6 +1967,28 @@ public class LinearRelaxation extends Constraint
   // the model (refutation)
   private static final boolean ROOT_REFUTATION =
       !FALSE.equals(System.getProperty("org.jacop.lp.rootRefutation"));
+
+  // made by clauseRefutation
+  private boolean clauseRefutation;
+
+  /** The variables that unit propagation fixed in the clause rows of {@link #clauseRefutation}. */
+  public int clauseUnits;
+
+  /** The variables that equivalences substituted in {@link #clauseRefutation}. */
+  public int clauseEquivalences;
+
+  // models in clauses: a refutation over the clause rows and their clique rows (clauseRefutation),
+  // made when the binary clauses form at least this many cliques of three or more literals
+  private static final boolean CLAUSE_REFUTATION =
+      !FALSE.equals(System.getProperty("org.jacop.lp.clauseRefutation"));
+  private static final int CLAUSE_REFUTATION_CLIQUES =
+      Integer.getInteger("org.jacop.lp.clauseRefutationCliques", 1);
+
+  // the pivots of its root solve: the pigeonhole, mutilated chessboard and grandtour formulas of
+  // the SAT Competition refute in 65, 328 and 184; rubik 6-cube of the MiniZinc Challenge (a
+  // solution in 3 s) does not refute in 2,083 pivots, 1.1 s
+  private static final int CLAUSE_REFUTATION_PIVOTS =
+      Integer.getInteger("org.jacop.lp.clauseRefutationPivots", 1_000);
 
   // the pivots of the root solve of the refutation: the social golfers refute in 1,442; on the 351
   // XCSP 2022-2025 satisfaction instances it does not refute, the root solve took up to 1.7 s
@@ -2826,7 +2911,7 @@ public class LinearRelaxation extends Constraint
             ? (int) Math.clamp(ROOT_WORK / size, 5, rootPivots)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
     if (refutation) {
-      limit = Math.min(limit, REFUTATION_PIVOTS);
+      limit = Math.min(limit, clauseRefutation ? CLAUSE_REFUTATION_PIVOTS : REFUTATION_PIVOTS);
     }
     int status =
         (calls == 1 || restarting) && simplex != Simplex.LAZY
@@ -3421,6 +3506,12 @@ public class LinearRelaxation extends Constraint
       work = Long.MAX_VALUE;
       nanos = Math.max(0, largeDeadline - now);
     }
+    return solveWithin(s, pivots, work, nanos);
+  }
+
+  // a solve of the sparse simplex in chunks, until it is done, the pivots run out, its work passes
+  // the budget or its time the nanoseconds given
+  private static int solveWithin(LpSolver s, int pivots, long work, long nanos) {
     long startPivots = s.pivots();
     long startWork = s.work();
     long startTime = System.nanoTime();
@@ -5370,6 +5461,10 @@ public class LinearRelaxation extends Constraint
     long size = Math.max(1, full.pivotWork());
     int pivots = Math.clamp(ROOT_WORK / size, 5, rootPivots);
     boolean keep;
+    // the pivots and nanoseconds of the solve at the bounds of the start of the search, which cap
+    // the solve at the current bounds after it (Long.MAX_VALUE without it)
+    long startPivots = Long.MAX_VALUE;
+    long startNanos = Long.MAX_VALUE;
     if (searchStartMin != null) {
       // solved after a search that started without it: the rows are kept as they would have been
       // at the start of that search, not for a bound that the facts the search found raise
@@ -5384,6 +5479,8 @@ public class LinearRelaxation extends Constraint
       double startBound =
           baseStatus == LpSolver.OPTIMAL && objective != null ? base.value(0) : Double.NaN;
       droppedPivots += base.pivots();
+      long before0 = full.pivots();
+      long started = System.nanoTime();
       int startStatus = rootSolve(full, pivots, rootWork());
       if (k == leadExtra && startStatus == LpSolver.LIMIT) {
         // as below: the value encodings alone get the time of a large root solve
@@ -5392,6 +5489,19 @@ public class LinearRelaxation extends Constraint
       }
       trialStatusAtStart = startStatus;
       keep = keepRows(startStatus, baseStatus, startBound, full, few, k);
+      if (keep
+          && startStatus == LpSolver.OPTIMAL
+          && objective != null
+          && !(few && k <= SMALL_EXTRA)) {
+        // the bound that the rows raise at the start bounds is no better than the bound the search
+        // has found since: they are not kept for it. rna-alignment-k50-23-49 (MaxSAT Evaluation
+        // 2024): 13,579 clause rows raise 0 to 443, where the cores of LCG had 532 (the optimum is
+        // 536); keeping them took 16.6 s more of root LP before the rows and the LP were dropped
+        double b = integerBound(full.value(0));
+        keep = maximize ? b < objective.max() : b > objective.min();
+      }
+      startPivots = Math.max(MIN_RESOLVE_PIVOTS, full.pivots() - before0);
+      startNanos = Math.max(MIN_RESOLVE_NANOS, System.nanoTime() - started);
       for (int j = 0; j < n; j++) {
         setBounds(full, j);
       }
@@ -5405,13 +5515,24 @@ public class LinearRelaxation extends Constraint
       droppedPivots += full.pivots();
       return null;
     }
-    int first = rootSolve(full, pivots, rootWork());
-    if (k == leadExtra && first == LpSolver.LIMIT) {
-      // the value encodings alone are the model's own rows: their trial gets the time of a large
-      // root solve, a share of the time limit of the run, from now
-      extendDeadline = Math.max(extendDeadline, System.nanoTime() + largeRootNanos);
+    int withExtra;
+    if (searchStartMin != null && !keep && !keepExtra && trees.isEmpty()) {
+      // rows that the start bounds do not keep are kept at the current bounds only when they make
+      // the relaxation infeasible: that solve gets no more than the solve at the start bounds took,
+      // and is not extended (rna-alignment-k50-23-49: 4.5 s and 3,172 pivots at the start bounds,
+      // 16.6 s and 6,234 pivots at the current ones)
+      withExtra =
+          rootSolveCapped(
+              full, (int) Math.min(large ? Integer.MAX_VALUE : pivots, startPivots), startNanos);
+    } else {
+      int first = rootSolve(full, pivots, rootWork());
+      if (k == leadExtra && first == LpSolver.LIMIT) {
+        // the value encodings alone are the model's own rows: their trial gets the time of a large
+        // root solve, a share of the time limit of the run, from now
+        extendDeadline = Math.max(extendDeadline, System.nanoTime() + largeRootNanos);
+      }
+      withExtra = extendRootSolve(full, first, true);
     }
-    int withExtra = extendRootSolve(full, first, true);
     if (searchStartMin == null) {
       keep = keepRows(withExtra, status, before, full, few, k);
     } else if (withExtra == LpSolver.LIMIT) {
@@ -5428,6 +5549,27 @@ public class LinearRelaxation extends Constraint
     }
     droppedPivots += full.pivots();
     return null;
+  }
+
+  // the fewest pivots and nanoseconds that the solve of a trial at the current bounds gets
+  private static final long MIN_RESOLVE_PIVOTS = 100;
+  private static final long MIN_RESOLVE_NANOS = 100_000_000L;
+
+  // a root solve within at most the given pivots and nanoseconds, also on a large relaxation (whose
+  // root solves otherwise share the time of its root)
+  private int rootSolveCapped(LpSolver s, int pivots, long nanos) {
+    if (s instanceof DualSimplex) {
+      return s.solve(pivots);
+    }
+    long cap = nanos;
+    if (large) {
+      long now = System.nanoTime();
+      if (largeDeadline == 0) {
+        largeDeadline = now + largeRootNanos;
+      }
+      cap = Math.min(cap, Math.max(0, largeDeadline - now));
+    }
+    return solveWithin(s, pivots, rootWork(), cap);
   }
 
   // whether the rows of a trial that ends with the given status are kept, against the solve

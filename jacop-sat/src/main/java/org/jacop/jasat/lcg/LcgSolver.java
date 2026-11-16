@@ -83,6 +83,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.jasat.cdcl.VarHeap;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ClauseMiner;
 import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
@@ -686,6 +687,34 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     sat.connect(this);
+    String mineFile = System.getProperty("jacop.lcg.mine");
+    if (mineFile != null) {
+      miner = new ClauseMiner(trail, store, mineFile);
+      sat.setLearntExport(miner.maxSize, Integer.MAX_VALUE);
+    }
+  }
+
+  // research tool: classifies learnt clauses by the constraints that imply them, or null
+  private ClauseMiner miner;
+
+  private void mine(int[] clause) {
+    IntVar[] x = new IntVar[clause.length];
+    int[] kind = new int[clause.length];
+    int[] value = new int[clause.length];
+    boolean[] positive = new boolean[clause.length];
+    for (int k = 0; k < clause.length; k++) {
+      int d = Math.abs(clause[k]);
+      int i = d < litVar.length ? litVar[d] : -1;
+      if (i < 0 || vars[i] == null) {
+        miner.auxiliary();
+        return;
+      }
+      x[k] = vars[i];
+      kind[k] = litKind[d] == EQ_KIND ? ClauseMiner.EQ : ClauseMiner.GE;
+      value[k] = litValue[d];
+      positive[k] = clause[k] > 0;
+    }
+    miner.learnt(x, kind, value, positive);
   }
 
   // --------------------------------------------------------------------------------- proof
@@ -4429,6 +4458,24 @@ public final class LcgSolver implements ExternalPropagator {
     return coreTrim;
   }
 
+  // -Djacop.lcg.coreExhaust=K: the most totalizer outputs of each relaxed core that the
+  // core-guided phase tests alone (core exhaustion); 0 = never
+  private int coreExhaust = Integer.getInteger("jacop.lcg.coreExhaust", 0);
+
+  /**
+   * Sets how many outputs of each new totalizer the core-guided phase assumes alone and relaxes as
+   * unit cores while they are refuted (core exhaustion); 0, the default, tests none.
+   *
+   * @param outputs the most outputs per core (property {@code jacop.lcg.coreExhaust})
+   */
+  public void setCoreExhaust(int outputs) {
+    coreExhaust = outputs;
+  }
+
+  int coreExhaust() {
+    return coreExhaust;
+  }
+
   /**
    * Sets whether the core-guided phase of {@link #minimize} is skipped after branch and bound when
    * its probe ({@link #setCoreDelay}) stopped without a solution of its own and branch and bound
@@ -7251,6 +7298,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyLearnt(int[] clause, int lbd) {
+    if (miner != null) {
+      mine(clause);
+    }
     if (shared == null) {
       return;
     }
