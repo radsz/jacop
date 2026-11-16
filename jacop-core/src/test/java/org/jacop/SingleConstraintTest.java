@@ -150,6 +150,7 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricGCC;
+import org.jacop.constraints.TableCover;
 import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -10216,6 +10217,34 @@ class SingleConstraintTest extends TestHelper {
     cb.domain.in(child.level, cb, 0, 0);
     assertThat(child.consistency()).isTrue();
     assertThat(cx.max()).isEqualTo(1);
+  }
+
+  /**
+   * An exact TableCover requires the values that tuples cover in the range of the domains, but a
+   * value that no variable can take (a hole in that range) cannot be taken: the all different over
+   * {0, 2} takes both values and covers both groups, yet the tuple {1} of the first group made
+   * value 1 required, so the constraint failed at once.
+   */
+  @Test
+  void tableCoverExactIgnoresValuesOutsideTheDomains() {
+    Store store = new Store();
+    IntervalDomain d = new IntervalDomain(0, 0);
+    d.unionAdapt(2, 2);
+    IntVar x0 = new IntVar(store, "x0", d.cloneLight());
+    IntVar x1 = new IntVar(store, "x1", d.cloneLight());
+    store.impose(
+        new TableCover(
+            new IntVar[][] {{x0}, {x1}}, new int[][][] {{{0}, {1}, {2}}, {{0}, {2}}}, true));
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    assertThat(
+            search.labeling(
+                store, new SimpleSelect<>(new IntVar[] {x0, x1}, null, new IndomainMin<>())))
+        .isTrue();
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(2);
   }
 
   private static int root(int[] parent, int v) {
