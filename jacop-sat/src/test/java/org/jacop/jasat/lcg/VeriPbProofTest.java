@@ -55,6 +55,7 @@ import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
@@ -102,6 +103,7 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -998,6 +1000,117 @@ class VeriPbProofTest {
   }
 
   @Test
+  void channelOrderBoundPastAHoleIsDerived() {
+    // b <=> x > -1 and b <=> x <= 0 with 0 a hole of x: the channel fails under b, but unit
+    // propagation over the order literals of x does not see x >= 1 under b (fuzz seed 16683190)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, 4);
+    x.domain.inComplement(0, x, 0);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new ChannelOrder(
+            x, new IntVar[] {b, b, b}, new int[] {-1, 0, 2}, new boolean[] {false, true, false}));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void channelOrderItemsOfTheSameBooleanAreJoined() {
+    // b <=> x > 1 and b <=> x <= 1 fail under b without a hole: the model states each item as a
+    // sum of the order literals of x under b, and unit propagation does not join two of them
+    // (fuzz seed 17211274)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, 4);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new ChannelOrder(
+            x, new IntVar[] {b, b, b}, new int[] {1, 1, 2}, new boolean[] {false, true, false}));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void countWithAHoleOfTheCounterInTheReasonIsDerived() {
+    // a = 1 removes 1 from b and k (all different except 0), which pins the count of 1 in [a, b]
+    // to 1 while 1 is a hole of k: the failure of the count needs the bounds of k, which unit
+    // propagation over the value literals does not round (fuzz seed 20790780)
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 1, 2);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar k = new IntVar(store, "k", 0, 2);
+    store.impose(new AlldifferentExceptZero(new IntVar[] {b, a, k}));
+    store.impose(new Count(new IntVar[] {a, b}, k, 1));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(a)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 2 2");
+  }
+
+  @Test
+  void reifiedNegationOfARowWithoutIntegerSolutionIsDerived() {
+    // b <=> not (2 x0 + 2 x1 - x5 != 2) with x5 in {1, 3}: the row has no solution by parity, and
+    // the proof needs its bounds under b through the negation (fuzz seed 28841615)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 4);
+    x1.domain.inComplement(0, x1, 1);
+    IntVar x2 = new IntVar(store, "x2", 0, 4);
+    x2.domain.inComplement(0, x2, 2);
+    x2.domain.inComplement(0, x2, 3);
+    IntVar x3 = new IntVar(store, "x3", 1, 3);
+    x3.domain.inComplement(0, x3, 2);
+    IntVar x4 = new IntVar(store, "x4", -1, 4);
+    x4.domain.inComplement(0, x4, 1);
+    IntVar x5 = new IntVar(store, "x5", 1, 3);
+    x5.domain.inComplement(0, x5, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar obj = new IntVar(store, "obj", -30, 30);
+    store.impose(
+        new Reified(
+            new Not(new LinearInt(new IntVar[] {x0, x1, x5}, new int[] {2, 2, -1}, "!=", 2)), b));
+    store.impose(new XmulCeqZ(x1, 0, x4));
+    store.impose(new Reified(new XplusYlteqZ(x0, x3, x2), b));
+    store.impose(new LinearInt(new IntVar[] {x5, x2, x4, obj}, new int[] {2, -1, 1, -1}, "==", 0));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.sat().setExternalReasonKeep(1 + (int) (28841615L % 3));
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -2 -2");
+  }
+
+  @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
     IntVar b = new IntVar(store, "b", 0, 1);
@@ -1020,6 +1133,40 @@ class VeriPbProofTest {
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(pbp).contains("root changes derived, 0 taken into");
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void conditionalSelectWithEveryBranchInAHoleIsDerived() {
+    // obj = -y <= -1 needs y in 1..2, which the branches x1, x2 in {0, 3} cannot equal, so b0 = 1;
+    // unit propagation does not try each of them selected, so "b0 or y <= 0" needs a lemma per
+    // branch (fuzz seed 16953129); b0 = 1 then fails through x0 + 4 b0 <= 3
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+      x[i] = new IntVar(store, "x" + i, i == 0 ? -1 : 0, 3);
+      if (i > 0) {
+        x[i].domain.inComplement(0, x[i], 1);
+        x[i].domain.inComplement(0, x[i], 2);
+      }
+    }
+    IntVar y = new IntVar(store, "y", -1, 2);
+    IntVar obj = new IntVar(store, "obj", -10, 10);
+    store.impose(new ConditionalSelect(b, x, y));
+    store.impose(new LinearInt(new IntVar[] {x[0], b[0]}, new int[] {1, 4}, "<=", 3));
+    store.impose(new LinearInt(new IntVar[] {y, obj}, new int[] {1, 1}, "==", 0));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 0 0");
   }
 
   // y = x[k] for the first k with b[k] = 1 (if_then_else_int), over branches with holes
@@ -2069,6 +2216,8 @@ class VeriPbProofTest {
     store.impose(new LinearInt(all, a, "==", 0));
     LcgSolver lcg = withProof(store);
     lcg.setCoreSearch(0.5, 1_000_000, 1_000_000);
+    // core exhaustion would spend the 300 conflicts on outputs that only a pigeonhole proof refutes
+    lcg.setCoreExhaust(0);
     lcg.sat().setConflictLimit(300);
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
     long bound = lcg.coreSearch().lowerBound;

@@ -69,9 +69,10 @@ then reports the strongest level held at every node:
 - bounds(D): the same with the other variables in their domains;
 - domain (GAC): every value has a support in the domains.
 
-It also fails a case that removes a solution or fails while a solution exists (wrong pruning), and
-counts nodes where a missing support would be pruned by running the constraint again (not at
-fixpoint). Each case prints its level, the node count and the first counterexample of the next
+It also fails a case that removes a solution or fails while a solution exists (wrong pruning),
+accepts a fixed assignment that is no solution, or claims `satisfied()` while some tuple of the
+domains is no solution, and counts nodes where a missing support would be pruned by running the
+constraint again (not at fixpoint). Each case prints its level, the node count and the first counterexample of the next
 level, with the instance and the decision path that reproduces it.
 
 Using it to improve a propagator:
@@ -83,10 +84,28 @@ Using it to improve a propagator:
    `ConsistencyChecker.cases()` to what it now reaches, so a later weakening is caught when the
    checker is run.
 
+`-Dconsistency.repeated=true` checks the same cases with a variable repeated in the scope: about a
+third of the time, the variable helpers of a generator (`aVar`, `interval`, `bools`, `aBool`) return
+a variable already made for the instance whose domain fits, and the brute force enumerates only the
+tuples in which the positions of one variable agree. Only soundness is checked in that mode (a
+repeated variable may weaken a propagator), and an instance whose constructor rejects the repeat is
+counted as rejected. Run it after changing how a constraint handles its variables.
+
 To check another propagator, add a `Case` to `cases()`: a name, the level it reaches, and a
 generator returning a `Model` (the constraint, the relation as a `Predicate<int[]>` on complete
 assignments, and the variables in the relation's order). Keep the instances small, since every node
 enumerates the whole box (nodes above 200,000 tuples are skipped).
+
+## Mining learnt clauses for propagator gaps
+
+`-Djacop.lcg.mine=FILE` (`org.jacop.lcg.ClauseMiner`, off by default) tests every LCG learnt clause
+of up to 24 literals against the constraints whose scope covers its variables (or pairs of
+constraints sharing a variable): copied over the root domains with the other literals false, does
+propagation entail the asserting literal (`prop`), fail only once it is false too (`failOnly`, a
+missing domain-consistency pruning), need a search (`search`), or is the clause not implied
+(`not`)? Counts per constraint class and examples go to FILE at exit. It spends at most half of
+the run (`jacop.lcg.mine.budget`); `jacop.lcg.mine.size`, `.nodes` and `.exclude` tune it. The
+osolpro kit `benchmarks/clause-mining` runs it over a set and ranks the classes.
 
 ## Checking wake-up events (fresh fixpoint)
 
@@ -166,7 +185,21 @@ mvn -Pmin -pl jacop-sat test -Dtest=LcgFuzzTest -Dsurefire.rerunFailingTestsCoun
 ```
 
 A failure names the seed; the model of a seed is rebuilt with `-Dlcg.fuzz.runs=1 -Dlcg.fuzz.seed=N`.
+Add `-Dlcg.fuzz.repeated=true` to repeat a variable at about a third of the positions of each picked
+list, so constraints and their explanations see one variable at several positions.
 Add `-Dlcg.fuzz.holes=true` for up to two holes in every variable's domain: reasons of bounds that
 skip holes were the most frequent explanation bug (LinearIntDom, Diffn, WeightedCompletion).
 A constraint whose pruning depends on a variable that is not among its arguments (such as an
 internal counter) needs that variable in its scope, or the generic reason is unsound.
+
+`-Dlcg.fuzz.proof=true` instead solves the random models with `--proof` logging and checks every
+proof with `RupChecker` and its conclusion against the reference (models with a constraint that
+proof logging does not support are skipped; `-Dlcg.fuzz.proofPrint=true` prints the OPB model and
+the proof of a failure). Proof steps that unit propagation cannot derive were mostly holes in
+domains and rows unit propagation does not round:
+
+```
+mvn -Pmin -pl jacop-sat test -Dtest='LcgFuzzTest#proofsCheckOnRandomModels' \
+    -Dsurefire.rerunFailingTestsCount=0 -Dlcg.fuzz.proof=true -Dlcg.fuzz.holes=true \
+    -Dlcg.fuzz.runs=1000000 -Dlcg.fuzz.seed=30000000
+```

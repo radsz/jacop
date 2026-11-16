@@ -101,6 +101,21 @@ public final class Linearizations {
    * @return the rows
    */
   public static List<LinearForm> encodings(Collection<Constraint> constraints) {
+    return encodings(constraints, null);
+  }
+
+  /**
+   * Returns the rows of {@link #encodings(Collection)}, and puts in linked each {@link
+   * ElementInteger} whose value got its row {@code y = sum a[v] b_v}: that row, with {@code sum b_v
+   * = 1} and {@code x = sum v b_v}, gives the convex hull of the points {@code (v, a[v])}, so the
+   * hull rows of {@link #of(Constraint)} for that constraint add nothing.
+   *
+   * @param constraints the constraints
+   * @param linked the set that receives the element constraints linked to an encoding, or null
+   * @return the rows
+   */
+  public static List<LinearForm> encodings(
+      Collection<Constraint> constraints, Set<Constraint> linked) {
     Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
     List<LinearForm> out = new ArrayList<>();
     Map<IntVar, Map<Integer, IntVar>> covering = new IdentityHashMap<>();
@@ -169,6 +184,9 @@ public final class Linearizations {
         vars[k] = el.value;
         w[k] = -1;
         out.add(new LinearForm(vars, w, 0, LinearForm.EQ));
+        if (linked != null) {
+          linked.add(el);
+        }
       }
     }
     return out;

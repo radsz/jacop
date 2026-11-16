@@ -141,6 +141,12 @@ public final class DomainTrail {
   private int objectBase;
 
   /**
+   * The longest segment that may be allocated; a longer one fails as if the heap were full. Tests
+   * lower it to check that the trail survives an OutOfMemoryError.
+   */
+  int allocationLimit = Integer.MAX_VALUE;
+
+  /**
    * Pushes a word entry, which saves one long of a domain with an int.
    *
    * @param domain the domain the entry belongs to.
@@ -206,40 +212,56 @@ public final class DomainTrail {
     return intBase + p;
   }
 
+  /**
+   * Moves the int stream to its next segment. The segment is allocated before the trail changes: a
+   * push that fails with an OutOfMemoryError leaves the trail as it was, so its levels can still be
+   * popped while the error unwinds the search. Advancing the segment first made that pop walk the
+   * last full segment twice and give the objects of other entries to the domains.
+   */
   private int[] nextIntSegment() {
+    int s = intSegment + 1;
+    if (s >= SEGMENTS) {
+      throw new IllegalStateException("Trail too large");
+    }
+    int[] segment = ints[s];
+    if (segment == null) {
+      segment = allocationLimit < FIRST << s ? tooLarge() : new int[FIRST << s];
+      ints[s] = segment;
+    }
     if (intSegment >= 0) {
       intsUsed[intSegment] = intTop;
     }
-    int s = ++intSegment;
-    if (s >= SEGMENTS) {
-      intSegment--;
-      throw new IllegalStateException("Trail too large");
-    }
-    if (ints[s] == null) {
-      ints[s] = new int[FIRST << s];
-    }
-    intCurrent = ints[s];
+    intSegment = s;
+    intCurrent = segment;
     intTop = 0;
     intBase = start(s);
-    return intCurrent;
+    return segment;
   }
 
+  /** Moves the object stream to its next segment, allocated as in {@link #nextIntSegment()}. */
   private Object[] nextObjectSegment() {
+    int s = objectSegment + 1;
+    if (s >= SEGMENTS) {
+      throw new IllegalStateException("Trail too large");
+    }
+    Object[] segment = objects[s];
+    if (segment == null) {
+      segment = allocationLimit < FIRST << s ? tooLarge() : new Object[FIRST << s];
+      objects[s] = segment;
+    }
     if (objectSegment >= 0) {
       objectsUsed[objectSegment] = objectTop;
     }
-    int s = ++objectSegment;
-    if (s >= SEGMENTS) {
-      objectSegment--;
-      throw new IllegalStateException("Trail too large");
-    }
-    if (objects[s] == null) {
-      objects[s] = new Object[FIRST << s];
-    }
-    objectCurrent = objects[s];
+    objectSegment = s;
+    objectCurrent = segment;
     objectTop = 0;
     objectBase = start(s);
-    return objectCurrent;
+    return segment;
+  }
+
+  /** Fails the allocation of a segment longer than {@link #allocationLimit}, in tests. */
+  private static <T> T tooLarge() {
+    throw new OutOfMemoryError("DomainTrail segment above the allocation limit");
   }
 
   /** The position in a stream of the first element of segment s. */

@@ -150,6 +150,7 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricGCC;
+import org.jacop.constraints.TableCover;
 import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -168,6 +169,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -185,6 +187,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
@@ -460,6 +463,38 @@ class SingleConstraintTest extends TestHelper {
           }
         }
       }
+      assertThat((long) countSolutions(store, v, random)).as("trial " + trial).isEqualTo(expected);
+    }
+  }
+
+  /**
+   * An element with its index fixed and a reification or an implication with its Boolean fixed
+   * during search rewrite themselves to an equality and to the nested constraint; the solutions
+   * stay those of the original constraints.
+   */
+  @Test
+  void testRewritingDuringSearchKeepsSolutions() {
+    Random random = new Random(20261115);
+    for (int trial = 0; trial < 200; trial++) {
+      Store store = new Store();
+      IntVar[] v = new IntVar[7];
+      v[0] = new IntVar(store, "i", 1, 3);
+      for (int k = 1; k <= 4; k++) {
+        v[k] = new IntVar(store, "x" + k, 0, 2 + random.nextInt(2));
+      }
+      v[5] = new IntVar(store, "b", 0, 1);
+      v[6] = new IntVar(store, "c", 0, 1);
+      store.impose(new ElementVariableFast(v[0], new IntVar[] {v[1], v[2], v[3]}, v[4]));
+      store.impose(new Reified(new XlteqY(v[1], v[2]), v[5]));
+      store.impose(new Implies(v[6], new XneqY(v[2], v[3])));
+      long expected =
+          bruteForce(
+                  v,
+                  a ->
+                      a[4] == a[a[0]]
+                          && (a[5] == 1) == (a[1] <= a[2])
+                          && (a[6] == 0 || a[2] != a[3]))
+              .size();
       assertThat((long) countSolutions(store, v, random)).as("trial " + trial).isEqualTo(expected);
     }
   }
@@ -1274,6 +1309,75 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x.dom().toString()).isEqualTo("4");
     assertThat(y.dom().toString()).isEqualTo("-2");
+  }
+
+  @Test
+  void xmulYeqZSaturatedKeepsEveryPairOfFactors() {
+    // z = x * y saturated at the ends of the range stands for a product declared beyond it (2022
+    // arithmetic-target): XmulYeqZ over the narrowed z removed every pair whose product does not
+    // fit. Factors around sqrt(MAX_INT) = 23170, of both signs, and z within a random interval
+    // around an end: the solutions are the pairs whose saturated product lies in it.
+    Random random = new Random(11);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      int sx = random.nextBoolean() ? 1 : -1;
+      int sy = random.nextBoolean() ? 1 : -1;
+      IntVar x = randomSubsetVar(store, "x", 23160, 23185, random);
+      IntVar y = randomSubsetVar(store, "y", 23160, 23185, random);
+      IntVar fx = new IntVar(store, "fx", -23185, 23185);
+      IntVar fy = new IntVar(store, "fy", -23185, 23185);
+      store.impose(new XmulCeqZ(x, sx, fx));
+      store.impose(new XmulCeqZ(y, sy, fy));
+      boolean positive = sx == sy;
+      int end = positive ? IntDomain.MAX_INT : IntDomain.MIN_INT;
+      int width = 1 + random.nextInt(2_000_000);
+      int low = positive ? end - random.nextInt(2_000_000) : end;
+      int high = positive ? IntDomain.MAX_INT : end + width;
+      if (random.nextBoolean()) {
+        // an interval away from the end, where z is the product itself
+        low =
+            positive
+                ? 535_000_000 + random.nextInt(1_000_000)
+                : Math.max(-536_000_000 - width, IntDomain.MIN_INT + 1);
+        high = positive ? Math.min(low + width, IntDomain.MAX_INT - 1) : -535_000_000;
+      }
+      IntVar z = new IntVar(store, "z", low, high);
+      store.impose(new XmulYeqZSaturated(fx, fy, z));
+      long expected = 0;
+      for (int a : valuesOf(x)) {
+        for (int b : valuesOf(y)) {
+          int p = XmulYeqZSaturated.saturatedProduct(sx * a, sy * b);
+          if (p >= low && p <= high) {
+            expected++;
+          }
+        }
+      }
+      if (!store.consistency()) {
+        assertThat(expected).as("trial " + trial).isZero();
+        continue;
+      }
+      assertThat((long) countSolutions(store, new IntVar[] {x, y, z}, random))
+          .as("trial " + trial)
+          .isEqualTo(expected);
+    }
+
+    // the end of the range stands for every product beyond it, and only for those
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 68720);
+    IntVar y = new IntVar(store, "y", 0, 68720);
+    IntVar z = new IntVar(store, "z", IntDomain.MAX_INT, IntDomain.MAX_INT);
+    store.impose(new XmulYeqZSaturated(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x.domain.in(1, x, 68720, 68720);
+    assertThat(store.consistency()).isTrue();
+    y.domain.in(1, y, 7813, 7813); // 68720 * 7813 = 536,909,360
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(1);
+    x.domain.in(1, x, 68720, 68720);
+    y.domain.in(1, y, 7812, 7812); // 536,840,640 fits
+    assertThat(store.consistency()).isFalse();
   }
 
   @Test
@@ -4235,6 +4339,85 @@ class SingleConstraintTest extends TestHelper {
             .isTrue();
       }
     }
+  }
+
+  @Test
+  void knapsackDpKeepsSolutionsWhenAVariableIsRepeated() {
+    // A quantity which is also the capacity, the profit or another quantity changed during a pass:
+    // the supports of the next quantities were read with its new minimum from tables built with the
+    // old one, and solutions were lost (run 192: quantities x0, x1 with weights 0, 1, capacity x2
+    // and profit x1).
+    Random random = new Random(20261116);
+    for (int run = 0; run < 3000; run++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(3);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(4);
+        profits[i] = random.nextInt(4);
+      }
+      IntVar[] distinct = new IntVar[n + 2];
+      IntVar[] positions = new IntVar[n + 2];
+      int count = 0;
+      for (int k = 0; k < n + 2; k++) {
+        if (count > 0 && random.nextInt(3) == 0) {
+          positions[k] = distinct[random.nextInt(count)];
+        } else {
+          IntVar v = new IntVar(store, "x" + count);
+          for (int value = 0; value <= 10; value++) {
+            if (random.nextInt(k < n ? 2 : 3) == 0) {
+              v.addDom(value, value);
+            }
+          }
+          if (v.getSize() == 0) {
+            int low = random.nextInt(3);
+            v.addDom(low, low + 1);
+          }
+          distinct[count++] = v;
+          positions[k] = v;
+        }
+      }
+      IntVar[] vars = Arrays.copyOf(distinct, count);
+      long expected =
+          bruteForce(
+                  vars,
+                  t -> {
+                    long weight = 0;
+                    long profit = 0;
+                    for (int i = 0; i < n; i++) {
+                      int q = t[indexIn(vars, positions[i])];
+                      weight += (long) q * weights[i];
+                      profit += (long) q * profits[i];
+                    }
+                    return weight == t[indexIn(vars, positions[n])]
+                        && profit == t[indexIn(vars, positions[n + 1])];
+                  })
+              .size();
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " scope "
+              + Arrays.toString(positions);
+      store.impose(
+          new KnapsackDP(
+              profits, weights, Arrays.copyOf(positions, n), positions[n], positions[n + 1]));
+      int found = store.consistency() ? countSolutions(store, vars, random) : 0;
+      assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
+
+  private static int indexIn(IntVar[] vars, IntVar v) {
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == v) {
+        return i;
+      }
+    }
+    throw new IllegalArgumentException(v.id());
   }
 
   @Test
@@ -10216,6 +10399,154 @@ class SingleConstraintTest extends TestHelper {
     cb.domain.in(child.level, cb, 0, 0);
     assertThat(child.consistency()).isTrue();
     assertThat(cx.max()).isEqualTo(1);
+  }
+
+  /**
+   * An exact TableCover requires the values that tuples cover in the range of the domains, but a
+   * value that no variable can take (a hole in that range) cannot be taken: the all different over
+   * {0, 2} takes both values and covers both groups, yet the tuple {1} of the first group made
+   * value 1 required, so the constraint failed at once.
+   */
+  @Test
+  void tableCoverExactIgnoresValuesOutsideTheDomains() {
+    Store store = new Store();
+    IntervalDomain d = new IntervalDomain(0, 0);
+    d.unionAdapt(2, 2);
+    IntVar x0 = new IntVar(store, "x0", d.cloneLight());
+    IntVar x1 = new IntVar(store, "x1", d.cloneLight());
+    store.impose(
+        new TableCover(
+            new IntVar[][] {{x0}, {x1}}, new int[][][] {{{0}, {1}, {2}}, {{0}, {2}}}, true));
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    assertThat(
+            search.labeling(
+                store, new SimpleSelect<>(new IntVar[] {x0, x1}, null, new IndomainMin<>())))
+        .isTrue();
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(2);
+  }
+
+  /**
+   * Conditional did not include its nested constraints in the store, so a nested CountVar never
+   * created its backtrackable counts and threw a NullPointerException once its condition was 1.
+   */
+  @Test
+  void conditionalIncludesNestedCountVar() {
+    Store store = new Store();
+    IntVar[] list = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar counter = new IntVar(store, "n", 2, 2);
+    IntVar value = new IntVar(store, "v", 1, 1);
+    IntVar b0 = new IntVar(store, "b0", 1, 1);
+    IntVar b1 = new IntVar(store, "b1", 1, 1);
+    store.impose(
+        new Conditional(
+            new IntVar[] {b0, b1},
+            new PrimitiveConstraint[] {new CountVar(list, counter, value), new XeqC(list[0], 0)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(list[0].singleton(1)).isTrue();
+    assertThat(list[1].singleton(1)).isTrue();
+  }
+
+  /**
+   * Knapsack keeps the items changed at a level in a list of that level and applied only the list
+   * of the level of its consistency. When the store raised its level before the first consistency
+   * (as it does once Alldistinct is imposed), the quantities fixed after impose at level 0 never
+   * reached its tree, and the stale tree removed the only solution.
+   */
+  @Test
+  void knapsackSeesItemsChangedBeforeARaisedLevel() {
+    Store store = new Store();
+    IntervalDomain d0 = new IntervalDomain(0, 0);
+    d0.unionAdapt(2, 2);
+    IntVar[] q = {new IntVar(store, "q0", d0), new IntVar(store, "q1", 1, 2)};
+    IntVar capacity = new IntVar(store, "c", 2, 10);
+    IntVar profit = new IntVar(store, "p", 0, 10);
+    store.impose(new Knapsack(new int[] {1, 1}, new int[] {1, 2}, q, capacity, profit));
+    q[0].domain.in(store.level, q[0], 2, 2);
+    q[1].domain.in(store.level, q[1], 2, 2);
+    capacity.domain.in(store.level, capacity, 6, 6);
+    profit.domain.in(store.level, profit, 4, 4);
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    assertThat(
+            search.labeling(
+                store,
+                new SimpleSelect<>(
+                    new IntVar[] {q[0], q[1], capacity, profit}, null, new IndomainMin<>())))
+        .isTrue();
+  }
+
+  /**
+   * Diffn skipped a rectangle fixed at an earlier level as already checked. When the store raised
+   * its level before the first consistency (as it does once Alldistinct is imposed), rectangles
+   * fixed after impose at level 0 were first seen at level 1, all skipped, and two overlapping ones
+   * were accepted.
+   */
+  @Test
+  void diffnChecksRectanglesFixedBeforeARaisedLevel() {
+    Store store = new Store();
+    int[] values = {2, 1, 1, 1, 2, 0, 1, 2};
+    IntVar[] x = new IntVar[values.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+    }
+    store.impose(
+        new Diffn(new IntVar[][] {{x[0], x[1], x[2], x[3]}, {x[4], x[5], x[6], x[7]}}, true));
+    for (int i = 0; i < x.length; i++) {
+      x[i].domain.in(store.level, x[i], values[i], values[i]);
+    }
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void diff2ChecksRectanglesFixedBeforeARaisedLevel() {
+    for (String kind : new String[] {"Diff2", "Disjoint"}) {
+      Store store = new Store();
+      IntVar[][] r = overlappingRectanglesVars(store);
+      store.impose(kind.equals("Diff2") ? new Diff2(r) : new Disjoint(r));
+      fixOverlappingRectangles(store, r);
+      store.raiseLevelBeforeConsistency = true;
+      assertThat(store.consistency()).as(kind).isFalse();
+    }
+  }
+
+  @Test
+  void diffnKChecksBoxesFixedBeforeARaisedLevel() {
+    Store store = new Store();
+    IntVar[][] r = overlappingRectanglesVars(store);
+    IntVar[][] origin = {{r[0][0], r[0][1]}, {r[1][0], r[1][1]}};
+    IntVar[][] length = {{r[0][2], r[0][3]}, {r[1][2], r[1][3]}};
+    store.impose(new DiffnK(origin, length, true));
+    fixOverlappingRectangles(store, r);
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isFalse();
+  }
+
+  /** Two rectangles [x, y, width, height] over 0..2, fixed by fixOverlappingRectangles. */
+  private static IntVar[][] overlappingRectanglesVars(Store store) {
+    IntVar[][] r = new IntVar[2][4];
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j] = new IntVar(store, "r" + i + "_" + j, 0, 2);
+      }
+    }
+    return r;
+  }
+
+  /** Fixes the rectangles to (2, 1, 1, 1) and (2, 0, 1, 2), which overlap at (2, 1). */
+  private static void fixOverlappingRectangles(Store store, IntVar[][] r) {
+    int[][] values = {{2, 1, 1, 1}, {2, 0, 1, 2}};
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j].domain.in(store.level, r[i][j], values[i][j], values[i][j]);
+      }
+    }
   }
 
   private static int root(int[] parent, int v) {

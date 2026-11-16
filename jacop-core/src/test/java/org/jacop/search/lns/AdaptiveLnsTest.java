@@ -156,6 +156,29 @@ class AdaptiveLnsTest {
   }
 
   @Test
+  void rinsRelaxesTheVariablesThatDisagreeWithTheRelaxationFirst() {
+    AdaptiveLns lns = withSolution(5);
+    assertFalse(lns.usable(AdaptiveLns.Kind.RINS));
+    // the relaxation agrees with x[i] = i except on x9, x10 and x11, farthest on x11; x0 has no
+    // value
+    lns.setLpValues(i -> i == 0 ? Double.NaN : i < 9 ? i : i + (i - 8) * 0.5);
+    assertTrue(lns.usable(AdaptiveLns.Kind.RINS));
+    for (int k = 0; k < 200; k++) {
+      boolean[] free = relaxed(lns.neighbourhood(AdaptiveLns.Kind.RINS), N);
+      int count = 0;
+      for (boolean f : free) {
+        count += f ? 1 : 0;
+      }
+      int disagreeing = (free[9] ? 1 : 0) + (free[10] ? 1 : 0) + (free[11] ? 1 : 0);
+      assertEquals(Math.min(3, count), disagreeing, "run " + k);
+      // the farthest from the relaxation are relaxed first
+      assertTrue(count == 0 || free[11]);
+      assertTrue(count < 2 || free[10]);
+      lns.outcome(k % 2 == 0 ? AdaptiveLns.Outcome.IMPROVED : AdaptiveLns.Outcome.LIMIT);
+    }
+  }
+
+  @Test
   void neighbourhoodsGrowWhenRunsFinish() {
     AdaptiveLns lns = withSolution(2);
     int first = 0;

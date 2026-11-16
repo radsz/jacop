@@ -31,6 +31,8 @@ package org.jacop.jasat.lcg;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -53,6 +55,7 @@ import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
@@ -210,6 +213,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
@@ -240,7 +244,10 @@ import org.junit.jupiter.api.Test;
  * comma-separated list of the cases of the globals added in 5.0, half of the constraints are drawn
  * from those cases, to test their explanations at volume. With {@code lcg.fuzz.focus} set to a
  * comma-separated list of the cases of {@code randomConstraint}, three constraints in four are
- * drawn from those cases (the constraint audit checks one constraint's explanations this way).
+ * drawn from those cases (the constraint audit checks one constraint's explanations this way). With
+ * {@code lcg.fuzz.ground=true} about a quarter of the variables are ground before the constraints
+ * on them are imposed and another quarter after they are imposed, before the first consistency, for
+ * constraints imposed with ground variables.
  */
 class LcgFuzzTest {
 
@@ -249,6 +256,14 @@ class LcgFuzzTest {
   private static final int SEED = Integer.getInteger("lcg.fuzz.seed", 1);
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
+
+  // with lcg.fuzz.repeated=true, about a third of the positions of a picked list repeat a variable
+  // already in that list, so constraints see one variable at several positions of their scope
+  private static final boolean REPEATED = Boolean.getBoolean("lcg.fuzz.repeated");
+
+  // with lcg.fuzz.ground=true one variable in eight is ground before the constraints on it are
+  // imposed, and another one in eight after they are imposed, before the first consistency
+  private static final boolean GROUND = Boolean.getBoolean("lcg.fuzz.ground");
 
   // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
   private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
@@ -301,9 +316,17 @@ class LcgFuzzTest {
 
     final Random holes;
 
+    final Random repeats;
+
+    // grounds variables, from its own generator so the model is otherwise the same
+    final Random ground;
+    final List<IntVar> groundLater = new ArrayList<>();
+
     Model(long seed) {
       rnd = new Random(seed);
       holes = HOLES ? new Random(seed * 31 + 7) : null;
+      repeats = REPEATED ? new Random(seed * 41 + 13) : null;
+      ground = GROUND ? new Random(seed * 37 + 11) : null;
       int n = 4 + rnd.nextInt(4);
       x = new IntVar[n];
       for (int i = 0; i < n; i++) {
@@ -318,6 +341,9 @@ class LcgFuzzTest {
         if (rnd.nextBoolean()) {
           b[i] = new BooleanVar(store, "b" + i);
           vars.add(b[i]);
+          if (ground != null) {
+            ground(b[i]);
+          }
         } else {
           b[i] = intVar("b" + i, 0, 1);
         }
@@ -334,12 +360,41 @@ class LcgFuzzTest {
       if (rnd.nextBoolean()) {
         objective = rnd.nextBoolean() ? x[rnd.nextInt(n)] : sumObjective();
       }
+      for (IntVar v : groundLater) {
+        int value = valueOf(v);
+        v.domain.in(store.level, v, value, value);
+      }
+    }
+
+    // one variable in eight ground now, one in eight once the constraints are imposed (more leaves
+    // most models unsatisfiable, with few explanations to check)
+    private void ground(IntVar v) {
+      int choice = ground.nextInt(8);
+      System.out.println("DBG " + v.id() + " " + choice + " " + v.dom());
+      if (choice == 0) {
+        int value = valueOf(v);
+        v.domain.in(store.level, v, value, value);
+      } else if (choice == 1) {
+        groundLater.add(v);
+      }
+    }
+
+    private int valueOf(IntVar v) {
+      int[] values = new int[v.domain.getSize()];
+      int k = 0;
+      for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        values[k++] = e.nextElement();
+      }
+      return values[ground.nextInt(k)];
     }
 
     private IntVar intVar(String name, int min, int max) {
       IntVar v = new IntVar(store, name + "_" + vars.size(), min, max); // names may repeat
       if (holes != null) {
         punch(v);
+      }
+      if (ground != null) {
+        ground(v);
       }
       vars.add(v);
       return v;
@@ -395,7 +450,10 @@ class LcgFuzzTest {
       List<IntVar> pool = new ArrayList<>(List.of(from));
       IntVar[] result = new IntVar[Math.min(k, pool.size())];
       for (int i = 0; i < result.length; i++) {
-        result[i] = pool.remove(rnd.nextInt(pool.size()));
+        result[i] =
+            repeats != null && i > 0 && repeats.nextInt(3) == 0
+                ? result[repeats.nextInt(i)]
+                : pool.remove(rnd.nextInt(pool.size()));
       }
       return result;
     }
@@ -574,7 +632,7 @@ class LcgFuzzTest {
 
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(43);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(44);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -723,8 +781,26 @@ class LcgFuzzTest {
                 pick(x, 2),
                 new IntVar[] {intVar("my", -1, 3), rnd.nextBoolean() ? null : intVar("mz", 0, 2)},
                 intVar("mm", -2, 7));
+        case 43 -> arcTimes();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // arc-time precedences of 3 or 4 nodes over successors and times among the variables
+    private ArcTimes arcTimes() {
+      int n = 3 + rnd.nextInt(2);
+      IntVar[] succ = chain("as", n, 0, n - 1);
+      IntVar[] times = pick(x, n);
+      long[][] lag = new long[n][];
+      for (int v = 0; v < n; v++) {
+        if (rnd.nextInt(4) > 0) {
+          lag[v] = new long[n];
+          for (int w = 0; w < n; w++) {
+            lag[v][w] = rnd.nextInt(4) == 0 ? ArcTimes.NO_LAG : rnd.nextInt(4) - 1;
+          }
+        }
+      }
+      return new ArcTimes(succ, 0, times, lag);
     }
 
     // a 2 x 2 or 2 x 3 matrix of the 0/1 variables and the variables, with counted rows and columns
@@ -2238,6 +2314,72 @@ class LcgFuzzTest {
     return new Object[] {status, counts == null ? 0L : counts[3] - counts[4]};
   }
 
+  /**
+   * With {@code -Dlcg.fuzz.proof=true}: solves the random models with --proof logging and checks
+   * every proof with {@link RupChecker}, and its conclusion against the reference search (on
+   * demand, off by default). A model with a constraint that proof logging does not support is
+   * skipped.
+   */
+  @Test
+  void proofsCheckOnRandomModels() {
+    if (!Boolean.getBoolean("lcg.fuzz.proof")) {
+      return;
+    }
+    int checkedProofs = 0;
+    int unsupported = 0;
+    int rootFailures = 0;
+    for (int run = 0; run < RUNS; run++) {
+      long seed = SEED + (long) run;
+      Integer expected;
+      try {
+        expected = reference(new Model(seed));
+      } catch (FailException | ReferenceTimeout _) {
+        continue;
+      }
+      Model model = new Model(seed);
+      String where0 = "seed " + seed + "\n" + model.describe();
+      ByteArrayOutputStream opb = new ByteArrayOutputStream();
+      ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+      int status;
+      try {
+        LcgSolver solver = new LcgSolver(model.store);
+        solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        solver.setProof(opb, pbp);
+        status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
+      } catch (UnsupportedOperationException _) {
+        unsupported++;
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(where0, e);
+      }
+      String proofText = pbp.toString(StandardCharsets.US_ASCII);
+      String where =
+          where0
+              + (Boolean.getBoolean("lcg.fuzz.proofPrint")
+                  ? "\n" + opb.toString(StandardCharsets.US_ASCII) + "\n" + proofText
+                  : "");
+      RupChecker checker = new RupChecker();
+      String error = checker.check(opb.toString(StandardCharsets.US_ASCII), proofText);
+      assertThat(error).as(where).isNull();
+      if (expected == null && proofText.contains("failed at the root")) {
+        // without a root trail the root failure is not derived (FlatZinc proves it separately)
+        rootFailures++;
+      } else if (expected == null) {
+        // an optimisation without a solution concludes with infinite bounds
+        assertThat(checker.conclusion)
+            .as(where)
+            .isEqualTo(model.objective == null ? "UNSAT" : "BOUNDS INF INF");
+      } else if (model.objective != null) {
+        assertThat(checker.conclusion).as(where).isEqualTo("BOUNDS " + expected + " " + expected);
+      }
+      assertThat(status == CdclSolver.SAT).as(where).isEqualTo(expected != null);
+      checkedProofs++;
+    }
+    System.out.printf(
+        "lcg proof fuzz: %d runs, %d proofs checked, %d unsupported, %d root failures%n",
+        RUNS, checkedProofs, unsupported, rootFailures);
+  }
+
   @Test
   void agreesWithSearchOnRandomModels() {
     Map<String, long[]> statistics = new TreeMap<>();
@@ -2263,6 +2405,8 @@ class LcgFuzzTest {
         System.out.println("lcg fuzz: seed " + seed + " skipped, the reference search timed out");
         referenceTimeouts++;
         continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError("seed " + seed + "\n" + new Model(seed).describe(), e);
       }
       Model model = new Model(seed);
       String where = "seed " + seed + "\n" + model.describe();

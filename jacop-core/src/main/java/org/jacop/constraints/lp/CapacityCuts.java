@@ -65,6 +65,13 @@ import org.jacop.core.IntVar;
  * cuts over the same customers, see {@link CombCuts} (Padberg and Rao, Odd minimum cut-sets and
  * b-matchings, Mathematics of Operations Research 7, 1982; Grötschel and Padberg, Mathematical
  * Programming 16, 1979).
+ *
+ * <p>For routes with time windows ({@link Routes#setTimeWindows}) it separates infeasible path
+ * cuts: a path of the support graph that no vehicle can follow within the windows cannot be part of
+ * a solution, so a solution has at most p - 2 arcs of the tournament of a path of p nodes, the arcs
+ * from each node of the path to every later one (N. Ascheuer, M. Fischetti and M. Grötschel,
+ * Solving the asymmetric travelling salesman problem with time windows by branch-and-cut,
+ * Mathematical Programming 90(3), 2001, 475-506).
  */
 public final class CapacityCuts {
 
@@ -89,6 +96,21 @@ public final class CapacityCuts {
   private final long capacity;
   private final int n;
   private boolean[] mandatory;
+
+  // the infeasible path cuts of routes with time windows
+  private static final boolean PATHS = !"false".equals(System.getProperty("org.jacop.lp.pathCuts"));
+
+  // the most nodes of an infeasible path, and the most extensions tried in one separation
+  private static final int MAX_PATH = 16;
+  private static final int MAX_STEPS = 200_000;
+
+  // the time windows of the nodes and the least travel time of the arcs, or null
+  private long[] earliest;
+  private long[] latest;
+  private long[] travel;
+
+  // the infeasible path cuts separated
+  private int pathCuts;
 
   /**
    * A cut over arcs of the routes: {@code sum w[k] x[arcs[k]] >= bound} when entering, else {@code
@@ -172,6 +194,11 @@ public final class CapacityCuts {
    */
   public CapacityCuts(Routes routes) {
     this(routes.tails, routes.heads, routes.literals, routes.demands, routes.capacity);
+    if (PATHS && routes.earliest() != null) {
+      this.earliest = routes.earliest();
+      this.latest = routes.latest();
+      this.travel = routes.travel();
+    }
   }
 
   private CapacityCuts(int[] tails, int[] heads, IntVar[] literals, int[] demands, long capacity) {
@@ -209,6 +236,9 @@ public final class CapacityCuts {
     }
     CapacityCuts c = new CapacityCuts(tails, heads, copied, demands, capacity);
     c.mandatory = mandatory;
+    c.earliest = earliest;
+    c.latest = latest;
+    c.travel = travel;
     return c;
   }
 
@@ -279,6 +309,9 @@ public final class CapacityCuts {
           cuts.add(m);
         }
       }
+    }
+    if (earliest != null) {
+      paths(value, cuts);
     }
     cuts.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
     if (cuts.size() >= limit) {
@@ -456,5 +489,155 @@ public final class CapacityCuts {
         true,
         d,
         violation / Math.sqrt(norm));
+  }
+
+  /**
+   * It returns the number of infeasible path cuts separated so far.
+   *
+   * @return the number of cuts
+   */
+  public int pathCuts() {
+    return pathCuts;
+  }
+
+  // the infeasible path cuts violated by the values (Ascheuer, Fischetti and Grötschel): a path
+  // v1, ..., vp that no route can follow within the time windows has at most p - 2 of its arcs in
+  // a solution, and so has its tournament, the arcs (va, vb) with a < b (the arcs out of the
+  // depot only from v1 and into it only to vp, as the depot has many routes). The paths are
+  // grown along the arcs of the support graph from every node while their arcs could still
+  // violate the cut, each one checked by the earliest arrival times along it; a path that cannot
+  // be followed is not grown further, so the cut is over a minimal one.
+  private void paths(double[] value, List<Cut> cuts) {
+    int[] outStart = new int[n + 1];
+    for (int a = 0; a < tails.length; a++) {
+      if (tails[a] != heads[a] && value[a] > EPSILON) {
+        outStart[tails[a] + 1]++;
+      }
+    }
+    for (int v = 0; v < n; v++) {
+      outStart[v + 1] += outStart[v];
+    }
+    int[] out = new int[outStart[n]];
+    int[] fill = Arrays.copyOf(outStart, n);
+    for (int a = 0; a < tails.length; a++) {
+      if (tails[a] != heads[a] && value[a] > EPSILON) {
+        out[fill[tails[a]]++] = a;
+      }
+    }
+    // the arc of each pair, for the tournaments
+    java.util.Map<Long, Integer> arcOf = new java.util.HashMap<>();
+    for (int a = 0; a < tails.length; a++) {
+      if (tails[a] != heads[a]) {
+        arcOf.put((long) tails[a] * n + heads[a], a);
+      }
+    }
+    int[] path = new int[MAX_PATH];
+    long[] time = new long[MAX_PATH];
+    boolean[] on = new boolean[n];
+    int[] steps = {0};
+    Set<List<Integer>> seen = new HashSet<>();
+    for (int v = 0; v < n; v++) {
+      if (v != 0 && !mandatory[v]) {
+        continue;
+      }
+      path[0] = v;
+      time[0] = earliest[v];
+      on[v] = true;
+      grow(1, 0.0, path, time, on, out, outStart, value, arcOf, cuts, seen, steps);
+      on[v] = false;
+    }
+  }
+
+  private void grow(
+      int size,
+      double sum,
+      int[] path,
+      long[] time,
+      boolean[] on,
+      int[] out,
+      int[] outStart,
+      double[] value,
+      java.util.Map<Long, Integer> arcOf,
+      List<Cut> cuts,
+      Set<List<Integer>> seen,
+      int[] steps) {
+    int last = path[size - 1];
+    if (last == 0 && size > 1) {
+      return;
+    }
+    for (int i = outStart[last]; i < outStart[last + 1]; i++) {
+      if (++steps[0] > MAX_STEPS) {
+        return;
+      }
+      int a = out[i];
+      int h = heads[a];
+      if (on[h] || h != 0 && !mandatory[h]) {
+        continue;
+      }
+      double s = sum + value[a];
+      // p nodes, p - 1 arcs at s: the cut p - 2 can be violated only while s > p - 2; each
+      // further arc adds at most one to both sides
+      if (s <= size - 1 + MIN_VIOLATION) {
+        continue;
+      }
+      long t =
+          travel[a] == Long.MIN_VALUE
+              ? earliest[h]
+              : Math.max(earliest[h], time[size - 1] + travel[a]);
+      path[size] = h;
+      if (t > latest[h]) {
+        Cut c = pathCut(path, size + 1, value, arcOf, seen);
+        if (c != null) {
+          cuts.add(c);
+          pathCuts++;
+        }
+        continue;
+      }
+      if (size + 1 < MAX_PATH && h != 0) {
+        time[size] = t;
+        on[h] = true;
+        grow(size + 1, s, path, time, on, out, outStart, value, arcOf, cuts, seen, steps);
+        on[h] = false;
+      }
+    }
+  }
+
+  // the tournament cut of the infeasible path, or null when the values do not violate it
+  private Cut pathCut(
+      int[] path,
+      int p,
+      double[] value,
+      java.util.Map<Long, Integer> arcOf,
+      Set<List<Integer>> seen) {
+    List<Integer> key = new ArrayList<>(p);
+    for (int i = 0; i < p; i++) {
+      key.add(path[i]);
+    }
+    if (!seen.add(key)) {
+      return null;
+    }
+    List<Integer> arcs = new ArrayList<>();
+    double lhs = 0;
+    for (int x = 0; x < p; x++) {
+      for (int y = x + 1; y < p; y++) {
+        // the depot: only its arc to the second node and from the one before last
+        if (path[x] == 0 && y != 1 || path[y] == 0 && x != p - 2) {
+          continue;
+        }
+        Integer a = arcOf.get((long) path[x] * n + path[y]);
+        if (a != null) {
+          arcs.add(a);
+          lhs += value[a];
+        }
+      }
+    }
+    double violation = lhs - (p - 2);
+    if (violation <= MIN_VIOLATION) {
+      return null;
+    }
+    int[] as = arcs.stream().mapToInt(Integer::intValue).toArray();
+    long[] w = new long[as.length];
+    Arrays.fill(w, 1);
+    return new Cut(as, w, false, p - 2L, violation / Math.sqrt(as.length));
   }
 }

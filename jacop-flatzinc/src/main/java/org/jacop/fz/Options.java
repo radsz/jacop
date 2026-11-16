@@ -237,6 +237,9 @@ public class Options {
                 that makes fewer conflicts per second by lcg-slow-at, has a solution and
                 stopped making progress, gives way to free search without learning,
                 default 300; 0 = off),
+                lcg-slow-literal=<conflicts per second> (with lcg-slow-rate: the slow rate is
+                at least this many conflicts per second per literal of an average learnt
+                clause, default 5; 0 = off),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
                 lcg-slow-unsolved=<conflicts per second> (with --lcg and an objective: LCG
@@ -320,9 +323,10 @@ public class Options {
                 routes of two-index vrp models, default 1),
                 lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
                 default 1), lns-kinds=<kind>+<kind>... (the neighbourhoods used, of random, graph,
-                propagation, objective, constraints, scheduling, packing, routes, related, blocks;
+                propagation, objective, constraints, scheduling, packing, routes, related, blocks, rins;
                 default all), lns-blocks=0|1 (whole blocks of the decomposition bound as
-                neighbourhoods, default 1),
+                neighbourhoods, default 1), lns-rins=0|1 (relax the variables farthest from the
+                linear relaxation, default 1),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
