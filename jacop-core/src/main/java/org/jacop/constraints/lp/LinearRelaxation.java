@@ -1651,10 +1651,11 @@ public class LinearRelaxation extends Constraint
     }
     List<LinearForm> rows = Linearizations.refutationRows(constraints, given);
     if (rows.isEmpty()) {
-      return PSEUDO_OBJECTIVE
-          ? pseudoObjectiveRefutation(
-              substituted.isEmpty() ? given : substitute(given, substituted, null))
-          : null;
+      if (!PSEUDO_OBJECTIVE) {
+        return null;
+      }
+      List<LinearForm> model = substituted.isEmpty() ? given : substitute(given, substituted, null);
+      return pseudoObjectiveRefutation(model);
     }
     PairCliques merged = PairCliques.merge(rows, List.of());
     rows = merged.rows;
@@ -1749,8 +1750,10 @@ public class LinearRelaxation extends Constraint
       for (int k = 0; k < w.length; k++) {
         w[k] = Math.multiplyExact(sign, longest.weights()[k]);
         IntVar v = longest.vars()[k];
-        lo = Math.addExact(lo, Math.min(Math.multiplyExact(w[k], v.min()), w[k] * (long) v.max()));
-        hi = Math.addExact(hi, Math.max(Math.multiplyExact(w[k], v.min()), w[k] * (long) v.max()));
+        long atMin = Math.multiplyExact(w[k], v.min());
+        long atMax = Math.multiplyExact(w[k], v.max());
+        lo = Math.addExact(lo, Math.min(atMin, atMax));
+        hi = Math.addExact(hi, Math.max(atMin, atMax));
       }
     } catch (ArithmeticException _) {
       return null;
@@ -2036,10 +2039,11 @@ public class LinearRelaxation extends Constraint
   private static final int REFUTATION_PIVOTS =
       Integer.getInteger("org.jacop.lp.rootRefutationPivots", 2_500);
 
-  // a satisfaction model with no value encoding: the refutation minimizes its longest inequality
-  // with cut rounds (pseudoObjectiveRefutation), when that row has at least this many variables
+  // a satisfaction model with no value encoding: the refutation minimizes the inequality whose
+  // variables are in the most rows with cut rounds (pseudoObjectiveRefutation), when that row has
+  // at least this many variables
   private static final boolean PSEUDO_OBJECTIVE =
-      !"false".equals(System.getProperty("org.jacop.lp.refutationObjective"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.refutationObjective"));
   private static final int PSEUDO_OBJECTIVE_LENGTH =
       Integer.getInteger("org.jacop.lp.refutationObjectiveLength", 3);
 
@@ -3967,6 +3971,14 @@ public class LinearRelaxation extends Constraint
     };
   }
 
+  // the pivot limit of one cut round; a refutation is solved once, so its rounds may take the
+  // pivots of its root solve, since a round stopped at the limit is dropped and the refutation
+  // then fails (php-exit: 4,454 pivots in all)
+  private int roundPivots(long size) {
+    int pivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
+    return pseudoObjective ? Math.max(pivots, REFUTATION_PIVOTS) : pivots;
+  }
+
   /**
    * Rounds of MIR cuts at the root, each followed by a re-solve from the same basis. The cuts come
    * from the rows of the tableau of the basic columns with fractional values (Gomory mixed-integer
@@ -4055,15 +4067,7 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
-      // a refutation is solved once: its rounds may take the pivots of its root solve, since a
-      // round stopped at the limit is dropped and the refutation then fails (php-exit: 4,454
-      // pivots in all)
-      int roundPivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
-      status =
-          rootSolve(
-              lp,
-              pseudoObjective ? Math.max(roundPivots, REFUTATION_PIVOTS) : roundPivots,
-              rootWork() / CUT_ROUNDS);
+      status = rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
@@ -4429,15 +4433,7 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
-      // a refutation is solved once: its rounds may take the pivots of its root solve, since a
-      // round stopped at the limit is dropped and the refutation then fails (php-exit: 4,454
-      // pivots in all)
-      int roundPivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
-      status =
-          rootSolve(
-              lp,
-              pseudoObjective ? Math.max(roundPivots, REFUTATION_PIVOTS) : roundPivots,
-              rootWork() / CUT_ROUNDS);
+      status = rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
         status = DualSimplex.OPTIMAL;
@@ -4661,15 +4657,7 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
-      // a refutation is solved once: its rounds may take the pivots of its root solve, since a
-      // round stopped at the limit is dropped and the refutation then fails (php-exit: 4,454
-      // pivots in all)
-      int roundPivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
-      status =
-          rootSolve(
-              lp,
-              pseudoObjective ? Math.max(roundPivots, REFUTATION_PIVOTS) : roundPivots,
-              rootWork() / CUT_ROUNDS);
+      status = rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
         status = DualSimplex.OPTIMAL;
