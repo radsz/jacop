@@ -161,6 +161,15 @@ final class Congruence {
    * @return false when the formula is unsatisfiable
    */
   boolean run() {
+    boolean free = false;
+    for (int v = 0; v < numVars && !free; v++) {
+      free = !frozen[v] && occSize[2 * v] + occSize[2 * v + 1] > 0;
+    }
+    if (!free) {
+      result = clauses;
+      substituted = new boolean[numVars];
+      return true; // nothing could be replaced
+    }
     binaryComponents();
     if (!unsat && gatesOn) {
       extractGates();
@@ -711,14 +720,12 @@ final class Congruence {
     }
     int[] ext = new int[64];
     int extSize = 0;
-    int extra = 0;
     for (int v = 0; v < numVars; v++) {
       int r = find(2 * v);
       if (r == 2 * v) {
         continue;
       }
       if (frozen[v]) {
-        extra++;
         continue;
       }
       substituted[v] = true;
@@ -735,7 +742,7 @@ final class Congruence {
       ext[extSize++] = 2;
     }
     stack = Arrays.copyOf(ext, extSize);
-    int[][] res = new int[numClauses + 2 * extra][];
+    int[][] res = new int[numClauses][];
     int n = 0;
     int[] mark = new int[2 * numVars];
     int stamp = 0;
@@ -779,17 +786,6 @@ final class Congruence {
       }
       if (proof != null) {
         proof.delete(c, 0, c.length);
-      }
-    }
-    for (int v = 0; v < numVars; v++) {
-      int r = find(2 * v);
-      if (r != 2 * v && frozen[v]) {
-        res[n++] = new int[] {2 * v + 1, r};
-        res[n++] = new int[] {2 * v, r ^ 1};
-        if (proof != null) {
-          proof.add(res[n - 2], 0, 2);
-          proof.add(res[n - 1], 0, 2);
-        }
       }
     }
     result = Arrays.copyOf(res, n);
