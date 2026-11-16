@@ -6826,7 +6826,42 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
-381. A satisfaction model stated in clauses over 0/1 variables, with no
+381. Free search (-f) on satisfaction models gives LCG away to free search
+   without learning when learning does not cut the search: at 10 % of -t
+   (then each time the elapsed time doubles) the conflicts so far jump
+   back fewer than 1.5 levels on average and their learnt clauses have
+   an LBD of at least 0.4 of the conflict depth, so the clauses act like
+   chronological backtracking. Before, only optimisation searches gave
+   way (lcg-slow-rate). --free-config lcg-sat-probe=on|report|off,
+   lcg-sat-at=<share of -t> (0 gives way at once), lcg-sat-jump and
+   lcg-sat-lbd set it; with -s it prints lcgSatProbe. Fixed search keeps
+   LCG, since the annotation backtracks about one level a conflict
+   whatever learning does. On the 35 satisfaction instances of the wide
+   set and the XCSP competitions where -f LCG runs for more than 10 s, at
+   600 s in two repeats it solves 20 -> 25 and 21 -> 26, total time 0.73
+   and 0.78 (Subisomorphism g11-g30 and g11-g44, AnotherMagicSquare-04
+   proved UNSAT, FRB-45-21-3 solved).
+
+382. The LP relaxation keeps the value encodings of the model's variables
+   (sum b_v = 1, x = sum v b_v) when the other rows do not all fit its
+   first-solve trial. Before, they came after thousands of linearized rows
+   and missed the trial: on the ROADEF 2020 maintenance planning model the
+   relaxation could leave every Boolean at 0, all its duals were zero and
+   it never pruned. Now they go first, are tried alone first, and get the
+   time of a large root solve (10 % of -t). New clique rows over value
+   Booleans: value Booleans of one variable that each imply a Boolean a
+   give sum b_v <= a (implications lifted over a clique of the conflict
+   graph, A. Atamturk, G. L. Nemhauser, M. W. P. Savelsbergh, Conflict
+   graphs in solving integer programming problems, European Journal of
+   Operational Research 121(1), 2000), and set packing rows over such
+   Booleans are restated over the b_v. The sparse simplex takes up to
+   50,000 columns (was 30,000). ROADEF 2020 at 600 s with -f: dual bound
+   A_01 31,697,304 -> 31,804,427 (optimum 31,820,680), A_06 20,116,179 ->
+   21,448,097 (optimum 21,498,698). 36 of the 240 wide instances are
+   reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
+   -Dorg.jacop.lp.valueCliques=false turn them off.
+
+383. A satisfaction model stated in clauses over 0/1 variables, with no
    value encodings for the root refutation, gets a root-only refutation
    LP over its clause rows when its binary clauses hold at-most-one
    structure: unit propagation and the substitution of equivalent
