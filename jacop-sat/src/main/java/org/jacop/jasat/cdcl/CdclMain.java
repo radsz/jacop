@@ -140,6 +140,18 @@ public final class CdclMain {
       out.printf(
           "c eliminated variables %d, walk %.2f s%n",
           solver.eliminatedCount(), solver.walkNanos / 1e9);
+      out.printf(
+          "c vivify tried %d (irredundant %d), probes %d, reused %d, strengthened %d (irredundant %d),"
+              + " removed %d (irredundant %d), %.2f s%n",
+          solver.vivifyTried,
+          solver.vivifyTriedIrredundant,
+          solver.vivifyProbes,
+          solver.vivifyReused,
+          solver.vivifyStrengthened,
+          solver.vivifyStrengthenedIrredundant,
+          solver.vivifyRemoved,
+          solver.vivifyRemovedIrredundant,
+          solver.vivifyNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");
