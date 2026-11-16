@@ -319,6 +319,9 @@ public final class CdclSolver {
   private static final long PROBE_MIN_EFFORT = 1_000_000;
   private static final int PROBE_EFFORT_PER_MILLE = 50;
 
+  /** Statistics: propagations of failed-literal probing, not counted in {@link #propagations}. */
+  public long probePropagations;
+
   /** Statistics: literals probed. */
   public long probedLiterals;
 
@@ -3931,6 +3934,7 @@ public final class CdclSolver {
       return refuted();
     }
     long start = System.nanoTime();
+    long propagationsBefore = propagations;
     long budget =
         propagations
             + Math.max(
@@ -3940,6 +3944,8 @@ public final class CdclSolver {
     chrono = false;
     boolean wasNotifying = notifying;
     notifying = false; // the probing levels are internal
+    // probing must not move the saved phases: when it finds nothing, the search stays as it was
+    byte[] phases = Arrays.copyOf(savedSign, numVars);
     if (probeMark.length < 2 * numVars) {
       probeMark = new int[2 * numVars];
       probeStamp = 0;
@@ -3965,7 +3971,10 @@ public final class CdclSolver {
     } finally {
       chrono = wasChrono;
       notifying = wasNotifying;
+      System.arraycopy(phases, 0, savedSign, 0, numVars);
     }
+    probePropagations += propagations - propagationsBefore;
+    propagations = propagationsBefore; // the search's schedules count its own propagations
     propagationsAtProbe = propagations;
     probeNanos += System.nanoTime() - start;
     return result >= 0 && (propagate() == NO_CONFLICT || refuted());
