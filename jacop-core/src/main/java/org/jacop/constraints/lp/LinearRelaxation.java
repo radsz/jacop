@@ -2434,6 +2434,28 @@ public class LinearRelaxation extends Constraint
     } catch (ArithmeticException _) {
       return forms;
     }
+    // a variable that a row still has after the expansion, which stops at depth 8, keeps its
+    // definition, and so do the variables of that definition: the shared sums of linear overlap
+    // factoring nest deeper (CSPLib bus driver scheduling c1, 370 sums: without their definitions
+    // they were free columns and the root bound 4.4 instead of 25.4)
+    Set<IntVar> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> todo = new ArrayList<>();
+    for (LinearForm f : result) {
+      for (IntVar v : f.vars()) {
+        if (definition.containsKey(v) && kept.add(v)) {
+          todo.add(v);
+        }
+      }
+    }
+    while (!todo.isEmpty()) {
+      LinearForm d = definition.get(todo.removeLast());
+      result.add(d);
+      for (IntVar v : d.vars()) {
+        if (definition.containsKey(v) && kept.add(v)) {
+          todo.add(v);
+        }
+      }
+    }
     return result;
   }
 
