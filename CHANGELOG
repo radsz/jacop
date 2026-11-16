@@ -6599,7 +6599,19 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-366. Free search (-f) of a model without a search annotation branches on
+366. Free search picks its dom/wdeg variable from an indexed heap kept up
+   to date by domain changes (Store.domainWatcher) instead of scanning
+   every search variable and counting unfixed scope variables at each
+   decision. The choice is the same variable. On TelecomScheduling-B-10
+   (XCSP 2026, about 5000 search variables), where the scan was 40 % of
+   the time, -f makes 73 % more nodes in 120 s. Over 16 wide instances
+   that hand over from LCG to plain CP search and 3 TelecomScheduling
+   instances at 600 s the total time goes from 10815 to 10569 s, with
+   BACPj-01-08 proved; on wide-quick at 240 s it is neutral (2829 vs
+   2839 s, same 52 solved). -Dorg.jacop.search.free.domWdegScan=true
+   restores the scan.
+
+367. Free search (-f) of a model without a search annotation branches on
    the variables that no defines_var annotation names before the defined
    ones: under lazy clause generation until the first solution, and
    always in free search without learning (after LCG gives way). On
@@ -6614,7 +6626,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.definedLast=always keeps the order after the first
    solution, false restores the old order.
 
-367. The FlatZinc front end posts the aggregated flow of a regular
+368. The FlatZinc front end posts the aggregated flow of a regular
    constraint whose sequence is counted by cardinality constraints, one
    per residue class i mod p of its positions (RegularFlowDetector): the
    automaton's layers of one class are merged, the cardinalities give the
@@ -6631,7 +6643,7 @@ Version 5.0 (unreleased)
    ones keep their times. -Dorg.jacop.fz.regularFlow=false turns it off;
    --proof does not post it.
 
-368. CostNetworkBound (-Dorg.jacop.fz.costNetwork=true) cites each atom of a
+369. CostNetworkBound (-Dorg.jacop.fz.costNetwork=true) cites each atom of a
    lazy clause generation reason once and propagates incrementally.
    A reason cited one atom per cheaper value of a fixed variable and the
    bounds of a neighbour once per edge, so on celar scen07 a reason held
@@ -6648,7 +6660,7 @@ Version 5.0 (unreleased)
    0.79), and improves the objective of all three celar instances; -f
    proves 16 instead of 15 (total time 0.87).
 
-369. The FlatZinc front end posts the LYM inequality of vectors that are
+370. The FlatZinc front end posts the LYM inequality of vectors that are
    pairwise incomparable in the product order (every ordered pair u, v
    has "u[c] < v[c] for some c", as a clause of literals that imply
    u[c] < v[c] or as two element constraints with the same index whose
@@ -6674,7 +6686,7 @@ Version 5.0 (unreleased)
    instances. -Dorg.jacop.fz.antichain=false turns it off; it is off under
    --proof.
 
-370. A LinearInt (MiniZinc int_lin_eq/le with a variable sum) of 200 or
+371. A LinearInt (MiniZinc int_lin_eq/le with a variable sum) of 200 or
    more terms keeps the bounds of its sum incrementally: the store tells
    it about every bound change of its variables and a consistency call no
    longer rescans all terms, which dominated the cost sums of assignment
@@ -6690,7 +6702,7 @@ Version 5.0 (unreleased)
    heaviest candidate, where no test can prune; this was 88 % of the time
    of a1_5 under -f.
 
-371. The core-guided phase of lazy clause generation trims each core: it
+372. The core-guided phase of lazy clause generation trims each core: it
    solves again under the core's own literals, with at most 1000
    conflicts a call and up to 3 calls while the core shrinks, and relaxes
    the smallest core it got (core trimming in RC2: Ignatiev, Morgado and
@@ -6709,7 +6721,7 @@ Version 5.0 (unreleased)
    (LcgSolver.setCoreTrim); the statistic lcgCoreShrunk counts the
    literals it took out of cores.
 
-372. JaLP's presolve also removes forcing rows and fixes dominated columns
+373. JaLP's presolve also removes forcing rows and fixes dominated columns
    (Andersen and Andersen, "Presolving in linear programming",
    Mathematical Programming 71 (1995), sections 3.2 and 3.5; part of the
    Gurobi catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger,
@@ -6725,7 +6737,7 @@ Version 5.0 (unreleased)
    above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
    build an LP, where results stay the same.
 
-373. The linear relaxation takes the rows over the terms of the objective on
+374. The linear relaxation takes the rows over the terms of the objective on
    the sparse simplex when they do not fit the dense tableau. A model
    stated in clauses and elements has few rows of its own (CSPLib
    warehouses, prob034: 2), so the dense simplex was chosen and the clause
@@ -6739,7 +6751,7 @@ Version 5.0 (unreleased)
    proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
    turns it off; the statistic lpNearRows gives the rows taken.
 
-374. Symmetry breaking posts value precedence in models whose own
+375. Symmetry breaking posts value precedence in models whose own
    lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
    hid that their values are interchangeable. Each such constraint
    X <=lex sigma(X) must compare a prefix of one common order, with sigma
@@ -6752,7 +6764,7 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
-375. Free search (-f) of an optimisation model without a search
+376. Free search (-f) of an optimisation model without a search
    annotation, after slow lazy clause generation gave way without a
    solution, takes turns until its first solution with runs that fix the
    search variables in the model's order, least value first
@@ -6766,7 +6778,7 @@ Version 5.0 (unreleased)
    with a solution and 7 better against 3 worse (seed spread); neutral on
    the wide set.
 
-376. The FlatZinc front end posts the reified comparisons of one variable
+377. The FlatZinc front end posts the reified comparisons of one variable
    with constants (int_le_reif, int_lt_reif with a constant on either
    side) and their half-reifications (int_le_imp, int_lt_imp) as one
    ChannelOrder per variable with two or more of them, in place of one
@@ -6783,7 +6795,7 @@ Version 5.0 (unreleased)
    reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
    half-reifications.
 
-377. ArgMax and ArgMin bound the values at positions that the index can
+378. ArgMax and ArgMin bound the values at positions that the index can
    no longer take: such a position may not reach the extreme over the
    positions the index can still take (strictly for positions after
    them, since the first extreme wins). ArgMax and ArgMin now reach
