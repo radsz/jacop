@@ -594,6 +594,50 @@ class FreeSearchTest {
   }
 
   @Test
+  void runsAlternateUntilTheFirstSolution() {
+    // the main branching takes every other run before the first solution, so its failures are
+    // learned; with a period of one every run uses the alternative branching
+    for (int period : new int[] {1, 2, 4}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[5];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+      }
+      for (int i = 0; i < x.length; i++) {
+        for (int j = i + 1; j < x.length; j++) {
+          store.impose(new XneqY(x[i], x[j]));
+        }
+      }
+      int[] seen = new int[1];
+      SearchMonitor counter =
+          new SearchMonitor() {
+            @Override
+            public void onFailure(Constraint failed, Var decision) {
+              seen[0]++;
+            }
+          };
+      FreeSearch search =
+          FreeSearch.builder(store, new SimpleSelect<>(x, null, new IndomainMin<>()))
+              .alternateWith(
+                  new SimpleSelect<>(x, null, new IndomainMax<>()),
+                  FreeSearch.Alternation.EVERY_RESTART_UNTIL_FIRST_SOLUTION)
+              .alternationPeriod(period)
+              .restarts(new LubyCalculator(1))
+              .nogoodsFromRestarts(false)
+              .monitor(counter)
+              .build();
+      assertEquals(Status.UNSATISFIABLE, search.solve());
+      assertTrue(search.getFailures() > 0);
+      if (period == 1) {
+        assertEquals(0, seen[0]);
+      } else {
+        assertTrue(seen[0] > 0, "period " + period);
+        assertTrue(seen[0] < search.getFailures(), "period " + period);
+      }
+    }
+  }
+
+  @Test
   void limitsStopTheSearchWithoutAProof() {
     Random rnd = new Random(4);
     for (int k = 0; k < INSTANCES; k++) {
@@ -1287,6 +1331,62 @@ class FreeSearchTest {
           Arrays.toString(domWdegRun(instance, false)),
           instance.toString());
     }
+  }
+
+  /**
+   * The incremental selection of dom/wdeg follows every change of the domains: checked at each
+   * selection against one from scratch, with restarts, nogoods, forgotten weights, large
+   * neighbourhoods and a first selection deep in the tree (after a static order on half of x),
+   * whose earlier changes backtracking undoes.
+   */
+  @Test
+  void incrementalDomWdegFollowsEveryChange() {
+    Random rnd = new Random(17);
+    int incremental = 0;
+    for (int k = 0; k < INSTANCES; k++) {
+      Instance instance = Instance.random(rnd);
+      int[] reference = instance.bruteForce();
+      for (int option = 0; option < 8; option++) {
+        Model model = new Model(instance);
+        IndomainLastSolution phase = new IndomainLastSolution(concat(model), new IndomainMin<>());
+        DomWdeg domWdeg = new DomWdeg(concat(model), phase).checkSelections();
+        if ((option & 1) != 0) {
+          domWdeg.flushEvery(2);
+        }
+        SelectChoicePoint<? extends Var> select = domWdeg;
+        if ((option & 2) != 0) {
+          select =
+              new SequenceSelect(
+                  List.of(
+                      new SimpleSelect<>(Arrays.copyOf(model.x, N / 2), null, new IndomainMax<>()),
+                      domWdeg));
+        }
+        FreeSearch.Builder builder =
+            FreeSearch.builder(model.store, select)
+                .monitor(phase)
+                .monitor(domWdeg)
+                .restarts(new LubyCalculator(1))
+                .nogoodsFromRestarts(true)
+                .restartOnSolution(true)
+                .onSolution(s -> model.checkSolution());
+        if ((option & 4) != 0) {
+          builder.lns(
+              new AdaptiveLns(model.store, concat(model), model.cost, new Random(k)), 1.0, 3);
+        }
+        FreeSearch search = builder.minimize(model.cost).build();
+        Status status = search.solve();
+        if (domWdeg.incremental()) {
+          incremental++;
+        }
+        if (reference[0] == 0) {
+          assertEquals(Status.UNSATISFIABLE, status, instance.toString());
+        } else {
+          assertEquals(Status.OPTIMAL, status, instance.toString());
+          assertEquals(reference[1], search.getCostValue(), instance.toString());
+        }
+      }
+    }
+    assertTrue(incremental > 0);
   }
 
   /** Checks that the domains of the model are those it had before the search. */
