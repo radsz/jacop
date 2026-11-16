@@ -37,7 +37,9 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
@@ -202,6 +204,133 @@ class XcspTableFlatzincTest {
       assertEquals(expected, solveAll(fzn.toString()), message);
       assertEquals(expected, solveAll(fzn.toString(), "--lcg", "off"), message);
     }
+  }
+
+  @Test
+  void listsDifferMatchesBruteForce() throws IOException {
+    // short tables saying two lists differ (BinaryPuzzle of XCSP 2023) become AllDifferentLists
+    Random random = new Random(20261116);
+    for (int run = 0; run < 40; run++) {
+      int[] values = random.nextBoolean() ? new int[] {0, 1} : new int[] {0, 1, 3};
+      int n = 1 + random.nextInt(2);
+      int m = 2 + random.nextInt(3);
+      int vars = Math.min(m * n, values.length == 2 ? 7 : 5);
+      int[][] lists = new int[m][n];
+      for (int[] list : lists) {
+        for (int k = 0; k < n; k++) {
+          list[k] = random.nextInt(vars);
+        }
+      }
+      // all pairs (one AllDifferentLists) or some of them (one per pair)
+      boolean all = random.nextBoolean();
+      boolean dropRow = random.nextInt(5) == 0;
+      StringBuilder constraints = new StringBuilder();
+      List<int[]> pairs = new ArrayList<>();
+      for (int i = 0; i < m; i++) {
+        for (int j = i + 1; j < m; j++) {
+          if (all || random.nextBoolean()) {
+            pairs.add(new int[] {i, j});
+          }
+        }
+      }
+      List<int[][]> tables = new ArrayList<>();
+      for (int[] pair : pairs) {
+        List<int[]> rows = new ArrayList<>();
+        for (int k = 0; k < n; k++) {
+          for (int a : values) {
+            for (int b : values) {
+              if (a != b) {
+                int[] row = new int[2 * n];
+                Arrays.fill(row, STAR);
+                row[k] = a;
+                row[n + k] = b;
+                rows.add(row);
+              }
+            }
+          }
+        }
+        if (dropRow) {
+          rows.remove(random.nextInt(rows.size()));
+        }
+        int[][] table = rows.toArray(new int[0][]);
+        tables.add(table);
+        int[] scope = new int[2 * n];
+        System.arraycopy(lists[pair[0]], 0, scope, 0, n);
+        System.arraycopy(lists[pair[1]], 0, scope, n, n);
+        constraints.append(shortTable(scope, table));
+      }
+      Set<String> expected = new TreeSet<>();
+      enumerateLists(new int[vars], 0, values, lists, pairs, tables, expected);
+      String fzn = header(vars, values) + constraints + "solve satisfy;\n";
+      String message = "run " + run + "\n" + fzn;
+      assertEquals(expected, solveAll(fzn), message);
+      assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
+    }
+  }
+
+  private static void enumerateLists(
+      int[] x,
+      int i,
+      int[] values,
+      int[][] lists,
+      List<int[]> pairs,
+      List<int[][]> tables,
+      Set<String> out) {
+    if (i == x.length) {
+      for (int p = 0; p < pairs.size(); p++) {
+        int[] a = lists[pairs.get(p)[0]];
+        int[] b = lists[pairs.get(p)[1]];
+        int[] scope = new int[a.length + b.length];
+        System.arraycopy(a, 0, scope, 0, a.length);
+        System.arraycopy(b, 0, scope, a.length, b.length);
+        if (Arrays.stream(tables.get(p)).noneMatch(row -> allowed(x, scope, row))) {
+          return;
+        }
+      }
+      out.add(
+          Arrays.stream(x)
+              .mapToObj(String::valueOf)
+              .collect(Collectors.joining(", ", "x = array1d(1.." + x.length + ", [", "]);")));
+      return;
+    }
+    for (int v : values) {
+      x[i] = v;
+      enumerateLists(x, i + 1, values, lists, pairs, tables, out);
+    }
+  }
+
+  private static String header(int vars, int[] values) {
+    String domain =
+        Arrays.stream(values).mapToObj(String::valueOf).collect(Collectors.joining(",", "{", "}"));
+    StringBuilder fzn = new StringBuilder();
+    fzn.append(
+        "predicate jacop_short_table_int(array [int] of var int: x,array [int] of int: t,"
+            + "int: star);\n");
+    for (int i = 0; i < vars; i++) {
+      fzn.append("var ").append(domain).append(": x").append(i).append(";\n");
+    }
+    fzn.append("array [1..")
+        .append(vars)
+        .append("] of var int: x:: output_array([1..")
+        .append(vars)
+        .append("]) = ")
+        .append(
+            IntStream.range(0, vars)
+                .mapToObj(i -> "x" + i)
+                .collect(Collectors.joining(",", "[", "]")))
+        .append(";\n");
+    return fzn.toString();
+  }
+
+  private static String shortTable(int[] scope, int[][] rows) {
+    String cells =
+        Arrays.stream(rows)
+            .flatMapToInt(Arrays::stream)
+            .mapToObj(String::valueOf)
+            .collect(Collectors.joining(",", "[", "]"));
+    String xs =
+        Arrays.stream(scope).mapToObj(i -> "x" + i).collect(Collectors.joining(",", "[", "]"));
+    return "constraint jacop_short_table_int(" + xs + "," + cells + "," + STAR + ");\n";
   }
 
   private void randomTables(boolean positive, long seed) throws IOException {
