@@ -4458,6 +4458,24 @@ public final class LcgSolver implements ExternalPropagator {
     return coreTrim;
   }
 
+  // -Djacop.lcg.coreExhaust=K: the most totalizer outputs of each relaxed core that the
+  // core-guided phase tests alone (core exhaustion); 0 = never
+  private int coreExhaust = Integer.getInteger("jacop.lcg.coreExhaust", 0);
+
+  /**
+   * Sets how many outputs of each new totalizer the core-guided phase assumes alone and relaxes as
+   * unit cores while they are refuted (core exhaustion); 0, the default, tests none.
+   *
+   * @param outputs the most outputs per core (property {@code jacop.lcg.coreExhaust})
+   */
+  public void setCoreExhaust(int outputs) {
+    coreExhaust = outputs;
+  }
+
+  int coreExhaust() {
+    return coreExhaust;
+  }
+
   /**
    * Sets whether the core-guided phase of {@link #minimize} is skipped after branch and bound when
    * its probe ({@link #setCoreDelay}) stopped without a solution of its own and branch and bound

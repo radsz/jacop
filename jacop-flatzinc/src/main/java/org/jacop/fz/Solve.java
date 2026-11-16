@@ -996,6 +996,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // a satisfaction model gets the value encodings for one root solve, which can refute it
       long built = System.nanoTime();
       refutation = LinearRelaxation.refutation(store, refutationClauses);
+      if (refutation == null) {
+        refutation = LinearRelaxation.clauseRefutation(store, refutationClauses);
+      }
       refutationBuildNanos = System.nanoTime() - built;
       if (refutation != null) {
         refutation.setTimeLimit(options.getTimeOut());
@@ -1131,7 +1134,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + "\n%%%mzn-stat: lpRefutationSolveTime="
               + refutation.solveNanos / 1e9
               + "\n%%%mzn-stat: lpRefutationPivots="
-              + refutation.pivots());
+              + refutation.pivots()
+              + "\n%%%mzn-stat: lpRefutationClauseUnits="
+              + refutation.clauseUnits
+              + "\n%%%mzn-stat: lpRefutationClauseEquivalences="
+              + refutation.clauseEquivalences);
     }
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
@@ -4502,6 +4509,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreShrunk="
         + core.coreShrunk
+        + "\n%%%mzn-stat: lcgCoreExhausted="
+        + core.exhaustedOutputs
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
