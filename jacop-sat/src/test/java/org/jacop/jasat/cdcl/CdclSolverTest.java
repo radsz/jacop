@@ -42,6 +42,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -569,6 +570,34 @@ class CdclSolverTest {
     s.setDeadline(System.nanoTime() - 1);
     assertNotNull(s.probe(vars + 1));
     assertFalse(early[0], "a decision with " + (vars - implied[0]) + " root consequences to come");
+  }
+
+  @Test
+  void eliminationResolvesOnlyGateClausesAgainstTheOthers() {
+    // x (variable 0) = a (variable 1), and x occurs in 4 other clauses of each sign. The 24
+    // resolvents of all clauses exceed the 10 clauses they replace, but only the 8 of a defining
+    // clause with another clause are needed (Een and Biere, SAT 2005)
+    int numVars = 18;
+    int x = 0;
+    int a = 2;
+    int[][] clauses = new int[10][];
+    clauses[0] = new int[] {x + 1, a};
+    clauses[1] = new int[] {x, a + 1};
+    for (int i = 0; i < 4; i++) {
+      clauses[2 + i] = new int[] {x, 4 * (1 + i), 4 * (1 + i) + 2};
+      clauses[6 + i] = new int[] {x + 1, 4 * (1 + i) + 1, 4 * (1 + i) + 3};
+    }
+    boolean[] frozen = new boolean[numVars];
+    Arrays.fill(frozen, true);
+    frozen[0] = false;
+    for (boolean gates : new boolean[] {false, true}) {
+      Eliminator e =
+          new Eliminator(numVars, clauses, clauses.length, frozen, null, 0, 0, 100, gates);
+      assertTrue(e.run());
+      assertEquals(gates, e.eliminated()[0], "x eliminated with gates " + gates);
+      assertEquals(gates ? 1 : 0, e.numGateEliminations());
+      assertEquals(gates ? 8 : 10, e.clauses().length);
+    }
   }
 
   @Test

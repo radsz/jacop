@@ -294,6 +294,14 @@ public final class CdclSolver {
   private long nextElimination = 5000;
   private int eliminationInterval = 5000;
   private int eliminationRounds;
+  // the elimination bound reached so far, the largest one, and the longest resolvent
+  private int eliminationBound;
+  private int maxEliminationBound = 16;
+  private int resolventLimit = 100;
+  private boolean eliminationGates = true;
+  int gateEliminations;
+  // time spent in elimination
+  long eliminationNanos;
   private long seed;
 
   // --- external propagator (see ExternalPropagator)
@@ -3460,6 +3468,37 @@ public final class CdclSolver {
   }
 
   /**
+   * Sets the largest bound of variable elimination: an elimination may add this many clauses more
+   * than it removes. The bound starts at 0 and rises through 1, 2, 4, 8 and 16 up to this one
+   * whenever a round eliminates nothing (default 16; 0 never adds clauses).
+   *
+   * @param bound the largest bound
+   */
+  public void setEliminationBound(int bound) {
+    maxEliminationBound = Math.max(0, bound);
+  }
+
+  /**
+   * Turns gate detection in variable elimination on or off (on by default). When a variable is the
+   * output of an AND, OR, ITE, XOR gate or an equivalence, only the resolvents of its defining
+   * clauses with the others are added.
+   *
+   * @param on whether to use gates
+   */
+  public void setEliminationGates(boolean on) {
+    eliminationGates = on;
+  }
+
+  /**
+   * Sets the longest resolvent variable elimination may add (default 100).
+   *
+   * @param literals the limit
+   */
+  public void setResolventLimit(int literals) {
+    resolventLimit = Math.max(2, literals);
+  }
+
+  /**
    * Sets how often elimination runs again during search, after its first run before the search.
    *
    * @param conflicts the conflicts before the first round (later rounds are further apart), or 0
@@ -3728,8 +3767,22 @@ public final class CdclSolver {
         input[n++] = new int[] {a, b};
       }
     }
-    Eliminator e = new Eliminator(numVars, input, n, frozen, proof);
+    long begin = System.nanoTime();
+    Eliminator e =
+        new Eliminator(
+            numVars,
+            input,
+            n,
+            frozen,
+            proof,
+            eliminationBound,
+            maxEliminationBound,
+            resolventLimit,
+            eliminationGates);
     boolean sat = e.run();
+    gateEliminations += e.numGateEliminations();
+    eliminationBound = e.bound();
+    eliminationNanos += System.nanoTime() - begin;
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];
       if ((mem[ref + META] & DELETED) == 0) {

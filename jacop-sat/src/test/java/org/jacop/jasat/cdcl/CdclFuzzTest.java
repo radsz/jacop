@@ -136,6 +136,66 @@ class CdclFuzzTest {
     return f;
   }
 
+  /**
+   * A random circuit in Tseitin form (AND, OR, XOR, ITE gates and equivalences over earlier
+   * variables) with a few random clauses over its variables, so that elimination finds gates.
+   */
+  static List<int[]> circuitFormula(Random rnd, int[] varsOut) {
+    int inputs = 3 + rnd.nextInt(12);
+    int gates = 5 + rnd.nextInt(60);
+    int vars = inputs + gates;
+    List<int[]> f = new ArrayList<>();
+    for (int o = inputs + 1; o <= vars; o++) {
+      int a = lit(rnd, o - 1);
+      int b = lit(rnd, o - 1);
+      int c = lit(rnd, o - 1);
+      switch (rnd.nextInt(5)) {
+        case 0 -> { // o = a & b & c
+          f.add(new int[] {-o, a});
+          f.add(new int[] {-o, b});
+          f.add(new int[] {-o, c});
+          f.add(new int[] {o, -a, -b, -c});
+        }
+        case 1 -> { // o = a | b
+          f.add(new int[] {o, -a});
+          f.add(new int[] {o, -b});
+          f.add(new int[] {-o, a, b});
+        }
+        case 2 -> { // o = a ^ b
+          f.add(new int[] {-o, a, b});
+          f.add(new int[] {-o, -a, -b});
+          f.add(new int[] {o, -a, b});
+          f.add(new int[] {o, a, -b});
+        }
+        case 3 -> { // o = a ? b : c
+          f.add(new int[] {-o, -a, b});
+          f.add(new int[] {-o, a, c});
+          f.add(new int[] {o, -a, -b});
+          f.add(new int[] {o, a, -c});
+        }
+        default -> { // o = a
+          f.add(new int[] {-o, a});
+          f.add(new int[] {o, -a});
+        }
+      }
+    }
+    int extra = 1 + rnd.nextInt(2 + vars / 4);
+    for (int k = 0; k < extra; k++) {
+      int[] c = new int[1 + rnd.nextInt(3)];
+      for (int i = 0; i < c.length; i++) {
+        c[i] = lit(rnd, vars);
+      }
+      f.add(c);
+    }
+    varsOut[0] = vars;
+    return f;
+  }
+
+  private static int lit(Random rnd, int vars) {
+    int v = 1 + rnd.nextInt(vars);
+    return rnd.nextBoolean() ? v : -v;
+  }
+
   private static boolean satisfiedBy(List<int[]> f, CdclSolver s) {
     for (int[] c : f) {
       boolean sat = false;
@@ -275,6 +335,18 @@ class CdclFuzzTest {
     return solveChecked(f, vars[0], seed);
   }
 
+  /**
+   * Solves, with every check, the circuit formula of the given fuzz seed (every fourth run).
+   *
+   * @param seed the seed, as a failure prints it
+   * @return the answer
+   */
+  static int replayCircuit(long seed) throws IOException {
+    int[] vars = new int[1];
+    List<int[]> f = circuitFormula(new Random(~seed), vars);
+    return solveChecked(f, vars[0], seed);
+  }
+
   @Test
   void fuzz() throws IOException {
     long runs = Long.getLong("fuzz.runs", 2000);
@@ -290,6 +362,9 @@ class CdclFuzzTest {
       }
       if (rnd.nextInt(4) == 0) {
         incremental(rnd, f, vars[0], seed);
+      }
+      if (run % 4 == 0 && replayCircuit(seed) == CdclSolver.UNSAT) {
+        unsat++;
       }
       if ((run + 1) % 100_000 == 0) {
         System.out.println("fuzz: " + (run + 1) + " runs, " + unsat + " UNSAT");
