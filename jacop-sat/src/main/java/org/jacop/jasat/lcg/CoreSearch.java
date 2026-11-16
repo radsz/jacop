@@ -323,7 +323,7 @@ public final class CoreSearch {
       return true;
     }
     hardenedAtGroup = hardened;
-    return relaxAtMostOnes(true);
+    return relaxAtMostOnes(Integer.MAX_VALUE);
   }
 
   /** Whether each term's variable spans at most one level. */
@@ -354,11 +354,42 @@ public final class CoreSearch {
     regrouped = true;
     hardenedAtGroup = hardened;
     regroups++;
-    return relaxAtMostOnes(false);
+    return relaxAtMostOnes(0);
   }
 
   /** Statistics: times the at-most-one groups were looked for again after hardening. */
   public long regroups;
+
+  /**
+   * Adds the terms' soft literals, hardens and relaxes the at-most-one groups. Hardened literals
+   * are hard clauses for the probes of the groups: a conflict clause of heavy weight between two
+   * soft literals then puts them in one group. Returns {@link CdclSolver#UNKNOWN} to go on, else
+   * the result of the search.
+   */
+  private int firstGroups() {
+    addTermSofts();
+    if (!harden()) {
+      return CdclSolver.SAT; // no solution better than the best one
+    }
+    if (!group()) {
+      return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
+    }
+    return CdclSolver.UNKNOWN;
+  }
+
+  /**
+   * Hardens soft literals and looks for the at-most-one groups again when it hardened some ({@link
+   * #regroup}). Returns {@link CdclSolver#UNKNOWN} to go on, else the result of the search.
+   */
+  private int hardenAndRegroup() {
+    if (!harden()) {
+      return CdclSolver.SAT; // no solution better than the best one
+    }
+    if (!regroup()) {
+      return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
+    }
+    return CdclSolver.UNKNOWN;
+  }
 
   /** The number of levels of the terms' variables, summed. */
   private static long span(LcgSolver lcg, Map<Integer, Long> terms) {
@@ -549,15 +580,10 @@ public final class CoreSearch {
     }
     if (threshold < 0) {
       if (!grouped) {
-        addTermSofts();
-        // hardened literals are hard clauses for the probes of the groups: a conflict clause of
-        // heavy weight between two soft literals then puts them in one group
-        if (!harden()) {
-          return CdclSolver.SAT;
+        int status = firstGroups();
+        if (status != CdclSolver.UNKNOWN) {
+          return status;
         }
-      }
-      if (!grouped && !group()) {
-        return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       threshold = maxWeightBelow(Long.MAX_VALUE);
       start(sat.work());
@@ -570,11 +596,9 @@ public final class CoreSearch {
         // also when the best solution was found elsewhere (a portfolio): none here is better
         return CdclSolver.SAT;
       }
-      if (!harden()) {
-        return CdclSolver.SAT; // no solution better than the best one
-      }
-      if (!regroup()) {
-        return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
+      int status = hardenAndRegroup();
+      if (status != CdclSolver.UNKNOWN) {
+        return status;
       }
       List<Integer> assumed = new ArrayList<>();
       for (Soft s : softs) {
@@ -709,7 +733,7 @@ public final class CoreSearch {
     }
   }
 
-  private boolean relaxAtMostOnes(boolean expand) {
+  private boolean relaxAtMostOnes(int expandTerms) {
     grouped = true;
     // the nodes: soft literals of terms, then the value literals of the terms that expand
     List<Integer> lits = new ArrayList<>();
@@ -725,7 +749,7 @@ public final class CoreSearch {
     int terms = lits.size();
     long expansionCost = 0; // what the expansion takes from the bound
     BitSet expanded = new BitSet();
-    for (int i = 0; i < terms && expand; i++) {
+    for (int i = 0; i < Math.min(terms, expandTerms); i++) {
       int[] values = valueLiterals(owner.get(i));
       if (values.length == 0) {
         continue;
