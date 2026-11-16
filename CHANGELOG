@@ -7004,6 +7004,23 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. Large neighbourhood search under -f has a new kind, RINS
+   (relaxation induced neighbourhood search, E. Danna, E. Rothberg and
+   C. Le Pape, Exploring relaxation induced neighborhoods to improve MIP
+   solutions, Mathematical Programming 102(1), 71-90, 2005). It relaxes
+   the variables whose value in the best solution differs most from
+   their value in the root solution of the linear relaxation, and fixes
+   the others. It is used when the model has a linear relaxation;
+   --free-config lns-rins=0 turns it off, and AdaptiveLns.setLpValues
+   gives the values. On the 34 wide-set optimisation instances with a
+   relaxation that -f leaves open, at 240 s it finds a better objective
+   on 12, 11 and 10 of them and a worse one on 7, 5 and 8 over three
+   seeds (gbac UD3 2414 -> 515, 9736 -> 1015 and 7242 -> 915; warehouse
+   olil4 66713 -> 62918); at 600 s 6 better and 5 worse (gbac UD3
+   317 -> 173, kletzander i09 6735 -> 4765, cargo challenge16
+   129091 -> 154593). On 42 quicker relaxation instances it is neutral
+   (36 solved by both, total time 1.002 at 600 s).
+
 Version 4.11
 =============
 

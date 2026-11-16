@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.IntToDoubleFunction;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
@@ -159,7 +160,7 @@ public final class AdaptiveLns {
   }
 
   // the value of each variable in the solution of the linear relaxation, NaN when it has none
-  private java.util.function.IntToDoubleFunction lpValue;
+  private IntToDoubleFunction lpValue;
 
   /**
    * Gives the {@link Kind#RINS} neighbourhood the values of the variables in a solution of the
@@ -168,7 +169,7 @@ public final class AdaptiveLns {
    * @param values the value of the variable of each index, or NaN when unknown
    * @return this
    */
-  public AdaptiveLns setLpValues(java.util.function.IntToDoubleFunction values) {
+  public AdaptiveLns setLpValues(IntToDoubleFunction values) {
     lpValue = values;
     return this;
   }
