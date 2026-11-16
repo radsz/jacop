@@ -1476,7 +1476,11 @@ public final class Linearizations {
       return;
     }
     Class<?> k = c.getClass();
-    if (k == Reified.class && ((Reified) c).c.getClass() == In.class) {
+    if (k == ChannelOrder.class) {
+      for (Constraint r : ((ChannelOrder) c).reifications()) {
+        rows(r, out);
+      }
+    } else if (k == Reified.class && ((Reified) c).c.getClass() == In.class) {
       In in = (In) ((Reified) c).c;
       inSet(in.x, in.dom, ((Reified) c).b, out);
     } else if (k == Reified.class) {

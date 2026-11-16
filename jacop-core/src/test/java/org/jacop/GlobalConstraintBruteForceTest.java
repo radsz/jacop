@@ -1449,8 +1449,8 @@ class GlobalConstraintBruteForceTest {
   }
 
   /**
-   * ChannelOrder on the first variable; items may share a 0/1 variable and repeat a threshold, and
-   * thresholds may lie outside the domain of x.
+   * ChannelOrder on the first variable; items may share a 0/1 variable and repeat a threshold,
+   * thresholds may lie outside the domain of x, and items may be implications only.
    */
   private static Instance channelOrder(Random random) {
     int m = 1 + random.nextInt(4);
@@ -1458,10 +1458,12 @@ class GlobalConstraintBruteForceTest {
     int[] which = new int[n];
     int[] t = new int[n];
     boolean[] atMost = new boolean[n];
+    boolean[] implied = new boolean[n];
     for (int i = 0; i < n; i++) {
       which[i] = 1 + random.nextInt(m);
       t[i] = random.nextInt(8) - 1;
       atMost[i] = random.nextBoolean();
+      implied[i] = random.nextInt(3) == 0;
     }
     return new Instance(
         append(new int[][] {domain(random, 0, 5)}, domains(random, m, 0, 1)),
@@ -1470,11 +1472,13 @@ class GlobalConstraintBruteForceTest {
           for (int i = 0; i < n; i++) {
             b[i] = x[which[i]];
           }
-          store.impose(new ChannelOrder(x[0], b, t, atMost));
+          store.impose(new ChannelOrder(x[0], b, t, atMost, implied));
         },
         x -> {
           for (int i = 0; i < n; i++) {
-            if ((x[which[i]] == 1) != ((x[0] <= t[i]) == atMost[i])) {
+            boolean on = x[which[i]] == 1;
+            boolean holds = (x[0] <= t[i]) == atMost[i];
+            if (implied[i] ? on && !holds : on != holds) {
               return false;
             }
           }
@@ -1485,7 +1489,9 @@ class GlobalConstraintBruteForceTest {
             + " t="
             + Arrays.toString(t)
             + " atMost="
-            + Arrays.toString(atMost));
+            + Arrays.toString(atMost)
+            + " implied="
+            + Arrays.toString(implied));
   }
 
   private static Instance count(Random random) {
