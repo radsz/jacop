@@ -3474,8 +3474,8 @@ public final class CdclSolver {
 
   /**
    * Sets the largest bound of variable elimination: an elimination may add this many clauses more
-   * than it removes. The bound starts at 0 and rises through 1, 2, 4, 8 and 16 up to this one
-   * whenever a round eliminates nothing (default 16; 0 never adds clauses).
+   * than it removes. The bound is 0 in the first run before the search and rises through 1, 2, 4, 8
+   * and 16 up to this one with each complete run during search (default 16; 0 never adds clauses).
    *
    * @param bound the largest bound
    */
@@ -3781,13 +3781,17 @@ public final class CdclSolver {
             frozen,
             proof,
             eliminationBound,
-            maxEliminationBound,
+            eliminationBound,
             resolventLimit,
             eliminationGates);
     boolean sat = e.run();
     gateEliminations += e.numGateEliminations();
-    eliminationBound = e.bound();
+    // the bound rises by one step after each complete run, so the first run before the search
+    // adds no clauses and later runs during search add more (Kissat's eliminatebound schedule)
     eliminationFruitless = e.numEliminated() == 0 && eliminationBound >= maxEliminationBound;
+    if (e.completed()) {
+      eliminationBound = Eliminator.nextBound(eliminationBound, maxEliminationBound);
+    }
     eliminationNanos += System.nanoTime() - begin;
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];

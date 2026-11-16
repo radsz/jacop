@@ -38,12 +38,13 @@ import java.util.Arrays;
  * clauses at level 0, as in MiniSat's SimpSolver. Literals are internal ({@code 2*var+sign}).
  *
  * <p>A variable is eliminated when the non-tautological resolvents on it outnumber the clauses they
- * replace by at most a bound and none is longer than a limit. The bound starts at 0 and rises
- * through 1, 2, 4, 8 and 16 each time a round eliminates nothing, as in Kissat's {@code
- * eliminatebound} (Biere, Järvisalo, Kiesl, "Preprocessing in SAT Solving", Handbook of
- * Satisfiability, 2nd ed., 2021); after the first round only the variables whose clauses changed
- * are tried again. The removed clauses go on an extension stack, from which {@link #extend}
- * completes a model of the simplified formula.
+ * replace by at most a bound and none is longer than a limit. The bound follows the schedule 0, 1,
+ * 2, 4, 8, 16 of Kissat's {@code eliminatebound} (Biere, Järvisalo, Kiesl, "Preprocessing in SAT
+ * Solving", Handbook of Satisfiability, 2nd ed., 2021): within a run it rises up to a given maximum
+ * each time a round eliminates nothing, and {@link CdclSolver} raises it by one step between runs.
+ * After the first round only the variables whose clauses changed are tried again. The removed
+ * clauses go on an extension stack, from which {@link #extend} completes a model of the simplified
+ * formula.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
@@ -189,7 +190,14 @@ final class Eliminator {
     return !unsat;
   }
 
-  private static int nextBound(int bound, int maxBound) {
+  /**
+   * The bound after the given one in the schedule 0, 1, 2, 4, 8, 16, capped at maxBound.
+   *
+   * @param bound the bound
+   * @param maxBound the cap
+   * @return the next bound
+   */
+  static int nextBound(int bound, int maxBound) {
     for (int b : BOUNDS) {
       if (b > bound) {
         return Math.min(b, maxBound);
@@ -201,6 +209,11 @@ final class Eliminator {
   /** The number of eliminations that resolved only gate clauses against the others. */
   int numGateEliminations() {
     return numGateEliminations;
+  }
+
+  /** Whether the run tried every candidate within its effort limit. */
+  boolean completed() {
+    return !unsat && effort < EFFORT_LIMIT;
   }
 
   /** The bound reached, from which the next run starts. */
