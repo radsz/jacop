@@ -6596,6 +6596,21 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. Free search (-f) of a model without a search annotation branches on
+   the variables that no defines_var annotation names before the defined
+   ones: under lazy clause generation until the first solution, and
+   always in free search without learning (after LCG gives way). On
+   XCSP 2026 Feedback (a permutation x, penalties z = max(0, x[i] - x[j])
+   per arc, minimise their sum) the default search fixed the defined
+   penalties, which pins differences of x and fails deep on the
+   all_different; P1000-15000 and P1000-25000 had no solution in 600 s
+   and now reach 2424015 and 4008836, and P1000-05000 finds its first
+   solution in 8 s instead of 105 s. On 18 other XCSP families where the
+   order changes, 6 are better and 6 worse at 600 s; on wide-quick under
+   -f (240 s) 2 groups are better and 1 worse (proof time noise).
+   -Dorg.jacop.fz.definedLast=always keeps the order after the first
+   solution, false restores the old order.
+
 Version 4.11
 =============
 
