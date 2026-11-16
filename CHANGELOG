@@ -7024,7 +7024,20 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
-391. Bin packings that minimize the bins used find packings at the bound.
+391. The core-guided phase of LCG (MaxSAT-like objectives) looks for its
+   at-most-one groups of soft literals (Ignatiev, Morgado and
+   Marques-Silva, RC2, JSAT 11, 2019) once more after it hardens soft
+   literals. A conflict soft
+   clause heavier than the gap to the best solution is hard only once a
+   solution is known, and only then puts its two literals in one group;
+   before, the groups were built while it was still soft and never again,
+   and the cores raised the bound by one each. Weighted MaxSAT
+   frb_wt-frb20-11-1 (independent set, 20 domain cliques) is proved in
+   4 s instead of 416-477 s by default and 186-200 s with -f;
+   drmx-cryptogen threshold128 is proved in 275 s by default (before
+   not at 600 s). The statistic lcgCoreRegroups counts it.
+
+392. Bin packings that minimize the bins used find packings at the bound.
    (a) Free search packs the items of a bin packing whose objective
    bounds every item's bin (bin[i] <= bins) into as many bins as the
    objective's lower bound, by bin completion with first-fail item
@@ -7056,7 +7069,7 @@ Version 5.0 (unreleased)
    24 falls from 10707 to 3252 s (-f: 10759 to 3366 s). Neither part
    fires on the 240 wide instances.
 
-392. JaSAT can rewrite a formula by bounded variable addition before its
+393. JaSAT can rewrite a formula by bounded variable addition before its
    first variable elimination (org.jacop.jasat.cdcl.Factorizer,
    CdclSolver.setFactoring, on by default in CdclMain, --factor 0 turns
    it off): a grid of clauses f_p v R_i over factor literals f_1..f_k and
@@ -7073,7 +7086,7 @@ Version 5.0 (unreleased)
    are new; three satisfiable instances are lost). It is off in
    CdclSolver otherwise, so lazy clause generation is unchanged.
 
-393. Constraints rewrite themselves to simpler ones during search, as
+394. Constraints rewrite themselves to simpler ones during search, as
    Gecode's GECODE_REWRITE does (C. Schulte, G. Tack, M. Z. Lagerkvist,
    Modeling and Programming with Gecode, propagator rewriting): an
    ElementVariableFast whose index is fixed becomes XeqY, so changes of
@@ -7091,7 +7104,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.rewrite=false turns it off
    (org.jacop.rewrite.element and org.jacop.rewrite.reified per kind).
 
-394. The FlatZinc front end posts the sums of element constraints indexed
+395. The FlatZinc front end posts the sums of element constraints indexed
    by an all_different list: when y[k] = c[x[k]] over one constant array c
    and the x[k] are all different over the union U of their domains, the
    sum of the y[k] is fixed (a permutation of U) or bounded by the sums of
@@ -7109,7 +7122,7 @@ Version 5.0 (unreleased)
    12 of the 240 wide instances. -Dorg.jacop.fz.permutationElementSums=false
    turns them off.
 
-395. Local search detects a permutation flow shop in the store (sequence
+396. Local search detects a permutation flow shop in the store (sequence
    positions in an all different constraint, tables giving each machine's
    processing time of the job at a position, precedence rows s + d <= t
    along machines and positions, the makespan as the cost) and runs the
@@ -7127,7 +7140,7 @@ Version 5.0 (unreleased)
    (ta101 12806 -> 11368, ta106 12892 -> 11306) and
    the total time goes from 13971 s to 11097 s.
 
-396. The LP relaxation moves the clause rows that LCG hands it to the
+397. The LP relaxation moves the clause rows that LCG hands it to the
    sparse simplex when they make the dense tableau too large to search
    with. On set covering (OR-Library scp, one objective row and a few
    hundred covering clauses over thousands of columns) the 311 x 3,312
@@ -7147,7 +7160,7 @@ Version 5.0 (unreleased)
    fires on none of the 240 wide instances. -Dorg.jacop.lp.extraSparse=false
    turns it off.
 
-397. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
+398. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
    watch-list entry back to the same place while every entry before it
    stayed where it was, and a conflict leaves the rest of the list as it
    is instead of copying it onto itself. A visit that only checks the
@@ -7158,7 +7171,7 @@ Version 5.0 (unreleased)
    instances by default, with total time on them 0.971 by default and
    0.972 under -f.
 
-398. A satisfaction model without value encodings, such as a pure 0/1
+399. A satisfaction model without value encodings, such as a pure 0/1
    (pseudo-Boolean) model, now gets a root refutation LP too. Before,
    LinearRelaxation.refutation() needed value encodings, and the main
    relaxation never ran cut rounds without an objective. The new LP takes

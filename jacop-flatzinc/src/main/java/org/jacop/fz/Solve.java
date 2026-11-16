@@ -4830,6 +4830,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.amoGroups
         + "\n%%%mzn-stat: lcgCoreAmoBound="
         + core.amoBound
+        + "\n%%%mzn-stat: lcgCoreRegroups="
+        + core.regroups
         + "\n%%%mzn-stat: lcgCoreNoSolutionStops="
         + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreShrunk="
