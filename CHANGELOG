@@ -7024,7 +7024,23 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
-391. The XorSystem detector of the FlatZinc front end reads parities written
+391. Under --lcg a linear constraint over 0/1 variables that is equivalent
+   to a few clauses over its own literals becomes those clauses: its prime
+   implicates, the minimal covers of the threshold function (Balas and
+   Jeroslow, Canonical cuts on the unit hypercube, SIAM J. Appl. Math.
+   23(1), 1972), when there are at most 2 per variable
+   (-Djacop.lcg.clauseShaped=N, 0 = off). An at most one constraint over
+   n literals is its n (n - 1) / 2 exclusions, "at most 3 of 4" a single
+   clause. Before, such sums stayed propagators with lazy counters, which
+   become clauses only after 100 uses. The PB instance vdw_k4_l4_n360
+   (85,680 "at most 3 of 4" sums) becomes pure CNF and is solved in 63 s
+   (no solution in 600 s before; CP-SAT 9.15: 49 s). On the 117 of 222
+   PB screen instances where it fires, at 600 s, 81 -> 83 solved and the
+   total time goes from 24,092 to 22,394 s (0.930); on the 47 of 240
+   wide instances where it fires, 44 -> 44 solved, total time 1.010
+   (default) and 0.965 (-f). New statistic lcgClauseShaped.
+
+392. The XorSystem detector of the FlatZinc front end reads parities written
    as clauses (bool_clause), as CryptoMiniSat finds the XORs of a CNF
    (M. Soos, K. Nohl and C. Castelluccia, "Extending SAT Solvers to
    Cryptographic Problems", SAT 2009). A set of at most 8 variables
@@ -7055,7 +7071,7 @@ Version 5.0 (unreleased)
    wide instances it fires on 2013 rubik 6-cube and 7-cube only, which
    stay solved in 2 to 5 s (0.3 s slower).
 
-392. Core exhaustion (386) is on by default, for 8 outputs per core
+393. Core exhaustion (386) is on by default, for 8 outputs per core
    (-Djacop.lcg.coreExhaust=K, 0 = off), and gives up once the first
    output of 16 cores per output it proved, plus 16, was not refuted
    (-Djacop.lcg.coreExhaustPatience=P, LcgSolver.setCoreExhaustPatience,
@@ -7078,7 +7094,7 @@ Version 5.0 (unreleased)
    6649 s), the same 36 proved; the two that exhaustion alone slowed
    down (is A3PZaPjnUz, work-task seed 8) did not move.
 
-393. The LP relaxation keeps the definitions of the shared sums of linear
+394. The LP relaxation keeps the definitions of the shared sums of linear
    overlap factoring that its rows still use. It replaces those sums by
    their definitions only up to depth 8 but dropped every definition, so
    the deeper sums of nested sets were free columns: CSPLib bus driver
@@ -7089,7 +7105,7 @@ Version 5.0 (unreleased)
    The factoring is the horizontal overlap rule of the CP-SAT presolve
    (L. Perron, F. Didier, CP-SAT, OR-Tools 9.15).
 
-394. Free search (-f) also searches before an expensive root LP (319).
+395. Free search (-f) also searches before an expensive root LP (319).
    When the first solve of the relaxation is large, a solver of its own
    runs for 200 ms (-Dorg.jacop.fz.lpProbe) with the relaxation suspended.
    Its answer is final when it finishes. Otherwise its prunings are undone,
@@ -7104,7 +7120,7 @@ Version 5.0 (unreleased)
    12355 -> 11763 s and 30 -> 31 proved (roster-shifts-bool s100_e20_c8
    proved in 14 s). -Dorg.jacop.fz.freeLpProbe=false turns it off.
 
-395. The LP relaxation states the value encodings of the model's Booleans
+396. The LP relaxation states the value encodings of the model's Booleans
    (sum b_v = 1, x = sum v b_v, and y = sum a[v] b_v for an element
    y = a[x]) in place of the convex hull rows of the elements they cover,
    since the encoding is that hull. The encodings count with the model's
@@ -7124,7 +7140,7 @@ Version 5.0 (unreleased)
    lpEncodedElements gives the elements left to their encodings (":sparse"
    when they chose the sparse simplex).
 
-396. The core-guided phase of LCG (MaxSAT-like objectives) looks for its
+397. The core-guided phase of LCG (MaxSAT-like objectives) looks for its
    at-most-one groups of soft literals (Ignatiev, Morgado and
    Marques-Silva, RC2, JSAT 11, 2019) once more after it hardens soft
    literals. A conflict soft
@@ -7137,7 +7153,7 @@ Version 5.0 (unreleased)
    drmx-cryptogen threshold128 is proved in 275 s by default (before
    not at 600 s). The statistic lcgCoreRegroups counts it.
 
-397. Bin packings that minimize the bins used find packings at the bound.
+398. Bin packings that minimize the bins used find packings at the bound.
    (a) Free search packs the items of a bin packing whose objective
    bounds every item's bin (bin[i] <= bins) into as many bins as the
    objective's lower bound, by bin completion with first-fail item
@@ -7169,7 +7185,7 @@ Version 5.0 (unreleased)
    24 falls from 10707 to 3252 s (-f: 10759 to 3366 s). Neither part
    fires on the 240 wide instances.
 
-398. JaSAT can rewrite a formula by bounded variable addition before its
+399. JaSAT can rewrite a formula by bounded variable addition before its
    first variable elimination (org.jacop.jasat.cdcl.Factorizer,
    CdclSolver.setFactoring, on by default in CdclMain, --factor 0 turns
    it off): a grid of clauses f_p v R_i over factor literals f_1..f_k and
@@ -7186,7 +7202,7 @@ Version 5.0 (unreleased)
    are new; three satisfiable instances are lost). It is off in
    CdclSolver otherwise, so lazy clause generation is unchanged.
 
-399. Constraints rewrite themselves to simpler ones during search, as
+400. Constraints rewrite themselves to simpler ones during search, as
    Gecode's GECODE_REWRITE does (C. Schulte, G. Tack, M. Z. Lagerkvist,
    Modeling and Programming with Gecode, propagator rewriting): an
    ElementVariableFast whose index is fixed becomes XeqY, so changes of
@@ -7204,7 +7220,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.rewrite=false turns it off
    (org.jacop.rewrite.element and org.jacop.rewrite.reified per kind).
 
-400. The FlatZinc front end posts the sums of element constraints indexed
+401. The FlatZinc front end posts the sums of element constraints indexed
    by an all_different list: when y[k] = c[x[k]] over one constant array c
    and the x[k] are all different over the union U of their domains, the
    sum of the y[k] is fixed (a permutation of U) or bounded by the sums of
@@ -7222,7 +7238,7 @@ Version 5.0 (unreleased)
    12 of the 240 wide instances. -Dorg.jacop.fz.permutationElementSums=false
    turns them off.
 
-401. Local search detects a permutation flow shop in the store (sequence
+402. Local search detects a permutation flow shop in the store (sequence
    positions in an all different constraint, tables giving each machine's
    processing time of the job at a position, precedence rows s + d <= t
    along machines and positions, the makespan as the cost) and runs the
@@ -7240,7 +7256,7 @@ Version 5.0 (unreleased)
    (ta101 12806 -> 11368, ta106 12892 -> 11306) and
    the total time goes from 13971 s to 11097 s.
 
-402. The LP relaxation moves the clause rows that LCG hands it to the
+403. The LP relaxation moves the clause rows that LCG hands it to the
    sparse simplex when they make the dense tableau too large to search
    with. On set covering (OR-Library scp, one objective row and a few
    hundred covering clauses over thousands of columns) the 311 x 3,312
@@ -7260,7 +7276,7 @@ Version 5.0 (unreleased)
    fires on none of the 240 wide instances. -Dorg.jacop.lp.extraSparse=false
    turns it off.
 
-403. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
+404. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
    watch-list entry back to the same place while every entry before it
    stayed where it was, and a conflict leaves the rest of the list as it
    is instead of copying it onto itself. A visit that only checks the
@@ -7271,7 +7287,7 @@ Version 5.0 (unreleased)
    instances by default, with total time on them 0.971 by default and
    0.972 under -f.
 
-404. A satisfaction model without value encodings, such as a pure 0/1
+405. A satisfaction model without value encodings, such as a pure 0/1
    (pseudo-Boolean) model, now gets a root refutation LP too. Before,
    LinearRelaxation.refutation() needed value encodings, and the main
    relaxation never ran cut rounds without an objective. The new LP takes

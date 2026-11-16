@@ -5317,6 +5317,9 @@ public final class LcgSolver implements ExternalPropagator {
           && encodeCompressedTable((HybridTable) c)) {
         tablesAsClauses++;
         compressedTablesAsClauses++;
+      } else if (clauseShaped && encodeClauseShaped(c)) {
+        constraintsAsClauses++;
+        clauseShapedConstraints++;
       } else if ((clauseCandidate(c) || permutationCandidate(c)) && encodeAsClauses(c)) {
         constraintsAsClauses++;
         if (c instanceof Alldistinct) {
@@ -5353,6 +5356,120 @@ public final class LcgSolver implements ExternalPropagator {
       pureClauses = true;
       applyAnnotationChrono();
     }
+  }
+
+  /**
+   * The most clauses per unfixed variable of a linear constraint over 0/1 variables that becomes
+   * clauses over its own literals in place of its propagator ({@link ClauseShape}), {@code
+   * jacop.lcg.clauseShaped}; 0 keeps every such constraint a propagator. The default 2 takes the
+   * clauses ({@code sum l >= 1}, {@code sum l <= n - 1}, {@code x <= y}, {@code y -> l1 or ... or
+   * ln} as {@code sum l - y >= 0}), the implications of a conjunction ({@code n x <= y1 + ... +
+   * yn}) and the at most one constraints of up to five literals. A propagator of such a constraint
+   * explains every pruning and wakes on every change of its variables; unit propagation over the
+   * clauses is the same pruning at the cost of two watched literals, and a model that becomes a CNF
+   * is searched by the SAT solver's decisions ({@link #encodeGraphs}). On the PB competition's
+   * vdw_k4_l4_n360 (van der Waerden numbers, 85680 clauses as at most 3 of 4, 360 exactly one of 4)
+   * a first solution takes 6 s instead of more than 240 s.
+   */
+  static final int CLAUSE_SHAPED = Integer.getInteger("jacop.lcg.clauseShaped", 2);
+
+  private boolean clauseShaped = CLAUSE_SHAPED > 0;
+
+  /**
+   * Sets whether small linear constraints over 0/1 variables that are a few clauses become those
+   * clauses ({@link #CLAUSE_SHAPED}), before the solver starts.
+   *
+   * @param on true for clauses
+   */
+  public void setClauseShaped(boolean on) {
+    clauseShaped = on && CLAUSE_SHAPED > 0;
+  }
+
+  /** Statistics: linear constraints over 0/1 variables given to the solver as their clauses. */
+  public long clauseShapedConstraints;
+
+  // the clauses of a linear constraint over 0/1 variables that is at most CLAUSE_SHAPED clauses per
+  // unfixed variable over its own literals: sum w x REL c as sum a l >= k with a > 0
+  private boolean encodeClauseShaped(Constraint c) {
+    LinearForm f = LinearForms.of(c);
+    if (f == null || f.relation() == LinearForm.NE || !argumentsFit(c)) {
+      return false;
+    }
+    int n = 0;
+    long rest = f.c();
+    for (int i = 0; i < f.vars().length; i++) {
+      IntVar x = f.vars()[i];
+      IntDomain d = root[trail.id(x)];
+      if (f.weights()[i] == 0) {
+        continue;
+      }
+      if (d.singleton()) {
+        rest -= f.weights()[i] * d.min();
+      } else if (d.min() != 0 || d.max() != 1) {
+        return false;
+      } else {
+        n++;
+      }
+    }
+    if (n == 0) {
+      return false;
+    }
+    long[] w = new long[n];
+    int[] l = new int[n];
+    java.util.Set<Integer> seen = new java.util.HashSet<>();
+    int k = 0;
+    for (int i = 0; i < f.vars().length; i++) {
+      IntVar x = f.vars()[i];
+      int id = trail.id(x);
+      if (f.weights()[i] != 0 && !root[id].singleton()) {
+        if (!seen.add(id)) {
+          return false; // a variable twice
+        }
+        w[k] = f.weights()[i];
+        l[k++] = geLit(id, 1);
+      }
+    }
+    int cap = CLAUSE_SHAPED * n;
+    List<int[]> cs = new ArrayList<>();
+    if (f.relation() != LinearForm.LE && !geClauses(w, l, rest, cap, cs)) {
+      return false;
+    }
+    if (f.relation() != LinearForm.GE && !geClauses(negate(w), l, -rest, cap - cs.size(), cs)) {
+      return false;
+    }
+    return addEncoded(c, cs);
+  }
+
+  // the clauses of sum w l >= k into out, at most cap of them; false when there are more
+  private static boolean geClauses(long[] w, int[] l, long k, int cap, List<int[]> out) {
+    long[] a = new long[w.length];
+    int[] lit = new int[w.length];
+    long rhs = k;
+    for (int i = 0; i < w.length; i++) {
+      if (w[i] > 0) {
+        a[i] = w[i];
+        lit[i] = l[i];
+      } else {
+        // w x = -w (1 - x) + w = a ~x - a
+        a[i] = -w[i];
+        lit[i] = -l[i];
+        rhs += a[i];
+      }
+    }
+    List<int[]> cs = ClauseShape.clauses(a, lit, rhs, cap);
+    if (cs == null || cs.stream().anyMatch(cl -> cl.length == 0)) {
+      return false; // more clauses than the cap, or a constraint that fails at the root
+    }
+    out.addAll(cs);
+    return true;
+  }
+
+  private static long[] negate(long[] w) {
+    long[] n = new long[w.length];
+    for (int i = 0; i < w.length; i++) {
+      n[i] = -w[i];
+    }
+    return n;
   }
 
   /**
