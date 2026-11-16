@@ -126,6 +126,22 @@ public final class CdclSolver {
   private long propagationsAtWalk;
   private int walks;
   long walkNanos;
+  // feasibility-jump local search (JumpSearch): its share of the solver's clock, its search, the
+  // formula it was built for, its time so far and where the clock started
+  private double jumpShare = DEFAULT_JUMP_SHARE;
+  private JumpSearch jumper;
+  private long jumpSignature = -1;
+  private int jumperClauses;
+  private static final boolean JUMP_DEBUG = Boolean.getBoolean("jacop.jasat.jumpDebug");
+  private long jumpStart = Long.MIN_VALUE;
+  private long jumpWork;
+  long jumpNanos;
+  int jumpCalls;
+  int jumpModels;
+  // the model of the local search that the decisions follow, until a conflict
+  private byte[] jumpPhases;
+  private boolean jumpSolved;
+
   // chronological backtracking is used in this search (solve() without assumptions)
   private boolean chrono;
   // backtrack chronologically when a backjump would undo more levels than this; negative: never
@@ -255,6 +271,21 @@ public final class CdclSolver {
   private long propagationsAtVivify;
   private int[] vivifyLits = new int[16];
   private static final long REPHASE_INTERVAL = 1000;
+
+  /**
+   * The default share of the solver's clock given to the feasibility-jump local search ({@link
+   * #setJumpShare}), system property {@code jacop.jasat.jump}.
+   */
+  public static final double DEFAULT_JUMP_SHARE =
+      Double.parseDouble(System.getProperty("jacop.jasat.jump", "0.1"));
+
+  // the shortest slice of the local search worth starting, in nanoseconds of the clock
+  private static final long MIN_JUMP_SLICE = 20_000_000L;
+
+  // ticks of the local search (visited occurrences and literals) that count as one unit of work:
+  // the search visits 35 to 155 million a second (tree-decomposition, sgen of SAT Comp 2024),
+  // the virtual clock counts 2 million units of work a second
+  private static final long JUMP_TICKS_PER_WORK = 32;
   private int simplifyAssigns = -1;
   // propagations before the next simplification, as MiniSat's simpDB_props: a pass costs about the
   // size of the arena and the watch lists, so it waits for as much propagation work
@@ -606,6 +637,9 @@ public final class CdclSolver {
     int result;
     try {
       result = search();
+      if (result == SAT && jumpPhases != null) {
+        jumpSolved = true;
+      }
       if (result == SAT) {
         model = new boolean[numVars];
         for (int v = 0; v < numVars; v++) {
@@ -615,6 +649,7 @@ public final class CdclSolver {
       }
       backtrack(0);
     } finally {
+      jumpPhases = null;
       chrono = false;
       notifying = false;
       queuedExternal = null;
@@ -843,7 +878,7 @@ public final class CdclSolver {
    * @return the work so far
    */
   public long work() {
-    return propagations + externalWork.getAsLong();
+    return propagations + externalWork.getAsLong() + jumpWork;
   }
 
   /**
@@ -2842,6 +2877,7 @@ public final class CdclSolver {
       }
       if (confl != NO_CONFLICT) {
         conflicts++;
+        jumpPhases = null;
         if (decisionLevel == 0) {
           ok = false;
           if (proof != null) {
@@ -3367,6 +3403,9 @@ public final class CdclSolver {
     while (!order.isEmpty()) {
       int v = order.removeMax();
       if (vals[2 * v] == 0 && !eliminatedVar[v]) {
+        if (jumpPhases != null && v < jumpPhases.length) {
+          return 2 * v + jumpPhases[v];
+        }
         return 2 * v + (stable && targetSign[v] >= 0 ? targetSign[v] : savedSign[v]);
       }
     }
@@ -3413,6 +3452,9 @@ public final class CdclSolver {
       }
       default -> System.arraycopy(bestSign, 0, savedSign, 0, numVars);
     }
+    if (jumpShare > 0 && external == null && assumptions.length == 0 && decisionLevel == 0) {
+      jump();
+    }
     System.arraycopy(savedSign, 0, targetSign, 0, numVars);
     targetAssigned = 0;
     bestAssigned = 0;
@@ -3421,6 +3463,27 @@ public final class CdclSolver {
   /** Runs the Walker on the irredundant clauses from the saved phases and saves its best phases. */
   private void walk() {
     long begin = System.nanoTime();
+    int[][] formula = rootFormula();
+    int[] lits = formula[0];
+    int[] start = formula[1];
+    int n = start.length - 1;
+    byte[] phases = Arrays.copyOf(savedSign, numVars);
+    for (int i = 0; i < trailSize; i++) {
+      phases[trail[i] >> 1] = (byte) (trail[i] & 1); // fixed at level 0
+    }
+    Walker walker = new Walker(numVars, lits, start, n, phases, ++walks + 1_000_003L * seed);
+    walker.run(10_000_000L + (propagations - propagationsAtWalk) / 5);
+    propagationsAtWalk = propagations;
+    System.arraycopy(walker.best(), 0, savedSign, 0, numVars);
+    walkNanos += System.nanoTime() - begin;
+  }
+
+  /**
+   * The irredundant clauses at the root, without their false literals and without the satisfied
+   * ones: the literals one after the other, and where each clause starts (its last entry is the
+   * end).
+   */
+  private int[][] rootFormula() {
     int[] lits = new int[1024];
     int[] start = new int[numOriginals + numOriginalBinaries / 2 + 1];
     int n = 0;
@@ -3462,15 +3525,83 @@ public final class CdclSolver {
       }
     }
     start[n] = size;
-    byte[] phases = Arrays.copyOf(savedSign, numVars);
-    for (int i = 0; i < trailSize; i++) {
-      phases[trail[i] >> 1] = (byte) (trail[i] & 1); // fixed at level 0
+    return new int[][] {lits, Arrays.copyOf(start, n + 1)};
+  }
+
+  /**
+   * Gives the feasibility-jump local search (Luteberget and Sartor 2023, see {@link JumpSearch})
+   * its share of the solver's clock since the first call, on the irredundant clauses at the root.
+   * The search is kept between calls while that formula stays the same. When it satisfies every
+   * clause, the decisions follow its assignment until the next conflict, so that they descend to a
+   * model without one (learnt clauses follow from the formula), and the eliminated variables are
+   * extended as for any model; it also becomes the saved and best phases.
+   */
+  private void jump() {
+    long now = now();
+    if (jumpStart == Long.MIN_VALUE) {
+      jumpStart = now;
     }
-    Walker walker = new Walker(numVars, lits, start, n, phases, ++walks + 1_000_003L * seed);
-    walker.run(10_000_000L + (propagations - propagationsAtWalk) / 5);
-    propagationsAtWalk = propagations;
-    System.arraycopy(walker.best(), 0, savedSign, 0, numVars);
-    walkNanos += System.nanoTime() - begin;
+    long slice = (long) (jumpShare * (now - jumpStart)) - jumpNanos;
+    if (slice < MIN_JUMP_SLICE) {
+      return;
+    }
+    long begin = now;
+    long signature =
+        (((long) trailSize * 31 + eliminatedCount()) * 31 + numOriginals) * 31
+            + numOriginalBinaries
+            + 1_000_003L * numVars;
+    boolean rebuilt = jumper == null || signature != jumpSignature;
+    if (rebuilt) {
+      int[][] formula = rootFormula();
+      if (formula[1].length == 1) {
+        return;
+      }
+      jumper =
+          new JumpSearch(
+              numVars,
+              formula[0],
+              formula[1],
+              formula[1].length - 1,
+              Arrays.copyOf(savedSign, numVars),
+              jumpCalls + 7_000_003L * seed);
+      jumpSignature = signature;
+      jumperClauses = formula[1].length - 1;
+    }
+    jumpCalls++;
+    long end = begin + slice;
+    long workBefore = jumpWork;
+    long ticksBefore = jumper.ticks();
+    // the stop check also counts the ticks as work, which moves the virtual clock
+    boolean model =
+        jumper.run(
+            Long.MAX_VALUE,
+            () -> {
+              jumpWork = workBefore + (jumper.ticks() - ticksBefore) / JUMP_TICKS_PER_WORK;
+              return interrupted || now() >= end || now() > deadline;
+            });
+    jumpWork = workBefore + (jumper.ticks() - ticksBefore) / JUMP_TICKS_PER_WORK;
+    jumpNanos += now() - begin;
+    if (JUMP_DEBUG) {
+      System.out.printf(
+          "c jump call %d rebuilt %b clauses %d slice %.3f s flips %d ticks %d restarts %d best %d%n",
+          jumpCalls,
+          rebuilt,
+          jumperClauses,
+          slice / 1e9,
+          jumper.flips(),
+          jumper.ticks(),
+          jumper.restarts(),
+          jumper.bestUnsat());
+    }
+    if (model) {
+      jumpModels++;
+      byte[] signs = jumper.signs();
+      System.arraycopy(signs, 0, savedSign, 0, numVars);
+      System.arraycopy(signs, 0, bestSign, 0, numVars);
+      // decisions follow these phases until a conflict: vivification and phase saving may change
+      // the saved phases before the descent
+      jumpPhases = Arrays.copyOf(signs, numVars);
+    }
   }
 
   /**
@@ -3501,6 +3632,39 @@ public final class CdclSolver {
    */
   public void setWalk(boolean on) {
     walking = on;
+  }
+
+  /**
+   * Sets the share of the solver's clock given to the feasibility-jump local search, which looks
+   * for a model of the clauses at rephasing points of a search without assumptions and without an
+   * external propagator, and hands a model it finds to the search as phases ({@link
+   * #DEFAULT_JUMP_SHARE} by default).
+   *
+   * @param share the share, from 0 (off) to below 1
+   */
+  public void setJumpShare(double share) {
+    if (!(share >= 0 && share < 1)) {
+      throw new IllegalArgumentException("jump share must be in [0, 1): " + share);
+    }
+    jumpShare = share;
+  }
+
+  /**
+   * Returns how many times the feasibility-jump local search found a model of the clauses.
+   *
+   * @return the number of models it found
+   */
+  public int jumpModels() {
+    return jumpModels;
+  }
+
+  /**
+   * Returns whether a model of the feasibility-jump local search led the search to its model.
+   *
+   * @return whether the last model came from the local search
+   */
+  public boolean jumpSolved() {
+    return jumpSolved;
   }
 
   /**
