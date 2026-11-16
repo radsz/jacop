@@ -6566,6 +6566,9 @@ Version 5.0 (unreleased)
    same instances are proved (56 by default, 62 under -f, 600 s) and the
    total time is unchanged (1.005 and 1.012, the same search under the
    virtual clock).
+   A list wake then rechecks only the values whose residue is a changed
+   position: 11 % more nodes per second on TelecomScheduling-B-10, the
+   same pruning.
 
 365. Free search (-f) of a resource-constrained project scheduling model
    (a makespan over CumulativeBasic resources with fixed durations,
