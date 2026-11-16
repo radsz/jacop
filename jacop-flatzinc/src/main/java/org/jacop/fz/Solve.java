@@ -3517,9 +3517,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   // the share of the gap a bound raise must close to keep a slow LCG (lcg-slow-bound-gain): on
-  // rect-euler (MiniZinc Challenge 2026) LCG raises the bound from 3,887 to 5,166 in steps of a few
-  // units, closing about 0.1 % of the gap per window, and finds 8,088 against 8,471 when it gives
-  // way at the share 0.005 of lcg-slow-gain
+  // rect-euler (MiniZinc Challenge 2026) LCG raises the bound in bursts of steps of a few units: at
+  // the share 0.005 of lcg-slow-gain it gave way with the bound at 3,887 and ended at 8,471 in 600 s,
+  // at 0.0005 it kept going to a bound of 5,340 and ended at 8,029
   private double lcgBoundGain;
   // the conflicts per second below which LCG gives way before the regular check (lcg-hopeless-rate)
   private double lcgHopelessRate;
