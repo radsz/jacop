@@ -1117,6 +1117,55 @@ class LinearRelaxationTest {
   }
 
   /**
+   * A set covering, the objective row and clauses over its columns, moves to the sparse simplex:
+   * the dense tableau of its clause rows leaves a solve in search fewer than 100 pivots (scpa1 of
+   * the OR-Library: 19, and 32 of 33 solves stopped at the limit), and the clauses carry the whole
+   * bound. With a second given row that bounds the objective the dense tableau stays.
+   */
+  @Test
+  void setCoveringClausesMoveToTheSparseSimplex() {
+    for (boolean second : new boolean[] {false, true}) {
+      Store store = new Store();
+      Random random = new Random(7);
+      int n = 1_500;
+      IntVar[] b = new IntVar[n];
+      int[] w = new int[n + 1];
+      for (int j = 0; j < n; j++) {
+        b[j] = new IntVar(store, "b" + j, 0, 1);
+        w[j] = 1 + random.nextInt(20);
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 30_000);
+      IntVar[] row = Arrays.copyOf(b, n + 1);
+      row[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(row, w, "==", 0));
+      if (second) {
+        store.impose(new LinearInt(Arrays.copyOf(b, 10), new int[10], ">=", 0));
+        store.impose(new LinearInt(new IntVar[] {b[0], b[1], cost}, new int[] {1, 1, 1}, ">=", 1));
+      }
+      List<LinearForm> clauses = new ArrayList<>();
+      for (int i = 0; i < 150; i++) {
+        IntVar[] v = new IntVar[30];
+        for (int k = 0; k < v.length; k++) {
+          v[k] = b[(i * 37 + k * 50 + random.nextInt(50)) % n];
+        }
+        long[] ones = new long[v.length];
+        Arrays.fill(ones, 1);
+        clauses.add(new LinearForm(v, ones, 1, LinearForm.GE));
+      }
+      LinearRelaxation r = LinearRelaxation.of(store, cost, false, clauses, Set.of());
+      assertThat(r).isNotNull();
+      store.impose(r);
+      assertThat(store.consistency()).isTrue();
+      assertThat(r.extraSparse).isEqualTo(!second);
+      if (!second) {
+        assertThat(r.extraRows).isEqualTo(clauses.size());
+        assertThat(cost.min()).isGreaterThan(1);
+      }
+    }
+  }
+
+  /**
    * A copy keeps the extra rows its original kept. The copy decided again at its own first solve,
    * and over other domains (the LCG checker copies over the reason of a pruning) the same rows no
    * longer raised the bound and were dropped: the pruning the original had found with them looked
