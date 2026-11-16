@@ -6861,26 +6861,6 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
-383. The LP relaxation states the value encodings of the model's Booleans
-   (sum b_v = 1, x = sum v b_v, and y = sum a[v] b_v for an element
-   y = a[x]) in place of the convex hull rows of the elements they cover,
-   since the encoding is that hull. The encodings count with the model's
-   rows when the simplex is chosen by size: when they make 100 rows or
-   more, the sparse simplex takes them all, outside the share of the
-   other extra rows, and keeps them in search instead of dropping them at
-   the pivot limit of the dense tableau. On a generalized assignment model
-   (OR-Library gap, job j to agent a[j], b[i,j] <-> a[j] = i, capacity rows
-   over the b, cost by element) the encodings are the assignment and cost
-   rows of its LP: before, their dense trial with 836 hull rows stopped at
-   the pivot limit and kept none (gapb 5x100 root bound 1,569, now 1,831,
-   optimum 1,843), or the LP stalled after 33 solves in search (gapd
-   10x200). OR-Library gap b-d at 600 s: 3 -> 7 of 18 proved (total time
-   0.81) and 2 -> 7 with -f (0.79), a better incumbent on 16 of 18 and 14
-   of 18. It fires on 8 of the 240 wide instances, with the same results.
-   -Dorg.jacop.lp.encodingRows=false turns it off; the statistic
-   lpEncodedElements gives the elements left to their encodings (":sparse"
-   when they chose the sparse simplex).
-
 Version 4.11
 =============
 
