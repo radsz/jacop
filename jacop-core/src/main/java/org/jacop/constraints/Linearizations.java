@@ -1184,9 +1184,38 @@ public final class Linearizations {
      * @param list the variables of the levels
      * @param edges the edges on a path, four ints each (level, source, value, target)
      */
+    /**
+     * The arc columns of a flow model: an edge whose (level, value) labels no other edge is the
+     * value column itself, unless the variable is fixed; all other edges are arcs.
+     */
+    private static int arcColumns(IntVar[] list, int[] edges, int size) {
+      long[] keys = new long[size];
+      for (int e = 0; e < size; e++) {
+        keys[e] = ((long) edges[4 * e] << 32) | (edges[4 * e + 2] & 0xffffffffL);
+      }
+      Arrays.sort(keys);
+      int arcs = 0;
+      for (int i = 0; i < size; ) {
+        int j = i + 1;
+        while (j < size && keys[j] == keys[i]) {
+          j++;
+        }
+        boolean single = j - i == 1 && !list[(int) (keys[i] >>> 32)].singleton();
+        arcs += single ? 0 : j - i;
+        i = j;
+      }
+      return arcs;
+    }
+
     void flow(IntVar[] list, int[] edges) {
       int size = edges.length / 4;
       if (size == 0) {
+        return;
+      }
+      // the arc columns, counted before the edges are grouped: a graph of millions of edges is
+      // left out without boxing them (300 diagrams of 1.8 million edges in
+      // WordDesign2-words-mdd-025, XCSP 2023)
+      if (made + arcColumns(list, edges, size) > VALUE_ENCODINGS_MAX) {
         return;
       }
       // the edges of each (level, value)
@@ -1199,9 +1228,6 @@ public final class Linearizations {
       for (List<Integer> es : byValue.values()) {
         IntVar x = list[edges[4 * es.get(0)]];
         arcs += es.size() == 1 && !x.singleton() ? 0 : es.size();
-      }
-      if (made + arcs > VALUE_ENCODINGS_MAX) {
-        return;
       }
       Map<IntVar, Map<Integer, IntVar>> m = of(list);
       if (m == null || made + arcs > VALUE_ENCODINGS_MAX) {

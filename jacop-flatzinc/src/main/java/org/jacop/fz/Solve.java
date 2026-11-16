@@ -4303,6 +4303,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgGraphConstraintsTooLarge="
+            + lcg.graphConstraintsTooLarge
             + "\n%%%mzn-stat: lcgConstraintsAsClauses="
             + lcg.constraintsAsClauses
             + "\n%%%mzn-stat: lcgConstraintClauses="

@@ -182,6 +182,19 @@ class CdclFuzzTest {
         });
   }
 
+  /**
+   * Some seeds reduce the learnt clauses for memory after almost every conflict, or skip
+   * elimination and local search for memory, as models too large for the heap do.
+   */
+  private static void memoryBudgets(CdclSolver s, long seed) {
+    if (Math.floorMod(seed, 3L) == 1) {
+      s.setLearntBudget(64);
+    }
+    if (Math.floorMod(seed, 7L) == 2) {
+      s.setCopyBudget(0);
+    }
+  }
+
   /** Solves with a DRAT proof and checks the answer; returns the answer. */
   private static int solveChecked(List<int[]> f, int vars, long seed) throws IOException {
     CdclSolver s = new CdclSolver();
@@ -193,6 +206,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    memoryBudgets(s, seed);
     s.ensureVars(vars);
     for (int[] c : f) {
       s.addClause(c);
@@ -221,6 +235,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    memoryBudgets(s, seed);
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();

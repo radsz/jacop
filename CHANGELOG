@@ -7004,6 +7004,26 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+391. Memory of large layered graphs (mdd, regular) and of large clause sets.
+   Constraints ExtensionalSupportMdd given the same arrays (the FlatZinc
+   front end keeps equal long arrays once) share the graph built from them
+   when their variables have equal domains, instead of a graph each; the
+   arrays are no longer copied. The automatic choice of the propagation
+   engine of a layered graph keeps the counters while their state fits in
+   a quarter of the heap and takes support search past it, which keeps no
+   counter per node. Under lazy clause generation, layered graphs become
+   clauses while those fit in 1/8 of the heap
+   (-Djacop.lcg.graphClauses.heapShare); larger ones are propagated and
+   explained by cuts. The linear relaxation counts the arcs of a flow
+   model before it builds it. In JaSAT, elimination and the local search
+   walk are skipped when their copies of the clauses would not fit in a
+   quarter of the heap, and the learnt clauses are reduced early when they
+   take more than 1/16 of it. WordDesign2-words-mdd-025 (XCSP 2023, 300
+   MDDs on one diagram of 525,720 nodes and 1.8 million edges) ran out of
+   memory at 6 GB while posting and is now solved in 151 s;
+   MagicSquare-mdd-10 (-f) ran out of memory at 6 GB (and 12 GB) during
+   the search and now runs to the time limit.
+
 Version 4.11
 =============
 
