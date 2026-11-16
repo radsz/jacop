@@ -84,6 +84,12 @@ public class TableVariableElimination implements ParserTreeConstants {
 
   static final int MAX_ROWS = Integer.getInteger("org.jacop.fz.tableElimination.rows", 10_000);
 
+  // two relations are joined only if they have at most this many rows together: joining the chain
+  // of transition tables of 26 million rows of Inglenook (XCSP 2026) filled a 6 GB heap, and the
+  // model was never posted
+  static final int MAX_JOIN_INPUT =
+      Integer.getInteger("org.jacop.fz.tableElimination.joinInput", 100 * MAX_ROWS);
+
   private final Support support;
 
   private final Set<SimpleNode> frozenNodes;
@@ -102,16 +108,27 @@ public class TableVariableElimination implements ParserTreeConstants {
     final boolean joined;
     boolean alive = true;
 
+    // an upper bound on the rows, known without reading them
+    private final int size;
+
     Relation(IntVar[] scope, int[][] rows, List<SimpleNode> sources, boolean joined) {
       this.scope = scope;
       this.rows = rows;
       this.sources = sources;
       this.joined = joined;
+      this.size = rows.length;
     }
 
-    Relation(IntVar[] scope, Supplier<int[][]> source, List<SimpleNode> sources) {
-      this(scope, (int[][]) null, sources, false);
+    Relation(IntVar[] scope, Supplier<int[][]> source, int size, List<SimpleNode> sources) {
+      this.scope = scope;
       this.source = source;
+      this.sources = sources;
+      this.joined = false;
+      this.size = size;
+    }
+
+    int size() {
+      return rows != null ? rows.length : size;
     }
 
     int[][] rows() {
@@ -317,6 +334,9 @@ public class TableVariableElimination implements ParserTreeConstants {
 
   /** The join of a and b with y projected out, or null if it is too large. */
   private Relation join(Relation a, Relation b, IntVar y) {
+    if ((long) a.size() + b.size() > MAX_JOIN_INPUT) {
+      return null;
+    }
     int ya = a.column(y);
     int yb = b.column(y);
     List<IntVar> scope = new ArrayList<>();
@@ -435,7 +455,7 @@ public class TableVariableElimination implements ParserTreeConstants {
       tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     }
     int[] table = tbl;
-    return new Relation(v, () -> rows(v, table), List.of(node));
+    return new Relation(v, () -> rows(v, table), table.length / v.length, List.of(node));
   }
 
   // the distinct rows of a table that fit the domains
