@@ -302,6 +302,11 @@ public final class CdclSolver {
   int gateEliminations;
   // time spent in elimination
   long eliminationNanos;
+  // after a round that eliminated nothing: the root trail and irredundant clause counts it saw;
+  // the next round during search waits until one of them grows
+  private boolean eliminationFruitless;
+  private int eliminationTrail;
+  private int eliminationOriginals;
   private long seed;
 
   // --- external propagator (see ExternalPropagator)
@@ -2895,7 +2900,7 @@ public final class CdclSolver {
             && !externalUsed
             && numUnits == 0) {
           nextElimination = conflicts + (long) eliminationInterval * ++eliminationRounds;
-          if (!eliminate()) {
+          if (eliminationDue() && !eliminate()) {
             return UNSAT;
           }
         }
@@ -3782,6 +3787,7 @@ public final class CdclSolver {
     boolean sat = e.run();
     gateEliminations += e.numGateEliminations();
     eliminationBound = e.bound();
+    eliminationFruitless = e.numEliminated() == 0 && eliminationBound >= maxEliminationBound;
     eliminationNanos += System.nanoTime() - begin;
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];
@@ -3837,7 +3843,19 @@ public final class CdclSolver {
     if (propagate() != NO_CONFLICT) {
       return refuted();
     }
+    eliminationTrail = trailSize;
+    eliminationOriginals = numOriginals + numOriginalBinaries;
     return true;
+  }
+
+  /**
+   * Whether an elimination round during search can find more than the last one: it eliminated
+   * something, or new root facts or irredundant clauses appeared since.
+   */
+  private boolean eliminationDue() {
+    return !eliminationFruitless
+        || trailSize > eliminationTrail
+        || numOriginals + numOriginalBinaries != eliminationOriginals;
   }
 
   /**
