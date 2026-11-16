@@ -6705,6 +6705,22 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
+373. Free search (-f) on satisfaction models gives LCG away to free search
+   without learning when learning does not cut the search: at 10 % of -t
+   (then each time the elapsed time doubles) the conflicts so far jump
+   back fewer than 1.5 levels on average and their learnt clauses have
+   an LBD of at least 0.4 of the conflict depth, so the clauses act like
+   chronological backtracking. Before, only optimisation searches gave
+   way (lcg-slow-rate). --free-config lcg-sat-probe=on|report|off,
+   lcg-sat-at=<share of -t> (0 gives way at once), lcg-sat-jump and
+   lcg-sat-lbd set it; with -s it prints lcgSatProbe. Fixed search keeps
+   LCG, since the annotation backtracks about one level a conflict
+   whatever learning does. On the 35 satisfaction instances of the wide
+   set and the XCSP competitions where -f LCG runs for more than 10 s, at
+   600 s in two repeats it solves 20 -> 25 and 21 -> 26, total time 0.73
+   and 0.78 (Subisomorphism g11-g30 and g11-g44, AnotherMagicSquare-04
+   proved UNSAT, FRB-45-21-3 solved).
+
 Version 4.11
 =============
 
