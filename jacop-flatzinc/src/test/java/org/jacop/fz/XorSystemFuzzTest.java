@@ -561,7 +561,8 @@ class XorSystemFuzzTest {
   }
 
   // the XORs written as clauses, plain (some clauses subsumed by shorter ones) or lifted by
-  // substitution, give rows; an AND gate gives none
+  // substitution, give rows; an AND gate gives none; a system of plain rows without a cycle is
+  // left out
   @Test
   void clausesGiveTheParitiesTheyEncode() throws IOException {
     List<int[]> plain = new ArrayList<>();
@@ -577,9 +578,12 @@ class XorSystemFuzzTest {
     String out = run(fzn(new CnfModel(7, plain), false), "-debug");
     assertTrue(out.contains("% XorSystem: 1 systems, 3 rows"), out);
     assertTrue(out.contains("3 rows from clauses"), out);
+    // without that clause the gate gives no row, and the two XORs, which share only x2, form no
+    // cycle: unit propagation on their clauses does what Gauss-Jordan elimination would
     plain.removeLast();
-    String gate = run(fzn(new CnfModel(7, plain), false), "-debug");
-    assertTrue(gate.contains("% XorSystem: 1 systems, 2 rows"), gate);
+    String gate = run(fzn(new CnfModel(7, plain), false), "-s", "-v");
+    assertTrue(gate.contains("%%%mzn-stat: xorSystems=0"), gate);
+    assertTrue(gate.contains("%%%mzn-stat: xorAcyclicSystems=1"), gate);
     List<int[]> lifted = new ArrayList<>();
     liftedXor(new int[][] {{0, 1}, {2, 3}, {4, 5}}, 1, lifted, null);
     liftedXor(new int[][] {{0, 1}, {2, 3}, {6}}, 0, lifted, null);

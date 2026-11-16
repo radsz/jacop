@@ -60,6 +60,13 @@ import org.jacop.fz.SimpleNode;
  * also when written as two opposite inequalities; {@code org.jacop.fz.xorZeroOne=false} leaves out
  * the equations over 0/1 variables only.
  *
+ * <p>Clauses that encode parities give rows too (see {@link #clauseRows()}). A component of plain
+ * rows read from clauses only is left out when its rows and variables form a tree (a Berge-acyclic
+ * system): unit propagation on the clauses is then as strong as Gauss-Jordan elimination, since arc
+ * consistency on each row of a Berge-acyclic network is global consistency (Beeri, Fagin, Maier and
+ * Yannakakis, J. ACM 30(3), 1983), and the XORs of circuits (adders, multipliers) form such trees,
+ * where the system would only slow the search.
+ *
  * <p>Setting the system property {@code org.jacop.fz.xorSystem} to false turns it off. A component
  * with more than {@code jacop.fz.xorSystemCells} (default 50 million) row-column cells is left out,
  * as is a component of more than {@code jacop.fz.xorSystemRows} rows (default 20,000).
@@ -112,6 +119,12 @@ public class XorSystemDetector implements ParserTreeConstants {
 
   /** Statistics: the parity rows recovered from clauses. */
   int clauseRows;
+
+  /** Statistics: the systems of clause rows left out because their rows form no cycle. */
+  int acyclicSystems;
+
+  // the rows that are parities read from clauses, whose clauses the model keeps
+  private final java.util.BitSet fromClauses = new java.util.BitSet();
 
   // the parities encoded as clauses enter the system (see clause(IntVar[], IntVar[]))
   static final boolean CLAUSES =
@@ -176,6 +189,12 @@ public class XorSystemDetector implements ParserTreeConstants {
           || members.stream().allMatch(r -> rows.get(r).length < 3)) {
         continue;
       }
+      if (members.stream().allMatch(fromClauses::get) && acyclic(members, n)) {
+        // unit propagation on the clauses of a Berge-acyclic system already reaches the
+        // fixpoint of Gauss-Jordan elimination; the system would only slow the search
+        acyclicSystems++;
+        continue;
+      }
       IntVar[][] x = new IntVar[members.size()][];
       int[] p = new int[members.size()];
       for (int k = 0; k < members.size(); k++) {
@@ -192,7 +211,7 @@ public class XorSystemDetector implements ParserTreeConstants {
       systems++;
       systemRows += members.size();
     }
-    if (support.options.searchStatistics() && systems > 0) {
+    if (support.options.searchStatistics() && systems + acyclicSystems > 0) {
       FzConsole.println(
           "%%%mzn-stat: xorSystems="
               + systems
@@ -204,6 +223,8 @@ public class XorSystemDetector implements ParserTreeConstants {
               + pairedRows
               + "\n%%%mzn-stat: xorClauseRows="
               + clauseRows
+              + "\n%%%mzn-stat: xorAcyclicSystems="
+              + acyclicSystems
               + "\n%%%mzn-stat: xorQuadraticRows="
               + quadraticRows
               + "\n%%%mzn-stat: xorProducts="
@@ -518,7 +539,11 @@ public class XorSystemDetector implements ParserTreeConstants {
               x[j] = vars.get(cols[j]);
             }
             clauseRows++;
+            int before = rows.size();
             row(x, 1 - q);
+            if (rows.size() > before) {
+              fromClauses.set(before);
+            }
           }
         }
       }
@@ -1024,6 +1049,15 @@ public class XorSystemDetector implements ParserTreeConstants {
     }
     rows.add(row);
     parities.add(parity);
+  }
+
+  // the rows and the n variables of a connected system form a tree in their incidence graph
+  private boolean acyclic(List<Integer> members, int n) {
+    long edges = 0;
+    for (int r : members) {
+      edges += rows.get(r).length;
+    }
+    return edges == members.size() + n - 1L;
   }
 
   private int node(IntVar x) {

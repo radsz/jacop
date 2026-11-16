@@ -499,6 +499,15 @@ unless stated otherwise):
 - jacop.fz.xorSystemRows, jacop.fz.xorSystemCells: the largest XOR
   system, in rows and in rows times columns; default 20000 and
   50000000.
+- org.jacop.fz.xorClauses: the XorSystem detector also reads
+  bool_clause: clauses of at most jacop.fz.xorClauseLength (default 8)
+  variables that exclude every point of one parity of a variable set
+  become an XOR row; default true. A system of such rows only whose
+  rows and variables form a tree is left out (unit propagation on the
+  clauses already does what Gauss-Jordan elimination would).
+- org.jacop.fz.xorQuadratic: clause sets whose excluded points have an
+  algebraic normal form of degree 2 (XORs of ORs and of ANDs) become XOR
+  rows over the variables and auxiliary products a and b; default true.
 - org.jacop.fz.zeroOneCount: counts over 0/1 variables posted as sums,
   which the linear relaxation reads.
 - jacop.table: merging of the tuples of a table that differ in one

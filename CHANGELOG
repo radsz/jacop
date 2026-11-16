@@ -7004,6 +7004,37 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. The XorSystem detector of the FlatZinc front end reads parities written
+   as clauses (bool_clause), as CryptoMiniSat finds the XORs of a CNF
+   (M. Soos, K. Nohl and C. Castelluccia, "Extending SAT Solvers to
+   Cryptographic Problems", SAT 2009). A set of at most 8 variables
+   (jacop.fz.xorClauseLength) whose clauses, also shorter clauses that
+   subsume some of them, exclude every point of one parity gives a row.
+   A set whose clauses exclude half of the points with an algebraic
+   normal form of degree 2 gives a row over the variables and products
+   m = a and b (the linearisation of Bosphorus, D. Choo, M. Soos, K. M.
+   A. Chai and K. S. Meel, ICTAI 2019), which reads XORs of disjunctions
+   (a or b = a + b + ab); a product that occurs in one row only is left
+   out, and an AND gate x = ab stands for its product. Gauss-Jordan
+   elimination then refutes Tseitin formulas, which take resolution
+   exponentially long proofs (A. Urquhart, "Hard examples for
+   resolution", J. ACM 34(1), 1987). A system of plain rows read from
+   clauses whose rows and variables form a tree is not posted: unit
+   propagation on its clauses already reaches what Gauss-Jordan
+   elimination would (C. Beeri, R. Fagin, D. Maier and M. Yannakakis,
+   "On the desirability of acyclic database schemes", J. ACM 30(3),
+   1983); the XORs of adders and multipliers are such trees.
+   -Dorg.jacop.fz.xorClauses=false turns the clauses off,
+   -Dorg.jacop.fz.xorQuadratic=false the degree-2 rows. On the 90 SAT
+   Competition 2024/25 CNFs of the SAT screen (cnf2fzn FlatZinc, 240 s)
+   it fires on 41; tseitin-formulas, mutilated-chessboard, or_randxor
+   and subset-cardinality are refuted at posting (none decided before),
+   random-graph-xorsat and binary-tree-parity are solved in 1 to 3 s
+   (unknown before; Kissat 164 s and unknown), and the default search
+   solves 13 of the 41 instead of 7, -f 11 instead of 5. On the 240
+   wide instances it fires on 2013 rubik 6-cube and 7-cube only, which
+   stay solved in 2 to 5 s (0.3 s slower).
+
 Version 4.11
 =============
 
