@@ -326,40 +326,44 @@ public final class Linearizations {
       return;
     }
     for (Constraint c : constraints) {
-      if (!(c instanceof HybridTable t)) {
-        continue;
-      }
-      int key = t.keyColumn();
-      if (key < 0) {
-        continue;
-      }
-      IntVar x = t.column(key);
-      Map<Integer, IntVar> m = covering.get(x);
-      if (m == null) {
-        continue;
-      }
-      for (int j = 0; j < t.columnCount(); j++) {
-        IntVar y = t.column(j);
-        if (j == key || y == x || y.singleton() || m.containsValue(y)) {
-          continue;
-        }
-        IntVar[] vars = new IntVar[m.size() + 1];
-        long[] w = new long[vars.length];
-        int i = 0;
-        for (Map.Entry<Integer, IntVar> v : m.entrySet()) {
-          // a value of x without a tuple has no solution: its term is left out
-          int value = t.keyedValue(j, v.getKey(), 0);
-          if (value != 0) {
-            vars[i] = v.getValue();
-            w[i++] = value;
-          }
-        }
-        vars[i] = y;
-        w[i++] = -1;
-        if (i >= 2) {
-          out.add(new LinearForm(Arrays.copyOf(vars, i), Arrays.copyOf(w, i), 0, LinearForm.EQ));
+      if (c instanceof HybridTable t && t.keyColumn() >= 0) {
+        Map<Integer, IntVar> m = covering.get(t.column(t.keyColumn()));
+        if (m != null) {
+          keyedRows(t, m, out);
         }
       }
+    }
+  }
+
+  // the rows y = sum_v t(v) b_v of the columns y of table t, keyed by the encoded column of m
+  private static void keyedRows(HybridTable t, Map<Integer, IntVar> m, List<LinearForm> out) {
+    int key = t.keyColumn();
+    IntVar x = t.column(key);
+    for (int j = 0; j < t.columnCount(); j++) {
+      IntVar y = t.column(j);
+      if (j != key && y != x && !y.singleton() && !m.containsValue(y)) {
+        keyedRow(t, j, y, m, out);
+      }
+    }
+  }
+
+  private static void keyedRow(
+      HybridTable t, int j, IntVar y, Map<Integer, IntVar> m, List<LinearForm> out) {
+    IntVar[] vars = new IntVar[m.size() + 1];
+    long[] w = new long[vars.length];
+    int i = 0;
+    for (Map.Entry<Integer, IntVar> v : m.entrySet()) {
+      // a value of x without a tuple has no solution: its term is left out
+      int value = t.keyedValue(j, v.getKey(), 0);
+      if (value != 0) {
+        vars[i] = v.getValue();
+        w[i++] = value;
+      }
+    }
+    vars[i] = y;
+    w[i++] = -1;
+    if (i >= 2) {
+      out.add(new LinearForm(Arrays.copyOf(vars, i), Arrays.copyOf(w, i), 0, LinearForm.EQ));
     }
   }
 
