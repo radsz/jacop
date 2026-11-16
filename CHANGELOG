@@ -6596,23 +6596,37 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-366. Symmetry breaking posts a value precedence over the bins of a bin
-   packing that minimizes the bins used also when the model empties the
-   bins above the objective (b > bins -> load[b] = 0, which MiniZinc
-   flattens into bool_clause, int_eq_imp and int_le_imp). Like
-   bin[i] <= bins, these constraints are left out of the value graph:
-   relabelling the bins in the order of their first use (Y. C. Law and
-   J. H. M. Lee, Global constraints for integer and set value precedence,
-   CP 2004) never raises the largest bin used, so the bins above the
-   objective stay empty and an optimal solution is kept. Before, the
-   bin numbers looked different and a search at the optimum, where every
-   bin is full, had to tell apart packings that only number the bins
-   differently. On the Falkenauer triplets of the OR-Library
-   (E. Falkenauer, A hybrid grouping genetic algorithm for bin packing,
-   Journal of Heuristics 2, 1996; binpack5-8, t60-t501) all 8 instances
-   are now proved optimal in 0.2-6 s, where 5 had no optimal packing in
-   240 s (t501_10 no solution at all). It fires on none of the 240 wide
-   instances. -Dorg.jacop.fz.symmetryEmptiedBins=false turns it off.
+366. Bin packings that minimize the bins used find packings at the bound.
+   (a) Free search packs the items of a bin packing whose objective
+   bounds every item's bin (bin[i] <= bins) into as many bins as the
+   objective's lower bound, by bin completion with first-fail item
+   choice, completions that pack the items with the fewest completions
+   first, and randomized restarts, org.jacop.search.ls.BinCompletion
+   (R. E. Korf, A new algorithm for optimal bin packing, AAAI 2002;
+   C. P. Gomes, B. Selman and H. Kautz, Boosting combinatorial search
+   through randomization, AAAI 1998). The packing is checked in the
+   store, printed and given to lazy clause generation as its first
+   solution, which only has to prove it optimal. --free-config
+   bin-completion=off turns it off, bin-completion-share (0.05 of the
+   time limit, at most 30 s) bounds it.
+   (b) Symmetry breaking posts a value precedence over the bins also when
+   the model empties the bins above the objective (b > bins ->
+   load[b] = 0, flattened into bool_clause, int_eq_imp and int_le_imp):
+   like bin[i] <= bins these constraints are left out of the value graph,
+   since relabelling the bins by first use (Y. C. Law and J. H. M. Lee,
+   Global constraints for integer and set value precedence, CP 2004)
+   keeps the bins above the objective empty. The chain orders the items
+   by decreasing weight, as first fit decreasing opens the bins.
+   -Dorg.jacop.fz.symmetryEmptiedBins=false turns it off.
+   On the OR-Library binpack5-8 Falkenauer triplets (E. Falkenauer, A
+   hybrid grouping genetic algorithm for bin packing, Journal of
+   Heuristics 2, 1996) and shuffled copies, all 16 are proved optimal in
+   3-16 s at 600 s, where 6 were (CP-SAT proves the originals in
+   2-33 s); of the 8 binpack1-4 instances 3 are proved instead of 1
+   (u250_00 and u250_10, which CP-SAT does not solve in 240 s) and the
+   4 largest get a solution, where they had none. Total time over the
+   24 falls from 10707 to 3252 s (-f: 10759 to 3366 s). Neither part
+   fires on the 240 wide instances.
 
 Version 4.11
 =============

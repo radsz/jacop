@@ -38,14 +38,15 @@ import java.util.function.BooleanSupplier;
  *
  * <p>Each step takes the item whose bin has the fewest completions, the sets of remaining items
  * that fill the rest of its bin to within the waste still allowed (the capacity of all bins minus
- * the total weight), and tries them in random order; an item without completion fails the branch.
- * Bin completion builds a solution bin by bin (R. E. Korf, A new algorithm for optimal bin packing,
- * AAAI 2002; E. L. Schreiber and R. E. Korf, Improved bin completion for optimal bin packing and
- * number partitioning, IJCAI 2013); choosing the item with the fewest completions first is the
- * first-fail principle (R. M. Haralick and G. L. Elliott, Increasing tree search efficiency for
- * constraint satisfaction problems, Artificial Intelligence 14, 1980), and randomized restarts with
- * a growing node limit cut the heavy tails of such searches (C. P. Gomes, B. Selman and H. Kautz,
- * Boosting combinatorial search through randomization, AAAI 1998).
+ * the total weight), and tries first those that pack the items with the fewest completions of their
+ * own, with random noise; an item without completion fails the branch. Bin completion builds a
+ * solution bin by bin (R. E. Korf, A new algorithm for optimal bin packing, AAAI 2002; E. L.
+ * Schreiber and R. E. Korf, Improved bin completion for optimal bin packing and number
+ * partitioning, IJCAI 2013); choosing the item with the fewest completions first is the first-fail
+ * principle (R. M. Haralick and G. L. Elliott, Increasing tree search efficiency for constraint
+ * satisfaction problems, Artificial Intelligence 14, 1980), and randomized restarts with a growing
+ * node limit cut the heavy tails of such searches (C. P. Gomes, B. Selman and H. Kautz, Boosting
+ * combinatorial search through randomization, AAAI 1998).
  *
  * <p>On the Falkenauer triplets of the OR-Library (E. Falkenauer, A hybrid grouping genetic
  * algorithm for bin packing, Journal of Heuristics 2, 1996), where every bin of an optimal packing
@@ -212,6 +213,7 @@ public final class BinCompletion {
     int best = -1;
     int bestCount = Integer.MAX_VALUE;
     int ties = 0;
+    int[] hard = new int[weight.length];
     for (int k = 0; k < weight.length; k++) {
       if (count[k] == 0) {
         continue;
@@ -219,6 +221,7 @@ public final class BinCompletion {
       count[k]--;
       int n = completions(capacity - weight[k], waste, false);
       count[k]++;
+      hard[k] = n;
       if (n == 0) {
         return 0;
       }
@@ -235,12 +238,7 @@ public final class BinCompletion {
     int[][] options = Arrays.copyOf(found, foundCount);
     // with completions left out, a failure of those tried proves nothing
     boolean limited = foundCount >= MAX_TRIED;
-    for (int i = options.length - 1; i > 0; i--) {
-      int j = random.nextInt(i + 1);
-      int[] t = options[i];
-      options[i] = options[j];
-      options[j] = t;
-    }
+    order(options, hard);
     for (int[] option : options) {
       int used = 0;
       int sum = 0;
@@ -268,6 +266,37 @@ public final class BinCompletion {
     }
     count[best]++;
     return limited ? -1 : 0;
+  }
+
+  /**
+   * Orders the completions by how hard their items are to pack elsewhere, the sum over their items
+   * of one over the item's completions, each score scaled by a random factor in [1, 2) so restarts
+   * try other orders.
+   */
+  private void order(int[][] options, int[] hard) {
+    double[] score = new double[options.length];
+    for (int i = 0; i < options.length; i++) {
+      double sum = 0;
+      for (int k = 0; k < options[i].length; k++) {
+        if (options[i][k] > 0) {
+          sum += options[i][k] / (double) hard[k];
+        }
+      }
+      score[i] = sum * (1 + random.nextDouble());
+    }
+    // insertion sort by decreasing score, the arrays being short
+    for (int i = 1; i < options.length; i++) {
+      int[] option = options[i];
+      double value = score[i];
+      int j = i - 1;
+      while (j >= 0 && score[j] < value) {
+        options[j + 1] = options[j];
+        score[j + 1] = score[j];
+        j--;
+      }
+      options[j + 1] = option;
+      score[j + 1] = value;
+    }
   }
 
   /**

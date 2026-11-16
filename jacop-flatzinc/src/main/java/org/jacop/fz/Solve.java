@@ -73,7 +73,6 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.TableCliques;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
-import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cfn.CostNetworkBound;
@@ -3800,12 +3799,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (packed.isEmpty()) {
       return null;
     }
-    // the objective bounds the bins used: x <= cost for every item, so that packing into cost.min()
-    // bins is a solution at the objective's bound
-    for (int i : packed) {
-      if (!items[i].singleton() && !boundedBy(items[i], cost)) {
-        return null;
-      }
+    // the objective bounds the bins used: with the objective at k, propagation keeps every item in
+    // the first k bins, so a packing into k bins is a solution at the objective's bound
+    if (!boundsBins(items, cost, k, first)) {
+      return null;
     }
     int[] weights = packed.stream().mapToInt(i -> w[i]).toArray();
     long start = System.currentTimeMillis();
@@ -3840,14 +3837,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return new Hint(hinted, values);
   }
 
-  /** Whether a constraint x <= y of the store holds the variable below the objective. */
-  private static boolean boundedBy(IntVar x, IntVar y) {
-    for (Constraint c : x.dom().constraints()) {
-      if (c instanceof XlteqY le && le.x() == x && le.y() == y) {
-        return true;
+  /** Whether propagation with the objective at k leaves every item in bins first..first+k-1. */
+  private boolean boundsBins(IntVar[] items, IntVar cost, int k, int first) {
+    int base = store.level;
+    store.setLevel(base + 1);
+    try {
+      cost.domain.in(store.level, cost, k, k);
+      if (!store.consistency()) {
+        return false;
+      }
+      for (IntVar x : items) {
+        if (x.min() < first || x.max() >= first + k) {
+          return false;
+        }
+      }
+      return true;
+    } catch (FailException e) {
+      return false;
+    } finally {
+      while (store.level > base) {
+        store.removeLevel(store.level);
+        store.setLevel(store.level - 1);
       }
     }
-    return false;
   }
 
   /**
