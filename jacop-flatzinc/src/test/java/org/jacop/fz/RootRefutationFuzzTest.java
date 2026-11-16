@@ -193,7 +193,7 @@ class RootRefutationFuzzTest {
               + "("
               + list(w)
               + ", ["
-              + names(m, lits, "b")
+              + names(lits, "b")
               + "], "
               + c
               + ");");
@@ -223,7 +223,7 @@ class RootRefutationFuzzTest {
             + "("
             + list(coef)
             + ", ["
-            + names(m, lits, "y")
+            + names(lits, "y")
             + "], "
             + rhs
             + ");");
@@ -237,7 +237,7 @@ class RootRefutationFuzzTest {
     return sb.append(']').toString();
   }
 
-  private static String names(Model m, int[] lits, String prefix) {
+  private static String names(int[] lits, String prefix) {
     StringBuilder sb = new StringBuilder();
     for (int k = 0; k < lits.length; k++) {
       sb.append(k == 0 ? "" : ", ").append(prefix).append(lits[k] >> 1);
