@@ -52,6 +52,7 @@ import org.jacop.fz.constraints.AffineFolding;
 import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
@@ -87,6 +88,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
+import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
@@ -235,6 +237,15 @@ public class Constraints implements ParserTreeConstants {
       // merged copies of partial function results
       Set<SimpleNode> replaced = Set.of();
       Set<IntVar> tabled = Set.of();
+      // the conflicts of a model of maximum clique alone are enforced by its bound
+      boolean pureClique = false;
+      if (MaxCliqueDetector.enabled() && options.proof() == null) {
+        Set<SimpleNode> pairs = new MaxCliqueDetector(support).replacedPairs(astTree);
+        if (!pairs.isEmpty()) {
+          replaced = new HashSet<>(pairs);
+          pureClique = true;
+        }
+      }
       // a search variable that became an alias is searched as its Boolean
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
@@ -400,7 +411,7 @@ public class Constraints implements ParserTreeConstants {
       // a redundant Sequence over sliding-window sums, which --proof does not encode
       // its window rows are still posted, but marked implied: local search evaluates the sequence
       Set<SimpleNode> impliedRows = Set.of();
-      if (SequenceDetector.enabled() && options.proof() == null) {
+      if (SequenceDetector.enabled() && options.proof() == null && !pureClique) {
         SequenceDetector sequences = new SequenceDetector(support);
         sequences.detect(astTree);
         impliedRows = sequences.impliedRows();
@@ -577,6 +588,12 @@ public class Constraints implements ParserTreeConstants {
         new CountPartnersDetector(support).detect(astTree);
       }
 
+      // the aggregated flow of a regular constraint over the residue classes its cardinality
+      // constraints count, redundant; --proof does not encode it
+      if (RegularFlowDetector.enabled() && options.proof() == null) {
+        new RegularFlowDetector(support).detect(astTree);
+      }
+
       // the least number of bins of each item whose pairs must share a bin (SONET rings),
       // redundant; --proof does not encode it
       if (PairCoverDetector.enabled() && options.proof() == null) {
@@ -591,6 +608,14 @@ public class Constraints implements ParserTreeConstants {
         if (agreements.infeasible()) {
           throw Store.failException;
         }
+      }
+
+      // the LYM inequality of pairwise incomparable vectors (Sperner's theorem), redundant;
+      // --proof does not encode it
+      if (AntichainDetector.enabled() && options.proof() == null) {
+        AntichainDetector antichains = new AntichainDetector(support);
+        antichains.detect(astTree);
+        antichains.failIfInfeasible();
       }
 
       if (increasing != null && IncreasingDetector.sumEnabled()) {

@@ -92,7 +92,11 @@ class LcgSlowFallbackFlatzincTest {
   @Test
   void optimumAfterGivingWayAtOnce() throws IOException {
     String out = run("lcg-slow-rate=1,lcg-slow-at=0");
-    assertTrue(out.contains("lcgSlowConflicts=0"), out);
+    // LCG gives way at its first test; only the core-guided probe's trimming of its first cores
+    // can have made a few conflicts by then
+    Matcher conflicts = Pattern.compile("lcgSlowConflicts=(\\d+)").matcher(out);
+    assertTrue(conflicts.find(), out);
+    assertTrue(Long.parseLong(conflicts.group(1)) < 10, out);
     checkOptimum(out);
   }
 
@@ -191,6 +195,17 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void slowRateGrowsWithLearntClauseLength() {
+    // short learnt clauses keep lcg-slow-rate; ttppv circ20 learns about 400 literals a conflict,
+    // so 530 conflicts/s counts as slow at 5 conflicts/s per literal (2000)
+    assertEquals(300, Solve.slowRate(1000, 20_000, 300, 5), 1e-9);
+    assertEquals(2000, Solve.slowRate(1000, 400_000, 300, 5), 1e-9);
+    // off, and no conflicts yet
+    assertEquals(300, Solve.slowRate(1000, 400_000, 300, 0), 1e-9);
+    assertEquals(300, Solve.slowRate(0, 0, 300, 5), 1e-9);
+  }
+
+  @Test
   void slowLcgKeptWhenTheWindowCoversTheRun() throws IOException {
     // every check finds LCG slow (rate far above any solver), but the window is the whole time
     // limit and the first solution counts as progress until it is that old: LCG never gives way
@@ -204,6 +219,89 @@ class LcgSlowFallbackFlatzincTest {
     String out = run("lcg-slow-rate=0.001,lcg-slow-at=0.5");
     assertTrue(!out.contains("lcgSlowConflicts="), out);
     checkOptimum(out);
+  }
+
+  @Test
+  void satisfactionProbeTellsWeakLearning() {
+    // Subisomorphism g11-g30 at 12 s: conflicts at depth 87 jump back 1.4 levels, LBD 39
+    assertTrue(Solve.learningCutsLittle(19_248, 87.3, 1.405, 38.6, 1.5, 0.4));
+    // nmseq 395: conflicts at depth 1
+    assertTrue(Solve.learningCutsLittle(316, 1.0, 0.997, 1.0, 1.5, 0.4));
+    // whirlpool d29 and PegSolitaire: long jumps, short clauses
+    assertFalse(Solve.learningCutsLittle(7_288, 792.2, 19.8, 63.1, 1.5, 0.4));
+    assertFalse(Solve.learningCutsLittle(42_078, 262.0, 12.3, 23.8, 1.5, 0.4));
+    // short jumps but clauses far shorter than the depth: learning generalises
+    assertFalse(Solve.learningCutsLittle(31_000, 90.8, 1.2, 23.5, 1.5, 0.4));
+    // no conflict yet: nothing to tell
+    assertFalse(Solve.learningCutsLittle(0, 0, 0, 0, 1.5, 0.4));
+  }
+
+  @Test
+  void satisfactionSolvedAfterGivingWay() throws IOException {
+    // 40 queens (8 are solved before LCG starts); lcg-sat-at=0 gives way after LCG's root
+    // propagation, and search without learning
+    // must print a solution of the model
+    int n = 40;
+    StringBuilder s = new StringBuilder();
+    for (int i = 1; i <= n; i++) {
+      s.append("var 1..").append(n).append(": q").append(i).append(":: output_var;\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        s.append("constraint int_ne(q").append(i).append(", q").append(j).append(");\n");
+        // q_i - q_j != j - i and q_i - q_j != i - j
+        for (int d : new int[] {j - i, i - j}) {
+          s.append("constraint int_lin_ne([1, -1], [q")
+              .append(i)
+              .append(", q")
+              .append(j)
+              .append("], ")
+              .append(d)
+              .append(");\n");
+        }
+      }
+    }
+    s.append("solve satisfy;\n");
+    String out = runSatisfaction(s.toString(), "lcg-sat-at=0");
+    assertTrue(out.contains("lcgSlowUnsolved=true"), out);
+    int[] q = new int[n + 1];
+    for (int i = 1; i <= n; i++) {
+      Matcher m = Pattern.compile("q" + i + " = (\\d+);").matcher(out);
+      assertTrue(m.find(), out);
+      q[i] = Integer.parseInt(m.group(1));
+    }
+    for (int i = 1; i <= n; i++) {
+      for (int j = i + 1; j <= n; j++) {
+        assertTrue(q[i] != q[j] && Math.abs(q[i] - q[j]) != j - i, out);
+      }
+    }
+  }
+
+  private String runSatisfaction(String model, String config) throws IOException {
+    Path fzn = tmp.resolve("sat.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String[] args = {
+      "--lcg",
+      "-f",
+      "-s",
+      "-v",
+      "--lp",
+      "off",
+      "-t",
+      "30000",
+      "--free-config",
+      config,
+      fzn.toString()
+    };
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    PrintStream originalOut = System.out;
+    try (PrintStream capture = new PrintStream(out, true, StandardCharsets.UTF_8)) {
+      System.setOut(capture);
+      new Fz2jacop().callMain(args);
+    } finally {
+      System.setOut(originalOut);
+    }
+    return out.toString(StandardCharsets.UTF_8);
   }
 
   private static void checkOptimum(String out) {

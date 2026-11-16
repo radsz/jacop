@@ -202,4 +202,122 @@ class MaxCliqueBoundTest {
     assertTrue(checked > 100, "reasons checked: " + checked);
     assertTrue(failures > 3, "failures checked: " + failures);
   }
+
+  // the largest set of pairwise compatible vertices, by a plain branch and bound over bit masks
+  private static int reference(long[] compatible, long candidates, int size, int best) {
+    if (candidates == 0) {
+      return Math.max(size, best);
+    }
+    if (size + Long.bitCount(candidates) <= best) {
+      return best;
+    }
+    int v = Long.numberOfTrailingZeros(candidates);
+    best = reference(compatible, candidates & compatible[v], size + 1, best);
+    return reference(compatible, candidates & ~(1L << v), size, best);
+  }
+
+  private static int reference(int[][] conflicts) {
+    int n = conflicts.length;
+    boolean[][] c = matrix(conflicts);
+    long[] compatible = new long[n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        if (i != j && !c[i][j]) {
+          compatible[i] |= 1L << j;
+        }
+      }
+    }
+    return reference(compatible, n == 64 ? -1L : (1L << n) - 1, 0, 0);
+  }
+
+  // larger graphs, where the vertices beyond the incumbent are covered by re-coloring and MaxSAT
+  // reasoning, and the one vertex left uncovered is set to 1
+  @Test
+  void largerGraphsAgainstReference() {
+    Random rnd = new Random(23);
+    for (int instance = 0; instance < 150; instance++) {
+      int n = 15 + rnd.nextInt(26);
+      int[][] conflicts = randomConflicts(rnd, n);
+      int expected = reference(conflicts);
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar s = new IntVar(store, "s", 0, n);
+      store.impose(new SumInt(x, "==", s));
+      store.impose(new MaxCliqueBound(x, conflicts, s));
+      IntVar cost = new IntVar(store, "cost", -n, 0);
+      store.impose(new XplusYeqC(s, cost, 0));
+      Search<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      SelectChoicePoint<IntVar> select = new SimpleSelect<>(x, null, new IndomainMax<>());
+      assertTrue(search.labeling(store, select, cost));
+      assertEquals(-expected, cost.value(), "instance " + instance);
+    }
+  }
+
+  // reasons on larger graphs with a raised lower bound on the sum, so that the bound covers
+  // vertices beyond it and sets the last uncovered vertex to 1
+  @Test
+  void reasonsOfCoveredBounds() {
+    Random rnd = new Random(31);
+    int forced = 0;
+    int failures = 0;
+    int checked = 0;
+    for (int instance = 0; instance < 400; instance++) {
+      int n = 12 + rnd.nextInt(14);
+      int[][] conflicts = randomConflicts(rnd, n);
+      int expected = reference(conflicts);
+      Store store = new Store();
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 1);
+      }
+      IntVar s = new IntVar(store, "s", 0, n);
+      AtomicTrail trail = new AtomicTrail(store);
+      MaxCliqueBound c = new MaxCliqueBound(x, conflicts, s);
+      store.impose(c);
+      boolean consistent = store.consistency();
+      for (int step = 0; consistent && step < 10; step++) {
+        store.setLevel(store.level + 1);
+        try {
+          if (step == 0 || rnd.nextInt(3) == 0) {
+            int target = Math.max(s.min(), expected - 1 + rnd.nextInt(3));
+            s.domain.inMin(store.level, s, Math.min(s.max(), target));
+          } else {
+            IntVar v = x[rnd.nextInt(n)];
+            int a = rnd.nextInt(4) == 0 ? 1 : 0;
+            v.domain.in(store.level, v, a, a);
+          }
+          consistent = store.consistency();
+        } catch (FailException _) {
+          consistent = false;
+        }
+      }
+      ExplanationChecker checker = new ExplanationChecker(trail);
+      for (int e = 0; e < trail.size(); e++) {
+        if (trail.reason(e) == c) {
+          EntryList reason = new EntryList();
+          assertTrue(trail.explain(e, reason), "instance " + instance);
+          assertNull(checker.checkReason(e, reason), "instance " + instance);
+          checked++;
+          if (trail.kind(e) == AtomicTrail.GE && trail.variable(e) != s) {
+            forced++;
+          }
+        }
+      }
+      if (!consistent && store.recentlyFailedConstraint == c) {
+        EntryList reason = new EntryList();
+        if (c.explainFailure(trail, reason)) {
+          assertNull(checker.checkFailure(c, reason), "instance " + instance);
+          failures++;
+        }
+      }
+      trail.detach();
+    }
+    assertTrue(checked > 100, "reasons checked: " + checked);
+    assertTrue(forced > 10, "forced vertices checked: " + forced);
+    assertTrue(failures > 10, "failures checked: " + failures);
+  }
 }

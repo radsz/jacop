@@ -319,6 +319,25 @@ class LinearRelaxationTest {
     }
   }
 
+  /**
+   * The cut rounds of the restart solves over the bounds of the root level at that restart
+   * (org.jacop.lp.restartBounds) keep the optimum of every model, as depth-first search finds it.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsTheOptimumWithCutsOverTheRestartBounds(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    boolean bounds = LinearRelaxation.restartBoundsOn;
+    try {
+      LinearRelaxation.restartSolvesOn = true;
+      LinearRelaxation.restartBoundsOn = true;
+      assertThat(restarts(simplex)[0]).isPositive();
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+      LinearRelaxation.restartBoundsOn = bounds;
+    }
+  }
+
   // solves each model with restarts after each solution; returns the restart solves and the root
   // reduced-cost prunings
   private static long[] restarts(LinearRelaxation.Simplex simplex) {
@@ -2641,5 +2660,93 @@ class LinearRelaxationTest {
         }
       }
     }
+  }
+
+  // the clause row of (positive literals or negated negative ones)
+  private static LinearForm clause(IntVar[] positive, IntVar... negative) {
+    IntVar[] xs = new IntVar[positive.length + negative.length];
+    long[] ws = new long[xs.length];
+    for (int k = 0; k < xs.length; k++) {
+      xs[k] = k < positive.length ? positive[k] : negative[k - positive.length];
+      ws[k] = k < positive.length ? 1 : -1;
+    }
+    return new LinearForm(xs, ws, 1L - negative.length, LinearForm.GE);
+  }
+
+  /**
+   * The pigeonhole formula in clauses, as the SAT Competition states it: a clause per pigeon and
+   * the at-most-one of each hole as its pairs. Its clauses alone have a feasible LP; the clique
+   * rows of the pairs refute n + 1 pigeons in n holes, and n pigeons stay feasible. With {@code
+   * hidden}, each hole's pairs are stated over copies of the pigeon literals, equivalent through
+   * binary clauses, and each pigeon clause has an extra literal that a unit clause makes false: the
+   * cliques appear only after unit propagation and the substitution of equivalent literals.
+   */
+  @Test
+  void clauseRefutationFindsPigeonholeCliques() {
+    int holes = 4;
+    for (boolean hidden : new boolean[] {false, true}) {
+      for (int pigeons = holes; pigeons <= holes + 1; pigeons++) {
+        Store store = new Store();
+        IntVar[][] p = new IntVar[pigeons][holes];
+        IntVar[][] q = new IntVar[pigeons][holes];
+        List<LinearForm> clauses = new ArrayList<>();
+        IntVar off = new IntVar(store, "off", 0, 1);
+        if (hidden) {
+          clauses.add(clause(new IntVar[0], off));
+        }
+        for (int i = 0; i < pigeons; i++) {
+          for (int h = 0; h < holes; h++) {
+            p[i][h] = new IntVar(store, "p" + i + "_" + h, 0, 1);
+            q[i][h] = p[i][h];
+            if (hidden) {
+              q[i][h] = new IntVar(store, "q" + i + "_" + h, 0, 1);
+              clauses.add(clause(new IntVar[] {q[i][h]}, p[i][h]));
+              clauses.add(clause(new IntVar[] {p[i][h]}, q[i][h]));
+            }
+          }
+          IntVar[] some = Arrays.copyOf(p[i], hidden ? holes + 1 : holes);
+          if (hidden) {
+            some[holes] = off;
+          }
+          clauses.add(clause(some));
+        }
+        for (int h = 0; h < holes; h++) {
+          for (int i = 0; i < pigeons; i++) {
+            for (int j = i + 1; j < pigeons; j++) {
+              clauses.add(clause(new IntVar[0], q[i][h], q[j][h]));
+            }
+          }
+        }
+        String what = (hidden ? "hidden, " : "") + pigeons + " pigeons";
+        LinearRelaxation r = LinearRelaxation.clauseRefutation(store, clauses);
+        assertThat(r).as(what).isNotNull();
+        assertThat(r.pairCliques).as(what).isEqualTo(holes);
+        if (hidden) {
+          assertThat(r.clauseUnits).as(what).isEqualTo(1);
+          assertThat(r.clauseEquivalences).as(what).isEqualTo(pigeons * holes);
+        }
+        store.impose(r);
+        boolean consistent = store.consistency();
+        assertThat(consistent).as(what).isEqualTo(pigeons == holes);
+        assertThat(r.refutationOutcome())
+            .as(what)
+            .isEqualTo(pigeons == holes ? "feasible" : "refuted");
+      }
+    }
+  }
+
+  /** Clause models without at-most-one structure get no clause refutation. */
+  @Test
+  void clauseRefutationNeedsCliques() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int k = 0; k < x.length; k++) {
+      x[k] = new IntVar(store, "x" + k, 0, 1);
+    }
+    List<LinearForm> clauses = new ArrayList<>();
+    clauses.add(clause(new IntVar[] {x[0], x[1], x[2]}));
+    clauses.add(clause(new IntVar[] {x[1]}, x[3]));
+    clauses.add(clause(new IntVar[] {x[2], x[3]}, x[0]));
+    assertThat(LinearRelaxation.clauseRefutation(store, clauses)).isNull();
   }
 }

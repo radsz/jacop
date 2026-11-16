@@ -357,6 +357,19 @@ public final class CdclSolver {
   public long restarts;
 
   /**
+   * Statistics: the decision levels of the conflicts that were analysed, summed. Divided by the
+   * conflicts, the mean depth of a conflict.
+   */
+  public long conflictLevels;
+
+  /**
+   * Statistics: the levels the first-UIP clauses of the analysed conflicts jump back over, summed
+   * (before any chronological backtracking shortens a jump). A search that learns nothing useful
+   * jumps back about one level per conflict, as depth-first search without learning does.
+   */
+  public long backjumpLevels;
+
+  /**
    * Statistics: the deepest decision level the search opened, assumption levels included. Probing
    * and clause vivification open levels of their own; they do not count.
    */
@@ -373,6 +386,15 @@ public final class CdclSolver {
 
   /** Statistics: conflicts whose analysis stopped at a semantic UIP before the first UIP. */
   public long semanticUips;
+
+  /**
+   * Statistics: the LBD of the learnt clauses, summed.
+   *
+   * @return the sum of the LBDs of the clauses learnt so far
+   */
+  public long lbdSum() {
+    return lbdSum;
+  }
 
   /** Creates an empty solver. */
   public CdclSolver() {
@@ -2845,6 +2867,8 @@ public final class CdclSolver {
         trailQueuePush(trailSize);
         updateTargetAndBest();
         int btLevel = analyze();
+        conflictLevels += decisionLevel;
+        backjumpLevels += decisionLevel - btLevel;
         if (chrono && learntSize > 1 && decisionLevel - btLevel > chronoLimit) {
           btLevel = decisionLevel - 1;
         }
