@@ -1225,6 +1225,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.nearRows
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
+            + "\n%%%mzn-stat: lpRestartBoundCuts="
+            + r.restartBoundCuts
+            + "\n%%%mzn-stat: lpRestartCutBound="
+            + r.restartCutBound
+            + "\n%%%mzn-stat: lpRestartBoundsLost="
+            + r.restartBoundsLost()
             + "\n%%%mzn-stat: lpRootPrunings="
             + r.rootPrunings
             + "\n%%%mzn-stat: lpCutBound="
