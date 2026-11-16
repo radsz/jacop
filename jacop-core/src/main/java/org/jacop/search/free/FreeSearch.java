@@ -110,7 +110,13 @@ public final class FreeSearch {
     /** Runs alternate between the two branchings, starting with the alternative one. */
     EVERY_RESTART,
     /** The alternative branching is used until the first solution, the main one afterwards. */
-    UNTIL_FIRST_SOLUTION
+    UNTIL_FIRST_SOLUTION,
+    /**
+     * Until the first solution, one run in every {@link Builder#alternationPeriod(int)} (every
+     * other one by default), starting with the first, uses the alternative branching; the main one
+     * is used afterwards.
+     */
+    EVERY_RESTART_UNTIL_FIRST_SOLUTION
   }
 
   /** The reason a run ended. */
@@ -145,6 +151,7 @@ public final class FreeSearch {
   private final SelectChoicePoint<? extends Var> alternative;
   private final Alternation alternation;
   private final boolean mainFirst;
+  private final int alternationPeriod;
   private SelectChoicePoint<? extends Var> select;
   private final IntVar cost;
   private final boolean maximize;
@@ -260,6 +267,7 @@ public final class FreeSearch {
     alternative = builder.alternative;
     alternation = builder.alternation;
     mainFirst = builder.mainFirst;
+    alternationPeriod = builder.alternationPeriod;
     select = mainSelect;
     cost = builder.cost;
     maximize = builder.maximize;
@@ -686,10 +694,14 @@ public final class FreeSearch {
     if (alternative == null) {
       return mainSelect;
     }
+    boolean everyOther = (regularRuns + (mainFirst ? 1 : 0)) % 2 == 0;
     boolean useAlternative =
-        alternation == Alternation.EVERY_RESTART
-            ? (regularRuns + (mainFirst ? 1 : 0)) % 2 == 0
-            : solutions == 0 && !mainFirst;
+        switch (alternation) {
+          case EVERY_RESTART -> everyOther;
+          case UNTIL_FIRST_SOLUTION -> solutions == 0 && !mainFirst;
+          case EVERY_RESTART_UNTIL_FIRST_SOLUTION ->
+              solutions == 0 && (regularRuns + (mainFirst ? 1 : 0)) % alternationPeriod == 0;
+        };
     return useAlternative ? alternative : mainSelect;
   }
 
@@ -1188,6 +1200,7 @@ public final class FreeSearch {
     private final SelectChoicePoint<? extends Var> select;
     private SelectChoicePoint<? extends Var> alternative;
     private boolean mainFirst;
+    private int alternationPeriod = 2;
     private Alternation alternation;
     private IntVar cost;
     private boolean maximize;
@@ -1259,6 +1272,21 @@ public final class FreeSearch {
     public Builder alternateWith(SelectChoicePoint<? extends Var> select, Alternation when) {
       this.alternative = select;
       this.alternation = when;
+      return this;
+    }
+
+    /**
+     * Sets how many runs make one period of {@link Alternation#EVERY_RESTART_UNTIL_FIRST_SOLUTION}:
+     * the first run of each period uses the alternative branching, the others the main one.
+     *
+     * @param period runs in a period, at least 1 (default 2).
+     * @return this builder.
+     */
+    public Builder alternationPeriod(int period) {
+      if (period < 1) {
+        throw new IllegalArgumentException("alternation period must be at least 1: " + period);
+      }
+      this.alternationPeriod = period;
       return this;
     }
 
