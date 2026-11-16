@@ -629,7 +629,7 @@ abstract class AbstractDiff extends Constraint
     for (int l = 0; l < rectangles.length; l++) {
       Rectangle r = rectangles[l];
       RectState state = computeRectangleState(r, allowZeroLength);
-      if (!shouldProcessRectangle(state)) {
+      if (!shouldProcessRectangle(state, r, fdvQueue)) {
         continue;
       }
 
@@ -682,8 +682,14 @@ abstract class AbstractDiff extends Constraint
     return new RectState(settled, minLengthEq0, maxLevel);
   }
 
-  private boolean shouldProcessRectangle(RectState state) {
-    return !state.minLengthEq0() && (!state.settled() || state.maxLevel() >= currentStore.level);
+  private boolean shouldProcessRectangle(RectState state, Rectangle r, Set<IntVar> fdvQueue) {
+    // A rectangle fixed at an earlier level has normally been checked already, but when the store
+    // raises its level before consistency (Store.raiseLevelBeforeConsistency) the changes made at
+    // the earlier level reach this constraint only now, so a changed rectangle is still checked.
+    return !state.minLengthEq0()
+        && (!state.settled()
+            || state.maxLevel() >= currentStore.level
+            || containsChangedVariable(r, fdvQueue));
   }
 
   private void maybeUpdateEvalRects(Diff2Var[] evalRects, List<Rectangle> overlappingRects, int l) {

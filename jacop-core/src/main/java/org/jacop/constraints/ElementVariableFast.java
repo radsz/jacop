@@ -115,6 +115,17 @@ public class ElementVariableFast extends AbstractElement
 
   private int[] wakePositions;
 
+  /**
+   * For store indexes that span few values, the first entry of {@link #wakeKeys} with key {@code
+   * wakeBase + d} at {@code wakeFirst[d]}, or -1: a wake then finds its positions without a binary
+   * search. On MiniZinc Challenge multi-agent-graph-coverage 1086 elements share two lists of 543
+   * variables, so each change of a variable wakes 543 elements, and their binary searches took 16 %
+   * of the solving time.
+   */
+  private int[] wakeFirst;
+
+  private int wakeBase;
+
   /** No wake since the last consistency call: the call was queued for another reason. */
   private static final int WAKE_NONE = 0;
 
@@ -281,13 +292,19 @@ public class ElementVariableFast extends AbstractElement
       indexWakePositions();
     }
     int key = var.index();
-    int k = Arrays.binarySearch(wakeKeys, key);
+    int k;
+    if (wakeFirst != null) {
+      int d = key - wakeBase;
+      k = d >= 0 && d < wakeFirst.length ? wakeFirst[d] : -1;
+    } else {
+      k = Arrays.binarySearch(wakeKeys, key);
+      while (k > 0 && wakeKeys[k - 1] == key) {
+        k--;
+      }
+    }
     if (k < 0) {
       wake = WAKE_FULL;
       return;
-    }
-    while (k > 0 && wakeKeys[k - 1] == key) {
-      k--;
     }
     int kind = WAKE_IDLE;
     for (; k < wakeKeys.length && wakeKeys[k] == key; k++) {
@@ -322,6 +339,15 @@ public class ElementVariableFast extends AbstractElement
     }
     wakePositions = at;
     wakeKeys = keys;
+    if (n > 0 && keys[0] >= 0 && (long) keys[n - 1] - keys[0] < 4L * n + 64) {
+      int[] first = new int[keys[n - 1] - keys[0] + 1];
+      Arrays.fill(first, -1);
+      for (int k = n - 1; k >= 0; k--) {
+        first[keys[k] - keys[0]] = k;
+      }
+      wakeBase = keys[0];
+      wakeFirst = first;
+    }
   }
 
   /**
