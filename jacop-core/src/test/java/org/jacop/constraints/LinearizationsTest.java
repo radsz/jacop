@@ -254,6 +254,56 @@ class LinearizationsTest {
   }
 
   @Test
+  void valueCliquesReplaceImpliedBooleansByTheValuesThatImplyThem() {
+    // ROADEF 2020 maintenance planning: a_i = exists(s in window)(st_i = s) and not (a_1 /\ a_2);
+    // the implications b -> a come as rows b - a <= 0, the exclusion as -a_1 - a_2 >= -1 (a clause)
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 4), new IntVar(store, "x2", 1, 4)};
+    IntVar[][] b = new IntVar[2][5];
+    List<Constraint> cs = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      for (int v = 1; v <= 4; v++) {
+        b[i][v] = new IntVar(store, "b" + i + v, 0, 1);
+        cs.add(new Reified(new XeqC(x[i], v), b[i][v]));
+      }
+    }
+    IntVar a1 = new IntVar(store, "a1", 0, 1);
+    IntVar a2 = new IntVar(store, "a2", 0, 1);
+    List<LinearForm> rows = new ArrayList<>();
+    for (int v : new int[] {1, 2}) {
+      rows.add(new LinearForm(new IntVar[] {b[0][v], a1}, new long[] {1, -1}, 0, LinearForm.LE));
+    }
+    for (int v : new int[] {2, 3}) {
+      rows.add(new LinearForm(new IntVar[] {a2, b[1][v]}, new long[] {1, -1}, 0, LinearForm.GE));
+    }
+    rows.add(new LinearForm(new IntVar[] {a1, a2}, new long[] {-1, -1}, -1, LinearForm.GE));
+    List<LinearForm> made = Linearizations.valueCliques(cs, List.of(rows));
+    assertThat(made).hasSize(1);
+    LinearForm f = made.get(0);
+    assertThat(f.vars()).containsExactly(b[0][1], b[0][2], b[1][2], b[1][3]);
+    assertThat(f.weights()).containsExactly(1, 1, 1, 1);
+    assertThat(f.relation()).isEqualTo(LinearForm.LE);
+    assertThat(f.c()).isEqualTo(1);
+    // it holds for every solution of the model the rows state
+    cs.add(new OrBoolVector(new IntVar[] {b[0][1], b[0][2]}, a1));
+    cs.add(new OrBoolVector(new IntVar[] {b[1][2], b[1][3]}, a2));
+    cs.add(new LinearInt(new IntVar[] {a1, a2}, new int[] {1, 1}, "<=", 1));
+    for (Constraint c : cs) {
+      store.impose(c);
+    }
+    IntVar[] scope = {x[0], x[1], b[0][1], b[0][2], b[1][2], b[1][3]};
+    List<long[]> all = solutions(store, scope);
+    assertThat(all).isNotEmpty();
+    for (long[] solution : all) {
+      assertThat(holds(f, scope, solution)).as("%s at %s", f, Arrays.toString(solution)).isTrue();
+    }
+    // a Boolean implied by values of one variable only is not replaced
+    List<LinearForm> single =
+        Linearizations.valueCliques(cs, List.of(List.of(rows.get(0), rows.get(4))));
+    assertThat(single).isEmpty();
+  }
+
+  @Test
   void impliedValuesJoinTheEquivalentBooleansInOneClique() {
     // tank allocation (XCSP 2025): b_v -> x = v (int_eq_imp, ChannelImply) for the cargoes and
     // e <-> x = 3 (int_eq_reif) for the empty tank; b3 -> x = 3 duplicates e

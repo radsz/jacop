@@ -1315,6 +1315,86 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void longLinearIntKeepsIncrementalBoundsOverBacktracking() {
+    // an imposed LinearInt of 200 terms or more keeps its bounds incrementally; at every node of
+    // random dives with backtracking it must prune exactly as a fresh, rescanning copy does
+    Random random = new Random(20261115L);
+    String[] relations = {"==", "<=", ">=", "<", ">"};
+    for (int run = 0; run < 12; run++) {
+      Store store = new Store();
+      int n = 200 + random.nextInt(40);
+      IntVar[] x = new IntVar[n + 1];
+      int[] w = new int[n + 1];
+      long value = 0;
+      for (int i = 0; i < n; i++) {
+        if (random.nextInt(3) == 0) {
+          x[i] = new BooleanVar(store, "b" + i);
+        } else {
+          int lo = random.nextInt(11) - 5;
+          x[i] = new IntVar(store, "x" + i, lo, lo + random.nextInt(9));
+          if (random.nextBoolean()) {
+            x[i].domain.inComplement(0, x[i], lo + 1);
+          }
+        }
+        w[i] = (random.nextInt(4) + 1) * (random.nextBoolean() ? 1 : -1);
+        value += (long) w[i] * x[i].min();
+      }
+      x[n] = new IntVar(store, "s", -2000, 2000);
+      w[n] = -1;
+      String rel = relations[run % relations.length];
+      int b = (int) Math.max(-1500, Math.min(1500, value)) / 4;
+      store.impose(new LinearInt(x, w, rel, -b));
+      if (!store.consistency()) {
+        continue;
+      }
+      for (int step = 0; step < 300; step++) {
+        IntVar v = x[random.nextInt(n + 1)];
+        if (v.singleton()) {
+          continue;
+        }
+        store.setLevel(store.level + 1);
+        int pivot = v.min() + random.nextInt(v.max() - v.min() + 1);
+        try {
+          switch (random.nextInt(4)) {
+            case 0 -> v.domain.in(store.level, v, pivot, pivot);
+            case 1 -> v.domain.inMax(store.level, v, pivot);
+            case 2 -> v.domain.inMin(store.level, v, pivot);
+            default -> v.domain.inComplement(store.level, v, pivot);
+          }
+        } catch (FailException e) {
+          // an empty domain; the level is removed below
+        }
+        boolean empty = Arrays.stream(x).anyMatch(Var::isEmpty);
+        // a rescanning copy over the domains of this node before propagation
+        Store fresh = new Store();
+        IntVar[] copy = new IntVar[n + 1];
+        for (int i = 0; i <= n && !empty; i++) {
+          copy[i] = new IntVar(fresh, x[i].id(), x[i].dom().cloneLight());
+        }
+        boolean consistent = !empty && store.consistency();
+        if (!empty) {
+          String instance = "run " + run + " step " + step + " " + rel;
+          IntVar one = new IntVar(fresh, "one", 1, 1);
+          fresh.impose(new Reified(new LinearInt(copy, w, rel, -b), one));
+          assertThat(fresh.consistency()).as(instance).isEqualTo(consistent);
+          if (consistent) {
+            assertThat(Arrays.toString(Arrays.stream(copy).map(IntVar::dom).toArray()))
+                .as(instance)
+                .isEqualTo(Arrays.toString(Arrays.stream(x).map(IntVar::dom).toArray()));
+          }
+        }
+        if (!consistent || random.nextInt(8) == 0) {
+          int back = 1 + random.nextInt(Math.max(1, store.level));
+          for (int k = 0; k < back && store.level > 0; k++) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
   void linearIntDomWakesUpOnHoleRemoval() {
     // LinearIntDom is domain consistent but inherited the BOUND pruning event of LinearInt, so
     // removing an inner value of a variable did not re-run it.

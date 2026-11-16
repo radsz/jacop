@@ -375,6 +375,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
@@ -388,8 +389,10 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -633,6 +636,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
@@ -646,8 +650,10 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -887,6 +893,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
@@ -900,8 +907,10 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -1139,6 +1148,7 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
@@ -1152,8 +1162,10 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>

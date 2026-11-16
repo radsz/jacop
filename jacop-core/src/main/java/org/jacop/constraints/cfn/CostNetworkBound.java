@@ -32,14 +32,17 @@ package org.jacop.constraints.cfn;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
+import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -67,7 +70,13 @@ import org.jacop.lcg.Explainable;
  * <p>The reason of a bound is the objective's other bound, for a removal, and for each variable
  * whose contribution it needs the removals of its values that cost less, with the values of the
  * fixed neighbours when their binary costs are needed, lifted: a variable whose contribution the
- * slack covers is left out.
+ * slack covers is left out. The cheaper values outside a variable's bounds are cited by the weakest
+ * bound atom that excludes them all (for a fixed variable, the nearest cheaper value on each side
+ * decides), and a neighbour is cited once, so a reason holds each atom about once.
+ *
+ * <p>Propagation is incremental: only the contributions of the variables the store reports as
+ * changed (or whose changes backtracking undoes) and of the neighbours of variables that got fixed
+ * or freed are computed again.
  *
  * <p>The sweeps of the reparametrisation stop after {@code org.jacop.cfn.rootMs} milliseconds
  * (2,000) or {@code org.jacop.cfn.sweeps} sweeps (1,000), or when they stop raising the bound.
@@ -78,7 +87,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public final class CostNetworkBound extends Constraint
-    implements Explainable, Copyable<CostNetworkBound> {
+    implements Explainable, Copyable<CostNetworkBound>, Stateful {
 
   static final long ROOT_MS = Long.getLong("org.jacop.cfn.rootMs", 2000L);
 
@@ -367,20 +376,76 @@ public final class CostNetworkBound extends Constraint
   private final class Before implements View {
     final AtomicTrail trail;
     final int position;
+    // where the atoms of each fixed neighbour were added to the reason (or -1) and what they were
+    int[] citedAt;
+    int[] citedFirst;
+    int[] citedLast;
+
+    // whether the atoms of neighbour n are still in the list where they were added
+    boolean cited(int n, EntryList out) {
+      if (citedAt == null) {
+        return false;
+      }
+      int p = citedAt[n];
+      if (p < 0) {
+        return false;
+      }
+      if (citedFirst[n] < 0) {
+        // the root bounds: nothing to cite
+        return true;
+      }
+      return p < out.size()
+          && out.get(p) == citedFirst[n]
+          && (citedLast[n] == citedFirst[n]
+              || p + 1 < out.size() && out.get(p + 1) == citedLast[n]);
+    }
+
+    void cite(int n, int p, EntryList out) {
+      if (citedAt == null) {
+        citedAt = new int[x.length];
+        citedFirst = new int[x.length];
+        citedLast = new int[x.length];
+        Arrays.fill(citedAt, -1);
+      }
+      citedAt[n] = p;
+      int q = out.size();
+      citedFirst[n] = q > p ? out.get(p) : -1;
+      citedLast[n] = q > p ? out.get(q - 1) : -1;
+    }
 
     Before(AtomicTrail trail, int position) {
       this.trail = trail;
       this.position = position;
     }
 
+    // the bounds of each variable before the position, read once: 0 not read, 1 read
+    private byte[] read;
+    private int[] lo;
+    private int[] hi;
+
+    private void read(int i) {
+      if (read == null) {
+        read = new byte[x.length];
+        lo = new int[x.length];
+        hi = new int[x.length];
+      }
+      if (read[i] == 0) {
+        lo[i] = trail.minBefore(x[i], position);
+        hi[i] = trail.maxBefore(x[i], position);
+        read[i] = 1;
+      }
+    }
+
     @Override
     public boolean fixed(int i) {
-      return trail.minBefore(x[i], position) == trail.maxBefore(x[i], position);
+      read(i);
+      return lo[i] == hi[i];
     }
 
     @Override
     public int value(int i) {
-      return trail.minBefore(x[i], position);
+      read(i);
+      return lo[i];
     }
 
     @Override
@@ -403,26 +468,58 @@ public final class CostNetworkBound extends Constraint
 
   // the cost of value a of j with the binary costs towards the edges it receives
   private long cost(View view, int j, int a) {
-    long c = r.u[j][a];
-    if (c == HARD) {
-      return HARD;
+    return costAt(j, a, prepare(view, j));
+  }
+
+  // the binary functions j receives in a view, read once for all its values: the cost of value a
+  // of j towards the k-th is recvCost[k][recvBase[k] + a * recvStride[k]]
+  private long[][] recvCost = new long[0][];
+  private int[] recvBase = new int[0];
+  private int[] recvStride = new int[0];
+
+  // reads the functions j receives; returns their number, or -1 when a neighbour has a value
+  // outside the network (every value of j is then forbidden)
+  private int prepare(View view, int j) {
+    int[] adj = r.adj[j];
+    if (recvCost.length < adj.length) {
+      recvCost = new long[adj.length][];
+      recvBase = new int[adj.length];
+      recvStride = new int[adj.length];
     }
-    for (int e : r.adj[j]) {
+    int n = 0;
+    int dj = values[j].length;
+    for (int e : adj) {
       if (receives(view, j, e)) {
         boolean first = r.ei[e] == j;
         int k = first ? r.ej[e] : r.ei[e];
         int b = Arrays.binarySearch(values[k], view.value(k));
         if (b < 0) {
-          // a value outside the network: no assignment of it has a cost
-          return HARD;
+          return -1;
         }
-        int dk = values[k].length;
-        int dj = values[j].length;
-        long f = first ? r.ef[e][a * dk + b] : r.ef[e][b * dj + a];
-        c = CostNetwork.add(c, f);
-        if (c == HARD) {
-          return HARD;
+        recvCost[n] = r.ef[e];
+        if (first) {
+          recvBase[n] = b;
+          recvStride[n] = values[k].length;
+        } else {
+          recvBase[n] = b * dj;
+          recvStride[n] = 1;
         }
+        n++;
+      }
+    }
+    return n;
+  }
+
+  // the cost of value a of j with the n functions read by prepare (n = -1: forbidden)
+  private long costAt(int j, int a, int n) {
+    long c = r.u[j][a];
+    if (c == HARD || n < 0) {
+      return HARD;
+    }
+    for (int k = 0; k < n; k++) {
+      c = CostNetwork.add(c, recvCost[k][recvBase[k] + a * recvStride[k]]);
+      if (c == HARD) {
+        return HARD;
       }
     }
     return c;
@@ -431,14 +528,18 @@ public final class CostNetworkBound extends Constraint
   // the least cost of j over the allowed values; with unaryOnly[0] set, without binary costs
   private long contribution(View view, int j, boolean[] unaryOnly) {
     boolean plain = unaryOnly != null && unaryOnly[0];
-    boolean edges = false;
-    if (!plain) {
-      for (int e : r.adj[j]) {
-        if (receives(view, j, e)) {
-          edges = true;
-          break;
-        }
+    if (view.fixed(j)) {
+      int a = Arrays.binarySearch(values[j], view.value(j));
+      if (a < 0) {
+        return HARD;
       }
+      return plain ? r.u[j][a] : cost(view, j, a);
+    }
+    boolean edges = false;
+    int n = 0;
+    if (!plain) {
+      n = prepare(view, j);
+      edges = n != 0;
     }
     long best = HARD;
     int[] vs = values[j];
@@ -448,7 +549,7 @@ public final class CostNetworkBound extends Constraint
         break;
       }
       if (view.allowed(j, vs[a])) {
-        long c = edges ? cost(view, j, a) : ua;
+        long c = edges ? costAt(j, a, n) : ua;
         best = Math.min(best, c);
         if (!edges) {
           break;
@@ -458,38 +559,12 @@ public final class CostNetworkBound extends Constraint
     return best;
   }
 
-  // the contributions of the last propagation, valid while the domain of the variable (its object
-  // and size: a domain object only shrinks at its level) and the values of its fixed neighbours are
-  // the same
-  private IntDomain[] cacheDomain;
-  private int[] cacheSize;
-  private int[][] cacheNeighbours;
+  // the least and the most finite cost of each variable's values, over the domains of the last
+  // propagation of its contribution
   private long[] cacheLeast;
   private long[] cacheMost;
 
   private static final int NOT_FIXED = Integer.MIN_VALUE;
-
-  // whether the cached contribution of j is still valid; updates the neighbour values if not
-  private boolean cached(int j) {
-    IntVar xj = x[j];
-    boolean valid = cacheDomain[j] == xj.domain && cacheSize[j] == xj.domain.getSize();
-    int[] adj = r.adj[j];
-    int[] nb = cacheNeighbours[j];
-    for (int q = 0; q < adj.length; q++) {
-      int e = adj[q];
-      IntVar k = x[r.ei[e] == j ? r.ej[e] : r.ei[e]];
-      int sig = k.singleton() ? k.value() : NOT_FIXED;
-      if (nb[q] != sig) {
-        nb[q] = sig;
-        valid = false;
-      }
-    }
-    if (!valid) {
-      cacheDomain[j] = xj.domain;
-      cacheSize[j] = xj.domain.getSize();
-    }
-    return valid;
-  }
 
   // the least and the most finite cost of the values of j in its domain
   private void evaluate(int j) {
@@ -499,12 +574,13 @@ public final class CostNetworkBound extends Constraint
     long[] uj = r.u[j];
     int[] vs = values[j];
     boolean edges = r.adj[j].length > 0;
+    int n = edges ? prepare(now, j) : 0;
     for (int a : r.order[j]) {
       if (uj[a] == HARD) {
         break;
       }
       if (xj.domain.contains(vs[a])) {
-        long c = edges ? cost(now, j, a) : uj[a];
+        long c = edges ? costAt(j, a, n) : uj[a];
         least = Math.min(least, c);
         if (c != HARD) {
           most = Math.max(most, c);
@@ -515,21 +591,129 @@ public final class CostNetworkBound extends Constraint
     cacheMost[j] = most;
   }
 
+  // ---- incremental propagation: the variables whose contribution may have changed, from the
+  // changes the store reports and the changes the backtracking undoes
+
+  private IdentityHashMap<Var, Integer> indexOf;
+  private boolean[] isRelevant;
+  private boolean[] dirty;
+  private int[] dirtyList;
+  private int dirtyCount;
+  // the value of each variable when its neighbours were last told, or NOT_FIXED
+  private int[] fixedSig;
+  // the variables changed at each level, to tell them again when the level is removed
+  private int[] changedVar = new int[64];
+  private int[] changedLevel = new int[64];
+  private int changedSize;
+  private int[] pushedLevel;
+  private boolean evaluatedAll;
+
+  private void touch(int j) {
+    if (!dirty[j]) {
+      dirty[j] = true;
+      dirtyList[dirtyCount++] = j;
+    }
+  }
+
+  @Override
+  public void queueVariable(int level, Var variable) {
+    if (indexOf == null) {
+      return;
+    }
+    Integer at = indexOf.get(variable);
+    if (at == null) {
+      return;
+    }
+    int j = at;
+    touch(j);
+    if (pushedLevel[j] != level) {
+      pushedLevel[j] = level;
+      if (changedSize == changedVar.length) {
+        changedVar = Arrays.copyOf(changedVar, 2 * changedSize);
+        changedLevel = Arrays.copyOf(changedLevel, 2 * changedSize);
+      }
+      changedVar[changedSize] = j;
+      changedLevel[changedSize++] = level;
+    }
+  }
+
+  @Override
+  public void removeLevel(int level) {
+    while (changedSize > 0 && changedLevel[changedSize - 1] >= level) {
+      int j = changedVar[--changedSize];
+      pushedLevel[j] = -1;
+      if (indexOf != null) {
+        touch(j);
+      }
+    }
+  }
+
+  @Override
+  public boolean isStateful() {
+    return true;
+  }
+
+  private void initIncremental() {
+    indexOf = new IdentityHashMap<>();
+    for (int j = 0; j < x.length; j++) {
+      indexOf.put(x[j], j);
+    }
+    cacheLeast = new long[x.length];
+    cacheMost = new long[x.length];
+    isRelevant = new boolean[x.length];
+    for (int j : r.relevant) {
+      isRelevant[j] = true;
+    }
+    dirty = new boolean[x.length];
+    dirtyList = new int[x.length];
+    fixedSig = new int[x.length];
+    pushedLevel = new int[x.length];
+    Arrays.fill(pushedLevel, -1);
+  }
+
+  // brings the contributions up to date with the current domains
+  private void refresh() {
+    if (!evaluatedAll) {
+      for (int j = 0; j < x.length; j++) {
+        fixedSig[j] = x[j].singleton() ? x[j].value() : NOT_FIXED;
+      }
+      Arrays.fill(dirty, false);
+      dirtyCount = 0;
+      for (int j : r.relevant) {
+        evaluate(j);
+      }
+      evaluatedAll = true;
+      return;
+    }
+    // a variable fixed or freed changes the costs its neighbours receive
+    int told = dirtyCount;
+    for (int q = 0; q < told; q++) {
+      int j = dirtyList[q];
+      int sig = x[j].singleton() ? x[j].value() : NOT_FIXED;
+      if (sig != fixedSig[j]) {
+        fixedSig[j] = sig;
+        for (int e : r.adj[j]) {
+          touch(r.ei[e] == j ? r.ej[e] : r.ei[e]);
+        }
+      }
+    }
+    for (int q = 0; q < dirtyCount; q++) {
+      int j = dirtyList[q];
+      dirty[j] = false;
+      if (isRelevant[j]) {
+        evaluate(j);
+      }
+    }
+    dirtyCount = 0;
+  }
+
   @Override
   public void consistency(Store store) {
     if (r == null) {
       reparametrise();
     }
-    if (cacheDomain == null) {
-      cacheDomain = new IntDomain[x.length];
-      cacheSize = new int[x.length];
-      cacheLeast = new long[x.length];
-      cacheMost = new long[x.length];
-      cacheNeighbours = new int[x.length][];
-      for (int j = 0; j < x.length; j++) {
-        cacheNeighbours[j] = new int[r.adj[j].length];
-        Arrays.fill(cacheNeighbours[j], NOT_FIXED + 1);
-      }
+    if (indexOf == null) {
+      initIncremental();
     }
     // fixing a variable with binary costs changes the costs of its neighbours: again until none is
     while (bound(store)) {
@@ -541,10 +725,8 @@ public final class CostNetworkBound extends Constraint
   private boolean bound(Store store) {
     int[] rel = r.relevant;
     long s = r.c0;
+    refresh();
     for (int j : rel) {
-      if (!cached(j)) {
-        evaluate(j);
-      }
       s = CostNetwork.add(s, cacheLeast[j]);
     }
     if (s == HARD) {
@@ -581,12 +763,13 @@ public final class CostNetworkBound extends Constraint
       int[] o = r.order[j];
       int[] vs = values[j];
       boolean edges = r.adj[j].length > 0;
+      int n = edges ? prepare(now, j) : 0;
       for (int p = o.length - 1; p >= 0; p--) {
         int a = o[p];
         if (uj[a] == HARD || !xj.domain.contains(vs[a])) {
           continue;
         }
-        long ca = edges ? cost(now, j, a) : uj[a];
+        long ca = edges ? costAt(j, a, n) : uj[a];
         if (ca != HARD && ca > over) {
           prunings++;
           xj.domain.inComplement(store.level, xj, vs[a]);
@@ -617,29 +800,82 @@ public final class CostNetworkBound extends Constraint
   private void addNeighbours(Before view, int j, EntryList out) {
     for (int e : r.adj[j]) {
       if (receives(view, j, e)) {
-        IntVar k = x[r.ei[e] == j ? r.ej[e] : r.ei[e]];
+        int n = r.ei[e] == j ? r.ej[e] : r.ei[e];
+        IntVar k = x[n];
+        if (view.cited(n, out)) {
+          // a neighbour of several variables is cited once
+          continue;
+        }
+        int p = out.size();
         view.trail.addLowerBound(k, view.position, out);
         view.trail.addUpperBound(k, view.position, out);
+        view.cite(n, p, out);
       }
     }
   }
 
   // the removals of the values of j cheaper than level, by unary cost alone or with edges
   private boolean addCheaper(Before view, int j, long level, boolean edges, EntryList out) {
-    IntDomain root = view.trail.rootDomain(x[j]);
+    IntVar xj = x[j];
+    AtomicTrail trail = view.trail;
+    IntDomain root = trail.rootDomain(xj);
     int[] vs = values[j];
+    // the values below the lower bound are excluded by one bound atom, the weakest that serves, and
+    // likewise above the upper bound; only the values between need their own atoms
+    int lo = trail.minBefore(xj, view.position);
+    int hi = trail.maxBefore(xj, view.position);
+    int n = edges ? prepare(view, j) : 0;
+    long below = Long.MIN_VALUE;
+    long above = Long.MAX_VALUE;
+    if (lo == hi) {
+      // fixed: only the nearest cheaper values on either side matter
+      int at = Arrays.binarySearch(vs, lo);
+      int from = at >= 0 ? at : -at - 1;
+      for (int a = (at >= 0 ? at : from) - 1; a >= 0; a--) {
+        if (r.u[j][a] < level && root.contains(vs[a]) && (!edges || costAt(j, a, n) < level)) {
+          below = vs[a];
+          break;
+        }
+      }
+      for (int a = at >= 0 ? at + 1 : from; a < vs.length; a++) {
+        if (r.u[j][a] < level && root.contains(vs[a]) && (!edges || costAt(j, a, n) < level)) {
+          above = vs[a];
+          break;
+        }
+      }
+      if (at >= 0 && r.u[j][at] < level && (!edges || costAt(j, at, n) < level)) {
+        // the value itself is cheaper than the level: not a reason
+        return false;
+      }
+      return addOutside(view, xj, below, above, out);
+    }
     for (int a : r.order[j]) {
       long ua = r.u[j][a];
       if (ua >= level) {
         break;
       }
-      if (!root.contains(vs[a])) {
+      int w = vs[a];
+      if (!root.contains(w) || (edges && costAt(j, a, n) >= level)) {
         continue;
       }
-      if ((!edges || cost(view, j, a) < level)
-          && !view.trail.excludedBefore(x[j], vs[a], view.position, out)) {
+      if (w < lo) {
+        below = Math.max(below, w);
+      } else if (w > hi) {
+        above = Math.min(above, w);
+      } else if (!trail.excludedBefore(xj, w, view.position, out)) {
         return false;
       }
+    }
+    return addOutside(view, xj, below, above, out);
+  }
+
+  // the weakest bound atoms that exclude the values up to below and from above
+  private boolean addOutside(Before view, IntVar xj, long below, long above, EntryList out) {
+    if (below != Long.MIN_VALUE) {
+      view.trail.addBoundReaching(xj, view.position, true, below + 1, out);
+    }
+    if (above != Long.MAX_VALUE) {
+      view.trail.addBoundReaching(xj, view.position, false, above - 1, out);
     }
     return true;
   }

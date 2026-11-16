@@ -6599,7 +6599,128 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-366. The core-guided phase of lazy clause generation trims each core: it
+367. The XOR system of the FlatZinc front end (XorSystemDetector, Gauss-
+   Jordan elimination over GF(2)) also takes the parity rows of linear
+   equations over 0/1 variables only, and of equations written as two
+   opposite inequalities a x <= k and -a x <= -k (as OPB files do).
+   Exactly-one rows and other cardinalities of value 1 or n - 1 stay out.
+   Together these rows give the parity arguments of even colouring
+   models (Markstrom, "Locality and hard SAT-instances", JSAT 2, 2006;
+   PB competition evencolouring and ec_* families): the sum of all vertex
+   rows is odd, so the slacks of an optimisation model must sum to an odd
+   number and an exact model has no solution. In the PB competition
+   evencolouring_opt_linear_random6regular_nvert_071 and _unit_..._351
+   are proved optimal in 1.5 s and 3.7 s (before not at 600 s, CP-SAT
+   5 s), ec_stargrid_04_021 and _06_012 unsatisfiable in 1.5 s (before
+   and CP-SAT unknown at 240 s), ECgrid5x40split, ECgrid5x130split and
+   ec_random_rational_random8reg_split_750 unsatisfiable in under 2 s
+   (before unknown). It changes 15 of 222 PB and 9 of 240 wide instances.
+   -Dorg.jacop.fz.xorZeroOne=false turns it off.
+
+368. Free search picks its dom/wdeg variable from an indexed heap kept up
+   to date by domain changes (Store.domainWatcher) instead of scanning
+   every search variable and counting unfixed scope variables at each
+   decision. The choice is the same variable. On TelecomScheduling-B-10
+   (XCSP 2026, about 5000 search variables), where the scan was 40 % of
+   the time, -f makes 73 % more nodes in 120 s. Over 16 wide instances
+   that hand over from LCG to plain CP search and 3 TelecomScheduling
+   instances at 600 s the total time goes from 10815 to 10569 s, with
+   BACPj-01-08 proved; on wide-quick at 240 s it is neutral (2829 vs
+   2839 s, same 52 solved). -Dorg.jacop.search.free.domWdegScan=true
+   restores the scan.
+
+369. Free search (-f) of a model without a search annotation branches on
+   the variables that no defines_var annotation names before the defined
+   ones: under lazy clause generation until the first solution, and
+   always in free search without learning (after LCG gives way). On
+   XCSP 2026 Feedback (a permutation x, penalties z = max(0, x[i] - x[j])
+   per arc, minimise their sum) the default search fixed the defined
+   penalties, which pins differences of x and fails deep on the
+   all_different; P1000-15000 and P1000-25000 had no solution in 600 s
+   and now reach 2424015 and 4008836, and P1000-05000 finds its first
+   solution in 8 s instead of 105 s. On 18 other XCSP families where the
+   order changes, 6 are better and 6 worse at 600 s; on wide-quick under
+   -f (240 s) 2 groups are better and 1 worse (proof time noise).
+   -Dorg.jacop.fz.definedLast=always keeps the order after the first
+   solution, false restores the old order.
+
+370. The FlatZinc front end posts the aggregated flow of a regular
+   constraint whose sequence is counted by cardinality constraints, one
+   per residue class i mod p of its positions (RegularFlowDetector): the
+   automaton's layers of one class are merged, the cardinalities give the
+   number of arcs per value, and flow conservation links consecutive
+   classes (flow formulations of regular: G. Pesant, CP 2004;
+   M.-C. Cote, B. Gendron and L.-M. Rousseau, CPAIOR 2007). Rotating
+   workforce scheduling (MiniZinc Challenge 2018, 2019, 2022) is the
+   case: one regular over the cyclic schedule and a global cardinality per
+   weekday. 2019 Example1370, which CP-SAT proves infeasible in 38 s and
+   JaCoP did not in 600 s, fails at the root; Example1174 and 2018
+   Example1780 (210 s) are proved in about 2 s, by default and with -f.
+   It fires on 15 of the 127 Challenge instances with a regular
+   constraint, all of them rotating workforce, and the solved satisfiable
+   ones keep their times. -Dorg.jacop.fz.regularFlow=false turns it off;
+   --proof does not post it.
+
+371. CostNetworkBound (-Dorg.jacop.fz.costNetwork=true) cites each atom of a
+   lazy clause generation reason once and propagates incrementally.
+   A reason cited one atom per cheaper value of a fixed variable and the
+   bounds of a neighbour once per edge, so on celar scen07 a reason held
+   about 6,100 atoms of which 215 were distinct; it now cites the bound
+   atoms of the cheaper values outside a variable's bounds (for a fixed
+   variable the nearest cheaper value on each side) and each neighbour
+   once. During search only the variables whose domain or fixed
+   neighbours changed are evaluated again, and the received binary costs
+   of a variable are read once. Conflicts per second on scen07 rise
+   about 8 times. On the 19 MiniZinc Challenge instances where the bound
+   posts (celar, proteindesign12, one community-detection), at 600 s,
+   default search proves 14 instead of 13 (1UBI.13p.9aa 184 s), the
+   1HZ5.12p.19aa instances in 78-81 s instead of 280-307 s (total time
+   0.79), and improves the objective of all three celar instances; -f
+   proves 16 instead of 15 (total time 0.87).
+
+372. The FlatZinc front end posts the LYM inequality of vectors that are
+   pairwise incomparable in the product order (every ordered pair u, v
+   has "u[c] < v[c] for some c", as a clause of literals that imply
+   u[c] < v[c] or as two element constraints with the same index whose
+   results are in a < b): sum_i 1/N(rank(x_i)) <= 1, where N(r) is the
+   number of elements of rank r of the product of the chains of the
+   coordinates. Products of chains are LYM posets (L. H. Harper,
+   J. Combin. Theory A 17, 1974; W. N. Hsieh and D. J. Kleitman, Stud.
+   Appl. Math. 52, 1973), so the inequality is implied; for subsets it is
+   Lubell's (J. Combin. Theory 1, 1966) and gives Sperner's theorem (Math.
+   Z. 27, 1928) and its multiset form (de Bruijn, van Ebbenhorst
+   Tengbergen and Kruyswijk, 1951). It is posted as one rank variable and
+   one element of scaled weights per vector and a sum, only when it
+   removes a rank at the root; with more vectors than the largest rank the
+   model fails at the root. On Antichain1 and Antichain2 of the XCSP 2026
+   competition (-f, 600 s) it decides the six instances at Sperner's bound
+   that JaCoP did not decide before: 127-09 and 253-10 (C(9,4) + 1 and
+   C(10,5) + 1 subsets) and Antichain2-142-6-03 are proved unsatisfiable
+   in 12, 60 and 7 s, and 126-09, 252-10 and 141-6-03 are solved in 19, 78
+   and 79 s. Over the 24 Antichain instances 24 are decided instead of 18,
+   in 325 s instead of 4,126 s. The other UNSAT instances fall to 1-4 s (Antichain1-071-08
+   86 -> 3 s, Antichain2-086-4-05 73 -> 2 s). It fires on none of the 240
+   instances of the wide benchmark set or of the XCSP 2022-2025
+   instances. -Dorg.jacop.fz.antichain=false turns it off; it is off under
+   --proof.
+
+373. A LinearInt (MiniZinc int_lin_eq/le with a variable sum) of 200 or
+   more terms keeps the bounds of its sum incrementally: the store tells
+   it about every bound change of its variables and a consistency call no
+   longer rescans all terms, which dominated the cost sums of assignment
+   models (advisors in the sense of Lagerkvist and Schulte, CP 2007).
+   Terms are sorted by their initial variability so a pruning pass stops
+   at the first term within the slack. Pruning is unchanged. On the 2012
+   ROADEF machine reassignment instances (cost sums of 1000-2004 terms)
+   nodes per second go up 1.9x in default search and 1.7x under -f;
+   a1_1 -f at 600 s reaches 44,311,581 (before 45,404,327, best known
+   44,306,501). -Dorg.jacop.linearIncrementalTerms=n sets the threshold,
+   0 turns it off. Binpacking also skips its elimination and commitment
+   tests (Shaw, CP 2004) when the load range is at least as wide as the
+   heaviest candidate, where no test can prune; this was 88 % of the time
+   of a1_5 under -f.
+
+374. The core-guided phase of lazy clause generation trims each core: it
    solves again under the core's own literals, with at most 1000
    conflicts a call and up to 3 calls while the core shrinks, and relaxes
    the smallest core it got (core trimming in RC2: Ignatiev, Morgado and
@@ -6618,7 +6739,7 @@ Version 5.0 (unreleased)
    (LcgSolver.setCoreTrim); the statistic lcgCoreShrunk counts the
    literals it took out of cores.
 
-367. JaLP's presolve also removes forcing rows and fixes dominated columns
+375. JaLP's presolve also removes forcing rows and fixes dominated columns
    (Andersen and Andersen, "Presolving in linear programming",
    Mathematical Programming 71 (1995), sections 3.2 and 3.5; part of the
    Gurobi catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger,
@@ -6634,7 +6755,7 @@ Version 5.0 (unreleased)
    above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
    build an LP, where results stay the same.
 
-368. The linear relaxation takes the rows over the terms of the objective on
+376. The linear relaxation takes the rows over the terms of the objective on
    the sparse simplex when they do not fit the dense tableau. A model
    stated in clauses and elements has few rows of its own (CSPLib
    warehouses, prob034: 2), so the dense simplex was chosen and the clause
@@ -6648,7 +6769,7 @@ Version 5.0 (unreleased)
    proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
    turns it off; the statistic lpNearRows gives the rows taken.
 
-369. Symmetry breaking posts value precedence in models whose own
+377. Symmetry breaking posts value precedence in models whose own
    lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
    hid that their values are interchangeable. Each such constraint
    X <=lex sigma(X) must compare a prefix of one common order, with sigma
@@ -6661,7 +6782,7 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
-370. Free search (-f) of an optimisation model without a search
+378. Free search (-f) of an optimisation model without a search
    annotation, after slow lazy clause generation gave way without a
    solution, takes turns until its first solution with runs that fix the
    search variables in the model's order, least value first
@@ -6675,7 +6796,7 @@ Version 5.0 (unreleased)
    with a solution and 7 better against 3 worse (seed spread); neutral on
    the wide set.
 
-371. The FlatZinc front end posts the reified comparisons of one variable
+379. The FlatZinc front end posts the reified comparisons of one variable
    with constants (int_le_reif, int_lt_reif with a constant on either
    side) and their half-reifications (int_le_imp, int_lt_imp) as one
    ChannelOrder per variable with two or more of them, in place of one
@@ -6692,7 +6813,7 @@ Version 5.0 (unreleased)
    reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
    half-reifications.
 
-372. ArgMax and ArgMin bound the values at positions that the index can
+380. ArgMax and ArgMin bound the values at positions that the index can
    no longer take: such a position may not reach the extreme over the
    positions the index can still take (strictly for positions after
    them, since the first extreme wins). ArgMax and ArgMin now reach
@@ -6705,7 +6826,7 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
-373. Free search (-f) on satisfaction models gives LCG away to free search
+381. Free search (-f) on satisfaction models gives LCG away to free search
    without learning when learning does not cut the search: at 10 % of -t
    (then each time the elapsed time doubles) the conflicts so far jump
    back fewer than 1.5 levels on average and their learnt clauses have
@@ -6720,6 +6841,25 @@ Version 5.0 (unreleased)
    600 s in two repeats it solves 20 -> 25 and 21 -> 26, total time 0.73
    and 0.78 (Subisomorphism g11-g30 and g11-g44, AnotherMagicSquare-04
    proved UNSAT, FRB-45-21-3 solved).
+
+382. The LP relaxation keeps the value encodings of the model's variables
+   (sum b_v = 1, x = sum v b_v) when the other rows do not all fit its
+   first-solve trial. Before, they came after thousands of linearized rows
+   and missed the trial: on the ROADEF 2020 maintenance planning model the
+   relaxation could leave every Boolean at 0, all its duals were zero and
+   it never pruned. Now they go first, are tried alone first, and get the
+   time of a large root solve (10 % of -t). New clique rows over value
+   Booleans: value Booleans of one variable that each imply a Boolean a
+   give sum b_v <= a (implications lifted over a clique of the conflict
+   graph, A. Atamturk, G. L. Nemhauser, M. W. P. Savelsbergh, Conflict
+   graphs in solving integer programming problems, European Journal of
+   Operational Research 121(1), 2000), and set packing rows over such
+   Booleans are restated over the b_v. The sparse simplex takes up to
+   50,000 columns (was 30,000). ROADEF 2020 at 600 s with -f: dual bound
+   A_01 31,697,304 -> 31,804,427 (optimum 31,820,680), A_06 20,116,179 ->
+   21,448,097 (optimum 21,498,698). 36 of the 240 wide instances are
+   reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
+   -Dorg.jacop.lp.valueCliques=false turn them off.
 
 Version 4.11
 =============
