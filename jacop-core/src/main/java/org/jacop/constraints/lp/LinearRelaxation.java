@@ -1586,6 +1586,69 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Creates the relaxation that tries to refute a model stated in clauses over 0/1 variables at the
+   * root, as {@link #refutation} does for models with value encodings: the clause rows and the
+   * linear rows of the model, with the conflicts of pairs of literals (the binary clauses) merged
+   * into clique rows. It is made only when the binary clauses hold at-most-one structure, at least
+   * {@code org.jacop.lp.clauseRefutationCliques} cliques of three or more literals: pigeonhole and
+   * mutilated chessboard formulas state each at-most-one as its pairs, and the clauses alone have
+   * an LP that is always feasible (each literal at 1/2).
+   *
+   * @param store the store
+   * @param clauses the clause rows of the clauses that lazy clause generation took
+   * @return the relaxation, or null when it is off, the model has too few cliques or too many rows
+   */
+  public static LinearRelaxation clauseRefutation(Store store, Collection<LinearForm> clauses) {
+    if (!CLAUSE_REFUTATION || !ROOT_REFUTATION || clauses.isEmpty()) {
+      return null;
+    }
+    List<LinearForm> given = new ArrayList<>();
+    for (Constraint c : constraintsOf(store)) {
+      if (c instanceof LinearRelaxation) {
+        continue;
+      }
+      LinearForm f = LinearForms.of(c);
+      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+        given.add(f);
+      }
+    }
+    List<LinearForm> clauseRows = new ArrayList<>();
+    for (LinearForm f : clauses) {
+      if (f == null) {
+        continue;
+      }
+      if (ClauseSimplification.isClause(f)) {
+        clauseRows.add(f);
+      } else {
+        given.add(f);
+      }
+    }
+    ClauseSimplification simplified = ClauseSimplification.of(clauseRows);
+    if (simplified.refuted) {
+      // unit propagation refutes the clauses: lazy clause generation does so at its root
+      return null;
+    }
+    given.addAll(simplified.rows);
+    PairCliques merged = PairCliques.merge(given, List.of());
+    if (merged.cliques < CLAUSE_REFUTATION_CLIQUES) {
+      return null;
+    }
+    List<LinearForm> rows = merged.rows;
+    Simplex simplex = sparseTakes(rows) ? Simplex.SPARSE : Simplex.DENSE;
+    if (tooLarge(rows, simplex)) {
+      return null;
+    }
+    LinearRelaxation r = new LinearRelaxation(rows, List.of(), null, false, simplex);
+    r.refutation = true;
+    r.pairCliques = merged.cliques;
+    r.clauseRefutation = true;
+    r.clauseUnits = simplified.units;
+    r.clauseEquivalences = simplified.equivalences;
+    r.cutsTried = true;
+    return r.rows() < 2 ? null : r;
+  }
+
+  /**
    * Returns the outcome of the root solve of a relaxation made by {@link #refutation}.
    *
    * @return "refuted" when it proved that the model has no solution, "feasible", "limit" when it
@@ -1818,6 +1881,28 @@ public class LinearRelaxation extends Constraint
   // the model (refutation)
   private static final boolean ROOT_REFUTATION =
       !"false".equals(System.getProperty("org.jacop.lp.rootRefutation"));
+
+  // made by clauseRefutation
+  private boolean clauseRefutation;
+
+  /** The variables that unit propagation fixed in the clause rows of {@link #clauseRefutation}. */
+  public int clauseUnits;
+
+  /** The variables that equivalences substituted in {@link #clauseRefutation}. */
+  public int clauseEquivalences;
+
+  // models in clauses: a refutation over the clause rows and their clique rows (clauseRefutation),
+  // made when the binary clauses form at least this many cliques of three or more literals
+  private static final boolean CLAUSE_REFUTATION =
+      !"false".equals(System.getProperty("org.jacop.lp.clauseRefutation"));
+  private static final int CLAUSE_REFUTATION_CLIQUES =
+      Integer.getInteger("org.jacop.lp.clauseRefutationCliques", 1);
+
+  // the pivots of its root solve: the pigeonhole, mutilated chessboard and grandtour formulas of
+  // the SAT Competition refute in 65, 328 and 184; rubik 6-cube of the MiniZinc Challenge (a
+  // solution in 3 s) does not refute in 2,083 pivots, 1.1 s
+  private static final int CLAUSE_REFUTATION_PIVOTS =
+      Integer.getInteger("org.jacop.lp.clauseRefutationPivots", 1_000);
 
   // the pivots of the root solve of the refutation: the social golfers refute in 1,442; on the 351
   // XCSP 2022-2025 satisfaction instances it does not refute, the root solve took up to 1.7 s
@@ -2734,7 +2819,7 @@ public class LinearRelaxation extends Constraint
             ? (int) Math.clamp(ROOT_WORK / size, 5, rootPivots)
             : (int) Math.clamp(WORK / size, 5, pivotLimit);
     if (refutation) {
-      limit = Math.min(limit, REFUTATION_PIVOTS);
+      limit = Math.min(limit, clauseRefutation ? CLAUSE_REFUTATION_PIVOTS : REFUTATION_PIVOTS);
     }
     int status =
         (calls == 1 || restarting) && simplex != Simplex.LAZY
