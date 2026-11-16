@@ -44,6 +44,7 @@ import org.jacop.api.Monotone;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
@@ -211,7 +212,10 @@ public final class DominanceNogoods {
     List<Var> all = Derivation.variables(store);
     List<Constraint> live = new ArrayList<>();
     for (Constraint c : Derivation.constraints(store, all)) {
-      if (!(c instanceof SatisfiedPresent s && s.satisfied())) {
+      if (c instanceof ChannelOrder ch && !ch.satisfied()) {
+        // read as the reifications it replaces, each of which defines its 0/1 variable
+        live.addAll(ch.reifications());
+      } else if (!(c instanceof SatisfiedPresent s && s.satisfied())) {
         live.add(c);
       }
     }

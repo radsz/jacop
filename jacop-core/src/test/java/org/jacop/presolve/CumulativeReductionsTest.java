@@ -264,6 +264,38 @@ class CumulativeReductionsTest {
     assertThat(d0.statistics().childConstraints()).isEqualTo(1);
   }
 
+  /**
+   * A resource that lists a task twice is not implied by one that lists it once: each task of the
+   * first was matched against any task of the second, so [x1, x1, x0] counted as inside [x3, x1,
+   * x0] and was removed, which lost the load of 2 that x1 puts on it (SymmetryBreakingFlatzincTest
+   * with xseed 664, trial 211).
+   */
+  @Test
+  void aTaskListedTwiceIsNotImpliedByItOnce() {
+    Store direct = new Store();
+    IntVar[] vars = twiceListed(direct);
+    Set<List<Integer>> expected = new HashSet<>();
+    assertThat(direct.consistency()).isTrue();
+    search(direct, vars, () -> expected.add(values(vars)));
+    Store store = new Store();
+    Set<List<Integer>> found =
+        solveThroughPresolve(store, twiceListed(store), new CumulativeReductions(false));
+    assertThat(found).isEqualTo(expected).isNotEmpty();
+  }
+
+  private static IntVar[] twiceListed(Store store) {
+    IntVar x0 = new IntVar(store, "x0", 0, 3);
+    IntVar x1 = new IntVar(store, "x1", 0, 3);
+    IntVar x3 = new IntVar(store, "x3", 0, 3);
+    IntVar one = new IntVar(store, 1, 1);
+    IntVar two = new IntVar(store, 2, 2);
+    IntVar[] durations = {one, one, two};
+    IntVar[] uses = {one, one, one};
+    store.impose(new Cumulative(new IntVar[] {x1, x1, x0}, durations, uses, two));
+    store.impose(new Cumulative(new IntVar[] {x3, x1, x0}, durations, uses, two));
+    return new IntVar[] {x0, x1, x3};
+  }
+
   /** Returns the smallest cost of a solution, or Integer.MAX_VALUE if there is none. */
   private static int minimize(Store store, IntVar[] vars, IntVar cost, Runnable onSolution) {
     int[] best = {Integer.MAX_VALUE};

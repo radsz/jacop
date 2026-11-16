@@ -4715,6 +4715,68 @@ class LcgSolverTest {
   }
 
   /**
+   * A stop during the runs in large neighbourhoods ends them: the runs that follow return at once
+   * without a conflict and must not count as neighbourhoods too large. The slow-LCG hand-over of
+   * free search stopped LCG in its runs on MaximumAgreementForest2-exact12 (XCSP 2026), which went
+   * on for the rest of their share of the time: 7,000 runs shrank every neighbourhood to 2
+   * variables.
+   */
+  @Test
+  void stopEndsLargeNeighbourhoodRuns() {
+    Random rnd = new Random(29);
+    int stopped = 0;
+    for (int k = 0; k < 60; k++) {
+      Store store = new Store();
+      int n = 8;
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 5);
+      }
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            store.impose(new XneqY(x[i], x[j]));
+          }
+        }
+      }
+      int[] w = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(11) - 3;
+      }
+      w[n] = -1;
+      IntVar cost = new IntVar(store, "cost", -1000, 1000);
+      IntVar[] terms = Arrays.copyOf(x, n + 1);
+      terms[n] = cost;
+      store.impose(new LinearInt(terms, w, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setLowerBoundSearch(0.5, 2);
+      AdaptiveLns lns = new AdaptiveLns(store, x, cost, new Random(k));
+      solver.setLns(lns, 1000.0, 2);
+      long[] runsAtStop = {-1};
+      // the first better solution found in a neighbourhood stops the search
+      solver.onSolution(
+          () -> {
+            if (solver.lnsRuns > 0 && runsAtStop[0] < 0) {
+              runsAtStop[0] = solver.lnsRuns;
+              solver.stop();
+            }
+          });
+      String shares = lns.statistics();
+      int result = solver.minimize(cost);
+      if (runsAtStop[0] < 0) {
+        continue;
+      }
+      stopped++;
+      assertThat(result).isNotEqualTo(CdclSolver.UNSAT);
+      // at most the run that the stop came in
+      assertThat(solver.lnsRuns).isEqualTo(runsAtStop[0]);
+      assertThat(lns.statistics()).doesNotContain("0.000");
+      assertThat(shares).doesNotContain("0.000");
+    }
+    assertThat(stopped).isPositive();
+  }
+
+  /**
    * A solver that adds constraints to the shared model (symmetry breaking) reads the clauses of
    * solvers that added none or the same ones; its own reach only the latter.
    */
@@ -4826,6 +4888,33 @@ class LcgSolverTest {
       assertThat(bound.get()).as("instance %d", instance).isEqualTo(optimum);
     }
     assertThat(imported).isPositive();
+  }
+
+  /**
+   * Core-guided search proves the same optima with and without trimming its cores, and trimming
+   * takes literals out of some of them.
+   */
+  @Test
+  void trimmedCoresKeepTheOptimum() {
+    Random rnd = new Random(23);
+    long shrunk = 0;
+    long untrimmed = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = coreModelOptimum(seed, -1, new long[3]);
+      long[] trimmed = new long[6];
+      assertThat(coreModelOptimum(seed, 0, trimmed))
+          .as("instance %d (seed %d), trimmed", instance, seed)
+          .isEqualTo(expected);
+      long[] plain = new long[6];
+      assertThat(coreModelOptimum(seed, 4, plain))
+          .as("instance %d (seed %d), untrimmed", instance, seed)
+          .isEqualTo(expected);
+      shrunk += trimmed[5];
+      untrimmed += plain[5];
+    }
+    assertThat(shrunk).isPositive();
+    assertThat(untrimmed).isZero();
   }
 
   @Test
@@ -5681,6 +5770,10 @@ class LcgSolverTest {
     solver.setChecking(true);
     solver.setCoreSearch(
         1, mode == 1 ? 1 + rnd.nextInt(10) : 1_000_000, mode == 1 ? 1 + rnd.nextInt(5) : 100_000);
+    if (mode == 4) {
+      // core-guided search alone, each core as the solver gives it
+      solver.setCoreTrim(0);
+    }
     if (mode == 3) {
       // a few conflicts of branch and bound, after a few of core-guided search or none, then the
       // core-guided phase picks up where it stopped
@@ -5707,6 +5800,9 @@ class LcgSolverTest {
     }
     if (stats.length > 4 && solver.coreSearch() != null) {
       stats[4] += solver.coreSearch().objectiveProbes;
+    }
+    if (stats.length > 5 && solver.coreSearch() != null) {
+      stats[5] += solver.coreSearch().coreShrunk;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
