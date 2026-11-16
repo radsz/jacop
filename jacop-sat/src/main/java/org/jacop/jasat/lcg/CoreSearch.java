@@ -184,6 +184,8 @@ public final class CoreSearch {
   private long runBound; // the lower bound when the last run started
   private long runEnd; // the solver's work when the last run stopped
   private boolean grouped; // the at-most-one groups were looked for
+  private boolean regrouped; // they were looked for again after hardening
+  private long hardenedAtGroup; // the soft literals hardened when the groups were looked for
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
 
@@ -320,7 +322,8 @@ public final class CoreSearch {
       grouped = true;
       return true;
     }
-    return relaxAtMostOnes();
+    hardenedAtGroup = hardened;
+    return relaxAtMostOnes(true);
   }
 
   /** Whether each term's variable spans at most one level. */
@@ -333,6 +336,29 @@ public final class CoreSearch {
     }
     return true;
   }
+
+  /**
+   * Looks for the at-most-one groups once more when soft literals were hardened since they were
+   * looked for: a heavy soft clause between two light soft literals, such as a conflict of weight
+   * 221 between the unit soft clauses of weight 1 of a weighted MaxSAT independent set (MaxSAT
+   * Evaluation frb_wt), becomes hard only once a solution cheaper than its weight is known, and
+   * only then does it put the two literals in one group. Without it, the cores raise the bound by
+   * one each: 200 cores and 120 s on frb_wt-frb20-11-1, whose 20 domain cliques give the bound at
+   * once. The values of terms are not expanded again. Returns false when the solver is
+   * unsatisfiable at the root.
+   */
+  private boolean regroup() {
+    if (regrouped || !grouped || proof != null || hardened == hardenedAtGroup) {
+      return true;
+    }
+    regrouped = true;
+    hardenedAtGroup = hardened;
+    regroups++;
+    return relaxAtMostOnes(false);
+  }
+
+  /** Statistics: times the at-most-one groups were looked for again after hardening. */
+  public long regroups;
 
   /** The number of levels of the terms' variables, summed. */
   private static long span(LcgSolver lcg, Map<Integer, Long> terms) {
@@ -524,6 +550,11 @@ public final class CoreSearch {
     if (threshold < 0) {
       if (!grouped) {
         addTermSofts();
+        // hardened literals are hard clauses for the probes of the groups: a conflict clause of
+        // heavy weight between two soft literals then puts them in one group
+        if (!harden()) {
+          return CdclSolver.SAT;
+        }
       }
       if (!grouped && !group()) {
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
@@ -541,6 +572,9 @@ public final class CoreSearch {
       }
       if (!harden()) {
         return CdclSolver.SAT; // no solution better than the best one
+      }
+      if (!regroup()) {
+        return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       List<Integer> assumed = new ArrayList<>();
       for (Soft s : softs) {
@@ -675,7 +709,7 @@ public final class CoreSearch {
     }
   }
 
-  private boolean relaxAtMostOnes() {
+  private boolean relaxAtMostOnes(boolean expand) {
     grouped = true;
     // the nodes: soft literals of terms, then the value literals of the terms that expand
     List<Integer> lits = new ArrayList<>();
@@ -691,7 +725,7 @@ public final class CoreSearch {
     int terms = lits.size();
     long expansionCost = 0; // what the expansion takes from the bound
     BitSet expanded = new BitSet();
-    for (int i = 0; i < terms; i++) {
+    for (int i = 0; i < terms && expand; i++) {
       int[] values = valueLiterals(owner.get(i));
       if (values.length == 0) {
         continue;
