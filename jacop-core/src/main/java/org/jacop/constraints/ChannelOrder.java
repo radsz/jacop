@@ -36,12 +36,14 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToIntFunction;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.api.VarMap;
+import org.jacop.api.Violation;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -50,22 +52,33 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * Channels the order literals of an integer variable: {@code b[i] <=> (x <= t[i])}, or {@code b[i]
- * <=> (x > t[i])} for a negated item. It does what one reified comparison of x with a constant per
- * item does, with one propagator: the items are sorted by threshold, so a bound change of x fixes
- * the 0/1 variables of the thresholds it passes, and a fixed 0/1 variable moves a bound of x.
+ * <=> (x > t[i])} for a negated item, and for an implied item only {@code b[i] => (x <= t[i])} or
+ * {@code b[i] => (x > t[i])}. It does what one reified comparison of x with a constant per item
+ * does, with one propagator: the items are sorted by threshold, so a bound change of x fixes the
+ * 0/1 variables of the thresholds it passes, and a fixed 0/1 variable moves a bound of x.
  *
- * <p>Presolve posts it for the {@code int_le_reif}, {@code int_lt_reif}, {@code int_ge_reif} and
- * {@code int_gt_reif} constraints of one variable with constants, the order counterpart of what
- * {@link ChannelReif} does for {@code int_eq_reif}.
+ * <p>The FlatZinc front end and presolve post it for the {@code int_le_reif}, {@code int_lt_reif},
+ * {@code int_ge_reif} and {@code int_gt_reif} constraints of one variable with constants, the order
+ * counterpart of what {@link ChannelReif} does for {@code int_eq_reif}. The linear relaxation and
+ * other readers of reifications see it as its {@link #reifications()}.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
 public class ChannelOrder extends Constraint
-    implements UsesQueueVariable, Stateful, SatisfiedPresent, Explainable, Copyable<ChannelOrder> {
+    implements UsesQueueVariable,
+        Stateful,
+        SatisfiedPresent,
+        Explainable,
+        Violation,
+        PbEncodable,
+        Copyable<ChannelOrder> {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -75,6 +88,9 @@ public class ChannelOrder extends Constraint
   final IntVar[] b;
   final int[] t;
   final boolean[] atMost;
+
+  // whether an item is only an implication: b[i] => (x <= t[i]), or b[i] => (x > t[i])
+  final boolean[] implied;
 
   // the items of each 0/1 variable; one variable may stand for several items
   private final Map<Var, int[]> itemsOf = new IdentityHashMap<>();
@@ -96,9 +112,25 @@ public class ChannelOrder extends Constraint
    * @param atMost for each item, whether b stands for x {@literal <=} t or for x {@literal >} t.
    */
   public ChannelOrder(IntVar x, IntVar[] b, int[] t, boolean[] atMost) {
+    this(x, b, t, atMost, new boolean[atMost == null ? 0 : atMost.length]);
+  }
+
+  /**
+   * Constructs b[i] {@literal <=>} (x {@literal <=} t[i]) if atMost[i], and b[i] {@literal <=>} (x
+   * {@literal >} t[i]) otherwise, where an implied item is only the implication b[i] {@literal =>}
+   * of its comparison (a half-reification, {@code int_le_imp}).
+   *
+   * @param x the integer variable.
+   * @param b the 0/1 variables.
+   * @param t the thresholds.
+   * @param atMost for each item, whether b stands for x {@literal <=} t or for x {@literal >} t.
+   * @param implied for each item, whether b only implies its comparison.
+   */
+  public ChannelOrder(IntVar x, IntVar[] b, int[] t, boolean[] atMost, boolean[] implied) {
     checkInputForNullness(new String[] {"x", "b"}, new Object[] {x}, b);
-    checkInputForNullness(new String[] {"t", "atMost"}, new Object[] {t, atMost});
-    if (b.length != t.length || b.length != atMost.length) {
+    checkInputForNullness(
+        new String[] {"t", "atMost", "implied"}, new Object[] {t, atMost, implied});
+    if (b.length != t.length || b.length != atMost.length || b.length != implied.length) {
       throw new IllegalArgumentException(
           "ChannelOrder: b, t and atMost have different lengths "
               + b.length
@@ -129,10 +161,12 @@ public class ChannelOrder extends Constraint
     this.b = new IntVar[n];
     this.t = new int[n];
     this.atMost = new boolean[n];
+    this.implied = new boolean[n];
     for (int i = 0; i < n; i++) {
       this.b[i] = b[order[i]];
       this.t[i] = t[order[i]];
       this.atMost[i] = atMost[order[i]];
+      this.implied[i] = implied[order[i]];
     }
     for (int i = 0; i < n; i++) {
       int[] old = itemsOf.get(this.b[i]);
@@ -191,7 +225,7 @@ public class ChannelOrder extends Constraint
             continue;
           }
           for (int i : items) {
-            if (i >= l && i < h && b[i].singleton()) {
+            if (i >= l && i < h && b[i].singleton() && (b[i].value() == 1 || !implied[i])) {
               if ((b[i].value() == 1) == atMost[i]) {
                 x.domain.inMax(store.level, x, t[i]);
               } else if (t[i] == Integer.MAX_VALUE) {
@@ -202,17 +236,22 @@ public class ChannelOrder extends Constraint
             }
           }
         }
-        // the bounds of x fix the items they pass; fixing a 0/1 variable queues it again
+        // the bounds of x fix the items they pass (an implied item only when its comparison
+        // fails); fixing a 0/1 variable queues it again
         int min = x.min();
         int max = x.max();
         while (l < h && t[l] < min) {
-          int v = atMost[l] ? 0 : 1;
-          b[l].domain.in(store.level, b[l], v, v);
+          if (atMost[l] || !implied[l]) {
+            int v = atMost[l] ? 0 : 1;
+            b[l].domain.in(store.level, b[l], v, v);
+          }
           l++;
         }
         while (h > l && t[h - 1] >= max) {
-          int v = atMost[h - 1] ? 1 : 0;
-          b[h - 1].domain.in(store.level, b[h - 1], v, v);
+          if (!atMost[h - 1] || !implied[h - 1]) {
+            int v = atMost[h - 1] ? 1 : 0;
+            b[h - 1].domain.in(store.level, b[h - 1], v, v);
+          }
           h--;
         }
       } while (next < queue.size());
@@ -231,18 +270,25 @@ public class ChannelOrder extends Constraint
     int min = x.min();
     int max = x.max();
     for (int i = 0; i < t.length; i++) {
-      if (!b[i].singleton()) {
-        return false;
-      }
       boolean le;
       if (t[i] >= max) {
         le = true;
       } else if (t[i] < min) {
         le = false;
       } else {
+        if (implied[i] && b[i].max() == 0) {
+          continue;
+        }
         return false;
       }
-      if ((b[i].value() == 1) != (le == atMost[i])) {
+      if (implied[i]) {
+        // b => literal: holds once b is 0 or the literal holds
+        if (le != atMost[i] && b[i].max() != 0) {
+          return false;
+        }
+        continue;
+      }
+      if (!b[i].singleton() || (b[i].value() == 1) != (le == atMost[i])) {
         return false;
       }
     }
@@ -254,9 +300,10 @@ public class ChannelOrder extends Constraint
     int bv;
     if (trail.minBefore(b[i], position) >= 1) {
       bv = 1;
-    } else if (trail.maxBefore(b[i], position) <= 0) {
+    } else if (trail.maxBefore(b[i], position) <= 0 && !implied[i]) {
       bv = 0;
     } else {
+      // open, or b = 0 of an implied item, which says nothing of x
       return -1;
     }
     return (bv == 1) == atMost[i] ? 1 : 0;
@@ -325,6 +372,10 @@ public class ChannelOrder extends Constraint
     }
     boolean one = kind == AtomicTrail.GE || kind == AtomicTrail.NE && a == 0;
     for (int i : items) {
+      if (one && implied[i]) {
+        // the channel never sets b of an implied item to 1
+        continue;
+      }
       boolean le = one == atMost[i];
       int e =
           le
@@ -374,13 +425,53 @@ public class ChannelOrder extends Constraint
     return true;
   }
 
+  /**
+   * Returns the items as the reified comparisons they replace, {@code b[i] <=> x <= t[i]} or {@code
+   * b[i] <=> x > t[i]} ({@link Reified}, or {@link Implies} for an implied item), for readers of
+   * reifications such as the linear relaxation. They are not imposed.
+   *
+   * @return one reification per item, in the order of the thresholds.
+   */
+  public List<Constraint> reifications() {
+    List<Constraint> result = new ArrayList<>(t.length);
+    for (int i = 0; i < t.length; i++) {
+      PrimitiveConstraint c = atMost[i] ? new XlteqC(x, t[i]) : new XgtC(x, t[i]);
+      result.add(implied[i] ? new Implies(b[i], c) : new Reified(c, b[i]));
+    }
+    return result;
+  }
+
+  @Override
+  public long violation(ToIntFunction<IntVar> value) {
+    int xv = value.applyAsInt(x);
+    long violated = 0;
+    for (int i = 0; i < t.length; i++) {
+      boolean on = value.applyAsInt(b[i]) == 1;
+      boolean holds = (xv <= t[i]) == atMost[i];
+      if (implied[i] ? on && !holds : on != holds) {
+        violated++;
+      }
+    }
+    return violated;
+  }
+
+  @Override
+  public boolean encode(PbModel model) {
+    for (int i = 0; i < t.length; i++) {
+      LinearForm le = new LinearForm(new IntVar[] {x}, new long[] {1}, t[i], LinearForm.LE);
+      model.reified(b[i], atMost[i] ? le : le.negated(), !implied[i]);
+    }
+    return true;
+  }
+
   @Override
   public String toString() {
     StringBuilder s = new StringBuilder(id()).append(" : ChannelOrder(").append(x).append(", [");
     for (int i = 0; i < t.length; i++) {
       s.append(i == 0 ? "" : ", ")
           .append(b[i])
-          .append(atMost[i] ? " <=> x <= " : " <=> x > ")
+          .append(implied[i] ? " => x" : " <=> x")
+          .append(atMost[i] ? " <= " : " > ")
           .append(t[i]);
     }
     return s.append("] )").toString();
@@ -392,6 +483,6 @@ public class ChannelOrder extends Constraint
     for (int i = 0; i < b.length; i++) {
       bs[i] = map.get(b[i]);
     }
-    return new ChannelOrder(map.get(x), bs, t, atMost);
+    return new ChannelOrder(map.get(x), bs, t, atMost, implied);
   }
 }

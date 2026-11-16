@@ -73,6 +73,7 @@ import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
@@ -1310,6 +1311,86 @@ class SingleConstraintTest extends TestHelper {
       store.setLevel(store.level + 1);
       abs.consistency(store);
       assertThat(x.dom() + " " + y.dom()).as(instance).isEqualTo(afterPropagation);
+    }
+  }
+
+  @Test
+  void longLinearIntKeepsIncrementalBoundsOverBacktracking() {
+    // an imposed LinearInt of 200 terms or more keeps its bounds incrementally; at every node of
+    // random dives with backtracking it must prune exactly as a fresh, rescanning copy does
+    Random random = new Random(20261115L);
+    String[] relations = {"==", "<=", ">=", "<", ">"};
+    for (int run = 0; run < 12; run++) {
+      Store store = new Store();
+      int n = 200 + random.nextInt(40);
+      IntVar[] x = new IntVar[n + 1];
+      int[] w = new int[n + 1];
+      long value = 0;
+      for (int i = 0; i < n; i++) {
+        if (random.nextInt(3) == 0) {
+          x[i] = new BooleanVar(store, "b" + i);
+        } else {
+          int lo = random.nextInt(11) - 5;
+          x[i] = new IntVar(store, "x" + i, lo, lo + random.nextInt(9));
+          if (random.nextBoolean()) {
+            x[i].domain.inComplement(0, x[i], lo + 1);
+          }
+        }
+        w[i] = (random.nextInt(4) + 1) * (random.nextBoolean() ? 1 : -1);
+        value += (long) w[i] * x[i].min();
+      }
+      x[n] = new IntVar(store, "s", -2000, 2000);
+      w[n] = -1;
+      String rel = relations[run % relations.length];
+      int b = (int) Math.max(-1500, Math.min(1500, value)) / 4;
+      store.impose(new LinearInt(x, w, rel, -b));
+      if (!store.consistency()) {
+        continue;
+      }
+      for (int step = 0; step < 300; step++) {
+        IntVar v = x[random.nextInt(n + 1)];
+        if (v.singleton()) {
+          continue;
+        }
+        store.setLevel(store.level + 1);
+        int pivot = v.min() + random.nextInt(v.max() - v.min() + 1);
+        try {
+          switch (random.nextInt(4)) {
+            case 0 -> v.domain.in(store.level, v, pivot, pivot);
+            case 1 -> v.domain.inMax(store.level, v, pivot);
+            case 2 -> v.domain.inMin(store.level, v, pivot);
+            default -> v.domain.inComplement(store.level, v, pivot);
+          }
+        } catch (FailException e) {
+          // an empty domain; the level is removed below
+        }
+        boolean empty = Arrays.stream(x).anyMatch(Var::isEmpty);
+        // a rescanning copy over the domains of this node before propagation
+        Store fresh = new Store();
+        IntVar[] copy = new IntVar[n + 1];
+        for (int i = 0; i <= n && !empty; i++) {
+          copy[i] = new IntVar(fresh, x[i].id(), x[i].dom().cloneLight());
+        }
+        boolean consistent = !empty && store.consistency();
+        if (!empty) {
+          String instance = "run " + run + " step " + step + " " + rel;
+          IntVar one = new IntVar(fresh, "one", 1, 1);
+          fresh.impose(new Reified(new LinearInt(copy, w, rel, -b), one));
+          assertThat(fresh.consistency()).as(instance).isEqualTo(consistent);
+          if (consistent) {
+            assertThat(Arrays.toString(Arrays.stream(copy).map(IntVar::dom).toArray()))
+                .as(instance)
+                .isEqualTo(Arrays.toString(Arrays.stream(x).map(IntVar::dom).toArray()));
+          }
+        }
+        if (!consistent || random.nextInt(8) == 0) {
+          int back = 1 + random.nextInt(Math.max(1, store.level));
+          for (int k = 0; k < back && store.level > 0; k++) {
+            store.removeLevel(store.level);
+            store.setLevel(store.level - 1);
+          }
+        }
+      }
     }
   }
 
@@ -4780,6 +4861,52 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
 
     assertThat(noOfSolutions).isEqualTo(2401);
+  }
+
+  @Test
+  void argMaxAndArgMinBoundPositionsMissingFromTheIndex() {
+    // a position the index no longer holds cannot be the first extremum, so it is bounded by the
+    // index positions around it; before, only the positions before the smallest index were
+    // bounded tighter than the others (x1 kept 4 below, 0 in the second store)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 3);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    x1.addDom(3, 4);
+    IntVar x2 = new IntVar(store, "x2", 1, 4);
+    IntVar index = new IntVar(store, "index", 0, 0);
+    index.addDom(2, 2);
+    store.impose(new ArgMax(new IntVar[] {x0, x1, x2}, index, -1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.max()).isEqualTo(3);
+
+    Store other = new Store();
+    IntVar y0 = new IntVar(other, "y0", 1, 3);
+    IntVar y1 = new IntVar(other, "y1", 0, 2);
+    IntVar y2 = new IntVar(other, "y2", 0, 2);
+    y2.addDom(4, 4);
+    IntVar position = new IntVar(other, "position", 0, 0);
+    position.addDom(2, 2);
+    other.impose(new ArgMin(new IntVar[] {y0, y1, y2}, position, -1));
+    assertThat(other.consistency()).isTrue();
+    assertThat(y1.min()).isEqualTo(1);
+
+    // the same for ArgMaxMonotone, with x2 read through a doubling table
+    Store third = new Store();
+    IntVar z0 = new IntVar(third, "z0", 0, 3);
+    IntVar z1 = new IntVar(third, "z1", 0, 0);
+    z1.addDom(3, 8);
+    IntVar z2 = new IntVar(third, "z2", 1, 2);
+    IntVar at = new IntVar(third, "at", 0, 0);
+    at.addDom(2, 2);
+    third.impose(
+        new ArgMaxMonotone(
+            new IntVar[] {z0, z1, z2},
+            new int[][] {null, null, {2, 4}},
+            new int[] {0, 0, 1},
+            at,
+            -1));
+    assertThat(third.consistency()).isTrue();
+    assertThat(z1.max()).isEqualTo(3);
   }
 
   @Test

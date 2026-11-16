@@ -69,6 +69,33 @@ class BinpackingSameWeightTest {
   }
 
   @Test
+  void noSumFindsASumInEveryIntervalWiderThanTheHeaviestWeight() {
+    // Binpacking skips elimination and commitment when no candidate outweighs the load range:
+    // Shaw's NoSum must then answer false for every interval of that width
+    Random random = new Random(20261115L);
+    long[] bounds = new long[2];
+    for (int run = 0; run < 20000; run++) {
+      int len = 1 + random.nextInt(30);
+      int[] x = new int[len];
+      for (int i = 0; i < len; i++) {
+        x[i] = 1 + random.nextInt(1 + random.nextInt(100));
+      }
+      Arrays.sort(x);
+      for (int i = 0; i < len / 2; i++) {
+        int t = x[i];
+        x[i] = x[len - 1 - i];
+        x[len - 1 - i] = t;
+      }
+      long sum = Arrays.stream(x).asLongStream().sum();
+      long width = x[0] - 1L + random.nextInt(3);
+      long alpha = 1 + random.nextInt((int) sum);
+      assertThat(Binpacking.noSum(x, len, sum, alpha, alpha + width, bounds))
+          .as("%s [%d, %d]", Arrays.toString(x), alpha, alpha + width)
+          .isFalse();
+    }
+  }
+
+  @Test
   void equalWeightShortcutsPruneAsTheGeneralRules() {
     Random random = new Random(11);
     for (int t = 0; t < 400; t++) {
