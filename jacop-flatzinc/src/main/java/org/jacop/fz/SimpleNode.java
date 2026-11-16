@@ -5,7 +5,7 @@
 package org.jacop.fz;
 
 /** Simple AST node for flatzinc parser. */
-public class SimpleNode implements Node {
+public class SimpleNode implements Node, Cloneable {
 
   protected final int id;
   protected Node parent;
@@ -31,6 +31,37 @@ public class SimpleNode implements Node {
   public SimpleNode(Parser p, int i) {
     this(i);
     parser = p;
+  }
+
+  /**
+   * Copies the tree below this node, for a reader that rewrites it: the passes of the front end
+   * (affine folding, objective scaling) change constraint items in place, and the threads of a
+   * portfolio build from one tree. The values of the nodes (identifiers, numbers, lists) are
+   * shared, since nothing changes them after parsing.
+   *
+   * @return the copy, without a parent
+   */
+  public SimpleNode copy() {
+    SimpleNode c;
+    try {
+      c = (SimpleNode) clone();
+    } catch (CloneNotSupportedException e) {
+      throw new IllegalStateException(e);
+    }
+    c.parent = null;
+    if (children != null) {
+      c.children = new Node[children.length];
+      for (int i = 0; i < children.length; i++) {
+        if (children[i] instanceof SimpleNode child) {
+          SimpleNode d = child.copy();
+          d.parent = c;
+          c.children[i] = d;
+        } else {
+          c.children[i] = children[i];
+        }
+      }
+    }
+    return c;
   }
 
   /** {@inheritDoc} */

@@ -630,7 +630,8 @@ final class Portfolio {
 
   /**
    * Reads the model once for all threads, which build their stores from the tree it gives; it is
-   * about a third of their start-up, and one tree in place of one per thread saves its memory. A
+   * about a third of their start-up. Each thread builds from a copy of its own (Parser.build), since
+   * the front end rewrites constraint items in place, and drops the copy once its model is built. A
    * model that does not parse gives null, and each thread reads it again and reports the error as
    * one thread does.
    */

@@ -135,11 +135,13 @@ public class Parser {
      * {@link #model} does while it reads a model: the items in the order of the model, then the
      * constraints and the search.
      *
-     * @param model the tree of the model
+     * @param read the tree of the model, which is not changed
      * @throws ParseException as model does
      */
-    void build(SimpleNode model) throws ParseException {
-	solver.shareModelTree();
+    void build(SimpleNode read) throws ParseException {
+	// a copy of its own: the passes of the front end rewrite constraint items in place, and the
+	// other threads of a portfolio build from the same tree
+	SimpleNode model = read.copy();
 	cc.setOptions(options);
 	cg.setOptions(options);
 	solver.startTimer();

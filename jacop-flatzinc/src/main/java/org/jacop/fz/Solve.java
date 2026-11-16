@@ -423,14 +423,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  // the parse tree is read by the other threads of a portfolio (Parser.build): it is kept whole
-  private boolean sharedModelTree;
-
-  /** Keeps the parse tree whole during the search, since other parsers build from it too. */
-  void shareModelTree() {
-    sharedModelTree = true;
-  }
-
   /**
    * Drops the parsed variable and constraint items of the model once the model is built and the
    * search is about to start: the store holds what was built from them, and only the solve item is
@@ -441,9 +433,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param solveItem the solve item, whose branch of the parse tree is kept
    */
   private void releaseModelItems(SimpleNode solveItem) {
-    if (sharedModelTree) {
-      return;
-    }
     releaseAllBut(solveItem);
   }
 

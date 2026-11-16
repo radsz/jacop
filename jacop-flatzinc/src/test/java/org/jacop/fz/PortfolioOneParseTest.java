@@ -112,6 +112,67 @@ class PortfolioOneParseTest {
     }
   }
 
+  // z is an affine function of x used only in linear rows, which affine folding rewrites
+  private static final String FOLDED =
+      """
+      var 0..2: x :: output_var;
+      var 0..3: y :: output_var;
+      var -20..20: z;
+      constraint int_times(3, x, z);
+      constraint int_lin_le([1, 1], [z, y], 4);
+      solve :: int_search([x, y], input_order, indomain_min, complete) satisfy;
+      """;
+
+  /**
+   * Affine folding rewrote the rows of the tree in place, with an array that only the dictionary of
+   * the thread that folded knows: a thread that built from the tree later read "Cannot find array
+   * X_JACOP_AFFINE_0" (rcpsp ship-schedule 6ShipsMixedUnconst under -p 4 with portfolio-split=4),
+   * and one building at the same time could read a half-written row.
+   */
+  @Test
+  void rewritingPassesLeaveTheReadTreeAsItWas() throws Exception {
+    Path fzn = write(FOLDED);
+    Options opt = new Options(new String[] {"-a", "--lcg", "off", fzn.toString()});
+    SimpleNode tree;
+    try (FileInputStream in = new FileInputStream(fzn.toFile())) {
+      Parser parser = new Parser(in);
+      parser.setOptions(opt);
+      tree = parser.parseModel();
+    }
+    String before = dump(tree);
+    for (int i = 0; i < 2; i++) {
+      String built =
+          capture(
+              () -> {
+                Parser parser = new Parser(java.io.InputStream.nullInputStream());
+                parser.setOptions(opt);
+                parser.build(tree);
+              });
+      assertEquals(
+          "x = 0;\ny = 0;\n----------\nx = 0;\ny = 1;\n----------\nx = 0;\ny = 2;\n----------\n"
+              + "x = 0;\ny = 3;\n----------\nx = 1;\ny = 0;\n----------\nx = 1;\ny = 1;\n----------\n==========",
+          solutionLines(built).strip());
+      assertEquals(before, dump(tree));
+    }
+  }
+
+  private static String dump(Node node) {
+    StringBuilder s = new StringBuilder(node.toString());
+    if (node instanceof ASTScalarFlatExpr e) {
+      s.append(' ')
+          .append(e.getType())
+          .append(' ')
+          .append(e.getIdent())
+          .append(' ')
+          .append(e.getInt());
+    }
+    s.append('(');
+    for (int i = 0; i < node.jjtGetNumChildren(); i++) {
+      s.append(dump(node.jjtGetChild(i))).append(',');
+    }
+    return s.append(')').toString();
+  }
+
   @Test
   void threadsBuildingFromOneTreeFindTheOptimum() throws IOException {
     Path fzn = write(MINIMISE);
