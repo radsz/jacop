@@ -7389,7 +7389,7 @@ Version 5.0 (unreleased)
    total time 3,708 -> 1,011 s (three base runs ran out of memory at
    4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
 
-412. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+411. The linear relaxation (--lp, and LCG free search -f) keeps the rows
    that linear overlap factoring (272) reduces to the shared sum alone.
    A row k * S rel c whose whole sum S became the new variable z is
    k * z rel c, which the FlatZinc front end posts as a bound of z or as
