@@ -164,6 +164,18 @@ public final class CdclMain {
       out.printf(
           "c factored variables %d, clauses %d, effort %d, factor %.2f s%n",
           solver.factoredVars, solver.factoredClauses, solver.factorWork, solver.factorNanos / 1e9);
+      out.printf(
+          "c vivify tried %d (irredundant %d), probes %d, reused %d, strengthened %d (irredundant %d),"
+              + " removed %d (irredundant %d), %.2f s%n",
+          solver.vivifyTried,
+          solver.vivifyTriedIrredundant,
+          solver.vivifyProbes,
+          solver.vivifyReused,
+          solver.vivifyStrengthened,
+          solver.vivifyStrengthenedIrredundant,
+          solver.vivifyRemoved,
+          solver.vivifyRemovedIrredundant,
+          solver.vivifyNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");

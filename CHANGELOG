@@ -7411,6 +7411,106 @@ Version 5.0 (unreleased)
    At 600 s 41 -> 45 of the 90 are solved, total time 0.942 on the 60
    not solved by both at 240 s.
 
+412. The FlatZinc front end keeps large tables in memory once and builds
+   less for them, so the XCSP 2026 models with large tables no longer run
+   out of memory at 6 GB. Short tables with equal rows share one
+   HybridTable index (CrosswordDesign posts 96 of them, 4 distinct);
+   parameter arrays (of integers or sets) of 1024 or more entries that
+   MiniZinc writes several times are kept once (the 31 copies of the MDD
+   label sets of WordDesign2-words-mdd-025, XCSP 2023, took 5.7 GB); the detectors that scan constraint arguments no
+   longer turn parameter arrays into constant variables (84,000 on
+   CrosswordDesign-09, all LCG variables); the symmetry detection releases
+   its caches after it runs; table variable elimination reads the rows of
+   a table only when it joins it, and joins at most a million rows
+   (org.jacop.fz.tableElimination.joinInput); table posting copies only
+   the rows that fit the domains; and the parser no longer keeps every
+   token of an array literal alive. The new mznlib predicates
+   fzn_xcsp_table_rows, fzn_xcsp_short_table_rows and
+   fzn_xcsp_negative_table_rows take a table as a one-dimensional array of
+   rows, which MiniZinc writes once. Live heap: CrosswordDesign-12 7.0 GB
+   to 2.5 GB, Steiner3-11 5.4 GB to 1.2 GB, Inglenook-100 out of memory
+   at 10 GB to solved in 30 s at 2.9 GB. Over the 30 held-back XCSP 2026
+   instances at 600 s and 6 GB, 24 now find solutions and 5 more run to
+   the limit (before: none of them); the 2026 CSP replay score goes from
+   116 to 130 (fifth to third). The default search is unchanged.
+
+413. JaSAT (CdclMain, plain SAT without an external propagator) vivifies
+   on a sorted schedule as Kissat 4 and CaDiCaL 2 do: after each clause
+   database reduction, the core, middle and local learnt tiers and the
+   irredundant clauses share a budget of 10 % of the propagations since
+   the last round (weights 3/3/1/3). Literals are sorted by occurrence and
+   candidates lexicographically so that consecutive probes reuse their
+   decisions; a conflict or an implied literal is analysed back to the
+   decisions, and the clause is shrunk, removed when subsumed or implied
+   by irredundant clauses, or strengthened by instantiation. Before, only
+   core and middle learnt clauses were vivified, once each. References:
+   Li, Xiao, Luo, Manya, Lu, Li, Clause vivification by unit propagation
+   in CDCL SAT solvers, Artificial Intelligence 279 (2020); Luo, Li, Xiao,
+   Manya, Lu, An effective learnt clause minimization approach for CDCL
+   SAT solvers, IJCAI 2017; Biere, Faller, Fazekas, Fleury, Froleyks,
+   Pollitt, CaDiCaL, Gimsatul, IsaSAT and Kissat entering the SAT
+   Competition 2024. On 90 SAT Competition 2024/25 instances at 240 s
+   JaSAT solves 32 instead of 30 (seed 0) and 32 instead of 28 (seed 1),
+   with 3 more UNSAT proofs on seed 1 (planning and tseitin-formulas on
+   both seeds); at 600 s over 3 seeds circuit-equivalence-checking takes
+   0.90x and grs-fp-comm 0.85x the time. LCG and the FlatZinc front end
+   keep the previous vivification; -Djacop.jasat.vivifySorted=false
+   restores it for CdclMain too.
+
+414. The LP relaxation links the columns of a table with a key column (the
+   element constraints over one index that the front end merges into one
+   table, such as the options of a class in car sequencing) to the value
+   encoding of the key: y = sum_v t(v) b_v for every other column y, the
+   linear formulation of element (P. Refalo, Linear formulation of
+   constraint programming models and hybrid solvers, CP 2000, LNCS 1894).
+   The extra rows of a satisfaction model (value encodings, linearized
+   constraints), kept before only when the root LP was infeasible, stay on
+   probation for 64 solves and are kept if at least 10 % of the solves
+   since then failed the node; a relaxation that fails that often is no
+   longer starved by its work budget, and its extra rows are not dropped
+   for the pivot limits they hit. Car sequencing (CSPLib 001) p6-76 is
+   proved UNSAT with -f in 24 s instead of 318 s; the 108 CSPLib car
+   sequencing instances at 600 s with -f: 83 -> 87 solved (p10-93, p36-92
+   UNSAT, pb_200_01, pb_200_07), total time -7 %. With -s it prints lpProbationKept
+   and lpFailingSolves. -Dorg.jacop.lp.keyedTables=false,
+   -Dorg.jacop.lp.satisfactionProbation=0 and -Dorg.jacop.lp.failRate=0
+   turn them off.
+
+415. Free search (-f), and model search without a search annotation, of a
+   weighted partial MaxSAT model (clauses, 0/1 linear rows and a cost
+   that is a weighted sum of 0/1 variables, as the MaxSAT Evaluation
+   instances flatten) runs MaxSAT local search,
+   org.jacop.search.ls.MaxSatLocalSearch, in the style of SATLike (Z. Lei
+   and S. Cai, Solving (weighted) partial MaxSAT by dynamic local search
+   for SAT, IJCAI 2018; S. Cai and Z. Lei, Old techniques in new ways:
+   clause weighting, unit propagation and hybridization for maximum
+   satisfiability, Artificial Intelligence 287, 2020): dynamic clause
+   weights with a bound on soft weights, smoothing, and best-from-multiple-
+   selection (S. Cai, Balance between complexity and quality: local search
+   for minimum vertex cover in massive graphs, IJCAI 2015). The FlatZinc
+   front end reads the model back (org.jacop.fz.MaxSatModel): equalities
+   and negations of 0/1 variables are merged, relaxation variables that
+   occur in one clause become soft clauses, and symmetry breaking
+   constraints are left out and solutions mapped onto ones they accept.
+   A short burst runs first; its best assignment is checked in the store,
+   printed and given to lazy clause generation as its first solution,
+   whose bound comes after the core-guided phase; then the local search
+   continues in slices from LNS's best solution as LNS proposals. On the
+   85 MaxSAT Evaluation 2024 instances where it fires at 240 s, -f is
+   better on 16 and worse on none (57 proved both ways), default search
+   better on 17 and worse on 1 (60 proved, was 58): ramsey k3_n17
+   13395 -> 10372 (CP-SAT 600 s: 11579), HaplotypeAssembly 1874 -> 1560,
+   mpe random-net-100-2 95863 -> 91062, drmx-cryptogen 872 -> 819. On
+   the 23 gap instances of the screen at 600 s, -f is better on 9 and
+   worse on 2 (10 proved, was 9; total time 0.945), default search
+   better on 8 and worse on 3 (10 proved, was 9; 0.962). It fires on 2
+   of the 240 wide instances, with the same results. --free-config maxsat=0 turns it
+   off; maxsat-share (0.05 of the time limit), maxsat-max (60000 ms),
+   maxsat-patience (1000 ms), maxsat-lns (200000 flips per proposal),
+   maxsat-bound, maxsat-hard and maxsat-smooth tune it.
+   The store check of a hint before lazy clause generation (also of the
+   project schedule) now runs the root's pending propagation first.
+
 Version 4.11
 =============
 

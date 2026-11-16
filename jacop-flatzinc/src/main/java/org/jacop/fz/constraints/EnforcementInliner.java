@@ -331,7 +331,7 @@ public class EnforcementInliner implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
-      IntVar[] array = support.dictionary.getVariableArray(e.getIdent());
+      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
       if (array != null) {
         for (IntVar v : array) {
           add(v, out);
@@ -339,7 +339,8 @@ public class EnforcementInliner implements ParserTreeConstants {
         return;
       }
       add(support.dictionary.getVariable(e.getIdent()), out);
-    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
+    } else if (e.getType() == 3
+        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
       add(support.getVariable(e), out);
     }
   }
