@@ -1214,6 +1214,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
+            + "\n%%%mzn-stat: lpLeadEncodings="
+            + r.leadEncodings
+            + (r.leadKept ? ":kept" : "")
+            + "\n%%%mzn-stat: lpValueCliques="
+            + r.valueCliques
             + "\n%%%mzn-stat: lpTableClauses="
             + r.tableClauses
             + "\n%%%mzn-stat: lpNearRows="
@@ -3406,7 +3411,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
-    if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
+    if (costVar == null) {
+      // fixed search backtracks the annotation's decisions about one level a conflict whatever
+      // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
+      // at 240 s it lost 2 instances and 9 % of the time there
+      return unsolvedOnly ? null : satisfactionProbe(lcg);
+    }
+    if (rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
     LcgSolver solver = lcg;
@@ -3454,6 +3465,135 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  /**
+   * Starts the probe of a satisfaction search with learning (no objective): at shares of the time
+   * limit (lcg-sat-at, then doubling; 0 gives way at once, a negative share turns it off), it reads
+   * how far the conflicts of LCG jump back and gives way to search without learning when learning
+   * does not cut the tree (see {@link #learningCutsLittle}).
+   *
+   * @param solver the LCG solver
+   * @return the thread of the probe, or null when it is off or runs on the virtual clock
+   */
+  private Thread satisfactionProbe(LcgSolver solver) {
+    String mode = options.freeConfig("lcg-sat-probe", "on");
+    double at = Double.parseDouble(options.freeConfig("lcg-sat-at", "0.1"));
+    if ("off".equals(mode) || at < 0 || options.getTimeOut() <= 0) {
+      return null;
+    }
+    boolean act = !"report".equals(mode);
+    if (at == 0 && act) {
+      // lcg-sat-at=0: search without learning from the start, after LCG's root propagation
+      lcgSlow = true;
+      lcgSlowUnsolved = true;
+      solver.stop();
+      return null;
+    }
+    boolean report = !act || options.debug() || options.searchStatistics();
+    lcgStart = solver.sat().now();
+    long limit = CdclSolver.VIRTUAL_CLOCK ? options.getTimeOut() : options.getRemainingTimeOut();
+    long first = (long) (at * limit);
+    if (first <= 0) {
+      return null;
+    }
+    if (CdclSolver.VIRTUAL_CLOCK) {
+      Runnable[] check = new Runnable[1];
+      long[] next = {first};
+      check[0] =
+          () -> {
+            if (satisfactionProbeOnce(solver, act, report)) {
+              next[0] *= 2;
+              solver.sat().setAlarm(lcgStart + next[0] * 1_000_000L, check[0]);
+            }
+          };
+      solver.sat().setAlarm(lcgStart + first * 1_000_000L, check[0]);
+      return null;
+    }
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                long slept = 0;
+                long next = first;
+                do {
+                  Thread.sleep(next - slept);
+                  slept = next;
+                  next *= 2;
+                } while (satisfactionProbeOnce(solver, act, report));
+              } catch (InterruptedException _) {
+                // LCG search ended first
+                Thread.currentThread().interrupt();
+              }
+            });
+  }
+
+  /**
+   * Makes one probe of a satisfaction search with learning.
+   *
+   * @return true if the probe is to be made again later
+   */
+  private boolean satisfactionProbeOnce(LcgSolver solver, boolean act, boolean report) {
+    CdclSolver sat = solver.sat();
+    long conflicts = sat.conflicts;
+    double seconds = (sat.now() - lcgStart) / 1e9;
+    double level = conflicts == 0 ? 0 : (double) sat.conflictLevels / conflicts;
+    double jump = conflicts == 0 ? 0 : (double) sat.backjumpLevels / conflicts;
+    double lbd = conflicts == 0 ? 0 : (double) sat.lbdSum() / conflicts;
+    boolean weak =
+        learningCutsLittle(
+            conflicts,
+            level,
+            jump,
+            lbd,
+            Double.parseDouble(options.freeConfig("lcg-sat-jump", "1.5")),
+            Double.parseDouble(options.freeConfig("lcg-sat-lbd", "0.4")));
+    if (report) {
+      IO.println(
+          String.format(
+              Locale.ROOT,
+              "%%%%%%mzn-stat: lcgSatProbe=%.1f,%d,%d,%.2f,%.3f,%.2f,%d,%b",
+              seconds,
+              conflicts,
+              sat.decisions,
+              level,
+              jump,
+              lbd,
+              sat.propagations,
+              weak));
+    }
+    if (act && weak && !tooLateForFreeSearch(solver)) {
+      lcgSlow = true;
+      lcgSlowUnsolved = true;
+      solver.stop();
+      return false;
+    }
+    return !tooLateForFreeSearch(solver);
+  }
+
+  /**
+   * Whether learning cuts the tree of a satisfaction search too little to pay for its cost per
+   * node. A conflict whose first-UIP clause jumps back about one level, with an LBD close to the
+   * depth of the conflict, is a nogood on nearly all decisions of its branch: what depth-first
+   * search without learning gets by backtracking, at a fraction of the cost per node (plain CP made
+   * 2 to 25 times the nodes per second of LCG on the satisfaction instances of the topic set). On
+   * those instances (53 satisfaction instances of the wide set and 77 XCSP CSP instances, 240 s)
+   * the searches that plain CP solves sooner jump back 1.0 to 1.4 levels a conflict with an LBD of
+   * 0.45 to 1.0 times the depth; those where learning wins clearly (whirlpool, PegSolitaire,
+   * Pb-fpga, nonogram, GracefulGraph) jump 1.8 to 15 levels with LBDs of 0.1 to 0.45 times the
+   * depth.
+   *
+   * @param conflicts the conflicts so far
+   * @param level the mean decision level of a conflict
+   * @param jump the mean levels a conflict jumps back
+   * @param lbd the mean LBD of a learnt clause
+   * @param maxJump the mean jump below which learning may cut too little (lcg-sat-jump)
+   * @param minLbdShare the share of the mean depth the mean LBD must reach (lcg-sat-lbd)
+   * @return true if search without learning should take over
+   */
+  static boolean learningCutsLittle(
+      long conflicts, double level, double jump, double lbd, double maxJump, double minLbdShare) {
+    return conflicts > 0 && level > 0 && jump < maxJump && lbd >= minLbdShare * level;
   }
 
   /**
@@ -4081,6 +4221,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().expandedLiterals
             + "\n%%%mzn-stat: lcgChronoBacktracks="
             + lcg.sat().lazyChronoBacktracks
+            + "\n%%%mzn-stat: lcgConflictLevels="
+            + lcg.sat().conflictLevels
+            + "\n%%%mzn-stat: lcgBackjumpLevels="
+            + lcg.sat().backjumpLevels
+            + "\n%%%mzn-stat: lcgLbdSum="
+            + lcg.sat().lbdSum()
+            + "\n%%%mzn-stat: lcgSatDecisions="
+            + lcg.sat().decisions
             + "\n%%%mzn-stat: lcgCompletedModels="
             + lcg.completedModels
             + "\n%%%mzn-stat: lcgSatPropagations="
