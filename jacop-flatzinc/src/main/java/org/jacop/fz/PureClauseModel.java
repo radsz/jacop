@@ -35,6 +35,7 @@ import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -90,7 +91,7 @@ final class PureClauseModel {
    * @return the model with its clauses added to the solver, or null
    */
   static PureClauseModel of(
-      Store store, List<IntVar[][]> clauses, Set<Constraint> ignored, Var[] declared) {
+      Store store, List<IntVar[][]> clauses, Set<Constraint> ignored, Supplier<Var[]> declared) {
     if (clauses.isEmpty()) {
       return null;
     }
@@ -99,15 +100,16 @@ final class PureClauseModel {
         return null;
       }
     }
-    // Boolean variables are not in store.vars
+    // all variables, Boolean ones included (they are not in store.vars), stopping at the first
+    // propagator of a model that is not of clauses alone
     for (Var v : store.variablesHashMap.values()) {
       if (!(v instanceof IntVar) && !v.singleton()) {
         return null;
       }
-    }
-    for (Constraint c : store.getConstraints()) {
-      if (!allowed(c, ignored)) {
-        return null;
+      for (Constraint c : v.dom().constraints()) {
+        if (!allowed(c, ignored)) {
+          return null;
+        }
       }
     }
     Map<IntVar, Integer> index = new IdentityHashMap<>();
@@ -129,7 +131,7 @@ final class PureClauseModel {
     }
     // the declared variables first, then the others in the order the clauses first name them
     List<IntVar> numbered = new ArrayList<>(order.size());
-    for (Var v : declared) {
+    for (Var v : declared.get()) {
       if (v instanceof IntVar x && index.get(x) instanceof Integer i && i > 0) {
         numbered.add(x);
         index.put(x, -i);
