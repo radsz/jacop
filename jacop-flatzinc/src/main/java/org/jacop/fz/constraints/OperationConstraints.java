@@ -36,6 +36,7 @@ import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
@@ -217,6 +218,9 @@ class OperationConstraints implements ParserTreeConstants {
       }
     } else if ((v1.singleton() && v1.value() == 0) || (v2.singleton() && v2.value() == 0)) {
       v3.domain.inValue(store.level, v3, 0);
+    } else if (support.dictionary.postSaturated(v3)) {
+      // v3 only meets values inside the range, which cannot tell a product beyond it from the end
+      support.pose(new XmulYeqZSaturated(v1, v2, v3));
     } else {
       if (PRODUCT_DOMAINS) {
         restrictToProducts(v1, v2, v3);
