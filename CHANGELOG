@@ -7004,6 +7004,22 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. Under --lcg a linear constraint over 0/1 variables that is equivalent
+   to a few clauses over its own literals becomes those clauses: its prime
+   implicates, the minimal covers of the threshold function (Balas and
+   Jeroslow, Canonical cuts on the unit hypercube, SIAM J. Appl. Math.
+   23(1), 1972), when there are at most 2 per variable
+   (-Djacop.lcg.clauseShaped=N, 0 = off). An at most one constraint over
+   n literals is its n (n - 1) / 2 exclusions, "at most 3 of 4" a single
+   clause. Before, such sums stayed propagators with lazy counters, which
+   become clauses only after 100 uses. The PB instance vdw_k4_l4_n360
+   (85,680 "at most 3 of 4" sums) becomes pure CNF and is solved in 63 s
+   (no solution in 600 s before; CP-SAT 9.15: 49 s). On the 117 of 222
+   PB screen instances where it fires, at 600 s, 81 -> 83 solved and the
+   total time goes from 24,092 to 22,394 s (0.930); on the 47 of 240
+   wide instances where it fires, 44 -> 44 solved, total time 1.010
+   (default) and 0.965 (-f). New statistic lcgClauseShaped.
+
 Version 4.11
 =============
 
