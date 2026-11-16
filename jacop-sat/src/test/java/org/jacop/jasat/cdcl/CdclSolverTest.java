@@ -607,6 +607,84 @@ class CdclSolverTest {
     }
   }
 
+  private static CdclSolver luckySolver(int vars, int[]... clauses) {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.ensureVars(vars);
+    for (int[] c : clauses) {
+      s.addClause(c);
+    }
+    return s;
+  }
+
+  @Test
+  void luckyAssignmentsFindTrivialModelsWithoutSearch() {
+    // every clause has a positive literal: all true
+    CdclSolver s = luckySolver(3, new int[] {1, -2}, new int[] {2, 3}, new int[] {-1, -3, 2});
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("all-true", s.luckyFound);
+    assertEquals(0, s.conflicts);
+    // every clause has a negative literal: all false
+    s = luckySolver(3, new int[] {-1, 2}, new int[] {-2, -3}, new int[] {1, 2, -3});
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("all-false", s.luckyFound);
+    // forward false fails at x2 whichever value it takes, forward true flips nothing
+    int[][] f = {{1, 2, 3}, {1, 2, -3}, {1, -2, 3}, {1, -2, -3}, {-1, -2, -3}};
+    s = luckySolver(3, f);
+    s.setElimination(false);
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("forward-true", s.luckyFound);
+    assertEquals(0, s.conflicts);
+    assertTrue(satisfies(List.of(f), model(s, 3)));
+    s = luckySolver(3, f);
+    s.setElimination(false);
+    s.setLucky(false);
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertNull(s.luckyFound);
+    assertTrue(satisfies(List.of(f), model(s, 3)));
+  }
+
+  @Test
+  void luckyFailedLiteralsRefuteWithACheckedProof() throws IOException {
+    // forward false gives up at x2; forward true fails x1 at once (unit -x1), then x2 (unit -x2)
+    int[][] f = {{1, 2, 3}, {1, 2, -3}, {1, -2, 3}, {1, -2, -3}, {-1, 2, 4}, {-1, 2, -4}, {-1, -2}};
+    CdclSolver s = luckySolver(4, f);
+    s.setElimination(false);
+    ByteArrayOutputStream proof = new ByteArrayOutputStream();
+    DratWriter drat = new DratWriter(proof);
+    s.setProof(drat);
+    assertEquals(CdclSolver.UNSAT, s.solve());
+    drat.close();
+    assertEquals(0, s.conflicts);
+    assertEquals(2, s.luckyUnits);
+    String text = proof.toString(StandardCharsets.US_ASCII);
+    assertNull(RupChecker.check(4, List.of(f), text), text);
+  }
+
+  @Test
+  void luckyAssignmentsKeepRandomAnswersAndProofs() throws IOException {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 2000; run++) {
+      int vars = 3 + rnd.nextInt(10);
+      List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
+      CdclSolver s = luckySolver(vars, f.toArray(new int[0][]));
+      s.setElimination(rnd.nextBoolean());
+      ByteArrayOutputStream proof = new ByteArrayOutputStream();
+      DratWriter drat = new DratWriter(proof);
+      s.setProof(drat);
+      int result = s.solve();
+      drat.close();
+      boolean expected = bruteForce(f, vars, new int[0]);
+      assertEquals(expected ? CdclSolver.SAT : CdclSolver.UNSAT, result, "run " + run);
+      if (expected) {
+        assertTrue(satisfies(f, model(s, vars)), "model of run " + run);
+      } else {
+        String text = proof.toString(StandardCharsets.US_ASCII);
+        assertNull(RupChecker.check(vars, f, text), "proof of run " + run);
+      }
+    }
+  }
+
   @Test
   void lubySequence() {
     long[] expected = {1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8};
