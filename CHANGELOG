@@ -7013,14 +7013,16 @@ Version 5.0 (unreleased)
    refuted, it kept the core-guided phase from the objective probes that
    prove the optimum (1.7 s -> 13 s); with the patience rule 1.8 s.
    Under -f at 600 s, on the 14 wide instances with objective terms
-   that are not all 0-1 where exhaustion fires, the total time is 1255 s
-   instead of 1512 s (0.830) with 13 proved instead of 12 (lot-sizing
-   pigment20a 370 s instead of unproved, workforce-alloc 202 41 s
-   instead of 72 s, prize-collecting 32-4-8-2 22 s instead of 26 s;
-   accap instance5 62 s instead of 46 s). On the 32 MaxSAT Evaluation
-   2024 instances where exhaustion fires, against exhaustion without the
-   patience rule, 5510 s instead of 5625 s (0.980), 25 proved in both
-   (it was 0.919 and 26 against no exhaustion). On the 62 wide-quick
+   that are not all 0-1 where exhaustion fires, two rounds give a total
+   time of 2760 s instead of 3008 s (0.918) with 25 proved instead of 24:
+   lot-sizing pigment20a is proved in one round (370 s) and its bound
+   rises in the other (1014 -> 1070); diameterc-mst c_v15 (23 -> 18 s),
+   prize-collecting 32-4-8-2 (26-30 -> 22-26 s), median-string and
+   kidney-exchange are faster in both, accap instance5 (46-49 -> 62-67 s)
+   and gt-sort n9 (54-59 -> 60-68 s) slower in both. On the 32 MaxSAT
+   Evaluation 2024 instances where exhaustion fires, against exhaustion
+   without the patience rule, 5510 s instead of 5625 s (0.980), 25 proved
+   in both (it was 0.919 and 26 against no exhaustion). On the 62 wide-quick
    instances at 240 s under -f the total is 0.997 (6632 s instead of
    6649 s), the same 36 proved; the two that exhaustion alone slowed
    down (is A3PZaPjnUz, work-task seed 8) did not move.
