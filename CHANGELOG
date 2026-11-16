@@ -6615,10 +6615,10 @@ Version 5.0 (unreleased)
    At 600 s with -f on the 41 wide instances with LP cuts, total time is
    5705 s for the base, 5054 s with extraLimits=1000000 (roster-shifts
    s100_e20 proved in 3 s, base timeout) and 5046 s with restart bounds
-   too, 33 proved against 32; dual bounds of the 9 open ones improve on 6
+   too, 33 proved against 32; dual bounds improve on 7 of the 8 still open
    (train 57764 -> 67043, pigment20a 1033 -> 1043, unit-commitment
    1320705 -> 1335120). On TankAllocation1 (9) with zero-half: chemical
-   2667 -> 2459 (optimum 2296), 2000 1821 -> 1730, 1600 proved in 19 s
+   2667 -> 2459 (optimum 2296), 2000 1821 -> 1730, 0400 1386 -> 1329, 1600 proved in 19 s
    instead of 52 s.
 
 Version 4.11
