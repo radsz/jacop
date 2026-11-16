@@ -1406,18 +1406,16 @@ public final class CoreSearch {
    */
   private int[] trim(int[] core, long phaseLimit) {
     int before = core.length;
-    for (int r = 0; r < lcg.coreTrim() && core.length > 1; r++) {
+    boolean shrinking = true;
+    for (int r = 0; shrinking && r < lcg.coreTrim() && core.length > 1; r++) {
       long cap = sat.conflicts + TRIM_CONFLICTS;
       sat.setConflictLimit(
           Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
-      if (lcg.solveUnder(core) != CdclSolver.UNSAT) {
-        break;
+      int[] smaller = lcg.solveUnder(core) == CdclSolver.UNSAT ? sat.failedAssumptions() : core;
+      shrinking = smaller.length > 0 && smaller.length < core.length;
+      if (shrinking) {
+        core = smaller;
       }
-      int[] smaller = sat.failedAssumptions();
-      if (smaller.length == 0 || smaller.length >= core.length) {
-        break;
-      }
-      core = smaller;
     }
     coreShrunk += before - core.length;
     return core;
