@@ -1657,6 +1657,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
         }
       }
       if (space != null) {
+        if (!emptied.isEmpty()) {
+          space.anchors = byDecreasingWeight(items, space.vars);
+        }
         spaceOf.keySet().retainAll(space.vars);
         spaceOf.replaceAll((x, k) -> 0);
         spaces = new ArrayList<>(List.of(space));
@@ -1790,6 +1793,37 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     return emptied;
+  }
+
+  /**
+   * The bin variables of a bin packing in decreasing order of their items' weights, ties in model
+   * order, or null (all variables in model order) when they are not the bins of one bin packing.
+   * The precedence chain then numbers the bins in the order a first-fit decreasing packing opens
+   * them: in model order it fights a search that places the large items first (OR-Library u120_00
+   * found no solution in 600 s, without the chain one in 1 s). Any order of the variables keeps a
+   * solution of every orbit; the lex-leader constraints of the variable symmetries follow the same
+   * order, as the chain's variables come first in it.
+   */
+  private static List<IntVar> byDecreasingWeight(List<Item> items, List<IntVar> vars) {
+    Map<IntVar, Integer> weight = new IdentityHashMap<>();
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if (item.name().equals("jacop_bin_packing")
+          && args.length == 4
+          && args[0].length == args[2].length) {
+        for (int i = 0; i < args[0].length; i++) {
+          if (args[0][i].aVar() != null && args[2][i].isInt()) {
+            weight.put(args[0][i].aVar(), args[2][i].value());
+          }
+        }
+      }
+    }
+    if (!weight.keySet().containsAll(vars)) {
+      return null;
+    }
+    List<IntVar> sorted = new ArrayList<>(vars);
+    sorted.sort((a, b) -> Integer.compare(weight.get(b), weight.get(a)));
+    return sorted;
   }
 
   /**

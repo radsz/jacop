@@ -967,20 +967,35 @@ class SymmetryBreakingFlatzincTest {
    * int_eq_imp(load[b], 0, r1)} and {@code int_le_imp(c, bins, r2)}, here with c = b + shift.
    */
   private static String emptiedBins(int shift) {
-    int[] sizes = {5, 5, 4, 4, 3, 3};
-    int bins = 4;
-    StringBuilder fzn = new StringBuilder("var 1..4: bins :: output_var;\n");
+    return emptiedBins(new int[] {5, 5, 4, 4, 3, 3}, 9, 4, shift);
+  }
+
+  private static String emptiedBins(int[] sizes, int capacity, int bins, int shift) {
+    StringBuilder fzn = new StringBuilder("var 1..").append(bins).append(": bins :: output_var;\n");
     for (int b = 1; b <= bins; b++) {
-      fzn.append("var 0..9: l").append(b).append(";\n");
+      fzn.append("var 0..").append(capacity).append(": l").append(b).append(";\n");
     }
+    StringBuilder xs = new StringBuilder();
+    StringBuilder ls = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
     for (int i = 0; i < sizes.length; i++) {
-      fzn.append("var 1..4: x").append(i).append(" :: output_var;\n");
+      fzn.append("var 1..").append(bins).append(": x").append(i).append(" :: output_var;\n");
+      xs.append(i == 0 ? "" : ",").append('x').append(i);
+      ws.append(i == 0 ? "" : ",").append(sizes[i]);
+    }
+    for (int b = 1; b <= bins; b++) {
+      ls.append(b == 1 ? "" : ",").append('l').append(b);
     }
     for (int b = 2; b <= bins; b++) {
       fzn.append("var bool: e").append(b).append(";\nvar bool: a").append(b).append(";\n");
     }
-    fzn.append(
-        "constraint jacop_bin_packing([x0,x1,x2,x3,x4,x5],[l1,l2,l3,l4],[5,5,4,4,3,3],1);\n");
+    fzn.append("constraint jacop_bin_packing([")
+        .append(xs)
+        .append("],[")
+        .append(ls)
+        .append("],[")
+        .append(ws)
+        .append("],1);\n");
     for (int i = 0; i < sizes.length; i++) {
       fzn.append("constraint int_lin_le([1,-1],[x").append(i).append(",bins],0);\n");
     }
@@ -995,6 +1010,79 @@ class SymmetryBreakingFlatzincTest {
     }
     fzn.append("solve minimize bins;\n");
     return fzn.toString();
+  }
+
+  /** The fewest bins of the given capacity that hold the items, by trying every assignment. */
+  private static int fewestBins(int[] sizes, int capacity) {
+    for (int bins = 1; ; bins++) {
+      if (packs(sizes, 0, new int[bins], capacity)) {
+        return bins;
+      }
+    }
+  }
+
+  private static boolean packs(int[] sizes, int i, int[] load, int capacity) {
+    if (i == sizes.length) {
+      return true;
+    }
+    for (int b = 0; b < load.length; b++) {
+      if (load[b] + sizes[i] <= capacity) {
+        load[b] += sizes[i];
+        boolean ok = packs(sizes, i + 1, load, capacity);
+        load[b] -= sizes[i];
+        if (ok) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Test
+  void binCompletionPacksShuffledTripletsAtTheBound() throws IOException {
+    // three bins of 10, each full with three items, listed out of order: bin completion finds the
+    // packing at the bound, which is printed as the first solution and proved optimal
+    int[] sizes = {4, 3, 2, 5, 3, 3, 2, 4, 4};
+    String out =
+        FlatzincTestRunner.run(
+            tmp,
+            emptiedBins(sizes, 10, 5, 0),
+            "--search-statistics",
+            "--presolve",
+            "check",
+            "--lcg",
+            "on");
+    assertTrue(out.contains("binCompletionFound=true"), out);
+    assertEquals(3, objective(out, "bins"), out);
+    assertTrue(out.contains("=========="), out);
+  }
+
+  @Test
+  void binCompletionAgreesWithBruteForce() throws IOException {
+    Random random = new Random(5);
+    for (int trial = 0; trial < 12; trial++) {
+      int n = 3 + random.nextInt(5);
+      int capacity = 6 + random.nextInt(8);
+      int[] sizes = new int[n];
+      for (int i = 0; i < n; i++) {
+        sizes[i] = 1 + random.nextInt(capacity);
+      }
+      int optimum = fewestBins(sizes, capacity);
+      for (String completion : new String[] {"on", "off"}) {
+        String out =
+            FlatzincTestRunner.run(
+                tmp,
+                emptiedBins(sizes, capacity, n, 0),
+                "--presolve",
+                "check",
+                "--lcg",
+                "on",
+                "--free-config",
+                "bin-completion=" + completion);
+        assertEquals(optimum, objective(out, "bins"), Arrays.toString(sizes) + " " + out);
+        assertTrue(out.contains("=========="), out);
+      }
+    }
   }
 
   @Test
