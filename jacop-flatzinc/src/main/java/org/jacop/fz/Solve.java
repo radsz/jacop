@@ -3721,7 +3721,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean satisfactionProbeOnce(LcgSolver solver, boolean act, boolean report) {
     CdclSolver sat = solver.sat();
     long conflicts = sat.conflicts;
-    double seconds = (sat.now() - lcgStart) / 1e9;
+    double seconds = (sat.now() - lcgStart - sat.vivifyNanos) / 1e9;
     double level = conflicts == 0 ? 0 : (double) sat.conflictLevels / conflicts;
     double jump = conflicts == 0 ? 0 : (double) sat.backjumpLevels / conflicts;
     double lbd = conflicts == 0 ? 0 : (double) sat.lbdSum() / conflicts;
@@ -3812,9 +3812,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
+    // vivification makes no conflicts: its time does not count against the rate
     if (solver.sat().conflicts
             >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
-                * (now - lcgStart)
+                * (now - lcgStart - solver.sat().vivifyNanos)
                 / 1e9
         || tooLateForFreeSearch(solver)) {
       return false;
@@ -3836,7 +3837,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         solver.stop();
         return false;
       }
-    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9
+    } else if (solver.sat().conflicts
+            < unsolvedRate * (now - lcgStart - solver.sat().vivifyNanos) / 1e9
         || !unsolvedOnly && unsolvedLate(now)) {
       lcgSlowUnsolved = true;
       lcgSlow = true;
@@ -4747,6 +4749,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().numVars()
             + "\n%%%mzn-stat: lcgSatConflicts="
             + lcg.sat().conflicts
+            + "\n%%%mzn-stat: lcgVivifyRounds="
+            + lcg.sat().vivifyRounds
+            + "\n%%%mzn-stat: lcgVivifyTried="
+            + lcg.sat().vivifyTried
+            + "\n%%%mzn-stat: lcgVivifyStrengthened="
+            + lcg.sat().vivifyStrengthened
+            + "\n%%%mzn-stat: lcgVivifyOriginals="
+            + lcg.sat().vivifyOriginalsStrengthened
+            + "\n%%%mzn-stat: lcgVivifyRemoved="
+            + lcg.sat().vivifyRemoved
+            + "\n%%%mzn-stat: lcgVivifySubsumed="
+            + lcg.sat().vivifySubsumed
+            + "\n%%%mzn-stat: lcgVivifyTime="
+            + lcg.sat().vivifyNanos / 1e9
             + "\n%%%mzn-stat: lcgUnkeptReasons="
             + lcg.sat().unkeptReasons
             + "\n%%%mzn-stat: lcgExpandedLiterals="

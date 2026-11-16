@@ -285,6 +285,19 @@ class LcgFuzzTest {
     InterDistance.setExplanations(false);
   }
 
+  /**
+   * Turns on vivification with the CP propagation in three runs of four, every 1 to 4 conflicts in
+   * two of them, so that small models reach it.
+   */
+  private static void inprocessing(LcgSolver solver, long seed) {
+    if (seed % 4 != 3) {
+      solver.sat().setExternalVivification(true);
+      if (seed % 4 != 2) {
+        solver.sat().setVivifyInterval(1 + (int) (seed / 4 % 4));
+      }
+    }
+  }
+
   private static int[] recentCases(String cases) {
     if (cases == null || cases.isBlank()) {
       return null;
@@ -1571,6 +1584,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     if (solver.solve() != CdclSolver.SAT) {
       return false;
     }
@@ -1666,6 +1680,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     return solver.solve();
   }
 
@@ -1744,6 +1759,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       for (int i = 0; i < n; i++) {
@@ -1903,6 +1919,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     int status = solver.solve();
     long[] c = solver.explanationStatistics().get("Geost");
     long own = c == null ? 0 : c[0] - c[1] - c[6] + c[3] - c[4] - c[7];
@@ -2029,6 +2046,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       for (int i = 0; i < m; i++) {
@@ -2107,6 +2125,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       for (int i = 0; i + 1 < m; i++) {
@@ -2226,6 +2245,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       for (Object[] p : posted) {
@@ -2297,6 +2317,7 @@ class LcgFuzzTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+    inprocessing(solver, seed);
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       for (int i = 0; i < n; i++) {
@@ -2344,6 +2365,7 @@ class LcgFuzzTest {
       try {
         LcgSolver solver = new LcgSolver(model.store);
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        inprocessing(solver, seed);
         solver.setProof(opb, pbp);
         status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
       } catch (UnsupportedOperationException _) {
@@ -2417,6 +2439,7 @@ class LcgFuzzTest {
         solver.setChecking(true);
         // reasons of up to 1 to 3 literals stay as clauses
         solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        inprocessing(solver, seed);
         // tables as clauses: one run in three by support clauses, one in three direct
         solver.setTableClauses(new String[] {"none", "support", "direct"}[(int) (seed / 4 % 3)]);
         if (seed % 5 == 1 && !LcgSolver.CHAIN_LIMIT_SET) {

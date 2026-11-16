@@ -254,6 +254,45 @@ public final class CdclSolver {
   private boolean vivifyDue;
   private long propagationsAtVivify;
   private int[] vivifyLits = new int[16];
+  // vivification with the external propagator (setExternalVivification): its share of the work of
+  // the search in per mille, and the work at the end of the last round
+  private boolean externalVivify =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.vivify", "false"));
+  private boolean vivifyOriginals =
+      !"false".equals(System.getProperty("jacop.lcg.vivifyOriginals"));
+  private int vivifyEffort = Integer.getInteger("jacop.lcg.vivifyEffort", 100);
+  private static final long VIVIFY_MIN_WORK = 20_000;
+  private long workAtVivify;
+  // tests: a restart that vivifies every vivifyInterval conflicts (0: never)
+  private int vivifyInterval;
+  private long nextVivifyAt;
+
+  /** Statistics: rounds of vivification with the external propagator. */
+  public long vivifyRounds;
+
+  /** Statistics: clauses vivified with the external propagator. */
+  public long vivifyTried;
+
+  /** Statistics: clauses vivification with the external propagator shortened. */
+  public long vivifyStrengthened;
+
+  /** Statistics: of those, original clauses. */
+  public long vivifyOriginalsStrengthened;
+
+  /** Statistics: literals vivification with the external propagator removed. */
+  public long vivifyRemoved;
+
+  /**
+   * The time of vivification with the external propagator in nanoseconds, which makes no conflicts.
+   */
+  public long vivifyNanos;
+
+  /** Statistics: clauses vivification with the external propagator found subsumed. */
+  public long vivifySubsumed;
+
+  private boolean vivifySubsumption =
+      !"false".equals(System.getProperty("jacop.lcg.vivifySubsume"));
+
   private static final long REPHASE_INTERVAL = 1000;
   private int simplifyAssigns = -1;
   // propagations before the next simplification, as MiniSat's simpDB_props: a pass costs about the
@@ -3662,6 +3701,11 @@ public final class CdclSolver {
   }
 
   private boolean shouldRestart() {
+    if (vivifyInterval > 0 && decisionLevel > assumptionLevels && conflicts >= nextVivifyAt) {
+      nextVivifyAt = conflicts + vivifyInterval;
+      vivifyDue = vivification;
+      return true;
+    }
     if (forcedRestartAt != Long.MAX_VALUE && decisionLevel > 0 && now() >= forcedRestartAt) {
       forcedRestartAt = Long.MAX_VALUE;
       forcedRestart = true;
@@ -3996,18 +4040,47 @@ public final class CdclSolver {
    * false. Each clause is tried once, within a tenth of the propagations of the search since the
    * last round.
    *
+   * <p>With an external propagator and {@link #setExternalVivification} on, the decisions are
+   * propagated by the external propagator as well, the original clauses are vivified too, and a
+   * conflict or a true literal keeps only the decisions it depends on, found through the reasons
+   * (asked from the external propagator, and so written to the proof). The round then takes a share
+   * of the {@link #work} of the search since the last round.
+   *
    * @return false when the formula is found unsatisfiable
    */
   private boolean vivify() {
     vivifyDue = false;
-    if (propagate() != NO_CONFLICT) {
-      return refuted();
-    }
-    long budget = propagations + Math.max(20_000, (propagations - propagationsAtVivify) / 10);
-    boolean wasChrono = chrono;
-    chrono = false;
+    boolean full = externalVivify && external != null;
     boolean wasNotifying = notifying;
-    notifying = false; // the probing levels of vivification are internal
+    notifying = full; // without the external propagator the probing levels are internal
+    try {
+      if ((full ? propagateAll() : propagate()) != NO_CONFLICT) {
+        return refuted();
+      }
+      if (!ok) {
+        return false;
+      }
+      if (outOfTime) {
+        return true; // the search sees it after its next propagation and stops
+      }
+      boolean wasChrono = chrono;
+      chrono = false;
+      long start = full ? now() : 0;
+      boolean result = full ? vivifyRound() : vivifyLearnts();
+      if (full) {
+        vivifyNanos += now() - start;
+      }
+      chrono = wasChrono;
+      purge();
+      return result;
+    } finally {
+      notifying = wasNotifying;
+    }
+  }
+
+  /** The round of {@link #vivify} without the external propagator. */
+  private boolean vivifyLearnts() {
+    long budget = propagations + Math.max(20_000, (propagations - propagationsAtVivify) / 10);
     int[] candidates = new int[numLearnts];
     int n = 0;
     for (int i = numLearnts - 1; i >= 0; i--) {
@@ -4020,10 +4093,57 @@ public final class CdclSolver {
     for (int i = 0; i < n && propagations < budget && result; i++) {
       result = vivifyClause(candidates[i]);
     }
-    chrono = wasChrono;
-    notifying = wasNotifying;
     propagationsAtVivify = propagations;
-    purge();
+    return result;
+  }
+
+  /**
+   * The round of {@link #vivify} with the external propagator: learnt clauses of the core and
+   * middle tiers, newest first, then original clauses of three literals or more, each once.
+   */
+  private boolean vivifyRound() {
+    long now = work();
+    long share = Math.max(VIVIFY_MIN_WORK, (now - workAtVivify) * vivifyEffort / 1000);
+    vivifyRounds++;
+    int[] candidates = new int[numLearnts];
+    int n = 0;
+    for (int i = numLearnts - 1; i >= 0; i--) {
+      int meta = mem[learnts[i] + META];
+      if ((meta & (DELETED | VIVIFIED)) == 0 && tierOf(meta) != TIER_LOCAL) {
+        candidates[n++] = learnts[i];
+      }
+    }
+    // the learnt clauses get two thirds of the share, the original ones the rest and what the
+    // learnt ones leave
+    boolean result =
+        vivifyCandidates(candidates, n, vivifyOriginals ? now + share * 2 / 3 : now + share);
+    if (result && vivifyOriginals) {
+      // the external propagator may have added clauses meanwhile
+      candidates = new int[numOriginals];
+      n = 0;
+      for (int i = 0; i < numOriginals; i++) {
+        int ref = originals[i];
+        if ((mem[ref + META] & (DELETED | VIVIFIED)) == 0 && mem[ref + SIZE] > 2) {
+          candidates[n++] = ref;
+        }
+      }
+      result = vivifyCandidates(candidates, n, now + share);
+    }
+    workAtVivify = work();
+    return result;
+  }
+
+  /** Vivifies the first n clauses of candidates with the external propagator until the work. */
+  private boolean vivifyCandidates(int[] candidates, int n, long budget) {
+    boolean result = true;
+    for (int i = 0; i < n && result && !outOfTime && !interrupted; i++) {
+      if (work() >= budget || (i & 63) == 63 && pastDeadline()) {
+        break;
+      }
+      if ((mem[candidates[i] + META] & DELETED) == 0) {
+        result = vivifyFull(candidates[i]);
+      }
+    }
     return result;
   }
 
@@ -4063,12 +4183,220 @@ public final class CdclSolver {
     if (n == size) {
       return true;
     }
-    if (proof != null) {
+    return replaceVivified(ref, meta, d, n, proof != null);
+  }
+
+  /**
+   * Vivifies one clause with the external propagator: decides the negations of its literals one
+   * level each and propagates them with {@link #propagateAll}. A conflict keeps the literals whose
+   * negated decisions the conflict depends on, a literal of the clause that becomes true keeps
+   * itself and the literals it depends on, and otherwise the clause loses the literals that became
+   * false. The clause is left as it is when the external propagator undoes a probing level.
+   */
+  private boolean vivifyFull(int ref) {
+    int meta = mem[ref + META];
+    mem[ref + META] = meta | VIVIFIED;
+    int size = mem[ref + SIZE];
+    int lits = ref + HEADER;
+    for (int k = 0; k < size; k++) {
+      if (vals[mem[lits + k]] > 0) {
+        return true; // satisfied at level 0: simplifyDb removes it
+      }
+    }
+    vivifyTried++;
+    if (vivifyLits.length < 2 * size) {
+      vivifyLits = new int[4 * size];
+    }
+    // propagation reorders the clause in the arena, so its literals are copied first
+    int[] d = vivifyLits;
+    System.arraycopy(mem, lits, d, size, size);
+    int n = 0;
+    int conflict = NO_CONFLICT;
+    int trueLit = -1;
+    boolean skipped = false;
+    for (int k = 0; k < size; k++) {
+      int l = d[size + k];
+      if (vals[l] < 0) {
+        skipped = true;
+        continue;
+      }
+      if (vals[l] > 0) {
+        trueLit = l;
+        break;
+      }
+      d[n++] = l;
+      newDecisionLevel();
+      int level = decisionLevel;
+      assign(l ^ 1, NO_REASON);
+      conflict = propagateAll();
+      if (!ok) {
+        backtrack(0);
+        return false;
+      }
+      if (decisionLevel != level || outOfTime) {
+        // the external propagator jumped back, or the clock stopped the fixpoint: no conclusion
+        backtrack(0);
+        return true;
+      }
+      if (conflict != NO_CONFLICT) {
+        break;
+      }
+    }
+    int m;
+    if (conflict != NO_CONFLICT || trueLit >= 0) {
+      m = vivifyDependencies(d, n, conflict != NO_CONFLICT, trueLit);
+    } else {
+      if (skipped && proof != null) {
+        // the reasons of the false literals go to the proof, which then has the shorter clause
+        for (int k = 0; k < size; k++) {
+          int l = d[size + k];
+          if (vals[l] < 0 && litLevel(l) > 0) {
+            markFinal(l);
+          }
+        }
+        collectFinal(vivifyOut(trailSize), 0);
+      }
+      m = n;
+    }
+    if (m >= 0 && m < size && vivifySubsumption) {
+      int by =
+          conflict != NO_CONFLICT
+              ? conflictRef
+              : trueLit >= 0 ? varReason(trueLit >> 1) : NO_REASON;
+      if (subsumes(by, ref, meta, trueLit)) {
+        // a clause of the database has only literals of this one: this one goes
+        backtrack(0);
+        vivifySubsumed++;
+        deleteClause(ref);
+        removeWatch(mem[lits], ref);
+        removeWatch(mem[lits + 1], ref);
+        return true;
+      }
+    }
+    if (m >= 0 && m < size && proof != null) {
+      // before the backtrack, which deletes the temporary reasons the step uses from the proof
+      proof.add(d, 0, m);
+    }
+    backtrack(0);
+    if (m < 0 || m >= size) {
+      return true;
+    }
+    vivifyStrengthened++;
+    vivifyRemoved += size - m;
+    if ((meta & LEARNT_FLAG) == 0) {
+      vivifyOriginalsStrengthened++;
+    }
+    return replaceVivified(ref, meta, d, m, false);
+  }
+
+  /**
+   * Whether clause by of the arena, the conflict or the reason of the true literal of a probe of
+   * clause ref, has besides that literal only negations of the probe's decisions, so that it
+   * subsumes ref. An original clause is subsumed only by an original one.
+   */
+  private boolean subsumes(int by, int ref, int meta, int trueLit) {
+    if (by < 0 || by >= STACK_REF || by == ref) {
+      return false;
+    }
+    int byMeta = mem[by + META];
+    if ((byMeta & DELETED) != 0 || (meta & LEARNT_FLAG) == 0 && (byMeta & LEARNT_FLAG) != 0) {
+      return false;
+    }
+    int lits = by + HEADER;
+    for (int k = 0, size = mem[by + SIZE]; k < size; k++) {
+      int l = mem[lits + k];
+      if (l != trueLit && (vals[l] >= 0 || litLevel(l) == 0 || varReason(l >> 1) != NO_REASON)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private int[] vivifyOut = new int[16];
+
+  private int[] vivifyOut(int size) {
+    if (vivifyOut.length < size + 1) {
+      vivifyOut = new int[2 * size + 2];
+    }
+    return vivifyOut;
+  }
+
+  /**
+   * Replaces the n decided literals in d by those the conflict (or the true literal) depends on,
+   * plus the true literal, and returns their number; -1 when the dependencies are not decisions of
+   * the probe, which leaves the clause as it is.
+   */
+  private int vivifyDependencies(int[] d, int n, boolean isConflict, int trueLit) {
+    if (isConflict) {
+      int ref = conflictRef;
+      if (ref == UNIT_REASON) {
+        return -1;
+      }
+      if (ref == BINARY_CONFLICT) {
+        markFinal(conflictLit0);
+        markFinal(conflictLit1);
+      } else if (ref < NO_REASON) {
+        markFinal(-2 - ref);
+      } else {
+        int[] m = reasonArena(ref);
+        int off = reasonOffset(ref);
+        for (int k = 0; k < m[off + SIZE]; k++) {
+          markFinal(m[off + HEADER + k]);
+        }
+      }
+    } else {
+      markFinal(trueLit ^ 1);
+    }
+    int[] out = vivifyOut(trailSize);
+    int found = collectFinal(out, 0);
+    // the decisions found are negations of literals of the clause, in trail order
+    int m = 0;
+    for (int i = 0; i < found; i++) {
+      int dec = toLit(out[i]) ^ 1;
+      int k = 0;
+      while (k < n && d[k] != dec) {
+        k++;
+      }
+      if (k == n) {
+        return -1;
+      }
+      out[m++] = dec;
+    }
+    if (trueLit >= 0) {
+      out[m++] = trueLit;
+    }
+    if (m == 0) {
+      return -1;
+    }
+    // keep the clause's order: the literals decided first watch
+    int j = 0;
+    for (int k = 0; k < n; k++) {
+      for (int i = 0; i < m; i++) {
+        if (out[i] == d[k]) {
+          d[j++] = d[k];
+          break;
+        }
+      }
+    }
+    if (trueLit >= 0) {
+      d[j++] = trueLit;
+    }
+    return j;
+  }
+
+  /**
+   * Replaces clause ref, whose META was meta, by the first n literals of d, adding them to the
+   * proof first when told to.
+   */
+  private boolean replaceVivified(int ref, int meta, int[] d, int n, boolean log) {
+    int lits = ref + HEADER;
+    if (log) {
       proof.add(d, 0, n);
     }
     if (n == 0) {
       return refuted();
     }
+    boolean isLearnt = (meta & LEARNT_FLAG) != 0;
     deleteClause(ref);
     // unwatched at once: the next propagation, of d[0] or of the next clause tried, must not use
     // it as a reason, which would keep pointing at a deleted clause
@@ -4076,16 +4404,27 @@ public final class CdclSolver {
     removeWatch(mem[lits + 1], ref);
     if (n == 1) {
       assign(d[0], NO_REASON);
+      if (notifying) {
+        return propagateAll() == NO_CONFLICT && ok || refuted();
+      }
       return propagate() == NO_CONFLICT || refuted();
     }
     if (n == 2) {
-      addLearntBinary(d[0], d[1]);
+      if (isLearnt) {
+        addLearntBinary(d[0], d[1]);
+      } else {
+        addOriginalBinary(d[0], d[1]);
+      }
       return true;
     }
-    int copy = allocate(d, n, true, Math.min(lbdOf(meta), n - 1));
+    int copy = allocate(d, n, isLearnt, Math.min(lbdOf(meta), n - 1));
     mem[copy + META] |= VIVIFIED;
     mem[copy + ACT] = mem[ref + ACT];
-    learnts = push(learnts, numLearnts++, copy);
+    if (isLearnt) {
+      learnts = push(learnts, numLearnts++, copy);
+    } else {
+      originals = push(originals, numOriginals++, copy);
+    }
     attach(copy);
     return true;
   }
@@ -4118,6 +4457,29 @@ public final class CdclSolver {
    */
   public void setVivification(boolean on) {
     vivification = on;
+  }
+
+  /**
+   * Turns on or off vivification with the external propagator (off by default, or as the system
+   * property {@code jacop.lcg.vivify} says): the probing decisions of {@link #vivify} are then
+   * propagated by the external propagator too, and original clauses are vivified as well as learnt
+   * ones.
+   *
+   * @param on whether vivification uses the external propagator
+   */
+  public void setExternalVivification(boolean on) {
+    externalVivify = on;
+  }
+
+  /**
+   * Restarts and vivifies every given number of conflicts as well, for tests that need vivification
+   * on small formulas.
+   *
+   * @param conflicts the conflicts between two of these restarts, 0 for none (the default)
+   */
+  public void setVivifyInterval(int conflicts) {
+    vivifyInterval = conflicts;
+    nextVivifyAt = conflicts;
   }
 
   /**
