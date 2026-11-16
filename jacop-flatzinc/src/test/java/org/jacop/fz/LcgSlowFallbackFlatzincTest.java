@@ -195,6 +195,17 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void slowRateGrowsWithLearntClauseLength() {
+    // short learnt clauses keep lcg-slow-rate; ttppv circ20 learns about 400 literals a conflict,
+    // so 530 conflicts/s counts as slow at 5 conflicts/s per literal (2000)
+    assertEquals(300, Solve.slowRate(1000, 20_000, 300, 5), 1e-9);
+    assertEquals(2000, Solve.slowRate(1000, 400_000, 300, 5), 1e-9);
+    // off, and no conflicts yet
+    assertEquals(300, Solve.slowRate(1000, 400_000, 300, 0), 1e-9);
+    assertEquals(300, Solve.slowRate(0, 0, 300, 5), 1e-9);
+  }
+
+  @Test
   void slowLcgKeptWhenTheWindowCoversTheRun() throws IOException {
     // every check finds LCG slow (rate far above any solver), but the window is the whole time
     // limit and the first solution counts as progress until it is that old: LCG never gives way

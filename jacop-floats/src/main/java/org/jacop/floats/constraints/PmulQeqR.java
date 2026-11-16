@@ -124,34 +124,51 @@ public class PmulQeqR extends Constraint
     }
   }
 
+  // r = p * p: each projection is computed again only when the other variable's bounds changed
   private void consistencySquare(Store store) {
+    boolean rStale = true;
+    boolean pStale = true;
     do {
       if (r.max() < 0) {
         throw Store.failException;
       }
-      store.propagationHasOccurred = false;
 
-      double min = computeSquareRangeMinimum();
-      double max = computeSquareRangeMaximum();
-      r.domain.in(store.level, r, min, max);
-
-      // |p| in [sqrt(r.min), sqrt(r.max)], rounded outward
-      double pMin = r.min() <= 0.0 ? 0.0 : FloatDomain.sqrtDown(r.min());
-      double pMax;
-      if (r.max() < 0.0) {
-        throw Store.failException;
-      }
-      pMax = FloatDomain.sqrtUp(r.max());
-
-      if (pMin > pMax) {
-        throw Store.failException;
+      if (rStale) {
+        rStale = false;
+        double rMin = r.min();
+        double rMax = r.max();
+        double min = computeSquareRangeMinimum();
+        double max = computeSquareRangeMaximum();
+        r.domain.in(store.level, r, min, max);
+        if (rMin != r.min() || rMax != r.max()) {
+          pStale = true;
+        }
       }
 
-      FloatDomain dom = new FloatIntervalDomain(-pMax, -pMin);
-      dom.unionAdapt(pMin, pMax);
-      p.domain.in(store.level, p, dom);
+      if (pStale) {
+        pStale = false;
+        // |p| in [sqrt(r.min), sqrt(r.max)], rounded outward
+        double pMin = r.min() <= 0.0 ? 0.0 : FloatDomain.sqrtDown(r.min());
+        if (r.max() < 0.0) {
+          throw Store.failException;
+        }
+        double pMax = FloatDomain.sqrtUp(r.max());
 
-    } while (store.propagationHasOccurred);
+        if (pMin > pMax) {
+          throw Store.failException;
+        }
+
+        double oldMin = p.min();
+        double oldMax = p.max();
+        FloatDomain dom = new FloatIntervalDomain(-pMax, -pMin);
+        dom.unionAdapt(pMin, pMax);
+        p.domain.in(store.level, p, dom);
+        if (oldMin != p.min() || oldMax != p.max()) {
+          rStale = true;
+        }
+      }
+    } while (rStale || pStale);
+    store.propagationHasOccurred = false;
   }
 
   private double computeSquareRangeMinimum() {
@@ -165,20 +182,47 @@ public class PmulQeqR extends Constraint
     return Math.max(FloatDomain.mulUp(p.min(), p.min()), FloatDomain.mulUp(p.max(), p.max()));
   }
 
+  // p, q and r are distinct here. A projection is computed again only when the bounds of one of
+  // its two inputs changed since it was last computed: with unchanged inputs it gives the same
+  // bounds and narrows nothing, so the result is the same fixpoint as recomputing all three until
+  // a round changes nothing.
   private void consistencyProduct(Store store) {
+    boolean pStale = true;
+    boolean qStale = true;
+    boolean rStale = true;
     do {
-      store.propagationHasOccurred = false;
-
-      FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), q.min(), q.max());
-      p.domain.in(store.level, p, pBounds);
-
-      FloatIntervalDomain qBounds = FloatDomain.divBounds(r.min(), r.max(), p.min(), p.max());
-      q.domain.in(store.level, q, qBounds);
-
-      FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), q.min(), q.max());
-      r.domain.in(store.level, r, rBounds);
-
-    } while (store.propagationHasOccurred);
+      if (pStale) {
+        pStale = false;
+        double min = p.min();
+        double max = p.max();
+        p.domain.in(store.level, p, FloatDomain.divBounds(r.min(), r.max(), q.min(), q.max()));
+        if (min != p.min() || max != p.max()) {
+          qStale = true;
+          rStale = true;
+        }
+      }
+      if (qStale) {
+        qStale = false;
+        double min = q.min();
+        double max = q.max();
+        q.domain.in(store.level, q, FloatDomain.divBounds(r.min(), r.max(), p.min(), p.max()));
+        if (min != q.min() || max != q.max()) {
+          pStale = true;
+          rStale = true;
+        }
+      }
+      if (rStale) {
+        rStale = false;
+        double min = r.min();
+        double max = r.max();
+        r.domain.in(store.level, r, FloatDomain.mulBounds(p.min(), p.max(), q.min(), q.max()));
+        if (min != r.min() || max != r.max()) {
+          pStale = true;
+          qStale = true;
+        }
+      }
+    } while (pStale || qStale || rStale);
+    store.propagationHasOccurred = false;
   }
 
   @Override
