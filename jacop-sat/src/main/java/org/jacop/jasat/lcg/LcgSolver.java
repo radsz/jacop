@@ -8005,7 +8005,7 @@ public final class LcgSolver implements ExternalPropagator {
         if (proof != null) {
           proof.add(new int[0], 0, 0);
         }
-        sat.addClause(new int[0]);
+        sat.addClause();
         pushedReason = null;
         return 0;
       }
