@@ -837,8 +837,44 @@ public class Tables {
    * @param array the array being stored.
    */
   public void addIntArray(String ident, int[] array) {
-    // already exists ";
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedIntArrays.computeIfAbsent(new IntArrayContents(array), k -> k).array();
+    }
     intArrayTable.put(ident, array);
+  }
+
+  /**
+   * Arrays of integer parameters of at least this length are kept once for each content. MiniZinc
+   * writes a table posted on many scopes as a separate array for each constraint: Steiner3-11 (XCSP
+   * 2026) has 153 copies of one table of 5 million entries, 3 GB as separate arrays.
+   */
+  static final int INTERNED_ARRAY_LENGTH = 1024;
+
+  // the long arrays of integer parameters read so far, by content
+  private final Map<IntArrayContents, IntArrayContents> internedIntArrays = new HashMap<>();
+
+  /** An array of integers compared by content. */
+  private record IntArrayContents(int[] array, int hash) {
+    IntArrayContents(int[] array) {
+      this(array, Arrays.hashCode(array));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof IntArrayContents(int[] other, int otherHash)
+          && otherHash == hash
+          && Arrays.equals(other, array);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "IntArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
   }
 
   /**
@@ -986,6 +1022,21 @@ public class Tables {
       }
     }
     return a;
+  }
+
+  /**
+   * It returns the array of variables of the given identity, or null if there is none. Unlike
+   * {@link #getVariableArray(String)} it does not read an array of integer parameters as an array
+   * of constants, so the passes that look for the variables of the constraints skip the tables:
+   * reading a table of millions of entries as constants cost an array of millions of references at
+   * every look and made one constant variable for each distinct value of the table (84,000 on
+   * CrosswordDesign-09, XCSP 2026, each then a variable of LCG).
+   *
+   * @param ident the identity of the array.
+   * @return the array of variables, or null if ident is not an array of variables.
+   */
+  public IntVar[] getDeclaredVariableArray(String ident) {
+    return variableArrayTable.containsKey(ident) ? getVariableArray(ident) : null;
   }
 
   /**

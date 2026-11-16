@@ -86,6 +86,124 @@ class XcspTableFlatzincTest {
     randomTables(false, 20261102);
   }
 
+  @Test
+  void sharedShortTablesMatchBruteForce() throws IOException {
+    sharedTables("short", 20261116);
+  }
+
+  @Test
+  void sharedTablesMatchBruteForce() throws IOException {
+    sharedTables("table", 20261117);
+  }
+
+  @Test
+  void sharedNegativeTablesMatchBruteForce() throws IOException {
+    sharedTables("negative", 20261118);
+  }
+
+  /**
+   * Tables with the same rows given under two names (MiniZinc writes a large table once for every
+   * few constraints) and posted on several scopes, one of them over a variable with a smaller
+   * domain, so that the front end keeps the arrays once and the short tables share the index of
+   * their rows. Each table has more than 1,024 entries, the length from which arrays are kept once.
+   */
+  private void sharedTables(String kind, long seed) throws IOException {
+    Random random = new Random(seed);
+    int arity = 3;
+    int vars = 4;
+    int[][] scopes = {{0, 1, 2}, {1, 2, 3}, {3, 0, 1}, {2, 3, 0}};
+    for (int run = 0; run < 4; run++) {
+      boolean positive = !"negative".equals(kind);
+      int[][] rows = new int[360][arity];
+      for (int[] row : rows) {
+        for (int i = 0; i < arity; i++) {
+          row[i] = "short".equals(kind) && random.nextInt(4) == 0 ? STAR : random.nextInt(5);
+        }
+      }
+      if (positive) {
+        // few rows allowed: a solution must pick rows that agree on the shared variables
+        rows = Arrays.copyOf(rows, 6 + random.nextInt(8));
+        int[][] padded = new int[360][];
+        for (int r = 0; r < padded.length; r++) {
+          padded[r] = rows[r % rows.length];
+        }
+        rows = padded;
+      }
+      String cells =
+          Arrays.stream(rows)
+              .flatMapToInt(Arrays::stream)
+              .mapToObj(String::valueOf)
+              .collect(Collectors.joining(",", "[", "]"));
+      StringBuilder fzn = new StringBuilder();
+      String predicate =
+          switch (kind) {
+            case "short" -> "jacop_short_table_int";
+            case "negative" -> "jacop_negative_table_int";
+            default -> "jacop_table_int";
+          };
+      fzn.append("predicate ")
+          .append(predicate)
+          .append("(array [int] of var int: x,array [int] of int: t")
+          .append("short".equals(kind) ? ",int: star" : "")
+          .append(");\n");
+      for (String name : new String[] {"T1", "T2"}) {
+        fzn.append("array [1..")
+            .append(rows.length * arity)
+            .append("] of int: ")
+            .append(name)
+            .append(" = ")
+            .append(cells)
+            .append(";\n");
+      }
+      for (int i = 0; i < vars; i++) {
+        // x3 has the smaller domain, so the rows kept for its scopes differ
+        fzn.append(i == 3 ? "var {0,1}: x" : "var {0,1,3,4}: x").append(i).append(";\n");
+      }
+      fzn.append("array [1..")
+          .append(vars)
+          .append("] of var int: x:: output_array([1..")
+          .append(vars)
+          .append("]) = [x0,x1,x2,x3];\n");
+      for (int c = 0; c < scopes.length; c++) {
+        fzn.append("constraint ")
+            .append(predicate)
+            .append('(')
+            .append(
+                Arrays.stream(scopes[c])
+                    .mapToObj(i -> "x" + i)
+                    .collect(Collectors.joining(",", "[", "]")))
+            .append(c % 2 == 0 ? ",T1" : ",T2")
+            .append("short".equals(kind) ? "," + STAR : "")
+            .append(");\n");
+      }
+      fzn.append("solve satisfy;\n");
+      Set<String> expected = new TreeSet<>();
+      int[][] tableRows = rows;
+      int[] x = new int[vars];
+      for (int a = 0; a < 4 * 4 * 4 * 2; a++) {
+        int[] values = {0, 1, 3, 4};
+        x[0] = values[a % 4];
+        x[1] = values[a / 4 % 4];
+        x[2] = values[a / 16 % 4];
+        x[3] = a / 64;
+        boolean all = true;
+        for (int[] scope : scopes) {
+          boolean match = Arrays.stream(tableRows).anyMatch(row -> allowed(x, scope, row));
+          all &= match == positive;
+        }
+        if (all) {
+          expected.add(
+              Arrays.stream(x)
+                  .mapToObj(String::valueOf)
+                  .collect(Collectors.joining(", ", "x = array1d(1..4, [", "]);")));
+        }
+      }
+      String message = kind + " run " + run;
+      assertEquals(expected, solveAll(fzn.toString()), message);
+      assertEquals(expected, solveAll(fzn.toString(), "--lcg", "off"), message);
+    }
+  }
+
   private void randomTables(boolean positive, long seed) throws IOException {
     Random random = new Random(seed);
     for (int run = 0; run < 30; run++) {

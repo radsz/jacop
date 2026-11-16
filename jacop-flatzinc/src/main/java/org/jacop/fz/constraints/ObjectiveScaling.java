@@ -255,7 +255,7 @@ public final class ObjectiveScaling {
 
   private void occurrences(Node node, List<IntVar> out) {
     if (node instanceof ASTScalarFlatExpr e && (e.getType() == 2 || e.getType() == 3)) {
-      IntVar[] array = dictionary.getVariableArray(e.getIdent());
+      IntVar[] array = dictionary.getDeclaredVariableArray(e.getIdent());
       if (array != null) {
         out.addAll(List.of(array));
       } else {

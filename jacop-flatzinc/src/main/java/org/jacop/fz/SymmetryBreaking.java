@@ -667,6 +667,19 @@ final class SymmetryBreaking implements ParserTreeConstants {
    */
   Outcome run(
       SimpleNode astTree, IntVar objective, boolean minimize, List<Var> order, long maxNanos) {
+    try {
+      return breakSymmetries(astTree, objective, minimize, order, maxNanos);
+    } finally {
+      // the atoms of the named arrays are read for this run only; a table of a hundred thousand
+      // tuples kept them for the whole search (266 MB on CrosswordDesign-12, XCSP 2026)
+      namedArrays.clear();
+      constantArrays.clear();
+      contentKeys.clear();
+    }
+  }
+
+  private Outcome breakSymmetries(
+      SimpleNode astTree, IntVar objective, boolean minimize, List<Var> order, long maxNanos) {
     IntVar goal = objective != null && !objective.singleton() ? objective : null;
     // reading the model and building its graphs count in the time given, as the search does
     deadline = clock.getAsLong() + maxNanos;

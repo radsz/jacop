@@ -212,6 +212,50 @@ class GlobalConstraints implements ParserTreeConstants {
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
 
+  // The first HybridTable posted for the rows of a short table, compared by content.
+  private final Map<ShortTableRows, HybridTable> shortTables = new HashMap<>();
+
+  /** The rows of a short table and its star value, compared by content. */
+  private record ShortTableRows(List<int[]> rows, int star, int hash) {
+    ShortTableRows(List<int[]> rows, int star) {
+      this(rows, star, hash(rows, star));
+    }
+
+    private static int hash(List<int[]> rows, int star) {
+      int h = star;
+      for (int[] row : rows) {
+        h = 31 * h + Arrays.hashCode(row);
+      }
+      return h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof ShortTableRows(List<int[]> otherRows, int otherStar, int otherHash))
+          || otherHash != hash
+          || otherStar != star
+          || otherRows.size() != rows.size()) {
+        return false;
+      }
+      for (int i = 0; i < rows.size(); i++) {
+        if (!Arrays.equals(rows.get(i), otherRows.get(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "ShortTableRows[rows=" + rows.size() + ", star=" + star + ", hash=" + hash + "]";
+    }
+  }
+
   /** The tuples of a table, compared by content. */
   private record TableTuples(int[][] tuples, int hash) {
     TableTuples(int[][] tuples) {
@@ -2046,7 +2090,17 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       return;
     }
-    support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
+    // short tables with the same rows after the filtering (CrosswordDesign, XCSP 2026, posts each
+    // of its dictionary tables of up to 330,000 rows on 24 slots) share the bit-sets of the first
+    HybridTable same = shortTables.get(new ShortTableRows(kept, star));
+    HybridTable table =
+        same == null
+            ? new HybridTable(nv, kept.toArray(new int[0][]), star)
+            : new HybridTable(nv, same);
+    if (same == null) {
+      shortTables.put(new ShortTableRows(kept, star), table);
+    }
+    support.pose(table);
   }
 
   /**
