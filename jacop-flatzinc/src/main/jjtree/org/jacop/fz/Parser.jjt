@@ -39,6 +39,10 @@ options {
   MULTI = true;
   NODE_DEFAULT_VOID = true;
   NODE_PACKAGE = "org.jacop.fz";
+  // without error reporting the parser does not record the first token of each lookahead
+  // (JJCalls.first), which kept every later token alive: 38 million tokens of one table
+  // literal of Inglenook (XCSP 2026) took more than 6 GB; errors still give the line
+  ERROR_REPORTING = false;
 }
 
  
@@ -449,6 +453,7 @@ void pred_decl_item() :
 void var_decl_item() #VarDeclItem:
 {
     Token t, t1, t2;
+    int low = 0, high = 0;
     //kind -- 0=var, 1=non-var; 2=array-var, 3=array-non-var
 }
 {
@@ -470,8 +475,12 @@ void var_decl_item() #VarDeclItem:
 	   }
 	 }
 
-   | <ARRAY> <LBOX> t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> <RBOX> <OF> array_decl_tail(jjtThis)
-	  {   jjtThis.setIndexes(intLiteral(t1), intLiteral(t2)); 
+   | <ARRAY> <LBOX> t1=<INT_LITERAL> <DOTDOT> t2=<INT_LITERAL> <RBOX>
+	  {   // a token held while the rest is read keeps every later token alive through Token.next:
+	      // a table literal of 38 million entries (Inglenook, XCSP 2026) took more than 6 GB
+	      low = intLiteral(t1); high = intLiteral(t2); t1 = null; t2 = null; }
+       <OF> array_decl_tail(jjtThis)
+	  {   jjtThis.setIndexes(low, high); 
 	      if (!parseOnly) {
 	          cg.generateArray(jjtThis, dict, store);
 	          releaseDeclaration(jjtThis);
@@ -497,14 +506,12 @@ void array_decl_tail(ASTVarDeclItem v) :
 {Token t;}
 {
     (
-     non_array_ti_expr_tail() <COLON> t=ident_anns() <ASGN> array_literal()
+     non_array_ti_expr_tail() <COLON> t=ident_anns() { v.setId(name(t)); t = null; } <ASGN> array_literal()
      {v.setKind(3); 
      }
-     | <VAR> non_array_ti_expr_tail() <COLON> t=ident_anns() [ <ASGN> array_literal() ] //array_decl_tail2()
+     | <VAR> non_array_ti_expr_tail() <COLON> t=ident_anns() { v.setId(name(t)); t = null; } [ <ASGN> array_literal() ] //array_decl_tail2()
 	 {v.setKind(2); }
      )
-
-  	{v.setId(name(t));}
 }
 
 // array_decl_tail2:
@@ -551,9 +558,7 @@ void constraint_elem() #ConstElem:
 {
 //     (
 //     LOOKAHEAD(2)
-    t =<IDENT> <LP> flat_exprs() <RP>  	
-     {jjtThis.setName(name(t));
-     }
+    t =<IDENT> {jjtThis.setName(name(t)); t = null; } <LP> flat_exprs() <RP>
     // new flatzinc does not support variable as constraint any longer
     // can be deleted
 //    |   variable_expr()

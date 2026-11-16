@@ -585,6 +585,10 @@ Search of the LCG solver:
 - jacop.lcg.fullFixpoint: run the store to its fixpoint before the
   clauses propagate again; false returns to the clauses after each
   pruning; default true.
+- jacop.jasat.jump: share of the time of the SAT solver (without LCG or
+  assumptions) given to feasibility-jump local search at rephasing
+  points, 0 for none; default 0.1. jacop.jasat.jumpDebug prints each
+  call; default false.
 
 Core-guided phase (free search, --lcg -f):
 
