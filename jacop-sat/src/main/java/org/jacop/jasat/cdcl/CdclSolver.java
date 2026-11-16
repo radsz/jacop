@@ -289,6 +289,8 @@ public final class CdclSolver {
   // on gates in it
   private boolean substitution = !"false".equals(System.getProperty("jacop.jasat.substitute"));
   private boolean congruence = !"false".equals(System.getProperty("jacop.jasat.congruence"));
+  // gate extraction runs again at a later elimination only if the last one found an equivalence
+  private boolean gatesPaid = true;
 
   /** Statistics: variables replaced by an equivalent literal. */
   public long substitutedVars;
@@ -3799,8 +3801,9 @@ public final class CdclSolver {
     if (substitution) {
       long t0 = System.nanoTime();
       cc = new Congruence(numVars, input, n, frozen, proof);
-      cc.gatesOn = congruence;
+      cc.gatesOn = congruence && gatesPaid;
       sat = cc.run();
+      gatesPaid = cc.gatesOn && cc.gateEquivalences > 0;
       substitutionNanos += System.nanoTime() - t0;
       if (sat) {
         input = cc.clauses();

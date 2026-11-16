@@ -249,54 +249,58 @@ final class GateExtractor {
     if (n < 2 || n > OCC_LIMIT || occSize[o] < 2 || occSize[o] > OCC_LIMIT) {
       return null;
     }
-    int[] list = occ[o ^ 1];
-    for (int i = 0; i < n; i++) {
-      int[] ci = clauses[list[i]];
-      if (ci.length != 3) {
+    // the pairs (literal, clause) of the ternary clauses with -o, sorted by literal: a clause with -c
+    // and one with c sit in the adjacent groups of 2c and 2c + 1, so only such pairs are tried
+    int[] list = ternaries(o ^ 1);
+    long[] keys = new long[2 * list.length];
+    int m = 0;
+    for (int i = 0; i < list.length; i++) {
+      for (int l : clauses[list[i]]) {
+        if (l != (o ^ 1)) {
+          keys[m++] = (long) l << 32 | i;
+        }
+      }
+    }
+    Arrays.sort(keys, 0, m);
+    effort += m;
+    int p = 0;
+    while (p < m) {
+      int c = (int) (keys[p] >>> 32);
+      int q = p;
+      while (q < m && (int) (keys[q] >>> 32) == c) {
+        q++;
+      }
+      if ((c & 1) != 0) {
+        p = q;
         continue;
       }
-      for (int j = i + 1; j < n; j++) {
-        int[] cj = clauses[list[j]];
-        effort++;
-        if (cj.length != 3) {
-          continue;
-        }
-        // ci = (-o | x1 | y1), cj = (-o | x2 | y2) with x1 = -x2: the condition
-        for (int a = 0; a < 3; a++) {
-          int x1 = ci[a];
-          if (x1 == (o ^ 1)) {
+      // keys[p..q) hold c; keys[q..r) hold -c
+      int r = q;
+      while (r < m && (int) (keys[r] >>> 32) == (c ^ 1)) {
+        r++;
+      }
+      for (int i = q; i < r; i++) {
+        int ci = list[(int) keys[i]];
+        int t = other(clauses[ci], o ^ 1, c ^ 1);
+        for (int j = p; j < q; j++) {
+          int cj = list[(int) keys[j]];
+          int e = other(clauses[cj], o ^ 1, c);
+          effort++;
+          if (t >> 1 == e >> 1) {
             continue;
           }
-          int y1 = other(ci, o ^ 1, x1);
-          for (int b = 0; b < 3; b++) {
-            int x2 = cj[b];
-            if (x2 != (x1 ^ 1)) {
-              continue;
-            }
-            int y2 = other(cj, o ^ 1, x2);
-            // x1 = -c, y1 = t, x2 = c, y2 = e
-            int c = x2;
-            int t = y1;
-            int e = y2;
-            if (t >> 1 == e >> 1) {
-              continue;
-            }
-            int k1 = ternary(o, c ^ 1, t ^ 1);
-            if (k1 < 0) {
-              continue;
-            }
-            int k2 = ternary(o, c, e ^ 1);
-            if (k2 < 0) {
-              continue;
-            }
-            int[] defining = {list[i], list[j], k1, k2};
-            if ((c & 1) != 0) {
-              return new Gate(ITE, o, new int[] {c ^ 1, e, t}, defining);
-            }
-            return new Gate(ITE, o, new int[] {c, t, e}, defining);
+          int k1 = ternary(o, c ^ 1, t ^ 1);
+          if (k1 < 0) {
+            break;
           }
+          int k2 = ternary(o, c, e ^ 1);
+          if (k2 < 0) {
+            continue;
+          }
+          return new Gate(ITE, o, new int[] {c, t, e}, new int[] {ci, cj, k1, k2});
         }
       }
+      p = r;
     }
     return null;
   }
@@ -403,6 +407,26 @@ final class GateExtractor {
   }
 
   // the index of a ternary clause with literals a, b and c (in any order), or -1
+  // the ternary clauses with literal l
+  private int[] ternaries(int l) {
+    int[] list = occ[l];
+    int count = 0;
+    for (int k = 0; k < occSize[l]; k++) {
+      if (clauses[list[k]].length == 3) {
+        count++;
+      }
+    }
+    effort += occSize[l];
+    int[] result = new int[count];
+    count = 0;
+    for (int k = 0; k < occSize[l]; k++) {
+      if (clauses[list[k]].length == 3) {
+        result[count++] = list[k];
+      }
+    }
+    return result;
+  }
+
   private int ternary(int a, int b, int c) {
     int best = a;
     if (occSize[b] < occSize[best]) {
