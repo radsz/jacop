@@ -72,6 +72,7 @@ import org.jacop.fz.constraints.EnforcementInliner;
 import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
+import org.jacop.fz.constraints.IndexDisjunctionDetector;
 import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
@@ -85,6 +86,7 @@ import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
+import org.jacop.fz.constraints.ProgressionTilingDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
@@ -327,6 +329,24 @@ public class Constraints implements ParserTreeConstants {
           for (Map.Entry<IntVar[], int[][]> t : elimination.tables()) {
             cf.poseTable(t.getKey(), t.getValue());
           }
+        }
+      }
+
+      // index variables that only pick the position where a relation holds become a disjunction
+      // over the positions, and get their values again when a solution is printed
+      if (IndexDisjunctionDetector.enabled()
+          && options.proof() == null
+          && options.presolve() == Options.Presolve.OFF
+          && !manySolutions) {
+        IndexDisjunctionDetector disjunctions =
+            new IndexDisjunctionDetector(support, cf, replaced, solveItemVariables(astTree));
+        disjunctions.detect(astTree);
+        if (!disjunctions.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(disjunctions.replaced());
+          dictionary.removeFromDefaultSearch(disjunctions.eliminated());
+          dictionary.unusedVariables.addAll(disjunctions.eliminated());
+          dictionary.indexDisjunctions = disjunctions.values();
         }
       }
 
@@ -628,6 +648,11 @@ public class Constraints implements ParserTreeConstants {
       // redundant; --proof does not encode it
       if (TranslationTilingDetector.enabled() && options.proof() == null) {
         new TranslationTilingDetector(support).detect(astTree);
+      }
+      // tilings by arithmetic progressions with ordered starts: a branching for the search, no
+      // constraint
+      if (ProgressionTilingDetector.enabled()) {
+        dictionary.progressionTiling = new ProgressionTilingDetector(support).detect(astTree);
       }
       store.imposingImplied(false);
 

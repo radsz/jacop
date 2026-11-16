@@ -251,6 +251,36 @@ class LcgSolverTest {
     return false;
   }
 
+  /**
+   * A solution given by setIncumbent is the best one of minimize: only better solutions are
+   * reported, and an optimal incumbent is the answer without any report.
+   */
+  @Test
+  void incumbentIsTheFirstSolution() {
+    for (int start = 0; start <= 4; start++) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", 0, 5);
+      IntVar y = new IntVar(store, "y", 0, 5);
+      IntVar cost = new IntVar(store, "cost", 0, 100);
+      store.impose(new LinearInt(new IntVar[] {x, y}, new int[] {1, 1}, ">=", 4));
+      store.impose(new LinearInt(new IntVar[] {x, y, cost}, new int[] {2, 3, -1}, "==", 0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      // x + y = 4 with y = start: cost 8 + start, optimal for start 0
+      int given = 8 + start;
+      solver.setIncumbent(new IntVar[] {x, y, cost}, new int[] {4 - start, start, given});
+      List<Integer> reported = new ArrayList<>();
+      solver.onSolution(() -> reported.add(cost.value()));
+      assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(cost)).isEqualTo(8);
+      assertThat(reported).allMatch(c -> c < given);
+      if (start == 0) {
+        assertThat(reported).isEmpty();
+        assertThat(solver.value(x)).isEqualTo(4);
+      }
+    }
+  }
+
   @Test
   void deferredValueRemovalsAgreeWithBruteForce() {
     // with no literal budget every value removal without a literal stays out of the solver, and
@@ -5240,6 +5270,39 @@ class LcgSolverTest {
   }
 
   /**
+   * Branch and bound that improves the best solution by one at each solution stops after a few
+   * solutions for jumps a doubling step below it, which reach the same optimum with fewer
+   * solutions; without jumps it walks down one by one.
+   */
+  @Test
+  void jumpsBelowTheBestSolution() {
+    long[] found = new long[2];
+    for (boolean jump : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[5];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 30);
+      }
+      IntVar obj = new IntVar(store, "obj", 0, 150);
+      store.impose(new LinearInt(x, new int[] {1, 1, 1, 1, 1}, ">=", 37));
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[0], x[1], x[2], x[3], x[4], obj},
+              new int[] {1, 1, 1, 1, 1, -1},
+              "==",
+              0));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setAnnotation(new SimpleSelect<>(x, null, new IndomainMax<>()), true);
+      solver.setJumps(jump);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(obj)).isEqualTo(37);
+      assertThat(solver.jumpRuns > 0).isEqualTo(jump);
+      found[jump ? 1 : 0] = solver.solutions;
+    }
+    assertThat(found[1]).isLessThan(found[0] / 2);
+  }
+
+  /**
    * When the objective's root bound is above the cores' lower bound, a short search for a solution
    * at that bound runs before the core-guided probe and ends the search with it: on nfc (Challenge
    * 2022) the linear relaxation's bound is the optimum, which the probe delayed by 0.67 % of the
@@ -5505,6 +5568,42 @@ class LcgSolverTest {
   }
 
   @Test
+  void objectiveProbesOfTheCorePhaseKeepItsOptimaAndBounds() {
+    // the probes of the objective's own bound after every core (32 cores by default): the optima
+    // and the reported lower bounds stay those of search
+    long saved = CoreSearch.objectiveProbeAfter;
+    CoreSearch.objectiveProbeAfter = 1;
+    try {
+      Random rnd = new Random(31);
+      int checked = 0;
+      long probes = 0;
+      for (int instance = 0; instance < 200; instance++) {
+        long seed = rnd.nextLong();
+        Integer expected = coreModelOptimum(seed, -1, new long[3]);
+        for (int mode = 0; mode < 4; mode++) {
+          long[] stats = new long[5];
+          long[] lower = new long[1];
+          Integer found = coreModelOptimum(seed, mode, stats, null, lower);
+          assertThat(found)
+              .as("instance %d (seed %d), mode %d", instance, seed, mode)
+              .isEqualTo(expected);
+          if (expected != null) {
+            assertThat(lower[0])
+                .as("instance %d (seed %d), mode %d", instance, seed, mode)
+                .isLessThanOrEqualTo(expected);
+          }
+          probes += stats[4];
+          checked++;
+        }
+      }
+      assertThat(checked).isPositive();
+      assertThat(probes).isPositive();
+    } finally {
+      CoreSearch.objectiveProbeAfter = saved;
+    }
+  }
+
+  @Test
   void coreGuidedSearchTakesTheDefinitionWithTheHigherRootBound() {
     // obj = a + b with a, b in 0..10, and obj = y0 + y1 with y0, y1 in {3, 5}, as presolve adds the
     // objective over cost variables next to its definition: the y's bound obj by 6 at the root
@@ -5667,6 +5766,9 @@ class LcgSolverTest {
     }
     if (stats.length > 3) {
       stats[3] += solver.solver().conflicts;
+    }
+    if (stats.length > 4 && solver.coreSearch() != null) {
+      stats[4] += solver.coreSearch().objectiveProbes;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
