@@ -214,6 +214,7 @@ setup to run configuration. -->
                                 <enforcementInlining.trials>100</enforcementInlining.trials>
                                 <cse.trials>100</cse.trials>
                                 <affine.trials>100</affine.trials>
+                                <equalityPairs.trials>100</equalityPairs.trials>
                                 <convex.lcg.runs>300</convex.lcg.runs>
                                 <convex.fz.trials>100</convex.fz.trials>
                                 <prob.trials>300</prob.trials>
@@ -400,6 +401,7 @@ setup to run configuration. -->
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
+                                <include>**/LinearEqualityPairsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>
@@ -666,6 +668,7 @@ setup to run configuration. -->
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
+                                <include>**/LinearEqualityPairsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>
@@ -928,6 +931,7 @@ setup to run configuration. -->
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
+                                <include>**/LinearEqualityPairsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>
@@ -1188,6 +1192,7 @@ setup to run configuration. -->
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
+                                <include>**/LinearEqualityPairsFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
                                 <include>**/LcgCompletionFlatzincTest.java</include>

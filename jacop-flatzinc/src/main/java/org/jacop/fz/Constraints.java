@@ -76,6 +76,7 @@ import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
 import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
+import org.jacop.fz.constraints.LinearEqualityPairs;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
@@ -248,6 +249,16 @@ public class Constraints implements ParserTreeConstants {
       }
       // a search variable that became an alias is searched as its Boolean
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
+      // equalities written as two opposite inequalities become int_lin_eq, which the later
+      // detectors read
+      if (LinearEqualityPairs.enabled() && options.proof() == null) {
+        LinearEqualityPairs pairs = new LinearEqualityPairs(support);
+        pairs.detect(astTree, replaced);
+        if (!pairs.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(pairs.replaced());
+        }
+      }
       // the same function of the same inputs is computed once; --proof encodes the model as given
       if (CommonSubexpressions.enabled() && options.proof() == null) {
         CommonSubexpressions cse = new CommonSubexpressions(support, solveItemVariables(astTree));
