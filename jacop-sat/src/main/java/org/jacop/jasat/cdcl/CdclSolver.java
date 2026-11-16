@@ -3925,7 +3925,9 @@ public final class CdclSolver {
    * first UIP). The roots of the binary implication graph (literals with binary implications and no
    * binary clause implying them) are probed in turn from where the last round stopped, and the
    * negation of a root too, which gives units implied by both signs (lifting) and equivalent
-   * literals.
+   * literals. References: I. Lynce, J. Marques-Silva, "Probing-Based Preprocessing Techniques for
+   * Propositional Satisfiability", ICTAI 2003; M. J. H. Heule, M. Järvisalo, A. Biere, "Efficient
+   * CNF Simplification Based on Binary Implication Graphs", SAT 2011.
    *
    * @return false when the formula is unsatisfiable
    */
