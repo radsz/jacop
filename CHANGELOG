@@ -6902,7 +6902,17 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
-385. Maximum clique (item 353). MaxCliqueBound covers the vertices that the
+385. ElementVariableFast finds the list positions of a variable that woke
+   it in a table indexed by the variable's store index when the indexes of
+   its list span few values, instead of by binary search. On MiniZinc
+   Challenge 2023 multi-agent-graph-coverage rnd_n75 1086 elements share
+   two lists of 543 variables, so every change of a variable wakes 543
+   elements, and the binary searches took 16 % of the solving time: the
+   same search runs in 0.76-0.87 of the time. On the 18 wide instances
+   where the wakes take at least 1 % of the time the total time is 1.004
+   with identical search (virtual clock, 2 rounds).
+
+386. Maximum clique (item 353). MaxCliqueBound covers the vertices that the
    coloring puts beyond sum.min() - 1 classes one at a time: by the
    re-coloring of MCS (E. Tomita, Y. Sutani, T. Higashi, S. Takahashi and
    M. Wakatsuki, "A simple and faster branch-and-bound algorithm for
@@ -6934,7 +6944,7 @@ Version 5.0 (unreleased)
    before 19), and the summed time goes from 5769 s to 3610 s;
    p-hat1500-2 and p-hat1500-3 end one below (64 and 93).
 
-386. Under --lcg with -f, LCG free search counts as slow, and gives way to
+387. Under --lcg with -f, LCG free search counts as slow, and gives way to
    free search without learning once it stops making progress, also when
    it makes fewer conflicts per second than 5 times the average length of
    its learnt clauses (--free-config lcg-slow-literal, 0 = off), not only
