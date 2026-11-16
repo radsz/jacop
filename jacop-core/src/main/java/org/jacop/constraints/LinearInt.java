@@ -144,6 +144,18 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
    */
   private DroppedTerms dropped;
 
+  /**
+   * The bounds of a long imposed sum kept up to date by bound changes of its variables, or null: a
+   * consistency call then reads them instead of rescanning the terms.
+   */
+  private IncrementalSum incremental;
+
+  /**
+   * The number of terms from which an imposed LinearInt keeps its bounds incrementally; 0 turns it
+   * off. Below a few hundred terms the rescan is as cheap as the bookkeeping.
+   */
+  static final int INCREMENTAL_TERMS = Integer.getInteger("org.jacop.linearIncrementalTerms", 200);
+
   // the variables whose weight a failure of this constraint increases; null for its own variables
   private Var[] weighted;
 
@@ -474,6 +486,10 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
 
   @Override
   public int getBoundPruningEvent(Var v) {
+    if (incremental != null) {
+      // the bounds of the sum follow both bounds of every term
+      return IntDomain.BOUND;
+    }
     // <= and < read only the minimum of the weighted sum, >= and > only its maximum
     boolean readsSumMin = relationType == LE || relationType == LT;
     if (!readsSumMin && relationType != GE && relationType != GT) {
@@ -508,14 +524,60 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
     }
 
     // a subclass may rely on the order of x, and short sums gain nothing from dropping
-    if (getClass() == LinearInt.class && l > 3) {
+    if (getClass() == LinearInt.class
+        && INCREMENTAL_TERMS > 0
+        && l >= INCREMENTAL_TERMS
+        && relationType != NE
+        // an event set for a variable could hide bound changes from the incremental bounds
+        && (consistencyPruningEvents == null || consistencyPruningEvents.isEmpty())) {
+      sortByVariability();
+      incremental = new IncrementalSum(this, store);
+      incremental.initialize();
+    } else if (getClass() == LinearInt.class && l > 3) {
       dropped = new DroppedTerms(store, pos, l);
     }
 
     super.impose(store);
   }
 
+  /**
+   * Orders the terms of each sign by decreasing variability, so a pruning pass of an incremental
+   * sum can stop at the first term whose initial variability is within the slack.
+   */
+  private void sortByVariability() {
+    long[] width = new long[l];
+    for (int i = 0; i < l; i++) {
+      width[i] = Math.abs((x[i].max() - (long) x[i].min()) * a[i]);
+    }
+    Integer[] order = new Integer[l];
+    for (int i = 0; i < l; i++) {
+      order[i] = i;
+    }
+    java.util.Comparator<Integer> wider = (p, q) -> Long.compare(width[q], width[p]);
+    Arrays.sort(order, 0, pos, wider);
+    Arrays.sort(order, pos, l, wider);
+    IntVar[] sortedX = new IntVar[l];
+    long[] sortedA = new long[l];
+    for (int i = 0; i < l; i++) {
+      sortedX[i] = x[order[i]];
+      sortedA[i] = a[order[i]];
+    }
+    System.arraycopy(sortedX, 0, x, 0, l);
+    System.arraycopy(sortedA, 0, a, 0, l);
+  }
+
+  @Override
+  public void queueVariable(int level, Var v) {
+    if (incremental != null) {
+      incremental.changed(v);
+    }
+  }
+
   void computeInit() {
+    if (incremental != null) {
+      // the bounds are current: every bound change of a term updated them
+      return;
+    }
     if (dropped != null) {
       computeInitDropping();
       return;
@@ -619,6 +681,10 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
     if (sumMin > b) {
       throw Store.failException;
     }
+    if (incremental != null) {
+      pruneLtEqIncremental(b);
+      return;
+    }
     if (maxVariability <= b - sumMin) {
       return;
     }
@@ -658,6 +724,10 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
     if (sumMax < b) {
       throw Store.failException;
     }
+    if (incremental != null) {
+      pruneGtEqIncremental(b);
+      return;
+    }
     if (maxVariability <= sumMax - b) {
       return;
     }
@@ -688,6 +758,59 @@ public class LinearInt extends PrimitiveConstraint implements Copyable<LinearInt
           sumMin += newMin - min;
           variability[i] = max - newMin;
         }
+      }
+    }
+  }
+
+  /**
+   * Prunes the maxima of the weighted terms of an incremental sum. The store reports each pruning
+   * back through queueVariable, which updates the bounds of the sum and the variabilities.
+   */
+  private void pruneLtEqIncremental(long b) {
+    long[] initial = incremental.initialVariability;
+    long[] termMin = incremental.termMin;
+    for (int i = 0; i < pos; i++) {
+      long slack = b - sumMin;
+      if (initial[i] <= slack) {
+        break;
+      }
+      if (variability[i] > slack) {
+        pruneMax(x[i], IntDomain.divRoundDown(slack + termMin[i], a[i]));
+      }
+    }
+    for (int i = pos; i < l; i++) {
+      long slack = b - sumMin;
+      if (initial[i] <= slack) {
+        break;
+      }
+      if (variability[i] > slack) {
+        pruneMin(x[i], IntDomain.divRoundUp(-(slack + termMin[i]), -a[i]));
+      }
+    }
+  }
+
+  /** Prunes the minima of the weighted terms of an incremental sum, see pruneLtEqIncremental. */
+  private void pruneGtEqIncremental(long b) {
+    long[] initial = incremental.initialVariability;
+    long[] termMin = incremental.termMin;
+    for (int i = 0; i < pos; i++) {
+      long slack = sumMax - b;
+      if (initial[i] <= slack) {
+        break;
+      }
+      if (variability[i] > slack) {
+        long max = termMin[i] + variability[i];
+        pruneMin(x[i], IntDomain.divRoundUp(max - slack, a[i]));
+      }
+    }
+    for (int i = pos; i < l; i++) {
+      long slack = sumMax - b;
+      if (initial[i] <= slack) {
+        break;
+      }
+      if (variability[i] > slack) {
+        long max = termMin[i] + variability[i];
+        pruneMax(x[i], IntDomain.divRoundDown(-(max - slack), -a[i]));
       }
     }
   }

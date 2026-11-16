@@ -521,6 +521,53 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void forcingRowFixesItsColumnsAndPostsolvesAnOptimalBasis() {
+    // x + y <= 0 over x, y in [0, 5] holds only at x = y = 0; then x + 2y + z >= 2 makes z >= 2.
+    // min -3x - y + z = 2. The postsolve gives row 0 the dual -4 with x basic in place of its
+    // slack, so the whole problem needs no pivot after the reduced one
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{0, 1}, {0, 1, 2}},
+            new double[][] {{1, 1}, {1, 2, 1}},
+            new double[] {-inf, 2},
+            new double[] {0, inf},
+            new double[] {-3, -1, 1},
+            true);
+    lp.setExact(true);
+    for (int j = 0; j < 3; j++) {
+      lp.setBounds(j, 0, 5);
+    }
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolveReductions()[Presolve.FORCING_ROW]).isEqualTo(1);
+    assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
+  }
+
+  @Test
+  void dominatedColumnIsFixedByTheDualBoundOfAColumnSingleton() {
+    // x + s + t = 4 and x - v <= 2, s >= 0 without upper bound and cost 1 bounds the dual of row 0
+    // by 1, so the reduced cost of x (cost 3) is at least 2: x = 0 in every optimum. min 4
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{0, 1, 2}, {0, 3}},
+            new double[][] {{1, 1, 1}, {1, -1}},
+            new double[] {4, -inf},
+            new double[] {4, 2},
+            new double[] {3, 1, 1, 0},
+            true);
+    lp.setExact(true);
+    lp.setBounds(0, 0, 10);
+    lp.setBounds(1, 0, inf);
+    lp.setBounds(2, 0, 10);
+    lp.setBounds(3, 0, 10);
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isEqualTo(1);
+    assertThat(lp.objective()).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+  }
+
+  @Test
   void givenDualsHaveNoPerturbation() {
     // min z with z - x - y >= 0, x + y >= 3, x - y <= 1, all in [0, 10]: duals 1, 1, 0
     double inf = Double.POSITIVE_INFINITY;
@@ -600,7 +647,7 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[7];
+    int[] reductions = new int[9];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;

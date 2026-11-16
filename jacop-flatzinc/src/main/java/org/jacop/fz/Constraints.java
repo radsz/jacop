@@ -52,6 +52,7 @@ import org.jacop.fz.constraints.AffineFolding;
 import org.jacop.fz.constraints.AgreementCountDetector;
 import org.jacop.fz.constraints.AlldiffChannels;
 import org.jacop.fz.constraints.AlldifferentDetector;
+import org.jacop.fz.constraints.AntichainDetector;
 import org.jacop.fz.constraints.ArgMaxFunctionDetector;
 import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
@@ -87,6 +88,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
+import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
@@ -577,6 +579,12 @@ public class Constraints implements ParserTreeConstants {
         new CountPartnersDetector(support).detect(astTree);
       }
 
+      // the aggregated flow of a regular constraint over the residue classes its cardinality
+      // constraints count, redundant; --proof does not encode it
+      if (RegularFlowDetector.enabled() && options.proof() == null) {
+        new RegularFlowDetector(support).detect(astTree);
+      }
+
       // the least number of bins of each item whose pairs must share a bin (SONET rings),
       // redundant; --proof does not encode it
       if (PairCoverDetector.enabled() && options.proof() == null) {
@@ -591,6 +599,14 @@ public class Constraints implements ParserTreeConstants {
         if (agreements.infeasible()) {
           throw Store.failException;
         }
+      }
+
+      // the LYM inequality of pairwise incomparable vectors (Sperner's theorem), redundant;
+      // --proof does not encode it
+      if (AntichainDetector.enabled() && options.proof() == null) {
+        AntichainDetector antichains = new AntichainDetector(support);
+        antichains.detect(astTree);
+        antichains.failIfInfeasible();
       }
 
       if (increasing != null && IncreasingDetector.sumEnabled()) {

@@ -3075,7 +3075,8 @@ public final class LcgSolver implements ExternalPropagator {
     long end = budgetNanos >= Long.MAX_VALUE - start ? Long.MAX_VALUE : start + budgetNanos;
     end = Math.min(end, sat.deadline());
     if (rootFailed || proof != null) {
-      return !rootFailed;
+      // probing is not logged under a proof: the search that follows derives a failure at the root
+      return proof != null;
     }
     encodeGraphs();
     // the clauses added since the solver was made (graphs, collected clauses) propagate first, so
@@ -4230,6 +4231,24 @@ public final class LcgSolver implements ExternalPropagator {
     coresWithoutSolutionOnly = only;
   }
 
+  // -Djacop.lcg.coreTrim=R: the times each core of the core-guided phase is solved again under its
+  // own literals while that shrinks it; 0 = never
+  private int coreTrim = Integer.getInteger("jacop.lcg.coreTrim", 3);
+
+  /**
+   * Sets how many times the core-guided phase solves each core again under its own literals while
+   * that shrinks it (core trimming); 0 takes each core as the solver gives it.
+   *
+   * @param rounds the most calls per core, 3 by default (property {@code jacop.lcg.coreTrim})
+   */
+  public void setCoreTrim(int rounds) {
+    coreTrim = rounds;
+  }
+
+  int coreTrim() {
+    return coreTrim;
+  }
+
   /**
    * Sets whether the core-guided phase of {@link #minimize} is skipped after branch and bound when
    * its probe ({@link #setCoreDelay}) stopped without a solution of its own and branch and bound
@@ -4595,7 +4614,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int neighbourhoodRuns(long nanos) {
     long end = Math.min(sat.now() + nanos, sat.deadline());
-    while (sat.now() < end) {
+    while (sat.now() < end && !stopRequested) {
       int[] fixed = lns.neighbourhood();
       int[] upper = lns.upperBounded();
       int[] assumed = new int[fixed.length + upper.length];
@@ -4615,7 +4634,8 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
       long before = best[objective];
-      sat.setConflictLimit(sat.conflicts + lnsConflicts);
+      long limit = sat.conflicts + lnsConflicts;
+      sat.setConflictLimit(limit);
       lnsRuns++;
       int result = solve(Arrays.copyOf(assumed, n));
       boolean improved = best[objective] < before;
@@ -4625,6 +4645,18 @@ public final class LcgSolver implements ExternalPropagator {
       if (result == CdclSolver.SAT
           || (result == CdclSolver.UNSAT && sat.failedAssumptions().length == 0)) {
         return result;
+      }
+      if (result == CdclSolver.UNKNOWN && sat.conflicts < limit) {
+        // stopped by the deadline, a stop request or the work limit of the phase, not by its own
+        // conflicts: the size of the neighbourhood was not too large, and the runs end. On
+        // MaximumAgreementForest2-exact12 (XCSP 2026) the slow-LCG hand-over stopped LCG in its
+        // runs, which went on until their share of the time ended: 7,000 runs without a conflict,
+        // each counted as too large, shrank every neighbourhood to 2 variables, and free search
+        // without learning went on with those (no better solution in 100 s)
+        if (improved) {
+          lns.outcome(AdaptiveLns.Outcome.IMPROVED);
+        }
+        break;
       }
       AdaptiveLns.Outcome outcome;
       if (improved) {
@@ -7735,6 +7767,15 @@ public final class LcgSolver implements ExternalPropagator {
    * learning stops after its annotation (37 nodes). Tested once on each branch after the annotation
    * ends; not with a proof, whose solution must give every variable.
    */
+  private static boolean allFixed(Collection<? extends Var> variables) {
+    for (Var v : variables) {
+      if (!v.singleton()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private boolean completedByAnnotation() {
     int level = sat.decisionLevel();
     if (mustBeFixed == null
@@ -7745,6 +7786,11 @@ public final class LcgSolver implements ExternalPropagator {
       return false;
     }
     completionTested = level;
+    if (!allFixed(mustBeFixed)) {
+      // a printed variable need not be one of the store's variables (the Boolean b of
+      // bool2int(b, i) is printed while the store holds only i), so it is tested here
+      return false;
+    }
     for (int k = 0; k < store.size(); k++) {
       Var v = store.vars[k];
       if (v == null || v.singleton()) {
