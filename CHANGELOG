@@ -6596,6 +6596,31 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. With -Dorg.jacop.lp.restartSolves=true, the cut rounds of the
+   linear relaxation at restarts can use the bounds tightened at the root
+   level since the first solve, as SCIP separates again over the
+   presolved problem after a restart (T. Achterberg, Constraint Integer
+   Programming, PhD thesis, TU Berlin, 2007):
+   -Dorg.jacop.lp.restartBounds=true (off by default). The proving side
+   of the objective goes back to its first-solve bound, so the cuts can
+   move the LP bound below the objective cap, and the solve reads the
+   pool of aged-out rows. These cuts hold only under the root-level
+   bounds: when the search backtracks below the LP root level the
+   relaxation stops and its ground check skips them; proof logging
+   (--proof) does not use them. Statistics lpRestartBoundCuts,
+   lpRestartCutBound, lpRestartBoundsLost. -Dorg.jacop.lp.extraLimits
+   (3) sets how many pivot-limit hits drop the extra rows and cuts;
+   with zero-half cuts on TankAllocation1 under -f they were dropped on
+   8 of 9 instances, which left the restart relaxation without them.
+   At 600 s with -f on the 41 wide instances with LP cuts, total time is
+   5705 s for the base, 5054 s with extraLimits=1000000 (roster-shifts
+   s100_e20 proved in 3 s, base timeout) and 5046 s with restart bounds
+   too, 33 proved against 32; dual bounds of the 9 open ones improve on 6
+   (train 57764 -> 67043, pigment20a 1033 -> 1043, unit-commitment
+   1320705 -> 1335120). On TankAllocation1 (9) with zero-half: chemical
+   2667 -> 2459 (optimum 2296), 2000 1821 -> 1730, 1600 proved in 19 s
+   instead of 52 s.
+
 Version 4.11
 =============
 
