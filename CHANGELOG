@@ -6501,7 +6501,38 @@ Version 5.0 (unreleased)
    turns it off, =true posts it without lazy clause generation too, and
    -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
 
-361. The FlatZinc front end detects tilings of 0..n-1 by m arithmetic
+361. Large neighbourhood search under -f keeps to the variables that no
+   constraint defines when there are at least 3 of them, instead of 16
+   (item 290). Below 16 the neighbourhoods took every variable, which on
+   models with a few roots that define the rest, such as city-position
+   (8 and 12 roots), made each neighbourhood relax variables that the
+   fixed roots determine anyway. Found by bisecting a -f loss of the
+   second integration round (city-position city-5-06, 4 seeds: 26-42 s
+   before item 290, 66-98 s after). On the 10 wide instances with 3 to
+   15 roots, -f at 240 s, two seeds: city-position city-5-06 108/93 ->
+   48/29 s, city-7-04 proved in 107/126 s (before unproved at the
+   limit), fast-food ff58 47/28 -> 19/28 s, median-string p2_10_8-0
+   16/15 -> 11/12 s, the other six equal; total time 819 -> 409 s.
+   pattern-set-mining (1 and 2 roots) and atp-stage2 (2) still take
+   every variable.
+
+362. The core-guided phase of free search (-f) under lazy clause
+   generation probes the objective's own bound when its cores raise the
+   lower bound by about one each, as cores of two terms with large
+   domains do (a makespan and a tardiness that rise together). After 32,
+   64, 128... cores, if the cores' recent rate would need more than four
+   times as many cores again to meet the best solution, bounds of the
+   objective at doubling distances above the lower bound are assumed
+   with 100 conflicts each, and each one refuted becomes a clause. The
+   phase hands over to branch and bound once the probes leave less than
+   an eighth of the cores' gap; the probes' work is left out of the
+   phase's rates. MiniZinc Challenge 2021 ATSP instance5 is proved in
+   1.2 s instead of 2.3 s (1,978 cores of +1 before, 32 now); on the 13
+   of 187 wide optimisation instances where it fires, -f at 600 s takes
+   0.86 of the time with the same proofs (kitchen linear 305 -> 166 s).
+   -Djacop.lcg.coreObjectiveProbe=false turns it off.
+
+363. The FlatZinc front end detects tilings of 0..n-1 by m arithmetic
    progressions of k terms with pairwise distinct gaps (perfect rhythmic
    tilings, T. Johnson, "Tiling in my music", The Experimental Music
    Review, 1996; N. Alon, M. Debski, J. Grytczuk, J. Przybylo, "Perfect
@@ -6522,7 +6553,7 @@ Version 5.0 (unreleased)
    turns the detection off, -Dorg.jacop.fz.progressionTiling.search=false
    the search only.
 
-362. ElementVariableFast (MiniZinc element with a variable array) skips
+364. ElementVariableFast (MiniZinc element with a variable array) skips
    the calls woken by array positions the index can no longer select, and
    for a wake from a few selectable positions it checks residual supports
    (the changed positions, the bounds of the value and, for values spanning
@@ -6535,8 +6566,11 @@ Version 5.0 (unreleased)
    same instances are proved (56 by default, 62 under -f, 600 s) and the
    total time is unchanged (1.005 and 1.012, the same search under the
    virtual clock).
+   A list wake then rechecks only the values whose residue is a changed
+   position: 11 % more nodes per second on TelecomScheduling-B-10, the
+   same pruning.
 
-363. Free search (-f) of a resource-constrained project scheduling model
+365. Free search (-f) of a resource-constrained project scheduling model
    (a makespan over CumulativeBasic resources with fixed durations,
    demands and capacities, and precedence rows) runs a project schedule
    heuristic, org.jacop.search.ls.ProjectSchedule: the serial schedule
@@ -6565,7 +6599,7 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-364. Symmetry breaking posts value precedence in models whose own
+366. Symmetry breaking posts value precedence in models whose own
    lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
    hid that their values are interchangeable. Each such constraint
    X <=lex sigma(X) must compare a prefix of one common order, with sigma
@@ -6578,7 +6612,7 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
-365. Free search (-f) of an optimisation model without a search
+367. Free search (-f) of an optimisation model without a search
    annotation, after slow lazy clause generation gave way without a
    solution, takes turns until its first solution with runs that fix the
    search variables in the model's order, least value first
@@ -6591,6 +6625,36 @@ Version 5.0 (unreleased)
    before; on 26 XCSP 2025/2026 instances where it can fire, two more
    with a solution and 7 better against 3 worse (seed spread); neutral on
    the wide set.
+
+368. The FlatZinc front end posts the reified comparisons of one variable
+   with constants (int_le_reif, int_lt_reif with a constant on either
+   side) and their half-reifications (int_le_imp, int_lt_imp) as one
+   ChannelOrder per variable with two or more of them, in place of one
+   Reified or Implies each, as presolve rule 5 (OrderLiterals) already
+   did under --presolve on. ChannelOrder gets implied items
+   (b => x <= t, b => x > t), a violation for local search and a
+   pseudo-Boolean encoding for proofs; the linear relaxation and the
+   dominance nogoods read it as the reifications it replaces. On the
+   41 wide instances where it fires (2,596 channels for 21,321
+   constraints) at 600 s the same instances are proved; the proved
+   instances take 0.976 of the time by default and 0.736 under -f
+   (2026_kitchen 288 -> 174 s, neighbours-new-6 152 -> 98 s), total time
+   0.997 and 0.982. -Dorg.jacop.fz.orderChannels=false keeps the
+   reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
+   half-reifications.
+
+369. ArgMax and ArgMin bound the values at positions that the index can
+   no longer take: such a position may not reach the extreme over the
+   positions the index can still take (strictly for positions after
+   them, since the first extreme wins). ArgMax and ArgMin now reach
+   domain consistency in the consistency checker (bounds(Z) before), and
+   so does ArgMaxMonotone, which the FlatZinc front end posts for
+   maximum_arg over monotone functions of shared variables; the checker
+   also gains XlteqY, XneqY and BinaryBitTable cases at domain
+   consistency. The LCG explanations are the existing ones. The upTo5sec
+   arg models give the same answers and node counts; the one wide
+   instance with maximum_arg (tower) fails 10 % less often (30155 ->
+   27287) at the same time.
 
 Version 4.11
 =============

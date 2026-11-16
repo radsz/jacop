@@ -182,14 +182,40 @@ public class ArgMin extends AbstractArgMinMax implements Copyable<ArgMin> {
     }
   }
 
+  /*
+   * Every position after the first one of the index is at least lb, the smallest minimum over the
+   * positions left in the index. A position k that is not in the index cannot be the first
+   * minimum, so some position j of the index is at most x[k] before k, or below it after k: x[k]
+   * is at least the smallest minimum of the index positions before k, or one more than the
+   * smallest after k.
+   */
   private void pruneWhenExtremeIndexNotSingletonMin(Store store, int lb) {
+    int n = list.length;
     int im = extremeIndex.min();
-    for (int i = 0; i < list.length; i++) {
+    long[] after = new long[n + 1];
+    after[n] = Long.MAX_VALUE;
+    for (int j = n - 1; j >= 0; j--) {
+      after[j] = after[j + 1];
+      if (extremeIndex.domain.contains(j + 1 + indexOffset)) {
+        after[j] = Math.min(after[j], list[j].min());
+      }
+    }
+    long before = Long.MAX_VALUE;
+    for (int i = 0; i < n; i++) {
+      IntVar v = list[i];
       int cp = i + 1 + indexOffset;
-      if (cp < im) {
-        list[i].domain.inMin(store.level, list[i], lb + 1);
-      } else if (cp > im) {
-        list[i].domain.inMin(store.level, list[i], lb);
+      if (extremeIndex.domain.contains(cp)) {
+        if (cp > im) {
+          v.domain.inMin(store.level, v, lb);
+        }
+        before = Math.min(before, v.min());
+      } else {
+        long bound =
+            Math.min(before, after[i + 1] == Long.MAX_VALUE ? Long.MAX_VALUE : after[i + 1] + 1);
+        if (bound > v.max()) {
+          throw Store.failException;
+        }
+        v.domain.inMin(store.level, v, (int) Math.max(bound, cp < im ? lb + 1L : lb));
       }
     }
   }

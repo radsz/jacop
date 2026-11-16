@@ -385,6 +385,7 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
@@ -641,6 +642,7 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
@@ -893,6 +895,7 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
@@ -1143,6 +1146,7 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
