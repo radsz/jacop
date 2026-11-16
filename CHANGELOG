@@ -7004,6 +7004,28 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. The FlatZinc front end keeps large tables in memory once and builds
+   less for them, so the XCSP 2026 models with large tables no longer run
+   out of memory at 6 GB. Short tables with equal rows share one
+   HybridTable index (CrosswordDesign posts 96 of them, 4 distinct);
+   parameter arrays of 1024 or more entries that MiniZinc writes several
+   times are kept once; the detectors that scan constraint arguments no
+   longer turn parameter arrays into constant variables (84,000 on
+   CrosswordDesign-09, all LCG variables); the symmetry detection releases
+   its caches after it runs; table variable elimination reads the rows of
+   a table only when it joins it, and joins at most a million rows
+   (org.jacop.fz.tableElimination.joinInput); table posting copies only
+   the rows that fit the domains; and the parser no longer keeps every
+   token of an array literal alive. The new mznlib predicates
+   fzn_xcsp_table_rows, fzn_xcsp_short_table_rows and
+   fzn_xcsp_negative_table_rows take a table as a one-dimensional array of
+   rows, which MiniZinc writes once. Live heap: CrosswordDesign-12 7.0 GB
+   to 2.5 GB, Steiner3-11 5.4 GB to 1.2 GB, Inglenook-100 out of memory
+   at 10 GB to solved in 30 s at 2.9 GB. Over the 30 held-back XCSP 2026
+   instances at 600 s and 6 GB, 24 now find solutions and 5 more run to
+   the limit (before: none of them); the 2026 CSP replay score goes from
+   116 to 130 (fifth to third). The default search is unchanged.
+
 Version 4.11
 =============
 
