@@ -961,6 +961,67 @@ class SymmetryBreakingFlatzincTest {
     assertEquals(3, objective(on, "colours"), on);
   }
 
+  /**
+   * A bin packing that minimizes the bins used, flattened as MiniZinc flattens {@code bin[i] <=
+   * bins} and {@code b > bins -> load[b] = 0}: {@code bool_clause([r1, r2], [])} with {@code
+   * int_eq_imp(load[b], 0, r1)} and {@code int_le_imp(c, bins, r2)}, here with c = b + shift.
+   */
+  private static String emptiedBins(int shift) {
+    int[] sizes = {5, 5, 4, 4, 3, 3};
+    int bins = 4;
+    StringBuilder fzn = new StringBuilder("var 1..4: bins :: output_var;\n");
+    for (int b = 1; b <= bins; b++) {
+      fzn.append("var 0..9: l").append(b).append(";\n");
+    }
+    for (int i = 0; i < sizes.length; i++) {
+      fzn.append("var 1..4: x").append(i).append(" :: output_var;\n");
+    }
+    for (int b = 2; b <= bins; b++) {
+      fzn.append("var bool: e").append(b).append(";\nvar bool: a").append(b).append(";\n");
+    }
+    fzn.append(
+        "constraint jacop_bin_packing([x0,x1,x2,x3,x4,x5],[l1,l2,l3,l4],[5,5,4,4,3,3],1);\n");
+    for (int i = 0; i < sizes.length; i++) {
+      fzn.append("constraint int_lin_le([1,-1],[x").append(i).append(",bins],0);\n");
+    }
+    for (int b = 2; b <= bins; b++) {
+      fzn.append("constraint bool_clause([e").append(b).append(",a").append(b).append("],[]);\n");
+      fzn.append("constraint int_eq_imp(l").append(b).append(",0,e").append(b).append(");\n");
+      fzn.append("constraint int_le_imp(")
+          .append(b + shift)
+          .append(",bins,a")
+          .append(b)
+          .append(");\n");
+    }
+    fzn.append("solve minimize bins;\n");
+    return fzn.toString();
+  }
+
+  @Test
+  void binsEmptiedAboveTheObjectiveKeepValuePrecedence() throws IOException {
+    // z < b -> load[b] = 0 bounds the bins used like x <= z: relabelling the bins by first use
+    // leaves every bin above the largest one used empty, so the bins get a value precedence chain
+    for (String lcg : new String[] {"on", "off"}) {
+      String on =
+          FlatzincTestRunner.run(
+              tmp, emptiedBins(0), "--search-statistics", "--presolve", "check", "--lcg", lcg);
+      assertEquals(1, precedences(on), on);
+      assertEquals(3, objective(on, "bins"), on);
+    }
+  }
+
+  @Test
+  void binsEmptiedBelowTheirNumberStayDistinct() throws IOException {
+    // z < b + 1 -> load[b] = 0 also empties bin b when z = b, so bin b is not like the bins below
+    // it
+    String on =
+        FlatzincTestRunner.run(tmp, emptiedBins(1), "--search-statistics", "--presolve", "check");
+    assertEquals(0, precedences(on), on);
+    // bin b holds items only when bins > b, bin 4 never: with 3 bins only bins 1 and 2 hold the
+    // items (24 > 2 * 9), with 4 bins bins 1 to 3 do
+    assertEquals(4, objective(on, "bins"), on);
+  }
+
   @Test
   void haplotypesChosenByIndexAreInterchangeable() throws IOException {
     // pure parsimony haplotyping: three genotypes, each explained by two of k binary haplotypes

@@ -6596,6 +6596,24 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. Symmetry breaking posts a value precedence over the bins of a bin
+   packing that minimizes the bins used also when the model empties the
+   bins above the objective (b > bins -> load[b] = 0, which MiniZinc
+   flattens into bool_clause, int_eq_imp and int_le_imp). Like
+   bin[i] <= bins, these constraints are left out of the value graph:
+   relabelling the bins in the order of their first use (Y. C. Law and
+   J. H. M. Lee, Global constraints for integer and set value precedence,
+   CP 2004) never raises the largest bin used, so the bins above the
+   objective stay empty and an optimal solution is kept. Before, the
+   bin numbers looked different and a search at the optimum, where every
+   bin is full, had to tell apart packings that only number the bins
+   differently. On the Falkenauer triplets of the OR-Library
+   (E. Falkenauer, A hybrid grouping genetic algorithm for bin packing,
+   Journal of Heuristics 2, 1996; binpack5-8, t60-t501) all 8 instances
+   are now proved optimal in 0.2-6 s, where 5 had no optimal packing in
+   240 s (t501_10 no solution at all). It fires on none of the 240 wide
+   instances. -Dorg.jacop.fz.symmetryEmptiedBins=false turns it off.
+
 Version 4.11
 =============
 

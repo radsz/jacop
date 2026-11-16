@@ -143,6 +143,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
   static final boolean ENCODED = !FALSE.equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
 
   /**
+   * Whether the constraints that empty the bins above a minimized number of bins ({@link
+   * #emptyAbove}) are left out of the value graph with that bound
+   * (org.jacop.fz.symmetryEmptiedBins, default true).
+   */
+  static final boolean EMPTIED_BINS =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetryEmptiedBins"));
+
+  /**
    * Whether the elements of set variables that only set operations, comparisons and cardinalities
    * constrain may be renamed by symmetries, together in all those sets
    * (org.jacop.fz.symmetrySetValues, default true). Without it each element keeps its value as its
@@ -1630,11 +1638,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     List<Space> spaces = new ArrayList<>();
     // a minimized objective that only bounds the variables of one space from above
-    Set<IntVar> bounded = minimize && objective != null ? upperBounded(items, objective) : null;
+    Set<Item> emptied =
+        EMPTIED_BINS && minimize && objective != null ? emptyAbove(items, objective) : Set.of();
+    Set<IntVar> bounded =
+        minimize && objective != null ? upperBounded(items, objective, emptied) : null;
     if (bounded != null) {
       List<Item> kept = new ArrayList<>();
       for (Item item : items) {
-        if (!bounds(item, objective, new ArrayList<>())) {
+        if (!bounds(item, objective, new ArrayList<>()) && !emptied.contains(item)) {
           kept.add(item);
         }
       }
@@ -1659,14 +1670,18 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   /**
    * The variables that the objective bounds from above, when it appears only in constraints {@code
-   * x <= objective} or {@code objective = max(xs)}, or null.
+   * x <= objective} or {@code objective = max(xs)}, or in the constraints of {@link #emptyAbove}
+   * (given as emptied), or null.
    */
-  private static Set<IntVar> upperBounded(List<Item> items, IntVar objective) {
+  private static Set<IntVar> upperBounded(List<Item> items, IntVar objective, Set<Item> emptied) {
     Set<IntVar> bounded = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Item item : items) {
       List<IntVar> xs = new ArrayList<>();
       if (bounds(item, objective, xs)) {
         bounded.addAll(xs);
+        continue;
+      }
+      if (emptied.contains(item)) {
         continue;
       }
       for (Atom[] arg : item.args()) {
@@ -1678,6 +1693,103 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     return bounded.isEmpty() ? null : bounded;
+  }
+
+  /**
+   * The constraints that empty the bins above the objective in a bin packing that minimizes the
+   * bins used: {@code bool_clause([r1, r2], [])} with {@code r1 -> load[b] = 0} ({@code int_eq_imp}
+   * or {@code int_eq_reif}) and {@code r2 -> c <= z} ({@code int_le_imp} or {@code int_le_reif}),
+   * where {@code load[b]} is the load of bin {@code b >= c} of a {@code jacop_bin_packing} and r1,
+   * r2 appear nowhere else; that is, {@code z < c -> load[b] = 0}, as MiniZinc flattens {@code b >
+   * bins -> load[b] = 0} (OR-Library binpack, Falkenauer 1996).
+   *
+   * <p>Like {@code bin[i] <= z} they bound the bins used by the objective, so they are left out of
+   * the value graph with it. Relabelling the bins of a solution in the order of their first use
+   * keeps every bin it empties empty, maps the used ones to 1..k with k at most the largest bin
+   * used, so at most z, and then a bin {@code b >= c > z >= k} is unused and its load is 0: the
+   * relabelled solution satisfies them, and the value precedence over the bins keeps an optimal
+   * solution. Without it the bins of the model are not interchangeable and a search at the optimum,
+   * where every bin is full, has to tell apart the packings that only number the bins differently.
+   *
+   * @return the three constraints of each such clause, or an empty set.
+   */
+  private static Set<Item> emptyAbove(List<Item> items, IntVar z) {
+    Map<IntVar, Integer> loadBin = new IdentityHashMap<>();
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if (item.name().equals("jacop_bin_packing") && args.length == 4 && args[3][0].isInt()) {
+        int min = args[3][0].value();
+        for (int j = 0; j < args[1].length; j++) {
+          if (args[1][j].aVar() != null) {
+            loadBin.put(args[1][j].aVar(), min + j);
+          }
+        }
+      }
+    }
+    if (loadBin.isEmpty()) {
+      return Set.of();
+    }
+    Map<IntVar, Integer> uses = new IdentityHashMap<>();
+    Map<IntVar, Item> emptyLiteral = new IdentityHashMap<>();
+    Map<IntVar, Item> aboveLiteral = new IdentityHashMap<>();
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      for (Atom[] arg : args) {
+        for (Atom a : arg) {
+          if (a.aVar() != null) {
+            uses.merge(a.aVar(), 1, Integer::sum);
+          }
+        }
+      }
+      if (args.length != 3 || args[2][0].aVar() == null) {
+        continue;
+      }
+      switch (item.name()) {
+        case "int_eq_imp", "int_eq_reif" -> {
+          if (args[0][0].aVar() != null
+              && loadBin.containsKey(args[0][0].aVar())
+              && args[1][0].isInt()
+              && args[1][0].value() == 0) {
+            emptyLiteral.put(args[2][0].aVar(), item);
+          }
+        }
+        case "int_le_imp", "int_le_reif" -> {
+          if (args[0][0].isInt() && args[1][0].aVar() == z) {
+            aboveLiteral.put(args[2][0].aVar(), item);
+          }
+        }
+        default -> {
+          // not a literal of such a clause
+        }
+      }
+    }
+    Set<Item> emptied = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if (!item.name().equals("bool_clause")
+          || args.length != 2
+          || args[0].length != 2
+          || args[1].length != 0) {
+        continue;
+      }
+      for (int k = 0; k < 2; k++) {
+        IntVar r1 = args[0][k].aVar();
+        IntVar r2 = args[0][1 - k].aVar();
+        Item empty = r1 == null ? null : emptyLiteral.get(r1);
+        Item above = r2 == null ? null : aboveLiteral.get(r2);
+        if (empty != null
+            && above != null
+            && uses.get(r1) == 2
+            && uses.get(r2) == 2
+            && above.args()[0][0].value() <= loadBin.get(empty.args()[0][0].aVar())) {
+          emptied.add(item);
+          emptied.add(empty);
+          emptied.add(above);
+          break;
+        }
+      }
+    }
+    return emptied;
   }
 
   /**
