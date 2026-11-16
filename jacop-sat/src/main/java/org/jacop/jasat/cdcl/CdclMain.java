@@ -81,7 +81,7 @@ public final class CdclMain {
     boolean walk = true;
     long seed = 0;
     int elimInterval = 5000;
-    boolean vmtf = true;
+    boolean vmtf = false;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);

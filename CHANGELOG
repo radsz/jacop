@@ -6961,6 +6961,22 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+388. JaSAT can decide by a VMTF queue (variable move-to-front) in focused
+   mode, as CaDiCaL and Kissat do, keeping VSIDS for stable mode, each
+   mode bumping only its own heuristic: CdclSolver.setVmtf(true), CdclMain
+   --vmtf 1; off by default, and ignored under an external propagator
+   (LCG). With one VSIDS heap for both modes, the stable phases leave
+   scores that steer the focused phases. L. Ryan, Efficient algorithms
+   for clause-learning SAT solvers, MSc thesis, Simon Fraser University,
+   2004; A. Biere, A. Froehlich, Evaluating CDCL variable scoring schemes,
+   SAT 2015. Of the 90 SAT Competition 2024/25 instances of the SAT gap
+   screen at 240 s both versions solve 30, five each that the other does
+   not; at 600 s VMTF proves hardware-verification in 24 s and sgen in
+   97 s (both unsolved before) and solves crafted-cec 318 -> 130 s,
+   ensemble-computation 380 -> 8 s, pythagorean-triples 353 -> 77 s,
+   but loses edge-matching, heule-nol, scheduling and waerden (9 to 93 s
+   before) and is slower on most UNSAT instances, hence off by default.
+
 Version 4.11
 =============
 
