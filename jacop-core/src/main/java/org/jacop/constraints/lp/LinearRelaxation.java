@@ -49,6 +49,7 @@ import java.util.stream.IntStream;
 import org.jacop.api.Copyable;
 import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.LinearForms;
 import org.jacop.constraints.Linearizations;
@@ -372,6 +373,12 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: the clique rows in place of the rows of pairs of conflicting 0/1 literals. */
   public int pairCliques;
+
+  /**
+   * Statistics: the rows over the terms of the objective for which the sparse simplex was taken,
+   * since they did not fit the dense tableau; 0 when that did not happen.
+   */
+  public int nearRows;
 
   /**
    * The value encodings that went ahead of the other extra rows, which did not all fit the share of
@@ -1362,6 +1369,7 @@ public class LinearRelaxation extends Constraint
       return null;
     }
     List<LinearForm> further = new ArrayList<>();
+    int nearRows = 0;
     // the further rows are tried at the first solve over every column; on the sparse simplex
     // chosen by size at most twice the given rows and org.jacop.lp.sparseRows more, so that the
     // trial stays in proportion to the relaxation (a trial over every candidate of a large model
@@ -1403,9 +1411,30 @@ public class LinearRelaxation extends Constraint
           share = share == Long.MAX_VALUE ? share : share + enc.size();
         }
       }
-      fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
+      boolean fitted = fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
+      if (!fitted && nearRowsOn && auto && simplex == Simplex.DENSE) {
+        // the rows over the terms of the objective do not fit the dense tableau: the sparse
+        // simplex takes them all, as many as they are. A model stated in clauses has few rows of
+        // its own, and their share left out the rows that bound the objective (CSPLib warehouses
+        // cap131: 2 rows of its own, and the clauses b[i,j] -> open[j] with the element costs as
+        // value encodings, 3,826 rows, raise the root bound from 626,300 to 914,788, opt 915,059)
+        // at most as many as a sparse relaxation in search has rows: pattern-set-mining-k1
+        // ionosphere has 110,602 such rows, whose trial took 15 s and did not raise the bound
+        Set<LinearForm> near = nearObjective(localForms, sorted, triedSet, objective);
+        List<LinearForm> sparse = new ArrayList<>();
+        long nearShare = Math.max(share, (long) first + near.size());
+        fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse);
+        if (localForms.size() + near.size() <= sparseMaxRows
+            && containsAll(sparse, near)
+            && !containsAll(further, near)) {
+          further = sparse;
+          simplex = Simplex.SPARSE;
+          nearRows = near.size();
+        }
+      }
     }
     LinearRelaxation r = new LinearRelaxation(localForms, further, objective, maximize, simplex);
+    r.nearRows = nearRows;
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.large = large && simplex == Simplex.SPARSE;
     r.keepEncodings = exempt > 0;
@@ -1658,6 +1687,18 @@ public class LinearRelaxation extends Constraint
       constraints.addAll(store.valueWatchers(v));
     }
     constraints.addAll(store.watchedLiteralConstraints());
+    // the readers of reifications (value links, encodings) see an order channel as its items
+    if (constraints.stream().anyMatch(c -> c.getClass() == ChannelOrder.class)) {
+      Set<Constraint> expanded = new LinkedHashSet<>();
+      for (Constraint c : constraints) {
+        if (c.getClass() == ChannelOrder.class) {
+          expanded.addAll(((ChannelOrder) c).reifications());
+        } else {
+          expanded.add(c);
+        }
+      }
+      return expanded;
+    }
     return constraints;
   }
 
@@ -1716,12 +1757,66 @@ public class LinearRelaxation extends Constraint
     return new Certificate(f, rows, multipliers);
   }
 
+  private static boolean containsAll(List<LinearForm> rows, Set<LinearForm> part) {
+    Set<LinearForm> in = Collections.newSetFromMap(new IdentityHashMap<>());
+    in.addAll(rows);
+    return in.containsAll(part);
+  }
+
+  /**
+   * Returns the candidates, not among the tried ones, at distance at most 1 from the objective (see
+   * {@link #byDistance}): the rows over the objective and over the variables of those rows, and the
+   * rows over no other columns than these and the given rows.
+   */
+  static Set<LinearForm> nearObjective(
+      List<LinearForm> forms,
+      List<LinearForm> candidates,
+      Set<LinearForm> tried,
+      IntVar objective) {
+    int[] distance = distances(forms, candidates, objective);
+    Set<LinearForm> near = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<IntVar> columns = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (LinearForm f : forms) {
+      columns.addAll(Arrays.asList(f.vars()));
+    }
+    for (int i = 0; i < candidates.size(); i++) {
+      if (distance[i] <= 1 && !tried.contains(candidates.get(i))) {
+        near.add(candidates.get(i));
+        columns.addAll(Arrays.asList(candidates.get(i).vars()));
+      }
+    }
+    // and the rows over their columns only, such as the exactly-one rows of the value encodings,
+    // whose Booleans the rows over the terms of the objective bound one by one
+    for (LinearForm f : candidates) {
+      if (!near.contains(f) && !tried.contains(f) && columns.containsAll(Arrays.asList(f.vars()))) {
+        near.add(f);
+      }
+    }
+    return near;
+  }
+
   /**
    * Returns the candidates ordered by their distance from the objective (stable): a row over the
    * objective has distance 0, a row over a variable of a row at distance d has distance d + 1,
    * through the given rows and the candidates; rows not connected to the objective come last.
    */
   static List<LinearForm> byDistance(
+      List<LinearForm> forms, List<LinearForm> candidates, IntVar objective) {
+    int[] distance = distances(forms, candidates, objective);
+    Integer[] order = new Integer[candidates.size()];
+    for (int i = 0; i < order.length; i++) {
+      order[i] = i;
+    }
+    Arrays.sort(order, Comparator.comparingInt(i -> distance[i]));
+    List<LinearForm> sorted = new ArrayList<>(order.length);
+    for (int i : order) {
+      sorted.add(candidates.get(i));
+    }
+    return sorted;
+  }
+
+  // the distances of the candidates from the objective (byDistance)
+  private static int[] distances(
       List<LinearForm> forms, List<LinearForm> candidates, IntVar objective) {
     List<LinearForm> all = new ArrayList<>(forms.size() + candidates.size());
     all.addAll(forms);
@@ -1756,18 +1851,13 @@ public class LinearRelaxation extends Constraint
         }
       }
     }
-    Integer[] order = new Integer[candidates.size()];
-    for (int i = 0; i < order.length; i++) {
-      order[i] = i;
-    }
-    int offset = forms.size();
-    Arrays.sort(order, Comparator.comparingInt(i -> distance[offset + i]));
-    List<LinearForm> sorted = new ArrayList<>(order.length);
-    for (int i : order) {
-      sorted.add(candidates.get(i));
-    }
-    return sorted;
+    return Arrays.copyOfRange(distance, forms.size(), all.size());
   }
+
+  // the rows over the terms of the objective that do not fit the dense tableau are all taken by
+  // the sparse simplex (not final: a test hook)
+  static boolean nearRowsOn =
+      !Boolean.FALSE.toString().equals(System.getProperty("org.jacop.lp.nearRows"));
 
   // the dense simplex is chosen for relaxations below this many rows, the sparse one from it on,
   // when the dense one is asked for; -1 keeps the dense one whatever the size
