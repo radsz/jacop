@@ -150,6 +150,7 @@ import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.SymmetricGCC;
+import org.jacop.constraints.TableCover;
 import org.jacop.constraints.UsedBy;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.ViolationMeasure;
@@ -185,6 +186,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
@@ -10295,6 +10297,154 @@ class SingleConstraintTest extends TestHelper {
     cb.domain.in(child.level, cb, 0, 0);
     assertThat(child.consistency()).isTrue();
     assertThat(cx.max()).isEqualTo(1);
+  }
+
+  /**
+   * An exact TableCover requires the values that tuples cover in the range of the domains, but a
+   * value that no variable can take (a hole in that range) cannot be taken: the all different over
+   * {0, 2} takes both values and covers both groups, yet the tuple {1} of the first group made
+   * value 1 required, so the constraint failed at once.
+   */
+  @Test
+  void tableCoverExactIgnoresValuesOutsideTheDomains() {
+    Store store = new Store();
+    IntervalDomain d = new IntervalDomain(0, 0);
+    d.unionAdapt(2, 2);
+    IntVar x0 = new IntVar(store, "x0", d.cloneLight());
+    IntVar x1 = new IntVar(store, "x1", d.cloneLight());
+    store.impose(
+        new TableCover(
+            new IntVar[][] {{x0}, {x1}}, new int[][][] {{{0}, {1}, {2}}, {{0}, {2}}}, true));
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    assertThat(
+            search.labeling(
+                store, new SimpleSelect<>(new IntVar[] {x0, x1}, null, new IndomainMin<>())))
+        .isTrue();
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(2);
+  }
+
+  /**
+   * Conditional did not include its nested constraints in the store, so a nested CountVar never
+   * created its backtrackable counts and threw a NullPointerException once its condition was 1.
+   */
+  @Test
+  void conditionalIncludesNestedCountVar() {
+    Store store = new Store();
+    IntVar[] list = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar counter = new IntVar(store, "n", 2, 2);
+    IntVar value = new IntVar(store, "v", 1, 1);
+    IntVar b0 = new IntVar(store, "b0", 1, 1);
+    IntVar b1 = new IntVar(store, "b1", 1, 1);
+    store.impose(
+        new Conditional(
+            new IntVar[] {b0, b1},
+            new PrimitiveConstraint[] {new CountVar(list, counter, value), new XeqC(list[0], 0)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(list[0].singleton(1)).isTrue();
+    assertThat(list[1].singleton(1)).isTrue();
+  }
+
+  /**
+   * Knapsack keeps the items changed at a level in a list of that level and applied only the list
+   * of the level of its consistency. When the store raised its level before the first consistency
+   * (as it does once Alldistinct is imposed), the quantities fixed after impose at level 0 never
+   * reached its tree, and the stale tree removed the only solution.
+   */
+  @Test
+  void knapsackSeesItemsChangedBeforeARaisedLevel() {
+    Store store = new Store();
+    IntervalDomain d0 = new IntervalDomain(0, 0);
+    d0.unionAdapt(2, 2);
+    IntVar[] q = {new IntVar(store, "q0", d0), new IntVar(store, "q1", 1, 2)};
+    IntVar capacity = new IntVar(store, "c", 2, 10);
+    IntVar profit = new IntVar(store, "p", 0, 10);
+    store.impose(new Knapsack(new int[] {1, 1}, new int[] {1, 2}, q, capacity, profit));
+    q[0].domain.in(store.level, q[0], 2, 2);
+    q[1].domain.in(store.level, q[1], 2, 2);
+    capacity.domain.in(store.level, capacity, 6, 6);
+    profit.domain.in(store.level, profit, 4, 4);
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    assertThat(
+            search.labeling(
+                store,
+                new SimpleSelect<>(
+                    new IntVar[] {q[0], q[1], capacity, profit}, null, new IndomainMin<>())))
+        .isTrue();
+  }
+
+  /**
+   * Diffn skipped a rectangle fixed at an earlier level as already checked. When the store raised
+   * its level before the first consistency (as it does once Alldistinct is imposed), rectangles
+   * fixed after impose at level 0 were first seen at level 1, all skipped, and two overlapping ones
+   * were accepted.
+   */
+  @Test
+  void diffnChecksRectanglesFixedBeforeARaisedLevel() {
+    Store store = new Store();
+    int[] values = {2, 1, 1, 1, 2, 0, 1, 2};
+    IntVar[] x = new IntVar[values.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+    }
+    store.impose(
+        new Diffn(new IntVar[][] {{x[0], x[1], x[2], x[3]}, {x[4], x[5], x[6], x[7]}}, true));
+    for (int i = 0; i < x.length; i++) {
+      x[i].domain.in(store.level, x[i], values[i], values[i]);
+    }
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isFalse();
+  }
+
+  @Test
+  void diff2ChecksRectanglesFixedBeforeARaisedLevel() {
+    for (String kind : new String[] {"Diff2", "Disjoint"}) {
+      Store store = new Store();
+      IntVar[][] r = overlappingRectanglesVars(store);
+      store.impose(kind.equals("Diff2") ? new Diff2(r) : new Disjoint(r));
+      fixOverlappingRectangles(store, r);
+      store.raiseLevelBeforeConsistency = true;
+      assertThat(store.consistency()).as(kind).isFalse();
+    }
+  }
+
+  @Test
+  void diffnKChecksBoxesFixedBeforeARaisedLevel() {
+    Store store = new Store();
+    IntVar[][] r = overlappingRectanglesVars(store);
+    IntVar[][] origin = {{r[0][0], r[0][1]}, {r[1][0], r[1][1]}};
+    IntVar[][] length = {{r[0][2], r[0][3]}, {r[1][2], r[1][3]}};
+    store.impose(new DiffnK(origin, length, true));
+    fixOverlappingRectangles(store, r);
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isFalse();
+  }
+
+  /** Two rectangles [x, y, width, height] over 0..2, fixed by fixOverlappingRectangles. */
+  private static IntVar[][] overlappingRectanglesVars(Store store) {
+    IntVar[][] r = new IntVar[2][4];
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j] = new IntVar(store, "r" + i + "_" + j, 0, 2);
+      }
+    }
+    return r;
+  }
+
+  /** Fixes the rectangles to (2, 1, 1, 1) and (2, 0, 1, 2), which overlap at (2, 1). */
+  private static void fixOverlappingRectangles(Store store, IntVar[][] r) {
+    int[][] values = {{2, 1, 1, 1}, {2, 0, 1, 2}};
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j].domain.in(store.level, r[i][j], values[i][j], values[i][j]);
+      }
+    }
   }
 
   private static int root(int[] parent, int v) {
