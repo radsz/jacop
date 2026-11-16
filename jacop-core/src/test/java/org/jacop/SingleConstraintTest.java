@@ -466,6 +466,38 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  /**
+   * An element with its index fixed and a reification or an implication with its Boolean fixed
+   * during search rewrite themselves to an equality and to the nested constraint; the solutions
+   * stay those of the original constraints.
+   */
+  @Test
+  void testRewritingDuringSearchKeepsSolutions() {
+    Random random = new Random(20261115);
+    for (int trial = 0; trial < 200; trial++) {
+      Store store = new Store();
+      IntVar[] v = new IntVar[7];
+      v[0] = new IntVar(store, "i", 1, 3);
+      for (int k = 1; k <= 4; k++) {
+        v[k] = new IntVar(store, "x" + k, 0, 2 + random.nextInt(2));
+      }
+      v[5] = new IntVar(store, "b", 0, 1);
+      v[6] = new IntVar(store, "c", 0, 1);
+      store.impose(new ElementVariableFast(v[0], new IntVar[] {v[1], v[2], v[3]}, v[4]));
+      store.impose(new Reified(new XlteqY(v[1], v[2]), v[5]));
+      store.impose(new Implies(v[6], new XneqY(v[2], v[3])));
+      long expected =
+          bruteForce(
+                  v,
+                  a ->
+                      a[4] == a[a[0]]
+                          && (a[5] == 1) == (a[1] <= a[2])
+                          && (a[6] == 0 || a[2] != a[3]))
+              .size();
+      assertThat((long) countSolutions(store, v, random)).as("trial " + trial).isEqualTo(expected);
+    }
+  }
+
   @Test
   void testInvalidSimpleTable() {
 

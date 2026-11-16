@@ -7024,7 +7024,25 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
-391. The FlatZinc front end posts the sums of element constraints indexed
+391. Constraints rewrite themselves to simpler ones during search, as
+   Gecode's GECODE_REWRITE does (C. Schulte, G. Tack, M. Z. Lagerkvist,
+   Modeling and Programming with Gecode, propagator rewriting): an
+   ElementVariableFast whose index is fixed becomes XeqY, so changes of
+   the other list variables no longer wake it, and a Reified, Implies or
+   ImpliesNot whose Boolean variable is fixed becomes its nested
+   constraint (or its negation), without the entailment checks at every
+   call. The simpler constraint lives until the store backtracks below
+   the level of the rewriting; lazy clause generation explains its
+   prunings and failures with the original constraint. On the 83 wide
+   set instances where they take most propagation time, total time is
+   unchanged at 600 s (-f 1.016 over two rounds, inside the 4 % noise
+   between base rounds) with the same instances solved, and -f finds
+   better objectives on celar graph11 (3080 vs 4450-14210),
+   multi-agent-graph-coverage n75 and orthorio challenge_12.
+   -Dorg.jacop.rewrite=false turns it off
+   (org.jacop.rewrite.element and org.jacop.rewrite.reified per kind).
+
+392. The FlatZinc front end posts the sums of element constraints indexed
    by an all_different list: when y[k] = c[x[k]] over one constant array c
    and the x[k] are all different over the union U of their domains, the
    sum of the y[k] is fixed (a permutation of U) or bounded by the sums of
@@ -7042,7 +7060,7 @@ Version 5.0 (unreleased)
    12 of the 240 wide instances. -Dorg.jacop.fz.permutationElementSums=false
    turns them off.
 
-392. Local search detects a permutation flow shop in the store (sequence
+393. Local search detects a permutation flow shop in the store (sequence
    positions in an all different constraint, tables giving each machine's
    processing time of the job at a position, precedence rows s + d <= t
    along machines and positions, the makespan as the cost) and runs the
@@ -7060,7 +7078,7 @@ Version 5.0 (unreleased)
    (ta101 12806 -> 11368, ta106 12892 -> 11306) and
    the total time goes from 13971 s to 11097 s.
 
-393. The LP relaxation moves the clause rows that LCG hands it to the
+394. The LP relaxation moves the clause rows that LCG hands it to the
    sparse simplex when they make the dense tableau too large to search
    with. On set covering (OR-Library scp, one objective row and a few
    hundred covering clauses over thousands of columns) the 311 x 3,312
@@ -7080,7 +7098,7 @@ Version 5.0 (unreleased)
    fires on none of the 240 wide instances. -Dorg.jacop.lp.extraSparse=false
    turns it off.
 
-394. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
+395. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
    watch-list entry back to the same place while every entry before it
    stayed where it was, and a conflict leaves the rest of the list as it
    is instead of copying it onto itself. A visit that only checks the
@@ -7091,7 +7109,7 @@ Version 5.0 (unreleased)
    instances by default, with total time on them 0.971 by default and
    0.972 under -f.
 
-395. A satisfaction model without value encodings, such as a pure 0/1
+396. A satisfaction model without value encodings, such as a pure 0/1
    (pseudo-Boolean) model, now gets a root refutation LP too. Before,
    LinearRelaxation.refutation() needed value encodings, and the main
    relaxation never ran cut rounds without an objective. The new LP takes
