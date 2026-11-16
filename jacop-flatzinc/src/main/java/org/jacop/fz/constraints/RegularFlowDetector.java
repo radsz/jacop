@@ -73,9 +73,9 @@ import org.jacop.fz.SimpleNode;
  *       the final state (a variable over F).
  * </ul>
  *
- * Every solution gives the counts of its own state sequence, so the constraints are redundant: an
- * aggregated network flow relaxation of the layered graph of the automaton in the sense of the flow
- * formulations of regular by G. Pesant, A regular language membership constraint for finite
+ * <p>Every solution gives the counts of its own state sequence, so the constraints are redundant:
+ * an aggregated network flow relaxation of the layered graph of the automaton in the sense of the
+ * flow formulations of regular by G. Pesant, A regular language membership constraint for finite
  * sequences of variables, CP 2004, and M.-C. Côté, B. Gendron and L.-M. Rousseau, Modeling the
  * regular constraint with integer programming, CPAIOR 2007, with the layers of one class merged.
  * The new variables are not searched: every assignment of the model's variables that satisfies the
