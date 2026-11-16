@@ -125,7 +125,7 @@ public final class ClauseMiner {
    *
    * @param trail the solver's trail, for root domains
    * @param store the store, whose constraints are read now
-   * @param file the file the counts go to
+   * @param file the file the counts go to at exit, or null for none
    */
   public ClauseMiner(AtomicTrail trail, Store store, String file) {
     this.trail = trail;
@@ -145,7 +145,36 @@ public final class ClauseMiner {
         }
       }
     }
-    Runtime.getRuntime().addShutdownHook(new Thread(this::write));
+    if (file != null) {
+      Runtime.getRuntime().addShutdownHook(new Thread(this::write));
+    }
+  }
+
+  /**
+   * Returns the counts per key (the constraint class and the number of variables of the clause, or
+   * {@code pair A+B}): candidates tested, implied by propagation, implied only by search, not
+   * implied, undecided, clauses whose first gap had this key, literals, implied only by failure.
+   *
+   * @return the counts, in the order of {@link #write} lines (failure-only last)
+   */
+  public synchronized Map<String, long[]> counts() {
+    Map<String, long[]> result = new TreeMap<>();
+    for (Map.Entry<String, long[]> e : counts.entrySet()) {
+      long[] c = e.getValue();
+      result.put(
+          e.getKey(),
+          new long[] {
+            c[TESTED],
+            c[PROPAGATION],
+            c[SEARCH],
+            c[NOT_IMPLIED],
+            c[UNDECIDED],
+            c[FIRST_GAP],
+            c[LITERALS],
+            c[FAIL_ONLY]
+          });
+    }
+    return result;
   }
 
   /** Counts a learnt clause with a literal that is not an atom, which is not mined. */
