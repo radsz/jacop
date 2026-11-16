@@ -59,6 +59,7 @@ import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
+import org.jacop.constraints.ConditionalSelect;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.IncreasingSum;
@@ -1991,6 +1992,10 @@ public final class LcgSolver implements ExternalPropagator {
     if (proofStarted && c instanceof Binpacking b) {
       proofBinLoads(b, atoms, from, entry);
     }
+    if (proofStarted && c.getClass() == ConditionalSelect.class) {
+      proofSelectedBranches((ConditionalSelect) c, atoms, from, entry);
+      return;
+    }
     if (proofStarted && c instanceof AbstractReifiedConstraint r) {
       proofReifiedBounds(r, atoms, from, entry);
       return;
@@ -2016,6 +2021,56 @@ public final class LcgSolver implements ExternalPropagator {
       f = ((IncreasingSum) c).sumRow();
     }
     proofLinearBounds(f, atoms, from, entry, "");
+  }
+
+  /**
+   * Writes, for a reason or a failure of a conditional select on y, the clause widened by "branch i
+   * is not selected" (its condition false or one before it true), branch by branch. Under the
+   * hypotheses a branch can be excluded only by a hole of it (y in 1..2 and a branch in {0, 3}),
+   * which unit propagation over the guarded equality y = x[i] sees once the branch is selected but
+   * does not try; with these lemmas, the clause follows from "some branch is selected".
+   */
+  private void proofSelectedBranches(ConditionalSelect c, EntryList atoms, int from, int entry) {
+    if (entry >= 0) {
+      IntVar v = proofTrail.variable(entry);
+      if (v != c.result() && !Arrays.asList(c.conditions()).contains(v)) {
+        // a branch equal to y, explained by the selected branch alone
+        return;
+      }
+    }
+    Set<String> literals = new LinkedHashSet<>();
+    if (entry >= 0) {
+      String atom = proofAtom(entry, 0);
+      if ("1".equals(atom)) {
+        return;
+      }
+      literals.add(atom);
+    }
+    for (int k = from; k < atoms.size(); k++) {
+      String r = proofAtom(atoms.get(k), atoms.slack(k));
+      if (!"1".equals(r)) {
+        literals.add(OpbEncoder.negate(r));
+      }
+    }
+    for (IntVar condition : c.conditions()) {
+      int id = trail.id(condition);
+      if (proofDomains[id].max() < 1) {
+        continue;
+      }
+      if (proofDomains[id].min() >= 1) {
+        // the branches after it are never selected
+        return;
+      }
+      String selected = OpbEncoder.ge(id, 1);
+      if (!literals.contains(selected)) {
+        StringBuilder s = new StringBuilder("rup");
+        for (String l : literals) {
+          s.append(" 1 ").append(l);
+        }
+        proof.lemma(s.append(" 1 ").append(OpbEncoder.negate(selected)).append(" >= 1 ;\n"));
+      }
+      literals.add(selected);
+    }
   }
 
   /**

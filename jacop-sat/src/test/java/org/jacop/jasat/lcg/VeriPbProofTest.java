@@ -1047,6 +1047,40 @@ class VeriPbProofTest {
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
 
+  @Test
+  void conditionalSelectWithEveryBranchInAHoleIsDerived() {
+    // obj = -y <= -1 needs y in 1..2, which the branches x1, x2 in {0, 3} cannot equal, so b0 = 1;
+    // unit propagation does not try each of them selected, so "b0 or y <= 0" needs a lemma per
+    // branch (fuzz seed 16953129); b0 = 1 then fails through x0 + 4 b0 <= 3
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+      x[i] = new IntVar(store, "x" + i, i == 0 ? -1 : 0, 3);
+      if (i > 0) {
+        x[i].domain.inComplement(0, x[i], 1);
+        x[i].domain.inComplement(0, x[i], 2);
+      }
+    }
+    IntVar y = new IntVar(store, "y", -1, 2);
+    IntVar obj = new IntVar(store, "obj", -10, 10);
+    store.impose(new ConditionalSelect(b, x, y));
+    store.impose(new LinearInt(new IntVar[] {x[0], b[0]}, new int[] {1, 4}, "<=", 3));
+    store.impose(new LinearInt(new IntVar[] {y, obj}, new int[] {1, 1}, "==", 0));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 0 0");
+  }
+
   // y = x[k] for the first k with b[k] = 1 (if_then_else_int), over branches with holes
   @Test
   void conditionalSelectIsProved() {
