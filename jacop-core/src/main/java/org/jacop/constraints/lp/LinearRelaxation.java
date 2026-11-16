@@ -763,6 +763,10 @@ public class LinearRelaxation extends Constraint
   // with org.jacop.lp.mirSearch. Off by default (-Dorg.jacop.lp.coverCuts=true); not final, so that
   // tests can switch it on
   static boolean coverOn = Boolean.getBoolean("org.jacop.lp.coverCuts");
+  // with coverOn, the cover cuts alone also in search, every mirPeriod optimal solves as the MIR
+  // cuts of mirSearch (which takes the cover cuts with its own); off by default
+  // (-Dorg.jacop.lp.coverSearch=true)
+  private static final boolean COVER_SEARCH = Boolean.getBoolean("org.jacop.lp.coverSearch");
   // the most slack of a row the zero-half separator takes, the most rows, and the most sets
   private static final double ZERO_HALF_SLACK = 0.1;
   private static final int ZERO_HALF_ROWS = 2000;
@@ -3247,7 +3251,7 @@ public class LinearRelaxation extends Constraint
       status = cutRounds();
     }
     if (status == LpSolver.OPTIMAL
-        && MIR_SEARCH
+        && (MIR_SEARCH || COVER_SEARCH && coverOn)
         && mirRows != null
         && mirColumns == lp.columns()
         && objective != null
@@ -5265,7 +5269,8 @@ public class LinearRelaxation extends Constraint
             Arrays.copyOf(rootHi, n),
             mirRows,
             mirSeen,
-            MIR_SEARCH_WEIGHT);
+            MIR_SEARCH_WEIGHT,
+            !MIR_SEARCH);
     List<MirCut> chosen =
         found.size() > MIR_SEARCH_CUTS ? found.subList(0, MIR_SEARCH_CUTS) : found;
     for (MirCut c : found.subList(chosen.size(), found.size())) {
@@ -5352,6 +5357,17 @@ public class LinearRelaxation extends Constraint
    */
   private List<MirCut> separateCuts(
       long[] lo, long[] hi, Aggregate[] unitRows, Set<List<Long>> seen, long maxWeight) {
+    return separateCuts(lo, hi, unitRows, seen, maxWeight, false);
+  }
+
+  // as above; with coversOnly, the cover cuts alone
+  private List<MirCut> separateCuts(
+      long[] lo,
+      long[] hi,
+      Aggregate[] unitRows,
+      Set<List<Long>> seen,
+      long maxWeight,
+      boolean coversOnly) {
     int n = lp.columns();
     double[] value = new double[n];
     for (int j = 0; j < n; j++) {
@@ -5361,7 +5377,7 @@ public class LinearRelaxation extends Constraint
     List<Integer> sources = new ArrayList<>();
     for (int j = 0; j < n; j++) {
       double f = value[j] - Math.floor(value[j]);
-      if (lp.basicRow(j) >= 0 && f > 0.01 && f < 0.99) {
+      if (!coversOnly && lp.basicRow(j) >= 0 && f > 0.01 && f < 0.99) {
         sources.add(j);
       }
     }
@@ -5385,7 +5401,7 @@ public class LinearRelaxation extends Constraint
       labelled(found, foundBefore, "gomory");
     }
     Set<MirCut> dual = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (dualAggregateOn) {
+    if (dualAggregateOn && !coversOnly) {
       int before = found.size();
       dualAggregate(value, lo, hi, found);
       dual.addAll(found.subList(before, found.size()));
@@ -5393,14 +5409,14 @@ public class LinearRelaxation extends Constraint
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
     // a refutation also takes the zero-half cuts: they are the odd-cycle inequalities of the
     // cardinality refutations (domset hexgrid)
-    if (zeroHalfOn || pseudoObjective) {
+    if ((zeroHalfOn || pseudoObjective) && !coversOnly) {
       int foundBefore = found.size();
       zeroHalf(value, lo, hi, found, zeroHalf);
       labelled(found, foundBefore, "zerohalf");
     }
     int unitBefore = found.size();
-    for (Aggregate row : unitRows) {
-      mir(row, value, lo, hi, found);
+    for (int i = 0; i < unitRows.length && !coversOnly; i++) {
+      mir(unitRows[i], value, lo, hi, found);
     }
     labelled(found, unitBefore, "mir");
     Set<MirCut> covers = Collections.newSetFromMap(new IdentityHashMap<>());
