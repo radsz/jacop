@@ -7007,7 +7007,7 @@ Version 5.0 (unreleased)
 390. The core-guided phase of LCG (MaxSAT-like objectives) looks for its
    at-most-one groups of soft literals (Ignatiev, Morgado and
    Marques-Silva, RC2, JSAT 11, 2019) once more after it hardens soft
-   literals, and hardens before it first looks for them. A conflict soft
+   literals. A conflict soft
    clause heavier than the gap to the best solution is hard only once a
    solution is known, and only then puts its two literals in one group;
    before, the groups were built while it was still soft and never again,

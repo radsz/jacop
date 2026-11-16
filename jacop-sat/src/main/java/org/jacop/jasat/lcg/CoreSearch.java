@@ -186,6 +186,7 @@ public final class CoreSearch {
   private boolean grouped; // the at-most-one groups were looked for
   private boolean regrouped; // they were looked for again after hardening
   private long hardenedAtGroup; // the soft literals hardened when the groups were looked for
+  private boolean expandValues = true; // the groups expand terms into their value literals
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
 
@@ -323,7 +324,7 @@ public final class CoreSearch {
       return true;
     }
     hardenedAtGroup = hardened;
-    return relaxAtMostOnes(Integer.MAX_VALUE);
+    return relaxAtMostOnes();
   }
 
   /** Whether each term's variable spans at most one level. */
@@ -354,42 +355,17 @@ public final class CoreSearch {
     regrouped = true;
     hardenedAtGroup = hardened;
     regroups++;
-    return relaxAtMostOnes(0);
+    expandValues = false;
+    return relaxAtMostOnes();
+  }
+
+  /** The value literals of a term to expand into the groups, none once the values were expanded. */
+  private int[] expandedValues(Soft s) {
+    return expandValues ? valueLiterals(s) : new int[0];
   }
 
   /** Statistics: times the at-most-one groups were looked for again after hardening. */
   public long regroups;
-
-  /**
-   * Adds the terms' soft literals, hardens and relaxes the at-most-one groups. Hardened literals
-   * are hard clauses for the probes of the groups: a conflict clause of heavy weight between two
-   * soft literals then puts them in one group. Returns {@link CdclSolver#UNKNOWN} to go on, else
-   * the result of the search.
-   */
-  private int firstGroups() {
-    addTermSofts();
-    if (!harden()) {
-      return CdclSolver.SAT; // no solution better than the best one
-    }
-    if (!group()) {
-      return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
-    }
-    return CdclSolver.UNKNOWN;
-  }
-
-  /**
-   * Hardens soft literals and looks for the at-most-one groups again when it hardened some ({@link
-   * #regroup}). Returns {@link CdclSolver#UNKNOWN} to go on, else the result of the search.
-   */
-  private int hardenAndRegroup() {
-    if (!harden()) {
-      return CdclSolver.SAT; // no solution better than the best one
-    }
-    if (!regroup()) {
-      return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
-    }
-    return CdclSolver.UNKNOWN;
-  }
 
   /** The number of levels of the terms' variables, summed. */
   private static long span(LcgSolver lcg, Map<Integer, Long> terms) {
@@ -580,10 +556,10 @@ public final class CoreSearch {
     }
     if (threshold < 0) {
       if (!grouped) {
-        int status = firstGroups();
-        if (status != CdclSolver.UNKNOWN) {
-          return status;
-        }
+        addTermSofts();
+      }
+      if (!grouped && !group()) {
+        return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       threshold = maxWeightBelow(Long.MAX_VALUE);
       start(sat.work());
@@ -596,9 +572,8 @@ public final class CoreSearch {
         // also when the best solution was found elsewhere (a portfolio): none here is better
         return CdclSolver.SAT;
       }
-      int status = hardenAndRegroup();
-      if (status != CdclSolver.UNKNOWN) {
-        return status;
+      if (!harden()) {
+        return CdclSolver.SAT; // no solution better than the best one
       }
       List<Integer> assumed = new ArrayList<>();
       for (Soft s : softs) {
@@ -679,10 +654,15 @@ public final class CoreSearch {
   /**
    * Makes hard each soft literal whose weight exceeds the gap between the best solution and the
    * lower bound: any assignment that violates it costs at least the lower bound plus its weight, so
-   * no better solution violates it (hardening, as in RC2 and Geas). Returns false when the solver
-   * becomes unsatisfiable.
+   * no better solution violates it (hardening, as in RC2 and Geas), then looks for the at-most-one
+   * groups again if it hardened some ({@link #regroup}). Returns false when the solver becomes
+   * unsatisfiable.
    */
   private boolean harden() {
+    return hardenSoft() && regroup();
+  }
+
+  private boolean hardenSoft() {
     long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return true;
@@ -733,7 +713,7 @@ public final class CoreSearch {
     }
   }
 
-  private boolean relaxAtMostOnes(int expandTerms) {
+  private boolean relaxAtMostOnes() {
     grouped = true;
     // the nodes: soft literals of terms, then the value literals of the terms that expand
     List<Integer> lits = new ArrayList<>();
@@ -749,8 +729,8 @@ public final class CoreSearch {
     int terms = lits.size();
     long expansionCost = 0; // what the expansion takes from the bound
     BitSet expanded = new BitSet();
-    for (int i = 0; i < Math.min(terms, expandTerms); i++) {
-      int[] values = valueLiterals(owner.get(i));
+    for (int i = 0; i < terms; i++) {
+      int[] values = expandedValues(owner.get(i));
       if (values.length == 0) {
         continue;
       }
