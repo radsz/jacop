@@ -80,7 +80,7 @@ import org.jacop.search.SimpleSolutionListener;
  *
  * <p>When the case also gives the constraint as a {@link PrimitiveConstraint}, the harness checks
  * it under {@link Reified}, {@link Not}, {@link Xor}, {@link Implies}, {@link IfThen} and {@link
- * Conditional} (selecting it or its negation) with an extra 0/1 variable (also grounded in the
+ * Conditional} (selected when the variable is 1) with an extra 0/1 variable (also grounded in the
  * plans), and checks {@code satisfied()} and {@code notSatisfied()} once all variables are ground.
  *
  * <p>Usage from a JUnit test:
@@ -290,10 +290,12 @@ public final class ImposeGroundingHarness {
             case "Xor" -> store.impose(new Xor(build.apply(args), b));
             case "Implies" -> store.impose(new Implies(b, build.apply(args)));
             case "Conditional" ->
+                // b = 1 selects the constraint, b = 0 the always true b = 0 (a second copy of
+                // the constraint could repeat the names of the variables a case creates)
                 store.impose(
                     new Conditional(
                         new IntVar[] {b, new IntVar(store, 1, 1)},
-                        new PrimitiveConstraint[] {build.apply(args), new Not(build.apply(args))}));
+                        new PrimitiveConstraint[] {build.apply(args), new XeqC(b, 0)}));
             default -> store.impose(new IfThen(new XeqC(b, 1), build.apply(args)));
           }
         };
@@ -302,7 +304,7 @@ public final class ImposeGroundingHarness {
           boolean holds = semantics.test(Arrays.copyOf(t, n));
           boolean b = t[n] == 1;
           return switch (wrapper) {
-            case "Reified", "Conditional" -> b == holds;
+            case "Reified" -> b == holds;
             case "Xor" -> b != holds;
             default -> !b || holds;
           };
