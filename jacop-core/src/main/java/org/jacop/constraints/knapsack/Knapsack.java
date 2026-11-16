@@ -157,6 +157,14 @@ public class Knapsack extends Constraint
    */
   private int positionOfAlreadyUpdated;
 
+  /**
+   * The lowest level whose changes of the items are not yet applied to the tree. The store may
+   * raise its level before the next consistency (Store.raiseLevelBeforeConsistency, set by
+   * Alldistinct and others when imposed), so items changed at level l can reach the constraint
+   * first at level l + 1, where the list of level l is not looked at.
+   */
+  private int pendingLevel = Integer.MAX_VALUE;
+
   /** It specifies if the knapsack tree requires an update. */
   private boolean needUpdate = true;
 
@@ -341,6 +349,10 @@ public class Knapsack extends Constraint
       }
     }
 
+    if (pendingLevel >= level) {
+      // the changes of the removed levels are undone, and the tree is updated from them below
+      pendingLevel = Integer.MAX_VALUE;
+    }
     List<TreeLeaf> list = hashForUpdate.get(level);
     /* there was some change in this level */
     if (list != null) {
@@ -443,6 +455,12 @@ public class Knapsack extends Constraint
     if (needUpdate) {
       needUpdate = false;
 
+      if (pendingLevel < currentLevel) {
+        // changes of a lower level that no consistency at that level applied
+        tree.recompute();
+        needCriticalUpdate = true;
+      }
+      pendingLevel = Integer.MAX_VALUE;
       List<TreeLeaf> list = hashForUpdate.get(currentLevel);
       if (list != null) {
         // there were too many updates to use incremental recomputation
@@ -938,6 +956,7 @@ public class Knapsack extends Constraint
   }
 
   private void addToUpdateListIfNeeded(int level, TreeLeaf leafForV) {
+    pendingLevel = Math.min(pendingLevel, level);
     List<TreeLeaf> list = hashForUpdate.get(level);
     if (list == null) {
       list = new ArrayList<>();
