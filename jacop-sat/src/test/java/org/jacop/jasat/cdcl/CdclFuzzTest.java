@@ -254,6 +254,7 @@ class CdclFuzzTest {
       s.setCopyBudget(0);
     }
   }
+
   // solves in which bounded variable addition added a variable
   private static long factoredRuns;
 
