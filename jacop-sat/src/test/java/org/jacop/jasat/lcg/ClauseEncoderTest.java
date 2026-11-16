@@ -641,4 +641,84 @@ class ClauseEncoderTest {
     return sat != null
         && sat.solve(units.stream().mapToInt(Integer::intValue).toArray()) == CdclSolver.SAT;
   }
+
+  /**
+   * {@link ClauseShape}: on random pseudo-Boolean constraints of up to 7 literals, the clauses
+   * (when within the cap) have exactly the solutions of the constraint, are distinct and each is
+   * minimal (no literal can be dropped). The cap is respected, and the at most one, clause and
+   * conjunction shapes give their known counts.
+   */
+  @Test
+  void clauseShapeHasTheSolutionsOfTheConstraint() {
+    Random r = new Random(17);
+    int encoded = 0;
+    for (int t = 0; t < 4000; t++) {
+      int n = 1 + r.nextInt(7);
+      long[] a = new long[n];
+      int[] l = new int[n];
+      for (int i = 0; i < n; i++) {
+        a[i] = 1 + r.nextInt(r.nextBoolean() ? 2 : 6);
+        l[i] = r.nextBoolean() ? i + 1 : -(i + 1);
+      }
+      long k = r.nextInt(12) - 1;
+      int cap = 1 + r.nextInt(3 * n);
+      List<int[]> cs = ClauseShape.clauses(a, l, k, cap);
+      if (cs == null) {
+        continue;
+      }
+      encoded++;
+      assertThat(cs).hasSizeLessThanOrEqualTo(Math.max(cap, 1));
+      for (int m = 0; m < 1 << n; m++) {
+        long sum = 0;
+        for (int i = 0; i < n; i++) {
+          sum += holds(l[i], m) ? a[i] : 0;
+        }
+        boolean all = true;
+        for (int[] c : cs) {
+          all &= satisfied(c, m);
+        }
+        assertThat(all).as("trial %d assignment %d", t, m).isEqualTo(sum >= k);
+      }
+      for (int[] c : cs) {
+        for (int drop = 0; drop < c.length; drop++) {
+          // a weaker clause without c[drop] is not implied: some solution falsifies it
+          boolean implied = true;
+          for (int m = 0; m < 1 << n && implied; m++) {
+            long sum = 0;
+            for (int i = 0; i < n; i++) {
+              sum += holds(l[i], m) ? a[i] : 0;
+            }
+            boolean rest = false;
+            for (int j = 0; j < c.length; j++) {
+              rest |= j != drop && holds(c[j], m);
+            }
+            implied = sum < k || rest;
+          }
+          assertThat(implied).as("trial %d clause %s not minimal", t, Arrays.toString(c)).isFalse();
+        }
+      }
+    }
+    assertThat(encoded).isGreaterThan(1000);
+    // at most one of 4 literals: 6 exclusions; at least one: 1 clause; x -> y1 and y2: 2 clauses
+    assertThat(ClauseShape.clauses(new long[] {1, 1, 1, 1}, new int[] {-1, -2, -3, -4}, 3, 8))
+        .hasSize(6);
+    assertThat(ClauseShape.clauses(new long[] {1, 1, 1}, new int[] {1, 2, 3}, 1, 3)).hasSize(1);
+    assertThat(ClauseShape.clauses(new long[] {2, 1, 1}, new int[] {-1, 2, 3}, 2, 6)).hasSize(2);
+    assertThat(ClauseShape.clauses(new long[] {1, 1, 1, 1}, new int[] {-1, -2, -3, -4}, 3, 5))
+        .isNull();
+  }
+
+  private static boolean holds(int lit, int m) {
+    boolean v = (m >> (Math.abs(lit) - 1) & 1) == 1;
+    return lit > 0 == v;
+  }
+
+  private static boolean satisfied(int[] c, int m) {
+    for (int lit : c) {
+      if (holds(lit, m)) {
+        return true;
+      }
+    }
+    return false;
+  }
 }
