@@ -7018,11 +7018,14 @@ Version 5.0 (unreleased)
    model before it builds it. In JaSAT, elimination and the local search
    walk are skipped when their copies of the clauses would not fit in a
    quarter of the heap, and the learnt clauses are reduced early when they
-   take more than 1/16 of it. WordDesign2-words-mdd-025 (XCSP 2023, 300
+   take more than 1/16 of it. The FlatZinc front end keeps the equal sets
+   of a set array of 1024 or more sets once (MagicSquare-mdd-16 read 31
+   million label sets, 4.2 GB). WordDesign2-words-mdd-025 (XCSP 2023, 300
    MDDs on one diagram of 525,720 nodes and 1.8 million edges) ran out of
-   memory at 6 GB while posting and is now solved in 151 s;
+   memory at 6 GB while posting and is now solved in 147 s;
    MagicSquare-mdd-10 (-f) ran out of memory at 6 GB (and 12 GB) during
-   the search and now runs to the time limit.
+   the search and MagicSquare-mdd-16 while reading; both now run to the
+   time limit.
 
 Version 4.11
 =============

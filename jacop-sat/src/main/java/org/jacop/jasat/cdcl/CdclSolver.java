@@ -3707,10 +3707,10 @@ public final class CdclSolver {
 
   /**
    * It deletes the longest learnt clauses that are not the reason of an assignment, whatever their
-   * tier, until the learnt clauses take half of their budget. Long clauses of a low LBD stay in
-   * the core tier for good, so the scheduled reductions never delete them: under lazy clause
-   * generation over a diagram given as clauses they were the clauses of tens of thousands of
-   * literals that filled the heap.
+   * tier, until the learnt clauses take half of their budget. Long clauses of a low LBD stay in the
+   * core tier for good, so the scheduled reductions never delete them: under lazy clause generation
+   * over a diagram given as clauses they were the clauses of tens of thousands of literals that
+   * filled the heap.
    */
   private void reduceForMemory() {
     memoryReductions++;
