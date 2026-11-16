@@ -38,22 +38,25 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Checks a DRAT proof made only of RUP lemmas (the CDCL core never needs RAT). Each lemma must lead
- * to a conflict by unit propagation over the formula and the earlier lemmas once its literals are
- * negated, and the proof must derive the empty clause. Deletions are ignored, which keeps the check
- * sound (more clauses only make propagation stronger, and every kept clause is implied).
+ * Checks a DRAT proof. Each lemma must lead to a conflict by unit propagation over the formula and
+ * the earlier lemmas once its literals are negated (RUP), or else be RAT on its first literal
+ * {@code p}: every resolvent on {@code p} with a clause holding {@code -p} is RUP. Bounded variable
+ * addition needs RAT (its fresh variables), the CDCL core never does. The proof must derive the
+ * empty clause. Deletions are ignored, which keeps the check sound: it is a DRAT check of the proof
+ * without its deletions, where each lemma keeps every clause so far satisfiable, and the RAT
+ * resolvents are taken over all of them.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 final class RupChecker {
 
-  private final int[][] watchLists;
-  private final int[] watchCount;
+  private int[][] watchLists;
+  private int[] watchCount;
   private int[][] clauses = new int[64][];
   private int numClauses;
-  private final byte[] value; // per literal index: 1 true, -1 false
-  private final int[] trail;
+  private byte[] value; // per literal index: 1 true, -1 false
+  private int[] trail;
   private int trailSize;
   private int head;
   private boolean inconsistent;
@@ -120,8 +123,11 @@ final class RupChecker {
         return "line " + line + " does not end with 0";
       }
       lemma = Arrays.copyOf(lemma, lemma.length - 1);
-      if (!c.isRup(lemma)) {
-        return "line " + line + " is not RUP: " + text;
+      for (int l : lemma) {
+        c.ensure(Math.abs(l));
+      }
+      if (!c.isRup(lemma) && !c.isRat(lemma)) {
+        return "line " + line + " is neither RUP nor RAT: " + text;
       }
       if (lemma.length == 0) {
         return null;
@@ -129,6 +135,51 @@ final class RupChecker {
       c.add(lemma);
     }
     return c.inconsistent ? null : "the proof does not derive the empty clause";
+  }
+
+  /** Grows the arrays for a variable beyond the input ones (a fresh variable of the proof). */
+  private void ensure(int var) {
+    int n = 2 * var + 2;
+    if (n > value.length) {
+      int cap = Math.max(n, 2 * value.length);
+      watchLists = Arrays.copyOf(watchLists, cap);
+      watchCount = Arrays.copyOf(watchCount, cap);
+      value = Arrays.copyOf(value, cap);
+      trail = Arrays.copyOf(trail, cap / 2 + 1);
+    }
+  }
+
+  /** RAT on the first literal: each resolvent with a clause that holds its negation is RUP. */
+  private boolean isRat(int[] lemma) {
+    if (lemma.length == 0) {
+      return false;
+    }
+    int p = lemma[0];
+    int[] rest = Arrays.copyOfRange(lemma, 1, lemma.length);
+    if (value[index(-p)] > 0) {
+      // -p is a root fact: the resolvent with its clause contains the rest of the lemma
+      return isRup(rest);
+    }
+    for (int i = 0; i < numClauses; i++) {
+      int[] d = clauses[i];
+      if (Arrays.stream(d).noneMatch(x -> x == -p)) {
+        continue;
+      }
+      int[] resolvent = new int[rest.length + d.length - 1];
+      System.arraycopy(rest, 0, resolvent, 0, rest.length);
+      int k = rest.length;
+      boolean tautology = false;
+      for (int x : d) {
+        if (x != -p) {
+          tautology |= Arrays.stream(rest).anyMatch(y -> y == -x);
+          resolvent[k++] = x;
+        }
+      }
+      if (!tautology && !isRup(resolvent)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static int index(int lit) {

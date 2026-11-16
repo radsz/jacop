@@ -425,4 +425,207 @@ class XorSystemFuzzTest {
     }
     assertTrue(failures.isEmpty(), String.join("\n", failures));
   }
+
+  // clauses as literals: v + 1 for variable v, -(v + 1) for its negation
+  private record CnfModel(int n, List<int[]> clauses) {}
+
+  // the clauses of xor(t_1, ..., t_k) = p where each term t_i is the disjunction of its variables
+  // (one variable: a plain XOR; two: an XOR lifted by substitution, as or_randxor)
+  private static void liftedXor(int[][] terms, int p, List<int[]> out, Random r) {
+    int k = terms.length;
+    for (int s = 0; s < 1 << k; s++) {
+      if ((Integer.bitCount(s) & 1) == p) {
+        continue;
+      }
+      // the clause excludes the terms at s: t_i if t_i = 0 at s, not t_i otherwise, and not t_i
+      // (all variables of t_i false) is distributed over the variables of t_i
+      List<List<Integer>> partial = new ArrayList<>();
+      partial.add(new ArrayList<>());
+      for (int i = 0; i < k; i++) {
+        List<List<Integer>> next = new ArrayList<>();
+        for (List<Integer> c : partial) {
+          if ((s >> i & 1) == 0) {
+            List<Integer> d = new ArrayList<>(c);
+            for (int v : terms[i]) {
+              d.add(v + 1);
+            }
+            next.add(d);
+          } else {
+            for (int v : terms[i]) {
+              List<Integer> d = new ArrayList<>(c);
+              d.add(-(v + 1));
+              next.add(d);
+            }
+          }
+        }
+        partial = next;
+      }
+      for (List<Integer> c : partial) {
+        // sometimes a clause is shortened (unless r is null): a stronger clause subsuming it
+        if (r != null && c.size() > 2 && r.nextInt(6) == 0) {
+          c.remove(r.nextInt(c.size()));
+        }
+        out.add(c.stream().mapToInt(Integer::intValue).toArray());
+      }
+    }
+  }
+
+  private static CnfModel randomCnf(Random r) {
+    int n = 5 + r.nextInt(8);
+    List<int[]> clauses = new ArrayList<>();
+    int xors = 1 + r.nextInt(5);
+    for (int x = 0; x < xors; x++) {
+      int k = 2 + r.nextInt(3);
+      int[][] terms = new int[k][];
+      for (int i = 0; i < k; i++) {
+        terms[i] =
+            r.nextInt(3) == 0 ? new int[] {r.nextInt(n), r.nextInt(n)} : new int[] {r.nextInt(n)};
+      }
+      liftedXor(terms, r.nextInt(2), clauses, r);
+    }
+    // an AND gate now and then, and a few other clauses
+    if (r.nextBoolean()) {
+      int g = r.nextInt(n);
+      int a = r.nextInt(n);
+      int b = r.nextInt(n);
+      clauses.add(new int[] {-(g + 1), a + 1});
+      clauses.add(new int[] {-(g + 1), b + 1});
+      clauses.add(new int[] {g + 1, -(a + 1), -(b + 1)});
+    }
+    for (int i = r.nextInt(3); i > 0; i--) {
+      clauses.add(
+          new int[] {
+            (r.nextInt(n) + 1) * (r.nextBoolean() ? 1 : -1),
+            (r.nextInt(n) + 1) * (r.nextBoolean() ? 1 : -1),
+            (r.nextInt(n) + 1) * (r.nextBoolean() ? 1 : -1)
+          });
+    }
+    return new CnfModel(n, clauses);
+  }
+
+  // the least number of true variables, or -1 when there is no solution
+  private static int bruteForce(CnfModel m) {
+    int best = -1;
+    for (int s = 0; s < 1 << m.n; s++) {
+      boolean ok = true;
+      for (int[] c : m.clauses) {
+        boolean sat = false;
+        for (int l : c) {
+          sat |= ((s >> (Math.abs(l) - 1) & 1) == 1) == (l > 0);
+        }
+        if (!sat) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok && (best < 0 || Integer.bitCount(s) < best)) {
+        best = Integer.bitCount(s);
+      }
+    }
+    return best;
+  }
+
+  private static String fzn(CnfModel m, boolean minimize) {
+    StringBuilder sb = new StringBuilder();
+    for (int c = 0; c < m.n; c++) {
+      sb.append("var bool: ").append(name(c)).append(" :: output_var;\n");
+      sb.append("var 0..1: y").append(c).append(";\n");
+    }
+    sb.append("var 0..").append(m.n).append(": obj :: output_var;\n");
+    for (int[] c : m.clauses) {
+      List<String> pos = new ArrayList<>();
+      List<String> neg = new ArrayList<>();
+      for (int l : c) {
+        (l > 0 ? pos : neg).add(name(Math.abs(l) - 1));
+      }
+      sb.append("constraint bool_clause([")
+          .append(String.join(", ", pos))
+          .append("], [")
+          .append(String.join(", ", neg))
+          .append("]);\n");
+    }
+    StringBuilder ys = new StringBuilder();
+    StringBuilder ones = new StringBuilder();
+    for (int c = 0; c < m.n; c++) {
+      sb.append("constraint bool2int(").append(name(c)).append(", y").append(c).append(");\n");
+      ys.append(c > 0 ? ", " : "").append("y").append(c);
+      ones.append(c > 0 ? ", " : "").append("1");
+    }
+    sb.append("constraint int_lin_eq([")
+        .append(ones)
+        .append(", -1], [")
+        .append(ys)
+        .append(", obj], 0);\n");
+    sb.append(minimize ? "solve minimize obj;\n" : "solve satisfy;\n");
+    return sb.toString();
+  }
+
+  // the XORs written as clauses, plain (some clauses subsumed by shorter ones) or lifted by
+  // substitution, give rows; an AND gate gives none; a system of plain rows without a cycle is
+  // left out
+  @Test
+  void clausesGiveTheParitiesTheyEncode() throws IOException {
+    List<int[]> plain = new ArrayList<>();
+    liftedXor(new int[][] {{0}, {1}, {2}}, 1, plain, null);
+    liftedXor(new int[][] {{2}, {3}, {4}, {5}}, 0, plain, null);
+    // x6 = x0 x1, and the clause x0 or x1 subsuming two of the clauses of the first XOR; with
+    // that clause the gate allows only 100, 010 and 111 of x0 x1 x6, so x0 + x1 + x6 = 1 is a
+    // third row
+    plain.add(new int[] {-7, 1});
+    plain.add(new int[] {-7, 2});
+    plain.add(new int[] {7, -1, -2});
+    plain.add(new int[] {1, 2});
+    String out = run(fzn(new CnfModel(7, plain), false), "-debug");
+    assertTrue(out.contains("% XorSystem: 1 systems, 3 rows"), out);
+    assertTrue(out.contains("3 rows from clauses"), out);
+    // without that clause the gate gives no row, and the two XORs, which share only x2, form no
+    // cycle: unit propagation on their clauses does what Gauss-Jordan elimination would
+    plain.removeLast();
+    String gate = run(fzn(new CnfModel(7, plain), false), "-s", "-v");
+    assertTrue(gate.contains("%%%mzn-stat: xorSystems=0"), gate);
+    assertTrue(gate.contains("%%%mzn-stat: xorAcyclicSystems=1"), gate);
+    List<int[]> lifted = new ArrayList<>();
+    liftedXor(new int[][] {{0, 1}, {2, 3}, {4, 5}}, 1, lifted, null);
+    liftedXor(new int[][] {{0, 1}, {2, 3}, {6}}, 0, lifted, null);
+    liftedXor(new int[][] {{0, 1}, {4, 5}, {7}}, 0, lifted, null);
+    String quadratic = run(fzn(new CnfModel(8, lifted), false), "-debug", "-s", "-v");
+    assertTrue(quadratic.contains("%%%mzn-stat: xorQuadraticRows=3"), quadratic);
+    assertTrue(quadratic.contains("%%%mzn-stat: xorProducts=3"), quadratic);
+  }
+
+  @Test
+  void clauseParityModelsHaveTheOptimumOfEnumeration() throws IOException {
+    Random r = new Random(SEED + 1);
+    List<String> failures = new ArrayList<>();
+    System.setProperty("jacop.lcg.check", "true");
+    try {
+      for (int trial = 0; trial < TRIALS && failures.size() < 5; trial++) {
+        CnfModel m = randomCnf(r);
+        int expected = bruteForce(m);
+        String model = fzn(m, true);
+        String[][] runs = {{"--lcg"}, {"--lcg", "-f"}, {"--lcg", "off"}};
+        for (String[] options : runs) {
+          Integer got = solve(model, options);
+          if (got == null || got != expected) {
+            failures.add(
+                "trial "
+                    + trial
+                    + " "
+                    + String.join(" ", options)
+                    + ": expected "
+                    + expected
+                    + ", got "
+                    + got
+                    + "\n"
+                    + model);
+          }
+        }
+      }
+    } catch (IllegalStateException e) {
+      failures.add(e.getMessage());
+    } finally {
+      System.clearProperty("jacop.lcg.check");
+    }
+    assertTrue(failures.isEmpty(), String.join("\n", failures));
+  }
 }
