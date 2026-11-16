@@ -40,6 +40,7 @@ import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import org.jacop.constraints.Conditional;
 import org.jacop.constraints.IfThen;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.Not;
@@ -73,14 +74,14 @@ import org.jacop.search.SimpleSolutionListener;
  * random subsets. Values: from a solution (the constraint stays satisfiable), from a non-solution
  * (usually violating), the domain minimum or maximum (boundary values), or random domain values.
  * Moments ({@link When}): a singleton domain at creation, {@code in} before impose, {@code in}
- * after impose but before the first consistency, {@code in} at a search level after the root
- * consistency (then the level is removed and all solutions must come back), and a mix of the first
- * and third.
+ * after impose but before the first consistency (also with the store raising its level before that
+ * consistency), {@code in} at a search level after the root consistency (then the level is removed
+ * and all solutions must come back), and a mix of the first and third.
  *
  * <p>When the case also gives the constraint as a {@link PrimitiveConstraint}, the harness checks
- * it under {@link Reified}, {@link Not}, {@link Xor}, {@link Implies} and {@link IfThen} with an
- * extra 0/1 variable (also grounded in the plans), and checks {@code satisfied()} and {@code
- * notSatisfied()} once all variables are ground.
+ * it under {@link Reified}, {@link Not}, {@link Xor}, {@link Implies}, {@link IfThen} and {@link
+ * Conditional} (selecting it or its negation) with an extra 0/1 variable (also grounded in the
+ * plans), and checks {@code satisfied()} and {@code notSatisfied()} once all variables are ground.
  *
  * <p>Usage from a JUnit test:
  *
@@ -113,7 +114,14 @@ public final class ImposeGroundingHarness {
      */
     AT_SEARCH_LEVEL,
     /** Even-indexed grounded variables as singleton domains, the others after impose. */
-    MIXED
+    MIXED,
+    /**
+     * Grounded with {@code in} after impose, and the store raises its level before the first
+     * consistency, as it does once {@link org.jacop.constraints.Alldistinct} or another constraint
+     * that sets {@link Store#raiseLevelBeforeConsistency} is imposed: the constraint first sees the
+     * changes of level 0 at level 1.
+     */
+    AFTER_IMPOSE_RAISED
   }
 
   /**
@@ -207,7 +215,7 @@ public final class ImposeGroundingHarness {
 
   private static void checkWrapped(String label, Case c, Random random, List<String> failures) {
     if (c.primitive() != null) {
-      for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen")) {
+      for (String wrapper : List.of("Reified", "Not", "Xor", "Implies", "IfThen", "Conditional")) {
         checkCase(label + " " + wrapper, wrap(c, wrapper), random, failures);
       }
       checkSatisfied(label, c, random, failures);
@@ -281,6 +289,11 @@ public final class ImposeGroundingHarness {
             case "Reified" -> store.impose(new Reified(build.apply(args), b));
             case "Xor" -> store.impose(new Xor(build.apply(args), b));
             case "Implies" -> store.impose(new Implies(b, build.apply(args)));
+            case "Conditional" ->
+                store.impose(
+                    new Conditional(
+                        new IntVar[] {b, new IntVar(store, 1, 1)},
+                        new PrimitiveConstraint[] {build.apply(args), new Not(build.apply(args))}));
             default -> store.impose(new IfThen(new XeqC(b, 1), build.apply(args)));
           }
         };
@@ -289,7 +302,7 @@ public final class ImposeGroundingHarness {
           boolean holds = semantics.test(Arrays.copyOf(t, n));
           boolean b = t[n] == 1;
           return switch (wrapper) {
-            case "Reified" -> b == holds;
+            case "Reified", "Conditional" -> b == holds;
             case "Xor" -> b != holds;
             default -> !b || holds;
           };
@@ -465,9 +478,10 @@ public final class ImposeGroundingHarness {
       }
       phase = "impose";
       c.impose().accept(store, x);
-      if (when == When.AFTER_IMPOSE || when == When.MIXED) {
+      if (when == When.AFTER_IMPOSE || when == When.MIXED || when == When.AFTER_IMPOSE_RAISED) {
         phase = "grounding after impose";
-        ground(store, x, plan, i -> when == When.AFTER_IMPOSE || i % 2 == 1);
+        ground(store, x, plan, i -> when != When.MIXED || i % 2 == 1);
+        store.raiseLevelBeforeConsistency |= when == When.AFTER_IMPOSE_RAISED;
       }
 
       if (when == When.AT_SEARCH_LEVEL) {
