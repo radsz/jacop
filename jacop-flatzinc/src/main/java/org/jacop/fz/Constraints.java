@@ -94,6 +94,7 @@ import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
+import org.jacop.fz.constraints.SuccessorForestDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
@@ -727,6 +728,12 @@ public class Constraints implements ParserTreeConstants {
 
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
+    }
+
+    // the forest of the successor arcs along which positions grow, redundant, for the subtour
+    // elimination cuts of the linear relaxation; --proof does not encode it
+    if (SuccessorForestDetector.enabled() && options.proof() == null) {
+      new SuccessorForestDetector(support).detect(astTree);
     }
   }
 

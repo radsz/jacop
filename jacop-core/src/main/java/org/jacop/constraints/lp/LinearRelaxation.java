@@ -4153,10 +4153,21 @@ public class LinearRelaxation extends Constraint
    * @return whether the rows moved
    */
   private boolean moveToSparse() {
+    return moveToSparse(false);
+  }
+
+  /**
+   * Moves the rows of the dense tableau to the sparse simplex, as {@link #moveToSparse()}, also
+   * when the tableau has room left if force is true.
+   *
+   * @param force true to move whatever room the tableau has
+   * @return whether the rows moved
+   */
+  private boolean moveToSparse(boolean force) {
     int m = lp.rows();
     int n = lp.columns();
     long room = (long) (m + CUTS_PER_ROUND) * (m + CUTS_PER_ROUND + n + 1);
-    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
+    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap && !force) {
       return false;
     }
     int[][] cs = new int[m][];
@@ -4678,6 +4689,24 @@ public class LinearRelaxation extends Constraint
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
         status = DualSimplex.OPTIMAL;
+        if (toSparse
+            && simplex == Simplex.DENSE
+            && Math.abs(lp.value(0) - start) > 1e-6 * (1 + Math.abs(start))
+            && moveToSparse(true)) {
+          // the dense tableau ran out of pivots for the round after the cuts raised the bound:
+          // the rows and the cuts so far move to the sparse simplex for good, as above, and the
+          // round is tried again there (prize-collecting 32-4-8-2 of the Challenge 2016: the dense
+          // tableau of 800 rows stops at 127 after one round of tree cuts, the sparse simplex goes
+          // on to 102.5, for the optimum 92)
+          denseBeforeCuts = null;
+          denseLpRow = null;
+          denseInLp = null;
+          denseInactive = null;
+          for (MirCut row : chosen) {
+            seen.remove(key(row));
+          }
+          continue;
+        }
         break;
       }
       added += chosen.size();
