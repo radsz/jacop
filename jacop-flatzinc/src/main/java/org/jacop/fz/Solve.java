@@ -995,7 +995,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objective == null && options.proof() == null) {
       // a satisfaction model gets the value encodings for one root solve, which can refute it
       long built = System.nanoTime();
-      refutation = LinearRelaxation.refutation(store, refutationClauses);
+      refutation = LinearRelaxation.refutation(store, refutationClauses, splitSums());
+      if (refutation == null) {
+        refutation = LinearRelaxation.clauseRefutation(store, refutationClauses);
+      }
       refutationBuildNanos = System.nanoTime() - built;
       if (refutation != null) {
         refutation.setTimeLimit(options.getTimeOut());
@@ -1126,12 +1129,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + refutation.pairCliques
               + "\n%%%mzn-stat: lpRefutation="
               + refutation.refutationOutcome()
+              + "\n%%%mzn-stat: lpRefutationObjective="
+              + refutation.hasPseudoObjective()
               + "\n%%%mzn-stat: lpRefutationTime="
               + (refutationBuildNanos + refutation.solveNanos) / 1e9
               + "\n%%%mzn-stat: lpRefutationSolveTime="
               + refutation.solveNanos / 1e9
               + "\n%%%mzn-stat: lpRefutationPivots="
-              + refutation.pivots());
+              + refutation.pivots()
+              + "\n%%%mzn-stat: lpRefutationClauseUnits="
+              + refutation.clauseUnits
+              + "\n%%%mzn-stat: lpRefutationClauseEquivalences="
+              + refutation.clauseEquivalences);
     }
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
@@ -1263,6 +1272,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.extraRows
             + "\n%%%mzn-stat: lpExtraDropped="
             + r.extraDropped
+            + "\n%%%mzn-stat: lpExtraSparse="
+            + r.extraSparse
             + "\n%%%mzn-stat: lpPooledExtra="
             + r.pooledExtra
             + "\n%%%mzn-stat: lpPooledCuts="
@@ -4502,6 +4513,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreShrunk="
         + core.coreShrunk
+        + "\n%%%mzn-stat: lcgCoreExhausted="
+        + core.exhaustedOutputs
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
@@ -4705,7 +4718,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && costVar instanceof IntVar
             && !"0".equals(options.freeConfig("ls-auto", "1"));
     // the task starts are decision variables: only their constraints are looked at
-    if (auto && !ScheduleResources.hasResource(searchVars.getIntVars())) {
+    if (auto
+        && !ScheduleResources.hasResource(searchVars.getIntVars())
+        && !ScheduleResources.hasPermutation(searchVars.getIntVars())) {
       return null;
     }
     double share = auto ? AUTO_LS_SHARE : Double.parseDouble(given == null ? "0" : given);
@@ -4916,13 +4931,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return null;
       }
       cost.domain.in(store.level, cost, makespan, makespan);
-      if (!store.consistency()) {
+      if (!store.consistency() || !collectedClausesPropagate()) {
         return null;
       }
       for (IntVar x : hinted) {
         if (!x.singleton()) {
           x.domain.in(store.level, x, x.min(), x.min());
-          if (!store.consistency()) {
+          if (!store.consistency() || !collectedClausesPropagate()) {
             return null;
           }
         }
@@ -4941,6 +4956,55 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         store.setLevel(store.level - 1);
       }
     }
+  }
+
+  /**
+   * Unit propagation, with the store's propagation after each round, of the clauses kept for the
+   * LCG solver: under --lcg the Boolean constraints are not in the store until the solver takes
+   * them, so a schedule checked in the store alone could break them.
+   *
+   * @return false when a clause is false
+   */
+  private boolean collectedClausesPropagate() {
+    List<IntVar[][]> clauses = sat.collectedClauses();
+    boolean changed = !clauses.isEmpty();
+    while (changed) {
+      changed = false;
+      for (IntVar[][] clause : clauses) {
+        IntVar unit = null;
+        int value = 0;
+        int open = 0;
+        boolean satisfied = false;
+        for (int side = 0; side < 2 && !satisfied; side++) {
+          int wanted = side == 0 ? 1 : 0;
+          for (IntVar x : clause[side]) {
+            if (x.singleton(wanted)) {
+              satisfied = true;
+              break;
+            }
+            if (x.domain.contains(wanted)) {
+              open++;
+              unit = x;
+              value = wanted;
+            }
+          }
+        }
+        if (satisfied) {
+          continue;
+        }
+        if (open == 0) {
+          return false;
+        }
+        if (open == 1) {
+          unit.domain.in(store.level, unit, value, value);
+          changed = true;
+        }
+      }
+      if (changed && !store.consistency()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -5121,10 +5185,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the disjunctive graph of the scheduling search of local search: tasks/machines/iterations
   private String scheduleStatistics() {
     long[] counts = localSearch.getScheduleCounts();
-    if (counts[0] == 0) {
+    long[] flow = localSearch.getFlowShopCounts();
+    if (counts[0] == 0 && flow[0] == 0) {
       return "";
     }
-    return "\n%%%mzn-stat: lsSchedule=" + counts[0] + "/" + counts[1] + "/" + counts[2];
+    String out = "\n%%%mzn-stat: lsSchedule=" + counts[0] + "/" + counts[1] + "/" + counts[2];
+    return flow[0] == 0
+        ? out
+        : out + "\n%%%mzn-stat: lsFlowShop=" + flow[0] + "/" + flow[1] + "/" + flow[2];
   }
 
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch

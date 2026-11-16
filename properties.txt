@@ -369,6 +369,12 @@ unless stated otherwise):
   whose tasks are ordered by precedences.
 - org.jacop.fz.giantTour: Routes for vehicle routes written as a
   giant tour.
+- org.jacop.fz.timeWindows: time window reduction of giant tours with
+  arrival-time rows; infeasible path cuts and ArcTimes only when some
+  customer has a window of its own; =all for every giant tour, =false
+  off; default true.
+- org.jacop.fz.arcTimes: ArcTimes (x[v] = w -> t[w] >= t[v] + lag) on
+  those giant tours; default true.
 - org.jacop.fz.tsp: Routes, arc Booleans and cost rows also for a
   pure travelling salesman tour (circuit with no fixed successor),
   for the subtour, blossom and comb cuts of the LP; default false.
@@ -786,6 +792,8 @@ Cuts:
 - org.jacop.lp.capacityCuts: rounded capacity cuts of Routes at the
   root; default true.
 - org.jacop.lp.capacityRounds: their rounds; default 50.
+- org.jacop.lp.pathCuts: infeasible path (tournament) cuts of Routes
+  with time windows; default true.
 - org.jacop.lp.multistarCuts: multistar cuts over the same sets;
   default true.
 - org.jacop.lp.combCuts: blossom and comb cuts of Routes over the
