@@ -1227,6 +1227,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.nearRows
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
+            + "\n%%%mzn-stat: lpRestartBoundCuts="
+            + r.restartBoundCuts
+            + "\n%%%mzn-stat: lpRestartCutBound="
+            + r.restartCutBound
+            + "\n%%%mzn-stat: lpRestartBoundsLost="
+            + r.restartBoundsLost()
             + "\n%%%mzn-stat: lpRootPrunings="
             + r.rootPrunings
             + "\n%%%mzn-stat: lpCutBound="
@@ -2505,6 +2511,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (progressionSearch(costVar)) {
         return executeProgressionSearch(label, costVar, solveType);
       }
+      if (cliqueSearch(costVar)) {
+        return executeCliqueSearch(label, costVar, solveType);
+      }
       if (useLcg(costVar)) {
         fixedLabel = label;
         fixedSelect = select;
@@ -2566,6 +2575,48 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && dictionary.onRestart == null
         && options.proof() == null
         && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.progressionTiling.search"));
+  }
+
+  /**
+   * Whether the search is the branching of maximum clique algorithms ({@link
+   * org.jacop.search.MaxCliqueSelect}): a model of maximum clique and nothing else, maximized
+   * without an annotation to follow (or under -f), without LCG, restarts or on_restart built-ins.
+   * The system property org.jacop.fz.maxClique.search=false keeps the default search.
+   */
+  private boolean cliqueSearch(Var costVar) {
+    return dictionary.maxClique != null
+        && costVar != null
+        && options.freeSearch()
+        && !options.lcg()
+        && dictionary.onRestart == null
+        && restartCalculator == null
+        && options.proof() == null
+        && org.jacop.fz.constraints.MaxCliqueDetector.searches();
+  }
+
+  /**
+   * Branch and bound of maximum clique: the vertex of the last color class first, at 1 first, as
+   * MCQ and MCS do, under the bound of {@link org.jacop.constraints.MaxCliqueBound}.
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeCliqueSearch(DepthFirstSearch<T> label, Var costVar, String type) {
+    if (options.debug()) {
+      IO.println("%% maximum clique search over " + dictionary.maxClique.x.length + " vertices");
+    }
+    org.jacop.search.MaxCliqueSelect select =
+        new org.jacop.search.MaxCliqueSelect(dictionary.maxClique);
+    if (!"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.maxClique.greedy"))) {
+      // the greedy clique is the incumbent of a run from the root: as the top decisions of the
+      // tree, its vertices of large degree keep the search away from the hidden clique of brock
+      int[] clique = dictionary.maxClique.greedyClique();
+      select.firstDive(clique);
+      if (options.debug()) {
+        IO.println("%% greedy clique of " + clique.length + " vertices for the first run");
+      }
+      restartCalculator = new org.jacop.search.restart.FirstRunCalculator(0);
+      return executeRestartSearch(label, (SelectChoicePoint<T>) select, costVar, type);
+    }
+    return executeNonRestartSearch(label, (SelectChoicePoint<T>) select, costVar, type);
   }
 
   /**
@@ -3413,6 +3464,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
+    double perLiteral = Double.parseDouble(options.freeConfig("lcg-slow-literal", "5"));
     if (costVar == null) {
       // fixed search backtracks the annotation's decisions about one level a conflict whatever
       // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
@@ -3446,7 +3498,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       check[0] =
           () -> {
             if (slowLcgCheckOnce(
-                solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                solver, rate, perLiteral, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
               solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
             }
           };
@@ -3459,7 +3511,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               try {
                 Thread.sleep(wait);
                 while (slowLcgCheckOnce(
-                    solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                    solver,
+                    rate,
+                    perLiteral,
+                    unsolvedRate,
+                    unsolvedOnly,
+                    stallNanos,
+                    gain,
+                    costs)) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -3607,6 +3666,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean slowLcgCheckOnce(
       LcgSolver solver,
       double rate,
+      double perLiteral,
       double unsolvedRate,
       boolean unsolvedOnly,
       long stallNanos,
@@ -3616,7 +3676,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
-    if (solver.sat().conflicts >= rate * (now - lcgStart) / 1e9 || tooLateForFreeSearch(solver)) {
+    if (solver.sat().conflicts
+            >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
+                * (now - lcgStart)
+                / 1e9
+        || tooLateForFreeSearch(solver)) {
       return false;
     }
     long cost = bestPrintedCost.get();
@@ -3644,6 +3708,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return true;
+  }
+
+  /**
+   * The rate in conflicts per second below which LCG free search counts as slow: lcg-slow-rate, or
+   * lcg-slow-literal conflicts per second for each literal of an average learnt clause when that is
+   * more. A conflict whose learnt clause has hundreds of literals prunes little of the search, so
+   * LCG pays for learning that branch and bound without it does not need, and runs fewer
+   * neighbourhoods. On the CSPLib TTPPV instances (traveling tournament with predefined venues,
+   * circ14 and circ20) LCG learns clauses of 210 to 450 literals at 490 to 990 conflicts per
+   * second, the sum of 400 travel bounds behind each objective conflict; free search without
+   * learning runs three times as many neighbourhoods (sum of the best objectives at 600 s 12,816 to
+   * 12,526; CP-SAT 12,428).
+   *
+   * @param conflicts the conflicts of LCG so far
+   * @param learntLiterals the literals of the clauses it learnt
+   * @param rate lcg-slow-rate
+   * @param perLiteral lcg-slow-literal, 0 = off
+   * @return the slow rate in conflicts per second
+   */
+  static double slowRate(long conflicts, long learntLiterals, double rate, double perLiteral) {
+    if (perLiteral <= 0 || conflicts == 0) {
+      return rate;
+    }
+    return Math.max(rate, perLiteral * learntLiterals / conflicts);
   }
 
   /**
@@ -4405,6 +4493,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.coreSkips
         + "\n%%%mzn-stat: lcgCoreProbeSkips="
         + lcg.probeSkips
+        + "\n%%%mzn-stat: lcgCoreProbeHalfWays="
+        + lcg.probeHalfWays
+        + "\n%%%mzn-stat: lcgCoreTermsBySpanRatio="
+        + core.termsBySpanRatio
         + "\n%%%mzn-stat: lcgBoundDives="
         + lcg.boundDives
         + "\n%%%mzn-stat: lcgBoundDiveSolutions="
