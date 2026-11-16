@@ -45,6 +45,7 @@ import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -265,9 +266,17 @@ public class TableCover extends Constraint
         cover[x][fill[x]++] = r;
       }
     }
+    // with exact, a value must be taken when a tuple covers it and some variable can take it; a
+    // value in no domain (a hole in the range) cannot be taken, and the all different leaves it out
+    boolean[] possible = new boolean[range];
+    for (IntVar v : vars) {
+      for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        possible[e.nextElement() - lo] = true;
+      }
+    }
     primary = new boolean[n];
     for (int e = 0; e < n; e++) {
-      primary[e] = e < k || exact && cover[e].length > 0;
+      primary[e] = e < k || exact && cover[e].length > 0 && possible[e - k];
     }
     dead = new boolean[tuple.length];
     killed = new boolean[tuple.length];
