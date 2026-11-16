@@ -187,16 +187,26 @@ class LpProbeFlatzincTest {
     args[options.length + 1] = "-t";
     args[options.length + 2] = "20000";
     args[options.length + 3] = fzn.toString();
-    System.setProperty("org.jacop.fz.lpProbe", Long.toString(probe));
-    System.setProperty("org.jacop.fz.lpProbeSize", "0");
+    // the build sets org.jacop.fz.lpProbe to 0 for every test (pom.xml): restore it afterwards, as
+    // clearing it turned the 200 ms probe on for the tests that ran later in the same JVM
+    String previousProbe = System.setProperty("org.jacop.fz.lpProbe", Long.toString(probe));
+    String previousSize = System.setProperty("org.jacop.fz.lpProbeSize", "0");
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
       new Fz2jacop().callMain(args);
     } finally {
       System.setOut(originalOut);
-      System.clearProperty("org.jacop.fz.lpProbe");
-      System.clearProperty("org.jacop.fz.lpProbeSize");
+      restore("org.jacop.fz.lpProbe", previousProbe);
+      restore("org.jacop.fz.lpProbeSize", previousSize);
     }
     return buffer.toString(StandardCharsets.UTF_8);
+  }
+
+  private static void restore(String key, String value) {
+    if (value == null) {
+      System.clearProperty(key);
+    } else {
+      System.setProperty(key, value);
+    }
   }
 }
