@@ -211,6 +211,7 @@ import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.core.ValueEnumeration;
 import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.search.DepthFirstSearch;
 import org.jacop.search.IndomainMax;
@@ -241,7 +242,10 @@ import org.junit.jupiter.api.Test;
  * comma-separated list of the cases of the globals added in 5.0, half of the constraints are drawn
  * from those cases, to test their explanations at volume. With {@code lcg.fuzz.focus} set to a
  * comma-separated list of the cases of {@code randomConstraint}, three constraints in four are
- * drawn from those cases (the constraint audit checks one constraint's explanations this way).
+ * drawn from those cases (the constraint audit checks one constraint's explanations this way). With
+ * {@code lcg.fuzz.ground=true} about a quarter of the variables are ground before the constraints
+ * on them are imposed and another quarter after they are imposed, before the first consistency, for
+ * constraints imposed with ground variables.
  */
 class LcgFuzzTest {
 
@@ -250,6 +254,10 @@ class LcgFuzzTest {
   private static final int SEED = Integer.getInteger("lcg.fuzz.seed", 1);
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
+
+  // with lcg.fuzz.ground=true one variable in eight is ground before the constraints on it are
+  // imposed, and another one in eight after they are imposed, before the first consistency
+  private static final boolean GROUND = Boolean.getBoolean("lcg.fuzz.ground");
 
   // with lcg.fuzz.recent=3,4 (cases of recentGlobal), half of the constraints are those globals
   private static final int[] RECENT = recentCases(System.getProperty("lcg.fuzz.recent"));
@@ -302,9 +310,14 @@ class LcgFuzzTest {
 
     final Random holes;
 
+    // grounds variables, from its own generator so the model is otherwise the same
+    final Random ground;
+    final List<IntVar> groundLater = new ArrayList<>();
+
     Model(long seed) {
       rnd = new Random(seed);
       holes = HOLES ? new Random(seed * 31 + 7) : null;
+      ground = GROUND ? new Random(seed * 37 + 11) : null;
       int n = 4 + rnd.nextInt(4);
       x = new IntVar[n];
       for (int i = 0; i < n; i++) {
@@ -319,6 +332,9 @@ class LcgFuzzTest {
         if (rnd.nextBoolean()) {
           b[i] = new BooleanVar(store, "b" + i);
           vars.add(b[i]);
+          if (ground != null) {
+            ground(b[i]);
+          }
         } else {
           b[i] = intVar("b" + i, 0, 1);
         }
@@ -335,12 +351,41 @@ class LcgFuzzTest {
       if (rnd.nextBoolean()) {
         objective = rnd.nextBoolean() ? x[rnd.nextInt(n)] : sumObjective();
       }
+      for (IntVar v : groundLater) {
+        int value = valueOf(v);
+        v.domain.in(store.level, v, value, value);
+      }
+    }
+
+    // one variable in eight ground now, one in eight once the constraints are imposed (more leaves
+    // most models unsatisfiable, with few explanations to check)
+    private void ground(IntVar v) {
+      int choice = ground.nextInt(8);
+      System.out.println("DBG " + v.id() + " " + choice + " " + v.dom());
+      if (choice == 0) {
+        int value = valueOf(v);
+        v.domain.in(store.level, v, value, value);
+      } else if (choice == 1) {
+        groundLater.add(v);
+      }
+    }
+
+    private int valueOf(IntVar v) {
+      int[] values = new int[v.domain.getSize()];
+      int k = 0;
+      for (ValueEnumeration e = v.domain.valueEnumeration(); e.hasMoreElements(); ) {
+        values[k++] = e.nextElement();
+      }
+      return values[ground.nextInt(k)];
     }
 
     private IntVar intVar(String name, int min, int max) {
       IntVar v = new IntVar(store, name + "_" + vars.size(), min, max); // names may repeat
       if (holes != null) {
         punch(v);
+      }
+      if (ground != null) {
+        ground(v);
       }
       vars.add(v);
       return v;
@@ -2282,6 +2327,8 @@ class LcgFuzzTest {
         System.out.println("lcg fuzz: seed " + seed + " skipped, the reference search timed out");
         referenceTimeouts++;
         continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError("seed " + seed + "\n" + new Model(seed).describe(), e);
       }
       Model model = new Model(seed);
       String where = "seed " + seed + "\n" + model.describe();
