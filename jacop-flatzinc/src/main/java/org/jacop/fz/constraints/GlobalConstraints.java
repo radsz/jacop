@@ -2481,6 +2481,10 @@ class GlobalConstraints implements ParserTreeConstants {
     if (f.length != invf.length) {
       throw Store.failException;
     }
+    // and each of f and invf takes distinct values, so a variable repeated in one of them cannot
+    // be satisfied (the implied Alldistinct under ::domain rejects such a list)
+    checkForDuplicateVariables(f);
+    checkForDuplicateVariables(invf);
 
     // inverse(x, x) is symmetric all different, a perfect matching of the variables
     String symmetric = symmetricAlldifferent(f.length);

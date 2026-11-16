@@ -296,6 +296,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
@@ -404,6 +405,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -555,6 +557,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
@@ -668,6 +671,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -815,6 +819,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
@@ -928,6 +933,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -1075,6 +1081,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
@@ -1186,6 +1193,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -1664,6 +1672,7 @@ setup to run configuration. -->
                         <include>**/FreeSearchTest.java</include>
                         <include>**/AdaptiveLnsTest.java</include>
                         <include>**/ProjectScheduleTest.java</include>
+                        <include>**/BinCompletionTest.java</include>
                         <include>**/SuccessorRoutesTest.java</include>
                         <include>**/RectanglePlacementSelectTest.java</include>
                         <include>**/RouteNeighbourhoodsTest.java</include>
