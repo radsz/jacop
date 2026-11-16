@@ -1775,11 +1775,22 @@ class FlatzincFrontEndTest {
     String out = run(model, "-s", "--lcg", "off")[0];
     assertTrue(out.contains("x60 = 4;"), out);
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+    // the sum of the y_i (at least 118 over 60 distinct indices) also removes 3 and 5 at the root
     System.setProperty("org.jacop.fz.alldiffChannel", "false");
+    System.setProperty("org.jacop.fz.permutationElementSums", "false");
     try {
       String bounds = run(model, "-s", "--lcg", "off")[0];
       assertTrue(bounds.contains("x60 = 4;"), bounds);
       assertTrue(!bounds.contains("%%%mzn-stat: failures=0"), bounds);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldiffChannel");
+      System.clearProperty("org.jacop.fz.permutationElementSums");
+    }
+    System.setProperty("org.jacop.fz.alldiffChannel", "false");
+    try {
+      String sums = run(model, "-s", "--lcg", "off")[0];
+      assertTrue(sums.contains("x60 = 4;"), sums);
+      assertTrue(sums.contains("%%%mzn-stat: failures=0"), sums);
     } finally {
       System.clearProperty("org.jacop.fz.alldiffChannel");
     }

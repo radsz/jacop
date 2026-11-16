@@ -4718,7 +4718,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             && costVar instanceof IntVar
             && !"0".equals(options.freeConfig("ls-auto", "1"));
     // the task starts are decision variables: only their constraints are looked at
-    if (auto && !ScheduleResources.hasResource(searchVars.getIntVars())) {
+    if (auto
+        && !ScheduleResources.hasResource(searchVars.getIntVars())
+        && !ScheduleResources.hasPermutation(searchVars.getIntVars())) {
       return null;
     }
     double share = auto ? AUTO_LS_SHARE : Double.parseDouble(given == null ? "0" : given);
@@ -5183,10 +5185,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // the disjunctive graph of the scheduling search of local search: tasks/machines/iterations
   private String scheduleStatistics() {
     long[] counts = localSearch.getScheduleCounts();
-    if (counts[0] == 0) {
+    long[] flow = localSearch.getFlowShopCounts();
+    if (counts[0] == 0 && flow[0] == 0) {
       return "";
     }
-    return "\n%%%mzn-stat: lsSchedule=" + counts[0] + "/" + counts[1] + "/" + counts[2];
+    String out = "\n%%%mzn-stat: lsSchedule=" + counts[0] + "/" + counts[1] + "/" + counts[2];
+    return flow[0] == 0
+        ? out
+        : out + "\n%%%mzn-stat: lsFlowShop=" + flow[0] + "/" + flow[1] + "/" + flow[2];
   }
 
   // dom/wdeg weights are forgotten every this many restarts (0 never); set by executeFreeSearch
