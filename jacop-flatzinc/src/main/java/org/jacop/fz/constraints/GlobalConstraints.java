@@ -2255,26 +2255,26 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private int[][] filterFeasibleTuples(int[] tbl, IntVar[] v, int size) {
-    int[][] t = new int[tbl.length / size][size];
-    boolean[] tuplesToRemove = new boolean[t.length];
-    int n = 0;
-    for (int i = 0; i < t.length; i++) {
-      for (int j = 0; j < size; j++) {
-        if (!v[j].domain.contains(tbl[size * i + j])) {
-          tuplesToRemove[i] = true;
-        }
-        t[i][j] = tbl[size * i + j];
+    // only the rows that fit are copied: a table of 26 million rows (Inglenook, XCSP 2026) fits
+    // the domains of most of its constraints with a small part of its rows
+    int rows = tbl.length / size;
+    boolean[] fits = new boolean[rows];
+    int k = 0;
+    for (int i = 0; i < rows; i++) {
+      boolean fit = true;
+      for (int j = 0; j < size && fit; j++) {
+        fit = v[j].domain.contains(tbl[size * i + j]);
       }
-      if (tuplesToRemove[i]) {
-        n++;
+      fits[i] = fit;
+      if (fit) {
+        k++;
       }
     }
-    int k = t.length - n;
     int[][] newT = new int[k][];
     int m = 0;
-    for (int i = 0; i < t.length; i++) {
-      if (!tuplesToRemove[i]) {
-        newT[m++] = t[i];
+    for (int i = 0; i < rows; i++) {
+      if (fits[i]) {
+        newT[m++] = Arrays.copyOfRange(tbl, size * i, size * i + size);
       }
     }
     return newT;
@@ -2311,6 +2311,9 @@ class GlobalConstraints implements ParserTreeConstants {
         toRemove[i] = true;
         numberToRemove++;
       }
+    }
+    if (numberToRemove == 0) {
+      return new TableVarsTuples(v, t);
     }
     int[][] newT = new int[t.length][size - numberToRemove];
     for (int i = 0; i < t.length; i++) {
