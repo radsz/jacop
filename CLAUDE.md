@@ -88,6 +88,17 @@ generator returning a `Model` (the constraint, the relation as a `Predicate<int[
 assignments, and the variables in the relation's order). Keep the instances small, since every node
 enumerates the whole box (nodes above 200,000 tuples are skipped).
 
+## Mining learnt clauses for propagator gaps
+
+`-Djacop.lcg.mine=FILE` (`org.jacop.lcg.ClauseMiner`, off by default) tests every LCG learnt clause
+of up to 24 literals against the constraints whose scope covers its variables (or pairs of
+constraints sharing a variable): copied over the root domains with the other literals false, does
+propagation entail the asserting literal (`prop`), fail only once it is false too (`failOnly`, a
+missing domain-consistency pruning), need a search (`search`), or is the clause not implied
+(`not`)? Counts per constraint class and examples go to FILE at exit. It spends at most half of
+the run (`jacop.lcg.mine.budget`); `jacop.lcg.mine.size`, `.nodes` and `.exclude` tune it. The
+osolpro kit `benchmarks/clause-mining` runs it over a set and ranks the classes.
+
 ## Checking wake-up events (fresh fixpoint)
 
 `jacop-core/src/test/java/org/jacop/WakeUpFixpointTest.java` (in the build, `wakeup.trials`, 1000 in
