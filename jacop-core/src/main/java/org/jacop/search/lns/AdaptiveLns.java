@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.IntToDoubleFunction;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
@@ -147,7 +148,68 @@ public final class AdaptiveLns {
      * A whole new assignment of some variables proposed by a heuristic from the best solution, such
      * as a schedule of the tasks built by a genetic algorithm; the other variables are free.
      */
-    PROPOSALS
+    PROPOSALS,
+    /**
+     * Relaxation-induced: the variables whose value in the best solution differs from their value
+     * in the solution of the linear relaxation are free, the others fixed (RINS, E. Danna, E.
+     * Rothberg and C. Le Pape, Exploring relaxation induced neighborhoods to improve MIP solutions,
+     * Mathematical Programming 102, 2005); free variables are added at random up to the share of
+     * the kind, and the farthest from the relaxation are kept when there are more.
+     */
+    RINS
+  }
+
+  // the value of each variable in the solution of the linear relaxation, NaN when it has none
+  private IntToDoubleFunction lpValue;
+
+  /**
+   * Gives the {@link Kind#RINS} neighbourhood the values of the variables in a solution of the
+   * linear relaxation.
+   *
+   * @param values the value of the variable of each index, or NaN when unknown
+   * @return this
+   */
+  public AdaptiveLns setLpValues(IntToDoubleFunction values) {
+    lpValue = values;
+    return this;
+  }
+
+  // the variables that disagree with the relaxation relaxed, the farthest first, then random
+  // ones up to relaxed
+  private boolean[] rinsRelax(int relaxed) {
+    if (lpValue == null) {
+      return randomRelax(relaxed);
+    }
+    int[] order = freeOrder();
+    double[] distance = new double[vars.length];
+    int known = 0;
+    for (int i : order) {
+      double v = lpValue.applyAsDouble(i);
+      if (Double.isNaN(v)) {
+        distance[i] = -1;
+      } else {
+        distance[i] = Math.abs(v - incumbent[i]);
+        known++;
+      }
+    }
+    if (known == 0) {
+      return randomRelax(relaxed);
+    }
+    Integer[] sorted = new Integer[order.length];
+    for (int k = 0; k < order.length; k++) {
+      sorted[k] = order[k];
+    }
+    // stable: ties (the agreeing variables, and those without a value) stay in random order
+    Arrays.sort(sorted, (a, b) -> Double.compare(rinsKey(distance[b]), rinsKey(distance[a])));
+    boolean[] relax = new boolean[vars.length];
+    for (int k = 0; k < relaxed && k < sorted.length; k++) {
+      relax[sorted[k]] = true;
+    }
+    return relax;
+  }
+
+  private static double rinsKey(double distance) {
+    return distance > 1e-6 ? distance : 0;
   }
 
   /** Proposes new values of some variables from their values in the best solution. */
@@ -846,6 +908,7 @@ public final class AdaptiveLns {
           case PACKING -> packingRelax(relaxed);
           case BLOCKS -> blocksRelax(relaxed);
           case LINES -> linesRelax(relaxed);
+          case RINS -> rinsRelax(relaxed);
           default -> null;
         };
     if (relax == null) {
@@ -1012,6 +1075,7 @@ public final class AdaptiveLns {
       case LINES -> lines.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
       case PROPOSALS -> proposer != null;
+      case RINS -> lpValue != null;
       default -> true;
     };
   }

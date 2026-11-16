@@ -130,6 +130,8 @@ public final class CdclSolver {
   // formula it was built for, its time so far and where the clock started
   private double jumpShare = DEFAULT_JUMP_SHARE;
   private JumpSearch jumper;
+  // the formula of the local search when bounded variable addition is undone in it
+  private JumpSearch.Unfactored jumpUnfactored;
   private long jumpSignature = -1;
   private int jumperClauses;
   private static final boolean JUMP_DEBUG = Boolean.getBoolean("jacop.jasat.jumpDebug");
@@ -326,6 +328,27 @@ public final class CdclSolver {
   private int eliminationInterval = 5000;
   private int eliminationRounds;
   private long seed;
+
+  // --- bounded variable addition before the first elimination (see Factorizer)
+  private boolean factoring;
+  private boolean factored;
+  // the variables above this one are fresh variables of the factorizer
+  private int factorBase = Integer.MAX_VALUE;
+  private long factorEffort = Factorizer.EFFORT_LIMIT;
+  // restoreEliminated adds back clauses on fresh variables too
+  private boolean restoring;
+
+  /** Statistics: fresh variables added by bounded variable addition. */
+  public int factoredVars;
+
+  /** Statistics: clauses removed by bounded variable addition, net of the added ones. */
+  public long factoredClauses;
+
+  /** Statistics: time spent in bounded variable addition. */
+  public long factorNanos;
+
+  /** Statistics: effort spent in bounded variable addition (see {@link #setFactorEffort}). */
+  public long factorWork;
 
   // --- external propagator (see ExternalPropagator)
   private ExternalPropagator external;
@@ -536,6 +559,9 @@ public final class CdclSolver {
       }
       maxVar = Math.max(maxVar, Math.abs(lits[i]));
     }
+    if (!restoring) {
+      checkNotFresh(maxVar);
+    }
     ensureVars(maxVar);
     for (int i = 0; i < n && numEliminated > 0; i++) {
       if (eliminatedVar[Math.abs(lits[i]) - 1]) {
@@ -612,6 +638,7 @@ public final class CdclSolver {
     for (int a : assumed) {
       maxVar = Math.max(maxVar, Math.abs(a));
     }
+    checkNotFresh(maxVar);
     ensureVars(maxVar);
     assumptions = new int[assumed.length];
     for (int i = 0; i < assumed.length; i++) {
@@ -1014,6 +1041,46 @@ public final class CdclSolver {
   }
 
   /**
+   * Turns bounded variable addition on or off (off by default). It runs once, in the first {@link
+   * #solve} call, just before the first variable elimination (so only with elimination on), and it
+   * adds fresh variables above {@link #numInputVars()}: a model of the new formula is one of the
+   * input formula on the input variables. A clause or an assumption on a variable above them is an
+   * error afterwards, so it suits one-shot solving such as {@link CdclMain}, not a caller that adds
+   * variables between calls. See {@link Factorizer}.
+   *
+   * @param on whether to add variables
+   */
+  public void setFactoring(boolean on) {
+    factoring = on;
+  }
+
+  /**
+   * Sets the effort (clause and occurrence visits) bounded variable addition may spend.
+   *
+   * @param effort the effort limit
+   */
+  public void setFactorEffort(long effort) {
+    factorEffort = effort;
+  }
+
+  /**
+   * Returns the number of variables of the input formula: {@link #numVars()} without the fresh
+   * variables of bounded variable addition.
+   *
+   * @return the largest input DIMACS variable
+   */
+  public int numInputVars() {
+    return Math.min(numVars, factorBase);
+  }
+
+  private void checkNotFresh(int maxVar) {
+    if (maxVar > factorBase) {
+      throw new IllegalStateException(
+          "variable " + maxVar + " is a fresh variable of bounded variable addition");
+    }
+  }
+
+  /**
    * Writes a proof of every derived and deleted clause, such as a {@link DratWriter}. Set it before
    * adding clauses.
    *
@@ -1280,8 +1347,12 @@ public final class CdclSolver {
         i += 2;
         int bv = localVals[blocker];
         if (bv > 0) {
-          ws[j++] = blocker;
-          ws[j++] = ref;
+          // the pair stays where it is: the list is only read until a pair before it moves
+          if (j != i - 2) {
+            ws[j] = blocker;
+            ws[j + 1] = ref;
+          }
+          j += 2;
           continue;
         }
         int lits = ref + HEADER;
@@ -1343,8 +1414,13 @@ public final class CdclSolver {
         }
       }
       if (conflict != NO_CONFLICT) {
-        while (i < n) {
-          ws[j++] = ws[i++];
+        if (j == i) {
+          // nothing moved: the rest of the list stays as it is
+          j = n;
+        } else {
+          while (i < n) {
+            ws[j++] = ws[i++];
+          }
         }
         watchSize[falseLit] = j;
         qhead = trailSize;
@@ -3556,16 +3632,30 @@ public final class CdclSolver {
       if (formula[1].length == 1) {
         return;
       }
+      int[] lits = formula[0];
+      int[] start = formula[1];
+      int clauses = start.length - 1;
+      jumpUnfactored = null;
+      if (factorBase < numVars) {
+        jumpUnfactored =
+            JumpSearch.unfactor(
+                lits, start, clauses, factorBase, numVars, 4L * start[clauses] + 1_000_000);
+        if (jumpUnfactored != null) {
+          lits = jumpUnfactored.lits;
+          start = jumpUnfactored.start;
+          clauses = jumpUnfactored.numClauses;
+        }
+      }
       jumper =
           new JumpSearch(
               numVars,
-              formula[0],
-              formula[1],
-              formula[1].length - 1,
+              lits,
+              start,
+              clauses,
               Arrays.copyOf(savedSign, numVars),
               jumpCalls + 7_000_003L * seed);
       jumpSignature = signature;
-      jumperClauses = formula[1].length - 1;
+      jumperClauses = clauses;
     }
     jumpCalls++;
     long end = begin + slice;
@@ -3595,12 +3685,15 @@ public final class CdclSolver {
     }
     if (model) {
       jumpModels++;
-      byte[] signs = jumper.signs();
+      byte[] signs = Arrays.copyOf(jumper.signs(), numVars);
+      if (jumpUnfactored != null) {
+        jumpUnfactored.extend(signs);
+      }
       System.arraycopy(signs, 0, savedSign, 0, numVars);
       System.arraycopy(signs, 0, bestSign, 0, numVars);
       // decisions follow these phases until a conflict: vivification and phase saving may change
       // the saved phases before the descent
-      jumpPhases = Arrays.copyOf(signs, numVars);
+      jumpPhases = signs;
     }
   }
 
@@ -3916,6 +4009,23 @@ public final class CdclSolver {
         input[n++] = new int[] {a, b};
       }
     }
+    if (factoring && !factored) {
+      factored = true;
+      long begin = System.nanoTime();
+      Factorizer f = new Factorizer(numVars, input, n, proof, factorEffort);
+      f.setDeadline(deadline);
+      if (f.run() > 0) {
+        input = f.clauses();
+        factoredClauses = n - (long) input.length;
+        n = input.length;
+        factorBase = numVars;
+        factoredVars = f.numFresh();
+        ensureVars(f.numVars());
+        frozen = Arrays.copyOf(frozen, numVars);
+      }
+      factorWork = f.effort();
+      factorNanos = System.nanoTime() - begin;
+    }
     Eliminator e = new Eliminator(numVars, input, n, frozen, proof);
     boolean sat = e.run();
     for (int i = 0; i < numOriginals; i++) {
@@ -4052,7 +4162,12 @@ public final class CdclSolver {
       if (proof != null) {
         proof.add(ext, start, size);
       }
-      addClause(c, size);
+      restoring = true;
+      try {
+        addClause(c, size);
+      } finally {
+        restoring = false;
+      }
       i = start;
     }
   }

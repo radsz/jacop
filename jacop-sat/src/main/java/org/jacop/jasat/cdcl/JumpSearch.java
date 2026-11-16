@@ -31,7 +31,9 @@
 
 package org.jacop.jasat.cdcl;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.SplittableRandom;
 import java.util.function.BooleanSupplier;
 
@@ -205,6 +207,164 @@ final class JumpSearch {
       x = x % size;
     }
     return 1L << seq;
+  }
+
+  /**
+   * Resolves the fresh variables of bounded variable addition (see {@link Factorizer}) away again,
+   * from the last one down: a fresh variable x stands for the products of its clauses x v F and -x
+   * v R, and the local search finds models of the products F v R far more easily than of the
+   * factored form. Tautologies are dropped.
+   *
+   * @param lits the literals of the clauses, one after the other
+   * @param start where clause i starts in lits; start[numClauses] is the end
+   * @param numClauses the number of clauses
+   * @param first the first fresh variable
+   * @param numVars the number of variables
+   * @param limit the most literals the result may have
+   * @return the formula without the fresh variables, or null if it would exceed the limit
+   */
+  static Unfactored unfactor(
+      int[] lits, int[] start, int numClauses, int first, int numVars, long limit) {
+    List<int[]> clauses = new ArrayList<>(numClauses);
+    int fresh = numVars - first;
+    List<List<Integer>> occ = new ArrayList<>(2 * fresh);
+    for (int i = 0; i < 2 * fresh; i++) {
+      occ.add(new ArrayList<>());
+    }
+    List<Boolean> alive = new ArrayList<>(numClauses);
+    long size = 0;
+    for (int c = 0; c < numClauses; c++) {
+      add(Arrays.copyOfRange(lits, start[c], start[c + 1]), clauses, alive, occ, first);
+      size += start[c + 1] - start[c];
+    }
+    int[][][] defs = new int[fresh][][];
+    for (int v = numVars - 1; v >= first; v--) {
+      List<int[]> pos = new ArrayList<>();
+      List<int[]> neg = new ArrayList<>();
+      for (int s = 0; s < 2; s++) {
+        for (int c : occ.get(2 * (v - first) + s)) {
+          if (alive.get(c)) {
+            alive.set(c, false);
+            size -= clauses.get(c).length;
+            (s == 0 ? pos : neg).add(without(clauses.get(c), v));
+          }
+        }
+      }
+      defs[v - first] = pos.toArray(new int[0][]);
+      for (int[] f : pos) {
+        for (int[] r : neg) {
+          int[] resolvent = resolve(f, r);
+          if (resolvent != null) {
+            size += resolvent.length;
+            if (size > limit) {
+              return null;
+            }
+            add(resolvent, clauses, alive, occ, first);
+          }
+        }
+      }
+    }
+    int n = 0;
+    for (int c = 0; c < clauses.size(); c++) {
+      if (alive.get(c)) {
+        n++;
+      }
+    }
+    int[] outLits = new int[(int) size];
+    int[] outStart = new int[n + 1];
+    int k = 0;
+    int m = 0;
+    for (int c = 0; c < clauses.size(); c++) {
+      if (alive.get(c)) {
+        outStart[m++] = k;
+        for (int l : clauses.get(c)) {
+          outLits[k++] = l;
+        }
+      }
+    }
+    outStart[n] = k;
+    return new Unfactored(outLits, outStart, n, first, defs);
+  }
+
+  private static void add(
+      int[] clause, List<int[]> clauses, List<Boolean> alive, List<List<Integer>> occ, int first) {
+    int c = clauses.size();
+    clauses.add(clause);
+    alive.add(true);
+    for (int l : clause) {
+      if (l >> 1 >= first) {
+        occ.get(l - 2 * first).add(c);
+      }
+    }
+  }
+
+  private static int[] without(int[] clause, int v) {
+    int[] r = new int[clause.length - 1];
+    int k = 0;
+    for (int l : clause) {
+      if (l >> 1 != v) {
+        r[k++] = l;
+      }
+    }
+    return r;
+  }
+
+  // the union of two clauses, or null for a tautology
+  private static int[] resolve(int[] a, int[] b) {
+    int[] r = Arrays.copyOf(a, a.length + b.length);
+    int k = a.length;
+    outer:
+    for (int l : b) {
+      for (int i = 0; i < a.length; i++) {
+        if (a[i] == l) {
+          continue outer;
+        }
+        if (a[i] == (l ^ 1)) {
+          return null;
+        }
+      }
+      r[k++] = l;
+    }
+    return Arrays.copyOf(r, k);
+  }
+
+  /** A formula with the fresh variables of bounded variable addition resolved away. */
+  static final class Unfactored {
+    final int[] lits;
+    final int[] start;
+    final int numClauses;
+    private final int first;
+    // per fresh variable, its clauses x v F (without x) when it was resolved away
+    private final int[][][] defs;
+
+    Unfactored(int[] lits, int[] start, int numClauses, int first, int[][][] defs) {
+      this.lits = lits;
+      this.start = start;
+      this.numClauses = numClauses;
+      this.first = first;
+      this.defs = defs;
+    }
+
+    /**
+     * Gives the fresh variables values that extend a model of the resolved formula to one of the
+     * factored formula: x is true when one of its clauses x v F has F false, and then every R of
+     * its clauses -x v R is true, since F v R is satisfied.
+     *
+     * @param signs a model of the resolved formula over all variables, as signs; changed in place
+     */
+    void extend(byte[] signs) {
+      for (int i = 0; i < defs.length; i++) {
+        boolean needed = false;
+        for (int[] f : defs[i]) {
+          boolean allFalse = true;
+          for (int l : f) {
+            allFalse &= signs[l >> 1] != (l & 1);
+          }
+          needed |= allFalse;
+        }
+        signs[first + i] = (byte) (needed ? 0 : 1);
+      }
+    }
   }
 
   // weights back to one, counts, scores and lists from the signs

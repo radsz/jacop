@@ -34,6 +34,7 @@ package org.jacop.jasat.cdcl;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -174,5 +175,38 @@ class JumpSearchTest {
     assertThrows(IllegalArgumentException.class, () -> s.setJumpShare(Double.NaN));
     s.setJumpShare(0);
     assertEquals(0, s.jumpModels());
+  }
+
+  @Test
+  void factoredVariablesAreResolvedAwayAndExtended() {
+    // x5 v a, x5 v b, -x5 v c, -x5 v d (the form bounded variable addition gives (a & b) | (c &
+    // d)),
+    // plus -a v -c: the local search sees a v c, a v d, b v c, b v d, -a v -c over a..d only
+    int[][] f = {{5, 1}, {5, 2}, {-5, 3}, {-5, 4}, {-1, -3}};
+    int[] lits = new int[11];
+    int[] start = new int[f.length + 1];
+    int k = 0;
+    for (int c = 0; c < f.length; c++) {
+      start[c] = k;
+      for (int l : f[c]) {
+        lits[k++] = l > 0 ? 2 * (l - 1) : 2 * (-l - 1) + 1;
+      }
+    }
+    start[f.length] = k;
+    JumpSearch.Unfactored u = JumpSearch.unfactor(lits, start, f.length, 4, 5, 1000);
+    assertEquals(5, u.numClauses);
+    for (int i = 0; i < u.start[u.numClauses]; i++) {
+      assertTrue(u.lits[i] >> 1 < 4);
+    }
+    for (int seed = 0; seed < 20; seed++) {
+      JumpSearch s = new JumpSearch(5, u.lits, u.start, u.numClauses, new byte[5], seed);
+      assertTrue(s.run(Long.MAX_VALUE, () -> false));
+      byte[] signs = s.signs().clone();
+      signs[4] = (byte) (seed & 1);
+      u.extend(signs);
+      assertTrue(satisfies(f, signs), "seed " + seed);
+    }
+    // a limit below the size of the resolvents gives up
+    assertNull(JumpSearch.unfactor(lits, start, f.length, 4, 5, 5));
   }
 }
