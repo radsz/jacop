@@ -45,8 +45,10 @@ the work is truly done.
 ## Checking propagator strength (consistency checker)
 
 `jacop-core/src/test/java/org/jacop/ConsistencyChecker.java` measures the consistency a propagator
-actually reaches. It is a tool for improving constraints, not part of the build: no Maven profile
-includes it, so run it on demand with `-Dtest`.
+actually reaches. It is a tool for improving constraints and a guard against weakened propagators:
+the profiles run it with few instances (`consistency.instances` 50 in `min`, about 40 s, and 200 in
+`commit`), since it is the only test that fails when a propagator still answers right but prunes
+less. Run it at volume on demand with `-Dtest`.
 
 ```
 mvn -Pmin -pl jacop-core test -Dtest=ConsistencyChecker -Dsurefire.rerunFailingTestsCount=0
@@ -191,6 +193,16 @@ Add `-Dlcg.fuzz.holes=true` for up to two holes in every variable's domain: reas
 skip holes were the most frequent explanation bug (LinearIntDom, Diffn, WeightedCompletion).
 A constraint whose pruning depends on a variable that is not among its arguments (such as an
 internal counter) needs that variable in its scope, or the generic reason is unsound.
+
+`LcgFuzzTest#explanationSizesMatchGolden` is the explanation-size oracle: it solves 40,000 fixed
+random models (`lcg.sizes.runs`, about 10 s) and compares, per constraint class with at least 100
+samples, the share of reasons and failures explained by the generic reason and the atoms per
+explanation with `jacop-sat/src/test/resources/org/jacop/jasat/lcg/explanation-sizes.tsv`. It fails
+when a share grows by more than two points or the atoms by more than 10 %: a weaker but valid
+explanation, which the checker cannot see. After a change meant to alter explanations or the model
+generator, rewrite the file with `-Dlcg.sizes.write=true` and commit it with the change.
+`MutationGapsTest` (jacop-core) does the same for Max, Min, Member and ElementInteger outside the
+solver, with exact counts per seed, and checks each reason directly.
 
 `-Dlcg.fuzz.proof=true` instead solves the random models with `--proof` logging and checks every
 proof with `RupChecker` and its conclusion against the reference (models with a constraint that

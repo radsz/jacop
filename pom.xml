@@ -224,6 +224,7 @@ setup to run configuration. -->
                                 <presolve.elimination.trials>300</presolve.elimination.trials>
                                 <presolve.dominance.trials>500</presolve.dominance.trials>
                                 <wakeup.trials>1000</wakeup.trials>
+                                <consistency.instances>50</consistency.instances>
                                 <floats.fuzz.trials>100</floats.fuzz.trials>
                                 <floats.fuzz.opt.trials>3</floats.fuzz.opt.trials>
                                 <float.builtins.trials>200</float.builtins.trials>
@@ -309,6 +310,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -489,6 +492,7 @@ setup to run configuration. -->
                         <configuration>
                             <systemPropertyVariables>
                                 <upTo30sec.list>list-commit.txt</upTo30sec.list>
+                                <consistency.instances>200</consistency.instances>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
@@ -571,6 +575,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -834,6 +840,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -1097,6 +1105,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
