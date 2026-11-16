@@ -223,6 +223,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   FreeSearch freeSearch;
   FreeSearch.Status freeSearchStatus;
   LcgSolver lcg;
+  // the solver of a model of clauses alone, which JaSAT solves without lazy clause generation
+  private CdclSolver pureSat;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -2963,6 +2965,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeLcgSearch(Var costVar) {
     Portfolio.Worker worker = options.portfolioWorker();
+    if (PureClauseModel.enabled()
+        && costVar == null
+        && worker == null
+        && options.proof() == null
+        && !options.getAll()
+        && options.getNumberSolutions() <= 1
+        && options.freeSearch()) {
+      // under free search (-f, or a model without search annotation, unless --default-search
+      // input), a model of clauses alone is a CNF that JaSAT solves on its own; a fixed search
+      // stays with LCG, which follows it
+      Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
+      if (linearRelaxation != null) {
+        ignored.add(linearRelaxation);
+      }
+      if (refutation != null) {
+        ignored.add(refutation);
+      }
+      PureClauseModel cnf =
+          PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
+      if (cnf != null) {
+        return executePureClauseSearch(cnf);
+      }
+    }
     // the hint and bound of a free search probe that did not finish (see freeLpProbe)
     IntVar[] probeVars = null;
     int[] probeValues = null;
@@ -3436,6 +3461,51 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
     }
     return numberSolutions > 0;
+  }
+
+  /**
+   * Solves a model of clauses alone with JaSAT, as CdclMain solves its CNF (see {@link
+   * PureClauseModel}), and prints the solution with the store's variables fixed to it.
+   */
+  private boolean executePureClauseSearch(PureClauseModel cnf) {
+    pureSat = cnf.solver;
+    if (options.debug()) {
+      FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
+    }
+    if (options.getTimeOut() > 0 && CdclSolver.VIRTUAL_CLOCK) {
+      pureSat.setDeadline(pureSat.now() + options.getTimeOut() * 1_000_000L);
+    } else if (options.getTimeOut() > 0) {
+      pureSat.setDeadline(System.nanoTime() + options.getRemainingTimeOut() * 1_000_000L);
+    }
+    String dump = System.getProperty("org.jacop.fz.pureClauses.dump");
+    if (dump != null) {
+      try (java.io.Writer w = Files.newBufferedWriter(Path.of(dump))) {
+        pureSat.writeDimacs(w);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+    lcgStatus = pureSat.solve();
+    if (lcgStatus == CdclSolver.SAT) {
+      cnf.fixStore(store);
+      printSolution();
+    }
+    return numberSolutions > 0;
+  }
+
+  // the 0/1 and integer variables of the model in the order of their declarations
+  private Var[] declaredVariables() {
+    DefaultSearchVars declared = new DefaultSearchVars(dictionary);
+    declared.defaultVars();
+    Var[] order = new Var[declared.boolVars.length + declared.intVars.length];
+    System.arraycopy(declared.boolVars, 0, order, 0, declared.boolVars.length);
+    System.arraycopy(declared.intVars, 0, order, declared.boolVars.length, declared.intVars.length);
+    return order;
+  }
+
+  // the SAT solver of lazy clause generation, or the one of a model of clauses alone
+  private CdclSolver lcgSat() {
+    return lcg != null ? lcg.sat() : pureSat;
   }
 
   // set when LCG free search was stopped for making too few conflicts
@@ -4542,16 +4612,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printResultStatus(interrupted, numberSolutions > 0, !complete, complete && !interrupted);
     if (options.getStatistics()) {
       printStatisticsOutput(
-          (int) lcg.sat().decisions,
-          (int) lcg.sat().conflicts,
-          lcg.sat().peakDecisionLevel,
+          (int) lcgSat().decisions,
+          (int) lcgSat().conflicts,
+          lcgSat().peakDecisionLevel,
           numberSolutions);
       if (numberSolutions > 0 && costVariable instanceof IntVar) {
         // the cost variable is the negated objective under maximisation
         int value = lcgLastCost;
         IO.println(MZN_STAT_OBJECTIVE + objectiveValue(minimize ? value : -value));
       }
-      if (options.searchStatistics()) {
+      if (pureSat != null) {
+        IO.println("%%%mzn-stat: pureClauseModel=true");
+      } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
         if (lcgSlowDeferred > 0) {
           // LCG made too few conflicts but kept finding better solutions or bounds
@@ -6922,7 +6994,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
 
-    if (lcg != null) {
+    if (lcg != null || pureSat != null) {
       printLcgStatistics(interrupted);
       return;
     }
@@ -7478,7 +7550,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     printLinearRelaxationStatistics();
     printCostNetworkStatistics();
 
-    if (lcg != null) {
+    if (lcg != null || pureSat != null) {
       printLcgStatistics(interrupted);
       return;
     }
@@ -7533,7 +7605,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private long propagations() {
     long calls = store.numberConsistencyCalls;
-    return lcg != null ? calls + lcg.sat().propagations : calls;
+    return lcgSat() != null ? calls + lcgSat().propagations : calls;
   }
 
   private void printStatisticsOutput(int nodes, int wrong, int depth, int solutions) {
@@ -7541,8 +7613,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (freeSearch != null) {
       restarts = freeSearch.getRestarts();
     }
-    if (lcg != null) {
-      restarts = lcg.sat().restarts;
+    if (lcgSat() != null) {
+      restarts = lcgSat().restarts;
     }
 
     IO.println(
