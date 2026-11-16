@@ -894,8 +894,44 @@ public class Tables {
    * @param array the array being stored.
    */
   public void addIntArray(String ident, int[] array) {
-    // already exists ";
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedIntArrays.computeIfAbsent(new IntArrayContents(array), k -> k).array();
+    }
     intArrayTable.put(ident, array);
+  }
+
+  /**
+   * Arrays of integer parameters of at least this length are kept once for each content. MiniZinc
+   * writes a table posted on many scopes as a separate array for each constraint: Steiner3-11 (XCSP
+   * 2026) has 153 copies of one table of 5 million entries, 3 GB as separate arrays.
+   */
+  static final int INTERNED_ARRAY_LENGTH = 1024;
+
+  // the long arrays of integer parameters read so far, by content
+  private final Map<IntArrayContents, IntArrayContents> internedIntArrays = new HashMap<>();
+
+  /** An array of integers compared by content. */
+  private record IntArrayContents(int[] array, int hash) {
+    IntArrayContents(int[] array) {
+      this(array, Arrays.hashCode(array));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof IntArrayContents(int[] other, int otherHash)
+          && otherHash == hash
+          && Arrays.equals(other, array);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "IntArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
   }
 
   /**
@@ -935,7 +971,57 @@ public class Tables {
    * @param array the array being added.
    */
   public void addSetArray(String ident, IntDomain[] array) {
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedSetArrays.computeIfAbsent(new SetArrayContents(array), k -> k).array();
+    }
     setArrayTable.put(ident, array);
+  }
+
+  // the long arrays of set parameters read so far, by content: MiniZinc writes the label sets of an
+  // MDD again for every constraint that uses it (WordDesign2-words-mdd-025, XCSP 2023: 31 copies of
+  // 1.8 million sets, 230 MB each)
+  private final Map<SetArrayContents, SetArrayContents> internedSetArrays = new HashMap<>();
+
+  /** An array of sets compared by content. */
+  private record SetArrayContents(IntDomain[] array, int hash) {
+    SetArrayContents(IntDomain[] array) {
+      this(array, hash(array));
+    }
+
+    private static int hash(IntDomain[] array) {
+      int h = 1;
+      for (IntDomain d : array) {
+        h = 31 * h + (d == null || d.isEmpty() ? 0 : 31 * (31 * d.min() + d.max()) + d.getSize());
+      }
+      return h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof SetArrayContents(IntDomain[] other, int otherHash))
+          || otherHash != hash
+          || other.length != array.length) {
+        return false;
+      }
+      for (int i = 0; i < array.length; i++) {
+        IntDomain a = array[i];
+        IntDomain b = other[i];
+        if (a != b && (a == null || b == null || !a.eq(b))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "SetArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
   }
 
   /**
@@ -1043,6 +1129,21 @@ public class Tables {
       }
     }
     return a;
+  }
+
+  /**
+   * It returns the array of variables of the given identity, or null if there is none. Unlike
+   * {@link #getVariableArray(String)} it does not read an array of integer parameters as an array
+   * of constants, so the passes that look for the variables of the constraints skip the tables:
+   * reading a table of millions of entries as constants cost an array of millions of references at
+   * every look and made one constant variable for each distinct value of the table (84,000 on
+   * CrosswordDesign-09, XCSP 2026, each then a variable of LCG).
+   *
+   * @param ident the identity of the array.
+   * @return the array of variables, or null if ident is not an array of variables.
+   */
+  public IntVar[] getDeclaredVariableArray(String ident) {
+    return variableArrayTable.containsKey(ident) ? getVariableArray(ident) : null;
   }
 
   /**

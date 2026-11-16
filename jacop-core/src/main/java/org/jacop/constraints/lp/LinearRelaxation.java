@@ -2014,6 +2014,19 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Tells which pass made this refutation: "values" for the value encodings of {@link #refutation},
+   * "objective" for {@link #pseudoObjectiveRefutation}, "clauses" for {@link #clauseRefutation}.
+   *
+   * @return the kind of the refutation
+   */
+  public String refutationKind() {
+    if (pseudoObjective) {
+      return "objective";
+    }
+    return clauseRefutation ? "clauses" : "values";
+  }
+
+  /**
    * Returns the outcome of the root solve of a relaxation made by {@link #refutation}.
    *
    * @return "refuted" when it proved that the model has no solution, "feasible", "limit" when it
@@ -2898,6 +2911,15 @@ public class LinearRelaxation extends Constraint
    */
   public void suspend(boolean suspend) {
     suspended = suspend;
+  }
+
+  /**
+   * Tells whether solving the relaxation is suspended, see {@link #suspend(boolean)}.
+   *
+   * @return true while suspended.
+   */
+  public boolean isSuspended() {
+    return suspended;
   }
 
   /**
