@@ -155,6 +155,7 @@ import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.BinCompletion;
 import org.jacop.search.ls.LocalSearch;
+import org.jacop.search.ls.MaxSatLocalSearch;
 import org.jacop.search.ls.ProjectSchedule;
 import org.jacop.search.ls.ScheduleResources;
 import org.jacop.search.restart.Calculator;
@@ -3034,6 +3035,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // the packing, printed already, is the first solution of the solver as a schedule is
       scheduled = completed;
     }
+    if (scheduled == null
+        && (options.freeSearch() || defaultSearch)
+        && ls == null
+        && costVar instanceof IntVar c) {
+      // a MaxSAT model: the best assignment of MaxSAT local search, also for model search when
+      // the model has no search annotation to follow
+      scheduled = maxSatHint(c, worker);
+    }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -3349,6 +3358,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
     addScheduleProposer(lns);
+    addMaxSatProposer(lns);
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -5377,8 +5387,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private int[] checkSchedule(
       IntVar[] starts, int[] start, IntVar cost, int makespan, IntVar[] hinted) {
     int base = store.level;
-    store.setLevel(base + 1);
     try {
+      // the root's pending propagation first: run at the level of the check, the first
+      // consistency of the constraints is undone with it, which left warehouses cap91 (MaxSAT
+      // 2024) without its 7 s proof
+      if (!store.consistency()) {
+        return null;
+      }
+      store.setLevel(base + 1);
       for (int k = 0; k < starts.length; k++) {
         starts[k].domain.in(store.level, starts[k], start[k], start[k]);
       }
@@ -5477,6 +5493,165 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (slice > 0) {
       lns.setProposer(ps.starts(), incumbent -> ps.improve(incumbent, slice));
     }
+  }
+
+  // the MaxSAT reading of the model and its local search, or null
+  private MaxSatModel maxSat;
+  private MaxSatLocalSearch maxSatSearch;
+  private long maxSatMillis;
+  private long maxSatProposals;
+  private SymmetryCanonicalizer maxSatCanonical;
+
+  // the values of the 0/1 variables of the MaxSAT model, moved onto a symmetric assignment that
+  // the symmetry breaking constraints accept
+  private int[] canonical(int[] values) {
+    if (maxSatCanonical != null) {
+      maxSatCanonical.canonicalize(maxSat.vars, values);
+    }
+    return values;
+  }
+
+  /**
+   * Runs MaxSAT local search ({@link MaxSatLocalSearch}) when the model is weighted partial MaxSAT:
+   * clauses and a cost that is a weighted sum of 0/1 variables. The best assignment it finds in its
+   * share of the time is checked in the store and printed, and becomes the first solution of the
+   * solver; the search then goes on from the best solution of the solver as a kind of
+   * neighbourhood. --free-config maxsat=0 turns it off, maxsat-share gives the first run its share
+   * of the time (default 0.05), maxsat-max caps it in milliseconds (default 60000), and the run
+   * ends early when it found nothing better in the last half of its time, or, after maxsat-patience
+   * milliseconds (default 1000) without an assignment of the hard clauses, when the fewest hard
+   * clauses falsified did not fall in the last half of its time.
+   *
+   * @return the best assignment, as a hint of the 0/1 variables, or null
+   */
+  private Hint maxSatHint(IntVar cost, Portfolio.Worker worker) {
+    if ("0".equals(options.freeConfig("maxsat", "1"))) {
+      return null;
+    }
+    long begin = System.currentTimeMillis();
+    // symmetry breaking constraints are left out, and solutions mapped onto ones they accept
+    SymmetryCanonicalizer canonical = symmetry == null ? null : symmetry.canonicalizer();
+    Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (canonical != null && !canonical.constraints().isEmpty()) {
+      ignored.addAll(canonical.constraints());
+      maxSatCanonical = canonical;
+    }
+    MaxSatModel model = MaxSatModel.detect(store, sat.collectedClauses(), cost, ignored);
+    if (model == null) {
+      return null;
+    }
+    MaxSatLocalSearch ls =
+        model
+            .search(
+                Long.parseLong(options.freeConfig("maxsat-bound", "1000")), options.getRandomSeed())
+            .hardStep(Long.parseLong(options.freeConfig("maxsat-hard", "1")))
+            .smoothing(Double.parseDouble(options.freeConfig("maxsat-smooth", "0.001")));
+    maxSat = model;
+    maxSatSearch = ls;
+    long budget = Long.parseLong(options.freeConfig("maxsat-max", "60000"));
+    if (options.getTimeOut() > 0) {
+      budget =
+          Math.min(
+              budget,
+              (long)
+                  (Double.parseDouble(options.freeConfig("maxsat-share", "0.05"))
+                      * options.getRemainingTimeOut()));
+    }
+    long deadline = begin + budget;
+    // without an assignment of the hard clauses after this time and no fewer falsified ones in the
+    // last half of it, the solver's solutions start the slices
+    long feasiblePatience = Long.parseLong(options.freeConfig("maxsat-patience", "1000"));
+    boolean[] stopped = {false};
+    if (worker != null) {
+      worker.onStop(() -> stopped[0] = true);
+    }
+    ls.start(new boolean[model.lsVars]);
+    long best = Long.MAX_VALUE;
+    long improvedAt = begin;
+    // the fewest falsified hard clauses so far, and when they were reached
+    int fewestHard = Integer.MAX_VALUE;
+    long hardAt = begin;
+    int[] hintValues = null;
+    while (!stopped[0]) {
+      long now = System.currentTimeMillis();
+      if (now > deadline
+          || (best == Long.MAX_VALUE
+              && now - begin > feasiblePatience
+              && now - hardAt > (now - begin) / 2)
+          || (best < Long.MAX_VALUE && now - begin > 200 && now - improvedAt > (now - begin) / 2)) {
+        break;
+      }
+      long found = ls.run(100_000, () -> stopped[0] || System.currentTimeMillis() > deadline);
+      if (found < best) {
+        best = found;
+        improvedAt = System.currentTimeMillis();
+      }
+      if (ls.lowestFalsifiedHard() < fewestHard) {
+        fewestHard = ls.lowestFalsifiedHard();
+        hardAt = System.currentTimeMillis();
+      }
+      if (ls.falsifiedHard() == 0 && ls.cost() == 0) {
+        break;
+      }
+    }
+    if (best < Long.MAX_VALUE && model.cost(best) < bestPrintedCost.get()) {
+      int[] values = canonical(model.values(ls.bestAssignment()));
+      long expected = model.cost(best);
+      if (expected >= Integer.MIN_VALUE && expected <= Integer.MAX_VALUE) {
+        hintValues = checkSchedule(model.vars, values, cost, (int) expected, hintedVariables());
+        if (hintValues != null) {
+          scheduledCost = (int) expected;
+        } else if (options.debug()) {
+          IO.println("% MaxSAT local search: the store rejected cost " + expected);
+        }
+      }
+    }
+    maxSatMillis = System.currentTimeMillis() - begin;
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: maxsatVariables="
+              + ls.variables()
+              + "\n%%%mzn-stat: maxsatHard="
+              + ls.hardClauses()
+              + "\n%%%mzn-stat: maxsatSoft="
+              + ls.softClauses()
+              + "\n%%%mzn-stat: maxsatFlips="
+              + ls.steps()
+              + "\n%%%mzn-stat: maxsatTime="
+              + maxSatMillis / 1000.0
+              + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: maxsatBest=" + model.cost(best)));
+    }
+    return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  /**
+   * Lets MaxSAT local search go on in slices of maxsat-lns flips (default 200000) from the best
+   * solution of the search, as a kind of neighbourhood whose runs fix the 0/1 variables to a better
+   * assignment.
+   */
+  private void addMaxSatProposer(AdaptiveLns lns) {
+    if (lns == null || maxSat == null) {
+      return;
+    }
+    MaxSatModel model = maxSat;
+    MaxSatLocalSearch ls = maxSatSearch;
+    long slice = Long.parseLong(options.freeConfig("maxsat-lns", "200000"));
+    if (slice <= 0) {
+      return;
+    }
+    lns.setProposer(
+        model.vars,
+        incumbent -> {
+          maxSatProposals++;
+          ls.start(model.assignment(incumbent));
+          if (ls.falsifiedHard() > 0) {
+            return null;
+          }
+          long from = ls.cost();
+          ls.forgetBest();
+          long found = ls.run(slice, () -> false);
+          return found < from ? canonical(model.values(ls.bestAssignment())) : null;
+        });
   }
 
   private static final class Hint {
@@ -5884,6 +6059,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else if (restarts != null && !allSolutions) {
       freeLns = lnsNeighbourhoods(costVar);
       addScheduleProposer(freeLns);
+      addMaxSatProposer(freeLns);
       if (freeLns != null && lcgHint != null) {
         // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
         // they waited for free search's own first solution, which must improve on it, and on

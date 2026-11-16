@@ -91,7 +91,9 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void optimumAfterGivingWayAtOnce() throws IOException {
-    String out = run("lcg-slow-rate=1,lcg-slow-at=0");
+    // without the MaxSAT local search, whose optimal first solution leaves LCG nothing to give way
+    // on
+    String out = run("lcg-slow-rate=1,lcg-slow-at=0,maxsat=0");
     // LCG gives way at its first test; only the core-guided probe's trimming of its first cores
     // can have made a few conflicts by then
     Matcher conflicts = Pattern.compile("lcgSlowConflicts=(\\d+)").matcher(out);
