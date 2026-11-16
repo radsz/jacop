@@ -65,6 +65,13 @@ import org.jacop.core.IntVar;
  * cuts over the same customers, see {@link CombCuts} (Padberg and Rao, Odd minimum cut-sets and
  * b-matchings, Mathematics of Operations Research 7, 1982; Grötschel and Padberg, Mathematical
  * Programming 16, 1979).
+ *
+ * <p>For routes with time windows ({@link Routes#setTimeWindows}) it separates infeasible path
+ * cuts: a path of the support graph that no vehicle can follow within the windows cannot be part of
+ * a solution, so a solution has at most p - 2 arcs of the tournament of a path of p nodes, the arcs
+ * from each node of the path to every later one (N. Ascheuer, M. Fischetti and M. Grötschel,
+ * Solving the asymmetric travelling salesman problem with time windows by branch-and-cut,
+ * Mathematical Programming 90(3), 2001, 475-506).
  */
 public final class CapacityCuts {
 

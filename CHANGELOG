@@ -6861,6 +6861,26 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+383. Time windows for vehicle routes written as a giant tour (MiniZinc
+   VRPTW models: arrival a[v] = T[succ[v]], a[v] >= T[v] + s[v] + d[v]).
+   The FlatZinc front end reads a lag for every arc from these rows and
+   removes the successors that no arrival time can reach (time window
+   reduction, M. Desrochers, J. Desrosiers, M. Solomon, A new optimization
+   algorithm for the vehicle routing problem with time windows, Operations
+   Research 40(2), 1992). When some customer has a window of its own
+   (narrower than the start and end times of the tour imply), it also
+   gives the windows to Routes, whose LP separates infeasible path
+   (tournament) cuts over paths of the LP support that no vehicle can
+   follow in time (N. Ascheuer, M. Fischetti, M. Groetschel, Solving the
+   asymmetric travelling salesman problem with time windows by
+   branch-and-cut, Mathematical Programming 90(3), 2001), and posts the
+   new constraint ArcTimes(x, offset, t, lag): x[v] = w implies
+   t[w] >= t[v] + lag[v][w], with LCG explanations. Solomon R101 with 100
+   customers is proved optimal in 81 s (17 s with -f), unproved in 600 s
+   before. -Dorg.jacop.fz.timeWindows=false turns this off, =all gives
+   cuts and ArcTimes to every giant tour; -Dorg.jacop.fz.arcTimes=false
+   and -Dorg.jacop.lp.pathCuts=false turn off the propagator and the cuts.
+
 Version 4.11
 =============
 
