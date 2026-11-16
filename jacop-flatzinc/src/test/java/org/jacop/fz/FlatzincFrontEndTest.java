@@ -1057,6 +1057,37 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void costCapWithWeightsBeyondIntFixesTheHeavyVariables() throws IOException {
+    // PB competition wcsp instances (spot5-28, satellite02cc, zenotravel04ac): the cost cap
+    // sum w * x <= top - 1 weighs each hard violation top, more than the cap, and the weights add
+    // up beyond an int; LinearBool rejected the cap and then the objective row ("problem detected")
+    String cap =
+        "constraint int_lin_le([1000000000, 1000000000, 1000000000, 3, 4], [a, b, c, d, e], 5);\n";
+    String objective =
+        "constraint int_lin_eq([1000000000, 1000000000, 1000000000, 3, 4, -1], [a, b, c, d, e, cost], 0);\n";
+    String head =
+        """
+        var 0..1: a :: output_var;
+        var 0..1: b :: output_var;
+        var 0..1: c :: output_var;
+        var 0..1: d :: output_var;
+        var 0..1: e :: output_var;
+        var 0..3000000007: cost :: output_var;
+        constraint int_lin_le([-1, -1], [d, e], -1);
+        """;
+    String expected = "a = 0;\nb = 0;\nc = 0;\nd = 1;\ne = 0;\ncost = 3;\n----------\n==========\n";
+    for (String rows : new String[] {cap + objective, objective + cap}) {
+      String[] out = run(head + rows + "solve minimize cost;\n");
+      assertEquals(0, lastStatus, out[1]);
+      assertEquals(expected, tail(out[0]), out[1]);
+    }
+    // without the cap the heavy variables stay free, the objective row still posts
+    String[] out = run(head + objective + "solve minimize cost;\n");
+    assertEquals(0, lastStatus, out[1]);
+    assertEquals(expected, tail(out[0]), out[1]);
+  }
+
+  @Test
   void objectiveBeyondTheRangeDividedByItsDivisor() throws IOException {
     // 2023 unit-commitment: obj 0..2147483646 is a sum of costs that are multiples of 5, and the
     // solutions of the fixed search all lie beyond 536870909; narrowed, L12 and L15 got no
@@ -1629,6 +1660,36 @@ class FlatzincFrontEndTest {
     String out = run(fzn, "--proof", prefix)[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
     assertTrue(run(fzn)[0].contains("=====UNSATISFIABLE====="));
+  }
+
+  @Test
+  void rootFailureUnderFreeSearchIsProved() throws IOException {
+    // s is false (x5 <= x1 cannot hold), so r is true, and the row of r fails over the bounds:
+    // the store of the LCG solver fails at the root. Under -f the root probing ran first, saw the
+    // failure and reported UNSAT without the proof starting, so the proof files stayed empty
+    // (MiniZinc fuzz seed 2012355).
+    String fzn =
+        """
+        var 0..1: x1:: output_var;
+        var {0,2,5,6}: x2:: output_var;
+        var -5..-4: x3:: output_var;
+        var -3..5: x4:: output_var;
+        var 2..5: x5:: output_var;
+        var -6..10: obj:: output_var;
+        var bool: r:: output_var;
+        var bool: s:: output_var;
+        constraint bool_clause([r,s],[]);
+        constraint int_lin_le_reif([-1,1,-3],[x2,x4,x3],1,r);
+        constraint int_lin_le_imp([-1,1],[x1,x5],0,s);
+        constraint int_lin_eq([2,-1],[x4,obj],0);
+        solve maximize obj;
+        """;
+    String prefix = tmp.resolve("rootfailure").toString();
+    String out = run(fzn, "-f", "--lcg", "on", "--proof", prefix)[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("conclusion BOUNDS INF INF"), proof);
+    assertTrue(proof.contains("end pseudo-Boolean proof"), proof);
   }
 
   @Test
@@ -3127,7 +3188,9 @@ class FlatzincFrontEndTest {
     // pigeons do not fit
     System.setProperty("org.jacop.fz.alldifferent", "false");
     try {
-      String out = run(model.toString(), "--lcg", "-t", "100")[0];
+      // without the linear relaxation: the root clause refutation refutes it at once from the
+      // cliques of the pair clauses
+      String out = run(model.toString(), "--lcg", "--lp", "off", "-t", "100")[0];
       assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
       assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
     } finally {

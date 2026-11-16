@@ -237,12 +237,23 @@ public class Options {
                 that makes fewer conflicts per second by lcg-slow-at, has a solution and
                 stopped making progress, gives way to free search without learning,
                 default 300; 0 = off),
+                lcg-slow-literal=<conflicts per second> (with lcg-slow-rate: the slow rate is
+                at least this many conflicts per second per literal of an average learnt
+                clause, default 5; 0 = off),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
                 lcg-slow-unsolved=<conflicts per second> (with --lcg and an objective: LCG
                 without a solution that makes fewer conflicts per second by lcg-slow-at gives
                 way to free search without learning, and fixed search to the search
                 annotation without learning, default 30; 0 = off),
+                lcg-slow-unsolved-late=<share> (with --lcg, -f and an objective: LCG that
+                makes fewer than lcg-slow-rate conflicts per second and has no solution
+                after this share of the time limit gives way to free search without
+                learning, default 0.5; 0 = off),
+                first-input=<runs> (-f, an objective and no search annotation: after slow
+                LCG gave way without a solution, one free search run in this many fixes the
+                variables in the model's order with their least values, until the first
+                solution; default 2, 0 = off),
                 lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
                 this share of the time limit, it raised the bound or its best cost fell by
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),

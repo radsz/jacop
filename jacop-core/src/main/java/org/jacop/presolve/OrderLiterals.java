@@ -34,8 +34,10 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Constraint;
+import org.jacop.constraints.Implies;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqC;
@@ -48,12 +50,13 @@ import org.jacop.lcg.LinearForm;
 /**
  * Rule 5 for order reifications: the reified comparisons of one integer variable with constants,
  * {@code b <=> x <= c} and its {@code <}, {@code >=} and {@code >} forms, become the items of one
- * {@link ChannelOrder} on x, as Chuffed and Huub turn them into literals of x.
+ * {@link ChannelOrder} on x, as Chuffed and Huub turn them into literals of x. The FlatZinc front
+ * end uses {@link #groups(List)} to post the channels in place of the reifications it posted.
  *
  * @author Radoslaw Szymanek and Krzysztof Kuchcinski
  * @version 5.0
  */
-final class OrderLiterals implements Rule {
+public final class OrderLiterals implements Rule {
 
   // the smallest number of reifications of one variable that become a channel
   static final int MIN_GROUP = 2;
@@ -74,7 +77,7 @@ final class OrderLiterals implements Rule {
     }
   }
 
-  private record Item(Reified r, IntVar x, IntVar b, int t, boolean atMost) {}
+  private record Item(Constraint r, IntVar x, IntVar b, int t, boolean atMost, boolean implied) {}
 
   /**
    * A channel and the reifications it replaces; the channel is over the same variables and is not
@@ -84,7 +87,7 @@ final class OrderLiterals implements Rule {
    * @param channel the channel.
    * @param reifications the reifications, in the order of the constraints.
    */
-  record Group(ChannelOrder channel, List<Reified> reifications) {}
+  public record Group(ChannelOrder channel, List<Constraint> reifications) {}
 
   /**
    * Finds the groups of order reifications of one variable with at least {@link #MIN_GROUP}
@@ -93,11 +96,23 @@ final class OrderLiterals implements Rule {
    * @param constraints the constraints to look at.
    * @return the groups, in the order of their first reification.
    */
-  static List<Group> groups(List<Constraint> constraints) {
+  public static List<Group> groups(List<Constraint> constraints) {
+    return groups(constraints, false);
+  }
+
+  /**
+   * Finds the groups of order reifications of one variable with at least {@link #MIN_GROUP}
+   * members, with the half-reifications {@code b => x op c} as implied items if asked.
+   *
+   * @param constraints the constraints to look at.
+   * @param halfReified whether {@link Implies} of a comparison with a constant becomes an item.
+   * @return the groups, in the order of their first reification.
+   */
+  public static List<Group> groups(List<Constraint> constraints, boolean halfReified) {
     // variables do not override equals, so this groups by identity in the order of the constraints
     Map<IntVar, List<Item>> byVariable = new LinkedHashMap<>();
     for (Constraint c : constraints) {
-      Item item = item(c);
+      Item item = item(c, halfReified);
       if (item != null) {
         byVariable.computeIfAbsent(item.x(), k -> new ArrayList<>()).add(item);
       }
@@ -112,25 +127,31 @@ final class OrderLiterals implements Rule {
       IntVar[] bs = new IntVar[n];
       int[] ts = new int[n];
       boolean[] atMost = new boolean[n];
-      List<Reified> reifications = new ArrayList<>(n);
+      boolean[] implied = new boolean[n];
+      List<Constraint> reifications = new ArrayList<>(n);
       for (int i = 0; i < n; i++) {
         Item item = items.get(i);
         bs[i] = item.b();
         ts[i] = item.t();
         atMost[i] = item.atMost();
+        implied[i] = item.implied();
         reifications.add(item.r());
       }
-      groups.add(new Group(new ChannelOrder(e.getKey(), bs, ts, atMost), reifications));
+      groups.add(new Group(new ChannelOrder(e.getKey(), bs, ts, atMost, implied), reifications));
     }
     return groups;
   }
 
-  /** The item of {@code b <=> x op c}, or null if the constraint is not such a reification. */
-  private static Item item(Constraint c) {
-    if (c.getClass() != Reified.class) {
+  /**
+   * The item of {@code b <=> x op c}, or of {@code b => x op c} when half-reified items are taken,
+   * or null if the constraint is not such a reification.
+   */
+  private static Item item(Constraint c, boolean halfReified) {
+    boolean implied = c.getClass() == Implies.class;
+    if (c.getClass() != Reified.class && !(halfReified && implied)) {
       return null;
     }
-    Reified r = (Reified) c;
+    AbstractReifiedConstraint r = (AbstractReifiedConstraint) c;
     Class<?> k = r.c.getClass();
     if (k != XlteqC.class && k != XltC.class && k != XgteqC.class && k != XgtC.class) {
       return null;
@@ -146,6 +167,6 @@ final class OrderLiterals implements Rule {
     if (t < Integer.MIN_VALUE || t > Integer.MAX_VALUE) {
       return null;
     }
-    return new Item(r, x, b, (int) t, f.relation() == LinearForm.LE);
+    return new Item(c, x, b, (int) t, f.relation() == LinearForm.LE, implied);
   }
 }

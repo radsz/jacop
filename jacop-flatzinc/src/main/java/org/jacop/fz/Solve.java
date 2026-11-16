@@ -46,6 +46,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -232,6 +233,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // order instead of dom/wdeg, whose scan over all of them at every decision costs too much
   private static final int DOM_WDEG_LIMIT =
       Integer.getInteger("org.jacop.fz.lcgDomWdegLimit", 50_000);
+
+  // free search without a search annotation branches on the variables that no defines_var
+  // annotation names before the defined ones (see definedLast): "first" (default) until the first
+  // solution under LCG and always without learning, "always" also after it under LCG, "false"
+  // all in one order
+  static final boolean DEFINED_LAST =
+      !"false".equals(System.getProperty("org.jacop.fz.definedLast"));
+
+  // with org.jacop.fz.definedLast=always the LCG default search keeps the defined variables out
+  // also after the first solution
+  static final boolean DEFINED_LAST_ALWAYS =
+      "always".equals(System.getProperty("org.jacop.fz.definedLast"));
 
   // fixed search's activity runs follow the relaxation's root solution, not its last one, which
   // comes from another branch
@@ -983,6 +996,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // a satisfaction model gets the value encodings for one root solve, which can refute it
       long built = System.nanoTime();
       refutation = LinearRelaxation.refutation(store, refutationClauses);
+      if (refutation == null) {
+        refutation = LinearRelaxation.clauseRefutation(store, refutationClauses);
+      }
       refutationBuildNanos = System.nanoTime() - built;
       if (refutation != null) {
         refutation.setTimeLimit(options.getTimeOut());
@@ -1118,7 +1134,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + "\n%%%mzn-stat: lpRefutationSolveTime="
               + refutation.solveNanos / 1e9
               + "\n%%%mzn-stat: lpRefutationPivots="
-              + refutation.pivots());
+              + refutation.pivots()
+              + "\n%%%mzn-stat: lpRefutationClauseUnits="
+              + refutation.clauseUnits
+              + "\n%%%mzn-stat: lpRefutationClauseEquivalences="
+              + refutation.clauseEquivalences);
     }
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
@@ -1201,10 +1221,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.cuts
             + "\n%%%mzn-stat: lpPairCliques="
             + r.pairCliques
+            + "\n%%%mzn-stat: lpLeadEncodings="
+            + r.leadEncodings
+            + (r.leadKept ? ":kept" : "")
+            + "\n%%%mzn-stat: lpValueCliques="
+            + r.valueCliques
             + "\n%%%mzn-stat: lpTableClauses="
             + r.tableClauses
+            + "\n%%%mzn-stat: lpNearRows="
+            + r.nearRows
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
+            + "\n%%%mzn-stat: lpRestartBoundCuts="
+            + r.restartBoundCuts
+            + "\n%%%mzn-stat: lpRestartCutBound="
+            + r.restartCutBound
+            + "\n%%%mzn-stat: lpRestartBoundsLost="
+            + r.restartBoundsLost()
             + "\n%%%mzn-stat: lpRootPrunings="
             + r.rootPrunings
             + "\n%%%mzn-stat: lpCutBound="
@@ -2483,6 +2516,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (progressionSearch(costVar)) {
         return executeProgressionSearch(label, costVar, solveType);
       }
+      if (cliqueSearch(costVar)) {
+        return executeCliqueSearch(label, costVar, solveType);
+      }
       if (useLcg(costVar)) {
         fixedLabel = label;
         fixedSelect = select;
@@ -2544,6 +2580,48 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && dictionary.onRestart == null
         && options.proof() == null
         && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.progressionTiling.search"));
+  }
+
+  /**
+   * Whether the search is the branching of maximum clique algorithms ({@link
+   * org.jacop.search.MaxCliqueSelect}): a model of maximum clique and nothing else, maximized
+   * without an annotation to follow (or under -f), without LCG, restarts or on_restart built-ins.
+   * The system property org.jacop.fz.maxClique.search=false keeps the default search.
+   */
+  private boolean cliqueSearch(Var costVar) {
+    return dictionary.maxClique != null
+        && costVar != null
+        && options.freeSearch()
+        && !options.lcg()
+        && dictionary.onRestart == null
+        && restartCalculator == null
+        && options.proof() == null
+        && org.jacop.fz.constraints.MaxCliqueDetector.searches();
+  }
+
+  /**
+   * Branch and bound of maximum clique: the vertex of the last color class first, at 1 first, as
+   * MCQ and MCS do, under the bound of {@link org.jacop.constraints.MaxCliqueBound}.
+   */
+  @SuppressWarnings("unchecked")
+  private boolean executeCliqueSearch(DepthFirstSearch<T> label, Var costVar, String type) {
+    if (options.debug()) {
+      IO.println("%% maximum clique search over " + dictionary.maxClique.x.length + " vertices");
+    }
+    org.jacop.search.MaxCliqueSelect select =
+        new org.jacop.search.MaxCliqueSelect(dictionary.maxClique);
+    if (!"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.maxClique.greedy"))) {
+      // the greedy clique is the incumbent of a run from the root: as the top decisions of the
+      // tree, its vertices of large degree keep the search away from the hidden clique of brock
+      int[] clique = dictionary.maxClique.greedyClique();
+      select.firstDive(clique);
+      if (options.debug()) {
+        IO.println("%% greedy clique of " + clique.length + " vertices for the first run");
+      }
+      restartCalculator = new org.jacop.search.restart.FirstRunCalculator(0);
+      return executeRestartSearch(label, (SelectChoicePoint<T>) select, costVar, type);
+    }
+    return executeNonRestartSearch(label, (SelectChoicePoint<T>) select, costVar, type);
   }
 
   /**
@@ -3330,6 +3408,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private LcgSolver slowLcg;
   private long lcgStart;
 
+  // the wait of the slow LCG check (nanoseconds of CdclSolver.now), and the time before which it
+  // makes no check: a check that finds LCG still in its root propagation starts the wait again
+  private long slowCheckWait;
+  private long slowCheckFrom;
+
   // the part of the time-out that must be left for LCG free search to give way to free search
   // without learning
   private static final double SLOW_LCG_MIN_LEFT = 0.1;
@@ -3391,7 +3474,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
-    if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
+    double perLiteral = Double.parseDouble(options.freeConfig("lcg-slow-literal", "5"));
+    if (costVar == null) {
+      // fixed search backtracks the annotation's decisions about one level a conflict whatever
+      // learning cuts, so the probe cannot tell; on the 53 satisfaction instances of the wide set
+      // at 240 s it lost 2 instances and 9 % of the time there
+      return unsolvedOnly ? null : satisfactionProbe(lcg);
+    }
+    if (rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
     LcgSolver solver = lcg;
@@ -3410,6 +3500,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       solver.stop();
       return null;
     }
+    slowCheckWait = wait * 1_000_000L;
+    slowCheckFrom = Long.MIN_VALUE;
     // the best cost printed at each check, to measure the gain over the last window
     ArrayDeque<long[]> costs = new ArrayDeque<>();
     if (CdclSolver.VIRTUAL_CLOCK) {
@@ -3418,7 +3510,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       check[0] =
           () -> {
             if (slowLcgCheckOnce(
-                solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                solver, rate, perLiteral, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
               solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
             }
           };
@@ -3431,7 +3523,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               try {
                 Thread.sleep(wait);
                 while (slowLcgCheckOnce(
-                    solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                    solver,
+                    rate,
+                    perLiteral,
+                    unsolvedRate,
+                    unsolvedOnly,
+                    stallNanos,
+                    gain,
+                    costs)) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -3439,6 +3538,135 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                 Thread.currentThread().interrupt();
               }
             });
+  }
+
+  /**
+   * Starts the probe of a satisfaction search with learning (no objective): at shares of the time
+   * limit (lcg-sat-at, then doubling; 0 gives way at once, a negative share turns it off), it reads
+   * how far the conflicts of LCG jump back and gives way to search without learning when learning
+   * does not cut the tree (see {@link #learningCutsLittle}).
+   *
+   * @param solver the LCG solver
+   * @return the thread of the probe, or null when it is off or runs on the virtual clock
+   */
+  private Thread satisfactionProbe(LcgSolver solver) {
+    String mode = options.freeConfig("lcg-sat-probe", "on");
+    double at = Double.parseDouble(options.freeConfig("lcg-sat-at", "0.1"));
+    if ("off".equals(mode) || at < 0 || options.getTimeOut() <= 0) {
+      return null;
+    }
+    boolean act = !"report".equals(mode);
+    if (at == 0 && act) {
+      // lcg-sat-at=0: search without learning from the start, after LCG's root propagation
+      lcgSlow = true;
+      lcgSlowUnsolved = true;
+      solver.stop();
+      return null;
+    }
+    boolean report = !act || options.debug() || options.searchStatistics();
+    lcgStart = solver.sat().now();
+    long limit = CdclSolver.VIRTUAL_CLOCK ? options.getTimeOut() : options.getRemainingTimeOut();
+    long first = (long) (at * limit);
+    if (first <= 0) {
+      return null;
+    }
+    if (CdclSolver.VIRTUAL_CLOCK) {
+      Runnable[] check = new Runnable[1];
+      long[] next = {first};
+      check[0] =
+          () -> {
+            if (satisfactionProbeOnce(solver, act, report)) {
+              next[0] *= 2;
+              solver.sat().setAlarm(lcgStart + next[0] * 1_000_000L, check[0]);
+            }
+          };
+      solver.sat().setAlarm(lcgStart + first * 1_000_000L, check[0]);
+      return null;
+    }
+    return Thread.ofVirtual()
+        .start(
+            () -> {
+              try {
+                long slept = 0;
+                long next = first;
+                do {
+                  Thread.sleep(next - slept);
+                  slept = next;
+                  next *= 2;
+                } while (satisfactionProbeOnce(solver, act, report));
+              } catch (InterruptedException _) {
+                // LCG search ended first
+                Thread.currentThread().interrupt();
+              }
+            });
+  }
+
+  /**
+   * Makes one probe of a satisfaction search with learning.
+   *
+   * @return true if the probe is to be made again later
+   */
+  private boolean satisfactionProbeOnce(LcgSolver solver, boolean act, boolean report) {
+    CdclSolver sat = solver.sat();
+    long conflicts = sat.conflicts;
+    double seconds = (sat.now() - lcgStart) / 1e9;
+    double level = conflicts == 0 ? 0 : (double) sat.conflictLevels / conflicts;
+    double jump = conflicts == 0 ? 0 : (double) sat.backjumpLevels / conflicts;
+    double lbd = conflicts == 0 ? 0 : (double) sat.lbdSum() / conflicts;
+    boolean weak =
+        learningCutsLittle(
+            conflicts,
+            level,
+            jump,
+            lbd,
+            Double.parseDouble(options.freeConfig("lcg-sat-jump", "1.5")),
+            Double.parseDouble(options.freeConfig("lcg-sat-lbd", "0.4")));
+    if (report) {
+      IO.println(
+          String.format(
+              Locale.ROOT,
+              "%%%%%%mzn-stat: lcgSatProbe=%.1f,%d,%d,%.2f,%.3f,%.2f,%d,%b",
+              seconds,
+              conflicts,
+              sat.decisions,
+              level,
+              jump,
+              lbd,
+              sat.propagations,
+              weak));
+    }
+    if (act && weak && !tooLateForFreeSearch(solver)) {
+      lcgSlow = true;
+      lcgSlowUnsolved = true;
+      solver.stop();
+      return false;
+    }
+    return !tooLateForFreeSearch(solver);
+  }
+
+  /**
+   * Whether learning cuts the tree of a satisfaction search too little to pay for its cost per
+   * node. A conflict whose first-UIP clause jumps back about one level, with an LBD close to the
+   * depth of the conflict, is a nogood on nearly all decisions of its branch: what depth-first
+   * search without learning gets by backtracking, at a fraction of the cost per node (plain CP made
+   * 2 to 25 times the nodes per second of LCG on the satisfaction instances of the topic set). On
+   * those instances (53 satisfaction instances of the wide set and 77 XCSP CSP instances, 240 s)
+   * the searches that plain CP solves sooner jump back 1.0 to 1.4 levels a conflict with an LBD of
+   * 0.45 to 1.0 times the depth; those where learning wins clearly (whirlpool, PegSolitaire,
+   * Pb-fpga, nonogram, GracefulGraph) jump 1.8 to 15 levels with LBDs of 0.1 to 0.45 times the
+   * depth.
+   *
+   * @param conflicts the conflicts so far
+   * @param level the mean decision level of a conflict
+   * @param jump the mean levels a conflict jumps back
+   * @param lbd the mean LBD of a learnt clause
+   * @param maxJump the mean jump below which learning may cut too little (lcg-sat-jump)
+   * @param minLbdShare the share of the mean depth the mean LBD must reach (lcg-sat-lbd)
+   * @return true if search without learning should take over
+   */
+  static boolean learningCutsLittle(
+      long conflicts, double level, double jump, double lbd, double maxJump, double minLbdShare) {
+    return conflicts > 0 && level > 0 && jump < maxJump && lbd >= minLbdShare * level;
   }
 
   /**
@@ -3450,16 +3678,33 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean slowLcgCheckOnce(
       LcgSolver solver,
       double rate,
+      double perLiteral,
       double unsolvedRate,
       boolean unsolvedOnly,
       long stallNanos,
       double gain,
       ArrayDeque<long[]> costs) {
     long now = solver.sat().now();
+    if (now < slowCheckFrom) {
+      return true;
+    }
+    if (solver.sat().decisions == 0 && solver.sat().conflicts == 0 && !solutionFound) {
+      // still in LCG's root propagation, which makes no conflicts: the rate counts from its end.
+      // rna-alignment-k50-23-49 (MaxSAT Evaluation 2024): the extra rows of the root LP took 20 s
+      // of the 24 s before the check, LCG gave way at 0 conflicts/s and the search without learning
+      // found 536 but no proof in 240 s; LCG kept proves it 15 s after its root propagation
+      lcgStart = now;
+      slowCheckFrom = now + slowCheckWait;
+      return true;
+    }
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
-    if (solver.sat().conflicts >= rate * (now - lcgStart) / 1e9 || tooLateForFreeSearch(solver)) {
+    if (solver.sat().conflicts
+            >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
+                * (now - lcgStart)
+                / 1e9
+        || tooLateForFreeSearch(solver)) {
       return false;
     }
     long cost = bestPrintedCost.get();
@@ -3479,13 +3724,54 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         solver.stop();
         return false;
       }
-    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9) {
+    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9
+        || !unsolvedOnly && unsolvedLate(now)) {
       lcgSlowUnsolved = true;
       lcgSlow = true;
       solver.stop();
       return false;
     }
     return true;
+  }
+
+  /**
+   * The rate in conflicts per second below which LCG free search counts as slow: lcg-slow-rate, or
+   * lcg-slow-literal conflicts per second for each literal of an average learnt clause when that is
+   * more. A conflict whose learnt clause has hundreds of literals prunes little of the search, so
+   * LCG pays for learning that branch and bound without it does not need, and runs fewer
+   * neighbourhoods. On the CSPLib TTPPV instances (traveling tournament with predefined venues,
+   * circ14 and circ20) LCG learns clauses of 210 to 450 literals at 490 to 990 conflicts per
+   * second, the sum of 400 travel bounds behind each objective conflict; free search without
+   * learning runs three times as many neighbourhoods (sum of the best objectives at 600 s 12,816 to
+   * 12,526; CP-SAT 12,428).
+   *
+   * @param conflicts the conflicts of LCG so far
+   * @param learntLiterals the literals of the clauses it learnt
+   * @param rate lcg-slow-rate
+   * @param perLiteral lcg-slow-literal, 0 = off
+   * @return the slow rate in conflicts per second
+   */
+  static double slowRate(long conflicts, long learntLiterals, double rate, double perLiteral) {
+    if (perLiteral <= 0 || conflicts == 0) {
+      return rate;
+    }
+    return Math.max(rate, perLiteral * learntLiterals / conflicts);
+  }
+
+  /**
+   * Whether LCG free search, slow (under lcg-slow-rate conflicts per second) and still without a
+   * solution, has had the share lcg-slow-unsolved-late of the time limit (default 0.2; 0 = off): it
+   * then gives way to free search without learning however many conflicts it makes. On
+   * GolombRuler-a3-32 (XCSP 2026: 32 marks within 1500) the explanations of all-different have
+   * about 900 atoms, LCG makes 37 conflicts/s, a little over lcg-slow-unsolved, and found no ruler
+   * in 600 s; free search without learning finds one in 3 s.
+   *
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
+   * @return true if LCG should give way now
+   */
+  private boolean unsolvedLate(long now) {
+    double late = Double.parseDouble(options.freeConfig("lcg-slow-unsolved-late", "0.5"));
+    return late > 0 && now - lcgStart >= late * options.getTimeOut() * 1_000_000L;
   }
 
   /**
@@ -3694,6 +3980,27 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (vars.isEmpty()) {
       return null;
     }
+    if (DEFINED_LAST) {
+      // the defined variables follow from the others, and activity completes them
+      IntVar[][] split = definedLast(vars.toArray(new IntVar[0]), true);
+      if (split[1].length > 0) {
+        SelectChoicePoint<IntVar> undefined =
+            defaultIntSelect(new ArrayList<>(Arrays.asList(split[0])));
+        if (DEFINED_LAST_ALWAYS) {
+          return undefined;
+        }
+        // until the first solution: afterwards the defined variables, such as the costs of the
+        // objective, are branched on as before, smallest value first
+        return new SwitchingSelect(undefined, defaultIntSelect(vars), () -> numberSolutions == 0);
+      }
+    }
+    return defaultIntSelect(vars);
+  }
+
+  /**
+   * The dom/wdeg, or input order, part of {@link #lcgDefaultIntSelect} over the given variables.
+   */
+  private SelectChoicePoint<IntVar> defaultIntSelect(List<IntVar> vars) {
     IntVar[] positions = elementPositions(vars);
     elementPositionCount = positions.length;
     if (positions.length > 0) {
@@ -4028,6 +4335,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.sat().expandedLiterals
             + "\n%%%mzn-stat: lcgChronoBacktracks="
             + lcg.sat().lazyChronoBacktracks
+            + "\n%%%mzn-stat: lcgConflictLevels="
+            + lcg.sat().conflictLevels
+            + "\n%%%mzn-stat: lcgBackjumpLevels="
+            + lcg.sat().backjumpLevels
+            + "\n%%%mzn-stat: lcgLbdSum="
+            + lcg.sat().lbdSum()
+            + "\n%%%mzn-stat: lcgSatDecisions="
+            + lcg.sat().decisions
             + "\n%%%mzn-stat: lcgCompletedModels="
             + lcg.completedModels
             + "\n%%%mzn-stat: lcgSatPropagations="
@@ -4192,6 +4507,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.amoBound
         + "\n%%%mzn-stat: lcgCoreNoSolutionStops="
         + core.noSolutionStops
+        + "\n%%%mzn-stat: lcgCoreShrunk="
+        + core.coreShrunk
+        + "\n%%%mzn-stat: lcgCoreExhausted="
+        + core.exhaustedOutputs
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
@@ -4200,6 +4519,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.coreSkips
         + "\n%%%mzn-stat: lcgCoreProbeSkips="
         + lcg.probeSkips
+        + "\n%%%mzn-stat: lcgCoreProbeHalfWays="
+        + lcg.probeHalfWays
+        + "\n%%%mzn-stat: lcgCoreTermsBySpanRatio="
+        + core.termsBySpanRatio
         + "\n%%%mzn-stat: lcgBoundDives="
         + lcg.boundDives
         + "\n%%%mzn-stat: lcgBoundDiveSolutions="
@@ -4820,6 +5143,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private AdaptiveLns freeLns;
 
   /**
+   * The branching of the runs that free search of a model without a search annotation takes turns
+   * with until its first solution: the integer search variables in the model's order, smallest
+   * value first, the objective left to the free search. Dom/wdeg goes first to the variables whose
+   * domains bounds made smallest, and on an objective's chain those are the ones next to it: on
+   * GolombRuler-a3-32 (XCSP 2026, 32 marks within 1500) the root bound of the objective takes
+   * values off the last marks, dom/wdeg fixes the second last mark first, at its least value, and
+   * free search found no ruler in 600 s; the marks in order find one in 3 s, as Choco's and ACE's
+   * dom/wdeg do over domains that no bound narrowed.
+   *
+   * @param searchVars the default search variables
+   * @param objective the objective when free search fixes it last, or null
+   * @return the branching, or null when there are no such variables
+   */
+  private SelectChoicePoint<? extends Var> inputOrderSelect(
+      DefaultSearchVars searchVars, IntVar objective) {
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar x : searchVars.getIntVars()) {
+      if (x != objective && x.index() >= 0) {
+        vars.add(x);
+      }
+    }
+    if (vars.size() < 2) {
+      return null;
+    }
+    // the default search variables are sorted by domain size; the store index is the model's order
+    vars.sort(Comparator.comparingInt(IntVar::index));
+    return new SimpleSelect<>(vars.toArray(new IntVar[0]), null, new IndomainMin<>());
+  }
+
+  /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
@@ -4889,6 +5242,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           withoutVars(searchVars.getBoolVars(), outputSet, BooleanVar[]::new),
           withoutVars(searchVars.getFloatVars(), outputSet, FloatVar[]::new),
           null);
+    } else if (DEFINED_LAST) {
+      addDefinedLastSelects(selects, monitors, searchVars, objective);
     } else {
       addFreeSelects(
           selects,
@@ -4925,7 +5280,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         "none".equals(interleave) || allSolutions
             ? null
             : withObjectiveCosts(latticeFirst(annotationSelect(annotatedSearch)));
-    if (annotated != null) {
+    if (annotated == null
+        && optimisation
+        && !allSolutions
+        && slowLcg != null
+        && numberSolutions == 0
+        && Integer.parseInt(options.freeConfig("first-input", "2")) > 0) {
+      annotated = inputOrderSelect(searchVars, objective);
+      if (annotated != null) {
+        builder.alternationPeriod(Integer.parseInt(options.freeConfig("first-input", "2")));
+        // after slow LCG gave way without a solution, one run in first-input fixes the variables
+        // in the model's order, until the first solution
+        builder.alternateWith(
+            new SequenceSelect(List.of(annotated, free)),
+            FreeSearch.Alternation.EVERY_RESTART_UNTIL_FIRST_SOLUTION);
+      }
+    } else if (annotated != null) {
       // free search completes what the annotation leaves unfixed
       builder.alternateWith(
           new SequenceSelect(List.of(annotated, free)),
@@ -5026,10 +5396,39 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
-   * Adds the free search branching on the given variables: the set variables first, then the
-   * integer and Boolean variables, then the objective and the float variables. The settings of
-   * --free-config select the heuristics.
+   * Adds the free search selects of {@link #executeFreeSearch} over the variables that no
+   * defines_var annotation names, then over the defined ones, which are fixed by then in a model
+   * where every defined variable follows from the others.
    */
+  private void addDefinedLastSelects(
+      List<SelectChoicePoint<? extends Var>> selects,
+      List<SearchMonitor> monitors,
+      DefaultSearchVars searchVars,
+      IntVar objective) {
+    IntVar[][] ints = definedLast(searchVars.getIntVars(), false);
+    IntVar[][] bools = definedLast(searchVars.getBoolVars(), false);
+    if (ints[0].length + bools[0].length == 0) {
+      ints = new IntVar[][] {ints[1], ints[0]};
+      bools = new IntVar[][] {bools[1], bools[0]};
+    }
+    addFreeSelects(
+        selects,
+        monitors,
+        searchVars.getSetVars(),
+        ints[0],
+        Arrays.copyOf(bools[0], bools[0].length, BooleanVar[].class),
+        searchVars.getFloatVars(),
+        null);
+    addFreeSelects(
+        selects,
+        monitors,
+        new SetVar[0],
+        ints[1],
+        Arrays.copyOf(bools[1], bools[1].length, BooleanVar[].class),
+        new FloatVar[0],
+        objective);
+  }
+
   /**
    * The free search's branching on the set variables of the default search: input order, smallest
    * element in first, as the default search of JaCoP 4 and Gecode; set-heuristic=afc picks the set
@@ -5047,6 +5446,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     };
   }
 
+  /**
+   * Adds the free search branching on the given variables: the set variables first, then the
+   * integer and Boolean variables, then the objective and the float variables. The settings of
+   * --free-config select the heuristics.
+   */
   private void addFreeSelects(
       List<SelectChoicePoint<? extends Var>> selects,
       List<SearchMonitor> monitors,
@@ -5131,6 +5535,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (floats.length > 0) {
       selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
     }
+  }
+
+  /**
+   * Splits the variables of the default search into those that no defines_var annotation names and
+   * the defined ones, each part in the given order. A defined variable is a function of others, so
+   * the first part decides the model wherever the defining constraints hold; branching on a defined
+   * variable instead fixes a value the others must then reach. On the feedback arc models of XCSP
+   * 2026 (Feedback, x a permutation of the nodes, z_k = max(0, x_i - x_j) for each arc, minimise
+   * the sum of z) dom/wdeg, smallest value first, chose penalties z: z = 0 orders an arc, and z = v
+   * &gt; 0 pins the distance x_i - x_j = v; the dives went 4,000 decisions deep and failed on the
+   * all-different over x, and no solution came in 600 s on 1,000 nodes with 3,000 or 5,000 arcs and
+   * on 500 nodes with 6,500 arcs. On x alone any assignment is a solution. When every variable is
+   * defined and allDefined is true, all of them are in the first part.
+   *
+   * @param vars the variables, in the order of the default search
+   * @param allDefined true to put all variables in the first part when every one is defined
+   * @return the variables named by no defines_var annotation, and the defined ones
+   */
+  private IntVar[][] definedLast(IntVar[] vars, boolean allDefined) {
+    Set<Var> defined = Collections.newSetFromMap(new IdentityHashMap<>());
+    defined.addAll(dictionary.definedVariables);
+    List<IntVar> first = new ArrayList<>();
+    List<IntVar> last = new ArrayList<>();
+    for (IntVar x : vars) {
+      (defined.contains(x) ? last : first).add(x);
+    }
+    if (allDefined && first.isEmpty()) {
+      return new IntVar[][] {vars, new IntVar[0]};
+    }
+    return new IntVar[][] {first.toArray(new IntVar[0]), last.toArray(new IntVar[0])};
   }
 
   private static <V extends Var> V[] withoutVars(
