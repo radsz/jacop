@@ -91,7 +91,9 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void optimumAfterGivingWayAtOnce() throws IOException {
-    String out = run("lcg-slow-rate=1,lcg-slow-at=0");
+    // without the MaxSAT local search, whose optimal first solution leaves LCG nothing to give way
+    // on
+    String out = run("lcg-slow-rate=1,lcg-slow-at=0,maxsat=0");
     // LCG gives way at its first test; only the core-guided probe's trimming of its first cores
     // can have made a few conflicts by then
     Matcher conflicts = Pattern.compile("lcgSlowConflicts=(\\d+)").matcher(out);
@@ -192,6 +194,17 @@ class LcgSlowFallbackFlatzincTest {
     // the first solution inside the window counts as progress, none at all does not
     assertTrue(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, 700));
     assertFalse(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, noCost));
+  }
+
+  @Test
+  void slowRateGrowsWithLearntClauseLength() {
+    // short learnt clauses keep lcg-slow-rate; ttppv circ20 learns about 400 literals a conflict,
+    // so 530 conflicts/s counts as slow at 5 conflicts/s per literal (2000)
+    assertEquals(300, Solve.slowRate(1000, 20_000, 300, 5), 1e-9);
+    assertEquals(2000, Solve.slowRate(1000, 400_000, 300, 5), 1e-9);
+    // off, and no conflicts yet
+    assertEquals(300, Solve.slowRate(1000, 400_000, 300, 0), 1e-9);
+    assertEquals(300, Solve.slowRate(0, 0, 300, 5), 1e-9);
   }
 
   @Test

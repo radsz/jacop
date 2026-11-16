@@ -79,6 +79,10 @@ public class ElementVariableFast extends AbstractElement
         Explainable,
         PbEncodable {
 
+  /** Whether a fixed index rewrites the constraint to an equality (org.jacop.rewrite.element). */
+  static final boolean REWRITE_FIXED_INDEX =
+      Boolean.parseBoolean(System.getProperty("org.jacop.rewrite.element", "true"));
+
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The most values of the list variables and the value an encoding enumerates. */
@@ -114,6 +118,17 @@ public class ElementVariableFast extends AbstractElement
   private int[] wakeKeys;
 
   private int[] wakePositions;
+
+  /**
+   * For store indexes that span few values, the first entry of {@link #wakeKeys} with key {@code
+   * wakeBase + d} at {@code wakeFirst[d]}, or -1: a wake then finds its positions without a binary
+   * search. On MiniZinc Challenge multi-agent-graph-coverage 1086 elements share two lists of 543
+   * variables, so each change of a variable wakes 543 elements, and their binary searches took 16 %
+   * of the solving time.
+   */
+  private int[] wakeFirst;
+
+  private int wakeBase;
 
   /** No wake since the last consistency call: the call was queued for another reason. */
   private static final int WAKE_NONE = 0;
@@ -281,13 +296,19 @@ public class ElementVariableFast extends AbstractElement
       indexWakePositions();
     }
     int key = var.index();
-    int k = Arrays.binarySearch(wakeKeys, key);
+    int k;
+    if (wakeFirst != null) {
+      int d = key - wakeBase;
+      k = d >= 0 && d < wakeFirst.length ? wakeFirst[d] : -1;
+    } else {
+      k = Arrays.binarySearch(wakeKeys, key);
+      while (k > 0 && wakeKeys[k - 1] == key) {
+        k--;
+      }
+    }
     if (k < 0) {
       wake = WAKE_FULL;
       return;
-    }
-    while (k > 0 && wakeKeys[k - 1] == key) {
-      k--;
     }
     int kind = WAKE_IDLE;
     for (; k < wakeKeys.length && wakeKeys[k] == key; k++) {
@@ -322,6 +343,15 @@ public class ElementVariableFast extends AbstractElement
     }
     wakePositions = at;
     wakeKeys = keys;
+    if (n > 0 && keys[0] >= 0 && (long) keys[n - 1] - keys[0] < 4L * n + 64) {
+      int[] first = new int[keys[n - 1] - keys[0] + 1];
+      Arrays.fill(first, -1);
+      for (int k = n - 1; k >= 0; k--) {
+        first[keys[k] - keys[0]] = k;
+      }
+      wakeBase = keys[0];
+      wakeFirst = first;
+    }
   }
 
   /**
@@ -490,6 +520,11 @@ public class ElementVariableFast extends AbstractElement
     }
     if (index.singleton()) {
       int position = index.value() - 1 - indexOffset;
+      if (REWRITE_FIXED_INDEX && list[position] != value && canRewrite(store)) {
+        // the other positions can no longer matter: an equality stops their wake-ups
+        rewriteTo(store, new XeqY(list[position], value));
+        return;
+      }
       value.domain.in(store.level, value, list[position].domain);
       list[position].domain.in(store.level, list[position], value.domain);
       if (value.singleton()) {

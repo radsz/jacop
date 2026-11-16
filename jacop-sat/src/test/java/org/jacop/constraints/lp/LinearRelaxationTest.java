@@ -244,6 +244,27 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Branch and bound in one depth-first search never returns to the level of the first solve, the
+   * level of the initial propagation: the root reduced costs are still propagated in search, once
+   * per bound of the cost on a branch and again after a backtrack, and keep the optima.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void propagatesRootReducedCostsInSearch(LinearRelaxation.Simplex simplex) {
+    long rootPruned = 0;
+    for (int run = 0; run < RUNS; run++) {
+      long[] expected = search(new Model(run));
+      Model model = new Model(run);
+      model.simplex = simplex;
+      LinearRelaxation r = model.relaxation();
+      long[] actual = search(model);
+      assertThat(actual).as("seed %d", run).isEqualTo(expected);
+      rootPruned += r.rootPrunings;
+    }
+    assertThat(rootPruned).isPositive();
+  }
+
+  /**
    * The statistics by source ({@code org.jacop.lp.sourceStats}) keep the optima, count the given
    * rows (named by constraint class when the relaxation is built from a store) and the cuts by
    * their separator, and are absent when off.
@@ -295,6 +316,25 @@ class LinearRelaxationTest {
       assertThat(counts[1]).isPositive();
     } finally {
       LinearRelaxation.restartSolvesOn = was;
+    }
+  }
+
+  /**
+   * The cut rounds of the restart solves over the bounds of the root level at that restart
+   * (org.jacop.lp.restartBounds) keep the optimum of every model, as depth-first search finds it.
+   */
+  @ParameterizedTest
+  @EnumSource(LinearRelaxation.Simplex.class)
+  void keepsTheOptimumWithCutsOverTheRestartBounds(LinearRelaxation.Simplex simplex) {
+    boolean was = LinearRelaxation.restartSolvesOn;
+    boolean bounds = LinearRelaxation.restartBoundsOn;
+    try {
+      LinearRelaxation.restartSolvesOn = true;
+      LinearRelaxation.restartBoundsOn = true;
+      assertThat(restarts(simplex)[0]).isPositive();
+    } finally {
+      LinearRelaxation.restartSolvesOn = was;
+      LinearRelaxation.restartBoundsOn = bounds;
     }
   }
 
@@ -1114,6 +1154,55 @@ class LinearRelaxationTest {
     assertThat(store.consistency()).isTrue();
     assertThat(cost.min()).isEqualTo(3);
     assertThat(r.rows()).isEqualTo(2);
+  }
+
+  /**
+   * A set covering, the objective row and clauses over its columns, moves to the sparse simplex:
+   * the dense tableau of its clause rows leaves a solve in search fewer than 100 pivots (scpa1 of
+   * the OR-Library: 19, and 32 of 33 solves stopped at the limit), and the clauses carry the whole
+   * bound. With a second given row that bounds the objective the dense tableau stays.
+   */
+  @Test
+  void setCoveringClausesMoveToTheSparseSimplex() {
+    for (boolean second : new boolean[] {false, true}) {
+      Store store = new Store();
+      Random random = new Random(7);
+      int n = 1_500;
+      IntVar[] b = new IntVar[n];
+      int[] w = new int[n + 1];
+      for (int j = 0; j < n; j++) {
+        b[j] = new IntVar(store, "b" + j, 0, 1);
+        w[j] = 1 + random.nextInt(20);
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 30_000);
+      IntVar[] row = Arrays.copyOf(b, n + 1);
+      row[n] = cost;
+      w[n] = -1;
+      store.impose(new LinearInt(row, w, "==", 0));
+      if (second) {
+        store.impose(new LinearInt(Arrays.copyOf(b, 10), new int[10], ">=", 0));
+        store.impose(new LinearInt(new IntVar[] {b[0], b[1], cost}, new int[] {1, 1, 1}, ">=", 1));
+      }
+      List<LinearForm> clauses = new ArrayList<>();
+      for (int i = 0; i < 150; i++) {
+        IntVar[] v = new IntVar[30];
+        for (int k = 0; k < v.length; k++) {
+          v[k] = b[(i * 37 + k * 50 + random.nextInt(50)) % n];
+        }
+        long[] ones = new long[v.length];
+        Arrays.fill(ones, 1);
+        clauses.add(new LinearForm(v, ones, 1, LinearForm.GE));
+      }
+      LinearRelaxation r = LinearRelaxation.of(store, cost, false, clauses, Set.of());
+      assertThat(r).isNotNull();
+      store.impose(r);
+      assertThat(store.consistency()).isTrue();
+      assertThat(r.extraSparse).isEqualTo(!second);
+      if (!second) {
+        assertThat(r.extraRows).isEqualTo(clauses.size());
+        assertThat(cost.min()).isGreaterThan(1);
+      }
+    }
   }
 
   /**
@@ -2620,5 +2709,186 @@ class LinearRelaxationTest {
         }
       }
     }
+  }
+
+  /**
+   * The cardinality refutations of pseudo-Boolean satisfaction models, which have no value
+   * encoding: a vertex cover of at most k vertices of three disjoint 5-cycles (each cycle needs 3,
+   * the relaxation takes every vertex at 1/2, 7.5 in all; the cuts of the cycles raise the bound
+   * past k = 8, so a cover of 8 is refuted and one of 9 is found), and a pigeonhole formula of 6
+   * pigeons in 5 holes, whose relaxation is infeasible as it is. The edges are clause rows, as lazy
+   * clause generation gives them, and the holes rows of the store. The refutation minimizes the
+   * cover row, whose variables are in the most rows.
+   */
+  @Test
+  void pseudoObjectiveRefutesCardinalityModels() {
+    for (int k = 8; k <= 9; k++) {
+      Store store = new Store();
+      IntVar[] v = new IntVar[15];
+      for (int i = 0; i < v.length; i++) {
+        v[i] = new IntVar(store, "v" + i, 0, 1);
+      }
+      List<LinearForm> clauses = new ArrayList<>();
+      for (int c = 0; c < 3; c++) {
+        for (int i = 0; i < 5; i++) {
+          IntVar a = v[5 * c + i];
+          IntVar b = v[5 * c + (i + 1) % 5];
+          store.impose(new BoolClause(new IntVar[] {a, b}, new IntVar[0]));
+          clauses.add(new LinearForm(new IntVar[] {a, b}, new long[] {1, 1}, 1, LinearForm.GE));
+        }
+      }
+      int[] ones = new int[v.length];
+      Arrays.fill(ones, 1);
+      store.impose(new LinearInt(v, ones, "<=", k));
+      assertThat(store.consistency()).isTrue();
+      LinearRelaxation r = LinearRelaxation.refutation(store, clauses);
+      assertThat(r).as("k " + k).isNotNull();
+      assertThat(r.hasPseudoObjective()).isTrue();
+      store.impose(r);
+      boolean consistent = store.consistency();
+      assertThat(consistent).as("cover of %d", k).isEqualTo(k == 9);
+      assertThat(r.refutationOutcome()).isEqualTo(k == 9 ? "feasible" : "refuted");
+      if (k == 9) {
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        assertThat(search.labeling(store, new SimpleSelect<>(v, null, new IndomainMin<>())))
+            .isTrue();
+      }
+    }
+    // a model whose variables are all fixed before the refutation's first solve: the row of its
+    // free objective column has no value to check (balance_partition of the FlatZinc tests was
+    // refuted when the ground check took the column's least value)
+    Store fixed = new Store();
+    IntVar[] y = new IntVar[4];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(fixed, "y" + i, 0, 1);
+    }
+    fixed.impose(new LinearInt(y, new int[] {1, 1, 1, 1}, "<=", 2));
+    LinearRelaxation g =
+        LinearRelaxation.refutation(
+            fixed,
+            List.of(
+                new LinearForm(new IntVar[] {y[0], y[1]}, new long[] {1, 1}, 1, LinearForm.GE),
+                new LinearForm(new IntVar[] {y[2], y[3]}, new long[] {1, 1}, 1, LinearForm.GE)));
+    assertThat(g).isNotNull();
+    fixed.impose(g);
+    for (int i = 0; i < y.length; i++) {
+      fixed.impose(new XeqC(y[i], i % 2));
+    }
+    assertThat(fixed.consistency()).isTrue();
+    for (int holes = 5; holes <= 6; holes++) {
+      Store store = new Store();
+      int pigeons = 6;
+      IntVar[][] p = new IntVar[pigeons][holes];
+      List<LinearForm> clauses = new ArrayList<>();
+      for (int i = 0; i < pigeons; i++) {
+        for (int h = 0; h < holes; h++) {
+          p[i][h] = new IntVar(store, "p" + i + "_" + h, 0, 1);
+        }
+        store.impose(new BoolClause(p[i], new IntVar[0]));
+        long[] w = new long[holes];
+        Arrays.fill(w, 1);
+        clauses.add(new LinearForm(p[i], w, 1, LinearForm.GE));
+      }
+      for (int h = 0; h < holes; h++) {
+        IntVar[] column = new IntVar[pigeons];
+        for (int i = 0; i < pigeons; i++) {
+          column[i] = p[i][h];
+        }
+        store.impose(new SumBool(column, "<=", new IntVar(store, 1, 1)));
+      }
+      LinearRelaxation r = LinearRelaxation.refutation(store, clauses);
+      assertThat(r).isNotNull();
+      store.impose(r);
+      assertThat(store.consistency()).as("%d holes", holes).isEqualTo(holes == 6);
+    }
+  }
+
+  // the clause row of (positive literals or negated negative ones)
+  private static LinearForm clause(IntVar[] positive, IntVar... negative) {
+    IntVar[] xs = new IntVar[positive.length + negative.length];
+    long[] ws = new long[xs.length];
+    for (int k = 0; k < xs.length; k++) {
+      xs[k] = k < positive.length ? positive[k] : negative[k - positive.length];
+      ws[k] = k < positive.length ? 1 : -1;
+    }
+    return new LinearForm(xs, ws, 1L - negative.length, LinearForm.GE);
+  }
+
+  /**
+   * The pigeonhole formula in clauses, as the SAT Competition states it: a clause per pigeon and
+   * the at-most-one of each hole as its pairs. Its clauses alone have a feasible LP; the clique
+   * rows of the pairs refute n + 1 pigeons in n holes, and n pigeons stay feasible. With {@code
+   * hidden}, each hole's pairs are stated over copies of the pigeon literals, equivalent through
+   * binary clauses, and each pigeon clause has an extra literal that a unit clause makes false: the
+   * cliques appear only after unit propagation and the substitution of equivalent literals.
+   */
+  @Test
+  void clauseRefutationFindsPigeonholeCliques() {
+    int holes = 4;
+    for (boolean hidden : new boolean[] {false, true}) {
+      for (int pigeons = holes; pigeons <= holes + 1; pigeons++) {
+        Store store = new Store();
+        IntVar[][] p = new IntVar[pigeons][holes];
+        IntVar[][] q = new IntVar[pigeons][holes];
+        List<LinearForm> clauses = new ArrayList<>();
+        IntVar off = new IntVar(store, "off", 0, 1);
+        if (hidden) {
+          clauses.add(clause(new IntVar[0], off));
+        }
+        for (int i = 0; i < pigeons; i++) {
+          for (int h = 0; h < holes; h++) {
+            p[i][h] = new IntVar(store, "p" + i + "_" + h, 0, 1);
+            q[i][h] = p[i][h];
+            if (hidden) {
+              q[i][h] = new IntVar(store, "q" + i + "_" + h, 0, 1);
+              clauses.add(clause(new IntVar[] {q[i][h]}, p[i][h]));
+              clauses.add(clause(new IntVar[] {p[i][h]}, q[i][h]));
+            }
+          }
+          IntVar[] some = Arrays.copyOf(p[i], hidden ? holes + 1 : holes);
+          if (hidden) {
+            some[holes] = off;
+          }
+          clauses.add(clause(some));
+        }
+        for (int h = 0; h < holes; h++) {
+          for (int i = 0; i < pigeons; i++) {
+            for (int j = i + 1; j < pigeons; j++) {
+              clauses.add(clause(new IntVar[0], q[i][h], q[j][h]));
+            }
+          }
+        }
+        String what = (hidden ? "hidden, " : "") + pigeons + " pigeons";
+        LinearRelaxation r = LinearRelaxation.clauseRefutation(store, clauses);
+        assertThat(r).as(what).isNotNull();
+        assertThat(r.pairCliques).as(what).isEqualTo(holes);
+        if (hidden) {
+          assertThat(r.clauseUnits).as(what).isEqualTo(1);
+          assertThat(r.clauseEquivalences).as(what).isEqualTo(pigeons * holes);
+        }
+        store.impose(r);
+        boolean consistent = store.consistency();
+        assertThat(consistent).as(what).isEqualTo(pigeons == holes);
+        assertThat(r.refutationOutcome())
+            .as(what)
+            .isEqualTo(pigeons == holes ? "feasible" : "refuted");
+      }
+    }
+  }
+
+  /** Clause models without at-most-one structure get no clause refutation. */
+  @Test
+  void clauseRefutationNeedsCliques() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int k = 0; k < x.length; k++) {
+      x[k] = new IntVar(store, "x" + k, 0, 1);
+    }
+    List<LinearForm> clauses = new ArrayList<>();
+    clauses.add(clause(new IntVar[] {x[0], x[1], x[2]}));
+    clauses.add(clause(new IntVar[] {x[1]}, x[3]));
+    clauses.add(clause(new IntVar[] {x[2], x[3]}, x[0]));
+    assertThat(LinearRelaxation.clauseRefutation(store, clauses)).isNull();
   }
 }

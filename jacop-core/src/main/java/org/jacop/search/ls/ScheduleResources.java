@@ -34,8 +34,11 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.cumulative.CumulativeBasic;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
@@ -86,6 +89,47 @@ public final class ScheduleResources {
             return true;
           }
         }
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Tells whether the store may hold a permutation flow shop for the iterated greedy search of
+   * {@link LocalSearch}: an all different whose variables are columns of tables.
+   *
+   * @param store the store.
+   * @return true when such a constraint is attached to a variable of the store.
+   */
+  public static boolean hasPermutation(Store store) {
+    return hasPermutation(Arrays.copyOf(store.vars, store.size()));
+  }
+
+  /**
+   * Tells whether one of the variables is in an all different and a column of a table with two
+   * other columns, as the positions of a permutation flow shop are (see {@link
+   * #hasPermutation(Store)}).
+   *
+   * @param vars the variables, such as the decision variables.
+   * @return true when one of them is.
+   */
+  public static boolean hasPermutation(Var[] vars) {
+    for (Var v : vars) {
+      Constraint[][] lists = v == null ? null : v.dom().modelConstraints;
+      if (lists == null) {
+        continue;
+      }
+      boolean alldiff = false;
+      boolean key = false;
+      for (int e = 0; e < lists.length; e++) {
+        for (int j = v.dom().modelConstraintsToEvaluate[e] - 1; j >= 0; j--) {
+          Constraint c = lists[e][j];
+          alldiff |= c instanceof Alldistinct || c instanceof Alldifferent;
+          key |= c instanceof HybridTable t && t.columnCount() >= 3;
+        }
+      }
+      if (alldiff && key) {
+        return true;
       }
     }
     return false;
