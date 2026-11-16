@@ -4078,7 +4078,7 @@ public class LinearRelaxation extends Constraint
    * (scpa1 of the OR-Library set covering, 300 clauses over 3,000 columns: 311 x 3,312 entries, 19
    * pivots a call, 32 of 33 solves at the limit). The sparse simplex costs its nonzeros per pivot,
    * a seventh of the tableau there. Only for extra rows that carry the bound (extraCarry), as in
-   * trialSolver. {@code -Dorg.jacop.lp.extraSparse=false} turns the move off.
+   * sparseTrial. {@code -Dorg.jacop.lp.extraSparse=false} turns the move off.
    */
   private void moveExtraToSparse() {
     if (!EXTRA_SPARSE
@@ -5386,7 +5386,37 @@ public class LinearRelaxation extends Constraint
    */
   private LpSolver trialRows(int status, double before, int m, int k, int n, boolean few) {
     setExtraRows(m, k);
-    LpSolver full = trialSolver(m + k, n, baseBoundsNothing(status, before, m));
+    LpSolver full = rowSolver(m + k, n);
+    int withExtra = trialSolve(full, status, before, m, k, n, few);
+    if (withExtra == LpSolver.LIMIT && few && baseBoundsNothing(status, before, m)) {
+      LpSolver sparse = sparseTrial(m + k, n);
+      if (sparse != null) {
+        droppedPivots += full.pivots();
+        full = sparse;
+        withExtra = trialSolve(full, status, before, m, k, n, few);
+      }
+    }
+    // the other rows of a model with trees are kept: alone they rarely move the bound, but with
+    // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
+    trialStatus = withExtra;
+    if (trialKeep || keepExtra || !trees.isEmpty()) {
+      return full;
+    }
+    droppedPivots += full.pivots();
+    if (trialSparse) {
+      simplex = Simplex.DENSE;
+      trialSparse = false;
+    }
+    return null;
+  }
+
+  // whether the rows of the last trialSolve are kept for their bound
+  private boolean trialKeep;
+
+  // the root solves of a trial of the extra rows on the simplex full; returns the status of the
+  // solve with them at the current bounds and sets trialKeep
+  private int trialSolve(
+      LpSolver full, int status, double before, int m, int k, int n, boolean few) {
     for (int j = 0; j < n; j++) {
       setBounds(full, j);
     }
@@ -5442,50 +5472,44 @@ public class LinearRelaxation extends Constraint
     } else {
       keep |= withExtra == LpSolver.INFEASIBLE;
     }
-    // the other rows of a model with trees are kept: alone they rarely move the bound, but with
-    // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
-    keep |= keepExtra || !trees.isEmpty();
-    trialStatus = withExtra;
-    if (keep) {
-      return full;
-    }
-    droppedPivots += full.pivots();
-    if (trialSparse) {
-      simplex = Simplex.DENSE;
-      trialSparse = false;
-    }
-    return null;
+    trialKeep = keep;
+    return withExtra;
   }
 
   // whether the trial of the extra rows runs on the sparse simplex in place of the dense one
   private boolean trialSparse;
 
   /**
-   * Returns the simplex of a trial of the extra rows: the dense one, or the sparse one when the
-   * dense tableau of the given rows and the extra ones would leave a solve in search fewer than
+   * Returns a sparse simplex for a second trial of the extra rows after the dense trial stopped at
+   * its root budget, or null: only when the dense tableau would leave a solve in search fewer than
    * EXTRA_SPARSE_PIVOTS pivots and the sparse one costs at most 1/EXTRA_SPARSE_GAIN of it per
-   * pivot. Its root solve then has the pivots it needs: on the dense tableau of scpb1 of the
-   * OR-Library set covering (300 clauses over 3,000 columns, 5 % dense) the trial stopped at its
-   * root budget of 970 pivots and the clauses were left out, root bound 0; on the sparse one the
-   * bound is 64.5 and the search proves the optimum 69 in 15 s. Only when the given rows bound
-   * nothing (baseNothing): where they already cut the domain of the objective the dense trial and
-   * the dropping of its rows after the limits stay (mqueens n11, prize-collecting, hoist: 2-3x
-   * slower with the rows kept on the sparse simplex).
+   * pivot. On the dense tableau of scpb1 of the OR-Library set covering (300 clauses over 3,000
+   * columns, 5 % dense) the trial stopped at its root budget of 970 pivots and the clauses were
+   * left out, root bound 0; on the sparse one the bound is 64.5 and the search proves the optimum
+   * 69 in 15 s. The caller tries it, also after a search that started without the rows, only for
+   * the plain extra rows (no value encodings) of a relaxation whose given rows bound nothing: where
+   * they already cut the domain of the objective the dense trial and the dropping of its rows after
+   * the limits stay (mqueens n11, prize-collecting, hoist: 2-3x slower with the rows kept on the
+   * sparse simplex); a dense trial that ends in its budget stays dense (peacable_queens 8: 257
+   * clause rows dense, no limit in search; the 1,352 rows with the value encodings on the sparse
+   * simplex took 389 s of LP in 600 s for a bound 31 in place of 32).
    */
-  private LpSolver trialSolver(int rows, int n, boolean baseNothing) {
-    if (simplex == Simplex.DENSE && EXTRA_SPARSE && baseNothing) {
-      long dense = (long) rows * (rows + n + 1);
-      if (WORK / Math.max(1, dense) < EXTRA_SPARSE_PIVOTS) {
-        simplex = Simplex.SPARSE;
-        LpSolver s = rowSolver(rows, n);
-        if (s.pivotWork() * EXTRA_SPARSE_GAIN <= dense) {
-          trialSparse = true;
-          return s;
-        }
-        simplex = Simplex.DENSE;
-      }
+  private LpSolver sparseTrial(int rows, int n) {
+    if (simplex != Simplex.DENSE || !EXTRA_SPARSE) {
+      return null;
     }
-    return rowSolver(rows, n);
+    long dense = (long) rows * (rows + n + 1);
+    if (WORK / Math.max(1, dense) >= EXTRA_SPARSE_PIVOTS) {
+      return null;
+    }
+    simplex = Simplex.SPARSE;
+    LpSolver s = rowSolver(rows, n);
+    if (s.pivotWork() * EXTRA_SPARSE_GAIN > dense) {
+      simplex = Simplex.DENSE;
+      return null;
+    }
+    trialSparse = true;
+    return s;
   }
 
   // whether the rows of a trial that ends with the given status are kept, against the solve
