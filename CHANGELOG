@@ -6599,7 +6599,21 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-366. Symmetry breaking posts value precedence in models whose own
+366. The linear relaxation takes the rows over the terms of the objective on
+   the sparse simplex when they do not fit the dense tableau. A model
+   stated in clauses and elements has few rows of its own (CSPLib
+   warehouses, prob034: 2), so the dense simplex was chosen and the clause
+   rows b[i,j] -> open[j] and the value encodings of the element costs did
+   not fit it; the root bound of cap131 stayed at 626,300 (optimum
+   915,059). Now the rows at distance at most 1 from the objective, and
+   the rows over no other columns, go to the sparse simplex when they are
+   at most org.jacop.lp.sparseMaxRows (25,000): cap131 root bound 914,788,
+   free search proves the optimum in 4 s instead of not in 600 s (CP-SAT
+   4.5 s), and traveling-tppv circ20fnonbal (MiniZinc Challenge 2022) is
+   proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
+   turns it off; the statistic lpNearRows gives the rows taken.
+
+367. Symmetry breaking posts value precedence in models whose own
    lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
    hid that their values are interchangeable. Each such constraint
    X <=lex sigma(X) must compare a prefix of one common order, with sigma
@@ -6612,7 +6626,7 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
-367. Free search (-f) of an optimisation model without a search
+368. Free search (-f) of an optimisation model without a search
    annotation, after slow lazy clause generation gave way without a
    solution, takes turns until its first solution with runs that fix the
    search variables in the model's order, least value first
@@ -6626,7 +6640,7 @@ Version 5.0 (unreleased)
    with a solution and 7 better against 3 worse (seed spread); neutral on
    the wide set.
 
-368. The FlatZinc front end posts the reified comparisons of one variable
+369. The FlatZinc front end posts the reified comparisons of one variable
    with constants (int_le_reif, int_lt_reif with a constant on either
    side) and their half-reifications (int_le_imp, int_lt_imp) as one
    ChannelOrder per variable with two or more of them, in place of one
@@ -6643,7 +6657,7 @@ Version 5.0 (unreleased)
    reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
    half-reifications.
 
-369. ArgMax and ArgMin bound the values at positions that the index can
+370. ArgMax and ArgMin bound the values at positions that the index can
    no longer take: such a position may not reach the extreme over the
    positions the index can still take (strictly for positions after
    them, since the first extreme wins). ArgMax and ArgMin now reach
