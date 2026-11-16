@@ -4855,6 +4855,26 @@ class LcgSolverTest {
     assertThat(untrimmed).isZero();
   }
 
+  /**
+   * Core-guided search proves the same optima with core exhaustion, and exhaustion proves some
+   * totalizer outputs.
+   */
+  @Test
+  void exhaustedCoresKeepTheOptimum() {
+    Random rnd = new Random(29);
+    long exhausted = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = coreModelOptimum(seed, -1, new long[3]);
+      long[] stats = new long[7];
+      assertThat(coreModelOptimum(seed, 5, stats))
+          .as("instance %d (seed %d), exhausted", instance, seed)
+          .isEqualTo(expected);
+      exhausted += stats[6];
+    }
+    assertThat(exhausted).isPositive();
+  }
+
   @Test
   void coreGuidedSearchAgreesWithSearch() {
     Random rnd = new Random(17);
@@ -5712,6 +5732,11 @@ class LcgSolverTest {
       // core-guided search alone, each core as the solver gives it
       solver.setCoreTrim(0);
     }
+    if (mode == 5) {
+      // core-guided search alone, with core exhaustion
+      solver.setCoreExhaust(1 + rnd.nextInt(8));
+      solver.setCoreTrim(rnd.nextInt(2));
+    }
     if (mode == 3) {
       // a few conflicts of branch and bound, after a few of core-guided search or none, then the
       // core-guided phase picks up where it stopped
@@ -5741,6 +5766,9 @@ class LcgSolverTest {
     }
     if (stats.length > 5 && solver.coreSearch() != null) {
       stats[5] += solver.coreSearch().coreShrunk;
+    }
+    if (stats.length > 6 && solver.coreSearch() != null) {
+      stats[6] += solver.coreSearch().exhaustedOutputs;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
