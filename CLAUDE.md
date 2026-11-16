@@ -73,7 +73,8 @@ then reports the strongest level held at every node:
 
 It also fails a case that removes a solution or fails while a solution exists (wrong pruning),
 accepts a fixed assignment that is no solution, or claims `satisfied()` while some tuple of the
-domains is no solution, and counts nodes where a missing support would be pruned by running the
+domains is no solution (checked after propagation and right after each decision, since the LCG
+represolve and the FlatZinc component split drop a constraint that says it is satisfied), and counts nodes where a missing support would be pruned by running the
 constraint again (not at fixpoint). Each case prints its level, the node count and the first counterexample of the next
 level, with the instance and the decision path that reproduces it.
 
@@ -201,8 +202,13 @@ explanation with `jacop-sat/src/test/resources/org/jacop/jasat/lcg/explanation-s
 when a share grows by more than two points or the atoms by more than 10 %: a weaker but valid
 explanation, which the checker cannot see. After a change meant to alter explanations or the model
 generator, rewrite the file with `-Dlcg.sizes.write=true` and commit it with the change.
-`MutationGapsTest` (jacop-core) does the same for Max, Min, Member and ElementInteger outside the
-solver, with exact counts per seed, and checks each reason directly.
+`MutationGapsTest` (jacop-core, in every profile, about 2 s) does the same outside the solver for
+Max, Min, Member, ElementInteger, BinaryBitTable, ArgMaxMonotone, AllDifferentLists, ChannelOrder,
+ConjunctionSum, MaxCliqueBound and reified LinearInt: random narrowings, every reason of the
+constraint's own explanation checked by `ExplanationChecker`, and exact goldens per seed of the atoms
+it explains and their literals. A new explanation gets a case there; update a golden only for a
+change meant to alter the reasons. The osolpro kit `benchmarks/mutation-testing` runs PIT on the
+classes a change touches.
 
 `-Dlcg.fuzz.proof=true` instead solves the random models with `--proof` logging and checks every
 proof with `RupChecker` and its conclusion against the reference (models with a constraint that

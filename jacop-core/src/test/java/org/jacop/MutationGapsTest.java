@@ -36,18 +36,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
 import java.util.function.Function;
+import org.jacop.constraints.AllDifferentLists;
+import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
+import org.jacop.constraints.ChannelOrder;
+import org.jacop.constraints.ConjunctionSum;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
 import org.jacop.constraints.ElementIntegerFast;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxCliqueBound;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
 import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.Xor;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
@@ -489,6 +497,562 @@ class MutationGapsTest {
         }
       }
     }
+  }
+
+  // ---- the globals added on 2026-11-14/16, PIT run of osolpro benchmarks/mutation-testing ----
+
+  private static IntVar[] holed(Store store, Random rnd, int n, int lo, int hi) {
+    IntVar[] x = vars(store, rnd, n, lo, hi);
+    for (IntVar v : x) {
+      if (v.max() - v.min() >= 2 && rnd.nextBoolean()) {
+        v.domain.subtractAdapt(v.min() + 1 + rnd.nextInt(v.max() - v.min() - 1));
+      }
+    }
+    return x;
+  }
+
+  private static IntVar[] bools(Store store, int n, String name) {
+    IntVar[] b = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      b[i] = new IntVar(store, name + i, 0, 1);
+    }
+    return b;
+  }
+
+  private static IntVar[] concat(IntVar[] a, IntVar[] b) {
+    IntVar[] all = java.util.Arrays.copyOf(a, a.length + b.length);
+    System.arraycopy(b, 0, all, a.length, b.length);
+    return all;
+  }
+
+  @Test
+  void binaryBitTableReasons() {
+    Counts n =
+        check(
+            11,
+            1500,
+            rnd -> {
+              Store store = new Store();
+              IntVar[] x = holed(store, rnd, 2, -1, 4);
+              int[][] tuples = new int[2 + rnd.nextInt(8)][];
+              for (int t = 0; t < tuples.length; t++) {
+                tuples[t] = new int[] {rnd.nextInt(6) - 1, rnd.nextInt(6) - 1};
+              }
+              return new Instance(store, new BinaryBitTable(x[0], x[1], tuples), x);
+            });
+    golden(n, 2044, 203, 665, 56);
+  }
+
+  @Test
+  void argMaxMonotoneReasons() {
+    Counts n =
+        check(
+            12,
+            1500,
+            rnd -> {
+              Store store = new Store();
+              int m = 2 + rnd.nextInt(3);
+              IntVar[] q = vars(store, rnd, m, -1, 4);
+              int[][] f = new int[m][];
+              int[] first = new int[m];
+              for (int k = 0; k < m; k++) {
+                if (rnd.nextInt(4) == 0) {
+                  continue;
+                }
+                first[k] = q[k].min() + rnd.nextInt(2) - 1;
+                f[k] = new int[2 + rnd.nextInt(q[k].max() - q[k].min() + 2)];
+                int v = rnd.nextInt(5) - 2;
+                for (int i = 0; i < f[k].length; i++) {
+                  v += rnd.nextInt(3);
+                  f[k][i] = v;
+                }
+              }
+              IntVar index = new IntVar(store, "i", 0, m + 1);
+              return new Instance(
+                  store, new ArgMaxMonotone(q, f, first, index, -1), withLast(q, index));
+            });
+    golden(n, 3876, 2270, 53, 137);
+  }
+
+  @Test
+  void allDifferentListsReasons() {
+    Counts n =
+        check(
+            13,
+            1500,
+            rnd -> {
+              Store store = new Store();
+              IntVar[] x = holed(store, rnd, 5, 0, 2);
+              IntVar[][] rows = {{x[0], x[1]}, {x[2], x[3]}, {x[4], x[rnd.nextInt(4)]}};
+              int[][] except =
+                  rnd.nextBoolean() ? new int[0][] : new int[][] {{rnd.nextInt(3), rnd.nextInt(3)}};
+              return new Instance(store, new AllDifferentLists(rows, except), x);
+            });
+    golden(n, 940, 1626, 125, 328);
+  }
+
+  @Test
+  void channelOrderReasons() {
+    Counts n =
+        check(
+            14,
+            1500,
+            rnd -> {
+              Store store = new Store();
+              IntVar x = holed(store, rnd, 1, -2, 5)[0];
+              int k = 2 + rnd.nextInt(3);
+              // order literals, which may share a 0/1 variable
+              IntVar[] own = bools(store, k, "b");
+              IntVar[] b = new IntVar[k];
+              int[] t = new int[k];
+              boolean[] atMost = new boolean[k];
+              boolean[] implied = new boolean[k];
+              for (int i = 0; i < k; i++) {
+                b[i] = i > 0 && rnd.nextInt(4) == 0 ? b[rnd.nextInt(i)] : own[i];
+                t[i] = rnd.nextInt(7) - 2;
+                atMost[i] = rnd.nextBoolean();
+                implied[i] = rnd.nextInt(3) == 0;
+              }
+              return new Instance(
+                  store, new ChannelOrder(x, b, t, atMost, implied), withLast(own, x));
+            });
+    golden(n, 3235, 1142, 207, 308);
+  }
+
+  @Test
+  void conjunctionSumReasons() {
+    Counts n =
+        check(
+            15,
+            1500,
+            rnd -> {
+              Store store = new Store();
+              IntVar[] x = holed(store, rnd, 2 + rnd.nextInt(3), 0, 3);
+              int terms = 1 + rnd.nextInt(4);
+              IntVar[][] tv = new IntVar[terms][];
+              int[][] values = new int[terms][];
+              boolean[][] eq = new boolean[terms][];
+              int[] w = new int[terms];
+              for (int t = 0; t < terms; t++) {
+                int k = 1 + rnd.nextInt(2);
+                tv[t] = new IntVar[k];
+                values[t] = new int[k];
+                eq[t] = new boolean[k];
+                for (int l = 0; l < k; l++) {
+                  tv[t][l] = x[rnd.nextInt(x.length)];
+                  values[t][l] = rnd.nextInt(5) - 1;
+                  eq[t][l] = rnd.nextInt(4) != 0;
+                }
+                w[t] = rnd.nextInt(4);
+              }
+              IntVar sum = new IntVar(store, "s", 0, 8);
+              return new Instance(
+                  store, new ConjunctionSum(tv, values, eq, w, sum), withLast(x, sum));
+            });
+    golden(n, 553, 286, 17, 42);
+  }
+
+  @Test
+  void maxCliqueBoundReasons() {
+    Counts n =
+        check(
+            16,
+            1500,
+            rnd -> {
+              Store store = new Store();
+              int k = 2 + rnd.nextInt(6);
+              IntVar[] x = bools(store, k, "x");
+              int[][] conflicts = new int[k][];
+              double density = 0.2 + 0.6 * rnd.nextDouble();
+              for (int i = 0; i < k; i++) {
+                java.util.List<Integer> c = new java.util.ArrayList<>();
+                for (int j = 0; j < k; j++) {
+                  if (j != i && rnd.nextDouble() < density) {
+                    c.add(j);
+                  }
+                }
+                conflicts[i] = c.stream().mapToInt(Integer::intValue).toArray();
+              }
+              IntVar s = new IntVar(store, "s", 0, k);
+              return new Instance(store, new MaxCliqueBound(x, conflicts, s), withLast(x, s));
+            });
+    golden(n, 4669, 3581, 66, 158);
+  }
+
+  /**
+   * MaxCliqueBound over 65 to 140 vertices, so that its bit sets span several words: the reasons
+   * index vertices by word and bit, which graphs of fewer than 64 vertices never exercise.
+   */
+  @Test
+  void maxCliqueBoundReasonsOverSeveralWords() {
+    Counts n =
+        check(
+            22,
+            60,
+            rnd -> {
+              Store store = new Store();
+              int k = 65 + rnd.nextInt(76);
+              IntVar[] x = bools(store, k, "x");
+              int[][] conflicts = new int[k][];
+              double density = 0.5 + 0.45 * rnd.nextDouble();
+              for (int i = 0; i < k; i++) {
+                java.util.List<Integer> c = new java.util.ArrayList<>();
+                for (int j = i + 1; j < k; j++) {
+                  if (rnd.nextDouble() < density) {
+                    c.add(j);
+                  }
+                }
+                conflicts[i] = c.stream().mapToInt(Integer::intValue).toArray();
+              }
+              IntVar s = new IntVar(store, "s", 0, k);
+              return new Instance(store, new MaxCliqueBound(x, conflicts, s), withLast(x, s));
+            });
+    golden(n, 4950, 4922, 0, 0);
+  }
+
+  /** LinearForm explains the entailment of a reified linear constraint (all four relations). */
+  @Test
+  void reifiedLinearEntailmentReasons() {
+    String[] relations = {"<=", ">=", "==", "!="};
+    Counts n =
+        check(
+            17,
+            1500,
+            rnd -> {
+              Store store = new Store();
+              IntVar[] x = holed(store, rnd, 2 + rnd.nextInt(2), -2, 4);
+              int[] w = new int[x.length];
+              for (int i = 0; i < w.length; i++) {
+                w[i] =
+                    (rnd.nextInt(3) + 1)
+                        * (rnd.nextBoolean() ? 1 : -1)
+                        * (rnd.nextInt(3) == 0 ? 2 : 1);
+              }
+              IntVar b = new IntVar(store, "b", 0, 1);
+              LinearInt sum = new LinearInt(x, w, relations[rnd.nextInt(4)], rnd.nextInt(9) - 4);
+              return new Instance(store, new Reified(sum, b), withLast(x, b));
+            });
+    golden(n, 1522, 1213, 90, 217);
+  }
+
+  /**
+   * MaxCliqueBound's search helpers, which the FlatZinc clique search uses and no test called: the
+   * greedy clique is a clique of vertices that can still be 1 and cannot be extended by another
+   * such vertex, and the branching vertex is a free one, -1 once every vertex is fixed.
+   */
+  @Test
+  void maxCliqueSearchHelpers() {
+    Random rnd = new Random(18);
+    int extended = 0;
+    for (int trial = 0; trial < 400; trial++) {
+      Store store = new Store();
+      int k = 2 + rnd.nextInt(70);
+      IntVar[] x = bools(store, k, "x");
+      boolean[][] conflict = new boolean[k][k];
+      int[][] conflicts = new int[k][];
+      double density = 0.1 + 0.8 * rnd.nextDouble();
+      for (int i = 0; i < k; i++) {
+        java.util.List<Integer> c = new java.util.ArrayList<>();
+        for (int j = 0; j < k; j++) {
+          if (j != i && rnd.nextDouble() < density) {
+            c.add(j);
+            conflict[i][j] = true;
+            conflict[j][i] = true;
+          }
+        }
+        conflicts[i] = c.stream().mapToInt(Integer::intValue).toArray();
+      }
+      IntVar s = new IntVar(store, "s", 0, k);
+      MaxCliqueBound c = new MaxCliqueBound(x, conflicts, s);
+      store.impose(c);
+      assertTrue(store.consistency());
+      // fix a few vertices to 0, so that the clique must avoid them
+      store.setLevel(1);
+      for (int f = rnd.nextInt(Math.max(1, k / 4)); f > 0; f--) {
+        IntVar v = x[rnd.nextInt(k)];
+        v.domain.in(store.level, v, 0, 0);
+      }
+      assertTrue(store.consistency());
+      int[] clique = c.greedyClique();
+      boolean[] in = new boolean[k];
+      for (int a : clique) {
+        assertTrue(x[a].max() > 0, "trial " + trial + ": vertex " + a + " is fixed to 0");
+        assertTrue(!in[a], "trial " + trial + ": vertex " + a + " twice");
+        in[a] = true;
+        for (int b : clique) {
+          assertTrue(!conflict[a][b], "trial " + trial + ": " + a + " and " + b + " conflict");
+        }
+      }
+      for (int v = 0; v < k; v++) {
+        if (in[v] || x[v].max() == 0) {
+          continue;
+        }
+        boolean compatible = true;
+        for (int a : clique) {
+          compatible &= !conflict[v][a];
+        }
+        assertTrue(!compatible, "trial " + trial + ": the clique misses vertex " + v);
+      }
+      if (clique.length > 1) {
+        extended++;
+      }
+      int b = c.branchVertex();
+      if (b >= 0) {
+        assertTrue(!x[b].singleton(), "trial " + trial + ": branching on fixed " + x[b]);
+      } else {
+        for (IntVar v : x) {
+          assertTrue(v.singleton() || v.max() == 0, "trial " + trial + ": -1 with free " + v);
+        }
+      }
+    }
+    assertTrue(extended > 100, "cliques of two or more vertices: " + extended);
+  }
+
+  /**
+   * ChannelOrder's reifications(), which the linear relaxation and presolve read in place of the
+   * constraint, have exactly its solutions.
+   */
+  @Test
+  void channelOrderReificationsHaveItsSolutions() {
+    Random rnd = new Random(19);
+    for (int trial = 0; trial < 300; trial++) {
+      int k = 1 + rnd.nextInt(4);
+      int[] t = new int[k];
+      boolean[] atMost = new boolean[k];
+      boolean[] implied = new boolean[k];
+      for (int i = 0; i < k; i++) {
+        t[i] = rnd.nextInt(7) - 2;
+        atMost[i] = rnd.nextBoolean();
+        implied[i] = rnd.nextInt(3) == 0;
+      }
+      long[] counts = new long[2];
+      for (int way = 0; way < 2; way++) {
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", -3, 5);
+        IntVar[] b = bools(store, k, "b");
+        ChannelOrder c = new ChannelOrder(x, b, t, atMost, implied);
+        if (way == 0) {
+          store.impose(c);
+        } else {
+          for (Constraint r : c.reifications()) {
+            store.impose(r);
+          }
+        }
+        DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+        search.setPrintInfo(false);
+        search.getSolutionListener().searchAll(true);
+        search.getSolutionListener().recordSolutions(false);
+        boolean found =
+            search.labeling(
+                store,
+                new SimpleSelect<>(withLast(b, x), null, new IndomainRandom<>(rnd.nextInt())));
+        counts[way] = found ? search.getSolutionListener().solutionsNo() : 0;
+      }
+      long expected = 0;
+      for (int v = -3; v <= 5; v++) {
+        long ways = 1;
+        for (int i = 0; i < k; i++) {
+          boolean holds = atMost[i] ? v <= t[i] : v > t[i];
+          ways *= implied[i] && !holds ? 1 : implied[i] ? 2 : 1;
+        }
+        expected += ways;
+      }
+      String where = "trial " + trial + " t " + java.util.Arrays.toString(t);
+      assertEquals(expected, counts[0], where + " ChannelOrder");
+      assertEquals(expected, counts[1], where + " reifications");
+    }
+  }
+
+  /**
+   * satisfied() of ConjunctionSum and MaxCliqueBound on ground assignments, before propagation: the
+   * LCG represolve and the FlatZinc component split drop a constraint that says it is satisfied, so
+   * true must mean a solution, and a solution with every variable fixed must say true.
+   */
+  @Test
+  void satisfiedOnGroundAssignments() {
+    Random rnd = new Random(20);
+    int claimed = 0;
+    for (int trial = 0; trial < 3000; trial++) {
+      Store store = new Store();
+      int n = 2 + rnd.nextInt(4);
+      IntVar[] x = vars(store, rnd, n, 0, 3);
+      boolean clique = rnd.nextBoolean();
+      boolean holds;
+      Constraint c;
+      IntVar s = new IntVar(store, "s", 0, 8);
+      int[] a = new int[n];
+      if (clique) {
+        x = bools(store, n, "y");
+        int[][] conflicts = new int[n][];
+        boolean[][] conflict = new boolean[n][n];
+        for (int i = 0; i < n; i++) {
+          java.util.List<Integer> l = new java.util.ArrayList<>();
+          for (int j = 0; j < n; j++) {
+            if (j != i && rnd.nextInt(3) == 0) {
+              l.add(j);
+              conflict[i][j] = true;
+              conflict[j][i] = true;
+            }
+          }
+          conflicts[i] = l.stream().mapToInt(Integer::intValue).toArray();
+        }
+        c = new MaxCliqueBound(x, conflicts, s);
+        int count = 0;
+        boolean independent = true;
+        for (int i = 0; i < n; i++) {
+          a[i] = rnd.nextInt(2);
+          count += a[i];
+          for (int j = 0; j < i; j++) {
+            independent &= !(conflict[i][j] && a[i] == 1 && a[j] == 1);
+          }
+        }
+        // the sum is at most the size of a clique that holds the ones
+        int sv = rnd.nextInt(n + 1);
+        holds = independent && sv <= count;
+        store.impose(c);
+        store.setLevel(1);
+        s.domain.in(store.level, s, sv, sv);
+      } else {
+        int terms = 1 + rnd.nextInt(4);
+        IntVar[][] tv = new IntVar[terms][];
+        int[][] values = new int[terms][];
+        boolean[][] eq = new boolean[terms][];
+        int[] w = new int[terms];
+        for (int i = 0; i < n; i++) {
+          a[i] = x[i].min() + rnd.nextInt(x[i].max() - x[i].min() + 1);
+        }
+        long total = 0;
+        for (int t = 0; t < terms; t++) {
+          int k = 1 + rnd.nextInt(2);
+          tv[t] = new IntVar[k];
+          values[t] = new int[k];
+          eq[t] = new boolean[k];
+          boolean all = true;
+          for (int l = 0; l < k; l++) {
+            int i = rnd.nextInt(n);
+            tv[t][l] = x[i];
+            values[t][l] = rnd.nextInt(4);
+            eq[t][l] = rnd.nextInt(4) != 0;
+            all &= (a[i] == values[t][l]) == eq[t][l];
+          }
+          w[t] = rnd.nextInt(4);
+          if (all) {
+            total += w[t];
+          }
+        }
+        c = new ConjunctionSum(tv, values, eq, w, s);
+        int lo = rnd.nextInt(6);
+        holds = total <= lo;
+        store.impose(c);
+        store.setLevel(1);
+        s.domain.in(store.level, s, lo, lo + rnd.nextInt(3));
+      }
+      for (int i = 0; i < n; i++) {
+        x[i].domain.in(store.level, x[i], a[i], a[i]);
+      }
+      boolean said = ((org.jacop.api.SatisfiedPresent) c).satisfied();
+      String where = "trial " + trial + " " + c + " " + java.util.Arrays.toString(a);
+      assertEquals(holds, said, where);
+      if (said) {
+        claimed++;
+      }
+    }
+    assertTrue(claimed > 300, "satisfied " + claimed);
+  }
+
+  /**
+   * XmulYeqZSaturated (z = x * y clamped to JaCoP's integer range) against brute force near the
+   * ends of the range, where the product saturates, and with x and y the same variable: every
+   * solution is kept, a failure means there is none, and the values pruned over the fixed seed are
+   * a golden, so a weaker propagation (a dropped bound of x, y or z) fails it too.
+   */
+  @Test
+  void saturatedProductsAgainstBruteForce() {
+    Random rnd = new Random(21);
+    int max = org.jacop.core.IntDomain.MAX_INT;
+    int min = org.jacop.core.IntDomain.MIN_INT;
+    int[] scales = {1, 23_170, max / 3, max / 2};
+    long pruned = 0;
+    int failures = 0;
+    for (int trial = 0; trial < 3000; trial++) {
+      Store store = new Store();
+      int sx = scales[rnd.nextInt(scales.length)] * (rnd.nextBoolean() ? 1 : -1);
+      int sy = scales[rnd.nextInt(2)] * (rnd.nextBoolean() ? 1 : -1);
+      IntVar x = new IntVar(store, "x");
+      IntVar y = new IntVar(store, "y");
+      int[] xs = new int[3 + rnd.nextInt(3)];
+      int[] ys = new int[3 + rnd.nextInt(3)];
+      for (int i = 0; i < xs.length; i++) {
+        xs[i] = (int) Math.clamp((long) sx + rnd.nextInt(7) - 3, min, max);
+        x.addDom(xs[i], xs[i]);
+      }
+      for (int i = 0; i < ys.length; i++) {
+        ys[i] = (int) Math.clamp((long) sy + rnd.nextInt(7) - 3, min, max);
+        y.addDom(ys[i], ys[i]);
+      }
+      boolean same = rnd.nextInt(4) == 0;
+      if (same) {
+        y = x;
+      }
+      IntVar z = new IntVar(store, "z");
+      // some products, the ends of the range and a few other values
+      int[] xv = values(x);
+      int[] yv = values(y);
+      for (int k = 0; k < 4; k++) {
+        int p =
+            XmulYeqZSaturated.saturatedProduct(
+                xv[rnd.nextInt(xv.length)], yv[rnd.nextInt(yv.length)]);
+        z.addDom(p, p);
+      }
+      int[] extra = {max, min, 0, max - 1, rnd.nextInt(2_000_001) - 1_000_000};
+      for (int k = rnd.nextInt(3); k < extra.length; k += 1 + rnd.nextInt(2)) {
+        z.addDom(extra[k], extra[k]);
+      }
+      int[] zv = values(z);
+      java.util.Set<Integer> zs = new java.util.HashSet<>();
+      for (int v : zv) {
+        zs.add(v);
+      }
+      java.util.Set<Integer> sxs = new java.util.TreeSet<>();
+      java.util.Set<Integer> sys = new java.util.TreeSet<>();
+      java.util.Set<Integer> szs = new java.util.TreeSet<>();
+      for (int a : xv) {
+        for (int b : same ? new int[] {a} : yv) {
+          int p = XmulYeqZSaturated.saturatedProduct(a, b);
+          if (zs.contains(p)) {
+            sxs.add(a);
+            sys.add(b);
+            szs.add(p);
+          }
+        }
+      }
+      int before = x.getSize() + (same ? 0 : y.getSize()) + z.getSize();
+      boolean consistent;
+      try {
+        store.impose(new XmulYeqZSaturated(x, y, z));
+        consistent = store.consistency();
+      } catch (FailException _) {
+        consistent = false;
+      }
+      String where = "trial " + trial + " x " + x + " y " + y + " z " + z + " same " + same;
+      if (!consistent) {
+        assertTrue(szs.isEmpty(), where + ": failed with a solution");
+        failures++;
+        continue;
+      }
+      for (int a : sxs) {
+        assertTrue(x.domain.contains(a), where + ": lost x = " + a);
+      }
+      for (int b : sys) {
+        assertTrue(y.domain.contains(b), where + ": lost y = " + b);
+      }
+      for (int p : szs) {
+        assertTrue(z.domain.contains(p), where + ": lost z = " + p);
+      }
+      pruned += before - (x.getSize() + (same ? 0 : y.getSize()) + z.getSize());
+    }
+    assertEquals(6763, pruned, "values pruned (golden)");
+    assertEquals(0, failures, "failures (golden)");
   }
 
   private static int[] values(IntVar x) {
