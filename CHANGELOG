@@ -7533,7 +7533,23 @@ Version 5.0 (unreleased)
    The store check of a hint before lazy clause generation (also of the
    project schedule) now runs the root's pending propagation first.
 
-417. JaSAT (CdclSolver, CdclMain) tries Kissat's lucky assignments before
+417. With lazy clause generation, a linear constraint of more than 20 terms
+   (instead of 40) becomes sums of blocks of about sqrt(n) terms, so its
+   explanations are shorter (as the lazy decomposition of Abio and Stuckey,
+   "Conflict directed lazy decomposition", CP 2012, does on demand). A
+   census of reasons on the 62 wide-quick instances showed sums of 21 to 40
+   terms giving reasons of 261 atoms on average, 71 % of all reason atoms on
+   lot-sizing pigment20a. Such sums occur in 27 of the 240 wide instances.
+   On them at 600 s with -f, two rounds: total time 3,315 -> 2,342 s
+   (0.707) and solved 50 -> 52 of 54 (pigment20a 600 -> 64-258 s,
+   neighbours-6 69-92 -> 26-46 s, liner-sf tp7_4 192 -> 123 s in round 1; slower
+   fast-food ff58 19 -> 26-28 s); default mode, one round: 3,403 ->
+   3,368 s, solved 23 -> 24 (neighbours-6 proved in 341 s; slower fast-food
+   ff58 227 -> 371 s and mario medium_4 287 -> 359 s). wide-quick at 240 s
+   with -f: 6,531 -> 6,422 s, solved 36 -> 37. --free-config lcg-split=40
+   restores the old limit.
+   
+418. JaSAT (CdclSolver, CdclMain) tries Kissat's lucky assignments before
    the first search (Biere and Fleury, Proc. SAT Competition 2022): all
    variables true or false when every clause has a literal of that sign,
    then forward and backward passes in input order deciding false and then
