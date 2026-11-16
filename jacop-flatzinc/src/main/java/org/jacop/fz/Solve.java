@@ -1136,6 +1136,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + refutation.refutationOutcome()
               + "\n%%%mzn-stat: lpRefutationObjective="
               + refutation.hasPseudoObjective()
+              + "\n%%%mzn-stat: lpRefutationKind="
+              + refutation.refutationKind()
               + "\n%%%mzn-stat: lpRefutationTime="
               + (refutationBuildNanos + refutation.solveNanos) / 1e9
               + "\n%%%mzn-stat: lpRefutationSolveTime="

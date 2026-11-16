@@ -206,6 +206,7 @@ setup to run configuration. -->
                                 <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <setfuzz.trials>100</setfuzz.trials>
+                                <rootRefutation.fuzz.trials>1000</rootRefutation.fuzz.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
@@ -316,6 +317,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -578,6 +580,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -841,6 +844,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -1104,6 +1108,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
