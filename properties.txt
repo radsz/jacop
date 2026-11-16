@@ -798,6 +798,10 @@ Cuts:
   slacks (false: MIR of the aggregate of the rows alone); default true.
 - org.jacop.lp.knapsackRows: the weight and profit rows of Knapsack
   (jacop_knapsack) are linearised rows of the LP; default true.
+- org.jacop.lp.coverCuts: lifted cover cuts of the rows as 0/1
+  knapsacks (CoverCuts) in the root cut rounds; default false.
+- org.jacop.lp.coverSearch: with coverCuts, cover cuts alone also in
+  search, every few optimal solves; default false.
 - org.jacop.lp.capacityCuts: rounded capacity cuts of Routes at the
   root; default true.
 - org.jacop.lp.capacityRounds: their rounds; default 50.
