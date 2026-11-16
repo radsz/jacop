@@ -227,6 +227,24 @@ public class ConditionalSelect extends Constraint
     return true;
   }
 
+  /**
+   * Returns the 0/1 conditions, in the order of the branches.
+   *
+   * @return the conditions (not a copy)
+   */
+  public IntVar[] conditions() {
+    return b;
+  }
+
+  /**
+   * Returns the selected value.
+   *
+   * @return the variable equal to the selected branch
+   */
+  public IntVar result() {
+    return y;
+  }
+
   // explanations for lazy clause generation; the semantics need some condition to be 1
 
   @Override

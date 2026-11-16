@@ -30,9 +30,11 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.MaxCliqueBound;
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTConstElem;
@@ -74,6 +76,9 @@ public class MaxCliqueDetector implements ParserTreeConstants {
   private final Map<IntVar, IntVar> bool2int = new IdentityHashMap<>();
 
   private final List<IntVar[]> pairs = new ArrayList<>();
+
+  // the constraints of the pairs
+  private final Set<SimpleNode> pairNodes = new HashSet<>();
 
   private final List<ASTConstElem> linears = new ArrayList<>();
 
@@ -117,8 +122,22 @@ public class MaxCliqueDetector implements ParserTreeConstants {
   public void detect(SimpleNode astTree) {
     IntVar[] vertices = scan(astTree);
     if (vertices != null) {
-      post(vertices);
+      MaxCliqueBound bound = post(vertices);
+      if (bound != null && others == 0 && linears.size() == 1 && pairs.size() >= vertices.length) {
+        // maximum clique and nothing else: its default search branches as clique algorithms do
+        support.dictionary.maxClique = bound;
+      }
     }
+  }
+
+  /**
+   * It tells if a model of maximum clique only, without a search annotation, is searched by the
+   * branching of maximum clique algorithms ({@link org.jacop.search.MaxCliqueSelect}).
+   *
+   * @return false if the system property org.jacop.fz.maxClique.search is false.
+   */
+  public static boolean searches() {
+    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.maxClique.search"));
   }
 
   /**
@@ -136,6 +155,23 @@ public class MaxCliqueDetector implements ParserTreeConstants {
         && others == 0
         && linears.size() == 1
         && pairs.size() >= vertices.length;
+  }
+
+  /**
+   * The pairwise conflicts of a model of maximum clique and nothing else, which the bound enforces
+   * by itself, so they need not be posted: their propagators cost more than half of the time of
+   * branch and bound on brock400 and make the sequence detector post AmongSeq over chains of
+   * consecutive pairs.
+   *
+   * @param astTree the root of the parsed model.
+   * @return the constraints of the conflicts, empty unless the model is pure maximum clique and the
+   *     system property org.jacop.fz.maxClique.pairs is not true
+   */
+  public Set<SimpleNode> replacedPairs(SimpleNode astTree) {
+    if (Boolean.getBoolean("org.jacop.fz.maxClique.pairs") || !pure(astTree)) {
+      return Set.of();
+    }
+    return pairNodes;
   }
 
   // the vertices of the maximized sum with conflicts, or null
@@ -185,9 +221,10 @@ public class MaxCliqueDetector implements ParserTreeConstants {
     return b == null ? v : b;
   }
 
-  private void pair(IntVar a, IntVar b) {
+  private void pair(ASTConstElem node, IntVar a, IntVar b) {
     if (a != b && zeroOne(a) && zeroOne(b)) {
       pairs.add(new IntVar[] {a, b});
+      pairNodes.add(node);
     } else {
       others++;
     }
@@ -207,7 +244,7 @@ public class MaxCliqueDetector implements ParserTreeConstants {
         IntVar[] x = support.getVarArray(child(node, 1));
         int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
         if (a != null && a.length == 2 && x.length == 2 && a[0] == 1 && a[1] == 1 && c == 1) {
-          pair(x[0], x[1]);
+          pair(node, x[0], x[1]);
         } else {
           others++;
         }
@@ -216,7 +253,7 @@ public class MaxCliqueDetector implements ParserTreeConstants {
         IntVar[] pos = support.getVarArray(child(node, 0));
         IntVar[] neg = support.getVarArray(child(node, 1));
         if (pos.length == 0 && neg.length == 2) {
-          pair(neg[0], neg[1]);
+          pair(node, neg[0], neg[1]);
         } else {
           others++;
         }
@@ -225,7 +262,7 @@ public class MaxCliqueDetector implements ParserTreeConstants {
         IntVar[] x = support.getVarArray(child(node, 0));
         IntVar r = variable(node, 1);
         if (x.length == 2 && r.singleton(0)) {
-          pair(x[0], x[1]);
+          pair(node, x[0], x[1]);
         } else {
           others++;
         }
@@ -297,7 +334,7 @@ public class MaxCliqueDetector implements ParserTreeConstants {
     return vertices.length <= MAX_VERTICES ? vertices : null;
   }
 
-  private void post(IntVar[] vertices) {
+  private MaxCliqueBound post(IntVar[] vertices) {
     int n = vertices.length;
     Map<IntVar, Integer> index = new IdentityHashMap<>();
     for (int i = 0; i < n; i++) {
@@ -324,7 +361,7 @@ public class MaxCliqueDetector implements ParserTreeConstants {
       }
     }
     if (found == 0) {
-      return;
+      return null;
     }
     int[][] lists = new int[n][];
     for (int i = 0; i < n; i++) {
@@ -338,5 +375,6 @@ public class MaxCliqueDetector implements ParserTreeConstants {
           "% redundant max-clique bound over " + n + " vertices, " + found + " conflicts");
     }
     support.delayedConstraints.add(bound);
+    return bound;
   }
 }
