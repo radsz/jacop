@@ -4476,6 +4476,24 @@ public final class LcgSolver implements ExternalPropagator {
     return coreExhaust;
   }
 
+  // -Djacop.lcg.coreExhaustZeroOne=K: the same when every core term is a 0-1 variable
+  private int coreExhaustZeroOne = Integer.getInteger("jacop.lcg.coreExhaustZeroOne", 8);
+
+  /**
+   * Sets how many outputs of each new totalizer are exhausted, as in {@link #setCoreExhaust}, when
+   * the cores run on terms of 0-1 variables only (a MaxSAT-like objective); the larger of the two
+   * settings applies there. The default is 8; 0 leaves such objectives to {@link #setCoreExhaust}.
+   *
+   * @param outputs the most outputs per core (property {@code jacop.lcg.coreExhaustZeroOne})
+   */
+  public void setCoreExhaustZeroOne(int outputs) {
+    coreExhaustZeroOne = outputs;
+  }
+
+  int coreExhaustZeroOne() {
+    return coreExhaustZeroOne;
+  }
+
   /**
    * Sets whether the core-guided phase of {@link #minimize} is skipped after branch and bound when
    * its probe ({@link #setCoreDelay}) stopped without a solution of its own and branch and bound

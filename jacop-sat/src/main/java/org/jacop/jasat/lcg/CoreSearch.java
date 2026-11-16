@@ -163,6 +163,13 @@ public final class CoreSearch {
    */
   public boolean termsBySpanRatio;
 
+  /** Whether the cores run on terms of 0-1 variables only (a MaxSAT-like objective). */
+  public boolean zeroOneTerms;
+
+  private int exhaustOutputs() {
+    return zeroOneTerms ? Math.max(lcg.coreExhaust(), lcg.coreExhaustZeroOne()) : lcg.coreExhaust();
+  }
+
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
 
@@ -286,6 +293,7 @@ public final class CoreSearch {
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
     search.termsBySpanRatio = termSpan > blockSpan;
+    search.zeroOneTerms = zeroOne;
     if (!search.startProof(definitions)) {
       return null;
     }
@@ -1465,11 +1473,11 @@ public final class CoreSearch {
    * @return false when the solver became unsatisfiable at the root
    */
   private boolean exhaust(int size, long phaseLimit) {
-    if (lcg.coreExhaust() <= 0 || size < 2 || lastTotalizer == null) {
+    if (exhaustOutputs() <= 0 || size < 2 || lastTotalizer == null) {
       return true;
     }
     Totalizer tot = lastTotalizer;
-    int last = Math.min(Math.min(tot.inputs.length, tot.outputs.length), lcg.coreExhaust() + 1);
+    int last = Math.min(Math.min(tot.inputs.length, tot.outputs.length), exhaustOutputs() + 1);
     boolean refuted = true;
     boolean open = true;
     for (int k = 2; refuted && open && k <= last; k++) {
