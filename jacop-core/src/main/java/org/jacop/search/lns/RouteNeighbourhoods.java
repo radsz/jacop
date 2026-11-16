@@ -241,6 +241,20 @@ final class RouteNeighbourhoods extends RouteStructure {
     routes = null;
   }
 
+  @Override
+  void solution(Map<IntVar, Integer> valueOf) {
+    for (int k = 0; k < literals.length; k++) {
+      Integer b = valueOf.get(literals[k]);
+      used[k] = (b == null ? literals[k].value() : b) == 1;
+    }
+    routes = null;
+  }
+
+  @Override
+  IntVar[] routeVariables() {
+    return literals;
+  }
+
   /** The routes of the best solution, followed from the depot along the arcs at 1. */
   @Override
   void readRoutes() {

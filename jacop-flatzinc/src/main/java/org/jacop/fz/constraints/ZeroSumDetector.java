@@ -527,7 +527,7 @@ public class ZeroSumDetector implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
-      IntVar[] array = support.dictionary.getVariableArray(e.getIdent());
+      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
       if (array != null) {
         Collections.addAll(out, array);
         return;
@@ -536,7 +536,8 @@ public class ZeroSumDetector implements ParserTreeConstants {
       if (v != null) {
         out.add(v);
       }
-    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
+    } else if (e.getType() == 3
+        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
       out.add(support.getVariable(e));
     }
   }

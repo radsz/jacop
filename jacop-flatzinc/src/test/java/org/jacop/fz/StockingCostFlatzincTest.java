@@ -208,6 +208,38 @@ class StockingCostFlatzincTest {
     assertEquals("2", optimum(out));
   }
 
+  /**
+   * A variable repeated in the cost sum is one term: counted twice, it filled both places of an
+   * alldifferent of two variables, and the stocking cost of [v1, v1] refuted the model (found by
+   * RootRefutationFuzzTest).
+   */
+  @Test
+  void repeatedVariableOfTheCostIsOneTerm() throws IOException {
+    String fzn =
+        """
+        var 0..2: v1 :: output_var;
+        var 0..2: v4 :: output_var;
+        var 0..6: cost :: output_var;
+        constraint jacop_alldiff([v1, v4]);
+        constraint int_lin_eq([1, 2, -1], [v1, v1, cost], 0);
+        solve minimize cost;
+        """;
+    assertEquals("0", optimum(run(fzn, true)));
+    // with cancelling coefficients the repeated variable is no term of the cost at all
+    String cancelling =
+        """
+        var 0..2: v0 :: output_var;
+        var 0..2: v1 :: output_var;
+        var 0..2: v3 :: output_var;
+        var 0..2: v4 :: output_var;
+        var -6..14: cost :: output_var;
+        constraint jacop_alldiff([v1, v4]);
+        constraint int_lin_eq([-3, 1, 3, 1, 2, -1], [v3, v0, v3, v1, v1, cost], 0);
+        solve minimize cost;
+        """;
+    assertEquals("0", optimum(run(cancelling, true)));
+  }
+
   @Test
   void detectionCanBeTurnedOff() throws IOException {
     String fzn =
