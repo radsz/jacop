@@ -55,6 +55,13 @@ public abstract class Var implements Backtrackable {
   /** It specifies the index at which it is stored in Store. */
   public int storeIndex = -1;
 
+  /**
+   * The order in which the variable was put in its store, counting Boolean variables, which have no
+   * store index. Constraints key tables by it, as identity hash codes would change the search
+   * order.
+   */
+  public int storeNumber = -1;
+
   /** It specifies the current weight of the variable. */
   public int weight = 1;
 

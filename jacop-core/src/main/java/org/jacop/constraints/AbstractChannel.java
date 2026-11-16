@@ -43,6 +43,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.TimeStampInt;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -58,6 +59,21 @@ abstract class AbstractChannel extends Constraint
   final Item[] item;
   final Map<Integer, IntVar> valueMap = new HashMap<>();
   TimeStampInt position;
+
+  // Incremental wake-up: the items whose 0/1 variable changed since the last consistency call are
+  // processed alone while x is unchanged. The variables are found by Var#storeNumber, in a dense
+  // table (keys from wakeBase) or in sorted keys; null when the 0/1 variables are not distinct.
+  private int[] wakeTable;
+  private int wakeBase;
+  private int[] wakeKeys;
+  private int[] wakeItems;
+  // origin[p] is the item first at position p of item[] that is now at p; at[k] its position now
+  private int[] origin;
+  private int[] at;
+  private int[] pending;
+  private boolean[] isPending;
+  private int pendingSize;
+  private boolean fullPassNeeded = true;
 
   AbstractChannel(int numberId, IntVar x, IntVar[] bs, int[] value, String constraintName) {
     checkInputForNullness(new String[] {"x", "bs"}, new Object[] {x}, bs);
@@ -182,7 +198,101 @@ abstract class AbstractChannel extends Constraint
       Item tmp = item[i];
       item[i] = item[j];
       item[j] = tmp;
+      if (origin != null) {
+        int oi = origin[i];
+        int oj = origin[j];
+        origin[i] = oj;
+        origin[j] = oi;
+        at[oi] = j;
+        at[oj] = i;
+      }
     }
+  }
+
+  // sets up the incremental wake-up when the 0/1 variables are distinct, other than x and numbered
+  private void indexWakeItems() {
+    int[] keys = new int[n];
+    for (int i = 0; i < n; i++) {
+      IntVar b = item[i].b();
+      if (b == x || b.storeNumber < 0) {
+        return;
+      }
+      keys[i] = b.storeNumber;
+    }
+    Integer[] order = new Integer[n];
+    for (int i = 0; i < n; i++) {
+      order[i] = i;
+    }
+    Arrays.sort(order, (p, q) -> Integer.compare(keys[p], keys[q]));
+    int[] sortedKeys = new int[n];
+    int[] sortedItems = new int[n];
+    for (int i = 0; i < n; i++) {
+      sortedKeys[i] = keys[order[i]];
+      sortedItems[i] = order[i];
+      if (i > 0 && sortedKeys[i] == sortedKeys[i - 1]) {
+        return;
+      }
+    }
+    if (n > 0 && (long) sortedKeys[n - 1] - sortedKeys[0] < 4L * n + 64) {
+      wakeBase = sortedKeys[0];
+      wakeTable = new int[sortedKeys[n - 1] - wakeBase + 1];
+      Arrays.fill(wakeTable, -1);
+      for (int i = 0; i < n; i++) {
+        wakeTable[sortedKeys[i] - wakeBase] = sortedItems[i];
+      }
+    } else {
+      wakeKeys = sortedKeys;
+      wakeItems = sortedItems;
+    }
+    origin = new int[n];
+    at = new int[n];
+    for (int i = 0; i < n; i++) {
+      origin[i] = i;
+      at[i] = i;
+    }
+    pending = new int[n];
+    isPending = new boolean[n];
+  }
+
+  @Override
+  public void queueVariable(int level, Var var) {
+    if (fullPassNeeded) {
+      return;
+    }
+    if (var == x || origin == null) {
+      fullPassNeeded = true;
+      return;
+    }
+    int key = var.storeNumber;
+    int k;
+    if (wakeTable != null) {
+      int d = key - wakeBase;
+      k = d >= 0 && d < wakeTable.length ? wakeTable[d] : -1;
+    } else {
+      k = Arrays.binarySearch(wakeKeys, key);
+      k = k >= 0 ? wakeItems[k] : -1;
+    }
+    if (k < 0 || item[at[k]].b() != var) {
+      fullPassNeeded = true;
+      return;
+    }
+    if (!isPending[k]) {
+      isPending[k] = true;
+      pending[pendingSize++] = k;
+    }
+  }
+
+  private void clearPending() {
+    for (int i = 0; i < pendingSize; i++) {
+      isPending[pending[i]] = false;
+    }
+    pendingSize = 0;
+  }
+
+  @Override
+  public void cleanAfterFailure() {
+    clearPending();
+    fullPassNeeded = true;
   }
 
   public boolean satisfied() {
@@ -211,6 +321,7 @@ abstract class AbstractChannel extends Constraint
   public void impose(Store store) {
     super.impose(store);
     position = new TimeStampInt(store, 0);
+    indexWakeItems();
   }
 
   /**
@@ -239,6 +350,60 @@ abstract class AbstractChannel extends Constraint
 
   @Override
   public void consistency(final Store store) {
+
+    // the changes this call makes are reported to queueVariable too, and are at the fixpoint it
+    // reaches; a failure reaches cleanAfterFailure after the finally block
+    try {
+      if (!fullPassNeeded && pendingSize > 0) {
+        // only distinct 0/1 variables changed since the last call, which reached a fixpoint
+        changedItemsPass(store);
+      } else {
+        fullConsistency(store);
+      }
+    } finally {
+      clearPending();
+      fullPassNeeded = false;
+    }
+  }
+
+  // the items of the pending 0/1 variables, which are distinct and none is x
+  private void changedItemsPass(final Store store) {
+    int start = position.value();
+    int startBefore = start;
+    for (int j = 0; j < pendingSize; j++) {
+      int i = at[pending[j]];
+      if (i < start) {
+        continue;
+      }
+      if (item[i].b().max() == 0) {
+        handleBmaxZero(store, i);
+        swap(start, i);
+        start++;
+        continue;
+      } else if (item[i].b().min() == 1) {
+        handleBminOne(store, i);
+      }
+      if (!x.domain.contains(item[i].value())) {
+        item[i].b().domain.inValue(store.level, item[i].b(), 0);
+        swap(start, i);
+        start++;
+      }
+    }
+    if (start != startBefore) {
+      position.update(start);
+    }
+    if (start == n) {
+      if (!x.singleton()) {
+        removeConstraint();
+      }
+      return;
+    }
+    if (x.singleton()) {
+      propagateWhenXisSingleton(store, start);
+    }
+  }
+
+  private void fullConsistency(final Store store) {
 
     // The same b variable may be used for several values, so fixing b for one value can affect an
     // item that was already visited; repeat the pass until it does not change any domain.
