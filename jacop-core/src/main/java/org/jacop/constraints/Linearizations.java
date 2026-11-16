@@ -47,6 +47,7 @@ import org.jacop.constraints.lp.AlldifferentCuts;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
@@ -139,6 +140,7 @@ public final class Linearizations {
     if (IMPLIED_VALUES) {
       impliedValues(constraints, byVar, out);
     }
+    keyedTables(constraints, covering, out);
     // value = list[index - offset] over an encoded index: value = sum list[v - offset] b_v
     for (Constraint c : constraints) {
       if (c.getClass() != ElementInteger.class) {
@@ -306,6 +308,64 @@ public final class Linearizations {
     }
     return out;
   }
+
+  /**
+   * Adds, for each table with a key column over an encoded variable x ({@link
+   * HybridTable#keyColumn()}: every tuple has its own value of x, and the other columns are values,
+   * so each of them is a function {@code y = t(x)}), the row {@code y = sum_v t(v) b_v} of every
+   * other column y over the value Booleans {@code b_v <-> x = v}. These are the rows of {@link
+   * ElementInteger} for the element constraints that the front end merged into one table per index
+   * (the options of a class in car sequencing): without them the relaxation has no link between the
+   * option variables and the classes.
+   */
+  private static void keyedTables(
+      Collection<Constraint> constraints,
+      Map<IntVar, Map<Integer, IntVar>> covering,
+      List<LinearForm> out) {
+    if (!KEYED_TABLES) {
+      return;
+    }
+    for (Constraint c : constraints) {
+      if (!(c instanceof HybridTable t)) {
+        continue;
+      }
+      int key = t.keyColumn();
+      if (key < 0) {
+        continue;
+      }
+      IntVar x = t.column(key);
+      Map<Integer, IntVar> m = covering.get(x);
+      if (m == null) {
+        continue;
+      }
+      for (int j = 0; j < t.columnCount(); j++) {
+        IntVar y = t.column(j);
+        if (j == key || y == x || y.singleton() || m.containsValue(y)) {
+          continue;
+        }
+        IntVar[] vars = new IntVar[m.size() + 1];
+        long[] w = new long[vars.length];
+        int i = 0;
+        for (Map.Entry<Integer, IntVar> v : m.entrySet()) {
+          // a value of x without a tuple has no solution: its term is left out
+          int value = t.keyedValue(j, v.getKey(), 0);
+          if (value != 0) {
+            vars[i] = v.getValue();
+            w[i++] = value;
+          }
+        }
+        vars[i] = y;
+        w[i++] = -1;
+        if (i >= 2) {
+          out.add(new LinearForm(Arrays.copyOf(vars, i), Arrays.copyOf(w, i), 0, LinearForm.EQ));
+        }
+      }
+    }
+  }
+
+  // the rows of keyedTables: on or off
+  private static final boolean KEYED_TABLES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.keyedTables", "true"));
 
   /**
    * Returns the rows of the value conjunctions ({@link #selectedValues}), with the conjunctions

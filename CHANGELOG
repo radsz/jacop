@@ -6861,6 +6861,25 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+383. The LP relaxation links the columns of a table with a key column (the
+   element constraints over one index that the front end merges into one
+   table, such as the options of a class in car sequencing) to the value
+   encoding of the key: y = sum_v t(v) b_v for every other column y, the
+   linear formulation of element (P. Refalo, Linear formulation of
+   constraint programming models and hybrid solvers, CP 2000, LNCS 1894).
+   The extra rows of a satisfaction model (value encodings, linearized
+   constraints), kept before only when the root LP was infeasible, stay on
+   probation for 64 solves and are kept if at least 10 % of the solves
+   since then failed the node; a relaxation that fails that often is no
+   longer starved by its work budget, and its extra rows are not dropped
+   for the pivot limits they hit. Car sequencing (CSPLib 001) p6-76 is
+   proved UNSAT with -f in 10 s instead of 295 s; the 108 CSPLib car
+   sequencing instances at 240 s with -f: 80 -> 84 solved (p6-76, p36-92,
+   p10-93, pb_200_10), total time -5 %. With -s it prints lpProbationKept
+   and lpFailingSolves. -Dorg.jacop.lp.keyedTables=false,
+   -Dorg.jacop.lp.satisfactionProbation=0 and -Dorg.jacop.lp.failRate=0
+   turn them off.
+
 Version 4.11
 =============
 
