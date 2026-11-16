@@ -1195,6 +1195,41 @@ class FlatzincFrontEndTest {
     assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
   }
 
+  @Test
+  void narrowedProductComparedInsideTheRangeIsSaturated() throws IOException {
+    // 2022 arithmetic-target: tree_vals[i] = tree_vals[l] * tree_vals[r] only for a Mul node, a
+    // product declared 0..4722438400 and used only in int_eq_imp. Narrowed, int_times removed the
+    // pairs whose product does not fit, also at nodes that are no products, and the completed
+    // search claimed nothing. Saturated at the end of the range it keeps them: here the optimum
+    // x = y = 30000 has x * y = 900000000
+    String product =
+        """
+        var 1..30000: x :: output_var;
+        var 1..30000: y :: output_var;
+        var 0..60000: s :: output_var;
+        var 0..900000000: p;
+        var 0..10: v;
+        var bool: b;
+        constraint int_times(x, y, p);
+        constraint int_eq_imp(v, p, b);
+        constraint int_lin_eq([1, 1, -1], [x, y, s], 0);
+        """;
+    String[] out = run(product + "solve maximize s;\n");
+    assertEquals("x = 30000;\ny = 30000;\ns = 60000;\n----------\n==========\n", tail(out[0]));
+    // the comparison holds: b forces the product into 0..10
+    out = run(product + "constraint bool_eq(b, true);\nsolve maximize s;\n");
+    assertTrue(tail(out[0]).endsWith("s = 11;\n----------\n==========\n"), out[0]);
+    // compared with a variable that reaches the end of the range: narrowed as before, no claim
+    out = run(product.replace("var 0..10: v;", "var 0..536870909: v;") + "solve maximize s;\n");
+    assertFalse(out[0].endsWith("==========\n"), out[0]);
+    // printed: narrowed as before, no claim
+    out =
+        run(
+            product.replace("var 0..900000000: p;", "var 0..900000000: p :: output_var;")
+                + "solve maximize s;\n");
+    assertFalse(out[0].endsWith("==========\n"), out[0]);
+  }
+
   // the last solution and the status lines
   private static String tail(String out) {
     int end = out.lastIndexOf("----------");

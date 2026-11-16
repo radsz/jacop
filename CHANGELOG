@@ -7004,6 +7004,27 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. New constraint XmulYeqZSaturated(x, y, z): z = x * y saturated at the
+   ends of JaCoP's integer range, z = max(MIN_INT, min(MAX_INT, x * y)).
+   The FlatZinc front end posts it for int_times(x, y, z) when the
+   declared domain of z reaches beyond the range (and holds every product
+   of the declared factors) and z is otherwise only compared, by int_eq,
+   int_ne, int_le or int_lt and their _reif and _imp forms, with constants
+   or variables declared strictly inside the range, and is neither
+   printed nor the objective. Such a comparison has the same truth value
+   for a product beyond the range and for the end of the range, so the
+   end stands for all of them (a saturated sentinel, as in interval
+   arithmetic: R. E. Moore, Interval Analysis, Prentice-Hall, 1966) and
+   no solution is lost; before, XmulYeqZ over the narrowed z removed every
+   pair of factors whose product did not fit, so a completed search could
+   claim nothing. MiniZinc compiles tree_vals[i] = tree_vals[l] *
+   tree_vals[r] of the 2022 Challenge model arithmetic-target to 21 such
+   products declared 0..4722438400: at 600 s its three large instances
+   (4108, 6872, 8657) are now proved optimal (7) in 12-31 s of search in
+   default mode and 10-15 s with -f; before, the search completed at 7
+   and printed no ==========. Of the 1,781 Challenge instances, only these
+   three have such a product. It is off with --proof.
+
 Version 4.11
 =============
 
