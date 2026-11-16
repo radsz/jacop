@@ -6826,6 +6826,25 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
+381. A satisfaction model stated in clauses over 0/1 variables, with no
+   value encodings for the root refutation, gets a root-only refutation
+   LP over its clause rows when its binary clauses hold at-most-one
+   structure: unit propagation and the substitution of equivalent
+   literals (strongly connected components of the binary implication
+   graph, Aspvall, Plass and Tarjan, IPL 8(3), 1979) first, then the pair
+   conflicts merged into clique rows (Atamtuerk, Nemhauser and
+   Savelsbergh, EJOR 121, 2000). Pigeonhole formulas, which resolution
+   and so lazy clause generation refute only in exponentially many steps
+   (Haken, TCS 39, 1985), are refuted at once. Of the SAT Competition
+   2024/25 CNFs of the SAT gap screen, pigeon-hole, mutilated-chessboard
+   and grandtour-puzzle (UNKNOWN at 600 s) and fpga-routing (203 s) are
+   refuted at the root in under 4 s; on the 13 CNFs where it can change
+   the result, 600 s, default and -f, 20 -> 26 runs solved, total time
+   5,984 -> 1,599 s. On the 12 wide instances where it runs the answers
+   are the same (rubik pays about 0.5 s). -Dorg.jacop.lp.clauseRefutation
+   =false turns it off; org.jacop.lp.clauseRefutationCliques (1) and
+   org.jacop.lp.clauseRefutationPivots (1,000) set its gate and its pivots.
+
 Version 4.11
 =============
 
