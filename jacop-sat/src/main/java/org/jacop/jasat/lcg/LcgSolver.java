@@ -119,6 +119,9 @@ public final class LcgSolver implements ExternalPropagator {
   // the value of a system property that turns an option off
   private static final String FALSE = "false";
 
+  /** The start of a clause step of the proof, before its first literal. */
+  private static final String RUP_ONE = "rup 1 ";
+
   /** The end of a clause step of the proof. */
   private static final String CLAUSE_END = " >= 1 ;\n";
 
@@ -1017,7 +1020,7 @@ public final class LcgSolver implements ExternalPropagator {
         proofLp(c, none, 0, e);
       }
       proofLinearBounds(c, none, 0, e);
-      proof.lemma("rup 1 " + proofAtom(e, 0) + CLAUSE_END);
+      proof.lemma(RUP_ONE + proofAtom(e, 0) + CLAUSE_END);
       reached[i] = next;
     }
     if (rootFailed && failedAtRoot != null) {
@@ -1049,7 +1052,7 @@ public final class LcgSolver implements ExternalPropagator {
     if ("1".equals(atom)) {
       return;
     }
-    StringBuilder s = new StringBuilder("rup 1 ").append(atom);
+    StringBuilder s = new StringBuilder(RUP_ONE).append(atom);
     // several atoms of a reason can be one literal of the model, written once
     Set<String> written = new HashSet<>();
     written.add(atom);
@@ -2077,8 +2080,8 @@ public final class LcgSolver implements ExternalPropagator {
     if (atLeast ? v > d.max() : v < d.min()) {
       return "0";
     }
-    String ge = OpbEncoder.ge(x, (int) (atLeast ? v : v + 1));
-    return atLeast ? ge : OpbEncoder.negate(ge);
+    String order = OpbEncoder.ge(x, (int) (atLeast ? v : v + 1));
+    return atLeast ? order : OpbEncoder.negate(order);
   }
 
   /** Writes the rup step "guard implies literal" (guard empty for none), unless it is true. */
@@ -2569,7 +2572,7 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     String bound = lower ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v + 1);
-    proof.lemma("rup 1 " + bound + clause + CLAUSE_END);
+    proof.lemma(RUP_ONE + bound + clause + CLAUSE_END);
     return 1;
   }
 
