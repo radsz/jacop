@@ -6826,7 +6826,23 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
-381. With -Dorg.jacop.lp.restartSolves=true, the cut rounds of the
+381. The core-guided phase of LCG free search keeps the 0-1 terms of a split
+   objective (lcg-split) also when their sums span up to twice fewer
+   levels (-Djacop.lcg.coreSpanRatio=2); wide terms keep the sums as
+   before. A long run's root propagation tightens the sums beyond their
+   terms' bounds, and the cores then ran on a few wide sums. The probe
+   skip of the phase (jacop #597) no longer fires when the
+   probe raised the lower bound at least as far as it is still below the
+   best solution (-Djacop.lcg.coreProbeHalfWay=false restores it). Stats
+   lcgCoreTermsBySpanRatio and lcgCoreProbeHalfWays. On 23 MaxSAT
+   Evaluation 2024 instances where JaCoP had a gap to CP-SAT, -f at 600 s
+   proves 11 instead of 9 (xai-mindset2 iris 8 s, packup-rand892 263 ->
+   8 s) and raises the bounds of logic-synthesis max1024 (154 -> 256 of
+   259) and optic-gen (45 -> 100); total time 9374 -> 8328 s. On the 11
+   wide-set instances where it fires (none in default mode), -f at 600 s
+   proves the same 10, total time 974 -> 897 s.
+
+382. With -Dorg.jacop.lp.restartSolves=true, the cut rounds of the
    linear relaxation at restarts can use the bounds tightened at the root
    level since the first solve, as SCIP separates again over the
    presolved problem after a restart (T. Achterberg, Constraint Integer
@@ -6851,7 +6867,7 @@ Version 5.0 (unreleased)
    2667 -> 2459 (optimum 2296), 2000 1821 -> 1730, 0400 1386 -> 1329,
    1600 proved in 19 s instead of 52 s.
 
-382. Free search (-f) on satisfaction models gives LCG away to free search
+383. Free search (-f) on satisfaction models gives LCG away to free search
    without learning when learning does not cut the search: at 10 % of -t
    (then each time the elapsed time doubles) the conflicts so far jump
    back fewer than 1.5 levels on average and their learnt clauses have
@@ -6867,7 +6883,7 @@ Version 5.0 (unreleased)
    and 0.78 (Subisomorphism g11-g30 and g11-g44, AnotherMagicSquare-04
    proved UNSAT, FRB-45-21-3 solved).
 
-383. The LP relaxation keeps the value encodings of the model's variables
+384. The LP relaxation keeps the value encodings of the model's variables
    (sum b_v = 1, x = sum v b_v) when the other rows do not all fit its
    first-solve trial. Before, they came after thousands of linearized rows
    and missed the trial: on the ROADEF 2020 maintenance planning model the
@@ -6886,7 +6902,7 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
-384. Under --lcg with -f, LCG free search counts as slow, and gives way to
+385. Under --lcg with -f, LCG free search counts as slow, and gives way to
    free search without learning once it stops making progress, also when
    it makes fewer conflicts per second than 5 times the average length of
    its learnt clauses (--free-config lcg-slow-literal, 0 = off), not only
