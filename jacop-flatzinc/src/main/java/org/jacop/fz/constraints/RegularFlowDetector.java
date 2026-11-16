@@ -253,7 +253,6 @@ public class RegularFlowDetector {
     // the cardinality constraints over variables of x only, each variable once, with the gcd of
     // the differences of their positions
     List<Count> groups = new ArrayList<>();
-    List<Integer> steps = new ArrayList<>();
     int period = 0;
     for (Count c : counts) {
       int first = -1;
@@ -278,11 +277,8 @@ public class RegularFlowDetector {
         continue;
       }
       groups.add(c);
-      steps.add(g);
       period = gcd(period, g);
     }
-    System.err.println(
-        +groups.size() + " period=" + period + " counts=" + counts.size() + " n=" + n);
     if (period < 2 || n < MIN_REPEATS * period) {
       return;
     }
@@ -387,10 +383,10 @@ public class RegularFlowDetector {
       for (int q = backward[i].nextSetBit(0); q >= 0; q = backward[i].nextSetBit(q + 1)) {
         for (int s = allowed[i].nextSetBit(0); s >= 0; s = allowed[i].nextSetBit(s + 1)) {
           int t = delta[q][s];
-          if (t >= 0 && backward[i + 1].get(t)) {
-            if (a.merge(((long) q << 32) | s, 1, Integer::sum) == 1) {
-              total++;
-            }
+          if (t >= 0
+              && backward[i + 1].get(t)
+              && a.merge(((long) q << 32) | s, 1, Integer::sum) == 1) {
+            total++;
           }
         }
       }
