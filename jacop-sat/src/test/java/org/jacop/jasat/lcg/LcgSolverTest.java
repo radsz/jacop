@@ -5008,10 +5008,29 @@ class LcgSolverTest {
     assertThat(exhausted).isPositive();
   }
 
+  private static final int DEFAULT_EXHAUST = Integer.MAX_VALUE;
+
+  /** Core exhaustion is on by default. */
+  @Test
+  void coresAreExhaustedByDefault() {
+    Random rnd = new Random(31);
+    long exhausted = 0;
+    for (int instance = 0; instance < 40; instance++) {
+      long seed = rnd.nextLong();
+      long[] stats = new long[1];
+      assertThat(maxSatOptimum(seed, DEFAULT_EXHAUST, stats))
+          .as("instance %d (seed %d)", instance, seed)
+          .isEqualTo(maxSatOptimum(seed, -1, stats));
+      exhausted += stats[0];
+    }
+    assertThat(exhausted).isPositive();
+  }
+
   /**
    * Minimises the number of true variables under random 3-literal clauses: by depth-first search
    * when {@code exhaust} is negative, otherwise by core-guided search with that many outputs
-   * exhausted per core; adds the exhausted outputs to {@code stats[0]}.
+   * exhausted per core ({@link #DEFAULT_EXHAUST}: the solver's defaults); adds the exhausted
+   * outputs to {@code stats[0]}.
    */
   private static Integer maxSatOptimum(long seed, int exhaust, long[] stats) {
     Random rnd = new Random(seed);
@@ -5055,7 +5074,9 @@ class LcgSolverTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.setCoreSearch(1, 1_000_000, 100_000);
-    solver.setCoreExhaust(exhaust);
+    if (exhaust != DEFAULT_EXHAUST) {
+      solver.setCoreExhaust(exhaust);
+    }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
     if (solver.coreSearch() != null) {

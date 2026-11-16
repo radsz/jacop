@@ -1493,6 +1493,9 @@ public final class CoreSearch {
 
   private Totalizer lastTotalizer;
 
+  // cores whose first output exhaustion tested without refuting it
+  private long exhaustMisses;
+
   /**
    * Core exhaustion as in RC2 (Ignatiev, Morgado and Marques-Silva, JSAT 11, 2019): after a core of
    * at least two literals is relaxed, the outputs "at least j of them false" of its new totalizer,
@@ -1503,7 +1506,11 @@ public final class CoreSearch {
    * @return false when the solver became unsatisfiable at the root
    */
   private boolean exhaust(int size, long phaseLimit) {
-    if (lcg.coreExhaust() <= 0 || size < 2 || lastTotalizer == null) {
+    int patience = lcg.coreExhaustPatience();
+    if (lcg.coreExhaust() <= 0
+        || size < 2
+        || lastTotalizer == null
+        || patience > 0 && exhaustMisses >= patience * (1 + exhaustedOutputs)) {
       return true;
     }
     Totalizer tot = lastTotalizer;
@@ -1522,6 +1529,9 @@ public final class CoreSearch {
         // an empty core: unsatisfiable without assumptions
         open = failed.length != 0;
         refuted = failed.length == 1;
+        if (!refuted && k == 2) {
+          exhaustMisses++;
+        }
         if (refuted) {
           exhaustedOutputs++;
           open = relax(failed, true);
