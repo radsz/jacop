@@ -5356,6 +5356,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return the probe's answer, or UNKNOWN when it did not finish
    */
   private int freeLpProbe(Var costVar) {
+    // the probe's prunings, such as its objective bound, are undone when it does not finish
+    int level = store.level;
+    store.setLevel(level + 1);
     LcgSolver probe = new LcgSolver(store);
     probe.setSeed(options.getRandomSeed());
     probe.setUnusedVariables(dictionary.unusedVariables);
@@ -5389,6 +5392,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return result;
     }
     probe.release();
+    store.removeLevel(level + 1);
+    store.setLevel(level);
     if (numberSolutions > 0) {
       List<IntVar> hinted = new ArrayList<>();
       List<Integer> values = new ArrayList<>();
