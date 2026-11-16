@@ -126,6 +126,12 @@ public class Store {
    */
   private Set<Constraint> implied;
 
+  /**
+   * Constraints whose rows a linear relaxation only tries at its first solve and keeps when they
+   * help, as it does with clauses, or null if there are none.
+   */
+  private Set<Constraint> optionalRows;
+
   /** True while the constraints imposed are implied by the others. */
   private boolean imposingImplied;
 
@@ -1702,6 +1708,34 @@ public class Store {
    */
   public boolean isImplied(Constraint c) {
     return implied != null && implied.contains(c);
+  }
+
+  /**
+   * Marks a constraint whose row a linear relaxation of the store should not take as a row of the
+   * model, but only try at its first solve and keep when it helps, as it does with clauses. Many
+   * short nogoods, such as dominance breaking ones, would otherwise make the relaxation too large
+   * for search.
+   *
+   * @param c the constraint.
+   */
+  public void markOptionalRow(Constraint c) {
+    Set<Constraint> marked = optionalRows;
+    if (marked == null) {
+      marked = Collections.newSetFromMap(new IdentityHashMap<>());
+      optionalRows = marked;
+    }
+    marked.add(c);
+  }
+
+  /**
+   * Tells whether the row of a constraint is only tried by a linear relaxation, see {@link
+   * #markOptionalRow(Constraint)}.
+   *
+   * @param c the constraint.
+   * @return true if c was marked so.
+   */
+  public boolean isOptionalRow(Constraint c) {
+    return optionalRows != null && optionalRows.contains(c);
   }
 
   /**

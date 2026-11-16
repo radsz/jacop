@@ -169,6 +169,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -1308,6 +1309,75 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x.dom().toString()).isEqualTo("4");
     assertThat(y.dom().toString()).isEqualTo("-2");
+  }
+
+  @Test
+  void xmulYeqZSaturatedKeepsEveryPairOfFactors() {
+    // z = x * y saturated at the ends of the range stands for a product declared beyond it (2022
+    // arithmetic-target): XmulYeqZ over the narrowed z removed every pair whose product does not
+    // fit. Factors around sqrt(MAX_INT) = 23170, of both signs, and z within a random interval
+    // around an end: the solutions are the pairs whose saturated product lies in it.
+    Random random = new Random(11);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      int sx = random.nextBoolean() ? 1 : -1;
+      int sy = random.nextBoolean() ? 1 : -1;
+      IntVar x = randomSubsetVar(store, "x", 23160, 23185, random);
+      IntVar y = randomSubsetVar(store, "y", 23160, 23185, random);
+      IntVar fx = new IntVar(store, "fx", -23185, 23185);
+      IntVar fy = new IntVar(store, "fy", -23185, 23185);
+      store.impose(new XmulCeqZ(x, sx, fx));
+      store.impose(new XmulCeqZ(y, sy, fy));
+      boolean positive = sx == sy;
+      int end = positive ? IntDomain.MAX_INT : IntDomain.MIN_INT;
+      int width = 1 + random.nextInt(2_000_000);
+      int low = positive ? end - random.nextInt(2_000_000) : end;
+      int high = positive ? IntDomain.MAX_INT : end + width;
+      if (random.nextBoolean()) {
+        // an interval away from the end, where z is the product itself
+        low =
+            positive
+                ? 535_000_000 + random.nextInt(1_000_000)
+                : Math.max(-536_000_000 - width, IntDomain.MIN_INT + 1);
+        high = positive ? Math.min(low + width, IntDomain.MAX_INT - 1) : -535_000_000;
+      }
+      IntVar z = new IntVar(store, "z", low, high);
+      store.impose(new XmulYeqZSaturated(fx, fy, z));
+      long expected = 0;
+      for (int a : valuesOf(x)) {
+        for (int b : valuesOf(y)) {
+          int p = XmulYeqZSaturated.saturatedProduct(sx * a, sy * b);
+          if (p >= low && p <= high) {
+            expected++;
+          }
+        }
+      }
+      if (!store.consistency()) {
+        assertThat(expected).as("trial " + trial).isZero();
+        continue;
+      }
+      assertThat((long) countSolutions(store, new IntVar[] {x, y, z}, random))
+          .as("trial " + trial)
+          .isEqualTo(expected);
+    }
+
+    // the end of the range stands for every product beyond it, and only for those
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 68720);
+    IntVar y = new IntVar(store, "y", 0, 68720);
+    IntVar z = new IntVar(store, "z", IntDomain.MAX_INT, IntDomain.MAX_INT);
+    store.impose(new XmulYeqZSaturated(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x.domain.in(1, x, 68720, 68720);
+    assertThat(store.consistency()).isTrue();
+    y.domain.in(1, y, 7813, 7813); // 68720 * 7813 = 536,909,360
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(1);
+    x.domain.in(1, x, 68720, 68720);
+    y.domain.in(1, y, 7812, 7812); // 536,840,640 fits
+    assertThat(store.consistency()).isFalse();
   }
 
   @Test
