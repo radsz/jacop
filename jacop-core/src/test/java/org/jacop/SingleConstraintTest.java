@@ -466,6 +466,38 @@ class SingleConstraintTest extends TestHelper {
     }
   }
 
+  /**
+   * An element with its index fixed and a reification or an implication with its Boolean fixed
+   * during search rewrite themselves to an equality and to the nested constraint; the solutions
+   * stay those of the original constraints.
+   */
+  @Test
+  void testRewritingDuringSearchKeepsSolutions() {
+    Random random = new Random(20261115);
+    for (int trial = 0; trial < 200; trial++) {
+      Store store = new Store();
+      IntVar[] v = new IntVar[7];
+      v[0] = new IntVar(store, "i", 1, 3);
+      for (int k = 1; k <= 4; k++) {
+        v[k] = new IntVar(store, "x" + k, 0, 2 + random.nextInt(2));
+      }
+      v[5] = new IntVar(store, "b", 0, 1);
+      v[6] = new IntVar(store, "c", 0, 1);
+      store.impose(new ElementVariableFast(v[0], new IntVar[] {v[1], v[2], v[3]}, v[4]));
+      store.impose(new Reified(new XlteqY(v[1], v[2]), v[5]));
+      store.impose(new Implies(v[6], new XneqY(v[2], v[3])));
+      long expected =
+          bruteForce(
+                  v,
+                  a ->
+                      a[4] == a[a[0]]
+                          && (a[5] == 1) == (a[1] <= a[2])
+                          && (a[6] == 0 || a[2] != a[3]))
+              .size();
+      assertThat((long) countSolutions(store, v, random)).as("trial " + trial).isEqualTo(expected);
+    }
+  }
+
   @Test
   void testInvalidSimpleTable() {
 
@@ -4237,6 +4269,85 @@ class SingleConstraintTest extends TestHelper {
             .isTrue();
       }
     }
+  }
+
+  @Test
+  void knapsackDpKeepsSolutionsWhenAVariableIsRepeated() {
+    // A quantity which is also the capacity, the profit or another quantity changed during a pass:
+    // the supports of the next quantities were read with its new minimum from tables built with the
+    // old one, and solutions were lost (run 192: quantities x0, x1 with weights 0, 1, capacity x2
+    // and profit x1).
+    Random random = new Random(20261116);
+    for (int run = 0; run < 3000; run++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(3);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(4);
+        profits[i] = random.nextInt(4);
+      }
+      IntVar[] distinct = new IntVar[n + 2];
+      IntVar[] positions = new IntVar[n + 2];
+      int count = 0;
+      for (int k = 0; k < n + 2; k++) {
+        if (count > 0 && random.nextInt(3) == 0) {
+          positions[k] = distinct[random.nextInt(count)];
+        } else {
+          IntVar v = new IntVar(store, "x" + count);
+          for (int value = 0; value <= 10; value++) {
+            if (random.nextInt(k < n ? 2 : 3) == 0) {
+              v.addDom(value, value);
+            }
+          }
+          if (v.getSize() == 0) {
+            int low = random.nextInt(3);
+            v.addDom(low, low + 1);
+          }
+          distinct[count++] = v;
+          positions[k] = v;
+        }
+      }
+      IntVar[] vars = Arrays.copyOf(distinct, count);
+      long expected =
+          bruteForce(
+                  vars,
+                  t -> {
+                    long weight = 0;
+                    long profit = 0;
+                    for (int i = 0; i < n; i++) {
+                      int q = t[indexIn(vars, positions[i])];
+                      weight += (long) q * weights[i];
+                      profit += (long) q * profits[i];
+                    }
+                    return weight == t[indexIn(vars, positions[n])]
+                        && profit == t[indexIn(vars, positions[n + 1])];
+                  })
+              .size();
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " scope "
+              + Arrays.toString(positions);
+      store.impose(
+          new KnapsackDP(
+              profits, weights, Arrays.copyOf(positions, n), positions[n], positions[n + 1]));
+      int found = store.consistency() ? countSolutions(store, vars, random) : 0;
+      assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
+
+  private static int indexIn(IntVar[] vars, IntVar v) {
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == v) {
+        return i;
+      }
+    }
+    throw new IllegalArgumentException(v.id());
   }
 
   @Test

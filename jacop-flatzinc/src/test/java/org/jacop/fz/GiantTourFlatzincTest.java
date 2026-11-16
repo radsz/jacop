@@ -62,6 +62,8 @@ class GiantTourFlatzincTest {
 
   private static final String PROPERTY = "org.jacop.fz.giantTour";
 
+  private static final String WINDOWS = "org.jacop.fz.timeWindows";
+
   @TempDir Path tmp;
 
   @AfterEach
@@ -73,6 +75,11 @@ class GiantTourFlatzincTest {
   // tour up to a capacity, travel times accumulated into arrival times, and bounds on the total
   // travel time and on the sum of the arrival times at the end nodes
   private static String randomModel(Random random, boolean optimize) {
+    return randomModel(random, optimize, false);
+  }
+
+  // with windows, each customer has a time window and may wait: a >= t[i] + d[i]
+  private static String randomModel(Random random, boolean optimize, boolean windows) {
     int c = 3 + random.nextInt(2);
     int v = 2;
     int n = c + 2 * v;
@@ -120,7 +127,13 @@ class GiantTourFlatzincTest {
         arrival.append(sep).append(0);
       } else {
         f.append("var 0..").append(capacity).append(": l").append(i).append(";\n");
-        f.append("var 0..").append(horizon).append(": t").append(i).append(";\n");
+        int open = windows && i <= c ? random.nextInt(horizon / 3) : 0;
+        int close =
+            windows && i <= c
+                ? Math.min(horizon, open + horizon / 4 + random.nextInt(horizon / 2))
+                : horizon;
+        f.append("var ").append(open).append("..").append(close).append(": t").append(i);
+        f.append(";\n");
         load.append(sep).append('l').append(i);
         arrival.append(sep).append('t').append(i);
       }
@@ -153,6 +166,10 @@ class GiantTourFlatzincTest {
     for (int i = 1; i <= c; i++) {
       f.append("var int: y").append(i).append(";\n");
     }
+    if (optimize) {
+      // FlatZinc declares every variable before the constraints
+      f.append("var 0..").append(2 * horizon).append(": obj:: output_var;\n");
+    }
     f.append("constraint jacop_circuit(succ);\n");
     for (int i = 1; i <= c + v; i++) {
       boolean start = i > c;
@@ -169,7 +186,9 @@ class GiantTourFlatzincTest {
           .append(i)
           .append(",1);\n");
       // a = t[i] + d[i], with t[i] = 0 at a start node
-      f.append(start ? "constraint int_lin_eq([1,-1],[" : "constraint int_lin_eq([1,1,-1],[")
+      String rel = windows ? "constraint int_lin_le(" : "constraint int_lin_eq(";
+      f.append(rel)
+          .append(start ? "[1,-1],[" : "[1,1,-1],[")
           .append(start ? "d" + i : "t" + i + ",d" + i)
           .append(",a")
           .append(i)
@@ -212,12 +231,13 @@ class GiantTourFlatzincTest {
       ends.append(ends.isEmpty() ? "" : ",").append('t').append(i);
     }
     if (optimize) {
-      f.append("var 0..").append(2 * horizon).append(": obj:: output_var;\n");
       f.append("constraint int_lin_eq([1,1,-1],[").append(ends).append(",obj],0);\n");
       f.append("solve minimize obj;\n");
     } else {
-      f.append("constraint int_lin_le([1,1],[").append(ends).append("],").append(budget + 2);
-      f.append(");\n");
+      if (!windows) {
+        f.append("constraint int_lin_le([1,1],[").append(ends).append("],").append(budget + 2);
+        f.append(");\n");
+      }
       f.append("solve satisfy;\n");
     }
     return f.toString();
@@ -269,6 +289,36 @@ class GiantTourFlatzincTest {
       }
     }
     return last + (out.contains("==========") ? " proved" : "");
+  }
+
+  @Test
+  @Timeout(120)
+  void timeWindowsKeepAllSolutionsAndTheOptimum() throws IOException {
+    // the time window reduction removes successors and the relaxation gets infeasible path cuts
+    Random random = new Random(21);
+    int timed = 0;
+    int solved = 0;
+    for (int trial = 0; trial < 30; trial++) {
+      boolean optimize = trial % 2 == 1;
+      String model = randomModel(random, optimize, true);
+      System.setProperty(WINDOWS, "false");
+      String plain = run(model, "-a");
+      System.setProperty(WINDOWS, "true");
+      String out = run(model, "-a", "-debug");
+      System.clearProperty(WINDOWS);
+      if (out.contains("time windows,")) {
+        timed++;
+      }
+      if (optimize) {
+        assertEquals(optimum(plain), optimum(out), "trial " + trial + "\n" + model);
+      } else {
+        Set<String> without = solutions(plain);
+        solved += without.isEmpty() ? 0 : 1;
+        assertEquals(without, solutions(out), "trial " + trial + "\n" + model);
+      }
+    }
+    assertTrue(timed >= 12, "too few time windows: " + timed);
+    assertTrue(solved > 3, "too few satisfiable trials: " + solved);
   }
 
   @Test

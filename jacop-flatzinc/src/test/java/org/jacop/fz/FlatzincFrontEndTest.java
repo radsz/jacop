@@ -1775,11 +1775,22 @@ class FlatzincFrontEndTest {
     String out = run(model, "-s", "--lcg", "off")[0];
     assertTrue(out.contains("x60 = 4;"), out);
     assertTrue(out.contains("%%%mzn-stat: failures=0"), out);
+    // the sum of the y_i (at least 118 over 60 distinct indices) also removes 3 and 5 at the root
     System.setProperty("org.jacop.fz.alldiffChannel", "false");
+    System.setProperty("org.jacop.fz.permutationElementSums", "false");
     try {
       String bounds = run(model, "-s", "--lcg", "off")[0];
       assertTrue(bounds.contains("x60 = 4;"), bounds);
       assertTrue(!bounds.contains("%%%mzn-stat: failures=0"), bounds);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldiffChannel");
+      System.clearProperty("org.jacop.fz.permutationElementSums");
+    }
+    System.setProperty("org.jacop.fz.alldiffChannel", "false");
+    try {
+      String sums = run(model, "-s", "--lcg", "off")[0];
+      assertTrue(sums.contains("x60 = 4;"), sums);
+      assertTrue(sums.contains("%%%mzn-stat: failures=0"), sums);
     } finally {
       System.clearProperty("org.jacop.fz.alldiffChannel");
     }
@@ -2075,6 +2086,62 @@ class FlatzincFrontEndTest {
       String[] out = run(model.formatted(size[0], size[1]), "-a");
       List<String> lines = out[0].lines().filter(l -> !l.startsWith("%%")).toList();
       assertEquals(List.of("=====UNSATISFIABLE====="), lines, out[0] + out[1]);
+    }
+  }
+
+  @Test
+  void projectScheduleKeepsTheBooleanClausesOfLcg() throws IOException {
+    // under --lcg the Boolean constraints are clauses kept for the SAT solver, not in the store;
+    // the project schedule heuristic of -f checked its schedules in the store alone, printed the
+    // makespan 4 that breaks the chain s3 -> s2 -> s1 the clauses force, and the search then
+    // proved it optimal
+    String fzn =
+        """
+        var 0..20: s1 :: output_var;
+        var 0..20: s2 :: output_var;
+        var 0..20: s3 :: output_var;
+        var 0..30: m :: output_var;
+        var bool: b1;
+        var bool: b2;
+        constraint jacop_cumulative([s1, s2, s3], [3, 2, 2], [1, 1, 1], 2);
+        constraint int_lin_le([1, -1], [s1, m], -3);
+        constraint int_lin_le([1, -1], [s2, m], -2);
+        constraint int_lin_le([1, -1], [s3, m], -2);
+        constraint int_lin_le_reif([1, -1], [s2, s1], -2, b1);
+        constraint int_lin_le_reif([1, -1], [s3, s2], -2, b2);
+        constraint bool_clause([b1], []);
+        constraint bool_clause([b2], []);
+        solve minimize m;
+        """;
+    String out = run(fzn, "-f", "--lcg", "on")[0];
+    List<Integer> makespans =
+        out.lines()
+            .filter(l -> l.startsWith("m = "))
+            .map(l -> Integer.parseInt(l.substring(4, l.length() - 1)))
+            .toList();
+    assertEquals(7, makespans.get(makespans.size() - 1), out);
+    assertTrue(makespans.stream().allMatch(v -> v >= 7), out);
+    assertTrue(out.contains("=========="), out);
+  }
+
+  @Test
+  void inverseWithAVariableRepeatedInOneArrayIsUnsatisfiable() throws IOException {
+    // jacop_assignment with ::domain posts an implied Alldistinct on f, whose constructor threw
+    // IllegalArgumentException when a variable is repeated in f; the model has no solution.
+    String model =
+        """
+        var 1..3: a :: output_var;
+        var 1..3: b :: output_var;
+        array [1..3] of var 1..3: g :: output_array([1..3]);
+        constraint jacop_assignment(%s, %s, 1, 1)%s;
+        solve satisfy;
+        """;
+    for (String annotation : new String[] {"", " :: domain"}) {
+      for (String[] args : new String[][] {{"[a, b, a]", "g"}, {"g", "[a, b, a]"}}) {
+        String[] out = run(model.formatted(args[0], args[1], annotation), "-a");
+        List<String> lines = out[0].lines().filter(l -> !l.startsWith("%%")).toList();
+        assertEquals(List.of("=====UNSATISFIABLE====="), lines, out[0] + out[1]);
+      }
     }
   }
 
