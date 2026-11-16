@@ -41,7 +41,7 @@ import java.io.PrintStream;
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
  *          [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--jump share] [--ema 0|1]
- *          [--seed n] [--elim-interval conflicts]
+ *          [--seed n] [--elim-interval conflicts] [--lucky 0|1]
  *          file.cnf[.gz]
  * </pre>
  *
@@ -53,7 +53,8 @@ import java.io.PrintStream;
  * local search ({@link CdclSolver#setJumpShare}, 0 turns it off). {@code --ema 0} restarts on
  * Glucose's LBD queue instead of fast and slow LBD averages. {@code --seed} changes the initial
  * decision order and {@code --elim-interval} sets when elimination runs again during search (0 for
- * never).
+ * never). {@code --lucky 0} turns the lucky assignments before the search off ({@link
+ * CdclSolver#setLucky}).
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -86,6 +87,7 @@ public final class CdclMain {
     boolean ema = true;
     boolean walk = true;
     double jump = CdclSolver.DEFAULT_JUMP_SHARE;
+    boolean lucky = true;
     long seed = 0;
     int elimInterval = 5000;
     for (int i = 0; i < args.length; i++) {
@@ -102,6 +104,7 @@ public final class CdclMain {
         case "--ema" -> ema = !"0".equals(args[++i]);
         case "--walk" -> walk = !"0".equals(args[++i]);
         case "--jump" -> jump = Double.parseDouble(args[++i]);
+        case "--lucky" -> lucky = !"0".equals(args[++i]);
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
         default -> file = args[i];
@@ -112,7 +115,7 @@ public final class CdclMain {
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
               + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1]"
               + " [--jump share] [--ema 0|1] [--seed n]"
-              + " [--elim-interval conflicts] file.cnf[.gz]");
+              + " [--elim-interval conflicts] [--lucky 0|1] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -127,6 +130,7 @@ public final class CdclMain {
     solver.setEmaRestarts(ema);
     solver.setWalk(walk);
     solver.setJumpShare(jump);
+    solver.setLucky(lucky);
     solver.setSeed(seed);
     solver.setEliminationInterval(elimInterval);
     if (timeout > 0) {
@@ -176,6 +180,9 @@ public final class CdclMain {
           solver.vivifyRemoved,
           solver.vivifyRemovedIrredundant,
           solver.vivifyNanos / 1e9);
+      out.printf(
+          "c lucky %s, %.2f s%n",
+          solver.luckyFound == null ? "none" : solver.luckyFound, solver.luckyNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");

@@ -382,6 +382,19 @@ public final class CdclSolver {
   private int numLowWatched;
   private boolean lowWatchedDue;
 
+  // --- lucky assignments before the first search (see lucky())
+  private boolean lucky = true;
+  private boolean luckyTried;
+
+  /** Statistics: time spent in the lucky assignments, in nanoseconds. */
+  public long luckyNanos;
+
+  /**
+   * Statistics: the lucky assignment that found a model ("all-true", "all-false", "forward-false",
+   * "forward-true", "backward-false", "backward-true"), or null when none did.
+   */
+  public String luckyFound;
+
   // --- variable elimination before the first search (see Eliminator)
   private boolean elimination = true;
   private boolean eliminationTried;
@@ -717,10 +730,30 @@ public final class CdclSolver {
     interrupted = cancelled;
     outOfTime = false;
     backtrack(0);
-    if (elimination && !eliminationTried && conflicts == 0 && !externalUsed && numUnits == 0) {
+    // lucky assignments before and after elimination (Kissat's luckyearly and luckylate), in the
+    // first plain search only
+    boolean luckyNow =
+        lucky && !luckyTried && assumptions.length == 0 && external == null && !externalUsed;
+    luckyTried |= luckyNow;
+    int luckyResult = luckyNow ? lucky() : UNKNOWN;
+    if (luckyResult == UNSAT) {
+      return UNSAT;
+    }
+    if (luckyResult == UNKNOWN
+        && elimination
+        && !eliminationTried
+        && conflicts == 0
+        && !externalUsed
+        && numUnits == 0) {
       eliminationTried = true;
       if (!eliminate()) {
         return UNSAT;
+      }
+      if (luckyNow && numEliminated > 0) {
+        luckyResult = lucky();
+        if (luckyResult == UNSAT) {
+          return UNSAT;
+        }
       }
     }
     // chronological backtracking would assign literals below the current level, which the level
@@ -729,8 +762,8 @@ public final class CdclSolver {
     notifying = external != null;
     int result;
     try {
-      result = search();
-      if (result == SAT && jumpPhases != null) {
+      result = luckyResult == SAT ? SAT : search();
+      if (result == SAT && luckyResult != SAT && jumpPhases != null) {
         jumpSolved = true;
       }
       if (result == SAT) {
@@ -3535,6 +3568,160 @@ public final class CdclSolver {
    */
   public boolean hasProof() {
     return proof != null;
+  }
+
+  /**
+   * Turns the lucky assignments before the first search on or off (on by default). They run in the
+   * first {@link #solve} without assumptions and without an external propagator, before variable
+   * elimination and again after it.
+   *
+   * @param on whether to try the lucky assignments
+   */
+  public void setLucky(boolean on) {
+    lucky = on;
+  }
+
+  /**
+   * Lucky assignments, as Kissat's lucky.c (Biere and Fleury, "Gimsatul, IsaSAT and Kissat entering
+   * the SAT Competition 2022", Proc. SAT Competition 2022): formulas from applications are often
+   * satisfied by a trivial assignment. First the solver checks whether every irredundant clause has
+   * a positive (negative) literal that is not false at the root, so that setting all variables true
+   * (false) satisfies the formula. Otherwise it decides the variables in input order, forward then
+   * backward, all false and then all true, with propagation after each decision; on a conflict it
+   * flips the last decision once and gives the pass up when the flipped one conflicts too. Unlike
+   * Kissat, a first decision that fails does not become a root unit: when no pass finds a model,
+   * the saved phases, the watches, the order of the clause literals and the propagation count are
+   * put back as they were, so the search that follows is exactly the one without lucky assignments
+   * (root units changed the search by luck on SAT instances, waerden 9 -> 95 s).
+   *
+   * @return {@link #SAT} with every variable assigned, {@link #UNSAT} when the root propagation
+   *     refutes the formula, {@link #UNKNOWN} at the root when no assignment was lucky
+   */
+  private int lucky() {
+    long begin = System.nanoTime();
+    try {
+      if (propagate() != NO_CONFLICT) {
+        return refutedAtRoot();
+      }
+      // the passes move watches and reorder clause literals: a failed attempt puts them back, so
+      // that the search afterwards is the one without lucky assignments, units aside
+      byte[] phases = Arrays.copyOf(savedSign, numVars);
+      int[] arena = Arrays.copyOf(mem, memSize);
+      int[][] watched = new int[2 * numVars][];
+      for (int l = 0; l < 2 * numVars; l++) {
+        watched[l] = Arrays.copyOf(watches[l], watchSize[l]);
+      }
+      long props = propagations;
+      int result = UNKNOWN;
+      if (noClauseWithoutSign(0)) {
+        result = luckyPass(true, 0, "all-true");
+      }
+      if (result == UNKNOWN && noClauseWithoutSign(1)) {
+        result = luckyPass(true, 1, "all-false");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(true, 1, "forward-false");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(true, 0, "forward-true");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(false, 1, "backward-false");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(false, 0, "backward-true");
+      }
+      if (result == UNKNOWN) {
+        System.arraycopy(phases, 0, savedSign, 0, numVars);
+        System.arraycopy(arena, 0, mem, 0, arena.length);
+        for (int l = 0; l < 2 * numVars; l++) {
+          int n = watched[l].length;
+          if (n > 0 && watches[l].length < n) {
+            watches[l] = watched[l];
+          } else if (n > 0) {
+            System.arraycopy(watched[l], 0, watches[l], 0, n);
+          }
+          watchSize[l] = n;
+        }
+        propagations = props;
+      }
+      return result;
+    } finally {
+      luckyNanos += System.nanoTime() - begin;
+    }
+  }
+
+  /**
+   * Whether every irredundant clause has a literal of the sign (0 positive, 1 negative) that is not
+   * false at the root.
+   */
+  private boolean noClauseWithoutSign(int sign) {
+    for (int i = 0; i < numOriginals; i++) {
+      int ref = originals[i];
+      if ((mem[ref + META] & DELETED) != 0) {
+        continue;
+      }
+      boolean found = false;
+      for (int k = 0, size = mem[ref + SIZE]; k < size && !found; k++) {
+        int l = mem[ref + HEADER + k];
+        found = (l & 1) == sign && vals[l] >= 0;
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    for (int i = 0; i < numOriginalBinaries; i += 2) {
+      int a = originalBinaries[i];
+      int b = originalBinaries[i + 1];
+      if (((a & 1) != sign || vals[a] < 0) && ((b & 1) != sign || vals[b] < 0)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * One lucky pass: decides each unassigned variable in input order (forward) or in reverse order
+   * with the literal of the sign, propagating after each decision.
+   *
+   * @return SAT when every variable got a value without a conflict left, UNKNOWN (back at the root)
+   *     otherwise
+   */
+  private int luckyPass(boolean forward, int sign, String name) {
+    for (int k = 0; k < numVars; k++) {
+      int v = forward ? k : numVars - 1 - k;
+      if (vals[2 * v] != 0 || eliminatedVar[v]) {
+        continue;
+      }
+      if ((k & 1023) == 0 && pastDeadline()) {
+        backtrack(0);
+        return UNKNOWN;
+      }
+      int lit = 2 * v + sign;
+      newDecisionLevel();
+      assign(lit, NO_REASON);
+      if (propagate() == NO_CONFLICT) {
+        continue;
+      }
+      backtrack(decisionLevel - 1);
+      newDecisionLevel();
+      assign(lit ^ 1, NO_REASON);
+      if (propagate() != NO_CONFLICT) {
+        backtrack(0);
+        return UNKNOWN;
+      }
+    }
+    luckyFound = name;
+    return SAT;
+  }
+
+  /** The root propagation found a conflict: the formula is refuted. */
+  private int refutedAtRoot() {
+    ok = false;
+    if (proof != null) {
+      proof.add(learnt, 0, 0);
+    }
+    return UNSAT;
   }
 
   /**
