@@ -79,6 +79,7 @@ import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
+import org.jacop.fz.constraints.ListsDifferDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MaxCliqueDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
@@ -313,6 +314,16 @@ public class Constraints implements ParserTreeConstants {
         if (!tables.replaced().isEmpty()) {
           replaced = new HashSet<>(replaced);
           replaced.addAll(tables.replaced());
+        }
+      }
+
+      // short tables saying that two lists differ become AllDifferentLists over groups of lists
+      if (ListsDifferDetector.enabled() && options.proof() == null) {
+        ListsDifferDetector lists = new ListsDifferDetector(support);
+        lists.detect(astTree);
+        if (!lists.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(lists.replaced());
         }
       }
 
