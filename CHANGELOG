@@ -6895,7 +6895,7 @@ Version 5.0 (unreleased)
    sequence; each better sequence is checked in the store. On the 24
    Taillard instances at 600 s with -f every unproved instance is better
    (ta101 12806 -> 11368, ta106 12892 -> 11306) and
-   the total time goes from 13971 s to 10497 s.
+   the total time goes from 13971 s to 11097 s.
 
 Version 4.11
 =============
