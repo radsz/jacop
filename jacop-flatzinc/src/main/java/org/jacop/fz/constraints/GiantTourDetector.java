@@ -410,6 +410,16 @@ public class GiantTourDetector implements ParserTreeConstants {
     Chain timed = null;
     long[][] windows = null;
     if (!"false".equals(System.getProperty("org.jacop.fz.timeWindows"))) {
+      // the path cuts and ArcTimes only for a chain whose customers have windows of their own; a
+      // distance accumulated up to one horizon (cvrp) has none, and there they only cost time
+      List<Chain> windowed = new ArrayList<>();
+      for (Chain c : chainList) {
+        if (c.lag != null
+            && ("all".equals(System.getProperty("org.jacop.fz.timeWindows"))
+                || ownWindows(x, offset, c, customers, starts, end))) {
+          windowed.add(c);
+        }
+      }
       for (int pass = 0; pass < 2; pass++) {
         for (Chain c : chainList) {
           if (c.lag != null) {
@@ -420,7 +430,7 @@ public class GiantTourDetector implements ParserTreeConstants {
               pass = 2;
               break;
             }
-            if (timed == null || timed == c) {
+            if (windowed.contains(c) && (timed == null || timed == c)) {
               timed = c;
               windows = w;
             }
@@ -1044,6 +1054,47 @@ public class GiantTourDetector implements ParserTreeConstants {
       }
     }
     return (double) k / (customers.size() - 1);
+  }
+
+  // whether some customer has a time window of its own: bounds of its time tighter than what the
+  // earliest start and the latest end of the routes give through the lags of its arcs; a distance
+  // accumulated up to one horizon (cvrp) has none
+  private static boolean ownWindows(
+      IntVar[] x,
+      int offset,
+      Chain c,
+      List<Integer> customers,
+      List<Integer> starts,
+      boolean[] end) {
+    int n = x.length;
+    long due = Long.MIN_VALUE;
+    for (int v = 0; v < n; v++) {
+      if (end[v]) {
+        due = Math.max(due, c.t[v].max());
+      }
+    }
+    for (int i = 1; i < customers.size(); i++) {
+      int v = customers.get(i);
+      long[] l = c.lag[v];
+      long back = Long.MAX_VALUE;
+      for (int w = 0; w < n && l != null; w++) {
+        if (end[w] && l[w] != NO_LAG && x[v].domain.contains(w + offset)) {
+          back = Math.min(back, l[w]);
+        }
+      }
+      long reach = Long.MAX_VALUE;
+      for (int s : starts) {
+        long[] ls = c.lag[s];
+        if (ls != null && ls[v] != NO_LAG && x[s].domain.contains(v + offset)) {
+          reach = Math.min(reach, c.t[s].min() + ls[v]);
+        }
+      }
+      if (back != Long.MAX_VALUE && c.t[v].max() < due - back
+          || reach != Long.MAX_VALUE && c.t[v].min() > reach) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // no row forces a lag on the arc
