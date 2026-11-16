@@ -10268,6 +10268,37 @@ class SingleConstraintTest extends TestHelper {
     assertThat(list[1].singleton(1)).isTrue();
   }
 
+  /**
+   * Knapsack keeps the items changed at a level in a list of that level and applied only the list
+   * of the level of its consistency. When the store raised its level before the first consistency
+   * (as it does once Alldistinct is imposed), the quantities fixed after impose at level 0 never
+   * reached its tree, and the stale tree removed the only solution.
+   */
+  @Test
+  void knapsackSeesItemsChangedBeforeARaisedLevel() {
+    Store store = new Store();
+    IntervalDomain d0 = new IntervalDomain(0, 0);
+    d0.unionAdapt(2, 2);
+    IntVar[] q = {new IntVar(store, "q0", d0), new IntVar(store, "q1", 1, 2)};
+    IntVar capacity = new IntVar(store, "c", 2, 10);
+    IntVar profit = new IntVar(store, "p", 0, 10);
+    store.impose(new Knapsack(new int[] {1, 1}, new int[] {1, 2}, q, capacity, profit));
+    q[0].domain.in(store.level, q[0], 2, 2);
+    q[1].domain.in(store.level, q[1], 2, 2);
+    capacity.domain.in(store.level, capacity, 6, 6);
+    profit.domain.in(store.level, profit, 4, 4);
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isTrue();
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    assertThat(
+            search.labeling(
+                store,
+                new SimpleSelect<>(
+                    new IntVar[] {q[0], q[1], capacity, profit}, null, new IndomainMin<>())))
+        .isTrue();
+  }
+
   private static int root(int[] parent, int v) {
     while (parent[v] != v) {
       v = parent[v];
