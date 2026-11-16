@@ -55,6 +55,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
@@ -98,6 +99,7 @@ import org.jacop.lcg.PbModel;
 import org.jacop.lcg.ReifiedExplanation;
 import org.jacop.lcg.ValueExclusion;
 import org.jacop.lcg.ValueIndicator;
+import org.jacop.presolve.OrderLiterals;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -960,6 +962,75 @@ public class Support implements ParserTreeConstants {
     reif.pose();
     // generate channeling constraints instead of implied constraints
     imply.pose();
+    poseOrderChannels();
+  }
+
+  /**
+   * Whether the reified comparisons of one variable with constants ({@code int_le_reif}, {@code
+   * int_lt_reif} and their {@code >=}, {@code >} forms) become one {@link
+   * org.jacop.constraints.ChannelOrder} per variable, as {@code int_eq_reif} becomes ChannelReif.
+   * The system property org.jacop.fz.orderChannels=false keeps them as reifications.
+   */
+  private final boolean orderChannelsOn =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.orderChannels", "true"));
+
+  /**
+   * Whether the half-reified comparisons ({@code int_le_imp} and its kin) join the order channels
+   * as implied items; the system property org.jacop.fz.orderChannels.implied=false leaves them as
+   * implications.
+   */
+  private final boolean orderChannelsImplied =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.orderChannels.implied", "true"));
+
+  // the order reifications b <-> x op c posted so far, for poseOrderChannels
+  private final List<Constraint> orderReifications = new ArrayList<>();
+
+  /** Statistics: order channels posted, and the reifications they replaced. */
+  int orderChannels;
+
+  int orderChannelItems;
+
+  /**
+   * Poses a reified comparison {@code b <-> x op c} of a variable with a constant, or its
+   * half-reification {@code b -> x op c}, and keeps it for {@link #poseOrderChannels()} unless a
+   * negated control substitution changes it.
+   *
+   * @param r the reification or implication.
+   */
+  void poseOrderReification(Constraint r) {
+    boolean kept =
+        orderChannelsOn
+            && (r instanceof Reified || orderChannelsImplied)
+            && (activeControl == null || !activeControl.negated());
+    pose(r);
+    if (kept) {
+      orderReifications.add(r);
+    }
+  }
+
+  /**
+   * Replaces the order reifications of each variable with two or more of them by one ChannelOrder
+   * over the same variables, which propagates the same bounds with one propagator (rule 5 of
+   * presolve, {@link OrderLiterals}).
+   */
+  void poseOrderChannels() {
+    if (orderReifications.isEmpty()) {
+      return;
+    }
+    for (OrderLiterals.Group g : OrderLiterals.groups(orderReifications, orderChannelsImplied)) {
+      g.reifications().forEach(Constraint::removeConstraint);
+      store.imposeWithConsistency(g.channel());
+      orderChannels++;
+      orderChannelItems += g.reifications().size();
+      if (options.debug()) {
+        FzConsole.println("% " + g.channel());
+      }
+    }
+    orderReifications.clear();
+    if (orderChannels > 0 && options.debug()) {
+      FzConsole.println(
+          "% order channels: " + orderChannels + " replace " + orderChannelItems + " reifications");
+    }
   }
 
   /**
