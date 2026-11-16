@@ -4867,8 +4867,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     lcg.setSharedClauses(worker.sharedClauses(), added, names::get, size, lbd);
+    // the tree's cubes are also over the elements of arrays of variables, on which the model
+    // usually branches: with its scalar variables alone, a knapsack declared as an array split
+    // only on the objective, and its last cube stayed with one thread while three waited
     if ("1".equals(options.freeConfig("lcg-split", "0"))
-        && !lcg.setSharedTree(worker.sharedTree(), added)) {
+        && !lcg.setSharedTree(worker.sharedTree(), added, modelVariableNames()::get)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
     }
   }
@@ -6371,22 +6374,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || label.getExitChildListener() != null) {
       return null;
     }
-    Map<IntVar, String> names = new IdentityHashMap<>();
-    for (String name : dictionary.variableTable.keySet()) {
-      IntVar x = dictionary.getVariable(name);
-      if (x != null) {
-        names.putIfAbsent(x, name);
-      }
-    }
-    // the elements of arrays of variables declared in the model, in an order every thread shares
-    for (String name : new TreeSet<>(dictionary.variableArrayTable.keySet())) {
-      IntVar[] xs = dictionary.variableArrayTable.get(name);
-      for (int i = 0; i < xs.length; i++) {
-        if (xs[i] != null) {
-          names.putIfAbsent(xs[i], name + "[" + (i + 1) + "]");
-        }
-      }
-    }
+    Map<IntVar, String> names = modelVariableNames();
     String added = symmetry == null ? "" : symmetry.added(names::get);
     org.jacop.jasat.lcg.SharedTree tree = worker.dfsTree();
     if (added == null || !tree.join(added)) {
@@ -6405,6 +6393,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       byId[e.getValue()] = e.getKey();
     }
     return new DfsSplit<>(tree, select, store, ids, byId);
+  }
+
+  /**
+   * The names of the model's integer variables, the same in every thread of a portfolio: scalar
+   * variables by their name, and elements of arrays of variables declared in the model as {@code
+   * name[i]} (from 1), unless they have a name of their own.
+   */
+  private Map<IntVar, String> modelVariableNames() {
+    Map<IntVar, String> names = new IdentityHashMap<>();
+    for (String name : dictionary.variableTable.keySet()) {
+      IntVar x = dictionary.getVariable(name);
+      if (x != null) {
+        names.putIfAbsent(x, name);
+      }
+    }
+    // in an order every thread shares
+    for (String name : new TreeSet<>(dictionary.variableArrayTable.keySet())) {
+      IntVar[] xs = dictionary.variableArrayTable.get(name);
+      for (int i = 0; i < xs.length; i++) {
+        if (xs[i] != null) {
+          names.putIfAbsent(xs[i], name + "[" + (i + 1) + "]");
+        }
+      }
+    }
+    return names;
   }
 
   /**
