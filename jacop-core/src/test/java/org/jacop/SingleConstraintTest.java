@@ -10247,6 +10247,27 @@ class SingleConstraintTest extends TestHelper {
     assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(2);
   }
 
+  /**
+   * Conditional did not include its nested constraints in the store, so a nested CountVar never
+   * created its backtrackable counts and threw a NullPointerException once its condition was 1.
+   */
+  @Test
+  void conditionalIncludesNestedCountVar() {
+    Store store = new Store();
+    IntVar[] list = {new IntVar(store, "x0", 0, 2), new IntVar(store, "x1", 0, 2)};
+    IntVar counter = new IntVar(store, "n", 2, 2);
+    IntVar value = new IntVar(store, "v", 1, 1);
+    IntVar b0 = new IntVar(store, "b0", 1, 1);
+    IntVar b1 = new IntVar(store, "b1", 1, 1);
+    store.impose(
+        new Conditional(
+            new IntVar[] {b0, b1},
+            new PrimitiveConstraint[] {new CountVar(list, counter, value), new XeqC(list[0], 0)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(list[0].singleton(1)).isTrue();
+    assertThat(list[1].singleton(1)).isTrue();
+  }
+
   private static int root(int[] parent, int v) {
     while (parent[v] != v) {
       v = parent[v];
