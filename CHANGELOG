@@ -6861,6 +6861,25 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+383. The LP relaxation moves the clause rows that LCG hands it to the
+   sparse simplex when they make the dense tableau too large to search
+   with. On set covering (OR-Library scp, one objective row and a few
+   hundred covering clauses over thousands of columns) the 311 x 3,312
+   tableau of scpa1 gave each solve in search 19 pivots: 32 of 33 solves
+   stopped at the limit and the clause rows were dropped; on scpb1 and
+   larger the root trial of the clauses ran out of its budget and the
+   root bound stayed 0. Now a dense trial of the clause rows that stops at
+   its root budget is repeated on the sparse simplex, a dense tableau that
+   leaves fewer than 100 pivots a solve moves to the sparse simplex when
+   that costs at most a quarter per pivot, and clause rows that alone
+   carry the bound of the objective are not dropped after limits. Only
+   for relaxations whose own rows bound nothing (the objective row
+   alone). OR-Library scp at 600 s (14 instances): proved 3 -> 6 by
+   default (scp51 288 -> 6 s; scp61, scpa1, scpb1 in 13-39 s) and
+   2 -> 7 with -f (also scp51 and scpc1, 5 and 25 s); total time
+   7,111 -> 5,114 s and 7,758 -> 4,832 s with two wide instances. It fires on none of the 240 wide
+   instances. -Dorg.jacop.lp.extraSparse=false turns it off.
+
 Version 4.11
 =============
 

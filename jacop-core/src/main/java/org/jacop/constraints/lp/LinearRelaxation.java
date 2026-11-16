@@ -5399,7 +5399,7 @@ public class LinearRelaxation extends Constraint
     // the other rows of a model with trees are kept: alone they rarely move the bound, but with
     // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
     trialStatus = withExtra;
-    if (trialKeep || keepExtra || !trees.isEmpty()) {
+    if (trialKeep || !trialCut && (keepExtra || !trees.isEmpty())) {
       return full;
     }
     droppedPivots += full.pivots();
@@ -5410,8 +5410,10 @@ public class LinearRelaxation extends Constraint
     return null;
   }
 
-  // whether the rows of the last trialSolve are kept for their bound
+  // whether the rows of the last trialSolve are kept for their bound, and whether it stopped
+  // before the solve over the current bounds (then they are not kept for any other reason)
   private boolean trialKeep;
+  private boolean trialCut;
 
   // the root solves of a trial of the extra rows on the simplex full; returns the status of the
   // solve with them at the current bounds and sets trialKeep
@@ -5454,9 +5456,9 @@ public class LinearRelaxation extends Constraint
     if (searchStartMin != null && k == leadExtra && !keep && trialStatusAtStart == LpSolver.LIMIT) {
       // the value encodings alone did not finish over the bounds of the search start: a second
       // solve over the current bounds would spend the same time again
-      trialStatus = LpSolver.LIMIT;
-      droppedPivots += full.pivots();
-      return null;
+      trialKeep = false;
+      trialCut = true;
+      return LpSolver.LIMIT;
     }
     int first = rootSolve(full, pivots, rootWork());
     if (k == leadExtra && first == LpSolver.LIMIT) {
@@ -5473,6 +5475,7 @@ public class LinearRelaxation extends Constraint
       keep |= withExtra == LpSolver.INFEASIBLE;
     }
     trialKeep = keep;
+    trialCut = false;
     return withExtra;
   }
 
