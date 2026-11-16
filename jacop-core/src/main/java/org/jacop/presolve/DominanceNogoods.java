@@ -323,6 +323,8 @@ public final class DominanceNogoods {
     }
     for (Constraint c : posted) {
       store.impose(c);
+      // they are many and short: a linear relaxation only tries them
+      store.markOptionalRow(c);
       imposed++;
     }
     return new Outcome(removals.size(), pairs, nogoods, imposed, checked, complete, null);

@@ -90,6 +90,10 @@ public abstract class AbstractImplication extends AbstractReifiedConstraint {
     } else if (released()) {
       removeConstraint();
     } else if (enforced()) {
+      if (RewrittenNested.ENABLED && canRewrite(store)) {
+        rewriteTo(store, new RewrittenNested(c, true));
+        return;
+      }
       c.consistency(store);
     }
   }
