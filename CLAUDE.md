@@ -69,9 +69,10 @@ then reports the strongest level held at every node:
 - bounds(D): the same with the other variables in their domains;
 - domain (GAC): every value has a support in the domains.
 
-It also fails a case that removes a solution or fails while a solution exists (wrong pruning), and
-counts nodes where a missing support would be pruned by running the constraint again (not at
-fixpoint). Each case prints its level, the node count and the first counterexample of the next
+It also fails a case that removes a solution or fails while a solution exists (wrong pruning),
+accepts a fixed assignment that is no solution, or claims `satisfied()` while some tuple of the
+domains is no solution, and counts nodes where a missing support would be pruned by running the
+constraint again (not at fixpoint). Each case prints its level, the node count and the first counterexample of the next
 level, with the instance and the decision path that reproduces it.
 
 Using it to improve a propagator:
@@ -82,6 +83,13 @@ Using it to improve a propagator:
 3. Re-run the checker with a high `consistency.instances` and raise the case's level in
    `ConsistencyChecker.cases()` to what it now reaches, so a later weakening is caught when the
    checker is run.
+
+`-Dconsistency.repeated=true` checks the same cases with a variable repeated in the scope: about a
+third of the time, the variable helpers of a generator (`aVar`, `interval`, `bools`, `aBool`) return
+a variable already made for the instance whose domain fits, and the brute force enumerates only the
+tuples in which the positions of one variable agree. Only soundness is checked in that mode (a
+repeated variable may weaken a propagator), and an instance whose constructor rejects the repeat is
+counted as rejected. Run it after changing how a constraint handles its variables.
 
 To check another propagator, add a `Case` to `cases()`: a name, the level it reaches, and a
 generator returning a `Model` (the constraint, the relation as a `Predicate<int[]>` on complete
@@ -166,6 +174,8 @@ mvn -Pmin -pl jacop-sat test -Dtest=LcgFuzzTest -Dsurefire.rerunFailingTestsCoun
 ```
 
 A failure names the seed; the model of a seed is rebuilt with `-Dlcg.fuzz.runs=1 -Dlcg.fuzz.seed=N`.
+Add `-Dlcg.fuzz.repeated=true` to repeat a variable at about a third of the positions of each picked
+list, so constraints and their explanations see one variable at several positions.
 Add `-Dlcg.fuzz.holes=true` for up to two holes in every variable's domain: reasons of bounds that
 skip holes were the most frequent explanation bug (LinearIntDom, Diffn, WeightedCompletion).
 A constraint whose pruning depends on a variable that is not among its arguments (such as an
