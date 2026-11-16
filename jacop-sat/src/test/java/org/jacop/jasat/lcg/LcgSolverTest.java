@@ -6043,6 +6043,51 @@ class LcgSolverTest {
     }
   }
 
+  // the lowest value of the objective's domain in coreModelOptimum (tests that start it at the
+  // optimum)
+  private static int objectiveFloor = Integer.MIN_VALUE;
+
+  @Test
+  void objectiveProbeEndsWhenTheObjectiveIsAlreadyAtTheBestSolution() {
+    // the objective's domain starts at the optimum, so its minimum meets the best solution while
+    // the cores' bound, which counts only the soft literals, is still below it: each probe target
+    // is then already implied, and the probe loop doubled its step until it overflowed and never
+    // ended (MiniZinc Challenge 2023 roster-shifts-bool s100_e20_c8 under -f -t 240 s)
+    long saved = CoreSearch.objectiveProbeAfter;
+    CoreSearch.objectiveProbeAfter = 1;
+    try {
+      Random rnd = new Random(37);
+      int checked = 0;
+      long probes = 0;
+      for (int instance = 0; instance < 2000; instance++) {
+        long seed = rnd.nextLong();
+        objectiveFloor = Integer.MIN_VALUE;
+        Integer expected = coreModelOptimum(seed, -1, new long[3]);
+        if (expected == null) {
+          continue;
+        }
+        objectiveFloor = expected;
+        for (int mode = 0; mode < 4; mode++) {
+          int m = mode;
+          long[] stats = new long[5];
+          Integer found =
+              assertTimeoutPreemptively(
+                  Duration.ofSeconds(20), () -> coreModelOptimum(seed, m, stats, null, null));
+          probes += stats[4];
+          assertThat(found)
+              .as("instance %d (seed %d), mode %d", instance, seed, mode)
+              .isEqualTo(expected);
+          checked++;
+        }
+      }
+      assertThat(checked).isPositive();
+      assertThat(probes).isPositive();
+    } finally {
+      objectiveFloor = Integer.MIN_VALUE;
+      CoreSearch.objectiveProbeAfter = saved;
+    }
+  }
+
   @Test
   void coreGuidedSearchTakesTheDefinitionWithTheHigherRootBound() {
     // obj = a + b with a, b in 0..10, and obj = y0 + y1 with y0, y1 in {3, 5}, as presolve adds the
@@ -6159,7 +6204,7 @@ class LcgSolverTest {
       lo += Math.min(w[i] * x[i].min(), w[i] * x[i].max());
       hi += Math.max(w[i] * x[i].min(), w[i] * x[i].max());
     }
-    IntVar objective = new IntVar(store, "obj", lo, hi);
+    IntVar objective = new IntVar(store, "obj", Math.max(lo, Math.min(hi, objectiveFloor)), hi);
     terms[n] = objective;
     w[n] = -1;
     store.impose(new LinearInt(terms, w, "==", 0));

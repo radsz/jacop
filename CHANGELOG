@@ -7443,6 +7443,15 @@ Version 5.0 (unreleased)
    The store check of a hint before lazy clause generation (also of the
    project schedule) now runs the root's pending propagation first.
 
+413. The core-guided phase of LCG no longer loops forever when it probes
+   the objective's bound (the probes of commit 7c2bc093d) after the
+   objective's own minimum has reached the best solution: every probe
+   target was already implied, so the step doubled until it overflowed
+   and the loop never ended. MiniZinc Challenge 2023 roster-shifts-bool
+   s100_e20_c8 under -f with -t 240 s or more never ended (bound and best
+   both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
+   instances it is the only one that met the loop at 240 s.
+
 Version 4.11
 =============
 
