@@ -13100,3 +13100,68 @@ C	mznc:upTo5sec/2014_mario/mario_n_medium_5	b2ca3676576df0fe	obj1:plain	PASS	COM
 C	mznc:upTo5sec/2014_mario/mario_n_medium_5	b2ca3676576df0fe	obj1:f	PASS	COMPLETE	1	1923	2026-11-16T01:15:15Z	
 C	mznc:upTo5sec/2014_mario/mario_n_medium_5	b2ca3676576df0fe	obj1:lcg	PASS	COMPLETE	1	11987	2026-11-16T01:15:27Z	
 C	mznc:upTo5sec/2014_mario/mario_n_medium_5	b2ca3676576df0fe	obj1:lcg-f	PASS	COMPLETE	1	13381	2026-11-16T01:15:40Z	
+P	mznc:upTo5sec/2013_pentominoes-int/02	5380177811ab45f9	satisfy		INCOMPLETE	27588	27588	219a7f5451587bf9	300223	300	2026-11-16T01:21:52Z	jacop_regular
+P	mznc:upTo5sec/2011_pentominoes/02	e5d1084fbeadc334	satisfy		INCOMPLETE	28044	28044	6ccfc091401babdf	300206	300	2026-11-16T01:21:52Z	jacop_regular
+P	hakank:solvedByOthersOnly/hakank_nontransitive_dice/nontransitive_dice	4eb3d36d73d3bddf	minimize	4	INCOMPLETE	2754	2754	5a1791031a048995	300367	300	2026-11-16T01:21:55Z	jacop_increasing,jacop_maximum
+P	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	minimize	107	COMPLETE	56	56	78ff126805cf5303	10447	300	2026-11-16T01:22:10Z	jacop_alldiff,jacop_table_int
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	all:f	PASS	COMPLETE	56	2037	2026-11-16T01:22:12Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	decomp:jacop_table_int	PASS	COMPLETE	56	13417	2026-11-16T01:22:26Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	decomp:jacop_alldiff	PASS	COMPLETE	56	10446	2026-11-16T01:22:36Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	std	PASS	COMPLETE	56	12720	2026-11-16T01:22:49Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	std:f	PASS	COMPLETE	56	1964	2026-11-16T01:22:51Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	objstd:lcg	PASS	COMPLETE	1	10176	2026-11-16T01:23:01Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj0:plain	PASS	COMPLETE	1	9220	2026-11-16T01:23:10Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj0:f	PASS	COMPLETE	1	8541	2026-11-16T01:23:19Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj0:lcg	PASS	COMPLETE	1	2657	2026-11-16T01:23:22Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj0:lcg-f	PASS	COMPLETE	1	4230	2026-11-16T01:23:26Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj0:lcg:decomp:jacop_table_int	PASS	COMPLETE	1	4279	2026-11-16T01:23:30Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	2837	2026-11-16T01:23:33Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj1:plain	PASS	COMPLETE	1	6844	2026-11-16T01:23:40Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj1:f	PASS	COMPLETE	1	11962	2026-11-16T01:23:52Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj1:lcg	PASS	COMPLETE	1	2825	2026-11-16T01:23:55Z	
+C	mznc:upTo30sec/2010_depot_placement/rat99_5	a3dcf63c47653c44	obj1:lcg-f	PASS	COMPLETE	1	4947	2026-11-16T01:24:00Z	
+P	mznc:upTo5sec/2020_pentominoes/02	3507b86f301250b2	satisfy		INCOMPLETE	27485	27485	1a0e9fac2e012e99	300154	300	2026-11-16T01:26:52Z	jacop_regular
+P	mznc:upTo30sec/2008_pentominoes-int/05	2452b00ddd3aa5a7	satisfy		INCOMPLETE	512	512	21fc902f3d27f244	300194	300	2026-11-16T01:26:53Z	jacop_regular
+P	mznc:upTo5sec/2026_nonogram/medium_05	adc4a63cb297ffd8	satisfy		INCOMPLETE	343953	343953	639302db255e09c	300214	300	2026-11-16T01:31:53Z	jacop_regular
+P	mznc:upTo1min/2008_pentominoes-int/04	ee17b2eb478d2e23	satisfy		INCOMPLETE	19608	19608	be21c2bcac21877	300233	300	2026-11-16T01:31:53Z	jacop_regular
+P	mznc:above1hour/2013_fjsp/med10	f5511f9911c32366	minimize	942	INCOMPLETE	0	0	0	300185	300	2026-11-16T01:34:01Z	jacop_cumulative
+P	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	maximize	832	COMPLETE	1	1	cc12b189505eb13d	804	300	2026-11-16T01:34:05Z	jacop_array_var_int_element_nonshifted,jacop_subcircuit
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	all:f	PASS	COMPLETE	1	773	2026-11-16T01:34:06Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	816	2026-11-16T01:34:07Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	decomp:jacop_subcircuit	PASS	COMPLETE	1	112284	2026-11-16T01:35:59Z	
+P	mznc:upTo1min/2011_pentominoes/04	20247e43fb74820c	satisfy		INCOMPLETE	29466	29466	191e820d33ec0657	300199	300	2026-11-16T01:36:53Z	jacop_regular
+P	mznc:upTo30sec/2013_pentominoes-int/04	ef467feb59ca1382	satisfy		INCOMPLETE	28716	28716	cb10cb9f2d100703	300267	300	2026-11-16T01:36:53Z	jacop_regular
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	std	PASS	COMPLETE	1	108193	2026-11-16T01:37:47Z	
+P	mznc:upTo30sec/2020_pentominoes/04	536a0edbb98db325	satisfy		INCOMPLETE	28200	28200	c4fb34f5950600f2	300221	300	2026-11-16T01:41:53Z	jacop_regular
+P	mznc:upTo30sec/2011_pentominoes/07	29da37daf9bb37af	satisfy		INCOMPLETE	87	87	a8df87d548b9d7e	300225	300	2026-11-16T01:41:54Z	jacop_regular
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	std:f	PARTIAL	INCOMPLETE	0	300161	2026-11-16T01:42:47Z	0 of 1 solutions before the limit
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	objstd:lcg	PASS	COMPLETE	1	156943	2026-11-16T01:45:24Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj0:plain	PASS	COMPLETE	1	1086	2026-11-16T01:45:25Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj0:f	PASS	COMPLETE	1	1250	2026-11-16T01:45:27Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj0:lcg	PASS	COMPLETE	1	9309	2026-11-16T01:45:36Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj0:lcg-f	PASS	COMPLETE	1	10555	2026-11-16T01:45:46Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj0:lcg:decomp:jacop_array_var_int_element_nonshifted	PASS	COMPLETE	1	9138	2026-11-16T01:45:56Z	
+P	jacop:upTo1min/pentominoes/04	c3366d68962f03f2	satisfy		INCOMPLETE	27706	27706	3961888439d7d249	300165	300	2026-11-16T01:46:54Z	jacop_regular
+P	jacop:upTo1min/pentominoes/04_int	efee3d768057e0df	satisfy		INCOMPLETE	22026	22026	97767ca88556b0f0	300266	300	2026-11-16T01:46:54Z	jacop_regular
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj0:lcg:decomp:jacop_subcircuit	PASS	COMPLETE	1	166095	2026-11-16T01:48:42Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj1:plain	PASS	COMPLETE	1	1143	2026-11-16T01:48:43Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj1:f	PASS	COMPLETE	1	1417	2026-11-16T01:48:44Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj1:lcg	PASS	COMPLETE	1	6121	2026-11-16T01:48:50Z	
+C	mznc:upTo5sec/2013_mario/mario_n_medium_4	13874f61d36a8281	obj1:lcg-f	PASS	COMPLETE	1	2228	2026-11-16T01:48:53Z	
+P	jacop:upTo10min/ghoulomb/3-10-16	fd2cc985ff8045a0	minimize	55	INCOMPLETE	9374	9374	d9b77e464f1863fc	300151	300	2026-11-16T01:54:03Z	jacop_cumulative
+P	mznc:upTo1hour/2017_traveling-tppv/circ8abal	a173e05f9d8b053c	minimize	84	INCOMPLETE	66	66	1a08de5df6e2f812	300154	300	2026-11-16T01:56:54Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_regular,jacop_table_int
+P	mznc:upTo1hour/2017_traveling-tppv/circ8dbal	99891f4e98a2e1f4	minimize	80	INCOMPLETE	2	2	909538088e91654c	300258	300	2026-11-16T01:56:55Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_regular,jacop_table_int
+P	mznc:above1hour/2015_largescheduling/instance-0100-1	14de8230b275574b	minimize	238293	INCOMPLETE	2000000	2000000	40bffd6b9170145e	138531	300	2026-11-16T02:01:22Z	jacop_cumulative,jacop_maximum
+P	mznc:above1hour/2014_traveling-tppv/circ8ebal	65f5d537b6b7ac75	minimize	80	INCOMPLETE	48	48	1cde264b88d18d0f	300195	300	2026-11-16T02:06:55Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_regular,jacop_table_int
+P	mznc:above1hour/2014_traveling-tppv/circ8bbal	fad353e4b42881a7	minimize	82	INCOMPLETE	19	19	50876b77b4fd27ab	300262	300	2026-11-16T02:06:55Z	jacop_alldiff,jacop_array_var_int_element_nonshifted,jacop_regular,jacop_table_int
+P	mznc:above1hour/2018_largescheduling/instance-0100-4	a585dbcfdc6c3dd4	minimize	226176	INCOMPLETE	2000000	2000000	39ac12961af4da61	143933	300	2026-11-16T02:08:46Z	jacop_cumulative,jacop_maximum
+P	mznc:upTo10min/2026_nonogram/hard_03	1bf0800c82199c98	satisfy		INCOMPLETE	0	0	0	300164	300	2026-11-16T02:11:55Z	jacop_regular
+P	mznc:upTo30sec/2026_nonogram/hard_02	d1b8159fb3a95b1f	satisfy		INCOMPLETE	0	0	0	300251	300	2026-11-16T02:11:56Z	jacop_regular
+P	jacop:above1hour/ghoulomb/4-10-16	97e2ea879df1bd7d	minimize	55	INCOMPLETE	9374	9374	ca9f9ee1225aea52	300146	300	2026-11-16T02:13:56Z	jacop_cumulative
+P	mznc:upTo5min/2026_nonogram/hard_01	9b0d59d740fb23b2	satisfy		INCOMPLETE	0	0	0	300171	300	2026-11-16T02:16:55Z	jacop_regular
+P	jacop:above10min/traveling-tppv/circ8abal	06d7aeff5f1de927	minimize	84	INCOMPLETE	65	65	dbf63f8f1fc19a2e	300306	300	2026-11-16T02:21:56Z	jacop_alldiff,jacop_regular
+P	jacop:above1hour/flexible-jobshop/med10	985773c40d354ad8	minimize	977	INCOMPLETE	0	0	0	300144	300	2026-11-16T02:23:56Z	jacop_cumulative
+P	jacop:above10min/traveling-tppv/circ8dbal	70a588fa2c6f2eba	minimize	80	INCOMPLETE	2	2	87f1d18366a00718	300198	300	2026-11-16T02:26:56Z	jacop_alldiff,jacop_regular
+P	jacop:upTo10min/rcpsp-max/psp_d_13	28b2455181ed56ea	minimize	372	INCOMPLETE	1587592	1587592	14c010bf13cbb2bb	300166	300	2026-11-16T02:28:58Z	jacop_cumulative
+P	jacop:upTo1hour/traveling-tppv/circ8bbal	82e79812e187c3ed	minimize	82	INCOMPLETE	18	18	f0e4032a69a52ca5	300226	300	2026-11-16T02:31:57Z	jacop_alldiff,jacop_regular
+P	jacop:upTo1hour/traveling-tppv/circ8cbal	8c57a59950cb196b	minimize	78	INCOMPLETE	4	4	b99208017b619cab	300167	300	2026-11-16T02:36:56Z	jacop_alldiff,jacop_regular
