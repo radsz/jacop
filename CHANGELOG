@@ -6861,6 +6861,26 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+383. JaSAT (CdclMain and pure clause models) gives a share of its time to
+   a feasibility-jump local search over the root-simplified formula, run at
+   each rephasing point (W. Luteberget, G. Sartor, Feasibility Jump: an
+   LP-free Lagrangian MIP heuristic, Mathematical Programming Computation
+   15, 2023; for clauses a jump is a flip, so it is clause weighting of the
+   breakout kind, P. Morris, The breakout method for escaping from local
+   minima, AAAI 1993). Its runs restart from a random assignment with fresh
+   weights after a Luby number of flips (M. Luby, A. Sinclair, D.
+   Zuckerman, Optimal speedup of Las Vegas algorithms, Information
+   Processing Letters 47, 1993); without the restarts it solves neither
+   target instance. A model it finds becomes the phase the decisions
+   follow until the next conflict, and eliminated variables are
+   reconstructed as before. -Djacop.jasat.jump=<share> (CdclMain --jump)
+   sets the share, default 0.1, 0 turns it off; it never runs under LCG or
+   with assumptions. On the 90 CNF instances of the SAT gap screen at
+   240 s: 30 -> 35 solved (sgen 32.7 s and tree-decomposition 147 s, which
+   Kissat and JaCoP did not solve in 600 s, fixed-shape-random, puzzle,
+   pythagorean-triples), heule-nol 49 -> 13 s, no instance lost, total
+   time 0.947; UNSAT instances take the share, 1.107 on the 13 proved.
+
 Version 4.11
 =============
 
