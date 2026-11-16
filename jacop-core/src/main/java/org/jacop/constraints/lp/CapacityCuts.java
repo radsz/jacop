@@ -638,6 +638,6 @@ public final class CapacityCuts {
     int[] as = arcs.stream().mapToInt(Integer::intValue).toArray();
     long[] w = new long[as.length];
     Arrays.fill(w, 1);
-    return new Cut(as, w, false, p - 2, violation / Math.sqrt(as.length));
+    return new Cut(as, w, false, p - 2L, violation / Math.sqrt(as.length));
   }
 }
