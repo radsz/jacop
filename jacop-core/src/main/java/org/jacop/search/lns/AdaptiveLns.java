@@ -194,6 +194,13 @@ public final class AdaptiveLns {
   /** Constraints of at most this many variables tie variables to an all-different scope. */
   static final int LINE_ARITY = 5;
 
+  /**
+   * Whether every second run of the LINES kind relaxes a few scopes of one family of disjoint
+   * scopes ({@link #familyRelax}); -Dorg.jacop.lns.familyLines=false turns it off.
+   */
+  static final boolean FAMILY_LINES =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.lns.familyLines"));
+
   /** The most decision variables that a variable runs do not fix stands for. */
   static final int MAX_NEAR = 16;
 
@@ -272,6 +279,11 @@ public final class AdaptiveLns {
   // is in one of them
   private int[][] lines = new int[0][];
   private boolean[] inLine = new boolean[0];
+  // the families of the LINES kind: groups of at least three pairwise disjoint scopes of one size,
+  // such as the rounds of a round-robin schedule, as indices into lines
+  private int[][] lineFamilies = new int[0][];
+  // runs of the LINES kind so far, to alternate between random scopes and a few of one family
+  private long lineRuns;
   // the variables that are successors of a circuit among the routings
   private final boolean[] successorVar;
 
@@ -1676,6 +1688,7 @@ public final class AdaptiveLns {
     }
     conVars = conList.toArray(new int[0][]);
     lines = lineList.toArray(new int[0][]);
+    lineFamilies = lineFamilies(lines, nodes.length);
     inLine = new boolean[nodes.length];
     for (int[] line : lines) {
       for (int u : line) {
@@ -1730,29 +1743,96 @@ public final class AdaptiveLns {
    * whole rounds with their venues and travels, so that rounds can be rematched and reordered.
    */
   private boolean[] linesRelax(int relaxed) {
+    if (FAMILY_LINES && lineFamilies.length > 0 && (lineRuns++ & 1) == 1) {
+      return familyRelax();
+    }
     boolean[] relax = new boolean[vars.length];
     int[] order = shuffled(lines.length);
     int count = 0;
     for (int k = 0; k < order.length && count < relaxed; k++) {
-      for (int u : lines[order[k]]) {
-        if (!relax[u] && !vars[u].singleton()) {
-          relax[u] = true;
-          count++;
+      count += relaxLine(lines[order[k]], relax);
+    }
+    return relax;
+  }
+
+  /**
+   * Relaxes two to four scopes of one family of pairwise disjoint all-different scopes, chosen at
+   * random, with the variables tied to them as in {@link #linesRelax}. On a round-robin schedule
+   * whose rounds are all-different over the opponents, the other rounds stay fixed, so each team
+   * meets the same opponents in the chosen rounds and the run can only swap rounds, whole or in
+   * part: the swap-rounds and partial-swap-rounds moves of local search for the traveling
+   * tournament problem (A. Anagnostopoulos, L. Michel, P. Van Hentenryck and Y. Vergados, A
+   * simulated annealing approach to the traveling tournament problem, J. Scheduling 9, 2006). A
+   * random choice of scopes of both families mostly relaxes team schedules, which the fixed rounds
+   * determine.
+   */
+  private boolean[] familyRelax() {
+    int[] family = lineFamilies[random.nextInt(lineFamilies.length)];
+    int k = Math.min(family.length, 2 + random.nextInt(3));
+    boolean[] relax = new boolean[vars.length];
+    int[] order = shuffled(family.length);
+    for (int i = 0; i < k; i++) {
+      relaxLine(lines[family[order[i]]], relax);
+    }
+    return relax;
+  }
+
+  /**
+   * Groups the scopes into families of at least three pairwise disjoint scopes of the same size.
+   *
+   * @param lines the scopes, as nodes
+   * @param nodes the number of nodes
+   * @return the families, as indices into lines
+   */
+  static int[][] lineFamilies(int[][] lines, int nodes) {
+    Map<Integer, List<Integer>> bySize = new LinkedHashMap<>();
+    for (int i = 0; i < lines.length; i++) {
+      bySize.computeIfAbsent(lines[i].length, n -> new ArrayList<>()).add(i);
+    }
+    List<int[]> families = new ArrayList<>();
+    for (List<Integer> group : bySize.values()) {
+      boolean[] used = new boolean[nodes];
+      List<Integer> family = new ArrayList<>();
+      for (int i : group) {
+        boolean disjoint = true;
+        for (int u : lines[i]) {
+          disjoint &= !used[u];
         }
-        for (int c : varCons[u]) {
-          if (conVars[c].length > LINE_ARITY) {
-            continue;
+        if (disjoint) {
+          family.add(i);
+          for (int u : lines[i]) {
+            used[u] = true;
           }
-          for (int w : conVars[c]) {
-            if (w < vars.length && !inLine[w] && !relax[w] && !vars[w].singleton()) {
-              relax[w] = true;
-              count++;
-            }
+        }
+      }
+      if (family.size() >= 3) {
+        families.add(family.stream().mapToInt(Integer::intValue).toArray());
+      }
+    }
+    return families.toArray(new int[0][]);
+  }
+
+  /** Relaxes one scope with the variables tied to it; returns how many it relaxed. */
+  private int relaxLine(int[] line, boolean[] relax) {
+    int count = 0;
+    for (int u : line) {
+      if (!relax[u] && !vars[u].singleton()) {
+        relax[u] = true;
+        count++;
+      }
+      for (int c : varCons[u]) {
+        if (conVars[c].length > LINE_ARITY) {
+          continue;
+        }
+        for (int w : conVars[c]) {
+          if (w < vars.length && !inLine[w] && !relax[w] && !vars[w].singleton()) {
+            relax[w] = true;
+            count++;
           }
         }
       }
     }
-    return relax;
+    return count;
   }
 
   /**
