@@ -156,6 +156,8 @@ class CdclSolverTest {
     CdclSolver t = new CdclSolver();
     t.setChecking(true);
     t.setFactoring(true);
+    // the forward lucky pass satisfies the pigeons before factoring would run
+    t.setLucky(false);
     sat.forEach(t::addClause);
     assertEquals(CdclSolver.SAT, t.solve());
     assertTrue(t.factoredVars > 0);
@@ -669,6 +671,97 @@ class CdclSolverTest {
     }
   }
 
+  private static CdclSolver luckySolver(int vars, int[]... clauses) {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.ensureVars(vars);
+    for (int[] c : clauses) {
+      s.addClause(c);
+    }
+    return s;
+  }
+
+  @Test
+  void luckyAssignmentsFindTrivialModelsWithoutSearch() {
+    // every clause has a positive literal: all true
+    CdclSolver s = luckySolver(3, new int[] {1, -2}, new int[] {2, 3}, new int[] {-1, -3, 2});
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("all-true", s.luckyFound);
+    assertEquals(0, s.conflicts);
+    // every clause has a negative literal: all false
+    s = luckySolver(3, new int[] {-1, 2}, new int[] {-2, -3}, new int[] {1, 2, -3});
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("all-false", s.luckyFound);
+    // forward false fails at x2 whichever value it takes, forward true flips nothing
+    int[][] f = {{1, 2, 3}, {1, 2, -3}, {1, -2, 3}, {1, -2, -3}, {-1, -2, -3}};
+    s = luckySolver(3, f);
+    s.setElimination(false);
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("forward-true", s.luckyFound);
+    assertEquals(0, s.conflicts);
+    assertTrue(satisfies(List.of(f), model(s, 3)));
+    s = luckySolver(3, f);
+    s.setElimination(false);
+    s.setLucky(false);
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertNull(s.luckyFound);
+    assertTrue(satisfies(List.of(f), model(s, 3)));
+  }
+
+  @Test
+  void failedLuckyAssignmentsLeaveTheSearchAsWithoutThem() {
+    Random rnd = new Random(11);
+    int compared = 0;
+    for (int run = 0; run < 40; run++) {
+      int vars = 60 + rnd.nextInt(40);
+      List<int[]> f = new ArrayList<>();
+      for (int i = 0; i < (int) (4.2 * vars); i++) {
+        int[] c = new int[3];
+        for (int k = 0; k < 3; k++) {
+          int v = 1 + rnd.nextInt(vars);
+          c[k] = rnd.nextBoolean() ? v : -v;
+        }
+        f.add(c);
+      }
+      CdclSolver on = luckySolver(vars, f.toArray(new int[0][]));
+      CdclSolver off = luckySolver(vars, f.toArray(new int[0][]));
+      off.setLucky(false);
+      int result = on.solve();
+      assertEquals(off.solve(), result, "run " + run);
+      if (on.luckyFound == null) {
+        compared++;
+        assertEquals(off.conflicts, on.conflicts, "conflicts of run " + run);
+        assertEquals(off.decisions, on.decisions, "decisions of run " + run);
+        assertEquals(off.propagations, on.propagations, "propagations of run " + run);
+      }
+    }
+    assertTrue(compared > 20, "compared " + compared);
+  }
+
+  @Test
+  void luckyAssignmentsKeepRandomAnswersAndProofs() throws IOException {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 2000; run++) {
+      int vars = 3 + rnd.nextInt(10);
+      List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
+      CdclSolver s = luckySolver(vars, f.toArray(new int[0][]));
+      s.setElimination(rnd.nextBoolean());
+      ByteArrayOutputStream proof = new ByteArrayOutputStream();
+      DratWriter drat = new DratWriter(proof);
+      s.setProof(drat);
+      int result = s.solve();
+      drat.close();
+      boolean expected = bruteForce(f, vars, new int[0]);
+      assertEquals(expected ? CdclSolver.SAT : CdclSolver.UNSAT, result, "run " + run);
+      if (expected) {
+        assertTrue(satisfies(f, model(s, vars)), "model of run " + run);
+      } else {
+        String text = proof.toString(StandardCharsets.US_ASCII);
+        assertNull(RupChecker.check(vars, f, text), "proof of run " + run);
+      }
+    }
+  }
+
   @Test
   void lubySequence() {
     long[] expected = {1, 1, 2, 1, 1, 2, 4, 1, 1, 2, 1, 1, 2, 4, 8};
@@ -1111,6 +1204,8 @@ class CdclSolverTest {
     s.setChecking(true);
     s.setSweeping(on);
     s.setProbing(on);
+    // lucky assignments solve these small formulas before the elimination round
+    s.setLucky(false);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     DratWriter drat = new DratWriter(out);
     s.setProof(drat);

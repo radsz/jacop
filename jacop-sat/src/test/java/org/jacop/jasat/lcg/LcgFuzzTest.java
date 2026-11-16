@@ -2499,6 +2499,105 @@ class LcgFuzzTest {
     }
   }
 
+  // explanation-size golden: lcg.sizes.runs fixed seeds, the file in the test resources
+  private static final int SIZE_RUNS = Integer.getInteger("lcg.sizes.runs", 40_000);
+
+  private static final java.nio.file.Path SIZE_GOLDEN =
+      java.nio.file.Path.of("src/test/resources/org/jacop/jasat/lcg/explanation-sizes.tsv");
+
+  /** Reasons (or failures) of a class below this count are too few for a stable average. */
+  private static final int SIZE_MIN_SAMPLES = 100;
+
+  /**
+   * Explanation-size oracle: solves fixed random models (seeds 1 to {@code lcg.sizes.runs}) with
+   * LCG and compares, per constraint class, the share of reasons and failures that fall back to the
+   * generic reason and the atoms per reason and per failure with a golden file. Every reason is
+   * still checked for validity by the other tests; this one fails when an explanation gets weaker
+   * but stays valid (a dropped {@code truncate}, a fallback to the generic reason, a weaker bound),
+   * which no answer-based test can see and which costs LCG node rate and learning. Classes with at
+   * least {@value #SIZE_MIN_SAMPLES} samples are compared: the generic share may grow by at most
+   * two points and the atoms per explanation by at most 10 %. After a change meant to alter the
+   * explanations (or the model generator), rewrite the file with {@code -Dlcg.sizes.write=true} and
+   * commit it with the change.
+   */
+  @Test
+  void explanationSizesMatchGolden() throws java.io.IOException {
+    Map<String, long[]> statistics = new TreeMap<>();
+    for (int run = 0; run < SIZE_RUNS; run++) {
+      long seed = 1 + (long) run;
+      Model model;
+      try {
+        model = new Model(seed);
+      } catch (FailException _) {
+        continue;
+      }
+      LcgSolver solver = new LcgSolver(model.store);
+      if (model.objective == null) {
+        solver.solve();
+      } else {
+        solver.minimize(model.objective);
+      }
+      solver
+          .explanationStatistics()
+          .forEach((k, v) -> statistics.merge(k, v.clone(), LcgFuzzTest::add));
+    }
+    StringBuilder table =
+        new StringBuilder("# class\treasons\tgeneric\tatoms\tfailures\tgeneric\tatoms\n");
+    statistics.forEach(
+        (k, v) ->
+            table.append(
+                String.format(
+                    "%s\t%d\t%d\t%d\t%d\t%d\t%d%n", k, v[0], v[1], v[2], v[3], v[4], v[5])));
+    if (Boolean.getBoolean("lcg.sizes.write")) {
+      java.nio.file.Files.writeString(SIZE_GOLDEN, table.toString());
+      return;
+    }
+    List<String> worse = new ArrayList<>();
+    for (String line : java.nio.file.Files.readAllLines(SIZE_GOLDEN)) {
+      if (line.startsWith("#") || line.isBlank()) {
+        continue;
+      }
+      String[] f = line.split("\t");
+      long[] g = new long[6];
+      for (int i = 0; i < 6; i++) {
+        g[i] = Long.parseLong(f[i + 1]);
+      }
+      long[] v = statistics.getOrDefault(f[0], new long[8]);
+      for (int at = 0; at < 6; at += 3) {
+        String kind = at == 0 ? "reasons" : "failures";
+        if (g[at] < SIZE_MIN_SAMPLES) {
+          continue;
+        }
+        if (v[at] < SIZE_MIN_SAMPLES / 2) {
+          worse.add(f[0] + " " + kind + ": " + v[at] + " now, " + g[at] + " in the golden");
+          continue;
+        }
+        double genericGolden = (double) g[at + 1] / g[at];
+        double generic = (double) v[at + 1] / v[at];
+        if (generic > genericGolden + 0.02) {
+          worse.add(
+              String.format(
+                  "%s %s: generic %.1f %% now, %.1f %% in the golden",
+                  f[0], kind, 100 * generic, 100 * genericGolden));
+        }
+        double atomsGolden = (double) g[at + 2] / g[at];
+        double atoms = (double) v[at + 2] / v[at];
+        if (atoms > atomsGolden * 1.10) {
+          worse.add(
+              String.format(
+                  "%s %s: %.2f atoms per explanation now, %.2f in the golden",
+                  f[0], kind, atoms, atomsGolden));
+        }
+      }
+    }
+    assertThat(worse)
+        .as(
+            "explanations weaker than the golden %s (rewrite it with -Dlcg.sizes.write=true only"
+                + " for an intended change); now:%n%s",
+            SIZE_GOLDEN, table)
+        .isEmpty();
+  }
+
   /**
    * Gives one run in three objective lower-bound search, one in three core-guided search first, and
    * three runs in four a search annotation on the decision variables, as fixed search (with or
