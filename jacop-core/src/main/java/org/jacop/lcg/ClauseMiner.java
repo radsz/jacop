@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import lombok.extern.slf4j.Slf4j;
 import org.jacop.constraints.Constraint;
 import org.jacop.core.FailException;
 import org.jacop.core.IntVar;
@@ -64,6 +65,7 @@ import org.jacop.search.SimpleSelect;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
+@Slf4j
 public final class ClauseMiner {
 
   /** Literal kind [x &gt;= v]. */
@@ -78,7 +80,7 @@ public final class ClauseMiner {
 
   private static final int MAX_PAIRS = 24;
 
-  private static final int EXAMPLES = 6;
+  private static final int MAX_EXAMPLES = 6;
 
   private final AtomicTrail trail;
   private final String file;
@@ -213,9 +215,7 @@ public final class ClauseMiner {
 
   private void mine(IntVar[] x, int[] kind, int[] value, boolean[] positive) {
     Set<IntVar> scope = java.util.Collections.newSetFromMap(new IdentityHashMap<>());
-    for (IntVar v : x) {
-      scope.add(v);
-    }
+    java.util.Collections.addAll(scope, x);
     IntVar rarest = null;
     for (IntVar v : scope) {
       List<Constraint> cs = constraintsOf.get(v);
@@ -241,7 +241,7 @@ public final class ClauseMiner {
     for (Constraint c : single) {
       String key = c.getClass().getSimpleName() + " |" + scope.size() + "v";
       int r = test(List.of(c), x, kind, value, positive);
-      record(key, r, x.length);
+      tally(key, r, x.length);
       if (r == PROPAGATION) {
         implied = true;
       } else if ((r == SEARCH || r == FAIL_ONLY) && gap == null) {
@@ -279,7 +279,7 @@ public final class ClauseMiner {
         String kb = list.get(j).getClass().getSimpleName();
         String key = "pair " + (ka.compareTo(kb) <= 0 ? ka + "+" + kb : kb + "+" + ka);
         int r = test(List.of(list.get(i), list.get(j)), x, kind, value, positive);
-        record(key, r, x.length);
+        tally(key, r, x.length);
         if (r == PROPAGATION) {
           pairImplied = true;
         } else if ((r == SEARCH || r == FAIL_ONLY) && pairGap == null) {
@@ -318,7 +318,7 @@ public final class ClauseMiner {
     return false;
   }
 
-  private void record(String key, int result, int literals) {
+  private void tally(String key, int result, int literals) {
     long[] c = counts.computeIfAbsent(key, k -> new long[8]);
     c[TESTED]++;
     c[result]++;
@@ -328,7 +328,7 @@ public final class ClauseMiner {
   private void example(
       String key, String constraint, IntVar[] x, int[] kind, int[] value, boolean[] positive) {
     List<String> list = examples.computeIfAbsent(key, k -> new ArrayList<>());
-    if (list.size() >= EXAMPLES) {
+    if (list.size() >= MAX_EXAMPLES) {
       return;
     }
     StringBuilder s = new StringBuilder();
@@ -465,7 +465,7 @@ public final class ClauseMiner {
         }
       }
     } catch (IOException e) {
-      System.err.println("% clause miner: " + e);
+      log.warn("clause miner cannot write {}", file, e);
     }
   }
 }
