@@ -40,6 +40,7 @@ import java.util.Set;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.Routes;
 import org.jacop.core.IntVar;
+import org.jacop.lcg.LinearForm;
 
 /**
  * Rounded capacity cuts of a {@link Routes}: for a set S of nodes that every route must visit
@@ -111,6 +112,24 @@ public final class CapacityCuts {
 
   // the infeasible path cuts separated
   private int pathCuts;
+
+  // the 2-path cuts of routes with time windows (Kohl et al. 1999): a set of at most MAX_TWO_PATH
+  // customers that no route can visit in one stretch within the windows is entered twice
+  private static final boolean TWO_PATH =
+      !"false".equals(System.getProperty("org.jacop.lp.twoPathCuts"));
+  private static final int MAX_TWO_PATH = Integer.getInteger("org.jacop.lp.twoPathSize", 12);
+  private static final int TWO_PATH_STEPS = 200_000;
+
+  // the arc of each pair of nodes, -1 for none, made at the first 2-path check
+  private int[][] arcAt;
+  // whether one route can visit each set checked so far in one stretch
+  private final java.util.Map<BitSet, Boolean> oneStretch = new java.util.HashMap<>();
+  // the steps left to the feasibility checks of the current separation
+  private int twoPathSteps;
+
+  // the 2-path cuts separated, and whether the last set needed two routes for its windows only
+  private int twoPathCuts;
+  private boolean twoPath;
 
   /**
    * A cut over arcs of the routes: {@code sum w[k] x[arcs[k]] >= bound} when entering, else {@code
@@ -188,6 +207,62 @@ public final class CapacityCuts {
   }
 
   /**
+   * The arc-time rows of routes with time windows and node times ({@link Routes#setTimes}): for an
+   * arc a = (i, j) between two nodes other than the depot with a known travel time, {@code t[j] >=
+   * t[i] + travel[a] - M (1 - x[a])}, written {@code t[j] - t[i] - M x[a] >= travel[a] - M}, with
+   * {@code M = latest[i] + travel[a] - earliest[j]} from the windows, which hold in every solution,
+   * so that the row holds in every solution too. Arcs with {@code M <= 0} need no literal and give
+   * no row (the windows already order the two nodes). These are the big-M precedence rows of the
+   * MIP formulations of the travelling salesman and vehicle routing problems with time windows (M.
+   * Desrochers and G. Laporte, Improvements and extensions to the Miller-Tucker-Zemlin subtour
+   * elimination constraints, Operations Research Letters 10(1), 1991, 27-36).
+   *
+   * @param routes the routes
+   * @param global whether the current bounds of the times hold in every solution (level 0), so that
+   *     they may narrow the windows
+   * @return the rows, empty without windows or times
+   */
+  public static List<LinearForm> arcTimeRows(Routes routes, boolean global) {
+    List<LinearForm> rows = new ArrayList<>();
+    IntVar[] t = routes.times();
+    long[] earliest = routes.earliest();
+    long[] latest = routes.latest();
+    long[] travel = routes.travel();
+    if (t == null || earliest == null || latest == null || travel == null) {
+      return rows;
+    }
+    for (int a = 0; a < routes.tails.length; a++) {
+      int i = routes.tails[a];
+      int j = routes.heads[a];
+      if (i == 0 || j == 0 || i == j || t[i] == null || t[j] == null || t[i] == t[j]) {
+        continue;
+      }
+      long d = travel[a];
+      if (d == Long.MIN_VALUE || routes.literals[a].singleton()) {
+        continue;
+      }
+      long hi = global ? Math.min(latest[i], t[i].max()) : latest[i];
+      long lo = global ? Math.max(earliest[j], t[j].min()) : earliest[j];
+      long big;
+      try {
+        big = Math.subtractExact(Math.addExact(hi, d), lo);
+        if (big <= 0) {
+          continue;
+        }
+        rows.add(
+            new LinearForm(
+                new IntVar[] {t[j], t[i], routes.literals[a]},
+                new long[] {1, -1, -big},
+                Math.subtractExact(d, big),
+                LinearForm.GE));
+      } catch (ArithmeticException _) {
+        // a window too wide for a row
+      }
+    }
+    return rows;
+  }
+
+  /**
    * It creates the separation of the cuts of a Routes.
    *
    * @param routes the routes
@@ -239,6 +314,7 @@ public final class CapacityCuts {
     c.earliest = earliest;
     c.latest = latest;
     c.travel = travel;
+    c.arcAt = arcAt;
     return c;
   }
 
@@ -287,6 +363,7 @@ public final class CapacityCuts {
         in[h] += v;
       }
     }
+    twoPathSteps = TWO_PATH_STEPS;
     List<BitSet> sets = new ArrayList<>();
     components(mandatory, flow, sets);
     for (int seed = 1; seed < n; seed++) {
@@ -298,9 +375,11 @@ public final class CapacityCuts {
     List<Cut> cuts = new ArrayList<>();
     for (BitSet s : sets) {
       if (seen.add(s)) {
+        twoPath = false;
         Cut c = cut(s, value);
         if (c != null) {
           cuts.add(c);
+          twoPathCuts += twoPath ? 1 : 0;
         }
         // a multistar cut only where the capacity cut holds: at the root they took the slots of
         // the capacity cuts and the bound fell
@@ -328,16 +407,97 @@ public final class CapacityCuts {
     return cuts;
   }
 
-  // the routes needed by a set: its demand over the capacity, rounded up, and at least one
+  // the routes needed by a set: its demand over the capacity, rounded up, and at least one; two
+  // when one route cannot visit the set in one stretch within the time windows
   private long needed(BitSet s) {
-    if (demands == null || capacity <= 0) {
-      return 1;
+    long k = 1;
+    if (demands != null && capacity > 0) {
+      long d = 0;
+      for (int v = s.nextSetBit(0); v >= 0; v = s.nextSetBit(v + 1)) {
+        d += demands[v];
+      }
+      k = Math.max(1, Math.ceilDiv(d, capacity));
     }
-    long d = 0;
-    for (int v = s.nextSetBit(0); v >= 0; v = s.nextSetBit(v + 1)) {
-      d += demands[v];
+    if (k == 1 && twoPaths() && s.cardinality() > 1 && s.cardinality() <= MAX_TWO_PATH) {
+      Boolean one = oneStretch.get(s);
+      if (one == null && twoPathSteps > 0) {
+        one = stretch(s);
+        if (one != null) {
+          oneStretch.put((BitSet) s.clone(), one);
+        }
+      }
+      if (Boolean.FALSE.equals(one)) {
+        twoPath = true;
+        return 2;
+      }
     }
-    return Math.max(1, Math.ceilDiv(d, capacity));
+    return k;
+  }
+
+  private boolean twoPaths() {
+    return TWO_PATH && earliest != null && n <= 2_000;
+  }
+
+  // whether some order visits all nodes of s one after the other within their windows, each at
+  // the earliest time its predecessor in the order allows (the earliest time at the first): the
+  // earliest arrival dominates, so the search is exact. Null when the check ran out of steps
+  private Boolean stretch(BitSet s) {
+    if (arcAt == null) {
+      arcAt = new int[n][n];
+      for (int[] row : arcAt) {
+        Arrays.fill(row, -1);
+      }
+      for (int a = 0; a < tails.length; a++) {
+        if (tails[a] != heads[a]) {
+          arcAt[tails[a]][heads[a]] = a;
+        }
+      }
+    }
+    int[] nodes = s.stream().toArray();
+    boolean[] used = new boolean[nodes.length];
+    for (int f = 0; f < nodes.length; f++) {
+      used[f] = true;
+      Boolean found = extend(nodes, used, nodes[f], earliest[nodes[f]], 1);
+      used[f] = false;
+      if (found == null || found) {
+        return found;
+      }
+    }
+    return Boolean.FALSE;
+  }
+
+  private Boolean extend(int[] nodes, boolean[] used, int last, long time, int count) {
+    if (count == nodes.length) {
+      return Boolean.TRUE;
+    }
+    if (--twoPathSteps < 0) {
+      return null;
+    }
+    for (int f = 0; f < nodes.length; f++) {
+      if (used[f]) {
+        continue;
+      }
+      int a = arcAt[last][nodes[f]];
+      if (a < 0) {
+        continue;
+      }
+      // an arc without a known travel time does not order the times: the next one may be as early
+      // as its window opens
+      long t =
+          travel[a] == Long.MIN_VALUE
+              ? earliest[nodes[f]]
+              : Math.max(earliest[nodes[f]], time + travel[a]);
+      if (t > latest[nodes[f]]) {
+        continue;
+      }
+      used[f] = true;
+      Boolean found = extend(nodes, used, nodes[f], t, count + 1);
+      used[f] = false;
+      if (found == null || found) {
+        return found;
+      }
+    }
+    return Boolean.FALSE;
   }
 
   // the connected components of the support graph over the mandatory nodes
@@ -379,7 +539,13 @@ public final class CapacityCuts {
     while (true) {
       double entering = into - inside;
       long k = demands == null || capacity <= 0 ? 1 : Math.max(1, Math.ceilDiv(demand, capacity));
-      if (k - entering > MIN_VIOLATION) {
+      if (k - entering > MIN_VIOLATION
+          || k == 1
+              && twoPaths()
+              && 2 - entering > MIN_VIOLATION
+              && s.cardinality() > 1
+              && s.cardinality() <= MAX_TWO_PATH) {
+        // a 2-path candidate: needed() decides whether one stretch can visit it
         sets.add((BitSet) s.clone());
       }
       int best = -1;
@@ -498,6 +664,18 @@ public final class CapacityCuts {
    */
   public int pathCuts() {
     return pathCuts;
+  }
+
+  /**
+   * It returns the number of 2-path cuts separated so far: sets of customers that one route cannot
+   * visit in one stretch within the time windows, entered at least twice (N. Kohl, J. Desrosiers,
+   * O. B. G. Madsen, M. M. Solomon and F. Soumis, 2-path cuts for the vehicle routing problem with
+   * time windows, Transportation Science 33(1), 1999, 101-116).
+   *
+   * @return the number of cuts
+   */
+  public int twoPathCuts() {
+    return twoPathCuts;
   }
 
   // the infeasible path cuts violated by the values (Ascheuer, Fischetti and Grötschel): a path

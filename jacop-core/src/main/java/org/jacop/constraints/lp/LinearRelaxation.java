@@ -644,6 +644,23 @@ public class LinearRelaxation extends Constraint
   /** Statistics: rounded capacity cuts added. */
   public long capacityCuts;
 
+  /**
+   * Statistics: the 2-path cuts of the Routes with time windows among the capacity cuts, at the
+   * root and in search ({@link CapacityCuts#twoPathCuts}).
+   *
+   * @return the number of 2-path cuts separated
+   */
+  public long twoPathCuts() {
+    long sum = 0;
+    for (CapacityCuts c : capacity) {
+      sum += c.twoPathCuts();
+    }
+    return sum;
+  }
+
+  /** Statistics: the arc-time rows of the Routes with time windows in the relaxation. */
+  public int arcTimeRows;
+
   // Hall cuts of the all-different constraints ({@link AlldifferentCuts}) at the root, after the
   // capacity and energy cuts and before the MIR cuts, in rounds like those; for an objective only
   private static final boolean ALLDIFF_CUTS =
@@ -786,6 +803,12 @@ public class LinearRelaxation extends Constraint
   // capacity and self loops), go into the row pool and leave the simplex when they age.
   private static final boolean CAPACITY_SEARCH =
       !FALSE.equals(System.getProperty("org.jacop.lp.capacitySearch"));
+  // the big-M arc-time rows of Routes with time windows and node times (CapacityCuts.arcTimeRows),
+  // as rows of the relaxation, or tried like the linearized rows with ARC_TIME_TRIED
+  private static final boolean ARC_TIME_ROWS =
+      !FALSE.equals(System.getProperty("org.jacop.lp.arcTimeRows"));
+  private static final boolean ARC_TIME_TRIED =
+      "tried".equals(System.getProperty("org.jacop.lp.arcTimeRows"));
   private static final int CAPACITY_SEARCH_CUTS =
       Integer.getInteger("org.jacop.lp.capacitySearchCuts", 10);
   private static final int CAPACITY_MAX_PERIOD = 1024;
@@ -1241,6 +1264,7 @@ public class LinearRelaxation extends Constraint
     boolean encodingsLead = false;
     int valueCliqueRows = 0;
     List<CapacityCuts> separations = new ArrayList<>();
+    int arcTimeCount = 0;
     List<EnergyCuts> resources = new ArrayList<>();
     List<AlldifferentCuts> hall = new ArrayList<>();
     List<TreeCuts> trees = new ArrayList<>();
@@ -1265,6 +1289,16 @@ public class LinearRelaxation extends Constraint
       }
       if (CAPACITY_CUTS && c instanceof Routes routes) {
         separations.add(new CapacityCuts(routes));
+      }
+      if (ARC_TIME_ROWS && objective != null && c instanceof Routes routes) {
+        List<LinearForm> rows = CapacityCuts.arcTimeRows(routes, store.level == 0);
+        if (ARC_TIME_TRIED) {
+          relaxed.addAll(rows);
+        } else {
+          localForms.addAll(rows);
+        }
+        tag(tags, rows, "arcTime");
+        arcTimeCount += rows.size();
       }
       if (ENERGY_CUTS && objective != null) {
         EnergyCuts e = energyCuts(c);
@@ -1580,6 +1614,7 @@ public class LinearRelaxation extends Constraint
     r.tableClauses = tableClauses;
     r.formSource = tags;
     r.capacity = separations;
+    r.arcTimeRows = arcTimeCount;
     r.energy = resources;
     r.hall = hall;
     r.trees = trees;

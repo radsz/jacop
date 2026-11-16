@@ -7389,6 +7389,24 @@ Version 5.0 (unreleased)
    total time 3,708 -> 1,011 s (three base runs ran out of memory at
    4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
 
+411. Routing with time windows: the LP relaxation of a Routes constraint
+   whose customers have times gets big-M arc-time rows
+   t_j >= t_i + d_ij - M (1 - x_ij), M = latest_i + d_ij - earliest_j over
+   the reduced windows (M. Desrochers, G. Laporte, Improvements and
+   extensions to the Miller-Tucker-Zemlin subtour elimination constraints,
+   Operations Research Letters 10(1), 1991, 27-36), kept in the search LP,
+   so its reduced-cost fixing prunes arc literals at every node; and
+   2-path cuts x(delta-(S)) >= 2 for customer sets that one route cannot
+   visit in one stretch within their windows (B. Kohl, J. Desrosiers,
+   O. B. G. Madsen, M. M. Solomon, F. Soumis, 2-path cuts for the vehicle
+   routing problem with time windows, Transportation Science 33(1), 1999,
+   101-116), checked exactly by a bounded search over the windows.
+   GiantTourDetector now also reads the XCSP TSPTW form (subcircuit over
+   x + 1, time rows enforced by int_lin_le_imp and exempt on the arc back
+   to the depot). RESULTS_PLACEHOLDER
+   -Dorg.jacop.lp.arcTimeRows=false and -Dorg.jacop.lp.twoPathCuts=false
+   turn them off.
+
 Version 4.11
 =============
 
