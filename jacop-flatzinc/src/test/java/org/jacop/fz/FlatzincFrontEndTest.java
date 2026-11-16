@@ -1632,6 +1632,36 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void rootFailureUnderFreeSearchIsProved() throws IOException {
+    // s is false (x5 <= x1 cannot hold), so r is true, and the row of r fails over the bounds:
+    // the store of the LCG solver fails at the root. Under -f the root probing ran first, saw the
+    // failure and reported UNSAT without the proof starting, so the proof files stayed empty
+    // (MiniZinc fuzz seed 2012355).
+    String fzn =
+        """
+        var 0..1: x1:: output_var;
+        var {0,2,5,6}: x2:: output_var;
+        var -5..-4: x3:: output_var;
+        var -3..5: x4:: output_var;
+        var 2..5: x5:: output_var;
+        var -6..10: obj:: output_var;
+        var bool: r:: output_var;
+        var bool: s:: output_var;
+        constraint bool_clause([r,s],[]);
+        constraint int_lin_le_reif([-1,1,-3],[x2,x4,x3],1,r);
+        constraint int_lin_le_imp([-1,1],[x1,x5],0,s);
+        constraint int_lin_eq([2,-1],[x4,obj],0);
+        solve maximize obj;
+        """;
+    String prefix = tmp.resolve("rootfailure").toString();
+    String out = run(fzn, "-f", "--lcg", "on", "--proof", prefix)[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("conclusion BOUNDS INF INF"), proof);
+    assertTrue(proof.contains("end pseudo-Boolean proof"), proof);
+  }
+
+  @Test
   void subcircuitPostsAlldistinctByDefaultFromThirtyNodes() throws IOException {
     // The same Hall set: Subcircuit alone tries x30 = 4 and x30 = 3 first.
     String fzn = hallSetSuccessors(30) + "constraint jacop_subcircuit(x);\n" + hallSetSearch(30);
