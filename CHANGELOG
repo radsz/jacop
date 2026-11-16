@@ -7024,7 +7024,39 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
-391. JaSAT can rewrite a formula by bounded variable addition before its
+391. Bin packings that minimize the bins used find packings at the bound.
+   (a) Free search packs the items of a bin packing whose objective
+   bounds every item's bin (bin[i] <= bins) into as many bins as the
+   objective's lower bound, by bin completion with first-fail item
+   choice, completions that pack the items with the fewest completions
+   first, and randomized restarts, org.jacop.search.ls.BinCompletion
+   (R. E. Korf, A new algorithm for optimal bin packing, AAAI 2002;
+   C. P. Gomes, B. Selman and H. Kautz, Boosting combinatorial search
+   through randomization, AAAI 1998). The packing is checked in the
+   store, printed and given to lazy clause generation as its first
+   solution, which only has to prove it optimal. --free-config
+   bin-completion=off turns it off, bin-completion-share (0.05 of the
+   time limit, at most 30 s) bounds it.
+   (b) Symmetry breaking posts a value precedence over the bins also when
+   the model empties the bins above the objective (b > bins ->
+   load[b] = 0, flattened into bool_clause, int_eq_imp and int_le_imp):
+   like bin[i] <= bins these constraints are left out of the value graph,
+   since relabelling the bins by first use (Y. C. Law and J. H. M. Lee,
+   Global constraints for integer and set value precedence, CP 2004)
+   keeps the bins above the objective empty. The chain orders the items
+   by decreasing weight, as first fit decreasing opens the bins.
+   -Dorg.jacop.fz.symmetryEmptiedBins=false turns it off.
+   On the OR-Library binpack5-8 Falkenauer triplets (E. Falkenauer, A
+   hybrid grouping genetic algorithm for bin packing, Journal of
+   Heuristics 2, 1996) and shuffled copies, all 16 are proved optimal in
+   3-16 s at 600 s, where 6 were (CP-SAT proves the originals in
+   2-33 s); of the 8 binpack1-4 instances 3 are proved instead of 1
+   (u250_00 and u250_10, which CP-SAT does not solve in 240 s) and the
+   4 largest get a solution, where they had none. Total time over the
+   24 falls from 10707 to 3252 s (-f: 10759 to 3366 s). Neither part
+   fires on the 240 wide instances.
+
+392. JaSAT can rewrite a formula by bounded variable addition before its
    first variable elimination (org.jacop.jasat.cdcl.Factorizer,
    CdclSolver.setFactoring, on by default in CdclMain, --factor 0 turns
    it off): a grid of clauses f_p v R_i over factor literals f_1..f_k and
@@ -7041,7 +7073,7 @@ Version 5.0 (unreleased)
    are new; three satisfiable instances are lost). It is off in
    CdclSolver otherwise, so lazy clause generation is unchanged.
 
-392. Constraints rewrite themselves to simpler ones during search, as
+393. Constraints rewrite themselves to simpler ones during search, as
    Gecode's GECODE_REWRITE does (C. Schulte, G. Tack, M. Z. Lagerkvist,
    Modeling and Programming with Gecode, propagator rewriting): an
    ElementVariableFast whose index is fixed becomes XeqY, so changes of
@@ -7059,7 +7091,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.rewrite=false turns it off
    (org.jacop.rewrite.element and org.jacop.rewrite.reified per kind).
 
-393. The FlatZinc front end posts the sums of element constraints indexed
+394. The FlatZinc front end posts the sums of element constraints indexed
    by an all_different list: when y[k] = c[x[k]] over one constant array c
    and the x[k] are all different over the union U of their domains, the
    sum of the y[k] is fixed (a permutation of U) or bounded by the sums of
@@ -7077,7 +7109,7 @@ Version 5.0 (unreleased)
    12 of the 240 wide instances. -Dorg.jacop.fz.permutationElementSums=false
    turns them off.
 
-394. Local search detects a permutation flow shop in the store (sequence
+395. Local search detects a permutation flow shop in the store (sequence
    positions in an all different constraint, tables giving each machine's
    processing time of the job at a position, precedence rows s + d <= t
    along machines and positions, the makespan as the cost) and runs the
@@ -7095,7 +7127,7 @@ Version 5.0 (unreleased)
    (ta101 12806 -> 11368, ta106 12892 -> 11306) and
    the total time goes from 13971 s to 11097 s.
 
-395. The LP relaxation moves the clause rows that LCG hands it to the
+396. The LP relaxation moves the clause rows that LCG hands it to the
    sparse simplex when they make the dense tableau too large to search
    with. On set covering (OR-Library scp, one objective row and a few
    hundred covering clauses over thousands of columns) the 311 x 3,312
@@ -7115,7 +7147,7 @@ Version 5.0 (unreleased)
    fires on none of the 240 wide instances. -Dorg.jacop.lp.extraSparse=false
    turns it off.
 
-396. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
+397. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
    watch-list entry back to the same place while every entry before it
    stayed where it was, and a conflict leaves the rest of the list as it
    is instead of copying it onto itself. A visit that only checks the
@@ -7126,7 +7158,7 @@ Version 5.0 (unreleased)
    instances by default, with total time on them 0.971 by default and
    0.972 under -f.
 
-397. A satisfaction model without value encodings, such as a pure 0/1
+398. A satisfaction model without value encodings, such as a pure 0/1
    (pseudo-Boolean) model, now gets a root refutation LP too. Before,
    LinearRelaxation.refutation() needed value encodings, and the main
    relaxation never ran cut rounds without an objective. The new LP takes
