@@ -6832,6 +6832,18 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
+   * Stops recording the store's changes, for a solver built on a store level of its own that the
+   * caller removes next: the backtrack restores the constraints that went to the solver as clauses
+   * (they are only marked as entailed above the root), which {@link #release} would impose a second
+   * time. The solver cannot solve again afterwards; its best solution stays readable.
+   */
+  public void detach() {
+    trail.detach();
+    encodedGraphs.clear();
+    encodedConstraints.clear();
+  }
+
+  /**
    * Tells whether the best solution has a value for x: there is one, and x existed when the solver
    * was built.
    *

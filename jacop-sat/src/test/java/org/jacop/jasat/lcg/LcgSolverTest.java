@@ -466,6 +466,72 @@ class LcgSolverTest {
   }
 
   @Test
+  void rootActionWaitsForItsTimeOverEarlierRestarts() {
+    // the action of atRootAfter runs at a restart to the root once its time has come, not at the
+    // first restart before it: under free search, which restarts at once, a relaxation suspended
+    // for a probe of 200 ms came back at the first restart
+    Store store = new Store();
+    IntVar[] x = new IntVar[9];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 8);
+    }
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        store.impose(new XneqY(x[i], x[j]));
+      }
+    }
+    LcgSolver solver = new LcgSolver(store);
+    boolean[] ran = {false};
+    solver.atRootAfter(3_600_000_000_000L, () -> ran[0] = true);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.UNSAT);
+    assertThat(solver.sat().restarts).isGreaterThan(0);
+    assertThat(ran[0]).isFalse();
+    assertThat(solver.rootActionPending()).isTrue();
+  }
+
+  @Test
+  void detachOnAStoreLevelOfItsOwnLeavesTheModelAsItWas() {
+    // a solver built on a store level that the caller removes after detach: the backtrack restores
+    // the table the solver took as clauses, which is in the store once (release imposes it again)
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    int[][] tuples = {{0, 1, 2}, {1, 2, 3}, {2, 3, 0}, {3, 0, 1}};
+    store.impose(new HybridTable(x, tuples));
+    store.impose(new XneqY(x[0], x[1]));
+    assertThat(store.consistency()).isTrue();
+    int[] before = new int[x.length];
+    for (int i = 0; i < x.length; i++) {
+      before[i] = x[i].dom().sizeConstraints();
+    }
+    store.setLevel(store.level + 1);
+    LcgSolver solver = new LcgSolver(store);
+    solver.setTableClauses("support");
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.tablesAsClauses).isGreaterThan(0);
+    // changes on the solver's level that no consistency followed: the table queued their columns
+    x[0].domain.in(store.level, x[0], 0, 2);
+    x[1].domain.in(store.level, x[1], 1, 3);
+    solver.detach();
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    for (int i = 0; i < x.length; i++) {
+      assertThat(x[i].dom().sizeConstraints()).as("x%d", i).isEqualTo(before[i]);
+      assertThat(x[i].min()).isZero();
+      assertThat(x[i].max()).isEqualTo(3);
+    }
+    // the model is whole: every solution of plain search is a tuple of the table
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()))).isTrue();
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(tuples.length);
+  }
+
+  @Test
   void compressedTablesAsClausesAgreeWithBruteForce() {
     // tables that are unions of one to three boxes of value sets, so they compress to a few
     // tuples, written as the clauses of their compressed form

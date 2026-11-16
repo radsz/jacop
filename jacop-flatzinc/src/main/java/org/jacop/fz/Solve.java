@@ -5391,7 +5391,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       linearRelaxation.suspend(false);
       return result;
     }
-    probe.release();
+    probe.detach();
     store.removeLevel(level + 1);
     store.setLevel(level);
     if (numberSolutions > 0) {
