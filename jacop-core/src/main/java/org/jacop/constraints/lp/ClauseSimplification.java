@@ -138,7 +138,9 @@ final class ClauseSimplification {
     }
     int units = 0;
     int equivalences = 0;
-    for (int round = 0; round < 10; round++) {
+    // until a round substitutes nothing: its unit propagation was complete
+    int substituted = 1;
+    for (int round = 0; round < 10 && substituted > 0; round++) {
       int fixed = propagate(cs, value, n);
       if (fixed < 0) {
         return new ClauseSimplification(List.of(), units, equivalences, true);
@@ -146,22 +148,18 @@ final class ClauseSimplification {
       units += fixed;
       cs = reduce(cs, value, null);
       int[] rep = representatives(cs, n);
-      if (rep == null) {
+      if (rep.length == 0) {
         return new ClauseSimplification(List.of(), units, equivalences, true);
       }
-      int substituted = 0;
+      substituted = 0;
       for (int l = 0; l < 2 * n; l += 2) {
         if (rep[l] != l) {
           substituted++;
         }
       }
-      if (substituted == 0 && fixed == 0 && round > 0) {
-        break;
-      }
-      equivalences += substituted;
-      cs = reduce(cs, value, rep);
-      if (substituted == 0) {
-        break;
+      if (substituted > 0) {
+        equivalences += substituted;
+        cs = reduce(cs, value, rep);
       }
     }
     List<LinearForm> rows = new ArrayList<>(cs.size());
@@ -186,7 +184,10 @@ final class ClauseSimplification {
   // whether the literal is true (1), false (0) or free (-1) under the values
   private static int truth(int l, int[] value) {
     int v = value[l >> 1];
-    return v < 0 ? -1 : ((l & 1) == 0 ? v : 1 - v);
+    if (v < 0) {
+      return -1;
+    }
+    return (l & 1) == 0 ? v : 1 - v;
   }
 
   /**
@@ -225,17 +226,16 @@ final class ClauseSimplification {
     }
     int fixed = 0;
     for (int i = 0; i < cs.size(); i++) {
-      if (satisfied[i] || open[i] > 1) {
-        continue;
-      }
-      if (open[i] == 0) {
+      if (!satisfied[i] && open[i] == 0) {
         return -1;
       }
-      for (int l : cs.get(i)) {
-        if (truth(l, value) < 0) {
-          value[l >> 1] = 1 - (l & 1);
-          queue[tail++] = l;
-          fixed++;
+      if (!satisfied[i] && open[i] == 1) {
+        for (int l : cs.get(i)) {
+          if (truth(l, value) < 0) {
+            value[l >> 1] = 1 - (l & 1);
+            queue[tail++] = l;
+            fixed++;
+          }
         }
       }
     }
@@ -247,30 +247,33 @@ final class ClauseSimplification {
       int negated = l ^ 1;
       for (int k = count[negated]; k < count[negated + 1]; k++) {
         int i = occurs[k];
-        if (satisfied[i]) {
-          continue;
-        }
-        if (--open[i] == 0) {
+        if (!satisfied[i] && --open[i] == 0) {
           return -1;
         }
-        if (open[i] == 1) {
-          for (int u : cs.get(i)) {
-            int t = truth(u, value);
-            if (t == 1) {
-              satisfied[i] = true;
-              break;
-            }
-            if (t < 0) {
-              value[u >> 1] = 1 - (u & 1);
-              queue[tail++] = u;
-              fixed++;
-              break;
-            }
+        if (!satisfied[i] && open[i] == 1) {
+          // the clause's only literal not false: true already, or free and now implied
+          int u = remaining(cs.get(i), value);
+          if (u >= 0 && truth(u, value) == 1) {
+            satisfied[i] = true;
+          } else if (u >= 0) {
+            value[u >> 1] = 1 - (u & 1);
+            queue[tail++] = u;
+            fixed++;
           }
         }
       }
     }
     return fixed;
+  }
+
+  // the first literal of the clause that is true or free, or -1 when all are false
+  private static int remaining(int[] c, int[] value) {
+    for (int u : c) {
+      if (truth(u, value) != 0) {
+        return u;
+      }
+    }
+    return -1;
   }
 
   /**
@@ -281,45 +284,12 @@ final class ClauseSimplification {
     List<int[]> out = new ArrayList<>(cs.size());
     Set<List<Integer>> seen = new HashSet<>();
     for (int[] c : cs) {
-      int[] d = new int[c.length];
-      int m = 0;
-      boolean drop = false;
-      for (int l : c) {
-        int t = truth(l, value);
-        if (t == 1) {
-          drop = true;
-          break;
-        }
-        if (t == 0) {
-          continue;
-        }
-        d[m++] = rep == null ? l : rep[l];
-      }
-      if (drop) {
-        continue;
-      }
-      d = Arrays.copyOf(d, m);
-      Arrays.sort(d);
-      int w = 0;
-      for (int k = 0; k < m; k++) {
-        if (w > 0 && d[w - 1] == d[k]) {
-          continue;
-        }
-        if (w > 0 && d[w - 1] == (d[k] ^ 1)) {
-          drop = true;
-          break;
-        }
-        d[w++] = d[k];
-      }
-      if (drop) {
-        continue;
-      }
-      d = Arrays.copyOf(d, w);
-      List<Integer> key = new ArrayList<>(w);
+      int[] d = reduced(c, value, rep);
+      List<Integer> key = new ArrayList<>(d.length);
       for (int l : d) {
         key.add(l);
       }
-      if (seen.add(key)) {
+      if (d.length > 0 && seen.add(key)) {
         out.add(d);
       }
     }
@@ -327,10 +297,41 @@ final class ClauseSimplification {
   }
 
   /**
+   * Returns the clause without its false literals, with representatives in place of the literals
+   * (when given), sorted and without repeated literals; or the empty array when the clause is
+   * satisfied or a tautology (unit propagation has refuted the clauses before any clause can lose
+   * all its literals).
+   */
+  private static int[] reduced(int[] c, int[] value, int[] rep) {
+    int[] d = new int[c.length];
+    int m = 0;
+    for (int l : c) {
+      int t = truth(l, value);
+      if (t == 1) {
+        return new int[0];
+      }
+      if (t < 0) {
+        d[m++] = rep == null ? l : rep[l];
+      }
+    }
+    Arrays.sort(d, 0, m);
+    int w = 0;
+    for (int k = 0; k < m; k++) {
+      if (w > 0 && d[w - 1] == (d[k] ^ 1)) {
+        return new int[0];
+      }
+      if (w == 0 || d[w - 1] != d[k]) {
+        d[w++] = d[k];
+      }
+    }
+    return Arrays.copyOf(d, w);
+  }
+
+  /**
    * The representative of each literal: the least literal of its strongly connected component in
    * the implication graph of the binary clauses, where a clause (a or b) gives not a -> b and not b
-   * -> a. The representative of the negation is the negation of the representative. Returns null
-   * when a literal and its negation are in one component.
+   * -> a. The representative of the negation is the negation of the representative. Returns the
+   * empty array when a literal and its negation are in one component.
    */
   private static int[] representatives(List<int[]> cs, int n) {
     int nodes = 2 * n;
@@ -418,8 +419,8 @@ final class ClauseSimplification {
     for (int l = 0; l < nodes; l += 2) {
       int r = rep[l];
       int s = rep[l + 1];
-      if (r == (l + 1) || r == s) {
-        return null;
+      if (r == s) {
+        return new int[0];
       }
       // r and s are negations of one component pair; take the pair of the least positive literal
       int a = Math.min(r, s ^ 1);

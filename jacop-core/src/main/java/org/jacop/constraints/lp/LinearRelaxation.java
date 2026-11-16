@@ -1955,7 +1955,7 @@ public class LinearRelaxation extends Constraint
   // models in clauses: a refutation over the clause rows and their clique rows (clauseRefutation),
   // made when the binary clauses form at least this many cliques of three or more literals
   private static final boolean CLAUSE_REFUTATION =
-      !"false".equals(System.getProperty("org.jacop.lp.clauseRefutation"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.clauseRefutation"));
   private static final int CLAUSE_REFUTATION_CLIQUES =
       Integer.getInteger("org.jacop.lp.clauseRefutationCliques", 1);
 
