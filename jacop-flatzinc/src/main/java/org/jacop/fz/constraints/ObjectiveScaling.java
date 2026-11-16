@@ -164,8 +164,18 @@ public final class ObjectiveScaling {
     return g;
   }
 
-  // the variable of the objective, or null without one
   private IntVar objective() {
+    return objective(dictionary, model);
+  }
+
+  /**
+   * The variable of the objective of a model.
+   *
+   * @param dictionary the variables of the model
+   * @param model the root of the model tree
+   * @return the variable, or null without one
+   */
+  public static IntVar objective(Tables dictionary, SimpleNode model) {
     for (int i = 0; i < model.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) model.jjtGetChild(i);
       if (node.getId() != ParserTreeConstants.JJTMODELEND) {

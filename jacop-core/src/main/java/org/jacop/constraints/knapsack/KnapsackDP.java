@@ -119,6 +119,13 @@ public class KnapsackDP extends Constraint
 
   private final long limit;
 
+  /**
+   * True if a variable occurs at two positions, as two quantities or as a quantity and the capacity
+   * or the profit. A pass then ends at its first pruning: the tables and the base weight were
+   * computed for the domains before it, and a later step of the pass would mix both.
+   */
+  private final boolean shared;
+
   private boolean adaptive = true;
 
   private double workRatio = DEFAULT_WORK_RATIO;
@@ -203,6 +210,7 @@ public class KnapsackDP extends Constraint
     this.limit = limit;
 
     setScope(Stream.concat(Arrays.stream(quantity), Stream.of(knapsackCapacity, knapsackProfit)));
+    shared = arguments().size() < quantity.length + 2;
   }
 
   /**
@@ -409,6 +417,9 @@ public class KnapsackDP extends Constraint
         knapsackProfit,
         Constraint.long2int(baseProfit + Math.max(0, worstProfit)),
         Constraint.long2int(baseProfit + bestProfit));
+    if (shared && store.propagationHasOccurred) {
+      return;
+    }
 
     // The supports are checked against the pruned capacity domain.
     maxSide.updateBackward(c);
@@ -426,6 +437,9 @@ public class KnapsackDP extends Constraint
             (IntervalDomain) supported.intersect(minSide.supported(i, -profitMax, window, c));
       }
       quantity[i].domain.in(store.level, quantity[i], supported);
+      if (shared && store.propagationHasOccurred) {
+        return;
+      }
     }
   }
 

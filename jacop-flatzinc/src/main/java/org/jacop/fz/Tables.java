@@ -34,6 +34,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -53,6 +54,7 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
+import org.jacop.fz.constraints.SaturatedProducts;
 import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.lcg.AtomicTrail;
@@ -348,6 +350,9 @@ public class Tables {
   private final IdentityHashMap<IntVar, long[]> clampedDeclared = new IdentityHashMap<>();
   // the reasoning that may show the narrowing harmless, or null
   private ClampedBounds clampedBounds;
+  // the narrowed products that may be posted saturated (SaturatedProducts), and those posted so
+  private Set<IntVar> saturationCandidates = Set.of();
+  private final Set<IntVar> saturatedProducts = Collections.newSetFromMap(new IdentityHashMap<>());
 
   /**
    * Records the domains of the variables as declared, before any constraint narrows them, when a
@@ -401,7 +406,7 @@ public class Tables {
    * @param v the variable
    * @return {low, high}
    */
-  long[] declaredBounds(IntVar v) {
+  public long[] declaredBounds(IntVar v) {
     long[] b = clampedDeclared.get(v);
     if (b != null) {
       return b;
@@ -436,6 +441,39 @@ public class Tables {
       }
     }
     return list;
+  }
+
+  /**
+   * Sets the narrowed products that may be posted saturated at the ends of JaCoP's range.
+   *
+   * @param products the products {@link SaturatedProducts} found
+   */
+  public void setSaturationCandidates(Set<IntVar> products) {
+    saturationCandidates = products;
+  }
+
+  /**
+   * Tells whether the product z of int_times is posted saturated at the ends of JaCoP's range, and
+   * records that it is.
+   *
+   * @param z the product, after aliases
+   * @return true if z is one of the products {@link SaturatedProducts} found
+   */
+  public boolean postSaturated(IntVar z) {
+    if (!saturationCandidates.contains(z)) {
+      return false;
+    }
+    saturatedProducts.add(z);
+    return true;
+  }
+
+  /**
+   * The products posted saturated at the ends of JaCoP's range.
+   *
+   * @return the products
+   */
+  public Set<IntVar> saturatedProducts() {
+    return saturatedProducts;
   }
 
   /**

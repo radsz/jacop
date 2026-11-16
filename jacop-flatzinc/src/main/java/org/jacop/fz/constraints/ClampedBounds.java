@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -106,14 +107,20 @@ public final class ClampedBounds {
    * @param astTree the root of the parsed model
    * @param narrowed the narrowed variables, after aliases
    * @param declared the declared bounds {low, high} of a variable, as written in the model
+   * @param saturated the narrowed products posted saturated (XmulYeqZSaturated), which lose no
+   *     solution: they are left out
    */
   public ClampedBounds(
       Support support,
       SimpleNode astTree,
       List<IntVar> narrowed,
-      Function<IntVar, long[]> declared) {
+      Function<IntVar, long[]> declared,
+      Set<IntVar> saturated) {
     this.declared = declared;
     for (IntVar v : narrowed) {
+      if (saturated.contains(v)) {
+        continue;
+      }
       int id = id(v);
       if (!otherOccurrences.containsKey(id)) {
         clamped.add(id);
