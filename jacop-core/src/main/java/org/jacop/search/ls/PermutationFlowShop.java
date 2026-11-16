@@ -104,6 +104,9 @@ final class PermutationFlowShop {
 
   private long iterations;
 
+  // whether the listener asked to stop: it answers true once, not on every later call
+  private boolean stopped;
+
   // the heads, tails and insertion heads of Taillard's acceleration
   private final int[][] e;
   private final int[][] q;
@@ -449,7 +452,7 @@ final class PermutationFlowShop {
     int destroyed = Math.min(4, n - 1);
     int[] work = new int[n];
     int[] removed = new int[destroyed];
-    while (!listener.stop()) {
+    while (!stopped(listener)) {
       iterations++;
       System.arraycopy(current, 0, work, 0, n);
       int len = n;
@@ -482,6 +485,13 @@ final class PermutationFlowShop {
     return true;
   }
 
+  private boolean stopped(Listener listener) {
+    if (!stopped) {
+      stopped = listener.stop();
+    }
+    return stopped;
+  }
+
   // NEH: jobs by decreasing total time, each inserted where the partial makespan is smallest
   int[] neh() {
     Integer[] jobs = new Integer[n];
@@ -505,7 +515,7 @@ final class PermutationFlowShop {
     int span = makespan(seq, n);
     int[] order = new int[n];
     boolean improved = true;
-    while (improved && !listener.stop()) {
+    while (improved && !stopped(listener)) {
       improved = false;
       System.arraycopy(seq, 0, order, 0, n);
       for (int k = n - 1; k > 0; k--) {
