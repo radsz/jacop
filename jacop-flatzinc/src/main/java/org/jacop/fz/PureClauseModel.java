@@ -65,9 +65,15 @@ import org.jacop.satwrapper.SatWrapper;
  */
 final class PureClauseModel {
 
-  /** Whether pure clause models go to JaSAT, the property {@code org.jacop.fz.pureClauses}. */
-  static final boolean ENABLED =
-      Boolean.parseBoolean(System.getProperty("org.jacop.fz.pureClauses", "true"));
+  /**
+   * Returns whether pure clause models go to JaSAT, the property {@code org.jacop.fz.pureClauses},
+   * read at every run.
+   *
+   * @return true unless the property is false
+   */
+  static boolean enabled() {
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.pureClauses", "true"));
+  }
 
   /** The solver, with the clauses added. */
   final CdclSolver solver = new CdclSolver();

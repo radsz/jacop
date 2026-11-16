@@ -2955,7 +2955,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeLcgSearch(Var costVar) {
     Portfolio.Worker worker = options.portfolioWorker();
-    if (PureClauseModel.ENABLED
+    if (PureClauseModel.enabled()
         && costVar == null
         && worker == null
         && options.proof() == null
