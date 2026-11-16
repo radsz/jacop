@@ -759,6 +759,10 @@ public class LinearRelaxation extends Constraint
   // best solutions of 3 families worse: the extra rows cost each solve more than they prune. Not
   // final, so that tests can switch it on
   static boolean zeroHalfOn = Boolean.getBoolean("org.jacop.lp.zeroHalf");
+  // lifted cover cuts of the rows as 0/1 knapsacks (CoverCuts) in the cut rounds, and in search
+  // with org.jacop.lp.mirSearch. Off by default (-Dorg.jacop.lp.coverCuts=true); not final, so that
+  // tests can switch it on
+  static boolean coverOn = Boolean.getBoolean("org.jacop.lp.coverCuts");
   // the most slack of a row the zero-half separator takes, the most rows, and the most sets
   private static final double ZERO_HALF_SLACK = 0.1;
   private static final int ZERO_HALF_ROWS = 2000;
@@ -770,6 +774,9 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: zero-half cuts added (in the cut rounds and in search). */
   public long zeroHalfCuts;
+
+  /** The number of lifted cover cuts added ({@link CoverCuts}). */
+  public long coverCuts;
 
   /** Statistics: MIR cuts of the rows weighted by their dual values added (rounds and search). */
   public long dualCuts;
@@ -5396,6 +5403,15 @@ public class LinearRelaxation extends Constraint
       mir(row, value, lo, hi, found);
     }
     labelled(found, unitBefore, "mir");
+    Set<MirCut> covers = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (coverOn) {
+      int coverBefore = found.size();
+      for (Aggregate row : unitRows) {
+        cover(row, value, lo, hi, found);
+      }
+      covers.addAll(found.subList(coverBefore, found.size()));
+      labelled(found, coverBefore, "cover");
+    }
     if (maxWeight < Long.MAX_VALUE) {
       List<MirCut> small = new ArrayList<>(found.size());
       for (MirCut c : found) {
@@ -5407,6 +5423,9 @@ public class LinearRelaxation extends Constraint
           }
           if (d != c && dual.contains(c)) {
             dual.add(d);
+          }
+          if (d != c && covers.contains(c)) {
+            covers.add(d);
           }
         }
       }
@@ -5433,6 +5452,9 @@ public class LinearRelaxation extends Constraint
         }
         if (dual.contains(c)) {
           dualCuts++;
+        }
+        if (covers.contains(c)) {
+          coverCuts++;
         }
       }
     }
@@ -5619,6 +5641,32 @@ public class LinearRelaxation extends Constraint
     long[] lambda = scaled(y, gomoryScale);
     if (lambda != null) {
       mir(aggregate(lambda), value, lo, hi, found);
+    }
+  }
+
+  // the lifted cover cuts of both sides of a row (CoverCuts)
+  private static void cover(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    if (g == null || g.columns().length < 2) {
+      return;
+    }
+    if (g.hasUpper()) {
+      MirCut c = CoverCuts.separate(g.columns(), g.coef(), g.upper(), value, lo, hi);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+    if (g.hasLower() && g.lower() != Long.MIN_VALUE) {
+      long[] neg = new long[g.coef().length];
+      for (int k = 0; k < neg.length; k++) {
+        if (g.coef()[k] == Long.MIN_VALUE) {
+          return;
+        }
+        neg[k] = -g.coef()[k];
+      }
+      MirCut c = CoverCuts.separate(g.columns(), neg, -g.lower(), value, lo, hi);
+      if (c != null) {
+        found.add(c);
+      }
     }
   }
 
