@@ -62,17 +62,9 @@ final class DiffnExplanation {
   private final AtomicTrail trail;
   private final Rectangle[] rectangle;
   private final int position;
-  // the bounds of the rectangles just before the position, read from the trail only when cover
-  // needs them: most rectangles are ruled out by their lengths or the other dimension, and reading
-  // every bound of every rectangle up front took a tenth of the search time on carpet-cutting
   private final int[][] originMin;
   private final int[][] originMax;
   private final int[][] lengthMin;
-  // per rectangle: LENGTHS when lengthMin is read, ORIGIN << d when originMin/Max[d] are
-  private final byte[] known;
-
-  private static final int LENGTHS = 1;
-  private static final int ORIGIN = 2;
 
   private DiffnExplanation(AtomicTrail trail, Rectangle[] rectangle, int position) {
     this.trail = trail;
@@ -82,51 +74,13 @@ final class DiffnExplanation {
     originMin = new int[2][n];
     originMax = new int[2][n];
     lengthMin = new int[2][n];
-    known = new byte[n];
-  }
-
-  /**
-   * Makes the trail record the origins and lengths of the rectangles, as reading their bounds
-   * would.
-   *
-   * @param trail the trail
-   * @param rectangle the rectangles
-   */
-  static void record(AtomicTrail trail, Rectangle[] rectangle) {
-    for (Rectangle r : rectangle) {
+    for (int k = 0; k < n; k++) {
       for (int d = 0; d < 2; d++) {
-        trail.rootDomain(r.origin[d]);
-        trail.rootDomain(r.length[d]);
+        originMin[d][k] = trail.minBefore(rectangle[k].origin[d], position);
+        originMax[d][k] = trail.maxBefore(rectangle[k].origin[d], position);
+        lengthMin[d][k] = trail.minBefore(rectangle[k].length[d], position);
       }
     }
-  }
-
-  private int lengthMin(int d, int k) {
-    if ((known[k] & LENGTHS) == 0) {
-      known[k] |= LENGTHS;
-      lengthMin[0][k] = trail.minBefore(rectangle[k].length[0], position);
-      lengthMin[1][k] = trail.minBefore(rectangle[k].length[1], position);
-    }
-    return lengthMin[d][k];
-  }
-
-  private void readOrigin(int d, int k) {
-    int bit = ORIGIN << d;
-    if ((known[k] & bit) == 0) {
-      known[k] |= (byte) bit;
-      originMin[d][k] = trail.minBefore(rectangle[k].origin[d], position);
-      originMax[d][k] = trail.maxBefore(rectangle[k].origin[d], position);
-    }
-  }
-
-  private int originMin(int d, int k) {
-    readOrigin(d, k);
-    return originMin[d][k];
-  }
-
-  private int originMax(int d, int k) {
-    readOrigin(d, k);
-    return originMax[d][k];
   }
 
   /**
@@ -188,7 +142,7 @@ final class DiffnExplanation {
         trail.addLowerBound(y, now, out);
         trail.addUpperBound(y, now, out);
         if (explanation.cover(
-            i, d, explanation.originMin(d, i), explanation.originMax(d, i), out)) {
+            i, d, explanation.originMin[d][i], explanation.originMax[d][i], out)) {
           out.sortUnique(mark);
           return true;
         }
@@ -233,28 +187,26 @@ final class DiffnExplanation {
       return true;
     }
     int e = 1 - d;
-    int li = lengthMin(d, i);
-    int liOther = lengthMin(e, i);
+    int li = lengthMin[d][i];
+    int liOther = lengthMin[e][i];
     if (li < 1 || liOther < 1) {
       return false;
     }
-    int iMinOther = originMin(e, i);
-    int iMaxOther = originMax[e][i];
     int n = rectangle.length;
     int[] start = new int[n];
     int[] end = new int[n];
     int count = 0;
     int[] which = new int[n];
     for (int j = 0; j < n; j++) {
-      if (j == i || lengthMin(d, j) < 1 || lengthMin(e, j) < 1) {
+      if (j == i || lengthMin[d][j] < 1 || lengthMin[e][j] < 1) {
         continue;
       }
       // overlapping in the other dimension wherever both are
-      if (iMaxOther >= originMin(e, j) + lengthMin[e][j]
-          || iMinOther + liOther <= originMax[e][j]) {
+      if (originMax[e][i] >= originMin[e][j] + lengthMin[e][j]
+          || originMin[e][i] + liOther <= originMax[e][j]) {
         continue;
       }
-      int s = originMax(d, j) - li + 1;
+      int s = originMax[d][j] - li + 1;
       int t = originMin[d][j] + lengthMin[d][j] - 1;
       if (s <= t && t >= from && s <= to) {
         start[count] = s;
