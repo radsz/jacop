@@ -162,7 +162,6 @@ class PureClauseFlatzincTest {
         String out = run(fzn, free);
         // root probing can decide a model before the search
         routed += out.contains("%%%mzn-stat: pureClauseModel=true") ? 1 : 0;
-        if (seed == 1) {}
         runs++;
         check(cnf, out);
       }
