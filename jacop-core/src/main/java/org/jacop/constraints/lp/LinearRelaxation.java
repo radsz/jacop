@@ -894,6 +894,11 @@ public class LinearRelaxation extends Constraint
   private Certificate[] rootCertificates = new Certificate[0];
   // the LP-only column facts of each root form, for its explanation
   private int[][] rootFacts = new int[0][];
+  // the bounds of the objective that the root forms were propagated with on the current branch,
+  // and the levels they were propagated at, a trail undone by removeLevel
+  private long[] rootBoundsAt = new long[8];
+  private int[] rootBoundsLevel = new int[8];
+  private int rootBoundsSize;
   private long[] solvedLo;
   private long[] solvedHi;
 
@@ -1268,7 +1273,12 @@ public class LinearRelaxation extends Constraint
         }
       }
       LinearForm f = LinearForms.of(c);
-      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+      if (f != null && store.isOptionalRow(c)) {
+        // tried like the clauses: the 84,897 dominance nogoods of knapPI similar_weights (5,000
+        // items) made the relaxation large, solved at the root only, and search lost its bound
+        relaxed.add(f);
+        tags.put(f, "optional:" + c.getClass().getSimpleName());
+      } else if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
         localForms.add(f);
         tags.put(f, "row:" + c.getClass().getSimpleName());
       } else if (f == null && LINEARIZE && !linked.contains(c)) {
@@ -2879,6 +2889,10 @@ public class LinearRelaxation extends Constraint
     if (refutation && calls > 0) {
       return; // solved once at the root, see refutation()
     }
+    // root forms made at a restart over tightened root bounds hold only while that level stays
+    if (ROOT_REDUCED_COSTS && calls > 0 && !restarting && !tightLost) {
+      rootReducedCosts(store);
+    }
     if (large && calls > 0 && store.level > rootLevel && !restarting) {
       // a large relaxation does nothing in search once it is solved: it never prunes there, so
       // the constraints of its rows hold an assignment to them, and checking the ground columns
@@ -2897,13 +2911,6 @@ public class LinearRelaxation extends Constraint
       rootObjective = objectiveBound();
     } else if (store.level <= rootLevel && objectiveBound() != rootObjective) {
       rootObjective = objectiveBound();
-      if (ROOT_REDUCED_COSTS) {
-        long pruned = prunings;
-        for (int k = 0; k < rootForms.length; k++) {
-          propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
-        }
-        rootPrunings += prunings - pruned;
-      }
       if (restartSolvesOn && rootBoundsChanged() && ++restartsWaited >= restartPeriod) {
         restartsWaited = 0;
         restartSolve(store);
@@ -2977,6 +2984,37 @@ public class LinearRelaxation extends Constraint
       }
     }
     checkGround();
+  }
+
+  // propagates the root forms again on the current branch when the bound of the objective has
+  // improved since they were last propagated on it. The bounds they were propagated with are
+  // trailed by level, so that the prunings undone by a backtrack are made again: at the level of
+  // the first solve alone, which the search never returns to, they never fired (knapPI
+  // similar_weights of the PB competition, 5,000 items: root bound 48,769.05 and optimum 48,768,
+  // no proof in 240 s). On a branch they are propagated once per bound, not at every call, which
+  // costs more than it prunes (bus_scheduling, osolpro #169)
+  private void rootReducedCosts(Store store) {
+    if (rootForms.length == 0) {
+      return;
+    }
+    long bound = objectiveBound();
+    if (rootBoundsSize > 0 && rootBoundsAt[rootBoundsSize - 1] == bound) {
+      return;
+    }
+    if (rootBoundsSize > 0 && rootBoundsLevel[rootBoundsSize - 1] == store.level) {
+      rootBoundsSize--;
+    }
+    if (rootBoundsSize == rootBoundsAt.length) {
+      rootBoundsAt = Arrays.copyOf(rootBoundsAt, 2 * rootBoundsSize);
+      rootBoundsLevel = Arrays.copyOf(rootBoundsLevel, 2 * rootBoundsSize);
+    }
+    rootBoundsAt[rootBoundsSize] = bound;
+    rootBoundsLevel[rootBoundsSize++] = store.level;
+    long pruned = prunings;
+    for (int k = 0; k < rootForms.length; k++) {
+      propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+    }
+    rootPrunings += prunings - pruned;
   }
 
   // whether the bounds of a column other than the objective are tighter than at the last solve at
@@ -6324,6 +6362,9 @@ public class LinearRelaxation extends Constraint
   public void removeLevel(int level) {
     if (tightFrom >= 0 && level <= rootLevel) {
       tightLost = true;
+    }
+    while (rootBoundsSize > 0 && rootBoundsLevel[rootBoundsSize - 1] >= level) {
+      rootBoundsSize--;
     }
     int k = deducedLevel.size();
     while (k > 0 && deducedLevel.get(k - 1) >= level) {
