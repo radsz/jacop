@@ -3188,7 +3188,9 @@ class FlatzincFrontEndTest {
     // pigeons do not fit
     System.setProperty("org.jacop.fz.alldifferent", "false");
     try {
-      String out = run(model.toString(), "--lcg", "-t", "100")[0];
+      // without the linear relaxation: the root clause refutation refutes it at once from the
+      // cliques of the pair clauses
+      String out = run(model.toString(), "--lcg", "--lp", "off", "-t", "100")[0];
       assertTrue(!out.contains("==========") && !out.contains("UNSATISFIABLE"), out);
       assertTrue(out.contains("=====UNKNOWN=====") || out.contains("TIME-OUT"), out);
     } finally {

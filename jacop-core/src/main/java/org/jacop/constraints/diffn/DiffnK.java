@@ -101,6 +101,14 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
   private boolean slices;
 
   // work arrays of layers 4 and 5
+  /**
+   * True once pruning has run to its end. Until then a box fixed before the current level has not
+   * been checked: when the store raises its level before consistency
+   * (Store.raiseLevelBeforeConsistency), the boxes fixed at the level of imposition reach the first
+   * pruning one level higher.
+   */
+  private boolean prunedOnce;
+
   private long[] events;
   private boolean[] active;
   private long[] crossSection;
@@ -517,7 +525,7 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
       Box b = box[i];
       BitSet current = candidates[i].value();
 
-      if (b.fixedBefore(store.level)) {
+      if (prunedOnce && b.fixedBefore(store.level)) {
         // the other boxes still have b as a candidate and prune against it
         if (!current.isEmpty()) {
           candidates[i].update(new BitSet());
@@ -559,6 +567,7 @@ public class DiffnK extends Constraint implements SatisfiedPresent, Copyable<Dif
         excludeIfNoRoom(b, current);
       }
     }
+    prunedOnce = true;
   }
 
   /** True if the two boxes can never overlap again, whatever their remaining values. */

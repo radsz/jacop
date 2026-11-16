@@ -31,6 +31,7 @@
 package org.jacop.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -154,5 +155,74 @@ class DomainTrailTest {
     long[] words = new long[5];
     trail.savedWords(a, entry, words);
     assertThat(words).containsExactly(100, 101, 102, 103, 0);
+  }
+
+  /**
+   * Pushes entries until the allocation of a segment fails, then pops them all. A failed push used
+   * to advance the segment anyway, so the pop walked the last full segment twice and read the
+   * objects of other entries (an ArrayIndexOutOfBoundsException in getObject on a 500x20 flow shop
+   * that ran out of heap with 67 million ints on the trail).
+   */
+  private static void popsAfterFailedAllocation(int intCount, int objectCount) {
+    DomainTrail trail = new DomainTrail();
+    // segments of 1024, 2048, 4096 and 8192 elements; the fifth one fails
+    trail.allocationLimit = 8192;
+    Recorder r = new Recorder();
+    List<long[]> pushed = new ArrayList<>();
+    assertThatThrownBy(
+            () -> {
+              for (int i = 0; ; i++) {
+                int level = 1 + i / 100;
+                if (i % 2 == 0) {
+                  trail.pushWord(r, i % 1000, level, level, 1L << 40 | i);
+                  pushed.add(new long[] {i % 1000, level, 1L << 40 | i});
+                } else {
+                  int entry = trail.push(r, -intCount, level, intCount, objectCount);
+                  long[] u = new long[2 + 2 * intCount];
+                  u[0] = -intCount;
+                  u[1] = 1;
+                  for (int k = 0; k < intCount; k++) {
+                    trail.setInt(entry, k, i * 10 + k);
+                    u[2 + k] = i * 10L + k;
+                  }
+                  for (int k = 0; k < objectCount; k++) {
+                    trail.setObject(entry, k + 1, -(i * 10 + k));
+                    if (k < intCount) {
+                      u[2 + intCount + k] = -(i * 10L + k);
+                    }
+                  }
+                  pushed.add(u);
+                }
+              }
+            })
+        .isInstanceOf(OutOfMemoryError.class);
+
+    // the store pops its levels while the error unwinds the search
+    trail.removeLevel(1);
+    assertThat(trail.isEmpty()).isTrue();
+    assertThat(r.undone).hasSize(pushed.size());
+    for (int j = 0; j < pushed.size(); j++) {
+      assertThat(r.undone.get(j)).containsExactly(pushed.get(pushed.size() - 1 - j));
+    }
+
+    // the trail is usable again once the memory is there
+    trail.allocationLimit = Integer.MAX_VALUE;
+    r.undone.clear();
+    fill(trail, r, 1, 20, 1000);
+    trail.removeLevel(1);
+    assertThat(r.undone).hasSize(20 * 1000);
+    assertThat(trail.isEmpty()).isTrue();
+  }
+
+  @Test
+  void popsAfterFailedIntSegmentAllocation() {
+    // five ints per word entry: the int stream needs a new segment first
+    popsAfterFailedAllocation(4, 4);
+  }
+
+  @Test
+  void popsAfterFailedObjectSegmentAllocation() {
+    // 21 objects and 4 ints per other entry: the object stream needs a new segment first
+    popsAfterFailedAllocation(1, 20);
   }
 }
