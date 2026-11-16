@@ -395,6 +395,7 @@ class ConsistencyChecker {
           path.append(' ').append(decide(store, free.get(random.nextInt(free.size())), random));
           before = solutions(m);
           String atNode = path + " gives " + domainsOf(m.vars());
+          checkSatisfiedBefore(result, path.toString(), m);
           consistent = propagate(store, result, atNode);
           checkNode(result, atNode, store, m, before, consistent);
           if (!consistent) {
@@ -408,6 +409,68 @@ class ConsistencyChecker {
       }
     }
     return result;
+  }
+
+  /**
+   * Whether satisfied() claims nothing false: when it says true, every tuple of the domains is a
+   * solution. Checked after propagation and also just after a decision, before propagation, since
+   * the LCG represolve and the FlatZinc component split drop a constraint that says it is satisfied
+   * at whatever state they find it.
+   */
+  private static boolean satisfiedIsSound(
+      Result result, String where, Model m, int[] lo, int[] hi, int[] first) {
+    IntVar[] vars = m.vars();
+    if (m.constraint() instanceof org.jacop.api.SatisfiedPresent sp) {
+      boolean claimed;
+      try {
+        claimed = sp.satisfied();
+      } catch (RuntimeException e) {
+        result.errors.add(where + ": satisfied() threw " + e);
+        return false;
+      }
+      if (claimed) {
+        int[][] counter = new int[1][];
+        forEachTuple(
+            lo,
+            hi,
+            first,
+            t -> {
+              if (counter[0] == null && inDomains(vars, t) && !m.relation().test(t)) {
+                counter[0] = t.clone();
+              }
+            });
+        if (counter[0] != null) {
+          result.errors.add(
+              where
+                  + ": satisfied() is true, but "
+                  + Arrays.toString(counter[0])
+                  + " is no solution");
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /** The satisfied() check on the domains a decision left, before propagation. */
+  private static void checkSatisfiedBefore(Result result, String where, Model m) {
+    if (m.constraint() instanceof DifferenceCycles || m.constraint() instanceof EnergyPrecedence) {
+      return;
+    }
+    IntVar[] vars = m.vars();
+    int n = vars.length;
+    int[] lo = new int[n];
+    int[] hi = new int[n];
+    for (int i = 0; i < n; i++) {
+      if (vars[i].domain.isEmpty()) {
+        return;
+      }
+      lo[i] = vars[i].min();
+      hi[i] = vars[i].max();
+    }
+    if (boxSize(lo, hi, m.alias()) <= MAX_BOX) {
+      satisfiedIsSound(result, where + " (before propagation)", m, lo, hi, m.alias());
+    }
   }
 
   /** The constraint's own text, with -Dconsistency.describe=true, to read a counterexample. */
@@ -492,34 +555,8 @@ class ConsistencyChecker {
         return;
       }
     }
-    if (complete && m.constraint() instanceof org.jacop.api.SatisfiedPresent sp) {
-      boolean claimed;
-      try {
-        claimed = sp.satisfied();
-      } catch (RuntimeException e) {
-        result.errors.add(where + ": satisfied() threw " + e);
-        return;
-      }
-      if (claimed) {
-        int[][] counter = new int[1][];
-        forEachTuple(
-            lo,
-            hi,
-            first,
-            t -> {
-              if (counter[0] == null && inDomains(vars, t) && !m.relation().test(t)) {
-                counter[0] = t.clone();
-              }
-            });
-        if (counter[0] != null) {
-          result.errors.add(
-              where
-                  + ": satisfied() is true, but "
-                  + Arrays.toString(counter[0])
-                  + " is no solution");
-          return;
-        }
-      }
+    if (complete && !satisfiedIsSound(result, where, m, lo, hi, first)) {
+      return;
     }
     // supportedZ[i][k]: value lo[i] + k of vars[i] has a support in the intervals; supportedD in
     // the domains
@@ -1840,6 +1877,10 @@ class ConsistencyChecker {
         new Case("HybridTableShort", Level.DOMAIN, (s, r) -> hybridTable(s, r, true)),
         // constraint audit, 2026-11-15: constraints added to develop-5.0 since the last round
         new Case("BinaryBitTable", Level.DOMAIN, ConsistencyChecker::binaryBitTable),
+        new Case(
+            "ChannelOrder",
+            SHARED_ORDER_LITERALS ? Level.NONE : Level.DOMAIN,
+            ConsistencyChecker::channelOrder),
         new Case("ArgMax", Level.DOMAIN, (s, r) -> argMaxMonotone(s, r, false)),
         new Case(
             "ArgMin",
@@ -2501,6 +2542,52 @@ class ConsistencyChecker {
   /**
    * A random table of 2 to 4 columns, plain or with unary restrictions (short and smart tables).
    */
+  /*
+   * b[i] <=> (x <= t[i]) when atMost[i], b[i] <=> (x > t[i]) otherwise, an implied item only the
+   * implication b[i] => comparison. Items with their own 0/1 variables reach domain consistency;
+   * with a shared one (consistency.sharedOrder=true, only soundness then) they do not reason
+   * across the items, by design.
+   */
+  private static final boolean SHARED_ORDER_LITERALS =
+      Boolean.getBoolean("consistency.sharedOrder");
+
+  private static Model channelOrder(Store store, Random random) {
+    IntVar x = aVar(store, "x", -2, 5, random);
+    int k = 2 + random.nextInt(3);
+    IntVar[] own = bools(store, "b", k);
+    IntVar[] b = new IntVar[k];
+    int[] t = new int[k];
+    boolean[] atMost = new boolean[k];
+    boolean[] implied = new boolean[k];
+    for (int i = 0; i < k; i++) {
+      b[i] =
+          SHARED_ORDER_LITERALS && i > 0 && random.nextInt(4) == 0 ? b[random.nextInt(i)] : own[i];
+      t[i] = random.nextInt(8) - 2;
+      atMost[i] = random.nextBoolean();
+      implied[i] = random.nextInt(3) == 0;
+    }
+    IntVar[] vars = new IntVar[k + 1];
+    System.arraycopy(own, 0, vars, 0, k);
+    vars[k] = x;
+    int[] index = new int[k];
+    for (int i = 0; i < k; i++) {
+      index[i] = Arrays.asList(own).indexOf(b[i]);
+    }
+    return new Model(
+        new org.jacop.constraints.ChannelOrder(x, b, t, atMost, implied),
+        a -> {
+          for (int i = 0; i < k; i++) {
+            boolean holds = atMost[i] ? a[k] <= t[i] : a[k] > t[i];
+            boolean bi = a[index[i]] == 1;
+            if (implied[i] ? bi && !holds : bi != holds) {
+              return false;
+            }
+          }
+          return true;
+        },
+        vars);
+  }
+
   private static Model binaryBitTable(Store store, Random random) {
     IntVar[] x = vars(store, "x", 2, -1, 4, random);
     int[][] tuples = new int[1 + random.nextInt(12)][];

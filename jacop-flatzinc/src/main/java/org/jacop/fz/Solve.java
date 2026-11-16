@@ -429,14 +429,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
   }
 
-  // the parse tree is read by the other threads of a portfolio (Parser.build): it is kept whole
-  private boolean sharedModelTree;
-
-  /** Keeps the parse tree whole during the search, since other parsers build from it too. */
-  void shareModelTree() {
-    sharedModelTree = true;
-  }
-
   /**
    * Drops the parsed variable and constraint items of the model once the model is built and the
    * search is about to start: the store holds what was built from them, and only the solve item is
@@ -447,9 +439,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param solveItem the solve item, whose branch of the parse tree is kept
    */
   private void releaseModelItems(SimpleNode solveItem) {
-    if (sharedModelTree) {
-      return;
-    }
     releaseAllBut(solveItem);
   }
 
@@ -1142,6 +1131,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + refutation.refutationOutcome()
               + "\n%%%mzn-stat: lpRefutationObjective="
               + refutation.hasPseudoObjective()
+              + "\n%%%mzn-stat: lpRefutationKind="
+              + refutation.refutationKind()
               + "\n%%%mzn-stat: lpRefutationTime="
               + (refutationBuildNanos + refutation.solveNanos) / 1e9
               + "\n%%%mzn-stat: lpRefutationSolveTime="
@@ -3157,6 +3148,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcg.onBound(
           lower -> {
             lcgBoundRaised = solver.sat().now();
+            synchronized (lcgBounds) {
+              lcgBounds.addLast(new long[] {lcgBoundRaised, lower});
+            }
             if (reportBound(lower)) {
               solver.stop();
             }
@@ -3538,6 +3532,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private volatile boolean lcgSlow;
   // when LCG last raised the bound on the objective (CdclSolver.now of the LCG solver)
   private volatile long lcgBoundRaised;
+  // the bounds LCG raised, with their times (CdclSolver.now), oldest first
+  private final ArrayDeque<long[]> lcgBounds = new ArrayDeque<>();
+  // the bound on the objective when the check of LCG's speed started
+  private long lcgStartBound;
   // set when LCG free search gave way without a solution, for making too few conflicts
   private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
@@ -3550,6 +3548,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // makes no check: a check that finds LCG still in its root propagation starts the wait again
   private long slowCheckWait;
   private long slowCheckFrom;
+  // the wait before the first check after LCG's root propagation (the early check when it is on)
+  private long slowCheckFirst;
 
   // the part of the time-out that must be left for LCG free search to give way to free search
   // without learning
@@ -3611,6 +3611,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
+    lcgBoundGain = Double.parseDouble(options.freeConfig("lcg-slow-bound-gain", "0.0005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     double perLiteral = Double.parseDouble(options.freeConfig("lcg-slow-literal", "5"));
     if (costVar == null) {
@@ -3625,20 +3626,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     LcgSolver solver = lcg;
     lcgStart = solver.sat().now();
     lcgBoundRaised = Long.MIN_VALUE;
+    lcgStartBound = costVar instanceof IntVar c ? c.min() : 0;
     long stallNanos = (long) (stall * options.getTimeOut() * 1_000_000L);
-    long wait =
-        (long)
-            (at
-                * (CdclSolver.VIRTUAL_CLOCK
-                    ? options.getTimeOut()
-                    : options.getRemainingTimeOut()));
-    if (wait <= 0) {
+    long limit = CdclSolver.VIRTUAL_CLOCK ? options.getTimeOut() : options.getRemainingTimeOut();
+    long regularWait = (long) (at * limit);
+    if (regularWait <= 0) {
       // lcg-slow-at=0: free search without learning from the start, after LCG's root propagation
       lcgSlow = true;
       solver.stop();
       return null;
     }
-    slowCheckWait = wait * 1_000_000L;
+    lcgHopelessRate = Double.parseDouble(options.freeConfig("lcg-hopeless-rate", "1"));
+    double hopelessAt = Double.parseDouble(options.freeConfig("lcg-hopeless-at", "0.02"));
+    lcgRegularCheck = lcgStart + regularWait * 1_000_000L;
+    long wait =
+        lcgHopelessRate > 0 && hopelessAt > 0 && hopelessAt < at
+            ? Math.max(1, (long) (hopelessAt * limit))
+            : regularWait;
+    slowCheckWait = regularWait * 1_000_000L;
+    slowCheckFirst = wait * 1_000_000L;
     slowCheckFrom = Long.MIN_VALUE;
     // the best cost printed at each check, to measure the gain over the last window
     ArrayDeque<long[]> costs = new ArrayDeque<>();
@@ -3832,8 +3838,23 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // of the 24 s before the check, LCG gave way at 0 conflicts/s and the search without learning
       // found 536 but no proof in 240 s; LCG kept proves it 15 s after its root propagation
       lcgStart = now;
-      slowCheckFrom = now + slowCheckWait;
+      slowCheckFrom = now + slowCheckFirst;
+      lcgRegularCheck = now + slowCheckWait;
       return true;
+    }
+    if (now < lcgRegularCheck) {
+      return !hopelessLcg(solver, now, unsolvedOnly);
+    }
+    if (options.debug() && !lcgCheckPrinted) {
+      lcgCheckPrinted = true;
+      IO.println(
+          "%% LCG speed check: "
+              + solver.sat().conflicts
+              + " conflicts in "
+              + String.format(Locale.ROOT, "%.1f", (now - lcgStart) / 1e9)
+              + " s, "
+              + (solutionFound ? "with" : "without")
+              + " a solution");
     }
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
@@ -3855,7 +3876,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     } else if (solutionFound) {
       long before = costs.peekFirst()[1];
-      if (stillProgressing(now, stallNanos, gain, lcgBoundRaised, before, cost)) {
+      long raised =
+          boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
+      if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
         lcgSlowDeferred++;
       } else {
         lcgSlow = true;
@@ -3870,6 +3893,91 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return true;
+  }
+
+  // the share of the gap a bound raise must close to keep a slow LCG (lcg-slow-bound-gain): on
+  // rect-euler (MiniZinc Challenge 2026) LCG raises the bound in bursts of steps of a few units: at
+  // the share 0.005 of lcg-slow-gain it gave way with the bound at 3,887 and ended at 8,471 in 600
+  // s,
+  // at 0.0005 it kept going to a bound of 5,340 and ended at 8,029
+  private double lcgBoundGain;
+  // the conflicts per second below which LCG gives way before the regular check (lcg-hopeless-rate)
+  private double lcgHopelessRate;
+  // when the regular check of LCG's speed starts (CdclSolver.now of the LCG solver)
+  private long lcgRegularCheck;
+  // set when LCG gave way at the early check, for the statistics
+  private volatile boolean lcgHopeless;
+  // whether -debug printed the first regular check of LCG's speed
+  private boolean lcgCheckPrinted;
+
+  /**
+   * The early check of LCG's speed, from a share lcg-hopeless-at (2 %) of the time limit until the
+   * regular check: LCG making fewer than lcg-hopeless-rate (1) conflicts per second gives way, with
+   * or without a solution (fixed search only without one). On the giant-tour CVRP model of the
+   * MiniZinc Challenge 2015 (CVRPLIB X-n110-k13, 327 nodes) each LCG dive takes seconds, mostly in
+   * the explanations of the elements {@code a[successor[i]]}: 4 conflicts in 12 s, and its first
+   * solution at 21 to 57 s, while free search without learning finds one 8 s after it starts and
+   * then improves on it with route neighbourhoods.
+   *
+   * @return true when LCG was stopped
+   */
+  private boolean hopelessLcg(LcgSolver solver, long now, boolean unsolvedOnly) {
+    if (solver.sat().conflicts >= lcgHopelessRate * (now - lcgStart) / 1e9
+        || (solutionFound && unsolvedOnly)
+        || tooLateForFreeSearch(solver)) {
+      return false;
+    }
+    lcgHopeless = true;
+    lcgSlowUnsolved = !solutionFound;
+    lcgSlow = true;
+    solver.stop();
+    return true;
+  }
+
+  /**
+   * Whether the bounds LCG raised during the last window closed at least the share {@code gain} of
+   * the gap between the bound at the start of the window and the best cost. On the giant-tour CVRP
+   * model of the MiniZinc Challenge 2015 (CVRPLIB X-n110-k13) LCG makes about 3 conflicts/s and
+   * raised the bound from 4 to 5 at 54 s against a best cost of 59,211: a raise of any size kept it
+   * until 104 s of 600, while free search without learning, with neighbourhoods, improves the cost
+   * by a fifth in that time.
+   *
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
+   * @param window the length of the window, in nanoseconds
+   * @param gain the share of the gap the bound must close over the window
+   * @param cost the best cost printed now
+   * @return true if the bound rose by enough during the window
+   */
+  private boolean boundGained(long now, long window, double gain, long cost) {
+    long before = lcgStartBound;
+    long after = lcgStartBound;
+    synchronized (lcgBounds) {
+      for (long[] b : lcgBounds) {
+        if (b[0] <= now - window) {
+          before = b[1];
+        }
+        after = b[1];
+      }
+    }
+    return boundClosesGap(before, after, gain, cost);
+  }
+
+  /**
+   * Whether raising the bound from {@code before} to {@code after} closes at least the share {@code
+   * gain} of the gap to the best cost {@code cost} ({@code Integer.MAX_VALUE} when there is none,
+   * when any raise counts).
+   *
+   * @param before the bound at the start of the window
+   * @param after the bound now
+   * @param gain the share of the gap
+   * @param cost the best cost printed now
+   * @return true if the raise is large enough
+   */
+  static boolean boundClosesGap(long before, long after, double gain, long cost) {
+    if (after <= before) {
+      return false;
+    }
+    return cost == Integer.MAX_VALUE || after - before >= gain * (cost - before);
   }
 
   /**
@@ -4973,8 +5081,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return;
     }
     lcg.setSharedClauses(worker.sharedClauses(), added, names::get, size, lbd);
+    // the tree's cubes are also over the elements of arrays of variables, on which the model
+    // usually branches: with its scalar variables alone, a knapsack declared as an array split
+    // only on the objective, and its last cube stayed with one thread while three waited
     if ("1".equals(options.freeConfig("lcg-split", "0"))
-        && !lcg.setSharedTree(worker.sharedTree(), added)) {
+        && !lcg.setSharedTree(worker.sharedTree(), added, modelVariableNames()::get)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
     }
   }
@@ -6168,9 +6279,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         freeLns.solution(lcgHinted, lcgHint);
       }
       if (freeLns != null) {
+        // on vehicle routes the neighbourhoods get three times the work of the other runs, not
+        // 0.8: branch and bound over hundreds of successors rarely improves a tour, route and
+        // related removal do. CVRPLIB X-n110-k13 and X-n120-k6 (giant tour of the 2015 Challenge
+        // model) at 240 s: 45,337 to 37,706 and 58,171 to 50,976
+        String share = freeLns.hasRoutes() ? options.freeConfig("lns-share-routes", "3") : "0.8";
         builder.lns(
             freeLns,
-            Double.parseDouble(options.freeConfig("lns-share", "0.8")),
+            Double.parseDouble(options.freeConfig("lns-share", share)),
             Long.parseLong(options.freeConfig("lns-fails", "100")));
       }
     }
@@ -6715,22 +6831,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || label.getExitChildListener() != null) {
       return null;
     }
-    Map<IntVar, String> names = new IdentityHashMap<>();
-    for (String name : dictionary.variableTable.keySet()) {
-      IntVar x = dictionary.getVariable(name);
-      if (x != null) {
-        names.putIfAbsent(x, name);
-      }
-    }
-    // the elements of arrays of variables declared in the model, in an order every thread shares
-    for (String name : new TreeSet<>(dictionary.variableArrayTable.keySet())) {
-      IntVar[] xs = dictionary.variableArrayTable.get(name);
-      for (int i = 0; i < xs.length; i++) {
-        if (xs[i] != null) {
-          names.putIfAbsent(xs[i], name + "[" + (i + 1) + "]");
-        }
-      }
-    }
+    Map<IntVar, String> names = modelVariableNames();
     String added = symmetry == null ? "" : symmetry.added(names::get);
     org.jacop.jasat.lcg.SharedTree tree = worker.dfsTree();
     if (added == null || !tree.join(added)) {
@@ -6749,6 +6850,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       byId[e.getValue()] = e.getKey();
     }
     return new DfsSplit<>(tree, select, store, ids, byId);
+  }
+
+  /**
+   * The names of the model's integer variables, the same in every thread of a portfolio: scalar
+   * variables by their name, and elements of arrays of variables declared in the model as {@code
+   * name[i]} (from 1), unless they have a name of their own.
+   */
+  private Map<IntVar, String> modelVariableNames() {
+    Map<IntVar, String> names = new IdentityHashMap<>();
+    for (String name : dictionary.variableTable.keySet()) {
+      IntVar x = dictionary.getVariable(name);
+      if (x != null) {
+        names.putIfAbsent(x, name);
+      }
+    }
+    // in an order every thread shares
+    for (String name : new TreeSet<>(dictionary.variableArrayTable.keySet())) {
+      IntVar[] xs = dictionary.variableArrayTable.get(name);
+      for (int i = 0; i < xs.length; i++) {
+        if (xs[i] != null) {
+          names.putIfAbsent(xs[i], name + "[" + (i + 1) + "]");
+        }
+      }
+    }
+    return names;
   }
 
   /**
@@ -7366,6 +7492,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
           IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
+          IO.println("%%%mzn-stat: lcgHopeless=" + lcgHopeless);
         }
       }
       return;
