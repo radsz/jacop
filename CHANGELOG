@@ -6625,7 +6625,7 @@ Version 5.0 (unreleased)
    Clique instances of the XCSP 2026 competition it proves 10 at 600 s
    instead of 6 (brock400-4 in 149 s, brock400-2 in 369 s, p-hat0700-2,
    p-hat1500-1), brock800-2 and brock800-4 reach their optima (24, 26,
-   before 19), and the summed time goes from 5169 s to 3610 s;
+   before 19), and the summed time goes from 5769 s to 3610 s;
    p-hat1500-2 and p-hat1500-3 end one below (64 and 93).
 
 Version 4.11
