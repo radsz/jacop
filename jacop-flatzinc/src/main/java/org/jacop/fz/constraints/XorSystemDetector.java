@@ -110,6 +110,20 @@ public class XorSystemDetector implements ParserTreeConstants {
   /** Statistics: the equations read as two opposite inequalities. */
   int pairedRows;
 
+  /** Statistics: the parity rows recovered from clauses. */
+  int clauseRows;
+
+  // the parities encoded as clauses enter the system (see clause(IntVar[], IntVar[]))
+  static final boolean CLAUSES =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.xorClauses"));
+
+  // the longest parity recovered from clauses: one of k variables takes 2^(k-1) clauses
+  static final int MAX_CLAUSE_XOR = Integer.getInteger("jacop.fz.xorClauseLength", 8);
+
+  // the clauses of at most MAX_CLAUSE_XOR variables by their variables (sorted columns), each
+  // with the points it excludes: bit i is the value of the i-th column at which the clause is false
+  private final Map<Columns, long[]> clauses = new HashMap<>();
+
   // the 0/1 columns of a table read, at most, for its implied parities
   static final int MAX_TABLE_COLUMNS = 63;
 
@@ -140,6 +154,7 @@ public class XorSystemDetector implements ParserTreeConstants {
   public void detect(SimpleNode astTree) {
     support.forEachConstraint(astTree, this::collect);
     lessEquals.clear();
+    clauseRows();
     if (rows.size() < 2) {
       return;
     }
@@ -187,6 +202,12 @@ public class XorSystemDetector implements ParserTreeConstants {
               + zeroOneRows
               + "\n%%%mzn-stat: xorPairedRows="
               + pairedRows
+              + "\n%%%mzn-stat: xorClauseRows="
+              + clauseRows
+              + "\n%%%mzn-stat: xorQuadraticRows="
+              + quadraticRows
+              + "\n%%%mzn-stat: xorProducts="
+              + products
               + "\n%%%mzn-stat-end");
     }
     if (support.options.debug() && systems > 0) {
@@ -199,7 +220,9 @@ public class XorSystemDetector implements ParserTreeConstants {
               + tableRows
               + " rows from tables, "
               + linearRows
-              + " rows from linear equations");
+              + " rows from linear equations, "
+              + clauseRows
+              + " rows from clauses");
     }
   }
 
@@ -214,6 +237,13 @@ public class XorSystemDetector implements ParserTreeConstants {
       case "bool_xor" -> {
         if (node.jjtGetNumChildren() == 3) {
           row(new IntVar[] {aVar(node, 0), aVar(node, 1), aVar(node, 2)}, 0);
+        }
+      }
+      case "bool_clause" -> {
+        if (CLAUSES && node.jjtGetNumChildren() == 2) {
+          clause(
+              support.getVarArray((SimpleNode) node.jjtGetChild(0)),
+              support.getVarArray((SimpleNode) node.jjtGetChild(1)));
         }
       }
       case "bool_not" -> row(new IntVar[] {aVar(node, 0), aVar(node, 1)}, 1);
@@ -373,6 +403,445 @@ public class XorSystemDetector implements ParserTreeConstants {
       }
       tableRows++;
       row(x, Long.bitCount(a & first) & 1);
+    }
+  }
+
+  /**
+   * It records a clause {@code pos_1 or ... or not neg_1 or ...} over at most {@link
+   * #MAX_CLAUSE_XOR} variables. A clause with a variable fixed to the value that satisfies it holds
+   * and is left out; a variable fixed to the other value is dropped from it.
+   */
+  private void clause(IntVar[] pos, IntVar[] neg) {
+    if (pos.length + neg.length > MAX_CLAUSE_XOR || pos.length + neg.length < 2) {
+      return;
+    }
+    int[] cols = new int[pos.length + neg.length];
+    boolean[] negated = new boolean[cols.length];
+    int size = 0;
+    for (int s = 0; s < 2; s++) {
+      IntVar[] lits = s == 0 ? pos : neg;
+      for (IntVar v : lits) {
+        if (v.min() < 0 || v.max() > 1) {
+          return;
+        }
+        if (v.singleton()) {
+          if ((v.value() == 1) == (s == 0)) {
+            // the literal is true, the clause holds
+            return;
+          }
+          continue;
+        }
+        int c = node(v);
+        for (int j = 0; j < size; j++) {
+          if (cols[j] == c) {
+            if (negated[j] != (s == 1)) {
+              // x or not x
+              return;
+            }
+            c = -1;
+            break;
+          }
+        }
+        if (c >= 0) {
+          cols[size] = c;
+          negated[size] = s == 1;
+          size++;
+        }
+      }
+    }
+    if (size < 2) {
+      return;
+    }
+    // sorted columns; the excluded point has the negated variables at 1
+    int[] sorted = Arrays.copyOf(cols, size);
+    Arrays.sort(sorted);
+    int point = 0;
+    for (int j = 0; j < size; j++) {
+      if (negated[j]) {
+        point |= 1 << Arrays.binarySearch(sorted, cols[j]);
+      }
+    }
+    long[] points = clauses.computeIfAbsent(new Columns(sorted), k -> new long[4]);
+    points[point >>> 6] |= 1L << (point & 63);
+  }
+
+  /**
+   * It adds a parity row for each set of k variables whose clauses exclude all 2^(k-1) points of
+   * one parity, the CNF encoding of {@code x_1 xor ... xor x_k = p}, as CryptoMiniSat finds the
+   * XORs of a CNF (Soos, Nohl and Castelluccia, SAT 2009). The clauses over a subset of the
+   * variables count too: each excludes all points that agree with it on the subset, so an XOR whose
+   * clauses were partly subsumed by shorter ones is found as well. The clauses stay posted; the
+   * rows let Gauss-Jordan elimination combine the XORs, which clause learning does only with
+   * exponentially long proofs on Tseitin formulas (Urquhart, J. ACM 34(1), 1987).
+   *
+   * <p>The sets read are the variables of each clause and, for a clause of at least three
+   * variables, those variables with the one more variable of each clause that shares all but that
+   * one with it, up to {@link #MAX_CLAUSE_XOR} variables. On a set whose clauses exclude exactly
+   * half of the points, the clauses are equivalent to one equation over GF(2), the algebraic normal
+   * form of the excluded points (a polynomial whose value is 1 exactly at them) equal to 0. When it
+   * has degree 2 its products {@code a b} become 0/1 variables {@code m = a and b}, so the equation
+   * is a parity row over variables and products, the linearisation of Bosphorus (Choo, Soos, Chai
+   * and Meel, ICTAI 2019). That reads an XOR of disjunctions, {@code (a or b) xor (c or d) xor
+   * ...}, since {@code a or b = a + b + a b} (CNFs lifted by substitution, as in the SAT
+   * Competition random-graph-xorsat and or_randxor families). Products are kept only when another
+   * row has them too; with the product in one row only, Gauss-Jordan elimination learns nothing
+   * from the row that its clauses do not say.
+   */
+  private void clauseRows() {
+    if (clauses.isEmpty()) {
+      return;
+    }
+    java.util.Set<Columns> candidates = new java.util.LinkedHashSet<>(clauses.keySet());
+    if (QUADRATIC) {
+      candidates.addAll(extendedSets());
+    }
+    java.util.Set<String> seenRows = new java.util.HashSet<>();
+    List<int[]> quadratic = new ArrayList<>();
+    for (Columns c : candidates) {
+      support.checkTimeOut();
+      int[] cols = c.cols;
+      int k = cols.length;
+      long[] excluded = excludedPoints(cols);
+      if (excluded == null) {
+        continue;
+      }
+      int[] count = {0, 0};
+      countPoints(excluded, k, count);
+      boolean linear = false;
+      for (int q = 0; q < 2; q++) {
+        if (count[q] == 1 << (k - 1)) {
+          // every point of parity q is excluded: the xor of the variables is 1 - q
+          linear = true;
+          if (seenRows.add(Arrays.toString(cols) + q)) {
+            IntVar[] x = new IntVar[k];
+            for (int j = 0; j < k; j++) {
+              x[j] = vars.get(cols[j]);
+            }
+            clauseRows++;
+            row(x, 1 - q);
+          }
+        }
+      }
+      if (!linear && QUADRATIC && k >= 3) {
+        int[] equation = quadraticForm(cols, excluded);
+        if (equation != null && seenRows.add(Arrays.toString(equation))) {
+          quadratic.add(equation);
+        }
+      }
+    }
+    clauses.clear();
+    if (!quadratic.isEmpty()) {
+      quadraticRows(quadratic);
+    }
+  }
+
+  // the products a b are read from the clauses over few variables (see clauseRows)
+  static final boolean QUADRATIC =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.xorQuadratic"));
+
+  // the clauses read, at most, from the occurrences of a variable to extend a set
+  static final int MAX_EXTENSION_OCCURRENCES = 256;
+
+  /**
+   * The sets of variables of a clause of at least three variables, with the one more variable of
+   * each clause that has all but one of its variables in it, of at most {@link #MAX_CLAUSE_XOR}
+   * variables and with at least two such clauses.
+   */
+  private List<Columns> extendedSets() {
+    Map<Integer, List<int[]>> occurrences = new HashMap<>();
+    for (Columns c : clauses.keySet()) {
+      for (int v : c.cols) {
+        occurrences.computeIfAbsent(v, x -> new ArrayList<>()).add(c.cols);
+      }
+    }
+    List<Columns> result = new ArrayList<>();
+    for (Columns c : clauses.keySet()) {
+      int[] cols = c.cols;
+      if (cols.length < 3 || cols.length >= MAX_CLAUSE_XOR) {
+        continue;
+      }
+      support.checkTimeOut();
+      java.util.TreeSet<Integer> extra = new java.util.TreeSet<>();
+      int found = 0;
+      for (int v : cols) {
+        List<int[]> occ = occurrences.get(v);
+        if (occ.size() > MAX_EXTENSION_OCCURRENCES) {
+          continue;
+        }
+        for (int[] d : occ) {
+          // d shares at least two variables with c and has exactly one more; the clause is
+          // seen from its first variable in c only
+          int outside = -1;
+          int inside = 0;
+          int firstInside = -1;
+          for (int w : d) {
+            if (Arrays.binarySearch(cols, w) >= 0) {
+              inside++;
+              if (firstInside < 0) {
+                firstInside = w;
+              }
+            } else if (outside < 0) {
+              outside = w;
+            } else {
+              outside = Integer.MIN_VALUE;
+            }
+          }
+          if (firstInside == v && inside >= 2 && outside >= 0) {
+            extra.add(outside);
+            found++;
+          }
+        }
+      }
+      if (found < 2 || extra.isEmpty() || cols.length + extra.size() > MAX_CLAUSE_XOR) {
+        continue;
+      }
+      int[] set = new int[cols.length + extra.size()];
+      int n = 0;
+      for (int v : cols) {
+        set[n++] = v;
+      }
+      for (int v : extra) {
+        set[n++] = v;
+      }
+      Arrays.sort(set);
+      result.add(new Columns(set));
+    }
+    return result;
+  }
+
+  /**
+   * The points of the 2^k values of the columns that the clauses over them or over a subset of them
+   * exclude, or null when fewer than a quarter of the points of a parity are excluded by the
+   * clauses over exactly these columns and no clause has exactly these columns.
+   */
+  private long[] excludedPoints(int[] cols) {
+    int k = cols.length;
+    long[] own = clauses.get(new Columns(cols));
+    long[] excluded = own == null ? new long[4] : own.clone();
+    if (own != null) {
+      int[] count = {0, 0};
+      countPoints(excluded, k, count);
+      // an XOR of k variables has 2^(k-1) clauses; at least half of them over all k variables
+      if (Math.max(count[0], count[1]) * 2 < 1 << (k - 1) && !QUADRATIC) {
+        return null;
+      }
+    }
+    // the clauses over proper subsets of the columns, by the mask of the columns they use
+    for (int mask = (1 << k) - 2; mask > 0; mask--) {
+      if (Integer.bitCount(mask) < 2) {
+        continue;
+      }
+      int[] sub = new int[Integer.bitCount(mask)];
+      int n = 0;
+      for (int j = 0; j < k; j++) {
+        if ((mask >>> j & 1) != 0) {
+          sub[n++] = cols[j];
+        }
+      }
+      long[] subPoints = clauses.get(new Columns(sub));
+      if (subPoints == null) {
+        continue;
+      }
+      int free = ((1 << k) - 1) & ~mask;
+      for (int q = 0; q < 1 << sub.length; q++) {
+        if ((subPoints[q >>> 6] >>> (q & 63) & 1) != 0) {
+          // every point of the k columns that agrees with q on the mask
+          int fixedBits = deposit(q, mask);
+          for (int f = free; ; f = (f - 1) & free) {
+            int point = fixedBits | f;
+            excluded[point >>> 6] |= 1L << (point & 63);
+            if (f == 0) {
+              break;
+            }
+          }
+        }
+      }
+    }
+    return excluded;
+  }
+
+  /**
+   * The equation over GF(2) that the excluded points of the columns give when their algebraic
+   * normal form has degree 2 and at least one product: {constant, number of variables, the
+   * variables, then the products as pairs of columns}; null otherwise.
+   */
+  private static int[] quadraticForm(int[] cols, long[] excluded) {
+    int k = cols.length;
+    int[] anf = new int[1 << k];
+    for (int point = 0; point < 1 << k; point++) {
+      anf[point] = (int) (excluded[point >>> 6] >>> (point & 63) & 1);
+    }
+    // the Moebius transform gives the coefficients of the monomials
+    for (int i = 0; i < k; i++) {
+      for (int point = 0; point < 1 << k; point++) {
+        if ((point >>> i & 1) != 0) {
+          anf[point] ^= anf[point ^ (1 << i)];
+        }
+      }
+    }
+    int linear = 0;
+    int products = 0;
+    for (int m = 1; m < 1 << k; m++) {
+      if (anf[m] != 0) {
+        int degree = Integer.bitCount(m);
+        if (degree > 2) {
+          return null;
+        }
+        if (degree == 1) {
+          linear++;
+        } else {
+          products++;
+        }
+      }
+    }
+    if (products == 0) {
+      return null;
+    }
+    int[] equation = new int[2 + linear + 2 * products];
+    equation[0] = anf[0];
+    equation[1] = linear;
+    int n = 2;
+    for (int i = 0; i < k; i++) {
+      if (anf[1 << i] != 0) {
+        equation[n++] = cols[i];
+      }
+    }
+    for (int m = 1; m < 1 << k; m++) {
+      if (anf[m] != 0 && Integer.bitCount(m) == 2) {
+        equation[n++] = cols[Integer.numberOfTrailingZeros(m)];
+        equation[n++] = cols[31 - Integer.numberOfLeadingZeros(m)];
+      }
+    }
+    return equation;
+  }
+
+  /** Statistics: the parity rows over products recovered from clauses, and their products. */
+  int quadraticRows;
+
+  int products;
+
+  /**
+   * It adds the quadratic equations as parity rows over variables and products. An equation {@code
+   * x + a b = c} defines the product as x (an AND gate, with c = 0) and gives no row; a product of
+   * no gate becomes a new 0/1 variable {@code m = a and b}. Equations with a product that no other
+   * equation has are left out, repeatedly.
+   */
+  private void quadraticRows(List<int[]> equations) {
+    Map<Long, Integer> gate = new HashMap<>();
+    Map<Long, Integer> gateParity = new HashMap<>();
+    List<int[]> rest = new ArrayList<>();
+    for (int[] e : equations) {
+      if (e[1] == 1 && e.length == 5) {
+        long key = pair(e[3], e[4]);
+        if (!gate.containsKey(key)) {
+          gate.put(key, e[2]);
+          gateParity.put(key, e[0]);
+          continue;
+        }
+      }
+      rest.add(e);
+    }
+    // the equations whose products are all gates or shared with another equation
+    boolean changed = true;
+    while (changed) {
+      changed = false;
+      Map<Long, Integer> uses = new HashMap<>();
+      for (int[] e : rest) {
+        for (int i = 2 + e[1]; i < e.length; i += 2) {
+          uses.merge(pair(e[i], e[i + 1]), 1, Integer::sum);
+        }
+      }
+      List<int[]> kept = new ArrayList<>();
+      for (int[] e : rest) {
+        boolean keep = e[1] + (e.length - 2 - e[1]) / 2 >= 2;
+        for (int i = 2 + e[1]; i < e.length && keep; i += 2) {
+          long key = pair(e[i], e[i + 1]);
+          keep = gate.containsKey(key) || uses.get(key) >= 2;
+        }
+        if (keep) {
+          kept.add(e);
+        } else {
+          changed = true;
+        }
+      }
+      rest = kept;
+    }
+    if (rest.isEmpty()) {
+      return;
+    }
+    Map<Long, IntVar> product = new HashMap<>();
+    for (int[] e : rest) {
+      List<IntVar> x = new ArrayList<>();
+      int parity = e[0];
+      for (int i = 2; i < 2 + e[1]; i++) {
+        x.add(vars.get(e[i]));
+      }
+      for (int i = 2 + e[1]; i < e.length; i += 2) {
+        long key = pair(e[i], e[i + 1]);
+        Integer g = gate.get(key);
+        if (g != null) {
+          // a b = x + c
+          x.add(vars.get(g));
+          parity ^= gateParity.get(key);
+          continue;
+        }
+        IntVar m = product.get(key);
+        if (m == null) {
+          IntVar a = vars.get(e[i]);
+          IntVar b = vars.get(e[i + 1]);
+          m = new org.jacop.core.BooleanVar(a.getStore(), "xor_and_" + product.size());
+          support.pose(new org.jacop.constraints.AndBoolSimple(a, b, m));
+          product.put(key, m);
+          products++;
+        }
+        x.add(m);
+      }
+      quadraticRows++;
+      // the polynomial is 0: the xor of its terms is its constant
+      row(x.toArray(new IntVar[0]), parity);
+    }
+  }
+
+  private static long pair(int a, int b) {
+    return ((long) Math.min(a, b) << 32) | Math.max(a, b);
+  }
+
+  // the excluded points of each parity among the 2^k points
+  private static void countPoints(long[] excluded, int k, int[] count) {
+    for (int point = 0; point < 1 << k; point++) {
+      if ((excluded[point >>> 6] >>> (point & 63) & 1) != 0) {
+        count[Integer.bitCount(point) & 1]++;
+      }
+    }
+  }
+
+  // the bits of q placed at the positions of the set bits of mask, lowest first
+  private static int deposit(int q, int mask) {
+    int result = 0;
+    int i = 0;
+    for (int m = mask; m != 0; m &= m - 1) {
+      if ((q >>> i++ & 1) != 0) {
+        result |= Integer.lowestOneBit(m);
+      }
+    }
+    return result;
+  }
+
+  /** The sorted columns of a clause, a key of {@link #clauses}. */
+  private record Columns(int[] cols) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Columns c && Arrays.equals(cols, c.cols);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode(cols);
+    }
+
+    @Override
+    public String toString() {
+      return Arrays.toString(cols);
     }
   }
 
