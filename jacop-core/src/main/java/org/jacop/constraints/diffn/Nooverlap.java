@@ -351,7 +351,10 @@ public class Nooverlap extends Constraint
       Rectangle r = rectangle[j];
 
       BitSet os = overlapping[j].value();
-      if (r.instantiatedBefore(store)) {
+      // a rectangle fixed at an earlier level was checked there, unless it changed since this
+      // pass last ran: the store may raise its level before a consistency
+      // (raiseLevelBeforeConsistency), so changes of level l can reach it first at level l + 1
+      if (r.instantiatedBefore(store) && !changedBefore[PRUNING_PASS].get(j)) {
         if (!os.isEmpty()) {
           overlapping[j].update(new BitSet());
         }

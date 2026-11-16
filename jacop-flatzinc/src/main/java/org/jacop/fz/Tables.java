@@ -160,6 +160,13 @@ public class Tables {
    */
   public org.jacop.fz.constraints.ProgressionTilingDetector.Tiling progressionTiling;
 
+  /**
+   * The bound of a model of maximum clique and nothing else ({@link
+   * org.jacop.fz.constraints.MaxCliqueDetector}), whose search without an annotation branches on
+   * its vertices, or null.
+   */
+  public org.jacop.constraints.MaxCliqueBound maxClique;
+
   // the domains of the variables of inverse channels as declared, before the constraints prune
   // them, for ConditionalValueSwaps
   private final Map<IntVar, IntDomain> channelDomains = new IdentityHashMap<>();
