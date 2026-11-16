@@ -35,6 +35,7 @@ import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
@@ -134,7 +135,97 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
         }
       }
 
+      if (DOMAIN_SPAN > 0 && getClass() == XplusYeqZ.class && x != y) {
+        domainConsistency(store);
+      }
+
     } while (store.propagationHasOccurred);
+  }
+
+  /**
+   * The largest span (max - min + 1, at most 64) of every variable for which the constraint removes
+   * values without a support in the domains of the other two (domain consistency), with the system
+   * property {@code jacop.xplusy.domainSpan}; 0 (the default) keeps bounds consistency.
+   */
+  static final int DOMAIN_SPAN = Math.min(64, Integer.getInteger("jacop.xplusy.domainSpan", 0));
+
+  // research counter: values removed by domain consistency beyond the bounds (TODO: remove)
+  static final java.util.concurrent.atomic.AtomicLong DOMAIN_PRUNES =
+      new java.util.concurrent.atomic.AtomicLong();
+
+  static {
+    if (DOMAIN_SPAN > 0) {
+      Runtime.getRuntime()
+          .addShutdownHook(
+              new Thread(
+                  () -> System.err.println("%% xplusy-domain-prunes=" + DOMAIN_PRUNES.get())));
+    }
+  }
+
+  // domain consistency over bit masks when every span is at most DOMAIN_SPAN
+  private void domainConsistency(Store store) {
+    int xMin = x.min();
+    int yMin = y.min();
+    int zMin = z.min();
+    if (x.max() - xMin >= DOMAIN_SPAN
+        || y.max() - yMin >= DOMAIN_SPAN
+        || z.max() - zMin >= DOMAIN_SPAN) {
+      return;
+    }
+    long mx = mask(x.dom(), xMin);
+    long my = mask(y.dom(), yMin);
+    long mz = mask(z.dom(), zMin);
+    long sx = 0;
+    long sz = 0;
+    for (long b = my; b != 0; b &= b - 1) {
+      int w = yMin + Long.numberOfTrailingZeros(b);
+      sx |= shift(mz, zMin - w - xMin);
+      sz |= shift(mx, xMin + w - zMin);
+    }
+    long sy = 0;
+    for (long b = mx; b != 0; b &= b - 1) {
+      int w = xMin + Long.numberOfTrailingZeros(b);
+      sy |= shift(mz, zMin - w - yMin);
+    }
+    prune(store, x, mx, mx & sx, xMin);
+    prune(store, y, my, my & sy, yMin);
+    prune(store, z, mz, mz & sz, zMin);
+  }
+
+  private static void prune(Store store, IntVar v, long mask, long kept, int base) {
+    if (kept == mask) {
+      return;
+    }
+    DOMAIN_PRUNES.addAndGet(Long.bitCount(mask & ~kept));
+    if (kept == 0) {
+      throw Store.failException;
+    }
+    IntervalDomain d = new IntervalDomain();
+    for (long b = kept; b != 0; ) {
+      int lo = Long.numberOfTrailingZeros(b);
+      long run = b >>> lo;
+      int len = Long.numberOfTrailingZeros(~run);
+      d.unionAdapt(base + lo, base + lo + len - 1);
+      b = len + lo >= 64 ? 0 : b & (-1L << (lo + len));
+    }
+    v.domain.in(store.level, v, d);
+  }
+
+  private static long mask(IntDomain d, int base) {
+    long m = 0;
+    for (int i = 0; i < d.noIntervals(); i++) {
+      int lo = d.leftElement(i) - base;
+      int hi = d.rightElement(i) - base;
+      m |= (hi >= 63 ? -1L : (1L << (hi + 1)) - 1) & (-1L << lo);
+    }
+    return m;
+  }
+
+  private static long shift(long m, int s) {
+    if (s >= 64 || s <= -64) {
+      return 0;
+    }
+    return s >= 0 ? m << s : m >>> -s;
   }
 
   void checkForOverflow() {
@@ -236,7 +327,8 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
     }
     return ShiftExplanation.explainSum(trail, entry, x, y, z, out)
         || LinearExplanation.explainChecked(
-            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
+            trail, entry, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out)
+        || DOMAIN_SPAN > 0 && ShiftExplanation.explainSumDomain(trail, entry, x, y, z, out);
   }
 
   @Override
@@ -246,7 +338,8 @@ public class XplusYeqZ extends AbstractConstraintXandYandZ
     }
     return ShiftExplanation.explainSumFailure(trail, x, y, z, out)
         || LinearExplanation.explainFailure(
-            trail, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out);
+            trail, new IntVar[] {x, y, z}, new long[] {1, 1, -1}, 0, true, true, out)
+        || DOMAIN_SPAN > 0 && ShiftExplanation.explainSumDomainFailure(trail, x, y, z, out);
   }
 
   // the equality, for entailment and negation

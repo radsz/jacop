@@ -170,6 +170,112 @@ public final class ShiftExplanation {
   }
 
   /**
+   * Adds to {@code out} the reason of an entry of {@code x + y = z} over distinct variables
+   * propagated on domains (Dx without support in Dz - Dy, and so on): each value the entry removes
+   * was out of the domain before it, or has no counterpart, since the domains of the two other
+   * variables were disjoint up to the shift by the value.
+   *
+   * @param trail the trail
+   * @param entry the entry
+   * @param x the first term
+   * @param y the second term
+   * @param z the sum
+   * @param out where the reason entries are added
+   * @return false when a removed value had a support before the entry, or too many values
+   */
+  public static boolean explainSumDomain(
+      AtomicTrail trail, int entry, IntVar x, IntVar y, IntVar z, EntryList out) {
+    IntVar v = trail.variable(entry);
+    int mark = out.size();
+    long lo;
+    long hi;
+    int a = trail.value(entry);
+    switch (trail.kind(entry)) {
+      case AtomicTrail.NE -> {
+        lo = a;
+        hi = a;
+      }
+      case AtomicTrail.GE -> {
+        lo = trail.minBefore(v, entry);
+        hi = a - 1L;
+        trail.addLowerBound(v, entry, out);
+      }
+      default -> {
+        lo = a + 1L;
+        hi = trail.maxBefore(v, entry);
+        trail.addUpperBound(v, entry, out);
+      }
+    }
+    if (unsupported(trail, entry, v, x, y, z, lo, hi, out)) {
+      return true;
+    }
+    out.truncate(mark);
+    return false;
+  }
+
+  /**
+   * Adds to {@code out} the reason why {@code x + y = z} over distinct variables has no solution
+   * now on domains: one variable has no value with a support in the domains of the other two.
+   *
+   * @param trail the trail
+   * @param x the first term
+   * @param y the second term
+   * @param z the sum
+   * @param out where the reason entries are added
+   * @return false when every variable has a supported value, or domains are too wide
+   */
+  public static boolean explainSumDomainFailure(
+      AtomicTrail trail, IntVar x, IntVar y, IntVar z, EntryList out) {
+    int now = trail.size();
+    for (IntVar v : new IntVar[] {x, y, z}) {
+      int mark = out.size();
+      long lo = trail.minBefore(v, now);
+      long hi = trail.maxBefore(v, now);
+      if (unsupported(trail, now, v, x, y, z, lo, hi, out)) {
+        trail.addLowerBound(v, now, out);
+        trail.addUpperBound(v, now, out);
+        return true;
+      }
+      out.truncate(mark);
+    }
+    return false;
+  }
+
+  // every value of v in lo..hi is out before the position or has no support then
+  private static boolean unsupported(
+      AtomicTrail trail,
+      int position,
+      IntVar v,
+      IntVar x,
+      IntVar y,
+      IntVar z,
+      long lo,
+      long hi,
+      EntryList out) {
+    if (hi - lo >= MAX_VALUES) {
+      return false;
+    }
+    for (long u = lo; u <= hi; u++) {
+      if (u < Integer.MIN_VALUE || u > Integer.MAX_VALUE) {
+        return false;
+      }
+      if (trail.excludedBefore(v, (int) u, position, out)) {
+        continue;
+      }
+      boolean disjoint =
+          v == x
+              ? disjointBefore(trail, position, z, y, u, 1, out)
+              : v == y
+                  ? disjointBefore(trail, position, z, x, u, 1, out)
+                  : disjointBefore(trail, position, x, y, u, -1, out);
+      if (!disjoint) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
    * Adds to {@code out} the reason of an entry of {@code x + y = z} over distinct variables when
    * {@code x} or {@code y} was fixed before it: that term's bounds, and the shift between the other
    * two variables.
