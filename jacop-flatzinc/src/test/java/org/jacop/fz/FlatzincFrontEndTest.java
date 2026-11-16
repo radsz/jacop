@@ -1057,6 +1057,37 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void costCapWithWeightsBeyondIntFixesTheHeavyVariables() throws IOException {
+    // PB competition wcsp instances (spot5-28, satellite02cc, zenotravel04ac): the cost cap
+    // sum w * x <= top - 1 weighs each hard violation top, more than the cap, and the weights add
+    // up beyond an int; LinearBool rejected the cap and then the objective row ("problem detected")
+    String cap =
+        "constraint int_lin_le([1000000000, 1000000000, 1000000000, 3, 4], [a, b, c, d, e], 5);\n";
+    String objective =
+        "constraint int_lin_eq([1000000000, 1000000000, 1000000000, 3, 4, -1], [a, b, c, d, e, cost], 0);\n";
+    String head =
+        """
+        var 0..1: a :: output_var;
+        var 0..1: b :: output_var;
+        var 0..1: c :: output_var;
+        var 0..1: d :: output_var;
+        var 0..1: e :: output_var;
+        var 0..3000000007: cost :: output_var;
+        constraint int_lin_le([-1, -1], [d, e], -1);
+        """;
+    String expected = "a = 0;\nb = 0;\nc = 0;\nd = 1;\ne = 0;\ncost = 3;\n----------\n==========\n";
+    for (String rows : new String[] {cap + objective, objective + cap}) {
+      String[] out = run(head + rows + "solve minimize cost;\n");
+      assertEquals(0, lastStatus, out[1]);
+      assertEquals(expected, tail(out[0]), out[1]);
+    }
+    // without the cap the heavy variables stay free, the objective row still posts
+    String[] out = run(head + objective + "solve minimize cost;\n");
+    assertEquals(0, lastStatus, out[1]);
+    assertEquals(expected, tail(out[0]), out[1]);
+  }
+
+  @Test
   void objectiveBeyondTheRangeDividedByItsDivisor() throws IOException {
     // 2023 unit-commitment: obj 0..2147483646 is a sum of costs that are multiples of 5, and the
     // solutions of the fixed search all lie beyond 536870909; narrowed, L12 and L15 got no
