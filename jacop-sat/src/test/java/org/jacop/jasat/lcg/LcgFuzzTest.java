@@ -254,6 +254,10 @@ class LcgFuzzTest {
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
 
+  // with lcg.fuzz.repeated=true, about a third of the positions of a picked list repeat a variable
+  // already in that list, so constraints see one variable at several positions of their scope
+  private static final boolean REPEATED = Boolean.getBoolean("lcg.fuzz.repeated");
+
   // with lcg.fuzz.ground=true one variable in eight is ground before the constraints on it are
   // imposed, and another one in eight after they are imposed, before the first consistency
   private static final boolean GROUND = Boolean.getBoolean("lcg.fuzz.ground");
@@ -309,6 +313,8 @@ class LcgFuzzTest {
 
     final Random holes;
 
+    final Random repeats;
+
     // grounds variables, from its own generator so the model is otherwise the same
     final Random ground;
     final List<IntVar> groundLater = new ArrayList<>();
@@ -316,6 +322,7 @@ class LcgFuzzTest {
     Model(long seed) {
       rnd = new Random(seed);
       holes = HOLES ? new Random(seed * 31 + 7) : null;
+      repeats = REPEATED ? new Random(seed * 41 + 13) : null;
       ground = GROUND ? new Random(seed * 37 + 11) : null;
       int n = 4 + rnd.nextInt(4);
       x = new IntVar[n];
@@ -440,7 +447,10 @@ class LcgFuzzTest {
       List<IntVar> pool = new ArrayList<>(List.of(from));
       IntVar[] result = new IntVar[Math.min(k, pool.size())];
       for (int i = 0; i < result.length; i++) {
-        result[i] = pool.remove(rnd.nextInt(pool.size()));
+        result[i] =
+            repeats != null && i > 0 && repeats.nextInt(3) == 0
+                ? result[repeats.nextInt(i)]
+                : pool.remove(rnd.nextInt(pool.size()));
       }
       return result;
     }

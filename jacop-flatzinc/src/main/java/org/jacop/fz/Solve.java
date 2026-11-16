@@ -995,7 +995,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objective == null && options.proof() == null) {
       // a satisfaction model gets the value encodings for one root solve, which can refute it
       long built = System.nanoTime();
-      refutation = LinearRelaxation.refutation(store, refutationClauses);
+      refutation = LinearRelaxation.refutation(store, refutationClauses, splitSums());
+      if (refutation == null) {
+        refutation = LinearRelaxation.clauseRefutation(store, refutationClauses);
+      }
       refutationBuildNanos = System.nanoTime() - built;
       if (refutation != null) {
         refutation.setTimeLimit(options.getTimeOut());
@@ -1126,12 +1129,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + refutation.pairCliques
               + "\n%%%mzn-stat: lpRefutation="
               + refutation.refutationOutcome()
+              + "\n%%%mzn-stat: lpRefutationObjective="
+              + refutation.hasPseudoObjective()
               + "\n%%%mzn-stat: lpRefutationTime="
               + (refutationBuildNanos + refutation.solveNanos) / 1e9
               + "\n%%%mzn-stat: lpRefutationSolveTime="
               + refutation.solveNanos / 1e9
               + "\n%%%mzn-stat: lpRefutationPivots="
-              + refutation.pivots());
+              + refutation.pivots()
+              + "\n%%%mzn-stat: lpRefutationClauseUnits="
+              + refutation.clauseUnits
+              + "\n%%%mzn-stat: lpRefutationClauseEquivalences="
+              + refutation.clauseEquivalences);
     }
     LinearRelaxation r = linearRelaxation;
     if (r == null || !options.searchStatistics()) {
@@ -3403,6 +3412,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private LcgSolver slowLcg;
   private long lcgStart;
 
+  // the wait of the slow LCG check (nanoseconds of CdclSolver.now), and the time before which it
+  // makes no check: a check that finds LCG still in its root propagation starts the wait again
+  private long slowCheckWait;
+  private long slowCheckFrom;
+
   // the part of the time-out that must be left for LCG free search to give way to free search
   // without learning
   private static final double SLOW_LCG_MIN_LEFT = 0.1;
@@ -3490,6 +3504,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       solver.stop();
       return null;
     }
+    slowCheckWait = wait * 1_000_000L;
+    slowCheckFrom = Long.MIN_VALUE;
     // the best cost printed at each check, to measure the gain over the last window
     ArrayDeque<long[]> costs = new ArrayDeque<>();
     if (CdclSolver.VIRTUAL_CLOCK) {
@@ -3673,6 +3689,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       double gain,
       ArrayDeque<long[]> costs) {
     long now = solver.sat().now();
+    if (now < slowCheckFrom) {
+      return true;
+    }
+    if (solver.sat().decisions == 0 && solver.sat().conflicts == 0 && !solutionFound) {
+      // still in LCG's root propagation, which makes no conflicts: the rate counts from its end.
+      // rna-alignment-k50-23-49 (MaxSAT Evaluation 2024): the extra rows of the root LP took 20 s
+      // of the 24 s before the check, LCG gave way at 0 conflicts/s and the search without learning
+      // found 536 but no proof in 240 s; LCG kept proves it 15 s after its root propagation
+      lcgStart = now;
+      slowCheckFrom = now + slowCheckWait;
+      return true;
+    }
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
@@ -4485,6 +4513,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.noSolutionStops
         + "\n%%%mzn-stat: lcgCoreShrunk="
         + core.coreShrunk
+        + "\n%%%mzn-stat: lcgCoreExhausted="
+        + core.exhaustedOutputs
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
@@ -4899,13 +4929,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return null;
       }
       cost.domain.in(store.level, cost, makespan, makespan);
-      if (!store.consistency()) {
+      if (!store.consistency() || !collectedClausesPropagate()) {
         return null;
       }
       for (IntVar x : hinted) {
         if (!x.singleton()) {
           x.domain.in(store.level, x, x.min(), x.min());
-          if (!store.consistency()) {
+          if (!store.consistency() || !collectedClausesPropagate()) {
             return null;
           }
         }
@@ -4924,6 +4954,55 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         store.setLevel(store.level - 1);
       }
     }
+  }
+
+  /**
+   * Unit propagation, with the store's propagation after each round, of the clauses kept for the
+   * LCG solver: under --lcg the Boolean constraints are not in the store until the solver takes
+   * them, so a schedule checked in the store alone could break them.
+   *
+   * @return false when a clause is false
+   */
+  private boolean collectedClausesPropagate() {
+    List<IntVar[][]> clauses = sat.collectedClauses();
+    boolean changed = !clauses.isEmpty();
+    while (changed) {
+      changed = false;
+      for (IntVar[][] clause : clauses) {
+        IntVar unit = null;
+        int value = 0;
+        int open = 0;
+        boolean satisfied = false;
+        for (int side = 0; side < 2 && !satisfied; side++) {
+          int wanted = side == 0 ? 1 : 0;
+          for (IntVar x : clause[side]) {
+            if (x.singleton(wanted)) {
+              satisfied = true;
+              break;
+            }
+            if (x.domain.contains(wanted)) {
+              open++;
+              unit = x;
+              value = wanted;
+            }
+          }
+        }
+        if (satisfied) {
+          continue;
+        }
+        if (open == 0) {
+          return false;
+        }
+        if (open == 1) {
+          unit.domain.in(store.level, unit, value, value);
+          changed = true;
+        }
+      }
+      if (changed && !store.consistency()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
