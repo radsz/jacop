@@ -72,6 +72,8 @@ public class ListsDifferDetector implements ParserTreeConstants {
 
   private final Support support;
 
+  private static final IntVar[][] NO_LISTS = new IntVar[0][];
+
   private final Set<SimpleNode> replaced = new HashSet<>();
 
   /**
@@ -149,7 +151,7 @@ public class ListsDifferDetector implements ParserTreeConstants {
           if (item.getId() == JJTCONSTELEM
               && "jacop_short_table_int".equals(((ASTConstElem) item).getName())) {
             IntVar[][] lists = listsDiffer(item);
-            if (lists != null) {
+            if (lists.length == 2) {
               int a = ids.computeIfAbsent(new VarList(lists[0]), k -> ids.size());
               int b = ids.computeIfAbsent(new VarList(lists[1]), k -> ids.size());
               pairs.add(new int[] {Math.min(a, b), Math.max(a, b)});
@@ -166,17 +168,17 @@ public class ListsDifferDetector implements ParserTreeConstants {
     post(new ArrayList<>(ids.keySet()), pairs);
   }
 
-  // the two lists x and y when the table says x != y, otherwise null
+  // the two lists x and y when the table says x != y, otherwise no lists
   private IntVar[][] listsDiffer(SimpleNode node) {
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int size = v.length;
     if (size < 2 || size % 2 != 0) {
-      return null;
+      return NO_LISTS;
     }
     Map<IntVar, Boolean> distinct = new IdentityHashMap<>();
     for (IntVar x : v) {
       if (!x.singleton() && distinct.put(x, Boolean.TRUE) != null) {
-        return null;
+        return NO_LISTS;
       }
     }
     int n = size / 2;
@@ -199,12 +201,12 @@ public class ListsDifferDetector implements ParserTreeConstants {
         }
       }
       if (count != 2 || k >= n || tbl[r * size + k + n] == star) {
-        return null;
+        return NO_LISTS;
       }
       int a = tbl[r * size + k];
       int b = tbl[r * size + k + n];
       if (a == b) {
-        return null;
+        return NO_LISTS;
       }
       allowed.get(k).add(((long) a << 32) ^ (b & 0xffffffffL));
     }
@@ -214,14 +216,14 @@ public class ListsDifferDetector implements ParserTreeConstants {
       long sb = v[k + n].getSize();
       if (sa * sb - Math.min(sa, sb) > rows.size()) {
         // fewer rows than different pairs of values, some pair is missing
-        return null;
+        return NO_LISTS;
       }
       for (var ia = v[k].domain.valueEnumeration(); ia.hasMoreElements(); ) {
         int a = ia.nextElement();
         for (var ib = v[k + n].domain.valueEnumeration(); ib.hasMoreElements(); ) {
           int b = ib.nextElement();
           if (a != b && !rows.contains(((long) a << 32) ^ (b & 0xffffffffL))) {
-            return null;
+            return NO_LISTS;
           }
         }
       }
