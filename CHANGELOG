@@ -7389,7 +7389,97 @@ Version 5.0 (unreleased)
    total time 3,708 -> 1,011 s (three base runs ran out of memory at
    4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
 
-411. The LP relaxation links the columns of a table with a key column (the
+411. Free search (-f) on routing models: on the giant-tour CVRP model of
+   the MiniZinc Challenge 2015 with CVRPLIB X instances, -f at 600 s finds
+   23,954 instead of 44,120 on X-n110-k13 and 26,191 instead of 56,345 on
+   X-n120-k6 (CP-SAT 9.15 with one worker 32,871 and 36,139).
+   - Route neighbourhoods of LNS start from the solution that LCG hands
+     over to free search without learning; before, LNS waited for a
+     better solution of free search's own and on X-n110-k13 first ran
+     after about 490 s.
+   - A slow LCG search is kept for a bound raise only when it closes
+     lcg-slow-bound-gain (default 0.0005) of the gap to the best cost; a
+     raise from 4 to 5 against 59,211 no longer keeps it. From
+     lcg-hopeless-at (2 % of the time limit) LCG gives way below
+     lcg-hopeless-rate (1 conflict/s).
+   - Element constraints are no longer queued for a change of a position
+     their index cannot select (Constraint.wakeNeeded()): +50 % failures/s
+     on X-n110-k13, where each variable is in about 330 element lists.
+   - LNS takes the share lns-share-routes (3) of free search's calls on
+     models with routes, instead of lns-share (0.8).
+   On the 88 wide-set instances with an element or circuit constraint the
+   time over the set goes from 15,991 to 15,202 s at 600 s;
+   benchmarks/cvrp-giant-tour in osolpro has the runs.
+
+412. JaSAT (CdclMain and pure clause models) gives a share of its time to
+   a feasibility-jump local search over the root-simplified formula, run at
+   each rephasing point (W. Luteberget, G. Sartor, Feasibility Jump: an
+   LP-free Lagrangian MIP heuristic, Mathematical Programming Computation
+   15, 2023; for clauses a jump is a flip, so it is clause weighting of the
+   breakout kind, P. Morris, The breakout method for escaping from local
+   minima, AAAI 1993). Its runs restart from a random assignment with fresh
+   weights after a Luby number of flips (M. Luby, A. Sinclair, D.
+   Zuckerman, Optimal speedup of Las Vegas algorithms, Information
+   Processing Letters 47, 1993); without the restarts it solves neither
+   target instance. A model it finds becomes the phase the decisions
+   follow until the next conflict, and eliminated variables are
+   reconstructed as before. -Djacop.jasat.jump=<share> (CdclMain --jump)
+   sets the share, default 0.1, 0 turns it off; it never runs under LCG or
+   with assumptions. On the 90 CNF instances of the SAT gap screen at
+   240 s: 30 -> 35 solved (sgen 32.7 s and tree-decomposition 147 s, which
+   Kissat and JaCoP did not solve in 600 s, fixed-shape-random, puzzle,
+   pythagorean-triples), heule-nol 49 -> 13 s, no instance lost, total
+   time 0.947; UNSAT instances take the share, 1.107 on the 13 proved.
+   At 600 s 41 -> 45 of the 90 are solved, total time 0.942 on the 60
+   not solved by both at 240 s.
+
+413. The FlatZinc front end keeps large tables in memory once and builds
+   less for them, so the XCSP 2026 models with large tables no longer run
+   out of memory at 6 GB. Short tables with equal rows share one
+   HybridTable index (CrosswordDesign posts 96 of them, 4 distinct);
+   parameter arrays (of integers or sets) of 1024 or more entries that
+   MiniZinc writes several times are kept once (the 31 copies of the MDD
+   label sets of WordDesign2-words-mdd-025, XCSP 2023, took 5.7 GB); the detectors that scan constraint arguments no
+   longer turn parameter arrays into constant variables (84,000 on
+   CrosswordDesign-09, all LCG variables); the symmetry detection releases
+   its caches after it runs; table variable elimination reads the rows of
+   a table only when it joins it, and joins at most a million rows
+   (org.jacop.fz.tableElimination.joinInput); table posting copies only
+   the rows that fit the domains; and the parser no longer keeps every
+   token of an array literal alive. The new mznlib predicates
+   fzn_xcsp_table_rows, fzn_xcsp_short_table_rows and
+   fzn_xcsp_negative_table_rows take a table as a one-dimensional array of
+   rows, which MiniZinc writes once. Live heap: CrosswordDesign-12 7.0 GB
+   to 2.5 GB, Steiner3-11 5.4 GB to 1.2 GB, Inglenook-100 out of memory
+   at 10 GB to solved in 30 s at 2.9 GB. Over the 30 held-back XCSP 2026
+   instances at 600 s and 6 GB, 24 now find solutions and 5 more run to
+   the limit (before: none of them); the 2026 CSP replay score goes from
+   116 to 130 (fifth to third). The default search is unchanged.
+
+414. JaSAT (CdclMain, plain SAT without an external propagator) vivifies
+   on a sorted schedule as Kissat 4 and CaDiCaL 2 do: after each clause
+   database reduction, the core, middle and local learnt tiers and the
+   irredundant clauses share a budget of 10 % of the propagations since
+   the last round (weights 3/3/1/3). Literals are sorted by occurrence and
+   candidates lexicographically so that consecutive probes reuse their
+   decisions; a conflict or an implied literal is analysed back to the
+   decisions, and the clause is shrunk, removed when subsumed or implied
+   by irredundant clauses, or strengthened by instantiation. Before, only
+   core and middle learnt clauses were vivified, once each. References:
+   Li, Xiao, Luo, Manya, Lu, Li, Clause vivification by unit propagation
+   in CDCL SAT solvers, Artificial Intelligence 279 (2020); Luo, Li, Xiao,
+   Manya, Lu, An effective learnt clause minimization approach for CDCL
+   SAT solvers, IJCAI 2017; Biere, Faller, Fazekas, Fleury, Froleyks,
+   Pollitt, CaDiCaL, Gimsatul, IsaSAT and Kissat entering the SAT
+   Competition 2024. On 90 SAT Competition 2024/25 instances at 240 s
+   JaSAT solves 32 instead of 30 (seed 0) and 32 instead of 28 (seed 1),
+   with 3 more UNSAT proofs on seed 1 (planning and tseitin-formulas on
+   both seeds); at 600 s over 3 seeds circuit-equivalence-checking takes
+   0.90x and grs-fp-comm 0.85x the time. LCG and the FlatZinc front end
+   keep the previous vivification; -Djacop.jasat.vivifySorted=false
+   restores it for CdclMain too.
+
+415. The LP relaxation links the columns of a table with a key column (the
    element constraints over one index that the front end merges into one
    table, such as the options of a class in car sequencing) to the value
    encoding of the key: y = sum_v t(v) b_v for every other column y, the
@@ -7408,7 +7498,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.satisfactionProbation=0 and -Dorg.jacop.lp.failRate=0
    turn them off.
 
-412. Free search (-f), and model search without a search annotation, of a
+416. Free search (-f), and model search without a search annotation, of a
    weighted partial MaxSAT model (clauses, 0/1 linear rows and a cost
    that is a weighted sum of 0/1 variables, as the MaxSAT Evaluation
    instances flatten) runs MaxSAT local search,
@@ -7443,7 +7533,7 @@ Version 5.0 (unreleased)
    The store check of a hint before lazy clause generation (also of the
    project schedule) now runs the root's pending propagation first.
 
-413. JaSAT (CdclSolver, CdclMain) tries Kissat's lucky assignments before
+417. JaSAT (CdclSolver, CdclMain) tries Kissat's lucky assignments before
    the first search (Biere and Fleury, Proc. SAT Competition 2022): all
    variables true or false when every clause has a literal of that sign,
    then forward and backward passes in input order deciding false and then

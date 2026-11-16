@@ -42,6 +42,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
@@ -83,6 +84,12 @@ public class TableVariableElimination implements ParserTreeConstants {
 
   static final int MAX_ROWS = Integer.getInteger("org.jacop.fz.tableElimination.rows", 10_000);
 
+  // two relations are joined only if they have at most this many rows together: joining the chain
+  // of transition tables of 26 million rows of Inglenook (XCSP 2026) filled a 6 GB heap, and the
+  // model was never posted
+  static final int MAX_JOIN_INPUT =
+      Integer.getInteger("org.jacop.fz.tableElimination.joinInput", 100 * MAX_ROWS);
+
   private final Support support;
 
   private final Set<SimpleNode> frozenNodes;
@@ -92,16 +99,44 @@ public class TableVariableElimination implements ParserTreeConstants {
   /** A relation: its scope, its rows, and the constraint nodes it stands for. */
   static final class Relation {
     final IntVar[] scope;
-    final int[][] rows;
+    private int[][] rows;
+    // the rows of a table constraint are read when a join first needs them: most tables join with
+    // nothing, and reading each of the 153 tables of 831,600 rows of Steiner3-11 (XCSP 2026) as
+    // rows up front took 5 GB
+    private Supplier<int[][]> source;
     final List<SimpleNode> sources;
     final boolean joined;
     boolean alive = true;
+
+    // an upper bound on the rows, known without reading them
+    private final int size;
 
     Relation(IntVar[] scope, int[][] rows, List<SimpleNode> sources, boolean joined) {
       this.scope = scope;
       this.rows = rows;
       this.sources = sources;
       this.joined = joined;
+      this.size = rows.length;
+    }
+
+    Relation(IntVar[] scope, Supplier<int[][]> source, int size, List<SimpleNode> sources) {
+      this.scope = scope;
+      this.source = source;
+      this.sources = sources;
+      this.joined = false;
+      this.size = size;
+    }
+
+    int size() {
+      return rows != null ? rows.length : size;
+    }
+
+    int[][] rows() {
+      if (rows == null) {
+        rows = source.get();
+        source = null;
+      }
+      return rows;
     }
 
     int column(IntVar x) {
@@ -181,7 +216,7 @@ public class TableVariableElimination implements ParserTreeConstants {
   public List<Map.Entry<IntVar[], int[][]>> tables() {
     List<Map.Entry<IntVar[], int[][]>> t = new ArrayList<>(posted.size());
     for (Relation r : posted) {
-      t.add(Map.entry(r.scope, r.rows));
+      t.add(Map.entry(r.scope, r.rows()));
     }
     return t;
   }
@@ -299,6 +334,9 @@ public class TableVariableElimination implements ParserTreeConstants {
 
   /** The join of a and b with y projected out, or null if it is too large. */
   private Relation join(Relation a, Relation b, IntVar y) {
+    if ((long) a.size() + b.size() > MAX_JOIN_INPUT) {
+      return null;
+    }
     int ya = a.column(y);
     int yb = b.column(y);
     List<IntVar> scope = new ArrayList<>();
@@ -325,9 +363,9 @@ public class TableVariableElimination implements ParserTreeConstants {
     if (n == 0 || n > Math.max(a.scope.length, b.scope.length)) {
       return null;
     }
-    long limit = Math.max(MAX_ROWS, (long) a.rows.length + b.rows.length);
+    long limit = Math.max(MAX_ROWS, (long) a.rows().length + b.rows().length);
     Map<Integer, List<int[]>> byValue = new HashMap<>();
-    for (int[] row : b.rows) {
+    for (int[] row : b.rows()) {
       byValue.computeIfAbsent(row[yb], k -> new ArrayList<>()).add(row);
     }
     Map<Row, int[]> out = new LinkedHashMap<>();
@@ -336,7 +374,7 @@ public class TableVariableElimination implements ParserTreeConstants {
     for (int c = 0; c < a.scope.length; c++) {
       fromA[c] = c == ya ? -1 : next++;
     }
-    for (int[] ra : a.rows) {
+    for (int[] ra : a.rows()) {
       List<int[]> match = byValue.get(ra[ya]);
       if (match == null) {
         continue;
@@ -416,6 +454,12 @@ public class TableVariableElimination implements ParserTreeConstants {
     if (tbl == null) {
       tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
     }
+    int[] table = tbl;
+    return new Relation(v, () -> rows(v, table), table.length / v.length, List.of(node));
+  }
+
+  // the distinct rows of a table that fit the domains
+  private static int[][] rows(IntVar[] v, int[] tbl) {
     int n = v.length;
     List<int[]> rows = new ArrayList<>();
     Set<Row> seen = new HashSet<>();
@@ -425,7 +469,7 @@ public class TableVariableElimination implements ParserTreeConstants {
         rows.add(row);
       }
     }
-    return new Relation(v, rows.toArray(new int[0][]), List.of(node), false);
+    return rows.toArray(new int[0][]);
   }
 
   private Relation shortTable(ASTConstElem node) {
@@ -552,7 +596,7 @@ public class TableVariableElimination implements ParserTreeConstants {
   private static Set<Integer> candidates(Relation r, IntVar y, Map<Var, Integer> values) {
     Set<Integer> c = new HashSet<>();
     int yc = r.column(y);
-    for (int[] row : r.rows) {
+    for (int[] row : r.rows()) {
       boolean ok = true;
       for (int k = 0; k < row.length && ok; k++) {
         if (k != yc) {
