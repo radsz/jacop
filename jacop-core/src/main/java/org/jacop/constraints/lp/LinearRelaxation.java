@@ -492,7 +492,7 @@ public class LinearRelaxation extends Constraint
   // the extra rows of a dense tableau whose search solves get fewer pivots than this move to the
   // sparse simplex when it costs at most a quarter of the tableau per pivot (moveExtraToSparse)
   private static final boolean EXTRA_SPARSE =
-      !"false".equals(System.getProperty("org.jacop.lp.extraSparse"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.extraSparse"));
   private static final long EXTRA_SPARSE_PIVOTS = 100;
   private static final long EXTRA_SPARSE_GAIN = 4;
 
