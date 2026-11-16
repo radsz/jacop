@@ -241,7 +241,9 @@ setup to run configuration. -->
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
@@ -499,7 +501,9 @@ setup to run configuration. -->
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
@@ -758,7 +762,9 @@ setup to run configuration. -->
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
@@ -1017,7 +1023,9 @@ setup to run configuration. -->
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
