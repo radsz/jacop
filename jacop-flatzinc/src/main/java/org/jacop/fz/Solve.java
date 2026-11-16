@@ -1012,7 +1012,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       linearRelaxation.setTimeLimit(options.getTimeOut());
       store.impose(linearRelaxation);
       if (lpProbeMs > 0
-          && !options.freeSearch()
+          && (!options.freeSearch() || FREE_LP_PROBE)
           && options.portfolioWorker == null
           && linearRelaxation.rootTrialSize() >= lpProbeSize) {
         // the root solve waits for a short search without it: see executeSearch
@@ -2963,6 +2963,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executeLcgSearch(Var costVar) {
     Portfolio.Worker worker = options.portfolioWorker();
+    // the hint and bound of a free search probe that did not finish (see freeLpProbe)
+    IntVar[] probeVars = null;
+    int[] probeValues = null;
+    if (lpProbing && options.freeSearch()) {
+      int probed = freeLpProbe(costVar);
+      if (probed != CdclSolver.UNKNOWN) {
+        lcgStatus = probed;
+        return numberSolutions > 0;
+      }
+      if (lcgHint != null) {
+        probeVars = lcgHinted;
+        probeValues = lcgHint;
+        lcgHinted = null;
+        lcgHint = null;
+      }
+    }
+    // a solution of the probe bounds the search
+    boolean probed = probeValues != null && costVar instanceof IntVar;
+    int probeCost = lcgLastCost;
     // local search runs on the store before the solver takes it over
     LocalSearch ls = null;
     // -a on an optimisation problem prints every better solution, local search included
@@ -3045,8 +3064,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (worker != null) {
         lcg.setSharedBound(worker::sharedBound);
       }
+    } else if (probed) {
+      lcgLastCost = probeCost;
+      lcg.setSharedBound(
+          () -> worker == null ? probeCost : Math.min(probeCost, worker.sharedBound()));
     } else if (worker != null && costVar != null) {
       lcg.setSharedBound(worker::sharedBound);
+    }
+    if (probeVars != null) {
+      lcg.setPhase(probeVars, probeValues);
     }
     if (worker != null
         && costVar != null
@@ -3064,7 +3090,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if ((ls != null || scheduled != null) && costVar instanceof IntVar cost) {
+    if ((ls != null || scheduled != null || probed) && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better
       lcg.onSolution(
@@ -6102,6 +6128,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // cheap, and a restart costs more than it saves (multiple-constant-multiplication XU07_28)
   private final long lpProbeSize = Long.getLong("org.jacop.fz.lpProbeSize", 1_000_000);
 
+  // -Dorg.jacop.fz.freeLpProbe=false: free search solves a large root relaxation at once, without
+  // the search of org.jacop.fz.lpProbe before it
+  private static final boolean FREE_LP_PROBE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.freeLpProbe", Boolean.TRUE.toString()));
+
   // the relaxation is suspended until the probe ends
   private boolean lpProbing;
 
@@ -6129,6 +6160,73 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lpProbing = false;
     linearRelaxation.suspend(false);
     store.addChanged(linearRelaxation);
+  }
+
+  /**
+   * Free search first runs a solver of its own for org.jacop.fz.lpProbe ms without the relaxation:
+   * its answer when it finishes. Otherwise the solver hands the store back, the relaxation is
+   * resumed, and free search starts as without the probe, from the probe's best solution (in
+   * lcgHinted and lcgHint). Free search takes choices at its start from the solved relaxation (the
+   * guide of its solution, the schedule of the core-guided phase from the root bound, the rate of
+   * conflicts that hands slow learning over to search without it): a relaxation that joined the
+   * running search after the probe changed them, mapping mesh3x3_mpeg_2 (2015) took 27-70 s instead
+   * of 6-7 s and lot-sizing pigment15a took the guide of the relaxation's solution.
+   *
+   * @return the probe's answer, or UNKNOWN when it did not finish
+   */
+  private int freeLpProbe(Var costVar) {
+    // the probe's prunings, such as its objective bound, are undone when it does not finish
+    int level = store.level;
+    store.setLevel(level + 1);
+    LcgSolver probe = new LcgSolver(store);
+    probe.setSeed(options.getRandomSeed());
+    probe.setUnusedVariables(dictionary.unusedVariables);
+    probe.setUnusedVariables(
+        dictionary.binaryEqAliases.stream().filter(x -> x.dom().sizeConstraints() == 0).toList());
+    for (IntVar[][] clause : sat.collectedClauses()) {
+      probe.addClause(clause[0], clause[1]);
+    }
+    probe.onSolution(this::printSolution);
+    if (costVar instanceof IntVar) {
+      probe.onBound(
+          lower -> {
+            if (reportBound(lower)) {
+              probe.stop();
+            }
+          });
+    }
+    probe.sat().setDeadline(probe.sat().now() + lpProbeMs * 1_000_000L);
+    lcg = probe;
+    int answer;
+    try {
+      answer = costVar == null ? probe.solve() : probe.minimize((IntVar) costVar);
+    } finally {
+      lcg = null;
+    }
+    if (answer != CdclSolver.UNKNOWN || gapReached()) {
+      lcg = probe;
+      lpProbing = false;
+      lpProbeFinished = true;
+      linearRelaxation.suspend(false);
+      return answer;
+    }
+    probe.detach();
+    store.removeLevel(level + 1);
+    store.setLevel(level);
+    if (numberSolutions > 0) {
+      List<IntVar> hinted = new ArrayList<>();
+      List<Integer> values = new ArrayList<>();
+      for (IntVar x : hintedVariables()) {
+        if (probe.hasValue(x)) {
+          hinted.add(x);
+          values.add(probe.value(x));
+        }
+      }
+      lcgHinted = hinted.toArray(new IntVar[0]);
+      lcgHint = values.stream().mapToInt(Integer::intValue).toArray();
+    }
+    resumeRelaxation();
+    return CdclSolver.UNKNOWN;
   }
 
   /** The fixed search, first for a short time without the relaxation (org.jacop.fz.lpProbe). */
