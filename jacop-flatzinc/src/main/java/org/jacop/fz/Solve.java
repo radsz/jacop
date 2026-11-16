@@ -5626,7 +5626,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // -Dorg.jacop.fz.freeLpProbe=false: free search solves a large root relaxation at once, without
   // the search of org.jacop.fz.lpProbe before it
   private static final boolean FREE_LP_PROBE =
-      !"false".equals(System.getProperty("org.jacop.fz.freeLpProbe"));
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.freeLpProbe", Boolean.TRUE.toString()));
 
   // the relaxation is suspended until the probe ends
   private boolean lpProbing;
@@ -5692,18 +5692,18 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     probe.sat().setDeadline(probe.sat().now() + lpProbeMs * 1_000_000L);
     lcg = probe;
-    int result;
+    int answer;
     try {
-      result = costVar == null ? probe.solve() : probe.minimize((IntVar) costVar);
+      answer = costVar == null ? probe.solve() : probe.minimize((IntVar) costVar);
     } finally {
       lcg = null;
     }
-    if (result != CdclSolver.UNKNOWN || gapReached()) {
+    if (answer != CdclSolver.UNKNOWN || gapReached()) {
       lcg = probe;
       lpProbing = false;
       lpProbeFinished = true;
       linearRelaxation.suspend(false);
-      return result;
+      return answer;
     }
     probe.detach();
     store.removeLevel(level + 1);
