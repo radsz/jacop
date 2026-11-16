@@ -667,7 +667,7 @@ class ClauseEncoderTest {
         continue;
       }
       encoded++;
-      assertThat(cs.size()).isLessThanOrEqualTo(Math.max(cap, 1));
+      assertThat(cs).hasSizeLessThanOrEqualTo(Math.max(cap, 1));
       for (int m = 0; m < 1 << n; m++) {
         long sum = 0;
         for (int i = 0; i < n; i++) {
