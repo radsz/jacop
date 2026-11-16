@@ -551,6 +551,9 @@ public final class CoreSearch {
         continue;
       }
       int[] core = sat.failedAssumptions();
+      if (core.length > 1 && lcg.coreTrim() > 0) {
+        core = trim(core, phaseLimit);
+      }
       if (core.length == 0 || !relax(core, true)) {
         // no solution better than the best one, if there is one
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
@@ -1385,6 +1388,37 @@ public final class CoreSearch {
       }
     }
     return max;
+  }
+
+  // the conflicts of one trimming call
+  private static final long TRIM_CONFLICTS = 1000;
+
+  /** Statistics: the literals that trimming took out of cores. */
+  public long coreShrunk;
+
+  /**
+   * Trims a core: solves again under the core's own literals, which often fails on fewer of them,
+   * up to {@link LcgSolver#setCoreTrim} times while the core shrinks (core trimming in RC2:
+   * Ignatiev, Morgado and Marques-Silva, "RC2: an Efficient MaxSAT Solver", JSAT 11, 2019). A
+   * smaller core raises the lower bound by as much and leaves the other literals for later cores. A
+   * call that runs out of its conflicts keeps the core it has; one that finds a solution reports it
+   * as any other.
+   */
+  private int[] trim(int[] core, long phaseLimit) {
+    int before = core.length;
+    boolean shrinking = true;
+    for (int r = 0; shrinking && r < lcg.coreTrim() && core.length > 1; r++) {
+      long cap = sat.conflicts + TRIM_CONFLICTS;
+      sat.setConflictLimit(
+          Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
+      int[] smaller = lcg.solveUnder(core) == CdclSolver.UNSAT ? sat.failedAssumptions() : core;
+      shrinking = smaller.length > 0 && smaller.length < core.length;
+      if (shrinking) {
+        core = smaller;
+      }
+    }
+    coreShrunk += before - core.length;
+    return core;
   }
 
   /** Relaxes a core of assumptions; returns false when the solver is unsatisfiable at the root. */
