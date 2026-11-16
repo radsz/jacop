@@ -181,3 +181,15 @@ Add `-Dlcg.fuzz.holes=true` for up to two holes in every variable's domain: reas
 skip holes were the most frequent explanation bug (LinearIntDom, Diffn, WeightedCompletion).
 A constraint whose pruning depends on a variable that is not among its arguments (such as an
 internal counter) needs that variable in its scope, or the generic reason is unsound.
+
+`-Dlcg.fuzz.proof=true` instead solves the random models with `--proof` logging and checks every
+proof with `RupChecker` and its conclusion against the reference (models with a constraint that
+proof logging does not support are skipped; `-Dlcg.fuzz.proofPrint=true` prints the OPB model and
+the proof of a failure). Proof steps that unit propagation cannot derive were mostly holes in
+domains and rows unit propagation does not round:
+
+```
+mvn -Pmin -pl jacop-sat test -Dtest='LcgFuzzTest#proofsCheckOnRandomModels' \
+    -Dsurefire.rerunFailingTestsCount=0 -Dlcg.fuzz.proof=true -Dlcg.fuzz.holes=true \
+    -Dlcg.fuzz.runs=1000000 -Dlcg.fuzz.seed=30000000
+```
