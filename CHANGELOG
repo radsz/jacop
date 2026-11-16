@@ -6875,12 +6875,13 @@ Version 5.0 (unreleased)
    the gates and is shared with variable elimination. DRAT proofs cover the
    new steps (XOR and ITE equivalences by case splits on the gate inputs).
    On the 90 SAT Competition instances of the JaSAT comparison at 240 s it
-   solves 30 -> 35 (hardware-model-checking 1.2 s, grs-fp-comm,
-   crafted-cec, cryptography-simon, planning, stedman-triples; scheduling
-   lost), total time 16,036 -> 15,449 s. Under --lcg it fires on 19 of the
-   240 wide instances, with the same results. --substitute 0 and
-   --congruence 0 in CdclMain, -Djacop.jasat.substitute=false and
-   -Djacop.jasat.congruence=false turn it off.
+   solves 30 -> 34 (hardware-model-checking 2.2 s, crafted-cec,
+   cryptography-simon, planning, stedman-triples; scheduling lost;
+   grs-fp-comm proved in 232 s in one of three rounds), total time 16,105
+   -> 15,436 s. Under --lcg it fires on 19 of the 240 wide instances, with
+   the same results. --substitute 0 and --congruence 0 in CdclMain,
+   -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
+   it off.
 
 Version 4.11
 =============
