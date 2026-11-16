@@ -136,8 +136,10 @@ public class LinearRelaxation extends Constraint
   // variable of the store, and whether there is any
   private final boolean[] lpOnly;
   private final boolean anyLpOnly;
-  // whether the relaxation holds the all-different-except encodings over auxiliary columns, which
-  // are the relaxation itself and are never dropped (the other encodings are extra rows like any)
+  // whether the relaxation holds the all-different-except encodings over auxiliary columns, or the
+  // value encodings of the model's Booleans that chose the sparse simplex, which are the relaxation
+  // itself and are not dropped for the pivot limits of search (the other encodings are extra rows
+  // like any)
   private boolean keepEncodings;
   // the extra rows before the value encodings of valueRows' tried rows, which come last; the others
   // are tried without them when all of them are not kept
@@ -222,6 +224,12 @@ public class LinearRelaxation extends Constraint
   private static final int LAZY_BATCH = Integer.getInteger("org.jacop.lp.lazyBatch", 50);
   private static final int LAZY_ROUNDS = Integer.getInteger("org.jacop.lp.lazyRounds", 100);
   private static final int LAZY_AGE = Integer.getInteger("org.jacop.lp.lazyAge", 100);
+
+  // the value encodings of the model's Booleans in place of the hull rows of the element
+  // constraints they cover, and counted with the exempt rows when the simplex is chosen by size
+  // (-Dorg.jacop.lp.encodingRows=false: the hull rows, and the simplex chosen without them; not
+  // final: a test hook)
+  static boolean encodingRowsOn = !FALSE.equals(System.getProperty("org.jacop.lp.encodingRows"));
 
   // the row pool: whether the rows of other constraints and the cuts leave the simplex after
   // POOL_AGE optimal solves in which they are inactive (with lazy rows every row does, after
@@ -392,6 +400,15 @@ public class LinearRelaxation extends Constraint
   /** Whether the value encodings ahead of the other extra rows were kept alone at their trial. */
   public boolean leadKept;
 
+  /**
+   * Statistics: the element constraints whose hull rows were left out for the value encoding that
+   * links their value to the Booleans of their index.
+   */
+  public int encodedElements;
+
+  /** Statistics: whether the value encodings of the model's Booleans chose the sparse simplex. */
+  public boolean encodingsSparse;
+
   /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
   public int tableClauses;
 
@@ -409,6 +426,18 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: whether those rows were dropped in search, as too many solves hit the limit. */
   public boolean extraDropped;
+
+  /** Statistics: the extra rows of a satisfaction model kept on probation at the root. */
+  public boolean probationKept;
+
+  /** Statistics: the solves charged as pruning ones because the relaxation failed nodes often. */
+  public long failingSolves;
+
+  /**
+   * Statistics: whether those rows moved the dense tableau to the sparse simplex, as it left too
+   * few pivots for a solve in search.
+   */
+  public boolean extraSparse;
 
   /** Statistics: the auxiliary columns ({@link LpColumn}) of the relaxation. */
   public int valueColumns;
@@ -482,8 +511,42 @@ public class LinearRelaxation extends Constraint
   private int baseRows;
   private long extraLimits;
   private static final int EXTRA_LIMITS = Integer.getInteger("org.jacop.lp.extraLimits", 3);
+
+  // the extra rows of a dense tableau whose search solves get fewer pivots than this move to the
+  // sparse simplex when it costs at most a quarter of the tableau per pivot (moveExtraToSparse)
+  private static final boolean EXTRA_SPARSE =
+      !FALSE.equals(System.getProperty("org.jacop.lp.extraSparse"));
+  private static final long EXTRA_SPARSE_PIVOTS = 100;
+  private static final long EXTRA_SPARSE_GAIN = 4;
+
+  // the most given rows of a relaxation whose extra rows move to the sparse simplex: the row of the
+  // objective alone, as in a set covering, whose rows are all clauses. With more given rows the
+  // extra rows kept on the sparse simplex made search slower (mqueens n11 7 -> 21 s, 12 rows;
+  // prize-collecting 32-4-8-2 14 -> 32 s, 33 rows; hoist PU_2_8_1 3 -> 9 s, 94 rows; at 240 s)
+  private static final int EXTRA_SPARSE_ROWS = 1;
+
+  // whether the extra rows carry the bound of the relaxation: without them it does not cut the
+  // domain of the objective
+  private boolean extraCarry;
   // the call at which the extra rows were added
   private long extraCall;
+  // the failures of the relaxation before the extra rows were added
+  private long extraFailures;
+
+  // the extra rows of a satisfaction model are kept at the root on probation: after this many
+  // solves they are dropped unless at least FAIL_RATE of the solves since then failed the node;
+  // 0 turns the probation off (the rows are then kept only when the root LP is infeasible)
+  private static final int SATISFACTION_PROBATION =
+      Integer.getInteger("org.jacop.lp.satisfactionProbation", 64);
+  private boolean probation;
+
+  // the share of solves that fail the node above which the relaxation is taken to pay for itself:
+  // its solves that deduce nothing are charged a PRUNE_DISCOUNT-th of their work, and its extra
+  // rows are not dropped for the pivot limits they hit
+  private static final double FAIL_RATE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.failRate", "0.1"));
+  // the share of the recent solves that failed the node, decaying by 1/32 a solve
+  private double recentFailures;
 
   // whether the sparse simplex was chosen by the size of the relaxation in place of the dense one
   private boolean bySize;
@@ -493,6 +556,8 @@ public class LinearRelaxation extends Constraint
 
   // made by refutation(): solved once at the root, then removed
   private boolean refutation;
+  // a refutation whose objective is a free column of the longest inequality of the model
+  private boolean pseudoObjective;
   private int refutationStatus = -1;
   // the status of the last solve
   private int lastSolveStatus = -1;
@@ -852,6 +917,11 @@ public class LinearRelaxation extends Constraint
   private Certificate[] rootCertificates = new Certificate[0];
   // the LP-only column facts of each root form, for its explanation
   private int[][] rootFacts = new int[0][];
+  // the bounds of the objective that the root forms were propagated with on the current branch,
+  // and the levels they were propagated at, a trail undone by removeLevel
+  private long[] rootBoundsAt = new long[8];
+  private int[] rootBoundsLevel = new int[8];
+  private int rootBoundsSize;
   private long[] solvedLo;
   private long[] solvedHi;
 
@@ -996,7 +1066,9 @@ public class LinearRelaxation extends Constraint
         valueColumns++;
       }
     }
-    anyLpOnly = valueColumns > 0;
+    // a free column (a wire of a sorting network, the objective of a refutation) has no value
+    // either: a row over it is not checked on a ground assignment
+    anyLpOnly = valueColumns > 0 || freeColumns > 0;
     int further = rc.size() - base;
     extraColumns = rc.subList(base, rc.size()).toArray(new int[0][]);
     extraWeights = rw.subList(base, rw.size()).toArray(new long[0][]);
@@ -1196,6 +1268,14 @@ public class LinearRelaxation extends Constraint
     List<AlldifferentCuts> hall = new ArrayList<>();
     List<TreeCuts> trees = new ArrayList<>();
     Map<LinearForm, String> tags = new IdentityHashMap<>();
+    // the element constraints whose value encodings give their convex hull: their own hull rows
+    // are left out (gap of the OR-Library: 836 hull rows next to 400 encoding rows, which made the
+    // dense trial of the further rows stop at its pivot limit and keep none)
+    Set<Constraint> linked = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<LinearForm> encodings = new ArrayList<>();
+    if (LINEARIZE) {
+      encodings.addAll(Linearizations.encodings(constraints, encodingRowsOn ? linked : null));
+    }
     for (Constraint c : constraints) {
       TreeCuts forest = TREE_CUTS && objective != null ? TreeCuts.of(c) : null;
       if (forest != null) {
@@ -1216,10 +1296,15 @@ public class LinearRelaxation extends Constraint
         }
       }
       LinearForm f = LinearForms.of(c);
-      if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
+      if (f != null && store.isOptionalRow(c)) {
+        // tried like the clauses: the 84,897 dominance nogoods of knapPI similar_weights (5,000
+        // items) made the relaxation large, solved at the root only, and search lost its bound
+        relaxed.add(f);
+        tags.put(f, "optional:" + c.getClass().getSimpleName());
+      } else if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
         localForms.add(f);
         tags.put(f, "row:" + c.getClass().getSimpleName());
-      } else if (f == null && LINEARIZE) {
+      } else if (f == null && LINEARIZE && !linked.contains(c)) {
         List<LinearForm> rows = Linearizations.of(c);
         relaxed.addAll(rows);
         tag(tags, rows, "lin:" + c.getClass().getSimpleName());
@@ -1250,7 +1335,6 @@ public class LinearRelaxation extends Constraint
       tag(tags, localForms, "substituted");
     }
     if (LINEARIZE) {
-      List<LinearForm> encodings = new ArrayList<>(Linearizations.encodings(constraints));
       if (objective != null) {
         List<LinearForm> cliques =
             Linearizations.valueCliques(constraints, List.of(localForms, relaxed));
@@ -1381,10 +1465,24 @@ public class LinearRelaxation extends Constraint
       // larger ones, also those over the dense size cap, which would get no relaxation at all
       simplex = Simplex.SPARSE;
     }
-    if (auto && simplex == Simplex.DENSE && exempt > 0) {
+    // the value encodings of the model's own Booleans count like the exempt rows: on a model that
+    // states an assignment by Booleans (x = v) the encodings are its assignment and cost rows, and
+    // a dense trial of them at the first solve stopped at its pivot limit (gapd 10x200 of the
+    // OR-Library: 800 encoding rows over 2,601 columns, 360 pivots, all rows dropped and the root
+    // bound 3,738 instead of 12,4xx)
+    int encoded = 0;
+    boolean bySparse = false;
+    if (encodingRowsOn && auto && simplex == Simplex.DENSE && !encodingSet.isEmpty()) {
+      for (LinearForm f : candidates) {
+        encoded += encodingSet.contains(f) ? 1 : 0;
+      }
+    }
+    if (auto && simplex == Simplex.DENSE && (exempt > 0 || encoded > 0)) {
       List<LinearForm> withColumns = new ArrayList<>(localForms);
       withColumns.addAll(candidates.subList(0, exempt));
-      if (localForms.size() + exempt >= SPARSE_ROWS || tooLarge(withColumns, Simplex.DENSE)) {
+      if (localForms.size() + exempt + encoded >= SPARSE_ROWS
+          || tooLarge(withColumns, Simplex.DENSE)) {
+        bySparse = encoded > 0;
         // the encodings are rows of the model as a MIP states it: the simplex is chosen by their
         // count too, and the sparse one takes them all when the dense tableau cannot
         simplex = Simplex.SPARSE;
@@ -1405,7 +1503,15 @@ public class LinearRelaxation extends Constraint
     // the leading rows of the value conjunctions are counted like the exempt ones, outside the
     // share of the others (ihtc-2024-kletzander test05: 412 leading rows of a share of 472 left out
     // the count row of the objective, and the root bound stayed 0)
-    long share = trees.isEmpty() ? 2L * localForms.size() + SPARSE_ROWS + first : Long.MAX_VALUE;
+    // the encodings that chose the sparse simplex are counted outside the share too (gapd 10x200:
+    // a share of 124 rows took 124 of its 800 encoding rows, root bound 3,746)
+    long share =
+        trees.isEmpty()
+            ? 2L * localForms.size()
+                + SPARSE_ROWS
+                + first
+                + (bySparse && leading.isEmpty() ? encoded : 0)
+            : Long.MAX_VALUE;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
@@ -1437,9 +1543,10 @@ public class LinearRelaxation extends Constraint
         }
       }
       boolean fitted = fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
-      if (!fitted && nearRowsOn && auto && simplex == Simplex.DENSE) {
-        // the rows over the terms of the objective do not fit the dense tableau: the sparse
-        // simplex takes them all, as many as they are. A model stated in clauses has few rows of
+      if (!fitted && nearRowsOn && auto && (simplex == Simplex.DENSE || bySparse)) {
+        // the rows over the terms of the objective do not fit the dense tableau (or the share of
+        // the sparse simplex that the value encodings chose): the sparse simplex takes them all,
+        // as many as they are. A model stated in clauses has few rows of
         // its own, and their share left out the rows that bound the objective (CSPLib warehouses
         // cap131: 2 rows of its own, and the clauses b[i,j] -> open[j] with the element costs as
         // value encodings, 3,826 rows, raise the root bound from 626,300 to 914,788, opt 915,059)
@@ -1447,7 +1554,19 @@ public class LinearRelaxation extends Constraint
         // ionosphere has 110,602 such rows, whose trial took 15 s and did not raise the bound
         Set<LinearForm> near = nearObjective(localForms, sorted, triedSet, objective);
         List<LinearForm> sparse = new ArrayList<>();
-        long nearShare = Math.max(share, (long) first + near.size());
+        // the value encodings that went ahead come before the near rows: those of them that are
+        // not near rows are counted on top (NearRowsTest, 40 stores: with the element hull rows
+        // left out for the encodings, the 40 rows sum b = 1 went ahead of the 1,680 near rows and
+        // pushed 40 of them out of the share, root bound 8,009 instead of 15,057)
+        int ahead = 0;
+        for (int k = first; encodingsLead && k < sorted.size(); k++) {
+          LinearForm f = sorted.get(k);
+          if (!encodingSet.contains(f)) {
+            break;
+          }
+          ahead += near.contains(f) ? 0 : 1;
+        }
+        long nearShare = Math.max(share, (long) first + near.size() + ahead);
         fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse);
         if (localForms.size() + near.size() <= sparseMaxRows
             && containsAll(sparse, near)
@@ -1462,7 +1581,11 @@ public class LinearRelaxation extends Constraint
     r.nearRows = nearRows;
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.large = large && simplex == Simplex.SPARSE;
-    r.keepEncodings = exempt > 0;
+    // the encodings that chose the sparse simplex are the model's rows as well: the solves in
+    // search get the pivots of the sparse simplex, not those of the dense tableau they would make
+    // (gapd
+    // 10x200: 7 pivots a solve, every one stopped at the limit and the relaxation stalled after 32)
+    r.keepEncodings = exempt > 0 || bySparse;
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     if (encodingsLead) {
@@ -1475,6 +1598,8 @@ public class LinearRelaxation extends Constraint
     }
     r.valueCliques = valueCliqueRows;
     r.pairCliques = pairCliques;
+    r.encodedElements = linked.size();
+    r.encodingsSparse = bySparse;
     r.tableClauses = tableClauses;
     r.formSource = tags;
     r.capacity = separations;
@@ -1637,6 +1762,22 @@ public class LinearRelaxation extends Constraint
    * @return the relaxation, or null when there is no value encoding or the rows are too many
    */
   public static LinearRelaxation refutation(Store store, Collection<LinearForm> clauses) {
+    return refutation(store, clauses, Set.of());
+  }
+
+  /**
+   * Creates the relaxation that tries to refute a satisfaction model at the root, as {@link
+   * #refutation(Store, Collection)}, with the block sums of split linear constraints replaced by
+   * their definitions in the rows of a model with no value encoding ({@link
+   * #pseudoObjectiveRefutation}), so that a long row of the model is one row again.
+   *
+   * @param store the store
+   * @param clauses the clause rows of the clauses that lazy clause generation took
+   * @param substituted variables to replace by their definitions
+   * @return the relaxation, or null when there is no value encoding or the rows are too many
+   */
+  public static LinearRelaxation refutation(
+      Store store, Collection<LinearForm> clauses, Set<? extends IntVar> substituted) {
     if (!ROOT_REFUTATION || !LINEARIZE) {
       return null;
     }
@@ -1656,7 +1797,11 @@ public class LinearRelaxation extends Constraint
     }
     List<LinearForm> rows = Linearizations.refutationRows(constraints, given);
     if (rows.isEmpty()) {
-      return null;
+      if (!PSEUDO_OBJECTIVE) {
+        return null;
+      }
+      List<LinearForm> model = substituted.isEmpty() ? given : substitute(given, substituted, null);
+      return pseudoObjectiveRefutation(model);
     }
     PairCliques merged = PairCliques.merge(rows, List.of());
     rows = merged.rows;
@@ -1668,6 +1813,125 @@ public class LinearRelaxation extends Constraint
     r.refutation = true;
     r.pairCliques = merged.cliques;
     r.cutsTried = true;
+    return r.rows() < 2 ? null : r;
+  }
+
+  /**
+   * The refutation of a model with no value encoding, such as a pseudo-Boolean model: its linear
+   * rows and clause rows, with the inequality {@code sum w x <= b} whose variables are in the most
+   * rows as the objective. The root solve minimizes {@code t = sum w x} over a free column t in
+   * [min, b] and its cut rounds raise that bound; the model has no solution when the relaxation, or
+   * the relaxation with its cuts, is infeasible. Without an objective a relaxation has no cut
+   * rounds, and its vertex is any point of the polytope; with the cardinality row of the model as
+   * the objective the cuts work on the point that comes nearest to breaking it.
+   *
+   * <p>The pseudo-Boolean competition has such cardinality refutations: a vertex cover of at most k
+   * vertices of a graph made of odd cycles (vc-lines), where the relaxation takes every vertex at
+   * 1/2 and the Chvátal-Gomory and MIR cuts of the cycles (the odd-cycle inequalities, M. W.
+   * Padberg, "On the facial structure of set packing polyhedra", Math. Programming 5, 1973) raise
+   * the bound past k; and the pigeonhole principle (php), whose relaxation is infeasible as it is,
+   * while resolution and so lazy clause generation refutes it only in exponentially many steps (A.
+   * Haken, "The intractability of resolution", TCS 39, 1985). The relaxation of such a model is
+   * often over the size caps of the relaxation in search (php 230/229: 52,670 columns); it is
+   * solved once at the root here, within the pivot limit of the refutation.
+   */
+  // whether f states a clause over 0/1 variables: unit weights and the right-hand side that makes
+  // one literal true enough, sum(positive) - sum(negative) >= 1 - |negative|, or its negation
+  private static boolean isClause(LinearForm f) {
+    long positive = 0;
+    long negative = 0;
+    for (int k = 0; k < f.vars().length; k++) {
+      IntVar v = f.vars()[k];
+      long w = f.weights()[k];
+      if (Math.abs(w) != 1 || v.min() < 0 || v.max() > 1) {
+        return false;
+      }
+      if (w > 0) {
+        positive++;
+      } else {
+        negative++;
+      }
+    }
+    return f.relation() == LinearForm.GE ? f.c() == 1 - negative : f.c() == positive - 1;
+  }
+
+  private static LinearRelaxation pseudoObjectiveRefutation(List<LinearForm> given) {
+    // the inequality whose variables are in the most rows: the cardinality row over every vertex
+    // of a vertex cover, the row that bounds the exits of the blocks of a pigeonhole formula with
+    // exits (php-exit, each exit in the 93 pigeon rows of its block), not one of those rows
+    Map<IntVar, Integer> occurrences = new IdentityHashMap<>();
+    for (LinearForm f : given) {
+      for (IntVar v : f.vars()) {
+        occurrences.merge(v, 1, Integer::sum);
+      }
+    }
+    LinearForm longest = null;
+    long most = 0;
+    for (LinearForm f : given) {
+      if ((f.relation() == LinearForm.LE || f.relation() == LinearForm.GE)
+          && f.vars().length >= PSEUDO_OBJECTIVE_LENGTH
+          && !isClause(f)) {
+        long incidence = 0;
+        for (IntVar v : f.vars()) {
+          incidence += occurrences.get(v);
+        }
+        if (incidence > most) {
+          most = incidence;
+          longest = f;
+        }
+      }
+    }
+    // no row but clauses: the relaxation of a formula in conjunctive normal form with clauses of at
+    // least two literals takes every variable at 1/2, and its cuts are no stronger than resolution
+    // (rubik of the Challenge, 22,410 clauses: 4.5 s for nothing)
+    if (longest == null) {
+      return null;
+    }
+    // sum w x <= b; a row >= is negated
+    long sign = longest.relation() == LinearForm.LE ? 1 : -1;
+    long[] w = new long[longest.vars().length];
+    long lo = 0;
+    long hi = 0;
+    try {
+      for (int k = 0; k < w.length; k++) {
+        w[k] = Math.multiplyExact(sign, longest.weights()[k]);
+        IntVar v = longest.vars()[k];
+        long atMin = Math.multiplyExact(w[k], v.min());
+        long atMax = Math.multiplyExact(w[k], v.max());
+        lo = Math.addExact(lo, Math.min(atMin, atMax));
+        hi = Math.addExact(hi, Math.max(atMin, atMax));
+      }
+    } catch (ArithmeticException _) {
+      return null;
+    }
+    long b = Math.multiplyExact(sign, longest.c());
+    if (lo < IntDomain.MIN_INT || Math.min(b, hi) > IntDomain.MAX_INT || lo > Math.min(b, hi)) {
+      return null;
+    }
+    LpColumn t = new LpColumn("refutationObjective", (int) lo, (int) Math.min(b, hi));
+    IntVar[] vars = Arrays.copyOf(longest.vars(), w.length + 1);
+    vars[w.length] = t;
+    long[] weights = Arrays.copyOf(w, w.length + 1);
+    weights[w.length] = -1;
+    List<LinearForm> rows = new ArrayList<>();
+    rows.add(new LinearForm(vars, weights, 0, LinearForm.EQ));
+    for (LinearForm f : given) {
+      if (f != longest) {
+        rows.add(f);
+      }
+    }
+    PairCliques merged = PairCliques.merge(rows, List.of());
+    rows = merged.rows;
+    // solved once, within the pivot limit of the refutation: the sparse simplex also over the size
+    // caps of the relaxation in search, up to those of a large relaxation
+    Simplex simplex = sparseTakes(rows) || largeTakes(rows) ? Simplex.SPARSE : Simplex.DENSE;
+    if (tooLarge(rows, simplex)) {
+      return null;
+    }
+    LinearRelaxation r = new LinearRelaxation(rows, List.of(), t, false, simplex);
+    r.refutation = true;
+    r.pseudoObjective = true;
+    r.pairCliques = merged.cliques;
     return r.rows() < 2 ? null : r;
   }
 
@@ -1732,6 +1996,16 @@ public class LinearRelaxation extends Constraint
     r.clauseEquivalences = simplified.equivalences;
     r.cutsTried = true;
     return r.rows() < 2 ? null : r;
+  }
+
+  /**
+   * Tells whether this refutation minimizes an inequality of the model ({@link
+   * #pseudoObjectiveRefutation}).
+   *
+   * @return true for a refutation with an objective
+   */
+  public boolean hasPseudoObjective() {
+    return pseudoObjective;
   }
 
   /**
@@ -1996,6 +2270,14 @@ public class LinearRelaxation extends Constraint
   private static final int REFUTATION_PIVOTS =
       Integer.getInteger("org.jacop.lp.rootRefutationPivots", 2_500);
 
+  // a satisfaction model with no value encoding: the refutation minimizes the inequality whose
+  // variables are in the most rows with cut rounds (pseudoObjectiveRefutation), when that row has
+  // at least this many variables
+  private static final boolean PSEUDO_OBJECTIVE =
+      !FALSE.equals(System.getProperty("org.jacop.lp.refutationObjective"));
+  private static final int PSEUDO_OBJECTIVE_LENGTH =
+      Integer.getInteger("org.jacop.lp.refutationObjectiveLength", 3);
+
   // the largest relaxation, in rows and in columns, that the sparse simplex is chosen for by size:
   // beyond them its root solve and its ratio test take more than the time limit of a run (nside
   // EASY_200_50, 57,505 rows: 52 ms a pivot; rcpsp-wet-diverse j60_19_6, 140,925 columns), and the
@@ -2184,6 +2466,28 @@ public class LinearRelaxation extends Constraint
       }
     } catch (ArithmeticException _) {
       return forms;
+    }
+    // a variable that a row still has after the expansion, which stops at depth 8, keeps its
+    // definition, and so do the variables of that definition: the shared sums of linear overlap
+    // factoring nest deeper (CSPLib bus driver scheduling c1, 370 sums: without their definitions
+    // they were free columns and the root bound 4.4 instead of 25.4)
+    Set<IntVar> kept = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar> todo = new ArrayList<>();
+    for (LinearForm f : result) {
+      for (IntVar v : f.vars()) {
+        if (definition.containsKey(v) && kept.add(v)) {
+          todo.add(v);
+        }
+      }
+    }
+    while (!todo.isEmpty()) {
+      LinearForm d = definition.get(todo.removeLast());
+      result.add(d);
+      for (IntVar v : d.vars()) {
+        if (definition.containsKey(v) && kept.add(v)) {
+          todo.add(v);
+        }
+      }
     }
     return result;
   }
@@ -2608,6 +2912,10 @@ public class LinearRelaxation extends Constraint
     if (refutation && calls > 0) {
       return; // solved once at the root, see refutation()
     }
+    // root forms made at a restart over tightened root bounds hold only while that level stays
+    if (ROOT_REDUCED_COSTS && calls > 0 && !restarting && !tightLost) {
+      rootReducedCosts(store);
+    }
     if (large && calls > 0 && store.level > rootLevel && !restarting) {
       // a large relaxation does nothing in search once it is solved: it never prunes there, so
       // the constraints of its rows hold an assignment to them, and checking the ground columns
@@ -2626,13 +2934,6 @@ public class LinearRelaxation extends Constraint
       rootObjective = objectiveBound();
     } else if (store.level <= rootLevel && objectiveBound() != rootObjective) {
       rootObjective = objectiveBound();
-      if (ROOT_REDUCED_COSTS) {
-        long pruned = prunings;
-        for (int k = 0; k < rootForms.length; k++) {
-          propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
-        }
-        rootPrunings += prunings - pruned;
-      }
       if (restartSolvesOn && rootBoundsChanged() && ++restartsWaited >= restartPeriod) {
         restartsWaited = 0;
         restartSolve(store);
@@ -2650,6 +2951,7 @@ public class LinearRelaxation extends Constraint
     long pivots = pivots();
     long work = lp.work();
     boolean first = calls == 0;
+    long callsBefore = calls;
     // the bound of the objective's domain before the first solve, which the root bound must cut
     long domainBound = 0;
     if (objective != null) {
@@ -2689,11 +2991,17 @@ public class LinearRelaxation extends Constraint
         cost = Math.min(cost, WORK);
       }
       // back off while the relaxation finds nothing, come back as soon as it does
+      if (calls > callsBefore) {
+        recentFailures += ((failures > failed ? 1 : 0) - recentFailures) / 32;
+      }
       if (failures > failed) {
         idle = 0;
         period = Math.max(1, period / 2);
         credit = WORK;
-      } else if (prunings > pruned) {
+      } else if (prunings > pruned || FAIL_RATE > 0 && recentFailures >= FAIL_RATE) {
+        if (prunings == pruned) {
+          failingSolves++;
+        }
         idle = 0;
         period = Math.max(1, period / 2);
         credit -= PRUNE_DISCOUNT == 0 ? 0 : cost / PRUNE_DISCOUNT;
@@ -2706,6 +3014,37 @@ public class LinearRelaxation extends Constraint
       }
     }
     checkGround();
+  }
+
+  // propagates the root forms again on the current branch when the bound of the objective has
+  // improved since they were last propagated on it. The bounds they were propagated with are
+  // trailed by level, so that the prunings undone by a backtrack are made again: at the level of
+  // the first solve alone, which the search never returns to, they never fired (knapPI
+  // similar_weights of the PB competition, 5,000 items: root bound 48,769.05 and optimum 48,768,
+  // no proof in 240 s). On a branch they are propagated once per bound, not at every call, which
+  // costs more than it prunes (bus_scheduling, osolpro #169)
+  private void rootReducedCosts(Store store) {
+    if (rootForms.length == 0) {
+      return;
+    }
+    long bound = objectiveBound();
+    if (rootBoundsSize > 0 && rootBoundsAt[rootBoundsSize - 1] == bound) {
+      return;
+    }
+    if (rootBoundsSize > 0 && rootBoundsLevel[rootBoundsSize - 1] == store.level) {
+      rootBoundsSize--;
+    }
+    if (rootBoundsSize == rootBoundsAt.length) {
+      rootBoundsAt = Arrays.copyOf(rootBoundsAt, 2 * rootBoundsSize);
+      rootBoundsLevel = Arrays.copyOf(rootBoundsLevel, 2 * rootBoundsSize);
+    }
+    rootBoundsAt[rootBoundsSize] = bound;
+    rootBoundsLevel[rootBoundsSize++] = store.level;
+    long pruned = prunings;
+    for (int k = 0; k < rootForms.length; k++) {
+      propagate(store, rootForms[k], rootFacts[k], rootCertificates[k]);
+    }
+    rootPrunings += prunings - pruned;
   }
 
   // whether the bounds of a column other than the objective are tighter than at the last solve at
@@ -2889,6 +3228,12 @@ public class LinearRelaxation extends Constraint
       // solution guides the search and its reduced costs fix columns at the root level
       return;
     }
+    if (probation && calls - extraCall >= SATISFACTION_PROBATION) {
+      probation = false;
+      if (beforeExtra != null && !failingWithExtra()) {
+        dropExtraRows();
+      }
+    }
     calls++;
     boolean jump = calls > 1 && lastSolveLevel - store.level >= BASIS_JUMP;
     long pivotsBefore = lp.pivots();
@@ -3005,7 +3350,9 @@ public class LinearRelaxation extends Constraint
       // 60-190 s instead of 13 s)
       if (beforeExtra != null
           && !keepEncodings
+          && !extraCarry
           && trees.isEmpty()
+          && !failingWithExtra()
           && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
               || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
@@ -3943,6 +4290,14 @@ public class LinearRelaxation extends Constraint
     };
   }
 
+  // the pivot limit of one cut round; a refutation is solved once, so its rounds may take the
+  // pivots of its root solve, since a round stopped at the limit is dropped and the refutation
+  // then fails (php-exit: 4,454 pivots in all)
+  private int roundPivots(long size) {
+    int pivots = Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots);
+    return pseudoObjective ? Math.max(pivots, REFUTATION_PIVOTS) : pivots;
+  }
+
   /**
    * Rounds of MIR cuts at the root, each followed by a re-solve from the same basis. The cuts come
    * from the rows of the tableau of the basic columns with fractional values (Gomory mixed-integer
@@ -4064,11 +4419,8 @@ public class LinearRelaxation extends Constraint
       long size = Math.max(1, lp.pivotWork());
       status =
           tight
-              ? rootSolvePool(Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots))
-              : rootSolve(
-                  lp,
-                  Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
-                  rootWork() / CUT_ROUNDS);
+              ? rootSolvePool(roundPivots(size))
+              : rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
@@ -4159,6 +4511,32 @@ public class LinearRelaxation extends Constraint
     if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
       return false;
     }
+    LpSolver s = sparseCopy();
+    if (s == null) {
+      return false;
+    }
+    droppedPivots += lp.pivots();
+    denseBeforeCuts = lp;
+    denseLpRow = lpRow.clone();
+    denseInLp = inLp.clone();
+    denseInactive = inactive.clone();
+    denseIdentity = identityRows;
+    denseRows = rows();
+    denseDormant = dormant;
+    lp = s;
+    simplex = Simplex.SPARSE;
+    sparseCuts = true;
+    return true;
+  }
+
+  /**
+   * Returns the sparse simplex of JaLP over the rows of the dense tableau, in the same order,
+   * solved from scratch with the root budget, when it reaches the optimum of the dense one; null
+   * otherwise (its pivots are counted as dropped).
+   */
+  private LpSolver sparseCopy() {
+    int m = lp.rows();
+    int n = lp.columns();
     int[][] cs = new int[m][];
     double[][] ws = new double[m][];
     double[] lo = new double[m];
@@ -4176,7 +4554,7 @@ public class LinearRelaxation extends Constraint
       hi[k] = hasHi[i] ? (double) rowHi[i] : Double.POSITIVE_INFINITY;
     }
     if (nonzeros > MAX_NONZEROS) {
-      return false;
+      return null;
     }
     double[] cost = new double[n];
     cost[0] = maximize ? -1 : 1;
@@ -4190,20 +4568,39 @@ public class LinearRelaxation extends Constraint
     if (status != LpSolver.OPTIMAL
         || Math.abs(s.value(0) - before) > 1e-6 * (1 + Math.abs(before))) {
       droppedPivots += s.pivots();
-      return false;
+      return null;
+    }
+    return s;
+  }
+
+  /**
+   * Moves a dense tableau that the extra rows made too large for search to the sparse simplex: a
+   * solve in search takes WORK / pivotWork pivots, and a tableau of a few hundred clause rows over
+   * thousands of columns gets only tens of them, so that nearly every solve stops at its limit
+   * (scpa1 of the OR-Library set covering, 300 clauses over 3,000 columns: 311 x 3,312 entries, 19
+   * pivots a call, 32 of 33 solves at the limit). The sparse simplex costs its nonzeros per pivot,
+   * a seventh of the tableau there. Only for extra rows that carry the bound (extraCarry), as in
+   * sparseTrial. {@code -Dorg.jacop.lp.extraSparse=false} turns the move off.
+   */
+  private void moveExtraToSparse() {
+    if (!EXTRA_SPARSE
+        || simplex != Simplex.DENSE
+        || !extraCarry
+        || WORK / Math.max(1, lp.pivotWork()) >= EXTRA_SPARSE_PIVOTS) {
+      return;
+    }
+    LpSolver s = sparseCopy();
+    if (s == null) {
+      return;
+    }
+    if (s.pivotWork() * EXTRA_SPARSE_GAIN > lp.pivotWork()) {
+      droppedPivots += s.pivots();
+      return;
     }
     droppedPivots += lp.pivots();
-    denseBeforeCuts = lp;
-    denseLpRow = lpRow.clone();
-    denseInLp = inLp.clone();
-    denseInactive = inactive.clone();
-    denseIdentity = identityRows;
-    denseRows = rows();
-    denseDormant = dormant;
     lp = s;
     simplex = Simplex.SPARSE;
-    sparseCuts = true;
-    return true;
+    extraSparse = true;
   }
 
   // whether the MIR of a row of the tableau also tries the weight of its basic column as divisor,
@@ -4442,11 +4839,7 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
-      status =
-          rootSolve(
-              lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
-              rootWork() / CUT_ROUNDS);
+      status = rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
         status = DualSimplex.OPTIMAL;
@@ -4670,11 +5063,7 @@ public class LinearRelaxation extends Constraint
       double before = lp.value(0);
       addCuts(chosen);
       long size = Math.max(1, lp.pivotWork());
-      status =
-          rootSolve(
-              lp,
-              Math.clamp(ROOT_WORK / CUT_ROUNDS / size, 5, rootPivots),
-              rootWork() / CUT_ROUNDS);
+      status = rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
         status = DualSimplex.OPTIMAL;
@@ -5032,7 +5421,9 @@ public class LinearRelaxation extends Constraint
       dual.addAll(found.subList(before, found.size()));
     }
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (zeroHalfOn) {
+    // a refutation also takes the zero-half cuts: they are the odd-cycle inequalities of the
+    // cardinality refutations (domset hexgrid)
+    if (zeroHalfOn || pseudoObjective) {
       int foundBefore = found.size();
       zeroHalf(value, lo, hi, found, zeroHalf);
       labelled(found, foundBefore, "zerohalf");
@@ -5380,14 +5771,52 @@ public class LinearRelaxation extends Constraint
       baseRows = m;
       extraLimits = limits;
       extraCall = calls;
+      extraFailures = failures;
       droppedPivots += lp.pivots();
       lp = full;
       allRowsInSimplex(m + k);
+      extraCarry = carriesBound(status, before, m, keptStatus);
+      extraSparse = trialSparse;
+      trialSparse = false;
+      if (keptStatus == LpSolver.OPTIMAL) {
+        moveExtraToSparse();
+      }
       return keptStatus;
     }
     // the rows of the last trial are the m + last rows
     poolExtraRows(m, last);
     return status;
+  }
+
+  // whether the extra rows kept carry the bound: the relaxation without them is optimal at a bound
+  // that does not cut the domain of the objective, and with them it is infeasible or cuts it
+  // (set covering: the objective row alone is bounded by 0, the clauses make it 246.8 on scpa1)
+  private boolean carriesBound(int status, double before, int given, int keptStatus) {
+    if (!baseBoundsNothing(status, before, given)) {
+      return false;
+    }
+    long domain = maximize ? objective.max() : objective.min();
+    if (keptStatus == LpSolver.INFEASIBLE) {
+      return true;
+    }
+    double with = lp.value(0);
+    return keptStatus == LpSolver.OPTIMAL
+        && (maximize ? integerBound(with) < domain : integerBound(with) > domain);
+  }
+
+  // whether the relaxation without the extra rows is at most the row of the objective
+  // (EXTRA_SPARSE_ROWS), optimal at a bound that does not cut the domain of the objective: the
+  // bound
+  // it gives the search is the domain's own
+  private boolean baseBoundsNothing(int status, double before, int given) {
+    if (objective == null
+        || given > EXTRA_SPARSE_ROWS
+        || status != LpSolver.OPTIMAL
+        || Double.isNaN(before)) {
+      return false;
+    }
+    long domain = maximize ? objective.max() : objective.min();
+    return maximize ? integerBound(before) >= domain : integerBound(before) <= domain;
   }
 
   // the columns of the base rows and the first p extra rows
@@ -5455,6 +5884,53 @@ public class LinearRelaxation extends Constraint
   private LpSolver trialRows(int status, double before, int m, int k, int n, boolean few) {
     setExtraRows(m, k);
     LpSolver full = rowSolver(m + k, n);
+    int withExtra = trialSolve(full, status, before, m, k, n, few);
+    if (withExtra == LpSolver.LIMIT && few && baseBoundsNothing(status, before, m)) {
+      LpSolver sparse = sparseTrial(m + k, n);
+      if (sparse != null) {
+        droppedPivots += full.pivots();
+        full = sparse;
+        withExtra = trialSolve(full, status, before, m, k, n, few);
+      }
+    }
+    // the other rows of a model with trees are kept: alone they rarely move the bound, but with
+    // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
+    trialStatus = withExtra;
+    boolean kept = trialKeep || !trialCut && (keepExtra || !trees.isEmpty());
+    if (!kept
+        && !trialCut
+        && objective == null
+        && SATISFACTION_PROBATION > 0
+        && k == extraColumns.length
+        && withExtra == LpSolver.OPTIMAL) {
+      // a satisfaction model has no bound to raise: the rows stay on probation, and are dropped
+      // unless they fail nodes in search (car sequencing p6-76: the class encodings and option
+      // tables fail one LP solve in six and prove it in 17 s, 300 conflicts; without them the
+      // window rows fail one in twenty and the proof takes 295 s and 1.2 million conflicts)
+      kept = true;
+      probation = true;
+      probationKept = true;
+    }
+    if (kept) {
+      return full;
+    }
+    droppedPivots += full.pivots();
+    if (trialSparse) {
+      simplex = Simplex.DENSE;
+      trialSparse = false;
+    }
+    return null;
+  }
+
+  // whether the rows of the last trialSolve are kept for their bound, and whether it stopped
+  // before the solve over the current bounds (then they are not kept for any other reason)
+  private boolean trialKeep;
+  private boolean trialCut;
+
+  // the root solves of a trial of the extra rows on the simplex full; returns the status of the
+  // solve with them at the current bounds and sets trialKeep
+  private int trialSolve(
+      LpSolver full, int status, double before, int m, int k, int n, boolean few) {
     for (int j = 0; j < n; j++) {
       setBounds(full, j);
     }
@@ -5511,9 +5987,9 @@ public class LinearRelaxation extends Constraint
     if (searchStartMin != null && k == leadExtra && !keep && trialStatusAtStart == LpSolver.LIMIT) {
       // the value encodings alone did not finish over the bounds of the search start: a second
       // solve over the current bounds would spend the same time again
-      trialStatus = LpSolver.LIMIT;
-      droppedPivots += full.pivots();
-      return null;
+      trialKeep = false;
+      trialCut = true;
+      return LpSolver.LIMIT;
     }
     int withExtra;
     if (searchStartMin != null && !keep && !keepExtra && trees.isEmpty()) {
@@ -5540,15 +6016,45 @@ public class LinearRelaxation extends Constraint
     } else {
       keep |= withExtra == LpSolver.INFEASIBLE;
     }
-    // the other rows of a model with trees are kept: alone they rarely move the bound, but with
-    // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
-    keep |= keepExtra || !trees.isEmpty();
-    trialStatus = withExtra;
-    if (keep) {
-      return full;
+    trialKeep = keep;
+    trialCut = false;
+    return withExtra;
+  }
+
+  // whether the trial of the extra rows runs on the sparse simplex in place of the dense one
+  private boolean trialSparse;
+
+  /**
+   * Returns a sparse simplex for a second trial of the extra rows after the dense trial stopped at
+   * its root budget, or null: only when the dense tableau would leave a solve in search fewer than
+   * EXTRA_SPARSE_PIVOTS pivots and the sparse one costs at most 1/EXTRA_SPARSE_GAIN of it per
+   * pivot. On the dense tableau of scpb1 of the OR-Library set covering (300 clauses over 3,000
+   * columns, 5 % dense) the trial stopped at its root budget of 970 pivots and the clauses were
+   * left out, root bound 0; on the sparse one the bound is 64.5 and the search proves the optimum
+   * 69 in 15 s. The caller tries it, also after a search that started without the rows, only for
+   * the plain extra rows (no value encodings) of a relaxation whose given rows bound nothing: where
+   * they already cut the domain of the objective the dense trial and the dropping of its rows after
+   * the limits stay (mqueens n11, prize-collecting, hoist: 2-3x slower with the rows kept on the
+   * sparse simplex); a dense trial that ends in its budget stays dense (peacable_queens 8: 257
+   * clause rows dense, no limit in search; the 1,352 rows with the value encodings on the sparse
+   * simplex took 389 s of LP in 600 s for a bound 31 in place of 32).
+   */
+  private LpSolver sparseTrial(int rows, int n) {
+    if (simplex != Simplex.DENSE || !EXTRA_SPARSE) {
+      return null;
     }
-    droppedPivots += full.pivots();
-    return null;
+    long dense = (long) rows * (rows + n + 1);
+    if (WORK / Math.max(1, dense) >= EXTRA_SPARSE_PIVOTS) {
+      return null;
+    }
+    simplex = Simplex.SPARSE;
+    LpSolver s = rowSolver(rows, n);
+    if (s.pivotWork() * EXTRA_SPARSE_GAIN > dense) {
+      simplex = Simplex.DENSE;
+      return null;
+    }
+    trialSparse = true;
+    return s;
   }
 
   // the fewest pivots and nanoseconds that the solve of a trial at the current bounds gets
@@ -5677,6 +6183,12 @@ public class LinearRelaxation extends Constraint
       identityRows = false;
       pooledExtra = pooled.size();
     }
+  }
+
+  // whether at least FAIL_RATE of the solves since the extra rows were added failed the node
+  private boolean failingWithExtra() {
+    long solves = calls - extraCall;
+    return FAIL_RATE > 0 && solves > 0 && failures - extraFailures >= FAIL_RATE * solves;
   }
 
   // the rows of the other constraints make too many solves in search stop at the pivot limit: back
@@ -5910,6 +6422,9 @@ public class LinearRelaxation extends Constraint
     if (tightFrom >= 0 && level <= rootLevel) {
       tightLost = true;
     }
+    while (rootBoundsSize > 0 && rootBoundsLevel[rootBoundsSize - 1] >= level) {
+      rootBoundsSize--;
+    }
     int k = deducedLevel.size();
     while (k > 0 && deducedLevel.get(k - 1) >= level) {
       k--;
@@ -6020,6 +6535,7 @@ public class LinearRelaxation extends Constraint
     c.pivotLimit = pivotLimit;
     c.keepExtra = !keptExtraForms.isEmpty();
     c.keepEncodings = keepEncodings;
+    c.extraCarry = extraCarry;
     c.refutation = refutation;
     for (CapacityCuts cc : capacity) {
       c.capacity.add(cc.copy(map));

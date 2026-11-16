@@ -264,6 +264,53 @@ class LinearOverlapFlatzincTest {
     assertEquals(solutions(run(model, false, "-f")), solutions(run(model, true, "-f")));
   }
 
+  /**
+   * Twelve nested covering rows, the k-th over x0..x(4k+3): the factoring makes a chain of twelve
+   * shared sums, each the previous one plus four variables. The relaxation replaces the sums by
+   * their definitions up to depth 8 only, and kept no definition: the deeper sums were free
+   * columns, and the relaxation had no row left and no bound (CSPLib bus driver scheduling c1: root
+   * bound 4.4 instead of 25.4, optimum 26).
+   */
+  @Test
+  void nestedSharedSumsKeepTheirDefinitionsInTheRelaxation() throws IOException {
+    int n = 12;
+    int size = 4 * n + 4;
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < size; i++) {
+      fzn.append("var 0..1: x").append(i).append(";\n");
+    }
+    fzn.append("var 0..").append(size).append(": obj:: output_var;\n");
+    for (int k = 0; k < n; k++) {
+      int m = 4 * k + 4;
+      fzn.append("constraint int_lin_le([")
+          .append(String.join(",", Collections.nCopies(m, "-1")))
+          .append("],")
+          .append(
+              IntStream.range(0, m)
+                  .mapToObj(i -> "x" + i)
+                  .collect(Collectors.joining(",", "[", "]")))
+          .append(",")
+          .append(-(1 + k / 3))
+          .append(");\n");
+    }
+    fzn.append("constraint int_lin_eq([")
+        .append(String.join(",", Collections.nCopies(size, "1")))
+        .append(",-1],")
+        .append(
+            IntStream.range(0, size)
+                .mapToObj(i -> "x" + i)
+                .collect(Collectors.joining(",", "[", ",obj]")))
+        .append(",0);\n");
+    fzn.append("solve minimize obj;\n");
+    String model = fzn.toString();
+    assertTrue(run(model, true, "-debug").contains("12 sub-sums factored"), "not factored");
+    String factored = run(model, true, "--lcg", "-f", "-s", "--search-statistics");
+    assertTrue(factored.contains("lpRootBound=4.0"), factored);
+    assertTrue(
+        run(model, false, "--lcg", "-f", "-s", "--search-statistics").contains("lpRootBound=4.0"));
+    assertEquals("4", optimum(factored, model));
+  }
+
   private String run(String model, boolean factoring, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
