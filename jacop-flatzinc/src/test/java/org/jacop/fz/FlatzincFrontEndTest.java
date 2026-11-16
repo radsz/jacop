@@ -3108,7 +3108,14 @@ class FlatzincFrontEndTest {
           .append("], []);\n");
     }
     model.append("solve satisfy;\n");
-    String out = run(model.toString(), "--lcg", "--search-statistics")[0];
+    // clauses alone would go to JaSAT without lazy clause generation (PureClauseModel)
+    System.setProperty("org.jacop.fz.pureClauses", "false");
+    String out;
+    try {
+      out = run(model.toString(), "--lcg", "--search-statistics")[0];
+    } finally {
+      System.clearProperty("org.jacop.fz.pureClauses");
+    }
     assertTrue(out.contains("----------"), out.substring(Math.max(0, out.length() - 2000)));
     assertEquals(n, statistic(out, "lcgInputOrder"));
   }
