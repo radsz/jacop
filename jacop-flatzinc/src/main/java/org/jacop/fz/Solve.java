@@ -3391,6 +3391,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
+    double perLiteral = Double.parseDouble(options.freeConfig("lcg-slow-literal", "5"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
     }
@@ -3418,7 +3419,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       check[0] =
           () -> {
             if (slowLcgCheckOnce(
-                solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                solver, rate, perLiteral, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
               solver.sat().setAlarm(solver.sat().now() + 500_000_000L, check[0]);
             }
           };
@@ -3431,7 +3432,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               try {
                 Thread.sleep(wait);
                 while (slowLcgCheckOnce(
-                    solver, rate, unsolvedRate, unsolvedOnly, stallNanos, gain, costs)) {
+                    solver,
+                    rate,
+                    perLiteral,
+                    unsolvedRate,
+                    unsolvedOnly,
+                    stallNanos,
+                    gain,
+                    costs)) {
                   Thread.sleep(500);
                 }
               } catch (InterruptedException _) {
@@ -3450,6 +3458,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private boolean slowLcgCheckOnce(
       LcgSolver solver,
       double rate,
+      double perLiteral,
       double unsolvedRate,
       boolean unsolvedOnly,
       long stallNanos,
@@ -3459,7 +3468,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // LCG gives way only with a solution to hand over: without one, the check is made again until
     // LCG has one or is no longer slow. cutstock type16 TEST9 found its first solution with LCG at
     // 37 s and none without
-    if (solver.sat().conflicts >= rate * (now - lcgStart) / 1e9 || tooLateForFreeSearch(solver)) {
+    if (solver.sat().conflicts
+            >= slowRate(solver.sat().conflicts, solver.sat().learntLiterals, rate, perLiteral)
+                * (now - lcgStart)
+                / 1e9
+        || tooLateForFreeSearch(solver)) {
       return false;
     }
     long cost = bestPrintedCost.get();
@@ -3486,6 +3499,30 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return true;
+  }
+
+  /**
+   * The rate in conflicts per second below which LCG free search counts as slow: lcg-slow-rate, or
+   * lcg-slow-literal conflicts per second for each literal of an average learnt clause when that is
+   * more. A conflict whose learnt clause has hundreds of literals prunes little of the search, so
+   * LCG pays for learning that branch and bound without it does not need, and runs fewer
+   * neighbourhoods. On the CSPLib TTPPV instances (traveling tournament with predefined venues,
+   * circ14 and circ20) LCG learns clauses of 210 to 450 literals at 490 to 990 conflicts per
+   * second, the sum of 400 travel bounds behind each objective conflict; free search without
+   * learning runs three times as many neighbourhoods (sum of the best objectives at 600 s 12,816 to
+   * 12,526; CP-SAT 12,428).
+   *
+   * @param conflicts the conflicts of LCG so far
+   * @param learntLiterals the literals of the clauses it learnt
+   * @param rate lcg-slow-rate
+   * @param perLiteral lcg-slow-literal, 0 = off
+   * @return the slow rate in conflicts per second
+   */
+  static double slowRate(long conflicts, long learntLiterals, double rate, double perLiteral) {
+    if (perLiteral <= 0 || conflicts == 0) {
+      return rate;
+    }
+    return Math.max(rate, perLiteral * learntLiterals / conflicts);
   }
 
   /**

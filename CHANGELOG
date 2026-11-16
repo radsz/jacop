@@ -6596,6 +6596,23 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+364. Under --lcg with -f, LCG free search counts as slow, and gives way to
+   free search without learning once it stops making progress, also when
+   it makes fewer conflicts per second than 5 times the average length of
+   its learnt clauses (--free-config lcg-slow-literal, 0 = off), not only
+   below lcg-slow-rate (300). A conflict that learns a clause of hundreds
+   of literals prunes little, so learning costs more than it saves and
+   large neighbourhood search runs a third as often. On the CSPLib TTPPV
+   instances (traveling tournament with predefined venues, prob068) LCG
+   learns 210 to 450 literals per conflict, the bounds of the 400 travel
+   terms of the objective, at 490 to 990 conflicts per second. At 600 s
+   the switch fires on the 10 circ20 instances and 2 of the 4 feasible
+   circ14 ones: the sum of the 17 best objectives goes from 12,816 to
+   12,526 (CP-SAT 9.15, -p 1: 12,428), 8 of 10 circ20 better. Of the 240
+   wide instances it reaches 4 by its first check; cargo challenge16
+   goes from 132,309 to 115,263, the other three have no solution of
+   either version at 600 s.
+
 Version 4.11
 =============
 
