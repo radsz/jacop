@@ -558,6 +558,10 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] sharedLocal;
   // the search tree divided with other solvers (search splitting), or null
   private SharedTree tree;
+  // per variable its number in the tree's cubes (-1: no split on it), and the reverse; also the
+  // elements of arrays of variables, which clause sharing leaves out
+  private int[] treeId;
+  private int[] treeLocal;
   // the cube this solver solves under, and the atom it keeps after a split it asked for
   private int[] cube;
   private int[] splitAtom;
@@ -7349,10 +7353,51 @@ public final class LcgSolver implements ExternalPropagator {
    * @return whether this solver takes part
    */
   public boolean setSharedTree(SharedTree shared, String added) {
+    return setSharedTree(shared, added, null);
+  }
+
+  /**
+   * Divides the search with the other solvers of a shared tree, as {@link
+   * #setSharedTree(SharedTree, String)}, with cubes over the variables that {@code name} names,
+   * which can be more than the variables whose clauses are shared. A solver splits only on a
+   * decision on such a variable: when the model's decision variables have no name there (the
+   * elements of an array of variables), the last cube stays with one solver while the others wait.
+   *
+   * @param shared the tree
+   * @param added the constraints the store adds to the shared model, as for {@link
+   *     #setSharedClauses}
+   * @param name the name of a variable in the model, the same in every solver of the tree, or null
+   *     for a variable of this store only; null for the names of {@link #setSharedClauses}
+   * @return whether this solver takes part
+   */
+  public boolean setSharedTree(SharedTree shared, String added, Function<IntVar, String> name) {
     if (sharedId == null || proof != null || !shared.join(added)) {
       return false;
     }
     tree = shared;
+    treeId = sharedId;
+    treeLocal = sharedLocal;
+    if (name != null) {
+      treeId = new int[vars.length];
+      int top = -1;
+      for (int i = 0; i < vars.length; i++) {
+        treeId[i] = sharedId[i];
+        if (treeId[i] < 0 && vars[i] != null && !root[i].singleton()) {
+          String n = name.apply(vars[i]);
+          if (n != null) {
+            treeId[i] = this.shared.id(n);
+          }
+        }
+        top = Math.max(top, treeId[i]);
+      }
+      treeLocal = new int[top + 1];
+      Arrays.fill(treeLocal, -1);
+      for (int i = 0; i < vars.length; i++) {
+        if (treeId[i] >= 0) {
+          treeLocal[treeId[i]] = i;
+        }
+      }
+    }
     return true;
   }
 
@@ -7432,7 +7477,7 @@ public final class LcgSolver implements ExternalPropagator {
     int size = 0;
     for (int k = 0; k < c.length; k += 3) {
       int id = c[k];
-      int i = id < sharedLocal.length ? sharedLocal[id] : -1;
+      int i = id < treeLocal.length ? treeLocal[id] : -1;
       boolean negated = c[k + 1] >= SharedClauses.NEGATED;
       int kind = c[k + 1] % SharedClauses.NEGATED;
       int v = c[k + 2];
@@ -7468,7 +7513,7 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int d = Math.abs(lit);
     int i = d < litVar.length ? litVar[d] : -1;
-    if (i < 0 || sharedId[i] < 0) {
+    if (i < 0 || treeId[i] < 0) {
       // an auxiliary literal or a variable of this store only, such as the objective: no split on
       // it. With the fixpoint's atoms pushed before a conflict, the objective's atoms stay in the
       // conflict clauses, and every run of a 60-item knapsack under portfolio-split=4 decided on
@@ -7482,9 +7527,9 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int kind = litKind[d] + (lit < 0 ? SharedClauses.NEGATED : 0);
     int negatedKind = litKind[d] + (lit < 0 ? 0 : SharedClauses.NEGATED);
-    tree.split(SharedTree.extend(cube, sharedId[i], negatedKind, litValue[d]));
+    tree.split(SharedTree.extend(cube, treeId[i], negatedKind, litValue[d]));
     treeSplits++;
-    splitAtom = new int[] {sharedId[i], kind, litValue[d]};
+    splitAtom = new int[] {treeId[i], kind, litValue[d]};
     sat.interrupt();
   }
 
@@ -8017,8 +8062,15 @@ public final class LcgSolver implements ExternalPropagator {
       // backjumps to the root on it and then takes the empty clause
       int any = extra == 0 ? trueAtom() : extra;
       if (any == 0) {
-        throw new IllegalStateException(
-            "the constraints failed on the root domains: " + store.recentlyFailedConstraint);
+        // nothing is assigned, so no false literal can stand in: a propagator that joined the
+        // search at the root (the linear relaxation after its probe) failed there. The solver
+        // takes the empty clause at once and answers UNSAT (miplib2003 disctom threw here)
+        if (proof != null) {
+          proof.add(new int[0], 0, 0);
+        }
+        sat.addClause();
+        pushedReason = null;
+        return 0;
       }
       structural.add(new int[0]);
       clause = new int[] {-any};
