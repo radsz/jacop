@@ -876,4 +876,67 @@ class LinearizationsTest {
     assertThat(Linearizations.valueRows(x, 8, b, false, false)).isNotEmpty();
     assertThat(Linearizations.valueRows(x, 3, b, true, true)).isNotEmpty();
   }
+
+  /**
+   * A table whose key column is an encoded variable (each tuple its own key value, as the front end
+   * merges the element constraints of one index into one table: the options of a class in car
+   * sequencing) gets y = sum t(v) b_v for each other column; the rows hold on every solution, and a
+   * table without a key gets none.
+   */
+  @Test
+  void keyedTablesGiveTheElementRowsOfTheirColumns() {
+    Random rnd = new Random(11);
+    int keyed = 0;
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      int n = 2 + rnd.nextInt(5);
+      IntVar x = new IntVar(store, "x", 1, n);
+      IntVar[] bs = new IntVar[n];
+      for (int v = 0; v < n; v++) {
+        bs[v] = new IntVar(store, "b" + v, 0, 1);
+      }
+      IntVar y = new IntVar(store, "y", -2, 3);
+      IntVar z = new IntVar(store, "z", 0, 1);
+      // the key values: all of x's values, or a subset; a duplicate key value means no key
+      boolean duplicate = rnd.nextInt(4) == 0;
+      List<int[]> tuples = new ArrayList<>();
+      for (int v = 1; v <= n; v++) {
+        if (rnd.nextInt(5) > 0) {
+          tuples.add(new int[] {v, -2 + rnd.nextInt(6), rnd.nextInt(2)});
+        }
+      }
+      if (duplicate && !tuples.isEmpty()) {
+        int[] t = tuples.get(0);
+        tuples.add(new int[] {t[0], t[1] == 3 ? 2 : t[1] + 1, t[2]});
+      }
+      if (tuples.isEmpty()) {
+        continue;
+      }
+      HybridTable table = new HybridTable(new IntVar[] {x, y, z}, tuples.toArray(new int[0][]));
+      List<Constraint> cs = List.of(new ChannelReif(x, bs), table);
+      List<LinearForm> made = Linearizations.encodings(cs);
+      boolean hasKey = table.keyColumn() == 0;
+      boolean rowOfY = made.stream().anyMatch(f -> Arrays.asList(f.vars()).contains(y));
+      // a column that is 0 in every tuple gives no row: y = 0 has one variable
+      boolean nonzero = tuples.stream().anyMatch(t -> t[1] != 0);
+      assertThat(rowOfY).as("run %d", run).isEqualTo(hasKey && nonzero);
+      keyed += rowOfY ? 1 : 0;
+      for (Constraint c : cs) {
+        store.impose(c);
+      }
+      IntVar[] scope = new IntVar[n + 3];
+      scope[0] = x;
+      scope[1] = y;
+      scope[2] = z;
+      System.arraycopy(bs, 0, scope, 3, n);
+      for (long[] solution : solutions(store, scope)) {
+        for (LinearForm f : made) {
+          assertThat(holds(f, scope, solution))
+              .as("run %d %s at %s", run, f, Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+    }
+    assertThat(keyed).isGreaterThan(100);
+  }
 }

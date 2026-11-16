@@ -296,6 +296,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
                                 <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
@@ -422,6 +423,7 @@ setup to run configuration. -->
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -558,6 +560,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
                                 <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
@@ -689,6 +692,7 @@ setup to run configuration. -->
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -821,6 +825,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
                                 <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
@@ -952,6 +957,7 @@ setup to run configuration. -->
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -1084,6 +1090,7 @@ setup to run configuration. -->
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
                                 <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
                                 <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
                                 <include>**/RectanglePlacementSelectTest.java</include>
@@ -1213,6 +1220,7 @@ setup to run configuration. -->
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
                                 <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -1675,6 +1683,7 @@ setup to run configuration. -->
                         <include>**/FreeSearchTest.java</include>
                         <include>**/AdaptiveLnsTest.java</include>
                         <include>**/ProjectScheduleTest.java</include>
+                        <include>**/MaxSatLocalSearchTest.java</include>
                         <include>**/BinCompletionTest.java</include>
                         <include>**/SuccessorRoutesTest.java</include>
                         <include>**/RectanglePlacementSelectTest.java</include>
