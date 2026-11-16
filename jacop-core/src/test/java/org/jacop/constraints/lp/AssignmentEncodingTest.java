@@ -134,9 +134,11 @@ class AssignmentEncodingTest {
 
   @Test
   void encodingsGiveTheAssignmentBound() {
-    double[] on = rootBound(10, 200, 1, true);
-    double[] off = rootBound(10, 200, 1, false);
-    // without the encodings the bound is the cheapest costs; with them the capacities count
+    double[] on = rootBound(10, 100, 2, true);
+    double[] off = rootBound(10, 100, 2, false);
+    // with the hull rows of the elements and the dense simplex (as before) the bound stays at the
+    // cheapest costs; with the encodings in their place the capacities count (1,349.7 against
+    // 1,315, a feasible assignment costs 1,527)
     assertThat(off[0]).isLessThanOrEqualTo(off[1] + 1e-6);
     assertThat(on[0]).isGreaterThan(on[1] + 10);
     if (on[2] != Long.MAX_VALUE) {

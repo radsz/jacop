@@ -1458,9 +1458,10 @@ public class LinearRelaxation extends Constraint
         }
       }
       boolean fitted = fitsSimplex(localForms, sorted, simplex, auto, share, own, further);
-      if (!fitted && nearRowsOn && auto && simplex == Simplex.DENSE) {
-        // the rows over the terms of the objective do not fit the dense tableau: the sparse
-        // simplex takes them all, as many as they are. A model stated in clauses has few rows of
+      if (!fitted && nearRowsOn && auto && (simplex == Simplex.DENSE || bySparse)) {
+        // the rows over the terms of the objective do not fit the dense tableau (or the share of
+        // the sparse simplex that the value encodings chose): the sparse simplex takes them all,
+        // as many as they are. A model stated in clauses has few rows of
         // its own, and their share left out the rows that bound the objective (CSPLib warehouses
         // cap131: 2 rows of its own, and the clauses b[i,j] -> open[j] with the element costs as
         // value encodings, 3,826 rows, raise the root bound from 626,300 to 914,788, opt 915,059)
@@ -1468,7 +1469,19 @@ public class LinearRelaxation extends Constraint
         // ionosphere has 110,602 such rows, whose trial took 15 s and did not raise the bound
         Set<LinearForm> near = nearObjective(localForms, sorted, triedSet, objective);
         List<LinearForm> sparse = new ArrayList<>();
-        long nearShare = Math.max(share, (long) first + near.size());
+        // the value encodings that went ahead come before the near rows: those of them that are
+        // not near rows are counted on top (NearRowsTest, 40 stores: with the element hull rows
+        // left out for the encodings, the 40 rows sum b = 1 went ahead of the 1,680 near rows and
+        // pushed 40 of them out of the share, root bound 8,009 instead of 15,057)
+        int ahead = 0;
+        for (int k = first; encodingsLead && k < sorted.size(); k++) {
+          LinearForm f = sorted.get(k);
+          if (!encodingSet.contains(f)) {
+            break;
+          }
+          ahead += near.contains(f) ? 0 : 1;
+        }
+        long nearShare = Math.max(share, (long) first + near.size() + ahead);
         fitsSimplex(localForms, sorted, Simplex.SPARSE, true, nearShare, own, sparse);
         if (localForms.size() + near.size() <= sparseMaxRows
             && containsAll(sparse, near)
@@ -1484,8 +1497,8 @@ public class LinearRelaxation extends Constraint
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.large = large && simplex == Simplex.SPARSE;
     // the encodings that chose the sparse simplex are the model's rows as well: the solves in
-    // search
-    // get the pivots of the sparse simplex, not those of the dense tableau they would make (gapd
+    // search get the pivots of the sparse simplex, not those of the dense tableau they would make
+    // (gapd
     // 10x200: 7 pivots a solve, every one stopped at the limit and the relaxation stalled after 32)
     r.keepEncodings = exempt > 0 || bySparse;
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
