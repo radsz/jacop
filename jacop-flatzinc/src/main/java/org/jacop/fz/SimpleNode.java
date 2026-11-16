@@ -34,6 +34,17 @@ public class SimpleNode implements Node, Cloneable {
   }
 
   /**
+   * Copies this node alone: its children and its parent are the ones of this node.
+   *
+   * @return the copy
+   * @throws CloneNotSupportedException never, the class is cloneable
+   */
+  @Override
+  protected SimpleNode clone() throws CloneNotSupportedException {
+    return (SimpleNode) super.clone();
+  }
+
+  /**
    * Copies the tree below this node, for a reader that rewrites it: the passes of the front end
    * (affine folding, objective scaling) change constraint items in place, and the threads of a
    * portfolio build from one tree. The values of the nodes (identifiers, numbers, lists) are
@@ -44,7 +55,7 @@ public class SimpleNode implements Node, Cloneable {
   public SimpleNode copy() {
     SimpleNode c;
     try {
-      c = (SimpleNode) clone();
+      c = clone();
     } catch (CloneNotSupportedException e) {
       throw new IllegalStateException(e);
     }

@@ -149,8 +149,26 @@ class PortfolioOneParseTest {
                 parser.build(tree);
               });
       assertEquals(
-          "x = 0;\ny = 0;\n----------\nx = 0;\ny = 1;\n----------\nx = 0;\ny = 2;\n----------\n"
-              + "x = 0;\ny = 3;\n----------\nx = 1;\ny = 0;\n----------\nx = 1;\ny = 1;\n----------\n==========",
+          """
+          x = 0;
+          y = 0;
+          ----------
+          x = 0;
+          y = 1;
+          ----------
+          x = 0;
+          y = 2;
+          ----------
+          x = 0;
+          y = 3;
+          ----------
+          x = 1;
+          y = 0;
+          ----------
+          x = 1;
+          y = 1;
+          ----------
+          ==========""",
           solutionLines(built).strip());
       assertEquals(before, dump(tree));
     }
