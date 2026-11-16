@@ -261,6 +261,7 @@ setup to run configuration. -->
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
                                 <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -521,6 +522,7 @@ setup to run configuration. -->
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
                                 <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -782,6 +784,7 @@ setup to run configuration. -->
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
                                 <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -1043,6 +1046,7 @@ setup to run configuration. -->
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
                                 <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>

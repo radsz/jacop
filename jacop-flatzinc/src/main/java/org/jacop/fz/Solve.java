@@ -1231,6 +1231,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + (r.leadKept ? ":kept" : "")
             + "\n%%%mzn-stat: lpValueCliques="
             + r.valueCliques
+            + "\n%%%mzn-stat: lpEncodedElements="
+            + r.encodedElements
+            + (r.encodingsSparse ? ":sparse" : "")
             + "\n%%%mzn-stat: lpTableClauses="
             + r.tableClauses
             + "\n%%%mzn-stat: lpNearRows="
