@@ -7400,7 +7400,9 @@ Version 5.0 (unreleased)
    visit in one stretch within their windows (B. Kohl, J. Desrosiers,
    O. B. G. Madsen, M. M. Solomon, F. Soumis, 2-path cuts for the vehicle
    routing problem with time windows, Transportation Science 33(1), 1999,
-   101-116), checked exactly by a bounded search over the windows.
+   101-116), checked exactly by a bounded search over the windows. At most
+   1,000 arc-time rows are kept (org.jacop.lp.arcTimeMax), those whose
+   travel time is the largest share of M.
    GiantTourDetector now also reads the XCSP TSPTW form (subcircuit over
    x + 1, time rows enforced by int_lin_le_imp and exempt on the arc back
    to the depot). RESULTS_PLACEHOLDER

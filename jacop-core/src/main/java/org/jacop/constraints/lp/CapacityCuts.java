@@ -120,6 +120,10 @@ public final class CapacityCuts {
   private static final int MAX_TWO_PATH = Integer.getInteger("org.jacop.lp.twoPathSize", 12);
   private static final int TWO_PATH_STEPS = 200_000;
 
+  // at most this many big-M arc-time rows, the strongest ones: thousands of them make the LP slow
+  // enough to lose the cut rounds of a 100-customer instance
+  private static final int ARC_TIME_MAX = Integer.getInteger("org.jacop.lp.arcTimeMax", 1000);
+
   // the arc of each pair of nodes, -1 for none, made at the first 2-path check
   private int[][] arcAt;
   // whether one route can visit each set checked so far in one stretch
@@ -231,6 +235,7 @@ public final class CapacityCuts {
     if (t == null || earliest == null || latest == null || travel == null) {
       return rows;
     }
+    List<double[]> strength = new ArrayList<>();
     for (int a = 0; a < routes.tails.length; a++) {
       int i = routes.tails[a];
       int j = routes.heads[a];
@@ -255,11 +260,22 @@ public final class CapacityCuts {
                 new long[] {1, -1, -big},
                 Math.subtractExact(d, big),
                 LinearForm.GE));
+        strength.add(new double[] {(double) d / big, rows.size() - 1});
       } catch (ArithmeticException _) {
         // a window too wide for a row
       }
     }
-    return rows;
+    if (rows.size() <= ARC_TIME_MAX) {
+      return rows;
+    }
+    // A row binds only when its arc is nearly taken unless the travel time is a large part of M:
+    // keep the rows whose travel time is the largest share of M.
+    strength.sort((x, y) -> Double.compare(y[0], x[0]));
+    List<LinearForm> kept = new ArrayList<>(ARC_TIME_MAX);
+    for (int k = 0; k < ARC_TIME_MAX; k++) {
+      kept.add(rows.get((int) strength.get(k)[1]));
+    }
+    return kept;
   }
 
   /**
