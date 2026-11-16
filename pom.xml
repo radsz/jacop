@@ -231,6 +231,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
@@ -495,6 +496,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
@@ -760,6 +762,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
@@ -1025,6 +1028,7 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
@@ -1664,6 +1668,7 @@ setup to run configuration. -->
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/CdclSolverTest.java</include>
+                        <include>**/JumpSearchTest.java</include>
                         <include>**/SatWrapperTest.java</include>
                         <include>**/SmokeSetTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>

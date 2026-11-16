@@ -7389,7 +7389,29 @@ Version 5.0 (unreleased)
    total time 3,708 -> 1,011 s (three base runs ran out of memory at
    4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
 
-411. The FlatZinc front end keeps large tables in memory once and builds
+411. JaSAT (CdclMain and pure clause models) gives a share of its time to
+   a feasibility-jump local search over the root-simplified formula, run at
+   each rephasing point (W. Luteberget, G. Sartor, Feasibility Jump: an
+   LP-free Lagrangian MIP heuristic, Mathematical Programming Computation
+   15, 2023; for clauses a jump is a flip, so it is clause weighting of the
+   breakout kind, P. Morris, The breakout method for escaping from local
+   minima, AAAI 1993). Its runs restart from a random assignment with fresh
+   weights after a Luby number of flips (M. Luby, A. Sinclair, D.
+   Zuckerman, Optimal speedup of Las Vegas algorithms, Information
+   Processing Letters 47, 1993); without the restarts it solves neither
+   target instance. A model it finds becomes the phase the decisions
+   follow until the next conflict, and eliminated variables are
+   reconstructed as before. -Djacop.jasat.jump=<share> (CdclMain --jump)
+   sets the share, default 0.1, 0 turns it off; it never runs under LCG or
+   with assumptions. On the 90 CNF instances of the SAT gap screen at
+   240 s: 30 -> 35 solved (sgen 32.7 s and tree-decomposition 147 s, which
+   Kissat and JaCoP did not solve in 600 s, fixed-shape-random, puzzle,
+   pythagorean-triples), heule-nol 49 -> 13 s, no instance lost, total
+   time 0.947; UNSAT instances take the share, 1.107 on the 13 proved.
+   At 600 s 41 -> 45 of the 90 are solved, total time 0.942 on the 60
+   not solved by both at 240 s.
+
+412. The FlatZinc front end keeps large tables in memory once and builds
    less for them, so the XCSP 2026 models with large tables no longer run
    out of memory at 6 GB. Short tables with equal rows share one
    HybridTable index (CrosswordDesign posts 96 of them, 4 distinct);
@@ -7412,7 +7434,7 @@ Version 5.0 (unreleased)
    the limit (before: none of them); the 2026 CSP replay score goes from
    116 to 130 (fifth to third). The default search is unchanged.
 
-412. JaSAT (CdclMain, plain SAT without an external propagator) vivifies
+413. JaSAT (CdclMain, plain SAT without an external propagator) vivifies
    on a sorted schedule as Kissat 4 and CaDiCaL 2 do: after each clause
    database reduction, the core, middle and local learnt tiers and the
    irredundant clauses share a budget of 10 % of the propagations since
@@ -7435,7 +7457,7 @@ Version 5.0 (unreleased)
    keep the previous vivification; -Djacop.jasat.vivifySorted=false
    restores it for CdclMain too.
 
-413. The LP relaxation links the columns of a table with a key column (the
+414. The LP relaxation links the columns of a table with a key column (the
    element constraints over one index that the front end merges into one
    table, such as the options of a class in car sequencing) to the value
    encoding of the key: y = sum_v t(v) b_v for every other column y, the
@@ -7454,7 +7476,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.satisfactionProbation=0 and -Dorg.jacop.lp.failRate=0
    turn them off.
 
-414. Free search (-f), and model search without a search annotation, of a
+415. Free search (-f), and model search without a search annotation, of a
    weighted partial MaxSAT model (clauses, 0/1 linear rows and a cost
    that is a weighted sum of 0/1 variables, as the MaxSAT Evaluation
    instances flatten) runs MaxSAT local search,
