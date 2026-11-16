@@ -7004,6 +7004,29 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. JaSAT (CdclMain, plain SAT without an external propagator) vivifies
+   on a sorted schedule as Kissat 4 and CaDiCaL 2 do: after each clause
+   database reduction, the core, middle and local learnt tiers and the
+   irredundant clauses share a budget of 10 % of the propagations since
+   the last round (weights 3/3/1/3). Literals are sorted by occurrence and
+   candidates lexicographically so that consecutive probes reuse their
+   decisions; a conflict or an implied literal is analysed back to the
+   decisions, and the clause is shrunk, removed when subsumed or implied
+   by irredundant clauses, or strengthened by instantiation. Before, only
+   core and middle learnt clauses were vivified, once each. References:
+   Li, Xiao, Luo, Manya, Lu, Li, Clause vivification by unit propagation
+   in CDCL SAT solvers, Artificial Intelligence 279 (2020); Luo, Li, Xiao,
+   Manya, Lu, An effective learnt clause minimization approach for CDCL
+   SAT solvers, IJCAI 2017; Biere, Faller, Fazekas, Fleury, Froleyks,
+   Pollitt, CaDiCaL, Gimsatul, IsaSAT and Kissat entering the SAT
+   Competition 2024. On 90 SAT Competition 2024/25 instances at 240 s
+   JaSAT solves 32 instead of 30 (seed 0) and 32 instead of 28 (seed 1),
+   with 3 more UNSAT proofs on seed 1 (planning and tseitin-formulas on
+   both seeds); at 600 s over 3 seeds circuit-equivalence-checking takes
+   0.90x and grs-fp-comm 0.85x the time. LCG and the FlatZinc front end
+   keep the previous vivification; -Djacop.jasat.vivifySorted=false
+   restores it for CdclMain too.
+
 Version 4.11
 =============
 

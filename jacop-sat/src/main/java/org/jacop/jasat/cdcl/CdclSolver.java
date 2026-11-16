@@ -4077,17 +4077,19 @@ public final class CdclSolver {
 
   /**
    * Vivifies clauses at level 0 on a sorted schedule (Li, Xiao, Luo, Manyà, Lü, Li, "Clause
-   * vivification by unit propagation in CDCL SAT solvers", AIJ 2020; Luo, Li, Xiao, Manyà, Lü,
-   * IJCAI 2017; the schedule of Kissat 4 and CaDiCaL 2). Each learnt tier and the irredundant
-   * clauses get a share of a budget of propagations. A candidate's literals are sorted by their
-   * number of occurrences in the round's candidates, and the candidates lexicographically on those
-   * counts, so that consecutive candidates share their first decisions and the probe reuses them.
-   * The negation of each literal is decided in turn, with the candidate itself left out of
-   * propagation; a conflict or a candidate literal that becomes true is analysed back to the
-   * decisions, and the candidate is replaced by the decisions involved, removed when another clause
-   * subsumes it or when it follows from irredundant clauses alone, or strengthened by instantiation
-   * (deciding its last literal true). Clauses not tried yet go first; once all were, all are tried
-   * again.
+   * vivification by unit propagation in CDCL SAT solvers", Artificial Intelligence 279, 2020; Luo,
+   * Li, Xiao, Manyà, Lü, "An effective learnt clause minimization approach for CDCL SAT solvers",
+   * IJCAI 2017; the schedule of Kissat 4 and CaDiCaL 2: Biere, Faller, Fazekas, Fleury, Froleyks,
+   * Pollitt, "CaDiCaL, Gimsatul, IsaSAT and Kissat entering the SAT Competition 2024", SAT
+   * Competition 2024 solver descriptions). Each learnt tier and the irredundant clauses get a share
+   * of a budget of propagations. A candidate's literals are sorted by their number of occurrences
+   * in the round's candidates, and the candidates lexicographically on those counts, so that
+   * consecutive candidates share their first decisions and the probe reuses them. The negation of
+   * each literal is decided in turn, with the candidate itself left out of propagation; a conflict
+   * or a candidate literal that becomes true is analysed back to the decisions, and the candidate
+   * is replaced by the decisions involved, removed when another clause subsumes it or when it
+   * follows from irredundant clauses alone, or strengthened by instantiation (deciding its last
+   * literal true). Clauses not tried yet go first; once all were, all are tried again.
    *
    * @return false when the formula is found unsatisfiable
    */
