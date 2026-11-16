@@ -205,6 +205,59 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
     setScope(literals);
   }
 
+  // the time window of each node and the least travel time of each arc (Long.MIN_VALUE where
+  // unknown), or null: only the linear relaxation uses them, for infeasible path cuts
+  private long[] earliest;
+  private long[] latest;
+  private long[] travel;
+
+  /**
+   * It gives the routes time windows, for the infeasible path cuts of the linear relaxation (see
+   * {@link org.jacop.constraints.lp.CapacityCuts}); the propagation does not use them. A route that
+   * uses the arc a = (i, j) reaches j at time max(earliest[j], t + travel[a]) at the earliest,
+   * where t is its time at i, and must reach j by latest[j]; it leaves the depot at time
+   * earliest[0] and comes back by latest[0]. The windows must hold in every solution.
+   *
+   * @param earliest the earliest time of each node.
+   * @param latest the latest time of each node.
+   * @param travel the least travel time of each arc, Long.MIN_VALUE where it is not known.
+   */
+  public void setTimeWindows(long[] earliest, long[] latest, long[] travel) {
+    if (earliest.length < n || latest.length < n || travel.length != tails.length) {
+      throw new IllegalArgumentException("Routes needs a time window for each node and arc");
+    }
+    this.earliest = Arrays.copyOf(earliest, n);
+    this.latest = Arrays.copyOf(latest, n);
+    this.travel = travel.clone();
+  }
+
+  /**
+   * It returns the earliest time of each node.
+   *
+   * @return the earliest times, a copy, or null without time windows.
+   */
+  public long[] earliest() {
+    return earliest == null ? null : earliest.clone();
+  }
+
+  /**
+   * It returns the latest time of each node.
+   *
+   * @return the latest times, a copy, or null without time windows.
+   */
+  public long[] latest() {
+    return latest == null ? null : latest.clone();
+  }
+
+  /**
+   * It returns the least travel time of each arc.
+   *
+   * @return the travel times, a copy (Long.MIN_VALUE where unknown), or null without time windows.
+   */
+  public long[] travel() {
+    return travel == null ? null : travel.clone();
+  }
+
   /**
    * It tells whether the constraint keeps the degrees itself (one arc out of and one into each node
    * other than the depot). A model whose own constraints keep them can turn this off, so the
@@ -856,6 +909,9 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
   public Routes copy(VarMap map) {
     Routes c = new Routes(tails, heads, map.get(literals), demands, capacity);
     c.degrees = degrees;
+    c.earliest = earliest;
+    c.latest = latest;
+    c.travel = travel;
     return c;
   }
 }
