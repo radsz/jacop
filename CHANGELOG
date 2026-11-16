@@ -6599,6 +6599,19 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+365. ArgMax and ArgMin bound the values at positions that the index can
+   no longer take: such a position may not reach the extreme over the
+   positions the index can still take (strictly for positions after
+   them, since the first extreme wins). ArgMax and ArgMin now reach
+   domain consistency in the consistency checker (bounds(Z) before), and
+   so does ArgMaxMonotone, which the FlatZinc front end posts for
+   maximum_arg over monotone functions of shared variables; the checker
+   also gains XlteqY, XneqY and BinaryBitTable cases at domain
+   consistency. The LCG explanations are the existing ones. The upTo5sec
+   arg models give the same answers and node counts; the one wide
+   instance with maximum_arg (tower) fails 10 % less often (30155 ->
+   27287) at the same time.
+
 Version 4.11
 =============
 
