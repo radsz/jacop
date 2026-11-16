@@ -2176,6 +2176,8 @@ class VeriPbProofTest {
     store.impose(new LinearInt(all, a, "==", 0));
     LcgSolver lcg = withProof(store);
     lcg.setCoreSearch(0.5, 1_000_000, 1_000_000);
+    // core exhaustion would spend the 300 conflicts on outputs that only a pigeonhole proof refutes
+    lcg.setCoreExhaust(0);
     lcg.sat().setConflictLimit(300);
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
     long bound = lcg.coreSearch().lowerBound;
