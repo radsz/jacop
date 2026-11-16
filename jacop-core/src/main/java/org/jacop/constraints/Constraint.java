@@ -140,6 +140,20 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
   /** The store level at which the constraint was marked as entailed, or NOT_ENTAILED. */
   private int entailedAt = NOT_ENTAILED;
 
+  /**
+   * The constraint this one replaces during search ({@link #rewriteTo}), or null. Its prunings and
+   * failures are recorded as the source's: the target holds only under the domains that allowed the
+   * rewriting, which the source's reasons include and the target's own may not.
+   */
+  private Constraint rewrittenFrom;
+
+  /**
+   * Whether constraints replace themselves by simpler ones during search when the current domains
+   * allow it (system property {@code org.jacop.rewrite}, on by default).
+   */
+  public static final boolean REWRITE =
+      Boolean.parseBoolean(System.getProperty("org.jacop.rewrite", "true"));
+
   /** The constraint has not had a consistency call since it was imposed. */
   public static final int NOT_RUN = -1;
 
@@ -606,6 +620,44 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
       c.constraintScope.forEach(ic -> computeFixpoint(ic, fixpoint));
     }
     return fixpoint;
+  }
+
+  /**
+   * Returns the constraint that answers for this one's prunings and failures: the constraint it was
+   * rewritten from during search, or itself.
+   *
+   * @return the constraint whose reasons and weights stand for this one.
+   */
+  public final Constraint reasonOwner() {
+    return rewrittenFrom == null ? this : rewrittenFrom;
+  }
+
+  /**
+   * Tells whether this constraint may replace itself by a simpler one now ({@link #rewriteTo}).
+   *
+   * @param store the store.
+   * @return true during search when the store is running this constraint.
+   */
+  protected final boolean canRewrite(Store store) {
+    // only during search, and only a constraint the store runs itself: one nested in another
+    // constraint is called again by it, whatever the store does with it
+    return REWRITE && store.level > 0 && store.currentConstraint == this;
+  }
+
+  /**
+   * Replaces this constraint by a simpler one that is equivalent to it under the current domains:
+   * the target is imposed and this constraint is entailed. During search both are undone when the
+   * store backtracks below the current level, so the target holds only where the domains that
+   * allowed the rewriting hold. Lazy clause generation explains the target's prunings and failures
+   * with this constraint ({@link #reasonOwner()}), whose reasons include those domains.
+   *
+   * @param store the store.
+   * @param target the equivalent constraint, not imposed yet.
+   */
+  protected final void rewriteTo(Store store, Constraint target) {
+    target.rewrittenFrom = reasonOwner();
+    target.impose(store);
+    removeConstraint();
   }
 
   /**

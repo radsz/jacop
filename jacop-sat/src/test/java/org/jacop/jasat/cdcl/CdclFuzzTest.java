@@ -31,6 +31,7 @@
 
 package org.jacop.jasat.cdcl;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -41,6 +42,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 import org.junit.jupiter.api.Test;
@@ -136,6 +138,64 @@ class CdclFuzzTest {
     return f;
   }
 
+  /**
+   * Formulas that bounded variable addition rewrites: grids of factor literals times quotient
+   * clauses, at-most-one cliques, and random clauses over the same variables.
+   */
+  static List<int[]> gridFormula(Random rnd, int[] varsOut) {
+    int vars = 6 + rnd.nextInt(40);
+    List<int[]> f = new ArrayList<>();
+    int grids = 1 + rnd.nextInt(4);
+    for (int g = 0; g < grids; g++) {
+      int[] factors = randomLits(rnd, vars, 2 + rnd.nextInt(5));
+      int quotients = 2 + rnd.nextInt(5);
+      int width = rnd.nextInt(4);
+      for (int q = 0; q < quotients; q++) {
+        int[] r = randomLits(rnd, vars, width);
+        for (int x : factors) {
+          int[] c = Arrays.copyOf(r, width + 1);
+          c[width] = x;
+          if (rnd.nextInt(10) > 0) {
+            f.add(c); // some rows miss a clause
+          }
+        }
+      }
+    }
+    if (rnd.nextBoolean()) {
+      int[] clique = randomLits(rnd, vars, 3 + rnd.nextInt(Math.min(8, vars - 2)));
+      f.add(clique.clone());
+      for (int i = 0; i < clique.length; i++) {
+        for (int j = i + 1; j < clique.length; j++) {
+          f.add(new int[] {-clique[i], -clique[j]});
+        }
+      }
+    }
+    int extra = rnd.nextInt(3 * vars);
+    for (int k = 0; k < extra; k++) {
+      f.add(randomLits(rnd, vars, 2 + rnd.nextInt(3)));
+    }
+    Collections.shuffle(f, rnd);
+    varsOut[0] = vars;
+    return f;
+  }
+
+  /** Literals over distinct variables. */
+  private static int[] randomLits(Random rnd, int vars, int n) {
+    int[] c = new int[Math.min(n, vars)];
+    int k = 0;
+    while (k < c.length) {
+      int v = 1 + rnd.nextInt(vars);
+      boolean fresh = true;
+      for (int i = 0; i < k; i++) {
+        fresh &= Math.abs(c[i]) != v;
+      }
+      if (fresh) {
+        c[k++] = rnd.nextBoolean() ? v : -v;
+      }
+    }
+    return c;
+  }
+
   private static boolean satisfiedBy(List<int[]> f, CdclSolver s) {
     for (int[] c : f) {
       boolean sat = false;
@@ -182,6 +242,9 @@ class CdclFuzzTest {
         });
   }
 
+  // solves in which bounded variable addition added a variable
+  private static long factoredRuns;
+
   /** Solves with a DRAT proof and checks the answer; returns the answer. */
   private static int solveChecked(List<int[]> f, int vars, long seed) throws IOException {
     CdclSolver s = new CdclSolver();
@@ -194,6 +257,7 @@ class CdclFuzzTest {
       s.setReduceBase(10);
     }
     s.setVmtf(Math.floorMod(seed, 3L) != 2);
+    s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
     for (int[] c : f) {
       s.addClause(c);
@@ -203,6 +267,9 @@ class CdclFuzzTest {
     }
     int result = s.solve();
     drat.close();
+    if (s.factoredVars > 0) {
+      factoredRuns++;
+    }
     if (result == CdclSolver.SAT) {
       check(satisfiedBy(f, s), seed, "model does not satisfy the formula", f);
     } else {
@@ -224,6 +291,7 @@ class CdclFuzzTest {
     }
     s.setVmtf(Math.floorMod(seed, 3L) != 2);
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
+    s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();
     int next = 0;
@@ -281,9 +349,13 @@ class CdclFuzzTest {
   void fuzz() throws IOException {
     long runs = Long.getLong("fuzz.runs", 2000);
     long base = Long.getLong("fuzz.seed", 1);
+    long progress = Long.getLong("fuzz.progress", 100_000);
     long unsat = 0;
     for (long run = 0; run < runs; run++) {
       long seed = base * 1_000_003L + run;
+      if (Boolean.getBoolean("fuzz.trace")) {
+        System.out.println("fuzz: seed " + seed);
+      }
       Random rnd = new Random(seed);
       int[] vars = new int[1];
       List<int[]> f = randomFormula(rnd, vars);
@@ -293,11 +365,25 @@ class CdclFuzzTest {
       if (rnd.nextInt(4) == 0) {
         incremental(rnd, f, vars[0], seed);
       }
-      if ((run + 1) % 100_000 == 0) {
+      if (run % 2 == 0) {
+        Random gridRnd = new Random(~seed);
+        List<int[]> g = gridFormula(gridRnd, vars);
+        if (solveChecked(g, vars[0], seed) == CdclSolver.UNSAT) {
+          unsat++;
+        }
+      }
+      if ((run + 1) % progress == 0) {
         System.out.println("fuzz: " + (run + 1) + " runs, " + unsat + " UNSAT");
       }
     }
-    System.out.println("fuzz: " + runs + " runs, " + unsat + " UNSAT, all answers checked");
+    System.out.println(
+        "fuzz: "
+            + runs
+            + " runs, "
+            + unsat
+            + " UNSAT, "
+            + factoredRuns
+            + " solves with bounded variable addition, all answers checked");
     assertTrue(runs == 0 || unsat > 0, "no UNSAT instance was generated");
   }
 
@@ -311,5 +397,11 @@ class CdclFuzzTest {
     List<int[]> satisfiable = List.of(new int[] {1, 2}, new int[] {-1, 2});
     assertNotNull(RupChecker.check(2, satisfiable, "2 0\n"), "no refutation");
     assertNotNull(RupChecker.check(2, List.of(new int[] {1, 2}), "1 0\n0\n"), "1 is not RUP");
+    // RAT: 3 is fresh, so 3 v 1 is RAT; -3 v 2 resolves with it to 1 v 2, in the formula
+    List<int[]> one = List.of(new int[] {1, 2});
+    String noRefutation = "the proof does not derive the empty clause";
+    assertEquals(noRefutation, RupChecker.check(2, one, "3 1 0\n-3 2 0\n"));
+    assertTrue(RupChecker.check(2, one, "-1 0\n").contains("neither"), "-1 resolves to 2");
+    assertTrue(RupChecker.check(2, one, "3 0\n-3 2 0\n").contains("neither"), "3 is a fact");
   }
 }
