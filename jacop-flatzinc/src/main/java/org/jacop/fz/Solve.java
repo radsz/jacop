@@ -4679,7 +4679,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * solver; the search then goes on from the best solution of the solver as a kind of
    * neighbourhood. --free-config maxsat=0 turns it off, maxsat-share gives the first run its share
    * of the time (default 0.05), maxsat-max caps it in milliseconds (default 60000), and the run
-   * ends early when it found nothing better in the last half of its time.
+   * ends early when it found nothing better in the last half of its time, or, after maxsat-patience
+   * milliseconds (default 1000) without an assignment of the hard clauses, when the fewest hard
+   * clauses falsified did not fall in the last half of its time.
    *
    * @return the best assignment, as a hint of the 0/1 variables, or null
    */
@@ -4717,6 +4719,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
                       * options.getRemainingTimeOut()));
     }
     long deadline = begin + budget;
+    // without an assignment of the hard clauses after this time and no fewer falsified ones in the
+    // last half of it, the solver's solutions start the slices
+    long feasiblePatience = Long.parseLong(options.freeConfig("maxsat-patience", "1000"));
     boolean[] stopped = {false};
     if (worker != null) {
       worker.onStop(() -> stopped[0] = true);
@@ -4724,10 +4729,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     ls.start(new boolean[model.lsVars]);
     long best = Long.MAX_VALUE;
     long improvedAt = begin;
+    // the fewest falsified hard clauses so far, and when they were reached
+    int fewestHard = Integer.MAX_VALUE;
+    long hardAt = begin;
     int[] hintValues = null;
     while (!stopped[0]) {
       long now = System.currentTimeMillis();
       if (now > deadline
+          || (best == Long.MAX_VALUE
+              && now - begin > feasiblePatience
+              && now - hardAt > (now - begin) / 2)
           || (best < Long.MAX_VALUE && now - begin > 200 && now - improvedAt > (now - begin) / 2)) {
         break;
       }
@@ -4735,6 +4746,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (found < best) {
         best = found;
         improvedAt = System.currentTimeMillis();
+      }
+      if (ls.lowestFalsifiedHard() < fewestHard) {
+        fewestHard = ls.lowestFalsifiedHard();
+        hardAt = System.currentTimeMillis();
       }
       if (ls.falsifiedHard() == 0 && ls.cost() == 0) {
         break;

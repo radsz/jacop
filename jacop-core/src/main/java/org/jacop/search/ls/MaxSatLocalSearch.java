@@ -81,6 +81,7 @@ public final class MaxSatLocalSearch {
   private final SplittableRandom random;
   private long steps;
   private long improvements;
+  private int lowestHard = Integer.MAX_VALUE;
 
   private long hardStep = 1;
   private double smoothing = 0.01;
@@ -425,6 +426,9 @@ public final class MaxSatLocalSearch {
         }
       }
       flip(v);
+      if (falseHards < lowestHard) {
+        lowestHard = falseHards;
+      }
       if (falseHards == 0 && cost < best) {
         record();
       }
@@ -500,6 +504,11 @@ public final class MaxSatLocalSearch {
   /** The cost of the current assignment, counting only soft clauses. */
   public long cost() {
     return cost;
+  }
+
+  /** The fewest hard clauses an assignment of the runs so far falsified. */
+  public int lowestFalsifiedHard() {
+    return Math.min(lowestHard, falseHards);
   }
 
   /** The number of hard clauses the current assignment falsifies. */
