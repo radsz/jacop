@@ -4966,6 +4966,31 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else {
       lns.disable(AdaptiveLns.Kind.ROUTES).disable(AdaptiveLns.Kind.RELATED);
     }
+    if (linearRelaxation != null && !"0".equals(options.freeConfig("lns-rins", "1"))) {
+      LinearRelaxation r = linearRelaxation;
+      IntVar[] lv = vars.toArray(new IntVar[0]);
+      Map<IntVar, Integer> columnOf = new IdentityHashMap<>();
+      for (int j = 0; j < r.columns(); j++) {
+        columnOf.putIfAbsent(r.column(j), j);
+      }
+      int[] col = new int[lv.length];
+      for (int i = 0; i < lv.length; i++) {
+        col[i] = columnOf.getOrDefault(lv[i], -1);
+      }
+      lns.setLpValues(
+          i -> {
+            int j = col[i];
+            if (j < 0) {
+              return Double.NaN;
+            }
+            if (j < r.rootSolutionColumns()) {
+              return r.rootSolutionValue(j);
+            }
+            return j < r.solutionColumns() ? r.solutionValue(j) : Double.NaN;
+          });
+    } else {
+      lns.disable(AdaptiveLns.Kind.RINS);
+    }
     String kinds = options.freeConfig("lns-kinds", "");
     if (!kinds.isEmpty()) {
       // the kinds to use, separated by '+', for example random+graph+objective
