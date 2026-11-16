@@ -955,7 +955,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
       // linear constraints are split into block sums: the relaxation gets the clauses as rows and
       // the blocks substituted back, so it has the rows of the model as without --lcg
-      List<LinearForm> clauses = new ArrayList<>();
+      List<LinearForm> clauses = new ArrayList<>(dictionary.overlapUnitRows());
       if (options.lcg()) {
         for (IntVar[][] clause : sat.collectedClauses()) {
           clauses.add(clauseRow(clause[0], clause[1]));
@@ -1037,6 +1037,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: lpRows="
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat: lpUnitRows="
+              + dictionary.overlapUnitRows().size()
               + "\n%%%mzn-stat: lpTableClauses="
               + (linearRelaxation == null ? 0 : linearRelaxation.tableClauses)
               + (cliques == null

@@ -264,6 +264,45 @@ class LinearOverlapFlatzincTest {
     assertEquals(solutions(run(model, false, "-f")), solutions(run(model, true, "-f")));
   }
 
+  /**
+   * A row that is a multiple of the shared sub-sum, {@code 2 * (x0 + ... + x4) <= 7}, becomes the
+   * bound {@code 2 * z <= 7} of the sum's variable, which the store holds as a domain and not as a
+   * constraint. The linear relaxation substitutes z back and must still get the row: it has the
+   * rows of the unfactored model (MIPLIB p0548 lost 88 of its 174 rows, root cut bound 464 instead
+   * of 7,325, optimum 8,691).
+   */
+  @Test
+  void rowReducedToTheSharedSumStaysInTheRelaxation() throws IOException {
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 8; i++) {
+      fzn.append("var 0..1: x").append(i).append(";\n");
+    }
+    fzn.append("var 0..100: obj:: output_var;\n");
+    fzn.append("constraint int_lin_le([2,2,2,2,2],[x0,x1,x2,x3,x4],7);\n");
+    fzn.append("constraint int_lin_le([1,1,1,1,1,1,1],[x0,x1,x2,x3,x4,x5,x6],5);\n");
+    fzn.append("constraint int_lin_le([1,1,1,1,1,1,1,1],[x0,x1,x2,x3,x4,x5,x6,x7],6);\n");
+    fzn.append("constraint int_lin_eq([3,5,7,9,11,4,6,8,-1],[x0,x1,x2,x3,x4,x5,x6,x7,obj],0);\n");
+    fzn.append("solve maximize obj;\n");
+    String model = fzn.toString();
+    String factored = run(model, true, "--lcg", "off", "-s", "-v", "--search-statistics");
+    String plain = run(model, false, "--lcg", "off", "-s", "-v", "--search-statistics");
+    assertTrue(run(model, true, "-debug").contains("% linear overlap"), "not factored");
+    assertTrue(factored.contains("lpUnitRows=1"), factored);
+    // the rows give 47.5 (x0..x4 at 3.5, x5, x6 at 1.5, x7 at 1); without 2 * z <= 7 it is 53
+    assertEquals(47.5, Double.parseDouble(stat(factored, "lpRootBound")), 1e-6, factored);
+    assertEquals(optimum(plain, model), optimum(factored, model));
+  }
+
+  // the first value of a statistic
+  private static String stat(String out, String name) {
+    for (String line : out.split("\\R")) {
+      if (line.startsWith("%%%mzn-stat: " + name + "=")) {
+        return line.substring(line.indexOf('=') + 1);
+      }
+    }
+    return null;
+  }
+
   private String run(String model, boolean factoring, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

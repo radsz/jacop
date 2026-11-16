@@ -74,6 +74,7 @@ import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
+import org.jacop.lcg.LinearForm;
 import org.jacop.satwrapper.SatTranslation;
 
 /**
@@ -526,6 +527,14 @@ class LinearConstraints implements ParserTreeConstants {
 
     if (!p2Fixed && (operation == Support.EQ || operation == Support.LE)) {
       recordUnitSum(p1, p2, p3, operation == Support.EQ);
+      if (rewrite != null && p2.length == 1) {
+        support.dictionary.addOverlapUnitRow(
+            new LinearForm(
+                p2,
+                new long[] {p1[0]},
+                p3,
+                operation == Support.EQ ? LinearForm.EQ : LinearForm.LE));
+      }
     }
 
     switch (operation) {

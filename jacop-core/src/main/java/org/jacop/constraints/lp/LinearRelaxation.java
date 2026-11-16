@@ -1229,7 +1229,12 @@ public class LinearRelaxation extends Constraint
     // clauses of lazy clause generation make thousands of rows on some models (rel2onto: 65 rows
     // become 1,135), and a relaxation that large stalls at its pivot limit and prunes nothing
     for (LinearForm f : extra) {
-      if (f != null) {
+      if (f != null && overSubstituted(f, substituted)) {
+        // a row of the model over a substituted variable (linear overlap factoring reduced it to a
+        // bound of its sub-sum): substituted back below, it is the row of the model again
+        localForms.add(f);
+        tags.putIfAbsent(f, "unit");
+      } else if (f != null) {
         relaxed.add(f);
         tags.putIfAbsent(f, "given");
       }
@@ -2227,6 +2232,15 @@ public class LinearRelaxation extends Constraint
     }
     LinearForm e = new LinearForm(vs.toArray(new IntVar[0]), w, c, f.relation());
     return expand(e, definition, weight, depth + 1);
+  }
+
+  private static boolean overSubstituted(LinearForm f, Set<? extends IntVar> substituted) {
+    for (IntVar v : f.vars()) {
+      if (substituted.contains(v)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static int indexOf(LinearForm f, IntVar v) {
