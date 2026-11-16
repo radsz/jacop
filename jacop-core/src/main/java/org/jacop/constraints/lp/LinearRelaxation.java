@@ -136,8 +136,10 @@ public class LinearRelaxation extends Constraint
   // variable of the store, and whether there is any
   private final boolean[] lpOnly;
   private final boolean anyLpOnly;
-  // whether the relaxation holds the all-different-except encodings over auxiliary columns, which
-  // are the relaxation itself and are never dropped (the other encodings are extra rows like any)
+  // whether the relaxation holds the all-different-except encodings over auxiliary columns, or the
+  // value encodings of the model's Booleans that chose the sparse simplex, which are the relaxation
+  // itself and are not dropped for the pivot limits of search (the other encodings are extra rows
+  // like any)
   private boolean keepEncodings;
   // the extra rows before the value encodings of valueRows' tried rows, which come last; the others
   // are tried without them when all of them are not kept
@@ -223,6 +225,12 @@ public class LinearRelaxation extends Constraint
   private static final int LAZY_ROUNDS = Integer.getInteger("org.jacop.lp.lazyRounds", 100);
   private static final int LAZY_AGE = Integer.getInteger("org.jacop.lp.lazyAge", 100);
 
+  // the value encodings of the model's Booleans in place of the hull rows of the element
+  // constraints they cover, and counted with the exempt rows when the simplex is chosen by size
+  // (-Dorg.jacop.lp.encodingRows=false: the hull rows, and the simplex chosen without them; not
+  // final: a test hook)
+  static boolean encodingRowsOn = !FALSE.equals(System.getProperty("org.jacop.lp.encodingRows"));
+
   // the row pool: whether the rows of other constraints and the cuts leave the simplex after
   // POOL_AGE optimal solves in which they are inactive (with lazy rows every row does, after
   // LAZY_AGE); and whether the rows of other constraints that the root trial does not keep, and
@@ -230,6 +238,7 @@ public class LinearRelaxation extends Constraint
   // Both are off: such rows come back at the first solves in search, as its solution breaks them,
   // which undoes the root's choice to leave them out, and neither moved a result on the wide set
   private static final boolean POOL = !FALSE.equals(System.getProperty("org.jacop.lp.pool"));
+
   private static final int POOL_AGE = Integer.getInteger("org.jacop.lp.poolAge", 100);
   private static final boolean POOL_EXTRA = Boolean.getBoolean("org.jacop.lp.poolExtra");
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
@@ -391,6 +400,15 @@ public class LinearRelaxation extends Constraint
 
   /** Whether the value encodings ahead of the other extra rows were kept alone at their trial. */
   public boolean leadKept;
+
+  /**
+   * Statistics: the element constraints whose hull rows were left out for the value encoding that
+   * links their value to the Booleans of their index.
+   */
+  public int encodedElements;
+
+  /** Statistics: whether the value encodings of the model's Booleans chose the sparse simplex. */
+  public boolean encodingsSparse;
 
   /** Statistics: the clause rows of tables over 0/1 variables tried at the first solve. */
   public int tableClauses;
@@ -1171,6 +1189,14 @@ public class LinearRelaxation extends Constraint
     List<AlldifferentCuts> hall = new ArrayList<>();
     List<TreeCuts> trees = new ArrayList<>();
     Map<LinearForm, String> tags = new IdentityHashMap<>();
+    // the element constraints whose value encodings give their convex hull: their own hull rows
+    // are left out (gap of the OR-Library: 836 hull rows next to 400 encoding rows, which made the
+    // dense trial of the further rows stop at its pivot limit and keep none)
+    Set<Constraint> linked = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<LinearForm> encodings = new ArrayList<>();
+    if (LINEARIZE) {
+      encodings.addAll(Linearizations.encodings(constraints, encodingRowsOn ? linked : null));
+    }
     for (Constraint c : constraints) {
       TreeCuts forest = TREE_CUTS && objective != null ? TreeCuts.of(c) : null;
       if (forest != null) {
@@ -1194,7 +1220,7 @@ public class LinearRelaxation extends Constraint
       if (f != null && f.relation() != LinearForm.NE && f.vars().length > 1) {
         localForms.add(f);
         tags.put(f, "row:" + c.getClass().getSimpleName());
-      } else if (f == null && LINEARIZE) {
+      } else if (f == null && LINEARIZE && !linked.contains(c)) {
         List<LinearForm> rows = Linearizations.of(c);
         relaxed.addAll(rows);
         tag(tags, rows, "lin:" + c.getClass().getSimpleName());
@@ -1225,7 +1251,6 @@ public class LinearRelaxation extends Constraint
       tag(tags, localForms, "substituted");
     }
     if (LINEARIZE) {
-      List<LinearForm> encodings = new ArrayList<>(Linearizations.encodings(constraints));
       if (objective != null) {
         List<LinearForm> cliques =
             Linearizations.valueCliques(constraints, List.of(localForms, relaxed));
@@ -1356,10 +1381,24 @@ public class LinearRelaxation extends Constraint
       // larger ones, also those over the dense size cap, which would get no relaxation at all
       simplex = Simplex.SPARSE;
     }
-    if (auto && simplex == Simplex.DENSE && exempt > 0) {
+    // the value encodings of the model's own Booleans count like the exempt rows: on a model that
+    // states an assignment by Booleans (x = v) the encodings are its assignment and cost rows, and
+    // a dense trial of them at the first solve stopped at its pivot limit (gapd 10x200 of the
+    // OR-Library: 800 encoding rows over 2,601 columns, 360 pivots, all rows dropped and the root
+    // bound 3,738 instead of 12,4xx)
+    int encoded = 0;
+    boolean bySparse = false;
+    if (encodingRowsOn && auto && simplex == Simplex.DENSE && !encodingSet.isEmpty()) {
+      for (LinearForm f : candidates) {
+        encoded += encodingSet.contains(f) ? 1 : 0;
+      }
+    }
+    if (auto && simplex == Simplex.DENSE && (exempt > 0 || encoded > 0)) {
       List<LinearForm> withColumns = new ArrayList<>(localForms);
       withColumns.addAll(candidates.subList(0, exempt));
-      if (localForms.size() + exempt >= SPARSE_ROWS || tooLarge(withColumns, Simplex.DENSE)) {
+      if (localForms.size() + exempt + encoded >= SPARSE_ROWS
+          || tooLarge(withColumns, Simplex.DENSE)) {
+        bySparse = encoded > 0;
         // the encodings are rows of the model as a MIP states it: the simplex is chosen by their
         // count too, and the sparse one takes them all when the dense tableau cannot
         simplex = Simplex.SPARSE;
@@ -1380,7 +1419,15 @@ public class LinearRelaxation extends Constraint
     // the leading rows of the value conjunctions are counted like the exempt ones, outside the
     // share of the others (ihtc-2024-kletzander test05: 412 leading rows of a share of 472 left out
     // the count row of the objective, and the root bound stayed 0)
-    long share = trees.isEmpty() ? 2L * localForms.size() + SPARSE_ROWS + first : Long.MAX_VALUE;
+    // the encodings that chose the sparse simplex are counted outside the share too (gapd 10x200:
+    // a share of 124 rows took 124 of its 800 encoding rows, root bound 3,746)
+    long share =
+        trees.isEmpty()
+            ? 2L * localForms.size()
+                + SPARSE_ROWS
+                + first
+                + (bySparse && leading.isEmpty() ? encoded : 0)
+            : Long.MAX_VALUE;
     if (!fitsSimplex(localForms, candidates, simplex, auto, share, own, further)
         && objective != null) {
       // not all fit: after the value encodings, the rows nearest to the objective first, since rows
@@ -1437,7 +1484,11 @@ public class LinearRelaxation extends Constraint
     r.nearRows = nearRows;
     r.bySize = auto && simplex == Simplex.SPARSE;
     r.large = large && simplex == Simplex.SPARSE;
-    r.keepEncodings = exempt > 0;
+    // the encodings that chose the sparse simplex are the model's rows as well: the solves in
+    // search
+    // get the pivots of the sparse simplex, not those of the dense tableau they would make (gapd
+    // 10x200: 7 pivots a solve, every one stopped at the limit and the relaxation stalled after 32)
+    r.keepEncodings = exempt > 0 || bySparse;
     r.plainExtra = (int) r.extraForms.stream().filter(f -> !triedSet.contains(f)).count();
     r.triedExtra = (int) r.extraForms.stream().filter(f -> !flow.contains(f)).count();
     if (encodingsLead) {
@@ -1450,6 +1501,8 @@ public class LinearRelaxation extends Constraint
     }
     r.valueCliques = valueCliqueRows;
     r.pairCliques = pairCliques;
+    r.encodedElements = linked.size();
+    r.encodingsSparse = bySparse;
     r.tableClauses = tableClauses;
     r.formSource = tags;
     r.capacity = separations;
