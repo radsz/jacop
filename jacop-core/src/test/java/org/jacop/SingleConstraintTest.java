@@ -195,9 +195,11 @@ import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
+import org.jacop.constraints.graph.Forest;
 import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.constraints.lp.TreeCuts;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostRegular;
@@ -10373,5 +10375,96 @@ class SingleConstraintTest extends TestHelper {
       v = parent[v];
     }
     return v;
+  }
+
+  @Test
+  void forestCutsHoldOnEveryForest() {
+    // the generalized subtour elimination cuts of a Forest (SuccessorForestDetector) cut off a
+    // fractional cycle and hold on every assignment the Forest accepts, over all 0/1 assignments
+    // of 4 nodes and the 6 edges between them
+    int[] tail = {0, 0, 0, 1, 1, 2};
+    int[] head = {1, 2, 3, 2, 3, 3};
+    Store store = new Store();
+    IntVar[] ns = new IntVar[4];
+    IntVar[] es = new IntVar[6];
+    for (int i = 0; i < ns.length; i++) {
+      ns[i] = new IntVar(store, "n" + i, 0, 1);
+    }
+    for (int e = 0; e < es.length; e++) {
+      es[e] = new IntVar(store, "e" + e, 0, 1);
+    }
+    Forest forest = new Forest(ns, es, tail, head);
+    TreeCuts cuts = TreeCuts.of(forest);
+    assertThat(cuts).isNotNull();
+    // the triangle 0-1-2 with its edges at 1 and at 0.8 (node 3 out): 3 and 2.4 > 3 - 1
+    double[][] points = {{1, 1, 1, 1, 1, 1, 0, 1, 0, 0}, {1, 1, 1, 0, 0.8, 0.8, 0, 0.8, 0, 0}};
+    List<TreeCuts.Cut> found = new ArrayList<>();
+    for (double[] point : points) {
+      List<TreeCuts.Cut> c = cuts.separate(point, 10);
+      assertThat(c).isNotEmpty();
+      found.addAll(c);
+    }
+    int forests = 0;
+    for (int bits = 0; bits < 1 << 10; bits++) {
+      int level = store.level;
+      store.setLevel(level + 1);
+      int[] value = new int[10];
+      for (int a = 0; a < 10; a++) {
+        value[a] = bits >> a & 1;
+        IntVar v = a < 4 ? ns[a] : es[a - 4];
+        v.domain.in(store.level, v, value[a], value[a]);
+      }
+      if (forest.satisfied()) {
+        forests++;
+        for (TreeCuts.Cut cut : found) {
+          int lhs = 0;
+          for (int e : cut.edges()) {
+            lhs += value[4 + e];
+          }
+          for (int i : cut.nodes()) {
+            lhs -= value[i];
+          }
+          assertThat(lhs).as("cut on assignment %s", Arrays.toString(value)).isLessThanOrEqualTo(0);
+        }
+      }
+      store.removeLevel(level + 1);
+      store.setLevel(level);
+    }
+    // as many assignments as a plain count over all subsets gives
+    assertThat(forests).isEqualTo(countForests(tail, head, 4));
+  }
+
+  // the assignments of nodes and edges where every selected edge joins two selected nodes and the
+  // selected edges have no cycle, by a plain count over all subsets
+  private static int countForests(int[] tail, int[] head, int n) {
+    int count = 0;
+    for (int nodes = 0; nodes < 1 << n; nodes++) {
+      for (int edges = 0; edges < 1 << tail.length; edges++) {
+        boolean ok = true;
+        int[] parent = new int[n];
+        for (int i = 0; i < n; i++) {
+          parent[i] = i;
+        }
+        for (int e = 0; e < tail.length && ok; e++) {
+          if ((edges >> e & 1) == 1) {
+            int a = tail[e];
+            int b = head[e];
+            ok = (nodes >> a & 1) == 1 && (nodes >> b & 1) == 1;
+            while (parent[a] != a) {
+              a = parent[a];
+            }
+            while (parent[b] != b) {
+              b = parent[b];
+            }
+            ok &= a != b;
+            parent[a] = b;
+          }
+        }
+        if (ok) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 }
