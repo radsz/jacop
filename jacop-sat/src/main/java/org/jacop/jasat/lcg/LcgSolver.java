@@ -8062,8 +8062,15 @@ public final class LcgSolver implements ExternalPropagator {
       // backjumps to the root on it and then takes the empty clause
       int any = extra == 0 ? trueAtom() : extra;
       if (any == 0) {
-        throw new IllegalStateException(
-            "the constraints failed on the root domains: " + store.recentlyFailedConstraint);
+        // nothing is assigned, so no false literal can stand in: a propagator that joined the
+        // search at the root (the linear relaxation after its probe) failed there. The solver
+        // takes the empty clause at once and answers UNSAT (miplib2003 disctom threw here)
+        if (proof != null) {
+          proof.add(new int[0], 0, 0);
+        }
+        sat.addClause();
+        pushedReason = null;
+        return 0;
       }
       structural.add(new int[0]);
       clause = new int[] {-any};
