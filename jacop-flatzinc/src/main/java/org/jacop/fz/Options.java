@@ -311,7 +311,7 @@ public class Options {
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
-                blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
+                blocks of about sqrt of its size, for shorter explanations; default 20; 0 = off),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
                 at its lower bound or a growing offset above it, per failure of the other runs;
                 default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100),
