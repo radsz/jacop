@@ -39,10 +39,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.IntUnaryOperator;
 import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
@@ -936,6 +938,184 @@ class SymmetryBreakingFlatzincTest {
     assertEquals(1, precedences(on), on);
     // value precedence: x0 = 1, and the first other colour is 2
     assertTrue(on.contains("x0 = 1;"), on);
+  }
+
+  @Test
+  void modelLexLeadersKeepValuesInterchangeable() throws IOException {
+    // XCSP 2026 ColoredGrid: a Latin square whose diagonals are all different too, that is n
+    // disjoint solutions of n queens, with the model's lex-leader constraints for the symmetries
+    // of the square; the colours stay interchangeable (n = 9 was refuted in 3.6 s, no answer at
+    // 300 s without value precedence)
+    for (int n : new int[] {5, 6, 7}) {
+      String model = coloredGrid(n, gridLines(n, true, List.of()), squareSymmetries(n));
+      String off =
+          FlatzincTestRunner.run(
+              tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      assertEquals(off.contains("=====UNSATISFIABLE====="), on.contains("=====UNSATISFIABLE====="));
+      assertEquals(n == 6, on.contains("=====UNSATISFIABLE====="), on);
+      assertEquals(1, precedences(on), on);
+    }
+  }
+
+  @Test
+  void modelLexLeadersOfNoSymmetryKeepValueSymmetryOff() throws IOException {
+    // random lines on a Latin square of order 4, closed or not under the symmetry whose lex-leader
+    // constraint the model holds; value precedence is posted only when the lines are closed, and
+    // satisfiability never changes
+    Random random = new Random(20261115L);
+    int n = 4;
+    int fired = 0;
+    for (int trial = 0; trial < 60; trial++) {
+      int[] symmetry = squareSymmetries(n)[random.nextInt(7)];
+      List<int[]> extra = new ArrayList<>();
+      int lines = random.nextInt(5);
+      for (int l = 0; l < lines; l++) {
+        List<Integer> cells = new ArrayList<>();
+        for (int c = 0; c < n * n; c++) {
+          cells.add(c);
+        }
+        Collections.shuffle(cells, random);
+        extra.add(cells.subList(0, 2 + random.nextInt(3)).stream().mapToInt(i -> i).toArray());
+      }
+      if (random.nextBoolean()) {
+        for (int l = 0; l < lines; l++) {
+          int[] line = extra.get(l);
+          int[] image = line;
+          // the orbit of the line under the symmetry
+          for (int k = 0; k < 4; k++) {
+            int[] next = new int[image.length];
+            for (int i = 0; i < image.length; i++) {
+              next[i] = symmetry[image[i]];
+            }
+            image = next;
+            extra.add(image);
+          }
+        }
+      }
+      List<int[]> all = gridLines(n, random.nextBoolean(), extra);
+      boolean closed = closedUnder(all, symmetry);
+      String model = coloredGrid(n, all, new int[][] {symmetry});
+      String off =
+          FlatzincTestRunner.run(
+              tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      assertEquals(
+          off.contains("=====UNSATISFIABLE====="),
+          on.contains("=====UNSATISFIABLE====="),
+          "trial " + trial + "\n" + model + "\n" + on);
+      // a model refuted at the root reports no symmetry statistics
+      if (on.contains("symmetryValuePrecedences=")) {
+        assertEquals(closed ? 1 : 0, precedences(on), "trial " + trial + "\n" + model + "\n" + on);
+        fired += closed ? 1 : 0;
+      }
+    }
+    assertTrue(fired >= 10, "value precedence posted in " + fired + " models");
+  }
+
+  /**
+   * The lines of a square of order n: rows, columns, the diagonals if asked, and the extra ones.
+   */
+  private static List<int[]> gridLines(int n, boolean diagonals, List<int[]> extra) {
+    List<int[]> lines = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      int[] row = new int[n];
+      int[] column = new int[n];
+      for (int j = 0; j < n; j++) {
+        row[j] = i * n + j;
+        column[j] = j * n + i;
+      }
+      lines.add(row);
+      lines.add(column);
+    }
+    if (diagonals) {
+      for (int d = -(n - 2); d <= n - 2; d++) {
+        List<Integer> down = new ArrayList<>();
+        List<Integer> up = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+          int j = i + d;
+          if (j >= 0 && j < n) {
+            down.add(i * n + j);
+            up.add(i * n + (n - 1 - j));
+          }
+        }
+        lines.add(down.stream().mapToInt(c -> c).toArray());
+        lines.add(up.stream().mapToInt(c -> c).toArray());
+      }
+    }
+    lines.addAll(extra);
+    return lines;
+  }
+
+  /**
+   * The seven symmetries of a square of order n other than the identity, as maps of the cells
+   * (numbered row by row).
+   */
+  private static int[][] squareSymmetries(int n) {
+    int[][] maps = new int[7][n * n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        int c = i * n + j;
+        int m = n - 1;
+        maps[0][c] = j * n + i;
+        maps[1][c] = (m - j) * n + (m - i);
+        maps[2][c] = j * n + (m - i);
+        maps[3][c] = (m - i) * n + (m - j);
+        maps[4][c] = (m - j) * n + i;
+        maps[5][c] = i * n + (m - j);
+        maps[6][c] = (m - i) * n + j;
+      }
+    }
+    return maps;
+  }
+
+  /** Whether the set of lines, each taken as a set of cells, is closed under the map. */
+  private static boolean closedUnder(List<int[]> lines, int[] map) {
+    Set<Set<Integer>> sets = new HashSet<>();
+    for (int[] line : lines) {
+      sets.add(new TreeSet<>(Arrays.stream(line).boxed().toList()));
+    }
+    for (Set<Integer> line : sets) {
+      Set<Integer> image = new TreeSet<>();
+      for (int c : line) {
+        image.add(map[c]);
+      }
+      if (!sets.contains(image)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * A square of order n over the values 0..n-1 whose lines are all different, with the lex-leader
+   * constraint {@code X <=lex X o sigma} of each given map sigma of the cells, as lex_chain_lesseq
+   * over two columns.
+   */
+  private static String coloredGrid(int n, List<int[]> lines, int[][] symmetries) {
+    StringBuilder fzn = new StringBuilder();
+    for (int c = 0; c < n * n; c++) {
+      fzn.append("var 0..").append(n - 1).append(": x").append(c).append(" :: output_var;\n");
+    }
+    for (int[] line : lines) {
+      if (line.length > 1) {
+        fzn.append("constraint jacop_alldiff([")
+            .append(String.join(",", Arrays.stream(line).mapToObj(c -> "x" + c).toList()))
+            .append("]);\n");
+      }
+    }
+    for (int[] map : symmetries) {
+      List<String> pairs = new ArrayList<>();
+      for (int c = 0; c < n * n; c++) {
+        pairs.add("x" + c);
+        pairs.add("x" + map[c]);
+      }
+      fzn.append("constraint jacop_lex_chain_lesseq_int([")
+          .append(String.join(",", pairs))
+          .append("],2);\n");
+    }
+    fzn.append("solve satisfy;\n");
+    return fzn.toString();
   }
 
   @Test

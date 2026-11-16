@@ -73,6 +73,7 @@ import org.jacop.constraints.And;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.AndBoolVector;
 import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
@@ -4860,6 +4861,52 @@ class SingleConstraintTest extends TestHelper {
     int noOfSolutions = noOfAllSolutions(store, x, new IntVar[] {index});
 
     assertThat(noOfSolutions).isEqualTo(2401);
+  }
+
+  @Test
+  void argMaxAndArgMinBoundPositionsMissingFromTheIndex() {
+    // a position the index no longer holds cannot be the first extremum, so it is bounded by the
+    // index positions around it; before, only the positions before the smallest index were
+    // bounded tighter than the others (x1 kept 4 below, 0 in the second store)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 3);
+    IntVar x1 = new IntVar(store, "x1", 0, 0);
+    x1.addDom(3, 4);
+    IntVar x2 = new IntVar(store, "x2", 1, 4);
+    IntVar index = new IntVar(store, "index", 0, 0);
+    index.addDom(2, 2);
+    store.impose(new ArgMax(new IntVar[] {x0, x1, x2}, index, -1));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.max()).isEqualTo(3);
+
+    Store other = new Store();
+    IntVar y0 = new IntVar(other, "y0", 1, 3);
+    IntVar y1 = new IntVar(other, "y1", 0, 2);
+    IntVar y2 = new IntVar(other, "y2", 0, 2);
+    y2.addDom(4, 4);
+    IntVar position = new IntVar(other, "position", 0, 0);
+    position.addDom(2, 2);
+    other.impose(new ArgMin(new IntVar[] {y0, y1, y2}, position, -1));
+    assertThat(other.consistency()).isTrue();
+    assertThat(y1.min()).isEqualTo(1);
+
+    // the same for ArgMaxMonotone, with x2 read through a doubling table
+    Store third = new Store();
+    IntVar z0 = new IntVar(third, "z0", 0, 3);
+    IntVar z1 = new IntVar(third, "z1", 0, 0);
+    z1.addDom(3, 8);
+    IntVar z2 = new IntVar(third, "z2", 1, 2);
+    IntVar at = new IntVar(third, "at", 0, 0);
+    at.addDom(2, 2);
+    third.impose(
+        new ArgMaxMonotone(
+            new IntVar[] {z0, z1, z2},
+            new int[][] {null, null, {2, 4}},
+            new int[] {0, 0, 1},
+            at,
+            -1));
+    assertThat(third.consistency()).isTrue();
+    assertThat(z1.max()).isEqualTo(3);
   }
 
   @Test
