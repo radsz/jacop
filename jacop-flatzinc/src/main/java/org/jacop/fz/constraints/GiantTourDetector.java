@@ -591,7 +591,12 @@ public class GiantTourDetector implements ParserTreeConstants {
               + " cost rows, "
               + sums
               + " tour sums"
-              + (timed == null ? "" : ", time windows, " + windowArcs + " successors removed"));
+              + (timed == null
+                  ? ""
+                  : ", time windows, "
+                      + windowArcs
+                      + " successors removed, narrow "
+                      + narrow(windows, customers, end)));
     }
     support.delayedConstraints.addAll(posted);
     support.dictionary.addAuxiliaryVariables(literals);
@@ -1017,6 +1022,28 @@ public class GiantTourDetector implements ParserTreeConstants {
       travel[a] = t == Long.MAX_VALUE ? NO_LAG : t;
     }
     routes.setTimeWindows(earliest, latest, travel);
+  }
+
+  // the share of the customers whose window is at most half the span of the routes
+  private static double narrow(long[][] w, List<Integer> customers, boolean[] end) {
+    long due = Long.MIN_VALUE;
+    long start = Long.MAX_VALUE;
+    for (int v = 0; v < end.length; v++) {
+      if (end[v]) {
+        due = Math.max(due, w[1][v]);
+      }
+    }
+    for (int i = 1; i < customers.size(); i++) {
+      start = Math.min(start, w[0][customers.get(i)]);
+    }
+    int k = 0;
+    for (int i = 1; i < customers.size(); i++) {
+      int v = customers.get(i);
+      if (2 * (w[1][v] - w[0][v]) <= due - start) {
+        k++;
+      }
+    }
+    return (double) k / (customers.size() - 1);
   }
 
   // no row forces a lag on the arc

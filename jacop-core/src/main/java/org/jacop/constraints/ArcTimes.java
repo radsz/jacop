@@ -89,6 +89,11 @@ public class ArcTimes extends Constraint
   private final boolean[] dirty;
   private final int[] queue;
   private int queued;
+
+  // nodes whose arcs in are to be checked again
+  private final boolean[] headDirty;
+  private final int[] heads;
+  private int headCount;
   private boolean all = true;
 
   // the node whose successors all came too late in the last failure, or -1
@@ -148,6 +153,8 @@ public class ArcTimes extends Constraint
     }
     dirty = new boolean[n];
     queue = new int[n];
+    headDirty = new boolean[n];
+    heads = new int[n];
     this.queueIndex = 1;
     List<Var> scope = new ArrayList<>(Arrays.asList(this.x));
     for (IntVar tv : nodesOfTime.keySet()) {
@@ -170,10 +177,11 @@ public class ArcTimes extends Constraint
       return;
     }
     for (int u : nodes) {
-      // a later start at u: its successors; an earlier end at u: its predecessors
+      // a later start at u: its successors; an earlier end at u: the arcs into it
       mark(u);
-      for (int p : predecessors[u]) {
-        mark(p);
+      if (!headDirty[u]) {
+        headDirty[u] = true;
+        heads[headCount++] = u;
       }
     }
   }
@@ -198,12 +206,33 @@ public class ArcTimes extends Constraint
         for (int i = 0; i < queued; i++) {
           check(store, queue[i]);
         }
+        for (int i = 0; i < headCount; i++) {
+          into(store, heads[i]);
+        }
       }
     } finally {
       for (int i = 0; i < queued; i++) {
         dirty[queue[i]] = false;
       }
       queued = 0;
+      for (int i = 0; i < headCount; i++) {
+        headDirty[heads[i]] = false;
+      }
+      headCount = 0;
+    }
+  }
+
+  // removes w from the successors of the nodes that cannot reach it in time
+  private void into(Store store, int w) {
+    int end = t[w].max();
+    int value = w + offset;
+    for (int v : predecessors[w]) {
+      if (!dirty[v] && x[v].domain.contains(value) && t[v].min() + lag[v][w] > end) {
+        if (x[v].getSize() == 1) {
+          failed = v;
+        }
+        x[v].domain.inComplement(store.level, x[v], value);
+      }
     }
   }
 
