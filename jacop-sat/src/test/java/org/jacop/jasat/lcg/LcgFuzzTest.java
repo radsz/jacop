@@ -1179,12 +1179,14 @@ class LcgFuzzTest {
           IntVar[] bs = new IntVar[n];
           int[] t = new int[n];
           boolean[] atMost = new boolean[n];
+          boolean[] implied = new boolean[n];
           for (int i = 0; i < n; i++) {
             bs[i] = bool();
             t[i] = value();
             atMost[i] = rnd.nextBoolean();
+            implied[i] = rnd.nextInt(3) == 0;
           }
-          yield new ChannelOrder(one(), bs, t, atMost);
+          yield new ChannelOrder(one(), bs, t, atMost, implied);
         }
         case 70 ->
             // counters of their own, or variables of the model that may also be counted
