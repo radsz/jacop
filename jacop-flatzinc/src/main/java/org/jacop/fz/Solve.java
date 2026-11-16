@@ -3397,6 +3397,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
+    lcgBoundGain = Double.parseDouble(options.freeConfig("lcg-slow-bound-gain", "0.0005"));
     double unsolvedRate = Double.parseDouble(options.freeConfig("lcg-slow-unsolved", "30"));
     if (costVar == null || rate <= 0 || options.getTimeOut() <= 0) {
       return null;
@@ -3497,7 +3498,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     } else if (solutionFound) {
       long before = costs.peekFirst()[1];
-      long raised = boundGained(now, stallNanos, gain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
+      long raised =
+          boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
       if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
         lcgSlowDeferred++;
       } else {
@@ -3514,6 +3516,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return true;
   }
 
+  // the share of the gap a bound raise must close to keep a slow LCG (lcg-slow-bound-gain): on
+  // rect-euler (MiniZinc Challenge 2026) LCG raises the bound from 3,887 to 5,166 in steps of a few
+  // units, closing about 0.1 % of the gap per window, and finds 8,088 against 8,471 when it gives
+  // way at the share 0.005 of lcg-slow-gain
+  private double lcgBoundGain;
   // the conflicts per second below which LCG gives way before the regular check (lcg-hopeless-rate)
   private double lcgHopelessRate;
   // when the regular check of LCG's speed starts (CdclSolver.now of the LCG solver)
