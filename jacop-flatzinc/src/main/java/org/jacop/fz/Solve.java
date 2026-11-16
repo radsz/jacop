@@ -3417,15 +3417,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @param unsolvedOnly true for fixed search, which gives way only without a solution
    * @return the thread of the check, or null when it is off
    */
-  // the squares among the objective's terms from which it is a balancing objective
-  private static final int SQUARED_OBJECTIVE_TERMS =
-      Integer.getInteger("org.jacop.fz.squaredObjectiveTerms", 4);
-
   private Thread slowLcgCheck(Var costVar, boolean unsolvedOnly) {
-    boolean balancing =
-        costVar != null && squaredObjectiveTerms(costVar) >= SQUARED_OBJECTIVE_TERMS;
-    double rate =
-        Double.parseDouble(options.freeConfig("lcg-slow-rate", balancing ? "Infinity" : "300"));
+    double rate = Double.parseDouble(options.freeConfig("lcg-slow-rate", "300"));
     double at = Double.parseDouble(options.freeConfig("lcg-slow-at", "0.1"));
     double stall = Double.parseDouble(options.freeConfig("lcg-slow-stall", "0.05"));
     double gain = Double.parseDouble(options.freeConfig("lcg-slow-gain", "0.005"));
@@ -5375,6 +5368,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return freeSearch.getSolutions() > 0;
   }
 
+  // the squares among the objective's terms from which it is a balancing objective
+  private static final int SQUARED_OBJECTIVE_TERMS =
+      Integer.getInteger("org.jacop.fz.squaredObjectiveTerms", 4);
+
   // with a balancing objective, the time free search without learning runs before LCG, in
   // milliseconds (0 = none), and the best solution it found, which LCG starts from
   private long freeFirstMillis;
@@ -5390,8 +5387,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * squares say little about which value raises it: at 120 s on XCSP 2023 GBACP-UD05 LCG free
    * search ends at 1,253 to 3,777 and free search without learning at 228 to 333. Free search alone
    * stalls on others where LCG goes on improving (GBACP-UD04 542 from 12 s on, LCG 396), so LCG
-   * then starts from free search's best solution, and gives way back to free search without
-   * learning when it stops making progress ({@link #slowLcgCheck}).
+   * then starts from free search's best solution. Handing the search back to free search without
+   * learning each time LCG stalled lost that again (UD04 469 at 240 s), so LCG keeps it under the
+   * usual check of {@link #slowLcgCheck}.
    *
    * @param costVar the cost variable
    * @return true if free search finished the search (an optimum or no solution proved)
