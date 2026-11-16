@@ -6599,7 +6599,23 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-366. The core-guided phase of lazy clause generation trims each core: it
+366. A LinearInt (MiniZinc int_lin_eq/le with a variable sum) of 200 or
+   more terms keeps the bounds of its sum incrementally: the store tells
+   it about every bound change of its variables and a consistency call no
+   longer rescans all terms, which dominated the cost sums of assignment
+   models (advisors in the sense of Lagerkvist and Schulte, CP 2007).
+   Terms are sorted by their initial variability so a pruning pass stops
+   at the first term within the slack. Pruning is unchanged. On the 2012
+   ROADEF machine reassignment instances (cost sums of 1000-2004 terms)
+   nodes per second go up 1.9x in default search and 1.7x under -f;
+   a1_1 -f at 600 s reaches 44,311,581 (before 45,404,327, best known
+   44,306,501). -Dorg.jacop.linearIncrementalTerms=n sets the threshold,
+   0 turns it off. Binpacking also skips its elimination and commitment
+   tests (Shaw, CP 2004) when the load range is at least as wide as the
+   heaviest candidate, where no test can prune; this was 88 % of the time
+   of a1_5 under -f.
+
+367. The core-guided phase of lazy clause generation trims each core: it
    solves again under the core's own literals, with at most 1000
    conflicts a call and up to 3 calls while the core shrinks, and relaxes
    the smallest core it got (core trimming in RC2: Ignatiev, Morgado and
@@ -6618,7 +6634,7 @@ Version 5.0 (unreleased)
    (LcgSolver.setCoreTrim); the statistic lcgCoreShrunk counts the
    literals it took out of cores.
 
-367. JaLP's presolve also removes forcing rows and fixes dominated columns
+368. JaLP's presolve also removes forcing rows and fixes dominated columns
    (Andersen and Andersen, "Presolving in linear programming",
    Mathematical Programming 71 (1995), sections 3.2 and 3.5; part of the
    Gurobi catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger,
@@ -6634,7 +6650,7 @@ Version 5.0 (unreleased)
    above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
    build an LP, where results stay the same.
 
-368. The linear relaxation takes the rows over the terms of the objective on
+369. The linear relaxation takes the rows over the terms of the objective on
    the sparse simplex when they do not fit the dense tableau. A model
    stated in clauses and elements has few rows of its own (CSPLib
    warehouses, prob034: 2), so the dense simplex was chosen and the clause
@@ -6648,7 +6664,7 @@ Version 5.0 (unreleased)
    proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
    turns it off; the statistic lpNearRows gives the rows taken.
 
-369. Symmetry breaking posts value precedence in models whose own
+370. Symmetry breaking posts value precedence in models whose own
    lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
    hid that their values are interchangeable. Each such constraint
    X <=lex sigma(X) must compare a prefix of one common order, with sigma
@@ -6661,7 +6677,7 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
-370. Free search (-f) of an optimisation model without a search
+371. Free search (-f) of an optimisation model without a search
    annotation, after slow lazy clause generation gave way without a
    solution, takes turns until its first solution with runs that fix the
    search variables in the model's order, least value first
@@ -6675,7 +6691,7 @@ Version 5.0 (unreleased)
    with a solution and 7 better against 3 worse (seed spread); neutral on
    the wide set.
 
-371. The FlatZinc front end posts the reified comparisons of one variable
+372. The FlatZinc front end posts the reified comparisons of one variable
    with constants (int_le_reif, int_lt_reif with a constant on either
    side) and their half-reifications (int_le_imp, int_lt_imp) as one
    ChannelOrder per variable with two or more of them, in place of one
@@ -6692,7 +6708,7 @@ Version 5.0 (unreleased)
    reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
    half-reifications.
 
-372. ArgMax and ArgMin bound the values at positions that the index can
+373. ArgMax and ArgMin bound the values at positions that the index can
    no longer take: such a position may not reach the extreme over the
    positions the index can still take (strictly for positions after
    them, since the first extreme wins). ArgMax and ArgMin now reach
