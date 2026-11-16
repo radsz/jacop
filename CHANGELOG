@@ -7405,7 +7405,12 @@ Version 5.0 (unreleased)
    travel time is the largest share of M.
    GiantTourDetector now also reads the XCSP TSPTW form (subcircuit over
    x + 1, time rows enforced by int_lin_le_imp and exempt on the arc back
-   to the depot). RESULTS_PLACEHOLDER
+   to the depot). On the 44 instances that post Routes (18 Solomon VRPTW,
+   16 XCSP 2023 TSPTW, 5 MZNC 2025 tsptw and the 5 wide-set routing
+   instances) at 240 s the default mode proves 30 -> 34 (total time 0.80)
+   and -f 31 -> 34 (0.90); at 600 s on the 14 still open it proves
+   0 -> 6 and 1 -> 5 (TSPTW2 n040w060, n040w080, n060w040 and n060w060,
+   RC101_50, tsptw n100w120.003).
    -Dorg.jacop.lp.arcTimeRows=false and -Dorg.jacop.lp.twoPathCuts=false
    turn them off.
 
