@@ -32,6 +32,7 @@ package org.jacop;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Random;
@@ -167,8 +168,7 @@ class MutationGapsTest {
       }
       trail.detach();
     }
-    Counts n = new Counts(atoms, explained, literals, failures, failureLiterals);
-    return n;
+    return new Counts(atoms, explained, literals, failures, failureLiterals);
   }
 
   private record Instance(Store store, Constraint constraint, IntVar[] vars) {}
@@ -480,7 +480,7 @@ class MutationGapsTest {
       assertEquals(!failure, consistent);
       ExplanationChecker checker = new ExplanationChecker(trail);
       if (failure) {
-        assertTrue(store.recentlyFailedConstraint == c);
+        assertSame(c, store.recentlyFailedConstraint);
         EntryList reason = new EntryList();
         if (c.explainFailure(trail, reason)) {
           assertNull(checker.checkFailure(c, reason));
@@ -517,12 +517,6 @@ class MutationGapsTest {
       b[i] = new IntVar(store, name + i, 0, 1);
     }
     return b;
-  }
-
-  private static IntVar[] concat(IntVar[] a, IntVar[] b) {
-    IntVar[] all = java.util.Arrays.copyOf(a, a.length + b.length);
-    System.arraycopy(b, 0, all, a.length, b.length);
-    return all;
   }
 
   @Test
