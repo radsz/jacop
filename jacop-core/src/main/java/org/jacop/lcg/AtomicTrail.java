@@ -404,7 +404,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     kind[size] = k;
     value[size] = v;
     level[size] = store.level;
-    reason[size] = store.currentConstraint;
+    Constraint propagating = store.currentConstraint;
+    reason[size] = propagating == null ? null : propagating.reasonOwner();
     previous[size] = last[i];
     last[i] = size;
     if (k == NE) {

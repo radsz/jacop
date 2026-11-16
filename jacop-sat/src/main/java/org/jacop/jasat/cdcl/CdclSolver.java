@@ -1310,8 +1310,12 @@ public final class CdclSolver {
         i += 2;
         int bv = localVals[blocker];
         if (bv > 0) {
-          ws[j++] = blocker;
-          ws[j++] = ref;
+          // the pair stays where it is: the list is only read until a pair before it moves
+          if (j != i - 2) {
+            ws[j] = blocker;
+            ws[j + 1] = ref;
+          }
+          j += 2;
           continue;
         }
         int lits = ref + HEADER;
@@ -1373,8 +1377,13 @@ public final class CdclSolver {
         }
       }
       if (conflict != NO_CONFLICT) {
-        while (i < n) {
-          ws[j++] = ws[i++];
+        if (j == i) {
+          // nothing moved: the rest of the list stays as it is
+          j = n;
+        } else {
+          while (i < n) {
+            ws[j++] = ws[i++];
+          }
         }
         watchSize[falseLit] = j;
         qhead = trailSize;
