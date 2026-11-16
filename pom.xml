@@ -258,6 +258,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -385,9 +386,12 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -509,6 +513,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -641,9 +646,12 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -761,6 +769,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -893,9 +902,12 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
@@ -1013,6 +1025,7 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
@@ -1143,9 +1156,12 @@ setup to run configuration. -->
                                 <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
                                 <include>**/CommonSubexpressionsFlatzincTest.java</include>
                                 <include>**/AffineFoldingFlatzincTest.java</include>
