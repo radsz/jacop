@@ -632,6 +632,10 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
       return;
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
+    if (e.getType() == 2 && support.dictionary.isParameterArray(e.getIdent())) {
+      // constants only, of no interest here
+      return;
+    }
     if (e.getType() == 2) {
       IntVar[] array = support.dictionary.getVariableArray(e.getIdent());
       if (array != null) {
@@ -642,7 +646,7 @@ public class IndexDisjunctionDetector implements ParserTreeConstants {
       if (v != null) {
         out.add(v);
       }
-    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
+    } else if (e.getType() == 3 && support.dictionary.isArray(e.getIdent())) {
       out.add(support.getVariable(e));
     }
   }

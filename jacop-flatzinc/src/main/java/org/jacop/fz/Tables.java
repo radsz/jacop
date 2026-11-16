@@ -844,8 +844,46 @@ public class Tables {
    * @param array the array being stored.
    */
   public void addIntArray(String ident, int[] array) {
-    // already exists ";
-    intArrayTable.put(ident, array);
+    intArrayTable.put(ident, intern(array));
+  }
+
+  // the shortest parameter array that is stored once for all its equal copies
+  private static final int INTERN_LENGTH = 1024;
+
+  // the long parameter arrays by content, so that equal copies share one array
+  private final Map<IntArrayKey, int[]> internedArrays = new HashMap<>();
+
+  // the arrays of constants read from the long parameter arrays, built once per array
+  private final Map<int[], IntVar[]> constantArrays = new IdentityHashMap<>();
+
+  private record IntArrayKey(int[] values, int hash) {
+    IntArrayKey(int[] values) {
+      this(values, Arrays.hashCode(values));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof IntArrayKey k && k.hash == hash && Arrays.equals(k.values, values);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "IntArrayKey[length=" + values.length + "]";
+    }
+  }
+
+  // a long array equal to one stored before is replaced by it: MiniZinc writes a copy of a table's
+  // tuples for every constraint over it (Benzenoide-09: 25 copies of 4,251,080 values)
+  private int[] intern(int[] array) {
+    if (array == null || array.length < INTERN_LENGTH) {
+      return array;
+    }
+    return internedArrays.computeIfAbsent(new IntArrayKey(array), k -> k.values());
   }
 
   /**
@@ -979,11 +1017,17 @@ public class Tables {
     IntVar[] a = variableArrayTable.get(ident);
     if (a == null) {
       int[] intA = intArrayTable.get(ident);
-      if (intA != null) {
-        a = new IntVar[intA.length];
-        for (int i = 0; i < intA.length; i++) {
-          a[i] = getConstant(intA[i]);
+      if (intA != null && intA.length >= INTERN_LENGTH) {
+        // the detectors read every argument array; a long parameter array is turned into constants
+        // once, not at every read
+        IntVar[] constants = constantArrays.get(intA);
+        if (constants == null) {
+          constants = constants(intA);
+          constantArrays.put(intA, constants);
         }
+        return constants.clone();
+      } else if (intA != null) {
+        a = constants(intA);
       } else {
         return null;
       }
@@ -993,6 +1037,35 @@ public class Tables {
       }
     }
     return a;
+  }
+
+  private IntVar[] constants(int[] values) {
+    IntVar[] a = new IntVar[values.length];
+    for (int i = 0; i < values.length; i++) {
+      a[i] = getConstant(values[i]);
+    }
+    return a;
+  }
+
+  /**
+   * Whether the identity names an array of integer variables or of parameters, as {@code
+   * getVariableArray(ident) != null} without building the array.
+   *
+   * @param ident the identity of the array.
+   * @return true for an array {@link #getVariableArray(String)} returns.
+   */
+  public boolean isArray(String ident) {
+    return variableArrayTable.containsKey(ident) || intArrayTable.containsKey(ident);
+  }
+
+  /**
+   * Whether the identity names an array of parameters (integers or Booleans) and not of variables.
+   *
+   * @param ident the identity of the array.
+   * @return true for an array of parameters.
+   */
+  public boolean isParameterArray(String ident) {
+    return !variableArrayTable.containsKey(ident) && intArrayTable.containsKey(ident);
   }
 
   /**

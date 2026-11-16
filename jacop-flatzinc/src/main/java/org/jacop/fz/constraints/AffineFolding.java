@@ -443,6 +443,10 @@ public class AffineFolding implements ParserTreeConstants {
       return;
     }
     IntVar[] vars;
+    if (e.getType() == 2 && support.dictionary.isParameterArray(e.getIdent())) {
+      // constants only, of no interest here
+      return;
+    }
     if (e.getType() == 2) {
       // read as the constraints read their arguments, so that aliases resolve the same way
       if (support.dictionary.getVariableArray(e.getIdent()) != null) {
@@ -452,7 +456,7 @@ public class AffineFolding implements ParserTreeConstants {
       } else {
         return;
       }
-    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
+    } else if (e.getType() == 3 && support.dictionary.isArray(e.getIdent())) {
       // an element of an array of integer variables; float and set arrays are not ours
       vars = new IntVar[] {support.getVariable(e)};
     } else {

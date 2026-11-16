@@ -30,6 +30,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -84,6 +85,101 @@ class XcspTableFlatzincTest {
   @Test
   void randomNegativeTablesMatchBruteForce() throws IOException {
     randomTables(false, 20261102);
+  }
+
+  /**
+   * Large short tables written as equal copies of one parameter array (as MiniZinc writes a table
+   * for every constraint over it) share their parameter array and, where the rows kept by the
+   * domains are equal, their bit-sets. The third copy is over a variable whose domain drops rows,
+   * so its rows differ. The solutions must be those of brute force.
+   */
+  @Test
+  void copiesOfLargeShortTablesMatchBruteForce() throws IOException {
+    Random random = new Random(20261116);
+    int vars = 5;
+    int arity = 4;
+    // 1,200 rows drawn from 30, so that the table is large and still excludes most assignments
+    int[][] pool = new int[30][arity];
+    for (int[] row : pool) {
+      for (int i = 0; i < arity; i++) {
+        row[i] = random.nextInt(10) == 0 ? STAR : new int[] {0, 1, 3, 4}[random.nextInt(4)];
+      }
+    }
+    int[][] rows = new int[1200][];
+    for (int r = 0; r < rows.length; r++) {
+      rows[r] = pool[random.nextInt(pool.length)];
+    }
+    int[][] scopes = {{0, 1, 2, 3}, {1, 2, 3, 4}, {4, 0, 2, 1}};
+    Set<String> expected = new TreeSet<>();
+    enumerateAll(new int[vars], 0, scopes, rows, expected);
+    StringBuilder fzn = new StringBuilder();
+    fzn.append(
+        "predicate jacop_short_table_int(array [int] of var int: x,array [int] of int: t,"
+            + "int: star);\n");
+    String cells =
+        Arrays.stream(rows)
+            .flatMapToInt(Arrays::stream)
+            .mapToObj(String::valueOf)
+            .collect(Collectors.joining(",", "[", "]"));
+    for (int k = 0; k < scopes.length; k++) {
+      fzn.append("array [1..")
+          .append(rows.length * arity)
+          .append("] of int: T")
+          .append(k)
+          .append(" = ")
+          .append(cells)
+          .append(";\n");
+    }
+    for (int i = 0; i < vars; i++) {
+      // x4 has no 4: the rows of its tables that need one are dropped
+      fzn.append(i == 4 ? "var {0,1,3}: x" : "var {0,1,3,4}: x").append(i).append(";\n");
+    }
+    fzn.append("array [1..")
+        .append(vars)
+        .append("] of var int: x:: output_array([1..")
+        .append(vars)
+        .append("]) = ")
+        .append(
+            IntStream.range(0, vars)
+                .mapToObj(i -> "x" + i)
+                .collect(Collectors.joining(",", "[", "]")))
+        .append(";\n");
+    for (int k = 0; k < scopes.length; k++) {
+      fzn.append("constraint jacop_short_table_int(")
+          .append(
+              Arrays.stream(scopes[k])
+                  .mapToObj(i -> "x" + i)
+                  .collect(Collectors.joining(",", "[", "]")))
+          .append(",T")
+          .append(k)
+          .append(",")
+          .append(STAR)
+          .append(");\n");
+    }
+    fzn.append("solve satisfy;\n");
+    String model = fzn.toString();
+    assertTrue(!expected.isEmpty() && expected.size() < 100, "solutions: " + expected.size());
+    assertEquals(expected, solveAll(model));
+    assertEquals(expected, solveAll(model, "--lcg", "off"));
+  }
+
+  private static void enumerateAll(int[] x, int i, int[][] scopes, int[][] rows, Set<String> out) {
+    if (i == x.length) {
+      for (int[] scope : scopes) {
+        if (Arrays.stream(rows).noneMatch(row -> allowed(x, scope, row))) {
+          return;
+        }
+      }
+      out.add(
+          Arrays.stream(x)
+              .mapToObj(String::valueOf)
+              .collect(Collectors.joining(", ", "x = array1d(1.." + x.length + ", [", "]);")));
+      return;
+    }
+    for (int v : i == 4 ? new int[] {0, 1, 3} : new int[] {0, 1, 3, 4}) {
+      x[i] = v;
+      enumerateAll(x, i + 1, scopes, rows, out);
+    }
   }
 
   private void randomTables(boolean positive, long seed) throws IOException {

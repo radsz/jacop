@@ -579,11 +579,15 @@ public class CommonSubexpressions implements ParserTreeConstants {
       return;
     }
     IntVar[] vars;
+    if (e.getType() == 2 && support.dictionary.isParameterArray(e.getIdent())) {
+      // constants only, of no interest here
+      return;
+    }
     if (e.getType() == 2) {
       // an identifier: a variable or an array of variables
       IntVar[] a = support.dictionary.getVariableArray(e.getIdent());
       vars = a != null ? a : identVariable(e);
-    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
+    } else if (e.getType() == 3 && support.dictionary.isArray(e.getIdent())) {
       // an element of an array of integer variables; float and set arrays are not merged
       vars = new IntVar[] {support.getVariable(e)};
     } else {

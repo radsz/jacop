@@ -2046,7 +2046,50 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       return;
     }
-    support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
+    int[][] rows = kept.toArray(new int[0][]);
+    if (rows.length < SHARED_SHORT_TABLE) {
+      support.pose(new HybridTable(nv, rows, star));
+      return;
+    }
+    // a large short table posted on many scopes (Benzenoide: 531,385 rows over 8 columns, on 24
+    // scopes) builds its bit-sets once: the tables with equal rows and star share them
+    ShortTableKey key = new ShortTableKey(rows, star);
+    HybridTable same = shortTables.get(key);
+    HybridTable table = same == null ? new HybridTable(nv, rows, star) : new HybridTable(nv, same);
+    if (same == null) {
+      shortTables.put(key, table);
+    }
+    support.pose(table);
+  }
+
+  // the fewest rows of a short table whose structures are shared with its equal copies
+  private static final int SHARED_SHORT_TABLE = 1000;
+
+  private final Map<ShortTableKey, HybridTable> shortTables = new HashMap<>();
+
+  /** The rows and star of a short table, compared by content. */
+  private record ShortTableKey(int[][] rows, int star, int hash) {
+    ShortTableKey(int[][] rows, int star) {
+      this(rows, star, 31 * Arrays.deepHashCode(rows) + star);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof ShortTableKey(int[][] r, int s, int h)
+          && h == hash
+          && s == star
+          && Arrays.deepEquals(r, rows);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "ShortTableKey[rows=" + rows.length + ", star=" + star + "]";
+    }
   }
 
   /**
