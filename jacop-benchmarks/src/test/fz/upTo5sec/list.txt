@@ -820,6 +820,7 @@ max_n/max_n
 max_nvalue/max_nvalue
 max_size_of_consecutive_var/max_size_of_consecutive_var
 max_size_set_of_consecutive_var/max_size_set_of_consecutive_var
+maxclique_random70/maxclique_random70
 maxflow/maxflow
 maximum-dag/15_05
 maximum_density_still_life/maximum_density_still_life
