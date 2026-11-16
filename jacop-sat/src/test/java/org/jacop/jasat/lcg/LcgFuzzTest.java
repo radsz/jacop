@@ -31,6 +31,8 @@ package org.jacop.jasat.lcg;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -2310,6 +2312,72 @@ class LcgFuzzTest {
     }
     long[] counts = solver.explanationStatistics().get("Diffn");
     return new Object[] {status, counts == null ? 0L : counts[3] - counts[4]};
+  }
+
+  /**
+   * With {@code -Dlcg.fuzz.proof=true}: solves the random models with --proof logging and checks
+   * every proof with {@link RupChecker}, and its conclusion against the reference search (on
+   * demand, off by default). A model with a constraint that proof logging does not support is
+   * skipped.
+   */
+  @Test
+  void proofsCheckOnRandomModels() {
+    if (!Boolean.getBoolean("lcg.fuzz.proof")) {
+      return;
+    }
+    int checkedProofs = 0;
+    int unsupported = 0;
+    int rootFailures = 0;
+    for (int run = 0; run < RUNS; run++) {
+      long seed = SEED + (long) run;
+      Integer expected;
+      try {
+        expected = reference(new Model(seed));
+      } catch (FailException | ReferenceTimeout _) {
+        continue;
+      }
+      Model model = new Model(seed);
+      String where0 = "seed " + seed + "\n" + model.describe();
+      ByteArrayOutputStream opb = new ByteArrayOutputStream();
+      ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+      int status;
+      try {
+        LcgSolver solver = new LcgSolver(model.store);
+        solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        solver.setProof(opb, pbp);
+        status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
+      } catch (UnsupportedOperationException _) {
+        unsupported++;
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(where0, e);
+      }
+      String proofText = pbp.toString(StandardCharsets.US_ASCII);
+      String where =
+          where0
+              + (Boolean.getBoolean("lcg.fuzz.proofPrint")
+                  ? "\n" + opb.toString(StandardCharsets.US_ASCII) + "\n" + proofText
+                  : "");
+      RupChecker checker = new RupChecker();
+      String error = checker.check(opb.toString(StandardCharsets.US_ASCII), proofText);
+      assertThat(error).as(where).isNull();
+      if (expected == null && proofText.contains("failed at the root")) {
+        // without a root trail the root failure is not derived (FlatZinc proves it separately)
+        rootFailures++;
+      } else if (expected == null) {
+        // an optimisation without a solution concludes with infinite bounds
+        assertThat(checker.conclusion)
+            .as(where)
+            .isEqualTo(model.objective == null ? "UNSAT" : "BOUNDS INF INF");
+      } else if (model.objective != null) {
+        assertThat(checker.conclusion).as(where).isEqualTo("BOUNDS " + expected + " " + expected);
+      }
+      assertThat(status == CdclSolver.SAT).as(where).isEqualTo(expected != null);
+      checkedProofs++;
+    }
+    System.out.printf(
+        "lcg proof fuzz: %d runs, %d proofs checked, %d unsupported, %d root failures%n",
+        RUNS, checkedProofs, unsupported, rootFailures);
   }
 
   @Test
