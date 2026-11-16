@@ -14404,3 +14404,67 @@ P	jacop:above1hour/spot5/54	471b16f10a31519b	minimize	37	INCOMPLETE	0	0	0	300152
 P	jacop:upTo5sec/table_crossword/cw_9x9	6fc283b56821a7c5	satisfy		INCOMPLETE	2000000	2000000	8feee57ec821fc83	69049	300	2026-11-16T09:05:22Z	jacop_table_int
 P	jacop:above10min/opt-cryptanalysis/r5	aefde48c5b115a3d	minimize	20	INCOMPLETE	82	82	43e16b839c39ab4d	300154	300	2026-11-16T09:06:12Z	jacop_table_int
 P	mznc:above1hour/2024_cable-tree-wiring/A041	949f8a2bbbd5fdb1	minimize	1649056	INCOMPLETE	0	0	0	300169	300	2026-11-16T09:07:42Z	jacop_alldiff,jacop_maximum
+P	jacop:upTo5sec/table_kakuro/kk_12	a0f64e36d73529d2	satisfy		INCOMPLETE	2000000	2000000	7234cdb85237e34	94607	300	2026-11-16T09:10:54Z	jacop_table_int
+P	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	maximize	43	COMPLETE	16	16	e10b66417ef5eee7	116203	300	2026-11-16T09:12:54Z	jacop_alldiff,jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	all:f	PASS	COMPLETE	16	3671	2026-11-16T09:12:58Z	
+P	mznc:above1hour/2014_spot5/29	8e0fe781bcd9b62a	minimize	8059	INCOMPLETE	0	0	0	300280	300	2026-11-16T09:14:24Z	jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	decomp:jacop_alldiff	PASS	COMPLETE	16	118090	2026-11-16T09:14:56Z	
+P	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	maximize	27	COMPLETE	24	24	e97509d6d636333b	81726	300	2026-11-16T09:15:55Z	jacop_alldiff,jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	all:f	PASS	COMPLETE	24	3335	2026-11-16T09:15:59Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	decomp:jacop_alldiff	PASS	COMPLETE	24	82871	2026-11-16T09:17:22Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	decomp:jacop_table_int	PASS	COMPLETE	16	151682	2026-11-16T09:17:28Z	
+P	mznc:above1hour/2017_opt-cryptanalysis/r7	1444aad31b8459da	minimize	28	INCOMPLETE	1	1	f31730c9e2feac51	300189	300	2026-11-16T09:19:20Z	jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	decomp:jacop_table_int	PASS	COMPLETE	24	134930	2026-11-16T09:19:37Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	std	PARTIAL	INCOMPLETE	16	300231	2026-11-16T09:22:28Z	16 of 16 solutions before the limit
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	std:f	PASS	COMPLETE	16	7451	2026-11-16T09:22:35Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	objstd:lcg	PASS	COMPLETE	1	70627	2026-11-16T09:23:46Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	std	PASS	COMPLETE	24	251649	2026-11-16T09:23:48Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	std:f	PASS	COMPLETE	24	5068	2026-11-16T09:23:53Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	objstd:lcg	PASS	COMPLETE	1	50287	2026-11-16T09:24:44Z	
+P	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110106	baeeb47516469499	maximize	31	INCOMPLETE	0	0	0	300191	300	2026-11-16T09:24:49Z	jacop_alldiff,jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj0:plain	PARTIAL	INCOMPLETE	0	300187	2026-11-16T09:28:46Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj0:f	PASS	COMPLETE	1	2761	2026-11-16T09:28:49Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj0:lcg	PASS	COMPLETE	1	40122	2026-11-16T09:29:29Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj0:lcg-f	PASS	COMPLETE	1	3913	2026-11-16T09:29:33Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj0:plain	PARTIAL	INCOMPLETE	0	300183	2026-11-16T09:29:44Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj0:f	PASS	COMPLETE	1	2971	2026-11-16T09:29:47Z	
+P	mznc:above1hour/2022_spot5/404	988485f251adc85f	minimize	114	INCOMPLETE	0	0	0	300189	300	2026-11-16T09:29:56Z	jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	38757	2026-11-16T09:30:12Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj0:lcg	PASS	COMPLETE	1	145476	2026-11-16T09:32:12Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj0:lcg-f	PASS	COMPLETE	1	4409	2026-11-16T09:32:17Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj0:lcg:decomp:jacop_table_int	PASS	COMPLETE	1	194358	2026-11-16T09:33:26Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj0:lcg:decomp:jacop_alldiff	PASS	COMPLETE	1	149948	2026-11-16T09:34:47Z	
+P	hakank:upTo5sec/hakank_crossword3_0/crossword3_0	4660fc83454642f6	satisfy		INCOMPLETE	612496	612496	46b02fda7ea3f8fb	300188	300	2026-11-16T09:34:56Z	jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj0:lcg:decomp:jacop_table_int	PASS	COMPLETE	1	165243	2026-11-16T09:37:32Z	
+P	hakank:upTo5sec/hakank_crossword3_55/crossword3_55	af8f9d086ac79483	satisfy		INCOMPLETE	2000000	2000000	dae58bffd337f999	172293	300	2026-11-16T09:37:49Z	jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj1:plain	PARTIAL	INCOMPLETE	0	300196	2026-11-16T09:38:26Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj1:f	PASS	COMPLETE	1	3079	2026-11-16T09:38:29Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj1:lcg	PASS	COMPLETE	1	219194	2026-11-16T09:42:09Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_intro6	1e0f7d0397db28c7	obj1:lcg-f	PASS	COMPLETE	1	4545	2026-11-16T09:42:13Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj1:plain	PARTIAL	INCOMPLETE	0	300205	2026-11-16T09:42:32Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj1:f	PASS	COMPLETE	1	4134	2026-11-16T09:42:36Z	
+P	hakank:upTo5sec/hakank_crossword3_8/crossword3_8	08feaabd9167f433	satisfy		INCOMPLETE	2000000	2000000	83f70843c2e2527b	116212	300	2026-11-16T09:44:10Z	jacop_table_int
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj1:lcg	PASS	COMPLETE	1	200783	2026-11-16T09:45:57Z	
+C	hakank:solvedByOthersOnly/hakank_rogo3/rogo_20110709	38d29d7d1bc6064d	obj1:lcg-f	PASS	COMPLETE	1	5273	2026-11-16T09:46:02Z	
+P	mznc:above1hour/2021_opt-cryptoanalysis/r13	3387f0f3e18fbeee	minimize	64	INCOMPLETE	12	12	355bbaa1bd859a20	300179	300	2026-11-16T09:47:49Z	jacop_table_int
+P	jacop:upTo1min/table_crossword/cw_13x13	4e26a8ff6153ce82	satisfy		INCOMPLETE	2000000	2000000	2c6cf2ffac0059d3	170090	300	2026-11-16T09:50:40Z	jacop_table_int
+P	jacop:upTo5sec/table_negative/rn2_s1	5b2480d5bc83b81e	satisfy		INCOMPLETE	2000000	2000000	47245aaf1cc4d203	69617	300	2026-11-16T09:51:49Z	jacop_table_int
+P	mznc:upTo5min/2026_spot5/408	454b811c23d61ea2	minimize	6238	INCOMPLETE	0	0	0	300199	300	2026-11-16T09:54:10Z	jacop_table_int
+P	mznc:upTo5min/2026_spot5/505	6f82a688df272641	minimize	23279	INCOMPLETE	0	0	0	300188	300	2026-11-16T09:56:03Z	jacop_table_int
+P	jacop:upTo5sec/table_random/rt2_d40_t700	b9fec31630adc2b0	satisfy		INCOMPLETE	8009	8009	8b948504d9938de0	300156	300	2026-11-16T09:56:50Z	jacop_table_int
+P	jacop:upTo5sec/table_random/rt3_s3	8c7919032fd639e7	satisfy		INCOMPLETE	9626	9626	76b24fd48cc8a77c	300158	300	2026-11-16T10:01:03Z	jacop_table_int
+P	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	satisfy		COMPLETE	1	1	efa9d14d4696eb51	6597	300	2026-11-16T10:01:10Z	jacop_table_int
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	all:f	PASS	COMPLETE	1	2187	2026-11-16T10:01:12Z	
+P	jacop:upTo30sec/table_random/rt3_s2	45b58f6fd2fde827	satisfy		INCOMPLETE	2464	2464	dc6d06a0722c72a1	300167	300	2026-11-16T10:01:50Z	jacop_table_int
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	decomp:jacop_table_int	PASS	COMPLETE	1	51242	2026-11-16T10:02:03Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj0:plain	PASS	COMPLETE	1	8624	2026-11-16T10:02:12Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj0:f	PASS	COMPLETE	1	4096	2026-11-16T10:02:16Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj0:lcg	PASS	COMPLETE	1	21862	2026-11-16T10:02:38Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj0:lcg-f	PASS	COMPLETE	1	12253	2026-11-16T10:02:50Z	
+P	mznc:above1hour/2026_spot5/1504	542fbcb4ad605796	minimize	284481	INCOMPLETE	0	0	0	300175	300	2026-11-16T10:04:11Z	jacop_table_int
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj0:lcg:decomp:jacop_table_int	PASS	COMPLETE	1	136709	2026-11-16T10:05:07Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj1:plain	PASS	COMPLETE	1	9540	2026-11-16T10:05:17Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj1:f	PASS	COMPLETE	1	2953	2026-11-16T10:05:20Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj1:lcg	PASS	COMPLETE	1	24877	2026-11-16T10:05:44Z	
+C	jacop:upTo30sec/table_random/rt5_s4	51e879f595dbbd74	obj1:lcg-f	PASS	COMPLETE	1	9756	2026-11-16T10:05:54Z	
+P	hakank:upTo5sec/hakank_crossword3_63/crossword3_63	15dfa0c4d61c93e3	satisfy		INCOMPLETE	730203	730203	5b26f048e61c522c	300165	300	2026-11-16T10:06:50Z	jacop_table_int
