@@ -5495,6 +5495,91 @@ class LcgSolverTest {
   }
 
   /**
+   * 0-1 terms replace the sums of a split objective also when the sums span fewer levels than the
+   * terms, up to twice: a long run's root propagation tightens the sums beyond their terms' bounds,
+   * and on the sums the cores of xai-mindset2 iris (MaxSAT Evaluation 2024) had 3 assumptions and
+   * reached 49 of 87 in 240 s, while on the terms the optimum is proved in 4 s. Wide terms keep the
+   * sums when they span more.
+   */
+  @Test
+  void zeroOneTermsReplaceTighterSums() {
+    for (int width : new int[] {1, 3}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[6];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, width);
+      }
+      // each sum spans two thirds of its terms' levels
+      IntVar s1 = new IntVar(store, "s1", 0, 2 * width);
+      IntVar s2 = new IntVar(store, "s2", 0, 2 * width);
+      IntVar obj = new IntVar(store, "obj", 0, 4 * width);
+      store.impose(
+          new LinearInt(new IntVar[] {x[0], x[1], x[2], s1}, new int[] {1, 1, 1, -1}, "==", 0));
+      store.impose(
+          new LinearInt(new IntVar[] {x[3], x[4], x[5], s2}, new int[] {1, 1, 1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {s1, s2, obj}, new int[] {1, 1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {x[0], x[3]}, new int[] {1, 1}, ">=", 1));
+      store.impose(new LinearInt(new IntVar[] {x[1], x[4]}, new int[] {1, 1}, ">=", 1));
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setCoreSearch(1, 1_000_000, 100_000);
+      assertThat(solver.minimize(obj)).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(obj)).isEqualTo(2);
+      assertThat(solver.coreSearch().proved).isTrue();
+      assertThat(solver.coreSearch().termCount()).isEqualTo(width == 1 ? 6 : 2);
+      assertThat(solver.coreSearch().termsBySpanRatio).isEqualTo(width == 1);
+    }
+  }
+
+  /**
+   * The core-guided phase is not skipped after a probe without a solution of its own when the probe
+   * raised the lower bound at least as far as it is still below the solution of branch and bound:
+   * the probe of xai-mindset2 iris (MaxSAT Evaluation 2024) took the bound from 0 to 77 of 87 in
+   * 0.4 s, and the skip left it at 49 after 240 s.
+   */
+  @Test
+  void corePhaseNotSkippedAfterAProbeHalfWay() {
+    // the pigeons of corePhaseSkippedWhenItsProbeFoundNoSolution, whose core is too hard, and 16
+    // pairs of Booleans of which one at least is true and costs 1, whose cores are easy: the probe
+    // raises the bound to 16, and branch and bound finds solutions of 16 + the pigeons in hole 0
+    Store store = new Store();
+    int n = 12;
+    int pairs = 16;
+    IntVar[] p = new IntVar[n];
+    BooleanVar[] c = new BooleanVar[n + 2 * pairs];
+    for (int i = 0; i < n; i++) {
+      p[i] = new IntVar(store, "p" + i, 0, n - 1);
+      c[i] = new BooleanVar(store, "c" + i);
+      store.impose(new Reified(new XeqC(p[i], 0), c[i]));
+      for (int j = 0; j < i; j++) {
+        store.impose(new Or(new XneqY(p[j], p[i]), new XeqC(p[i], 0)));
+      }
+    }
+    for (int k = 0; k < pairs; k++) {
+      c[n + 2 * k] = new BooleanVar(store, "a" + k);
+      c[n + 2 * k + 1] = new BooleanVar(store, "b" + k);
+      store.impose(
+          new LinearInt(new IntVar[] {c[n + 2 * k], c[n + 2 * k + 1]}, new int[] {1, 1}, ">=", 1));
+    }
+    IntVar obj = new IntVar(store, "obj", 0, c.length);
+    store.impose(new SumBool(c, "==", obj));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setAnnotation(new SimpleSelect<>(p, null, new IndomainMin<>()), true);
+    solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+    solver.setCoreDelay(0.05, 1_000_000, 0.05);
+    solver.setTimeLimit(200);
+    // a clock cap of 1.5 times the probe's share of 3 s: the share of the work ends the probe, not
+    // the clock of a cold JVM
+    solver.sat().setDeadline(System.nanoTime() + 3_000_000_000L);
+    solver.minimize(obj);
+    assertThat(solver.coreSearch().lowerBound).isEqualTo(pairs);
+    assertThat(solver.value(obj)).isBetween(pairs + 1, pairs + 12);
+    assertThat(solver.coreSearch().noSolutionStops).isPositive();
+    assertThat(solver.probeHalfWays).isEqualTo(1);
+    assertThat(solver.probeSkips).isZero();
+  }
+
+  /**
    * Under fixed search the core-guided phase runs only when branch and bound under the annotation
    * found no solution in its share of the time (setCoresWithoutSolutionOnly): with one, branch and
    * bound keeps the time and proves the optimum without a core.

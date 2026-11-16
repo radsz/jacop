@@ -108,6 +108,10 @@ public final class CoreSearch {
 
   // the conflicts of one probe of a term's level
   private static final long PROBE_CONFLICTS = 100;
+  // the sums of a split objective replace their 0-1 terms only when the terms span more than this
+  // many times their levels (see #of)
+  private static final double SPAN_RATIO =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreSpanRatio", "2"));
   // the lower bound's rate, per unit of the solver's work (CdclSolver#work, never the clock, so a
   // run repeats), is measured once this much work was done (about two seconds), and may grow this
   // many times
@@ -152,6 +156,12 @@ public final class CoreSearch {
    * own after a third of its time.
    */
   public long noSolutionStops;
+
+  /**
+   * Statistics: whether the terms of the sums replace the sums although they span more levels, by
+   * less than {@link #SPAN_RATIO} times.
+   */
+  public boolean termsBySpanRatio;
 
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
@@ -262,12 +272,20 @@ public final class CoreSearch {
     }
     // the terms of the sums replace the sums when they have fewer levels for the cores to relax:
     // 0-1 terms (trucking, celar, spot5), not wide ones whose span is that of the sums (atsp: 405
-    // terms, 151 cores on its 3 sums against 2,285 on the terms)
-    if (span(lcg, terms) > span(lcg, blocks)) {
+    // terms, 151 cores on its 3 sums against 2,285 on the terms). 0-1 terms also replace sums of
+    // fewer levels, up to SPAN_RATIO times fewer: the root propagation of a long run tightens the
+    // sums beyond their terms' bounds. On MaxSAT Evaluation 2024's xai-mindset2 iris, 564 0-1 terms
+    // in 4 sums of 525 levels at -t 60 s (1,061 levels each at -t 3 s), the cores had 3 assumptions
+    // on the sums and a bound of 49 of 87 after 240 s; on the terms the optimum is proved in 4 s
+    long termSpan = span(lcg, terms);
+    long blockSpan = span(lcg, blocks);
+    boolean zeroOne = zeroOne(lcg, terms);
+    if (termSpan > (zeroOne ? SPAN_RATIO : 1) * blockSpan) {
       CoreSearch search = new CoreSearch(lcg, objective, blocks, blocksConstant);
       return search.startProof(blockDefinitions) ? search : null;
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
+    search.termsBySpanRatio = termSpan > blockSpan;
     if (!search.startProof(definitions)) {
       return null;
     }
@@ -303,6 +321,17 @@ public final class CoreSearch {
       return true;
     }
     return relaxAtMostOnes();
+  }
+
+  /** Whether each term's variable spans at most one level. */
+  private static boolean zeroOne(LcgSolver lcg, Map<Integer, Long> terms) {
+    for (int t : terms.keySet()) {
+      IntVar x = lcg.variable(t);
+      if ((long) x.max() - x.min() > 1) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** The number of levels of the terms' variables, summed. */
