@@ -83,6 +83,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.cdcl.ExternalPropagator;
 import org.jacop.jasat.cdcl.VarHeap;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.ClauseMiner;
 import org.jacop.lcg.ClauseModel;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.ExplanationChecker;
@@ -686,6 +687,34 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     sat.connect(this);
+    String mineFile = System.getProperty("jacop.lcg.mine");
+    if (mineFile != null) {
+      miner = new ClauseMiner(trail, store, mineFile);
+      sat.setLearntExport(miner.maxSize, Integer.MAX_VALUE);
+    }
+  }
+
+  // research tool: classifies learnt clauses by the constraints that imply them, or null
+  private ClauseMiner miner;
+
+  private void mine(int[] clause) {
+    IntVar[] x = new IntVar[clause.length];
+    int[] kind = new int[clause.length];
+    int[] value = new int[clause.length];
+    boolean[] positive = new boolean[clause.length];
+    for (int k = 0; k < clause.length; k++) {
+      int d = Math.abs(clause[k]);
+      int i = d < litVar.length ? litVar[d] : -1;
+      if (i < 0 || vars[i] == null) {
+        miner.auxiliary();
+        return;
+      }
+      x[k] = vars[i];
+      kind[k] = litKind[d] == EQ_KIND ? ClauseMiner.EQ : ClauseMiner.GE;
+      value[k] = litValue[d];
+      positive[k] = clause[k] > 0;
+    }
+    miner.learnt(x, kind, value, positive);
   }
 
   // --------------------------------------------------------------------------------- proof
@@ -7251,6 +7280,9 @@ public final class LcgSolver implements ExternalPropagator {
 
   @Override
   public void notifyLearnt(int[] clause, int lbd) {
+    if (miner != null) {
+      mine(clause);
+    }
     if (shared == null) {
       return;
     }
