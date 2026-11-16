@@ -404,6 +404,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -668,6 +669,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -928,6 +930,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -1186,6 +1189,7 @@ setup to run configuration. -->
                                 <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
