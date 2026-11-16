@@ -6861,6 +6861,21 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+383. Free search (-f) also searches before an expensive root LP (319).
+   When the first solve of the relaxation is large, a solver of its own
+   runs for 200 ms (-Dorg.jacop.fz.lpProbe) with the relaxation suspended.
+   Its answer is final when it finishes. Otherwise its prunings are undone,
+   the relaxation is solved at the root and free search starts as before,
+   from the probe's best solution as phase and bound. Free search takes
+   choices at its start from the solved relaxation (its solution as a
+   guide, the core-guided schedule from the root bound), so the probe does
+   not run inside it. nside MEDIUM_5_3 of the 2026 Challenge: 2.3 -> 0.5 s.
+   At 600 s with -f, base and change pinned to a core each: the 104
+   Challenge instances of the upTo5sec, upTo30sec and upTo1min sets where
+   it fires 1895 -> 1851 s in total, the 50 wide instances where it fires
+   12355 -> 11763 s and 30 -> 31 proved (roster-shifts-bool s100_e20_c8
+   proved in 14 s). -Dorg.jacop.fz.freeLpProbe=false turns it off.
+
 Version 4.11
 =============
 
