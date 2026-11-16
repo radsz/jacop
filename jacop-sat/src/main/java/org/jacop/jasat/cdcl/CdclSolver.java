@@ -448,7 +448,7 @@ public final class CdclSolver {
       binWatches = Arrays.copyOf(binWatches, 2 * c);
       binSize = Arrays.copyOf(binSize, 2 * c);
     }
-    if (qPrev.length < n) {
+    if (qPrev.length < n || qNext.length < n || qStamp.length < n) { // grown together
       int c = Math.max(n, 2 * qPrev.length);
       qPrev = Arrays.copyOf(qPrev, c);
       qNext = Arrays.copyOf(qNext, c);
@@ -4155,20 +4155,8 @@ public final class CdclSolver {
     }
   }
 
-  /** Moves the analysed variables to the end of the queue, in the order of their old stamps. */
-  private void bumpQueue() {
-    int n = qToBumpSize;
-    if (n == 0) {
-      return;
-    }
-    qToBumpSize = 0;
-    if (qBumped + n >= 1L << 37) {
-      long renumbered = 0; // renumber along the queue before the stamps outgrow the sort keys
-      for (int v = qFirst; v >= 0; v = qNext[v]) {
-        qStamp[v] = ++renumbered;
-      }
-      qBumped = renumbered;
-    }
+  /** Sorts qKeys so that the low 26 bits of qKeys[i] index qToBump by increasing stamp. */
+  private void sortBumped(int n) {
     if (qKeys.length < n) {
       qKeys = new long[Math.max(n, 2 * qKeys.length)];
     }
@@ -4183,6 +4171,23 @@ public final class CdclSolver {
     } else {
       Arrays.sort(qKeys, 0, n);
     }
+  }
+
+  /** Moves the analysed variables to the end of the queue, in the order of their old stamps. */
+  private void bumpQueue() {
+    int n = qToBumpSize;
+    if (n == 0) {
+      return;
+    }
+    qToBumpSize = 0;
+    if (qBumped + n >= 1L << 37) {
+      long renumbered = 0; // renumber along the queue before the stamps outgrow the sort keys
+      for (int v = qFirst; v >= 0; v = qNext[v]) {
+        qStamp[v] = ++renumbered;
+      }
+      qBumped = renumbered;
+    }
+    sortBumped(n);
     for (int i = 0; i < n; i++) {
       int v = qToBump[(int) (qKeys[i] & ((1 << 26) - 1))];
       if (v != qLast) {
