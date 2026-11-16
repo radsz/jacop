@@ -6566,6 +6566,9 @@ Version 5.0 (unreleased)
    same instances are proved (56 by default, 62 under -f, 600 s) and the
    total time is unchanged (1.005 and 1.012, the same search under the
    virtual clock).
+   A list wake then rechecks only the values whose residue is a changed
+   position: 11 % more nodes per second on TelecomScheduling-B-10, the
+   same pruning.
 
 365. Free search (-f) of a resource-constrained project scheduling model
    (a makespan over CumulativeBasic resources with fixed durations,
@@ -6612,6 +6615,19 @@ Version 5.0 (unreleased)
    0.997 and 0.982. -Dorg.jacop.fz.orderChannels=false keeps the
    reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
    half-reifications.
+
+367. ArgMax and ArgMin bound the values at positions that the index can
+   no longer take: such a position may not reach the extreme over the
+   positions the index can still take (strictly for positions after
+   them, since the first extreme wins). ArgMax and ArgMin now reach
+   domain consistency in the consistency checker (bounds(Z) before), and
+   so does ArgMaxMonotone, which the FlatZinc front end posts for
+   maximum_arg over monotone functions of shared variables; the checker
+   also gains XlteqY, XneqY and BinaryBitTable cases at domain
+   consistency. The LCG explanations are the existing ones. The upTo5sec
+   arg models give the same answers and node counts; the one wide
+   instance with maximum_arg (tower) fails 10 % less often (30155 ->
+   27287) at the same time.
 
 Version 4.11
 =============
