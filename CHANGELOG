@@ -7004,6 +7004,18 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. The root reduced costs of the LP relaxation now prune in search. They
+   were propagated only at the level of the first LP call, which search
+   never revisits, so they never fired; now each branch propagates them
+   again once the bound of the objective changes. Two-literal nogoods of
+   the dominance presolve are only tried as LP rows instead of taken as
+   model rows: 84,897 of them made the LP of a 5,000-item knapsack too
+   large to solve in search. On the PB24 OPT-LIN knapPI knapsacks at 600 s
+   similar_weights is proved in 67 s instead of 158 s and profit_ceiling in
+   140 s instead of 190 s. On the 240 wide instances at 600 s, 196 instead
+   of 193 are solved by default and 198 instead of 193 with -f, total time
+   0.959 and 0.953.
+
 Version 4.11
 =============
 
