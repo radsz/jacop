@@ -7389,7 +7389,26 @@ Version 5.0 (unreleased)
    total time 3,708 -> 1,011 s (three base runs ran out of memory at
    4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
 
-411. Free search (-f), and model search without a search annotation, of a
+411. The LP relaxation links the columns of a table with a key column (the
+   element constraints over one index that the front end merges into one
+   table, such as the options of a class in car sequencing) to the value
+   encoding of the key: y = sum_v t(v) b_v for every other column y, the
+   linear formulation of element (P. Refalo, Linear formulation of
+   constraint programming models and hybrid solvers, CP 2000, LNCS 1894).
+   The extra rows of a satisfaction model (value encodings, linearized
+   constraints), kept before only when the root LP was infeasible, stay on
+   probation for 64 solves and are kept if at least 10 % of the solves
+   since then failed the node; a relaxation that fails that often is no
+   longer starved by its work budget, and its extra rows are not dropped
+   for the pivot limits they hit. Car sequencing (CSPLib 001) p6-76 is
+   proved UNSAT with -f in 24 s instead of 318 s; the 108 CSPLib car
+   sequencing instances at 600 s with -f: 83 -> 87 solved (p10-93, p36-92
+   UNSAT, pb_200_01, pb_200_07), total time -7 %. With -s it prints lpProbationKept
+   and lpFailingSolves. -Dorg.jacop.lp.keyedTables=false,
+   -Dorg.jacop.lp.satisfactionProbation=0 and -Dorg.jacop.lp.failRate=0
+   turn them off.
+
+412. Free search (-f), and model search without a search annotation, of a
    weighted partial MaxSAT model (clauses, 0/1 linear rows and a cost
    that is a weighted sum of 0/1 variables, as the MaxSAT Evaluation
    instances flatten) runs MaxSAT local search,
