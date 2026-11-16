@@ -4603,8 +4603,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private int[] checkSchedule(
       IntVar[] starts, int[] start, IntVar cost, int makespan, IntVar[] hinted) {
     int base = store.level;
-    store.setLevel(base + 1);
     try {
+      // the root's pending propagation first: run at the level of the check, the first
+      // consistency of the constraints is undone with it, which left warehouses cap91 (MaxSAT
+      // 2024) without its 7 s proof
+      if (!store.consistency()) {
+        return null;
+      }
+      store.setLevel(base + 1);
       for (int k = 0; k < starts.length; k++) {
         starts[k].domain.in(store.level, starts[k], start[k], start[k]);
       }

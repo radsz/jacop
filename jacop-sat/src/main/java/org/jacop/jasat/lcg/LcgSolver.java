@@ -3427,6 +3427,12 @@ public final class LcgSolver implements ExternalPropagator {
       startProof();
     }
     coreSearch = coreShare > 0 ? CoreSearch.of(this, objective) : null;
+    if (coreSearch == null || tree != null || (bisectGap > 0 && proof == null)) {
+      // the core-guided phase takes the incumbent's bound only after it (requireBetter): under it
+      // every stratum must improve, which made upgradeability rand653 (MaxSAT 2024) and
+      // warehouses cap91 find no core, and lose proofs of 8 s and 7 s
+      boundIncumbent();
+    }
     uncoredBisection = false;
     uncoredSwitch = Long.MAX_VALUE;
     int result;
@@ -3586,6 +3592,7 @@ public final class LcgSolver implements ExternalPropagator {
     workEnd = millis > 0 ? sat.work() + millis * WORK_PER_MS : Long.MAX_VALUE;
     int result;
     if (coresWithoutSolutionOnly) {
+      boundIncumbent(); // with a solution, branch and bound keeps the time
       result = firstSolutionBeforeCores();
       if (result == CdclSolver.UNSAT) {
         return result;
@@ -3621,11 +3628,12 @@ public final class LcgSolver implements ExternalPropagator {
         }
         probeWithoutSolution = coreSearch.noSolutionStops > stops;
       }
+      int[] given = best; // the incumbent, which is no solution of branch and bound
       result = minimizeBeforeCores();
       if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
         return result;
       }
-      if (coreProbeSkip && probeWithoutSolution && best != null) {
+      if (coreProbeSkip && probeWithoutSolution && best != null && best != given) {
         // the probe found no solution of its own while branch and bound did: the rest of the phase
         // stops the same way after a third of its work and gives the time back
         probeSkips++;
@@ -6760,8 +6768,9 @@ public final class LcgSolver implements ExternalPropagator {
   private int[] incumbentValues;
 
   /**
-   * Makes the solution given by {@link #setIncumbent} the best one of {@link #minimize}: its bound
-   * clause is added, and neighbourhood search relaxes around it as around a solution of its own.
+   * Makes the solution given by {@link #setIncumbent} the best one of {@link #minimize}, around
+   * which neighbourhood search relaxes as around a solution of its own. Its bound clause comes from
+   * {@link #boundIncumbent}.
    */
   private void takeIncumbent() {
     int[] s = incumbent;
@@ -6779,11 +6788,16 @@ public final class LcgSolver implements ExternalPropagator {
       // the store does not hold the solution: the neighbourhoods take its values
       lns.solution(incumbentVars, incumbentValues);
     }
-    if (v > root[objective].min()) {
-      // the literal first, so that its linking clauses come before the bound
-      int lit = geLit(objective, v);
-      structural.add(new int[] {-lit}); // objective <= v - 1
+  }
+
+  /** Adds the bound of the solution given by {@link #setIncumbent}, as {@link #checkModel} does. */
+  private void boundIncumbent() {
+    if (best == null || best[objective] <= root[objective].min()) {
+      return;
     }
+    // the literal first, so that its linking clauses come before the bound
+    int lit = geLit(objective, best[objective]);
+    structural.add(new int[] {-lit}); // objective <= v - 1
   }
 
   /**
