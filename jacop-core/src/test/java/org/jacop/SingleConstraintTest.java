@@ -10322,6 +10322,39 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isFalse();
   }
 
+  @Test
+  void diff2ChecksRectanglesFixedBeforeARaisedLevel() {
+    for (String kind : new String[] {"Diff2", "Disjoint"}) {
+      Store store = new Store();
+      IntVar[][] r = overlappingRectanglesVars(store);
+      store.impose(kind.equals("Diff2") ? new Diff2(r) : new Disjoint(r));
+      fixOverlappingRectangles(store, r);
+      store.raiseLevelBeforeConsistency = true;
+      assertThat(store.consistency()).as(kind).isFalse();
+    }
+  }
+
+  /** Two rectangles [x, y, width, height] over 0..2, fixed by fixOverlappingRectangles. */
+  private static IntVar[][] overlappingRectanglesVars(Store store) {
+    IntVar[][] r = new IntVar[2][4];
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j] = new IntVar(store, "r" + i + "_" + j, 0, 2);
+      }
+    }
+    return r;
+  }
+
+  /** Fixes the rectangles to (2, 1, 1, 1) and (2, 0, 1, 2), which overlap at (2, 1). */
+  private static void fixOverlappingRectangles(Store store, IntVar[][] r) {
+    int[][] values = {{2, 1, 1, 1}, {2, 0, 1, 2}};
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 4; j++) {
+        r[i][j].domain.in(store.level, r[i][j], values[i][j], values[i][j]);
+      }
+    }
+  }
+
   private static int root(int[] parent, int v) {
     while (parent[v] != v) {
       v = parent[v];
