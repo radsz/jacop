@@ -3871,6 +3871,23 @@ public final class CdclSolver {
       }
     }
     boolean sat = true;
+    if (factoring && !factored) {
+      factored = true;
+      long begin = System.nanoTime();
+      Factorizer f = new Factorizer(numVars, input, n, proof, factorEffort);
+      f.setDeadline(deadline);
+      if (f.run() > 0) {
+        input = f.clauses();
+        factoredClauses = n - (long) input.length;
+        n = input.length;
+        factorBase = numVars;
+        factoredVars = f.numFresh();
+        ensureVars(f.numVars());
+        frozen = Arrays.copyOf(frozen, numVars);
+      }
+      factorWork = f.effort();
+      factorNanos = System.nanoTime() - begin;
+    }
     Congruence cc = null;
     if (substitution) {
       long t0 = System.nanoTime();
@@ -3887,23 +3904,6 @@ public final class CdclSolver {
         gateEquivalences += cc.gateEquivalences;
         gatesFound += cc.andGates + cc.xorGates + cc.iteGates;
       }
-    }
-    if (sat && factoring && !factored) {
-      factored = true;
-      long begin = System.nanoTime();
-      Factorizer f = new Factorizer(numVars, input, n, proof, factorEffort);
-      f.setDeadline(deadline);
-      if (f.run() > 0) {
-        input = f.clauses();
-        factoredClauses = n - (long) input.length;
-        n = input.length;
-        factorBase = numVars;
-        factoredVars = f.numFresh();
-        ensureVars(f.numVars());
-        frozen = Arrays.copyOf(frozen, numVars);
-      }
-      factorWork = f.effort();
-      factorNanos = System.nanoTime() - begin;
     }
     Eliminator e = new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof);
     sat = sat && e.run();
