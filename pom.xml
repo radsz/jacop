@@ -388,6 +388,7 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/AntichainFlatzincTest.java</include>
@@ -647,6 +648,7 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/AntichainFlatzincTest.java</include>
@@ -902,6 +904,7 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/AntichainFlatzincTest.java</include>
@@ -1155,6 +1158,7 @@ setup to run configuration. -->
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
                                 <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
                                 <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
                                 <include>**/AntichainFlatzincTest.java</include>

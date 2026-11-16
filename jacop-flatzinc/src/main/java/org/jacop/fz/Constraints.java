@@ -88,6 +88,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
+import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
 import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
@@ -576,6 +577,12 @@ public class Constraints implements ParserTreeConstants {
       // each variable whose values are all counted at least twice equals one of its few partners
       if (CountPartnersDetector.enabled() && options.proof() == null) {
         new CountPartnersDetector(support).detect(astTree);
+      }
+
+      // the aggregated flow of a regular constraint over the residue classes its cardinality
+      // constraints count, redundant; --proof does not encode it
+      if (RegularFlowDetector.enabled() && options.proof() == null) {
+        new RegularFlowDetector(support).detect(astTree);
       }
 
       // the least number of bins of each item whose pairs must share a bin (SONET rings),
