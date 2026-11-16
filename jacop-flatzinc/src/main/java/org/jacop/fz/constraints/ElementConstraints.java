@@ -119,6 +119,7 @@ class ElementConstraints implements ParserTreeConstants {
   /** Poses p2[p1] = p3 where first is the index of p2[0]. */
   void poseElementInteger(IntVar p1, int[] p2, IntVar p3, int first) {
     p1.domain.in(store.level, p1, first, IntDomain.MAX_INT);
+    support.permutationElementSums.add(p1, p2, p3, first);
 
     int[] newP2 = extractSubArray(p1, p2, first);
     if (newP2.length == 0) {

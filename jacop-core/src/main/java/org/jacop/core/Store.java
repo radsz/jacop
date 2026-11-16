@@ -817,6 +817,8 @@ public class Store {
   private void handleConsistencyFailure() {
     if (currentConstraint != null) {
       currentConstraint.cleanAfterFailure();
+      // a constraint rewritten during search fails on behalf of the one it replaces
+      currentConstraint = currentConstraint.reasonOwner();
       if (variableWeightManagement) {
         currentConstraint.increaseWeight();
       }

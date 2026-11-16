@@ -4460,11 +4460,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   // -Djacop.lcg.coreExhaust=K: the most totalizer outputs of each relaxed core that the
   // core-guided phase tests alone (core exhaustion); 0 = never
-  private int coreExhaust = Integer.getInteger("jacop.lcg.coreExhaust", 0);
+  private int coreExhaust = Integer.getInteger("jacop.lcg.coreExhaust", 8);
 
   /**
    * Sets how many outputs of each new totalizer the core-guided phase assumes alone and relaxes as
-   * unit cores while they are refuted (core exhaustion); 0, the default, tests none.
+   * unit cores while they are refuted (core exhaustion); the default is 8, 0 tests none.
    *
    * @param outputs the most outputs per core (property {@code jacop.lcg.coreExhaust})
    */
@@ -4474,6 +4474,26 @@ public final class LcgSolver implements ExternalPropagator {
 
   int coreExhaust() {
     return coreExhaust;
+  }
+
+  // -Djacop.lcg.coreExhaustPatience=P: core exhaustion stops once the first output of P cores
+  // per output it proved, plus P, was not refuted; 0 = never stops
+  private int coreExhaustPatience = Integer.getInteger("jacop.lcg.coreExhaustPatience", 16);
+
+  /**
+   * Sets when core exhaustion gives up: once the test of the first output of a core has failed P
+   * times for each output exhaustion proved, plus P times. A failed test costs work and changes the
+   * solver's phases and learnt clauses, which on some models keeps the core-guided phase from the
+   * objective probes that prove the optimum. The default is 16; 0 never gives up.
+   *
+   * @param patience P (property {@code jacop.lcg.coreExhaustPatience})
+   */
+  public void setCoreExhaustPatience(int patience) {
+    coreExhaustPatience = patience;
+  }
+
+  int coreExhaustPatience() {
+    return coreExhaustPatience;
   }
 
   /**
@@ -6605,6 +6625,8 @@ public final class LcgSolver implements ExternalPropagator {
   // run once at the first restart to the root, see atRootAfter
   private Runnable rootAction;
   private long rootActionDelay;
+  // the time from which the action may run
+  private long rootActionAt;
 
   /**
    * Restarts the search to the root once the given time has passed, also under fixed search without
@@ -6616,9 +6638,19 @@ public final class LcgSolver implements ExternalPropagator {
    * @param action the action run at the root.
    */
   public void atRootAfter(long nanos, Runnable action) {
-    rootAction = action;
     rootActionDelay = nanos;
-    sat.restartAt(sat.now() + nanos);
+    rootActionAt = sat.now() + nanos;
+    rootAction = () -> runRootActionInTime(action);
+    sat.restartAt(rootActionAt);
+  }
+
+  // an earlier restart to the root (free search restarts often) leaves the action pending
+  private void runRootActionInTime(Runnable action) {
+    if (sat.now() < rootActionAt) {
+      rootAction = () -> runRootActionInTime(action);
+    } else {
+      action.run();
+    }
   }
 
   /**
@@ -7083,6 +7115,18 @@ public final class LcgSolver implements ExternalPropagator {
       store.clearEntailed(c);
       c.impose(store);
     }
+    encodedConstraints.clear();
+  }
+
+  /**
+   * Stops recording the store's changes, for a solver built on a store level of its own that the
+   * caller removes next: the backtrack restores the constraints that went to the solver as clauses
+   * (they are only marked as entailed above the root), which {@link #release} would impose a second
+   * time. The solver cannot solve again afterwards; its best solution stays readable.
+   */
+  public void detach() {
+    trail.detach();
+    encodedGraphs.clear();
     encodedConstraints.clear();
   }
 
