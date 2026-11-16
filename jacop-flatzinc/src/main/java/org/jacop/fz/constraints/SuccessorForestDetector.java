@@ -183,7 +183,7 @@ public class SuccessorForestDetector implements ParserTreeConstants {
           store.impose(new BoolClause(c[0], c[1]));
         }
         consistent = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         store.clearChanged();
         consistent = false;
       }
@@ -207,8 +207,32 @@ public class SuccessorForestDetector implements ParserTreeConstants {
     }
   }
 
-  // the successor arrays with their proved arcs
-  private record Pair(IntVar[] x, List<int[]> arcs, IntDomain[] removed) {}
+  // a successor array with its proved arcs and the values each node's in-arcs remove; a plain
+  // class,
+  // not a record, since the arrays are compared by identity
+  private static final class Pair {
+    private final IntVar[] x;
+    private final List<int[]> arcs;
+    private final IntDomain[] removed;
+
+    Pair(IntVar[] x, List<int[]> arcs, IntDomain[] removed) {
+      this.x = x;
+      this.arcs = arcs;
+      this.removed = removed;
+    }
+
+    IntVar[] x() {
+      return x;
+    }
+
+    List<int[]> arcs() {
+      return arcs;
+    }
+
+    IntDomain[] removed() {
+      return removed;
+    }
+  }
 
   private List<Pair> pairs() {
     List<Pair> found = new ArrayList<>();
@@ -354,7 +378,7 @@ public class SuccessorForestDetector implements ParserTreeConstants {
         try {
           store.impose(new XlteqY(posJ, posI));
           refuted = !store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           store.clearChanged();
           refuted = true;
         } finally {
@@ -363,7 +387,7 @@ public class SuccessorForestDetector implements ParserTreeConstants {
         }
         left = refuted ? headDomain : null;
       }
-    } catch (FailException e) {
+    } catch (FailException _) {
       store.clearChanged();
     } finally {
       store.removeLevel(level + 1);
