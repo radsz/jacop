@@ -78,8 +78,16 @@ public class Reified extends AbstractReifiedConstraint implements Copyable<Reifi
       b.domain.inValue(store.level, b, 0);
       removeConstraint();
     } else if (b.max() == 0) { // C must be false
+      if (RewrittenNested.ENABLED && canRewrite(store)) {
+        rewriteTo(store, new RewrittenNested(c, false));
+        return;
+      }
       c.notConsistency(store);
     } else if (b.min() == 1) { // C must be true
+      if (RewrittenNested.ENABLED && canRewrite(store)) {
+        rewriteTo(store, new RewrittenNested(c, true));
+        return;
+      }
       c.consistency(store);
     }
   }

@@ -6961,6 +6961,24 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+388. Constraints rewrite themselves to simpler ones during search, as
+   Gecode's GECODE_REWRITE does (C. Schulte, G. Tack, M. Z. Lagerkvist,
+   Modeling and Programming with Gecode, propagator rewriting): an
+   ElementVariableFast whose index is fixed becomes XeqY, so changes of
+   the other list variables no longer wake it, and a Reified, Implies or
+   ImpliesNot whose Boolean variable is fixed becomes its nested
+   constraint (or its negation), without the entailment checks at every
+   call. The simpler constraint lives until the store backtracks below
+   the level of the rewriting; lazy clause generation explains its
+   prunings and failures with the original constraint. On the 83 wide
+   set instances where they take most propagation time, total time is
+   unchanged at 600 s (-f 1.016 over two rounds, inside the 4 % noise
+   between base rounds) with the same instances solved, and -f finds
+   better objectives on celar graph11 (3080 vs 4450-14210),
+   multi-agent-graph-coverage n75 and orthorio challenge_12.
+   -Dorg.jacop.rewrite=false turns it off
+   (org.jacop.rewrite.element and org.jacop.rewrite.reified per kind).
+
 Version 4.11
 =============
 
