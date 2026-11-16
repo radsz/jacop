@@ -3395,7 +3395,16 @@ public final class CdclSolver {
       if (propagate() != NO_CONFLICT) {
         return refutedAtRoot();
       }
+      // the passes move watches and reorder clause literals: a failed attempt puts them back, so
+      // that the search afterwards is the one without lucky assignments, units aside
       byte[] phases = Arrays.copyOf(savedSign, numVars);
+      int[] arena = Arrays.copyOf(mem, memSize);
+      int[][] watched = new int[2 * numVars][];
+      for (int l = 0; l < 2 * numVars; l++) {
+        watched[l] = Arrays.copyOf(watches[l], watchSize[l]);
+      }
+      int rootTrail = trailSize;
+      long props = propagations;
       int result = UNKNOWN;
       if (noClauseWithoutSign(0)) {
         result = luckyPass(true, 0, "all-true");
@@ -3415,8 +3424,28 @@ public final class CdclSolver {
       if (result == UNKNOWN) {
         result = luckyPass(false, 0, "backward-true");
       }
-      if (result != SAT) {
+      if (result == UNKNOWN) {
         System.arraycopy(phases, 0, savedSign, 0, numVars);
+        System.arraycopy(arena, 0, mem, 0, arena.length);
+        for (int l = 0; l < 2 * numVars; l++) {
+          int n = watched[l].length;
+          if (n > 0 && watches[l].length < n) {
+            watches[l] = watched[l];
+          } else if (n > 0) {
+            System.arraycopy(watched[l], 0, watches[l], 0, n);
+          }
+          watchSize[l] = n;
+        }
+        propagations = props;
+        // the units of failed literals and their consequences stay as root facts without
+        // reasons (the restored clauses may not have them first), propagated again by the search
+        for (int i = rootTrail; i < trailSize; i++) {
+          vdata[(trail[i] >> 1) << 2 | REASON] = NO_REASON;
+          if (proof != null) {
+            proof.add(trail, i, 1);
+          }
+        }
+        qhead = rootTrail;
       }
       return result;
     } finally {
