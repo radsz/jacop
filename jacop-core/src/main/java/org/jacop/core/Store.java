@@ -199,6 +199,13 @@ public class Store {
    */
   public DomainChangeRecorder domainChangeRecorder;
 
+  /**
+   * Also receives every domain change of an integer variable when set, for search heuristics that
+   * keep their own view of the domains (dom/wdeg); unlike {@link #domainChangeRecorder} it does not
+   * mean that lazy clause generation runs. Null by default, which costs one test per change.
+   */
+  public DomainChangeRecorder domainWatcher;
+
   /** It stores constraint that has recently failed during store.consistency() execution. */
   public Constraint recentlyFailedConstraint;
 
@@ -595,6 +602,10 @@ public class Store {
     if (v.views != null) {
       queueViews(v, pruningEvent);
     }
+
+    if (domainWatcher != null && v instanceof IntVar x) {
+      domainWatcher.domainChanged(x, pruningEvent);
+    }
   }
 
   /**
@@ -618,6 +629,9 @@ public class Store {
       }
       if (view.valueWatches != null && event == IntDomain.GROUND) {
         queueValueWatches(view);
+      }
+      if (domainWatcher != null) {
+        domainWatcher.domainChanged(view, event);
       }
     }
   }

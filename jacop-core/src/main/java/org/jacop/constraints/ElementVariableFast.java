@@ -115,6 +115,17 @@ public class ElementVariableFast extends AbstractElement
 
   private int[] wakePositions;
 
+  /**
+   * For store indexes that span few values, the first entry of {@link #wakeKeys} with key {@code
+   * wakeBase + d} at {@code wakeFirst[d]}, or -1: a wake then finds its positions without a binary
+   * search. On MiniZinc Challenge multi-agent-graph-coverage 1086 elements share two lists of 543
+   * variables, so each change of a variable wakes 543 elements, and their binary searches took 16 %
+   * of the solving time.
+   */
+  private int[] wakeFirst;
+
+  private int wakeBase;
+
   /** No wake since the last consistency call: the call was queued for another reason. */
   private static final int WAKE_NONE = 0;
 
@@ -164,6 +175,15 @@ public class ElementVariableFast extends AbstractElement
   private int[] valueSupport;
 
   private int valueSupportBase;
+
+  /**
+   * For each position, the values (as bits from {@link #valueSupportBase}) whose residue in {@link
+   * #valueSupport} may be that position; a superset, so a change of the position rechecks them.
+   */
+  private long[] supportsOf;
+
+  /** The values (as bits from {@link #valueSupportBase}) that have a residue. */
+  private long coveredValues;
 
   /** A selectable position whose variable is not fixed to the fixed value, or -1; a residue. */
   private int openPosition = -1;
@@ -272,13 +292,19 @@ public class ElementVariableFast extends AbstractElement
       indexWakePositions();
     }
     int key = var.index();
-    int k = Arrays.binarySearch(wakeKeys, key);
+    int k;
+    if (wakeFirst != null) {
+      int d = key - wakeBase;
+      k = d >= 0 && d < wakeFirst.length ? wakeFirst[d] : -1;
+    } else {
+      k = Arrays.binarySearch(wakeKeys, key);
+      while (k > 0 && wakeKeys[k - 1] == key) {
+        k--;
+      }
+    }
     if (k < 0) {
       wake = WAKE_FULL;
       return;
-    }
-    while (k > 0 && wakeKeys[k - 1] == key) {
-      k--;
     }
     int kind = WAKE_IDLE;
     for (; k < wakeKeys.length && wakeKeys[k] == key; k++) {
@@ -324,6 +350,15 @@ public class ElementVariableFast extends AbstractElement
     }
     wakePositions = at;
     wakeKeys = keys;
+    if (n > 0 && keys[0] >= 0 && (long) keys[n - 1] - keys[0] < 4L * n + 64) {
+      int[] first = new int[keys[n - 1] - keys[0] + 1];
+      Arrays.fill(first, -1);
+      for (int k = n - 1; k >= 0; k--) {
+        first[keys[k] - keys[0]] = k;
+      }
+      wakeBase = keys[0];
+      wakeFirst = first;
+    }
   }
 
   /**
@@ -381,15 +416,31 @@ public class ElementVariableFast extends AbstractElement
     if (valueSupport == null || min < valueSupportBase || (long) max - valueSupportBase >= 64) {
       return false;
     }
-    for (ValueEnumeration e = value.domain.valueEnumeration(); e.hasMoreElements(); ) {
-      int v = e.nextElement();
-      int q = valueSupport[v - valueSupportBase];
+    // a residue stays valid until its position changes: the index did not change since the last
+    // full call, which rebuilt the residues, and a position that changed since is in changed or
+    // made that call full; after backtracking the domains are larger, so the residues still hold.
+    // Only the values supported by a changed position and those without a residue are checked
+    long touched = ~coveredValues;
+    for (int k = 0; k < n; k++) {
+      touched |= supportsOf[changed[k]];
+    }
+    int from = min - valueSupportBase;
+    long span = (1L << (max - min)) * 2 - 1; // max - min < 64, so 2^64 - 1 wraps to every bit
+    for (long check = touched & (span << from); check != 0; check &= check - 1) {
+      int bit = Long.numberOfTrailingZeros(check);
+      int v = valueSupportBase + bit;
+      if (!value.domain.contains(v)) {
+        continue;
+      }
+      int q = valueSupport[bit];
       if (q < 0 || !index.domain.contains(q + 1 + indexOffset) || !list[q].domain.contains(v)) {
         q = findValue(v);
         if (q < 0) {
           return false;
         }
-        valueSupport[v - valueSupportBase] = q;
+        valueSupport[bit] = q;
+        supportsOf[q] |= 1L << bit;
+        coveredValues |= 1L << bit;
       }
     }
     return true;
@@ -464,6 +515,9 @@ public class ElementVariableFast extends AbstractElement
     } else if (woken == WAKE_LIST && !index.singleton() && listChangeKeepsFixpoint(n)) {
       return;
     }
+    // changes seen by a full call are not checked against the value residues: drop them unless
+    // the scan below rebuilds them
+    valueSupportBase = Integer.MAX_VALUE;
 
     if (value.singleton() && index.singleton()) {
       IntVar v = list[index.value() - 1 - indexOffset];
@@ -490,8 +544,10 @@ public class ElementVariableFast extends AbstractElement
     if (smallValue) {
       if (valueSupport == null) {
         valueSupport = new int[64];
+        supportsOf = new long[list.length];
       }
       Arrays.fill(valueSupport, -1);
+      Arrays.fill(supportsOf, 0L);
       valueSupportBase = valueMin;
     }
     int lowest = -1;
@@ -527,12 +583,14 @@ public class ElementVariableFast extends AbstractElement
           for (long added = bits & ~supportBits; added != 0; added &= added - 1) {
             valueSupport[Long.numberOfTrailingZeros(added)] = position;
           }
+          supportsOf[position] |= bits & ~supportBits;
           supportBits |= bits;
         }
       }
     }
     minSupport = lowest;
     maxSupport = highest;
+    coveredValues = supportBits;
 
     if (indexDomNonEmpty) {
       index.domain.in(store.level, index, indexDom.complement());

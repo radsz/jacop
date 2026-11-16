@@ -98,19 +98,47 @@ public class PplusQeqR extends PrimitiveConstraint
       return;
     }
 
+    // a projection is computed again only when the bounds of one of its inputs changed since it
+    // was last computed; with unchanged inputs it narrows nothing, so the fixpoint is the same
+    boolean pStale = true;
+    boolean qStale = true;
+    boolean rStale = true;
     do {
-      store.propagationHasOccurred = false;
-
-      FloatIntervalDomain pDom = FloatDomain.subBounds(r.min(), r.max(), q.min(), q.max());
-      p.domain.in(store.level, p, pDom.min(), pDom.max());
-
-      FloatIntervalDomain qDom = FloatDomain.subBounds(r.min(), r.max(), p.min(), p.max());
-      q.domain.in(store.level, q, qDom.min(), qDom.max());
-
-      FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), q.min(), q.max());
-      r.domain.in(store.level, r, rDom.min(), rDom.max());
-
-    } while (store.propagationHasOccurred);
+      if (pStale) {
+        pStale = false;
+        double min = p.min();
+        double max = p.max();
+        FloatIntervalDomain pDom = FloatDomain.subBounds(r.min(), r.max(), q.min(), q.max());
+        p.domain.in(store.level, p, pDom.min(), pDom.max());
+        if (min != p.min() || max != p.max()) {
+          qStale = true;
+          rStale = true;
+        }
+      }
+      if (qStale) {
+        qStale = false;
+        double min = q.min();
+        double max = q.max();
+        FloatIntervalDomain qDom = FloatDomain.subBounds(r.min(), r.max(), p.min(), p.max());
+        q.domain.in(store.level, q, qDom.min(), qDom.max());
+        if (min != q.min() || max != q.max()) {
+          pStale = true;
+          rStale = true;
+        }
+      }
+      if (rStale) {
+        rStale = false;
+        double min = r.min();
+        double max = r.max();
+        FloatIntervalDomain rDom = FloatDomain.addBounds(p.min(), p.max(), q.min(), q.max());
+        r.domain.in(store.level, r, rDom.min(), rDom.max());
+        if (min != r.min() || max != r.max()) {
+          pStale = true;
+          qStale = true;
+        }
+      }
+    } while (pStale || qStale || rStale);
+    store.propagationHasOccurred = false;
   }
 
   // x + x = r: r - x does not narrow x by itself, so the bounds of x moved by an ulp per pass and
