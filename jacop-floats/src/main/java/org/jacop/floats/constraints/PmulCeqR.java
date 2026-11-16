@@ -101,20 +101,48 @@ public class PmulCeqR extends Constraint
 
   @Override
   public void consistency(Store store) {
-
+    if (p == r) {
+      consistencySameVariable(store);
+      return;
+    }
+    // p * c = r: each projection is computed again only when the bounds of the other variable
+    // changed since it was last computed; with unchanged inputs it narrows nothing, so the fixpoint
+    // is the one of recomputing both until a round changes nothing
+    boolean pStale = true;
+    boolean rStale = true;
     do {
+      if (pStale) {
+        pStale = false;
+        double min = p.min();
+        double max = p.max();
+        p.domain.in(store.level, p, FloatDomain.divBounds(r.min(), r.max(), c, c));
+        if (min != p.min() || max != p.max()) {
+          rStale = true;
+        }
+      }
+      if (rStale) {
+        rStale = false;
+        double min = r.min();
+        double max = r.max();
+        r.domain.in(store.level, r, FloatDomain.mulBounds(p.min(), p.max(), c, c));
+        if (min != r.min() || max != r.max()) {
+          pStale = true;
+        }
+      }
+    } while (pStale || rStale);
+    store.propagationHasOccurred = false;
+  }
 
+  // p * c = p: a change of one side is a change of the other
+  private void consistencySameVariable(Store store) {
+    do {
       store.propagationHasOccurred = false;
 
-      // Bounds for P
       FloatIntervalDomain pBounds = FloatDomain.divBounds(r.min(), r.max(), c, c);
+      p.domain.in(store.level, p, pBounds);
 
-      p.domain.in(store.level, p, pBounds); // .min(), pBounds.max());
-
-      // Bounds for R
       FloatIntervalDomain rBounds = FloatDomain.mulBounds(p.min(), p.max(), c, c);
-
-      r.domain.in(store.level, r, rBounds); // .min(), rBounds.max());
+      r.domain.in(store.level, r, rBounds);
 
     } while (store.propagationHasOccurred);
   }
