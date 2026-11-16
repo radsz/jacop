@@ -34,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.StockingCost;
@@ -180,6 +181,37 @@ public class StockingCostDetector implements ParserTreeConstants {
     }
     int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     boolean equation = node.getName().equals("int_lin_eq");
+    // a variable repeated in the sum is one term with the sum of its coefficients: counted twice,
+    // it filled two places of an alldifferent of two variables (v1 + 2 * v1 over alldiff(v1, v4)
+    // posted the stocking cost of [v1, v1] and refuted the model)
+    Map<IntVar, Integer> position = new IdentityHashMap<>();
+    List<IntVar> merged = new ArrayList<>();
+    List<Long> coefficients = new ArrayList<>();
+    for (int k = 0; k < a.length; k++) {
+      Integer p = position.putIfAbsent(vars[k], merged.size());
+      if (p == null) {
+        merged.add(vars[k]);
+        coefficients.add((long) a[k]);
+      } else {
+        coefficients.set(p, coefficients.get(p) + a[k]);
+      }
+    }
+    if (merged.size() < a.length) {
+      List<IntVar> kept = new ArrayList<>();
+      List<Integer> keptWeights = new ArrayList<>();
+      for (int k = 0; k < merged.size(); k++) {
+        long w = coefficients.get(k);
+        if (w < Integer.MIN_VALUE || w > Integer.MAX_VALUE) {
+          return;
+        }
+        if (w != 0) {
+          kept.add(merged.get(k));
+          keptWeights.add((int) w);
+        }
+      }
+      vars = kept.toArray(new IntVar[0]);
+      a = keptWeights.stream().mapToInt(Integer::intValue).toArray();
+    }
     for (int g = 0; g < groups.size(); g++) {
       Set<IntVar> group = groups.get(g);
       List<IntVar> x = new ArrayList<>();

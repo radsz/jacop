@@ -399,12 +399,22 @@ public final class LocalSearch {
     if (activity) {
       store.activityManagement(false);
     }
-    relaxations.forEach(r -> r.suspend(true));
+    // only the relaxations solving now are resumed after local search: one the caller suspended
+    // (the root solve of free search waits for org.jacop.fz.lpProbe) must stay so, or its first
+    // solve comes at a later probe or decision and its root rows hold only under that literal
+    List<LinearRelaxation> active = relaxations.stream().filter(r -> !r.isSuspended()).toList();
+    active.forEach(r -> r.suspend(true));
     try {
       initialAssignment();
       search();
     } finally {
-      relaxations.forEach(r -> r.suspend(false));
+      // queued again: the propagation of local search took their calls, and a relaxation that was
+      // not solved yet must be solved at the root, not at the first probe or decision after it
+      active.forEach(
+          r -> {
+            r.suspend(false);
+            store.addChanged(r);
+          });
       store.variableWeightManagement = weights;
       store.afcManagement(afc);
       if (activity) {

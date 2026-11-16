@@ -379,6 +379,49 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void equalLongSetArraysAreKeptOnceAndDifferentOnesApart() throws IOException {
+    // Set arrays of 1024 or more sets are kept once for each content (MiniZinc repeats the label
+    // sets of an MDD for every constraint). S1 and S2 are equal, S3 differs in its last set only:
+    // x and y may take 0..2 and z 0..3.
+    int n = 1024;
+    StringBuilder sets = new StringBuilder();
+    StringBuilder other = new StringBuilder();
+    StringBuilder from = new StringBuilder();
+    StringBuilder to = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      String sep = i == 0 ? "" : ",";
+      sets.append(sep).append('{').append(i % 3).append('}');
+      other.append(sep).append('{').append(i == n - 1 ? 3 : i % 3).append('}');
+      from.append(sep).append(1);
+      to.append(sep).append(0);
+    }
+    String fzn =
+        "array [1..%d] of set of int: S1 = [%s];%n".formatted(n, sets)
+            + "array [1..%d] of set of int: S2 = [%s];%n".formatted(n, sets)
+            + "array [1..%d] of set of int: S3 = [%s];%n".formatted(n, other)
+            + "array [1..%d] of int: F = [%s];%n".formatted(n, from)
+            + "array [1..%d] of int: T = [%s];%n".formatted(n, to)
+            + """
+            var 0..5: x:: output_var;
+            var 0..5: y:: output_var;
+            var 0..5: z:: output_var;
+            constraint jacop_mdd([x],[1],F,S1,T);
+            constraint jacop_mdd([y],[1],F,S2,T);
+            constraint jacop_mdd([z],[1],F,S3,T);
+            solve satisfy;
+            """;
+    Set<String> expected = new HashSet<>();
+    for (int x = 0; x <= 2; x++) {
+      for (int y = 0; y <= 2; y++) {
+        for (int z = 0; z <= 3; z++) {
+          expected.add("x = " + x + "; y = " + y + "; z = " + z + ";");
+        }
+      }
+    }
+    assertEquals(expected, solveAll(fzn));
+  }
+
+  @Test
   void equalSetsOfLongSetArraysAreKeptOnce(@TempDir Path dir) throws IOException {
     // The label sets of an MDD repeat a few sets millions of times (31 million sets, 4.2 GB while
     // MagicSquare-mdd-16 of XCSP 2023 was read). Sets of arrays of 1024 or more sets are kept once

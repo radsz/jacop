@@ -33,7 +33,9 @@ package org.jacop.search.lns;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
+import org.jacop.core.IntVar;
 
 /**
  * The vehicle routes of a model, as large neighbourhood search sees them: customers on routes in
@@ -98,6 +100,33 @@ abstract class RouteStructure {
 
   /** Records the routes of the best solution, while the store holds it. */
   abstract void solution();
+
+  /**
+   * Records the routes of a solution given by values rather than held by the store, the one another
+   * search found before this one. Every variable of the routes has a value or is fixed ({@link
+   * #knows}).
+   *
+   * @param valueOf the value of each variable in the solution.
+   */
+  abstract void solution(Map<IntVar, Integer> valueOf);
+
+  /** The variables the routes are read from (successors or arc literals). */
+  abstract IntVar[] routeVariables();
+
+  /**
+   * Tells whether a solution given by values sets every variable of the routes.
+   *
+   * @param valueOf the value of each variable in the solution.
+   * @return true when each variable of the routes has a value or is fixed.
+   */
+  final boolean knows(Map<IntVar, Integer> valueOf) {
+    for (IntVar x : routeVariables()) {
+      if (!x.singleton() && !valueOf.containsKey(x)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   /** Fills {@link #routes} and {@link #routeOf} from the best solution. */
   abstract void readRoutes();
