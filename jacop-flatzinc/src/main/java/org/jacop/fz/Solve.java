@@ -2909,13 +2909,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       if (refutation != null) {
         ignored.add(refutation);
       }
-      DefaultSearchVars declared = new DefaultSearchVars(dictionary);
-      declared.defaultVars();
-      Var[] order = new Var[declared.boolVars.length + declared.intVars.length];
-      System.arraycopy(declared.boolVars, 0, order, 0, declared.boolVars.length);
-      System.arraycopy(
-          declared.intVars, 0, order, declared.boolVars.length, declared.intVars.length);
-      PureClauseModel cnf = PureClauseModel.of(store, sat.collectedClauses(), ignored, order);
+      PureClauseModel cnf =
+          PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
       if (cnf != null) {
         return executePureClauseSearch(cnf);
       }
@@ -3391,6 +3386,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       printSolution();
     }
     return numberSolutions > 0;
+  }
+
+  // the 0/1 and integer variables of the model in the order of their declarations
+  private Var[] declaredVariables() {
+    DefaultSearchVars declared = new DefaultSearchVars(dictionary);
+    declared.defaultVars();
+    Var[] order = new Var[declared.boolVars.length + declared.intVars.length];
+    System.arraycopy(declared.boolVars, 0, order, 0, declared.boolVars.length);
+    System.arraycopy(declared.intVars, 0, order, declared.boolVars.length, declared.intVars.length);
+    return order;
   }
 
   // the SAT solver of lazy clause generation, or the one of a model of clauses alone
