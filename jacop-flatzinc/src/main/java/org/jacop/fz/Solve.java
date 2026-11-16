@@ -3898,10 +3898,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Set<Var> squares = Collections.newSetFromMap(new IdentityHashMap<>());
     List<Constraint> linear = new ArrayList<>();
     for (Constraint c : store.getConstraints()) {
-      if (c instanceof XmulYeqZ m && m.x() == m.y() && !m.x().singleton()) {
-        squares.add(m.z());
-      } else if (c instanceof XexpYeqZ e && e.y().singleton(2) && !e.x().singleton()) {
-        squares.add(e.z());
+      Var square = squareOf(c);
+      if (square != null) {
+        squares.add(square);
       } else if (c instanceof LinearInt || c instanceof SumWeight || c instanceof SumInt) {
         linear.add(c);
       }
@@ -3914,30 +3913,43 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     Set<Constraint> used = Collections.newSetFromMap(new IdentityHashMap<>());
     Set<Var> frontier = Set.of(costVar);
     for (int depth = 0; depth < 3 && !frontier.isEmpty(); depth++) {
-      Set<Var> next = Collections.newSetFromMap(new IdentityHashMap<>());
-      for (Constraint c : linear) {
-        if (used.contains(c)) {
-          continue;
-        }
-        Set<Var> args = c.arguments();
-        if (args.stream().anyMatch(frontier::contains)) {
-          used.add(c);
-          for (Var v : args) {
-            if (reached.add(v) && !squares.contains(v)) {
-              next.add(v);
-            }
+      frontier = linearStep(frontier, linear, used, reached, squares);
+    }
+    return (int) reached.stream().filter(squares::contains).count();
+  }
+
+  // z of z = x * x or z = x ^ 2 with x not fixed, null for any other constraint
+  private static Var squareOf(Constraint c) {
+    if (c instanceof XmulYeqZ m && m.x() == m.y() && !m.x().singleton()) {
+      return m.z();
+    }
+    if (c instanceof XexpYeqZ e && e.y().singleton(2) && !e.x().singleton()) {
+      return e.z();
+    }
+    return null;
+  }
+
+  // one step from the frontier through the linear constraints not used yet: the variables reached
+  // for the first time that are not squares, whose terms are followed in the next step
+  private static Set<Var> linearStep(
+      Set<Var> frontier,
+      List<Constraint> linear,
+      Set<Constraint> used,
+      Set<Var> reached,
+      Set<Var> squares) {
+    Set<Var> next = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint c : linear) {
+      Set<Var> args = c.arguments();
+      if (!used.contains(c) && args.stream().anyMatch(frontier::contains)) {
+        used.add(c);
+        for (Var v : args) {
+          if (reached.add(v) && !squares.contains(v)) {
+            next.add(v);
           }
         }
       }
-      frontier = next;
     }
-    int n = 0;
-    for (Var v : reached) {
-      if (squares.contains(v)) {
-        n++;
-      }
-    }
-    return n;
+    return next;
   }
 
   /**
