@@ -7389,6 +7389,28 @@ Version 5.0 (unreleased)
    total time 3,708 -> 1,011 s (three base runs ran out of memory at
    4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
 
+411. Free search (-f) on routing models: on the giant-tour CVRP model of
+   the MiniZinc Challenge 2015 with CVRPLIB X instances, -f at 600 s finds
+   23,954 instead of 44,120 on X-n110-k13 and 26,191 instead of 56,345 on
+   X-n120-k6 (CP-SAT 9.15 with one worker 32,871 and 36,139).
+   - Route neighbourhoods of LNS start from the solution that LCG hands
+     over to free search without learning; before, LNS waited for a
+     better solution of free search's own and on X-n110-k13 first ran
+     after about 490 s.
+   - A slow LCG search is kept for a bound raise only when it closes
+     lcg-slow-bound-gain (default 0.0005) of the gap to the best cost; a
+     raise from 4 to 5 against 59,211 no longer keeps it. From
+     lcg-hopeless-at (2 % of the time limit) LCG gives way below
+     lcg-hopeless-rate (1 conflict/s).
+   - Element constraints are no longer queued for a change of a position
+     their index cannot select (Constraint.wakeNeeded()): +50 % failures/s
+     on X-n110-k13, where each variable is in about 330 element lists.
+   - LNS takes the share lns-share-routes (3) of free search's calls on
+     models with routes, instead of lns-share (0.8).
+   On the 88 wide-set instances with an element or circuit constraint the
+   time over the set goes from 15,991 to 15,202 s at 600 s;
+   benchmarks/cvrp-giant-tour in osolpro has the runs.
+
 Version 4.11
 =============
 
