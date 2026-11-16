@@ -4632,7 +4632,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private int neighbourhoodRuns(long nanos) {
     long end = Math.min(sat.now() + nanos, sat.deadline());
-    while (sat.now() < end) {
+    while (sat.now() < end && !stopRequested) {
       int[] fixed = lns.neighbourhood();
       int[] upper = lns.upperBounded();
       int[] assumed = new int[fixed.length + upper.length];
@@ -4652,7 +4652,8 @@ public final class LcgSolver implements ExternalPropagator {
         }
       }
       long before = best[objective];
-      sat.setConflictLimit(sat.conflicts + lnsConflicts);
+      long limit = sat.conflicts + lnsConflicts;
+      sat.setConflictLimit(limit);
       lnsRuns++;
       int result = solve(Arrays.copyOf(assumed, n));
       boolean improved = best[objective] < before;
@@ -4662,6 +4663,18 @@ public final class LcgSolver implements ExternalPropagator {
       if (result == CdclSolver.SAT
           || (result == CdclSolver.UNSAT && sat.failedAssumptions().length == 0)) {
         return result;
+      }
+      if (result == CdclSolver.UNKNOWN && sat.conflicts < limit) {
+        // stopped by the deadline, a stop request or the work limit of the phase, not by its own
+        // conflicts: the size of the neighbourhood was not too large, and the runs end. On
+        // MaximumAgreementForest2-exact12 (XCSP 2026) the slow-LCG hand-over stopped LCG in its
+        // runs, which went on until their share of the time ended: 7,000 runs without a conflict,
+        // each counted as too large, shrank every neighbourhood to 2 variables, and free search
+        // without learning went on with those (no better solution in 100 s)
+        if (improved) {
+          lns.outcome(AdaptiveLns.Outcome.IMPROVED);
+        }
+        break;
       }
       AdaptiveLns.Outcome outcome;
       if (improved) {
