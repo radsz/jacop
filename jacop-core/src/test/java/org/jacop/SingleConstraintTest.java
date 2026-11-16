@@ -10403,6 +10403,33 @@ class SingleConstraintTest extends TestHelper {
     assertThat(cx.max()).isEqualTo(1);
   }
 
+  @Test
+  void elementIsNotQueuedForAPositionTheIndexCannotSelect() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "i", 1, 3);
+    IntVar[] list = new IntVar[3];
+    for (int p = 0; p < 3; p++) {
+      list[p] = new IntVar(store, "x" + p, 0, 10);
+    }
+    IntVar value = new IntVar(store, "v", 0, 10);
+    store.impose(new ElementVariableFast(index, list, value));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    index.domain.in(store.level, index, 1, 2);
+    assertThat(store.consistency()).isTrue();
+    // the third position cannot be selected: its change does not wake the element
+    list[2].domain.in(store.level, list[2], 5, 5);
+    long calls = store.numberConsistencyCalls;
+    assertThat(store.consistency()).isTrue();
+    assertThat(store.numberConsistencyCalls).isEqualTo(calls);
+    // a change at a selectable position still prunes the value
+    list[0].domain.in(store.level, list[0], 7, 7);
+    list[1].domain.in(store.level, list[1], 8, 8);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.min()).isEqualTo(7);
+    assertThat(value.max()).isEqualTo(8);
+  }
+
   /**
    * An exact TableCover requires the values that tuples cover in the range of the domains, but a
    * value that no variable can take (a hole in that range) cannot be taken: the all different over

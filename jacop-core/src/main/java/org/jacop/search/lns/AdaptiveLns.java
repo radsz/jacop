@@ -761,6 +761,15 @@ public final class AdaptiveLns {
     return this;
   }
 
+  /**
+   * Returns whether the neighbourhoods follow vehicle routes (route and related removal).
+   *
+   * @return true when the variables hold the successors or arcs of routes.
+   */
+  public boolean hasRoutes() {
+    return !routings.isEmpty();
+  }
+
   /** The routing structures, for tests. */
   List<RouteStructure> routings() {
     return routings;
@@ -788,17 +797,13 @@ public final class AdaptiveLns {
    * Records as the best solution one given by values rather than held by the store: the solution
    * that another search found before this one, which the store no longer admits once the search
    * must improve on it. Nothing is recorded when a variable of the neighbourhoods, a node they
-   * read, has no value given and is not fixed, or when the neighbourhoods follow vehicle routes,
-   * which read their solution from the store.
+   * read, or a variable of the vehicle routes, has no value given and is not fixed.
    *
    * @param xs variables of the store
    * @param values their values in the solution
    * @return true when the solution was recorded
    */
   public boolean solution(IntVar[] xs, int[] values) {
-    if (!routings.isEmpty()) {
-      return false;
-    }
     Map<IntVar, Integer> valueOf = new IdentityHashMap<>();
     for (int k = 0; k < xs.length; k++) {
       valueOf.put(xs[k], values[k]);
@@ -824,6 +829,18 @@ public final class AdaptiveLns {
       if (!known[terms[k]]) {
         return false;
       }
+    }
+    for (RouteStructure r : routings) {
+      if (!r.knows(valueOf)) {
+        return false;
+      }
+    }
+    // the routes are read from the given values: LCG hands its best solution over to free search
+    // without learning, which must improve on it. Without them a model with routes started its
+    // neighbourhoods only once free search found a better solution from scratch: CVRPLIB X-n110-k13
+    // (giant tour of the 2015 Challenge model) at 600 s never ran a neighbourhood before 490 s
+    for (RouteStructure r : routings) {
+      r.solution(valueOf);
     }
     System.arraycopy(given, 0, incumbent, 0, vars.length);
     for (int k = 0; k < terms.length; k++) {

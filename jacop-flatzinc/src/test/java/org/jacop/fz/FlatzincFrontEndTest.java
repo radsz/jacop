@@ -375,6 +375,49 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void equalLongSetArraysAreKeptOnceAndDifferentOnesApart() throws IOException {
+    // Set arrays of 1024 or more sets are kept once for each content (MiniZinc repeats the label
+    // sets of an MDD for every constraint). S1 and S2 are equal, S3 differs in its last set only:
+    // x and y may take 0..2 and z 0..3.
+    int n = 1024;
+    StringBuilder sets = new StringBuilder();
+    StringBuilder other = new StringBuilder();
+    StringBuilder from = new StringBuilder();
+    StringBuilder to = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      String sep = i == 0 ? "" : ",";
+      sets.append(sep).append('{').append(i % 3).append('}');
+      other.append(sep).append('{').append(i == n - 1 ? 3 : i % 3).append('}');
+      from.append(sep).append(1);
+      to.append(sep).append(0);
+    }
+    String fzn =
+        "array [1..%d] of set of int: S1 = [%s];%n".formatted(n, sets)
+            + "array [1..%d] of set of int: S2 = [%s];%n".formatted(n, sets)
+            + "array [1..%d] of set of int: S3 = [%s];%n".formatted(n, other)
+            + "array [1..%d] of int: F = [%s];%n".formatted(n, from)
+            + "array [1..%d] of int: T = [%s];%n".formatted(n, to)
+            + """
+            var 0..5: x:: output_var;
+            var 0..5: y:: output_var;
+            var 0..5: z:: output_var;
+            constraint jacop_mdd([x],[1],F,S1,T);
+            constraint jacop_mdd([y],[1],F,S2,T);
+            constraint jacop_mdd([z],[1],F,S3,T);
+            solve satisfy;
+            """;
+    Set<String> expected = new HashSet<>();
+    for (int x = 0; x <= 2; x++) {
+      for (int y = 0; y <= 2; y++) {
+        for (int z = 0; z <= 3; z++) {
+          expected.add("x = " + x + "; y = " + y + "; z = " + z + ";");
+        }
+      }
+    }
+    assertEquals(expected, solveAll(fzn));
+  }
+
+  @Test
   void outputFileGetsEverySolutionWhenAllAreRequested() throws IOException {
     // With -a the output file kept only the last solution, so golden files of the MiniZinc
     // based tests could not record all solutions.
@@ -2781,12 +2824,14 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgSplitsLongLinearConstraintsAndKeepsTheOptimum() throws IOException {
-    // --lcg splits a linear constraint of more than 40 terms into sums of blocks of about
+    // --lcg splits a linear constraint of more than 20 terms into sums of blocks of about
     // sqrt(n) terms: the optimum stays that of the flat constraints and of the CP solver, and the
-    // linear reasons, about 32 atoms on the flat sums, get below 16
+    // linear reasons, about 32 atoms on the flat sums of 60 terms, get below 16; sums of 25 terms
+    // are split too, with shorter reasons than flat
     java.util.Random rnd = new java.util.Random(3);
-    for (int run = 0; run < 12; run++) {
-      int n = 60;
+    int shorter25 = 0;
+    for (int run = 0; run < 16; run++) {
+      int n = run < 12 ? 60 : 25;
       StringBuilder model = new StringBuilder();
       // 60 terms over 6 independent values: each x(i) equals y(i mod 6), so the search is small
       for (int j = 0; j < 6; j++) {
@@ -2823,18 +2868,31 @@ class FlatzincFrontEndTest {
       model.append(
           "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
               .formatted(run % 2 == 0 ? "minimize" : "maximize"));
-      String flat = lastObjective(run(model.toString(), "--lcg", "--free-config", "lcg-split=0"));
+      String[] flatRun =
+          run(model.toString(), "--lcg", "--search-statistics", "--free-config", "lcg-split=0");
+      String flat = lastObjective(flatRun);
       String cp = lastObjective(run(model.toString()));
-      String[] split = run(model.toString(), "--lcg", "-s");
+      String[] split = run(model.toString(), "--lcg", "--search-statistics");
       assertEquals(cp, flat, model.toString());
       assertEquals(cp, lastObjective(split), model.toString());
-      java.util.regex.Matcher m =
-          java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
-              .matcher(split[0]);
-      if (m.find() && Long.parseLong(m.group(1)) > 0) {
-        assertTrue(Double.parseDouble(m.group(2)) < 16, split[0]);
+      double splitAtoms = linearAtoms(split[0]);
+      if (n == 60 && splitAtoms >= 0) {
+        assertTrue(splitAtoms < 16, split[0]);
+      }
+      double flatAtoms = linearAtoms(flatRun[0]);
+      if (n == 25 && splitAtoms >= 0 && flatAtoms >= 0) {
+        shorter25 += splitAtoms < flatAtoms ? 1 : 0;
       }
     }
+    assertTrue(shorter25 > 0, "no sum of 25 terms got shorter linear reasons");
+  }
+
+  // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
+  private static double linearAtoms(String out) {
+    java.util.regex.Matcher m =
+        java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
+            .matcher(out);
+    return m.find() && Long.parseLong(m.group(1)) > 0 ? Double.parseDouble(m.group(2)) : -1;
   }
 
   // the last obj = value or status line printed
