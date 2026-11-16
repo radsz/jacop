@@ -6885,8 +6885,11 @@ Version 5.0 (unreleased)
    better on 16 and worse on none (57 proved both ways), default search
    better on 17 and worse on 1 (60 proved, was 58): ramsey k3_n17
    13395 -> 10372 (CP-SAT 600 s: 11579), HaplotypeAssembly 1874 -> 1560,
-   mpe random-net-100-2 95863 -> 91062, drmx-cryptogen 872 -> 819. It
-   fires on 2 of the 240 wide instances. --free-config maxsat=0 turns it
+   mpe random-net-100-2 95863 -> 91062, drmx-cryptogen 872 -> 819. On
+   the 23 gap instances of the screen at 600 s, -f is better on 9 and
+   worse on 2 (10 proved, was 9; total time 0.945), default search
+   better on 8 and worse on 3 (10 proved, was 9; 0.962). It fires on 2
+   of the 240 wide instances, with the same results. --free-config maxsat=0 turns it
    off; maxsat-share (0.05 of the time limit), maxsat-max (60000 ms),
    maxsat-patience (1000 ms), maxsat-lns (200000 flips per proposal),
    maxsat-bound, maxsat-hard and maxsat-smooth tune it.
