@@ -946,7 +946,9 @@ public class LinearRelaxation extends Constraint
         valueColumns++;
       }
     }
-    anyLpOnly = valueColumns > 0;
+    // a free column (a wire of a sorting network, the objective of a refutation) has no value
+    // either: a row over it is not checked on a ground assignment
+    anyLpOnly = valueColumns > 0 || freeColumns > 0;
     int further = rc.size() - base;
     extraColumns = rc.subList(base, rc.size()).toArray(new int[0][]);
     extraWeights = rw.subList(base, rw.size()).toArray(new long[0][]);

@@ -2666,6 +2666,27 @@ class LinearRelaxationTest {
             .isTrue();
       }
     }
+    // a model whose variables are all fixed before the refutation's first solve: the row of its
+    // free objective column has no value to check (balance_partition of the FlatZinc tests was
+    // refuted when the ground check took the column's least value)
+    Store fixed = new Store();
+    IntVar[] y = new IntVar[4];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(fixed, "y" + i, 0, 1);
+    }
+    fixed.impose(new LinearInt(y, new int[] {1, 1, 1, 1}, "<=", 2));
+    LinearRelaxation g =
+        LinearRelaxation.refutation(
+            fixed,
+            List.of(
+                new LinearForm(new IntVar[] {y[0], y[1]}, new long[] {1, 1}, 1, LinearForm.GE),
+                new LinearForm(new IntVar[] {y[2], y[3]}, new long[] {1, 1}, 1, LinearForm.GE)));
+    assertThat(g).isNotNull();
+    fixed.impose(g);
+    for (int i = 0; i < y.length; i++) {
+      fixed.impose(new XeqC(y[i], i % 2));
+    }
+    assertThat(fixed.consistency()).isTrue();
     for (int holes = 5; holes <= 6; holes++) {
       Store store = new Store();
       int pigeons = 6;
