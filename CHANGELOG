@@ -7389,7 +7389,7 @@ Version 5.0 (unreleased)
    total time 3,708 -> 1,011 s (three base runs ran out of memory at
    4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
 
-410. The FlatZinc front end keeps large tables in memory once and builds
+411. The FlatZinc front end keeps large tables in memory once and builds
    less for them, so the XCSP 2026 models with large tables no longer run
    out of memory at 6 GB. Short tables with equal rows share one
    HybridTable index (CrosswordDesign posts 96 of them, 4 distinct);
