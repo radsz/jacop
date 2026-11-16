@@ -193,6 +193,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    s.setVmtf(Math.floorMod(seed, 3L) != 2);
     s.ensureVars(vars);
     for (int[] c : f) {
       s.addClause(c);
@@ -221,6 +222,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    s.setVmtf(Math.floorMod(seed, 3L) != 2);
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();

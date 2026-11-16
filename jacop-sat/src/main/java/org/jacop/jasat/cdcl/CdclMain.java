@@ -81,6 +81,7 @@ public final class CdclMain {
     boolean walk = true;
     long seed = 0;
     int elimInterval = 5000;
+    boolean vmtf = true;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);
@@ -94,6 +95,7 @@ public final class CdclMain {
         case "--walk" -> walk = !"0".equals(args[++i]);
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
+        case "--vmtf" -> vmtf = !"0".equals(args[++i]);
         default -> file = args[i];
       }
     }
@@ -101,7 +103,7 @@ public final class CdclMain {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
               + " [--elim 0|1] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
-              + " [--elim-interval conflicts] file.cnf[.gz]");
+              + " [--elim-interval conflicts] [--vmtf 0|1] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -113,6 +115,7 @@ public final class CdclMain {
     solver.setWalk(walk);
     solver.setSeed(seed);
     solver.setEliminationInterval(elimInterval);
+    solver.setVmtf(vmtf);
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }
