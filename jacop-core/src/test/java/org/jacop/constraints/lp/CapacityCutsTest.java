@@ -228,4 +228,121 @@ class CapacityCutsTest {
     // either two arcs from the depot at least, or the arcs between 1 and 2 at most 0
     assertThat(best.entering() ? best.bound() : 2 - best.bound()).isEqualTo(2);
   }
+
+  // whether every route of the arcs at 1 keeps the time windows: it leaves the depot at
+  // earliest[0], reaches each node at max(earliest, time + travel) by latest, and comes back by
+  // latest[0]
+  private static boolean timely(
+      int[] tails, int[] heads, int[] bits, long[] earliest, long[] latest, long[] travel) {
+    int n = earliest.length;
+    int[] arcOut = new int[n];
+    Arrays.fill(arcOut, -1);
+    for (int a = 0; a < bits.length; a++) {
+      if (bits[a] == 1 && tails[a] != heads[a] && tails[a] != 0) {
+        arcOut[tails[a]] = a;
+      }
+    }
+    for (int a = 0; a < bits.length; a++) {
+      if (bits[a] != 1 || tails[a] != 0 || heads[a] == 0) {
+        continue;
+      }
+      long t = earliest[0];
+      int arc = a;
+      for (int steps = 0; steps <= n; steps++) {
+        int w = heads[arc];
+        t = Math.max(earliest[w], t + travel[arc]);
+        if (t > latest[w]) {
+          return false;
+        }
+        if (w == 0) {
+          break;
+        }
+        arc = arcOut[w];
+      }
+    }
+    return true;
+  }
+
+  /**
+   * No infeasible path cut, from any LP values, cuts off a set of routes that keeps the time
+   * windows, and such routes violate no cut.
+   */
+  @Test
+  void pathCutsKeepEveryTimelySetOfRoutes() {
+    int separated = 0;
+    for (int run = 0; run < INSTANCES; run++) {
+      Random rnd = new Random(1000 + run);
+      Graph g = graph(rnd);
+      int n = g.n();
+      long[] earliest = new long[n];
+      long[] latest = new long[n];
+      latest[0] = 10 + rnd.nextInt(20);
+      for (int v = 1; v < n; v++) {
+        earliest[v] = rnd.nextInt(10);
+        latest[v] = earliest[v] + rnd.nextInt(12);
+      }
+      long[] travel = new long[g.tails().length];
+      for (int a = 0; a < travel.length; a++) {
+        travel[a] = rnd.nextInt(8) == 0 ? Long.MIN_VALUE : 1 + rnd.nextInt(6);
+      }
+      Store store = new Store();
+      IntVar[] literals = new IntVar[g.tails().length];
+      for (int a = 0; a < literals.length; a++) {
+        literals[a] = new IntVar(store, "x" + a, 0, 1);
+      }
+      Routes routes = new Routes(g.tails(), g.heads(), literals, g.demands(), g.capacity());
+      routes.setTimeWindows(earliest, latest, travel);
+      CapacityCuts cuts = new CapacityCuts(routes);
+      List<int[]> solutions = new ArrayList<>();
+      for (int[] s : g.solutions()) {
+        if (timely(g.tails(), g.heads(), s, earliest, latest, travel)) {
+          solutions.add(s);
+        }
+      }
+      for (int[] s : solutions) {
+        double[] value = Arrays.stream(s).asDoubleStream().toArray();
+        assertThat(cuts.separate(value, 100)).as("seed %d solution %s", run, s).isEmpty();
+      }
+      for (int trial = 0; trial < 20; trial++) {
+        double[] value = new double[literals.length];
+        for (int a = 0; a < value.length; a++) {
+          value[a] = rnd.nextInt(3) == 0 ? 0 : rnd.nextInt(2) == 0 ? 1 : rnd.nextDouble();
+        }
+        int before = cuts.pathCuts();
+        for (CapacityCuts.Cut cut : cuts.separate(value, 100)) {
+          double act = activity(cut, value);
+          assertThat(cut.entering() ? act < cut.bound() : act > cut.bound())
+              .as("seed %d: the values violate %s", run, cut)
+              .isTrue();
+          for (int[] s : solutions) {
+            assertThat(holds(cut, s)).as("seed %d: %s cuts off %s", run, cut, s).isTrue();
+          }
+        }
+        separated += cuts.pathCuts() - before;
+      }
+    }
+    assertThat(separated).isPositive();
+  }
+
+  /** A path whose second customer closes before the first can be left is cut off. */
+  @Test
+  void infeasiblePathIsCut() {
+    // depot 0, customers 1 and 2: 2 opens at 0 and closes at 3, 1 opens at 5, so 1-2 cannot be
+    // followed although the arc is there; 0-1-2-0 at 1 violates x(0,1) + x(1,2) <= 1
+    int[] tails = {0, 0, 1, 2, 1, 2};
+    int[] heads = {1, 2, 2, 1, 0, 0};
+    Store store = new Store();
+    IntVar[] x = new IntVar[tails.length];
+    for (int a = 0; a < x.length; a++) {
+      x[a] = new IntVar(store, "x" + a, 0, 1);
+    }
+    Routes routes = new Routes(tails, heads, x);
+    routes.setTimeWindows(
+        new long[] {0, 5, 0}, new long[] {100, 20, 3}, new long[] {1, 1, 1, 1, 1, 1});
+    CapacityCuts cuts = new CapacityCuts(routes);
+    double[] value = {1, 0, 1, 0, 0, 1};
+    List<CapacityCuts.Cut> found = cuts.separate(value, 10);
+    assertThat(found).isNotEmpty();
+    assertThat(cuts.pathCuts()).isPositive();
+  }
 }
