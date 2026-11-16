@@ -3773,7 +3773,7 @@ public class LinearRelaxation extends Constraint
       }
       long size = Math.max(1, lp.pivotWork());
       int status = rootSolvePool(Math.clamp(ROOT_WORK / size, 5, rootPivots));
-      if (status != DualSimplex.OPTIMAL) {
+      if (status != LpSolver.OPTIMAL) {
         return status;
       }
     }
@@ -3863,7 +3863,7 @@ public class LinearRelaxation extends Constraint
       if (tight) {
         restartBoundCuts += Math.max(0, cuts - cutsAtStart);
       }
-      if (status == DualSimplex.OPTIMAL) {
+      if (status == LpSolver.OPTIMAL) {
         restartCutBound = lp.value(0);
       }
     }
