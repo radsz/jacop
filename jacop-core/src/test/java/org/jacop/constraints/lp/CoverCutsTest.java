@@ -42,10 +42,11 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Tests the lifted cover cuts: every lifted cover inequality of random knapsacks, with any minimal
- * cover, holds on all their 0/1 points; every cut of random rows over 0/1 and general integer
- * columns with weights of both signs holds on all their integer points and is violated by the LP
- * point it was separated from; a textbook knapsack gets its lifted weights; and random
- * multi-knapsack models solved with the relaxation and its cover cuts keep their optimum.
+ * cover and both lifting functions, holds on all their 0/1 points; every cut of random rows over
+ * 0/1 and general integer columns with weights of both signs holds on all their integer points and
+ * is violated by the LP point it was separated from; a textbook knapsack gets its lifted weights;
+ * and random multi-knapsack models solved with the relaxation and its cover cuts keep their
+ * optimum.
  */
 class CoverCutsTest {
 
@@ -93,12 +94,19 @@ class CoverCutsTest {
       if (cover == null) {
         continue;
       }
-      long[] coef = CoverCuts.lifted(m, a, cover, side);
+      boolean scaled = trial % 2 == 1;
+      long[] coef = CoverCuts.lifted(m, a, cover, side, scaled);
+      long scale = coef[m];
+      long[] integral = CoverCuts.lifted(m, a, cover, side);
+      for (int k = 0; k < m; k++) {
+        // the scaled function is at least its integral rounding down
+        assertThat(coef[k]).isGreaterThanOrEqualTo(integral[k] * scale);
+      }
       int r = 0;
       for (int k = 0; k < m; k++) {
         if (cover[k]) {
           r++;
-          assertThat(coef[k]).isEqualTo(1);
+          assertThat(coef[k]).isEqualTo(scale);
         }
       }
       for (int mask = 0; mask < 1 << m; mask++) {
@@ -119,7 +127,7 @@ class CoverCutsTest {
                   java.util.Arrays.toString(cover),
                   java.util.Arrays.toString(coef),
                   Integer.toBinaryString(mask))
-              .isLessThanOrEqualTo(r - 1L);
+              .isLessThanOrEqualTo((r - 1L) * scale);
         }
       }
       checked++;

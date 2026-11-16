@@ -69,6 +69,11 @@ final class CoverCuts {
 
   private CoverCuts() {}
 
+  // the lifting function of Gu, Nemhauser and Savelsbergh with its fractional steps, scaled to
+  // integers (-Dorg.jacop.lp.coverScaled=false: its integral rounding down)
+  private static final boolean SCALED =
+      !Boolean.FALSE.toString().equals(System.getProperty("org.jacop.lp.coverScaled"));
+
   /**
    * Returns the most violated lifted cover cut of {@code sum c x <= b}, as a row {@code sum w x <=
    * rhs} over the same columns, or null when the row has no cover, no violated cut, or its
@@ -137,7 +142,7 @@ final class CoverCuts {
     if (inCover == null) {
       return null;
     }
-    long[] coef = lifted(m, a, inCover, side);
+    long[] coef = lifted(m, a, inCover, side, SCALED);
     int r = 0;
     for (int k = 0; k < m; k++) {
       if (inCover[k]) {
@@ -145,7 +150,7 @@ final class CoverCuts {
       }
     }
     // the cut sum coef y <= r - 1 over the knapsack's items, back over the columns
-    long rhs = r - 1L;
+    long rhs = Math.multiplyExact(r - 1L, coef[m]);
     Map<Integer, Long> weights = new TreeMap<>();
     for (int k = 0; k < m; k++) {
       if (coef[k] == 0) {
@@ -250,6 +255,18 @@ final class CoverCuts {
    * @return the weight of each item in the cut
    */
   static long[] lifted(int m, long[] a, boolean[] inCover, long side) {
+    return Arrays.copyOf(lifted(m, a, inCover, side, false), m);
+  }
+
+  /**
+   * Returns the weights of the lifted cover inequality, scaled: {@code sum coef y <= (|C| - 1) s}
+   * with the scale {@code s} at index {@code m}. Unscaled ({@code s = 1}) the function is the
+   * integral {@code g} of the class comment; scaled, it is the function of Gu, Nemhauser and
+   * Savelsbergh itself, {@code h} on {@code [mu_h - lambda + rho_h, mu_(h+1) - lambda]} and {@code
+   * h - (mu_h - lambda + rho_h - z) / rho_1} just below, times {@code s = rho_1} so that it stays
+   * integral.
+   */
+  static long[] lifted(int m, long[] a, boolean[] inCover, long side, boolean scaled) {
     int r = 0;
     for (int k = 0; k < m; k++) {
       if (inCover[k]) {
@@ -271,23 +288,43 @@ final class CoverCuts {
     }
     long lambda = mu[r] - side;
     long a1 = sorted[r - 1];
-    long[] coef = new long[m];
+    // rho[h] = max(0, a_(h+1) - (a_1 - lambda)), h = 0 .. r - 1
+    long[] rho = new long[r];
+    for (int h = 0; h < r; h++) {
+      rho[h] = Math.max(0, sorted[r - 1 - h] - (a1 - lambda));
+    }
+    long scale = scaled && r >= 2 ? Math.max(1, rho[1]) : 1;
+    long[] coef = new long[m + 1];
+    coef[m] = scale;
     for (int k = 0; k < m; k++) {
       if (inCover[k]) {
-        coef[k] = 1;
+        coef[k] = scale;
         continue;
       }
       long z = a[k];
       if (z > side) {
         // the item never fits: any weight is valid, r keeps the cut tightest
-        coef[k] = r;
+        coef[k] = Math.multiplyExact(r, scale);
         continue;
       }
+      if (scale == 1) {
+        int h = 0;
+        while (h + 1 <= r - 1 && z > mu[h + 1] - lambda && z >= mu[h + 2] - a1) {
+          h++;
+        }
+        coef[k] = h;
+        continue;
+      }
+      // the class of the exact lifting function: the largest h <= r - 1 with z > mu_h - lambda
       int h = 0;
-      while (h + 1 <= r - 1 && z > mu[h + 1] - lambda && z >= mu[h + 2] - a1) {
+      while (h + 1 <= r - 1 && z > mu[h + 1] - lambda) {
         h++;
       }
-      coef[k] = h;
+      long flat = Math.addExact(mu[h] - lambda, rho[h]);
+      coef[k] =
+          h == 0 || z >= flat
+              ? Math.multiplyExact(h, scale)
+              : Math.multiplyExact(h, scale) - (flat - z);
     }
     return coef;
   }
