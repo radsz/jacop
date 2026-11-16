@@ -6861,6 +6861,16 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+383. ElementVariableFast finds the list positions of a variable that woke
+   it in a table indexed by the variable's store index when the indexes of
+   its list span few values, instead of by binary search. On MiniZinc
+   Challenge 2023 multi-agent-graph-coverage rnd_n75 1086 elements share
+   two lists of 543 variables, so every change of a variable wakes 543
+   elements, and the binary searches took 16 % of the solving time: the
+   same search runs in 0.76-0.87 of the time. On the 18 wide instances
+   where the wakes take at least 1 % of the time the total time is 1.004
+   with identical search (virtual clock, 2 rounds).
+
 Version 4.11
 =============
 
