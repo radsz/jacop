@@ -108,6 +108,9 @@ public class Conditional extends Constraint
     }
 
     setScope(Stream.concat(Arrays.stream(b), vs.stream()));
+    // the nested constraints are included in the store when this one is imposed, so that those
+    // with a backtrackable state of their own (Count, CountVar, ...) create it
+    setConstraintScope(this.c);
     queueForward = new QueueForward<>(this.c, arguments());
   }
 

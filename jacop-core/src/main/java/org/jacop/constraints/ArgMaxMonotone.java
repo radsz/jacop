@@ -95,6 +95,8 @@ public class ArgMaxMonotone extends Constraint implements SatisfiedPresent, Expl
 
   private final long[] suffixWorst;
 
+  private final long[] suffixBest;
+
   /**
    * It creates the constraint index = first position of max_k f[k](list[k]).
    *
@@ -132,6 +134,7 @@ public class ArgMaxMonotone extends Constraint implements SatisfiedPresent, Expl
     this.indexOffset = indexOffset;
     this.prefixWorst = new long[list.length + 1];
     this.suffixWorst = new long[list.length + 1];
+    this.suffixBest = new long[list.length + 1];
     setScope(Stream.concat(Arrays.stream(list), Stream.of(index)));
   }
 
@@ -298,9 +301,36 @@ public class ArgMaxMonotone extends Constraint implements SatisfiedPresent, Expl
         }
       }
     } else {
-      int im = index.min();
-      for (int k = 0; k < list.length; k++) {
-        valueAtMost(store, k, k + 1 + indexOffset < im ? ub - 1 : ub);
+      boundValuesByIndex(store, ub);
+    }
+  }
+
+  /*
+   * A position the index can take has a value at most ub, the largest best value over those
+   * positions. A position it cannot take may not reach the first maximum: its value stays at most
+   * the best value of an index position before it, or below the best value of one after it.
+   */
+  private void boundValuesByIndex(Store store, long ub) {
+    int n = list.length;
+    suffixBest[n] = Long.MIN_VALUE;
+    for (int k = n - 1; k >= 0; k--) {
+      suffixBest[k] = suffixBest[k + 1];
+      if (index.domain.contains(k + 1 + indexOffset)) {
+        suffixBest[k] = Math.max(suffixBest[k], best(k));
+      }
+    }
+    long before = Long.MIN_VALUE;
+    for (int k = 0; k < n; k++) {
+      if (index.domain.contains(k + 1 + indexOffset)) {
+        valueAtMost(store, k, ub);
+        before = Math.max(before, best(k));
+      } else {
+        long after = suffixBest[k + 1] == Long.MIN_VALUE ? Long.MIN_VALUE : suffixBest[k + 1] - 1;
+        long bound = Math.max(before, after);
+        if (bound < worst(k)) {
+          throw Store.failException;
+        }
+        valueAtMost(store, k, Math.min(bound, ub));
       }
     }
   }
