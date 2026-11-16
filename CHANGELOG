@@ -6861,6 +6861,17 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+384. The LP relaxation keeps the definitions of the shared sums of linear
+   overlap factoring that its rows still use. It replaces those sums by
+   their definitions only up to depth 8 but dropped every definition, so
+   the deeper sums of nested sets were free columns: CSPLib bus driver
+   scheduling c1 had root bound 4.4 instead of 25.4 (optimum 26). With -f
+   at 600 s on the 20 instances it reaches (12 bus driver scheduling, 8 of
+   the 240 wide instances): 15 -> 18 proved (c1 10 s, c2 20 s, r5a 193 s),
+   total time 3,389 -> 1,898 s; fixed search at 240 s 11 -> 13 proved.
+   The factoring is the horizontal overlap rule of the CP-SAT presolve
+   (L. Perron, F. Didier, CP-SAT, OR-Tools 9.15).
+
 Version 4.11
 =============
 
