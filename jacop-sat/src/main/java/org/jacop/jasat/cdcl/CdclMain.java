@@ -40,17 +40,18 @@ import java.io.PrintStream;
  *
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
- *          [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n] [--elim-interval conflicts]
+ *          [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n] [--elim-interval conflicts]
  *          [--lucky 0|1] file.cnf[.gz]
  * </pre>
  *
  * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
  * backtracking off), {@code --shrink 0} turns all-UIP shrinking off, {@code --elim 0} turns
- * variable elimination off, {@code --vivify 0} turns vivification off and {@code --walk 0} turns
- * local search off. {@code --ema 0} restarts on Glucose's LBD queue instead of fast and slow LBD
- * averages. {@code --seed} changes the initial decision order and {@code --elim-interval} sets when
- * elimination runs again during search (0 for never). {@code --lucky 0} turns the lucky assignments
- * before the search off ({@link CdclSolver#setLucky}).
+ * variable elimination off, {@code --factor 0} turns bounded variable addition off ({@code
+ * --factor-effort} bounds its work), {@code --vivify 0} turns vivification off and {@code --walk 0}
+ * turns local search off. {@code --ema 0} restarts on Glucose's LBD queue instead of fast and slow
+ * LBD averages. {@code --seed} changes the initial decision order and {@code --elim-interval} sets
+ * when elimination runs again during search (0 for never). {@code --lucky 0} turns the lucky
+ * assignments before the search off ({@link CdclSolver#setLucky}).
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -77,6 +78,8 @@ public final class CdclMain {
     int chrono = 100;
     boolean shrink = true;
     boolean elim = true;
+    boolean factor = true;
+    long factorEffort = -1;
     boolean vivify = true;
     boolean ema = true;
     boolean walk = true;
@@ -91,6 +94,8 @@ public final class CdclMain {
         case "--chrono" -> chrono = Integer.parseInt(args[++i]);
         case "--shrink" -> shrink = !"0".equals(args[++i]);
         case "--elim" -> elim = !"0".equals(args[++i]);
+        case "--factor" -> factor = !"0".equals(args[++i]);
+        case "--factor-effort" -> factorEffort = Long.parseLong(args[++i]);
         case "--vivify" -> vivify = !"0".equals(args[++i]);
         case "--ema" -> ema = !"0".equals(args[++i]);
         case "--walk" -> walk = !"0".equals(args[++i]);
@@ -103,7 +108,7 @@ public final class CdclMain {
     if (file == null) {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
-              + " [--elim 0|1] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
+              + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
               + " [--elim-interval conflicts] [--lucky 0|1] file.cnf[.gz]");
       System.exit(1);
     }
@@ -111,6 +116,10 @@ public final class CdclMain {
     solver.setChronoLimit(chrono);
     solver.setShrink(shrink);
     solver.setElimination(elim);
+    solver.setFactoring(factor);
+    if (factorEffort >= 0) {
+      solver.setFactorEffort(factorEffort);
+    }
     solver.setVivification(vivify);
     solver.setEmaRestarts(ema);
     solver.setWalk(walk);
@@ -145,13 +154,16 @@ public final class CdclMain {
           "c eliminated variables %d, walk %.2f s%n",
           solver.eliminatedCount(), solver.walkNanos / 1e9);
       out.printf(
+          "c factored variables %d, clauses %d, effort %d, factor %.2f s%n",
+          solver.factoredVars, solver.factoredClauses, solver.factorWork, solver.factorNanos / 1e9);
+      out.printf(
           "c lucky %s, %.2f s%n",
           solver.luckyFound == null ? "none" : solver.luckyFound, solver.luckyNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");
       StringBuilder line = new StringBuilder("v");
-      for (int v = 1; v <= solver.numVars(); v++) {
+      for (int v = 1; v <= solver.numInputVars(); v++) {
         line.append(' ').append(solver.modelValue(v) ? v : -v);
         if (line.length() > 70) {
           out.println(line);

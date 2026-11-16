@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -113,6 +114,69 @@ class CdclSolverTest {
       value[v] = s.modelValue(v);
     }
     return value;
+  }
+
+  /** Pigeons into holes: each pigeon in some hole, at most one pigeon per hole. */
+  private static List<int[]> pigeons(int pigeons, int holes) {
+    List<int[]> f = new ArrayList<>();
+    for (int p = 0; p < pigeons; p++) {
+      int[] c = new int[holes];
+      for (int h = 0; h < holes; h++) {
+        c[h] = p * holes + h + 1;
+      }
+      f.add(c);
+    }
+    for (int h = 0; h < holes; h++) {
+      for (int p = 0; p < pigeons; p++) {
+        for (int q = p + 1; q < pigeons; q++) {
+          f.add(new int[] {-(p * holes + h + 1), -(q * holes + h + 1)});
+        }
+      }
+    }
+    return f;
+  }
+
+  @Test
+  void boundedVariableAdditionKeepsAnswersAndProofs() throws IOException {
+    List<int[]> unsat = pigeons(7, 6);
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.setFactoring(true);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    DratWriter drat = new DratWriter(out);
+    s.setProof(drat);
+    unsat.forEach(s::addClause);
+    assertEquals(CdclSolver.UNSAT, s.solve());
+    drat.close();
+    assertTrue(s.factoredVars > 0, "the at-most-one cliques are factored");
+    assertEquals(42, s.numInputVars());
+    assertNull(RupChecker.check(42, unsat, out.toString(StandardCharsets.US_ASCII)));
+
+    List<int[]> sat = pigeons(6, 6);
+    CdclSolver t = new CdclSolver();
+    t.setChecking(true);
+    t.setFactoring(true);
+    // the forward lucky pass satisfies the pigeons before factoring would run
+    t.setLucky(false);
+    sat.forEach(t::addClause);
+    assertEquals(CdclSolver.SAT, t.solve());
+    assertTrue(t.factoredVars > 0);
+    for (int[] c : sat) {
+      boolean holds = false;
+      for (int l : c) {
+        holds |= t.modelValue(Math.abs(l)) == l > 0;
+      }
+      assertTrue(holds, "the model satisfies the input clauses");
+    }
+    // the fresh variables are not the caller's
+    assertThrows(IllegalStateException.class, () -> t.addClause(t.numInputVars() + 1));
+    // a clause on an eliminated input variable brings back the removed clauses, the ones on fresh
+    // variables included
+    assertTrue(t.eliminatedCount() > 0, "elimination ran after the factoring");
+    for (int h = 1; h <= 6; h++) {
+      t.addClause(-h);
+    }
+    assertEquals(CdclSolver.UNSAT, t.solve(), "pigeon 1 has no hole left");
   }
 
   @Test

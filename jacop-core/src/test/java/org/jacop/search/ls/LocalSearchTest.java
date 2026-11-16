@@ -50,8 +50,10 @@ import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
@@ -732,6 +734,134 @@ class LocalSearchTest {
             .build();
     assertEquals(LocalSearch.Status.NOT_APPLICABLE, none.solve());
     assertEquals(0, none.getSteps());
+  }
+
+  // a permutation flow shop as the fz front end posts pfsp.mzn: positions x[k], one table per
+  // position with the times of its job, precedences between the starts; the makespan plus extra
+  private static IntVar flowShop(Store store, int[][] p, int extra) {
+    int m = p.length;
+    int n = p[0].length;
+    IntVar[] x = new IntVar[n];
+    IntVar[][] s = new IntVar[m][n];
+    IntVar[][] d = new IntVar[m][n];
+    for (int k = 0; k < n; k++) {
+      x[k] = new IntVar(store, "x" + k, 1, n);
+      for (int i = 0; i < m; i++) {
+        s[i][k] = i + k == 0 ? null : new IntVar(store, "s" + i + "_" + k, 0, 1000);
+        d[i][k] = new IntVar(store, "d" + i + "_" + k, 1, 99);
+      }
+      IntVar[] columns = new IntVar[m + 1];
+      int[][] tuples = new int[n][m + 1];
+      for (int j = 0; j < n; j++) {
+        for (int i = 0; i < m; i++) {
+          tuples[j][i] = p[i][j];
+        }
+        tuples[j][m] = j + 1;
+      }
+      for (int i = 0; i < m; i++) {
+        columns[i] = d[i][k];
+      }
+      columns[m] = x[k];
+      store.impose(new HybridTable(columns, tuples));
+    }
+    store.impose(new Alldistinct(x));
+    for (int i = 0; i < m; i++) {
+      for (int k = 0; k < n; k++) {
+        if (k > 0) {
+          before(store, s[i][k - 1], d[i][k - 1], s[i][k]);
+        }
+        if (i > 0) {
+          before(store, s[i - 1][k], d[i - 1][k], s[i][k]);
+        }
+      }
+    }
+    IntVar end = new IntVar(store, "end", 0, 1000);
+    store.impose(new XplusYeqZ(s[m - 1][n - 1], d[m - 1][n - 1], end));
+    IntVar cost = new IntVar(store, "cost", 0, 2000);
+    store.impose(new XplusCeqZ(end, extra, cost));
+    return cost;
+  }
+
+  // s + d <= t, s null for the start 0 of the first operation
+  private static void before(Store store, IntVar s, IntVar d, IntVar t) {
+    store.impose(s == null ? new XlteqY(d, t) : new XplusYlteqZ(s, d, t));
+  }
+
+  private static int bestFlowShop(int[][] p, int[] perm, int k) {
+    if (k == perm.length) {
+      int[] c = new int[p.length];
+      for (int j : perm) {
+        for (int i = 0; i < p.length; i++) {
+          c[i] = Math.max(c[i], i > 0 ? c[i - 1] : 0) + p[i][j];
+        }
+      }
+      return c[p.length - 1];
+    }
+    int best = Integer.MAX_VALUE;
+    for (int t = k; t < perm.length; t++) {
+      int a = perm[k];
+      perm[k] = perm[t];
+      perm[t] = a;
+      best = Math.min(best, bestFlowShop(p, perm, k + 1));
+      perm[t] = perm[k];
+      perm[k] = a;
+    }
+    return best;
+  }
+
+  /**
+   * The iterated greedy search of a permutation flow shop, run alone as fz runs it under -f, finds
+   * the optimum of small flow shops (brute force over the sequences), and gives way when the cost
+   * is not the makespan.
+   */
+  @Test
+  void runsIteratedGreedyOnPermutationFlowShops() {
+    java.util.Random random = new java.util.Random(5);
+    for (int trial = 0; trial < 6; trial++) {
+      int m = 2 + random.nextInt(3);
+      int n = 4 + random.nextInt(4);
+      int[][] p = new int[m][n];
+      for (int[] row : p) {
+        for (int j = 0; j < n; j++) {
+          row[j] = 1 + random.nextInt(40);
+        }
+      }
+      int[] perm = new int[n];
+      for (int j = 0; j < n; j++) {
+        perm[j] = j;
+      }
+      int optimum = bestFlowShop(p, perm, 0);
+      Store store = new Store();
+      IntVar cost = flowShop(store, p, 0);
+      assertTrue(store.consistency());
+      LocalSearch ls =
+          LocalSearch.builder(store)
+              .minimize(cost)
+              .scheduleOnly(true)
+              .timeLimit(Duration.ofSeconds(5))
+              .patience(Duration.ofMillis(200))
+              .seed(trial)
+              .build();
+      assertEquals(LocalSearch.Status.SATISFIED, ls.solve(), "trial " + trial);
+      assertEquals(optimum, ls.getCostValue(), "trial " + trial);
+      assertArrayEquals(new long[] {n, m}, Arrays.copyOf(ls.getFlowShopCounts(), 2));
+
+      // the cost is the makespan plus 5: the sequences do not give it, the search gives way
+      Store other = new Store();
+      IntVar shifted = flowShop(other, p, 5);
+      assertTrue(other.consistency());
+      LocalSearch none =
+          LocalSearch.builder(other)
+              .minimize(shifted)
+              .scheduleOnly(true)
+              .timeLimit(Duration.ofSeconds(5))
+              .patience(Duration.ofMillis(200))
+              .seed(trial)
+              .build();
+      LocalSearch.Status status = none.solve();
+      assertTrue(status != LocalSearch.Status.SATISFIED || none.getCostValue() >= optimum + 5);
+      assertTrue(none.getFlowShopCounts()[2] <= 1, "trial " + trial);
+    }
   }
 
   /** An open shop (machines and jobs as unary resources, no precedences) is left to the search. */
