@@ -40,17 +40,17 @@ import java.io.PrintStream;
  *
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
- *          [--factor 0|1] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n] [--elim-interval conflicts]
+ *          [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n] [--elim-interval conflicts]
  *          file.cnf[.gz]
  * </pre>
  *
  * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
  * backtracking off), {@code --shrink 0} turns all-UIP shrinking off, {@code --elim 0} turns
- * variable elimination off, {@code --factor 0} turns bounded variable addition off, {@code --vivify
- * 0} turns vivification off and {@code --walk 0} turns local search off. {@code --ema 0} restarts
- * on Glucose's LBD queue instead of fast and slow LBD averages. {@code --seed} changes the initial
- * decision order and {@code --elim-interval} sets when elimination runs again during search (0 for
- * never).
+ * variable elimination off, {@code --factor 0} turns bounded variable addition off ({@code
+ * --factor-effort} bounds its work), {@code --vivify 0} turns vivification off and {@code --walk 0}
+ * turns local search off. {@code --ema 0} restarts on Glucose's LBD queue instead of fast and slow
+ * LBD averages. {@code --seed} changes the initial decision order and {@code --elim-interval} sets
+ * when elimination runs again during search (0 for never).
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -105,7 +105,7 @@ public final class CdclMain {
     if (file == null) {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
-              + " [--elim 0|1] [--factor 0|1] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
+              + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
               + " [--elim-interval conflicts] file.cnf[.gz]");
       System.exit(1);
     }

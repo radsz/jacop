@@ -302,6 +302,8 @@ public final class CdclSolver {
   // the variables above this one are fresh variables of the factorizer
   private int factorBase = Integer.MAX_VALUE;
   private long factorEffort = Factorizer.EFFORT_LIMIT;
+  // restoreEliminated adds back clauses on fresh variables too
+  private boolean restoring;
 
   /** Statistics: fresh variables added by bounded variable addition. */
   public int factoredVars;
@@ -502,7 +504,9 @@ public final class CdclSolver {
       }
       maxVar = Math.max(maxVar, Math.abs(lits[i]));
     }
-    checkNotFresh(maxVar);
+    if (!restoring) {
+      checkNotFresh(maxVar);
+    }
     ensureVars(maxVar);
     for (int i = 0; i < n && numEliminated > 0; i++) {
       if (eliminatedVar[Math.abs(lits[i]) - 1]) {
@@ -3942,7 +3946,12 @@ public final class CdclSolver {
       if (proof != null) {
         proof.add(ext, start, size);
       }
-      addClause(c, size);
+      restoring = true;
+      try {
+        addClause(c, size);
+      } finally {
+        restoring = false;
+      }
       i = start;
     }
   }

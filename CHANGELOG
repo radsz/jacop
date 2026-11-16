@@ -6596,6 +6596,23 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
+366. JaSAT can rewrite a formula by bounded variable addition before its
+   first variable elimination (org.jacop.jasat.cdcl.Factorizer,
+   CdclSolver.setFactoring, on by default in CdclMain, --factor 0 turns
+   it off): a grid of clauses f_p v R_i over factor literals f_1..f_k and
+   quotients R_1..R_n becomes x v f_p and -x v R_i on a fresh variable x,
+   k*n clauses into k+n, so at-most-one cliques and similar products
+   shrink from quadratic to linear size (N. Manthey, M. J. H. Heule and
+   A. Biere, Automated reencoding of Boolean formulas, HVC 2012, in the
+   form of Kissat's factor; ties as in A. Haberlandt, H. Green and
+   M. J. H. Heule, Effective auxiliary variables via structured
+   reencoding, SAT 2023). The DRAT proof has the new clauses as RAT
+   steps. On 90 SAT Competition 2024/25 instances at 240 s CdclMain
+   solves 34 instead of 30 (reg-n UNSAT in 3 s, or_randxor, clique
+   formulas, puzzle, planning, oddball weighing and ensemble computation
+   are new; three satisfiable instances are lost). It is off in
+   CdclSolver otherwise, so lazy clause generation is unchanged.
+
 Version 4.11
 =============
 

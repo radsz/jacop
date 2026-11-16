@@ -347,9 +347,13 @@ class CdclFuzzTest {
   void fuzz() throws IOException {
     long runs = Long.getLong("fuzz.runs", 2000);
     long base = Long.getLong("fuzz.seed", 1);
+    long progress = Long.getLong("fuzz.progress", 100_000);
     long unsat = 0;
     for (long run = 0; run < runs; run++) {
       long seed = base * 1_000_003L + run;
+      if (Boolean.getBoolean("fuzz.trace")) {
+        System.out.println("fuzz: seed " + seed);
+      }
       Random rnd = new Random(seed);
       int[] vars = new int[1];
       List<int[]> f = randomFormula(rnd, vars);
@@ -366,7 +370,7 @@ class CdclFuzzTest {
           unsat++;
         }
       }
-      if ((run + 1) % 100_000 == 0) {
+      if ((run + 1) % progress == 0) {
         System.out.println("fuzz: " + (run + 1) + " runs, " + unsat + " UNSAT");
       }
     }
