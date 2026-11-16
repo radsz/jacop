@@ -7004,20 +7004,26 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
-390. Core exhaustion (386) is on by default, for 8 outputs per core, when
-   the core-guided phase of LCG runs on objective terms that are all 0-1
-   variables, as in MaxSAT models (-Djacop.lcg.coreExhaustZeroOne=K,
-   LcgSolver.setCoreExhaustZeroOne, 0 = off; the statistic
-   lcgCoreZeroOneTerms says whether the terms qualify). Under -f at 600 s,
-   on the 32 MaxSAT Evaluation 2024 instances where exhaustion fires, the
-   total time is 5128 s instead of 5578 s (0.919) with 26 proved instead
-   of 25 (quantum-circuit realamprandom 64 s instead of unproved, mqc
-   10tree510p 7 s instead of 19 s, mqc 10tree120p 196 s instead of 263 s;
-   frb20-11-1 322 s instead of 181 s, synplicate 30 s instead of 9 s).
-   On the 62 wide-quick instances at 240 s under -f the total is 0.992
-   (6659 s instead of 6715 s), the same 36 proved: the gate fires on 8 of
-   them and leaves out the two that exhaustion slowed down (is
-   A3PZaPjnUz, work-task seed 8), whose objective terms are not 0-1.
+390. Core exhaustion (386) is on by default, for 8 outputs per core
+   (-Djacop.lcg.coreExhaust=K, 0 = off), and gives up once the first
+   output of 16 cores per output it proved, plus 16, was not refuted
+   (-Djacop.lcg.coreExhaustPatience=P, LcgSolver.setCoreExhaustPatience,
+   0 = never). A failed test costs conflicts and changes the solver's
+   phases and learnt clauses: on is A3PZaPjnUz, where no output is ever
+   refuted, it kept the core-guided phase from the objective probes that
+   prove the optimum (1.7 s -> 13 s); with the patience rule 1.8 s.
+   Under -f at 600 s, on the 14 wide instances with objective terms
+   that are not all 0-1 where exhaustion fires, the total time is 1255 s
+   instead of 1512 s (0.830) with 13 proved instead of 12 (lot-sizing
+   pigment20a 370 s instead of unproved, workforce-alloc 202 41 s
+   instead of 72 s, prize-collecting 32-4-8-2 22 s instead of 26 s;
+   accap instance5 62 s instead of 46 s). On the 32 MaxSAT Evaluation
+   2024 instances where exhaustion fires, against exhaustion without the
+   patience rule, 5510 s instead of 5625 s (0.980), 25 proved in both
+   (it was 0.919 and 26 against no exhaustion). On the 62 wide-quick
+   instances at 240 s under -f the total is 0.997 (6632 s instead of
+   6649 s), the same 36 proved; the two that exhaustion alone slowed
+   down (is A3PZaPjnUz, work-task seed 8) did not move.
 
 Version 4.11
 =============

@@ -4460,11 +4460,11 @@ public final class LcgSolver implements ExternalPropagator {
 
   // -Djacop.lcg.coreExhaust=K: the most totalizer outputs of each relaxed core that the
   // core-guided phase tests alone (core exhaustion); 0 = never
-  private int coreExhaust = Integer.getInteger("jacop.lcg.coreExhaust", 0);
+  private int coreExhaust = Integer.getInteger("jacop.lcg.coreExhaust", 8);
 
   /**
    * Sets how many outputs of each new totalizer the core-guided phase assumes alone and relaxes as
-   * unit cores while they are refuted (core exhaustion); 0, the default, tests none.
+   * unit cores while they are refuted (core exhaustion); the default is 8, 0 tests none.
    *
    * @param outputs the most outputs per core (property {@code jacop.lcg.coreExhaust})
    */
@@ -4476,22 +4476,24 @@ public final class LcgSolver implements ExternalPropagator {
     return coreExhaust;
   }
 
-  // -Djacop.lcg.coreExhaustZeroOne=K: the same when every core term is a 0-1 variable
-  private int coreExhaustZeroOne = Integer.getInteger("jacop.lcg.coreExhaustZeroOne", 8);
+  // -Djacop.lcg.coreExhaustPatience=P: core exhaustion stops once the first output of P cores
+  // per output it proved, plus P, was not refuted; 0 = never stops
+  private int coreExhaustPatience = Integer.getInteger("jacop.lcg.coreExhaustPatience", 16);
 
   /**
-   * Sets how many outputs of each new totalizer are exhausted, as in {@link #setCoreExhaust}, when
-   * the cores run on terms of 0-1 variables only (a MaxSAT-like objective); the larger of the two
-   * settings applies there. The default is 8; 0 leaves such objectives to {@link #setCoreExhaust}.
+   * Sets when core exhaustion gives up: once the test of the first output of a core has failed P
+   * times for each output exhaustion proved, plus P times. A failed test costs work and changes the
+   * solver's phases and learnt clauses, which on some models keeps the core-guided phase from the
+   * objective probes that prove the optimum. The default is 16; 0 never gives up.
    *
-   * @param outputs the most outputs per core (property {@code jacop.lcg.coreExhaustZeroOne})
+   * @param patience P (property {@code jacop.lcg.coreExhaustPatience})
    */
-  public void setCoreExhaustZeroOne(int outputs) {
-    coreExhaustZeroOne = outputs;
+  public void setCoreExhaustPatience(int patience) {
+    coreExhaustPatience = patience;
   }
 
-  int coreExhaustZeroOne() {
-    return coreExhaustZeroOne;
+  int coreExhaustPatience() {
+    return coreExhaustPatience;
   }
 
   /**

@@ -163,13 +163,6 @@ public final class CoreSearch {
    */
   public boolean termsBySpanRatio;
 
-  /** Whether the cores run on terms of 0-1 variables only (a MaxSAT-like objective). */
-  public boolean zeroOneTerms;
-
-  private int exhaustOutputs() {
-    return zeroOneTerms ? Math.max(lcg.coreExhaust(), lcg.coreExhaustZeroOne()) : lcg.coreExhaust();
-  }
-
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
 
@@ -293,7 +286,6 @@ public final class CoreSearch {
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
     search.termsBySpanRatio = termSpan > blockSpan;
-    search.zeroOneTerms = zeroOne;
     if (!search.startProof(definitions)) {
       return null;
     }
@@ -1463,6 +1455,9 @@ public final class CoreSearch {
 
   private Totalizer lastTotalizer;
 
+  // cores whose first output exhaustion tested without refuting it
+  private long exhaustMisses;
+
   /**
    * Core exhaustion as in RC2 (Ignatiev, Morgado and Marques-Silva, JSAT 11, 2019): after a core of
    * at least two literals is relaxed, the outputs "at least j of them false" of its new totalizer,
@@ -1473,11 +1468,15 @@ public final class CoreSearch {
    * @return false when the solver became unsatisfiable at the root
    */
   private boolean exhaust(int size, long phaseLimit) {
-    if (exhaustOutputs() <= 0 || size < 2 || lastTotalizer == null) {
+    int patience = lcg.coreExhaustPatience();
+    if (lcg.coreExhaust() <= 0
+        || size < 2
+        || lastTotalizer == null
+        || patience > 0 && exhaustMisses >= patience * (1 + exhaustedOutputs)) {
       return true;
     }
     Totalizer tot = lastTotalizer;
-    int last = Math.min(Math.min(tot.inputs.length, tot.outputs.length), exhaustOutputs() + 1);
+    int last = Math.min(Math.min(tot.inputs.length, tot.outputs.length), lcg.coreExhaust() + 1);
     boolean refuted = true;
     boolean open = true;
     for (int k = 2; refuted && open && k <= last; k++) {
@@ -1492,6 +1491,9 @@ public final class CoreSearch {
         // an empty core: unsatisfiable without assumptions
         open = failed.length != 0;
         refuted = failed.length == 1;
+        if (!refuted && k == 2) {
+          exhaustMisses++;
+        }
         if (refuted) {
           exhaustedOutputs++;
           open = relax(failed, true);

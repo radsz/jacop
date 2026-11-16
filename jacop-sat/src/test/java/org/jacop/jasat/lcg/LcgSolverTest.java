@@ -4944,9 +4944,9 @@ class LcgSolverTest {
 
   private static final int DEFAULT_EXHAUST = Integer.MAX_VALUE;
 
-  /** Core exhaustion is on by default when every objective term is a 0-1 variable. */
+  /** Core exhaustion is on by default. */
   @Test
-  void zeroOneObjectivesExhaustCoresByDefault() {
+  void coresAreExhaustedByDefault() {
     Random rnd = new Random(31);
     long exhausted = 0;
     for (int instance = 0; instance < 40; instance++) {
@@ -5010,7 +5010,6 @@ class LcgSolverTest {
     solver.setCoreSearch(1, 1_000_000, 100_000);
     if (exhaust != DEFAULT_EXHAUST) {
       solver.setCoreExhaust(exhaust);
-      solver.setCoreExhaustZeroOne(exhaust);
     }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);

@@ -4523,8 +4523,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.probeHalfWays
         + "\n%%%mzn-stat: lcgCoreTermsBySpanRatio="
         + core.termsBySpanRatio
-        + "\n%%%mzn-stat: lcgCoreZeroOneTerms="
-        + core.zeroOneTerms
         + "\n%%%mzn-stat: lcgBoundDives="
         + lcg.boundDives
         + "\n%%%mzn-stat: lcgBoundDiveSolutions="
