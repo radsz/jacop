@@ -296,6 +296,25 @@ public final class CdclSolver {
   private int eliminationRounds;
   private long seed;
 
+  // --- bounded variable addition before the first elimination (see Factorizer)
+  private boolean factoring;
+  private boolean factored;
+  // the variables above this one are fresh variables of the factorizer
+  private int factorBase = Integer.MAX_VALUE;
+  private long factorEffort = Factorizer.EFFORT_LIMIT;
+
+  /** Statistics: fresh variables added by bounded variable addition. */
+  public int factoredVars;
+
+  /** Statistics: clauses removed by bounded variable addition, net of the added ones. */
+  public long factoredClauses;
+
+  /** Statistics: time spent in bounded variable addition. */
+  public long factorNanos;
+
+  /** Statistics: effort spent in bounded variable addition (see {@link #setFactorEffort}). */
+  public long factorWork;
+
   // --- external propagator (see ExternalPropagator)
   private ExternalPropagator external;
   private int externalReasonKeep = 2;
@@ -483,6 +502,7 @@ public final class CdclSolver {
       }
       maxVar = Math.max(maxVar, Math.abs(lits[i]));
     }
+    checkNotFresh(maxVar);
     ensureVars(maxVar);
     for (int i = 0; i < n && numEliminated > 0; i++) {
       if (eliminatedVar[Math.abs(lits[i]) - 1]) {
@@ -559,6 +579,7 @@ public final class CdclSolver {
     for (int a : assumed) {
       maxVar = Math.max(maxVar, Math.abs(a));
     }
+    checkNotFresh(maxVar);
     ensureVars(maxVar);
     assumptions = new int[assumed.length];
     for (int i = 0; i < assumed.length; i++) {
@@ -954,6 +975,46 @@ public final class CdclSolver {
    */
   public void setElimination(boolean on) {
     elimination = on;
+  }
+
+  /**
+   * Turns bounded variable addition on or off (off by default). It runs once, in the first {@link
+   * #solve} call, just before the first variable elimination (so only with elimination on), and it
+   * adds fresh variables above {@link #numInputVars()}: a model of the new formula is one of the
+   * input formula on the input variables. A clause or an assumption on a variable above them is an
+   * error afterwards, so it suits one-shot solving such as {@link CdclMain}, not a caller that adds
+   * variables between calls. See {@link Factorizer}.
+   *
+   * @param on whether to add variables
+   */
+  public void setFactoring(boolean on) {
+    factoring = on;
+  }
+
+  /**
+   * Sets the effort (clause and occurrence visits) bounded variable addition may spend.
+   *
+   * @param effort the effort limit
+   */
+  public void setFactorEffort(long effort) {
+    factorEffort = effort;
+  }
+
+  /**
+   * Returns the number of variables of the input formula: {@link #numVars()} without the fresh
+   * variables of bounded variable addition.
+   *
+   * @return the largest input DIMACS variable
+   */
+  public int numInputVars() {
+    return Math.min(numVars, factorBase);
+  }
+
+  private void checkNotFresh(int maxVar) {
+    if (maxVar > factorBase) {
+      throw new IllegalStateException(
+          "variable " + maxVar + " is a fresh variable of bounded variable addition");
+    }
   }
 
   /**
@@ -3727,6 +3788,23 @@ public final class CdclSolver {
       if (vals[a] <= 0 && vals[b] <= 0) {
         input[n++] = new int[] {a, b};
       }
+    }
+    if (factoring && !factored) {
+      factored = true;
+      long begin = System.nanoTime();
+      Factorizer f = new Factorizer(numVars, input, n, proof, factorEffort);
+      f.setDeadline(deadline);
+      if (f.run() > 0) {
+        input = f.clauses();
+        factoredClauses = n - (long) input.length;
+        n = input.length;
+        factorBase = numVars;
+        factoredVars = f.numFresh();
+        ensureVars(f.numVars());
+        frozen = Arrays.copyOf(frozen, numVars);
+      }
+      factorWork = f.effort();
+      factorNanos = System.nanoTime() - begin;
     }
     Eliminator e = new Eliminator(numVars, input, n, frozen, proof);
     boolean sat = e.run();
