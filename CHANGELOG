@@ -6599,7 +6599,23 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-366. The linear relaxation takes the rows over the terms of the objective on
+366. JaLP's presolve also removes forcing rows and fixes dominated columns
+   (Andersen and Andersen, "Presolving in linear programming",
+   Mathematical Programming 71 (1995), sections 3.2 and 3.5; part of the
+   Gurobi catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger,
+   "Presolve reductions in mixed integer programming", INFORMS J. Comput.
+   32 (2020)). A row whose activity reaches its bound only with every column
+   at one of its bounds fixes those columns; the postsolve gives the row
+   the dual that keeps their reduced costs feasible and makes the column
+   that sets it basic. Bounds on the duals from the row sides and from
+   column singletons without a bound fix columns whose reduced cost cannot
+   be 0. -Dorg.jacop.jalp.presolveForcing=false and
+   -Dorg.jacop.jalp.presolveDominated=false turn them off. They fire on
+   149 of the 687 LPs of the LP bench (pivots 0.92x there, time 0.96-0.97x
+   above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
+   build an LP, where results stay the same.
+
+367. The linear relaxation takes the rows over the terms of the objective on
    the sparse simplex when they do not fit the dense tableau. A model
    stated in clauses and elements has few rows of its own (CSPLib
    warehouses, prob034: 2), so the dense simplex was chosen and the clause
@@ -6613,7 +6629,7 @@ Version 5.0 (unreleased)
    proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
    turns it off; the statistic lpNearRows gives the rows taken.
 
-367. Symmetry breaking posts value precedence in models whose own
+368. Symmetry breaking posts value precedence in models whose own
    lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
    hid that their values are interchangeable. Each such constraint
    X <=lex sigma(X) must compare a prefix of one common order, with sigma
@@ -6626,7 +6642,7 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
-368. Free search (-f) of an optimisation model without a search
+369. Free search (-f) of an optimisation model without a search
    annotation, after slow lazy clause generation gave way without a
    solution, takes turns until its first solution with runs that fix the
    search variables in the model's order, least value first
@@ -6640,7 +6656,7 @@ Version 5.0 (unreleased)
    with a solution and 7 better against 3 worse (seed spread); neutral on
    the wide set.
 
-369. The FlatZinc front end posts the reified comparisons of one variable
+370. The FlatZinc front end posts the reified comparisons of one variable
    with constants (int_le_reif, int_lt_reif with a constant on either
    side) and their half-reifications (int_le_imp, int_lt_imp) as one
    ChannelOrder per variable with two or more of them, in place of one
@@ -6657,7 +6673,7 @@ Version 5.0 (unreleased)
    reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
    half-reifications.
 
-370. ArgMax and ArgMin bound the values at positions that the index can
+371. ArgMax and ArgMin bound the values at positions that the index can
    no longer take: such a position may not reach the extreme over the
    positions the index can still take (strictly for positions after
    them, since the first extreme wins). ArgMax and ArgMin now reach
