@@ -7023,6 +7023,8 @@ Version 5.0 (unreleased)
    Kissat and JaCoP did not solve in 600 s, fixed-shape-random, puzzle,
    pythagorean-triples), heule-nol 49 -> 13 s, no instance lost, total
    time 0.947; UNSAT instances take the share, 1.107 on the 13 proved.
+   At 600 s 41 -> 45 of the 90 are solved, total time 0.942 on the 60
+   not solved by both at 240 s.
 
 Version 4.11
 =============
