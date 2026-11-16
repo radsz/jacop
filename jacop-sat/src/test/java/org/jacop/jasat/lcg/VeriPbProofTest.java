@@ -1023,6 +1023,30 @@ class VeriPbProofTest {
   }
 
   @Test
+  void channelOrderItemsOfTheSameBooleanAreJoined() {
+    // b <=> x > 1 and b <=> x <= 1 fail under b without a hole: the model states each item as a
+    // sum of the order literals of x under b, and unit propagation does not join two of them
+    // (fuzz seed 17211274)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, 4);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new ChannelOrder(
+            x, new IntVar[] {b, b, b}, new int[] {1, 1, 2}, new boolean[] {false, true, false}));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
     IntVar b = new IntVar(store, "b", 0, 1);

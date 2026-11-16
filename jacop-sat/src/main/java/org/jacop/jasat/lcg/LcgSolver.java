@@ -2003,7 +2003,11 @@ public final class LcgSolver implements ExternalPropagator {
     if (proofStarted && c instanceof ChannelOrder channel) {
       // each item is a reified bound of x, whose bound past a hole of x unit propagation misses
       // (b <=> x > -1 and b <=> x <= 0 fail under b when 0 is a hole)
-      for (Constraint item : channel.reifications()) {
+      List<Constraint> items = channel.reifications();
+      for (Constraint item : items) {
+        proofOrderItem((AbstractReifiedConstraint) item, atoms, from, entry);
+      }
+      for (Constraint item : items) {
         proofReifiedBounds((AbstractReifiedConstraint) item, atoms, from, entry);
       }
       return;
@@ -2021,6 +2025,70 @@ public final class LcgSolver implements ExternalPropagator {
       f = ((IncreasingSum) c).sumRow();
     }
     proofLinearBounds(f, atoms, from, entry, "");
+  }
+
+  /**
+   * Writes the order literal of an item b &lt;=&gt; x &lt;= t (or x &gt; t) of a channel under b,
+   * and its negation under not b, when b is in the reason. The model states the item as a sum of
+   * the order literals of x under b, and unit propagation does not join two such sums under the
+   * same b (b &lt;=&gt; x &gt; 1 and b &lt;=&gt; x &lt;= 1 fail under b, but x &gt;= 3 sums do not
+   * meet x &lt;= 2 ones); over the order literal itself it does.
+   */
+  private void proofOrderItem(
+      AbstractReifiedConstraint item, EntryList atoms, int from, int entry) {
+    LinearForm f = OpbEncoder.form(item.c);
+    if (f == null || f.vars().length != 1 || Math.abs(f.weights()[0]) != 1) {
+      return;
+    }
+    int b = trail.id(item.b);
+    boolean cited = entry >= 0 && trail.id(proofTrail.variable(entry)) == b;
+    for (int k = from; k < atoms.size() && !cited; k++) {
+      cited = trail.id(proofTrail.variable(atoms.get(k))) == b;
+    }
+    IntDomain bRoot = proofDomains[b];
+    if (!cited && !bRoot.singleton()) {
+      return;
+    }
+    // the row as x >= v (w x >= c, or w x <= c with w = -1) or x <= v
+    long w = f.weights()[0];
+    boolean atLeast = f.relation() == LinearForm.GE ? w > 0 : w < 0;
+    long v = f.c() * w;
+    int x = trail.id(f.vars()[0]);
+    String holds = proofBound(x, atLeast, v);
+    String fails = proofBound(x, !atLeast, atLeast ? v - 1 : v + 1);
+    String one = OpbEncoder.ge(b, 1);
+    if (bRoot.max() >= 1) {
+      proofGuarded(bRoot.singleton() ? "" : one, holds);
+    }
+    if (bRoot.min() <= 0 && item instanceof Reified) {
+      proofGuarded(bRoot.singleton() ? "" : OpbEncoder.negate(one), fails);
+    }
+  }
+
+  /** Returns the literal x &gt;= v (or x &lt;= v) over the root domain of x: "1" or "0" past it. */
+  private String proofBound(int x, boolean atLeast, long v) {
+    IntDomain d = proofDomains[x];
+    if (atLeast) {
+      return v <= d.min() ? "1" : v > d.max() ? "0" : OpbEncoder.ge(x, (int) v);
+    }
+    return v >= d.max()
+        ? "1"
+        : v < d.min() ? "0" : OpbEncoder.negate(OpbEncoder.ge(x, (int) v + 1));
+  }
+
+  /** Writes the rup step "guard implies literal" (guard empty for none), unless it is true. */
+  private void proofGuarded(String guard, String literal) {
+    if ("1".equals(literal) || guard.isEmpty() && "0".equals(literal)) {
+      return;
+    }
+    StringBuilder s = new StringBuilder("rup");
+    if (!guard.isEmpty()) {
+      s.append(" 1 ").append(OpbEncoder.negate(guard));
+    }
+    if (!"0".equals(literal)) {
+      s.append(" 1 ").append(literal);
+    }
+    proof.lemma(s.append(" >= 1 ;\n"));
   }
 
   /**
