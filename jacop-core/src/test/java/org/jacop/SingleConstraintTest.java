@@ -10299,6 +10299,29 @@ class SingleConstraintTest extends TestHelper {
         .isTrue();
   }
 
+  /**
+   * Diffn skipped a rectangle fixed at an earlier level as already checked. When the store raised
+   * its level before the first consistency (as it does once Alldistinct is imposed), rectangles
+   * fixed after impose at level 0 were first seen at level 1, all skipped, and two overlapping ones
+   * were accepted.
+   */
+  @Test
+  void diffnChecksRectanglesFixedBeforeARaisedLevel() {
+    Store store = new Store();
+    int[] values = {2, 1, 1, 1, 2, 0, 1, 2};
+    IntVar[] x = new IntVar[values.length];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 2);
+    }
+    store.impose(
+        new Diffn(new IntVar[][] {{x[0], x[1], x[2], x[3]}, {x[4], x[5], x[6], x[7]}}, true));
+    for (int i = 0; i < x.length; i++) {
+      x[i].domain.in(store.level, x[i], values[i], values[i]);
+    }
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static int root(int[] parent, int v) {
     while (parent[v] != v) {
       v = parent[v];
