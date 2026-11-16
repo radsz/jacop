@@ -281,6 +281,24 @@ class HybridTableTest {
   }
 
   @Test
+  void aSecondImpositionStartsWithAnEmptyQueue() {
+    // LcgSolver.release imposes again a table that lazy clause generation held as clauses: the
+    // columns its first imposition queued were never taken off, and the second one overflowed the
+    // queue (ArrayIndexOutOfBoundsException on Solomon R201_50 under -f when LCG gave way)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 3);
+    IntVar y = new IntVar(store, "y", 1, 3);
+    IntVar z = new IntVar(store, "z", 1, 3);
+    HybridTable table =
+        new HybridTable(
+            new IntVar[] {x, y, z}, new int[][] {{1, 1, 2}, {2, 2, 3}, {3, 1, 1}, {3, 3, 3}});
+    table.impose(store);
+    table.impose(store);
+    assertThat(store.consistency()).isTrue();
+    assertThat(z.dom().min()).isEqualTo(1);
+  }
+
+  @Test
   void validTuplesComeBackFromTheStoreTrailOnly() {
     Store store = new Store();
     IntVar x = new IntVar(store, "x", 1, 3);
