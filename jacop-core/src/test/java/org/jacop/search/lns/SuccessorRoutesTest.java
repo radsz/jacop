@@ -132,6 +132,58 @@ class SuccessorRoutesTest {
     assertEquals(Set.of("[0, 1]", "[2, 3]", "[4, 5]"), found);
   }
 
+  // the solution as values, the way LCG hands it over to free search without learning
+  private void givenSolution(IntVar[] xs, int[] values) {
+    int total = 0;
+    for (int v = 0; v < N; v++) {
+      int d = Math.abs(position(v) - position(NEXT[v]));
+      total += d;
+      xs[v] = next[v];
+      values[v] = NEXT[v] + 1;
+      xs[N + v] = load[v];
+      values[N + v] = v;
+      xs[2 * N + v] = distance[v];
+      values[2 * N + v] = d;
+    }
+    xs[3 * N] = cost;
+    values[3 * N] = total;
+  }
+
+  @Test
+  void routesAreReadFromAGivenSolution() {
+    AdaptiveLns lns = new AdaptiveLns(store, decisionVars(), cost, new Random(1));
+    assertFalse(lns.ready());
+    IntVar[] xs = new IntVar[3 * N + 1];
+    int[] values = new int[3 * N + 1];
+    givenSolution(xs, values);
+    assertTrue(lns.solution(xs, values));
+    assertTrue(lns.ready());
+    Set<String> found = new HashSet<>();
+    for (int[] route : lns.routings().get(0).bestRoutes()) {
+      found.add(Arrays.toString(route));
+    }
+    assertEquals(Set.of("[0, 1]", "[2, 3]", "[4, 5]"), found);
+    // the neighbourhoods fix variables to the given values
+    int[] fixed = lns.neighbourhood();
+    assertTrue(fixed.length > 0);
+    for (int k : fixed) {
+      assertEquals(k < N ? NEXT[k] + 1 : k - N, lns.value(k));
+    }
+  }
+
+  @Test
+  void aGivenSolutionWithoutASuccessorIsNotRecorded() {
+    AdaptiveLns lns = new AdaptiveLns(store, decisionVars(), cost, new Random(1));
+    IntVar[] xs = new IntVar[3 * N + 1];
+    int[] values = new int[3 * N + 1];
+    givenSolution(xs, values);
+    // the successor of customer 0 is left out
+    assertFalse(
+        lns.solution(
+            Arrays.copyOfRange(xs, 1, xs.length), Arrays.copyOfRange(values, 1, values.length)));
+    assertFalse(lns.ready());
+  }
+
   @Test
   void routeRemovalRelaxesTheSuccessorsAroundTheRemovedCustomers() {
     AdaptiveLns lns = withSolution(new AdaptiveLns(store, decisionVars(), cost, new Random(2)));
