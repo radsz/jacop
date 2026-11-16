@@ -7378,6 +7378,17 @@ Version 5.0 (unreleased)
    wide instances takes the new path. -Dorg.jacop.fz.pureClauses=false
    turns it off.
 
+410. Short tables saying that two lists differ are posted as AllDifferentLists.
+   ListsDifferDetector finds jacop_short_table_int over x ++ y whose rows
+   each fix position k of x and of y to two different values and hold
+   every such pair of the domains, which is x != y as XCSP3 pycsp3 writes
+   it (BinaryPuzzle of the XCSP 2023 competition: 6,320 tables of 160 rows
+   over 160 variables at size 80). A group of lists that all differ
+   pairwise becomes one AllDifferentLists, any other pair one of two
+   lists. On the 12 BinaryPuzzle instances at 600 s, solved 7 -> 12 and
+   total time 3,708 -> 1,011 s (three base runs ran out of memory at
+   4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
+
 Version 4.11
 =============
 
