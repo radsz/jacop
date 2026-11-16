@@ -995,7 +995,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (objective == null && options.proof() == null) {
       // a satisfaction model gets the value encodings for one root solve, which can refute it
       long built = System.nanoTime();
-      refutation = LinearRelaxation.refutation(store, refutationClauses);
+      refutation = LinearRelaxation.refutation(store, refutationClauses, splitSums());
       if (refutation == null) {
         refutation = LinearRelaxation.clauseRefutation(store, refutationClauses);
       }
@@ -1129,6 +1129,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + refutation.pairCliques
               + "\n%%%mzn-stat: lpRefutation="
               + refutation.refutationOutcome()
+              + "\n%%%mzn-stat: lpRefutationObjective="
+              + refutation.hasPseudoObjective()
               + "\n%%%mzn-stat: lpRefutationTime="
               + (refutationBuildNanos + refutation.solveNanos) / 1e9
               + "\n%%%mzn-stat: lpRefutationSolveTime="

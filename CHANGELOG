@@ -7004,6 +7004,33 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
+390. A satisfaction model without value encodings, such as a pure 0/1
+   (pseudo-Boolean) model, now gets a root refutation LP too. Before,
+   LinearRelaxation.refutation() needed value encodings, and the main
+   relaxation never ran cut rounds without an objective. The new LP takes
+   the model rows and the clause rows, with the block sums that lazy
+   clause generation split substituted back. It minimises a pseudo
+   objective t = sum w x over the inequality whose variables occur in the
+   most rows (clause rows are never chosen: pure CNF is left to the clause
+   refutation of item 385), with t in [min lhs, rhs]. Cut rounds (Gomory, MIR, zero-half) that push the
+   bound of t above rhs prove the model infeasible. Pigeonhole and
+   odd-cycle arguments are easy for the LP with cuts and exponential for
+   resolution (A. Haken, The intractability of resolution, Theoretical
+   Computer Science 39, 1985; M. W. Padberg, On the facial structure of
+   set packing polyhedra, Mathematical Programming 5, 1973). Pseudo-Boolean
+   competition instances proved UNSAT at 600 s that JaCoP could not prove
+   before: php_230_229 (7.6 s), phpexit_v2_10_092 (12.4 s), vc-grids
+   grid8_161 (1.6 s), vc-lines grid4_121 (0.8 s),
+   subsetcard-geq-random4reg-3500 (3.9 s) and miplib disctom (3.2 s);
+   vc-grids grid10_35 48.6 -> 0.9 s. The LP fires on 14 of the 240 wide
+   instances and on 65 of 222 PB instances. On those 79 at 600 s, 57 ->
+   63 are decided and nothing is lost. The total time goes from 15038 to
+   11036 s (wide 1345 -> 1313 s, PB 13692 -> 9723 s).
+   -Dorg.jacop.lp.refutationObjective=false turns it off, and
+   -Dorg.jacop.lp.refutationObjectiveLength (3) is the shortest row taken
+   as the objective. The statistic lpRefutationObjective tells when it
+   was built.
+
 Version 4.11
 =============
 
