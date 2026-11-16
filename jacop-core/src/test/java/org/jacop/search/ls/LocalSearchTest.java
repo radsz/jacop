@@ -33,6 +33,7 @@ package org.jacop.search.ls;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,11 +56,13 @@ import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.cumulative.Cumulative;
+import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
+import org.jacop.lcg.LinearForm;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -131,6 +134,43 @@ class LocalSearchTest {
       }
       assertTrue(Math.abs(sum - target) <= 5, sum + " vs " + target);
     }
+  }
+
+  /**
+   * Local search suspends the linear relaxations of the store while it runs. Afterwards a
+   * relaxation the caller suspended (free search waits with the root solve, org.jacop.fz.lpProbe)
+   * stays suspended, and one that was not solved yet is queued again, so that its first solve is at
+   * the root. Before, both missed their root call and were first solved inside a literal of root
+   * probing: the cuts and reduced costs of that solve held only under the literal, and -f proved
+   * 168 on rcpsp_max psp_j20_34 (MiniZinc Challenge 2010), whose optimum is 95.
+   */
+  @Test
+  void resumesRelaxationsAtTheRoot() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 10);
+    }
+    store.impose(new LinearInt(x, new int[] {1, 1, 1, 1}, "==", 17));
+    LinearRelaxation waiting =
+        new LinearRelaxation(
+            List.of(new LinearForm(x, new long[] {1, 1, 1, 1}, 17, LinearForm.EQ)), null, false);
+    store.impose(waiting);
+    waiting.suspend(true);
+    assertTrue(store.consistency());
+    // imposed after the root fixpoint: local search is the first to propagate it
+    LinearRelaxation unsolved =
+        new LinearRelaxation(
+            List.of(new LinearForm(x, new long[] {1, 2, 3, 4}, 60, LinearForm.LE)), null, false);
+    store.impose(unsolved);
+    LocalSearch ls = LocalSearch.builder(store).order(x).timeLimit(LIMIT).seed(3).build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    assertTrue(waiting.isSuspended());
+    assertFalse(unsolved.isSuspended());
+    assertFalse(unsolved.solved());
+    assertTrue(store.consistency());
+    assertTrue(unsolved.solved(), "the relaxation is solved at the root after local search");
+    assertFalse(waiting.solved());
   }
 
   private static void queens(boolean defined, boolean jump) {

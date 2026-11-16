@@ -2864,6 +2864,15 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Tells whether solving the relaxation is suspended, see {@link #suspend(boolean)}.
+   *
+   * @return true while suspended.
+   */
+  public boolean isSuspended() {
+    return suspended;
+  }
+
+  /**
    * Returns the size of the dense tableau of the first solve, its rows and the rows of the other
    * constraints that the first solve tries, times those rows and the columns: an estimate of the
    * cost of the root solve and its cut rounds, known before it runs.
