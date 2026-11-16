@@ -1120,7 +1120,8 @@ public final class LcgSolver implements ExternalPropagator {
       for (int k = 0; k < m; k++) {
         if (freeCounter[k] >= 0) {
           count[k] = restricted[k];
-          proofCounterBounds(freeCounter[k], values[k], dom, literals, counterLiterals[k]);
+          proofCounterBounds(
+              freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
         }
       }
     }
@@ -1385,7 +1386,12 @@ public final class LcgSolver implements ExternalPropagator {
     StringBuilder[] literals = new StringBuilder[n + 1];
     hypotheses(position, ids, atoms, from, entry, dom, literals);
     proofCounterBounds(
-        ids[n], c.countedValue(), Arrays.copyOf(dom, n), Arrays.copyOf(literals, n), literals[n]);
+        ids[n],
+        dom[n],
+        c.countedValue(),
+        Arrays.copyOf(dom, n),
+        Arrays.copyOf(literals, n),
+        literals[n]);
   }
 
   /**
@@ -1393,12 +1399,20 @@ public final class LcgSolver implements ExternalPropagator {
    * least the variables fixed to its value and at most those that can take it. The flow of {@link
    * #proofCardinality} sees the counter's interval only, and unit propagation over the order
    * literals of the counter does not reach a bound from the count of the value literals (the count
-   * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}).
+   * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}). The hole can be the model's
+   * or a hypothesis's (counter != 1 with the count pinned to 1).
    */
   private void proofCounterBounds(
-      int counter, int value, IntDomain[] dom, StringBuilder[] literals, StringBuilder own) {
+      int counter,
+      IntDomain restricted,
+      int value,
+      IntDomain[] dom,
+      StringBuilder[] literals,
+      StringBuilder own) {
     IntDomain d = proofDomains[counter];
-    if (d.getSize() == (long) d.max() - d.min() + 1) {
+    if (d.getSize() == (long) d.max() - d.min() + 1
+        && (restricted.isEmpty()
+            || restricted.getSize() == (long) restricted.max() - restricted.min() + 1)) {
       return;
     }
     int fixed = 0;

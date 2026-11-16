@@ -1047,6 +1047,30 @@ class VeriPbProofTest {
   }
 
   @Test
+  void countWithAHoleOfTheCounterInTheReasonIsDerived() {
+    // a = 1 removes 1 from b and k (all different except 0), which pins the count of 1 in [a, b]
+    // to 1 while 1 is a hole of k: the failure of the count needs the bounds of k, which unit
+    // propagation over the value literals does not round (fuzz seed 20790780)
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 1, 2);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar k = new IntVar(store, "k", 0, 2);
+    store.impose(new AlldifferentExceptZero(new IntVar[] {b, a, k}));
+    store.impose(new Count(new IntVar[] {a, b}, k, 1));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(a)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 2 2");
+  }
+
+  @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
     IntVar b = new IntVar(store, "b", 0, 1);
