@@ -249,7 +249,8 @@ final class GateExtractor {
     if (n < 2 || n > OCC_LIMIT || occSize[o] < 2 || occSize[o] > OCC_LIMIT) {
       return null;
     }
-    // the pairs (literal, clause) of the ternary clauses with -o, sorted by literal: a clause with -c
+    // the pairs (literal, clause) of the ternary clauses with -o, sorted by literal: a clause with
+    // -c
     // and one with c sit in the adjacent groups of 2c and 2c + 1, so only such pairs are tried
     int[] list = ternaries(o ^ 1);
     long[] keys = new long[2 * list.length];

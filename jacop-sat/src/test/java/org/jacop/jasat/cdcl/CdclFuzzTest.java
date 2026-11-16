@@ -221,10 +221,16 @@ class CdclFuzzTest {
   }
 
   /** Random formulas of several shapes; mostly near the satisfiability threshold. */
-  static List<int[]> randomFormula(Random rnd, int[] varsOut) {
-    if (rnd.nextInt(5) == 0) {
+  // the formula of a seed: a circuit for one seed in five, chosen apart from the seed's stream so
+  // the other seeds keep the formulas they had before circuits were added (and replay as before)
+  static List<int[]> formula(long seed, Random rnd, int[] varsOut) {
+    if (new Random(~seed).nextInt(5) == 0) {
       return circuitFormula(rnd, varsOut);
     }
+    return randomFormula(rnd, varsOut);
+  }
+
+  static List<int[]> randomFormula(Random rnd, int[] varsOut) {
     int shape = rnd.nextInt(4);
     int vars;
     int clauses;
@@ -419,7 +425,7 @@ class CdclFuzzTest {
   static int replay(long seed) throws IOException {
     Random rnd = new Random(seed);
     int[] vars = new int[1];
-    List<int[]> f = randomFormula(rnd, vars);
+    List<int[]> f = formula(seed, rnd, vars);
     return solveChecked(f, vars[0], seed);
   }
 
@@ -432,7 +438,7 @@ class CdclFuzzTest {
       long seed = base * 1_000_003L + run;
       Random rnd = new Random(seed);
       int[] vars = new int[1];
-      List<int[]> f = randomFormula(rnd, vars);
+      List<int[]> f = formula(seed, rnd, vars);
       if (solveChecked(f, vars[0], seed) == CdclSolver.UNSAT) {
         unsat++;
       }
