@@ -92,7 +92,11 @@ class LcgSlowFallbackFlatzincTest {
   @Test
   void optimumAfterGivingWayAtOnce() throws IOException {
     String out = run("lcg-slow-rate=1,lcg-slow-at=0");
-    assertTrue(out.contains("lcgSlowConflicts=0"), out);
+    // LCG gives way at its first test; only the core-guided probe's trimming of its first cores
+    // can have made a few conflicts by then
+    Matcher conflicts = Pattern.compile("lcgSlowConflicts=(\\d+)").matcher(out);
+    assertTrue(conflicts.find(), out);
+    assertTrue(Long.parseLong(conflicts.group(1)) < 10, out);
     checkOptimum(out);
   }
 

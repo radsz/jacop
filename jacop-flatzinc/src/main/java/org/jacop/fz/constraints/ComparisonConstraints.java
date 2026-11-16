@@ -860,7 +860,11 @@ class ComparisonConstraints implements ParserTreeConstants {
       c = intComparisonVarVar(operation, p1, p2, v3, isReified);
     }
 
-    if (c != null) {
+    if (c != null
+        && (c instanceof XlteqC || c instanceof XltC || c instanceof XgteqC || c instanceof XgtC)) {
+      // b <-> x op c or b -> x op c, which may become part of an order channel of x
+      support.poseOrderReification(isReified ? new Reified(c, v3) : new Implies(v3, c));
+    } else if (c != null) {
       Constraint cr = isReified ? new Reified(c, v3) : new Implies(v3, c);
       support.pose(cr);
     }

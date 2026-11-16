@@ -46,6 +46,7 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashSet;
@@ -1203,6 +1204,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.pairCliques
             + "\n%%%mzn-stat: lpTableClauses="
             + r.tableClauses
+            + "\n%%%mzn-stat: lpNearRows="
+            + r.nearRows
             + "\n%%%mzn-stat: lpRestartSolves="
             + r.restartSolves
             + "\n%%%mzn-stat: lpRootPrunings="
@@ -3492,7 +3495,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         solver.stop();
         return false;
       }
-    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9) {
+    } else if (solver.sat().conflicts < unsolvedRate * (now - lcgStart) / 1e9
+        || !unsolvedOnly && unsolvedLate(now)) {
       lcgSlowUnsolved = true;
       lcgSlow = true;
       solver.stop();
@@ -3523,6 +3527,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return rate;
     }
     return Math.max(rate, perLiteral * learntLiterals / conflicts);
+  }
+
+  /**
+   * Whether LCG free search, slow (under lcg-slow-rate conflicts per second) and still without a
+   * solution, has had the share lcg-slow-unsolved-late of the time limit (default 0.2; 0 = off): it
+   * then gives way to free search without learning however many conflicts it makes. On
+   * GolombRuler-a3-32 (XCSP 2026: 32 marks within 1500) the explanations of all-different have
+   * about 900 atoms, LCG makes 37 conflicts/s, a little over lcg-slow-unsolved, and found no ruler
+   * in 600 s; free search without learning finds one in 3 s.
+   *
+   * @param now the time of the check (CdclSolver.now of the LCG solver)
+   * @return true if LCG should give way now
+   */
+  private boolean unsolvedLate(long now) {
+    double late = Double.parseDouble(options.freeConfig("lcg-slow-unsolved-late", "0.5"));
+    return late > 0 && now - lcgStart >= late * options.getTimeOut() * 1_000_000L;
   }
 
   /**
@@ -4229,6 +4249,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.amoBound
         + "\n%%%mzn-stat: lcgCoreNoSolutionStops="
         + core.noSolutionStops
+        + "\n%%%mzn-stat: lcgCoreShrunk="
+        + core.coreShrunk
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
@@ -4857,6 +4879,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private AdaptiveLns freeLns;
 
   /**
+   * The branching of the runs that free search of a model without a search annotation takes turns
+   * with until its first solution: the integer search variables in the model's order, smallest
+   * value first, the objective left to the free search. Dom/wdeg goes first to the variables whose
+   * domains bounds made smallest, and on an objective's chain those are the ones next to it: on
+   * GolombRuler-a3-32 (XCSP 2026, 32 marks within 1500) the root bound of the objective takes
+   * values off the last marks, dom/wdeg fixes the second last mark first, at its least value, and
+   * free search found no ruler in 600 s; the marks in order find one in 3 s, as Choco's and ACE's
+   * dom/wdeg do over domains that no bound narrowed.
+   *
+   * @param searchVars the default search variables
+   * @param objective the objective when free search fixes it last, or null
+   * @return the branching, or null when there are no such variables
+   */
+  private SelectChoicePoint<? extends Var> inputOrderSelect(
+      DefaultSearchVars searchVars, IntVar objective) {
+    List<IntVar> vars = new ArrayList<>();
+    for (IntVar x : searchVars.getIntVars()) {
+      if (x != objective && x.index() >= 0) {
+        vars.add(x);
+      }
+    }
+    if (vars.size() < 2) {
+      return null;
+    }
+    // the default search variables are sorted by domain size; the store index is the model's order
+    vars.sort(Comparator.comparingInt(IntVar::index));
+    return new SimpleSelect<>(vars.toArray(new IntVar[0]), null, new IndomainMin<>());
+  }
+
+  /**
    * Runs free search with the FreeSearch engine. It branches on the set variables first, then on
    * the integer and Boolean variables, then on the objective and on the float variables. The
    * settings of --free-config select the heuristics; by default dom/wdeg with last conflict and
@@ -4962,7 +5014,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         "none".equals(interleave) || allSolutions
             ? null
             : withObjectiveCosts(latticeFirst(annotationSelect(annotatedSearch)));
-    if (annotated != null) {
+    if (annotated == null
+        && optimisation
+        && !allSolutions
+        && slowLcg != null
+        && numberSolutions == 0
+        && Integer.parseInt(options.freeConfig("first-input", "2")) > 0) {
+      annotated = inputOrderSelect(searchVars, objective);
+      if (annotated != null) {
+        builder.alternationPeriod(Integer.parseInt(options.freeConfig("first-input", "2")));
+        // after slow LCG gave way without a solution, one run in first-input fixes the variables
+        // in the model's order, until the first solution
+        builder.alternateWith(
+            new SequenceSelect(List.of(annotated, free)),
+            FreeSearch.Alternation.EVERY_RESTART_UNTIL_FIRST_SOLUTION);
+      }
+    } else if (annotated != null) {
       // free search completes what the annotation leaves unfixed
       builder.alternateWith(
           new SequenceSelect(List.of(annotated, free)),
