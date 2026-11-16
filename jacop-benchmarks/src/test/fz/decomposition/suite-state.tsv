@@ -13165,3 +13165,6 @@ P	jacop:above10min/traveling-tppv/circ8dbal	70a588fa2c6f2eba	minimize	80	INCOMPL
 P	jacop:upTo10min/rcpsp-max/psp_d_13	28b2455181ed56ea	minimize	372	INCOMPLETE	1587592	1587592	14c010bf13cbb2bb	300166	300	2026-11-16T02:28:58Z	jacop_cumulative
 P	jacop:upTo1hour/traveling-tppv/circ8bbal	82e79812e187c3ed	minimize	82	INCOMPLETE	18	18	f0e4032a69a52ca5	300226	300	2026-11-16T02:31:57Z	jacop_alldiff,jacop_regular
 P	jacop:upTo1hour/traveling-tppv/circ8cbal	8c57a59950cb196b	minimize	78	INCOMPLETE	4	4	b99208017b619cab	300167	300	2026-11-16T02:36:56Z	jacop_alldiff,jacop_regular
+P	mznc:upTo30sec/2012_nonogram/non_fast_4	230a874e504c454d	satisfy		COMPLETE	1	1	313c326743e7d1ff	8456	300	2026-11-16T02:38:19Z	jacop_regular
+C	mznc:upTo30sec/2012_nonogram/non_fast_4	230a874e504c454d	all:f	PASS	COMPLETE	1	859	2026-11-16T02:38:20Z	
+P	jacop:upTo1hour/rcpsp/00	a119ddcf2013cc55	minimize	53	INCOMPLETE	2000000	2000000	c5344c179839cd47	54201	300	2026-11-16T02:39:06Z	jacop_cumulative
