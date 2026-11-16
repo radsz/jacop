@@ -810,6 +810,12 @@ public class Binpacking extends Constraint
     }
     long loadMin = load[i].min();
     long loadMax = load[i].max();
+    // every test below asks whether no subset of the other candidates sums into an interval of
+    // loadMax - loadMin + 1 values; when no candidate is heavier than that, the sums of the
+    // lightest k of them step into any such interval between 0 and their total, so no test prunes
+    if (loadMax - loadMin + 1 >= candidateWeights[0]) {
+      return;
+    }
     if (sameWeight > 0) {
       // the others of every candidate are the same multiset: both tests hold for all or for none
       long w = sameWeight;
