@@ -41,7 +41,7 @@ import java.io.PrintStream;
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
  *          [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n] [--elim-interval conflicts]
- *          file.cnf[.gz]
+ *          [--sweep 0|1] [--probe 0|1] file.cnf[.gz]
  * </pre>
  *
  * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
@@ -49,7 +49,9 @@ import java.io.PrintStream;
  * variable elimination off, {@code --vivify 0} turns vivification off and {@code --walk 0} turns
  * local search off. {@code --ema 0} restarts on Glucose's LBD queue instead of fast and slow LBD
  * averages. {@code --seed} changes the initial decision order and {@code --elim-interval} sets when
- * elimination runs again during search (0 for never).
+ * elimination runs again during search (0 for never). {@code --sweep 0} turns SAT sweeping off and
+ * {@code --probe 0} failed-literal probing off (both on here, off by default in {@link
+ * CdclSolver}).
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -81,6 +83,8 @@ public final class CdclMain {
     boolean walk = true;
     long seed = 0;
     int elimInterval = 5000;
+    boolean sweep = true;
+    boolean probe = true;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);
@@ -94,6 +98,8 @@ public final class CdclMain {
         case "--walk" -> walk = !"0".equals(args[++i]);
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
+        case "--sweep" -> sweep = !"0".equals(args[++i]);
+        case "--probe" -> probe = !"0".equals(args[++i]);
         default -> file = args[i];
       }
     }
@@ -101,7 +107,7 @@ public final class CdclMain {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
               + " [--elim 0|1] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
-              + " [--elim-interval conflicts] file.cnf[.gz]");
+              + " [--elim-interval conflicts] [--sweep 0|1] [--probe 0|1] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -113,6 +119,8 @@ public final class CdclMain {
     solver.setWalk(walk);
     solver.setSeed(seed);
     solver.setEliminationInterval(elimInterval);
+    solver.setSweeping(sweep);
+    solver.setProbing(probe);
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }
@@ -140,6 +148,24 @@ public final class CdclMain {
       out.printf(
           "c eliminated variables %d, walk %.2f s%n",
           solver.eliminatedCount(), solver.walkNanos / 1e9);
+      if (sweep) {
+        out.printf(
+            "c swept variables %d, sweep units %d, sweep equivalences %d, sweep %.2f s%n",
+            solver.sweptVariables,
+            solver.sweepUnits,
+            solver.sweepEquivalences,
+            solver.sweepNanos / 1e9);
+      }
+      if (probe) {
+        out.printf(
+            "c probed literals %d, failed literals %d, lifted units %d, probe equivalences %d,"
+                + " probe %.2f s%n",
+            solver.probedLiterals,
+            solver.failedLiterals,
+            solver.liftedUnits,
+            solver.probeEquivalences,
+            solver.probeNanos / 1e9);
+      }
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");
