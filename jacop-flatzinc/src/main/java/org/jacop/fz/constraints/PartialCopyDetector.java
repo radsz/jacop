@@ -240,7 +240,7 @@ public class PartialCopyDetector implements ParserTreeConstants {
     }
     ASTScalarFlatExpr e = (ASTScalarFlatExpr) arg;
     if (e.getType() == 2) {
-      IntVar[] array = support.dictionary.getVariableArray(e.getIdent());
+      IntVar[] array = support.dictionary.getDeclaredVariableArray(e.getIdent());
       if (array != null) {
         for (IntVar v : array) {
           occurrences.merge(v, 1, Integer::sum);
@@ -251,7 +251,8 @@ public class PartialCopyDetector implements ParserTreeConstants {
       if (v != null) {
         occurrences.merge(v, 1, Integer::sum);
       }
-    } else if (e.getType() == 3 && support.dictionary.getVariableArray(e.getIdent()) != null) {
+    } else if (e.getType() == 3
+        && support.dictionary.getDeclaredVariableArray(e.getIdent()) != null) {
       // an element of an array of variables; other arrays hold parameters
       occurrences.merge(support.getVariable(e), 1, Integer::sum);
     }
