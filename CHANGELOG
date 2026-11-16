@@ -7008,8 +7008,9 @@ Version 5.0 (unreleased)
    less for them, so the XCSP 2026 models with large tables no longer run
    out of memory at 6 GB. Short tables with equal rows share one
    HybridTable index (CrosswordDesign posts 96 of them, 4 distinct);
-   parameter arrays of 1024 or more entries that MiniZinc writes several
-   times are kept once; the detectors that scan constraint arguments no
+   parameter arrays (of integers or sets) of 1024 or more entries that
+   MiniZinc writes several times are kept once (the 31 copies of the MDD
+   label sets of WordDesign2-words-mdd-025, XCSP 2023, took 5.7 GB); the detectors that scan constraint arguments no
    longer turn parameter arrays into constant variables (84,000 on
    CrosswordDesign-09, all LCG variables); the symmetry detection releases
    its caches after it runs; table variable elimination reads the rows of

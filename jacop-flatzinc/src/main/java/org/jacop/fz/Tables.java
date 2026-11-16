@@ -921,7 +921,57 @@ public class Tables {
    * @param array the array being added.
    */
   public void addSetArray(String ident, IntDomain[] array) {
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedSetArrays.computeIfAbsent(new SetArrayContents(array), k -> k).array();
+    }
     setArrayTable.put(ident, array);
+  }
+
+  // the long arrays of set parameters read so far, by content: MiniZinc writes the label sets of an
+  // MDD again for every constraint that uses it (WordDesign2-words-mdd-025, XCSP 2023: 31 copies of
+  // 1.8 million sets, 230 MB each)
+  private final Map<SetArrayContents, SetArrayContents> internedSetArrays = new HashMap<>();
+
+  /** An array of sets compared by content. */
+  private record SetArrayContents(IntDomain[] array, int hash) {
+    SetArrayContents(IntDomain[] array) {
+      this(array, hash(array));
+    }
+
+    private static int hash(IntDomain[] array) {
+      int h = 1;
+      for (IntDomain d : array) {
+        h = 31 * h + (d == null || d.isEmpty() ? 0 : 31 * (31 * d.min() + d.max()) + d.getSize());
+      }
+      return h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof SetArrayContents(IntDomain[] other, int otherHash))
+          || otherHash != hash
+          || other.length != array.length) {
+        return false;
+      }
+      for (int i = 0; i < array.length; i++) {
+        IntDomain a = array[i];
+        IntDomain b = other[i];
+        if (a != b && (a == null || b == null || !a.eq(b))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "SetArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
   }
 
   /**
