@@ -142,14 +142,7 @@ public final class AdaptiveLns {
      * The variables of random all-different constraints, with the variables that small constraints
      * tie to them alone: whole rounds of a round-robin schedule, with their venues and travels.
      */
-    LINES,
-    /**
-     * The variables whose fixed values a search with lazy clause generation found to rule out a
-     * better solution in the last neighbourhood (its failed assumptions), grown in the graph:
-     * explanation-based neighbourhoods (Prud'homme, Lorca and Jussien, Explanation-based large
-     * neighborhood search, Constraints 19(4), 2014).
-     */
-    EXPLAINED
+    LINES
   }
 
   /** How a run in a neighbourhood ended. */
@@ -788,7 +781,6 @@ public final class AdaptiveLns {
           case PACKING -> packingRelax(relaxed);
           case BLOCKS -> blocksRelax(relaxed);
           case LINES -> linesRelax(relaxed);
-          case EXPLAINED -> explainedRelax(relaxed);
           default -> null;
         };
     if (relax == null) {
@@ -915,7 +907,6 @@ public final class AdaptiveLns {
       case BLOCKS -> groups.length > 1;
       case LINES -> lines.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
-      case EXPLAINED -> EXPLAINED_ON && explanation.length > 0;
       default -> true;
     };
   }
@@ -1289,53 +1280,12 @@ public final class AdaptiveLns {
    * from a new seed.
    */
   private boolean[] graphRelax(int relaxed, boolean objective) {
-    return graphRelax(relaxed, objective, new int[0]);
-  }
-
-  /**
-   * Relaxes the variables of the last explanation (see {@link #explain}), at most the given number
-   * of them chosen at random, and grows the neighbourhood from them in the graph up to that number.
-   */
-  private boolean[] explainedRelax(int relaxed) {
-    int[] seeds = explanation.clone();
-    for (int i = seeds.length - 1; i > 0; i--) {
-      int j = random.nextInt(i + 1);
-      int t = seeds[i];
-      seeds[i] = seeds[j];
-      seeds[j] = t;
-    }
-    return graphRelax(relaxed, false, seeds);
-  }
-
-  private static final boolean EXPLAINED_ON = Boolean.getBoolean("org.jacop.lns.explained");
-
-  // the variables of the failed assumptions of the last run that ended without a better solution
-  private int[] explanation = new int[0];
-
-  /**
-   * Gives the variables whose values in the best solution ruled out a better solution in the last
-   * neighbourhood: the failed assumptions of a search with lazy clause generation. The next {@link
-   * Kind#EXPLAINED} neighbourhood relaxes them.
-   *
-   * @param indices the indices of the variables, as in {@link #variables()}
-   */
-  public void explain(int[] indices) {
-    explanation = indices.clone();
-  }
-
-  private boolean[] graphRelax(int relaxed, boolean objective, int[] seeds) {
     boolean[] relax = new boolean[vars.length];
     stamp++;
     int[] queue = new int[nodes.length];
     int head = 0;
     int tail = 0;
     int count = 0;
-    for (int seed : seeds) {
-      if (seed >= 0 && seed < vars.length && seenVar[seed] != stamp) {
-        seenVar[seed] = stamp;
-        queue[tail++] = seed;
-      }
-    }
     int[] order = freeOrder();
     int nextSeed = 0;
     while (count < relaxed) {
