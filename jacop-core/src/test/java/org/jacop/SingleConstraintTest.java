@@ -186,6 +186,7 @@ import org.jacop.constraints.cumulative.CumulativeOptional;
 import org.jacop.constraints.cumulative.CumulativeUnary;
 import org.jacop.constraints.cumulative.CumulativeUnaryOptional;
 import org.jacop.constraints.diffn.Diffn;
+import org.jacop.constraints.diffn.DiffnK;
 import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.geost.Dbox;
 import org.jacop.constraints.geost.ExternalConstraint;
@@ -10332,6 +10333,18 @@ class SingleConstraintTest extends TestHelper {
       store.raiseLevelBeforeConsistency = true;
       assertThat(store.consistency()).as(kind).isFalse();
     }
+  }
+
+  @Test
+  void diffnKChecksBoxesFixedBeforeARaisedLevel() {
+    Store store = new Store();
+    IntVar[][] r = overlappingRectanglesVars(store);
+    IntVar[][] origin = {{r[0][0], r[0][1]}, {r[1][0], r[1][1]}};
+    IntVar[][] length = {{r[0][2], r[0][3]}, {r[1][2], r[1][3]}};
+    store.impose(new DiffnK(origin, length, true));
+    fixOverlappingRectangles(store, r);
+    store.raiseLevelBeforeConsistency = true;
+    assertThat(store.consistency()).isFalse();
   }
 
   /** Two rectangles [x, y, width, height] over 0..2, fixed by fixOverlappingRectangles. */
