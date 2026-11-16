@@ -142,8 +142,7 @@ public class Tables {
   final ArrayList<IntVar> overlapSetRowsDefined = new ArrayList<>();
 
   // the rows that linear overlap factoring reduced to a multiple of one sub-sum, k * z rel c:
-  // posted
-  // as bounds of z, they reach the linear relaxation only from here
+  // posted as bounds of z, they reach the linear relaxation only from here
   final ArrayList<LinearForm> overlapUnitRows = new ArrayList<>();
 
   // the tables of the model, for the clique rows of the linear relaxation
