@@ -257,6 +257,7 @@ public class ElementTableDetector implements ParserTreeConstants {
     support.pose(new HybridTable(vars, tuples));
     for (Element e : group) {
       replaced.add(e.node());
+      support.permutationElementSums.add(index, e.array(), e.value(), e.first());
     }
     tables++;
   }

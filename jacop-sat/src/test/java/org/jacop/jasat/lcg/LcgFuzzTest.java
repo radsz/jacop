@@ -53,6 +53,7 @@ import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
@@ -254,6 +255,10 @@ class LcgFuzzTest {
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
 
+  // with lcg.fuzz.repeated=true, about a third of the positions of a picked list repeat a variable
+  // already in that list, so constraints see one variable at several positions of their scope
+  private static final boolean REPEATED = Boolean.getBoolean("lcg.fuzz.repeated");
+
   // with lcg.fuzz.ground=true one variable in eight is ground before the constraints on it are
   // imposed, and another one in eight after they are imposed, before the first consistency
   private static final boolean GROUND = Boolean.getBoolean("lcg.fuzz.ground");
@@ -309,6 +314,8 @@ class LcgFuzzTest {
 
     final Random holes;
 
+    final Random repeats;
+
     // grounds variables, from its own generator so the model is otherwise the same
     final Random ground;
     final List<IntVar> groundLater = new ArrayList<>();
@@ -316,6 +323,7 @@ class LcgFuzzTest {
     Model(long seed) {
       rnd = new Random(seed);
       holes = HOLES ? new Random(seed * 31 + 7) : null;
+      repeats = REPEATED ? new Random(seed * 41 + 13) : null;
       ground = GROUND ? new Random(seed * 37 + 11) : null;
       int n = 4 + rnd.nextInt(4);
       x = new IntVar[n];
@@ -440,7 +448,10 @@ class LcgFuzzTest {
       List<IntVar> pool = new ArrayList<>(List.of(from));
       IntVar[] result = new IntVar[Math.min(k, pool.size())];
       for (int i = 0; i < result.length; i++) {
-        result[i] = pool.remove(rnd.nextInt(pool.size()));
+        result[i] =
+            repeats != null && i > 0 && repeats.nextInt(3) == 0
+                ? result[repeats.nextInt(i)]
+                : pool.remove(rnd.nextInt(pool.size()));
       }
       return result;
     }
@@ -619,7 +630,7 @@ class LcgFuzzTest {
 
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(43);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(44);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -768,8 +779,26 @@ class LcgFuzzTest {
                 pick(x, 2),
                 new IntVar[] {intVar("my", -1, 3), rnd.nextBoolean() ? null : intVar("mz", 0, 2)},
                 intVar("mm", -2, 7));
+        case 43 -> arcTimes();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // arc-time precedences of 3 or 4 nodes over successors and times among the variables
+    private ArcTimes arcTimes() {
+      int n = 3 + rnd.nextInt(2);
+      IntVar[] succ = chain("as", n, 0, n - 1);
+      IntVar[] times = pick(x, n);
+      long[][] lag = new long[n][];
+      for (int v = 0; v < n; v++) {
+        if (rnd.nextInt(4) > 0) {
+          lag[v] = new long[n];
+          for (int w = 0; w < n; w++) {
+            lag[v][w] = rnd.nextInt(4) == 0 ? ArcTimes.NO_LAG : rnd.nextInt(4) - 1;
+          }
+        }
+      }
+      return new ArcTimes(succ, 0, times, lag);
     }
 
     // a 2 x 2 or 2 x 3 matrix of the 0/1 variables and the variables, with counted rows and columns
