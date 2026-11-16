@@ -257,6 +257,8 @@ public class Options {
                 lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
                 this share of the time limit, it raised the bound or its best cost fell by
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),
+                lcg-slow-bound-gain=<share> (a bound raise in the window counts when it
+                closes this share of the gap to the best cost, default 0.0005),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),

@@ -4323,6 +4323,50 @@ class LcgSolverTest {
   }
 
   /**
+   * A propagator that joins the search at the root once the search has started, as the linear
+   * relaxation does after its probe (org.jacop.fz.lpProbe), can fail there on the root domains
+   * while the solver has assigned nothing: miplib2003 disctom (PB 2025) threw "the constraints
+   * failed on the root domains", since the conflict clause was empty and no assigned literal was
+   * left to stand in for it. The empty clause now goes to the solver, which answers UNSAT.
+   */
+  @Test
+  void failureResumedAtTheRootWithNothingAssignedProvesUnsatisfiable() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    store.impose(new XplusYeqZ(x, y, new IntVar(store, "z", 0, 20)));
+    Constraint gate = new FailsOnceOpened(x, y);
+    store.impose(gate);
+    LcgSolver solver = new LcgSolver(store);
+    solver.atRootAfter(
+        0,
+        () -> {
+          ((FailsOnceOpened) gate).open = true;
+          store.addChanged(gate);
+        });
+    int result = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> solver.solve());
+    assertThat(result).isEqualTo(CdclSolver.UNSAT);
+  }
+
+  // a constraint without pruning until opened, then failing whatever the domains
+  private static final class FailsOnceOpened extends Constraint {
+    private static final AtomicInteger ID = new AtomicInteger();
+    boolean open;
+
+    FailsOnceOpened(IntVar... vars) {
+      super(new IntVar[][] {vars});
+      numberId = ID.incrementAndGet();
+    }
+
+    @Override
+    public void consistency(Store store) {
+      if (open) {
+        throw Store.failException;
+      }
+    }
+  }
+
+  /**
    * Free search branches on the 0/1 variables before the others, as CP-SAT does: here the integer
    * variable y is first on the heap, and only branching on b first ([b <= 0], then y above 50)
    * gives b = 0 and y = 51. With the property off, y goes first ([y <= 50] makes b = 1, then y =
