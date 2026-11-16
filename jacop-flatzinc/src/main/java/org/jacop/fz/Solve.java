@@ -74,6 +74,7 @@ import org.jacop.constraints.Routes;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XmulYeqZ;
@@ -3690,6 +3691,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (Constraint c : store.getConstraints()) {
       if (c instanceof XmulYeqZ m && m.x() == m.y() && !m.x().singleton()) {
         squares.add(m.z());
+      } else if (c instanceof XexpYeqZ e && e.y().singleton(2) && !e.x().singleton()) {
+        squares.add(e.z());
       } else if (c instanceof LinearInt || c instanceof SumWeight || c instanceof SumInt) {
         linear.add(c);
       }
@@ -5400,7 +5403,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || options.getTimeOut() <= 0
         || options.portfolioWorker() != null
         || options.proof() != null
-        || options.getAll()
         || !(costVar instanceof IntVar)
         || squaredObjectiveTerms(costVar) < SQUARED_OBJECTIVE_TERMS) {
       return false;
