@@ -64,9 +64,6 @@ final class Sweeper {
   // conflicts per sub-solver call; the sub-solver's propagations count against the budget
   private static final int CONFLICT_LIMIT = 1000;
 
-  // a round stops after this many variables swept in a row without a result
-  private static final int UNPRODUCTIVE_WINDOW = 1000;
-
   private final int numVars;
   private int[][] clauses;
   private int numClauses;
@@ -173,18 +170,7 @@ final class Sweeper {
    */
   int run(int[] order, int n, boolean[] done) {
     int i = 0;
-    int windowStart = 0;
-    int windowResults = 0;
     while (!exhausted()) {
-      if (swept - windowStart >= UNPRODUCTIVE_WINDOW) {
-        // a window of variables without a unit or an equivalence: the rest is unlikely to pay
-        int results = numUnits + equivalences;
-        if (results == windowResults) {
-          break;
-        }
-        windowStart = swept;
-        windowResults = results;
-      }
       int v;
       if (numAgain > 0) {
         v = again[--numAgain];
@@ -309,6 +295,7 @@ final class Sweeper {
   private int numEnvVars;
   private int[][] envClauses = new int[64][];
   private int numEnvClauses;
+  private int envLiterals;
 
   // the current model of the environment (local literal values) and flip support
   private boolean[] model;
@@ -333,6 +320,7 @@ final class Sweeper {
     stamp++;
     numEnvVars = 0;
     numEnvClauses = 0;
+    envLiterals = 0;
     addVar(v);
     int expand = 0;
     int next = 1;
@@ -418,6 +406,8 @@ final class Sweeper {
       d[i] = 2 * (local[d[i] >> 1] - 1) + (d[i] & 1);
     }
     pushEnvClause(k == d.length ? d : Arrays.copyOf(d, k));
+    envLiterals += k;
+    work += c.length;
   }
 
   private void pushEnvClause(int[] c) {
@@ -828,11 +818,13 @@ final class Sweeper {
       dimacs[i] = CdclSolver.toDimacs(assumed[i]);
     }
     int r = sub.solve(dimacs);
-    work += sub.propagations - before + numEnvClauses;
+    // the sub-solver's propagations, and the clauses and literals each call goes over
+    work += sub.propagations - before + numEnvClauses + envLiterals;
     return r;
   }
 
   private void readModel() {
+    work += numEnvVars + envLiterals;
     for (int i = 0; i < numEnvVars; i++) {
       boolean t = sub.modelValue(i + 1);
       model[2 * i] = t;
@@ -926,6 +918,7 @@ final class Sweeper {
   }
 
   private int refineBackbone(int[] backbone, int nb) {
+    work += nb;
     int j = 0;
     for (int i = 0; i < nb; i++) {
       if (model[backbone[i]]) {
@@ -937,6 +930,7 @@ final class Sweeper {
 
   /** Splits each class into its true and false literals in the model; drops singletons. */
   private int refinePartition(int[] partition, int np) {
+    work += np;
     int[] out = new int[partition.length];
     int j = 0;
     int i = 0;

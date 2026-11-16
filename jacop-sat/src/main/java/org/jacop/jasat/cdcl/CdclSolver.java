@@ -304,7 +304,12 @@ public final class CdclSolver {
   private boolean[] sweepDone = new boolean[0];
   private int sweepCompleted;
   private long propagationsAtSweep;
+  private static final long SWEEP_FIRST_EFFORT =
+      Long.getLong("jacop.jasat.sweepFirst", 100_000_000);
   private static final long SWEEP_MIN_EFFORT = Long.getLong("jacop.jasat.sweepMin", 20_000_000);
+  private int sweepRounds;
+  private int sweepDelay;
+  private int sweepDelayLimit;
   private static final int SWEEP_EFFORT_PER_MILLE = 100;
 
   // --- failed-literal probing, at each elimination round
@@ -4093,9 +4098,16 @@ public final class CdclSolver {
    */
   private Sweeper sweep(int[][] input, int n, boolean[] frozen) {
     long start = System.nanoTime();
+    if (sweepDelay > 0) {
+      // the last rounds found almost nothing: skip rounds, as Kissat's sweep delay
+      sweepDelay--;
+      return new Sweeper(numVars, input, n, frozen, proof, 0, sweepCompleted);
+    }
+    // the first round, before any search, gets a fixed effort: equivalences found then pay most
     long budget =
         Math.max(
-            SWEEP_MIN_EFFORT, (propagations - propagationsAtSweep) * SWEEP_EFFORT_PER_MILLE / 1000);
+            sweepRounds++ == 0 ? SWEEP_FIRST_EFFORT : SWEEP_MIN_EFFORT,
+            (propagations - propagationsAtSweep) * SWEEP_EFFORT_PER_MILLE / 1000);
     Sweeper s = new Sweeper(numVars, input, n, frozen, proof, budget, sweepCompleted);
     if (sweepDone.length < numVars) {
       sweepDone = Arrays.copyOf(sweepDone, numVars);
@@ -4126,6 +4138,12 @@ public final class CdclSolver {
     sweptVariables += s.swept;
     sweepUnits += s.units().length;
     sweepEquivalences += s.equivalences;
+    if (s.units().length + s.equivalences < s.swept / 1000.0) {
+      sweepDelayLimit = Math.min(2 * sweepDelayLimit + 1, 64);
+      sweepDelay = sweepDelayLimit;
+    } else {
+      sweepDelayLimit = 0;
+    }
     propagationsAtSweep = propagations;
     sweepNanos += System.nanoTime() - start;
     if (VERBOSE) {

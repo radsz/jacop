@@ -330,6 +330,10 @@ class CdclFuzzTest {
       s.setReduceBase(10);
     }
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
+    // substituted variables come back when a later clause or assumption uses them
+    boolean inprocessing = Math.floorMod(seed / 7, 4L) != 0;
+    s.setSweeping(inprocessing && !Boolean.getBoolean("fuzz.noSweep"));
+    s.setProbing(inprocessing && !Boolean.getBoolean("fuzz.noProbe"));
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();
     int next = 0;
