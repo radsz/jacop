@@ -452,7 +452,12 @@ final class PermutationFlowShop {
     int destroyed = Math.min(4, n - 1);
     int[] work = new int[n];
     int[] removed = new int[destroyed];
-    while (!stopped(listener)) {
+    int bound = lowerBound();
+    // small flow shops stop after this many iterations without a better sequence, long before the
+    // patience of the search; large ones do far fewer iterations in their time
+    long stagnation = 1000L * n * m;
+    long lastBest = 0;
+    while (bestSpan > bound && iterations - lastBest < stagnation && !stopped(listener)) {
       iterations++;
       System.arraycopy(current, 0, work, 0, n);
       int len = n;
@@ -472,6 +477,7 @@ final class PermutationFlowShop {
         currentSpan = span;
         if (span < bestSpan) {
           bestSpan = span;
+          lastBest = iterations;
           System.arraycopy(work, 0, best, 0, n);
           if (!listener.report(best, bestSpan)) {
             return false;
@@ -483,6 +489,39 @@ final class PermutationFlowShop {
       }
     }
     return true;
+  }
+
+  // the largest machine load with the shortest head before and tail after the machine, and the
+  // longest job: no sequence is shorter (Taillard 1993)
+  int lowerBound() {
+    long bound = 0;
+    for (int j = 0; j < n; j++) {
+      long job = 0;
+      for (int i = 0; i < m; i++) {
+        job += p[i][j];
+      }
+      bound = Math.max(bound, job);
+    }
+    for (int i = 0; i < m; i++) {
+      long load = 0;
+      long head = Long.MAX_VALUE;
+      long tail = Long.MAX_VALUE;
+      for (int j = 0; j < n; j++) {
+        load += p[i][j];
+        long h = 0;
+        long t = 0;
+        for (int k = 0; k < i; k++) {
+          h += p[k][j];
+        }
+        for (int k = i + 1; k < m; k++) {
+          t += p[k][j];
+        }
+        head = Math.min(head, h);
+        tail = Math.min(tail, t);
+      }
+      bound = Math.max(bound, load + head + tail);
+    }
+    return (int) Math.min(bound, Integer.MAX_VALUE);
   }
 
   private boolean stopped(Listener listener) {

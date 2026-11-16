@@ -6861,6 +6861,42 @@ Version 5.0 (unreleased)
    reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
    -Dorg.jacop.lp.valueCliques=false turn them off.
 
+383. The FlatZinc front end posts the sums of element constraints indexed
+   by an all_different list: when y[k] = c[x[k]] over one constant array c
+   and the x[k] are all different over the union U of their domains, the
+   sum of the y[k] is fixed (a permutation of U) or bounded by the sums of
+   the n smallest and largest values of c over U. Permutation flow shop
+   models (d[i,k] = p[i,perm[k]]) get the machine loads, the bound of
+   E. Taillard (Benchmarks for basic scheduling problems, EJOR 64(2),
+   1993) and of the one-machine relaxations of B. J. Lageweg, J. K.
+   Lenstra and A. H. G. Rinnooy Kan (A general bounding scheme for the
+   permutation flow-shop problem, Operations Research 26(1), 1978); the
+   sums aggregate the assignment formulation of element and all_different
+   (P. Refalo, Linear formulation of constraint programming models and
+   hybrid solvers, CP 2000). Taillard ta006 had a root bound of 160 and
+   is proved optimal (1195) in 8 s with -f; CP-SAT takes 188 s. On the 24
+   Taillard instances at 600 s, -f proves 6 (none before). They fire on
+   12 of the 240 wide instances. -Dorg.jacop.fz.permutationElementSums=false
+   turns them off.
+
+384. Local search detects a permutation flow shop in the store (sequence
+   positions in an all different constraint, tables giving each machine's
+   processing time of the job at a position, precedence rows s + d <= t
+   along machines and positions, the makespan as the cost) and runs the
+   iterated greedy algorithm of R. Ruiz and T. Stuetzle (A simple and
+   effective iterated greedy algorithm for the permutation flowshop
+   scheduling problem, EJOR 177(3), 2007): NEH start (M. Nawaz, E. E.
+   Enscore and I. Ham, Omega 11(1), 1983), destruction and greedy
+   reinsertion, insertion local search and simulated annealing
+   acceptance, with the O(nm) insertion of E. Taillard (Some efficient
+   heuristic methods for the flow shop sequencing problem, EJOR 47(1),
+   1990). Under -f it runs like the job shop tabu search, alone for up to
+   half of the time limit and until ls-patience passes without a better
+   sequence; each better sequence is checked in the store. On the 24
+   Taillard instances at 600 s with -f every unproved instance is better
+   (ta101 12806 -> 11368, ta106 12892 -> 11306) and
+   the total time goes from 13971 s to 10497 s.
+
 Version 4.11
 =============
 
