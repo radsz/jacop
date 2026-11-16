@@ -2079,6 +2079,27 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void inverseWithAVariableRepeatedInOneArrayIsUnsatisfiable() throws IOException {
+    // jacop_assignment with ::domain posts an implied Alldistinct on f, whose constructor threw
+    // IllegalArgumentException when a variable is repeated in f; the model has no solution.
+    String model =
+        """
+        var 1..3: a :: output_var;
+        var 1..3: b :: output_var;
+        array [1..3] of var 1..3: g :: output_array([1..3]);
+        constraint jacop_assignment(%s, %s, 1, 1)%s;
+        solve satisfy;
+        """;
+    for (String annotation : new String[] {"", " :: domain"}) {
+      for (String[] args : new String[][] {{"[a, b, a]", "g"}, {"g", "[a, b, a]"}}) {
+        String[] out = run(model.formatted(args[0], args[1], annotation), "-a");
+        List<String> lines = out[0].lines().filter(l -> !l.startsWith("%%")).toList();
+        assertEquals(List.of("=====UNSATISFIABLE====="), lines, out[0] + out[1]);
+      }
+    }
+  }
+
+  @Test
   void debugOptionPrintsConstraints() throws IOException {
     // -debug printed the constraints through a logger that has no appender, so only the search
     // was printed.
