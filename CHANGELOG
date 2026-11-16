@@ -6566,6 +6566,9 @@ Version 5.0 (unreleased)
    same instances are proved (56 by default, 62 under -f, 600 s) and the
    total time is unchanged (1.005 and 1.012, the same search under the
    virtual clock).
+   A list wake then rechecks only the values whose residue is a changed
+   position: 11 % more nodes per second on TelecomScheduling-B-10, the
+   same pruning.
 
 365. Free search (-f) of a resource-constrained project scheduling model
    (a makespan over CumulativeBasic resources with fixed durations,
@@ -6611,6 +6614,77 @@ Version 5.0 (unreleased)
    149 of the 687 LPs of the LP bench (pivots 0.92x there, time 0.96-0.97x
    above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
    build an LP, where results stay the same.
+
+367. The linear relaxation takes the rows over the terms of the objective on
+   the sparse simplex when they do not fit the dense tableau. A model
+   stated in clauses and elements has few rows of its own (CSPLib
+   warehouses, prob034: 2), so the dense simplex was chosen and the clause
+   rows b[i,j] -> open[j] and the value encodings of the element costs did
+   not fit it; the root bound of cap131 stayed at 626,300 (optimum
+   915,059). Now the rows at distance at most 1 from the objective, and
+   the rows over no other columns, go to the sparse simplex when they are
+   at most org.jacop.lp.sparseMaxRows (25,000): cap131 root bound 914,788,
+   free search proves the optimum in 4 s instead of not in 600 s (CP-SAT
+   4.5 s), and traveling-tppv circ20fnonbal (MiniZinc Challenge 2022) is
+   proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
+   turns it off; the statistic lpNearRows gives the rows taken.
+
+368. Symmetry breaking posts value precedence in models whose own
+   lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
+   hid that their values are interchangeable. Each such constraint
+   X <=lex sigma(X) must compare a prefix of one common order, with sigma
+   a permutation of the variables that keeps their domains, fixes the
+   objective and maps every other constraint to one of the model; the
+   lexicographically smallest solution of an orbit of all symmetries then
+   satisfies them and the precedence chain in that order (Law and Lee,
+   CP 2004; Walsh, CP 2006). XCSP 2026 ColoredGrid-09 (9 disjoint
+   9-queens solutions, UNSAT) is refuted in 3.7 s, no answer at 300 s
+   before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
+   -Dorg.jacop.fz.symmetryModelLex=false turns it off.
+
+369. Free search (-f) of an optimisation model without a search
+   annotation, after slow lazy clause generation gave way without a
+   solution, takes turns until its first solution with runs that fix the
+   search variables in the model's order, least value first
+   (FreeSearch.Alternation.EVERY_RESTART_UNTIL_FIRST_SOLUTION,
+   --free-config first-input=<runs>, one run in 2, 0 = off): the root
+   bounds can make dom/wdeg start at the far end of a chain (GolombRuler:
+   the last mark first). LCG slower than lcg-slow-rate without a solution
+   at half the time limit now gives way too (lcg-slow-unsolved-late,
+   default 0.5). XCSP 2026 GolombRuler-a3-32: 1348 at 600 s, no solution
+   before; on 26 XCSP 2025/2026 instances where it can fire, two more
+   with a solution and 7 better against 3 worse (seed spread); neutral on
+   the wide set.
+
+370. The FlatZinc front end posts the reified comparisons of one variable
+   with constants (int_le_reif, int_lt_reif with a constant on either
+   side) and their half-reifications (int_le_imp, int_lt_imp) as one
+   ChannelOrder per variable with two or more of them, in place of one
+   Reified or Implies each, as presolve rule 5 (OrderLiterals) already
+   did under --presolve on. ChannelOrder gets implied items
+   (b => x <= t, b => x > t), a violation for local search and a
+   pseudo-Boolean encoding for proofs; the linear relaxation and the
+   dominance nogoods read it as the reifications it replaces. On the
+   41 wide instances where it fires (2,596 channels for 21,321
+   constraints) at 600 s the same instances are proved; the proved
+   instances take 0.976 of the time by default and 0.736 under -f
+   (2026_kitchen 288 -> 174 s, neighbours-new-6 152 -> 98 s), total time
+   0.997 and 0.982. -Dorg.jacop.fz.orderChannels=false keeps the
+   reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
+   half-reifications.
+
+371. ArgMax and ArgMin bound the values at positions that the index can
+   no longer take: such a position may not reach the extreme over the
+   positions the index can still take (strictly for positions after
+   them, since the first extreme wins). ArgMax and ArgMin now reach
+   domain consistency in the consistency checker (bounds(Z) before), and
+   so does ArgMaxMonotone, which the FlatZinc front end posts for
+   maximum_arg over monotone functions of shared variables; the checker
+   also gains XlteqY, XneqY and BinaryBitTable cases at domain
+   consistency. The LCG explanations are the existing ones. The upTo5sec
+   arg models give the same answers and node counts; the one wide
+   instance with maximum_arg (tower) fails 10 % less often (30155 ->
+   27287) at the same time.
 
 Version 4.11
 =============
