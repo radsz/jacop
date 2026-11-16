@@ -79,6 +79,10 @@ public class ElementVariableFast extends AbstractElement
         Explainable,
         PbEncodable {
 
+  /** Whether a fixed index rewrites the constraint to an equality (org.jacop.rewrite.element). */
+  static final boolean REWRITE_FIXED_INDEX =
+      Boolean.parseBoolean(System.getProperty("org.jacop.rewrite.element", "true"));
+
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The most values of the list variables and the value an encoding enumerates. */
@@ -516,6 +520,11 @@ public class ElementVariableFast extends AbstractElement
     }
     if (index.singleton()) {
       int position = index.value() - 1 - indexOffset;
+      if (REWRITE_FIXED_INDEX && list[position] != value && canRewrite(store)) {
+        // the other positions can no longer matter: an equality stops their wake-ups
+        rewriteTo(store, new XeqY(list[position], value));
+        return;
+      }
       value.domain.in(store.level, value, list[position].domain);
       list[position].domain.in(store.level, list[position], value.domain);
       if (value.singleton()) {
