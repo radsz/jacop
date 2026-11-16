@@ -6826,6 +6826,20 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
+381. JaSAT (CdclSolver, CdclMain) tries Kissat's lucky assignments before
+   the first search (Biere and Fleury, Proc. SAT Competition 2022): all
+   variables true or false when every clause has a literal of that sign,
+   then forward and backward passes in input order deciding false and then
+   true, with propagation and one flip per conflict. They run before
+   variable elimination and again after it, only in the first solve()
+   without assumptions or an external propagator (so not under LCG). An
+   attempt that finds no model leaves the search exactly as without it
+   (watches, clause literal order and phases are restored, no units are
+   kept). On the 90 SAT Competition 2024/25 CNFs of the SAT gap screen
+   they find a model for 2 (cryptography-simon, unsolved at 600 s before,
+   now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
+   CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
+
 Version 4.11
 =============
 
