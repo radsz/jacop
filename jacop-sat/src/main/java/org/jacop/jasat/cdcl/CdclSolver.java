@@ -447,6 +447,9 @@ public final class CdclSolver {
       watchSize = Arrays.copyOf(watchSize, 2 * c);
       binWatches = Arrays.copyOf(binWatches, 2 * c);
       binSize = Arrays.copyOf(binSize, 2 * c);
+    }
+    if (qPrev.length < n) {
+      int c = Math.max(n, 2 * qPrev.length);
       qPrev = Arrays.copyOf(qPrev, c);
       qNext = Arrays.copyOf(qNext, c);
       qStamp = Arrays.copyOf(qStamp, c);
@@ -1859,9 +1862,7 @@ public final class CdclSolver {
       }
     }
 
-    if (qToBumpSize > 0) {
-      bumpQueue();
-    }
+    bumpQueue();
     if (learntSize == 1) {
       return 0;
     }
@@ -2923,9 +2924,7 @@ public final class CdclSolver {
         if (wasted > (1 << 20) && wasted > memSize / 2) {
           purge(); // temporary external reasons freed by the backtrack
         }
-        if (!queueInUse()) {
-          varInc /= varDecay; // the activities rest while the queue decides: no overflow
-        }
+        decayActivities();
         claInc /= CLA_DECAY;
         if (!stable && varDecay < 0.95 && conflicts % 5000 == 0) {
           varDecay += 0.01;
@@ -3403,17 +3402,7 @@ public final class CdclSolver {
 
   private int pickBranch() {
     if (queueInUse()) {
-      int v = qSearch;
-      while (v >= 0 && (vals[2 * v] != 0 || eliminatedVar[v])) {
-        int pv = qPrev[v];
-        if (eliminatedVar[v]) {
-          queueUnlink(v); // walked over by every later decision otherwise
-          qStamp[v] = -1;
-        }
-        v = pv;
-      }
-      qSearch = v;
-      return v < 0 ? -1 : 2 * v + savedSign[v];
+      return pickFromQueue();
     }
     while (!order.isEmpty()) {
       int v = order.removeMax();
@@ -4105,6 +4094,33 @@ public final class CdclSolver {
     qSearch = qLast;
   }
 
+  /**
+   * Raises the activity increment, except while the queue decides (the activities rest: no
+   * overflow).
+   */
+  private void decayActivities() {
+    if (!queueInUse()) {
+      varInc /= varDecay;
+    }
+  }
+
+  /**
+   * The decision of the queue: the last unassigned variable from qSearch back, at its saved sign.
+   */
+  private int pickFromQueue() {
+    int v = qSearch;
+    while (v >= 0 && (vals[2 * v] != 0 || eliminatedVar[v])) {
+      int pv = qPrev[v];
+      if (eliminatedVar[v]) {
+        queueUnlink(v); // walked over by every later decision otherwise
+        qStamp[v] = -1;
+      }
+      v = pv;
+    }
+    qSearch = v;
+    return v < 0 ? -1 : 2 * v + savedSign[v];
+  }
+
   private boolean queueInUse() {
     return vmtf && !stable && external == null;
   }
@@ -4142,13 +4158,16 @@ public final class CdclSolver {
   /** Moves the analysed variables to the end of the queue, in the order of their old stamps. */
   private void bumpQueue() {
     int n = qToBumpSize;
+    if (n == 0) {
+      return;
+    }
     qToBumpSize = 0;
     if (qBumped + n >= 1L << 37) {
-      long stamp = 0; // renumber along the queue before the stamps outgrow the sort keys
+      long renumbered = 0; // renumber along the queue before the stamps outgrow the sort keys
       for (int v = qFirst; v >= 0; v = qNext[v]) {
-        qStamp[v] = ++stamp;
+        qStamp[v] = ++renumbered;
       }
-      qBumped = stamp;
+      qBumped = renumbered;
     }
     if (qKeys.length < n) {
       qKeys = new long[Math.max(n, 2 * qKeys.length)];
