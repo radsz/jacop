@@ -594,6 +594,50 @@ class FreeSearchTest {
   }
 
   @Test
+  void runsAlternateUntilTheFirstSolution() {
+    // the main branching takes every other run before the first solution, so its failures are
+    // learned; with a period of one every run uses the alternative branching
+    for (int period : new int[] {1, 2, 4}) {
+      Store store = new Store();
+      IntVar[] x = new IntVar[5];
+      for (int i = 0; i < x.length; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+      }
+      for (int i = 0; i < x.length; i++) {
+        for (int j = i + 1; j < x.length; j++) {
+          store.impose(new XneqY(x[i], x[j]));
+        }
+      }
+      int[] seen = new int[1];
+      SearchMonitor counter =
+          new SearchMonitor() {
+            @Override
+            public void onFailure(Constraint failed, Var decision) {
+              seen[0]++;
+            }
+          };
+      FreeSearch search =
+          FreeSearch.builder(store, new SimpleSelect<>(x, null, new IndomainMin<>()))
+              .alternateWith(
+                  new SimpleSelect<>(x, null, new IndomainMax<>()),
+                  FreeSearch.Alternation.EVERY_RESTART_UNTIL_FIRST_SOLUTION)
+              .alternationPeriod(period)
+              .restarts(new LubyCalculator(1))
+              .nogoodsFromRestarts(false)
+              .monitor(counter)
+              .build();
+      assertEquals(Status.UNSATISFIABLE, search.solve());
+      assertTrue(search.getFailures() > 0);
+      if (period == 1) {
+        assertEquals(0, seen[0]);
+      } else {
+        assertTrue(seen[0] > 0, "period " + period);
+        assertTrue(seen[0] < search.getFailures(), "period " + period);
+      }
+    }
+  }
+
+  @Test
   void limitsStopTheSearchWithoutAProof() {
     Random rnd = new Random(4);
     for (int k = 0; k < INSTANCES; k++) {

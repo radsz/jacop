@@ -184,15 +184,35 @@ public class ArgMax extends AbstractArgMinMax implements Copyable<ArgMax> {
     }
   }
 
+  /*
+   * Every variable is at most ub, the largest maximum over the positions left in the index. A
+   * position k that is not in the index cannot be the first maximum, so some position j of the
+   * index is at least x[k] before k, or above it after k: x[k] is at most the largest maximum of
+   * the index positions before k, or one less than the largest after k.
+   */
   private void pruneWhenExtremeIndexNotSingletonMax(Store store, int ub) {
-    int im = extremeIndex.min();
-    for (int i = 0; i < list.length; i++) {
-      int cp = i + 1 + indexOffset;
+    int n = list.length;
+    long[] after = new long[n + 1];
+    after[n] = Long.MIN_VALUE;
+    for (int j = n - 1; j >= 0; j--) {
+      after[j] = after[j + 1];
+      if (extremeIndex.domain.contains(j + 1 + indexOffset)) {
+        after[j] = Math.max(after[j], list[j].max());
+      }
+    }
+    long before = Long.MIN_VALUE;
+    for (int i = 0; i < n; i++) {
       IntVar v = list[i];
-      if (cp < im) {
-        v.domain.inMax(store.level, v, ub - 1);
-      } else {
+      if (extremeIndex.domain.contains(i + 1 + indexOffset)) {
         v.domain.inMax(store.level, v, ub);
+        before = Math.max(before, v.max());
+      } else {
+        long bound =
+            Math.max(before, after[i + 1] == Long.MIN_VALUE ? Long.MIN_VALUE : after[i + 1] - 1);
+        if (bound < v.min()) {
+          throw Store.failException;
+        }
+        v.domain.inMax(store.level, v, (int) Math.min(bound, ub));
       }
     }
   }
