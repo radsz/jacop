@@ -119,6 +119,9 @@ public final class LcgSolver implements ExternalPropagator {
   // the value of a system property that turns an option off
   private static final String FALSE = "false";
 
+  /** The end of a clause step of the proof. */
+  private static final String CLAUSE_END = " >= 1 ;\n";
+
   private static final int GE_KIND = 0;
   private static final int EQ_KIND = 1;
 
@@ -1014,7 +1017,7 @@ public final class LcgSolver implements ExternalPropagator {
         proofLp(c, none, 0, e);
       }
       proofLinearBounds(c, none, 0, e);
-      proof.lemma("rup 1 " + proofAtom(e, 0) + " >= 1 ;\n");
+      proof.lemma("rup 1 " + proofAtom(e, 0) + CLAUSE_END);
       reached[i] = next;
     }
     if (rootFailed && failedAtRoot != null) {
@@ -1061,7 +1064,7 @@ public final class LcgSolver implements ExternalPropagator {
       String name = proofName(Math.abs(extra));
       s.append(" 1 ").append(extra > 0 ? "~" + name : name);
     }
-    proof.lemma(s.append(" >= 1 ;\n"));
+    proof.lemma(s.append(CLAUSE_END));
   }
 
   /**
@@ -1236,7 +1239,7 @@ public final class LcgSolver implements ExternalPropagator {
           && !proofCardinalitySplit(cardinality, fixed, freeCounter, caseClause, leaves / cases)) {
         return false;
       }
-      proof.lemma("rup" + caseClause + " >= 1 ;\n");
+      proof.lemma("rup" + caseClause + CLAUSE_END);
     }
     return true;
   }
@@ -1332,7 +1335,7 @@ public final class LcgSolver implements ExternalPropagator {
         for (ValueEnumeration e = dom[j].valueEnumeration(); e.hasMoreElements(); ) {
           takes.append(" 1 ").append(OpbEncoder.eq(i, e.nextElement()));
         }
-        long id = proof.lemma(takes.append(literals[j]).append(" >= 1 ;\n"));
+        long id = proof.lemma(takes.append(literals[j]).append(CLAUSE_END));
         pol.append(operands++ == 0 ? "" : " ").append(id).append(operands > 1 ? " +" : "");
       }
     } else if (cut[0] && cut[1]) {
@@ -1833,7 +1836,7 @@ public final class LcgSolver implements ExternalPropagator {
     for (int k = n - 1; k >= 1; k--) {
       for (int i = 1; i < n; i++) {
         if (component[i] == localBest && !"0".equals(p[i][k])) {
-          proof.lemma("rup" + clause + " 1 " + PbModel.not(p[i][k]) + " >= 1 ;\n");
+          proof.lemma("rup" + clause + " 1 " + PbModel.not(p[i][k]) + CLAUSE_END);
         }
       }
     }
@@ -2068,12 +2071,14 @@ public final class LcgSolver implements ExternalPropagator {
   /** Returns the literal x &gt;= v (or x &lt;= v) over the root domain of x: "1" or "0" past it. */
   private String proofBound(int x, boolean atLeast, long v) {
     IntDomain d = proofDomains[x];
-    if (atLeast) {
-      return v <= d.min() ? "1" : v > d.max() ? "0" : OpbEncoder.ge(x, (int) v);
+    if (atLeast ? v <= d.min() : v >= d.max()) {
+      return "1";
     }
-    return v >= d.max()
-        ? "1"
-        : v < d.min() ? "0" : OpbEncoder.negate(OpbEncoder.ge(x, (int) v + 1));
+    if (atLeast ? v > d.max() : v < d.min()) {
+      return "0";
+    }
+    String ge = OpbEncoder.ge(x, (int) (atLeast ? v : v + 1));
+    return atLeast ? ge : OpbEncoder.negate(ge);
   }
 
   /** Writes the rup step "guard implies literal" (guard empty for none), unless it is true. */
@@ -2088,7 +2093,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (!"0".equals(literal)) {
       s.append(" 1 ").append(literal);
     }
-    proof.lemma(s.append(" >= 1 ;\n"));
+    proof.lemma(s.append(CLAUSE_END));
   }
 
   /**
@@ -2135,7 +2140,7 @@ public final class LcgSolver implements ExternalPropagator {
         for (String l : literals) {
           s.append(" 1 ").append(l);
         }
-        proof.lemma(s.append(" 1 ").append(OpbEncoder.negate(selected)).append(" >= 1 ;\n"));
+        proof.lemma(s.append(" 1 ").append(OpbEncoder.negate(selected)).append(CLAUSE_END));
       }
       literals.add(selected);
     }
@@ -2315,7 +2320,7 @@ public final class LcgSolver implements ExternalPropagator {
           && !proofRowSplit(f, variables, w, fixed, caseClause, leaves / cases)) {
         return false;
       }
-      proof.lemma("rup" + caseClause + " >= 1 ;\n");
+      proof.lemma("rup" + caseClause + CLAUSE_END);
     }
     return true;
   }
@@ -2564,7 +2569,7 @@ public final class LcgSolver implements ExternalPropagator {
       return 0;
     }
     String bound = lower ? OpbEncoder.ge(i, v) : "~" + OpbEncoder.ge(i, v + 1);
-    proof.lemma("rup 1 " + bound + clause + " >= 1 ;\n");
+    proof.lemma("rup 1 " + bound + clause + CLAUSE_END);
     return 1;
   }
 
@@ -4263,7 +4268,7 @@ public final class LcgSolver implements ExternalPropagator {
     for (int l : lits) {
       s.append(" 1 ").append(proofLiteral(l));
     }
-    return s.append(" >= 1 ;\n").toString();
+    return s.append(CLAUSE_END).toString();
   }
 
   /** The proof's name of a DIMACS literal, with {@code ~} when negative. */
