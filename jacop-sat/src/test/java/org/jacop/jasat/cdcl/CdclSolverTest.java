@@ -645,20 +645,33 @@ class CdclSolverTest {
   }
 
   @Test
-  void luckyFailedLiteralsRefuteWithACheckedProof() throws IOException {
-    // forward false gives up at x2; forward true fails x1 at once (unit -x1), then x2 (unit -x2)
-    int[][] f = {{1, 2, 3}, {1, 2, -3}, {1, -2, 3}, {1, -2, -3}, {-1, 2, 4}, {-1, 2, -4}, {-1, -2}};
-    CdclSolver s = luckySolver(4, f);
-    s.setElimination(false);
-    ByteArrayOutputStream proof = new ByteArrayOutputStream();
-    DratWriter drat = new DratWriter(proof);
-    s.setProof(drat);
-    assertEquals(CdclSolver.UNSAT, s.solve());
-    drat.close();
-    assertEquals(0, s.conflicts);
-    assertEquals(2, s.luckyUnits);
-    String text = proof.toString(StandardCharsets.US_ASCII);
-    assertNull(RupChecker.check(4, List.of(f), text), text);
+  void failedLuckyAssignmentsLeaveTheSearchAsWithoutThem() {
+    Random rnd = new Random(11);
+    int compared = 0;
+    for (int run = 0; run < 40; run++) {
+      int vars = 60 + rnd.nextInt(40);
+      List<int[]> f = new ArrayList<>();
+      for (int i = 0; i < (int) (4.2 * vars); i++) {
+        int[] c = new int[3];
+        for (int k = 0; k < 3; k++) {
+          int v = 1 + rnd.nextInt(vars);
+          c[k] = rnd.nextBoolean() ? v : -v;
+        }
+        f.add(c);
+      }
+      CdclSolver on = luckySolver(vars, f.toArray(new int[0][]));
+      CdclSolver off = luckySolver(vars, f.toArray(new int[0][]));
+      off.setLucky(false);
+      int result = on.solve();
+      assertEquals(off.solve(), result, "run " + run);
+      if (on.luckyFound == null) {
+        compared++;
+        assertEquals(off.conflicts, on.conflicts, "conflicts of run " + run);
+        assertEquals(off.decisions, on.decisions, "decisions of run " + run);
+        assertEquals(off.propagations, on.propagations, "propagations of run " + run);
+      }
+    }
+    assertTrue(compared > 20, "compared " + compared);
   }
 
   @Test

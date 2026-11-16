@@ -296,9 +296,6 @@ public final class CdclSolver {
    */
   public String luckyFound;
 
-  /** Statistics: units the lucky assignments found as failed literals. */
-  public int luckyUnits;
-
   // --- variable elimination before the first search (see Eliminator)
   private boolean elimination = true;
   private boolean eliminationTried;
@@ -3381,13 +3378,14 @@ public final class CdclSolver {
    * a positive (negative) literal that is not false at the root, so that setting all variables true
    * (false) satisfies the formula. Otherwise it decides the variables in input order, forward then
    * backward, all false and then all true, with propagation after each decision; on a conflict it
-   * flips the last decision once and gives the pass up when the flipped one conflicts too. A first
-   * decision that conflicts is a failed literal: its negation becomes a root unit (with its RUP
-   * step in the proof) and the pass goes on. Nothing is learnt otherwise, and a pass that fails
-   * leaves the saved phases as they were.
+   * flips the last decision once and gives the pass up when the flipped one conflicts too. Unlike
+   * Kissat, a first decision that fails does not become a root unit: when no pass finds a model,
+   * the saved phases, the watches, the order of the clause literals and the propagation count are
+   * put back as they were, so the search that follows is exactly the one without lucky assignments
+   * (root units changed the search by luck on SAT instances, waerden 9 -> 95 s).
    *
-   * @return {@link #SAT} with every variable assigned, {@link #UNSAT} when the root or a failed
-   *     literal refutes the formula, {@link #UNKNOWN} at the root when no assignment was lucky
+   * @return {@link #SAT} with every variable assigned, {@link #UNSAT} when the root propagation
+   *     refutes the formula, {@link #UNKNOWN} at the root when no assignment was lucky
    */
   private int lucky() {
     long begin = System.nanoTime();
@@ -3403,7 +3401,6 @@ public final class CdclSolver {
       for (int l = 0; l < 2 * numVars; l++) {
         watched[l] = Arrays.copyOf(watches[l], watchSize[l]);
       }
-      int rootTrail = trailSize;
       long props = propagations;
       int result = UNKNOWN;
       if (noClauseWithoutSign(0)) {
@@ -3437,15 +3434,6 @@ public final class CdclSolver {
           watchSize[l] = n;
         }
         propagations = props;
-        // the units of failed literals and their consequences stay as root facts without
-        // reasons (the restored clauses may not have them first), propagated again by the search
-        for (int i = rootTrail; i < trailSize; i++) {
-          vdata[(trail[i] >> 1) << 2 | REASON] = NO_REASON;
-          if (proof != null) {
-            proof.add(trail, i, 1);
-          }
-        }
-        qhead = rootTrail;
       }
       return result;
     } finally {
@@ -3486,8 +3474,8 @@ public final class CdclSolver {
    * One lucky pass: decides each unassigned variable in input order (forward) or in reverse order
    * with the literal of the sign, propagating after each decision.
    *
-   * @return SAT when every variable got a value without a conflict left, UNSAT when a failed
-   *     literal refutes the formula, UNKNOWN (back at the root) otherwise
+   * @return SAT when every variable got a value without a conflict left, UNKNOWN (back at the root)
+   *     otherwise
    */
   private int luckyPass(boolean forward, int sign, String name) {
     for (int k = 0; k < numVars; k++) {
@@ -3505,26 +3493,12 @@ public final class CdclSolver {
       if (propagate() == NO_CONFLICT) {
         continue;
       }
-      if (decisionLevel > 1) {
-        backtrack(decisionLevel - 1);
-        newDecisionLevel();
-        assign(lit ^ 1, NO_REASON);
-        if (propagate() == NO_CONFLICT) {
-          continue;
-        }
+      backtrack(decisionLevel - 1);
+      newDecisionLevel();
+      assign(lit ^ 1, NO_REASON);
+      if (propagate() != NO_CONFLICT) {
         backtrack(0);
         return UNKNOWN;
-      }
-      // the first decision fails: its negation is a unit implied by unit propagation (RUP)
-      backtrack(0);
-      learnt[0] = lit ^ 1;
-      if (proof != null) {
-        proof.add(learnt, 0, 1);
-      }
-      assign(lit ^ 1, NO_REASON);
-      luckyUnits++;
-      if (propagate() != NO_CONFLICT) {
-        return refutedAtRoot();
       }
     }
     luckyFound = name;

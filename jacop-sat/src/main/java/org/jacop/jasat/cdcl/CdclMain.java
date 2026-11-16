@@ -145,10 +145,8 @@ public final class CdclMain {
           "c eliminated variables %d, walk %.2f s%n",
           solver.eliminatedCount(), solver.walkNanos / 1e9);
       out.printf(
-          "c lucky %s, units %d, %.2f s%n",
-          solver.luckyFound == null ? "none" : solver.luckyFound,
-          solver.luckyUnits,
-          solver.luckyNanos / 1e9);
+          "c lucky %s, %.2f s%n",
+          solver.luckyFound == null ? "none" : solver.luckyFound, solver.luckyNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");
