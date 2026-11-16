@@ -55,6 +55,7 @@ import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
@@ -995,6 +996,30 @@ class VeriPbProofTest {
           .as("holes %b", holes)
           .isNull();
     }
+  }
+
+  @Test
+  void channelOrderBoundPastAHoleIsDerived() {
+    // b <=> x > -1 and b <=> x <= 0 with 0 a hole of x: the channel fails under b, but unit
+    // propagation over the order literals of x does not see x >= 1 under b (fuzz seed 16683190)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, 4);
+    x.domain.inComplement(0, x, 0);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new ChannelOrder(
+            x, new IntVar[] {b, b, b}, new int[] {-1, 0, 2}, new boolean[] {false, true, false}));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
   }
 
   @Test

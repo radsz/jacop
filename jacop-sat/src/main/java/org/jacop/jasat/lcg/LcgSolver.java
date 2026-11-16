@@ -57,6 +57,7 @@ import java.util.function.LongConsumer;
 import org.jacop.api.SatisfiedPresent;
 import org.jacop.constraints.AbstractReifiedConstraint;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
@@ -1992,6 +1993,14 @@ public final class LcgSolver implements ExternalPropagator {
     }
     if (proofStarted && c instanceof AbstractReifiedConstraint r) {
       proofReifiedBounds(r, atoms, from, entry);
+      return;
+    }
+    if (proofStarted && c instanceof ChannelOrder channel) {
+      // each item is a reified bound of x, whose bound past a hole of x unit propagation misses
+      // (b <=> x > -1 and b <=> x <= 0 fail under b when 0 is a hole)
+      for (Constraint item : channel.reifications()) {
+        proofReifiedBounds((AbstractReifiedConstraint) item, atoms, from, entry);
+      }
       return;
     }
     if (proofStarted && c.getClass() == Count.class) {
