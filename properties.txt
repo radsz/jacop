@@ -150,6 +150,49 @@ Constraints (core):
 - org.jacop.diffnk.reasons: under LCG DiffnK explains its pruning and
   failures by the boxes of the rule (false: generic reasons); default
   true.
+- org.jacop.rewrite: constraints replace themselves by simpler ones
+  during search when the current domains allow it (their prunings are
+  recorded as those of the original for LCG); default true.
+- org.jacop.rewrite.element: ElementVariableFast with a fixed index
+  becomes an equality; default true.
+- org.jacop.rewrite.reified: a reification or implication whose Boolean
+  is fixed becomes its nested constraint (or its negation), as Gecode
+  rewrites its reified propagators; default true.
+- org.jacop.linearIncrementalTerms: an imposed LinearInt with at least
+  this many terms keeps its bounds incrementally instead of rescanning
+  them, 0 for never; default 200.
+- org.jacop.netflow.generalArcs: NetworkFlow decides residual arcs of
+  any capacity by shortest paths when it can, not only arcs of capacity
+  one; false probes every such arc instead; default true.
+- org.jacop.netflow.shortestPaths: NetworkFlow probes the arcs left
+  after the shortest paths by successive shortest paths instead of
+  network simplex pivots; default true.
+- org.jacop.maxClique.renumber: MaxCliqueBound tries to cover the
+  vertices beyond the limit by re-colouring (MCS); default true.
+- org.jacop.maxClique.maxsat: MaxCliqueBound tries to cover them by
+  MaxSAT failed-literal reasoning (Li and Quan); default true.
+- org.jacop.maxClique.degeneracy: MaxCliqueBound colours the vertices in
+  the minimum width order of MCS instead of by decreasing degree;
+  default true.
+- org.jacop.maxClique.force: MaxCliqueBound sets the one vertex left
+  uncovered to 1; default true.
+- org.jacop.maxClique.greedyStarts: the starting vertices of the greedy
+  clique of MaxCliqueBound; default 100.
+- jacop.sequenceMdd.skip: the most calls of SequenceMdd skipped after
+  calls that pruned nothing; default 63.
+- jacop.sequenceMdd.replayNodes: the largest circuit whose SequenceMdd
+  pruning LCG explains by replaying the constraint; a larger one gives
+  the generic reason at once; default 32.
+- org.jacop.table.binaryBitSpan: the most values between the least and
+  the largest value of a column of a BinaryBitTable; default 4096.
+- org.jacop.geost.reasons: under LCG, Geost explains its pruning and
+  failures by covering the swept region (else by replay); default true.
+- org.jacop.floats.minReduction: the smallest relative reduction of a
+  float domain that is applied; smaller narrowings are skipped, 0
+  applies every one; default 0.
+- org.jacop.search.free.domWdegScan: free search dom/wdeg scans all
+  variables at each decision instead of selecting incrementally (both
+  give the same variable); default false.
 
 flatzinc compiler specific:
 ===========================
@@ -519,6 +562,222 @@ unless stated otherwise):
 - jacop.table: merging of the tuples of a table that differ in one
   column: plain (none), star (into *) or sets (into sets of values);
   default plain.
+- org.jacop.fz.affineFolding: fold a variable that is an affine function
+  of another (int_times by a constant, int_plus with a constant, a
+  two-term int_lin_eq) into the linear constraints that use it, as
+  CP-SAT and MIP presolve do; default true.
+- org.jacop.fz.affineFoldingRows: the most rows a folded variable may
+  occur in (with LCG a variable in several rows learns better than its
+  folded terms); default 1.
+- org.jacop.fz.cse: merge constraints that compute the same function of
+  the same inputs and remove duplicate constraints (common
+  subexpressions); default true.
+- org.jacop.fz.enforcementInlining: eliminate the 0/1 controls of
+  half-reified constraints whose every other occurrence is a positive
+  literal of a clause (CP-SAT enforcement-literal reductions); off for
+  all-solution search and --proof; default true.
+- org.jacop.fz.enforcementInlining.literal,
+  org.jacop.fz.enforcementInlining.binary,
+  org.jacop.fz.enforcementInlining.negated: the parts of that reduction,
+  for experiments; default true each.
+- org.jacop.fz.agreementCount: check at the root the pigeonhole bound on
+  the number of equal pairs of a group of variables whose pairs all have
+  an equality indicator (XCSP3 Hamming) against the model's bounds on
+  agreements; "rows" also posts the bounds as constraints for search,
+  false turns it off; default true.
+- org.jacop.fz.antichain: post the LYM inequality over a group of
+  integer vectors that are pairwise incomparable in the product order;
+  default true.
+- org.jacop.fz.argMaxFunctions: run an arg_max over values that are
+  nondecreasing functions of other variables on those variables; default
+  true.
+- org.jacop.fz.binPackingPermutations: bin packings whose items of an
+  all_different group fill every bin with exactly one item get the dual
+  viewpoint (item position per bin, its weight, the bin loads); default
+  true.
+- org.jacop.fz.countPartners: a variable whose every value is counted
+  with a count that cannot be one gets a clause that it equals one of
+  its few possible partners (XCSP3 ButtonsScissors); default true.
+- org.jacop.fz.indexDisjunction: an index variable used only by element
+  constraints whose results feed one linear relation becomes a clause
+  over half-reified relations, one per position; default true.
+- org.jacop.fz.indexDisjunction.max: elements over arrays of more
+  positions are left as they are; default 64.
+- org.jacop.fz.intensionTable: replace a small expression that MiniZinc
+  flattened into several constraints by the table of its solutions;
+  "force" also when the gate would refuse it, false turns it off;
+  default true.
+- org.jacop.fz.listsDiffer: short tables that say two lists of variables
+  differ become AllDifferentLists; default true.
+- org.jacop.fz.pairCover: pairs of items that must share some bins of
+  bounded capacity (SONET) get a lower bound on the bins of each item;
+  default true.
+- org.jacop.fz.permutationElementSums: element constraints y[k] =
+  c[x[k]] over indices of one all_different get the bounds (or the fixed
+  value) of the sum of the y[k]; default true.
+- org.jacop.fz.permutationSums: the permutation sum rows of
+  all_different groups in the lattice of the linear equalities; default
+  true.
+- org.jacop.fz.partitionSums: implied sums over unit sums that partition
+  the variables of an all_different (left out under --proof); default
+  true.
+- org.jacop.fz.progressionTiling: tilings of 0..n-1 by arithmetic
+  progressions with distinct gaps (XCSP3 PerfectRythmicTiling) get their
+  redundant constraints; default true.
+- org.jacop.fz.progressionTiling.search: such a satisfaction model
+  without an annotation to follow (or under -f) is searched by the
+  branching of the tiling; default true.
+- org.jacop.fz.translationTiling: tilings of Z_n by translation (XCSP3
+  TilingRythmicCanons) get the redundant exact cover over the
+  characteristic vector of B; default true.
+- org.jacop.fz.translationTiling.search: how the search uses that
+  vector: "add" (default) adds its Booleans to the search variables,
+  "first" branches on them first, anything else leaves the search as it
+  is.
+- org.jacop.fz.regularFlow: a regular constraint whose sequence is
+  counted per residue class of a period (rotating workforce) gets the
+  aggregated flow of its automaton over the classes; default true.
+- org.jacop.fz.sequenceMdd: circuits whose arcs carry times (routing
+  with time windows) get a redundant SequenceMdd; default true.
+- org.jacop.fz.sequenceMddWidth, org.jacop.fz.sequenceMddNodes: the
+  width of that diagram and the largest circuit it is posted on; default
+  64 and 32.
+- org.jacop.fz.symmetricGcc: sums of 0/1 variables that form the rows
+  and columns of a matrix get a symmetric global cardinality (flow) over
+  them; default false.
+- org.jacop.fz.symmetricGccLines, org.jacop.fz.symmetricGccCells: the
+  fewest rows (and columns) and the most cells of such a matrix; default
+  2 and 40000.
+- org.jacop.fz.tableElimination: eliminate the variables that occur in
+  exactly two extensional constraints and nowhere else by joining the
+  two relations (bucket elimination of degree two); off for all-solution
+  search; default true.
+- org.jacop.fz.tableElimination.rows: the most rows of a joined relation
+  that has more columns than the larger of the two; default 10000.
+- org.jacop.fz.zeroSum: half-reified sums at their least value, b -> s =
+  min(s), become b -> x[i] = v[i] for every term; default true.
+- org.jacop.fz.zeroSum.maxTerms: a sum with more implications in all is
+  left as it is; default 100000.
+- org.jacop.fz.xorZeroOne: equations over 0/1 variables enter the
+  XorSystem (modulo 2); default true.
+- org.jacop.fz.pureClauses: a satisfaction model that is a set of
+  clauses alone is solved by JaSAT as a CNF (with inprocessing and local
+  search); default true.
+- org.jacop.fz.differenceOffsets: DifferenceCycles also gets the arcs
+  whose weight is the bound of a third variable of a row, and the m >= x
+  arcs of max and min; default true.
+- org.jacop.fz.differenceElements: DifferenceCycles also gets the arcs
+  of elements y = a[index] over arrays of variables, conditional on the
+  index; default true.
+- org.jacop.fz.alldifferentImplied: the cliques of implied disequalities
+  found by the all_different detector: "sum" (default) records them for
+  the implied sums only, "post" also posts them as all_different, "off"
+  ignores them.
+- org.jacop.fz.binaryBitTable: tables of two variables with small ranges
+  are posted as BinaryBitTable; default true.
+- org.jacop.fz.binaryBitTable.negativePairs: the most pairs of values of
+  a negative table of two variables posted as a BinaryBitTable; default
+  1000000.
+- org.jacop.fz.binaryEqAlias: int_eq_reif(x, 1, b) of a 0..1 variable x
+  makes x an alias of b, as bool2int does; default false.
+- org.jacop.fz.orderChannels: the reified comparisons of one variable
+  with constants (int_le_reif, int_lt_reif and their >=, > forms) become
+  one ChannelOrder per variable; default true.
+- org.jacop.fz.orderChannels.implied: the half-reified comparisons
+  (int_le_imp and its kin) join the order channels as implied items;
+  default true.
+- org.jacop.fz.cumulativeTimeIndexed: a cumulative with variable
+  durations and fixed resource uses also gets the time-resource
+  decomposition (Schutt et al., CP 2009): "lcg" (default) under lazy
+  clause generation only, true always, false never.
+- org.jacop.fz.cumulativeTimeIndexedPairs: the most (task, time point)
+  pairs of that decomposition; default 4000.
+- org.jacop.fz.inferredCumulatives.disjoint: the inference of
+  cumulatives also uses the disjoint pairs of tasks; default true.
+- org.jacop.fz.inferredCumulatives.out: the most inferred cumulatives
+  posted; default 5.
+- org.jacop.fz.inferredCumulatives.useful: post only inferred
+  cumulatives whose capacity bound exceeds that of every input
+  cumulative and clique; false posts them all; default true.
+- org.jacop.fz.maxClique: a maximized sum of 0/1 variables with pairwise
+  conflicts (maximum clique, independent set) gets a redundant
+  MaxCliqueBound; default true.
+- org.jacop.fz.maxClique.search: a model of maximum clique only, without
+  a search annotation, is searched by the branching of maximum clique
+  algorithms (MaxCliqueSelect); default true.
+- org.jacop.fz.maxClique.greedy: that search starts from a greedy clique
+  as incumbent; default true.
+- org.jacop.fz.maxClique.lcg: a model of maximum clique only keeps LCG
+  on by default (else it is searched without LCG); default false.
+- org.jacop.fz.maxClique.pairs: the pairwise conflicts of a pure maximum
+  clique model are posted too (the bound enforces them by itself
+  otherwise); default false.
+- org.jacop.fz.dominance: Lee-Zhong dominance nogoods at presolve: unset
+  gives on for fixed search and off under -f, true or false overrides.
+- jacop.dominance.budget, jacop.dominance.time: the work budget (steps)
+  and the time (ms) of the dominance rule; default 50000000 and 1000.
+- jacop.dominance.domain, jacop.dominance.nogoods: the most values of a
+  variable the rule checks and the most nogoods it posts; default 16 and
+  200000.
+- org.jacop.fz.symmetryEmptiedBins: the constraints that empty the bins
+  above a minimized number of bins are left out of the value graph of
+  symmetry detection; default true.
+- org.jacop.fz.symmetryIndexValues: value symmetries are also looked for
+  among the index variables of element constraints when the plain value
+  spaces give none; default true.
+- org.jacop.fz.symmetryModelLex: lex-leader constraints of the model
+  that are verified to compare the variables in one order let value
+  precedence be posted on those variables too; default true.
+- org.jacop.fz.symmetrySetValues: the elements of set variables that
+  only set operations, comparisons and cardinalities constrain may be
+  renamed by symmetries; default true.
+- org.jacop.fz.symmetrySwaps: break the conditional symmetry of
+  interchangeable values in a sequence ordered by precedences (Black
+  Hole); default true.
+- org.jacop.fz.definedLast: free search without a search annotation
+  branches on the variables no defines_var names before the defined
+  ones: "first" (default, any value but always and false) until the
+  first solution under LCG and always without learning, "always" also
+  after it, false all in one order.
+- org.jacop.fz.firstFailTie: how first_fail breaks ties between the
+  smallest domains: "none" (default) the annotation order, "span" the
+  smallest max - min + 1.
+- org.jacop.fz.lpProbe: a fixed search whose root linear relaxation is
+  large first runs this many ms without it, and starts again from the
+  root with it if not finished; 0 is off; default 200.
+- org.jacop.fz.lpProbeSize: the smallest first-solve tableau (rows times
+  rows and columns) the probe waits for; default 1000000.
+- org.jacop.fz.freeLpProbe: free search uses that probe too; false
+  solves a large root relaxation at once; default true.
+- org.jacop.fz.floatBisection: a float objective is searched by
+  bisection of its range instead of asking each solution to improve by
+  the next float; default true.
+- org.jacop.fz.floatBisectStart: under free search with a float
+  relaxation and a finite bound, the bisection starts at once from the
+  points of the relaxation (else after org.jacop.fz.floatCrawl
+  solutions); default true.
+- org.jacop.fz.floatRestart: each run of the bisection stops at its
+  first solution, and the next starts again from the root; default true.
+- org.jacop.fz.floatStepNodes: the node budget of a run of the
+  bisection, at least the nodes so far; default 100000.
+- org.jacop.fz.floatCrawl: the solutions of a float objective's branch
+  and bound before it turns to bisection; default 1000.
+- org.jacop.fz.floatLp: the LP relaxation of the linear float rows of a
+  float objective (LinearFloatRelaxation); default true.
+- org.jacop.fz.floatLpRows: the most rows of that relaxation; default
+  5000.
+- org.jacop.fz.floatLpPoint: the bisection first tries the point of the
+  relaxation; default true.
+- org.jacop.floats.lpProducts: the products of the model get their
+  McCormick envelopes in the float relaxation; default true.
+- org.jacop.floats.cid: the 3BCID contractor over the float variables of
+  a search, "s3b[,variablesPerNode]" or "off"; unset gives "10" for
+  satisfaction and off for optimisation.
+- org.jacop.floats.newton: the interval Newton contractor over the float
+  variables of a search (true or false); unset gives true for
+  satisfaction and false for optimisation.
+- jacop.lns.depotLinks: route removal of large neighbourhood search also
+  frees the links between routes and depots; default true.
 
 Presolve:
 =========
@@ -744,6 +1003,127 @@ Proofs (--proof):
 - jacop.lcg.proofTrace: name the constraint behind each explanation
   in a comment and write each conflict clause as a step (debugging);
   default false.
+- jacop.virtualClock.propagationsPerMs: under jacop.virtualClock, the
+  constraint propagations of the search without learning that count as
+  one millisecond; default 1000.
+- jacop.lcg.probe.cap: the most ms root probing takes whatever its
+  share, 0 for no cap; default 0 with jacop.lcg.probe, 1000 for the
+  default probing of free search.
+- jacop.lcg.alldiffClauses: permutations become clauses (pairwise
+  exclusions of each value and a clause per value); default true.
+- jacop.lcg.alldiffClauses.limit: the most clauses of one all different
+  constraint; default 16384.
+- jacop.lcg.alldiffClauses.objective: a permutation over terms of the
+  objective's sum may become clauses too; default true.
+- jacop.lcg.counters: counting constraints become counters (lazy
+  decomposition, Abio and Stuckey CP 2012) once their explanations take
+  part in conflicts: unset is lazy, "eager" encodes them all before
+  search, false never.
+- jacop.lcg.counters.limit, jacop.lcg.counters.uses: the most clauses of
+  one counter and the explanations after which a lazy one becomes
+  clauses; default 4000 and 100.
+- jacop.lcg.clauseShaped: the most clauses per unfixed variable of a
+  linear constraint over 0/1 variables that becomes clauses in place of
+  its propagator, 0 keeps them all propagators; default 2.
+- jacop.lcg.tableClauses: tables (HybridTable without restrictions
+  between columns) that become clauses: "none" (default), "support"
+  (literal per tuple), "direct" (support clauses for two-column tables,
+  support for the others), "binary" (two-column tables only).
+- jacop.lcg.tableClauses.limit, jacop.lcg.tableClauses.dom,
+  jacop.lcg.tableClauses.tuples: the most clauses, values per column and
+  tuples of such a table; default 5000, 64 and 100.
+- jacop.lcg.tableClauses.objectiveTerms: a table over the objective's
+  definition keeps its propagator; default true.
+- jacop.lcg.tableClauses.compressed: a table that is not written as
+  clauses by jacop.lcg.tableClauses is written as the clauses of its
+  compressed form when compression shrinks it to a few tuples (as CP-SAT
+  presolve); default true.
+- jacop.lcg.tableClauses.compressed.tuples,
+  jacop.lcg.tableClauses.compressed.ratio,
+  jacop.lcg.tableClauses.compressed.dom,
+  jacop.lcg.tableClauses.compressed.input: the most compressed tuples,
+  the least ratio of plain to compressed tuples, the most values of a
+  column, and the most plain tuples tried; default 16, 4, 256 and 4096.
+- jacop.lcg.assignmentReasons: CircuitCost and SubcircuitCost explain
+  their atoms with assignment reasons (smaller, but slower to compute);
+  default false.
+- jacop.lcg.interDistanceReasons: InterDistance explains its pruning
+  (else LCG replays it); default false.
+- jacop.lcg.inEntailByBounds: under LCG, In counts as satisfied only
+  when the bounds of x lie in its set, which keeps explanations short;
+  false restores the complete check; default true.
+- jacop.lcg.pushBeforeConflict: a constraint failure first hands the
+  solver the atoms its fixpoint recorded, then the conflict, whose
+  clause cites them instead of their explanations; off with proof
+  logging; default true.
+- jacop.lcg.chainLimit: linked bound literals of one variable past which
+  its new bound literals stay transient (not kept in short reasons,
+  resolved away in learnt clauses); unset gives no limit in fixed search
+  and 64 under free search.
+- jacop.lcg.reasonUnkept: a short reason with a transient literal is not
+  kept as a clause, so it does not make that literal permanent; default
+  true.
+- jacop.lcg.expandUnkept: conflict analysis expands the transient bound
+  literals of a learnt clause into their reasons; default false.
+- jacop.lcg.targetPhase: target phases of activity branching (the values
+  at the conflict with the longest trail since the last restart, until
+  the first solution): unset is on under -f and off otherwise, true or
+  false sets it in every mode.
+- jacop.lcg.targetBest: every this many restarts the target becomes the
+  values of the longest trail seen so far (CaDiCaL best rephasing), 0
+  never; default 1.
+- jacop.lcg.boundDive: the share of the work left for a search for a
+  solution at the objective's root bound before the core-guided probe,
+  when that bound is above the cores' lower bound, 0 off; default 0.002.
+- jacop.lcg.boundDiveConflicts: the most conflicts of that search;
+  default 1000.
+- jacop.lcg.bisectUncored: an objective the core-guided phase cannot
+  take (no linear sum) goes to dichotomic probes of its bound; false
+  keeps branch and bound with lower-bound runs; default true.
+- jacop.lcg.bisectUncoredAfter: the conflicts of branch and bound with
+  lower-bound runs before such an objective goes to bisection; default
+  100000.
+- jacop.lcg.jumpConflicts: free search: the conflicts of a call of
+  branch and bound before the core-guided phase that assumes the
+  objective more than one below the best solution, 0 turns the jumps
+  off; default 100.
+- jacop.lcg.jumpAfter: the solutions of one run of branch and bound
+  after which it stops for jumps, 0 off; default 4.
+- jacop.lcg.jumpFast: the most conflicts after the last solution for a
+  solution to extend the streak of quick ones that triggers jumps;
+  default 20.
+- jacop.lcg.coreTrim: the times each core of the core-guided phase is
+  solved again under its own literals while that shrinks it, 0 never;
+  default 3.
+- jacop.lcg.coreExhaust: the most totalizer outputs of each relaxed core
+  that the core-guided phase tests alone (core exhaustion), 0 never;
+  default 8.
+- jacop.lcg.coreExhaustPatience: core exhaustion stops once the first
+  output of this many cores per output it proved, plus this many, was
+  not refuted, 0 never stops; default 16.
+- jacop.lcg.coreObjectiveProbe: the core-guided phase probes the
+  objective's own bound; default true.
+- jacop.lcg.coreObjectiveProbeAfter: the cores before the first check of
+  their rate for those probes (1 probes after every core); default 16.
+- jacop.lcg.coreProbeHalfWay: the core probe is not skipped when it
+  raised the cores' lower bound at least half way to the best solution
+  of branch and bound; default true.
+- jacop.lcg.coreExtendRecent: extensions of the core-guided phase
+  measure the bound's recent rate; false the rate since the phase's
+  start only; default true.
+- jacop.lcg.coreDecay: the stall test of the core-guided phase projects
+  a falling rate of the bound as decaying; false projects it linearly;
+  default true.
+- jacop.lcg.coreDecayAfterMs: the phase's own work, in ms of the work
+  clock, before a falling rate counts; default 120000.
+- jacop.lcg.coreSpanRatio: the sums of a split objective replace their
+  0-1 terms only when the terms span more than this many times their
+  levels; default 2.
+- jacop.jasat.lubyUnit: the conflicts of one unit of the Luby restart
+  sequence in stable mode; default 512.
+- jacop.jasat.roundClockMask: the clock is read every this many plus one
+  rounds of unit propagation with the external propagator (a power of
+  two minus one); default 1023.
 
 Linear relaxation (LP):
 =======================
@@ -957,6 +1337,93 @@ Simplex choice and bases:
   (JaLP's clean-up); default false.
 - org.jacop.lp.clean: clean the combination of a certificate (drop
   multipliers of a missing side, divide by gcd); default true.
+- org.jacop.lp.cutRoundsMax, org.jacop.lp.cutExtraSeconds: cut rounds
+  after the first org.jacop.lp.cutRounds while each still moves the
+  bound: at most this many rounds in all, within this many seconds;
+  default 50 and 1.
+- org.jacop.lp.sparseCuts: the rows of a dense tableau with no room for
+  a round of cuts move to the sparse simplex for the cut rounds; default
+  true.
+- org.jacop.lp.gomoryDivisor: the MIR of a tableau row also tries the
+  weight of its basic column as divisor (textbook Gomory mixed-integer
+  cut); default true.
+- org.jacop.lp.gomoryScale: the scale of the rows of the basis inverse
+  the Gomory cuts come from; default 2^36.
+- org.jacop.lp.dualAggregate: MIR cuts of the dual-weighted aggregate of
+  the rows; default true.
+- org.jacop.lp.zeroHalf: zero-half cuts in the cut rounds
+  (ZeroHalfCuts); default false.
+- org.jacop.lp.cutWeight: the largest weight of a cut made in the cut
+  rounds; default unlimited.
+- org.jacop.lp.mirSearch: MIR and Gomory cuts also in search, every few
+  optimal solves over the bounds of the first solve; default false.
+- org.jacop.lp.mirSearchCuts, org.jacop.lp.mirSearchWeight: the most
+  cuts of a separation in search and the largest weight of such a cut;
+  default 10 and 2^16.
+- org.jacop.lp.searchCutGate: a separation in search whose cuts leave
+  the bound of the re-solve where it was counts as one that finds none
+  (its period doubles); default true.
+- org.jacop.lp.energySearch: energy cuts of the cumulative resources
+  also in search, under the period and gate of the capacity cuts;
+  default false.
+- org.jacop.lp.restartBounds: with org.jacop.lp.restartSolves, the cut
+  rounds of a restart solve use the root bounds at that restart instead
+  of those of the first solve; default false.
+- org.jacop.lp.anytimeBound: the duals of a solve stopped at its pivot
+  limit bound the objective too; default true.
+- org.jacop.lp.extraLimits: the rows of the other constraints are
+  dropped when this many solves with them (and one in twenty) stop at
+  the pivot limit; a large value keeps them; default 3.
+- org.jacop.lp.extraSparse: those rows of a dense tableau whose search
+  solves get few pivots move to the sparse simplex when it is cheaper
+  per pivot; default true.
+- org.jacop.lp.nearRows: the rows over the terms of the objective that
+  do not fit the dense tableau are all taken by the sparse simplex;
+  default true.
+- org.jacop.lp.encodingRows: the value encodings of the model's Booleans
+  in place of the hull rows of the element constraints they cover;
+  default true.
+- org.jacop.lp.leadEncodings: when not every candidate row fits, the
+  value encodings of the model's variables go right after the leading
+  rows; default true.
+- org.jacop.lp.booleanCount: at most one rows over the Booleans of a
+  channel that select values of one variable; default true.
+- org.jacop.lp.selectedValues: the rows that link value Booleans to the
+  values selected by other constraints; default true.
+- org.jacop.lp.valueCliques: clique rows over value Booleans lifted from
+  implications; default true.
+- org.jacop.lp.impliedValues: clique rows that join the Booleans of
+  ChannelImply (b_v -> x = v) with those of b_v <-> x = v of the same
+  variable; default true.
+- org.jacop.lp.alldiffNetwork: sorting-network rows of all-different
+  permutations: true (default), "all" also for constraints whose value
+  encodings give the hull already, false off.
+- org.jacop.lp.alldiffNetworkMax: the most comparators of those networks
+  over all constraints; default 5000.
+- org.jacop.lp.setRowsShare: a relaxation counts as made of set rows
+  (0/1 columns, unit weights) only when its model rows are at most this
+  share of its columns; default 0.1.
+- org.jacop.lp.rootRefutation: a satisfaction model gets a relaxation of
+  its value encodings solved once at the root, to refute it; default
+  true.
+- org.jacop.lp.rootRefutationPivots: the pivots of that root solve;
+  default 2500.
+- org.jacop.lp.clauseRefutation: a model in clauses gets a refutation
+  over the clause rows and their clique rows (units and equivalences
+  substituted); default true.
+- org.jacop.lp.clauseRefutationCliques,
+  org.jacop.lp.clauseRefutationPivots: the fewest cliques of three or
+  more literals the binary clauses must form, and the pivots of its root
+  solve; default 1 and 1000.
+- org.jacop.lp.refutationObjective: a satisfaction model with no value
+  encoding gets a refutation that minimizes the inequality whose
+  variables are in the most rows, with cut rounds; default true.
+- org.jacop.lp.refutationObjectiveLength: the fewest variables of that
+  inequality; default 3.
+- org.jacop.lp.slackShift: the dense dual simplex shifts the bounds of
+  slacks to avoid degenerate pivots; default true.
+- org.jacop.lp.shiftScale, org.jacop.lp.shiftPower: the scale and power
+  of those shifts; default 10 and 0.5.
 
 JaLP sparse simplex:
 ====================
@@ -998,6 +1465,13 @@ JaLP sparse simplex:
   each presolve to standard error; default false.
 - org.jacop.jalp.main: modes of the stand-alone LP solver (LpMain), a
   comma separated list of primal and reobjective; default empty.
+- org.jacop.jalp.linearScore: the leaving row by gap^1.2 / weight
+  instead of gap^2 / weight: "auto" (default) on LPs shaped like
+  multicommodity networks, "on", "off".
+- org.jacop.jalp.presolveForcing: presolve removes forcing rows; default
+  true.
+- org.jacop.jalp.presolveDominated: presolve fixes columns dominated
+  over the bounds of the duals; default true.
 
 Decomposition bound:
 ====================
@@ -1047,3 +1521,19 @@ Debugging:
   computed afresh after every step; default false.
 - tmp.lattice: print the pruning of LinearEqualities by residue
   classes; default false.
+- org.jacop.search.free.domWdegCheck: check each incremental dom/wdeg
+  selection of free search against one made by a scan; default false.
+- jacop.dominance.debug: print the candidates the dominance rule checks;
+  default false.
+- jacop.lcg.tableClauses.debug: print each table tried as clauses;
+  default false.
+- org.jacop.fz.pureClauses.dump=file: write the CNF of a pure clause
+  model in DIMACS format.
+- org.jacop.lp.sourceStats: relaxations keep per-source row statistics
+  (with --search-statistics); default false.
+- jacop.lcg.mine=file: a research tool: classify learnt clauses by the
+  constraints whose scope covers their variables, counts written to the
+  file.
+- jacop.lcg.mine.budget, jacop.lcg.mine.size, jacop.lcg.mine.nodes: the
+  share of the time spent mining, the largest clause mined and the nodes
+  of each implication check; default 0.5, 24 and 5000.
