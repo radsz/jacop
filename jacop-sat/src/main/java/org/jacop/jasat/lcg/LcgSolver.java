@@ -64,6 +64,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LinearForms;
+import org.jacop.constraints.Not;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.binpacking.Binpacking;
@@ -2201,7 +2202,7 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void proofReifiedBounds(
       AbstractReifiedConstraint r, EntryList atoms, int from, int entry) {
-    LinearForm f = OpbEncoder.form(r.c);
+    LinearForm f = proofRow(r.c);
     if (f == null) {
       return;
     }
@@ -2238,6 +2239,18 @@ public final class LcgSolver implements ExternalPropagator {
       String guard = proofDomains[b].singleton() ? "" : " 1 " + literal;
       proofLinearBounds(one ? f : f.negated(), atoms, from, entry, guard);
     }
+  }
+
+  /**
+   * Returns the row of a primitive constraint as the model states it, through negations (b
+   * &lt;=&gt; not (2 x + 2 y - z != 2) is the row 2 x + 2 y - z = 2), or null.
+   */
+  private static LinearForm proofRow(PrimitiveConstraint c) {
+    if (c instanceof Not n && n.getClass() == Not.class) {
+      LinearForm f = proofRow(n.negatedConstraint());
+      return f == null ? null : f.negated();
+    }
+    return OpbEncoder.form(c);
   }
 
   /**

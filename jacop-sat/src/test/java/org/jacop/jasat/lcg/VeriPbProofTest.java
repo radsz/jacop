@@ -103,6 +103,7 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -1068,6 +1069,45 @@ class VeriPbProofTest {
                 opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
         .isNull();
     assertThat(checker.conclusion).isEqualTo("BOUNDS 2 2");
+  }
+
+  @Test
+  void reifiedNegationOfARowWithoutIntegerSolutionIsDerived() {
+    // b <=> not (2 x0 + 2 x1 - x5 != 2) with x5 in {1, 3}: the row has no solution by parity, and
+    // the proof needs its bounds under b through the negation (fuzz seed 28841615)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 4);
+    x1.domain.inComplement(0, x1, 1);
+    IntVar x2 = new IntVar(store, "x2", 0, 4);
+    x2.domain.inComplement(0, x2, 2);
+    x2.domain.inComplement(0, x2, 3);
+    IntVar x3 = new IntVar(store, "x3", 1, 3);
+    x3.domain.inComplement(0, x3, 2);
+    IntVar x4 = new IntVar(store, "x4", -1, 4);
+    x4.domain.inComplement(0, x4, 1);
+    IntVar x5 = new IntVar(store, "x5", 1, 3);
+    x5.domain.inComplement(0, x5, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar obj = new IntVar(store, "obj", -30, 30);
+    store.impose(
+        new Reified(
+            new Not(new LinearInt(new IntVar[] {x0, x1, x5}, new int[] {2, 2, -1}, "!=", 2)), b));
+    store.impose(new XmulCeqZ(x1, 0, x4));
+    store.impose(new Reified(new XplusYlteqZ(x0, x3, x2), b));
+    store.impose(new LinearInt(new IntVar[] {x5, x2, x4, obj}, new int[] {2, -1, 1, -1}, "==", 0));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.sat().setExternalReasonKeep(1 + (int) (28841615L % 3));
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -2 -2");
   }
 
   @Test
