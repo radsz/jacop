@@ -238,7 +238,6 @@ public class LinearRelaxation extends Constraint
   // Both are off: such rows come back at the first solves in search, as its solution breaks them,
   // which undoes the root's choice to leave them out, and neither moved a result on the wide set
   private static final boolean POOL = !FALSE.equals(System.getProperty("org.jacop.lp.pool"));
-
   private static final int POOL_AGE = Integer.getInteger("org.jacop.lp.poolAge", 100);
   private static final boolean POOL_EXTRA = Boolean.getBoolean("org.jacop.lp.poolExtra");
   private static final boolean POOL_CUTS = Boolean.getBoolean("org.jacop.lp.poolCuts");
