@@ -159,11 +159,12 @@ class PortfolioSplitTest {
   // the other three waited (the 60-item knapsack split only on its objective and timed out at 30 s
   // under load, about one run in a hundred)
   private static final String SUBSET_SUM =
-      "array [1..24] of var 0..1: x :: output_array([1..24]);\n"
-          + "constraint int_lin_eq([2125, 1975, 1813, 2308, 2763, 1308, 1474, 2300, 1310, 2777, 2896,"
-          + " 2071, 1798, 2518, 1031, 2375, 2591, 1131, 1326, 2552, 2960, 2210, 1087, 1616], x,"
-          + " 40718);\n"
-          + "solve :: int_search(x, input_order, indomain_max, complete) satisfy;\n";
+      """
+      array [1..24] of var 0..1: x :: output_array([1..24]);
+      constraint int_lin_eq([2125, 1975, 1813, 2308, 2763, 1308, 1474, 2300, 1310, 2777, 2896, \
+      2071, 1798, 2518, 1031, 2375, 2591, 1131, 1326, 2552, 2960, 2210, 1087, 1616], x, 40718);
+      solve :: int_search(x, input_order, indomain_max, complete) satisfy;
+      """;
 
   @Test
   void splitThreadsSplitOnTheElementsOfArrays() throws IOException {
