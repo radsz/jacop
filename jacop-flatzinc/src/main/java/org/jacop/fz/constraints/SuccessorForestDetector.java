@@ -86,9 +86,12 @@ import org.jacop.fz.SimpleNode;
  *       is not an arc of its own; every kept arc thus has both its nodes selected.
  * </ul>
  *
- * <p>It runs for an optimization only, whose bound the cuts raise. System property
- * org.jacop.fz.successorForest=false turns it off; org.jacop.fz.successorForestMs (default 1000)
- * limits the time of its probes.
+ * <p>It runs for an optimization only, whose bound the cuts raise, and keeps one forest per
+ * successor array, with at least as many arcs as nodes. It is off by default: on 32-4-8-2 the bound
+ * after the root cuts is 102.5, yet the proof takes as long (13 s; it takes as long with {@code
+ * objective <= 93} posted by hand), as the relaxation in search hits its pivot limit on nearly
+ * every call. System property org.jacop.fz.successorForest=true turns it on;
+ * org.jacop.fz.successorForestMs (default 1000) limits the time of its probes.
  *
  * <p>References: C. E. Miller, A. W. Tucker and R. A. Zemlin, Integer programming formulation of
  * traveling salesman problems, Journal of the ACM 7(4), 1960; A. Lucena and M. G. C. Resende,
@@ -133,12 +136,14 @@ public class SuccessorForestDetector implements ParserTreeConstants {
   }
 
   /**
-   * It tells if the detection is on.
+   * It tells if the detection is on. It is off by default: the cuts raise the root bound, but on
+   * the prize-collecting instance its proof took as long with them, since the relaxation in search
+   * hits its pivot limit (see the class comment).
    *
-   * @return false if the system property org.jacop.fz.successorForest is false.
+   * @return true if the system property org.jacop.fz.successorForest is true.
    */
   public static boolean enabled() {
-    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.successorForest"));
+    return Boolean.getBoolean("org.jacop.fz.successorForest");
   }
 
   /**
@@ -213,6 +218,7 @@ public class SuccessorForestDetector implements ParserTreeConstants {
       if (x == null || x.length < 3) {
         continue;
       }
+      Pair best = null;
       for (int c = 0; c < lists.size() && System.nanoTime() < deadline; c++) {
         IntVar[] pos = lists.get(c);
         if (pos.length != x.length || Arrays.equals(pos, x)) {
@@ -223,10 +229,16 @@ public class SuccessorForestDetector implements ParserTreeConstants {
         key.add(firsts.get(c));
         if (tried.add(key)) {
           Pair p = tryPair(x, pos, firsts.get(c));
-          if (p != null) {
-            found.add(p);
+          if (p != null && (best == null || p.arcs().size() > best.arcs().size())) {
+            best = p;
           }
         }
+      }
+      // one forest per successor array, and only for a successor structure: at least an arc per
+      // node (other pairs of arrays have a few arcs that happen to be ordered, as the loads of
+      // cvrp or the times of kidney-exchange, whose cuts only make the relaxation larger)
+      if (best != null && best.arcs().size() >= x.length) {
+        found.add(best);
       }
     }
     return found;
