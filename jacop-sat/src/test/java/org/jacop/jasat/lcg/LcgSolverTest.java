@@ -5336,6 +5336,93 @@ class LcgSolverTest {
   }
 
   @Test
+  void heavySoftConflictsFormAtMostOneGroupsOnceHardened() {
+    // a weighted MaxSAT independent set as frb_wt of the MaxSAT Evaluation: unit soft clauses of
+    // weight 1 select vertices, and soft conflict clauses of a weight above all units together
+    // forbid pairs, the groups' cliques among them. The conflicts become hard only once a solution
+    // is known; the at-most-one groups are then looked for again, and the groups give the bound
+    // without a core (there were one core per unit of the bound before)
+    Random rnd = new Random(11);
+    long proved = 0;
+    for (int instance = 0; instance < 30; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = independentSetOptimum(seed, false, new long[3]);
+      long[] stats = new long[3];
+      Integer found = independentSetOptimum(seed, true, stats);
+      assertThat(found).as("instance %d (seed %d)", instance, seed).isEqualTo(expected);
+      assertThat(stats[0]).as("groups of instance %d", instance).isPositive();
+      assertThat(stats[1]).as("regroups of instance %d", instance).isEqualTo(1);
+      proved += stats[2];
+    }
+    assertThat(proved).isEqualTo(30);
+  }
+
+  /**
+   * Minimises the units left out of a random independent set with soft conflicts, by depth-first
+   * search or by LCG with core-guided search alone; stats gets the at-most-one groups, the regroups
+   * and whether core-guided search proved the optimum.
+   */
+  private static Integer independentSetOptimum(long seed, boolean lcg, long[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int groups = 3 + rnd.nextInt(3);
+    int size = 3 + rnd.nextInt(2);
+    int n = groups * size;
+    int heavy = n + 1;
+    IntVar[] v = new IntVar[n];
+    List<IntVar> relax = new ArrayList<>();
+    List<Integer> weight = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      v[i] = new IntVar(store, "v" + i, 0, 1);
+      IntVar r = new IntVar(store, "u" + i, 0, 1);
+      store.impose(new LinearInt(new IntVar[] {v[i], r}, new int[] {1, 1}, ">=", 1));
+      relax.add(r);
+      weight.add(1);
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        boolean sameGroup = i / size == j / size;
+        if (sameGroup || rnd.nextInt(4) == 0) {
+          IntVar r = new IntVar(store, "c" + i + "_" + j, 0, 1);
+          store.impose(new LinearInt(new IntVar[] {v[i], v[j], r}, new int[] {1, 1, -1}, "<=", 1));
+          relax.add(r);
+          weight.add(heavy);
+        }
+      }
+    }
+    int m = relax.size();
+    IntVar cost = new IntVar(store, "cost", 0, n + heavy * (m - n));
+    IntVar[] terms = relax.toArray(new IntVar[m + 1]);
+    terms[m] = cost;
+    int[] w = new int[m + 1];
+    for (int k = 0; k < m; k++) {
+      w[k] = weight.get(k);
+    }
+    w[m] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    if (!lcg) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      IntVar[] all = Arrays.copyOf(v, n + m);
+      for (int k = 0; k < m; k++) {
+        all[n + k] = relax.get(k);
+      }
+      boolean found =
+          search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    stats[0] += solver.coreSearch().amoGroups;
+    stats[1] += solver.coreSearch().regroups;
+    stats[2] += solver.coreSearch().proved ? 1 : 0;
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
+  }
+
+  @Test
   void atMostOneGroupKeepsTheNextLevelsOfIntegerTerms() {
     // x0 = 0 forces x1 >= 4 and x1 = 0 forces x0 >= 4, so [x0 >= 1] and [x1 >= 1] form a group;
     // the levels above 1 must still cost their weight, or a solution with every soft literal false
