@@ -6599,7 +6599,26 @@ Version 5.0 (unreleased)
    bound the first burst and sgs-lns (20 schedules per task, at least
    1000) the slices.
 
-366. JaLP's presolve also removes forcing rows and fixes dominated columns
+366. The core-guided phase of lazy clause generation trims each core: it
+   solves again under the core's own literals, with at most 1000
+   conflicts a call and up to 3 calls while the core shrinks, and relaxes
+   the smallest core it got (core trimming in RC2: Ignatiev, Morgado and
+   Marques-Silva, RC2: an Efficient MaxSAT Solver, JSAT 11, 2019). A
+   smaller core raises the lower bound by as much and leaves its other
+   soft literals to later cores. Under -f it fires on 34 of the 240 wide
+   instances; at 600 s on those the total time is 5988 s instead of
+   6153 s (0.973) with the same 26 proved: workforce-alloc 202 50 s
+   instead of 97 s, neighbours-new-6 83 s instead of 158 s, city-position
+   7-04 88 s instead of 174 s, pattern-set-mining ionosphere 7 s instead
+   of 14 s; city-position 5-06 43 s instead of 27 s, kitchen linear 170 s
+   instead of 143 s. Two earlier rounds before entry 362 gave 0.937 and
+   0.983. On the 62 wide-quick instances at 240 s: -f 3 families better,
+   none worse; fixed search unchanged.
+   -Djacop.lcg.coreTrim=n sets the calls per core, 0 turns it off
+   (LcgSolver.setCoreTrim); the statistic lcgCoreShrunk counts the
+   literals it took out of cores.
+
+367. JaLP's presolve also removes forcing rows and fixes dominated columns
    (Andersen and Andersen, "Presolving in linear programming",
    Mathematical Programming 71 (1995), sections 3.2 and 3.5; part of the
    Gurobi catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger,
@@ -6615,7 +6634,7 @@ Version 5.0 (unreleased)
    above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
    build an LP, where results stay the same.
 
-367. The linear relaxation takes the rows over the terms of the objective on
+368. The linear relaxation takes the rows over the terms of the objective on
    the sparse simplex when they do not fit the dense tableau. A model
    stated in clauses and elements has few rows of its own (CSPLib
    warehouses, prob034: 2), so the dense simplex was chosen and the clause
@@ -6629,7 +6648,7 @@ Version 5.0 (unreleased)
    proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
    turns it off; the statistic lpNearRows gives the rows taken.
 
-368. Symmetry breaking posts value precedence in models whose own
+369. Symmetry breaking posts value precedence in models whose own
    lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
    hid that their values are interchangeable. Each such constraint
    X <=lex sigma(X) must compare a prefix of one common order, with sigma
@@ -6642,7 +6661,7 @@ Version 5.0 (unreleased)
    before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
    -Dorg.jacop.fz.symmetryModelLex=false turns it off.
 
-369. Free search (-f) of an optimisation model without a search
+370. Free search (-f) of an optimisation model without a search
    annotation, after slow lazy clause generation gave way without a
    solution, takes turns until its first solution with runs that fix the
    search variables in the model's order, least value first
@@ -6656,7 +6675,7 @@ Version 5.0 (unreleased)
    with a solution and 7 better against 3 worse (seed spread); neutral on
    the wide set.
 
-370. The FlatZinc front end posts the reified comparisons of one variable
+371. The FlatZinc front end posts the reified comparisons of one variable
    with constants (int_le_reif, int_lt_reif with a constant on either
    side) and their half-reifications (int_le_imp, int_lt_imp) as one
    ChannelOrder per variable with two or more of them, in place of one
@@ -6673,7 +6692,7 @@ Version 5.0 (unreleased)
    reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
    half-reifications.
 
-371. ArgMax and ArgMin bound the values at positions that the index can
+372. ArgMax and ArgMin bound the values at positions that the index can
    no longer take: such a position may not reach the extreme over the
    positions the index can still take (strictly for positions after
    them, since the first extreme wins). ArgMax and ArgMin now reach

@@ -4828,6 +4828,33 @@ class LcgSolverTest {
     assertThat(imported).isPositive();
   }
 
+  /**
+   * Core-guided search proves the same optima with and without trimming its cores, and trimming
+   * takes literals out of some of them.
+   */
+  @Test
+  void trimmedCoresKeepTheOptimum() {
+    Random rnd = new Random(23);
+    long shrunk = 0;
+    long untrimmed = 0;
+    for (int instance = 0; instance < 300; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = coreModelOptimum(seed, -1, new long[3]);
+      long[] trimmed = new long[6];
+      assertThat(coreModelOptimum(seed, 0, trimmed))
+          .as("instance %d (seed %d), trimmed", instance, seed)
+          .isEqualTo(expected);
+      long[] plain = new long[6];
+      assertThat(coreModelOptimum(seed, 4, plain))
+          .as("instance %d (seed %d), untrimmed", instance, seed)
+          .isEqualTo(expected);
+      shrunk += trimmed[5];
+      untrimmed += plain[5];
+    }
+    assertThat(shrunk).isPositive();
+    assertThat(untrimmed).isZero();
+  }
+
   @Test
   void coreGuidedSearchAgreesWithSearch() {
     Random rnd = new Random(17);
@@ -5681,6 +5708,10 @@ class LcgSolverTest {
     solver.setChecking(true);
     solver.setCoreSearch(
         1, mode == 1 ? 1 + rnd.nextInt(10) : 1_000_000, mode == 1 ? 1 + rnd.nextInt(5) : 100_000);
+    if (mode == 4) {
+      // core-guided search alone, each core as the solver gives it
+      solver.setCoreTrim(0);
+    }
     if (mode == 3) {
       // a few conflicts of branch and bound, after a few of core-guided search or none, then the
       // core-guided phase picks up where it stopped
@@ -5707,6 +5738,9 @@ class LcgSolverTest {
     }
     if (stats.length > 4 && solver.coreSearch() != null) {
       stats[4] += solver.coreSearch().objectiveProbes;
+    }
+    if (stats.length > 5 && solver.coreSearch() != null) {
+      stats[5] += solver.coreSearch().coreShrunk;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
