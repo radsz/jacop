@@ -7004,7 +7004,27 @@ Version 5.0 (unreleased)
    goes from 132,309 to 115,263, the other three have no solution of
    either version at 600 s.
 
-390. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
+390. The LP relaxation moves the clause rows that LCG hands it to the
+   sparse simplex when they make the dense tableau too large to search
+   with. On set covering (OR-Library scp, one objective row and a few
+   hundred covering clauses over thousands of columns) the 311 x 3,312
+   tableau of scpa1 gave each solve in search 19 pivots: 32 of 33 solves
+   stopped at the limit and the clause rows were dropped; on scpb1 and
+   larger the root trial of the clauses ran out of its budget and the
+   root bound stayed 0. Now a dense trial of the clause rows that stops at
+   its root budget is repeated on the sparse simplex, a dense tableau that
+   leaves fewer than 100 pivots a solve moves to the sparse simplex when
+   that costs at most a quarter per pivot, and clause rows that alone
+   carry the bound of the objective are not dropped after limits. Only
+   for relaxations whose own rows bound nothing (the objective row
+   alone). OR-Library scp at 600 s (14 instances): proved 3 -> 6 by
+   default (scp51 288 -> 6 s; scp61, scpa1, scpb1 in 13-39 s) and
+   2 -> 7 with -f (also scp51 and scpc1, 5 and 25 s); total time
+   7,111 -> 5,114 s and 7,758 -> 4,832 s with two wide instances. It
+   fires on none of the 240 wide instances. -Dorg.jacop.lp.extraSparse=false
+   turns it off.
+
+391. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
    watch-list entry back to the same place while every entry before it
    stayed where it was, and a conflict leaves the rest of the list as it
    is instead of copying it onto itself. A visit that only checks the
@@ -7015,7 +7035,7 @@ Version 5.0 (unreleased)
    instances by default, with total time on them 0.971 by default and
    0.972 under -f.
 
-391. A satisfaction model without value encodings, such as a pure 0/1
+392. A satisfaction model without value encodings, such as a pure 0/1
    (pseudo-Boolean) model, now gets a root refutation LP too. Before,
    LinearRelaxation.refutation() needed value encodings, and the main
    relaxation never ran cut rounds without an objective. The new LP takes
