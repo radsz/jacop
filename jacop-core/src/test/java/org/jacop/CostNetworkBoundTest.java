@@ -372,6 +372,8 @@ class CostNetworkBoundTest {
   void reasonsImplyTheirAtoms() {
     Random rnd = new Random(29);
     int checked = 0;
+    long cited = 0;
+    long distinct = 0;
     for (int instance = 0; instance < INSTANCES / 2; instance++) {
       Instance inst = random(rnd);
       boolean maximize = rnd.nextBoolean();
@@ -389,13 +391,19 @@ class CostNetworkBoundTest {
       for (int step = 0; consistent && step < 8; step++) {
         store.setLevel(store.level + 1);
         try {
-          if (rnd.nextInt(3) == 0) {
+          int pick = rnd.nextInt(9);
+          if (pick < 3) {
             int v = z.min() + rnd.nextInt(z.max() - z.min() + 1);
             if (maximize) {
               z.domain.inMin(store.level, z, v);
             } else {
               z.domain.inMax(store.level, z, v);
             }
+          } else if (pick < 5) {
+            // fixed variables: their reasons are bound atoms
+            IntVar y = x[rnd.nextInt(x.length)];
+            int v = rnd.nextBoolean() ? y.min() : y.max();
+            y.domain.in(store.level, y, v, v);
           } else {
             IntVar y = x[rnd.nextInt(x.length)];
             y.domain.inComplement(store.level, y, y.min() + rnd.nextInt(y.max() - y.min() + 1));
@@ -412,10 +420,16 @@ class CostNetworkBoundTest {
           assertTrue(trail.explain(e, reason), "no reason for " + trail.atomString(e));
           assertNull(checker.checkReason(e, reason));
           checked++;
+          cited += reason.size();
+          reason.sortUnique(0);
+          distinct += reason.size();
         }
       }
       trail.detach();
     }
     assertTrue(checked > 100, "reasons checked: " + checked);
+    // an atom is cited about once: one bound atom for the cheaper values beyond a bound, and each
+    // fixed neighbour once
+    assertTrue(cited <= 1.2 * distinct, "atoms cited " + cited + ", distinct " + distinct);
   }
 }

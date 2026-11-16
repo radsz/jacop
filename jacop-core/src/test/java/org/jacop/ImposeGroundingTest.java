@@ -87,7 +87,9 @@ class ImposeGroundingTest {
                       };
                   return Arguments.of(a.get()[0], generator);
                 });
-    return Stream.concat(globals, ImposeGroundingCases.cases())
+    return Stream.concat(
+            globals,
+            Stream.concat(ImposeGroundingCases.cases(), ImposeGroundingGlobalCases.cases()))
         .filter(
             a ->
                 FILTER.isEmpty()

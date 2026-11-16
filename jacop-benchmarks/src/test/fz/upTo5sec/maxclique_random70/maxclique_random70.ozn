@@ -1,0 +1,5 @@
+output let {array [int] of string: X_INTRODUCED_143_ = ["size = "++format(size)++";\n","x = "++format(x)++";\n"]} in (X_INTRODUCED_143_);
+int: n = 70;
+array [1..70] of bool: X_INTRODUCED_0_;
+array [0..n-1] of bool: x = array1d(0..69,X_INTRODUCED_0_);
+int: size = sum([bool2int(x[i]) | i in 0..n-1]);
