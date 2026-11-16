@@ -4856,23 +4856,84 @@ class LcgSolverTest {
   }
 
   /**
-   * Core-guided search proves the same optima with core exhaustion, and exhaustion proves some
-   * totalizer outputs.
+   * Core-guided search proves the same optima of random partial MaxSAT models (3-literal hard
+   * clauses, every variable a unit-cost soft) with and without core exhaustion, the optima of
+   * search, and exhaustion proves totalizer outputs on some of them.
    */
   @Test
   void exhaustedCoresKeepTheOptimum() {
     Random rnd = new Random(29);
     long exhausted = 0;
-    for (int instance = 0; instance < 300; instance++) {
+    for (int instance = 0; instance < 150; instance++) {
       long seed = rnd.nextLong();
-      Integer expected = coreModelOptimum(seed, -1, new long[3]);
-      long[] stats = new long[7];
-      assertThat(coreModelOptimum(seed, 5, stats))
+      long[] stats = new long[1];
+      Integer expected = maxSatOptimum(seed, -1, stats);
+      assertThat(maxSatOptimum(seed, 0, stats))
+          .as("instance %d (seed %d), without exhaustion", instance, seed)
+          .isEqualTo(expected);
+      assertThat(stats[0]).isZero();
+      assertThat(maxSatOptimum(seed, 1 + instance % 8, stats))
           .as("instance %d (seed %d), exhausted", instance, seed)
           .isEqualTo(expected);
-      exhausted += stats[6];
+      exhausted += stats[0];
     }
     assertThat(exhausted).isPositive();
+  }
+
+  /**
+   * Minimises the number of true variables under random 3-literal clauses: by depth-first search
+   * when {@code exhaust} is negative, otherwise by core-guided search with that many outputs
+   * exhausted per core; adds the exhausted outputs to {@code stats[0]}.
+   */
+  private static Integer maxSatOptimum(long seed, int exhaust, long[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int n = 14 + rnd.nextInt(8);
+    IntVar[] x = new IntVar[n + 1];
+    int[] w = new int[n + 1];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+      w[i] = 1;
+    }
+    int m = 2 * n + rnd.nextInt(2 * n);
+    for (int k = 0; k < m; k++) {
+      int a = rnd.nextInt(n);
+      int b = (a + 1 + rnd.nextInt(n - 1)) % n;
+      int c = rnd.nextInt(n);
+      if (c == a || c == b) {
+        continue;
+      }
+      // x[a] or x[b] or x[c], each literal negative with probability 1/3
+      int[] coefficients = new int[3];
+      int rhs = 1;
+      for (int t = 0; t < 3; t++) {
+        coefficients[t] = rnd.nextInt(3) == 0 ? -1 : 1;
+        rhs -= coefficients[t] < 0 ? 1 : 0;
+      }
+      store.impose(new LinearInt(new IntVar[] {x[a], x[b], x[c]}, coefficients, ">=", rhs));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, n);
+    x[n] = cost;
+    w[n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    if (exhaust < 0) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      boolean found =
+          search.labeling(
+              store, new SimpleSelect<>(Arrays.copyOf(x, n), null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    solver.setCoreExhaust(exhaust);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    if (solver.coreSearch() != null) {
+      stats[0] += solver.coreSearch().exhaustedOutputs;
+    }
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 
   @Test
@@ -5732,11 +5793,6 @@ class LcgSolverTest {
       // core-guided search alone, each core as the solver gives it
       solver.setCoreTrim(0);
     }
-    if (mode == 5) {
-      // core-guided search alone, with core exhaustion
-      solver.setCoreExhaust(1 + rnd.nextInt(8));
-      solver.setCoreTrim(rnd.nextInt(2));
-    }
     if (mode == 3) {
       // a few conflicts of branch and bound, after a few of core-guided search or none, then the
       // core-guided phase picks up where it stopped
@@ -5766,9 +5822,6 @@ class LcgSolverTest {
     }
     if (stats.length > 5 && solver.coreSearch() != null) {
       stats[5] += solver.coreSearch().coreShrunk;
-    }
-    if (stats.length > 6 && solver.coreSearch() != null) {
-      stats[6] += solver.coreSearch().exhaustedOutputs;
     }
     return status == CdclSolver.SAT ? solver.value(cost) : null;
   }

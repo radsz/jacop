@@ -6781,6 +6781,26 @@ Version 5.0 (unreleased)
    instance with maximum_arg (tower) fails 10 % less often (30155 ->
    27287) at the same time.
 
+377. The core-guided phase of LCG can exhaust its cores, off by default
+   (-Djacop.lcg.coreExhaust=K, LcgSolver.setCoreExhaust). After a core
+   of at least two literals is relaxed, the outputs "at least j of them
+   false" of its new totalizer, j = 2, 3, ..., are each assumed alone,
+   at most K of them and at most 1000 conflicts a call, and relaxed as
+   unit cores while they are refuted (core exhaustion in RC2: Ignatiev,
+   Morgado and Marques-Silva, RC2: an Efficient MaxSAT Solver, JSAT 11,
+   2019). The bound rises at once by what a run of cores over the same
+   literals would give. With K = 8 under -f, on the 32 of 87 MaxSAT
+   Evaluation 2024 instances where it fires, at 600 s, two runs give
+   11456 s instead of 12132 s in total (0.944) and 49 proved instead of
+   48 (quantum-circuit realamprandom 12 s instead of unproved,
+   close_solutions teams16 11-13 s instead of 27-41 s, mqc 10tree510p
+   6-8 s instead of 14-20 s); lower bounds rise on frb20-11-1 (196 -> 199)
+   and mpe network-10 (80831 -> 82195) and fall on minimize-5gons (28-30
+   -> 26). On the 62 wide-quick instances at 240 s under -f the total is
+   1.009 with 3 families worse (is A3PZaPjnUz 4 -> 18 s, work-task seed 8
+   20 -> 49 s), so it stays off. The statistic lcgCoreExhausted counts
+   the outputs it proved.
+
 Version 4.11
 =============
 

@@ -1467,6 +1467,7 @@ public final class CoreSearch {
   /** Relaxes a core of assumptions; returns false when the solver is unsatisfiable at the root. */
   private boolean relax(int[] core, boolean bound) {
     cores++;
+    lastTotalizer = null;
     coreLiterals += core.length;
     long min = Long.MAX_VALUE;
     List<Soft> in = new ArrayList<>();
