@@ -764,6 +764,9 @@ public class Store {
     }
     if (c.overridesQueueVariable()) {
       c.queueVariable(level, v);
+      if (!c.wakeNeeded()) {
+        return;
+      }
     }
     // the constraint whose pruning wakes the variable is told about the change but not queued again
     if (c != currentConstraint) {

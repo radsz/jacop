@@ -197,6 +197,16 @@ class LcgSlowFallbackFlatzincTest {
   }
 
   @Test
+  void aBoundRaiseCountsOnlyWhenItClosesAShareOfTheGap() {
+    // CVRPLIB X-n110-k13: the bound rose from 4 to 5 against a best cost of 59,211
+    assertFalse(Solve.boundClosesGap(4, 5, 0.005, 59_211));
+    assertTrue(Solve.boundClosesGap(4, 400, 0.005, 59_211));
+    assertFalse(Solve.boundClosesGap(5, 5, 0.005, 59_211));
+    // without a solution any raise counts
+    assertTrue(Solve.boundClosesGap(4, 5, 0.005, Integer.MAX_VALUE));
+  }
+
+  @Test
   void slowRateGrowsWithLearntClauseLength() {
     // short learnt clauses keep lcg-slow-rate; ttppv circ20 learns about 400 literals a conflict,
     // so 530 conflicts/s counts as slow at 5 conflicts/s per literal (2000)

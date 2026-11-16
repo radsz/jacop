@@ -40,18 +40,22 @@ import java.io.PrintStream;
  *
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
- *          [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n] [--elim-interval conflicts]
- *          [--substitute 0|1] [--congruence 0|1] file.cnf[.gz]
+ *          [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--jump share] [--ema 0|1]
+ *          [--seed n] [--elim-interval conflicts] [--lucky 0|1] [--substitute 0|1] [--congruence 0|1]
+ *          file.cnf[.gz]
  * </pre>
  *
  * <p>{@code --chrono} sets {@link CdclSolver#setChronoLimit} (negative turns chronological
  * backtracking off), {@code --shrink 0} turns all-UIP shrinking off, {@code --elim 0} turns
  * variable elimination off, {@code --factor 0} turns bounded variable addition off ({@code
  * --factor-effort} bounds its work), {@code --vivify 0} turns vivification off and {@code --walk 0}
- * turns local search off. {@code --ema 0} restarts on Glucose's LBD queue instead of fast and slow
- * LBD averages. {@code --seed} changes the initial decision order and {@code --elim-interval} sets
- * when elimination runs again during search (0 for never). {@code --substitute 0} turns
- * equivalent-literal substitution off and {@code --congruence 0} its congruence closure on gates.
+ * turns local search off. {@code --jump} sets the share of the time given to the feasibility-jump
+ * local search ({@link CdclSolver#setJumpShare}, 0 turns it off). {@code --ema 0} restarts on
+ * Glucose's LBD queue instead of fast and slow LBD averages. {@code --seed} changes the initial
+ * decision order and {@code --elim-interval} sets when elimination runs again during search (0 for
+ * never). {@code --lucky 0} turns the lucky assignments before the search off ({@link
+ * CdclSolver#setLucky}). {@code --substitute 0} turns equivalent-literal substitution off and
+ * {@code --congruence 0} its congruence closure on gates.
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -83,6 +87,8 @@ public final class CdclMain {
     boolean vivify = true;
     boolean ema = true;
     boolean walk = true;
+    double jump = CdclSolver.DEFAULT_JUMP_SHARE;
+    boolean lucky = true;
     long seed = 0;
     int elimInterval = 5000;
     boolean substitute = true;
@@ -100,6 +106,8 @@ public final class CdclMain {
         case "--vivify" -> vivify = !"0".equals(args[++i]);
         case "--ema" -> ema = !"0".equals(args[++i]);
         case "--walk" -> walk = !"0".equals(args[++i]);
+        case "--jump" -> jump = Double.parseDouble(args[++i]);
+        case "--lucky" -> lucky = !"0".equals(args[++i]);
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
         case "--substitute" -> substitute = !"0".equals(args[++i]);
@@ -110,8 +118,9 @@ public final class CdclMain {
     if (file == null) {
       System.err.println(
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
-              + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--ema 0|1] [--seed n]"
-              + " [--elim-interval conflicts] [--substitute 0|1] [--congruence 0|1] file.cnf[.gz]");
+              + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1]"
+              + " [--jump share] [--ema 0|1] [--seed n]"
+              + " [--elim-interval conflicts] [--lucky 0|1] [--substitute 0|1] [--congruence 0|1] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -125,6 +134,8 @@ public final class CdclMain {
     solver.setVivification(vivify);
     solver.setEmaRestarts(ema);
     solver.setWalk(walk);
+    solver.setJumpShare(jump);
+    solver.setLucky(lucky);
     solver.setSeed(seed);
     solver.setEliminationInterval(elimInterval);
     solver.setSubstitution(substitute);
@@ -154,8 +165,13 @@ public final class CdclMain {
           solver.restarts,
           solver.reductions);
       out.printf(
-          "c eliminated variables %d, walk %.2f s%n",
-          solver.eliminatedCount(), solver.walkNanos / 1e9);
+          "c eliminated variables %d, walk %.2f s, jump %.2f s (%d calls, %d models, solved %b)%n",
+          solver.eliminatedCount(),
+          solver.walkNanos / 1e9,
+          solver.jumpNanos / 1e9,
+          solver.jumpCalls,
+          solver.jumpModels(),
+          solver.jumpSolved());
       out.printf(
           "c substituted variables %d, scc equivalences %d, gate equivalences %d, gates %d,"
               + " substitution %.2f s%n",
@@ -167,6 +183,21 @@ public final class CdclMain {
       out.printf(
           "c factored variables %d, clauses %d, effort %d, factor %.2f s%n",
           solver.factoredVars, solver.factoredClauses, solver.factorWork, solver.factorNanos / 1e9);
+      out.printf(
+          "c vivify tried %d (irredundant %d), probes %d, reused %d, strengthened %d (irredundant %d),"
+              + " removed %d (irredundant %d), %.2f s%n",
+          solver.vivifyTried,
+          solver.vivifyTriedIrredundant,
+          solver.vivifyProbes,
+          solver.vivifyReused,
+          solver.vivifyStrengthened,
+          solver.vivifyStrengthenedIrredundant,
+          solver.vivifyRemoved,
+          solver.vivifyRemovedIrredundant,
+          solver.vivifyNanos / 1e9);
+      out.printf(
+          "c lucky %s, %.2f s%n",
+          solver.luckyFound == null ? "none" : solver.luckyFound, solver.luckyNanos / 1e9);
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");
