@@ -47,7 +47,6 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
-import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
 /**
@@ -76,7 +75,7 @@ import org.jacop.fz.SimpleNode;
  * @author Radoslaw Szymanek
  * @version 5.0
  */
-public class NumberedPathDetector implements ParserTreeConstants {
+public class NumberedPathDetector {
 
   private final Support support;
 
@@ -132,17 +131,7 @@ public class NumberedPathDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
-            collect((ASTConstElem) item);
-          }
-        }
-      }
-    }
+    support.forEachConstraint(astTree, this::collect);
     for (IntVar[] x : alldiffs) {
       tryPath(x);
     }
