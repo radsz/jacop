@@ -1402,6 +1402,36 @@ public final class ConstraintFncs {
     foc.gen_float_log2(n);
   }
 
+  /** Handles the float_sinh FlatZinc constraint. */
+  public void float_sinh(SimpleNode n) {
+    foc.gen_float_sinh(n);
+  }
+
+  /** Handles the float_cosh FlatZinc constraint. */
+  public void float_cosh(SimpleNode n) {
+    foc.gen_float_cosh(n);
+  }
+
+  /** Handles the float_tanh FlatZinc constraint. */
+  public void float_tanh(SimpleNode n) {
+    foc.gen_float_tanh(n);
+  }
+
+  /** Handles the float_asinh FlatZinc constraint. */
+  public void float_asinh(SimpleNode n) {
+    foc.gen_float_asinh(n);
+  }
+
+  /** Handles the float_acosh FlatZinc constraint. */
+  public void float_acosh(SimpleNode n) {
+    foc.gen_float_acosh(n);
+  }
+
+  /** Handles the float_atanh FlatZinc constraint. */
+  public void float_atanh(SimpleNode n) {
+    foc.gen_float_atanh(n);
+  }
+
   /** Handles the float_sqrt FlatZinc constraint. */
   public void float_sqrt(SimpleNode n) {
     foc.gen_float_sqrt(n);
@@ -1623,5 +1653,19 @@ public final class ConstraintFncs {
    */
   public void poseClause(IntVar[] a1, IntVar[] a2) {
     bc.poseClause(a1, a2);
+  }
+
+  /**
+   * Posts the half-reified linear relation {@code b -> sum(a * x) op c}, as int_lin_eq_imp,
+   * int_lin_ne_imp or int_lin_le_imp would.
+   *
+   * @param operation Support.EQ, Support.NE or Support.LE.
+   * @param a the weights.
+   * @param x the variables, distinct and not fixed.
+   * @param c the right-hand side.
+   * @param b the control.
+   */
+  public void poseLinearImplied(int operation, int[] a, IntVar[] x, int c, IntVar b) {
+    lc.linearImplied(operation, a, x, c, b);
   }
 }

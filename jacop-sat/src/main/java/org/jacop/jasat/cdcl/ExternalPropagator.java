@@ -174,7 +174,8 @@ public interface ExternalPropagator {
 
   /**
    * Notifies the first decision below the assumptions (or at the root without them), just before it
-   * is assigned.
+   * is assigned, and the next decision below it after a call of {@link
+   * CdclSolver#notifyNextDecision}.
    *
    * @param lit the decision literal
    */
@@ -187,6 +188,18 @@ public interface ExternalPropagator {
    */
   default int decide() {
     return 0;
+  }
+
+  /**
+   * Called when {@link #decide} gave no decision: true when the current assignment, with the
+   * variables still unassigned taking any values, is a model, so that the solver offers it to
+   * {@link #checkModel} at once instead of deciding the rest one level at a time. The solver checks
+   * that every clause it holds is satisfied first ({@link CdclSolver#clausesSatisfied}).
+   *
+   * @return true to offer the current assignment as a model
+   */
+  default boolean modelComplete() {
+    return false;
   }
 
   /**

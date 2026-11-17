@@ -126,6 +126,12 @@ public class Store {
    */
   private Set<Constraint> implied;
 
+  /**
+   * Constraints whose rows a linear relaxation only tries at its first solve and keeps when they
+   * help, as it does with clauses, or null if there are none.
+   */
+  private Set<Constraint> optionalRows;
+
   /** True while the constraints imposed are implied by the others. */
   private boolean imposingImplied;
 
@@ -198,6 +204,13 @@ public class Store {
    * default, which costs one test per change.
    */
   public DomainChangeRecorder domainChangeRecorder;
+
+  /**
+   * Also receives every domain change of an integer variable when set, for search heuristics that
+   * keep their own view of the domains (dom/wdeg); unlike {@link #domainChangeRecorder} it does not
+   * mean that lazy clause generation runs. Null by default, which costs one test per change.
+   */
+  public DomainChangeRecorder domainWatcher;
 
   /** It stores constraint that has recently failed during store.consistency() execution. */
   public Constraint recentlyFailedConstraint;
@@ -595,6 +608,10 @@ public class Store {
     if (v.views != null) {
       queueViews(v, pruningEvent);
     }
+
+    if (domainWatcher != null && v instanceof IntVar x) {
+      domainWatcher.domainChanged(x, pruningEvent);
+    }
   }
 
   /**
@@ -618,6 +635,9 @@ public class Store {
       }
       if (view.valueWatches != null && event == IntDomain.GROUND) {
         queueValueWatches(view);
+      }
+      if (domainWatcher != null) {
+        domainWatcher.domainChanged(view, event);
       }
     }
   }
@@ -744,6 +764,9 @@ public class Store {
     }
     if (c.overridesQueueVariable()) {
       c.queueVariable(level, v);
+      if (!c.wakeNeeded()) {
+        return;
+      }
     }
     // the constraint whose pruning wakes the variable is told about the change but not queued again
     if (c != currentConstraint) {
@@ -803,6 +826,8 @@ public class Store {
   private void handleConsistencyFailure() {
     if (currentConstraint != null) {
       currentConstraint.cleanAfterFailure();
+      // a constraint rewritten during search fails on behalf of the one it replaces
+      currentConstraint = currentConstraint.reasonOwner();
       if (variableWeightManagement) {
         currentConstraint.increaseWeight();
       }
@@ -1686,6 +1711,34 @@ public class Store {
    */
   public boolean isImplied(Constraint c) {
     return implied != null && implied.contains(c);
+  }
+
+  /**
+   * Marks a constraint whose row a linear relaxation of the store should not take as a row of the
+   * model, but only try at its first solve and keep when it helps, as it does with clauses. Many
+   * short nogoods, such as dominance breaking ones, would otherwise make the relaxation too large
+   * for search.
+   *
+   * @param c the constraint.
+   */
+  public void markOptionalRow(Constraint c) {
+    Set<Constraint> marked = optionalRows;
+    if (marked == null) {
+      marked = Collections.newSetFromMap(new IdentityHashMap<>());
+      optionalRows = marked;
+    }
+    marked.add(c);
+  }
+
+  /**
+   * Tells whether the row of a constraint is only tried by a linear relaxation, see {@link
+   * #markOptionalRow(Constraint)}.
+   *
+   * @param c the constraint.
+   * @return true if c was marked so.
+   */
+  public boolean isOptionalRow(Constraint c) {
+    return optionalRows != null && optionalRows.contains(c);
   }
 
   /**

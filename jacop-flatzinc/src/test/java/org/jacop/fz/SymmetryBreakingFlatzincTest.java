@@ -39,10 +39,12 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.function.IntUnaryOperator;
 import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
@@ -65,6 +67,16 @@ class SymmetryBreakingFlatzincTest {
   private static final Pattern OBJECTIVE = Pattern.compile("obj = (-?\\d+);");
 
   @TempDir Path tmp;
+
+  /**
+   * Fails unless a run printed a solution or proved the model unsatisfiable, so that a model the
+   * front end rejects (it printed an error on stderr) does not pass every comparison unchecked.
+   */
+  private static void assertAnswered(String out, String model) {
+    assertTrue(
+        out.contains("----------") || out.contains("=====UNSATISFIABLE====="),
+        "no answer for\n" + model + "\n" + out);
+  }
 
   @Test
   void pigeonholeIsRefutedWithFewFailures() throws IOException {
@@ -364,6 +376,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
       String what = "trial " + trial + "\n" + model + "\n" + on;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
@@ -372,7 +385,7 @@ class SymmetryBreakingFlatzincTest {
         assertEquals(objective(off), objective(on), what);
       }
       // without presolve, as fzn-jacop runs by default; compared with LCG without symmetry
-      // breaking, since LCG rejects some of these models (array_int_maximum) that CP refutes
+      // breaking
       String lcgOff = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
       String lcgOn = FlatzincTestRunner.run(tmp, model, "--symmetry", "on", "--lcg");
       // a search for the largest values first keeps the largest solution of each orbit
@@ -414,7 +427,8 @@ class SymmetryBreakingFlatzincTest {
               default -> randomMatrixModel(random, optimise);
             };
         String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
-        // LCG rejects some variable-symmetric models (array_int_maximum) that CP refutes
+        assertAnswered(off, model);
+        // the LCG arms of variable-symmetric models are compared with LCG without symmetry breaking
         String lcgOff =
             kind == 0 ? FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg") : off;
         String what = "trial " + trial + "\n" + model;
@@ -470,6 +484,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomSetModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -489,6 +504,225 @@ class SymmetryBreakingFlatzincTest {
       }
     }
     assertTrue(broken > trials / 4, "broken " + broken);
+  }
+
+  @Test
+  void elementsOfSetsAreInterchangeableValues() throws IOException {
+    // monomatch (MiniZinc Challenge 2021) with n = 3: 12 cards of 3 symbols out of 13, every two
+    // sharing exactly one symbol. Cards and symbols are both interchangeable: a row and a column
+    // orbitope of the card-symbol matrix. At most 7 such cards exist, so the model is UNSAT.
+    String fzn = monomatch(3, 12);
+    String out = FlatzincTestRunner.run(tmp, fzn, "--search-statistics", "--symmetry", "on", "-f");
+    // 11 generators permute the cards, 12 the symbols
+    assertEquals(23, generators(out), out);
+    assertTrue(out.contains("symmetryOrbitopes=2"), out);
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    // with 7 cards it is the Fano plane, which the symmetry breaking keeps
+    out = FlatzincTestRunner.run(tmp, monomatch(3, 7), "--search-statistics", "--symmetry", "on");
+    assertEquals(18, generators(out), out);
+    assertTrue(out.contains("----------"), out);
+  }
+
+  /**
+   * The monomatch model of order n with m cards, as MiniZinc flattens it for JaCoP: the cards,
+   * their cardinalities, the pairwise intersections and their cardinalities, then all_different.
+   */
+  private static String monomatch(int n, int m) {
+    int items = n * n + n + 1;
+    StringBuilder v = new StringBuilder();
+    StringBuilder cards = new StringBuilder("[");
+    StringBuilder cardinalities = new StringBuilder();
+    StringBuilder meets = new StringBuilder();
+    StringBuilder ones = new StringBuilder();
+    StringBuilder different = new StringBuilder();
+    for (int i = 0; i < m; i++) {
+      v.append("var set of 1..").append(items).append(": s").append(i).append(";\n");
+      cards.append(i > 0 ? "," : "").append("s").append(i);
+      cardinalities.append("constraint set_card(s").append(i).append(",").append(n);
+      cardinalities.append(");\n");
+    }
+    for (int i = 0; i < m; i++) {
+      for (int j = i + 1; j < m; j++) {
+        String x = "x" + i + "_" + j;
+        v.append("var set of 1..").append(items).append(": ").append(x);
+        v.append(" ::var_is_introduced :: is_defined_var;\n");
+        meets.append("constraint set_intersect(s").append(i).append(",s").append(j);
+        meets.append(",").append(x).append(") :: defines_var(").append(x).append(");\n");
+        ones.append("constraint set_card(").append(x).append(",1);\n");
+        different.append("constraint set_ne(s").append(i).append(",s").append(j);
+        different.append(");\n");
+      }
+    }
+    cards.append("]");
+    return v.toString()
+        + "array [1.."
+        + m
+        + "] of var set of 1.."
+        + items
+        + ": cards :: output_array([1.."
+        + m
+        + "]) = "
+        + cards
+        + ";\n"
+        + cardinalities
+        + meets
+        + ones
+        + different
+        + "solve :: set_search(cards, input_order, indomain_min, complete) satisfy;\n";
+  }
+
+  @Test
+  void randomSetValueModelsKeepSatisfiabilityAndOptimum() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 23));
+    int trials = Integer.getInteger("symmetry.trials", 300) / 2;
+    int broken = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      boolean optimise = random.nextBoolean();
+      String model = randomSetValueModel(random, optimise);
+      String what = "trial " + trial + "\n" + model;
+      String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
+      boolean unsat = off.contains("=====UNSATISFIABLE=====");
+      for (String[] options :
+          new String[][] {
+            {"--search-statistics", "--symmetry", "on"},
+            {"--search-statistics", "--symmetry", "on", "-f"},
+            {"--search-statistics", "--symmetry", "on", "--lcg"},
+          }) {
+        String on = FlatzincTestRunner.run(tmp, model, options);
+        String why = what + "\n" + String.join(" ", options) + "\n" + on;
+        assertEquals(unsat, on.contains("=====UNSATISFIABLE====="), why);
+        if (optimise && !unsat) {
+          assertEquals(objective(off, "obj"), objective(on, "obj"), why);
+        }
+        if (options.length == 3 && generators(on) > 0) {
+          broken++;
+        }
+      }
+    }
+    assertTrue(broken > trials / 8, "broken " + broken);
+  }
+
+  /**
+   * Set variables over upper bounds that differ in some values, joined by set operations and
+   * comparisons whose results are bounded in cardinality. Some models also fix elements, compare
+   * sets lexicographically, give a constant set or link an element to an integer, which keeps
+   * values (or the whole group) in place. The objective is the weighted cardinality of a set or the
+   * sum of the cardinalities.
+   */
+  private static String randomSetValueModel(Random random, boolean optimise) {
+    int n = 3 + random.nextInt(3);
+    int k = 3 + random.nextInt(3);
+    StringBuilder m = new StringBuilder();
+    StringBuilder c = new StringBuilder();
+    for (int i = 0; i < k; i++) {
+      // most sets range over 1..n, some miss a value
+      int miss = random.nextInt(3) == 0 ? 1 + random.nextInt(n) : 0;
+      StringBuilder lub = new StringBuilder("{");
+      for (int e = 1, first = 1; e <= n; e++) {
+        if (e != miss) {
+          lub.append(first == 1 ? "" : ",").append(e);
+          first = 0;
+        }
+      }
+      lub.append("}");
+      m.append("var set of ").append(lub).append(": s").append(i).append(";\n");
+      int lo = random.nextInt(n);
+      m.append("var ").append(lo).append("..").append(lo + random.nextInt(2)).append(": c");
+      m.append(i).append(";\n");
+      c.append("constraint set_card(s").append(i).append(",c").append(i).append(");\n");
+    }
+    int aux = 0;
+    String[] ops = {"set_intersect", "set_union", "set_diff", "set_symdiff"};
+    for (int i = 0; i < k; i++) {
+      for (int j = i + 1; j < k; j++) {
+        switch (random.nextInt(5)) {
+          case 0, 1 -> {
+            String x = "x" + aux++;
+            m.append("var set of 1..").append(n).append(": ").append(x).append(";\n");
+            m.append("var 0..").append(1 + random.nextInt(2)).append(": d").append(x);
+            m.append(";\n");
+            c.append("constraint ").append(ops[random.nextInt(ops.length)]).append("(s");
+            c.append(i).append(",s").append(j).append(",").append(x).append(");\n");
+            c.append("constraint set_card(").append(x).append(",d").append(x).append(");\n");
+          }
+          case 2 -> c.append("constraint set_ne(s").append(i).append(",s").append(j).append(");\n");
+          case 3 -> {
+            String b = "b" + aux++;
+            m.append("var bool: ").append(b).append(";\n");
+            c.append("constraint set_subset_reif(s").append(i).append(",s").append(j);
+            c.append(",").append(b).append(");\n");
+          }
+          default -> {
+            // the pair is left unconstrained
+          }
+        }
+      }
+    }
+    // what keeps values in place
+    switch (random.nextInt(6)) {
+      case 0 ->
+          c.append("constraint set_in(")
+              .append(1 + random.nextInt(n))
+              .append(",s")
+              .append(random.nextInt(k))
+              .append(");\n");
+      case 1 ->
+          c.append("constraint set_le(s")
+              .append(random.nextInt(k))
+              .append(",s")
+              .append(random.nextInt(k))
+              .append(");\n");
+      case 2 ->
+          c.append("constraint set_eq(s")
+              .append(random.nextInt(k))
+              .append(",{")
+              .append(1 + random.nextInt(n))
+              .append("});\n");
+      case 3 -> {
+        m.append("var 1..").append(n).append(": y;\n");
+        c.append("constraint set_in(y,s").append(random.nextInt(k)).append(");\n");
+      }
+      default -> {
+        // nothing keeps the values in place
+      }
+    }
+    // the objective weighs the elements of one set: the weights keep values apart
+    m.append("var 0..").append(n * n + k * n).append(": obj :: output_var;\n");
+    StringBuilder vs = new StringBuilder("[");
+    StringBuilder w = new StringBuilder("[");
+    for (int e = 1; e <= n; e++) {
+      vs.append(e > 1 ? "," : "").append(e);
+      w.append(e > 1 ? "," : "").append(random.nextBoolean() ? 1 : e);
+    }
+    vs.append("]");
+    w.append("]");
+    if (random.nextBoolean()) {
+      c.append("constraint jacop_sum_set(").append(vs).append(",").append(w).append(",s");
+      c.append(random.nextInt(k)).append(",obj);\n");
+    } else {
+      // or counts the elements of all sets, which renaming them keeps
+      StringBuilder ones = new StringBuilder("[-1");
+      StringBuilder cs = new StringBuilder("[obj");
+      for (int i = 0; i < k; i++) {
+        ones.append(",1");
+        cs.append(",c").append(i);
+      }
+      c.append("constraint int_lin_eq(").append(ones).append("],").append(cs).append("],0);\n");
+    }
+    StringBuilder sets = new StringBuilder("[");
+    for (int i = 0; i < k; i++) {
+      sets.append(i > 0 ? "," : "").append("s").append(i);
+    }
+    sets.append("]");
+    String goal = optimise ? (random.nextBoolean() ? "minimize obj" : "maximize obj") : "satisfy";
+    return m.toString()
+        + c
+        + "solve :: set_search("
+        + sets
+        + ", input_order, indomain_min, complete) "
+        + goal
+        + ";\n";
   }
 
   /**
@@ -575,6 +809,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomEncodedModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -721,6 +956,184 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void modelLexLeadersKeepValuesInterchangeable() throws IOException {
+    // XCSP 2026 ColoredGrid: a Latin square whose diagonals are all different too, that is n
+    // disjoint solutions of n queens, with the model's lex-leader constraints for the symmetries
+    // of the square; the colours stay interchangeable (n = 9 was refuted in 3.6 s, no answer at
+    // 300 s without value precedence)
+    for (int n : new int[] {5, 6, 7}) {
+      String model = coloredGrid(n, gridLines(n, true, List.of()), squareSymmetries(n));
+      String off =
+          FlatzincTestRunner.run(
+              tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      assertEquals(off.contains("=====UNSATISFIABLE====="), on.contains("=====UNSATISFIABLE====="));
+      assertEquals(n == 6, on.contains("=====UNSATISFIABLE====="), on);
+      assertEquals(1, precedences(on), on);
+    }
+  }
+
+  @Test
+  void modelLexLeadersOfNoSymmetryKeepValueSymmetryOff() throws IOException {
+    // random lines on a Latin square of order 4, closed or not under the symmetry whose lex-leader
+    // constraint the model holds; value precedence is posted only when the lines are closed, and
+    // satisfiability never changes
+    Random random = new Random(20261115L);
+    int n = 4;
+    int fired = 0;
+    for (int trial = 0; trial < 60; trial++) {
+      int[] symmetry = squareSymmetries(n)[random.nextInt(7)];
+      List<int[]> extra = new ArrayList<>();
+      int lines = random.nextInt(5);
+      for (int l = 0; l < lines; l++) {
+        List<Integer> cells = new ArrayList<>();
+        for (int c = 0; c < n * n; c++) {
+          cells.add(c);
+        }
+        Collections.shuffle(cells, random);
+        extra.add(cells.subList(0, 2 + random.nextInt(3)).stream().mapToInt(i -> i).toArray());
+      }
+      if (random.nextBoolean()) {
+        for (int l = 0; l < lines; l++) {
+          int[] line = extra.get(l);
+          int[] image = line;
+          // the orbit of the line under the symmetry
+          for (int k = 0; k < 4; k++) {
+            int[] next = new int[image.length];
+            for (int i = 0; i < image.length; i++) {
+              next[i] = symmetry[image[i]];
+            }
+            image = next;
+            extra.add(image);
+          }
+        }
+      }
+      List<int[]> all = gridLines(n, random.nextBoolean(), extra);
+      boolean closed = closedUnder(all, symmetry);
+      String model = coloredGrid(n, all, new int[][] {symmetry});
+      String off =
+          FlatzincTestRunner.run(
+              tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      assertEquals(
+          off.contains("=====UNSATISFIABLE====="),
+          on.contains("=====UNSATISFIABLE====="),
+          "trial " + trial + "\n" + model + "\n" + on);
+      // a model refuted at the root reports no symmetry statistics
+      if (on.contains("symmetryValuePrecedences=")) {
+        assertEquals(closed ? 1 : 0, precedences(on), "trial " + trial + "\n" + model + "\n" + on);
+        fired += closed ? 1 : 0;
+      }
+    }
+    assertTrue(fired >= 10, "value precedence posted in " + fired + " models");
+  }
+
+  /**
+   * The lines of a square of order n: rows, columns, the diagonals if asked, and the extra ones.
+   */
+  private static List<int[]> gridLines(int n, boolean diagonals, List<int[]> extra) {
+    List<int[]> lines = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      int[] row = new int[n];
+      int[] column = new int[n];
+      for (int j = 0; j < n; j++) {
+        row[j] = i * n + j;
+        column[j] = j * n + i;
+      }
+      lines.add(row);
+      lines.add(column);
+    }
+    if (diagonals) {
+      for (int d = -(n - 2); d <= n - 2; d++) {
+        List<Integer> down = new ArrayList<>();
+        List<Integer> up = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+          int j = i + d;
+          if (j >= 0 && j < n) {
+            down.add(i * n + j);
+            up.add(i * n + (n - 1 - j));
+          }
+        }
+        lines.add(down.stream().mapToInt(c -> c).toArray());
+        lines.add(up.stream().mapToInt(c -> c).toArray());
+      }
+    }
+    lines.addAll(extra);
+    return lines;
+  }
+
+  /**
+   * The seven symmetries of a square of order n other than the identity, as maps of the cells
+   * (numbered row by row).
+   */
+  private static int[][] squareSymmetries(int n) {
+    int[][] maps = new int[7][n * n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        int c = i * n + j;
+        int m = n - 1;
+        maps[0][c] = j * n + i;
+        maps[1][c] = (m - j) * n + (m - i);
+        maps[2][c] = j * n + (m - i);
+        maps[3][c] = (m - i) * n + (m - j);
+        maps[4][c] = (m - j) * n + i;
+        maps[5][c] = i * n + (m - j);
+        maps[6][c] = (m - i) * n + j;
+      }
+    }
+    return maps;
+  }
+
+  /** Whether the set of lines, each taken as a set of cells, is closed under the map. */
+  private static boolean closedUnder(List<int[]> lines, int[] map) {
+    Set<Set<Integer>> sets = new HashSet<>();
+    for (int[] line : lines) {
+      sets.add(new TreeSet<>(Arrays.stream(line).boxed().toList()));
+    }
+    for (Set<Integer> line : sets) {
+      Set<Integer> image = new TreeSet<>();
+      for (int c : line) {
+        image.add(map[c]);
+      }
+      if (!sets.contains(image)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * A square of order n over the values 0..n-1 whose lines are all different, with the lex-leader
+   * constraint {@code X <=lex X o sigma} of each given map sigma of the cells, as lex_chain_lesseq
+   * over two columns.
+   */
+  private static String coloredGrid(int n, List<int[]> lines, int[][] symmetries) {
+    StringBuilder fzn = new StringBuilder();
+    for (int c = 0; c < n * n; c++) {
+      fzn.append("var 0..").append(n - 1).append(": x").append(c).append(" :: output_var;\n");
+    }
+    for (int[] line : lines) {
+      if (line.length > 1) {
+        fzn.append("constraint jacop_alldiff([")
+            .append(String.join(",", Arrays.stream(line).mapToObj(c -> "x" + c).toList()))
+            .append("]);\n");
+      }
+    }
+    for (int[] map : symmetries) {
+      List<String> pairs = new ArrayList<>();
+      for (int c = 0; c < n * n; c++) {
+        pairs.add("x" + c);
+        pairs.add("x" + map[c]);
+      }
+      fzn.append("constraint jacop_lex_chain_lesseq_int([")
+          .append(String.join(",", pairs))
+          .append("],2);\n");
+    }
+    fzn.append("solve satisfy;\n");
+    return fzn.toString();
+  }
+
+  @Test
   void fewestColoursKeepValuePrecedence() throws IOException {
     // the number of colours bounds every colour, which breaks their symmetry; relabelling the
     // colours by first use never raises the largest one, so the precedence chain is still posted
@@ -741,6 +1154,273 @@ class SymmetryBreakingFlatzincTest {
         FlatzincTestRunner.run(tmp, fzn.toString(), "--search-statistics", "--presolve", "check");
     assertEquals(1, precedences(on), on);
     assertEquals(3, objective(on, "colours"), on);
+  }
+
+  /**
+   * A bin packing that minimizes the bins used, flattened as MiniZinc flattens {@code bin[i] <=
+   * bins} and {@code b > bins -> load[b] = 0}: {@code bool_clause([r1, r2], [])} with {@code
+   * int_eq_imp(load[b], 0, r1)} and {@code int_le_imp(c, bins, r2)}, here with c = b + shift.
+   */
+  private static String emptiedBins(int shift) {
+    return emptiedBins(new int[] {5, 5, 4, 4, 3, 3}, 9, 4, shift);
+  }
+
+  private static String emptiedBins(int[] sizes, int capacity, int bins, int shift) {
+    StringBuilder fzn = new StringBuilder("var 1..").append(bins).append(": bins :: output_var;\n");
+    for (int b = 1; b <= bins; b++) {
+      fzn.append("var 0..").append(capacity).append(": l").append(b).append(";\n");
+    }
+    StringBuilder xs = new StringBuilder();
+    StringBuilder ls = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    for (int i = 0; i < sizes.length; i++) {
+      fzn.append("var 1..").append(bins).append(": x").append(i).append(" :: output_var;\n");
+      xs.append(i == 0 ? "" : ",").append('x').append(i);
+      ws.append(i == 0 ? "" : ",").append(sizes[i]);
+    }
+    for (int b = 1; b <= bins; b++) {
+      ls.append(b == 1 ? "" : ",").append('l').append(b);
+    }
+    for (int b = 2; b <= bins; b++) {
+      fzn.append("var bool: e").append(b).append(";\nvar bool: a").append(b).append(";\n");
+    }
+    fzn.append("constraint jacop_bin_packing([")
+        .append(xs)
+        .append("],[")
+        .append(ls)
+        .append("],[")
+        .append(ws)
+        .append("],1);\n");
+    for (int i = 0; i < sizes.length; i++) {
+      fzn.append("constraint int_lin_le([1,-1],[x").append(i).append(",bins],0);\n");
+    }
+    for (int b = 2; b <= bins; b++) {
+      fzn.append("constraint bool_clause([e").append(b).append(",a").append(b).append("],[]);\n");
+      fzn.append("constraint int_eq_imp(l").append(b).append(",0,e").append(b).append(");\n");
+      fzn.append("constraint int_le_imp(")
+          .append(b + shift)
+          .append(",bins,a")
+          .append(b)
+          .append(");\n");
+    }
+    fzn.append("solve minimize bins;\n");
+    return fzn.toString();
+  }
+
+  /** The fewest bins of the given capacity that hold the items, by trying every assignment. */
+  private static int fewestBins(int[] sizes, int capacity) {
+    for (int bins = 1; ; bins++) {
+      if (packs(sizes, 0, new int[bins], capacity)) {
+        return bins;
+      }
+    }
+  }
+
+  private static boolean packs(int[] sizes, int i, int[] load, int capacity) {
+    if (i == sizes.length) {
+      return true;
+    }
+    for (int b = 0; b < load.length; b++) {
+      if (load[b] + sizes[i] <= capacity) {
+        load[b] += sizes[i];
+        boolean ok = packs(sizes, i + 1, load, capacity);
+        load[b] -= sizes[i];
+        if (ok) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Test
+  void binCompletionPacksShuffledTripletsAtTheBound() throws IOException {
+    // three bins of 10, each full with three items, listed out of order: bin completion finds the
+    // packing at the bound, which is printed as the first solution and proved optimal
+    int[] sizes = {4, 3, 2, 5, 3, 3, 2, 4, 4};
+    String out =
+        FlatzincTestRunner.run(
+            tmp,
+            emptiedBins(sizes, 10, 5, 0),
+            "--search-statistics",
+            "--presolve",
+            "check",
+            "--lcg",
+            "on");
+    assertTrue(out.contains("binCompletionFound=true"), out);
+    assertEquals(3, objective(out, "bins"), out);
+    assertTrue(out.contains("=========="), out);
+  }
+
+  @Test
+  void binCompletionAgreesWithBruteForce() throws IOException {
+    Random random = new Random(5);
+    for (int trial = 0; trial < 12; trial++) {
+      int n = 3 + random.nextInt(5);
+      int capacity = 6 + random.nextInt(8);
+      int[] sizes = new int[n];
+      for (int i = 0; i < n; i++) {
+        sizes[i] = 1 + random.nextInt(capacity);
+      }
+      int optimum = fewestBins(sizes, capacity);
+      for (String completion : new String[] {"on", "off"}) {
+        String out =
+            FlatzincTestRunner.run(
+                tmp,
+                emptiedBins(sizes, capacity, n, 0),
+                "--presolve",
+                "check",
+                "--lcg",
+                "on",
+                "--free-config",
+                "bin-completion=" + completion);
+        assertEquals(optimum, objective(out, "bins"), Arrays.toString(sizes) + " " + out);
+        assertTrue(out.contains("=========="), out);
+      }
+    }
+  }
+
+  @Test
+  void binsEmptiedAboveTheObjectiveKeepValuePrecedence() throws IOException {
+    // z < b -> load[b] = 0 bounds the bins used like x <= z: relabelling the bins by first use
+    // leaves every bin above the largest one used empty, so the bins get a value precedence chain
+    for (String lcg : new String[] {"on", "off"}) {
+      String on =
+          FlatzincTestRunner.run(
+              tmp, emptiedBins(0), "--search-statistics", "--presolve", "check", "--lcg", lcg);
+      assertEquals(1, precedences(on), on);
+      assertEquals(3, objective(on, "bins"), on);
+    }
+  }
+
+  @Test
+  void binsEmptiedBelowTheirNumberStayDistinct() throws IOException {
+    // z < b + 1 -> load[b] = 0 also empties bin b when z = b, so bin b is not like the bins below
+    // it
+    String on =
+        FlatzincTestRunner.run(tmp, emptiedBins(1), "--search-statistics", "--presolve", "check");
+    assertEquals(0, precedences(on), on);
+    // bin b holds items only when bins > b, bin 4 never: with 3 bins only bins 1 and 2 hold the
+    // items (24 > 2 * 9), with 4 bins bins 1 to 3 do
+    assertEquals(4, objective(on, "bins"), on);
+  }
+
+  @Test
+  void haplotypesChosenByIndexAreInterchangeable() throws IOException {
+    // pure parsimony haplotyping: three genotypes, each explained by two of k binary haplotypes
+    // chosen by index; renaming the haplotypes renames the rows of h with the index values, so the
+    // index variables get a value precedence chain. Two haplotypes cannot explain the genotypes
+    // 22, 01 and 00 (22 needs 01 with 10, or 00 with 11), three can.
+    int[][] genotypes = {{2, 2}, {0, 1}, {0, 0}};
+    for (int k = 2; k <= 3; k++) {
+      String model = haplotypeModel(genotypes, k, k == 2);
+      String off =
+          FlatzincTestRunner.run(
+              tmp, model, "--search-statistics", "--presolve", "on", "--symmetry", "off");
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      assertEquals(1, precedences(on), on);
+      assertEquals(
+          off.contains("=====UNSATISFIABLE====="), on.contains("=====UNSATISFIABLE====="), on);
+      assertEquals(k == 2, on.contains("=====UNSATISFIABLE====="), on);
+      if (k == 3) {
+        // the first genotype takes the first two haplotypes (1-based indices here)
+        assertTrue(on.contains("s_0_0 = 1;") && on.contains("s_0_1 = 2;"), on);
+      }
+    }
+  }
+
+  @Test
+  void randomHaplotypeModelsKeepSatisfiability() throws IOException {
+    Random random = new Random(11);
+    int trials = Integer.getInteger("symmetry.trials", 300) / 10;
+    int unsat = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      int[][] genotypes = new int[2 + random.nextInt(4)][2 + random.nextInt(3)];
+      for (int[] g : genotypes) {
+        for (int j = 0; j < g.length; j++) {
+          g[j] = random.nextInt(3);
+        }
+      }
+      String model = haplotypeModel(genotypes, 2 + random.nextInt(3), random.nextBoolean());
+      String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
+      assertAnswered(off, model);
+      String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
+      String lcg = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--lcg");
+      boolean refuted = off.contains("=====UNSATISFIABLE=====");
+      assertEquals(refuted, on.contains("=====UNSATISFIABLE====="), model + "\n" + on);
+      assertEquals(refuted, lcg.contains("=====UNSATISFIABLE====="), model + "\n" + lcg);
+      if (refuted) {
+        unsat++;
+      }
+    }
+    assertTrue(unsat > 0 && unsat < trials, "unsatisfiable " + unsat + " of " + trials);
+  }
+
+  /**
+   * A haplotype inference model: binary haplotypes {@code h_i_j}, and for each genotype two
+   * haplotype indices {@code s_g_0, s_g_1}; a site of value 0 or 1 takes that value in both chosen
+   * haplotypes, a site of value 2 takes different values. The elements are 0-based ({@code
+   * jacop_array_var_int_element_nonshifted}) or 1-based ({@code array_var_int_element}).
+   */
+  private static String haplotypeModel(int[][] genotypes, int k, boolean nonshifted) {
+    int sites = genotypes[0].length;
+    int low = nonshifted ? 0 : 1;
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < k; i++) {
+      for (int j = 0; j < sites; j++) {
+        fzn.append("var 0..1: h_").append(i).append('_').append(j).append(" :: output_var;\n");
+      }
+    }
+    StringBuilder constraints = new StringBuilder();
+    for (int g = 0; g < genotypes.length; g++) {
+      for (int p = 0; p < 2; p++) {
+        fzn.append("var ")
+            .append(low)
+            .append("..")
+            .append(low + k - 1)
+            .append(": s_")
+            .append(g)
+            .append('_')
+            .append(p)
+            .append(" :: output_var;\n");
+      }
+      for (int j = 0; j < sites; j++) {
+        StringBuilder column = new StringBuilder("[");
+        for (int i = 0; i < k; i++) {
+          column.append(i > 0 ? "," : "").append("h_").append(i).append('_').append(j);
+        }
+        column.append(']');
+        String[] result = new String[2];
+        for (int p = 0; p < 2; p++) {
+          if (genotypes[g][j] < 2) {
+            result[p] = String.valueOf(genotypes[g][j]);
+          } else {
+            result[p] = "r_" + g + "_" + j + "_" + p;
+            fzn.append("var 0..1: ").append(result[p]).append(";\n");
+          }
+          String index = "s_" + g + "_" + p;
+          constraints
+              .append("constraint ")
+              .append(
+                  nonshifted ? "jacop_array_var_int_element_nonshifted(" : "array_var_int_element(")
+              .append(index)
+              .append(',')
+              .append(column)
+              .append(',')
+              .append(result[p])
+              .append(nonshifted ? ",0);\n" : ");\n");
+        }
+        if (genotypes[g][j] == 2) {
+          constraints
+              .append("constraint int_lin_eq([1,1],[")
+              .append(result[0])
+              .append(',')
+              .append(result[1])
+              .append("],1);\n");
+        }
+      }
+    }
+    return fzn.append(constraints).append("solve satisfy;\n").toString();
   }
 
   @Test
@@ -856,6 +1536,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomValueModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String what = "trial " + trial + "\n" + model;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
@@ -897,6 +1578,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomMatrixModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String what = "trial " + trial + "\n" + model;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
@@ -1156,9 +1838,7 @@ class SymmetryBreakingFlatzincTest {
         for (int i = 0; i < bounded; i++) {
           xs.add("x" + i);
         }
-        fzn.append("constraint array_int_maximum(obj,[")
-            .append(String.join(",", xs))
-            .append("]);\n");
+        fzn.append("constraint jacop_maximum(obj,[").append(String.join(",", xs)).append("]);\n");
       } else {
         for (int i = 0; i < bounded; i++) {
           fzn.append(
@@ -1465,7 +2145,7 @@ class SymmetryBreakingFlatzincTest {
                       + ")";
           case 7 ->
               (xs, bs) ->
-                  "array_int_maximum("
+                  "jacop_maximum("
                       + xv(xs, 3)
                       + ",["
                       + xv(xs, 0)
@@ -1536,5 +2216,146 @@ class SymmetryBreakingFlatzincTest {
 
   private static String bv(IntUnaryOperator bs, int i) {
     return "b" + bs.applyAsInt(i);
+  }
+
+  private static final Pattern SWAPS = Pattern.compile("symmetryValueSwaps=(\\d+)");
+
+  /**
+   * The exchanges of interchangeable values that {@link ConditionalValueSwaps} breaks keep the
+   * lexicographically smallest (or, for indomain_max, largest) solution over the sequence, which is
+   * the first one a search in input order finds: random patience games (cards of a few ranks, a
+   * table of the ranks that may follow each other, piles as precedences) give the same first
+   * solution, or no solution, with and without symmetry breaking, with and without LCG.
+   */
+  @Test
+  void conditionalValueSwapsKeepFirstSolution() throws IOException {
+    Random random = new Random(Long.getLong("symmetry.seed", 23));
+    int trials = Integer.getInteger("symmetry.trials", 300);
+    int broken = 0;
+    int solved = 0;
+    for (int trial = 0; trial < trials; trial++) {
+      String model = patienceModel(random, trial % 3 == 2);
+      for (String lcg : new String[] {"on", "off"}) {
+        String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg", lcg);
+        assertAnswered(off, model);
+        String on =
+            FlatzincTestRunner.run(
+                tmp, model, "--search-statistics", "--symmetry", "on", "--lcg", lcg);
+        String what = "trial " + trial + " lcg " + lcg + "\n" + model + "\n" + on;
+        assertEquals(firstSolution(off), firstSolution(on), what);
+        if (lcg.equals("on")) {
+          Matcher m = SWAPS.matcher(on);
+          if (m.find() && Integer.parseInt(m.group(1)) > 0) {
+            broken++;
+          }
+          if (!off.contains("=====UNSATISFIABLE=====")) {
+            solved++;
+          }
+        }
+      }
+    }
+    assertTrue(broken > trials / 2, "broken " + broken);
+    assertTrue(solved > trials / 5 && solved < trials, "solved " + solved);
+  }
+
+  private static String firstSolution(String out) {
+    int end = out.indexOf("----------");
+    if (end < 0) {
+      return out.contains("=====UNSATISFIABLE=====") ? "UNSAT" : "none";
+    }
+    return Arrays.stream(out.substring(0, end).split("\n"))
+        .filter(l -> l.startsWith("x = "))
+        .findFirst()
+        .orElse("none");
+  }
+
+  /**
+   * A patience game: the card at each position may follow the one before it when the table of ranks
+   * allows it, card 1 comes first, and the cards of a pile are played from the top.
+   */
+  private static String patienceModel(Random random, boolean largestFirst) {
+    int n = 6 + random.nextInt(5);
+    int ranks = 2 + random.nextInt(3);
+    int[] rank = new int[n + 1];
+    for (int v = 1; v <= n; v++) {
+      rank[v] = random.nextInt(ranks);
+    }
+    boolean[][] follows = new boolean[ranks][ranks];
+    for (int r = 0; r < ranks; r++) {
+      for (int q = 0; q < ranks; q++) {
+        follows[r][q] = random.nextInt(3) > 0;
+      }
+    }
+    List<String> tuples = new ArrayList<>();
+    for (int u = 1; u <= n; u++) {
+      for (int v = 1; v <= n; v++) {
+        if (u != v && follows[rank[u]][rank[v]]) {
+          tuples.add(u + "," + v);
+        }
+      }
+    }
+    StringBuilder m = new StringBuilder();
+    m.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    m.append("predicate jacop_assignment(array [int] of var int: f,array [int] of var int: invf,")
+        .append("int: index_f,int: index_invf);\n");
+    m.append("array [1..")
+        .append(2 * tuples.size())
+        .append("] of int: T = [")
+        .append(String.join(",", tuples))
+        .append("];\n");
+    m.append("array [1..2] of int: C = [1,-1];\n");
+    for (int i = 2; i <= n; i++) {
+      m.append("var 1..").append(n).append(": x").append(i).append(";\n");
+    }
+    for (int i = 1; i <= n; i++) {
+      m.append("var 1..").append(n).append(": y").append(i).append(";\n");
+    }
+    List<String> xs = new ArrayList<>(List.of("1"));
+    List<String> ys = new ArrayList<>();
+    for (int i = 2; i <= n; i++) {
+      xs.add("x" + i);
+    }
+    for (int i = 1; i <= n; i++) {
+      ys.add("y" + i);
+    }
+    m.append("array [1..")
+        .append(n)
+        .append("] of var int: x :: output_array([1..")
+        .append(n)
+        .append("]) = [")
+        .append(String.join(",", xs))
+        .append("];\n");
+    m.append("array [1..").append(n).append("] of var int: y = [").append(String.join(",", ys));
+    m.append("];\n");
+    for (int i = 0; i + 1 < n; i++) {
+      m.append("constraint jacop_table_int([")
+          .append(xs.get(i))
+          .append(",")
+          .append(xs.get(i + 1))
+          .append("],T);\n");
+    }
+    m.append("constraint jacop_assignment(x,y,1,1);\n");
+    // piles of cards 2..n, played from the top
+    List<Integer> cards = new ArrayList<>();
+    for (int v = 2; v <= n; v++) {
+      cards.add(v);
+    }
+    Collections.shuffle(cards, random);
+    int k = 0;
+    while (k < cards.size()) {
+      int height = 1 + random.nextInt(3);
+      for (int j = k; j + 1 < Math.min(k + height, cards.size()); j++) {
+        m.append("constraint int_lin_le(C,[y")
+            .append(cards.get(j))
+            .append(",y")
+            .append(cards.get(j + 1))
+            .append("],-1);\n");
+      }
+      k += height;
+    }
+    m.append("solve :: int_search(x,input_order,")
+        .append(largestFirst ? "indomain_max" : "indomain_min")
+        .append(",complete) satisfy;\n");
+    return m.toString();
   }
 }

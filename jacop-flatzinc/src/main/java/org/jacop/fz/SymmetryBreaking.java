@@ -102,6 +102,21 @@ import org.jacop.set.core.SetVar;
  */
 final class SymmetryBreaking implements ParserTreeConstants {
 
+  // names of constraints and properties used in several tables below
+  private static final String FALSE = "false";
+  private static final String REIF = "_reif";
+  private static final String IMP = "_imp";
+  private static final String SET_UNION = "set_union";
+  private static final String SET_INTERSECT = "set_intersect";
+  private static final String SET_SYMDIFF = "set_symdiff";
+  private static final String SET_EQ = "set_eq";
+  private static final String SET_NE = "set_ne";
+  private static final String DISJOINT = "jacop_disjoint";
+  private static final String[] SET_OPERATIONS = {
+    SET_UNION, SET_INTERSECT, "set_diff", SET_SYMDIFF
+  };
+  private static final String[] SET_COMPARISONS = {SET_EQ, SET_NE, "set_subset", "set_superset"};
+
   /** The most Schreier-Sims cuts posted. */
   static final int MAX_CUTS = 100_000;
 
@@ -113,7 +128,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * models whose search annotation branches on set variables. Without it every set variable has a
    * colour of its own.
    */
-  static final boolean SETS = !"false".equals(System.getProperty("org.jacop.fz.symmetrySets"));
+  static final boolean SETS = !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySets"));
 
   /**
    * The most element vertices that set variables add to the graph; the set variables met after that
@@ -125,11 +140,59 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * Whether value symmetries are also looked for in spaces joined through set variables and shared
    * values, when the plain value spaces give none (org.jacop.fz.symmetryEncoded, default true).
    */
-  static final boolean ENCODED =
-      !"false".equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
+  static final boolean ENCODED = !FALSE.equals(System.getProperty("org.jacop.fz.symmetryEncoded"));
+
+  /**
+   * Whether the constraints that empty the bins above a minimized number of bins ({@link
+   * #emptyAbove}) are left out of the value graph with that bound
+   * (org.jacop.fz.symmetryEmptiedBins, default true).
+   */
+  static final boolean EMPTIED_BINS =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetryEmptiedBins"));
+
+  /**
+   * Whether lex-leader constraints of the model ({@code X <=lex sigma(X)}) that are verified to
+   * compare the variables in one order under symmetries of the rest of the model let value
+   * precedence be posted on those variables too (org.jacop.fz.symmetryModelLex, default true).
+   * Otherwise the lex constraints use the values as numbers and no value space contains their
+   * variables.
+   */
+  static final boolean MODEL_LEX =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetryModelLex"));
+
+  /**
+   * Whether the elements of set variables that only set operations, comparisons and cardinalities
+   * constrain may be renamed by symmetries, together in all those sets
+   * (org.jacop.fz.symmetrySetValues, default true). Without it each element keeps its value as its
+   * colour, so only whole set variables move.
+   */
+  static final boolean SET_VALUES =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetrySetValues"));
 
   /** The n-ary union that a chain of binary unions stands for: {@code s = union(xs)}. */
   static final String UNION_N = "jacop_symmetry_union";
+
+  /**
+   * Whether value symmetries are also looked for among the index variables of element constraints,
+   * whose values select array positions, when the plain value spaces give none
+   * (org.jacop.fz.symmetryIndexValues, default true).
+   */
+  static final boolean INDEX_VALUES =
+      !FALSE.equals(System.getProperty("org.jacop.fz.symmetryIndexValues"));
+
+  /**
+   * An element constraint {@code y = xs[i]} read with its index as a value: {@code (i, xs, y,
+   * first)}, with {@code first} the index of the first element of {@code xs}.
+   */
+  static final String INDEX_ELEMENT = "jacop_symmetry_index_element";
+
+  private static final String[] SHIFTED_ELEMENTS = {
+    "array_int_element", "array_var_int_element", "array_bool_element", "array_var_bool_element"
+  };
+
+  private static final String[] NONSHIFTED_ELEMENTS = {
+    "jacop_array_var_int_element_nonshifted", "jacop_array_var_bool_element_nonshifted"
+  };
 
   /** Graphs with more vertices are not searched. */
   static final int MAX_VERTICES = 2_000_000;
@@ -193,7 +256,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * symmetry moves, or a constant written as a string. An integer constant has its value; when it
    * stands for a value of a value space ({@code space >= 0}) it is a vertex, not a constant.
    */
-  private record Atom(IntVar aVar, Var other, String constant, int space, int value) {
+  record Atom(IntVar aVar, Var other, String constant, int space, int value) {
     boolean isConstant() {
       return constant != null && space < 0;
     }
@@ -255,8 +318,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     for (String s : new String[] {"int_lin_eq", "int_lin_le", "int_lin_ne", "bool_lin_eq"}) {
       SPECS.put(s, Spec.grouped(new int[] {0, 1}));
-      SPECS.put(s + "_reif", Spec.grouped(new int[] {0, 1}));
-      SPECS.put(s + "_imp", Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + REIF, Spec.grouped(new int[] {0, 1}));
+      SPECS.put(s + IMP, Spec.grouped(new int[] {0, 1}));
     }
     SPECS.put("bool_lin_le", Spec.grouped(new int[] {0, 1}));
     for (String s :
@@ -306,16 +369,16 @@ final class SymmetryBreaking implements ParserTreeConstants {
     // set operations whose two operands can be exchanged
     for (String s :
         new String[] {
-          "set_union",
-          "set_intersect",
-          "set_symdiff",
-          "set_eq",
-          "set_ne",
-          "set_eq_reif",
-          "set_ne_reif",
-          "set_eq_imp",
-          "set_ne_imp",
-          "jacop_disjoint"
+          SET_UNION,
+          SET_INTERSECT,
+          SET_SYMDIFF,
+          SET_EQ,
+          SET_NE,
+          SET_EQ + REIF,
+          SET_NE + REIF,
+          SET_EQ + IMP,
+          SET_NE + IMP,
+          DISJOINT
         }) {
       SPECS.put(s, Spec.sym(0, 1));
     }
@@ -400,6 +463,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
     VALUE_SPECS.put("jacop_gcc", new ValueSpec(new int[] {0}, 1, 2));
     VALUE_SPECS.put("jacop_bin_packing", new ValueSpec(new int[] {0}, 1, 3));
     VALUE_SPECS.put("jacop_bin_packing_capacity", new ValueSpec(new int[] {0}, 1, 3));
+    // the index selects the element of its value, wherever the value goes; the elements and the
+    // result are numbers
+    VALUE_SPECS.put(INDEX_ELEMENT, new ValueSpec(new int[] {0}, 1, 3));
   }
 
   /** Value spaces with more values are not searched for value symmetries. */
@@ -412,7 +478,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
   static final int MAX_SCHREIER_SIMS = 40;
 
   /** A constraint of the model with its arguments. */
-  private record Item(String name, Atom[][] args, boolean[] array) {
+  record Item(String name, Atom[][] args, boolean[] array) {
     @Override
     public boolean equals(Object o) {
       return o instanceof Item i
@@ -440,6 +506,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private long deadline = Long.MAX_VALUE;
   // whether the lex-leader keeps the largest solution of an orbit instead of the smallest
   private boolean largest;
+
+  // the exchanges of values broken by ConditionalValueSwaps
+  private int swaps;
   // whether the search is free search (-f), which does not follow the search annotation
   private boolean free;
   // whether set variables are vertices of the variable graph that symmetries may move
@@ -470,6 +539,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private void note(String kind, IntVar[]... rows) {
     postedKinds.add(kind);
     postedVariables.add(rows);
+  }
+
+  /**
+   * The constraints posted by {@link ConditionalValueSwaps}.
+   *
+   * @return the number of pairs of values whose exchange got a constraint.
+   */
+  int swaps() {
+    return swaps;
   }
 
   /**
@@ -607,6 +685,19 @@ final class SymmetryBreaking implements ParserTreeConstants {
    */
   Outcome run(
       SimpleNode astTree, IntVar objective, boolean minimize, List<Var> order, long maxNanos) {
+    try {
+      return breakSymmetries(astTree, objective, minimize, order, maxNanos);
+    } finally {
+      // the atoms of the named arrays are read for this run only; a table of a hundred thousand
+      // tuples kept them for the whole search (266 MB on CrosswordDesign-12, XCSP 2026)
+      namedArrays.clear();
+      constantArrays.clear();
+      contentKeys.clear();
+    }
+  }
+
+  private Outcome breakSymmetries(
+      SimpleNode astTree, IntVar objective, boolean minimize, List<Var> order, long maxNanos) {
     IntVar goal = objective != null && !objective.singleton() ? objective : null;
     // reading the model and building its graphs count in the time given, as the search does
     deadline = clock.getAsLong() + maxNanos;
@@ -639,7 +730,51 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
 
-    ValueOutcome values = breakValueSymmetries(items, goal, minimize, ranked, maxNanos / 2);
+    // lex-leader constraints of the model leave the values interchangeable when every one of them
+    // compares the variables in one order under a symmetry of the rest of the model: the
+    // lexicographically smallest solution of an orbit of all the symmetries then satisfies them,
+    // value precedence in that order and the lex-leader constraints posted here alike
+    List<Item> valueItems = items;
+    List<IntVar> plainRanked = ranked;
+    ModelLex modelLex = MODEL_LEX ? modelLexLeaders(items, goal) : null;
+    if (modelLex != null) {
+      List<IntVar> lexRanked = lexFirst(ranked, modelLex.order(), order);
+      if (lexRanked == null) {
+        modelLex = null;
+      } else {
+        ranked = lexRanked;
+        valueItems = new ArrayList<>();
+        for (Item item : items) {
+          if (!modelLex.items().contains(item)) {
+            valueItems.add(item);
+          }
+        }
+      }
+    }
+    ValueOutcome values = breakValueSymmetries(valueItems, goal, minimize, ranked, maxNanos / 2);
+    if (modelLex != null && values.posted() == 0) {
+      modelLex = null;
+      ranked = plainRanked;
+    }
+    if (values.posted() == 0 && INDEX_VALUES) {
+      List<Item> indexItems = indexElements(items);
+      if (indexItems != items && indexSpace(indexItems, goal, ranked)) {
+        // half of the time left at most, building the graph included, so that the variable
+        // symmetries keep the other half
+        long whole = deadline;
+        long half = Math.max(0, whole - clock.getAsLong()) / 2;
+        deadline = clock.getAsLong() + half;
+        ValueOutcome indexValues;
+        try {
+          indexValues = breakValueSymmetries(indexItems, goal, minimize, ranked, half);
+        } finally {
+          deadline = whole;
+        }
+        if (indexValues.posted() > 0) {
+          values = indexValues;
+        }
+      }
+    }
     if (values.posted() == 0 && ENCODED && !(free && minimize && largestLoad(items, goal))) {
       Set<IntVar> annotated = Collections.newSetFromMap(new IdentityHashMap<>());
       for (Var v : order) {
@@ -649,7 +784,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       values = breakEncodedValueSymmetries(items, goal, ranked, annotated, maxNanos / 2);
     }
-    if (!values.first().isEmpty()) {
+    // with lex-leader constraints of the model the order stays theirs
+    if (!values.first().isEmpty() && modelLex == null) {
       List<IntVar> reordered = new ArrayList<>(values.first());
       Set<IntVar> front = Collections.newSetFromMap(new IdentityHashMap<>());
       front.addAll(values.first());
@@ -661,10 +797,25 @@ final class SymmetryBreaking implements ParserTreeConstants {
       ranked = reordered;
     }
 
+    // exchanges of interchangeable values of a sequence that its precedences allow, for a
+    // satisfaction problem under the search of its annotation; free search (black-hole) is up to
+    // 5.8x slower with them on the hard instances
+    if (objective == null && !free && ConditionalValueSwaps.ENABLED && modelLex == null) {
+      ConditionalValueSwaps finder = new ConditionalValueSwaps(store, dictionary);
+      swaps = finder.run(items, ranked, largest && values.posted() == 0);
+      if (swaps > 0) {
+        note("swaps", finder.pairs().toArray(new IntVar[0][]));
+      }
+    }
+
     Graph graph = new Graph(goal, null);
+    List<Item> graphItems = setsMove ? flattenUnions(items) : items;
+    if (setsMove && SET_VALUES) {
+      graph.setValueSpaces = setValueSpaces(graphItems);
+    }
     try {
       // a chain of set unions is one n-ary union, whose operands can be exchanged
-      for (Item item : setsMove ? flattenUnions(items) : items) {
+      for (Item item : graphItems) {
         checkTime();
         graph.addConstraint(item);
       }
@@ -1347,15 +1498,15 @@ final class SymmetryBreaking implements ParserTreeConstants {
     for (String s : new String[] {"set_in", "set_in_reif", "set_in_imp"}) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
     }
-    for (String s : new String[] {"set_union", "set_intersect", "set_diff", "set_symdiff"}) {
+    for (String s : SET_OPERATIONS) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1, 2));
     }
-    for (String s : new String[] {"set_eq", "set_ne", "set_subset", "set_superset"}) {
+    for (String s : SET_COMPARISONS) {
       SET_VALUE_SPECS.put(s, ValueSpec.of(0, 1));
-      SET_VALUE_SPECS.put(s + "_reif", ValueSpec.of(0, 1));
-      SET_VALUE_SPECS.put(s + "_imp", ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + REIF, ValueSpec.of(0, 1));
+      SET_VALUE_SPECS.put(s + IMP, ValueSpec.of(0, 1));
     }
-    SET_VALUE_SPECS.put("jacop_disjoint", ValueSpec.of(0, 1));
+    SET_VALUE_SPECS.put(DISJOINT, ValueSpec.of(0, 1));
     SET_VALUE_SPECS.put(UNION_N, ValueSpec.of(0, 1));
   }
 
@@ -1405,6 +1556,222 @@ final class SymmetryBreaking implements ParserTreeConstants {
         && item.array()[spec.indexed()]
         && args[spec.offsetArg()].length == 1
         && args[spec.offsetArg()][0].isInt();
+  }
+
+  /**
+   * Lex-leader constraints of the model: their items and the order in which they compare the
+   * variables.
+   */
+  private record ModelLex(List<IntVar> order, Set<Item> items) {}
+
+  /**
+   * The lex-leader constraints of the model, {@code X <=lex sigma(X)} for permutations sigma of the
+   * variables of X, when there is at least one and each of them is verified: every X is a prefix of
+   * the longest one, and sigma, with the other variables fixed, keeps the domains and maps every
+   * other constraint of the model to one of them (with the arguments that the constraint may
+   * permute sorted). Null otherwise. The lexicographically smallest solution of an orbit of the
+   * group of these variable symmetries and the value permutations satisfies every lex-leader
+   * constraint of the group in one order, so the model's and the value precedence posted in the
+   * same order keep it (T. Walsh, General Symmetry Breaking Constraints, CP 2006; Y. C. Law and J.
+   * H. M. Lee, Global Constraints for Integer and Set Value Precedence, CP 2004).
+   */
+  private static ModelLex modelLexLeaders(List<Item> items, IntVar objective) {
+    Set<Item> lexItems = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<IntVar[][]> pairs = new ArrayList<>();
+    for (Item item : items) {
+      IntVar[][] pair = lexPair(item);
+      if (pair.length > 0) {
+        lexItems.add(item);
+        pairs.add(pair);
+      }
+    }
+    if (pairs.isEmpty()) {
+      return null;
+    }
+    IntVar[] longest = pairs.get(0)[0];
+    for (IntVar[][] pair : pairs) {
+      if (pair[0].length > longest.length) {
+        longest = pair[0];
+      }
+    }
+    Map<Object, Integer> ids = new IdentityHashMap<>();
+    Set<String> keys = new HashSet<>();
+    for (Item item : items) {
+      if (!lexItems.contains(item)) {
+        keys.add(itemKey(item, null, ids));
+      }
+    }
+    for (IntVar[][] pair : pairs) {
+      IntVar[] x = pair[0];
+      IntVar[] y = pair[1];
+      Map<IntVar, IntVar> sigma = new IdentityHashMap<>();
+      Set<IntVar> image = Collections.newSetFromMap(new IdentityHashMap<>());
+      for (int i = 0; i < x.length; i++) {
+        if (x[i] != longest[i] || sigma.put(x[i], y[i]) != null || !image.add(y[i])) {
+          return null;
+        }
+        if (!x[i].dom().eq(y[i].dom())) {
+          return null;
+        }
+      }
+      if (!sigma.keySet().containsAll(image)
+          || objective != null && sigma.getOrDefault(objective, objective) != objective) {
+        return null;
+      }
+      for (Item item : items) {
+        if (!lexItems.contains(item) && !keys.contains(itemKey(item, sigma, ids))) {
+          return null;
+        }
+      }
+    }
+    return new ModelLex(Arrays.asList(longest), lexItems);
+  }
+
+  /** The vectors X and Y of a constraint {@code X <=lex Y} on integer variables, or none. */
+  private static IntVar[][] lexPair(Item item) {
+    Atom[][] args = item.args();
+    Atom[] xs;
+    Atom[] ys;
+    if (item.name().equals("jacop_lex_chain_lesseq_int")
+        && args.length == 2
+        && args[1].length == 1
+        && args[1][0].isInt()
+        && args[1][0].value() == 2
+        && args[0].length % 2 == 0) {
+      int n = args[0].length / 2;
+      xs = new Atom[n];
+      ys = new Atom[n];
+      // the vectors are the columns of a matrix listed row by row
+      for (int i = 0; i < n; i++) {
+        xs[i] = args[0][2 * i];
+        ys[i] = args[0][2 * i + 1];
+      }
+    } else if (item.name().equals("jacop_lex_lesseq_int")
+        && args.length == 2
+        && args[0].length == args[1].length) {
+      xs = args[0];
+      ys = args[1];
+    } else {
+      return new IntVar[0][];
+    }
+    if (xs.length == 0) {
+      return new IntVar[0][];
+    }
+    IntVar[][] pair = new IntVar[2][xs.length];
+    for (int i = 0; i < xs.length; i++) {
+      if (xs[i].aVar() == null || ys[i].aVar() == null) {
+        return new IntVar[0][];
+      }
+      pair[0][i] = xs[i].aVar();
+      pair[1][i] = ys[i].aVar();
+    }
+    return pair;
+  }
+
+  /**
+   * A key of a constraint with its integer variables renamed by sigma (null for none), the same for
+   * two constraints that differ only in an order of arguments that the constraint may permute.
+   */
+  private static String itemKey(Item item, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
+    Atom[][] args = item.args();
+    String[][] atoms = new String[args.length][];
+    for (int a = 0; a < args.length; a++) {
+      atoms[a] = new String[args[a].length];
+      for (int i = 0; i < args[a].length; i++) {
+        atoms[a][i] = atomKey(args[a][i], sigma, ids);
+      }
+    }
+    String[] parts = new String[args.length];
+    for (int a = 0; a < args.length; a++) {
+      parts[a] = (item.array()[a] ? "[" : "") + String.join(",", atoms[a]);
+    }
+    Spec spec = SPECS.get(item.name());
+    if (spec != null) {
+      for (int[] bag : spec.bags) {
+        if (bag[bag.length - 1] >= args.length) {
+          continue;
+        }
+        int n = args[bag[0]].length;
+        boolean aligned = true;
+        for (int b : bag) {
+          aligned &= args[b].length == n;
+        }
+        if (!aligned) {
+          continue;
+        }
+        List<String> tuples = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+          StringBuilder t = new StringBuilder();
+          for (int b : bag) {
+            t.append(atoms[b][i]).append('/');
+          }
+          tuples.add(t.toString());
+        }
+        tuples.sort(null);
+        parts[bag[0]] = "{" + String.join(",", tuples);
+        for (int k = 1; k < bag.length; k++) {
+          parts[bag[k]] = "";
+        }
+      }
+      if (spec.symmetric.length > 0 && spec.symmetric[spec.symmetric.length - 1] < args.length) {
+        List<String> sym = new ArrayList<>();
+        for (int a : spec.symmetric) {
+          sym.add(parts[a]);
+        }
+        sym.sort(null);
+        for (int k = 0; k < spec.symmetric.length; k++) {
+          parts[spec.symmetric[k]] = sym.get(k);
+        }
+      }
+    }
+    return item.name() + "(" + String.join("|", parts) + ")";
+  }
+
+  private static String atomKey(Atom atom, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
+    if (atom.aVar() != null) {
+      IntVar x = sigma == null ? atom.aVar() : sigma.getOrDefault(atom.aVar(), atom.aVar());
+      return "v" + ids.computeIfAbsent(x, k -> ids.size());
+    }
+    if (atom.other() != null) {
+      return "o" + ids.computeIfAbsent(atom.other(), k -> ids.size());
+    }
+    return "c" + atom.constant() + "/" + atom.space() + "/" + atom.value();
+  }
+
+  /**
+   * The lex-leader order with the variables of the model's lex-leader constraints first, in their
+   * order, or null when the search annotation puts other variables first.
+   */
+  private static List<IntVar> lexFirst(
+      List<IntVar> ranked, List<IntVar> lexOrder, List<Var> order) {
+    boolean annotated = false;
+    for (Var v : order) {
+      annotated |= v instanceof IntVar iv && !iv.singleton();
+    }
+    if (annotated) {
+      return ranked.size() >= lexOrder.size()
+              && sameVars(ranked.subList(0, lexOrder.size()), lexOrder)
+          ? ranked
+          : null;
+    }
+    List<IntVar> result = new ArrayList<>(lexOrder);
+    Set<IntVar> front = Collections.newSetFromMap(new IdentityHashMap<>());
+    front.addAll(lexOrder);
+    for (IntVar v : ranked) {
+      if (front.add(v)) {
+        result.add(v);
+      }
+    }
+    return result;
+  }
+
+  private static boolean sameVars(List<IntVar> a, List<IntVar> b) {
+    for (int i = 0; i < a.size(); i++) {
+      if (a.get(i) != b.get(i)) {
+        return false;
+      }
+    }
+    return a.size() == b.size();
   }
 
   /**
@@ -1536,11 +1903,14 @@ final class SymmetryBreaking implements ParserTreeConstants {
     }
     List<Space> spaces = new ArrayList<>();
     // a minimized objective that only bounds the variables of one space from above
-    Set<IntVar> bounded = minimize && objective != null ? upperBounded(items, objective) : null;
+    Set<Item> emptied =
+        EMPTIED_BINS && minimize && objective != null ? emptyAbove(items, objective) : Set.of();
+    Set<IntVar> bounded =
+        minimize && objective != null ? upperBounded(items, objective, emptied) : null;
     if (bounded != null) {
       List<Item> kept = new ArrayList<>();
       for (Item item : items) {
-        if (!bounds(item, objective, new ArrayList<>())) {
+        if (!bounds(item, objective, new ArrayList<>()) && !emptied.contains(item)) {
           kept.add(item);
         }
       }
@@ -1552,6 +1922,9 @@ final class SymmetryBreaking implements ParserTreeConstants {
         }
       }
       if (space != null) {
+        if (!emptied.isEmpty()) {
+          space.anchors = byDecreasingWeight(items, space.vars);
+        }
         spaceOf.keySet().retainAll(space.vars);
         spaceOf.replaceAll((x, k) -> 0);
         spaces = new ArrayList<>(List.of(space));
@@ -1565,14 +1938,18 @@ final class SymmetryBreaking implements ParserTreeConstants {
 
   /**
    * The variables that the objective bounds from above, when it appears only in constraints {@code
-   * x <= objective} or {@code objective = max(xs)}, or null.
+   * x <= objective} or {@code objective = max(xs)}, or in the constraints of {@link #emptyAbove}
+   * (given as emptied), or null.
    */
-  private static Set<IntVar> upperBounded(List<Item> items, IntVar objective) {
+  private static Set<IntVar> upperBounded(List<Item> items, IntVar objective, Set<Item> emptied) {
     Set<IntVar> bounded = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Item item : items) {
       List<IntVar> xs = new ArrayList<>();
       if (bounds(item, objective, xs)) {
         bounded.addAll(xs);
+        continue;
+      }
+      if (emptied.contains(item)) {
         continue;
       }
       for (Atom[] arg : item.args()) {
@@ -1584,6 +1961,134 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     return bounded.isEmpty() ? null : bounded;
+  }
+
+  /**
+   * The constraints that empty the bins above the objective in a bin packing that minimizes the
+   * bins used: {@code bool_clause([r1, r2], [])} with {@code r1 -> load[b] = 0} ({@code int_eq_imp}
+   * or {@code int_eq_reif}) and {@code r2 -> c <= z} ({@code int_le_imp} or {@code int_le_reif}),
+   * where {@code load[b]} is the load of bin {@code b >= c} of a {@code jacop_bin_packing} and r1,
+   * r2 appear nowhere else; that is, {@code z < c -> load[b] = 0}, as MiniZinc flattens {@code b >
+   * bins -> load[b] = 0} (OR-Library binpack, Falkenauer 1996).
+   *
+   * <p>Like {@code bin[i] <= z} they bound the bins used by the objective, so they are left out of
+   * the value graph with it. Relabelling the bins of a solution in the order of their first use
+   * keeps every bin it empties empty, maps the used ones to 1..k with k at most the largest bin
+   * used, so at most z, and then a bin {@code b >= c > z >= k} is unused and its load is 0: the
+   * relabelled solution satisfies them, and the value precedence over the bins keeps an optimal
+   * solution. Without it the bins of the model are not interchangeable and a search at the optimum,
+   * where every bin is full, has to tell apart the packings that only number the bins differently.
+   *
+   * @return the three constraints of each such clause, or an empty set.
+   */
+  private static Set<Item> emptyAbove(List<Item> items, IntVar z) {
+    Map<IntVar, Integer> loadBin = new IdentityHashMap<>();
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if (item.name().equals("jacop_bin_packing") && args.length == 4 && args[3][0].isInt()) {
+        int min = args[3][0].value();
+        for (int j = 0; j < args[1].length; j++) {
+          if (args[1][j].aVar() != null) {
+            loadBin.put(args[1][j].aVar(), min + j);
+          }
+        }
+      }
+    }
+    if (loadBin.isEmpty()) {
+      return Set.of();
+    }
+    Map<IntVar, Integer> uses = new IdentityHashMap<>();
+    Map<IntVar, Item> emptyLiteral = new IdentityHashMap<>();
+    Map<IntVar, Item> aboveLiteral = new IdentityHashMap<>();
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      for (Atom[] arg : args) {
+        for (Atom a : arg) {
+          if (a.aVar() != null) {
+            uses.merge(a.aVar(), 1, Integer::sum);
+          }
+        }
+      }
+      if (args.length != 3 || args[2][0].aVar() == null) {
+        continue;
+      }
+      switch (item.name()) {
+        case "int_eq_imp", "int_eq_reif" -> {
+          if (args[0][0].aVar() != null
+              && loadBin.containsKey(args[0][0].aVar())
+              && args[1][0].isInt()
+              && args[1][0].value() == 0) {
+            emptyLiteral.put(args[2][0].aVar(), item);
+          }
+        }
+        case "int_le_imp", "int_le_reif" -> {
+          if (args[0][0].isInt() && args[1][0].aVar() == z) {
+            aboveLiteral.put(args[2][0].aVar(), item);
+          }
+        }
+        default -> {
+          // not a literal of such a clause
+        }
+      }
+    }
+    Set<Item> emptied = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if (!item.name().equals("bool_clause")
+          || args.length != 2
+          || args[0].length != 2
+          || args[1].length != 0) {
+        continue;
+      }
+      for (int k = 0; k < 2; k++) {
+        IntVar r1 = args[0][k].aVar();
+        IntVar r2 = args[0][1 - k].aVar();
+        Item empty = r1 == null ? null : emptyLiteral.get(r1);
+        Item above = r2 == null ? null : aboveLiteral.get(r2);
+        if (empty != null
+            && above != null
+            && uses.get(r1) == 2
+            && uses.get(r2) == 2
+            && above.args()[0][0].value() <= loadBin.get(empty.args()[0][0].aVar())) {
+          emptied.add(item);
+          emptied.add(empty);
+          emptied.add(above);
+          break;
+        }
+      }
+    }
+    return emptied;
+  }
+
+  /**
+   * The bin variables of a bin packing in decreasing order of their items' weights, ties in model
+   * order, or null (all variables in model order) when they are not the bins of one bin packing.
+   * The precedence chain then numbers the bins in the order a first-fit decreasing packing opens
+   * them: in model order it fights a search that places the large items first (OR-Library u120_00
+   * found no solution in 600 s, without the chain one in 1 s). Any order of the variables keeps a
+   * solution of every orbit; the lex-leader constraints of the variable symmetries follow the same
+   * order, as the chain's variables come first in it.
+   */
+  private static List<IntVar> byDecreasingWeight(List<Item> items, List<IntVar> vars) {
+    Map<IntVar, Integer> weight = new IdentityHashMap<>();
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      if (item.name().equals("jacop_bin_packing")
+          && args.length == 4
+          && args[0].length == args[2].length) {
+        for (int i = 0; i < args[0].length; i++) {
+          if (args[0][i].aVar() != null && args[2][i].isInt()) {
+            weight.put(args[0][i].aVar(), args[2][i].value());
+          }
+        }
+      }
+    }
+    if (!weight.keySet().containsAll(vars)) {
+      return null;
+    }
+    List<IntVar> sorted = new ArrayList<>(vars);
+    sorted.sort((a, b) -> Integer.compare(weight.get(b), weight.get(a)));
+    return sorted;
   }
 
   /**
@@ -1807,6 +2312,151 @@ final class SymmetryBreaking implements ParserTreeConstants {
   }
 
   /**
+   * Set constraints that hold after a permutation of the values is applied to the elements of every
+   * set: the set operations and the comparisons other than the lexicographic ones. Their arguments
+   * at these positions are sets; the others (a cardinality, a Boolean of a reified comparison) do
+   * not depend on which values the elements are.
+   */
+  private static final Map<String, int[]> SET_RENAMING = new HashMap<>();
+
+  static {
+    for (String s : SET_OPERATIONS) {
+      SET_RENAMING.put(s, new int[] {0, 1, 2});
+    }
+    for (String s : SET_COMPARISONS) {
+      SET_RENAMING.put(s, new int[] {0, 1});
+      SET_RENAMING.put(s + REIF, new int[] {0, 1});
+      SET_RENAMING.put(s + IMP, new int[] {0, 1});
+    }
+    SET_RENAMING.put(DISJOINT, new int[] {0, 1});
+    SET_RENAMING.put("set_card", new int[] {0});
+    SET_RENAMING.put(UNION_N, new int[] {0, 1});
+  }
+
+  /**
+   * The set value spaces: the set variables joined by the constraints of {@link #SET_RENAMING}, in
+   * groups whose every constraint is one of them with set variables at the set positions. A
+   * permutation of the values applied to the elements of every set of a group maps the solutions of
+   * the model to solutions, as in a matrix model with interchangeable columns (Flener et al.,
+   * "Breaking row and column symmetries in matrix models", CP 2002, LNCS 2470): the cards of a
+   * Dobble game and their symbols. A group with a set used anywhere else, or with a constant set in
+   * one of its constraints, is not a space.
+   *
+   * @return the space of each set variable of a space.
+   */
+  private static Map<SetVar, Integer> setValueSpaces(List<Item> items) {
+    Map<Var, Var> parent = new IdentityHashMap<>();
+    Set<Var> tainted = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<SetVar> order = new ArrayList<>();
+    for (Item item : items) {
+      int[] sets = SET_RENAMING.get(item.name());
+      boolean[] isSet = new boolean[item.args().length];
+      boolean renaming = sets != null && sets[sets.length - 1] < item.args().length;
+      if (renaming) {
+        for (int a : sets) {
+          isSet[a] = true;
+        }
+      }
+      Var first = null;
+      boolean constant = false;
+      for (int a = 0; a < item.args().length; a++) {
+        for (Atom atom : item.args()[a]) {
+          if (atom.other() instanceof SetVar sv) {
+            if (parent.putIfAbsent(sv, sv) == null) {
+              order.add(sv);
+            }
+            if (!isSet[a]) {
+              tainted.add(sv);
+            } else if (first == null) {
+              first = sv;
+            } else {
+              unionVar(parent, first, sv);
+            }
+          } else if (isSet[a]) {
+            constant = true;
+          }
+        }
+      }
+      if (constant && first != null) {
+        tainted.add(first);
+      }
+    }
+    Set<Var> taintedRoots = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Var x : tainted) {
+      taintedRoots.add(rootVar(parent, x));
+    }
+    Map<Var, Integer> spaceOfRoot = new IdentityHashMap<>();
+    Map<Var, IntDomain> values = new IdentityHashMap<>();
+    for (SetVar x : order) {
+      values.merge(rootVar(parent, x), x.dom().lub(), IntDomain::union);
+    }
+    Map<SetVar, Integer> spaces = new IdentityHashMap<>();
+    for (SetVar x : order) {
+      Var root = rootVar(parent, x);
+      if (taintedRoots.contains(root) || values.get(root).getSize() < 2) {
+        continue;
+      }
+      spaces.put(x, spaceOfRoot.computeIfAbsent(root, r -> spaceOfRoot.size()));
+    }
+    return spaces;
+  }
+
+  /**
+   * Whether the index of some element is in a value space of the second reading; building its graph
+   * takes time from the variable symmetries, so it is built only then.
+   */
+  private static boolean indexSpace(List<Item> items, IntVar objective, List<IntVar> ranked) {
+    Map<IntVar, Integer> spaceOf = valueSpaces(items, objective, ranked, new ArrayList<>());
+    for (Item item : items) {
+      if (item.name().equals(INDEX_ELEMENT) && spaceOf.containsKey(item.args()[0][0].aVar())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * The items with every element constraint whose index is a variable read as {@link
+   * #INDEX_ELEMENT}, or the items themselves if there is none. An element constraint {@code y =
+   * xs[i]} holds for an assignment exactly when it holds after a permutation of the values of
+   * {@code i} is applied to {@code i} and to the positions of {@code xs}, so the index variables
+   * can make a value space whose values move the elements of the arrays with them: the haplotypes
+   * of a haplotype inference model, chosen by index for each genotype, can be renamed in any order
+   * when the rows of the haplotype matrix are renamed with them. The value of the index is then not
+   * a number, so this is a second reading of the model, tried when the first gives no value
+   * symmetry.
+   */
+  private List<Item> indexElements(List<Item> items) {
+    List<Item> out = new ArrayList<>(items.size());
+    boolean any = false;
+    for (Item item : items) {
+      Atom[][] args = item.args();
+      boolean shifted = Arrays.asList(SHIFTED_ELEMENTS).contains(item.name()) && args.length == 3;
+      boolean nonshifted =
+          Arrays.asList(NONSHIFTED_ELEMENTS).contains(item.name())
+              && args.length == 4
+              && args[3].length == 1
+              && args[3][0].isInt();
+      if ((!shifted && !nonshifted)
+          || args[0].length != 1
+          || args[0][0].aVar() == null
+          || !item.array()[1]
+          || item.array()[2]) {
+        out.add(item);
+        continue;
+      }
+      any = true;
+      Atom[] first = nonshifted ? args[3] : new Atom[] {intConstant(1)};
+      out.add(
+          new Item(
+              INDEX_ELEMENT,
+              new Atom[][] {args[0], args[1], args[2], first},
+              new boolean[] {false, true, false, false}));
+    }
+    return any ? out : items;
+  }
+
+  /**
    * The items with each chain of binary set unions {@code u1 = x1 union x2, u2 = u1 union x3, ...}
    * whose intermediate results are used nowhere else replaced by one n-ary union.
    */
@@ -1823,7 +2473,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
           }
         }
       }
-      if (item.name().equals("set_union") && item.args().length == 3) {
+      if (item.name().equals(SET_UNION) && item.args().length == 3) {
         Var r = item.args()[2][0].other();
         if (r != null) {
           unionOf.put(r, item);
@@ -1850,7 +2500,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       if (inlined.contains(item)) {
         continue;
       }
-      if (!item.name().equals("set_union")
+      if (!item.name().equals(SET_UNION)
           || item.args().length != 3
           || item.args()[2][0].other() == null
           || unionOf.get(item.args()[2][0].other()) != item) {
@@ -2527,6 +3177,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
     final Map<Integer, SetVar> setOfElement = new HashMap<>();
     // the set variables with element vertices, in the order the graph met them
     final List<SetVar> sets = new ArrayList<>();
+    // the set value space of each set variable whose elements may be renamed ({@link
+    // #setValueSpaces}); its element vertices are joined to one vertex per value of the space
+    Map<SetVar, Integer> setValueSpaces = Map.of();
+    private final Map<Long, Integer> setValueVertex = new HashMap<>();
     private int setElements;
 
     Graph(IntVar objective, Map<IntVar, Integer> spaceOf) {
@@ -2820,17 +3474,30 @@ final class SymmetryBreaking implements ParserTreeConstants {
         int free = d.lub().getSize() - d.glb().getSize();
         if (setElements + free <= MAX_SET_ELEMENTS) {
           setElements += free;
-          v = vertex("S|" + d.glb() + "|" + d.lub() + "|" + d.card());
+          Integer space = setValueSpaces.get(s);
+          // in a set value space the edges to the value vertices tell the bounds
+          v =
+              vertex(
+                  space != null
+                      ? "S|" + space + "|" + d.card()
+                      : "S|" + d.glb() + "|" + d.lub() + "|" + d.card());
           otherVertex.put(s, v);
           int[] elements = new int[free];
           int k = 0;
           for (ValueEnumeration e = d.lub().valueEnumeration(); e.hasMoreElements(); ) {
             int value = e.nextElement();
             if (!d.glb().contains(value)) {
-              int w = vertex("E|" + value);
+              int w = vertex(space != null ? "E|" + space : "E|" + value);
               edge(v, w);
+              if (space != null) {
+                edge(w, setValueVertex(space, value));
+              }
               elements[k++] = w;
               setOfElement.put(w, s);
+            } else if (space != null) {
+              int g = vertex("G|" + space);
+              edge(v, g);
+              edge(g, setValueVertex(space, value));
             }
           }
           elementVertices.put(s, elements);
@@ -2840,6 +3507,17 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       // a float or set variable is kept in place: a colour of its own
       return otherVertex.computeIfAbsent(atom.other(), v -> vertex("u|" + otherVertex.size()));
+    }
+
+    /** The vertex of a value of a set value space, joined to its element in every set there. */
+    private int setValueVertex(int space, int value) {
+      long key = ((long) space << 32) | (value & 0xffffffffL);
+      Integer w = setValueVertex.get(key);
+      if (w == null) {
+        w = vertex("V|" + space);
+        setValueVertex.put(key, w);
+      }
+      return w;
     }
 
     /**

@@ -174,12 +174,23 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return lateVariables;
   }
 
-  /** Stops recording; a trail attached after this one keeps recording. */
+  /**
+   * Stops recording; a trail attached after this one keeps recording. The Boolean variables it
+   * numbered let go of it (they get their numbers back when asked again), so that a trail and the
+   * solver it reports to are not kept alive by the model's variables once detached:
+   * rcpsp-wet-diverse j90_48_4 under -f kept the whole LCG solver after free search without
+   * learning took over.
+   */
   public void detach() {
     if (store.domainChangeRecorder == this) {
       store.domainChangeRecorder = null;
     }
     store.removeLevelLateListeners.remove(this);
+    for (IntVar x : booleanIds.keySet()) {
+      if (x instanceof BooleanVar b && b.trailOwner == this) {
+        b.trailOwner = null;
+      }
+    }
   }
 
   /**
@@ -404,7 +415,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     kind[size] = k;
     value[size] = v;
     level[size] = store.level;
-    reason[size] = store.currentConstraint;
+    Constraint propagating = store.currentConstraint;
+    reason[size] = propagating == null ? null : propagating.reasonOwner();
     previous[size] = last[i];
     last[i] = size;
     if (k == NE) {

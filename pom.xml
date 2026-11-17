@@ -206,11 +206,15 @@ setup to run configuration. -->
                                 <unary.transition.trials>100</unary.transition.trials>
                                 <grounding.trials>10</grounding.trials>
                                 <setfuzz.trials>100</setfuzz.trials>
+                                <rootRefutation.fuzz.trials>1000</rootRefutation.fuzz.trials>
                                 <layeredgraph.trials>8</layeredgraph.trials>
                                 <disjunctiveCliques.trials>100</disjunctiveCliques.trials>
                                 <cumulative.presolve.trials>100</cumulative.presolve.trials>
+                                <pairCover.trials>60</pairCover.trials>
                                 <lcg.fuzz.runs>300</lcg.fuzz.runs>
                                 <enforcementInlining.trials>100</enforcementInlining.trials>
+                                <cse.trials>100</cse.trials>
+                                <affine.trials>100</affine.trials>
                                 <convex.lcg.runs>300</convex.lcg.runs>
                                 <convex.fz.trials>100</convex.fz.trials>
                                 <prob.trials>300</prob.trials>
@@ -221,6 +225,7 @@ setup to run configuration. -->
                                 <presolve.elimination.trials>300</presolve.elimination.trials>
                                 <presolve.dominance.trials>500</presolve.dominance.trials>
                                 <wakeup.trials>1000</wakeup.trials>
+                                <consistency.instances>50</consistency.instances>
                                 <floats.fuzz.trials>100</floats.fuzz.trials>
                                 <floats.fuzz.opt.trials>3</floats.fuzz.opt.trials>
                                 <float.builtins.trials>200</float.builtins.trials>
@@ -228,15 +233,20 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
@@ -253,8 +263,12 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -268,6 +282,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -283,7 +298,12 @@ setup to run configuration. -->
                                 <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
+                                <include>**/FunctionalTabuSearchTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -294,6 +314,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -301,6 +323,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -315,6 +338,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -326,6 +350,8 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
+                                <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/CostRegularTest.java</include>
                                 <include>**/MultiCostRegularTest.java</include>
@@ -361,21 +387,33 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/IndexDisjunctionFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
+                                <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
+                                <include>**/AffineFoldingFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -391,6 +429,9 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
+                                <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -414,6 +455,8 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
+                                <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -458,19 +501,25 @@ setup to run configuration. -->
                         <configuration>
                             <systemPropertyVariables>
                                 <upTo30sec.list>list-commit.txt</upTo30sec.list>
+                                <consistency.instances>200</consistency.instances>
                             </systemPropertyVariables>
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
@@ -487,8 +536,12 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -502,6 +555,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -517,7 +571,12 @@ setup to run configuration. -->
                                 <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
+                                <include>**/FunctionalTabuSearchTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -528,6 +587,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -535,6 +596,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -549,6 +611,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -561,6 +624,8 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
+                                <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
@@ -600,21 +665,33 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/IndexDisjunctionFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
+                                <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
+                                <include>**/AffineFoldingFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -630,6 +707,9 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
+                                <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -654,6 +734,8 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
+                                <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -697,15 +779,20 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
@@ -722,8 +809,12 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -737,6 +828,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -752,7 +844,12 @@ setup to run configuration. -->
                                 <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
+                                <include>**/FunctionalTabuSearchTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -763,6 +860,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -770,6 +869,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -784,6 +884,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -796,6 +897,8 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
+                                <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
@@ -835,21 +938,33 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/IndexDisjunctionFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
+                                <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
+                                <include>**/AffineFoldingFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -865,6 +980,9 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
+                                <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -889,6 +1007,8 @@ setup to run configuration. -->
                                 <include>**/OnRestartFlatzincTest.java</include>
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
+                                <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -932,15 +1052,20 @@ setup to run configuration. -->
                             <includes>
                                 <include>**/IntDomainTest.java</include>
                                 <include>**/CdclSolverTest.java</include>
+                                <include>**/JumpSearchTest.java</include>
                                 <include>**/SatWrapperTest.java</include>
                                 <include>**/SmokeSetTest.java</include>
                                 <include>**/DomainOperationsBruteForceTest.java</include>
                                 <include>**/FloatDomainOperationsTest.java</include>
+                                <include>**/LinearFloatRelaxationTest.java</include>
+                                <include>**/FloatOptimizationFlatzincTest.java</include>
                                 <include>**/LazyBitSetDomainTest.java</include>
                                 <include>**/VarIntMapTest.java</include>
                                 <include>**/ConstraintQueueTest.java</include>
                                 <include>**/StoreTrailTest.java</include>
+                                <include>**/DomainTrailTest.java</include>
                                 <include>**/AtomicTrailTest.java</include>
+                                <include>**/ClauseMinerTest.java</include>
                                 <include>**/DualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexTest.java</include>
                                 <include>**/RevisedDualSimplexCycleTest.java</include>
@@ -957,8 +1082,12 @@ setup to run configuration. -->
                                 <include>**/EnergyCutsTest.java</include>
                                 <include>**/TimeIndexedBoundTest.java</include>
                                 <include>**/LargeRelaxationTest.java</include>
+                                <include>**/NearRowsTest.java</include>
+                                <include>**/AssignmentEncodingTest.java</include>
+                                <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
                                 <include>**/LcgFuzzTest.java</include>
@@ -972,6 +1101,7 @@ setup to run configuration. -->
                                 <include>**/ExampleBasedTest.java</include>
                                 <include>**/SetSupersetTest.java</include>
                                 <include>**/SingleConstraintTest.java</include>
+                                <include>**/MaxCliqueBoundTest.java</include>
                                 <include>**/ClauseEncoderTest.java</include>
                                 <include>**/RoutesTest.java</include>
                                 <include>**/DifferenceCyclesTest.java</include>
@@ -987,7 +1117,12 @@ setup to run configuration. -->
                                 <include>**/SearchBoundTest.java</include>
                                 <include>**/FreeSearchTest.java</include>
                                 <include>**/AdaptiveLnsTest.java</include>
+                                <include>**/ProjectScheduleTest.java</include>
+                                <include>**/MaxSatLocalSearchTest.java</include>
+                                <include>**/FunctionalTabuSearchTest.java</include>
+                                <include>**/BinCompletionTest.java</include>
                                 <include>**/SuccessorRoutesTest.java</include>
+                                <include>**/RectanglePlacementSelectTest.java</include>
                                 <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>
@@ -998,6 +1133,8 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ConsistencyChecker.java</include>
+                                <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
                                 <include>**/ExactCoverTest.java</include>
                                 <include>**/TableCoverTest.java</include>
@@ -1005,6 +1142,7 @@ setup to run configuration. -->
                                 <include>**/LinearEqualitiesTest.java</include>
                                 <include>**/XorSystemFuzzTest.java</include>
                                 <include>**/ExactCoverFuzzTest.java</include>
+                                <include>**/RootRefutationFuzzTest.java</include>
                                 <include>**/TableCoverFuzzTest.java</include>
                                 <include>**/PrecedenceCostTest.java</include>
                                 <include>**/PrecedenceCostLcgTest.java</include>
@@ -1019,6 +1157,7 @@ setup to run configuration. -->
                                 <include>**/HornFlowTest.java</include>
                                 <include>**/HornFlowLcgTest.java</include>
                                 <include>**/MultiCumulativeTest.java</include>
+                                <include>**/fz/CumulativeTest.java</include>
                                 <include>**/UnaryReasoningTest.java</include>
                                 <include>**/UnaryTransitionTest.java</include>
                                 <include>**/UnaryTimetableTest.java</include>
@@ -1029,6 +1168,8 @@ setup to run configuration. -->
                                 <include>**/ImposeGroundingTest.java</include>
                                 <include>**/FloatImposeGroundingTest.java</include>
                                 <include>**/FloatPropagationFuzzTest.java</include>
+                                <include>**/FloatCidTest.java</include>
+                                <include>**/FloatNewtonTest.java</include>
                                 <include>**/FloatBuiltinsFuzzTest.java</include>
                                 <include>**/PresolveTest.java</include>
                                 <include>**/VariableEliminationTest.java</include>
@@ -1068,21 +1209,33 @@ setup to run configuration. -->
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
                                 <include>**/IncreasingDetectorFlatzincTest.java</include>
                                 <include>**/DefinedVariablesFlatzincTest.java</include>
+                                <include>**/DefinedLastFlatzincTest.java</include>
                                 <include>**/ElementTableFlatzincTest.java</include>
                                 <include>**/IntensionTableFlatzincTest.java</include>
                                 <include>**/TranslationTilingFlatzincTest.java</include>
+                                <include>**/ProgressionTilingFlatzincTest.java</include>
                                 <include>**/CostNetworkFlatzincTest.java</include>
                                 <include>**/TableReformulationFlatzincTest.java</include>
                                 <include>**/TableVariableEliminationFlatzincTest.java</include>
+                                <include>**/IndexDisjunctionFlatzincTest.java</include>
+                                <include>**/ZeroSumFlatzincTest.java</include>
                                 <include>**/LinearOverlapFlatzincTest.java</include>
                                 <include>**/BinaryEqAliasFlatzincTest.java</include>
+                                <include>**/OrderChannelsFlatzincTest.java</include>
                                 <include>**/CountPartnersFlatzincTest.java</include>
+                                <include>**/RegularFlowFlatzincTest.java</include>
+                                <include>**/PairCoverFlatzincTest.java</include>
                                 <include>**/AgreementCountFlatzincTest.java</include>
+                                <include>**/AntichainFlatzincTest.java</include>
                                 <include>**/EnforcementInlinerFlatzincTest.java</include>
+                                <include>**/CommonSubexpressionsFlatzincTest.java</include>
+                                <include>**/AffineFoldingFlatzincTest.java</include>
                                 <include>**/SetUnionFlatzincTest.java</include>
                                 <include>**/DefaultSetSearchFlatzincTest.java</include>
+                                <include>**/LcgCompletionFlatzincTest.java</include>
                                 <include>**/AlldiffSumFlatzincTest.java</include>
                                 <include>**/PermutationSumFlatzincTest.java</include>
+                                <include>**/PermutationElementSumsFlatzincTest.java</include>
                                 <include>**/PartitionSumsFlatzincTest.java</include>
                                 <include>**/BalanceFlatzincTest.java</include>
                                 <include>**/PrecedenceFlatzincTest.java</include>
@@ -1098,6 +1251,9 @@ setup to run configuration. -->
                                 <include>**/DominanceFlatzincTest.java</include>
                                 <include>**/BinPackingCardinalityFlatzincTest.java</include>
                                 <include>**/BinPackingPermutationsFlatzincTest.java</include>
+                                <include>**/SlotDiveFlatzincTest.java</include>
+                                <include>**/MaxSatFlatzincTest.java</include>
+                                <include>**/FunctionalTabuFlatzincTest.java</include>
                                 <include>**/DisjunctiveCliqueFlatzincTest.java</include>
                                 <include>**/SymmetryBreakingFlatzincTest.java</include>
                                 <include>**/ObjectivePresolveFlatzincTest.java</include>
@@ -1512,6 +1668,20 @@ setup to run configuration. -->
                 </executions>
             </plugin>
 
+            <!-- sets ${org.mockito:mockito-core:jar}, the agent the tests load at start up -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -1526,17 +1696,31 @@ setup to run configuration. -->
                         <!-- and without the default symmetry breaking (presolve-off runs); with
                              presolve the tests break symmetries as before -->
                         <jacop.symmetry>presolve</jacop.symmetry>
+                        <!-- the automorphism search stops after a wall-clock budget, so on a slow
+                             or loaded machine it can stop early and break other symmetries; give
+                             it room so that the expected outputs do not depend on the machine -->
+                        <org.jacop.fz.symmetryTime>20000</org.jacop.fz.symmetryTime>
+                        <!-- the probe before an expensive root LP runs a search for 200 ms of wall
+                             clock without the relaxation, so how far it gets, and which of several
+                             optimal solutions is printed last, depends on the machine
+                             (fair_split_into_3_groups); LpProbeFlatzincTest sets its own -->
+                        <org.jacop.fz.lpProbe>0</org.jacop.fz.lpProbe>
                     </systemPropertyVariables>
-                    <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
-                    <argLine>@{argLine} -Xss100m</argLine>
+                    <!-- same stack size as fzn-jacop: deep searches recurse once per decision;
+                         Mockito's inline mock maker is loaded as an agent at start up, since the
+                         JDK warns about (and will refuse) agents attached while running -->
+                    <argLine>@{argLine} -Xss100m -javaagent:${org.mockito:mockito-core:jar}</argLine>
                     <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>
                         <include>**/CdclSolverTest.java</include>
+                        <include>**/JumpSearchTest.java</include>
                         <include>**/SatWrapperTest.java</include>
                         <include>**/SmokeSetTest.java</include>
                         <include>**/DomainOperationsBruteForceTest.java</include>
                         <include>**/FloatDomainOperationsTest.java</include>
+                        <include>**/LinearFloatRelaxationTest.java</include>
+                        <include>**/FloatOptimizationFlatzincTest.java</include>
                         <include>**/LazyBitSetDomainTest.java</include>
                         <include>**/VarIntMapTest.java</include>
                         <include>**/ExampleBasedTest.java</include>
@@ -1549,7 +1733,12 @@ setup to run configuration. -->
                                 <include>**/SearchBoundTest.java</include>
                         <include>**/FreeSearchTest.java</include>
                         <include>**/AdaptiveLnsTest.java</include>
+                        <include>**/ProjectScheduleTest.java</include>
+                        <include>**/MaxSatLocalSearchTest.java</include>
+                        <include>**/FunctionalTabuSearchTest.java</include>
+                        <include>**/BinCompletionTest.java</include>
                         <include>**/SuccessorRoutesTest.java</include>
+                        <include>**/RectanglePlacementSelectTest.java</include>
                         <include>**/RouteNeighbourhoodsTest.java</include>
                                 <include>**/LocalSearchTest.java</include>
                                 <include>**/ViolationTest.java</include>

@@ -108,6 +108,10 @@ public final class CoreSearch {
 
   // the conflicts of one probe of a term's level
   private static final long PROBE_CONFLICTS = 100;
+  // the sums of a split objective replace their 0-1 terms only when the terms span more than this
+  // many times their levels (see #of)
+  private static final double SPAN_RATIO =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreSpanRatio", "2"));
   // the lower bound's rate, per unit of the solver's work (CdclSolver#work, never the clock, so a
   // run repeats), is measured once this much work was done (about two seconds), and may grow this
   // many times
@@ -153,6 +157,12 @@ public final class CoreSearch {
    */
   public long noSolutionStops;
 
+  /**
+   * Statistics: whether the terms of the sums replace the sums although they span more levels, by
+   * less than {@link #SPAN_RATIO} times.
+   */
+  public boolean termsBySpanRatio;
+
   /** Statistics: groups of soft literals relaxed at once as at most one of them false. */
   public long amoGroups;
 
@@ -174,6 +184,9 @@ public final class CoreSearch {
   private long runBound; // the lower bound when the last run started
   private long runEnd; // the solver's work when the last run stopped
   private boolean grouped; // the at-most-one groups were looked for
+  private boolean regrouped; // they were looked for again after hardening
+  private long hardenedAtGroup; // the soft literals hardened when the groups were looked for
+  private boolean expandValues = true; // the groups expand terms into their value literals
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
 
@@ -262,12 +275,20 @@ public final class CoreSearch {
     }
     // the terms of the sums replace the sums when they have fewer levels for the cores to relax:
     // 0-1 terms (trucking, celar, spot5), not wide ones whose span is that of the sums (atsp: 405
-    // terms, 151 cores on its 3 sums against 2,285 on the terms)
-    if (span(lcg, terms) > span(lcg, blocks)) {
+    // terms, 151 cores on its 3 sums against 2,285 on the terms). 0-1 terms also replace sums of
+    // fewer levels, up to SPAN_RATIO times fewer: the root propagation of a long run tightens the
+    // sums beyond their terms' bounds. On MaxSAT Evaluation 2024's xai-mindset2 iris, 564 0-1 terms
+    // in 4 sums of 525 levels at -t 60 s (1,061 levels each at -t 3 s), the cores had 3 assumptions
+    // on the sums and a bound of 49 of 87 after 240 s; on the terms the optimum is proved in 4 s
+    long termSpan = span(lcg, terms);
+    long blockSpan = span(lcg, blocks);
+    boolean zeroOne = zeroOne(lcg, terms);
+    if (termSpan > (zeroOne ? SPAN_RATIO : 1) * blockSpan) {
       CoreSearch search = new CoreSearch(lcg, objective, blocks, blocksConstant);
       return search.startProof(blockDefinitions) ? search : null;
     }
     CoreSearch search = new CoreSearch(lcg, objective, terms, constant[0]);
+    search.termsBySpanRatio = termSpan > blockSpan;
     if (!search.startProof(definitions)) {
       return null;
     }
@@ -302,8 +323,49 @@ public final class CoreSearch {
       grouped = true;
       return true;
     }
+    hardenedAtGroup = hardened;
     return relaxAtMostOnes();
   }
+
+  /** Whether each term's variable spans at most one level. */
+  private static boolean zeroOne(LcgSolver lcg, Map<Integer, Long> terms) {
+    for (int t : terms.keySet()) {
+      IntVar x = lcg.variable(t);
+      if ((long) x.max() - x.min() > 1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Looks for the at-most-one groups once more when soft literals were hardened since they were
+   * looked for: a heavy soft clause between two light soft literals, such as a conflict of weight
+   * 221 between the unit soft clauses of weight 1 of a weighted MaxSAT independent set (MaxSAT
+   * Evaluation frb_wt), becomes hard only once a solution cheaper than its weight is known, and
+   * only then does it put the two literals in one group. Without it, the cores raise the bound by
+   * one each: 200 cores and 120 s on frb_wt-frb20-11-1, whose 20 domain cliques give the bound at
+   * once. The values of terms are not expanded again. Returns false when the solver is
+   * unsatisfiable at the root.
+   */
+  private boolean regroup() {
+    if (regrouped || !grouped || proof != null || hardened == hardenedAtGroup) {
+      return true;
+    }
+    regrouped = true;
+    hardenedAtGroup = hardened;
+    regroups++;
+    expandValues = false;
+    return relaxAtMostOnes();
+  }
+
+  /** The value literals of a term to expand into the groups, none once the values were expanded. */
+  private int[] expandedValues(Soft s) {
+    return expandValues ? valueLiterals(s) : new int[0];
+  }
+
+  /** Statistics: times the at-most-one groups were looked for again after hardening. */
+  public long regroups;
 
   /** The number of levels of the terms' variables, summed. */
   private static long span(LcgSolver lcg, Map<Integer, Long> terms) {
@@ -551,15 +613,38 @@ public final class CoreSearch {
         continue;
       }
       int[] core = sat.failedAssumptions();
-      if (core.length == 0 || !relax(core, true)) {
+      if (core.length > 1 && lcg.coreTrim() > 0) {
+        core = trim(core, phaseLimit);
+      }
+      if (core.length == 0 || !relax(core, true) || !exhaust(core.length, phaseLimit)) {
         // no solution better than the best one, if there is one
         return lcg.bestObjective() == Long.MAX_VALUE ? CdclSolver.UNSAT : CdclSolver.SAT;
       }
       Soft unit = core.length == 1 ? byLiteral.get(-core[0]) : null;
       if (unit != null && unit.term >= 0) {
         probe(unit.term, unit.level, phaseLimit);
+      } else if (OBJECTIVE_PROBE && cores >= nextObjectiveProbe && slowCores()) {
+        long before = sat.work();
+        boolean feasible = probeObjective(phaseLimit);
+        discount(sat.work() - before);
+        if (!feasible) {
+          return CdclSolver.SAT; // no solution better than the best one
+        }
+        long best = lcg.boundObjective();
+        if (best != Long.MAX_VALUE
+            && best > objectiveFloor
+            && PROBE_HANDOVER * (best - objectiveFloor) < best - lowerBound) {
+          // the probes proved much more than the cores: branch and bound, which keeps the
+          // objective's bound, closes the rest faster than cores of 1 each (ATSP 2021 instance10:
+          // 3,700 more cores for the last 23 units after the probes)
+          probeStops++;
+          return CdclSolver.UNKNOWN;
+        }
       }
-      lcg.reportBound(lowerBound);
+      if (lcg.boundObjective() <= objectiveFloor) {
+        return CdclSolver.SAT;
+      }
+      lcg.reportBound(Math.max(lowerBound, objectiveFloor));
       if (tooSlow()) {
         return CdclSolver.UNKNOWN;
       }
@@ -569,10 +654,15 @@ public final class CoreSearch {
   /**
    * Makes hard each soft literal whose weight exceeds the gap between the best solution and the
    * lower bound: any assignment that violates it costs at least the lower bound plus its weight, so
-   * no better solution violates it (hardening, as in RC2 and Geas). Returns false when the solver
-   * becomes unsatisfiable.
+   * no better solution violates it (hardening, as in RC2 and Geas), then looks for the at-most-one
+   * groups again if it hardened some ({@link #regroup}). Returns false when the solver becomes
+   * unsatisfiable.
    */
   private boolean harden() {
+    return hardenSoft() && regroup();
+  }
+
+  private boolean hardenSoft() {
     long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return true;
@@ -640,7 +730,7 @@ public final class CoreSearch {
     long expansionCost = 0; // what the expansion takes from the bound
     BitSet expanded = new BitSet();
     for (int i = 0; i < terms; i++) {
-      int[] values = valueLiterals(owner.get(i));
+      int[] values = expandedValues(owner.get(i));
       if (values.length == 0) {
         continue;
       }
@@ -1228,6 +1318,134 @@ public final class CoreSearch {
     }
   }
 
+  // -Djacop.lcg.coreObjectiveProbe=false: no probes of the objective's own bound during the phase
+  static final boolean OBJECTIVE_PROBE =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreObjectiveProbe", "true"));
+
+  // the cores before the first check of their rate for the objective's probes, whose first probe
+  // comes at twice as many (-Djacop.lcg.coreObjectiveProbeAfter; 1 probes after every core)
+  static long objectiveProbeAfter = Long.getLong("jacop.lcg.coreObjectiveProbeAfter", 16);
+
+  // the cores found before the next probe of the objective's bound; doubled at each probe
+  private long nextObjectiveProbe = objectiveProbeAfter;
+
+  // the cores' bound when the cores last came to nextObjectiveProbe, Long.MIN_VALUE before
+  private long checkBound = Long.MIN_VALUE;
+
+  /**
+   * At 32, 64, 128... cores (see {@link #objectiveProbeAfter}): whether the cores, at the rate of
+   * their second half, would need more than four times as many cores again to meet the best
+   * solution. Only then are the objective's probes worth their work: on work-task-variation 2025
+   * seed-8 each core also raises the bound by 1, but a few more cores close the gap of 3 to its
+   * optimum, and probes there only change the run (the first test at 16 cores records the bound).
+   */
+  private boolean slowCores() {
+    long last = checkBound;
+    checkBound = lowerBound;
+    nextObjectiveProbe = 2 * cores;
+    long best = lcg.boundObjective();
+    if (best == Long.MAX_VALUE) {
+      return false;
+    }
+    if (objectiveProbeAfter <= 1) {
+      return true; // after every core (tests)
+    }
+    // the second half's cores, cores / 2, raised the bound by the gain: at that rate the gap needs
+    // gap / gain * cores / 2 cores, more than 4 * cores when the gap is above 8 gains
+    return last != Long.MIN_VALUE
+        && best - Math.max(lowerBound, objectiveFloor) > 8 * Math.max(0, lowerBound - last);
+  }
+
+  /** The objective's lower bound proved by the probes of {@link #probeObjective}. */
+  public long objectiveFloor = Long.MIN_VALUE;
+
+  // the phase stops once the probes leave less than this share of the cores' gap to the best
+  // solution
+  private static final long PROBE_HANDOVER = 8;
+
+  /** Statistics: phases stopped because the objective's probes proved more than the cores. */
+  public long probeStops;
+
+  /** Statistics: calls of the solver that probe the objective's bound. */
+  public long objectiveProbes;
+
+  /**
+   * Proves how far the objective itself must be above the cores' lower bound: bounds at doubling
+   * distances above it, up to the best solution, each assumed alone with a few conflicts, until one
+   * is not refuted. Cores of two or more terms with large domains, such as a makespan and a
+   * tardiness that rise together, each raise the cores' bound by 1 (ATSP 2021 instance5: 1,978
+   * cores of 2 literals for 20,000 units), while the objective's bound is often refuted at once.
+   * The bounds proved are clauses on the objective; they do not change the cores' own bound, which
+   * counts only the weights the cores took from the soft literals. Returns false when the solver
+   * becomes unsatisfiable: no solution is better than the best one.
+   */
+  private boolean probeObjective(long phaseLimit) {
+    long best = lcg.boundObjective();
+    if (best == Long.MAX_VALUE) {
+      return true;
+    }
+    long from = Math.max(lowerBound, objectiveFloor);
+    for (long step = 1; from < best; step *= 2) {
+      long target = Math.min(from + step, best);
+      IntVar x = lcg.variable(objective);
+      if (target <= x.min()) {
+        // already implied: once that reaches the best solution there is nothing left to probe,
+        // and the step would double until it overflowed
+        objectiveFloor = Math.max(objectiveFloor, x.min());
+        if (target >= best) {
+          return true;
+        }
+        continue;
+      }
+      if (target > x.max() + 1L) {
+        return false;
+      }
+      int lit = lcg.geLiteral(objective, (int) target);
+      long cap = sat.conflicts + PROBE_CONFLICTS;
+      sat.setConflictLimit(Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap)));
+      objectiveProbes++;
+      int result = lcg.solveUnder(-lit);
+      if (result != CdclSolver.UNSAT) {
+        return true;
+      }
+      if (sat.failedAssumptions().length == 0) {
+        return false;
+      }
+      objectiveFloor = target;
+      if (!lcg.addProvedClause(lit)) {
+        return false;
+      }
+      if (target >= best) {
+        return true;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Leaves the given work of the objective's probes out of the phase: its rates, which measure the
+   * cores' own bound, and its work limit. With the probes counted, work-task-variation 2025 seed-8
+   * stopped as stalled at 214, three below the optimum that its cores prove two cores later (lost
+   * in 4 of 4 runs at 120 s).
+   */
+  private void discount(long work) {
+    if (work <= 0) {
+      return;
+    }
+    if (startWork >= 0) {
+      startWork += work;
+    }
+    for (int k = 0; k < samples; k++) {
+      sampleWork[k] += work;
+    }
+    if (markWork >= 0) {
+      markWork += work;
+    }
+    if (sat.workLimit() != Long.MAX_VALUE) {
+      sat.setWorkLimit(sat.workLimit() + work);
+    }
+  }
+
   /** Whether every soft literal was assumed and a solution was found under all of them. */
   boolean exhausted() {
     return exhausted;
@@ -1244,9 +1462,94 @@ public final class CoreSearch {
     return max;
   }
 
+  // the conflicts of one trimming call
+  private static final long TRIM_CONFLICTS = 1000;
+
+  /** Statistics: the literals that trimming took out of cores. */
+  public long coreShrunk;
+
+  /**
+   * Trims a core: solves again under the core's own literals, which often fails on fewer of them,
+   * up to {@link LcgSolver#setCoreTrim} times while the core shrinks (core trimming in RC2:
+   * Ignatiev, Morgado and Marques-Silva, "RC2: an Efficient MaxSAT Solver", JSAT 11, 2019). A
+   * smaller core raises the lower bound by as much and leaves the other literals for later cores. A
+   * call that runs out of its conflicts keeps the core it has; one that finds a solution reports it
+   * as any other.
+   */
+  private int[] trim(int[] core, long phaseLimit) {
+    int before = core.length;
+    boolean shrinking = true;
+    for (int r = 0; shrinking && r < lcg.coreTrim() && core.length > 1; r++) {
+      long cap = sat.conflicts + TRIM_CONFLICTS;
+      sat.setConflictLimit(
+          Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
+      int[] smaller = lcg.solveUnder(core) == CdclSolver.UNSAT ? sat.failedAssumptions() : core;
+      shrinking = smaller.length > 0 && smaller.length < core.length;
+      if (shrinking) {
+        core = smaller;
+      }
+    }
+    coreShrunk += before - core.length;
+    return core;
+  }
+
+  /** Statistics: totalizer outputs that core exhaustion proved. */
+  public long exhaustedOutputs;
+
+  private Totalizer lastTotalizer;
+
+  // cores whose first output exhaustion tested without refuting it
+  private long exhaustMisses;
+
+  /**
+   * Core exhaustion as in RC2 (Ignatiev, Morgado and Marques-Silva, JSAT 11, 2019): after a core of
+   * at least two literals is relaxed, the outputs "at least j of them false" of its new totalizer,
+   * j = 2, 3, ..., are each assumed alone, at most {@link LcgSolver#setCoreExhaust} of them and at
+   * most 1000 conflicts a call, and relaxed as unit cores while they are refuted. That raises the
+   * bound at once by what a run of cores over the same literals would raise it.
+   *
+   * @return false when the solver became unsatisfiable at the root
+   */
+  private boolean exhaust(int size, long phaseLimit) {
+    int patience = lcg.coreExhaustPatience();
+    if (lcg.coreExhaust() <= 0
+        || size < 2
+        || lastTotalizer == null
+        || patience > 0 && exhaustMisses >= patience * (1 + exhaustedOutputs)) {
+      return true;
+    }
+    Totalizer tot = lastTotalizer;
+    int last = Math.min(Math.min(tot.inputs.length, tot.outputs.length), lcg.coreExhaust() + 1);
+    boolean refuted = true;
+    boolean open = true;
+    for (int k = 2; refuted && open && k <= last; k++) {
+      Soft s = byLiteral.get(tot.outputs[k - 1]);
+      refuted = s != null && s.weight > 0;
+      if (refuted) {
+        long cap = sat.conflicts + TRIM_CONFLICTS;
+        sat.setConflictLimit(
+            Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
+        int[] failed =
+            lcg.solveUnder(-s.lit) == CdclSolver.UNSAT ? sat.failedAssumptions() : new int[] {0, 0};
+        // an empty core: unsatisfiable without assumptions
+        open = failed.length != 0;
+        refuted = failed.length == 1;
+        if (!refuted && k == 2) {
+          exhaustMisses++;
+        }
+        if (refuted) {
+          exhaustedOutputs++;
+          open = relax(failed, true);
+        }
+      }
+    }
+    return open;
+  }
+
   /** Relaxes a core of assumptions; returns false when the solver is unsatisfiable at the root. */
   private boolean relax(int[] core, boolean bound) {
     cores++;
+    lastTotalizer = null;
     coreLiterals += core.length;
     long min = Long.MAX_VALUE;
     List<Soft> in = new ArrayList<>();
@@ -1277,6 +1580,7 @@ public final class CoreSearch {
     if (lits.length > 1) {
       Totalizer tot = new Totalizer(lits, min);
       addTotalizerSoft(tot, 2);
+      lastTotalizer = tot;
       if (proof != null) {
         proof.core(tot.outputs, min);
       }

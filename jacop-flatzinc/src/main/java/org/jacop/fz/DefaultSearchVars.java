@@ -157,6 +157,14 @@ public class DefaultSearchVars {
       intVarSet.removeAll(eliminated);
       boolVarSet.removeAll(eliminated);
     }
+    // and so do the variables of the sums that zero-sum detection dropped
+    if (dictionary.zeroSums != null) {
+      intVarSet.removeAll(dictionary.zeroSums.variables());
+    }
+    // and the index variables and results of the disjunctions
+    if (dictionary.indexDisjunctions != null) {
+      intVarSet.removeAll(dictionary.indexDisjunctions.variables());
+    }
 
     intVars = intVarSet.toArray(new IntVar[0]);
     boolVars = boolVarSet.toArray(new BooleanVar[0]);

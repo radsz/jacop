@@ -82,6 +82,26 @@ final class ScratchCopy {
   }
 
   /**
+   * Copies the variables of several constraints, but not the constraints.
+   *
+   * @return the scratch copy, or null when a constraint cannot be copied
+   */
+  static ScratchCopy ofAll(AtomicTrail trail, java.util.List<Constraint> cs) {
+    ScratchCopy s = new ScratchCopy(trail);
+    for (Constraint c : cs) {
+      if (!Copyable.canCopy(c)) {
+        return null;
+      }
+      for (Var v : c.arguments()) {
+        if (!s.copy(v)) {
+          return null;
+        }
+      }
+    }
+    return s;
+  }
+
+  /**
    * Imposes a copy of the constraint in the scratch store.
    *
    * @return false when the copy needs a variable outside the constraint's arguments (such as the

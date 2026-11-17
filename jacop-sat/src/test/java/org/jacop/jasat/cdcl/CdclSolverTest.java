@@ -35,11 +35,13 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,6 +51,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.LongSupplier;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -113,6 +116,69 @@ class CdclSolverTest {
       value[v] = s.modelValue(v);
     }
     return value;
+  }
+
+  /** Pigeons into holes: each pigeon in some hole, at most one pigeon per hole. */
+  private static List<int[]> pigeons(int pigeons, int holes) {
+    List<int[]> f = new ArrayList<>();
+    for (int p = 0; p < pigeons; p++) {
+      int[] c = new int[holes];
+      for (int h = 0; h < holes; h++) {
+        c[h] = p * holes + h + 1;
+      }
+      f.add(c);
+    }
+    for (int h = 0; h < holes; h++) {
+      for (int p = 0; p < pigeons; p++) {
+        for (int q = p + 1; q < pigeons; q++) {
+          f.add(new int[] {-(p * holes + h + 1), -(q * holes + h + 1)});
+        }
+      }
+    }
+    return f;
+  }
+
+  @Test
+  void boundedVariableAdditionKeepsAnswersAndProofs() throws IOException {
+    List<int[]> unsat = pigeons(7, 6);
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.setFactoring(true);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    DratWriter drat = new DratWriter(out);
+    s.setProof(drat);
+    unsat.forEach(s::addClause);
+    assertEquals(CdclSolver.UNSAT, s.solve());
+    drat.close();
+    assertTrue(s.factoredVars > 0, "the at-most-one cliques are factored");
+    assertEquals(42, s.numInputVars());
+    assertNull(RupChecker.check(42, unsat, out.toString(StandardCharsets.US_ASCII)));
+
+    List<int[]> sat = pigeons(6, 6);
+    CdclSolver t = new CdclSolver();
+    t.setChecking(true);
+    t.setFactoring(true);
+    // the forward lucky pass satisfies the pigeons before factoring would run
+    t.setLucky(false);
+    sat.forEach(t::addClause);
+    assertEquals(CdclSolver.SAT, t.solve());
+    assertTrue(t.factoredVars > 0);
+    for (int[] c : sat) {
+      boolean holds = false;
+      for (int l : c) {
+        holds |= t.modelValue(Math.abs(l)) == l > 0;
+      }
+      assertTrue(holds, "the model satisfies the input clauses");
+    }
+    // the fresh variables are not the caller's
+    assertThrows(IllegalStateException.class, () -> t.addClause(t.numInputVars() + 1));
+    // a clause on an eliminated input variable brings back the removed clauses, the ones on fresh
+    // variables included
+    assertTrue(t.eliminatedCount() > 0, "elimination ran after the factoring");
+    for (int h = 1; h <= 6; h++) {
+      t.addClause(-h);
+    }
+    assertEquals(CdclSolver.UNSAT, t.solve(), "pigeon 1 has no hole left");
   }
 
   @Test
@@ -316,6 +382,66 @@ class CdclSolverTest {
     }
   }
 
+  /**
+   * Solves x1 or PH(4), the pigeonhole clauses each with x1 added, deciding x1 false, then 30 free
+   * variables, then the pigeonhole variables, in that order (a fixed search under LCG). Each
+   * conflict of the pigeonhole part backjumps to x1's level, and the free variables between are
+   * decided again after it, unless the solver backtracks one level instead.
+   */
+  private static long fixedOrderDecisions(int lazyChronoLimit) {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    int free = 30;
+    int holes = 4;
+    int first = free + 2; // the pigeonhole variables follow x1 and the free ones
+    int vars = first - 1 + (holes + 1) * holes;
+    s.ensureVars(vars);
+    for (int p = 0; p <= holes; p++) {
+      int[] c = new int[holes + 1];
+      c[holes] = 1;
+      for (int h = 0; h < holes; h++) {
+        c[h] = first + p * holes + h;
+      }
+      s.addClause(c);
+    }
+    for (int h = 0; h < holes; h++) {
+      for (int p = 0; p <= holes; p++) {
+        for (int q = p + 1; q <= holes; q++) {
+          s.addClause(1, -(first + p * holes + h), -(first + q * holes + h));
+        }
+      }
+    }
+    for (int v = 1; v <= vars; v++) {
+      s.observe(v);
+    }
+    s.setLazyChronoLimit(lazyChronoLimit);
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int decide() {
+            for (int v = 1; v <= vars; v++) {
+              if (s.value(v) == 0) {
+                return v >= first ? v : -v; // x1 and the free variables false
+              }
+            }
+            return 0;
+          }
+        });
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertTrue(s.modelValue(1), "x1 must be true: PH(4) is unsatisfiable");
+    return s.decisions;
+  }
+
+  @Test
+  void lazyChronologicalBacktrackingKeepsTheDecisionsBetween() {
+    long backjumping = fixedOrderDecisions(-1);
+    long lazy = fixedOrderDecisions(0);
+    assertTrue(
+        lazy * 2 < backjumping,
+        "decisions with one-level backtracking " + lazy + ", with backjumping " + backjumping);
+    assertTrue(fixedOrderDecisions(10) < backjumping, "a backjump of 31 levels is over 10");
+  }
+
   @Test
   void pigeonholeIsUnsatisfiable() {
     CdclSolver s = new CdclSolver();
@@ -370,6 +496,33 @@ class CdclSolverTest {
     }
     assertTrue(conflicts[0] > 0);
     assertEquals(conflicts[0], conflicts[1]);
+  }
+
+  @Test
+  void stoppedClockReadsLikeTheSolverWithoutHoldingIt() {
+    // free search keeps this clock of the LCG solver that gave way, and drops the solver and its
+    // clauses (rcpsp-wet-diverse j90_48_4 under -f ran out of 4 GB while it kept them)
+    CdclSolver s = new CdclSolver();
+    s.setVirtualClock(true);
+    long[] external = {1_000};
+    s.setExternalWork(() -> external[0]);
+    pigeonhole(s, 8);
+    s.setDeadline(s.now() + 2 * 1_000_000L);
+    assertEquals(CdclSolver.UNKNOWN, s.solve());
+    LongSupplier clock = s.stoppedClock();
+    assertEquals(s.now(), clock.getAsLong());
+    external[0] += CdclSolver.VIRTUAL_WORK_PER_MS;
+    // the store's propagations after the hand-over still count
+    assertEquals(s.now(), clock.getAsLong());
+    assertEquals(s.deadline() - s.now(), s.deadline() - clock.getAsLong());
+    // the clock holds the work done, not the solver
+    for (Field f : clock.getClass().getDeclaredFields()) {
+      assertFalse(CdclSolver.class.isAssignableFrom(f.getType()), f.toString());
+    }
+    CdclSolver wall = new CdclSolver();
+    long before = System.nanoTime();
+    long now = wall.stoppedClock().getAsLong();
+    assertTrue(now >= before && now <= System.nanoTime());
   }
 
   @Test
@@ -544,6 +697,97 @@ class CdclSolverTest {
       assertNull(s.probe(1));
       assertTrue(given[0], "the external clause was not asked for");
       assertEquals(CdclSolver.UNSAT, s.solve());
+    }
+  }
+
+  private static CdclSolver luckySolver(int vars, int[]... clauses) {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.ensureVars(vars);
+    for (int[] c : clauses) {
+      s.addClause(c);
+    }
+    return s;
+  }
+
+  @Test
+  void luckyAssignmentsFindTrivialModelsWithoutSearch() {
+    // every clause has a positive literal: all true
+    CdclSolver s = luckySolver(3, new int[] {1, -2}, new int[] {2, 3}, new int[] {-1, -3, 2});
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("all-true", s.luckyFound);
+    assertEquals(0, s.conflicts);
+    // every clause has a negative literal: all false
+    s = luckySolver(3, new int[] {-1, 2}, new int[] {-2, -3}, new int[] {1, 2, -3});
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("all-false", s.luckyFound);
+    // forward false fails at x2 whichever value it takes, forward true flips nothing
+    int[][] f = {{1, 2, 3}, {1, 2, -3}, {1, -2, 3}, {1, -2, -3}, {-1, -2, -3}};
+    s = luckySolver(3, f);
+    s.setElimination(false);
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertEquals("forward-true", s.luckyFound);
+    assertEquals(0, s.conflicts);
+    assertTrue(satisfies(List.of(f), model(s, 3)));
+    s = luckySolver(3, f);
+    s.setElimination(false);
+    s.setLucky(false);
+    assertEquals(CdclSolver.SAT, s.solve());
+    assertNull(s.luckyFound);
+    assertTrue(satisfies(List.of(f), model(s, 3)));
+  }
+
+  @Test
+  void failedLuckyAssignmentsLeaveTheSearchAsWithoutThem() {
+    Random rnd = new Random(11);
+    int compared = 0;
+    for (int run = 0; run < 40; run++) {
+      int vars = 60 + rnd.nextInt(40);
+      List<int[]> f = new ArrayList<>();
+      for (int i = 0; i < (int) (4.2 * vars); i++) {
+        int[] c = new int[3];
+        for (int k = 0; k < 3; k++) {
+          int v = 1 + rnd.nextInt(vars);
+          c[k] = rnd.nextBoolean() ? v : -v;
+        }
+        f.add(c);
+      }
+      CdclSolver on = luckySolver(vars, f.toArray(new int[0][]));
+      CdclSolver off = luckySolver(vars, f.toArray(new int[0][]));
+      off.setLucky(false);
+      int result = on.solve();
+      assertEquals(off.solve(), result, "run " + run);
+      if (on.luckyFound == null) {
+        compared++;
+        assertEquals(off.conflicts, on.conflicts, "conflicts of run " + run);
+        assertEquals(off.decisions, on.decisions, "decisions of run " + run);
+        assertEquals(off.propagations, on.propagations, "propagations of run " + run);
+      }
+    }
+    assertTrue(compared > 20, "compared " + compared);
+  }
+
+  @Test
+  void luckyAssignmentsKeepRandomAnswersAndProofs() throws IOException {
+    Random rnd = new Random(7);
+    for (int run = 0; run < 2000; run++) {
+      int vars = 3 + rnd.nextInt(10);
+      List<int[]> f = randomFormula(rnd, vars, 1 + rnd.nextInt(5 * vars), 1 + rnd.nextInt(4));
+      CdclSolver s = luckySolver(vars, f.toArray(new int[0][]));
+      s.setElimination(rnd.nextBoolean());
+      ByteArrayOutputStream proof = new ByteArrayOutputStream();
+      DratWriter drat = new DratWriter(proof);
+      s.setProof(drat);
+      int result = s.solve();
+      drat.close();
+      boolean expected = bruteForce(f, vars, new int[0]);
+      assertEquals(expected ? CdclSolver.SAT : CdclSolver.UNSAT, result, "run " + run);
+      if (expected) {
+        assertTrue(satisfies(f, model(s, vars)), "model of run " + run);
+      } else {
+        String text = proof.toString(StandardCharsets.US_ASCII);
+        assertNull(RupChecker.check(vars, f, text), "proof of run " + run);
+      }
     }
   }
 

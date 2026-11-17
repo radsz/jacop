@@ -110,10 +110,24 @@ final class Portfolio {
   /**
    * The setting of the threads that divide one search tree (option {@code --free-config
    * portfolio-split=<threads>}): LCG free search as branch and bound, each thread under the cube of
-   * the tree it took; see {@link SharedTree}.
+   * the tree it took; see {@link SharedTree}. The thread joins the tree with {@code
+   * lcg-tree-split=1}, not with {@code lcg-split}, which is the term limit of long linear
+   * constraints: {@code lcg-split=1} split every linear constraint of two terms or more into
+   * blocks.
    */
   static final String[] SPLIT_SETTING = {
-    "lcg-split", LCG, "on", "-f", FREE_CONFIG, "lcg-split=1,lcg-core=0,lcg-lb=0"
+    "lcg-split", LCG, "on", "-f", FREE_CONFIG, "lcg-tree-split=1,lcg-core=0,lcg-lb=0"
+  };
+
+  /**
+   * The setting of the threads that divide one depth-first search on the annotation by work
+   * stealing (option {@code --free-config portfolio-dfs-split=<threads>}, 2 by default with free
+   * search and at least 4 threads, 0 turns it off); see {@link DfsSplit}. Symmetry breaking is off:
+   * its constraints may have variables with no name in the model, which a cube cannot name, and
+   * then no thread could join the tree and each would search all of it.
+   */
+  static final String[] DFS_SPLIT_SETTING = {
+    "dfs-split", LCG, "off", "--symmetry", "off", FREE_CONFIG, "dfs-split=1"
   };
 
   /** The name of the thread of {@link #boundSetting}. */
@@ -143,6 +157,8 @@ final class Portfolio {
   private final SharedClauses sharedClauses = new SharedClauses();
   // the search tree the threads of SPLIT_SETTING divide among themselves
   private final SharedTree sharedTree = new SharedTree();
+  // the search tree the threads of DFS_SPLIT_SETTING divide among themselves
+  private final SharedTree dfsTree = new SharedTree();
   private final Object lock = new Object();
   // where the portfolio prints: stdout as it was when the portfolio started
   private PrintStream stdout;
@@ -265,7 +281,20 @@ final class Portfolio {
     if (split < 2) {
       split = 0;
     }
+    // free search with 4 threads or more gives two threads to one split CP tree by default: on the
+    // wide set at 600 s (-f -p 4) it solved 203 instances against 200 with the plain settings
+    // (not next to LCG split threads)
+    String dfsDefault = options.freeSearch() && threads >= 4 && split == 0 ? "2" : "0";
+    int dfsSplit =
+        Math.min(
+            threads - split,
+            Integer.parseInt(options.freeConfig("portfolio-dfs-split", dfsDefault)));
+    if (dfsSplit < 2) {
+      dfsSplit = 0;
+    }
+    split += dfsSplit;
     List<String> splitFlags = Arrays.asList(SPLIT_SETTING).subList(1, SPLIT_SETTING.length);
+    List<String> dfsFlags = Arrays.asList(DFS_SPLIT_SETTING).subList(1, DFS_SPLIT_SETTING.length);
     if (split < threads) {
       workers.add(new Worker("given", arguments(base, List.of(), false)));
     }
@@ -276,7 +305,10 @@ final class Portfolio {
       List<String> flags = Arrays.asList(config).subList(1, config.length);
       workers.add(new Worker(config[0], arguments(base, flags, true)));
     }
-    for (int k = 0; k < split; k++) {
+    for (int k = 0; k < dfsSplit; k++) {
+      workers.add(new Worker(DFS_SPLIT_SETTING[0] + k, arguments(base, dfsFlags, true)));
+    }
+    for (int k = 0; k < split - dfsSplit; k++) {
       workers.add(new Worker(SPLIT_SETTING[0] + k, arguments(base, splitFlags, true)));
     }
     String file = args[args.length - 1];
@@ -397,6 +429,17 @@ final class Portfolio {
           }
           if (imports > 0) {
             s.append("%%%mzn-stat: portfolioImports=").append(imports).append('\n');
+          }
+          if (dfsTree.joined() > 0) {
+            s.append("%%%mzn-stat: portfolioDfsSplitThreads=")
+                .append(dfsTree.joined())
+                .append("\n%%%mzn-stat: portfolioDfsSplits=")
+                .append(dfsTree.splits())
+                .append("\n%%%mzn-stat: portfolioDfsCubesClosed=")
+                .append(dfsTree.closedCubes())
+                .append("\n%%%mzn-stat: portfolioDfsSplitWaitMillis=")
+                .append(dfsTree.waitedMillis())
+                .append('\n');
           }
           if (sharedTree.joined() > 0) {
             s.append("%%%mzn-stat: portfolioSplitThreads=")
@@ -590,9 +633,10 @@ final class Portfolio {
 
   /**
    * Reads the model once for all threads, which build their stores from the tree it gives; it is
-   * about a third of their start-up, and one tree in place of one per thread saves its memory. A
-   * model that does not parse gives null, and each thread reads it again and reports the error as
-   * one thread does.
+   * about a third of their start-up. Each thread builds from a copy of its own (Parser.build),
+   * since the front end rewrites constraint items in place, and drops the copy once its model is
+   * built. A model that does not parse gives null, and each thread reads it again and reports the
+   * error as one thread does.
    */
   private SimpleNode parse() {
     try (FileInputStream in = new FileInputStream(options.getFileName())) {
@@ -799,6 +843,14 @@ final class Portfolio {
      */
     SharedTree sharedTree() {
       return sharedTree;
+    }
+
+    SharedTree dfsTree() {
+      return dfsTree;
+    }
+
+    boolean isStopped() {
+      return stopped;
     }
 
     SharedClauses sharedClauses() {

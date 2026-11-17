@@ -55,6 +55,7 @@ import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.BoolClause;
 import org.jacop.constraints.ChannelImply;
+import org.jacop.constraints.ChannelOrder;
 import org.jacop.constraints.ChannelReif;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.ConditionalSelect;
@@ -72,6 +73,7 @@ import org.jacop.constraints.IncreasingSum;
 import org.jacop.constraints.LexOrder;
 import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
@@ -82,15 +84,18 @@ import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.SeqPrecedeChain;
 import org.jacop.constraints.Subcircuit;
+import org.jacop.constraints.Sum;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.ValuePrecede;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XgtC;
+import org.jacop.constraints.XgtY;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
+import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
@@ -98,6 +103,7 @@ import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
+import org.jacop.constraints.XplusYlteqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -713,6 +719,398 @@ class VeriPbProofTest {
   // if b then y = z else y = 0, with 0 a hole of y: the root propagation sets b, and the proof
   // derives it only if the else branch states the value literal of y (its bounds allow 0)
   @Test
+  void reifiedEqualityOfDisjointDomainsIsDerived() {
+    // b <=> x = y with x in 2..3 and y in {1, 4..6}: the root propagation sets b to 0, and the
+    // proof derives it only if the equality bounds y to the range of x (the sum alone is two bounds
+    // and the holes of y hide that no value of y is in 2..3)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 2, 3);
+    IntVar y = new IntVar(store, "y", 1, 6);
+    for (int v = 2; v <= 3; v++) {
+      y.domain.inComplement(0, y, v);
+    }
+    IntVar b = new IntVar(store, "b", 0, 1);
+    // attached after the variables: the model states their domains before the root propagation
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new Reified(new XeqY(x, y), b));
+    assertThat(b.max()).isZero();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(pbp).contains("root changes derived, 0 taken into");
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void sumIntoAHoleIsDerived() {
+    // d = z - x with x in 1..2 and z in {-1, 0, 2, 3}, a = |d|: fuzz seed 2010858
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 1, 2);
+    IntVar z = new IntVar(store, "z", -1, 0);
+    z.addDom(2, 3);
+    IntVar d = new IntVar(store, "d", -3, 2);
+    IntVar a = new IntVar(store, "a", 0, 3);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new XplusYeqZ(x, d, z));
+    store.imposeWithConsistency(new AbsXeqY(d, a));
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void sumWithARepeatedVariableIsDerived() {
+    // sum([z, x, w, y]) = z is x + w + y = 0, where x = -1 and w = 0 need y = 1, a hole of y:
+    // the bound lemmas of the row were skipped for the repeated z (fuzz seed 4000226)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, -1);
+    x.addDom(1, 2);
+    IntVar y = new IntVar(store, "y", -1, 0);
+    y.addDom(2, 2);
+    IntVar z = new IntVar(store, "z", 1, 1);
+    z.addDom(3, 3);
+    IntVar v = new IntVar(store, "v", 0, 3);
+    IntVar w = new IntVar(store, "w", 0, 0);
+    w.addDom(2, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Sum(new IntVar[] {z, x, w, y}, z));
+    store.impose(new LinearInt(new IntVar[] {y, v, z}, new int[] {2, 3, -1}, ">=", 3));
+    store.impose(new Alldifferent(new IntVar[] {y, v}));
+    store.impose(new Reified(new XlteqY(z, w), b));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void countIntoAHoleOfItsCounterIsDerived() {
+    // the count of 2 in [x3, x6, x4, x1] goes to 2 when x1 = 2 > x4 = 1, a hole of the counter
+    // c in {0, 1, 3}: the flow of the cardinality lines sees 0..3 only (fuzz seed 3001554)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 1, 2, 4);
+    IntVar x1 = values(store, "x1", 0, 2, 3, 4);
+    IntVar x3 = values(store, "x3", 1, 2);
+    IntVar x4 = values(store, "x4", 1, 2);
+    IntVar x5 = values(store, "x5", 1, 2);
+    IntVar x6 = values(store, "x6", -1, 0, 1, 2, 3);
+    IntVar c = values(store, "c", 0, 1, 3);
+    IntVar d = values(store, "d", 0, 1, 2, 3);
+    store.impose(new CountValues(new IntVar[] {x6, x3}, new IntVar[] {x0, x5}, new int[] {2, 0}));
+    store.impose(new XgtY(x1, x4));
+    store.impose(
+        new CountValues(new IntVar[] {x3, x6, x4, x1}, new IntVar[] {c, d}, new int[] {2, 0}));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void rowRefutedByValuesIsDerived() {
+    // x0 = 0 and x1 = 1 leave 3 x3 + 3 x4 - 2 x2 = 1, where 1 + 2 x2 is 1 or 7 for x2 in {0, 3}:
+    // no multiple of 3, while every bound has a support (LinearIntDom, fuzz seed 4008078)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 1, 3);
+    IntVar x1 = values(store, "x1", 1, 2);
+    IntVar x2 = values(store, "x2", -1, 0, 3);
+    IntVar x3 = values(store, "x3", 1, 3, 4);
+    IntVar x4 = values(store, "x4", -1, 0, 1, 2, 3);
+    IntVar x5 = values(store, "x5", 1, 3);
+    store.impose(
+        new LinearIntDom(new IntVar[] {x3, x0, x4, x1, x2}, new int[] {3, 1, 3, -2, -2}, "==", -1));
+    store.impose(new Increasing(new IntVar[] {x5, x1}));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x1)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void reifiedDisequalityUnderNotBIsDerived() {
+    // not b holds 2 x1 + 2 x2 - x3 = 4, which x3 = 1 refutes by parity: the bounds of the negated
+    // row under not b were not written (fuzz seed 4038106)
+    Store store = new Store();
+    IntVar x1 = new IntVar(store, "x1", 0, 4);
+    IntVar x2 = values(store, "x2", -1, 0, 1, 3);
+    IntVar x3 = values(store, "x3", 1, 4);
+    IntVar x5 = new IntVar(store, "x5", -1, 4);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new XplusYeqZ(x1, x3, x5));
+    store.impose(
+        new Reified(new LinearInt(new IntVar[] {x1, x2, x3}, new int[] {2, 2, -1}, "!=", 4), b));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x1)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void countIntoAHoleOfACountIsDerived() {
+    // x1 = -1 and x2 = 2 count one 2, a hole of the counter c in {0, 2}: the row of Count counts
+    // value literals, which unit propagation does not round into c's order literals (fuzz seed
+    // 2047046)
+    Store store = new Store();
+    IntVar c = values(store, "c", 0, 2);
+    IntVar x1 = values(store, "x1", -1, 2, 3, 4);
+    IntVar x2 = new IntVar(store, "x2", -1, 3);
+    IntVar x4 = new IntVar(store, "x4", 1, 3);
+    IntVar x5 = new IntVar(store, "x5", 0, 3);
+    IntVar obj = new IntVar(store, "obj", -30, -13);
+    obj.addDom(-11, 4);
+    obj.addDom(6, 30);
+    store.impose(new Count(new IntVar[] {x1, x2}, c, 2));
+    store.impose(new XplusClteqZ(x2, 1, x4));
+    store.impose(new LinearInt(new IntVar[] {x5, x2, x1, obj}, new int[] {1, -1, 1, -1}, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void gccCountsWithHolesAreSplit() {
+    // x0 = -1 leaves x1, x2 and x4 to values 0..2 with counts g1, g2 in {0, 2, 3} and g3 in
+    // {0, 3}: only 2 three times fits, which the flow over the counts' intervals 0..3 misses
+    // (fuzz seed 5043342)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", -1, 2);
+    IntVar x1 = values(store, "x1", 0, 1, 2, 4);
+    IntVar x2 = values(store, "x2", 0, 2);
+    IntVar x3 = values(store, "x3", -1, 0, 1, 2, 4);
+    IntVar x4 = values(store, "x4", 1, 2, 4);
+    IntVar x5 = values(store, "x5", 0, 2, 3, 4);
+    IntVar g0 = values(store, "g0", 0, 1, 2, 3);
+    IntVar g1 = values(store, "g1", 0, 2, 3);
+    IntVar g2 = values(store, "g2", 0, 2, 3);
+    IntVar g3 = values(store, "g3", 0, 3);
+    IntVar g4 = values(store, "g4", 0, 1, 3);
+    store.impose(new GCC(new IntVar[] {x1, x2, x0, x4}, new IntVar[] {g0, g1, g2, g3, g4}, -1));
+    store.impose(new ElementInteger(x3, new int[] {3, -1, 1, -1}, x5, 0));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x2)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void reifiedRowUnderARootFixedBIsDerived() {
+    // b = 0 at the root (b -> x5 = 1 with 1 not in x5) holds 2 x1 + 2 x5 - x0 = 5, which has no
+    // solution by parity, but b is in no reason (fuzz seed 6060968)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 4);
+    IntVar x1 = values(store, "x1", 1, 3);
+    IntVar x5 = values(store, "x5", -1, 0, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(new Implies(b, new XeqC(x5, 1)));
+    store.impose(
+        new Reified(new LinearInt(new IntVar[] {x1, x5, x0}, new int[] {2, 2, -1}, "!=", 5), b));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.max()).isZero();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(x0)).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
+  }
+
+  @Test
+  void increasingSumIntoAHoleIsDerived() {
+    // x2 = -1 < x0 = 0 < x1 = 3 sum to 2, a hole of s: the clause needs the bounds of the sum's
+    // row, which IncreasingSum's reasons did not write (fuzz seed 7000052)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 1, 4);
+    IntVar x1 = values(store, "x1", -1, 0, 1, 3);
+    IntVar x2 = values(store, "x2", -1, 2);
+    IntVar x3 = values(store, "x3", -1, 0, 2, 3, 4);
+    IntVar x4 = values(store, "x4", 1, 4);
+    IntVar x5 = values(store, "x5", 1, 2, 4);
+    IntVar s = values(store, "s", -2, -1, 0, 1, 3, 4, 6, 7, 8);
+    IntVar obj = new IntVar(store, "obj", -30, -16);
+    obj.addDom(-14, 30);
+    store.impose(new Alldiff(new IntVar[] {x3, x4, x0, x5}));
+    store.impose(new IncreasingSum(new IntVar[] {x2, x0, x1}, s, true));
+    store.impose(new LinearInt(new IntVar[] {x5, x3, x1}, new int[] {1, 2, -1}, "!=", 1));
+    store.impose(new LinearInt(new IntVar[] {x2, x5, x3, obj}, new int[] {2, -2, 1, -1}, "==", 0));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  private static IntVar values(Store store, String name, int... values) {
+    IntVar x = new IntVar(store, name);
+    for (int v : values) {
+      x.addDom(v, v);
+    }
+    return x;
+  }
+
+  @Test
+  void reifiedRowWithNoIntegerSolutionIsDerived() {
+    // b <=> -3 x = -4 has no integer x, so the root sets b to 0: the proof needs the bounds of x
+    // under b, since unit propagation over 3 times the order literals does not round (fuzz seed
+    // 2011548); with and without holes in x
+    for (boolean holes : new boolean[] {false, true}) {
+      Store store = new Store();
+      IntVar x = new IntVar(store, "x", -3, 5);
+      if (holes) {
+        x.domain.inComplement(0, x, -2);
+        x.domain.inComplement(0, x, 4);
+      }
+      IntVar b = new IntVar(store, "b", 0, 1);
+      AtomicTrail rootTrail = new AtomicTrail(store);
+      store.imposeWithConsistency(
+          new Reified(new XmulCeqZ(x, -3, new IntVar(store, "c", -4, -4)), b));
+      assertThat(b.max()).isZero();
+      ByteArrayOutputStream opb = new ByteArrayOutputStream();
+      ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+      LcgSolver lcg = new LcgSolver(store);
+      lcg.setRootTrail(rootTrail);
+      lcg.setProof(opb, pbp);
+      assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+      assertThat(
+              new RupChecker()
+                  .check(
+                      opb.toString(StandardCharsets.US_ASCII),
+                      pbp.toString(StandardCharsets.US_ASCII)))
+          .as("holes %b", holes)
+          .isNull();
+    }
+  }
+
+  @Test
+  void channelOrderBoundPastAHoleIsDerived() {
+    // b <=> x > -1 and b <=> x <= 0 with 0 a hole of x: the channel fails under b, but unit
+    // propagation over the order literals of x does not see x >= 1 under b (fuzz seed 16683190)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, 4);
+    x.domain.inComplement(0, x, 0);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new ChannelOrder(
+            x, new IntVar[] {b, b, b}, new int[] {-1, 0, 2}, new boolean[] {false, true, false}));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void channelOrderItemsOfTheSameBooleanAreJoined() {
+    // b <=> x > 1 and b <=> x <= 1 fail under b without a hole: the model states each item as a
+    // sum of the order literals of x under b, and unit propagation does not join two of them
+    // (fuzz seed 17211274)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, 4);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    store.impose(
+        new ChannelOrder(
+            x, new IntVar[] {b, b, b}, new int[] {1, 1, 2}, new boolean[] {false, true, false}));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
+  void countWithAHoleOfTheCounterInTheReasonIsDerived() {
+    // a = 1 removes 1 from b and k (all different except 0), which pins the count of 1 in [a, b]
+    // to 1 while 1 is a hole of k: the failure of the count needs the bounds of k, which unit
+    // propagation over the value literals does not round (fuzz seed 20790780)
+    Store store = new Store();
+    IntVar a = new IntVar(store, "a", 1, 2);
+    IntVar b = new IntVar(store, "b", 0, 2);
+    IntVar k = new IntVar(store, "k", 0, 2);
+    store.impose(new AlldifferentExceptZero(new IntVar[] {b, a, k}));
+    store.impose(new Count(new IntVar[] {a, b}, k, 1));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(a)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 2 2");
+  }
+
+  @Test
+  void reifiedNegationOfARowWithoutIntegerSolutionIsDerived() {
+    // b <=> not (2 x0 + 2 x1 - x5 != 2) with x5 in {1, 3}: the row has no solution by parity, and
+    // the proof needs its bounds under b through the negation (fuzz seed 28841615)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", 0, 4);
+    x1.domain.inComplement(0, x1, 1);
+    IntVar x2 = new IntVar(store, "x2", 0, 4);
+    x2.domain.inComplement(0, x2, 2);
+    x2.domain.inComplement(0, x2, 3);
+    IntVar x3 = new IntVar(store, "x3", 1, 3);
+    x3.domain.inComplement(0, x3, 2);
+    IntVar x4 = new IntVar(store, "x4", -1, 4);
+    x4.domain.inComplement(0, x4, 1);
+    IntVar x5 = new IntVar(store, "x5", 1, 3);
+    x5.domain.inComplement(0, x5, 2);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar obj = new IntVar(store, "obj", -30, 30);
+    store.impose(
+        new Reified(
+            new Not(new LinearInt(new IntVar[] {x0, x1, x5}, new int[] {2, 2, -1}, "!=", 2)), b));
+    store.impose(new XmulCeqZ(x1, 0, x4));
+    store.impose(new Reified(new XplusYlteqZ(x0, x3, x2), b));
+    store.impose(new LinearInt(new IntVar[] {x5, x2, x4, obj}, new int[] {2, -1, 1, -1}, "==", 0));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.sat().setExternalReasonKeep(1 + (int) (28841615L % 3));
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS -2 -2");
+  }
+
+  @Test
   void conditionalSelectOfAConstantHoleIsDerived() {
     Store store = new Store();
     IntVar b = new IntVar(store, "b", 0, 1);
@@ -735,6 +1133,40 @@ class VeriPbProofTest {
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(pbp).contains("root changes derived, 0 taken into");
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void conditionalSelectWithEveryBranchInAHoleIsDerived() {
+    // obj = -y <= -1 needs y in 1..2, which the branches x1, x2 in {0, 3} cannot equal, so b0 = 1;
+    // unit propagation does not try each of them selected, so "b0 or y <= 0" needs a lemma per
+    // branch (fuzz seed 16953129); b0 = 1 then fails through x0 + 4 b0 <= 3
+    Store store = new Store();
+    IntVar[] b = new IntVar[3];
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < 3; i++) {
+      b[i] = new IntVar(store, "b" + i, 0, 1);
+      x[i] = new IntVar(store, "x" + i, i == 0 ? -1 : 0, 3);
+      if (i > 0) {
+        x[i].domain.inComplement(0, x[i], 1);
+        x[i].domain.inComplement(0, x[i], 2);
+      }
+    }
+    IntVar y = new IntVar(store, "y", -1, 2);
+    IntVar obj = new IntVar(store, "obj", -10, 10);
+    store.impose(new ConditionalSelect(b, x, y));
+    store.impose(new LinearInt(new IntVar[] {x[0], b[0]}, new int[] {1, 4}, "<=", 3));
+    store.impose(new LinearInt(new IntVar[] {y, obj}, new int[] {1, 1}, "==", 0));
+    ByteArrayOutputStream opb = new ByteArrayOutputStream();
+    ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(opb, pbp);
+    assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    RupChecker checker = new RupChecker();
+    assertThat(
+            checker.check(
+                opb.toString(StandardCharsets.US_ASCII), pbp.toString(StandardCharsets.US_ASCII)))
+        .isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS 0 0");
   }
 
   // y = x[k] for the first k with b[k] = 1 (if_then_else_int), over branches with holes
@@ -1503,6 +1935,22 @@ class VeriPbProofTest {
   }
 
   @Test
+  void linearRowWithNoIntegerSolutionIsRefuted() {
+    // 2 x = 5 bounds x to [3, 2]: the row's bound pass must stop at the empty range (it crashed
+    // intersecting with min above max), fuzz seed 2010107
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -1, -1);
+    x.addDom(2, 4);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.impose(new XmulCeqZ(x, 2, new IntVar(store, "five", 5, 5)));
+    assertThat(store.consistency()).isFalse();
+    LcgSolver.proveRootFailure(store, rootTrail, model, proof);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("UNSAT");
+  }
+
+  @Test
   void clauseFalseAtTheRootIsRefuted() {
     // the clause's only literal is false at the root; the proof refutes it by unit propagation
     Store store = new Store();
@@ -1768,6 +2216,8 @@ class VeriPbProofTest {
     store.impose(new LinearInt(all, a, "==", 0));
     LcgSolver lcg = withProof(store);
     lcg.setCoreSearch(0.5, 1_000_000, 1_000_000);
+    // core exhaustion would spend the 300 conflicts on outputs that only a pigeonhole proof refutes
+    lcg.setCoreExhaust(0);
     lcg.sat().setConflictLimit(300);
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.UNKNOWN);
     long bound = lcg.coreSearch().lowerBound;

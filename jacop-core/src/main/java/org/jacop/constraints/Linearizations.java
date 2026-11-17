@@ -47,10 +47,12 @@ import org.jacop.constraints.lp.AlldifferentCuts;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ValueExclusion;
 import org.jacop.lcg.ValueIndicator;
 
 /**
@@ -66,6 +68,9 @@ import org.jacop.lcg.ValueIndicator;
  * @version 5.0
  */
 public final class Linearizations {
+
+  /** The value of a system property that turns a default-on flag off. */
+  private static final String FALSE = "false";
 
   private Linearizations() {}
 
@@ -96,6 +101,21 @@ public final class Linearizations {
    * @return the rows
    */
   public static List<LinearForm> encodings(Collection<Constraint> constraints) {
+    return encodings(constraints, null);
+  }
+
+  /**
+   * Returns the rows of {@link #encodings(Collection)}, and puts in linked each {@link
+   * ElementInteger} whose value got its row {@code y = sum a[v] b_v}: that row, with {@code sum b_v
+   * = 1} and {@code x = sum v b_v}, gives the convex hull of the points {@code (v, a[v])}, so the
+   * hull rows of {@link #of(Constraint)} for that constraint add nothing.
+   *
+   * @param constraints the constraints
+   * @param linked the set that receives the element constraints linked to an encoding, or null
+   * @return the rows
+   */
+  public static List<LinearForm> encodings(
+      Collection<Constraint> constraints, Set<Constraint> linked) {
     Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
     List<LinearForm> out = new ArrayList<>();
     Map<IntVar, Map<Integer, IntVar>> covering = new IdentityHashMap<>();
@@ -135,6 +155,7 @@ public final class Linearizations {
     if (IMPLIED_VALUES) {
       impliedValues(constraints, byVar, out);
     }
+    keyedTables(constraints, covering, out);
     // value = list[index - offset] over an encoded index: value = sum list[v - offset] b_v
     for (Constraint c : constraints) {
       if (c.getClass() != ElementInteger.class) {
@@ -163,9 +184,508 @@ public final class Linearizations {
         vars[k] = el.value;
         w[k] = -1;
         out.add(new LinearForm(vars, w, 0, LinearForm.EQ));
+        if (linked != null) {
+          linked.add(el);
+        }
       }
     }
     return out;
+  }
+
+  // the clique rows over value Booleans lifted from implications (valueCliques); off with
+  // -Dorg.jacop.lp.valueCliques=false
+  private static final boolean VALUE_CLIQUES =
+      !FALSE.equals(System.getProperty("org.jacop.lp.valueCliques"));
+
+  /**
+   * Returns the set packing rows of the given rows with their Booleans replaced by the value
+   * Booleans that imply them. When value Booleans {@code b_v <-> x = v} of one variable x (from
+   * {@link #valueBooleans}) each imply a Boolean a (rows {@code b_v - a <= 0}), at most one of them
+   * holds, so {@code sum b_v <= a}: the implications lifted over a clique of the conflict graph
+   * (Atamtürk, Nemhauser and Savelsbergh, Conflict graphs in solving integer programming problems,
+   * EJOR 121(1), 2000). A set packing row {@code a_1 + ... + a_k <= 1} then holds with each a_i
+   * replaced by the sum of its value Booleans; with the encodings {@code sum b_v = 1} these rows
+   * are the cliques of the conflict graph over the values, which the implications through the
+   * auxiliary a_i state only pairwise. A model that says "two tasks are not in progress at the same
+   * time" through {@code exists} over the starts of each task (the ROADEF 2020 maintenance planning
+   * exclusions) gets the LP bound of its clique formulation: A_01 31,737,934 with the encodings
+   * alone, 31,795,919 with these rows (optimum 31,820,680).
+   *
+   * <p>For each a, the largest set of the value Booleans of one variable that imply it is taken
+   * (the first variable among equal sizes, in the order of the rows); a row with no replaced
+   * Boolean is not returned, and each returned row is returned once.
+   *
+   * @param constraints the constraints, whose value Booleans are used
+   * @param rowLists the rows to read the implications and the set packing rows from, in order
+   * @return the rows, empty when off or none qualifies
+   */
+  public static List<LinearForm> valueCliques(
+      Collection<Constraint> constraints, List<List<LinearForm>> rowLists) {
+    if (!VALUE_CLIQUES) {
+      return List.of();
+    }
+    Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
+    Map<IntVar, IntVar> owner = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : byVar.entrySet()) {
+      IntVar x = e.getKey();
+      for (IntVar b : e.getValue().values()) {
+        if (b != x && boolean01(b)) {
+          owner.putIfAbsent(b, x);
+        }
+      }
+    }
+    if (owner.isEmpty()) {
+      return List.of();
+    }
+    // for each implied Boolean a, the value Booleans that imply it, by their variable, in order
+    Map<IntVar, Map<IntVar, List<IntVar>>> implying = new IdentityHashMap<>();
+    Map<IntVar, Set<IntVar>> seenImplying = new IdentityHashMap<>();
+    List<LinearForm> packing = new ArrayList<>();
+    for (List<LinearForm> rows : rowLists) {
+      for (LinearForm f : rows) {
+        int sign;
+        if (f == null || f.relation() == LinearForm.EQ || f.relation() == LinearForm.NE) {
+          continue;
+        }
+        sign = f.relation() == LinearForm.LE ? 1 : -1;
+        IntVar[] v = f.vars();
+        long[] w = f.weights();
+        long c = sign * f.c();
+        if (v.length == 2 && c == 0 && sign * w[0] == -sign * w[1] && Math.abs(w[0]) == 1) {
+          // b - a <= 0
+          int pb = sign * w[0] == 1 ? 0 : 1;
+          IntVar b = v[pb];
+          IntVar a = v[1 - pb];
+          IntVar x = owner.get(b);
+          if (x != null
+              && x != a
+              && boolean01(a)
+              && seenImplying
+                  .computeIfAbsent(a, k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+                  .add(b)) {
+            implying
+                .computeIfAbsent(a, k -> new LinkedHashMap<>())
+                .computeIfAbsent(x, k -> new ArrayList<>())
+                .add(b);
+          }
+        } else if (v.length >= 2 && c == 1) {
+          boolean ones = true;
+          for (int k = 0; k < v.length && ones; k++) {
+            ones = sign * w[k] == 1 && boolean01(v[k]);
+          }
+          if (ones) {
+            packing.add(f);
+          }
+        }
+      }
+    }
+    if (implying.isEmpty() || packing.isEmpty()) {
+      return List.of();
+    }
+    Map<IntVar, List<IntVar>> lifted = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<IntVar, List<IntVar>>> e : implying.entrySet()) {
+      List<IntVar> best = null;
+      for (List<IntVar> bs : e.getValue().values()) {
+        if (bs.size() >= 2 && (best == null || bs.size() > best.size())) {
+          best = bs;
+        }
+      }
+      if (best != null) {
+        lifted.put(e.getKey(), best);
+      }
+    }
+    if (lifted.isEmpty()) {
+      return List.of();
+    }
+    List<LinearForm> out = new ArrayList<>();
+    Set<List<IntVar>> made = new java.util.HashSet<>();
+    for (LinearForm f : packing) {
+      Map<IntVar, Long> weight = new LinkedHashMap<>();
+      boolean replaced = false;
+      for (IntVar a : f.vars()) {
+        List<IntVar> bs = lifted.get(a);
+        if (bs == null) {
+          weight.merge(a, 1L, Long::sum);
+        } else {
+          replaced = true;
+          for (IntVar b : bs) {
+            weight.merge(b, 1L, Long::sum);
+          }
+        }
+      }
+      if (!replaced || weight.size() < 2 || !made.add(new ArrayList<>(weight.keySet()))) {
+        continue;
+      }
+      IntVar[] vars = weight.keySet().toArray(new IntVar[0]);
+      long[] ws = new long[vars.length];
+      int k = 0;
+      for (long q : weight.values()) {
+        ws[k++] = q;
+      }
+      out.add(new LinearForm(vars, ws, 1, LinearForm.LE));
+    }
+    return out;
+  }
+
+  /**
+   * Adds, for each table with a key column over an encoded variable x ({@link
+   * HybridTable#keyColumn()}: every tuple has its own value of x, and the other columns are values,
+   * so each of them is a function {@code y = t(x)}), the row {@code y = sum_v t(v) b_v} of every
+   * other column y over the value Booleans {@code b_v <-> x = v}. These are the rows of {@link
+   * ElementInteger} for the element constraints that the front end merged into one table per index
+   * (the options of a class in car sequencing): without them the relaxation has no link between the
+   * option variables and the classes.
+   */
+  private static void keyedTables(
+      Collection<Constraint> constraints,
+      Map<IntVar, Map<Integer, IntVar>> covering,
+      List<LinearForm> out) {
+    if (!KEYED_TABLES) {
+      return;
+    }
+    for (Constraint c : constraints) {
+      if (c instanceof HybridTable t && t.keyColumn() >= 0) {
+        Map<Integer, IntVar> m = covering.get(t.column(t.keyColumn()));
+        if (m != null) {
+          keyedRows(t, m, out);
+        }
+      }
+    }
+  }
+
+  // the rows y = sum_v t(v) b_v of the columns y of table t, keyed by the encoded column of m
+  private static void keyedRows(HybridTable t, Map<Integer, IntVar> m, List<LinearForm> out) {
+    int key = t.keyColumn();
+    IntVar x = t.column(key);
+    for (int j = 0; j < t.columnCount(); j++) {
+      IntVar y = t.column(j);
+      if (j != key && y != x && !y.singleton() && !m.containsValue(y)) {
+        keyedRow(t, j, y, m, out);
+      }
+    }
+  }
+
+  private static void keyedRow(
+      HybridTable t, int j, IntVar y, Map<Integer, IntVar> m, List<LinearForm> out) {
+    IntVar[] vars = new IntVar[m.size() + 1];
+    long[] w = new long[vars.length];
+    int i = 0;
+    for (Map.Entry<Integer, IntVar> v : m.entrySet()) {
+      // a value of x without a tuple has no solution: its term is left out
+      int value = t.keyedValue(j, v.getKey(), 0);
+      if (value != 0) {
+        vars[i] = v.getValue();
+        w[i++] = value;
+      }
+    }
+    vars[i] = y;
+    w[i++] = -1;
+    if (i >= 2) {
+      out.add(new LinearForm(Arrays.copyOf(vars, i), Arrays.copyOf(w, i), 0, LinearForm.EQ));
+    }
+  }
+
+  // the rows of keyedTables: on or off
+  private static final boolean KEYED_TABLES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.keyedTables", "true"));
+
+  /**
+   * Returns the rows of the value conjunctions ({@link #selectedValues}), with the conjunctions
+   * {@code b <-> s /\ e} that the clause rows among the further rows of the relaxation state
+   * ({@code b -> s}, {@code b -> e} and {@code s /\ e -> b}, as lazy clause generation posts an and
+   * of two Booleans) taken like the and constraints of the store; {@code
+   * -Dorg.jacop.lp.selectedValues=false} turns them off.
+   *
+   * @param constraints the constraints
+   * @param extra the further rows of the relaxation, among them the clauses as rows (null entries
+   *     are skipped)
+   * @return the rows, empty when no conjunction qualifies
+   */
+  public static List<LinearForm> selectedValueRows(
+      Collection<Constraint> constraints, Collection<LinearForm> extra) {
+    List<LinearForm> out = new ArrayList<>();
+    if (SELECTED_VALUES) {
+      Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
+      for (Map.Entry<IntVar, Map<Integer, IntVar>> e : byVar.entrySet()) {
+        IntVar x = e.getKey();
+        e.getValue().keySet().removeIf(v -> !x.domain.contains(v));
+      }
+      selectedValues(constraints, extra, byVar, out);
+    }
+    return out;
+  }
+
+  // the rows of selectedValues: on or off
+  private static final boolean SELECTED_VALUES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.selectedValues", "true"));
+
+  /**
+   * Adds the rows of the conjunctions {@code b_v <-> s /\ e_v} of one Boolean s with the value
+   * Booleans {@code e_v <-> x = v} of one variable x (from {@link #valueBooleans}): {@code sum_v
+   * b_v <= s}, and {@code sum_v b_v = s} when the values cover the domain of x, since x takes one
+   * value. Then, for each {@code y = if s then x + c else d} ({@link ConditionalSelect} with a
+   * constant else branch, and {@code x + c} x itself or a variable z with a linear equality z - x =
+   * c) whose conjunctions cover the domain of x, {@code y = d + sum_v (v + c - d) b_v}. These are
+   * the rows of the assignment model of a MIP ({@code b_v} = item assigned to v): the big-M rows of
+   * the conjunctions alone let a fractional s keep every {@code b_v} at 0, and the big-M rows of
+   * the select let y take any value between its branches. On ihtc-2024-kletzander (MiniZinc
+   * Challenge 2025), where {@code b_pd} says that patient p is selected and admitted on day d, the
+   * surgeon capacity of each day is a sum of the {@code b_pd} and the delay of p is {@code if s_p
+   * then a_p - r_p else 0}, the root bound was 0 without them.
+   *
+   * @param constraints the constraints
+   * @param extra the further rows of the relaxation, whose clause rows may state conjunctions
+   * @param byVar the equivalent Booleans by variable and value, values outside the domain removed
+   * @param out the list the rows are added to
+   */
+  private static void selectedValues(
+      Collection<Constraint> constraints,
+      Collection<LinearForm> extra,
+      Map<IntVar, Map<Integer, IntVar>> byVar,
+      List<LinearForm> out) {
+    // the variable and value of each value Boolean
+    Map<IntVar, IntVar> ofVar = new IdentityHashMap<>();
+    Map<IntVar, Integer> ofValue = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : byVar.entrySet()) {
+      for (Map.Entry<Integer, IntVar> v : e.getValue().entrySet()) {
+        if (v.getValue() != e.getKey() && ofVar.putIfAbsent(v.getValue(), e.getKey()) == null) {
+          ofValue.put(v.getValue(), v.getKey());
+        }
+      }
+    }
+    if (ofVar.isEmpty()) {
+      return;
+    }
+    // the conjunctions b_v by selector s and variable x, then by value
+    Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> bySelector = new IdentityHashMap<>();
+    for (Constraint c : constraints) {
+      IntVar p;
+      IntVar q;
+      IntVar r;
+      if (c.getClass() == AndBoolSimple.class) {
+        AndBoolSimple a = (AndBoolSimple) c;
+        p = a.a;
+        q = a.b;
+        r = a.result;
+      } else if (c.getClass() == AndBoolVector.class && ((AndBoolVector) c).list.length == 2) {
+        AndBoolVector a = (AndBoolVector) c;
+        p = a.list[0];
+        q = a.list[1];
+        r = a.result;
+      } else {
+        continue;
+      }
+      if (p == q || r == p || r == q || r.singleton() || !boolean01(r)) {
+        continue;
+      }
+      conjunction(p, q, r, ofVar, ofValue, bySelector);
+      conjunction(q, p, r, ofVar, ofValue, bySelector);
+    }
+    ClauseFacts facts = clauseFacts(extra);
+    for (IntVar[] t : facts.conjunctions()) {
+      conjunction(t[1], t[2], t[0], ofVar, ofValue, bySelector);
+      conjunction(t[2], t[1], t[0], ofVar, ofValue, bySelector);
+    }
+    Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> covered = new IdentityHashMap<>();
+    for (Map.Entry<IntVar, Map<IntVar, Map<Integer, IntVar>>> e : bySelector.entrySet()) {
+      IntVar s = e.getKey();
+      for (Map.Entry<IntVar, Map<Integer, IntVar>> g : e.getValue().entrySet()) {
+        IntVar x = g.getKey();
+        Map<Integer, IntVar> m = g.getValue();
+        m.keySet().removeIf(v -> !x.domain.contains(v));
+        if (m.size() < 2) {
+          continue;
+        }
+        // the values whose conjunction is false, s /\ x = v never holding: they add 0 to the sum
+        Set<IntVar> never = facts.exclusive().getOrDefault(s, Set.of());
+        int excluded = 0;
+        for (Map.Entry<Integer, IntVar> v : byVar.get(x).entrySet()) {
+          if (!m.containsKey(v.getKey())
+              && x.domain.contains(v.getKey())
+              && never.contains(v.getValue())) {
+            excluded++;
+          }
+        }
+        boolean covers = m.size() + excluded == x.getSize();
+        IntVar[] vars = new IntVar[m.size() + 1];
+        long[] w = new long[vars.length];
+        int i = 0;
+        for (IntVar b : m.values()) {
+          vars[i] = b;
+          w[i++] = 1;
+        }
+        vars[i] = s;
+        w[i] = -1;
+        out.add(new LinearForm(vars, w, 0, covers ? LinearForm.EQ : LinearForm.LE));
+        if (covers) {
+          covered.computeIfAbsent(s, k -> new IdentityHashMap<>()).put(x, m);
+        }
+      }
+    }
+    if (covered.isEmpty()) {
+      return;
+    }
+    // z = x + c from the linear equalities z - x = c, for the then branches of the selects
+    Map<IntVar, IntVar> shiftOf = new IdentityHashMap<>();
+    Map<IntVar, Long> shiftBy = new IdentityHashMap<>();
+    for (Constraint c : constraints) {
+      LinearForm f = LinearForms.of(c);
+      if (f != null
+          && f.relation() == LinearForm.EQ
+          && f.vars().length == 2
+          && f.vars()[0] != f.vars()[1]
+          && f.weights()[0] + f.weights()[1] == 0
+          && Math.abs(f.weights()[0]) == 1) {
+        // w0 (v0 - v1) = c: v0 = v1 + c w0, v1 = v0 - c w0
+        IntVar v0 = f.vars()[0];
+        IntVar v1 = f.vars()[1];
+        long k = f.c() * f.weights()[0];
+        if (shiftOf.putIfAbsent(v0, v1) == null) {
+          shiftBy.put(v0, k);
+        }
+        if (shiftOf.putIfAbsent(v1, v0) == null) {
+          shiftBy.put(v1, -k);
+        }
+      }
+    }
+    for (Constraint c : constraints) {
+      if (c.getClass() == ConditionalSelect.class) {
+        ConditionalSelect cs = (ConditionalSelect) c;
+        selectedValue(cs, covered, shiftOf, shiftBy, out);
+      }
+    }
+  }
+
+  /**
+   * What clause rows state about pairs of Booleans for {@link #selectedValues}.
+   *
+   * @param conjunctions the triples {b, s, e} of {@code b <-> s /\ e}
+   * @param exclusive for each Boolean, the Booleans it is never 1 together with
+   */
+  record ClauseFacts(List<IntVar[]> conjunctions, Map<IntVar, Set<IntVar>> exclusive) {}
+
+  /**
+   * The conjunctions {@code b <-> s /\ e} of Booleans that clause rows state: {@code s /\ e -> b}
+   * (the row {@code b - s - e >= -1}) with {@code b -> s} and {@code b -> e} (the rows {@code s - b
+   * >= 0} and {@code e - b >= 0}); and the pairs of Booleans never 1 together ({@code -s - e >=
+   * -1}), as a conjunction fixed to 0 leaves them.
+   *
+   * @param rows the rows, null entries skipped
+   * @return the conjunctions and the exclusive pairs
+   */
+  static ClauseFacts clauseFacts(Collection<LinearForm> rows) {
+    Map<IntVar, Set<IntVar>> implied = new IdentityHashMap<>();
+    Map<IntVar, Set<IntVar>> exclusive = new IdentityHashMap<>();
+    List<IntVar[]> ternary = new ArrayList<>();
+    for (LinearForm f : rows) {
+      if (f == null || f.relation() != LinearForm.GE) {
+        continue;
+      }
+      IntVar[] v = f.vars();
+      long[] w = f.weights();
+      if (v.length == 2 && w[0] + w[1] == 0 && Math.abs(w[0]) == 1 && f.c() == 0) {
+        // p - n >= 0: n -> p
+        IntVar p = w[0] == 1 ? v[0] : v[1];
+        IntVar n = w[0] == 1 ? v[1] : v[0];
+        if (p != n && boolean01(p) && boolean01(n)) {
+          implied
+              .computeIfAbsent(n, k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+              .add(p);
+        }
+      } else if (v.length == 2 && w[0] == -1 && w[1] == -1 && f.c() == -1) {
+        // -a - b >= -1: not both
+        if (v[0] != v[1] && boolean01(v[0]) && boolean01(v[1])) {
+          exclusive
+              .computeIfAbsent(v[0], k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+              .add(v[1]);
+          exclusive
+              .computeIfAbsent(v[1], k -> Collections.newSetFromMap(new IdentityHashMap<>()))
+              .add(v[0]);
+        }
+      } else if (v.length == 3 && f.c() == -1) {
+        int pos = -1;
+        int negatives = 0;
+        for (int i = 0; i < 3; i++) {
+          if (w[i] == 1) {
+            pos = pos < 0 ? i : 3;
+          } else if (w[i] == -1) {
+            negatives++;
+          }
+        }
+        if (pos >= 0 && pos < 3 && negatives == 2) {
+          IntVar b = v[pos];
+          IntVar s = v[(pos + 1) % 3];
+          IntVar e = v[(pos + 2) % 3];
+          if (b != s && b != e && s != e && boolean01(b) && boolean01(s) && boolean01(e)) {
+            ternary.add(new IntVar[] {b, s, e});
+          }
+        }
+      }
+    }
+    List<IntVar[]> out = new ArrayList<>();
+    for (IntVar[] t : ternary) {
+      Set<IntVar> of = implied.get(t[0]);
+      if (of != null && of.contains(t[1]) && of.contains(t[2])) {
+        out.add(t);
+      }
+    }
+    return new ClauseFacts(out, exclusive);
+  }
+
+  // records b = s /\ e when e is a value Boolean of a variable other than s
+  private static void conjunction(
+      IntVar s,
+      IntVar e,
+      IntVar b,
+      Map<IntVar, IntVar> ofVar,
+      Map<IntVar, Integer> ofValue,
+      Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> bySelector) {
+    IntVar x = ofVar.get(e);
+    if (x == null || x == s || x == b || s.singleton() || !boolean01(s)) {
+      return;
+    }
+    bySelector
+        .computeIfAbsent(s, k -> new IdentityHashMap<>())
+        .computeIfAbsent(x, k -> new LinkedHashMap<>())
+        .putIfAbsent(ofValue.get(e), b);
+  }
+
+  // y = d + sum_v (v + c - d) b_v for y = if s then x + c else d over the conjunctions b_v
+  private static void selectedValue(
+      ConditionalSelect cs,
+      Map<IntVar, Map<IntVar, Map<Integer, IntVar>>> covered,
+      Map<IntVar, IntVar> shiftOf,
+      Map<IntVar, Long> shiftBy,
+      List<LinearForm> out) {
+    if (cs.b.length != 2 || cs.b[1].min() != 1 || !cs.x[1].singleton()) {
+      return;
+    }
+    Map<IntVar, Map<Integer, IntVar>> bySel = covered.get(cs.b[0]);
+    if (bySel == null) {
+      return;
+    }
+    IntVar x = cs.x[0];
+    long c = 0;
+    Map<Integer, IntVar> m = bySel.get(x);
+    if (m == null && shiftOf.containsKey(x)) {
+      c = shiftBy.get(x);
+      x = shiftOf.get(x);
+      m = bySel.get(x);
+    }
+    if (m == null || x == cs.y || m.containsValue(cs.y)) {
+      return;
+    }
+    long d = cs.x[1].value();
+    IntVar[] vars = new IntVar[m.size() + 1];
+    long[] w = new long[vars.length];
+    int i = 0;
+    for (Map.Entry<Integer, IntVar> v : m.entrySet()) {
+      vars[i] = v.getValue();
+      w[i++] = Math.subtractExact(Math.addExact(v.getKey(), c), d);
+    }
+    vars[i] = cs.y;
+    w[i] = -1;
+    out.add(new LinearForm(vars, w, -d, LinearForm.EQ));
   }
 
   // the clique rows that join the Booleans of ChannelImply (b_v -> x = v) with the Booleans b_v
@@ -228,7 +748,7 @@ public final class Linearizations {
   // value encodings over LP-only columns: on or off, the largest domain encoded, and the most
   // columns made for a model
   private static final boolean VALUE_COLUMNS =
-      !"false".equals(System.getProperty("org.jacop.lp.valueColumns"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.valueColumns"));
   private static final int VALUE_COLUMNS_DOMAIN =
       Integer.getInteger("org.jacop.lp.valueColumnsDomain", 128);
   private static final int VALUE_COLUMNS_MAX =
@@ -237,7 +757,7 @@ public final class Linearizations {
   // the value encodings of counting, all-different and element constraints: on or off, the
   // largest domain encoded, and the most columns made for a model
   private static final boolean VALUE_ENCODINGS =
-      !"false".equals(System.getProperty("org.jacop.lp.valueEncodings"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.valueEncodings"));
   private static final int VALUE_ENCODINGS_DOMAIN =
       Integer.getInteger("org.jacop.lp.valueEncodingsDomain", 64);
   private static final int VALUE_ENCODINGS_MAX =
@@ -246,7 +766,7 @@ public final class Linearizations {
   // whether valueRows gives the layered graphs of Regular and ExtensionalSupportMdd their flow
   // model
   private static final boolean FLOW_ENCODINGS =
-      !"false".equals(System.getProperty("org.jacop.lp.flowEncodings"));
+      !FALSE.equals(System.getProperty("org.jacop.lp.flowEncodings"));
 
   /**
    * Returns the value encodings of the variables of all-different-except constraints over auxiliary
@@ -360,6 +880,16 @@ public final class Linearizations {
       Collection<LinearForm> extra,
       boolean tried,
       boolean sets) {
+    return valueRows(constraints, extra, tried, sets, null);
+  }
+
+  // valueRows, with the columns of every encoded variable by value put in columns when given
+  private static ValueRows valueRows(
+      Collection<Constraint> constraints,
+      Collection<LinearForm> extra,
+      boolean tried,
+      boolean sets,
+      Map<IntVar, Map<Integer, IntVar>> columns) {
     Map<IntVar, Map<Integer, IntVar>> given = valueBooleans(constraints);
     Set<IntVar> byModel = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Map.Entry<IntVar, Map<Integer, IntVar>> e : given.entrySet()) {
@@ -388,6 +918,15 @@ public final class Linearizations {
       e.rows(c);
     }
     e.links(constraints);
+    if (columns != null) {
+      columns.putAll(encoded);
+      e.full.forEach(
+          (x, m) -> {
+            if (m != null) {
+              columns.put(x, m);
+            }
+          });
+    }
     List<LinearForm> tiered = e.out;
     if (!FLOW_ENCODINGS) {
       return new ValueRows(kept, tiered);
@@ -404,6 +943,122 @@ public final class Linearizations {
     }
     e.links(constraints);
     return new ValueRows(kept, tiered, e.out);
+  }
+
+  /**
+   * Returns the rows with which the linear relaxation tries to refute a satisfaction model at the
+   * root: the value encodings of {@link #valueRows(Collection, Collection, boolean, boolean)} with
+   * the count bounds (without flow models), and the given rows restated over the value columns.
+   * Each 0/1 control b of a half-reified exclusion {@code b -> x != c} ({@link ValueExclusion}, or
+   * {@link Implies} and {@link Reified} of {@link XneqC}) is bounded by {@code b <= 1 - [x = c]},
+   * and each z of {@code not z -> x != c} ({@link ImpliesNot}, the control that the front end
+   * eliminated from a binary clause) by {@code z >= [x = c]}; a row that needs such a variable
+   * large or small gets the bound in its place, and an upper and a lower bound of one variable give
+   * the conflict {@code [x = c] + [y = d] <= 1} of their columns. A clause {@code (x != c) \/ (y !=
+   * c)} that MiniZinc states over two such controls so becomes the conflict of two value columns,
+   * which the clique rows of the relaxation merge ({@link
+   * org.jacop.constraints.lp.LinearRelaxation#refutation}): the social golfers of the XCSP
+   * competition state "two players meet at most once" so, and a player who meets three others a
+   * week cannot meet 33 of the 31 others in 11 weeks, which only the cliques over the weeks and the
+   * counts of the groups show. Rows with a variable that the encodings do not have are left out:
+   * they cannot tie the encodings together.
+   *
+   * @param constraints the constraints
+   * @param clauses the rows of the model to state over the value columns: its linear rows and the
+   *     clauses that lazy clause generation took
+   * @return the rows, empty when no variable is value-encoded
+   */
+  public static List<LinearForm> refutationRows(
+      Collection<Constraint> constraints, Collection<LinearForm> clauses) {
+    Map<IntVar, Map<Integer, IntVar>> columns = new IdentityHashMap<>();
+    ValueRows encodings = valueRows(constraints, clauses, true, true, columns);
+    List<LinearForm> out = new ArrayList<>(encodings.kept());
+    out.addAll(encodings.tried());
+    if (out.isEmpty()) {
+      return out;
+    }
+    // the exclusions b -> x != c bound b <= 1 - [x = c]; with a negated control, not z -> x != c
+    // (ImpliesNot, the control the front end eliminated from a binary clause), they bound z >=
+    // [x = c]. The first upper bound replaces b where a row needs it large, the first lower bound
+    // replaces z where a row needs it small, and an upper and a lower bound of the same variable
+    // give the conflict of their columns, [x = c] + [y = d] <= 1
+    Map<IntVar, List<IntVar>> upper = new IdentityHashMap<>();
+    Map<IntVar, List<IntVar>> lower = new IdentityHashMap<>();
+    for (Constraint c : constraints) {
+      IntVar b = null;
+      IntVar x = null;
+      int v = 0;
+      boolean negated = false;
+      if (c instanceof ValueExclusion e) {
+        b = e.control();
+        x = e.variable();
+        v = e.value();
+      } else if ((c.getClass() == Implies.class
+              || c.getClass() == Reified.class
+              || c.getClass() == ImpliesNot.class)
+          && ((AbstractReifiedConstraint) c).c.getClass() == XneqC.class) {
+        XneqC ne = (XneqC) ((AbstractReifiedConstraint) c).c;
+        b = ((AbstractReifiedConstraint) c).b;
+        x = ne.x;
+        v = ne.c;
+        negated = c.getClass() == ImpliesNot.class;
+      }
+      Map<Integer, IntVar> m = x == null ? null : columns.get(x);
+      IntVar col = m == null ? null : m.get(v);
+      if (b != null && boolean01(b) && col != null && col != b) {
+        (negated ? lower : upper).computeIfAbsent(b, k -> new ArrayList<>()).add(col);
+      }
+    }
+    Set<IntVar> known = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (LinearForm f : out) {
+      known.addAll(Arrays.asList(f.vars()));
+    }
+    for (Map.Entry<IntVar, List<IntVar>> e : upper.entrySet()) {
+      for (IntVar l : lower.getOrDefault(e.getKey(), List.of())) {
+        for (IntVar u : e.getValue()) {
+          if (u != l) {
+            out.add(new LinearForm(new IntVar[] {u, l}, new long[] {1, 1}, 1, LinearForm.LE));
+          }
+        }
+      }
+    }
+    for (LinearForm f : clauses) {
+      if (f == null || f.relation() == LinearForm.EQ || f.relation() == LinearForm.NE) {
+        continue;
+      }
+      LinearForm g = boundSubstituted(f, upper, lower);
+      if (Arrays.stream(g.vars()).allMatch(v -> v.singleton() || known.contains(v))) {
+        out.add(g);
+      }
+    }
+    return out;
+  }
+
+  // f with each variable b that f needs large (a positive weight in a row >=, a negative one in a
+  // row <=) replaced by its first upper bound 1 - [x = c], and each that f needs small by its first
+  // lower bound [x = c]
+  private static LinearForm boundSubstituted(
+      LinearForm f, Map<IntVar, List<IntVar>> upper, Map<IntVar, List<IntVar>> lower) {
+    int sign = f.relation() == LinearForm.GE ? 1 : -1;
+    IntVar[] vars = f.vars().clone();
+    long[] w = f.weights().clone();
+    long c = f.c();
+    boolean changed = false;
+    for (int i = 0; i < vars.length; i++) {
+      boolean large = Long.signum(w[i]) == sign;
+      List<IntVar> bounds = (large ? upper : lower).get(vars[i]);
+      if (bounds == null) {
+        continue;
+      }
+      vars[i] = bounds.get(0);
+      if (large) {
+        // w b, with b <= 1 - col, becomes w - w col
+        c -= w[i];
+        w[i] = -w[i];
+      }
+      changed = true;
+    }
+    return changed ? new LinearForm(vars, w, c, f.relation()) : f;
   }
 
   // the rows of valueColumns, with the columns of each encoded variable put in encoded
@@ -611,9 +1266,38 @@ public final class Linearizations {
      * @param list the variables of the levels
      * @param edges the edges on a path, four ints each (level, source, value, target)
      */
+    /**
+     * The arc columns of a flow model: an edge whose (level, value) labels no other edge is the
+     * value column itself, unless the variable is fixed; all other edges are arcs.
+     */
+    private static int arcColumns(IntVar[] list, int[] edges, int size) {
+      long[] keys = new long[size];
+      for (int e = 0; e < size; e++) {
+        keys[e] = ((long) edges[4 * e] << 32) | (edges[4 * e + 2] & 0xffffffffL);
+      }
+      Arrays.sort(keys);
+      int arcs = 0;
+      for (int i = 0; i < size; ) {
+        int j = i + 1;
+        while (j < size && keys[j] == keys[i]) {
+          j++;
+        }
+        boolean single = j - i == 1 && !list[(int) (keys[i] >>> 32)].singleton();
+        arcs += single ? 0 : j - i;
+        i = j;
+      }
+      return arcs;
+    }
+
     void flow(IntVar[] list, int[] edges) {
       int size = edges.length / 4;
       if (size == 0) {
+        return;
+      }
+      // the arc columns, counted before the edges are grouped: a graph of millions of edges is
+      // left out without boxing them (300 diagrams of 1.8 million edges in
+      // WordDesign2-words-mdd-025, XCSP 2023)
+      if (made + arcColumns(list, edges, size) > VALUE_ENCODINGS_MAX) {
         return;
       }
       // the edges of each (level, value)
@@ -626,9 +1310,6 @@ public final class Linearizations {
       for (List<Integer> es : byValue.values()) {
         IntVar x = list[edges[4 * es.get(0)]];
         arcs += es.size() == 1 && !x.singleton() ? 0 : es.size();
-      }
-      if (made + arcs > VALUE_ENCODINGS_MAX) {
-        return;
       }
       Map<IntVar, Map<Integer, IntVar>> m = of(list);
       if (m == null || made + arcs > VALUE_ENCODINGS_MAX) {
@@ -1041,7 +1722,11 @@ public final class Linearizations {
       return;
     }
     Class<?> k = c.getClass();
-    if (k == Reified.class && ((Reified) c).c.getClass() == In.class) {
+    if (k == ChannelOrder.class) {
+      for (Constraint r : ((ChannelOrder) c).reifications()) {
+        rows(r, out);
+      }
+    } else if (k == Reified.class && ((Reified) c).c.getClass() == In.class) {
       In in = (In) ((Reified) c).c;
       inSet(in.x, in.dom, ((Reified) c).b, out);
     } else if (k == Reified.class) {
@@ -1104,6 +1789,9 @@ public final class Linearizations {
     } else if (k == ConditionalSelect.class) {
       ConditionalSelect s = (ConditionalSelect) c;
       select(s.b, s.x, s.y, out);
+    } else if (k == Count.class && BOOLEAN_COUNT) {
+      Count ct = (Count) c;
+      booleanCount(ct.list, ct.countedValue(), ct.counter(), out);
     } else if (k == ChannelImply.class) {
       // b_v -> x = v: at most one of the Booleans
       AbstractChannel ch = (AbstractChannel) c;
@@ -1119,6 +1807,48 @@ public final class Linearizations {
         out.add(new LinearForm(bs.toArray(new IntVar[0]), ones, 1, LinearForm.LE));
       }
     }
+  }
+
+  // the rows of booleanCount: on or off
+  private static final boolean BOOLEAN_COUNT =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.booleanCount", "true"));
+
+  /**
+   * The row of a count of 0 or 1 over 0/1 variables, which is linear: {@code c = sum x_i} for the
+   * value 1 and {@code c = n - sum x_i} for the value 0 (variables fixed to the value count 1,
+   * others 0). Without it an objective over the number of unselected items ({@code count(selection,
+   * false)} of ihtc-2024-kletzander, MiniZinc Challenge 2025) had no lower bound in the relaxation.
+   */
+  private static void booleanCount(IntVar[] list, int value, IntVar counter, List<LinearForm> out) {
+    if (value != 0 && value != 1) {
+      return;
+    }
+    List<IntVar> vars = new ArrayList<>();
+    long fixed = 0;
+    for (IntVar x : list) {
+      if (x == counter || !boolean01(x)) {
+        return;
+      }
+      if (x.singleton()) {
+        fixed += x.value() == value ? 1 : 0;
+      } else {
+        vars.add(x);
+        fixed += value == 0 ? 1 : 0;
+      }
+    }
+    if (vars.isEmpty()) {
+      return;
+    }
+    // counter - sum (+-1) x_i = fixed: + for the value 1, - for 0 (with 1 counted per variable)
+    IntVar[] vs = new IntVar[vars.size() + 1];
+    long[] w = new long[vs.length];
+    for (int i = 0; i < vars.size(); i++) {
+      vs[i] = vars.get(i);
+      w[i] = value == 1 ? -1 : 1;
+    }
+    vs[vars.size()] = counter;
+    w[vars.size()] = 1;
+    out.add(new LinearForm(vs, w, fixed, LinearForm.EQ));
   }
 
   /**
@@ -1622,7 +2352,7 @@ public final class Linearizations {
    */
   public static List<LinearForm> alldifferentNetworks(Collection<Constraint> constraints) {
     List<LinearForm> out = new ArrayList<>();
-    if ("false".equals(ALLDIFF_NETWORK)) {
+    if (FALSE.equals(ALLDIFF_NETWORK)) {
       return out;
     }
     boolean all = "all".equals(ALLDIFF_NETWORK);

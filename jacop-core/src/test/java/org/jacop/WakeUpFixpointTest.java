@@ -34,6 +34,7 @@ package org.jacop;
 import static org.assertj.core.api.Assertions.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.List;
@@ -191,6 +192,100 @@ class WakeUpFixpointTest {
   @Test
   void globalConstraintsReachTheFreshFixpoint() {
     check(4, random -> new Generator(random).global());
+  }
+
+  /**
+   * ElementVariableFast skips a call woken only by list variables at positions the index can no
+   * longer select. Lists longer than the index domain, a variable at two positions and the value in
+   * the list check that every other wake still propagates.
+   */
+  @Test
+  void elementOverLongListsReachesTheFreshFixpoint() {
+    check(7, random -> new Generator(random).longElement());
+  }
+
+  /**
+   * ElementVariableFast over values spanning more than 64 values, where a call woken by list
+   * variables only checks the supports of the value's bounds: at every node of random dives it must
+   * prune what the constraint imposed afresh on the current domains prunes.
+   */
+  @Test
+  void elementWithWideValuesReachesTheFreshFixpoint() {
+    for (int trial = 0; trial < TRIALS; trial++) {
+      long seed = 8_000_000L + trial;
+      Random random = new Random(seed);
+      int n = 8;
+      IntDomain[] domains = new IntDomain[n + 2];
+      for (int p = 0; p < n; p++) {
+        int lo = random.nextInt(100);
+        domains[p] = new IntervalDomain(lo, lo + random.nextInt(100));
+      }
+      domains[n] = new IntervalDomain(-1, n); // the index, positions 0..n-1 with offset -1
+      domains[n + 1] = new IntervalDomain(0, 200); // the value
+      Store store = new Store();
+      IntVar[] x = new IntVar[n + 2];
+      for (int p = 0; p < x.length; p++) {
+        x[p] = new IntVar(store, "x" + p, domains[p].cloneLight());
+      }
+      store.impose(new ElementVariableFast(x[n], Arrays.copyOf(x, n), x[n + 1], -1));
+      StringBuilder path = new StringBuilder();
+      boolean consistent = consistency(store);
+      for (int step = 0; consistent && step < 15; step++) {
+        // below 64 values the value's holes are pruned too, and a call that narrows the value's
+        // bounds below 64 values leaves them to its next call (elementOverLongLists covers them)
+        String missed = x[n + 1].max() - x[n + 1].min() < 64 ? null : freshElementPruning(x, n);
+        if (missed != null) {
+          fail("seed %d, path%s: a fresh store prunes %s", seed, path, missed);
+        }
+        // mostly list variables, which wake the constraint without the index or the value
+        IntVar y = x[random.nextInt(4) == 0 ? n + random.nextInt(2) : random.nextInt(n)];
+        if (y.singleton()) {
+          continue;
+        }
+        int v = y.min() + random.nextInt(y.max() - y.min() + 1);
+        int decision = random.nextInt(4);
+        path.append(' ').append(y.id()).append(new String[] {"=", "!=", "<=", ">="}[decision]);
+        path.append(v);
+        store.setLevel(store.level + 1);
+        try {
+          switch (decision) {
+            case 0 -> y.domain.in(store.level, y, v, v);
+            case 1 -> y.domain.inComplement(store.level, y, v);
+            case 2 -> y.domain.inMax(store.level, y, v);
+            default -> y.domain.inMin(store.level, y, v);
+          }
+          consistent = store.consistency();
+        } catch (FailException _) {
+          consistent = false;
+        }
+      }
+    }
+  }
+
+  private static String freshElementPruning(IntVar[] x, int n) {
+    Store fresh = new Store();
+    IntVar[] w = new IntVar[x.length];
+    for (int p = 0; p < x.length; p++) {
+      w[p] = new IntVar(fresh, "w" + p, x[p].dom().cloneLight());
+    }
+    boolean consistent;
+    try {
+      fresh.impose(new ElementVariableFast(w[n], Arrays.copyOf(w, n), w[n + 1], -1));
+      consistent = fresh.consistency();
+    } catch (FailException _) {
+      consistent = false;
+    }
+    if (!consistent) {
+      return "a failure";
+    }
+    StringBuilder pruned = new StringBuilder();
+    for (int p = 0; p < x.length; p++) {
+      if (!w[p].dom().eq(x[p].dom())) {
+        pruned.append(' ').append(x[p].id()).append(": ").append(x[p].dom());
+        pruned.append(" -> ").append(w[p].dom());
+      }
+    }
+    return pruned.isEmpty() ? null : pruned.toString();
   }
 
   /**
@@ -610,6 +705,32 @@ class WakeUpFixpointTest {
       };
     }
 
+    /** An element over a list of six variables, some of them repeated or the value itself. */
+    Builder longElement() {
+      int[] p = distinct(INTS, 4);
+      int i = p[0];
+      int j = p[1];
+      int k = p[2];
+      int l = p[3];
+      int[] q = distinct(BOOLS, 2);
+      int u = q[0];
+      int v = q[1];
+      return switch (random.nextInt(3)) {
+        case 0 ->
+            (x, b, r) ->
+                new ElementVariableFast(
+                    x[i], new IntVar[] {x[j], b[u], x[k], b[u], b[v], x[k]}, x[l], -1);
+        case 1 ->
+            (x, b, r) ->
+                new ElementVariableFast(
+                    x[i], new IntVar[] {b[u], x[j], x[l], b[v], x[k], x[j]}, x[l], -1);
+        default ->
+            (x, b, r) ->
+                new ElementVariableFast(
+                    x[i], new IntVar[] {x[j], x[k], b[u], x[l], b[v], x[l]}, x[k], -1);
+      };
+    }
+
     Builder global() {
       int[] p = distinct(INTS, 4);
       int i = p[0];
@@ -627,7 +748,7 @@ class WakeUpFixpointTest {
       }
       String rel = new String[] {"==", "<=", ">="}[random.nextInt(3)];
       int element = (l + 1) % INTS == i ? j : (l + 1) % INTS;
-      return switch (random.nextInt(37)) {
+      return switch (random.nextInt(38)) {
         case 0 -> (x, b, r) -> new XmulYeqZ(x[i], x[j], x[k]);
         case 1 -> (x, b, r) -> new XdivYeqZ(x[i], x[j], x[k]);
         case 2 -> (x, b, r) -> new XmodYeqZ(x[i], x[j], x[k]);
@@ -679,6 +800,10 @@ class WakeUpFixpointTest {
         case 33 -> (x, b, r) -> new IncreasingNValue(new IntVar[] {x[i], x[j], x[k]}, x[l]);
         case 34 -> (x, b, r) -> new NoGood(new IntVar[] {x[i], x[j]}, new int[] {c, c + 1});
         case 35 -> (x, b, r) -> new AbsXeqY(x[i], x[j], true);
+        case 36 -> {
+          int[] weights = {nonZero(3), nonZero(3), nonZero(3), nonZero(3)};
+          yield (x, b, r) -> new SumWeight(new IntVar[] {x[i], x[j], x[k], x[l]}, weights, c);
+        }
         default -> {
           PrimitiveBuilder c1 = composed(1);
           PrimitiveBuilder c2 = composed(1);

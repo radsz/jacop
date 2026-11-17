@@ -55,6 +55,7 @@ import org.jacop.constraints.Implies;
 import org.jacop.constraints.ImpliesNot;
 import org.jacop.constraints.Linearizations;
 import org.jacop.constraints.OverlappingAlldiff;
+import org.jacop.constraints.Reified;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
@@ -96,7 +97,9 @@ import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 import org.jacop.lcg.ReifiedExplanation;
+import org.jacop.lcg.ValueExclusion;
 import org.jacop.lcg.ValueIndicator;
+import org.jacop.presolve.OrderLiterals;
 import org.jacop.satwrapper.SatTranslation;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
@@ -186,6 +189,7 @@ public class Support implements ParserTreeConstants {
   final ArrayList<DiffnK> nonStrictDiffnK = new ArrayList<>();
   final BinPackingCliqueDetector binPackingCliques = new BinPackingCliqueDetector(this);
   final BinPackingPermutations binPackingPermutations = new BinPackingPermutations(this);
+  final PermutationElementSums permutationElementSums = new PermutationElementSums(this);
   // unary resources found by the disjunctive clique detection: starts and durations
   final ArrayList<IntVar[][]> unaryResources = new ArrayList<>();
   final ReificationConstraints reif = new ReificationConstraints(this);
@@ -825,6 +829,26 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * Records the domains of the variables of the inverse channels ({@code jacop_assignment}) before
+   * any constraint prunes them; symmetry breaking compares them as the model declares them.
+   *
+   * @param astTree the root of the parsed model.
+   */
+  public void recordChannelDomains(SimpleNode astTree) {
+    forEachConstraint(
+        astTree,
+        node -> {
+          if ("jacop_assignment".equals(node.getName())) {
+            for (int i = 0; i < 2; i++) {
+              for (IntVar v : getVarArray((SimpleNode) node.jjtGetChild(i))) {
+                dictionary.recordChannelDomain(v);
+              }
+            }
+          }
+        });
+  }
+
+  /**
    * Stops building the model once the time-out has passed.
    *
    * @throws ModelTimeOut when it has passed
@@ -839,6 +863,7 @@ public class Support implements ParserTreeConstants {
   public void detectBinPackingCliques() {
     implied(binPackingCliques::detect);
     implied(binPackingPermutations::detect);
+    implied(permutationElementSums::detect);
   }
 
   /**
@@ -939,6 +964,75 @@ public class Support implements ParserTreeConstants {
     reif.pose();
     // generate channeling constraints instead of implied constraints
     imply.pose();
+    poseOrderChannels();
+  }
+
+  /**
+   * Whether the reified comparisons of one variable with constants ({@code int_le_reif}, {@code
+   * int_lt_reif} and their {@code >=}, {@code >} forms) become one {@link
+   * org.jacop.constraints.ChannelOrder} per variable, as {@code int_eq_reif} becomes ChannelReif.
+   * The system property org.jacop.fz.orderChannels=false keeps them as reifications.
+   */
+  private final boolean orderChannelsOn =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.orderChannels", "true"));
+
+  /**
+   * Whether the half-reified comparisons ({@code int_le_imp} and its kin) join the order channels
+   * as implied items; the system property org.jacop.fz.orderChannels.implied=false leaves them as
+   * implications.
+   */
+  private final boolean orderChannelsImplied =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.orderChannels.implied", "true"));
+
+  // the order reifications b <-> x op c posted so far, for poseOrderChannels
+  private final List<Constraint> orderReifications = new ArrayList<>();
+
+  /** Statistics: order channels posted, and the reifications they replaced. */
+  int orderChannels;
+
+  int orderChannelItems;
+
+  /**
+   * Poses a reified comparison {@code b <-> x op c} of a variable with a constant, or its
+   * half-reification {@code b -> x op c}, and keeps it for {@link #poseOrderChannels()} unless a
+   * negated control substitution changes it.
+   *
+   * @param r the reification or implication.
+   */
+  void poseOrderReification(Constraint r) {
+    boolean kept =
+        orderChannelsOn
+            && (r instanceof Reified || orderChannelsImplied)
+            && (activeControl == null || !activeControl.negated());
+    pose(r);
+    if (kept) {
+      orderReifications.add(r);
+    }
+  }
+
+  /**
+   * Replaces the order reifications of each variable with two or more of them by one ChannelOrder
+   * over the same variables, which propagates the same bounds with one propagator (rule 5 of
+   * presolve, {@link OrderLiterals}).
+   */
+  void poseOrderChannels() {
+    if (orderReifications.isEmpty()) {
+      return;
+    }
+    for (OrderLiterals.Group g : OrderLiterals.groups(orderReifications, orderChannelsImplied)) {
+      g.reifications().forEach(Constraint::removeConstraint);
+      store.imposeWithConsistency(g.channel());
+      orderChannels++;
+      orderChannelItems += g.reifications().size();
+      if (options.debug()) {
+        FzConsole.println("% " + g.channel());
+      }
+    }
+    orderReifications.clear();
+    if (orderChannels > 0 && options.debug()) {
+      FzConsole.println(
+          "% order channels: " + orderChannels + " replace " + orderChannelItems + " reifications");
+    }
   }
 
   /**
@@ -1472,7 +1566,8 @@ public class Support implements ParserTreeConstants {
           LinearSplit.split(
               store,
               c,
-              Integer.parseInt(options.freeConfig("lcg-split", "40")),
+              Integer.parseInt(options.freeConfig("lcg-split", "20")),
+              !"0".equals(options.freeConfig("lcg-split-tree", "1")),
               // free LCG search branches on the block sums last, as on other defined variables, and
               // the linear relaxation replaces them by their blocks
               dictionary::addSplitSum);
@@ -1803,7 +1898,12 @@ public class Support implements ParserTreeConstants {
 
   /** The constraint x != c, reified with b or implied by b. */
   final class FzXneqC extends Constraint
-      implements Violation, Copyable<FzXneqC>, Explainable, PbEncodable, Linearizations.Relaxable {
+      implements Violation,
+          Copyable<FzXneqC>,
+          Explainable,
+          PbEncodable,
+          ValueExclusion,
+          Linearizations.Relaxable {
 
     final IntVar x;
     final int c;
@@ -1839,6 +1939,21 @@ public class Support implements ParserTreeConstants {
     @Override
     public List<LinearForm> relaxation() {
       return Linearizations.valueRows(x, c, b, isReified, false);
+    }
+
+    @Override
+    public IntVar control() {
+      return x == b ? null : b;
+    }
+
+    @Override
+    public IntVar variable() {
+      return x;
+    }
+
+    @Override
+    public int value() {
+      return c;
     }
 
     @Override

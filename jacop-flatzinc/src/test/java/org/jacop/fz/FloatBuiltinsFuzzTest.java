@@ -31,6 +31,7 @@
 
 package org.jacop.fz;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -79,8 +80,16 @@ class FloatBuiltinsFuzzTest {
 
   @TempDir Path tmp;
 
-  /** A float function of the integer values, NaN where it is undefined (the call fails). */
-  private record Function(String name, int arity, ToDoubleFunction<double[]> f, int lo, int hi) {}
+  /**
+   * A float function of the integer values, NaN where it is undefined (the call fails); constants
+   * are further arguments written after the variables (the exponent of a constant power).
+   */
+  private record Function(
+      String name, int arity, ToDoubleFunction<double[]> f, int lo, int hi, String constants) {
+    Function(String name, int arity, ToDoubleFunction<double[]> f, int lo, int hi) {
+      this(name, arity, f, lo, hi, "");
+    }
+  }
 
   private static final Function[] FUNCTIONS = {
     new Function("float_plus", 2, x -> x[0] + x[1], -3, 3),
@@ -102,6 +111,30 @@ class FloatBuiltinsFuzzTest {
     new Function("float_asin", 1, x -> Math.abs(x[0]) > 1 ? Double.NaN : Math.asin(x[0]), -2, 2),
     new Function("float_acos", 1, x -> Math.abs(x[0]) > 1 ? Double.NaN : Math.acos(x[0]), -2, 2),
     new Function("float_atan", 1, x -> Math.atan(x[0]), -4, 4),
+    // constant exponents (PowPeqR): MiniZinc's x^2.0, odd, real and negative powers
+    new Function("float_pow", 1, x -> Math.pow(x[0], 2), -3, 3, ",2.0"),
+    new Function("float_pow", 1, x -> Math.pow(x[0], 3), -3, 3, ",3.0"),
+    new Function("float_pow", 1, x -> Math.pow(x[0], 4), -3, 3, ",4.0"),
+    new Function("float_pow", 1, x -> x[0] < 0 ? Double.NaN : Math.pow(x[0], 1.5), -1, 5, ",1.5"),
+    new Function("float_pow", 1, x -> x[0] == 0 ? Double.NaN : Math.pow(x[0], -2), -3, 3, ",-2.0"),
+    new Function("float_pow", 1, x -> x[0] == 0 ? Double.NaN : Math.pow(x[0], -3), -3, 3, ",-3.0"),
+    // HyperbolicPeqR, and the inverses as the same constraint with the arguments swapped
+    new Function("float_sinh", 1, x -> Math.sinh(x[0]), -3, 3),
+    new Function("float_cosh", 1, x -> Math.cosh(x[0]), -3, 3),
+    new Function("float_tanh", 1, x -> Math.tanh(x[0]), -3, 3),
+    new Function("float_asinh", 1, x -> Math.log(x[0] + Math.sqrt(x[0] * x[0] + 1)), -4, 4),
+    new Function(
+        "float_acosh",
+        1,
+        x -> x[0] < 1 ? Double.NaN : Math.log(x[0] + Math.sqrt(x[0] * x[0] - 1)),
+        -1,
+        5),
+    new Function(
+        "float_atanh",
+        1,
+        x -> Math.abs(x[0]) >= 1 ? Double.NaN : 0.5 * Math.log((1 + x[0]) / (1 - x[0])),
+        -2,
+        2),
   };
 
   private record Model(String fzn, Set<String> expected) {}
@@ -138,6 +171,185 @@ class FloatBuiltinsFuzzTest {
             fail(String.join("\n\n", failures));
           }
         });
+  }
+
+  /**
+   * float_pow with a base that can be 0 or negative: the decomposition exp(c * ln(x)) lost x = 0
+   * (pow(0.0, 2.0), asinh(0.0), whose MiniZinc definition uses x^2.0, and pow(0.0, 0.5) were
+   * unsatisfiable). Every integer base in -2..2 has its power, except 0 for a negative exponent.
+   */
+  @Test
+  void powKeepsZeroAndNegativeBases() throws IOException {
+    double[] exponents = {2.0, 3.0, 5.0, 0.0, 1.0, -1.0, -2.0, 0.5, 1.5};
+    for (double c : exponents) {
+      boolean fractional = c != Math.rint(c);
+      int lo = fractional ? 0 : -2;
+      String model =
+          "var "
+              + lo
+              + "..2: i :: output_var;\n"
+              + "var float: x;\n"
+              + "var float: y :: output_var;\n"
+              + "constraint int2float(i, x);\n"
+              + "constraint float_pow(x, "
+              + c
+              + ", y);\n"
+              + "solve :: int_search([i], input_order, indomain_min, complete) satisfy;\n";
+      List<String> solutions = solveAll(model);
+      Set<Integer> bases = new TreeSet<>();
+      for (String solution : solutions) {
+        int i = Integer.parseInt(valueOf(solution, "i"));
+        double y = Double.parseDouble(valueOf(solution, "y"));
+        double expected = Math.pow(i, c);
+        assertThat(Math.abs(y - expected))
+            .as("pow(" + i + ", " + c + ") = " + y)
+            .isLessThanOrEqualTo(1e-9 * (1 + Math.abs(expected)));
+        bases.add(i);
+      }
+      Set<Integer> expectedBases = new TreeSet<>();
+      for (int i = lo; i <= 2; i++) {
+        if (i != 0 || c >= 0) {
+          expectedBases.add(i);
+        }
+      }
+      assertThat(bases).as("bases of pow(x, " + c + ")").isEqualTo(expectedBases);
+    }
+    // a fractional or variable power of a base that can be 0 is never negative, also while x > 0
+    // is undecided (minimising pow(x, 0.1) printed a negative minimum)
+    for (String exponent : new String[] {"0.1", "e"}) {
+      String model =
+          "var 0.0..10.0: x :: output_var;\n"
+              + "var 0.1..0.5: e;\n"
+              + "var float: z :: output_var;\n"
+              + "constraint float_pow(x, "
+              + exponent
+              + ", z);\n"
+              + "solve :: float_search([x], 1.0e-6, input_order, indomain_split, complete)"
+              + " minimize z;\n";
+      String out = run(model);
+      String last = out.substring(out.lastIndexOf("z = ") + 4);
+      double z = Double.parseDouble(last.substring(0, last.indexOf(';')));
+      assertThat(z).as("minimum of pow(x, " + exponent + ")").isBetween(0.0, 0.3);
+    }
+  }
+
+  /** The value printed for a variable in a solution such as "i = 2; y = 4.0;". */
+  private static String valueOf(String solution, String name) {
+    int start = solution.indexOf(name + " = ") + name.length() + 3;
+    return solution.substring(start, solution.indexOf(';', start));
+  }
+
+  /**
+   * floor, ceil and round of a float that has no bounds when the constraint is posted (a var float
+   * bounded only by a later constraint) threw "JaCoP cannot handle ... in rounding to integer".
+   */
+  @Test
+  void roundingOfAnUnboundedFloat() throws IOException {
+    for (String rounding : new String[] {"float_floor", "float_ceil", "float_round"}) {
+      String model =
+          "var -3..3: i :: output_var;\n"
+              + "var float: x;\n"
+              + "var float: h;\n"
+              + "var int: k :: output_var;\n"
+              + "constraint "
+              + rounding
+              + "(h, k);\n"
+              + "constraint int2float(i, x);\n"
+              + "constraint float_times(x, 0.25, h);\n"
+              + "solve :: int_search([i], input_order, indomain_min, complete) satisfy;\n";
+      List<String> solutions = solveAll(model);
+      Set<String> expected = new TreeSet<>();
+      for (int i = -3; i <= 3; i++) {
+        double h = i * 0.25;
+        long k =
+            switch (rounding) {
+              case "float_floor" -> (long) Math.floor(h);
+              case "float_ceil" -> (long) Math.ceil(h);
+              default -> (long) (Math.signum(h) * Math.floor(Math.abs(h) + 0.5));
+            };
+        expected.add("i = " + i + "; k = " + k + ";");
+      }
+      assertThat(new TreeSet<>(solutions)).as(rounding).isEqualTo(expected);
+    }
+  }
+
+  /**
+   * An exact sum or product of floats is a single value: -2.0 + 2.0 was the interval [-4.9e-324,
+   * 4.9e-324] (outward rounding by an ulp even when exact), so floor(x + y) for x = -2, y = 2 also
+   * gave -1 and the model had wrong solutions.
+   */
+  @Test
+  void exactArithmeticGivesExactRounding() throws IOException {
+    String model =
+        """
+        var -2..2: i :: output_var;
+        var -2..2: j :: output_var;
+        var -2.0..2.0: x;
+        var -2.0..2.0: y;
+        var float: s;
+        var float: p;
+        var int: k :: output_var;
+        var int: m :: output_var;
+        constraint int2float(i, x);
+        constraint int2float(j, y);
+        constraint float_plus(x, y, s);
+        constraint float_times(x, y, p);
+        constraint float_floor(s, k);
+        constraint float_ceil(p, m);
+        solve :: int_search([i, j, k, m], input_order, indomain_min, complete) satisfy;
+        """;
+    Set<String> expected = new TreeSet<>();
+    for (int i = -2; i <= 2; i++) {
+      for (int j = -2; j <= 2; j++) {
+        expected.add("i = " + i + "; j = " + j + "; k = " + (i + j) + "; m = " + (i * j) + ";");
+      }
+    }
+    List<String> solutions = solveAll(model);
+    assertThat(solutions).hasSize(expected.size());
+    assertThat(new TreeSet<>(solutions)).isEqualTo(expected);
+  }
+
+  /**
+   * MiniZinc writes x != 0.0 or x &gt; 0.0 of a defined float as the bound 4.940656458412465e-324
+   * (the double after 0.0), and x &lt; 2.0 as 1.9999999999999998. The front end widened bounds of
+   * defined floats by the precision, which gave x = 0.0 and x = 2.0 back.
+   */
+  @Test
+  void strictBoundsOfDefinedFloatsAreKept() throws IOException {
+    String low =
+        """
+        var 0..2: i :: output_var;
+        var 4.940656458412465e-324..2.0: f ::var_is_introduced :: is_defined_var;
+        constraint int2float(i, f) :: defines_var(f);
+        solve satisfy;
+        """;
+    assertThat(new TreeSet<>(solveAll(low))).containsExactly("i = 1;", "i = 2;");
+    String high = low.replace("4.940656458412465e-324..2.0", "0.0..1.9999999999999998");
+    assertThat(new TreeSet<>(solveAll(high))).containsExactly("i = 0;", "i = 1;");
+  }
+
+  /**
+   * --step (the distance by which a float objective must improve) made optimisation report
+   * UNSATISFIABLE: a child search's cost minus the step fell below the cost's minimum, and the
+   * FailException of the bound escaped the search.
+   */
+  @Test
+  void floatOptimisationWithAStep() throws IOException {
+    String model =
+        """
+        var -1.0..8.0: x :: output_var;
+        var -100.0..100.0: z :: output_var;
+        constraint float_times(x, x, z);
+        solve :: float_search([x], 0.0001, input_order, indomain_split, complete) minimize z;
+        """;
+    for (String[] options : new String[][] {{"--step", "1e-4"}, {"--step", "1e-2", "-a"}}) {
+      String out = run(model, options);
+      assertThat(out).as(Arrays.toString(options)).doesNotContain("UNSATISFIABLE");
+      assertThat(out).as(Arrays.toString(options)).contains("==========");
+      String last = out.substring(out.lastIndexOf("z = ") + 4);
+      double z = Double.parseDouble(last.substring(0, last.indexOf(';')));
+      assertThat(z).as(Arrays.toString(options)).isLessThan(0.02);
+    }
   }
 
   /**
@@ -202,7 +414,12 @@ class FloatBuiltinsFuzzTest {
       constraints.append("constraint float_lin_eq([").append(ws).append(",-1.0],[").append(args);
       constraints.append(",r],0.0):: defines_var(r);\n");
     } else {
-      constraints.append("constraint ").append(fn.name()).append("(").append(args);
+      constraints
+          .append("constraint ")
+          .append(fn.name())
+          .append("(")
+          .append(args)
+          .append(fn.constants());
       constraints.append(",r):: defines_var(r);\n");
     }
     boolean minimise = random.nextBoolean();
@@ -407,7 +624,12 @@ class FloatBuiltinsFuzzTest {
         for (int i = 0; i < n; i++) {
           args.add("f" + aVar[i]);
         }
-        constraints.append("constraint ").append(fn.name()).append("(").append(args);
+        constraints
+            .append("constraint ")
+            .append(fn.name())
+            .append("(")
+            .append(args)
+            .append(fn.constants());
         constraints.append(",r);\n");
         boolean resultFirst = random.nextBoolean();
         constraints

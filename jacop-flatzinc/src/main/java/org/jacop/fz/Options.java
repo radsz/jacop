@@ -237,23 +237,55 @@ public class Options {
                 that makes fewer conflicts per second by lcg-slow-at, has a solution and
                 stopped making progress, gives way to free search without learning,
                 default 300; 0 = off),
+                lcg-slow-literal=<conflicts per second> (with lcg-slow-rate: the slow rate is
+                at least this many conflicts per second per literal of an average learnt
+                clause, default 5; 0 = off),
                 lcg-slow-at=<share> (share of the time limit at which lcg-slow-rate is
                 checked, default 0.1),
+                lcg-slow-unsolved=<conflicts per second> (with --lcg and an objective: LCG
+                without a solution that makes fewer conflicts per second by lcg-slow-at gives
+                way to free search without learning, and fixed search to the search
+                annotation without learning, default 30; 0 = off),
+                lcg-slow-unsolved-late=<share> (with --lcg, -f and an objective: LCG that
+                makes fewer than lcg-slow-rate conflicts per second and has no solution
+                after this share of the time limit gives way to free search without
+                learning, default 0.5; 0 = off),
+                free-first=<share> (with --lcg, -f and an objective that sums at least four
+                squares: free search without learning runs first for this share of the
+                time limit, then LCG goes on from its best solution, default 0.1; 0 = off),
+                first-input=<runs> (-f, an objective and no search annotation: after slow
+                LCG gave way without a solution, one free search run in this many fixes the
+                variables in the model's order with their least values, until the first
+                solution; default 2, 0 = off),
                 lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
                 this share of the time limit, it raised the bound or its best cost fell by
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),
+                lcg-slow-bound-gain=<share> (a bound raise in the window counts when it
+                closes this share of the gap to the best cost, default 0.0005),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
                 lcg-core-call=<conflicts> (core-guided search stops when one solver call needs
                 more, default 5000),
-                lcg-booleans-first=on|off|turns (with --lcg: activity branching decides the 0/1
-                variables before the others (on, default), or all variables in one order of
-                activity (off); turns changes between the two at each restart),
+                lcg-booleans-first=on|off|turns|until-solution (with --lcg: activity branching
+                decides the 0/1 variables before the others (on), or all variables in one order
+                of activity (off); turns changes between the two at each restart, and
+                until-solution (default) does so only until the first solution, then is on,
+                and only once lcg-booleans-first-after=<conflicts> passed without a solution,
+                default 2000),
                 lcg-lp-branching=auto|on|off (with --lcg and a linear relaxation: decisions
                 from the relaxation's solution in the annotation's runs under -f, and at the start
                 of the activity runs of fixed-restarts; auto, the default, uses them when the
                 relaxation has value columns, or under -f tree cuts),
+                rect-placement=first|always|off (with --lcg: the runs of the default
+                branching place the rectangles of diffn constraints one at a time, bottom-left,
+                before the other decisions until the first solution (first, default), in all
+                of them (always), or never),
+                slot-dive=on|off (with --lcg, optimisation: before the search a dive without
+                learning fills the variables of a cardinality with fixed counts that covers the
+                search variables in model order, largest value first, and its solution starts
+                the default branching; default on), slot-dive-share=<share> (its share of the
+                time limit, default 0.05),
                 lcg-keep=0|1 (with --lcg: 1 lets a run that improved the best solution keep its
                 way of branching at the next restart; steadier between seeds, default 0),
                 lcg-literal-runs=<n>, lcg-literal-runs-solved=<n> (with --lcg and an
@@ -265,6 +297,9 @@ public class Options {
                 lcg-assume-level=0|1 (with --lcg: 1 puts the assumptions of core-guided,
                 neighbourhood and lower-bound runs on one decision level, kept at restarts;
                 0 gives each its own level, default 1),
+                lcg-chrono=<n> (with --lcg: runs that follow the search annotation, or the
+                default branching of free search, backtrack one level after a conflict
+                instead of a backjump over more than n levels; default 10, 0 always, -1 never),
                 lcg-bisect=<gap> (with --lcg and an objective: dichotomic probes of the
                 objective's bound, obj <= the middle of [lower bound, best - 1], until the
                 relative gap is at most this share of the best solution, then branch and bound;
@@ -281,7 +316,10 @@ public class Options {
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
-                blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
+                blocks of about sqrt of its size, for shorter explanations; default 20; 0 = off),
+                lcg-split-tree=0|1 (with lcg-split: blocks of at most n terms, and a sum of blocks
+                of more than n terms split again, so a sum of more than n*n terms becomes a tree of
+                sums; default 1),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
                 at its lower bound or a growing offset above it, per failure of the other runs;
                 default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100),
@@ -293,9 +331,10 @@ public class Options {
                 routes of two-index vrp models, default 1),
                 lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
                 default 1), lns-kinds=<kind>+<kind>... (the neighbourhoods used, of random, graph,
-                propagation, objective, constraints, scheduling, packing, routes, related, blocks;
+                propagation, objective, constraints, scheduling, packing, routes, related, blocks, rins;
                 default all), lns-blocks=0|1 (whole blocks of the decomposition bound as
-                neighbourhoods, default 1),
+                neighbourhoods, default 1), lns-rins=0|1 (relax the variables farthest from the
+                linear relaxation, default 1),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);
@@ -308,7 +347,9 @@ public class Options {
                 ls=<share> (with -f, also with --lcg: local search before the search, for this share
                 of the time left; default 0 = off), ls-max=<ms> (caps that time),
                 ls-patience=<ms> (local search stops after this long without a solution or fewer
-                violated constraints, default 1000), ls-moves=fj|walk (fj, the default:
+                violated constraints, default 1000; 5000 for ls-auto), ls-auto=1|0 (1, the default:
+                without ls, a disjunctive scheduling model whose cost is the makespan gets the
+                critical-path tabu search alone for half of the time left, until it stalls), ls-moves=fj|walk (fj, the default:
                 feasibility jump, the best jump of a sample of variables, all violated constraints
                 weigh more at a minimum; walk: a step moves a variable of one violated constraint),
                 ls-perm=1|0 (1, the default: an all different constraint over one domain of as many

@@ -31,6 +31,11 @@
 package org.jacop.fz.constraints;
 
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.IdentityHashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Set;
 import org.jacop.constraints.AndBoolSimple;
 import org.jacop.constraints.Implies;
 import org.jacop.constraints.LinearBool;
@@ -69,6 +74,7 @@ import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
+import org.jacop.lcg.LinearForm;
 import org.jacop.satwrapper.SatTranslation;
 
 /**
@@ -188,6 +194,15 @@ class LinearConstraints implements ParserTreeConstants {
 
   void int_lin_relation_imp(int operation, SimpleNode node) throws FailException {
     int_lin_relation_reif_imp(operation, node, false);
+  }
+
+  void linearImplied(int operation, int[] a, IntVar[] x, int c, IntVar b) {
+    switch (operation) {
+      case Support.EQ -> intLinReifEq(a, x, c, b, false, 0, false);
+      case Support.NE -> intLinReifNe(a, x, c, b, false);
+      case Support.LE -> intLinReifLe(a, x, c, b, false);
+      default -> throw new IllegalArgumentException("relation " + operation);
+    }
   }
 
   private void int_lin_relation_reif_imp(int operation, SimpleNode node, boolean isReified)
@@ -496,12 +511,30 @@ class LinearConstraints implements ParserTreeConstants {
       p2 = rewrite.vars();
     }
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    if (repeated(p2)) {
+      // merged aliases (CommonSubexpressions) can name a variable twice
+      Map<IntVar, Integer> terms = new LinkedHashMap<>();
+      for (int i = 0; i < p2.length; i++) {
+        terms.merge(p2[i], p1[i], Integer::sum);
+      }
+      terms.values().removeIf(c -> c == 0);
+      p2 = terms.keySet().toArray(new IntVar[0]);
+      p1 = terms.values().stream().mapToInt(Integer::intValue).toArray();
+    }
 
     Integer s = evaluateConstantLinearTerm(p1, p2);
     boolean p2Fixed = s != null;
 
     if (!p2Fixed && (operation == Support.EQ || operation == Support.LE)) {
       recordUnitSum(p1, p2, p3, operation == Support.EQ);
+      if (rewrite != null && p2.length == 1) {
+        support.dictionary.addOverlapUnitRow(
+            new LinearForm(
+                p2,
+                new long[] {p1[0]},
+                p3,
+                operation == Support.EQ ? LinearForm.EQ : LinearForm.LE));
+      }
     }
 
     switch (operation) {
@@ -893,8 +926,36 @@ class LinearConstraints implements ParserTreeConstants {
     if (bools < 3) {
       return false;
     }
+    if (sumsExceedInt(p1)) {
+      // variables already fixed to 0, such as those fixed by a cost cap, add nothing
+      int n = 0;
+      for (IntVar v : p2) {
+        if (!v.singleton(0)) {
+          n++;
+        }
+      }
+      if (n < p2.length) {
+        int[] w = new int[n];
+        IntVar[] x = new IntVar[n];
+        n = 0;
+        for (int i = 0; i < p2.length; i++) {
+          if (!p2[i].singleton(0)) {
+            w[n] = p1[i];
+            x[n++] = p2[i];
+          }
+        }
+        return poseLinearBool(w, x, rel, p3);
+      }
+      if (other != -1) {
+        return false;
+      }
+    }
     if (other == -1) {
-      support.pose(new LinearBool(p2, p1, rel, p3));
+      if ("<=".equals(rel) && sumsExceedInt(p1)) {
+        poseLinearBoolLeFixingHeavy(p1, p2, p3);
+      } else {
+        support.pose(new LinearBool(p2, p1, rel, p3));
+      }
       return true;
     }
     // sum + s * y rel 0 is sum rel -s * y; for s = 1 it is (-sum) rel' y with rel' reversed.
@@ -911,6 +972,71 @@ class LinearConstraints implements ParserTreeConstants {
     String relation = negate && "<=".equals(rel) ? ">=" : rel;
     support.pose(new LinearBool(vars, weights, relation, p2[other]));
     return true;
+  }
+
+  /** True if the positive or the negative weights add up to more than an int holds. */
+  private static boolean sumsExceedInt(int[] w) {
+    long positive = 0;
+    long negative = 0;
+    for (int a : w) {
+      if (a > 0) {
+        positive += a;
+      } else {
+        negative += a;
+      }
+    }
+    return positive > Integer.MAX_VALUE || negative < Integer.MIN_VALUE;
+  }
+
+  /**
+   * Poses w[0]*x[0] + ... + w[n-1]*x[n-1] &lt;= c over 0/1 variables whose weights add up to more
+   * than an int holds, which {@link LinearBool} rejects. A variable whose weight alone exceeds c
+   * minus the sum of the negative weights cannot be 1: it is fixed to 0 and left out of the sum.
+   * Pseudo-Boolean bounds on a weighted cost have this form, for example the cost cap of a weighted
+   * CSP converted from the PB competition (each hard violation weighs more than the cap). If the
+   * remaining weights still do not fit, the constraint is posed as a {@link LinearInt}.
+   */
+  private void poseLinearBoolLeFixingHeavy(int[] w, IntVar[] x, int c) {
+    long negative = 0;
+    for (int a : w) {
+      if (a < 0) {
+        negative += a;
+      }
+    }
+    int n = 0;
+    for (int a : w) {
+      if (a <= c - negative) {
+        n++;
+      }
+    }
+    IntVar[] vars = new IntVar[n];
+    int[] weights = new int[n];
+    n = 0;
+    for (int i = 0; i < w.length; i++) {
+      if (w[i] <= c - negative) {
+        vars[n] = x[i];
+        weights[n++] = w[i];
+      } else {
+        x[i].domain.in(store.level, x[i], 0, 0);
+      }
+    }
+    if (support.options.debug()) {
+      FzConsole.println(
+          "Fixed "
+              + (w.length - n)
+              + " 0/1 variables of a sum <= "
+              + c
+              + " to 0, their weights exceed it");
+    }
+    if (n == 0) {
+      if (c < negative) {
+        throw Store.failException;
+      }
+    } else if (sumsExceedInt(weights)) {
+      support.pose(new LinearInt(vars, weights, "<=", c));
+    } else {
+      support.pose(new LinearBool(vars, weights, "<=", c));
+    }
   }
 
   private void int_lin_relationLeSingleWeight(int w, IntVar x, int p3) {
@@ -1285,5 +1411,15 @@ class LinearConstraints implements ParserTreeConstants {
     int[] ones = new int[n];
     Arrays.fill(ones, 1);
     return ones;
+  }
+
+  private static boolean repeated(IntVar[] x) {
+    Set<IntVar> seen = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (IntVar v : x) {
+      if (!v.singleton() && !seen.add(v)) {
+        return true;
+      }
+    }
+    return false;
   }
 }

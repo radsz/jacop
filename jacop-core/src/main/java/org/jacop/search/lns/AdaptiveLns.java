@@ -40,7 +40,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.IntToDoubleFunction;
 import org.jacop.constraints.AbstractElement;
+import org.jacop.constraints.Alldifferent;
+import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
@@ -87,6 +90,9 @@ import org.jacop.lcg.LinearForm;
  *   <li>{@link Kind#BLOCKS}: whole groups of variables given by {@link #addGroups(IntVar[][],
  *       double[])}, such as the blocks of a Dantzig-Wolfe decomposition, chosen by roulette on
  *       their weights (the blocks whose column in the fractional master is far from 1 first).
+ *   <li>{@link Kind#LINES}: the scopes of random all-different constraints, with the variables that
+ *       constraints of at most five variables tie to them and to no other all-different scope; on a
+ *       round-robin schedule, whole rounds with their venues and travels.
  * </ul>
  *
  * <p>A neighbourhood made of variables that the runs do not fix (a task's start defined by the
@@ -132,8 +138,98 @@ public final class AdaptiveLns {
      */
     SHIFT,
     /** Whole groups of variables, such as the blocks of a decomposition. */
-    BLOCKS
+    BLOCKS,
+    /**
+     * The variables of random all-different constraints, with the variables that small constraints
+     * tie to them alone: whole rounds of a round-robin schedule, with their venues and travels.
+     */
+    LINES,
+    /**
+     * A whole new assignment of some variables proposed by a heuristic from the best solution, such
+     * as a schedule of the tasks built by a genetic algorithm; the other variables are free.
+     */
+    PROPOSALS,
+    /**
+     * Relaxation-induced: the variables whose value in the best solution differs from their value
+     * in the solution of the linear relaxation are free, the others fixed (RINS, E. Danna, E.
+     * Rothberg and C. Le Pape, Exploring relaxation induced neighborhoods to improve MIP solutions,
+     * Mathematical Programming 102, 2005); free variables are added at random up to the share of
+     * the kind, and the farthest from the relaxation are kept when there are more.
+     */
+    RINS
   }
+
+  // the value of each variable in the solution of the linear relaxation, NaN when it has none
+  private IntToDoubleFunction lpValue;
+
+  /**
+   * Gives the {@link Kind#RINS} neighbourhood the values of the variables in a solution of the
+   * linear relaxation.
+   *
+   * @param values the value of the variable of each index, or NaN when unknown
+   * @return this
+   */
+  public AdaptiveLns setLpValues(IntToDoubleFunction values) {
+    lpValue = values;
+    return this;
+  }
+
+  // the variables that disagree with the relaxation relaxed, the farthest first, then random
+  // ones up to relaxed
+  private boolean[] rinsRelax(int relaxed) {
+    if (lpValue == null) {
+      return randomRelax(relaxed);
+    }
+    int[] order = freeOrder();
+    double[] distance = new double[vars.length];
+    int known = 0;
+    for (int i : order) {
+      double v = lpValue.applyAsDouble(i);
+      if (Double.isNaN(v)) {
+        distance[i] = -1;
+      } else {
+        distance[i] = Math.abs(v - incumbent[i]);
+        known++;
+      }
+    }
+    if (known == 0) {
+      return randomRelax(relaxed);
+    }
+    Integer[] sorted = new Integer[order.length];
+    for (int k = 0; k < order.length; k++) {
+      sorted[k] = order[k];
+    }
+    // stable: ties (the agreeing variables, and those without a value) stay in random order
+    Arrays.sort(sorted, (a, b) -> Double.compare(rinsKey(distance[b]), rinsKey(distance[a])));
+    boolean[] relax = new boolean[vars.length];
+    for (int k = 0; k < relaxed && k < sorted.length; k++) {
+      relax[sorted[k]] = true;
+    }
+    return relax;
+  }
+
+  private static double rinsKey(double distance) {
+    return distance > 1e-6 ? distance : 0;
+  }
+
+  /** Proposes new values of some variables from their values in the best solution. */
+  @FunctionalInterface
+  public interface Proposer {
+    /**
+     * A proposal.
+     *
+     * @param incumbent the values of the proposer's variables in the best solution
+     * @return their proposed values, or null for none
+     */
+    int[] propose(int[] incumbent);
+  }
+
+  // the proposer, its variables as indices of vars, and the values of the last proposal
+  private Proposer proposer;
+  private int[] proposerVars = new int[0];
+  // the values given to the proposer for its variables outside the neighbourhoods
+  private int[] proposerValue = new int[0];
+  private int[] proposal;
 
   /** How a run in a neighbourhood ended. */
   public enum Outcome {
@@ -157,6 +253,9 @@ public final class AdaptiveLns {
   /** Constraints of at most this many variables tie a task's companions to it. */
   static final int COMPANION_ARITY = 3;
 
+  /** Constraints of at most this many variables tie variables to an all-different scope. */
+  static final int LINE_ARITY = 5;
+
   /** The most decision variables that a variable runs do not fix stands for. */
   static final int MAX_NEAR = 16;
 
@@ -178,6 +277,14 @@ public final class AdaptiveLns {
   private static final double FIRST_SHARE = 0.2;
   private static final double MAX_SHARE = 0.95;
   private static final double SHARE_STEP = 1.15;
+  // route removal also frees the links between routes and depots (CHANGELOG): with identical
+  // vehicles and the symmetry breaking "vehicle k unused implies vehicle k + 1 unused", a route
+  // other than the last cannot be emptied while the routes after it keep their vehicles. XCSP 2024
+  // VRP_LC-10-05-20-s3 at 600 s: 267, 288, 269 over three seeds instead of 288, 289, 288 (the
+  // better solutions use one vehicle fewer)
+  private static final boolean DEPOT_LINKS =
+      !"false".equals(System.getProperty("jacop.lns.depotLinks"));
+
   private static final double DECAY = 0.2;
   private static final double FLOOR = 0.1;
 
@@ -223,6 +330,10 @@ public final class AdaptiveLns {
   // the groups of variables of the BLOCKS kind, as indices of decision variables, and their weights
   private int[][] groups = new int[0][];
   private double[] groupWeight = new double[0];
+  // the scopes of the all-different constraints of the LINES kind, as nodes, and whether a node
+  // is in one of them
+  private int[][] lines = new int[0][];
+  private boolean[] inLine = new boolean[0];
   // the variables that are successors of a circuit among the routings
   private final boolean[] successorVar;
 
@@ -615,6 +726,50 @@ public final class AdaptiveLns {
     return this;
   }
 
+  /**
+   * Adds a heuristic that proposes new values of some variables from their values in the best
+   * solution ({@link Kind#PROPOSALS}). A proposal fixes those variables to the proposed values and
+   * leaves every other variable free, for the search to complete.
+   *
+   * @param xs the variables of the proposals; those that are not variables of the neighbourhoods
+   *     are left to the search, and the proposer gets their smallest value
+   * @param p the heuristic
+   * @return this object, unchanged when none of them is a variable of the neighbourhoods
+   */
+  public AdaptiveLns setProposer(IntVar[] xs, Proposer p) {
+    Map<IntVar, Integer> at = new IdentityHashMap<>();
+    for (int i = 0; i < vars.length; i++) {
+      at.put(vars[i], i);
+    }
+    int[] idx = new int[xs.length];
+    int found = 0;
+    for (int k = 0; k < xs.length; k++) {
+      Integer i = at.get(xs[k]);
+      // a variable that is not among them (fixed, or defined by others) is left to the search
+      idx[k] = i == null ? -1 : i;
+      found += i == null ? 0 : 1;
+    }
+    if (found == 0) {
+      return this;
+    }
+    proposer = p;
+    proposerVars = idx;
+    proposerValue = new int[xs.length];
+    for (int k = 0; k < xs.length; k++) {
+      proposerValue[k] = xs[k].min();
+    }
+    return this;
+  }
+
+  /**
+   * Returns whether the neighbourhoods follow vehicle routes (route and related removal).
+   *
+   * @return true when the variables hold the successors or arcs of routes.
+   */
+  public boolean hasRoutes() {
+    return !routings.isEmpty();
+  }
+
   /** The routing structures, for tests. */
   List<RouteStructure> routings() {
     return routings;
@@ -642,17 +797,13 @@ public final class AdaptiveLns {
    * Records as the best solution one given by values rather than held by the store: the solution
    * that another search found before this one, which the store no longer admits once the search
    * must improve on it. Nothing is recorded when a variable of the neighbourhoods, a node they
-   * read, has no value given and is not fixed, or when the neighbourhoods follow vehicle routes,
-   * which read their solution from the store.
+   * read, or a variable of the vehicle routes, has no value given and is not fixed.
    *
    * @param xs variables of the store
    * @param values their values in the solution
    * @return true when the solution was recorded
    */
   public boolean solution(IntVar[] xs, int[] values) {
-    if (!routings.isEmpty()) {
-      return false;
-    }
     Map<IntVar, Integer> valueOf = new IdentityHashMap<>();
     for (int k = 0; k < xs.length; k++) {
       valueOf.put(xs[k], values[k]);
@@ -678,6 +829,18 @@ public final class AdaptiveLns {
       if (!known[terms[k]]) {
         return false;
       }
+    }
+    for (RouteStructure r : routings) {
+      if (!r.knows(valueOf)) {
+        return false;
+      }
+    }
+    // the routes are read from the given values: LCG hands its best solution over to free search
+    // without learning, which must improve on it. Without them a model with routes started its
+    // neighbourhoods only once free search found a better solution from scratch: CVRPLIB X-n110-k13
+    // (giant tour of the 2015 Challenge model) at 600 s never ran a neighbourhood before 490 s
+    for (RouteStructure r : routings) {
+      r.solution(valueOf);
     }
     System.arraycopy(given, 0, incumbent, 0, vars.length);
     for (int k = 0; k < terms.length; k++) {
@@ -730,6 +893,12 @@ public final class AdaptiveLns {
   int[] neighbourhood(Kind kind) {
     last = kind;
     bounded = new int[0];
+    proposal = null;
+    if (kind == Kind.PROPOSALS) {
+      runs[kind.ordinal()]++;
+      totalRuns++;
+      return proposed();
+    }
     runs[kind.ordinal()]++;
     totalRuns++;
     int free = 0;
@@ -755,6 +924,8 @@ public final class AdaptiveLns {
           case SHIFT -> shiftRelax(relaxed);
           case PACKING -> packingRelax(relaxed);
           case BLOCKS -> blocksRelax(relaxed);
+          case LINES -> linesRelax(relaxed);
+          case RINS -> rinsRelax(relaxed);
           default -> null;
         };
     if (relax == null) {
@@ -770,7 +941,46 @@ public final class AdaptiveLns {
    * @return its value in the best solution.
    */
   public int value(int i) {
-    return incumbent[i];
+    return proposal != null && proposal[i] != Integer.MIN_VALUE ? proposal[i] : incumbent[i];
+  }
+
+  /**
+   * The neighbourhood of a proposal: its variables fixed to the proposed values, every other
+   * variable free. Without a proposal, a random neighbourhood.
+   */
+  private int[] proposed() {
+    int[] current = new int[proposerVars.length];
+    for (int k = 0; k < current.length; k++) {
+      int i = proposerVars[k];
+      current[k] = i >= 0 ? incumbent[i] : proposerValue[k];
+    }
+    int[] values = proposer.propose(current);
+    if (values == null) {
+      // nothing better to propose: the run is a random neighbourhood
+      int free = 0;
+      for (IntVar x : vars) {
+        if (!x.singleton()) {
+          free++;
+        }
+      }
+      int relaxed = Math.max(2, (int) Math.round(share[Kind.RANDOM.ordinal()] * free));
+      return relaxed >= free ? new int[0] : fixedOutside(randomRelax(relaxed));
+    }
+    proposal = new int[vars.length];
+    Arrays.fill(proposal, Integer.MIN_VALUE);
+    for (int k = 0; k < values.length; k++) {
+      if (proposerVars[k] >= 0) {
+        proposal[proposerVars[k]] = values[k];
+      }
+    }
+    int[] fixed = new int[proposerVars.length];
+    int m = 0;
+    for (int i : proposerVars) {
+      if (i >= 0 && !vars[i].singleton()) {
+        fixed[m++] = i;
+      }
+    }
+    return Arrays.copyOf(fixed, m);
   }
 
   /**
@@ -879,7 +1089,10 @@ public final class AdaptiveLns {
       case SHIFT -> SHIFT_ON && tasks.length > 1;
       case PACKING -> packings.length > 0;
       case BLOCKS -> groups.length > 1;
+      case LINES -> lines.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
+      case PROPOSALS -> proposer != null;
+      case RINS -> lpValue != null;
       default -> true;
     };
   }
@@ -1205,10 +1418,18 @@ public final class AdaptiveLns {
           }
         }
       }
+      relaxDepotLinks(kind, successors, relax);
       return relax;
     }
     r.relax(removed, relax);
     return relax;
+  }
+
+  // frees the links between the routes and their depots in a route removal (DEPOT_LINKS)
+  private static void relaxDepotLinks(Kind kind, SuccessorRoutes successors, boolean[] relax) {
+    if (kind == Kind.ROUTES && DEPOT_LINKS) {
+      successors.relaxDepotLinks(relax);
+    }
   }
 
   private boolean[] randomRelax(int relaxed) {
@@ -1490,12 +1711,16 @@ public final class AdaptiveLns {
     List<int[]> taskList = new ArrayList<>();
     Map<Var, Boolean> taskStarts = new IdentityHashMap<>();
     List<int[][]> packingList = new ArrayList<>();
+    List<int[]> lineList = new ArrayList<>();
     for (IntVar x : nodes) {
       for (Constraint c : x.constraintsWithWatches()) {
         if (conOf.containsKey(c)) {
           continue;
         }
         conOf.put(c, -1);
+        if (c instanceof Alldistinct || c instanceof Alldifferent) {
+          readLine(c, nodeOf, lineList);
+        }
         readStructure(c, nodeOf, taskList, taskStarts);
         if (c instanceof Nooverlap packing) {
           readPacking(packing, nodeOf, packingList);
@@ -1531,6 +1756,13 @@ public final class AdaptiveLns {
       }
     }
     conVars = conList.toArray(new int[0][]);
+    lines = lineList.toArray(new int[0][]);
+    inLine = new boolean[nodes.length];
+    for (int[] line : lines) {
+      for (int u : line) {
+        inLine[u] = true;
+      }
+    }
     tasks = taskList.toArray(new int[0][]);
     packings = packingList.toArray(new int[0][][]);
     nodeValue = new int[nodes.length];
@@ -1555,6 +1787,53 @@ public final class AdaptiveLns {
     }
     seenVar = new int[nodes.length];
     seenCon = new int[conVars.length];
+  }
+
+  /** Records the scope of an all-different constraint of at least 3 decision variables. */
+  private void readLine(Constraint c, Map<Var, Integer> nodeOf, List<int[]> lineList) {
+    int[] members =
+        c.arguments().stream()
+            .map(nodeOf::get)
+            .filter(u -> u != null && u < vars.length)
+            .mapToInt(Integer::intValue)
+            .distinct()
+            .toArray();
+    if (members.length >= 3) {
+      lineList.add(members);
+    }
+  }
+
+  /**
+   * Relaxes the scopes of all-different constraints chosen at random, until enough decision
+   * variables are relaxed, each with the decision variables that share a constraint of at most
+   * {@link #LINE_ARITY} variables with a member and are in no all-different scope: on a round-robin
+   * schedule with one all-different constraint over the opponents of each round, the opponents of
+   * whole rounds with their venues and travels, so that rounds can be rematched and reordered.
+   */
+  private boolean[] linesRelax(int relaxed) {
+    boolean[] relax = new boolean[vars.length];
+    int[] order = shuffled(lines.length);
+    int count = 0;
+    for (int k = 0; k < order.length && count < relaxed; k++) {
+      for (int u : lines[order[k]]) {
+        if (!relax[u] && !vars[u].singleton()) {
+          relax[u] = true;
+          count++;
+        }
+        for (int c : varCons[u]) {
+          if (conVars[c].length > LINE_ARITY) {
+            continue;
+          }
+          for (int w : conVars[c]) {
+            if (w < vars.length && !inLine[w] && !relax[w] && !vars[w].singleton()) {
+              relax[w] = true;
+              count++;
+            }
+          }
+        }
+      }
+    }
+    return relax;
   }
 
   /**

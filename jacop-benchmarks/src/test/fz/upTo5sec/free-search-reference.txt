@@ -41,6 +41,7 @@ all_interval3/all_interval3 SAT
 all_interval4/all_interval4 SAT
 all_interval5/all_interval5 SAT
 all_interval6/all_interval6 SAT
+all_interval_n40/all_interval_n40 SAT
 all_min_dist/all_min_dist SAT
 all_paths_graph/all_paths_graph MIN 4
 alldifferent_consecutive_values/alldifferent_consecutive_values SAT
@@ -720,6 +721,7 @@ max_n/max_n SAT
 max_nvalue/max_nvalue SAT
 max_size_of_consecutive_var/max_size_of_consecutive_var SAT
 max_size_set_of_consecutive_var/max_size_set_of_consecutive_var SAT
+maxclique_random70/maxclique_random70 MAX 7
 maxflow/maxflow MAX 29
 maximum-dag/15_05 MAX 46
 maximum_modulo/maximum_modulo SAT

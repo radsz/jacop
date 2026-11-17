@@ -430,12 +430,21 @@ public class IncreasingSum extends Constraint
         model.clause(PbModel.not(model.atLeast(x[i - 1], v)), model.atLeast(x[i], v + step));
       }
     }
+    model.linear(sumRow());
+    return true;
+  }
+
+  /**
+   * Returns the row of the sum, x_1 + ... + x_n - sum = 0, as the encoding writes it.
+   *
+   * @return the row
+   */
+  public LinearForm sumRow() {
     IntVar[] vars = Arrays.copyOf(x, n + 1);
     vars[n] = sum;
     long[] w = new long[n + 1];
     Arrays.fill(w, 1);
     w[n] = -1;
-    model.linear(new LinearForm(vars, w, 0, LinearForm.EQ));
-    return true;
+    return new LinearForm(vars, w, 0, LinearForm.EQ);
   }
 }

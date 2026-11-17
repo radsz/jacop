@@ -49,6 +49,7 @@ import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
+import org.jacop.constraints.AndBool;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
@@ -111,8 +112,10 @@ import org.jacop.constraints.ViolationMeasure;
 import org.jacop.constraints.WeightedSubcircuits;
 import org.jacop.constraints.XeqC;
 import org.jacop.constraints.XeqY;
+import org.jacop.constraints.XgtC;
 import org.jacop.constraints.XgteqY;
 import org.jacop.constraints.XltY;
+import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqZ;
@@ -164,6 +167,7 @@ import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
+import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.prob.constraints.ChanceSum;
 import org.jacop.prob.constraints.ChanceTable;
 import org.jacop.prob.constraints.ProbMdd;
@@ -207,6 +211,50 @@ class GlobalConstraints implements ParserTreeConstants {
   private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
+
+  // The first HybridTable posted for the rows of a short table, compared by content.
+  private final Map<ShortTableRows, HybridTable> shortTables = new HashMap<>();
+
+  /** The rows of a short table and its star value, compared by content. */
+  private record ShortTableRows(List<int[]> rows, int star, int hash) {
+    ShortTableRows(List<int[]> rows, int star) {
+      this(rows, star, hash(rows, star));
+    }
+
+    private static int hash(List<int[]> rows, int star) {
+      int h = star;
+      for (int[] row : rows) {
+        h = 31 * h + Arrays.hashCode(row);
+      }
+      return h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof ShortTableRows(List<int[]> otherRows, int otherStar, int otherHash))
+          || otherHash != hash
+          || otherStar != star
+          || otherRows.size() != rows.size()) {
+        return false;
+      }
+      for (int i = 0; i < rows.size(); i++) {
+        if (!Arrays.equals(rows.get(i), otherRows.get(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "ShortTableRows[rows=" + rows.size() + ", star=" + star + ", hash=" + hash + "]";
+    }
+  }
 
   /** The tuples of a table, compared by content. */
   private record TableTuples(int[][] tuples, int hash) {
@@ -486,6 +534,106 @@ class GlobalConstraints implements ParserTreeConstants {
       support.delayedConstraints.add(configureCumulative(cumul));
     }
     applyCumulativeImpliedOptions(s, d, r, b);
+    if (timeIndexedCumulative(s, d, r)) {
+      // redundant: local search does not evaluate it
+      support.implied(() -> poseTimeIndexedCumulative(s, d, r, b));
+    }
+  }
+
+  // the most (task, time point) pairs of the time-indexed decomposition of a cumulative
+  private static final int TIME_INDEXED_PAIRS =
+      Integer.getInteger("org.jacop.fz.cumulativeTimeIndexedPairs", 4000);
+
+  /**
+   * Whether a cumulative with variable durations also gets the time-resource decomposition, from
+   * the system property {@code org.jacop.fz.cumulativeTimeIndexed}: {@code lcg} (the default) under
+   * lazy clause generation only, {@code true} always, {@code false} never. It is posted only when
+   * the resource uses are fixed and the tasks have at most {@code
+   * org.jacop.fz.cumulativeTimeIndexedPairs} (task, time point) pairs.
+   *
+   * <p>The cumulative propagators take the earliest end of a task as its earliest start plus its
+   * shortest duration. When another constraint bounds the end of the task, such as a stockpile that
+   * stays until it is reclaimed, the part [latest start, earliest end) of the task is compulsory,
+   * but no cumulative rule sees it. The decomposition states the task's presence at each time point
+   * through the literals of its start and of its end, and lazy clause generation learns from them
+   * (Schutt, Feydy, Stuckey and Wallace, Why cumulative decomposition is not as bad as it sounds,
+   * CP 2009). XCSP 2024 Cargo-22 proves its optimum in 4 s and Cargo-10 in 62-154 s, which no 600 s
+   * run proved before.
+   */
+  private boolean timeIndexedCumulative(IntVar[] s, IntVar[] d, IntVar[] r) {
+    String mode = System.getProperty("org.jacop.fz.cumulativeTimeIndexed", "lcg").toLowerCase();
+    if (!("true".equals(mode) || "lcg".equals(mode) && support.options.lcg())) {
+      return false;
+    }
+    if (allVarGround(d) || !allVarGround(r)) {
+      return false;
+    }
+    long pairs = 0;
+    for (int i = 0; i < s.length; i++) {
+      pairs += Math.max(0L, (long) s[i].max() + d[i].max() - s[i].min());
+    }
+    return pairs <= TIME_INDEXED_PAIRS;
+  }
+
+  /**
+   * Posts, for each time point t, the sum of the resource uses of the tasks that run at t, task i
+   * running at t when s[i] &lt;= t &lt; s[i] + d[i], at most the capacity.
+   */
+  private void poseTimeIndexedCumulative(IntVar[] s, IntVar[] d, IntVar[] r, IntVar b) {
+    int n = s.length;
+    IntVar[] end = new IntVar[n];
+    int first = Integer.MAX_VALUE;
+    int last = Integer.MIN_VALUE;
+    for (int i = 0; i < n; i++) {
+      if (d[i].max() > 0 && r[i].value() > 0) {
+        first = Math.min(first, s[i].min());
+        last = Math.max(last, s[i].max() + d[i].max() - 1);
+      }
+    }
+    int points = 0;
+    for (int t = first; t <= last; t++) {
+      List<Integer> tasks = new ArrayList<>();
+      long most = 0;
+      for (int i = 0; i < n; i++) {
+        if (d[i].max() > 0 && r[i].value() > 0 && s[i].min() <= t && t < s[i].max() + d[i].max()) {
+          tasks.add(i);
+          most += r[i].value();
+        }
+      }
+      if (most <= b.min()) {
+        continue;
+      }
+      points++;
+      IntVar[] running = new IntVar[tasks.size() + 1];
+      int[] uses = new int[tasks.size() + 1];
+      for (int k = 0; k < tasks.size(); k++) {
+        int i = tasks.get(k);
+        if (end[i] == null) {
+          end[i] =
+              new IntVar(
+                  support.store, s[i].min() + Math.max(0, d[i].min()), s[i].max() + d[i].max());
+          support.pose(new XplusYeqZ(s[i], d[i], end[i]));
+        }
+        IntVar started = new IntVar(support.store, 0, 1);
+        support.pose(new Reified(new XlteqC(s[i], t), started));
+        IntVar notEnded = new IntVar(support.store, 0, 1);
+        support.pose(new Reified(new XgtC(end[i], t), notEnded));
+        running[k] = new IntVar(support.store, 0, 1);
+        support.poseDc(new AndBool(new IntVar[] {started, notEnded}, running[k]));
+        uses[k] = r[i].value();
+      }
+      running[tasks.size()] = b;
+      uses[tasks.size()] = -1;
+      support.pose(new LinearInt(running, uses, "<=", 0));
+    }
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% cumulative of "
+              + n
+              + " tasks with variable durations, time-indexed at "
+              + points
+              + " points");
+    }
   }
 
   /**
@@ -1942,7 +2090,17 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       return;
     }
-    support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
+    // short tables with the same rows after the filtering (CrosswordDesign, XCSP 2026, posts each
+    // of its dictionary tables of up to 330,000 rows on 24 slots) share the bit-sets of the first
+    HybridTable same = shortTables.get(new ShortTableRows(kept, star));
+    HybridTable table =
+        same == null
+            ? new HybridTable(nv, kept.toArray(new int[0][]), star)
+            : new HybridTable(nv, same);
+    if (same == null) {
+      shortTables.put(new ShortTableRows(kept, star), table);
+    }
+    support.pose(table);
   }
 
   /**
@@ -2097,26 +2255,26 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private int[][] filterFeasibleTuples(int[] tbl, IntVar[] v, int size) {
-    int[][] t = new int[tbl.length / size][size];
-    boolean[] tuplesToRemove = new boolean[t.length];
-    int n = 0;
-    for (int i = 0; i < t.length; i++) {
-      for (int j = 0; j < size; j++) {
-        if (!v[j].domain.contains(tbl[size * i + j])) {
-          tuplesToRemove[i] = true;
-        }
-        t[i][j] = tbl[size * i + j];
+    // only the rows that fit are copied: a table of 26 million rows (Inglenook, XCSP 2026) fits
+    // the domains of most of its constraints with a small part of its rows
+    int rows = tbl.length / size;
+    boolean[] fits = new boolean[rows];
+    int k = 0;
+    for (int i = 0; i < rows; i++) {
+      boolean fit = true;
+      for (int j = 0; j < size && fit; j++) {
+        fit = v[j].domain.contains(tbl[size * i + j]);
       }
-      if (tuplesToRemove[i]) {
-        n++;
+      fits[i] = fit;
+      if (fit) {
+        k++;
       }
     }
-    int k = t.length - n;
     int[][] newT = new int[k][];
     int m = 0;
-    for (int i = 0; i < t.length; i++) {
-      if (!tuplesToRemove[i]) {
-        newT[m++] = t[i];
+    for (int i = 0; i < rows; i++) {
+      if (fits[i]) {
+        newT[m++] = Arrays.copyOfRange(tbl, size * i, size * i + size);
       }
     }
     return newT;
@@ -2153,6 +2311,9 @@ class GlobalConstraints implements ParserTreeConstants {
         toRemove[i] = true;
         numberToRemove++;
       }
+    }
+    if (numberToRemove == 0) {
+      return new TableVarsTuples(v, t);
     }
     int[][] newT = new int[t.length][size - numberToRemove];
     for (int i = 0; i < t.length; i++) {
@@ -2292,10 +2453,33 @@ class GlobalConstraints implements ParserTreeConstants {
   static final boolean BINARY_BIT_TABLE =
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.binaryBitTable", "true"));
 
+  // whether at most one tuple valid in the domains has each value of x[0], or each of x[1]
+  private static boolean functionOfOneColumn(IntVar[] x, int[][] t) {
+    Set<Integer> first = new HashSet<>();
+    Set<Integer> second = new HashSet<>();
+    boolean firstUnique = true;
+    boolean secondUnique = true;
+    for (int[] row : t) {
+      if (x[0].domain.contains(row[0]) && x[1].domain.contains(row[1])) {
+        firstUnique &= first.add(row[0]);
+        secondUnique &= second.add(row[1]);
+      }
+    }
+    return firstUnique || secondUnique;
+  }
+
   private void poseTableBySizePlain(IntVar[] v, int[][] t) {
     // a table of two variables over at most 4096 values each: AC3-bit with residues, about three
     // times as many nodes a second as the compact table on Subisomorphism (XCSP 2024)
-    if (v.length == 2 && BINARY_BIT_TABLE && BinaryBitTable.fits(v[0], v[1])) {
+    // under LCG a table that becomes clauses of its compressed form stays a HybridTable: the
+    // clauses explain themselves, and black-hole searched 2x slower with BinaryBitTable; a
+    // function of one column stays a BinaryBitTable (code-generator 1.7x slower as clauses)
+    if (v.length == 2
+        && BINARY_BIT_TABLE
+        && BinaryBitTable.fits(v[0], v[1])
+        && !(support.options.lcg()
+            && !functionOfOneColumn(v, t)
+            && LcgSolver.compressedTableClauses(v, t))) {
       support.pose(new BinaryBitTable(v[0], v[1], t));
       return;
     }
@@ -2354,6 +2538,10 @@ class GlobalConstraints implements ParserTreeConstants {
     if (f.length != invf.length) {
       throw Store.failException;
     }
+    // and each of f and invf takes distinct values, so a variable repeated in one of them cannot
+    // be satisfied (the implied Alldistinct under ::domain rejects such a list)
+    checkForDuplicateVariables(f);
+    checkForDuplicateVariables(invf);
 
     // inverse(x, x) is symmetric all different, a perfect matching of the variables
     String symmetric = symmetricAlldifferent(f.length);

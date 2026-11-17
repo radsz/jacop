@@ -59,6 +59,7 @@ import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.ArgMax;
+import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
 import org.jacop.constraints.Assignment;
 import org.jacop.constraints.AtLeast;
@@ -321,6 +322,7 @@ class GlobalConstraintBruteForceTest {
         Arguments.of("MaxSimple", maxOrMinSimple(true)),
         Arguments.of("MinSimple", maxOrMinSimple(false)),
         Arguments.of("ArgMax", argMaxOrMin(true)),
+        Arguments.of("ArgMaxMonotone", argMaxMonotone()),
         Arguments.of("ArgMin", argMaxOrMin(false)),
         Arguments.of("Increasing", monotonic(true)),
         Arguments.of("Decreasing", monotonic(false)),
@@ -1447,8 +1449,8 @@ class GlobalConstraintBruteForceTest {
   }
 
   /**
-   * ChannelOrder on the first variable; items may share a 0/1 variable and repeat a threshold, and
-   * thresholds may lie outside the domain of x.
+   * ChannelOrder on the first variable; items may share a 0/1 variable and repeat a threshold,
+   * thresholds may lie outside the domain of x, and items may be implications only.
    */
   private static Instance channelOrder(Random random) {
     int m = 1 + random.nextInt(4);
@@ -1456,10 +1458,12 @@ class GlobalConstraintBruteForceTest {
     int[] which = new int[n];
     int[] t = new int[n];
     boolean[] atMost = new boolean[n];
+    boolean[] implied = new boolean[n];
     for (int i = 0; i < n; i++) {
       which[i] = 1 + random.nextInt(m);
       t[i] = random.nextInt(8) - 1;
       atMost[i] = random.nextBoolean();
+      implied[i] = random.nextInt(3) == 0;
     }
     return new Instance(
         append(new int[][] {domain(random, 0, 5)}, domains(random, m, 0, 1)),
@@ -1468,11 +1472,13 @@ class GlobalConstraintBruteForceTest {
           for (int i = 0; i < n; i++) {
             b[i] = x[which[i]];
           }
-          store.impose(new ChannelOrder(x[0], b, t, atMost));
+          store.impose(new ChannelOrder(x[0], b, t, atMost, implied));
         },
         x -> {
           for (int i = 0; i < n; i++) {
-            if ((x[which[i]] == 1) != ((x[0] <= t[i]) == atMost[i])) {
+            boolean on = x[which[i]] == 1;
+            boolean holds = (x[0] <= t[i]) == atMost[i];
+            if (implied[i] ? on && !holds : on != holds) {
               return false;
             }
           }
@@ -1483,7 +1489,9 @@ class GlobalConstraintBruteForceTest {
             + " t="
             + Arrays.toString(t)
             + " atMost="
-            + Arrays.toString(atMost));
+            + Arrays.toString(atMost)
+            + " implied="
+            + Arrays.toString(implied));
   }
 
   private static Instance count(Random random) {
@@ -2414,6 +2422,62 @@ class GlobalConstraintBruteForceTest {
             int best = 0;
             for (int i = 1; i < n; i++) {
               if (max ? x[i] > x[best] : x[i] < x[best]) {
+                best = i;
+              }
+            }
+            return x[n] == best + 1;
+          },
+          "");
+    };
+  }
+
+  // arg_max over nondecreasing tables of the arguments (with ties), some positions the identity,
+  // a table shorter than the domain, and an argument shared by two positions
+  private static Function<Random, Instance> argMaxMonotone() {
+    return random -> {
+      int n = 1 + random.nextInt(4);
+      int[][] f = new int[n][];
+      int[] first = new int[n];
+      for (int k = 0; k < n; k++) {
+        if (random.nextInt(4) == 0) {
+          continue;
+        }
+        first[k] = random.nextInt(2);
+        f[k] = new int[1 + random.nextInt(4)];
+        int v = random.nextInt(3) - 1;
+        for (int i = 0; i < f[k].length; i++) {
+          v += random.nextInt(3);
+          f[k][i] = v;
+        }
+      }
+      int[] arg = new int[n];
+      for (int k = 0; k < n; k++) {
+        arg[k] = k > 0 && random.nextInt(5) == 0 ? random.nextInt(k) : k;
+      }
+      return new Instance(
+          append(domains(random, n, 0, 3), domain(random, 0, n + 1)),
+          (store, x) -> {
+            IntVar[] list = new IntVar[n];
+            for (int k = 0; k < n; k++) {
+              list[k] = x[arg[k]];
+            }
+            store.impose(new ArgMaxMonotone(list, f, first, x[n], 0));
+          },
+          x -> {
+            long[] y = new long[n];
+            for (int k = 0; k < n; k++) {
+              int u = x[arg[k]];
+              if (f[k] == null) {
+                y[k] = u;
+              } else if (u < first[k] || u >= first[k] + f[k].length) {
+                return false;
+              } else {
+                y[k] = f[k][u - first[k]];
+              }
+            }
+            int best = 0;
+            for (int i = 1; i < n; i++) {
+              if (y[i] > y[best]) {
                 best = i;
               }
             }

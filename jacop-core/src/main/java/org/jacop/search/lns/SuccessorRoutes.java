@@ -33,6 +33,7 @@ package org.jacop.search.lns;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.jacop.core.IntVar;
 
 /**
@@ -142,6 +143,20 @@ final class SuccessorRoutes extends RouteStructure {
   }
 
   @Override
+  void solution(Map<IntVar, Integer> valueOf) {
+    for (int v = 0; v < n; v++) {
+      Integer w = valueOf.get(successors[v]);
+      next[v] = (w == null ? successors[v].value() : w) - offset;
+    }
+    routes = null;
+  }
+
+  @Override
+  IntVar[] routeVariables() {
+    return successors;
+  }
+
+  @Override
   void readRoutes() {
     if (routes != null) {
       return;
@@ -198,6 +213,21 @@ final class SuccessorRoutes extends RouteStructure {
     for (int v = 0; v < n; v++) {
       int w = next[v];
       if (varIndex[v] >= 0 && (removed[v] || w >= 0 && w < n && removed[w])) {
+        relax[varIndex[v]] = true;
+      }
+    }
+  }
+
+  /**
+   * Relaxes the links between the routes and their depots, so that a route can move to another
+   * vehicle.
+   *
+   * @param relax the variables to relax, by index, updated.
+   */
+  void relaxDepotLinks(boolean[] relax) {
+    for (int v = 0; v < n; v++) {
+      int w = next[v];
+      if (varIndex[v] >= 0 && w >= 0 && w < n && w != v && (depot[v] || depot[w])) {
         relax[varIndex[v]] = true;
       }
     }

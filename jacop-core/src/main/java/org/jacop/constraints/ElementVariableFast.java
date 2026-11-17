@@ -49,6 +49,7 @@ import org.jacop.core.IntervalDomain;
 import org.jacop.core.SmallDenseDomain;
 import org.jacop.core.Store;
 import org.jacop.core.ValueEnumeration;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.ElementVariableExplanation;
 import org.jacop.lcg.EntryList;
@@ -78,6 +79,10 @@ public class ElementVariableFast extends AbstractElement
         Explainable,
         PbEncodable {
 
+  /** Whether a fixed index rewrites the constraint to an equality (org.jacop.rewrite.element). */
+  static final boolean REWRITE_FIXED_INDEX =
+      Boolean.parseBoolean(System.getProperty("org.jacop.rewrite.element", "true"));
+
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
   /** The most values of the list variables and the value an encoding enumerates. */
@@ -103,6 +108,89 @@ public class ElementVariableFast extends AbstractElement
 
   /** No common value is known for the position. */
   private static final int NO_SUPPORT = Integer.MIN_VALUE;
+
+  /**
+   * The store indices of the list variables that are neither the index nor the value, sorted, made
+   * at the first wake; {@link #wakePositions} holds their positions in the same order. {@link
+   * #queueVariable} finds a changed variable there by binary search, without hashing it (identity
+   * hash codes would change the search order of other parts).
+   */
+  private int[] wakeKeys;
+
+  private int[] wakePositions;
+
+  /**
+   * For store indexes that span few values, the first entry of {@link #wakeKeys} with key {@code
+   * wakeBase + d} at {@code wakeFirst[d]}, or -1: a wake then finds its positions without a binary
+   * search. On MiniZinc Challenge multi-agent-graph-coverage 1086 elements share two lists of 543
+   * variables, so each change of a variable wakes 543 elements, and their binary searches took 16 %
+   * of the solving time.
+   */
+  private int[] wakeFirst;
+
+  private int wakeBase;
+
+  /** No wake since the last consistency call: the call was queued for another reason. */
+  private static final int WAKE_NONE = 0;
+
+  /** Only list variables at positions the index can no longer select changed. */
+  private static final int WAKE_IDLE = 1;
+
+  /** List variables changed, the selectable positions among them are in {@link #changed}. */
+  private static final int WAKE_LIST = 2;
+
+  /** The index or the value changed, or too many positions to list. */
+  private static final int WAKE_FULL = 3;
+
+  /** Selectable changed positions a wake of {@link #WAKE_LIST} lists. */
+  private static final int CHANGED_CAP = 16;
+
+  /**
+   * The wakes since the last consistency call, the largest of the WAKE_ constants. Not trailed: a
+   * wake lost to a failure leaves it larger than needed, which costs one more full call, since
+   * every change of a domain after the last call is reported by a wake.
+   *
+   * <p>On XCSP 2026 TelecomScheduling the lists are an agent's teams on every day (x[agent][day])
+   * and each task selects the day of every agent: a change of one team woke every element of that
+   * agent, and each scanned the whole index domain of 100-200 days, 85 % of the solving time. A
+   * wake from a position the index cannot select changes nothing, and one from a few selectable
+   * positions changes nothing when those positions keep a common value with the value and the
+   * value's bounds and values keep their supports ({@link #listChangeKeepsFixpoint}).
+   */
+  private int wake;
+
+  /**
+   * The selectable positions of the list variables that woke the constraint since its last call.
+   */
+  private final int[] changed = new int[CHANGED_CAP];
+
+  private int changedCount;
+
+  /** A position whose minimum supported the value's minimum at the last full call, or -1. */
+  private int minSupport = -1;
+
+  /** A position whose maximum supported the value's maximum at the last full call, or -1. */
+  private int maxSupport = -1;
+
+  /**
+   * For a value of the value of at most 64 values, a position whose variable had it, at index value
+   * - {@link #valueSupportBase}, or -1; residues checked again at every use.
+   */
+  private int[] valueSupport;
+
+  private int valueSupportBase;
+
+  /**
+   * For each position, the values (as bits from {@link #valueSupportBase}) whose residue in {@link
+   * #valueSupport} may be that position; a superset, so a change of the position rechecks them.
+   */
+  private long[] supportsOf;
+
+  /** The values (as bits from {@link #valueSupportBase}) that have a residue. */
+  private long coveredValues;
+
+  /** A selectable position whose variable is not fixed to the fixed value, or -1; a residue. */
+  private int openPosition = -1;
 
   /**
    * It constructs an element constraint.
@@ -196,11 +284,244 @@ public class ElementVariableFast extends AbstractElement
   }
 
   @Override
+  public void queueVariable(int level, Var var) {
+    if (wake == WAKE_FULL) {
+      return;
+    }
+    if (var == index || var == value) {
+      wake = WAKE_FULL;
+      return;
+    }
+    if (wakeKeys == null) {
+      indexWakePositions();
+    }
+    int key = var.index();
+    int k;
+    if (wakeFirst != null) {
+      int d = key - wakeBase;
+      k = d >= 0 && d < wakeFirst.length ? wakeFirst[d] : -1;
+    } else {
+      k = Arrays.binarySearch(wakeKeys, key);
+      while (k > 0 && wakeKeys[k - 1] == key) {
+        k--;
+      }
+    }
+    if (k < 0) {
+      wake = WAKE_FULL;
+      return;
+    }
+    int kind = WAKE_IDLE;
+    for (; k < wakeKeys.length && wakeKeys[k] == key; k++) {
+      int p = wakePositions[k];
+      if (index.domain.contains(p + 1 + indexOffset)) {
+        if (changedCount == CHANGED_CAP) {
+          wake = WAKE_FULL;
+          return;
+        }
+        changed[changedCount++] = p;
+        kind = WAKE_LIST;
+      }
+    }
+    wake = Math.max(wake, kind);
+  }
+
+  /**
+   * A change of list variables only at positions the index cannot select ({@code WAKE_IDLE}) is not
+   * queued. In the giant-tour model of CVRP (MiniZinc Challenge 2015) each arrival time, load and
+   * vehicle variable is in the list of about 330 elements {@code a[successor[i]]}, and once the
+   * successors are fixed nearly all of them are idle for any change.
+   */
+  @Override
+  public boolean wakeNeeded() {
+    return wake != WAKE_IDLE;
+  }
+
+  private void indexWakePositions() {
+    long[] packed = new long[list.length];
+    int n = 0;
+    for (int p = 0; p < list.length; p++) {
+      IntVar x = list[p];
+      if (x != index && x != value) {
+        packed[n++] = ((long) x.index() << 32) | p;
+      }
+    }
+    Arrays.sort(packed, 0, n);
+    int[] keys = new int[n];
+    int[] at = new int[n];
+    for (int k = 0; k < n; k++) {
+      keys[k] = (int) (packed[k] >> 32);
+      at[k] = (int) packed[k];
+    }
+    wakePositions = at;
+    wakeKeys = keys;
+    if (n > 0 && keys[0] >= 0 && (long) keys[n - 1] - keys[0] < 4L * n + 64) {
+      int[] first = new int[keys[n - 1] - keys[0] + 1];
+      Arrays.fill(first, -1);
+      for (int k = n - 1; k >= 0; k--) {
+        first[keys[k] - keys[0]] = k;
+      }
+      wakeBase = keys[0];
+      wakeFirst = first;
+    }
+  }
+
+  /**
+   * Whether the last call's pruning still holds after the list variables at the first n positions
+   * of {@link #changed} changed and nothing else did: each of those positions still shares a value
+   * with the value, and the value's bounds and, for a value of at most 64 values, each of its
+   * values keeps a selectable supporting position. When it does not, the full scan prunes; this
+   * only spares the scan when it would prune nothing, without its entailment test.
+   */
+  private boolean listChangeKeepsFixpoint(int n) {
+    for (int k = 0; k < n; k++) {
+      int p = changed[k];
+      if (index.domain.contains(p + 1 + indexOffset) && !supported(p)) {
+        return false;
+      }
+    }
+    if (value.singleton()) {
+      // every supported position has the value, so its bounds hold and it has no other values.
+      // When no selectable position is left open, the full scan finds the constraint entailed and
+      // removes it, which spares the later wakes: a residue keeps an open position
+      int v = value.value();
+      if (!open(openPosition, v)) {
+        // the search goes on after the last open position, round to the start: the positions
+        // before it are mostly the ones fixed since
+        int from = Math.max(openPosition, 0) + 1 + indexOffset;
+        openPosition = nextOpen(from, index.max(), v);
+        if (openPosition < 0) {
+          openPosition = nextOpen(index.min(), from - 1, v);
+        }
+        if (openPosition < 0) {
+          return false;
+        }
+      }
+      return true;
+    }
+    int min = value.min();
+    int max = value.max();
+    if (!keepsSupport(minSupport, min, true)) {
+      int q = findSupport(min, true);
+      if (q < 0) {
+        return false;
+      }
+      minSupport = q;
+    }
+    if (!keepsSupport(maxSupport, max, false)) {
+      int q = findSupport(max, false);
+      if (q < 0) {
+        return false;
+      }
+      maxSupport = q;
+    }
+    if ((long) max - min >= 64) {
+      return true; // the full scan prunes only the bounds of a value of 64 values or more
+    }
+    if (valueSupport == null || min < valueSupportBase || (long) max - valueSupportBase >= 64) {
+      return false;
+    }
+    // a residue stays valid until its position changes: the index did not change since the last
+    // full call, which rebuilt the residues, and a position that changed since is in changed or
+    // made that call full; after backtracking the domains are larger, so the residues still hold.
+    // Only the values supported by a changed position and those without a residue are checked
+    long touched = ~coveredValues;
+    for (int k = 0; k < n; k++) {
+      touched |= supportsOf[changed[k]];
+    }
+    int from = min - valueSupportBase;
+    long span = (1L << (max - min)) * 2 - 1; // max - min < 64, so 2^64 - 1 wraps to every bit
+    for (long check = touched & (span << from); check != 0; check &= check - 1) {
+      int bit = Long.numberOfTrailingZeros(check);
+      int v = valueSupportBase + bit;
+      if (!value.domain.contains(v)) {
+        continue;
+      }
+      int q = valueSupport[bit];
+      if (q < 0 || !index.domain.contains(q + 1 + indexOffset) || !list[q].domain.contains(v)) {
+        q = findValue(v);
+        if (q < 0) {
+          return false;
+        }
+        valueSupport[bit] = q;
+        supportsOf[q] |= 1L << bit;
+        coveredValues |= 1L << bit;
+      }
+    }
+    return true;
+  }
+
+  /** The first open position whose index value is in lo..hi, or -1. */
+  private int nextOpen(int lo, int hi, int v) {
+    IntDomain d = index.domain;
+    for (int i = d.contains(lo) ? lo : d.nextValue(lo); i <= hi && i >= lo; ) {
+      int q = i - 1 - indexOffset;
+      if (open(q, v)) {
+        return q;
+      }
+      int next = d.nextValue(i);
+      if (next <= i) {
+        break;
+      }
+      i = next;
+    }
+    return -1;
+  }
+
+  /** Whether position q is selectable and its variable is not fixed to v. */
+  private boolean open(int q, int v) {
+    return q >= 0
+        && index.domain.contains(q + 1 + indexOffset)
+        && !(list[q].singleton() && list[q].value() == v);
+  }
+
+  /** Whether selectable position q has a common value with the value and reaches bound v. */
+  private boolean keepsSupport(int q, int v, boolean lower) {
+    return q >= 0
+        && index.domain.contains(q + 1 + indexOffset)
+        && (lower ? list[q].min() <= v : list[q].max() >= v)
+        && supported(q);
+  }
+
+  private int findSupport(int v, boolean lower) {
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int q = e.nextElement() - 1 - indexOffset;
+      if ((lower ? list[q].min() <= v : list[q].max() >= v) && supported(q)) {
+        return q;
+      }
+    }
+    return -1;
+  }
+
+  /** A selectable position whose variable has value v, which the value has too, or -1. */
+  private int findValue(int v) {
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int q = e.nextElement() - 1 - indexOffset;
+      if (list[q].domain.contains(v)) {
+        return q;
+      }
+    }
+    return -1;
+  }
+
+  @Override
   public void consistency(Store store) {
 
-    if (init.begin(store)) {
+    boolean first = init.begin(store);
+    int woken = wake;
+    int n = changedCount;
+    wake = WAKE_NONE;
+    changedCount = 0;
+    if (first) {
       initFirstConsistencyCheck(store);
+    } else if (woken == WAKE_IDLE) {
+      // only positions the index cannot select changed: the last call's result still holds
+      return;
+    } else if (woken == WAKE_LIST && !index.singleton() && listChangeKeepsFixpoint(n)) {
+      return;
     }
+    // changes seen by a full call are not checked against the value residues: drop them unless
+    // the scan below rebuilds them
+    valueSupportBase = Integer.MAX_VALUE;
 
     if (value.singleton() && index.singleton()) {
       IntVar v = list[index.value() - 1 - indexOffset];
@@ -210,6 +531,11 @@ public class ElementVariableFast extends AbstractElement
     }
     if (index.singleton()) {
       int position = index.value() - 1 - indexOffset;
+      if (REWRITE_FIXED_INDEX && list[position] != value && canRewrite(store)) {
+        // the other positions can no longer matter: an equality stops their wake-ups
+        rewriteTo(store, new XeqY(list[position], value));
+        return;
+      }
       value.domain.in(store.level, value, list[position].domain);
       list[position].domain.in(store.level, list[position], value.domain);
       if (value.singleton()) {
@@ -224,6 +550,17 @@ public class ElementVariableFast extends AbstractElement
     // the values of the selectable positions, as bits from valueMin, when the value spans 64 values
     boolean smallValue = !value.singleton() && (long) value.max() - valueMin < 64;
     long supportBits = 0;
+    if (smallValue) {
+      if (valueSupport == null) {
+        valueSupport = new int[64];
+        supportsOf = new long[list.length];
+      }
+      Arrays.fill(valueSupport, -1);
+      Arrays.fill(supportsOf, 0L);
+      valueSupportBase = valueMin;
+    }
+    int lowest = -1;
+    int highest = -1;
     IntervalDomain indexDom = new IntervalDomain(5); // create with size 5 ;)
     boolean indexDomNonEmpty = false;
     // whether every selectable position is fixed to the fixed value: then the constraint holds
@@ -239,14 +576,30 @@ public class ElementVariableFast extends AbstractElement
           indexDom.addLastElement(position + 1 + indexOffset);
         }
       } else {
-        min = Math.min(min, list[position].min());
-        max = Math.max(max, list[position].max());
+        int lo = list[position].min();
+        int hi = list[position].max();
+        if (lo < min) {
+          min = lo;
+          lowest = position;
+        }
+        if (hi > max) {
+          max = hi;
+          highest = position;
+        }
         entailed = entailed && list[position].singleton() && list[position].value() == valueMin;
         if (smallValue) {
-          supportBits |= list[position].domain.bitsFrom(valueMin);
+          long bits = list[position].domain.bitsFrom(valueMin);
+          for (long added = bits & ~supportBits; added != 0; added &= added - 1) {
+            valueSupport[Long.numberOfTrailingZeros(added)] = position;
+          }
+          supportsOf[position] |= bits & ~supportBits;
+          supportBits |= bits;
         }
       }
     }
+    minSupport = lowest;
+    maxSupport = highest;
+    coveredValues = supportBits;
 
     if (indexDomNonEmpty) {
       index.domain.in(store.level, index, indexDom.complement());

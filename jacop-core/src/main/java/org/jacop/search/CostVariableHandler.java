@@ -122,4 +122,16 @@ public interface CostVariableHandler {
    * @return the previous cost value (for minimization)
    */
   double getPreviousCostValue(double costValue);
+
+  /**
+   * Restricts the cost variable to at most the given bound, for a search that asks for more than
+   * the next better cost ({@link DepthFirstSearch#setFloatCostBound}).
+   *
+   * @param store the store
+   * @param v the cost variable
+   * @param bound the largest cost allowed
+   */
+  default void boundCostDomain(Store store, Var v, double bound) {
+    throw new UnsupportedOperationException("no cost bound for " + v);
+  }
 }

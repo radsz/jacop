@@ -2120,6 +2120,10 @@ Version 5.0 (unreleased)
      turns it off. gt-sort, 60 s, model search: 3 of 5 optimal (none
      before), the optimum found on all 4 instances with a known one.
      Only gt-sort changes model on the wide set.
+     The [e_i = v] literals are shared by all chains, reuse the model's
+     own int_eq_reif Booleans and go into one ChannelReif per element
+     variable instead of one reified x = v each (gt-sort n13: 688k ->
+     52k propagators; 600 s -f: 22 % less time on the 4 proved).
 
 140. LP duals are those of the costs as given. Both dual simplex engines
      perturb the costs by about 1e-7 against dual degeneracy, and the
@@ -5789,6 +5793,1984 @@ Version 5.0 (unreleased)
    clock. The rest come from time limits outside LCG: symmetry detection
    (ptv, steelmillslab) and search without learning after LCG gave way
    (celar graph11, whirlpool d29).
+
+334. Free search with lazy clause generation (-f) no longer decides only
+   0/1 variables before a first solution: once 2,000 conflicts pass
+   without a solution, its activity runs take turns at restarts with and
+   without the 0/1 variables first, until the first solution
+   (--free-config lcg-booleans-first=until-solution, the new default;
+   lcg-booleans-first-after sets the conflicts; on restores the old
+   order). On the XCSP 2024 traveling tournament with 24 to 40 teams,
+   Booleans first decided the whole home/away pattern before any
+   opponent and found no solution in 600 s; now the first one comes in
+   30 to 60 s. Adaptive LNS has a new kind LINES, which relaxes the
+   scopes of random all-different constraints (such as the rounds of a
+   round-robin schedule) with the variables that small constraints tie to
+   them alone.
+
+335. New constraint ArgMaxMonotone(x, f, first, index, offset): index is the
+   first position k of the largest f[k](x[k]), for nondecreasing functions
+   f[k] given as tables. It runs the ArgMax rules (Gange and Stuckey, CP
+   2020) through the functions, in the spirit of views (Schulte and Tack,
+   CP 2005), and under LCG explains with the bounds of the x[k]. The
+   FlatZinc front end posts it for an arg_max whose values are defined by
+   y = m * v + c and v = e[p] over a constant array: MiniZinc flattens
+   arg_max(t)(a[h, t] * e[p[t]]) with one variable per value, whose bounds
+   ArgMax explained, so learnt clauses about one arg_max did not apply to
+   another. On the 15 tower instances of the MiniZinc Challenge (2020,
+   2022, 2025), the only Challenge model with arg_max, -f at 600 s proves
+   10 instead of 9 (tower_070_070_15_070-08 in 250 s, unproved before;
+   learnt clauses 72 -> 38 literals) and 6 others about twice as fast.
+   -Dorg.jacop.fz.argMaxFunctions=false turns it off; it is off under
+   --proof.
+
+336. In free search with lazy clause generation, the runs of the default
+   branching of a model without search annotation place the rectangles
+   of its diffn constraints first, one at a time, bottom-left: the
+   rectangle that can start first in the first dimension (ties to the one
+   that can start first in the second) gets its origins and lengths set
+   to their smallest values, then the next (the bottom-left rule of
+   B. S. Baker, E. G. Coffman and R. L. Rivest, "Orthogonal packings in
+   two dimensions", SIAM Journal on Computing 9(4), 1980; one rectangle
+   at a time as in H. Simonis and B. O'Sullivan, "Search strategies for
+   rectangle packing", CP 2008). Set times on the cumulative starts
+   follows, as before. The rectangles are placed until the first
+   solution (--free-config rect-placement=first, the default; always in
+   every such run, off never). On the coal stockyard of XCSP 2024 Cargo,
+   where stockpiles are rectangles of days by pad positions with a
+   variable stay, set times alone found no solution of Cargo-16 and 20 in
+   600 s and one of Cargo-19 at 220 s; with the placement, 132,939,
+   114,274 and 112,584 at 600 s, below the best of the 2024 competition
+   (248,754, 295,975 and 256,274 in 1800 s), and Cargo-12 24,404 instead
+   of 27,966; the other 12 Cargo instances end the same. Placing in every
+   run lost Cargo-07's proof and Cargo-10's best solution. None of the 14
+   wide-set models with diffn is affected: all have a search annotation.
+
+337. Symmetry breaking in the FlatZinc front end breaks the conditional
+   symmetry of interchangeable values in a sequence ordered by
+   precedences (new class org.jacop.fz.ConditionalValueSwaps), as in the
+   patience game Black Hole (I. P. Gent, C. Jefferson, T. Kelsey, I.
+   Lynce, I. Miguel, P. Nightingale, B. M. Smith and S. A. Tarim, "Search
+   in the patience game 'Black Hole'", AI Communications 20(3), 2007;
+   conditional symmetry: I. P. Gent, T. Kelsey, S. A. Linton, I.
+   McDonald, I. Miguel and B. M. Smith, "Conditional symmetry breaking",
+   CP 2005). The model has inverse(x, y), tables on x whose relation is
+   the same after two values a and b are exchanged, and precedences
+   y[u] < y[v]. Exchanging a and b in a solution keeps it a solution when
+   the predecessors of the value moved forward still come before it and
+   the successors of the value moved back still come after it, so
+   y[b] < y[a] -> OR(u before a) y[u] > y[b] \/ OR(s after b) y[s] < y[a]
+   is posted for a the value the lex-leader order prefers (Crawford,
+   Ginsberg, Luks and Roy, KR 1996). The constraints are lex-leader
+   constraints over x in the order of the other symmetry breaking
+   constraints, whose first variables are those of the search
+   annotation: with int_search(x, input_order, indomain_min, complete)
+   the search finds the same first solution as without them, takes the
+   same decisions, and fails sooner, so fixed search still follows the
+   annotation. On the 25 black-hole instances of the MiniZinc Challenges
+   2009-2025 at 600 s, fixed search solves 25 instead of 17
+   (2025 layout_3 40 s, layout_14 17 s, layout_17 9 s, all three unknown
+   before; 2009 instance 19 proved unsatisfiable in 38 s); the 17 that
+   both solve take 2.1x less time in geomean, and the 12 satisfiable ones
+   among them print the same first solution. It fires on 2 of the 240
+   instances of the wide benchmark set, both black-hole. It is used for
+   satisfaction problems that ask for one solution, not under free search
+   (-f), which solves all 25 within 13 s without it and was up to 5.8x
+   slower with it on the 9 hard ones; -Dorg.jacop.fz.symmetrySwaps=false turns it off. The
+   statistic symmetryValueSwaps counts the pairs of values.
+
+338. Lazy clause generation follows a search annotation (or the default
+   branching of a model without one) with fewer decisions. Such a run
+   decides its variables in a fixed order, so after a backjump it took
+   again every decision between the backjump level and the conflict:
+   gardner_dinner made 2,242 decisions for 90 conflicts, against 266 nodes
+   without learning. The runs that follow the annotation now backtrack one
+   level after a backjump over more than 10 levels, assert the learnt
+   literal on the level kept, and assert it again if a later backtrack
+   goes below it (chronological backtracking: A. Nadel and V. Ryvchin,
+   "Chronological Backtracking", SAT 2018, LNCS 10929; the missed lower
+   implications handled lazily as in A. Moehle and A. Biere, "Backing
+   Backtracking", SAT 2019, LNCS 11628; the threshold is lowered from
+   their 100). gardner_dinner takes 193 decisions. Backtracking one level
+   after every conflict lost the only solution of 2026 orthorio
+   challenge_12 in 600 s, since with first_fail a short backjump reorders
+   the decisions after the learnt literal. --free-config lcg-chrono=<n>
+   sets the threshold (0 always, -1 never); the statistic
+   lcgChronoBacktracks counts these backtracks.
+   When the annotation has fixed all its variables, the run also takes the
+   assignment as a solution if the printed variables and the objective
+   are fixed, every variable left has no constraint that is not entailed,
+   and every clause is satisfied; the variables left take their smallest
+   values. Before, activity decisions went on over the variables left: on
+   a_card_trick_1 (a 4 x 13 card layout with set channels), 1,014
+   decisions on 0/1 variables that no constraint used after the 29 of the
+   annotation, against 37 nodes without learning. It now takes 29. It is
+   off with neighbourhood search, presolve and proof logging; the
+   statistic lcgCompletedModels counts these solutions. On the 240
+   wide-set instances at 600 s, default search solves 170 instead of 169
+   and finds a solution of 203 instead of 202, 7 families better and none
+   worse (ptv pax_period_20_3b proved in 486 s, unit-commitment
+   L12-T48G15L10 a first solution, physician-scheduling instance10
+   10810 -> 9015); free search (-f) solves the same 193, 3 families
+   better and 2 worse.
+
+339. Symmetry breaking renames the elements of set variables: set
+   variables that only set operations, set comparisons other than the
+   lexicographic ones and cardinalities constrain (set_union,
+   set_intersect, set_diff, set_symdiff, set_eq, set_ne, set_subset,
+   set_superset and their reified forms, disjoint, set_card), with no
+   constant set among their arguments, form a set value space, whose
+   values may be permuted together in all its sets. Their elements join
+   one vertex per value in the variable graph, so the automorphisms find
+   the value symmetry next to the symmetry of the set variables, and the
+   card-symbol matrix of a model with both gets lex chains on its rows
+   and its columns (double lex, P. Flener, A. Frisch, B. Hnich, Z. Kiziltan,
+   I. Miguel, J. Pearson and T. Walsh, "Breaking row and column symmetries
+   in matrix models", CP 2002, LNCS 2470). As for the set symmetries of
+   item 241, only models whose search annotation branches on set
+   variables; -Dorg.jacop.fz.symmetrySetValues=false turns it off. Of the
+   65 Challenge instances with set variables it fires on the 5 of 2021
+   monomatch (Dobble cards), where it proves the 3 UNSAT instances in
+   under 3 s with and without -f (before, at 600 s: n3 in 50 s with -f
+   and 155 s without, the two n4 unknown) and finds the n5 and n6
+   solutions in 2.0-3.5 s with -f (n6 without -f 85 -> 14 s).
+
+340. Satisfaction models get a second linear relaxation, solved once at
+   the root and then removed, that can refute them. It holds the value
+   encodings of the counting, all-different and element constraints
+   (with the count bounds of global_cardinality), the model's linear and
+   clause rows restated over the value columns, and the pair conflicts
+   merged into cliques (Atamturk, Nemhauser and Savelsbergh, Conflict
+   graphs in solving integer programming problems, EJOR 2000). A control
+   b of a half-reified b -> x != c (MiniZinc's translation of a
+   disequality in a disjunction) is bounded by 1 - [x = c], and the z of
+   not z -> x != c by [x = c], so the clause (x != c) \/ (y != c) becomes
+   [x = c] + [y = c] <= 1. Such counts are pigeonhole arguments, which
+   resolution and so lazy clause generation refute only in exponentially
+   many steps (Haken, The intractability of resolution, TCS 1985). The
+   main relaxation keeps these encodings only for an objective. The
+   social golfers 08-04-11 of the XCSP 2024 competition (32 players in 8
+   groups of 4 for 11 weeks: each player meets 3 others a week, 33 in
+   all, but there are 31) were UNKNOWN at 600 s and are now refuted at
+   the root in under 2 s; only LP-based solvers proved them in the
+   competition. The root solve is capped at 2,500 pivots
+   (org.jacop.lp.rootRefutationPivots). It fires on 353 of the 792 XCSP
+   2022-2025 satisfaction instances (median 0.4 s more on the 2024 ones
+   both versions solve) and on 15 of the 53 satisfaction instances of
+   the wide benchmark set, with the same answers and, under -f, the same
+   search trees. -Dorg.jacop.lp.rootRefutation=false turns it off;
+   --search-statistics prints lpRefutationRows, lpRefutationCliques,
+   lpRefutation (refuted, feasible, limit), lpRefutationTime and
+   lpRefutationPivots.
+
+341. The FlatZinc front end merges common subexpressions before posting
+   (as CP-SAT's presolve does, DetectDuplicateConstraints: Perron, Didier
+   and Gay, The CP-SAT-LP solver, CP 2023; and the duplicate-row presolver
+   of MIP solvers: Achterberg, Bixby, Gu, Rothberg and Weninger, Presolve
+   reductions in mixed integer programming, INFORMS Journal on Computing
+   32(2), 2020). Two constraints that define their outputs by the same function
+   of the same arguments (reified comparisons, Boolean connectives,
+   int_times/plus/min/max/div/mod/abs, reified linear constraints,
+   elements) give one output, the other becomes its alias; a plain
+   equality of two variables (int_eq, bool_eq, x - y = 0, a conjunction
+   of one literal) aliases them; a repeated constraint is posted once, and
+   a linear constraint adds the coefficients of a repeated variable. It
+   repeats until nothing changes (at most 6 rounds). It changes the model
+   of 56 of the 240 instances of the wide benchmark set
+   (community-detection rnd_n100: 5,190 -> 211 constraints, 6.6 -> 4.1 s).
+   At 600 s against the build with enforcement inlining it solves 44 of
+   them as before in default mode (time geomean 1.007, cable-tree-wiring
+   A041 finds a worse best value on another search tree) and 48 as before
+   with -f (geomean 1.002). -Dorg.jacop.fz.cse=false turns it off; it is
+   off under --proof.
+
+342. JaLP chooses the leaving row of the dual simplex by gap^1.2 / weight
+   instead of gap^2 / weight (dual steepest edge) on LPs shaped like
+   multicommodity flows: at least 5000 columns, at most 2.2 nonzeros per
+   column and at most 4 columns per row (the less sensitive dual steepest
+   edge of Q. Huangfu, High performance simplex solver, PhD thesis,
+   University of Edinburgh, 2013, section 3.3). Squaring the gap favours
+   dense rows of the tableau, whose pivots lose the hypersparse solves.
+   On the 659 LPs of the LP bench at 120 s: 643 -> 644 solved, 0 wrong,
+   solve time 0.98 overall and 0.83 on the Mittelmann LPs, 18 LPs faster
+   and 1 slower (pds-30 39 -> 20 s, pds-50 112 -> 57 s, pds-60 proved in
+   74 s, the n37 network design LPs 0.45-0.8; snp-02-004-104 1.9 slower).
+   Without the shape gate it is 1.13 slower over the bench. On the 11
+   wide-set runs where it applies (600 s) nothing is solved or lost.
+   -Dorg.jacop.jalp.linearScore=on|off overrides the choice.
+
+343. The -p portfolio can split one depth-first search over its threads by
+   work stealing with recomputation (Schulte, "Parallel search made
+   simple", TRICS 2000; Chu, Schulte and Stuckey, "Confidence-based work
+   stealing in parallel constraint programming", CP 2009): a thread that
+   runs out of work takes an open right branch of another thread, given as
+   the decisions that lead to it, replays them in its own store and
+   searches below; the best bound is shared. With free search and at least
+   4 threads two threads do this by default, CP search (--lcg off) on the
+   model's annotation in place of the last two settings; option
+   --free-config portfolio-dfs-split=<threads> sets their number, 0 turns
+   it off. On the 240 instances of the wide set at 600 s (-f -p 4): 203
+   solved instead of 200, 7 families better, 3 worse; MiniZinc Challenge
+   2022 generalized-peacable-queens n9_q5 is proved in 484 s (not proved
+   in 600 s before, CP-SAT -p 4 264 s) and n8_q3 in 31 s instead of 53 s.
+   A split thread runs the propagation of the root before its first cube,
+   so the linear relaxation keeps root reduced costs from the root and not
+   from that cube. Statistics portfolioDfsSplitThreads, portfolioDfsSplits,
+   portfolioDfsCubesClosed, portfolioDfsSplitWaitMillis.
+
+344. The FlatZinc front end rewrites a variable s defined by a sum
+   s = sum(i) a[i] * x[i] that is used otherwise only in half-reifications
+   b -> s = m or b -> s <= m, where m is the least value of the sum: each
+   becomes the clauses not b \/ x[i] = v[i], with v[i] the bound at which
+   the term is least, and the sum is no longer posted (an output s gets its
+   value from the terms when a solution is printed; under presolve the sum
+   stays, woken only when a term is fixed). This is the presolve rule that a
+   linear constraint at its minimum activity fixes every term at its
+   minimum (CP-SAT, OR-Tools cp_model_presolve.cc), under the enforcement
+   literal. XCSP3 translations write it as or(ne(x, v), eq(aux, 0)) with aux
+   the sum of the variables around x; in SameQueensKnights (XCSP 2024) the
+   2,450 to 11,250 sums of up to 300 terms took 80 % of the time. At 600 s
+   all 15 instances improve or stay: b-10 is proved optimal (490 s), and 8
+   instances reach values above the best of the 2024 competition (b-75 133
+   instead of 94, field best 86; b-70 125 instead of 110, field 115). It
+   fires on none of the 240 instances of the wide benchmark set.
+   -Dorg.jacop.fz.zeroSum=false turns it off; it is off under --proof.
+
+345. A root solve of the linear relaxation of an optimisation model in the
+   sparse simplex (the first solve, or the trial of the extra rows such as
+   value encodings) that stops at its pivot or work budget now goes on
+   within half of the time a large relaxation gets for its root solves
+   (org.jacop.lp.largeRootShare of the time limit). Such a solve gave no
+   bound and its rows were dropped. On Drinking-010000 of the XCSP 2024
+   competition (13,142 rows and 12,570 extra rows) the trial stopped at its
+   budget and the bound stayed 0; it now takes 0.8 s more and the bound is
+   1,000, the optimum, as Drinking-020000, a large relaxation, already had.
+   It fires on none of the optimisation instances of the wide benchmark
+   set. -Dorg.jacop.lp.rootExtendShare=0 turns it off; the statistic
+   lpRootExtendTime gives its time.
+
+351. Value symmetry breaking also looks at index variables of element
+   constraints: when no value symmetry is found on the model as written,
+   each element constraint x = A[k] is read as k selecting a position of
+   A, so that permuting the values of k permutes the arrays it selects
+   from (and with them their rows). A value symmetry found on k is broken
+   by value precedence (Law and Lee, CP 2004; Puget, CP 2005, "Breaking
+   all value symmetries in surjection problems"). The pass gets at most
+   half of the time left for symmetry detection. On the XCSP 2026
+   competition it proves HIPP (haplotype inference by pure parsimony)
+   I0-gus-15, I1-gus-14, I2-gus-21, brown-I0-bro-15, brown-I1-bro-14 and
+   brown-I2-bro-21 unsatisfiable in 1.5 to 12 s at 600 s (none before;
+   I2-gus-21 was proved by no competition solver), and Antichain2 085 and
+   086 in 58 and 82 s (198 and 244 s before). It fires on CoveringArray
+   (XCSP 2023) and Wordpress (XCSP 2024) and on 3 of the 240 instances of
+   the wide benchmark set (wordpress, open-stacks, stable-goods).
+   -Dorg.jacop.fz.symmetryIndexValues=false turns it off.
+
+352. The FlatZinc front end posts an "exists k" pattern of XCSP3
+   translations, an index variable k used only by element constraints
+   r_i = A_i[k] whose results are used only by one linear relation
+   C(r_1, ..., r_n), as the disjunction over the positions p of
+   C(A_1[p], ..., A_n[p]): half-reified linear constraints b_p ->
+   C(A_1[p], ...) and the clause of the b_p (at most 64 positions,
+   org.jacop.fz.indexDisjunction.max). k and the r_i are no longer posted
+   and get their values from the first position that holds when a
+   solution is printed. Before, the element constraints only propagated
+   bounds of the r_i through k. On Antichain2 of the XCSP 2026
+   competition (with the value symmetry above) 100-3-10 is solved in 37 s
+   instead of 172 s and 120-3-10 in 85 s instead of 162 s. It fires on none
+   of the 240 instances of the wide benchmark set or of the XCSP 2022-2025
+   instances. -Dorg.jacop.fz.indexDisjunction=false turns it off; it is
+   off under --proof and presolve.
+
+337. The linear relaxation gets the rows of an assignment model for
+   conjunctions b_v <-> s /\ [x = v] of a Boolean s with the value
+   Booleans of a variable x: sum_v b_v = s (<= s when the values do not
+   cover the domain of x), and y = d + sum_v (v + c - d) b_v for
+   y = if s then x + c else d (ConditionalSelect). Under lazy clause
+   generation the conjunctions are read from their clause rows. Count over
+   0/1 variables gets its exact row. Before, these were big-M rows only,
+   which let a fractional s keep every b_v at 0. On ihtc-2024-kletzander
+   (MiniZinc Challenge 2025) the root bound rises from 0 to 9,151 on
+   test03 (optimum 9,385, proved with -f in 5 s at 600 s, before never)
+   and to 13,639 on test05 (bound 13,798 at 600 s, before 4,128). Of the
+   240 instances of the wide benchmark set they reach 10, with no change
+   in solved instances at 600 s. -Dorg.jacop.lp.selectedValues=false and
+   -Dorg.jacop.lp.booleanCount=false turn them off.
+
+338. Free search (-f) with lazy clause generation that has no solution and
+   makes fewer than 30 conflicts per second at lcg-slow-at gives way to
+   free search without learning (--free-config lcg-slow-unsolved=<rate>,
+   0 = off). Before, a slow LCG without a solution never gave way. On
+   ihtc-2024-marte i14 (MiniZinc Challenge 2025) LCG makes about 10
+   conflicts per second and found no solution in 1200 s; now -f finds
+   24,783 at 600 s and 18,747 at 1200 s (CP-SAT par 16,165 in the
+   Challenge). Fixed search (without -f), which also runs under LCG with
+   the decisions of the search annotation, gives way in the same case to
+   the annotation's search without learning; with a solution it keeps
+   LCG. On i14 it finds 35,036 at 600 s, where it found none before
+   (Gecode fixed search 35,626 in the Challenge). Of the 240 wide
+   instances each fires on one more (rcpsp_max psp_ubo500_33, no solution
+   either way).
+
+339. Binpacking skips the sort and uses a closed form of Shaw's NoSum
+   test (CP 2004) and one elimination and commitment pass when the items
+   not yet placed have the same weight, with the same pruning.
+
+
+340. Under -f, a model whose cost is the makespan of a disjunctive
+   schedule (unary resources and precedences between the task starts,
+   such as job shops, also with decomposed disjunctions) first runs the
+   critical-path tabu search of local search alone, for half of the time
+   left until it stalls for 5 s, without --free-config ls. On the 50x10
+   job shops swv11-swv14 (240 s) the makespans drop by 2-13 % and beat
+   CP-SAT; open shops (no precedences) and portfolio workers are left out.
+   --free-config ls-auto=0 turns it off. Nowicki and Smutnicki, A fast
+   taboo search algorithm for the job shop problem, Management Science
+   1996; Dell'Amico and Trubian, Applying tabu search to the job-shop
+   scheduling problem, Annals of OR 1993.
+
+341. The linear relaxation rounds the row it proves its bound with: each cut
+   round adds the mixed-integer rounding (MIR) cut of the rows weighted by
+   their LP dual values, without the objective's own rows (a Chvatal-Gomory
+   cut with the LP's multipliers, V. Chvatal, Edmonds polytopes and a
+   hierarchy of combinatorial problems, Discrete Math. 4, 1973; MIR of an
+   aggregated row as in H. Marchand and L. A. Wolsey, Aggregation and mixed
+   integer rounding to solve MIPs, Oper. Res. 49(3), 2001). On covers with
+   near-equal costs this row counts the sets a cover needs: MiniZinc
+   Challenge 2021 wmsmc-int batch_0_case_115_instance_0 has root bound
+   509,697 instead of 500,353 (optimum 509,704) and -f proves it in 10 s
+   instead of not in 600 s. -Dorg.jacop.lp.dualAggregate=false turns it off.
+
+342. The FlatZinc front end folds a variable z that is an affine function
+   of another variable x into the linear constraint that uses it (free
+   column substitution of MIP presolve: Achterberg, Bixby, Gu, Rothberg
+   and Weninger, Presolve reductions in mixed integer programming,
+   INFORMS Journal on Computing 32(2), 2020; as CP-SAT's presolve does:
+   Perron, Didier and Gay, The CP-SAT-LP solver, CP 2023). z is defined
+   by int_times(c, x, z), int_plus(x, c, z) or a two-term int_lin_eq
+   with a unit coefficient on z, is not an output or solve variable, its
+   domain allows every value of the function, and it occurs in one
+   linear constraint besides its definition: the term a*z becomes a*p*x,
+   a*q moves to the constant and the definition is not posted. A z in
+   several rows stays, since with lazy clause generation it is a shared
+   sub-term whose literals carry learning from row to row (code-generator
+   mips_gobmk of the 2019 Challenge: 7 such variables in 49 rows, 34 ->
+   63 s when folded; -Dorg.jacop.fz.affineFoldingRows=n allows n rows).
+   It fires on 4 of the 240 instances of the wide benchmark set: nside
+   EASY_200_50 folds 54,504 products by constants into its sums
+   (propagators 61,579 -> 7,075), the same search tree in 85 -> 46 s at
+   240 s; the other three are unchanged within noise.
+   -Dorg.jacop.fz.affineFolding=false turns it off; it is off under
+   --proof.
+
+343. The routes neighbourhood of the adaptive LNS (route removal on
+   circuits and subcircuits) also frees the links between every route
+   and its depots, so that a route can move to another vehicle.
+   With identical vehicles and symmetry breaking such as "vehicle k
+   unused implies vehicle k + 1 unused", a route other than the last
+   could not be emptied while the routes after it kept their vehicles.
+   XCSP 2024 VRP_LC-10-05-20-s3 at 600 s finds 267, 288 and 269 over
+   three seeds instead of 288, 289 and 288 (the better solutions use
+   one vehicle fewer; the 2024 competition best was 277), and MiniZinc
+   Challenge 2026 vrplc10_5_15_s4 with -f 207 (the best known), 209 and
+   216 instead of 216 three times. -Djacop.lns.depotLinks=false turns it off.
+
+344. NetworkFlow prunes its arcs without the pivots of the network simplex
+   when it can, with the same pruning. A residual arc (u, v) whose
+   shortest residual cycle back from v to u has room for the flow the
+   cost limit allows (limit / cycle cost, or all its capacity at cost 0)
+   is decided by that shortest path alone, for arcs of any capacity, not
+   only of capacity one; the other arcs are probed by successive shortest
+   paths with node potentials instead of dual pivots (Ahuja, Magnanti and
+   Orlin, Network Flows: Theory, Algorithms, and Applications, Prentice
+   Hall 1993, ch. 9). The probing of arcs took 74 % of the time of -f on
+   MiniZinc Challenge 2021 mapping ring_3. A test compares the domains
+   with the pivot probes over 300 random networks and dives (20,000 when
+   checked by hand). On the 30 mapping and nfc instances of the Challenge
+   (2015-2022) at 600 s: -f proves the same 30, 0.85 the time (geometric
+   mean, instances over 1 s; ring_3 106 -> 51 s, mesh_star_mpeg 87 -> 35 s,
+   ring_mp3 41 -> 17 s, mesh_star_2 388 -> 248 s), default mode proves
+   the same 27, 0.86 the time. -Dorg.jacop.netflow.generalArcs=false and
+   -Dorg.jacop.netflow.shortestPaths=false bring back the probes.
+
+345. Under lazy clause generation a constraint failure first hands the SAT
+   solver the atoms its fixpoint recorded and had not pushed yet, and only
+   then the conflict, whose clause cites those atoms instead of their
+   explanations (as with literals created on demand in lazy clause
+   generation, T. Feydy and P. J. Stuckey, "Lazy clause generation
+   reengineered", CP 2009). Conflict analysis then resolves them lazily
+   and can stop at one of them; before, each was replaced by its own
+   explanation at once, down to atoms the solver had, and the conflict
+   clauses of an Alldiff failure on ghoulomb had 406 literals on average
+   (XplusYeqZ 187). Fixed search on ghoulomb makes 2x the conflicts in
+   30 s. On the wide benchmark set with -f at 600 s (240 instances): 21
+   better, 16 worse, families 5 better, 1 worse, geomean 0.934 over the
+   144 solved by either (mapping mesh_star 128 -> 21 s, vrplc9_5_10_s2
+   118 -> 24 s, community-detection Sampson 374 -> 83 s; fast-food ff58
+   32 -> 114 s, and work-task-variation seed-8 lost its proof, a core
+   phase that is cut by the clock and times out in 2 of 3 runs on the
+   base too). On the 62 wide-quick instances at 240 s, -f: families
+   7 better, 2 worse, geomean 0.80 (base against base 0.95); default
+   mode: 4 better, 2 worse, geomean 0.90, one more solved. It is off with
+   --proof; -Djacop.lcg.pushBeforeConflict=false turns it off
+   (LcgSolver.setPushBeforeConflict). The statistic lcgHeldFailures
+   counts the failures held back. With it, the shared tree of
+   portfolio-split splits on the next decision below the first one when
+   the first is on the objective, which is not shared; otherwise a
+   knapsack whose first decision was always the objective never split.
+
+346. CountValues and CountValuesBounds read again only the domains whose
+   size changed since their last call, with the same pruning, and
+   Assignment queues changed variables in arrays instead of a hashed set
+   and map. On the 31 wide instances that post one of them (fixed
+   search, 600 s) time is 0.976 of before over the 18 solved by both;
+   ptv pax_period_20_2b 33.1 -> 28.9 s, and black-hole 15 and 19 search
+   6.6 % and 3 % more nodes.
+346. New float constraint PowPeqR(x, c, z), x^c = z for a constant c > 0:
+   hull consistent for any sign of x with an integer c (an even c keeps the
+   hole around 0, an odd c the sign), and for x >= 0 with a real c. The
+   FlatZinc front end posts it for float_pow with a constant exponent (a
+   negative one as 1 / x^-c), which MiniZinc emits for x^2.0 and pow; 425 of
+   the 747 instances of the osolpro float set use it. Benhamou and Older,
+   "Applying interval arithmetic to real, integer and boolean constraints",
+   J. Logic Programming 32(1), 1997.
+
+347. New float constraint HyperbolicPeqR(x, f, z) for f = sinh, cosh and
+   tanh, hull consistent with outward rounding; the FlatZinc front end posts
+   float_sinh, float_cosh, float_tanh and their inverses (the inverse as the
+   same constraint with the arguments swapped) instead of the MiniZinc
+   library decompositions through exp and ln, which use x twice and are not
+   hull consistent. Benhamou, Goualard, Granvilliers and Puget, "Revising
+   hull and box consistency", ICLP 1999.
+
+348. New float contractor FloatCid (org.jacop.floats.search), 3B shaving and
+   constructive interval disjunction (3BCID) run after propagation at every
+   search node as a ConsistencyListener. The FlatZinc front end runs it on
+   the float search variables of satisfaction problems (10 shaving slices,
+   every variable at every node); -Dorg.jacop.floats.cid=s3b[,variablesPerNode]
+   sets it and -Dorg.jacop.floats.cid=off turns it off. At 600 s it solves
+   52 of the 59 satisfaction instances of the osolpro float set instead of
+   45 (geometric mean of the times 0.92). It is off for optimisation, where
+   it is slower. Lhomme, "Consistency techniques for numeric CSPs", IJCAI
+   1993; Trombettoni and Chabert, "Constructive interval disjunction", CP
+   2007.
+
+349. Float propagation can skip narrowings smaller than a given part of the
+   domain width (a weak fixpoint, against slow convergence):
+   -Dorg.jacop.floats.minReduction=r or FloatDomain.setMinReduction(r),
+   default 0 (off). Lhomme, IJCAI 1993.
+
+350. New float contractor FloatNewton (org.jacop.floats.constraints), the
+   interval Newton method on the square system formed by the float
+   equations of a model (linear equalities, sums, products, powers, exp,
+   ln, sin, cos): a Hansen-Sengupta step with the inverse of the midpoint
+   Jacobian as preconditioner and Gauss-Seidel, evaluated in interval
+   arithmetic with outward rounding, after propagation at every search node.
+   The FlatZinc front end runs it, ahead of FloatCid, on the float search
+   variables of satisfaction problems; -Dorg.jacop.floats.newton=false turns
+   it off and =true also runs it for optimisation. At 240 s it solves 52 of
+   the 59 satisfaction instances of the osolpro float set instead of 50 with
+   FloatCid alone (geometric mean of the times 0.90).
+   Hansen and Sengupta, "Bounding solutions of systems of equations using
+   interval analysis", BIT 21(2), 1981.
+
+347. Free search (-f) probes the root before lazy clause generation search
+   by default: failed literals on the 0/1 variables and on the values of
+   small domains, for 2 % of the time left and at most 1 s (new
+   -Djacop.lcg.probe.cap=ms; -Djacop.lcg.probe=0 turns probing off, and
+   an explicit -Djacop.lcg.probe=share keeps its uncapped budget as
+   before). On java-routing of the MiniZinc Challenge (2013, 2021) it
+   finds the parity of the positions of the stops and the stops that
+   cannot follow each other, which propagation does not, and proves 8 of
+   10 instances in 240 s instead of 5 (2.6 times faster over three
+   seeds). The 62 wide-quick instances (-f, 240 s) take 2,609 s instead
+   of 2,866 s in all and solve 52 instead of 51 (work-task-variation
+   seed-8); easy instances where probing finds nothing are up to a few
+   seconds slower, as the literals it makes move the search. Model
+   search does not probe by default.
+
+348. A solve of the linear relaxation in search that stops at its pivot or
+   work limit now bounds the objective by its dual multipliers. They are
+   not optimal but still valid: the exact certificate (Neumaier and
+   Shcherbina, Safe bounds in linear and mixed-integer linear programming,
+   Mathematical Programming 99, 2004) turns any multipliers into a sound
+   bound and the same bounds reasoning as an optimal solve. Such solves
+   used to give nothing. They are rare (0.1 % of the solves of the wide
+   benchmark set, on 43 of 184 runs with a relaxation), but where they
+   happen they prune: at 600 s on those runs the best solution of ptv
+   pax_period_20_3b goes from 4324 to 3860 and of surface-based-tsp ch130
+   from 8202 to 8032, and vaccine v857 is proved in 19.9 s instead of
+   26.4 s. -Dorg.jacop.lp.anytimeBound=false turns it off; with -s -v the
+   statistics lpAnytime, lpAnytimePrunings and lpAnytimeFailures give the
+   stopped solves and what they pruned.
+
+349. New redundant constraints at FlatZinc posting (PairCoverDetector): when
+   pairs of items must share bins of bounded capacity (0/1 x[g][i], rows
+   sum(i) x[g][i] <= c, demands sum(g) b[g] >= k with b[g] -> x[g][i] /\
+   x[g][j]), each item i is in at least ceil(D(i) / (c - 1)) bins, D(i)
+   its demanded pairs (B. M. Smith, Symmetry and Search in a Network
+   Design Problem, CPAIOR 2005). On the 16 XCSP 2026 Sonet2 (SONET ring)
+   instances at 600 s, 6 -> 12 proved: 3-4, 5-5 and 6-5 optimal in 2-4 s,
+   6-4 (unsolved in the competition), 7-4 and 8-4 infeasible at the root.
+   It fires on none of the wide set; -Dorg.jacop.fz.pairCover=false turns
+   it off.
+
+350. SumWeight reads the whole queue of changed variables and reuses its set
+   between calls; it stopped at the first variable already behind its
+   pointer, which never left a value unpruned (100,000 WakeUpFixpointTest
+   trials with a new SumWeight case). ElementInteger with an index smaller
+   than its domain pruning limit unions the values of the index directly
+   instead of walking the groups of duplicate values. On the 45 wide
+   instances that post one of them (fixed search, 600 s) time is 1.011 of
+   before over the 30 solved by both, inside the noise (0.978 at 240 s),
+   and the 15 unsolved search 0.7 % more nodes; physician-scheduling
+   instance10 11010 -> 10835 and unit-commitment L12-T48G15L10 reach better
+   objectives, none worse.
+
+351. Under -f the set partitioning relaxations whose rows linear overlap
+   factoring (item 269) rewrote get LP-guided
+   branching again: the factoring turns the set rows into rows over the
+   shared sums, which LinearRelaxation.setRows does not recognise, so the
+   detector now checks the model's rows before it rewrites them. CSPLib bus
+   driver scheduling (crew schedules, 160-199 rows over up to 19,091
+   shifts) at 120 s with -f: r3 and r5 are proved optimal (16 and 29) in 29
+   and 28 s, unsolved in 240 s before, c1a in 39 s (70 s); CP-SAT 9.15
+   proves them in 25-63 s. It fires on none of the wide set; the statistic
+   lpGuided (-s -v) shows the decision.
+
+352. The FlatZinc front end removes from each difference t = x - y (any
+   a*x - a*y + b*t = c) the value that x - y != d would give, for every
+   disequality of the model, stated or implied, that AlldifferentDetector
+   collects, and raises abs(t) to the smallest absolute value left in t,
+   which AbsXeqY's bounds consistency misses when t has values on both
+   sides of 0. A difference of two all-different variables is not 0, so in
+   the CSPLib all-interval series the absolute differences start at 1 and
+   their all-different ranges over exactly n-1 values: n = 40, 60 and 100
+   found no solution in 240 s (default and -f) and now solve with 0
+   failures, as CP-SAT does through the same presolve reduction. It fires
+   on none of the wide set. Not with --proof.
+
+353. New constraint MaxCliqueBound(x, conflicts, sum): x are 0/1
+   variables, no two variables in conflict are both 1, and sum <= x[1] +
+   ... + x[n]. It bounds sum by a greedy coloring of the vertices that can
+   still be 1 (classes of pairwise conflicting vertices, kept as bit sets
+   in decreasing degree order) as maximum clique algorithms do: E. Tomita
+   and T. Seki, "An efficient branch-and-bound algorithm for finding a
+   maximum clique", DMTCS 2003, LNCS 2731; E. Tomita, Y. Sutani, T.
+   Higashi, S. Takahashi and M. Wakatsuki, "A simple and faster
+   branch-and-bound algorithm for finding a maximum clique", WALCOM 2010,
+   LNCS 5942; P. San Segundo, D. Rodriguez-Losada and A. Jimenez, "An
+   exact bit-parallel algorithm for the maximum clique problem", Computers
+   & Operations Research 38(2), 2011; as a constraint, J.-C. Regin, "Using
+   constraint programming to solve the maximum clique problem", CP 2003,
+   LNCS 2833. Under LCG its reason cites only the zeros that do not join a
+   color class, or a vertex at 1 in conflict with them. The FlatZinc front
+   end posts it as a redundant constraint on a maximized sum of 0/1
+   variables with pairwise conflicts (x[i] + x[j] <= 1, bool_clause or
+   array_bool_and of two); -Dorg.jacop.fz.maxClique=false turns this off.
+   A model that is maximum clique and nothing else is solved by branch and
+   bound without LCG unless --lcg is given (-Dorg.jacop.fz.maxClique.lcg=true
+   keeps LCG). Of the 15 Clique instances of the XCSP 2026 competition it
+   proves 6 at 600 s (brock200-4 in 14 s), where develop-5.0 proved 2. The
+   LP pair cliques test conflicts on bit sets, so p-hat1500-1 builds its
+   model in 35 s instead of more than 300 s, with the same cliques.
+
+354. The tabulation of small flattened expressions (item 292) reaches
+   groups whose outer variables follow from one of them. Its small search
+   now infers through clauses, implications and reifications (a clause
+   with one unknown literal and the others false; a false relation makes
+   its literal false; a true literal of an equality gives the unknown
+   term), so a link of the XCSP 2026 Collatz chain, x mod 2 != 0 \/
+   y = x div 2 and x mod 2 = 0 \/ y = 3x + 1, is enumerated over x alone
+   instead of the x * y box. A group is tabulated when one branch of that
+   search multiplies the domain sizes of the outer variables it branches
+   on to at most the rows limit, which for a group with an outer variable
+   of more than 10,000 values is that domain size, up to 100,000. Groups
+   with the same constraints over variables with the same domains share
+   one tabulation and the index of one table, so more groups fit in the
+   node budget. On the 23 instances of the XCSP 2022-2026 competitions
+   where it changes the model, at 600 s: Collatz 12 of 12 decided in
+   1-8 s, 1 before (2 to 12 of the 23 solvers of 2026 decided each); Dominoes
+   (2023) 11 of 11 solved in 7-102 s, 2 before, among them the three
+   45-* instances that no 2023 solver solved, and a solution checked by
+   the XCSP3 SolutionChecker for 40-150, which sat4j+roundingsat claimed
+   unsatisfiable. On the wide benchmark set it changes one instance
+   (code-generator mips_gobmk, one more table).
+
+355. Lazy clause generation explains an entailed reified <= or >= linear
+   constraint (int_lin_le_reif, int_lin_le_imp and the like) from one
+   bound lookup per term: before, it read both bounds of every term and
+   then looked up the entry of the bound it cites again. The reasons and
+   the search are the same. bnn-planner navigation_5x5_10s, where these
+   reasons took 22 % of the time, solves in 5.35 s instead of 6.29 s;
+   over the 53 wide instances with int_lin_le_reif or int_lin_le_imp, the
+   instances solved with the same search in at least 10 s take 0.94x
+   (default) and 0.93x (-f) of the time at 600 s.
+
+356. -Djacop.virtualClock=true also covers free search without learning
+   after LCG gives way (-f): its time limit, the time LCG left, counts
+   jacop.virtualClock.propagationsPerMs (1000) propagations per
+   millisecond, and the probes of the value impact heuristic take their
+   share of the propagations instead of the time. Two runs of the 62
+   wide-quick instances at 10 s with -f, three at a time, end identically
+   on 58 to 61 of them (55 before). The rest are symmetry detection
+   (whirlpool), presolve timers (a few propagations on monomatch and
+   work-task-variation) and, in one of three censuses, mapping.
+   FreeSearch.Builder.virtualClock turns it on for one search.
+
+357. LCG branch and bound under -f can jump below the best solution
+   (--free-config lcg-jumps=1, off by default; LcgSolver.setJumps):
+   after a streak of quick improving solutions (jacop.lcg.jumpAfter, 4,
+   each within jacop.lcg.jumpFast, 20, conflicts of the one before) the
+   run stops and probes obj <= best - step under a limit of
+   jacop.lcg.jumpConflicts (100) conflicts, doubling the step after
+   every solution and halving it after every refutation, which proves
+   obj >= target + 1 as a clause. The core-guided phase steps the same
+   way. Models with hundreds of tiny improvements gain: MiniZinc
+   Challenge 2021 connect 0086_02 25.5 -> 13.5 s and carpet-cutting
+   mzn_rnd_test.01/.02 about 2x faster (600 s, -f). On the wide set at
+   600 s with -f it is neutral (13 instances better, 12 worse) and the
+   35 where jumps fire take 1.6 % more time in total (city-position
+   city-7-04 265 -> 401 s, peacable_queens 8 loses its proof), hence
+   off by default. Statistics lcgJumpRuns, lcgJumpSolutions,
+   lcgJumpsRaised and lcgJumpLimits.
+
+358. Float optimisation in fzn-jacop is faster and proves more optima.
+   Once branch and bound has found 1000 solutions
+   (-Dorg.jacop.fz.floatCrawl) improving by a few ulps, the objective is
+   bisected between a lower bound and the best cost, each step with a
+   budget of nodes (-Dorg.jacop.fz.floatStepNodes, 100000, or the nodes
+   used so far) after which branch and bound takes over again; steps far
+   below the best cost are tried only under such a budget. Under free
+   search (-f) bisection starts at once (-Dorg.jacop.fz.floatBisectStart)
+   and each solution restarts the search (-Dorg.jacop.fz.floatRestart).
+   The lower bound comes from a new LinearFloatRelaxation
+   (org.jacop.floats.constraints) of the linear float rows, McCormick
+   envelopes of products (G. P. McCormick, Mathematical Programming 10
+   (1976) 147-175) and secant and tangent rows of squares, solved by JaLP
+   with exact duals and made safe by the bound of A. Neumaier and O.
+   Shcherbina (Mathematical Programming 99 (2004) 283-296), so rounding
+   never cuts off a solution; an infeasible relaxation is confirmed by a
+   Farkas certificate. The LP point is probed as a candidate solution
+   (-Dorg.jacop.fz.floatLpPoint). -Dorg.jacop.fz.floatBisection=false and
+   -Dorg.jacop.fz.floatLp=false turn the parts off. On 46 float
+   optimisation instances (Ibex benchmarks, hakank, jacop-benchmarks) at
+   600 s, three at a time, default search proves 25 optima instead of 18
+   and -f 25 instead of 17; no instance with float variables is in the
+   wide benchmark set.
+
+359. Free search with lazy clause generation on an optimisation model
+   whose search variables all lie in one cardinality with fixed counts
+   (jacop_count_values or global_cardinality posted as CountValuesBounds
+   with equal bounds) first dives without learning through those
+   variables in model order, largest value first, for at most 5 % of the
+   time limit; the values of its first solution start the default
+   branching of LCG. On the slot model of bin packing (x[i][j] the weight
+   of the j-th item in bin i) this fills bin after bin with the largest
+   item that fits, the packing of first fit decreasing (D. S. Johnson,
+   A. Demers, J. D. Ullman, M. R. Garey and R. L. Graham, "Worst-case
+   performance bounds for simple one-dimensional packing algorithms",
+   SIAM Journal on Computing 3, 1974). LCG made about 30 conflicts a second
+   there and found no solution of 8 of the 15 BinPacking instances of the
+   XCSP 2024 competition in 240 s; with the dive all 8 have one (n3c2w1a
+   91, the best of the field; n3c3w1a proved optimal in 4 s), and the
+   other 7 are unchanged. It fires on none of the instances of the wide
+   benchmark set. Under LCG the reifications and the objective
+   live in SAT clauses, so the dive does not print its solution: the first
+   run of LCG completes it. --free-config slot-dive=off turns it off and
+   slot-dive-share sets its share of the time; the statistics slotDiveSlots
+   and slotDiveTime give its size and time.
+
+360. Under lazy clause generation the FlatZinc front end adds to a
+   cumulative whose tasks have variable durations and fixed resource
+   uses, and at most 4000 (task, time point) pairs, its time-resource
+   decomposition: at each time point t the sum of the resource uses of
+   the tasks with s <= t < s + d is at most the capacity (Schutt, Feydy,
+   Stuckey and Wallace, Why cumulative decomposition is not as bad as it
+   sounds, CP 2009). The cumulative propagators take the earliest end of
+   a task as its earliest start plus its shortest duration; when another
+   constraint bounds the end, such as a stockpile that stays until it is
+   reclaimed, they miss the part of the task between its latest start
+   and its earliest end, which the learnt clauses over the start and end
+   literals of the decomposition capture. XCSP 2024 Cargo at 600 s, two
+   seeds: Cargo-22 proved in 4 s and Cargo-10 in 154 and 62 s, which no
+   run proved before (CP-SAT, one thread: 0.5 and 59 s); Cargo-06 152
+   and 5 s instead of 332 and 132 s, Cargo-05 4 s instead of 19 s. Of the
+   240 wide instances it fires on two (stack-cuttingstock d3,
+   stripboard), unchanged. -Dorg.jacop.fz.cumulativeTimeIndexed=false
+   turns it off, =true posts it without lazy clause generation too, and
+   -Dorg.jacop.fz.cumulativeTimeIndexedPairs=n sets the size limit.
+
+361. Large neighbourhood search under -f keeps to the variables that no
+   constraint defines when there are at least 3 of them, instead of 16
+   (item 290). Below 16 the neighbourhoods took every variable, which on
+   models with a few roots that define the rest, such as city-position
+   (8 and 12 roots), made each neighbourhood relax variables that the
+   fixed roots determine anyway. Found by bisecting a -f loss of the
+   second integration round (city-position city-5-06, 4 seeds: 26-42 s
+   before item 290, 66-98 s after). On the 10 wide instances with 3 to
+   15 roots, -f at 240 s, two seeds: city-position city-5-06 108/93 ->
+   48/29 s, city-7-04 proved in 107/126 s (before unproved at the
+   limit), fast-food ff58 47/28 -> 19/28 s, median-string p2_10_8-0
+   16/15 -> 11/12 s, the other six equal; total time 819 -> 409 s.
+   pattern-set-mining (1 and 2 roots) and atp-stage2 (2) still take
+   every variable.
+
+362. The core-guided phase of free search (-f) under lazy clause
+   generation probes the objective's own bound when its cores raise the
+   lower bound by about one each, as cores of two terms with large
+   domains do (a makespan and a tardiness that rise together). After 32,
+   64, 128... cores, if the cores' recent rate would need more than four
+   times as many cores again to meet the best solution, bounds of the
+   objective at doubling distances above the lower bound are assumed
+   with 100 conflicts each, and each one refuted becomes a clause. The
+   phase hands over to branch and bound once the probes leave less than
+   an eighth of the cores' gap; the probes' work is left out of the
+   phase's rates. MiniZinc Challenge 2021 ATSP instance5 is proved in
+   1.2 s instead of 2.3 s (1,978 cores of +1 before, 32 now); on the 13
+   of 187 wide optimisation instances where it fires, -f at 600 s takes
+   0.86 of the time with the same proofs (kitchen linear 305 -> 166 s).
+   -Djacop.lcg.coreObjectiveProbe=false turns it off.
+
+363. The FlatZinc front end detects tilings of 0..n-1 by m arithmetic
+   progressions of k terms with pairwise distinct gaps (perfect rhythmic
+   tilings, T. Johnson, "Tiling in my music", The Experimental Music
+   Review, 1996; N. Alon, M. Debski, J. Grytczuk, J. Przybylo, "Perfect
+   rhythmic tilings", arXiv 2603.02786): strictly increasing starts, an
+   all_different over the gaps and terms t = s + j g given by int_lin_eq
+   chains, offset sums or the columns of tables. A model that places the
+   terms with element constraints on a cell array gets the implied
+   all_different over the terms. Free search (-f) of a satisfaction model
+   for one solution then branches as Knuth's algorithm X with the leftmost
+   column (D. E. Knuth, "Dancing links", 2000): each start at its smallest
+   value, its gap at a random value whose terms fall on free cells, under
+   Luby restarts of 100 failures and without LCG. On the 24
+   PerfectRythmicTiling instances of the XCSP 2026 competition JaCoP finds
+   15 tilings at 600 s instead of 9, among them 1-4-20, which no solver
+   of the competition solved; total time 6,947 s instead of 10,499 s. It
+   fires on none of the 240 instances of the wide benchmark set or of the
+   XCSP 2022-2025 FlatZinc instances. -Dorg.jacop.fz.progressionTiling=false
+   turns the detection off, -Dorg.jacop.fz.progressionTiling.search=false
+   the search only.
+
+364. ElementVariableFast (MiniZinc element with a variable array) skips
+   the calls woken by array positions the index can no longer select, and
+   for a wake from a few selectable positions it checks residual supports
+   (the changed positions, the bounds of the value and, for values spanning
+   fewer than 64, each value) instead of scanning the whole index domain.
+   On XCSP 2026 TelecomScheduling, where each task selects its day in the
+   team array of every agent (100-200 days), the scans took 70-85 % of the
+   time; at 600 s B-10 now reaches 178920 and B-01 1045380, where JaCoP
+   found no solution before, and A-10 104404 instead of 140534 at 240 s.
+   On the 82 wide instances with an element over a variable array the
+   same instances are proved (56 by default, 62 under -f, 600 s) and the
+   total time is unchanged (1.005 and 1.012, the same search under the
+   virtual clock).
+   A list wake then rechecks only the values whose residue is a changed
+   position: 11 % more nodes per second on TelecomScheduling-B-10, the
+   same pruning.
+
+365. Free search (-f) of a resource-constrained project scheduling model
+   (a makespan over CumulativeBasic resources with fixed durations,
+   demands and capacities, and precedence rows) runs a project schedule
+   heuristic, org.jacop.search.ls.ProjectSchedule: the serial schedule
+   generation scheme (R. Kolisch, Serial and parallel resource-constrained
+   project scheduling methods revisited, EJOR 90, 1996), forward-backward
+   improvement (K. Y. Li and R. J. Willis, An iterative scheduling
+   technique for resource-constrained project scheduling, EJOR 56, 1992;
+   V. Valls, F. Ballestin and S. Quintanilla, Justification and RCPSP: a
+   technique that pays, EJOR 165, 2005) and the activity list genetic
+   algorithm of S. Hartmann (A competitive genetic algorithm for
+   resource-constrained project scheduling, NRL 45, 1998), with shift
+   moves and restarts. A short burst runs first; its best schedule is
+   checked in the store, printed and given to lazy clause generation as
+   its first solution (LcgSolver.setIncumbent), so LNS starts from it.
+   Then the algorithm continues in slices as a new LNS kind (PROPOSALS),
+   also in free search without learning after the lcg-slow hand-over.
+   Models whose resources are all machines are left to local search.
+   On the 20 PSPLIB j60/j120 instances of the MiniZinc benchmarks at
+   600 s, -f is at or below CP-SAT (240 s) on 14, before 7; the mean gap
+   to CP-SAT goes from +0.97 % to -0.80 % on j120 and from +1.49 % to
+   +0.71 % on j60 (j120_31 216 -> 204, CP-SAT 208). On the 35 instances
+   where it fires, 16 are better and 8 worse (proof times of 18 proved
+   both ways: geometric mean 1.013). Of the 240 wide instances it fires
+   on one. --free-config sgs=0 turns it off; sgs-share (0.03, share of
+   the time limit), sgs-max (60000 ms), sgs-patience (20000 schedules)
+   bound the first burst and sgs-lns (20 schedules per task, at least
+   1000) the slices.
+
+367. The XOR system of the FlatZinc front end (XorSystemDetector, Gauss-
+   Jordan elimination over GF(2)) also takes the parity rows of linear
+   equations over 0/1 variables only, and of equations written as two
+   opposite inequalities a x <= k and -a x <= -k (as OPB files do).
+   Exactly-one rows and other cardinalities of value 1 or n - 1 stay out.
+   Together these rows give the parity arguments of even colouring
+   models (Markstrom, "Locality and hard SAT-instances", JSAT 2, 2006;
+   PB competition evencolouring and ec_* families): the sum of all vertex
+   rows is odd, so the slacks of an optimisation model must sum to an odd
+   number and an exact model has no solution. In the PB competition
+   evencolouring_opt_linear_random6regular_nvert_071 and _unit_..._351
+   are proved optimal in 1.5 s and 3.7 s (before not at 600 s, CP-SAT
+   5 s), ec_stargrid_04_021 and _06_012 unsatisfiable in 1.5 s (before
+   and CP-SAT unknown at 240 s), ECgrid5x40split, ECgrid5x130split and
+   ec_random_rational_random8reg_split_750 unsatisfiable in under 2 s
+   (before unknown). It changes 15 of 222 PB and 9 of 240 wide instances.
+   -Dorg.jacop.fz.xorZeroOne=false turns it off.
+
+368. Free search picks its dom/wdeg variable from an indexed heap kept up
+   to date by domain changes (Store.domainWatcher) instead of scanning
+   every search variable and counting unfixed scope variables at each
+   decision. The choice is the same variable. On TelecomScheduling-B-10
+   (XCSP 2026, about 5000 search variables), where the scan was 40 % of
+   the time, -f makes 73 % more nodes in 120 s. Over 16 wide instances
+   that hand over from LCG to plain CP search and 3 TelecomScheduling
+   instances at 600 s the total time goes from 10815 to 10569 s, with
+   BACPj-01-08 proved; on wide-quick at 240 s it is neutral (2829 vs
+   2839 s, same 52 solved). -Dorg.jacop.search.free.domWdegScan=true
+   restores the scan.
+
+369. Free search (-f) of a model without a search annotation branches on
+   the variables that no defines_var annotation names before the defined
+   ones: under lazy clause generation until the first solution, and
+   always in free search without learning (after LCG gives way). On
+   XCSP 2026 Feedback (a permutation x, penalties z = max(0, x[i] - x[j])
+   per arc, minimise their sum) the default search fixed the defined
+   penalties, which pins differences of x and fails deep on the
+   all_different; P1000-15000 and P1000-25000 had no solution in 600 s
+   and now reach 2424015 and 4008836, and P1000-05000 finds its first
+   solution in 8 s instead of 105 s. On 18 other XCSP families where the
+   order changes, 6 are better and 6 worse at 600 s; on wide-quick under
+   -f (240 s) 2 groups are better and 1 worse (proof time noise).
+   -Dorg.jacop.fz.definedLast=always keeps the order after the first
+   solution, false restores the old order.
+
+370. The FlatZinc front end posts the aggregated flow of a regular
+   constraint whose sequence is counted by cardinality constraints, one
+   per residue class i mod p of its positions (RegularFlowDetector): the
+   automaton's layers of one class are merged, the cardinalities give the
+   number of arcs per value, and flow conservation links consecutive
+   classes (flow formulations of regular: G. Pesant, CP 2004;
+   M.-C. Cote, B. Gendron and L.-M. Rousseau, CPAIOR 2007). Rotating
+   workforce scheduling (MiniZinc Challenge 2018, 2019, 2022) is the
+   case: one regular over the cyclic schedule and a global cardinality per
+   weekday. 2019 Example1370, which CP-SAT proves infeasible in 38 s and
+   JaCoP did not in 600 s, fails at the root; Example1174 and 2018
+   Example1780 (210 s) are proved in about 2 s, by default and with -f.
+   It fires on 15 of the 127 Challenge instances with a regular
+   constraint, all of them rotating workforce, and the solved satisfiable
+   ones keep their times. -Dorg.jacop.fz.regularFlow=false turns it off;
+   --proof does not post it.
+
+371. CostNetworkBound (-Dorg.jacop.fz.costNetwork=true) cites each atom of a
+   lazy clause generation reason once and propagates incrementally.
+   A reason cited one atom per cheaper value of a fixed variable and the
+   bounds of a neighbour once per edge, so on celar scen07 a reason held
+   about 6,100 atoms of which 215 were distinct; it now cites the bound
+   atoms of the cheaper values outside a variable's bounds (for a fixed
+   variable the nearest cheaper value on each side) and each neighbour
+   once. During search only the variables whose domain or fixed
+   neighbours changed are evaluated again, and the received binary costs
+   of a variable are read once. Conflicts per second on scen07 rise
+   about 8 times. On the 19 MiniZinc Challenge instances where the bound
+   posts (celar, proteindesign12, one community-detection), at 600 s,
+   default search proves 14 instead of 13 (1UBI.13p.9aa 184 s), the
+   1HZ5.12p.19aa instances in 78-81 s instead of 280-307 s (total time
+   0.79), and improves the objective of all three celar instances; -f
+   proves 16 instead of 15 (total time 0.87).
+
+372. The FlatZinc front end posts the LYM inequality of vectors that are
+   pairwise incomparable in the product order (every ordered pair u, v
+   has "u[c] < v[c] for some c", as a clause of literals that imply
+   u[c] < v[c] or as two element constraints with the same index whose
+   results are in a < b): sum_i 1/N(rank(x_i)) <= 1, where N(r) is the
+   number of elements of rank r of the product of the chains of the
+   coordinates. Products of chains are LYM posets (L. H. Harper,
+   J. Combin. Theory A 17, 1974; W. N. Hsieh and D. J. Kleitman, Stud.
+   Appl. Math. 52, 1973), so the inequality is implied; for subsets it is
+   Lubell's (J. Combin. Theory 1, 1966) and gives Sperner's theorem (Math.
+   Z. 27, 1928) and its multiset form (de Bruijn, van Ebbenhorst
+   Tengbergen and Kruyswijk, 1951). It is posted as one rank variable and
+   one element of scaled weights per vector and a sum, only when it
+   removes a rank at the root; with more vectors than the largest rank the
+   model fails at the root. On Antichain1 and Antichain2 of the XCSP 2026
+   competition (-f, 600 s) it decides the six instances at Sperner's bound
+   that JaCoP did not decide before: 127-09 and 253-10 (C(9,4) + 1 and
+   C(10,5) + 1 subsets) and Antichain2-142-6-03 are proved unsatisfiable
+   in 12, 60 and 7 s, and 126-09, 252-10 and 141-6-03 are solved in 19, 78
+   and 79 s. Over the 24 Antichain instances 24 are decided instead of 18,
+   in 325 s instead of 4,126 s. The other UNSAT instances fall to 1-4 s (Antichain1-071-08
+   86 -> 3 s, Antichain2-086-4-05 73 -> 2 s). It fires on none of the 240
+   instances of the wide benchmark set or of the XCSP 2022-2025
+   instances. -Dorg.jacop.fz.antichain=false turns it off; it is off under
+   --proof.
+
+373. A LinearInt (MiniZinc int_lin_eq/le with a variable sum) of 200 or
+   more terms keeps the bounds of its sum incrementally: the store tells
+   it about every bound change of its variables and a consistency call no
+   longer rescans all terms, which dominated the cost sums of assignment
+   models (advisors in the sense of Lagerkvist and Schulte, CP 2007).
+   Terms are sorted by their initial variability so a pruning pass stops
+   at the first term within the slack. Pruning is unchanged. On the 2012
+   ROADEF machine reassignment instances (cost sums of 1000-2004 terms)
+   nodes per second go up 1.9x in default search and 1.7x under -f;
+   a1_1 -f at 600 s reaches 44,311,581 (before 45,404,327, best known
+   44,306,501). -Dorg.jacop.linearIncrementalTerms=n sets the threshold,
+   0 turns it off. Binpacking also skips its elimination and commitment
+   tests (Shaw, CP 2004) when the load range is at least as wide as the
+   heaviest candidate, where no test can prune; this was 88 % of the time
+   of a1_5 under -f.
+
+374. The core-guided phase of lazy clause generation trims each core: it
+   solves again under the core's own literals, with at most 1000
+   conflicts a call and up to 3 calls while the core shrinks, and relaxes
+   the smallest core it got (core trimming in RC2: Ignatiev, Morgado and
+   Marques-Silva, RC2: an Efficient MaxSAT Solver, JSAT 11, 2019). A
+   smaller core raises the lower bound by as much and leaves its other
+   soft literals to later cores. Under -f it fires on 34 of the 240 wide
+   instances; at 600 s on those the total time is 5988 s instead of
+   6153 s (0.973) with the same 26 proved: workforce-alloc 202 50 s
+   instead of 97 s, neighbours-new-6 83 s instead of 158 s, city-position
+   7-04 88 s instead of 174 s, pattern-set-mining ionosphere 7 s instead
+   of 14 s; city-position 5-06 43 s instead of 27 s, kitchen linear 170 s
+   instead of 143 s. Two earlier rounds before entry 362 gave 0.937 and
+   0.983. On the 62 wide-quick instances at 240 s: -f 3 families better,
+   none worse; fixed search unchanged.
+   -Djacop.lcg.coreTrim=n sets the calls per core, 0 turns it off
+   (LcgSolver.setCoreTrim); the statistic lcgCoreShrunk counts the
+   literals it took out of cores.
+
+375. JaLP's presolve also removes forcing rows and fixes dominated columns
+   (Andersen and Andersen, "Presolving in linear programming",
+   Mathematical Programming 71 (1995), sections 3.2 and 3.5; part of the
+   Gurobi catalogue of Achterberg, Bixby, Gu, Rothberg and Weninger,
+   "Presolve reductions in mixed integer programming", INFORMS J. Comput.
+   32 (2020)). A row whose activity reaches its bound only with every column
+   at one of its bounds fixes those columns; the postsolve gives the row
+   the dual that keeps their reduced costs feasible and makes the column
+   that sets it basic. Bounds on the duals from the row sides and from
+   column singletons without a bound fix columns whose reduced cost cannot
+   be 0. -Dorg.jacop.jalp.presolveForcing=false and
+   -Dorg.jacop.jalp.presolveDominated=false turn them off. They fire on
+   149 of the 687 LPs of the LP bench (pivots 0.92x there, time 0.96-0.97x
+   above 0.5 s, MIPLIB 2017 0.93-0.94x) and on 17 of 184 JaCoP runs that
+   build an LP, where results stay the same.
+
+376. The linear relaxation takes the rows over the terms of the objective on
+   the sparse simplex when they do not fit the dense tableau. A model
+   stated in clauses and elements has few rows of its own (CSPLib
+   warehouses, prob034: 2), so the dense simplex was chosen and the clause
+   rows b[i,j] -> open[j] and the value encodings of the element costs did
+   not fit it; the root bound of cap131 stayed at 626,300 (optimum
+   915,059). Now the rows at distance at most 1 from the objective, and
+   the rows over no other columns, go to the sparse simplex when they are
+   at most org.jacop.lp.sparseMaxRows (25,000): cap131 root bound 914,788,
+   free search proves the optimum in 4 s instead of not in 600 s (CP-SAT
+   4.5 s), and traveling-tppv circ20fnonbal (MiniZinc Challenge 2022) is
+   proved UNSAT in 45 s instead of 208 s. -Dorg.jacop.lp.nearRows=false
+   turns it off; the statistic lpNearRows gives the rows taken.
+
+377. Symmetry breaking posts value precedence in models whose own
+   lex-leader constraints (lex_chain_lesseq over two vectors, lex_lesseq)
+   hid that their values are interchangeable. Each such constraint
+   X <=lex sigma(X) must compare a prefix of one common order, with sigma
+   a permutation of the variables that keeps their domains, fixes the
+   objective and maps every other constraint to one of the model; the
+   lexicographically smallest solution of an orbit of all symmetries then
+   satisfies them and the precedence chain in that order (Law and Lee,
+   CP 2004; Walsh, CP 2006). XCSP 2026 ColoredGrid-09 (9 disjoint
+   9-queens solutions, UNSAT) is refuted in 3.7 s, no answer at 300 s
+   before; ColoredGrid-08 6.3 -> 0.5 s. It fires on no wide-set instance.
+   -Dorg.jacop.fz.symmetryModelLex=false turns it off.
+
+378. Free search (-f) of an optimisation model without a search
+   annotation, after slow lazy clause generation gave way without a
+   solution, takes turns until its first solution with runs that fix the
+   search variables in the model's order, least value first
+   (FreeSearch.Alternation.EVERY_RESTART_UNTIL_FIRST_SOLUTION,
+   --free-config first-input=<runs>, one run in 2, 0 = off): the root
+   bounds can make dom/wdeg start at the far end of a chain (GolombRuler:
+   the last mark first). LCG slower than lcg-slow-rate without a solution
+   at half the time limit now gives way too (lcg-slow-unsolved-late,
+   default 0.5). XCSP 2026 GolombRuler-a3-32: 1348 at 600 s, no solution
+   before; on 26 XCSP 2025/2026 instances where it can fire, two more
+   with a solution and 7 better against 3 worse (seed spread); neutral on
+   the wide set.
+
+379. The FlatZinc front end posts the reified comparisons of one variable
+   with constants (int_le_reif, int_lt_reif with a constant on either
+   side) and their half-reifications (int_le_imp, int_lt_imp) as one
+   ChannelOrder per variable with two or more of them, in place of one
+   Reified or Implies each, as presolve rule 5 (OrderLiterals) already
+   did under --presolve on. ChannelOrder gets implied items
+   (b => x <= t, b => x > t), a violation for local search and a
+   pseudo-Boolean encoding for proofs; the linear relaxation and the
+   dominance nogoods read it as the reifications it replaces. On the
+   41 wide instances where it fires (2,596 channels for 21,321
+   constraints) at 600 s the same instances are proved; the proved
+   instances take 0.976 of the time by default and 0.736 under -f
+   (2026_kitchen 288 -> 174 s, neighbours-new-6 152 -> 98 s), total time
+   0.997 and 0.982. -Dorg.jacop.fz.orderChannels=false keeps the
+   reifications, -Dorg.jacop.fz.orderChannels.implied=false keeps the
+   half-reifications.
+
+380. ArgMax and ArgMin bound the values at positions that the index can
+   no longer take: such a position may not reach the extreme over the
+   positions the index can still take (strictly for positions after
+   them, since the first extreme wins). ArgMax and ArgMin now reach
+   domain consistency in the consistency checker (bounds(Z) before), and
+   so does ArgMaxMonotone, which the FlatZinc front end posts for
+   maximum_arg over monotone functions of shared variables; the checker
+   also gains XlteqY, XneqY and BinaryBitTable cases at domain
+   consistency. The LCG explanations are the existing ones. The upTo5sec
+   arg models give the same answers and node counts; the one wide
+   instance with maximum_arg (tower) fails 10 % less often (30155 ->
+   27287) at the same time.
+
+381. The core-guided phase of LCG free search keeps the 0-1 terms of a split
+   objective (lcg-split) also when their sums span up to twice fewer
+   levels (-Djacop.lcg.coreSpanRatio=2); wide terms keep the sums as
+   before. A long run's root propagation tightens the sums beyond their
+   terms' bounds, and the cores then ran on a few wide sums. The probe
+   skip of the phase (jacop #597) no longer fires when the
+   probe raised the lower bound at least as far as it is still below the
+   best solution (-Djacop.lcg.coreProbeHalfWay=false restores it). Stats
+   lcgCoreTermsBySpanRatio and lcgCoreProbeHalfWays. On 23 MaxSAT
+   Evaluation 2024 instances where JaCoP had a gap to CP-SAT, -f at 600 s
+   proves 11 instead of 9 (xai-mindset2 iris 8 s, packup-rand892 263 ->
+   8 s) and raises the bounds of logic-synthesis max1024 (154 -> 256 of
+   259) and optic-gen (45 -> 100); total time 9374 -> 8328 s. On the 11
+   wide-set instances where it fires (none in default mode), -f at 600 s
+   proves the same 10, total time 974 -> 897 s.
+
+382. With -Dorg.jacop.lp.restartSolves=true, the cut rounds of the
+   linear relaxation at restarts can use the bounds tightened at the root
+   level since the first solve, as SCIP separates again over the
+   presolved problem after a restart (T. Achterberg, Constraint Integer
+   Programming, PhD thesis, TU Berlin, 2007):
+   -Dorg.jacop.lp.restartBounds=true (off by default). The proving side
+   of the objective goes back to its first-solve bound, so the cuts can
+   move the LP bound below the objective cap, and the solve reads the
+   pool of aged-out rows. These cuts hold only under the root-level
+   bounds: when the search backtracks below the LP root level the
+   relaxation stops and its ground check skips them; proof logging
+   (--proof) does not use them. Statistics lpRestartBoundCuts,
+   lpRestartCutBound, lpRestartBoundsLost. -Dorg.jacop.lp.extraLimits
+   (3) sets how many pivot-limit hits drop the extra rows and cuts;
+   with zero-half cuts on TankAllocation1 under -f they were dropped on
+   8 of 9 instances, which left the restart relaxation without them.
+   At 600 s with -f on the 41 wide instances with LP cuts, total time is
+   5705 s for the base, 5054 s with extraLimits=1000000 (roster-shifts
+   s100_e20 proved in 3 s, base timeout) and 5046 s with restart bounds
+   too, 33 proved against 32; dual bounds improve on 7 of the 8 still
+   open (train 57764 -> 67043, pigment20a 1033 -> 1043, unit-commitment
+   1320705 -> 1335120). On TankAllocation1 (9) with zero-half: chemical
+   2667 -> 2459 (optimum 2296), 2000 1821 -> 1730, 0400 1386 -> 1329,
+   1600 proved in 19 s instead of 52 s.
+
+383. Free search (-f) on satisfaction models gives LCG away to free search
+   without learning when learning does not cut the search: at 10 % of -t
+   (then each time the elapsed time doubles) the conflicts so far jump
+   back fewer than 1.5 levels on average and their learnt clauses have
+   an LBD of at least 0.4 of the conflict depth, so the clauses act like
+   chronological backtracking. Before, only optimisation searches gave
+   way (lcg-slow-rate). --free-config lcg-sat-probe=on|report|off,
+   lcg-sat-at=<share of -t> (0 gives way at once), lcg-sat-jump and
+   lcg-sat-lbd set it; with -s it prints lcgSatProbe. Fixed search keeps
+   LCG, since the annotation backtracks about one level a conflict
+   whatever learning does. On the 35 satisfaction instances of the wide
+   set and the XCSP competitions where -f LCG runs for more than 10 s, at
+   600 s in two repeats it solves 20 -> 25 and 21 -> 26, total time 0.73
+   and 0.78 (Subisomorphism g11-g30 and g11-g44, AnotherMagicSquare-04
+   proved UNSAT, FRB-45-21-3 solved).
+
+384. The LP relaxation keeps the value encodings of the model's variables
+   (sum b_v = 1, x = sum v b_v) when the other rows do not all fit its
+   first-solve trial. Before, they came after thousands of linearized rows
+   and missed the trial: on the ROADEF 2020 maintenance planning model the
+   relaxation could leave every Boolean at 0, all its duals were zero and
+   it never pruned. Now they go first, are tried alone first, and get the
+   time of a large root solve (10 % of -t). New clique rows over value
+   Booleans: value Booleans of one variable that each imply a Boolean a
+   give sum b_v <= a (implications lifted over a clique of the conflict
+   graph, A. Atamturk, G. L. Nemhauser, M. W. P. Savelsbergh, Conflict
+   graphs in solving integer programming problems, European Journal of
+   Operational Research 121(1), 2000), and set packing rows over such
+   Booleans are restated over the b_v. The sparse simplex takes up to
+   50,000 columns (was 30,000). ROADEF 2020 at 600 s with -f: dual bound
+   A_01 31,697,304 -> 31,804,427 (optimum 31,820,680), A_06 20,116,179 ->
+   21,448,097 (optimum 21,498,698). 36 of the 240 wide instances are
+   reached, with the same results. -Dorg.jacop.lp.leadEncodings=false and
+   -Dorg.jacop.lp.valueCliques=false turn them off.
+
+385. Time windows for vehicle routes written as a giant tour (MiniZinc
+   VRPTW models: arrival a[v] = T[succ[v]], a[v] >= T[v] + s[v] + d[v]).
+   The FlatZinc front end reads a lag for every arc from these rows and
+   removes the successors that no arrival time can reach (time window
+   reduction, M. Desrochers, J. Desrosiers, M. Solomon, A new optimization
+   algorithm for the vehicle routing problem with time windows, Operations
+   Research 40(2), 1992). When some customer has a window of its own
+   (narrower than the start and end times of the tour imply), it also
+   gives the windows to Routes, whose LP separates infeasible path
+   (tournament) cuts over paths of the LP support that no vehicle can
+   follow in time (N. Ascheuer, M. Fischetti, M. Groetschel, Solving the
+   asymmetric travelling salesman problem with time windows by
+   branch-and-cut, Mathematical Programming 90(3), 2001), and posts the
+   new constraint ArcTimes(x, offset, t, lag): x[v] = w implies
+   t[w] >= t[v] + lag[v][w], with LCG explanations. Solomon R101 with 100
+   customers is proved optimal in 81 s (17 s with -f), unproved in 600 s
+   before. -Dorg.jacop.fz.timeWindows=false turns this off, =all gives
+   cuts and ArcTimes to every giant tour; -Dorg.jacop.fz.arcTimes=false
+   and -Dorg.jacop.lp.pathCuts=false turn off the propagator and the cuts.
+
+386. A satisfaction model stated in clauses over 0/1 variables, with no
+   value encodings for the root refutation, gets a root-only refutation
+   LP over its clause rows when its binary clauses hold at-most-one
+   structure: unit propagation and the substitution of equivalent
+   literals (strongly connected components of the binary implication
+   graph, Aspvall, Plass and Tarjan, IPL 8(3), 1979) first, then the pair
+   conflicts merged into clique rows (Atamtuerk, Nemhauser and
+   Savelsbergh, EJOR 121, 2000). Pigeonhole formulas, which resolution
+   and so lazy clause generation refute only in exponentially many steps
+   (Haken, TCS 39, 1985), are refuted at once. Of the SAT Competition
+   2024/25 CNFs of the SAT gap screen, pigeon-hole, mutilated-chessboard
+   and grandtour-puzzle (UNKNOWN at 600 s) and fpga-routing (203 s) are
+   refuted at the root in under 4 s; on the 13 CNFs where it can change
+   the result, 600 s, default and -f, 20 -> 26 runs solved, total time
+   5,984 -> 1,599 s. On the 12 wide instances where it runs the answers
+   are the same (rubik pays about 0.5 s). -Dorg.jacop.lp.clauseRefutation
+   =false turns it off; org.jacop.lp.clauseRefutationCliques (1) and
+   org.jacop.lp.clauseRefutationPivots (1,000) set its gate and its pivots.
+
+387. The core-guided phase of LCG can exhaust its cores, off by default
+   (-Djacop.lcg.coreExhaust=K, LcgSolver.setCoreExhaust). After a core
+   of at least two literals is relaxed, the outputs "at least j of them
+   false" of its new totalizer, j = 2, 3, ..., are each assumed alone,
+   at most K of them and at most 1000 conflicts a call, and relaxed as
+   unit cores while they are refuted (core exhaustion in RC2: Ignatiev,
+   Morgado and Marques-Silva, RC2: an Efficient MaxSAT Solver, JSAT 11,
+   2019). The bound rises at once by what a run of cores over the same
+   literals would give. With K = 8 under -f, on the 32 of 87 MaxSAT
+   Evaluation 2024 instances where it fires, at 600 s, the total time is
+   5593 s instead of 5757 s (0.971) with 26 proved instead of 24
+   (quantum-circuit realamprandom 118 s, causal-discovery Bands 522 s and
+   mqc 10tree825p 582 s instead of unproved, close_solutions teams16 14 s
+   instead of 26 s, mqc 10tree510p 7 s instead of 15 s; frb20-11-1
+   unproved instead of 318 s, mqc 10tree320p 341 s instead of 228 s).
+   Lower bounds rise on mpe network-10 (74137 -> 85304), RBAC
+   mse20 (90519 -> 91991) and inconsistency-measurement (35 -> 38), and
+   fall on minimize-5gons (30 -> 27). Two earlier rounds, on develop
+   before the core span ratio rule, gave 0.944 in total. On the 62
+   wide-quick instances at 240 s under -f the total is 1.009 with 3
+   families worse (is A3PZaPjnUz 4 -> 18 s, work-task seed 8 20 -> 49 s),
+   so it stays off. The statistic
+   lcgCoreExhausted counts the outputs it proved.
+
+388. ElementVariableFast finds the list positions of a variable that woke
+   it in a table indexed by the variable's store index when the indexes of
+   its list span few values, instead of by binary search. On MiniZinc
+   Challenge 2023 multi-agent-graph-coverage rnd_n75 1086 elements share
+   two lists of 543 variables, so every change of a variable wakes 543
+   elements, and the binary searches took 16 % of the solving time: the
+   same search runs in 0.76-0.87 of the time. On the 18 wide instances
+   where the wakes take at least 1 % of the time the total time is 1.004
+   with identical search (virtual clock, 2 rounds).
+
+389. Maximum clique (item 353). MaxCliqueBound covers the vertices that the
+   coloring puts beyond sum.min() - 1 classes one at a time: by the
+   re-coloring of MCS (E. Tomita, Y. Sutani, T. Higashi, S. Takahashi and
+   M. Wakatsuki, "A simple and faster branch-and-bound algorithm for
+   finding a maximum clique", WALCOM 2010, LNCS 5942), then by MaxSAT
+   reasoning on the color classes as soft clauses, a failed literal test
+   by unit propagation (C.-M. Li and Z. Quan, "An efficient
+   branch-and-bound algorithm based on MaxSAT for the maximum clique
+   problem", AAAI 2010; C.-M. Li, Z. Fang and K. Xu, "Combining MaxSAT
+   reasoning and incremental upper bound for the maximum clique problem",
+   ICTAI 2013). When all are covered it fails; when one is left, that
+   vertex is in every clique large enough and is set to 1. The vertices
+   are colored in the minimum width order of MCS. Its LCG reasons cover
+   both (a zero joins a class of an inconsistent subset only when the
+   derivation falsifies it first). The properties
+   org.jacop.maxClique.renumber, .maxsat, .force and .degeneracy set to
+   false turn the parts off. A model that is maximum clique and nothing
+   else, without a search annotation (or under -f) and without LCG, is
+   searched as MCQ and MCS do: the vertex of the last color class first,
+   at 1 first (org.jacop.search.MaxCliqueSelect), after a short first run
+   whose incumbent is the best greedy clique from every vertex; its
+   pairwise conflicts are not posted, since the bound enforces them
+   (their propagators took more than half of the time, and the sequence
+   detector posted AmongSeq on chains of them).
+   -Dorg.jacop.fz.maxClique.search=false keeps the default search and
+   -Dorg.jacop.fz.maxClique.pairs=true posts the conflicts. Of the 15
+   Clique instances of the XCSP 2026 competition it proves 10 at 600 s
+   instead of 6 (brock400-4 in 149 s, brock400-2 in 369 s, p-hat0700-2,
+   p-hat1500-1), brock800-2 and brock800-4 reach their optima (24, 26,
+   before 19), and the summed time goes from 5769 s to 3610 s;
+   p-hat1500-2 and p-hat1500-3 end one below (64 and 93).
+
+390. Under --lcg with -f, LCG free search counts as slow, and gives way to
+   free search without learning once it stops making progress, also when
+   it makes fewer conflicts per second than 5 times the average length of
+   its learnt clauses (--free-config lcg-slow-literal, 0 = off), not only
+   below lcg-slow-rate (300). A conflict that learns a clause of hundreds
+   of literals prunes little, so learning costs more than it saves and
+   large neighbourhood search runs a third as often. On the CSPLib TTPPV
+   instances (traveling tournament with predefined venues, prob068) LCG
+   learns 210 to 450 literals per conflict, the bounds of the 400 travel
+   terms of the objective, at 490 to 990 conflicts per second. At 600 s
+   the switch fires on the 10 circ20 instances and 2 of the 4 feasible
+   circ14 ones: the sum of the 17 best objectives goes from 12,816 to
+   12,526 (CP-SAT 9.15, -p 1: 12,428), 8 of 10 circ20 better. Of the 240
+   wide instances it reaches 4 by its first check; cargo challenge16
+   goes from 132,309 to 115,263, the other three have no solution of
+   either version at 600 s.
+
+391. New constraint XmulYeqZSaturated(x, y, z): z = x * y saturated at the
+   ends of JaCoP's integer range, z = max(MIN_INT, min(MAX_INT, x * y)).
+   The FlatZinc front end posts it for int_times(x, y, z) when the
+   declared domain of z reaches beyond the range (and holds every product
+   of the declared factors) and z is otherwise only compared, by int_eq,
+   int_ne, int_le or int_lt and their _reif and _imp forms, with constants
+   or variables declared strictly inside the range, and is neither
+   printed nor the objective. Such a comparison has the same truth value
+   for a product beyond the range and for the end of the range, so the
+   end stands for all of them (a saturated sentinel, as in interval
+   arithmetic: R. E. Moore, Interval Analysis, Prentice-Hall, 1966) and
+   no solution is lost; before, XmulYeqZ over the narrowed z removed every
+   pair of factors whose product did not fit, so a completed search could
+   claim nothing. MiniZinc compiles tree_vals[i] = tree_vals[l] *
+   tree_vals[r] of the 2022 Challenge model arithmetic-target to 21 such
+   products declared 0..4722438400: at 600 s its three large instances
+   (4108, 6872, 8657) are now proved optimal (7) in 12-31 s of search in
+   default mode and 10-15 s with -f; before, the search completed at 7
+   and printed no ==========. Of the 1,781 Challenge instances, only these
+   three have such a product. It is off with --proof.
+
+392. The root reduced costs of the LP relaxation now prune in search. They
+   were propagated only at the level of the first LP call, which search
+   never revisits, so they never fired; now each branch propagates them
+   again once the bound of the objective changes. Two-literal nogoods of
+   the dominance presolve are only tried as LP rows instead of taken as
+   model rows: 84,897 of them made the LP of a 5,000-item knapsack too
+   large to solve in search. On the PB24 OPT-LIN knapPI knapsacks at 600 s
+   similar_weights is proved in 67 s instead of 158 s and profit_ceiling in
+   140 s instead of 190 s. On the 240 wide instances at 600 s, 196 instead
+   of 193 are solved by default and 198 instead of 193 with -f, total time
+   0.959 and 0.953.
+
+393. Large neighbourhood search under -f has a new kind, RINS
+   (relaxation induced neighbourhood search, E. Danna, E. Rothberg and
+   C. Le Pape, Exploring relaxation induced neighborhoods to improve MIP
+   solutions, Mathematical Programming 102(1), 71-90, 2005). It relaxes
+   the variables whose value in the best solution differs most from
+   their value in the root solution of the linear relaxation, and fixes
+   the others. It is used when the model has a linear relaxation;
+   --free-config lns-rins=0 turns it off, and AdaptiveLns.setLpValues
+   gives the values. On the 34 wide-set optimisation instances with a
+   relaxation that -f leaves open, at 240 s it finds a better objective
+   on 12, 11 and 10 of them and a worse one on 7, 5 and 8 over three
+   seeds (gbac UD3 2414 -> 515, 9736 -> 1015 and 7242 -> 915; warehouse
+   olil4 66713 -> 62918); at 600 s 6 better and 5 worse (gbac UD3
+   317 -> 173, kletzander i09 6735 -> 4765, cargo challenge16
+   129091 -> 154593). On 42 quicker relaxation instances it is neutral
+   (36 solved by both, total time 1.002 at 600 s).
+
+394. Under --lcg a linear constraint over 0/1 variables that is equivalent
+   to a few clauses over its own literals becomes those clauses: its prime
+   implicates, the minimal covers of the threshold function (Balas and
+   Jeroslow, Canonical cuts on the unit hypercube, SIAM J. Appl. Math.
+   23(1), 1972), when there are at most 2 per variable
+   (-Djacop.lcg.clauseShaped=N, 0 = off). An at most one constraint over
+   n literals is its n (n - 1) / 2 exclusions, "at most 3 of 4" a single
+   clause. Before, such sums stayed propagators with lazy counters, which
+   become clauses only after 100 uses. The PB instance vdw_k4_l4_n360
+   (85,680 "at most 3 of 4" sums) becomes pure CNF and is solved in 63 s
+   (no solution in 600 s before; CP-SAT 9.15: 49 s). On the 117 of 222
+   PB screen instances where it fires, at 600 s, 81 -> 83 solved and the
+   total time goes from 24,092 to 22,394 s (0.930); on the 47 of 240
+   wide instances where it fires, 44 -> 44 solved, total time 1.010
+   (default) and 0.965 (-f). New statistic lcgClauseShaped.
+
+395. The XorSystem detector of the FlatZinc front end reads parities written
+   as clauses (bool_clause), as CryptoMiniSat finds the XORs of a CNF
+   (M. Soos, K. Nohl and C. Castelluccia, "Extending SAT Solvers to
+   Cryptographic Problems", SAT 2009). A set of at most 8 variables
+   (jacop.fz.xorClauseLength) whose clauses, also shorter clauses that
+   subsume some of them, exclude every point of one parity gives a row.
+   A set whose clauses exclude half of the points with an algebraic
+   normal form of degree 2 gives a row over the variables and products
+   m = a and b (the linearisation of Bosphorus, D. Choo, M. Soos, K. M.
+   A. Chai and K. S. Meel, ICTAI 2019), which reads XORs of disjunctions
+   (a or b = a + b + ab); a product that occurs in one row only is left
+   out, and an AND gate x = ab stands for its product. Gauss-Jordan
+   elimination then refutes Tseitin formulas, which take resolution
+   exponentially long proofs (A. Urquhart, "Hard examples for
+   resolution", J. ACM 34(1), 1987). A system of plain rows read from
+   clauses whose rows and variables form a tree is not posted: unit
+   propagation on its clauses already reaches what Gauss-Jordan
+   elimination would (C. Beeri, R. Fagin, D. Maier and M. Yannakakis,
+   "On the desirability of acyclic database schemes", J. ACM 30(3),
+   1983); the XORs of adders and multipliers are such trees.
+   -Dorg.jacop.fz.xorClauses=false turns the clauses off,
+   -Dorg.jacop.fz.xorQuadratic=false the degree-2 rows. On the 90 SAT
+   Competition 2024/25 CNFs of the SAT screen (cnf2fzn FlatZinc, 240 s)
+   it fires on 41; tseitin-formulas, mutilated-chessboard, or_randxor
+   and subset-cardinality are refuted at posting (none decided before),
+   random-graph-xorsat and binary-tree-parity are solved in 1 to 3 s
+   (unknown before; Kissat 164 s and unknown), and the default search
+   solves 13 of the 41 instead of 7, -f 11 instead of 5. On the 240
+   wide instances it fires on 2013 rubik 6-cube and 7-cube only, which
+   stay solved in 2 to 5 s (0.3 s slower).
+
+396. Core exhaustion (386) is on by default, for 8 outputs per core
+   (-Djacop.lcg.coreExhaust=K, 0 = off), and gives up once the first
+   output of 16 cores per output it proved, plus 16, was not refuted
+   (-Djacop.lcg.coreExhaustPatience=P, LcgSolver.setCoreExhaustPatience,
+   0 = never). A failed test costs conflicts and changes the solver's
+   phases and learnt clauses: on is A3PZaPjnUz, where no output is ever
+   refuted, it kept the core-guided phase from the objective probes that
+   prove the optimum (1.7 s -> 13 s); with the patience rule 1.8 s.
+   Under -f at 600 s, on the 14 wide instances with objective terms
+   that are not all 0-1 where exhaustion fires, two rounds give a total
+   time of 2760 s instead of 3008 s (0.918) with 25 proved instead of 24:
+   lot-sizing pigment20a is proved in one round (370 s) and its bound
+   rises in the other (1014 -> 1070); diameterc-mst c_v15 (23 -> 18 s),
+   prize-collecting 32-4-8-2 (26-30 -> 22-26 s), median-string and
+   kidney-exchange are faster in both, accap instance5 (46-49 -> 62-67 s)
+   and gt-sort n9 (54-59 -> 60-68 s) slower in both. On the 32 MaxSAT
+   Evaluation 2024 instances where exhaustion fires, against exhaustion
+   without the patience rule, 5510 s instead of 5625 s (0.980), 25 proved
+   in both (it was 0.919 and 26 against no exhaustion). On the 62 wide-quick
+   instances at 240 s under -f the total is 0.997 (6632 s instead of
+   6649 s), the same 36 proved; the two that exhaustion alone slowed
+   down (is A3PZaPjnUz, work-task seed 8) did not move.
+
+397. The LP relaxation keeps the definitions of the shared sums of linear
+   overlap factoring that its rows still use. It replaces those sums by
+   their definitions only up to depth 8 but dropped every definition, so
+   the deeper sums of nested sets were free columns: CSPLib bus driver
+   scheduling c1 had root bound 4.4 instead of 25.4 (optimum 26). With -f
+   at 600 s on the 20 instances it reaches (12 bus driver scheduling, 8 of
+   the 240 wide instances): 15 -> 18 proved (c1 10 s, c2 20 s, r5a 193 s),
+   total time 3,389 -> 1,898 s; fixed search at 240 s 11 -> 13 proved.
+   The factoring is the horizontal overlap rule of the CP-SAT presolve
+   (L. Perron, F. Didier, CP-SAT, OR-Tools 9.15).
+
+398. Free search (-f) also searches before an expensive root LP (319).
+   When the first solve of the relaxation is large, a solver of its own
+   runs for 200 ms (-Dorg.jacop.fz.lpProbe) with the relaxation suspended.
+   Its answer is final when it finishes. Otherwise its prunings are undone,
+   the relaxation is solved at the root and free search starts as before,
+   from the probe's best solution as phase and bound. Free search takes
+   choices at its start from the solved relaxation (its solution as a
+   guide, the core-guided schedule from the root bound), so the probe does
+   not run inside it. nside MEDIUM_5_3 of the 2026 Challenge: 2.3 -> 0.5 s.
+   At 600 s with -f, base and change pinned to a core each: the 104
+   Challenge instances of the upTo5sec, upTo30sec and upTo1min sets where
+   it fires 1895 -> 1851 s in total, the 50 wide instances where it fires
+   12355 -> 11763 s and 30 -> 31 proved (roster-shifts-bool s100_e20_c8
+   proved in 14 s). -Dorg.jacop.fz.freeLpProbe=false turns it off.
+
+399. The LP relaxation states the value encodings of the model's Booleans
+   (sum b_v = 1, x = sum v b_v, and y = sum a[v] b_v for an element
+   y = a[x]) in place of the convex hull rows of the elements they cover,
+   since the encoding is that hull. The encodings count with the model's
+   rows when the simplex is chosen by size: when they make 100 rows or
+   more, the sparse simplex takes them all, outside the share of the
+   other extra rows, and keeps them in search instead of dropping them at
+   the pivot limit of the dense tableau. On a generalized assignment model
+   (OR-Library gap, job j to agent a[j], b[i,j] <-> a[j] = i, capacity rows
+   over the b, cost by element) the encodings are the assignment and cost
+   rows of its LP: before, their dense trial with 836 hull rows stopped at
+   the pivot limit and kept none (gapb 5x100 root bound 1,569, now 1,831,
+   optimum 1,843), or the LP stalled after 33 solves in search (gapd
+   10x200). OR-Library gap b-d at 600 s: 3 -> 7 of 18 proved (total time
+   0.81) and 2 -> 7 with -f (0.79), a better incumbent on 16 of 18 and 14
+   of 18. It fires on 8 of the 240 wide instances, with the same results.
+   -Dorg.jacop.lp.encodingRows=false turns it off; the statistic
+   lpEncodedElements gives the elements left to their encodings (":sparse"
+   when they chose the sparse simplex).
+
+400. The core-guided phase of LCG (MaxSAT-like objectives) looks for its
+   at-most-one groups of soft literals (Ignatiev, Morgado and
+   Marques-Silva, RC2, JSAT 11, 2019) once more after it hardens soft
+   literals. A conflict soft
+   clause heavier than the gap to the best solution is hard only once a
+   solution is known, and only then puts its two literals in one group;
+   before, the groups were built while it was still soft and never again,
+   and the cores raised the bound by one each. Weighted MaxSAT
+   frb_wt-frb20-11-1 (independent set, 20 domain cliques) is proved in
+   4 s instead of 416-477 s by default and 186-200 s with -f;
+   drmx-cryptogen threshold128 is proved in 275 s by default (before
+   not at 600 s). The statistic lcgCoreRegroups counts it.
+
+401. Bin packings that minimize the bins used find packings at the bound.
+   (a) Free search packs the items of a bin packing whose objective
+   bounds every item's bin (bin[i] <= bins) into as many bins as the
+   objective's lower bound, by bin completion with first-fail item
+   choice, completions that pack the items with the fewest completions
+   first, and randomized restarts, org.jacop.search.ls.BinCompletion
+   (R. E. Korf, A new algorithm for optimal bin packing, AAAI 2002;
+   C. P. Gomes, B. Selman and H. Kautz, Boosting combinatorial search
+   through randomization, AAAI 1998). The packing is checked in the
+   store, printed and given to lazy clause generation as its first
+   solution, which only has to prove it optimal. --free-config
+   bin-completion=off turns it off, bin-completion-share (0.05 of the
+   time limit, at most 30 s) bounds it.
+   (b) Symmetry breaking posts a value precedence over the bins also when
+   the model empties the bins above the objective (b > bins ->
+   load[b] = 0, flattened into bool_clause, int_eq_imp and int_le_imp):
+   like bin[i] <= bins these constraints are left out of the value graph,
+   since relabelling the bins by first use (Y. C. Law and J. H. M. Lee,
+   Global constraints for integer and set value precedence, CP 2004)
+   keeps the bins above the objective empty. The chain orders the items
+   by decreasing weight, as first fit decreasing opens the bins.
+   -Dorg.jacop.fz.symmetryEmptiedBins=false turns it off.
+   On the OR-Library binpack5-8 Falkenauer triplets (E. Falkenauer, A
+   hybrid grouping genetic algorithm for bin packing, Journal of
+   Heuristics 2, 1996) and shuffled copies, all 16 are proved optimal in
+   3-16 s at 600 s, where 6 were (CP-SAT proves the originals in
+   2-33 s); of the 8 binpack1-4 instances 3 are proved instead of 1
+   (u250_00 and u250_10, which CP-SAT does not solve in 240 s) and the
+   4 largest get a solution, where they had none. Total time over the
+   24 falls from 10707 to 3252 s (-f: 10759 to 3366 s). Neither part
+   fires on the 240 wide instances.
+
+402. JaSAT can rewrite a formula by bounded variable addition before its
+   first variable elimination (org.jacop.jasat.cdcl.Factorizer,
+   CdclSolver.setFactoring, on by default in CdclMain, --factor 0 turns
+   it off): a grid of clauses f_p v R_i over factor literals f_1..f_k and
+   quotients R_1..R_n becomes x v f_p and -x v R_i on a fresh variable x,
+   k*n clauses into k+n, so at-most-one cliques and similar products
+   shrink from quadratic to linear size (N. Manthey, M. J. H. Heule and
+   A. Biere, Automated reencoding of Boolean formulas, HVC 2012, in the
+   form of Kissat's factor; ties as in A. Haberlandt, H. Green and
+   M. J. H. Heule, Effective auxiliary variables via structured
+   reencoding, SAT 2023). The DRAT proof has the new clauses as RAT
+   steps. On 90 SAT Competition 2024/25 instances at 240 s CdclMain
+   solves 34 instead of 30 (reg-n UNSAT in 3 s, or_randxor, clique
+   formulas, puzzle, planning, oddball weighing and ensemble computation
+   are new; three satisfiable instances are lost). It is off in
+   CdclSolver otherwise, so lazy clause generation is unchanged.
+
+403. Constraints rewrite themselves to simpler ones during search, as
+   Gecode's GECODE_REWRITE does (C. Schulte, G. Tack, M. Z. Lagerkvist,
+   Modeling and Programming with Gecode, propagator rewriting): an
+   ElementVariableFast whose index is fixed becomes XeqY, so changes of
+   the other list variables no longer wake it, and a Reified, Implies or
+   ImpliesNot whose Boolean variable is fixed becomes its nested
+   constraint (or its negation), without the entailment checks at every
+   call. The simpler constraint lives until the store backtracks below
+   the level of the rewriting; lazy clause generation explains its
+   prunings and failures with the original constraint. On the 83 wide
+   set instances where they take most propagation time, total time is
+   unchanged at 600 s (-f 1.016 over two rounds, inside the 4 % noise
+   between base rounds) with the same instances solved, and -f finds
+   better objectives on celar graph11 (3080 vs 4450-14210),
+   multi-agent-graph-coverage n75 and orthorio challenge_12.
+   -Dorg.jacop.rewrite=false turns it off
+   (org.jacop.rewrite.element and org.jacop.rewrite.reified per kind).
+
+404. The FlatZinc front end posts the sums of element constraints indexed
+   by an all_different list: when y[k] = c[x[k]] over one constant array c
+   and the x[k] are all different over the union U of their domains, the
+   sum of the y[k] is fixed (a permutation of U) or bounded by the sums of
+   the n smallest and largest values of c over U. Permutation flow shop
+   models (d[i,k] = p[i,perm[k]]) get the machine loads, the bound of
+   E. Taillard (Benchmarks for basic scheduling problems, EJOR 64(2),
+   1993) and of the one-machine relaxations of B. J. Lageweg, J. K.
+   Lenstra and A. H. G. Rinnooy Kan (A general bounding scheme for the
+   permutation flow-shop problem, Operations Research 26(1), 1978); the
+   sums aggregate the assignment formulation of element and all_different
+   (P. Refalo, Linear formulation of constraint programming models and
+   hybrid solvers, CP 2000). Taillard ta006 had a root bound of 160 and
+   is proved optimal (1195) in 8 s with -f; CP-SAT takes 188 s. On the 24
+   Taillard instances at 600 s, -f proves 6 (none before). They fire on
+   12 of the 240 wide instances. -Dorg.jacop.fz.permutationElementSums=false
+   turns them off.
+
+405. Local search detects a permutation flow shop in the store (sequence
+   positions in an all different constraint, tables giving each machine's
+   processing time of the job at a position, precedence rows s + d <= t
+   along machines and positions, the makespan as the cost) and runs the
+   iterated greedy algorithm of R. Ruiz and T. Stuetzle (A simple and
+   effective iterated greedy algorithm for the permutation flowshop
+   scheduling problem, EJOR 177(3), 2007): NEH start (M. Nawaz, E. E.
+   Enscore and I. Ham, Omega 11(1), 1983), destruction and greedy
+   reinsertion, insertion local search and simulated annealing
+   acceptance, with the O(nm) insertion of E. Taillard (Some efficient
+   heuristic methods for the flow shop sequencing problem, EJOR 47(1),
+   1990). Under -f it runs like the job shop tabu search, alone for up to
+   half of the time limit and until ls-patience passes without a better
+   sequence; each better sequence is checked in the store. On the 24
+   Taillard instances at 600 s with -f every unproved instance is better
+   (ta101 12806 -> 11368, ta106 12892 -> 11306) and
+   the total time goes from 13971 s to 11097 s.
+
+406. The LP relaxation moves the clause rows that LCG hands it to the
+   sparse simplex when they make the dense tableau too large to search
+   with. On set covering (OR-Library scp, one objective row and a few
+   hundred covering clauses over thousands of columns) the 311 x 3,312
+   tableau of scpa1 gave each solve in search 19 pivots: 32 of 33 solves
+   stopped at the limit and the clause rows were dropped; on scpb1 and
+   larger the root trial of the clauses ran out of its budget and the
+   root bound stayed 0. Now a dense trial of the clause rows that stops at
+   its root budget is repeated on the sparse simplex, a dense tableau that
+   leaves fewer than 100 pivots a solve moves to the sparse simplex when
+   that costs at most a quarter per pivot, and clause rows that alone
+   carry the bound of the objective are not dropped after limits. Only
+   for relaxations whose own rows bound nothing (the objective row
+   alone). OR-Library scp at 600 s (14 instances): proved 3 -> 6 by
+   default (scp51 288 -> 6 s; scp61, scpa1, scpb1 in 13-39 s) and
+   2 -> 7 with -f (also scp51 and scpc1, 5 and 25 s); total time
+   7,111 -> 5,114 s and 7,758 -> 4,832 s with two wide instances. It
+   fires on none of the 240 wide instances. -Dorg.jacop.lp.extraSparse=false
+   turns it off.
+
+407. The CDCL unit propagation (CdclSolver.propagate) no longer writes a
+   watch-list entry back to the same place while every entry before it
+   stayed where it was, and a conflict leaves the rest of the list as it
+   is instead of copying it onto itself. A visit that only checks the
+   blocker literal now only reads the list, so the cache lines of long
+   watch lists stay clean. The search is the same. Pure SAT on 90 CNFs
+   runs 1.3 % faster (geomean 0.987, a copy of the base jar 1.003);
+   FlatZinc on the 240 wide-set instances at 600 s solves the same
+   instances by default, with total time on them 0.971 by default and
+   0.972 under -f.
+
+408. A satisfaction model without value encodings, such as a pure 0/1
+   (pseudo-Boolean) model, now gets a root refutation LP too. Before,
+   LinearRelaxation.refutation() needed value encodings, and the main
+   relaxation never ran cut rounds without an objective. The new LP takes
+   the model rows and the clause rows, with the block sums that lazy
+   clause generation split substituted back. It minimises a pseudo
+   objective t = sum w x over the inequality whose variables occur in the
+   most rows (clause rows are never chosen: pure CNF is left to the clause
+   refutation of item 385), with t in [min lhs, rhs]. Cut rounds (Gomory, MIR, zero-half) that push the
+   bound of t above rhs prove the model infeasible. Pigeonhole and
+   odd-cycle arguments are easy for the LP with cuts and exponential for
+   resolution (A. Haken, The intractability of resolution, Theoretical
+   Computer Science 39, 1985; M. W. Padberg, On the facial structure of
+   set packing polyhedra, Mathematical Programming 5, 1973). Pseudo-Boolean
+   competition instances proved UNSAT at 600 s that JaCoP could not prove
+   before: php_230_229 (7.6 s), phpexit_v2_10_092 (12.4 s), vc-grids
+   grid8_161 (1.6 s), vc-lines grid4_121 (0.8 s),
+   subsetcard-geq-random4reg-3500 (3.9 s) and miplib disctom (3.2 s);
+   vc-grids grid10_35 48.6 -> 0.9 s. The LP fires on 14 of the 240 wide
+   instances and on 65 of 222 PB instances. On those 79 at 600 s, 57 ->
+   63 are decided and nothing is lost. The total time goes from 15038 to
+   11036 s (wide 1345 -> 1313 s, PB 13692 -> 9723 s).
+   -Dorg.jacop.lp.refutationObjective=false turns it off, and
+   -Dorg.jacop.lp.refutationObjectiveLength (3) is the shortest row taken
+   as the objective. The statistic lpRefutationObjective tells when it
+   was built.
+
+409. A satisfaction model of clauses alone (bool_clause and the other
+   Boolean constraints the FlatZinc front end turns into clauses), asked
+   for one solution under free search (-f, or a model without search
+   annotation), goes to JaSAT as the CNF it is, as CdclMain solves a
+   DIMACS file: with variable elimination, chronological backtracking,
+   vivification and local search, which lazy clause generation keeps off
+   while the store's propagators are connected to the SAT solver. A model
+   whose detectors posted propagators (symmetry breaking, XOR systems,
+   cardinality) stays with lazy clause generation. On the 90 CNFs of the
+   SAT Competition 2024/25 screen at 240 s the default mode decides 30
+   instead of 17 and -f 32 instead of 15 (CdclMain 30); none of the 240
+   wide instances takes the new path. -Dorg.jacop.fz.pureClauses=false
+   turns it off.
+
+410. Short tables saying that two lists differ are posted as AllDifferentLists.
+   ListsDifferDetector finds jacop_short_table_int over x ++ y whose rows
+   each fix position k of x and of y to two different values and hold
+   every such pair of the domains, which is x != y as XCSP3 pycsp3 writes
+   it (BinaryPuzzle of the XCSP 2023 competition: 6,320 tables of 160 rows
+   over 160 variables at size 80). A group of lists that all differ
+   pairwise becomes one AllDifferentLists, any other pair one of two
+   lists. On the 12 BinaryPuzzle instances at 600 s, solved 7 -> 12 and
+   total time 3,708 -> 1,011 s (three base runs ran out of memory at
+   4 GB). -Dorg.jacop.fz.listsDiffer=false turns it off.
+
+411. Free search (-f) on routing models: on the giant-tour CVRP model of
+   the MiniZinc Challenge 2015 with CVRPLIB X instances, -f at 600 s finds
+   23,954 instead of 44,120 on X-n110-k13 and 26,191 instead of 56,345 on
+   X-n120-k6 (CP-SAT 9.15 with one worker 32,871 and 36,139).
+   - Route neighbourhoods of LNS start from the solution that LCG hands
+     over to free search without learning; before, LNS waited for a
+     better solution of free search's own and on X-n110-k13 first ran
+     after about 490 s.
+   - A slow LCG search is kept for a bound raise only when it closes
+     lcg-slow-bound-gain (default 0.0005) of the gap to the best cost; a
+     raise from 4 to 5 against 59,211 no longer keeps it. From
+     lcg-hopeless-at (2 % of the time limit) LCG gives way below
+     lcg-hopeless-rate (1 conflict/s).
+   - Element constraints are no longer queued for a change of a position
+     their index cannot select (Constraint.wakeNeeded()): +50 % failures/s
+     on X-n110-k13, where each variable is in about 330 element lists.
+   - LNS takes the share lns-share-routes (3) of free search's calls on
+     models with routes, instead of lns-share (0.8).
+   On the 88 wide-set instances with an element or circuit constraint the
+   time over the set goes from 15,991 to 15,202 s at 600 s;
+   benchmarks/cvrp-giant-tour in osolpro has the runs.
+
+412. JaSAT (CdclMain and pure clause models) gives a share of its time to
+   a feasibility-jump local search over the root-simplified formula, run at
+   each rephasing point (W. Luteberget, G. Sartor, Feasibility Jump: an
+   LP-free Lagrangian MIP heuristic, Mathematical Programming Computation
+   15, 2023; for clauses a jump is a flip, so it is clause weighting of the
+   breakout kind, P. Morris, The breakout method for escaping from local
+   minima, AAAI 1993). Its runs restart from a random assignment with fresh
+   weights after a Luby number of flips (M. Luby, A. Sinclair, D.
+   Zuckerman, Optimal speedup of Las Vegas algorithms, Information
+   Processing Letters 47, 1993); without the restarts it solves neither
+   target instance. A model it finds becomes the phase the decisions
+   follow until the next conflict, and eliminated variables are
+   reconstructed as before. -Djacop.jasat.jump=<share> (CdclMain --jump)
+   sets the share, default 0.1, 0 turns it off; it never runs under LCG or
+   with assumptions. On the 90 CNF instances of the SAT gap screen at
+   240 s: 30 -> 35 solved (sgen 32.7 s and tree-decomposition 147 s, which
+   Kissat and JaCoP did not solve in 600 s, fixed-shape-random, puzzle,
+   pythagorean-triples), heule-nol 49 -> 13 s, no instance lost, total
+   time 0.947; UNSAT instances take the share, 1.107 on the 13 proved.
+   At 600 s 41 -> 45 of the 90 are solved, total time 0.942 on the 60
+   not solved by both at 240 s.
+
+413. The FlatZinc front end keeps large tables in memory once and builds
+   less for them, so the XCSP 2026 models with large tables no longer run
+   out of memory at 6 GB. Short tables with equal rows share one
+   HybridTable index (CrosswordDesign posts 96 of them, 4 distinct);
+   parameter arrays (of integers or sets) of 1024 or more entries that
+   MiniZinc writes several times are kept once (the 31 copies of the MDD
+   label sets of WordDesign2-words-mdd-025, XCSP 2023, took 5.7 GB); the detectors that scan constraint arguments no
+   longer turn parameter arrays into constant variables (84,000 on
+   CrosswordDesign-09, all LCG variables); the symmetry detection releases
+   its caches after it runs; table variable elimination reads the rows of
+   a table only when it joins it, and joins at most a million rows
+   (org.jacop.fz.tableElimination.joinInput); table posting copies only
+   the rows that fit the domains; and the parser no longer keeps every
+   token of an array literal alive. The new mznlib predicates
+   fzn_xcsp_table_rows, fzn_xcsp_short_table_rows and
+   fzn_xcsp_negative_table_rows take a table as a one-dimensional array of
+   rows, which MiniZinc writes once. Live heap: CrosswordDesign-12 7.0 GB
+   to 2.5 GB, Steiner3-11 5.4 GB to 1.2 GB, Inglenook-100 out of memory
+   at 10 GB to solved in 30 s at 2.9 GB. Over the 30 held-back XCSP 2026
+   instances at 600 s and 6 GB, 24 now find solutions and 5 more run to
+   the limit (before: none of them); the 2026 CSP replay score goes from
+   116 to 130 (fifth to third). The default search is unchanged.
+
+414. JaSAT (CdclMain, plain SAT without an external propagator) vivifies
+   on a sorted schedule as Kissat 4 and CaDiCaL 2 do: after each clause
+   database reduction, the core, middle and local learnt tiers and the
+   irredundant clauses share a budget of 10 % of the propagations since
+   the last round (weights 3/3/1/3). Literals are sorted by occurrence and
+   candidates lexicographically so that consecutive probes reuse their
+   decisions; a conflict or an implied literal is analysed back to the
+   decisions, and the clause is shrunk, removed when subsumed or implied
+   by irredundant clauses, or strengthened by instantiation. Before, only
+   core and middle learnt clauses were vivified, once each. References:
+   Li, Xiao, Luo, Manya, Lu, Li, Clause vivification by unit propagation
+   in CDCL SAT solvers, Artificial Intelligence 279 (2020); Luo, Li, Xiao,
+   Manya, Lu, An effective learnt clause minimization approach for CDCL
+   SAT solvers, IJCAI 2017; Biere, Faller, Fazekas, Fleury, Froleyks,
+   Pollitt, CaDiCaL, Gimsatul, IsaSAT and Kissat entering the SAT
+   Competition 2024. On 90 SAT Competition 2024/25 instances at 240 s
+   JaSAT solves 32 instead of 30 (seed 0) and 32 instead of 28 (seed 1),
+   with 3 more UNSAT proofs on seed 1 (planning and tseitin-formulas on
+   both seeds); at 600 s over 3 seeds circuit-equivalence-checking takes
+   0.90x and grs-fp-comm 0.85x the time. LCG and the FlatZinc front end
+   keep the previous vivification; -Djacop.jasat.vivifySorted=false
+   restores it for CdclMain too.
+
+415. The LP relaxation links the columns of a table with a key column (the
+   element constraints over one index that the front end merges into one
+   table, such as the options of a class in car sequencing) to the value
+   encoding of the key: y = sum_v t(v) b_v for every other column y, the
+   linear formulation of element (P. Refalo, Linear formulation of
+   constraint programming models and hybrid solvers, CP 2000, LNCS 1894).
+   The extra rows of a satisfaction model (value encodings, linearized
+   constraints), kept before only when the root LP was infeasible, stay on
+   probation for 64 solves and are kept if at least 10 % of the solves
+   since then failed the node; a relaxation that fails that often is no
+   longer starved by its work budget, and its extra rows are not dropped
+   for the pivot limits they hit. Car sequencing (CSPLib 001) p6-76 is
+   proved UNSAT with -f in 24 s instead of 318 s; the 108 CSPLib car
+   sequencing instances at 600 s with -f: 83 -> 87 solved (p10-93, p36-92
+   UNSAT, pb_200_01, pb_200_07), total time -7 %. With -s it prints lpProbationKept
+   and lpFailingSolves. -Dorg.jacop.lp.keyedTables=false,
+   -Dorg.jacop.lp.satisfactionProbation=0 and -Dorg.jacop.lp.failRate=0
+   turn them off.
+
+416. Free search (-f), and model search without a search annotation, of a
+   weighted partial MaxSAT model (clauses, 0/1 linear rows and a cost
+   that is a weighted sum of 0/1 variables, as the MaxSAT Evaluation
+   instances flatten) runs MaxSAT local search,
+   org.jacop.search.ls.MaxSatLocalSearch, in the style of SATLike (Z. Lei
+   and S. Cai, Solving (weighted) partial MaxSAT by dynamic local search
+   for SAT, IJCAI 2018; S. Cai and Z. Lei, Old techniques in new ways:
+   clause weighting, unit propagation and hybridization for maximum
+   satisfiability, Artificial Intelligence 287, 2020): dynamic clause
+   weights with a bound on soft weights, smoothing, and best-from-multiple-
+   selection (S. Cai, Balance between complexity and quality: local search
+   for minimum vertex cover in massive graphs, IJCAI 2015). The FlatZinc
+   front end reads the model back (org.jacop.fz.MaxSatModel): equalities
+   and negations of 0/1 variables are merged, relaxation variables that
+   occur in one clause become soft clauses, and symmetry breaking
+   constraints are left out and solutions mapped onto ones they accept.
+   A short burst runs first; its best assignment is checked in the store,
+   printed and given to lazy clause generation as its first solution,
+   whose bound comes after the core-guided phase; then the local search
+   continues in slices from LNS's best solution as LNS proposals. On the
+   85 MaxSAT Evaluation 2024 instances where it fires at 240 s, -f is
+   better on 16 and worse on none (57 proved both ways), default search
+   better on 17 and worse on 1 (60 proved, was 58): ramsey k3_n17
+   13395 -> 10372 (CP-SAT 600 s: 11579), HaplotypeAssembly 1874 -> 1560,
+   mpe random-net-100-2 95863 -> 91062, drmx-cryptogen 872 -> 819. On
+   the 23 gap instances of the screen at 600 s, -f is better on 9 and
+   worse on 2 (10 proved, was 9; total time 0.945), default search
+   better on 8 and worse on 3 (10 proved, was 9; 0.962). It fires on 2
+   of the 240 wide instances, with the same results. --free-config maxsat=0 turns it
+   off; maxsat-share (0.05 of the time limit), maxsat-max (60000 ms),
+   maxsat-patience (1000 ms), maxsat-lns (200000 flips per proposal),
+   maxsat-bound, maxsat-hard and maxsat-smooth tune it.
+   The store check of a hint before lazy clause generation (also of the
+   project schedule) now runs the root's pending propagation first.
+
+417. With lazy clause generation, a linear constraint of more than 20 terms
+   (instead of 40) becomes sums of blocks of about sqrt(n) terms, so its
+   explanations are shorter (as the lazy decomposition of Abio and Stuckey,
+   "Conflict directed lazy decomposition", CP 2012, does on demand). A
+   census of reasons on the 62 wide-quick instances showed sums of 21 to 40
+   terms giving reasons of 261 atoms on average, 71 % of all reason atoms on
+   lot-sizing pigment20a. Such sums occur in 27 of the 240 wide instances.
+   On them at 600 s with -f, two rounds: total time 3,315 -> 2,342 s
+   (0.707) and solved 50 -> 52 of 54 (pigment20a 600 -> 64-258 s,
+   neighbours-6 69-92 -> 26-46 s, liner-sf tp7_4 192 -> 123 s in round 1; slower
+   fast-food ff58 19 -> 26-28 s); default mode, one round: 3,403 ->
+   3,368 s, solved 23 -> 24 (neighbours-6 proved in 341 s; slower fast-food
+   ff58 227 -> 371 s and mario medium_4 287 -> 359 s). wide-quick at 240 s
+   with -f: 6,531 -> 6,422 s, solved 36 -> 37. --free-config lcg-split=40
+   restores the old limit.
+   
+418. JaSAT (CdclSolver, CdclMain) tries Kissat's lucky assignments before
+   the first search (Biere and Fleury, Proc. SAT Competition 2022): all
+   variables true or false when every clause has a literal of that sign,
+   then forward and backward passes in input order deciding false and then
+   true, with propagation and one flip per conflict. They run before
+   variable elimination and again after it, only in the first solve()
+   without assumptions or an external propagator (so not under LCG). An
+   attempt that finds no model leaves the search exactly as without it
+   (watches, clause literal order and phases are restored, no units are
+   kept). On the 90 SAT Competition 2024/25 CNFs of the SAT gap screen
+   they find a model for 2 (cryptography-simon, unsolved at 600 s before,
+   now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
+   CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
+
+420. Free search (-f) runs a memetic tabu search before lazy clause
+   generation when every constraint of the model defines one variable from
+   others (products and other functional constraints, linear equalities)
+   and the cost is a function of at most 64-value decision variables, as on
+   low autocorrelation binary sequences (Gallardo, Cotta and Fernandez,
+   Finding low autocorrelation binary sequences with memetic algorithms,
+   Applied Soft Computing 9(4), 1252-1262, 2009). org.jacop.fz.FunctionalModel detects such models and
+   org.jacop.search.ls.FunctionalTabuSearch evaluates the definitions
+   incrementally (linear sums by deltas, partial sums inlined) and runs a
+   population with crossover, mutation and tabu walks. Its best assignment
+   is checked in the store and printed; LCG then starts from it with its
+   cost as bound and without the core-guided phase, and LNS continues the
+   tabu search from the incumbent as a proposer. --free-config tabu=0
+   turns it off; tabu-share (0.9 of the time left), tabu-max, tabu-stall,
+   tabu-generations and tabu-lns tune it. On the XCSP 2025
+   LowAutocorrelation instances at 240 s it finds 108 (optimum) for n=40,
+   about 856 for n=100 and 3820-4020 for n=200 (before 180, 1226-1354 and
+   4976-5172; Choco 120, 1038 and 4292 at 1800 s).
+
+421. Next to the redundant GCC that the FlatZinc front end posts on counts
+   written by hand, it posts the two sums every complete GCC implies when
+   the counted variables count themselves (self-describing sequences,
+   magic series): sum(c) = n and sum(v * c[v]) = sum(x) (B. M. Smith,
+   Modelling, Handbook of Constraint Programming, 2006). GCC's bound
+   consistency alone lowered one bound by one per round of its fixpoint;
+   with holes in the domains, as the facts of root probing under -f leave
+   them, it ran 125 rounds per call. MiniZinc Challenge nmseq 202 -f takes
+   11 s instead of 32 s, nmseq 395 25 s instead of 37 s (default search
+   11 s and 25 s instead of 15 s and 35 s). -Dorg.jacop.fz.gccSums=false
+   turns them off.
+
+422. A Hamiltonian path written as a numbering gets a redundant circuit.
+   NumberedPathDetector finds an all_different over N variables with values
+   in 1..N where every cell c holds N or a neighbour holds x[c] + 1
+   (among over the model's reified x[d] - x[c] = 1, or a short table of
+   (v, *, .., v + 1, .., *) rows), as in the CalvinPuzzle and Hidato
+   models of the XCSP competitions. It posts successor variables, s[c] = d <-> x[d] =
+   x[c] + 1 with the model's own literals, a start node whose successor is
+   the cell of value 1, and Circuit over them, so subtours are pruned (G.
+   Pesant, M. Gendreau, J.-Y. Potvin and J.-M. Rousseau, "An exact
+   constraint logic programming algorithm for the traveling salesman
+   problem with time windows", Transportation Science 32(1), 1998). The
+   numbering alone finds the dead ends of a path only when it is nearly
+   complete. Over the 1,761 XCSP FlatZinc files of 2022-2025 it fires on
+   the 14 CalvinPuzzle (2023, 05-12 and their table variants) and the 9
+   Hidato-table (2022) instances only. With -f at 600 s, CalvinPuzzle goes
+   from 11 to 14 solved and the total time from 3007 to 49 s
+   (CalvinPuzzle-10/12 and table-12 unknown -> 2-15 s, 09 424 -> 2 s), and
+   Hidato-table from 5 to 9 solved and 2779 to 1162 s (11-11 257 -> 19 s,
+   12..15 unknown -> 30-591 s).
+   -Dorg.jacop.fz.numberedPath=false turns it off; it is off with --proof.
+
+423. Memory of large layered graphs (mdd, regular) and of large clause sets.
+   Constraints ExtensionalSupportMdd given the same arrays (the FlatZinc
+   front end keeps equal long arrays once) share the graph built from them
+   when their variables have equal domains, instead of a graph each; the
+   arrays are no longer copied. The automatic choice of the propagation
+   engine of a layered graph keeps the counters while their state fits in
+   a quarter of the heap and takes support search past it, which keeps no
+   counter per node. Under lazy clause generation, layered graphs become
+   clauses while those fit in 1/8 of the heap
+   (-Djacop.lcg.graphClauses.heapShare); larger ones are propagated and
+   explained by cuts. The linear relaxation counts the arcs of a flow
+   model before it builds it. In JaSAT, elimination and the local search
+   walk are skipped when their copies of the clauses would not fit in a
+   quarter of the heap, and the learnt clauses are reduced early when they
+   take more than 1/16 of it. The FlatZinc front end keeps the equal sets
+   of a set array of 1024 or more sets once (MagicSquare-mdd-16 read 31
+   million label sets, 4.2 GB). WordDesign2-words-mdd-025 (XCSP 2023, 300
+   MDDs on one diagram of 525,720 nodes and 1.8 million edges) ran out of
+   memory at 6 GB while posting and is now solved in 147 s;
+   MagicSquare-mdd-10 (-f) ran out of memory at 6 GB (and 12 GB) during
+   the search and MagicSquare-mdd-16 while reading; both now run to the
+   time limit.
+
+424. Routing with time windows: the LP relaxation of a Routes constraint
+   whose customers have times gets big-M arc-time rows
+   t_j >= t_i + d_ij - M (1 - x_ij), M = latest_i + d_ij - earliest_j over
+   the reduced windows (M. Desrochers, G. Laporte, Improvements and
+   extensions to the Miller-Tucker-Zemlin subtour elimination constraints,
+   Operations Research Letters 10(1), 1991, 27-36), kept in the search LP,
+   so its reduced-cost fixing prunes arc literals at every node; and
+   2-path cuts x(delta-(S)) >= 2 for customer sets that one route cannot
+   visit in one stretch within their windows (B. Kohl, J. Desrosiers,
+   O. B. G. Madsen, M. M. Solomon, F. Soumis, 2-path cuts for the vehicle
+   routing problem with time windows, Transportation Science 33(1), 1999,
+   101-116), checked exactly by a bounded search over the windows. At most
+   1,000 arc-time rows are kept (org.jacop.lp.arcTimeMax), those whose
+   travel time is the largest share of M.
+   GiantTourDetector now also reads the XCSP TSPTW form (subcircuit over
+   x + 1, time rows enforced by int_lin_le_imp and exempt on the arc back
+   to the depot). On the 44 instances that post Routes (18 Solomon VRPTW,
+   16 XCSP 2023 TSPTW, 5 MZNC 2025 tsptw and the 5 wide-set routing
+   instances) at 240 s the default mode proves 30 -> 34 (total time 0.80)
+   and -f 31 -> 34 (0.90); at 600 s on the 14 still open it proves
+   0 -> 6 and 1 -> 5 (TSPTW2 n040w060, n040w080, n060w040 and n060w060,
+   RC101_50, tsptw n100w120.003).
+   -Dorg.jacop.lp.arcTimeRows=false and -Dorg.jacop.lp.twoPathCuts=false
+   turn them off.
+
+425. The split of long linear constraints for lazy clause generation
+   (lcg-split) keeps every sum at 20 terms or fewer: a constraint of more
+   than 400 terms, whose blocks of sqrt(n) terms and sum of blocks were
+   both longer than 20 terms, becomes blocks of 20 terms whose sum is split
+   again, a tree of sums (as the lazy decomposition of Abio and Stuckey,
+   "Conflict directed lazy decomposition", CP 2012, introduces partial
+   sums). It fires on 21 of the 240 wide instances, mostly on objectives.
+   At 600 s: same 12 proved with -f, total time 5,588 -> 5,542 s, better
+   objectives on gbac UD3 (269 -> 173), ihtc i01, unit-commitment, worse
+   on warehouse olil4 (47,617 -> 61,327); default search, same 8 proved,
+   better objectives on roster chicroster large_20 (no solution -> 98),
+   surface-based-tsp ch130 (9,040 -> 8,110), celar graph11 and
+   unit-commitment, worse on none. At 240 s with -f: total 2,448 ->
+   2,323 s (roster chicroster 79 -> 37 s, network_50_cstr 88 -> 16 s).
+   --free-config lcg-split-tree=0 restores blocks of sqrt(n) terms; with -s
+   it prints lcgSplitSums.
+
+426. With --lcg, -f and an objective that sums at least four squares (x * x
+   or x ^ 2 among the terms reached through up to three linear constraints
+   from the cost variable), free search without learning runs first for
+   10 % of the time limit and LCG then goes on from its best solution. A
+   sum of squared deviations is a balancing objective (balanced academic
+   curricula, nurse workloads, low autocorrelation): LCG's bound literals
+   say little about which value of a decision raises it, while free search
+   picks each value by its bound on the objective (value-impact). XCSP 2023
+   GBACP at 600 s: geometric mean of the best objective 0.63 of before,
+   UD07 7149 -> 378, UD03 2911 -> 177, UD05 340 -> 217 (CoSoCo in the 2023
+   competition: 2338 and 273); MiniZinc Challenge gbac 0.98,
+   LowAutocorrelation 0.98. Of the 240 wide instances only two gbac instances are reached.
+   --free-config free-first=<share> sets the share, 0 turns it off.
+
+427. The core-guided phase of LCG no longer loops forever when it probes
+   the objective's bound (the probes of commit 7c2bc093d) after the
+   objective's own minimum has reached the best solution: every probe
+   target was already implied, so the step doubled until it overflowed
+   and the loop never ended. MiniZinc Challenge 2023 roster-shifts-bool
+   s100_e20_c8 under -f with -t 240 s or more never ended (bound and best
+   both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
+   instances it is the only one that met the loop at 240 s.
+
+428. Subtour cuts for successor models (opt-in,
+   -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
+   output array x and an element list pos whose arcs x[i] = j are proved
+   acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
+   Miller-Tucker-Zemlin formulation of a path or tour (Miller, Tucker and
+   Zemlin, JACM 1960), and posts a redundant graph.Forest over the arc and
+   node literals. The linear relaxation separates on it the generalized
+   subtour elimination cuts of TreeCuts (Lucena and Resende, Discrete
+   Applied Mathematics 2004; Fischetti, Salazar-Gonzalez and Toth, INFORMS
+   Journal on Computing 1998). The tree cut rounds now also move to the
+   sparse simplex when the dense tableau runs out of pivots before the
+   bound has moved. On prize-collecting 32-4-8-2 (MiniZinc Challenge 2016)
+   the root bound goes from 172 (the assignment relaxation) to 102.5, for
+   the optimum 92, and on cvrp simple2 from 24 to 34 (optimal). It stays
+   off by default: of 187 optimisation instances of the wide set it fires
+   on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
+   28 s -> 34 s by default, 27-38 s -> 20 s with -f).
+
+429. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+   that linear overlap factoring (272) reduces to the shared sum alone.
+   A row k * S rel c whose whole sum S became the new variable z is
+   k * z rel c, which the FlatZinc front end posts as a bound of z or as
+   XmulCeqZ, so the relaxation, which substitutes S for z, never saw it.
+   These rows are now recorded at posting and given to the relaxation,
+   which expands them back into the original row. On MIPLIB p0548 (pure
+   integer, generic MPS model) the root cut bound goes from 464 to 7,325
+   (optimum 8,691) and -f proves it in 26 s instead of 297 s. At 600 s,
+   on the 18 MIPLIB and wide instances where the extra rows exist and
+   240 s results differed, the 7 proved instances take 7,271 s against
+   7,624 s in total (all 7 faster), and 8 of the 11 others end with a
+   better objective (mitre and p2756 at the optimum), 3 worse (air04,
+   warehouse olil4, cap6000). The rows are counted in the statistic
+   lpUnitRows.
+
+430. JaSAT substitutes equivalent literals before variable elimination. The
+   strongly connected components of the binary implication graph (B.
+   Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
+   the truth of certain quantified Boolean formulas, Information Processing
+   Letters 8(3), 1979; A. Van Gelder, Toward leaner binary-clause reasoning
+   in a satisfiability solver, Annals of Mathematics and Artificial
+   Intelligence 43, 2005) and clausal congruence closure over AND, XOR and
+   ITE gates found in the clauses (A. Biere, K. Fazekas, M. Fleury, N.
+   Froleyks, Clausal Congruence Closure, SAT 2024) give classes of equal
+   literals; each class is replaced by one representative, observed and
+   assumption variables never being replaced. The new GateExtractor finds
+   the gates and is shared with variable elimination. DRAT proofs cover the
+   new steps (XOR and ITE equivalences by case splits on the gate inputs).
+   On the 90 SAT Competition instances of the JaSAT comparison at 240 s,
+   against develop with bounded variable addition, two rounds: solved 32 ->
+   33 and 34 -> 33, total time 15,656 -> 15,552 s and 15,520 -> 15,396 s;
+   hardware-model-checking (2.2 s, unsolved at 600 s before) and
+   grs-fp-comm (210-237 s) are proved only with it, the other flips
+   (puzzle, planning, scheduling) go both ways between rounds. Under --lcg it fires on 19 of the 240 wide instances, with
+   the same results. --substitute 0 and --congruence 0 in CdclMain,
+   -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
+   it off.
+421. Free search without learning (-f, when LCG free search gives way)
+   no longer keeps the LCG solver it took over from: its SAT clauses,
+   trail and three literal maps per variable stayed live next to the
+   clauses posted again as constraints. Five references held it: the
+   solver kept for its statistics, the finished speed-check thread, the
+   trail pointer of every Boolean variable (AtomicTrail.detach now clears
+   it), a local of the method that runs free search, and the store's
+   cached copy of its level listeners after the trail was removed
+   (ListenerSet now drops the copy on removal). On rcpsp-wet-diverse
+   j90_48_4 (MiniZinc Challenge 2019, 2.35 million variables) with a
+   6 GB heap the live heap in free search is 4.3-4.8 GB instead of the
+   whole 6 GB.
 
 Version 4.11
 =============

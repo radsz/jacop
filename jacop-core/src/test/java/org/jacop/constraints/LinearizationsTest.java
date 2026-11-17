@@ -254,6 +254,56 @@ class LinearizationsTest {
   }
 
   @Test
+  void valueCliquesReplaceImpliedBooleansByTheValuesThatImplyThem() {
+    // ROADEF 2020 maintenance planning: a_i = exists(s in window)(st_i = s) and not (a_1 /\ a_2);
+    // the implications b -> a come as rows b - a <= 0, the exclusion as -a_1 - a_2 >= -1 (a clause)
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x1", 1, 4), new IntVar(store, "x2", 1, 4)};
+    IntVar[][] b = new IntVar[2][5];
+    List<Constraint> cs = new ArrayList<>();
+    for (int i = 0; i < 2; i++) {
+      for (int v = 1; v <= 4; v++) {
+        b[i][v] = new IntVar(store, "b" + i + v, 0, 1);
+        cs.add(new Reified(new XeqC(x[i], v), b[i][v]));
+      }
+    }
+    IntVar a1 = new IntVar(store, "a1", 0, 1);
+    IntVar a2 = new IntVar(store, "a2", 0, 1);
+    List<LinearForm> rows = new ArrayList<>();
+    for (int v : new int[] {1, 2}) {
+      rows.add(new LinearForm(new IntVar[] {b[0][v], a1}, new long[] {1, -1}, 0, LinearForm.LE));
+    }
+    for (int v : new int[] {2, 3}) {
+      rows.add(new LinearForm(new IntVar[] {a2, b[1][v]}, new long[] {1, -1}, 0, LinearForm.GE));
+    }
+    rows.add(new LinearForm(new IntVar[] {a1, a2}, new long[] {-1, -1}, -1, LinearForm.GE));
+    List<LinearForm> made = Linearizations.valueCliques(cs, List.of(rows));
+    assertThat(made).hasSize(1);
+    LinearForm f = made.get(0);
+    assertThat(f.vars()).containsExactly(b[0][1], b[0][2], b[1][2], b[1][3]);
+    assertThat(f.weights()).containsExactly(1, 1, 1, 1);
+    assertThat(f.relation()).isEqualTo(LinearForm.LE);
+    assertThat(f.c()).isEqualTo(1);
+    // it holds for every solution of the model the rows state
+    cs.add(new OrBoolVector(new IntVar[] {b[0][1], b[0][2]}, a1));
+    cs.add(new OrBoolVector(new IntVar[] {b[1][2], b[1][3]}, a2));
+    cs.add(new LinearInt(new IntVar[] {a1, a2}, new int[] {1, 1}, "<=", 1));
+    for (Constraint c : cs) {
+      store.impose(c);
+    }
+    IntVar[] scope = {x[0], x[1], b[0][1], b[0][2], b[1][2], b[1][3]};
+    List<long[]> all = solutions(store, scope);
+    assertThat(all).isNotEmpty();
+    for (long[] solution : all) {
+      assertThat(holds(f, scope, solution)).as("%s at %s", f, Arrays.toString(solution)).isTrue();
+    }
+    // a Boolean implied by values of one variable only is not replaced
+    List<LinearForm> single =
+        Linearizations.valueCliques(cs, List.of(List.of(rows.get(0), rows.get(4))));
+    assertThat(single).isEmpty();
+  }
+
+  @Test
   void impliedValuesJoinTheEquivalentBooleansInOneClique() {
     // tank allocation (XCSP 2025): b_v -> x = v (int_eq_imp, ChannelImply) for the cargoes and
     // e <-> x = 3 (int_eq_reif) for the empty tank; b3 -> x = 3 duplicates e
@@ -664,6 +714,97 @@ class LinearizationsTest {
     return c;
   }
 
+  @Test
+  void selectedValueAndCountRowsHoldForEverySolution() {
+    // b_v <-> s /\ [x = v] as and constraints or as the clause rows of LCG, a select y = if s then
+    // x + c else d, and counts of 0/1 variables, as in ihtc-2024-kletzander
+    Random rnd = new Random(17);
+    int rows = 0;
+    int selections = 0;
+    int selects = 0;
+    for (int run = 0; run < 600; run++) {
+      Store store = new Store();
+      IntervalDomain d = new IntervalDomain();
+      for (int v = 0; v < 6; v++) {
+        if (rnd.nextInt(3) > 0) {
+          d.unionAdapt(v, v);
+        }
+      }
+      if (d.getSize() < 2) {
+        d.unionAdapt(0, 1);
+      }
+      IntVar x = new IntVar(store, "x", d);
+      IntVar s = new IntVar(store, "s", 0, 1);
+      IntVar one = new IntVar(store, "one", 1, 1);
+      List<IntVar> scope = new ArrayList<>(List.of(x, s, one));
+      List<Constraint> cs = new ArrayList<>();
+      List<LinearForm> extra = new ArrayList<>();
+      List<IntVar> values = new ArrayList<>();
+      List<IntVar> conjunctions = new ArrayList<>();
+      for (ValueEnumeration e = d.valueEnumeration(); e.hasMoreElements(); ) {
+        int v = e.nextElement();
+        IntVar ev = new IntVar(store, "e" + v, 0, 1);
+        scope.add(ev);
+        values.add(ev);
+        cs.add(new Reified(new XeqC(x, v), ev));
+        if (rnd.nextInt(5) > 0) {
+          IntVar b = new IntVar(store, "b" + v, 0, 1);
+          scope.add(b);
+          conjunctions.add(b);
+          cs.add(new AndBoolSimple(s, ev, b));
+          if (rnd.nextBoolean()) {
+            // as LCG posts it: b - s - e >= -1, s - b >= 0, e - b >= 0, the and left to clauses
+            cs.removeLast();
+            cs.add(new AndBoolVector(new IntVar[] {s, ev, one}, b));
+            extra.add(
+                new LinearForm(new IntVar[] {b, s, ev}, new long[] {1, -1, -1}, -1, LinearForm.GE));
+            extra.add(new LinearForm(new IntVar[] {s, b}, new long[] {1, -1}, 0, LinearForm.GE));
+            extra.add(new LinearForm(new IntVar[] {ev, b}, new long[] {1, -1}, 0, LinearForm.GE));
+          }
+        } else if (rnd.nextBoolean()) {
+          // never s /\ x = v
+          cs.add(new LinearInt(new IntVar[] {s, ev}, new int[] {1, 1}, "<=", 1));
+          extra.add(new LinearForm(new IntVar[] {s, ev}, new long[] {-1, -1}, -1, LinearForm.GE));
+        }
+      }
+      int c = rnd.nextInt(5) - 2;
+      IntVar z = new IntVar(store, "z", -10, 10);
+      cs.add(rnd.nextBoolean() ? new XplusCeqZ(x, c, z) : new XplusCeqZ(z, -c, x));
+      IntVar dc = new IntVar(store, "d", c - 1, c - 1);
+      IntVar y = new IntVar(store, "y", -20, 20);
+      cs.add(new ConditionalSelect(new IntVar[] {s, one}, new IntVar[] {z, dc}, y));
+      IntVar counter = new IntVar(store, "n", 0, values.size());
+      IntVar zeros = new IntVar(store, "m", 0, values.size());
+      Count ones = new Count(values, counter, 1);
+      Count none = new Count(conjunctions, zeros, 0);
+      cs.add(ones);
+      cs.add(none);
+      scope.addAll(List.of(z, dc, y, counter, zeros));
+      List<LinearForm> made = new ArrayList<>(Linearizations.selectedValueRows(cs, extra));
+      for (LinearForm f : made) {
+        selections += f.relation() == LinearForm.EQ && Arrays.asList(f.vars()).contains(s) ? 1 : 0;
+        selects += Arrays.asList(f.vars()).contains(y) ? 1 : 0;
+      }
+      made.addAll(Linearizations.of(ones));
+      made.addAll(Linearizations.of(none));
+      rows += made.size();
+      for (Constraint k : cs) {
+        store.impose(k);
+      }
+      IntVar[] all = scope.toArray(new IntVar[0]);
+      for (long[] solution : solutions(store, all)) {
+        for (LinearForm f : made) {
+          assertThat(holds(f, all, solution))
+              .as("run %d %s at %s", run, f, Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+    }
+    assertThat(rows).isGreaterThan(1500);
+    assertThat(selections).isGreaterThan(50);
+    assertThat(selects).isGreaterThan(50);
+  }
+
   private static boolean holds(LinearForm f, IntVar[] scope, long[] value) {
     Function<IntVar, Long> v =
         aVar -> {
@@ -734,5 +875,68 @@ class LinearizationsTest {
     assertThat(Linearizations.valueRows(x, 0, b, true, false)).isNotEmpty();
     assertThat(Linearizations.valueRows(x, 8, b, false, false)).isNotEmpty();
     assertThat(Linearizations.valueRows(x, 3, b, true, true)).isNotEmpty();
+  }
+
+  /**
+   * A table whose key column is an encoded variable (each tuple its own key value, as the front end
+   * merges the element constraints of one index into one table: the options of a class in car
+   * sequencing) gets y = sum t(v) b_v for each other column; the rows hold on every solution, and a
+   * table without a key gets none.
+   */
+  @Test
+  void keyedTablesGiveTheElementRowsOfTheirColumns() {
+    Random rnd = new Random(11);
+    int keyed = 0;
+    for (int run = 0; run < 300; run++) {
+      Store store = new Store();
+      int n = 2 + rnd.nextInt(5);
+      IntVar x = new IntVar(store, "x", 1, n);
+      IntVar[] bs = new IntVar[n];
+      for (int v = 0; v < n; v++) {
+        bs[v] = new IntVar(store, "b" + v, 0, 1);
+      }
+      IntVar y = new IntVar(store, "y", -2, 3);
+      IntVar z = new IntVar(store, "z", 0, 1);
+      // the key values: all of x's values, or a subset; a duplicate key value means no key
+      boolean duplicate = rnd.nextInt(4) == 0;
+      List<int[]> tuples = new ArrayList<>();
+      for (int v = 1; v <= n; v++) {
+        if (rnd.nextInt(5) > 0) {
+          tuples.add(new int[] {v, -2 + rnd.nextInt(6), rnd.nextInt(2)});
+        }
+      }
+      if (duplicate && !tuples.isEmpty()) {
+        int[] t = tuples.get(0);
+        tuples.add(new int[] {t[0], t[1] == 3 ? 2 : t[1] + 1, t[2]});
+      }
+      if (tuples.isEmpty()) {
+        continue;
+      }
+      HybridTable table = new HybridTable(new IntVar[] {x, y, z}, tuples.toArray(new int[0][]));
+      List<Constraint> cs = List.of(new ChannelReif(x, bs), table);
+      List<LinearForm> made = Linearizations.encodings(cs);
+      boolean hasKey = table.keyColumn() == 0;
+      boolean rowOfY = made.stream().anyMatch(f -> Arrays.asList(f.vars()).contains(y));
+      // a column that is 0 in every tuple gives no row: y = 0 has one variable
+      boolean nonzero = tuples.stream().anyMatch(t -> t[1] != 0);
+      assertThat(rowOfY).as("run %d", run).isEqualTo(hasKey && nonzero);
+      keyed += rowOfY ? 1 : 0;
+      for (Constraint c : cs) {
+        store.impose(c);
+      }
+      IntVar[] scope = new IntVar[n + 3];
+      scope[0] = x;
+      scope[1] = y;
+      scope[2] = z;
+      System.arraycopy(bs, 0, scope, 3, n);
+      for (long[] solution : solutions(store, scope)) {
+        for (LinearForm f : made) {
+          assertThat(holds(f, scope, solution))
+              .as("run %d %s at %s", run, f, Arrays.toString(solution))
+              .isTrue();
+        }
+      }
+    }
+    assertThat(keyed).isGreaterThan(100);
   }
 }

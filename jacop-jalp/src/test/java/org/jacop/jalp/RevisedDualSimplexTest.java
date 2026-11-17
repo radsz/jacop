@@ -342,6 +342,104 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void linearScoreIsChosenForFlowShapedLpsAndKeepsTheOptimum() {
+    // min-cost flows on random graphs: every arc column holds 1 and -1 in the conservation rows
+    // of its ends, a few arcs one more entry in a shared capacity row; the leaving row by
+    // gap^1.2 / weight must reach the optimum of gap^2 / weight
+    Random rnd = new Random(5);
+    for (int run = 0; run < 40; run++) {
+      // the first run is large enough for the automatic choice
+      int nodes = run == 0 ? RevisedDualSimplex.LINEAR_SCORE_COLUMNS / 2 : 20 + rnd.nextInt(30);
+      int arcs = nodes * (2 + rnd.nextInt(2));
+      int caps = 1 + rnd.nextInt(3);
+      int[][] cols = new int[nodes + caps][];
+      double[][] vals = new double[nodes + caps][];
+      int[] from = new int[arcs];
+      int[] to = new int[arcs];
+      int[] cap = new int[arcs];
+      int[] count = new int[nodes + caps];
+      for (int a = 0; a < arcs; a++) {
+        from[a] = a < nodes ? a : rnd.nextInt(nodes);
+        to[a] = a < nodes ? (a + 1) % nodes : (from[a] + 1 + rnd.nextInt(nodes - 1)) % nodes;
+        cap[a] = rnd.nextInt(20) == 0 ? nodes + rnd.nextInt(caps) : -1;
+        count[from[a]]++;
+        count[to[a]]++;
+        if (cap[a] >= 0) {
+          count[cap[a]]++;
+        }
+      }
+      for (int i = 0; i < nodes + caps; i++) {
+        cols[i] = new int[count[i]];
+        vals[i] = new double[count[i]];
+        count[i] = 0;
+      }
+      for (int a = 0; a < arcs; a++) {
+        cols[from[a]][count[from[a]]] = a;
+        vals[from[a]][count[from[a]]++] = 1;
+        cols[to[a]][count[to[a]]] = a;
+        vals[to[a]][count[to[a]]++] = -1;
+        if (cap[a] >= 0) {
+          cols[cap[a]][count[cap[a]]] = a;
+          vals[cap[a]][count[cap[a]]++] = 1;
+        }
+      }
+      double[] rowLo = new double[nodes + caps];
+      double[] rowHi = new double[nodes + caps];
+      for (int i = 0; i < nodes; i++) {
+        double supply = i == 0 ? 10 : i == nodes / 2 ? -10 : rnd.nextInt(3) - 1;
+        rowLo[i] = supply;
+        rowHi[i] = supply;
+      }
+      rowLo[0] -= sumOf(rowLo, nodes);
+      rowHi[0] = rowLo[0];
+      for (int i = nodes; i < nodes + caps; i++) {
+        rowLo[i] = Double.NEGATIVE_INFINITY;
+        rowHi[i] = 5 + rnd.nextInt(10);
+      }
+      double[] cost = new double[arcs];
+      for (int a = 0; a < arcs; a++) {
+        cost[a] = 1 + rnd.nextInt(20);
+      }
+      RevisedDualSimplex chosen = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+      RevisedDualSimplex squared = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+      assertThat(chosen.linearScore()).as("run " + run).isEqualTo(run == 0);
+      chosen.setLinearScore(true);
+      squared.setLinearScore(false);
+      for (int a = 0; a < arcs; a++) {
+        chosen.setBounds(a, 0, 30);
+        squared.setBounds(a, 0, 30);
+      }
+      int status = squared.solve(100_000);
+      assertThat(chosen.solve(100_000)).as("run " + run).isEqualTo(status);
+      if (status == RevisedDualSimplex.OPTIMAL) {
+        assertThat(chosen.objective())
+            .as("run " + run)
+            .isCloseTo(squared.objective(), offset(1e-6 * (1 + Math.abs(squared.objective()))));
+      }
+    }
+  }
+
+  @Test
+  void linearScoreIsNotChosenForDenserColumns() {
+    // three entries in every column: not the shape of a flow
+    int[][] cols = {{0, 1, 2}, {0, 1, 2}, {0, 1, 2}};
+    double[][] vals = {{1, 2, 3}, {2, 1, 1}, {1, 1, 4}};
+    double[] lo = {1, 1, 1};
+    double[] hi = {5, 5, 5};
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(cols, vals, lo, hi, new double[] {1, 1, 1}, true);
+    assertThat(lp.linearScore()).isFalse();
+  }
+
+  private static double sumOf(double[] a, int len) {
+    double s = 0;
+    for (int i = 0; i < len; i++) {
+      s += a[i];
+    }
+    return s;
+  }
+
+  @Test
   void twoEqualRowsWithFreeColumnsAreNotLeftAtTheLimit() {
     // rows 5 and 8 are the same row, a range and an equation, over the free columns 9 and 12; at
     // artificial bounds of 1e12 the basic slack of row 8 is off by 2e-5, and the combination of
@@ -420,6 +518,53 @@ class RevisedDualSimplexTest {
     assertThat(lp.presolveReductions()[Presolve.PARALLEL_ROW]).isEqualTo(2);
     assertThat(lp.objective()).isCloseTo(-7.75, org.assertj.core.data.Offset.offset(1e-9));
     assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
+  }
+
+  @Test
+  void forcingRowFixesItsColumnsAndPostsolvesAnOptimalBasis() {
+    // x + y <= 0 over x, y in [0, 5] holds only at x = y = 0; then x + 2y + z >= 2 makes z >= 2.
+    // min -3x - y + z = 2. The postsolve gives row 0 the dual -4 with x basic in place of its
+    // slack, so the whole problem needs no pivot after the reduced one
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{0, 1}, {0, 1, 2}},
+            new double[][] {{1, 1}, {1, 2, 1}},
+            new double[] {-inf, 2},
+            new double[] {0, inf},
+            new double[] {-3, -1, 1},
+            true);
+    lp.setExact(true);
+    for (int j = 0; j < 3; j++) {
+      lp.setBounds(j, 0, 5);
+    }
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolveReductions()[Presolve.FORCING_ROW]).isEqualTo(1);
+    assertThat(lp.objective()).isCloseTo(2, org.assertj.core.data.Offset.offset(1e-9));
+    assertThat(lp.pivots()).isEqualTo(lp.reducedPivots());
+  }
+
+  @Test
+  void dominatedColumnIsFixedByTheDualBoundOfAColumnSingleton() {
+    // x + s + t = 4 and x - v <= 2, s >= 0 without upper bound and cost 1 bounds the dual of row 0
+    // by 1, so the reduced cost of x (cost 3) is at least 2: x = 0 in every optimum. min 4
+    double inf = Double.POSITIVE_INFINITY;
+    RevisedDualSimplex lp =
+        new RevisedDualSimplex(
+            new int[][] {{0, 1, 2}, {0, 3}},
+            new double[][] {{1, 1, 1}, {1, -1}},
+            new double[] {4, -inf},
+            new double[] {4, 2},
+            new double[] {3, 1, 1, 0},
+            true);
+    lp.setExact(true);
+    lp.setBounds(0, 0, 10);
+    lp.setBounds(1, 0, inf);
+    lp.setBounds(2, 0, 10);
+    lp.setBounds(3, 0, 10);
+    assertThat(lp.solve(100)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+    assertThat(lp.presolveReductions()[Presolve.DOMINATED_COLUMN]).isEqualTo(1);
+    assertThat(lp.objective()).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
   }
 
   @Test
@@ -502,7 +647,7 @@ class RevisedDualSimplexTest {
     // the chunks of the chunked solves, apart so that they leave the problems as they were
     Random chunks = new Random(29);
     Random parallels = new Random(31);
-    int[] reductions = new int[7];
+    int[] reductions = new int[9];
     int runs = Integer.getInteger("jalp.test.runs", 3000) / 3;
     int reduced = 0;
     int optimal = 0;

@@ -31,6 +31,8 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -140,8 +142,21 @@ public class LinearOverlapDetector implements ParserTreeConstants {
    * @param support the support of the FlatZinc front end.
    */
   public LinearOverlapDetector(Support support) {
-    this.support = support;
+    this(support, Set.of());
   }
+
+  /**
+   * It creates the factoring, leaving out the rows of the given nodes.
+   *
+   * @param support the support of the FlatZinc front end.
+   * @param skipped constraint nodes that earlier detectors replaced; they are not posted.
+   */
+  public LinearOverlapDetector(Support support, Set<SimpleNode> skipped) {
+    this.support = support;
+    this.skipped = skipped;
+  }
+
+  private final Set<SimpleNode> skipped;
 
   /**
    * It tells if the factoring is on.
@@ -163,24 +178,24 @@ public class LinearOverlapDetector implements ParserTreeConstants {
     // the bounds of the new variables cost propagation at every node: pattern-set-mining-k1 and
     // bnn-planner make the same trees 3 to 4 times slower with them
     boolean reified = Boolean.getBoolean("org.jacop.fz.linearOverlap.reified");
-    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM
-              && (PLAIN.contains(((ASTConstElem) item).getName())
-                  || reified && HALF_OR_REIFIED.contains(((ASTConstElem) item).getName()))) {
+    support.forEachConstraint(
+        astTree,
+        item -> {
+          if (!skipped.contains(item)
+              && (PLAIN.contains(item.getName())
+                  || reified && HALF_OR_REIFIED.contains(item.getName()))) {
             collect(item);
           }
-        }
-      }
-    }
+        });
     if (rows.size() < 2) {
       return;
     }
+    List<IntVar> defined = setRowsDefined(astTree);
     changed = new boolean[rows.size()];
     factor(new LinearConstraints(support));
+    if (factored > 0 && defined != null) {
+      support.dictionary.setOverlapSetRows(defined);
+    }
     if (support.options.debug() && factored > 0) {
       int rewritten = 0;
       for (boolean c : changed) {
@@ -195,6 +210,84 @@ public class LinearOverlapDetector implements ParserTreeConstants {
               + rows.size()
               + " linear constraints rewritten");
     }
+  }
+
+  /**
+   * Whether every linear constraint of the model is a set row, a row with weights of one sign and
+   * size one over 0/1 variables, or an equality defining an integer variable with weight 1 or -1
+   * over 0/1 variables of the other sign: then the integer variables defined, otherwise null. The
+   * factoring turns set rows into rows over the shared sums, so the linear relaxation no longer
+   * sees them as set rows ({@code LinearRelaxation.setRows}) and Solve asks here: with the
+   * LP-guided branching that set partitioning relaxations get, the CSPLib bus driver scheduling r3
+   * (160 rows over 19,091 shifts, factored) is optimal in 17 s, unsolved in 120 s without.
+   */
+  private List<IntVar> setRowsDefined(SimpleNode astTree) {
+    List<IntVar> defined = new ArrayList<>();
+    Set<IntVar> columns = Collections.newSetFromMap(new IdentityHashMap<>());
+    int[] rowCount = {0};
+    boolean[] all = {true};
+    support.forEachConstraint(
+        astTree,
+        node -> {
+          String name = node.getName();
+          if (!all[0] || skipped.contains(node) || !name.contains("_lin_")) {
+            return;
+          }
+          SetRow row = PLAIN.contains(name) ? setRow(node) : null;
+          if (row == null) {
+            all[0] = false;
+            return;
+          }
+          if (row.defined() != null) {
+            defined.add(row.defined());
+          } else {
+            rowCount[0]++;
+          }
+          columns.addAll(Arrays.asList(support.getVarArray((SimpleNode) node.jjtGetChild(1))));
+        });
+    // at most org.jacop.lp.setRowsShare rows per column, as LinearRelaxation.setRows asks
+    boolean few = rowCount[0] >= 2 && rowCount[0] <= columns.size() * SET_ROWS_SHARE;
+    return all[0] && few ? defined : null;
+  }
+
+  private static final double SET_ROWS_SHARE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.setRowsShare", "0.1"));
+
+  // a set row, or with defined an equality defining that integer variable
+  private record SetRow(IntVar defined) {}
+
+  // the row as a set row, or null when it is not one
+  private SetRow setRow(ASTConstElem node) {
+    int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
+    IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    if (a == null || x == null || a.length != x.length) {
+      return null;
+    }
+    int integer = -1;
+    int sign = 0;
+    for (int i = 0; i < x.length; i++) {
+      boolean binary = x[i].min() >= 0 && x[i].max() <= 1;
+      if (x[i].singleton()) {
+        continue;
+      }
+      if (Math.abs(a[i]) != 1 || !binary && integer >= 0 || binary && sign != 0 && a[i] != sign) {
+        return null;
+      }
+      if (binary) {
+        sign = a[i];
+      } else {
+        integer = i;
+      }
+    }
+    if (integer < 0) {
+      return new SetRow(null);
+    }
+    return defines(node, sign, a[integer]) ? new SetRow(x[integer]) : null;
+  }
+
+  // an equality whose integer variable has the sign opposite to its 0/1 variables
+  private static boolean defines(ASTConstElem node, int sign, int integerWeight) {
+    return "int_lin_eq".equals(node.getName()) && (sign == 0 || integerWeight == -sign);
   }
 
   private void collect(SimpleNode node) {

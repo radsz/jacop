@@ -40,6 +40,7 @@ import java.util.Random;
 import java.util.Set;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.LinearInt;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.diffn.Diffn;
 import org.jacop.core.IntVar;
@@ -155,6 +156,29 @@ class AdaptiveLnsTest {
   }
 
   @Test
+  void rinsRelaxesTheVariablesThatDisagreeWithTheRelaxationFirst() {
+    AdaptiveLns lns = withSolution(5);
+    assertFalse(lns.usable(AdaptiveLns.Kind.RINS));
+    // the relaxation agrees with x[i] = i except on x9, x10 and x11, farthest on x11; x0 has no
+    // value
+    lns.setLpValues(i -> i == 0 ? Double.NaN : i < 9 ? i : i + (i - 8) * 0.5);
+    assertTrue(lns.usable(AdaptiveLns.Kind.RINS));
+    for (int k = 0; k < 200; k++) {
+      boolean[] free = relaxed(lns.neighbourhood(AdaptiveLns.Kind.RINS), N);
+      int count = 0;
+      for (boolean f : free) {
+        count += f ? 1 : 0;
+      }
+      int disagreeing = (free[9] ? 1 : 0) + (free[10] ? 1 : 0) + (free[11] ? 1 : 0);
+      assertEquals(Math.min(3, count), disagreeing, "run " + k);
+      // the farthest from the relaxation are relaxed first
+      assertTrue(count == 0 || free[11]);
+      assertTrue(count < 2 || free[10]);
+      lns.outcome(k % 2 == 0 ? AdaptiveLns.Outcome.IMPROVED : AdaptiveLns.Outcome.LIMIT);
+    }
+  }
+
+  @Test
   void neighbourhoodsGrowWhenRunsFinish() {
     AdaptiveLns lns = withSolution(2);
     int first = 0;
@@ -182,6 +206,66 @@ class AdaptiveLnsTest {
       free[i] = false;
     }
     return free;
+  }
+
+  @Test
+  void linesRelaxWholeAllDifferentScopesWithTheirSatellites() {
+    // 6 rounds of 4 opponents, all different in each round; each round's venue is tied to its
+    // first opponent by a constraint of two variables, and the rounds are chained by a cost row
+    int rounds = 6;
+    int teams = 4;
+    Store s = new Store();
+    IntVar[][] o = new IntVar[rounds][teams];
+    IntVar[] venue = new IntVar[rounds];
+    IntVar[] all = new IntVar[rounds * (teams + 1)];
+    for (int r = 0; r < rounds; r++) {
+      for (int t = 0; t < teams; t++) {
+        o[r][t] = new IntVar(s, "o" + r + "_" + t, 0, teams - 1);
+        all[r * (teams + 1) + t] = o[r][t];
+      }
+      venue[r] = new IntVar(s, "v" + r, 0, teams - 1);
+      all[r * (teams + 1) + teams] = venue[r];
+      s.impose(new Alldifferent(o[r]));
+      s.impose(new XeqY(venue[r], o[r][0]));
+    }
+    IntVar c = new IntVar(s, "c", 0, 1000);
+    IntVar[] terms = new IntVar[rounds + 1];
+    int[] w = new int[rounds + 1];
+    for (int r = 0; r < rounds; r++) {
+      terms[r] = venue[r];
+      w[r] = 1;
+    }
+    terms[rounds] = c;
+    w[rounds] = -1;
+    s.impose(new LinearInt(terms, w, "==", 0));
+    assertTrue(s.consistency());
+    AdaptiveLns lns = new AdaptiveLns(s, all, c, new Random(5));
+    int level = s.level;
+    s.setLevel(level + 1);
+    for (int r = 0; r < rounds; r++) {
+      for (int t = 0; t < teams; t++) {
+        o[r][t].domain.inValue(s.level, o[r][t], (r + t) % teams);
+      }
+    }
+    assertTrue(s.consistency());
+    lns.solution();
+    s.removeLevel(level + 1);
+    s.setLevel(level);
+    assertTrue(lns.usable(AdaptiveLns.Kind.LINES));
+    for (int k = 0; k < 50; k++) {
+      boolean[] free = relaxed(lns.neighbourhood(AdaptiveLns.Kind.LINES), all.length);
+      int freeRounds = 0;
+      for (int r = 0; r < rounds; r++) {
+        int base = r * (teams + 1);
+        // a round is relaxed whole, with its venue, or not at all
+        for (int t = 1; t <= teams; t++) {
+          assertEquals(free[base], free[base + t], "round " + r + " partly relaxed");
+        }
+        freeRounds += free[base] ? 1 : 0;
+      }
+      assertTrue(freeRounds >= 1 && freeRounds < rounds, freeRounds + " rounds relaxed");
+      lns.outcome(AdaptiveLns.Outcome.LIMIT);
+    }
   }
 
   @Test

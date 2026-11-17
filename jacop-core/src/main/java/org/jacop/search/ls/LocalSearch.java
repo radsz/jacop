@@ -155,6 +155,7 @@ public final class LocalSearch {
   private final boolean jump;
   private final boolean permutations;
   private final int scheduling;
+  private final boolean scheduleOnly;
   private final boolean skipImplied;
   private final boolean tableKeys;
   private final boolean follow;
@@ -324,6 +325,7 @@ public final class LocalSearch {
     jump = b.jump;
     permutations = b.permutations;
     scheduling = b.scheduling;
+    scheduleOnly = b.scheduleOnly;
     skipImplied = b.skipImplied;
     tableKeys = b.tableKeys;
     follow = b.follow;
@@ -373,10 +375,18 @@ public final class LocalSearch {
    */
   public Status solve() {
     deadline = timeLimitMillis > 0 ? System.currentTimeMillis() + timeLimitMillis : Long.MAX_VALUE;
-    if (!applicable()) {
+    if ((scheduleOnly
+            && (scheduling == 0
+                || cost == null
+                || !(ScheduleResources.hasResource(store)
+                    || ScheduleResources.hasPermutation(store))))
+        || !applicable()) {
       return Status.NOT_APPLICABLE;
     }
     build();
+    if (scheduleOnly && schedule == null && flowShop == null) {
+      return Status.NOT_APPLICABLE;
+    }
     if (timeUp()) {
       return Status.UNKNOWN;
     }
@@ -389,12 +399,22 @@ public final class LocalSearch {
     if (activity) {
       store.activityManagement(false);
     }
-    relaxations.forEach(r -> r.suspend(true));
+    // only the relaxations solving now are resumed after local search: one the caller suspended
+    // (the root solve of free search waits for org.jacop.fz.lpProbe) must stay so, or its first
+    // solve comes at a later probe or decision and its root rows hold only under that literal
+    List<LinearRelaxation> active = relaxations.stream().filter(r -> !r.isSuspended()).toList();
+    active.forEach(r -> r.suspend(true));
     try {
       initialAssignment();
       search();
     } finally {
-      relaxations.forEach(r -> r.suspend(false));
+      // queued again: the propagation of local search took their calls, and a relaxation that was
+      // not solved yet must be solved at the root, not at the first probe or decision after it
+      active.forEach(
+          r -> {
+            r.suspend(false);
+            store.addChanged(r);
+          });
       store.variableWeightManagement = weights;
       store.afcManagement(afc);
       if (activity) {
@@ -505,6 +525,18 @@ public final class LocalSearch {
    */
   public long[] getScheduleCounts() {
     return new long[] {scheduleTasks, scheduleMachines, scheduleIterations};
+  }
+
+  /**
+   * Returns the size of the permutation flow shop that the iterated greedy search used, and its
+   * iterations.
+   *
+   * @return jobs, machines and iterations; zeros when the model has no flow shop.
+   */
+  public long[] getFlowShopCounts() {
+    return flowShopIterations == 0 && flowShop == null
+        ? new long[3]
+        : new long[] {flowShopJobs, flowShopMachines, flowShopIterations};
   }
 
   /**
@@ -734,6 +766,15 @@ public final class LocalSearch {
     touchStamp = new long[m];
     if (scheduling != 0 && cost != null) {
       buildSchedule();
+      if (schedule == null) {
+        flowShop = PermutationFlowShop.detect(constraints, random);
+        if (flowShop != null && flowShopIndices() == null) {
+          flowShop = null;
+        } else if (flowShop != null) {
+          flowShopJobs = flowShop.n;
+          flowShopMachines = flowShop.m;
+        }
+      }
     }
   }
 
@@ -1261,6 +1302,10 @@ public final class LocalSearch {
       // no row cost >= s[t] + lag: the cost is not a makespan of these tasks
       return;
     }
+    if (scheduleOnly && arcs.isEmpty()) {
+      // no precedences (an open shop): run alone, the machine sequences lose to the search
+      return;
+    }
     int[] aVar = new int[n];
     int[] dur = new int[n];
     int[] release = new int[n];
@@ -1464,6 +1509,89 @@ public final class LocalSearch {
     }
     // back to the general search, from the best solution if the schedules gave one
     schedule = null;
+    System.arraycopy(solutions > started ? solution : before, 0, val, 0, val.length);
+    evaluateAll();
+    defineAll();
+    return timeUp();
+  }
+
+  // the iterated greedy search of a permutation flow shop, and its iterations
+  private PermutationFlowShop flowShop;
+  private long flowShopIterations;
+  private int flowShopJobs;
+  private int flowShopMachines;
+
+  // the indices of the position variables of the flow shop, null when one is not a variable here
+  private int[] flowShopIndices() {
+    int[] idx = new int[flowShop.n];
+    for (int k = 0; k < idx.length; k++) {
+      Integer i = index.get(flowShop.position[k]);
+      if (i == null) {
+        return null;
+      }
+      idx[k] = i;
+    }
+    return idx;
+  }
+
+  /**
+   * Runs the iterated greedy search of the permutation flow shop. Each better sequence is fixed in
+   * the store, which checks the other constraints and gives the cost.
+   *
+   * @return true when the local search is over; false when the store rejects the sequences or its
+   *     cost is not their makespan, and the general search takes over.
+   */
+  private boolean flowShopSearch() {
+    PermutationFlowShop fs = flowShop;
+    int[] positions = flowShopIndices();
+    long started = solutions;
+    int[] before = val.clone();
+    boolean[] over = {false};
+    PermutationFlowShop.Listener listener =
+        new PermutationFlowShop.Listener() {
+          private long calls;
+          private long lastProgress = System.currentTimeMillis();
+
+          @Override
+          public boolean report(int[] sequence, int makespan) {
+            lastProgress = System.currentTimeMillis();
+            if (boundRow >= 0 && solutions > 0 && makespan > rhs[boundRow]) {
+              // not better than a solution found before
+              return true;
+            }
+            for (int k = 0; k < sequence.length; k++) {
+              val[positions[k]] = fs.value[sequence[k]];
+            }
+            if (!feasible(positions) || solutionCost != makespan) {
+              // the model is more than the flow shop: the sequences do not give its cost
+              return false;
+            }
+            if (firstSolution) {
+              over[0] = true;
+            }
+            return true;
+          }
+
+          @Override
+          public boolean stop() {
+            if (over[0] || stopRequested) {
+              return true;
+            }
+            if ((++calls & 15) != 0) {
+              return false;
+            }
+            return timeUp()
+                || (patienceMillis > 0
+                    && System.currentTimeMillis() - lastProgress > patienceMillis);
+          }
+        };
+    boolean done = fs.run(listener);
+    flowShopIterations += fs.iterations();
+    steps += fs.iterations();
+    if (done) {
+      return true;
+    }
+    flowShop = null;
     System.arraycopy(solutions > started ? solution : before, 0, val, 0, val.length);
     evaluateAll();
     defineAll();
@@ -2891,6 +3019,13 @@ public final class LocalSearch {
     if (schedule != null && scheduleSearch()) {
       return;
     }
+    if (flowShop != null && flowShopSearch()) {
+      return;
+    }
+    if (scheduleOnly) {
+      // the schedules gave way: the general moves are not asked for
+      return;
+    }
     double bestScore = Double.MAX_VALUE;
     long lastImprovement = 0;
     int[] candidates = new int[64];
@@ -3826,6 +3961,7 @@ public final class LocalSearch {
     private boolean jump;
     private boolean permutations = true;
     private int scheduling = SCHEDULE_NS | SCHEDULE_N4;
+    private boolean scheduleOnly;
     private boolean skipImplied = true;
     private boolean tableKeys = true;
     private boolean follow = true;
@@ -3947,6 +4083,20 @@ public final class LocalSearch {
      */
     public Builder scheduling(int kinds) {
       this.scheduling = kinds;
+      return this;
+    }
+
+    /**
+     * Runs only the scheduling search of {@link #scheduling(int)}: the search is not applicable
+     * when the model has no unary resource (a {@code CumulativeBasic}), no disjunctive schedule
+     * whose makespan is the cost or no precedences between the tasks (an open shop), and it ends
+     * when the schedules give way instead of going on with the general moves.
+     *
+     * @param scheduleOnly true for the scheduling search only.
+     * @return this builder.
+     */
+    public Builder scheduleOnly(boolean scheduleOnly) {
+      this.scheduleOnly = scheduleOnly;
       return this;
     }
 

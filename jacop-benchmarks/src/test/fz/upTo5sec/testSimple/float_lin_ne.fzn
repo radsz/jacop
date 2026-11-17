@@ -1,0 +1,3 @@
+% RUNS ON flatzinc
+constraint float_lin_ne([1.0, 2.0, 3.0], [1.0, 2.0, 3.0], 0.0);
+solve satisfy;
