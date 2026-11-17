@@ -7563,7 +7563,7 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
-418. JaSAT can decide by a VMTF queue (variable move-to-front) in focused
+419. JaSAT can decide by a VMTF queue (variable move-to-front) in focused
    mode, as CaDiCaL and Kissat do, and by its activity heap in stable
    mode: CdclSolver.setVmtf(true), CdclMain --vmtf 1; off by default,
    and ignored under an external propagator (LCG). With one heap for
