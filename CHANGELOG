@@ -7563,6 +7563,23 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+419. The split of long linear constraints for lazy clause generation
+   (lcg-split) keeps every sum at 20 terms or fewer: a constraint of more
+   than 400 terms, whose blocks of sqrt(n) terms and sum of blocks were
+   both longer than 20 terms, becomes blocks of 20 terms whose sum is split
+   again, a tree of sums (as the lazy decomposition of Abio and Stuckey,
+   "Conflict directed lazy decomposition", CP 2012, introduces partial
+   sums). It fires on 21 of the 240 wide instances, mostly on objectives.
+   At 600 s: same 12 proved with -f, total time 5,588 -> 5,542 s, better
+   objectives on gbac UD3 (269 -> 173), ihtc i01, unit-commitment, worse
+   on warehouse olil4 (47,617 -> 61,327); default search, same 8 proved,
+   better objectives on roster chicroster large_20 (no solution -> 98),
+   surface-based-tsp ch130 (9,040 -> 8,110), celar graph11 and
+   unit-commitment, worse on none. At 240 s with -f: total 2,448 ->
+   2,323 s (roster chicroster 79 -> 37 s, network_50_cstr 88 -> 16 s).
+   --free-config lcg-split-tree=0 restores blocks of sqrt(n) terms; with -s
+   it prints lcgSplitSums.
+
 Version 4.11
 =============
 

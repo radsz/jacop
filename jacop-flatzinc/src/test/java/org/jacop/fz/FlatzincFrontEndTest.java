@@ -2887,6 +2887,68 @@ class FlatzincFrontEndTest {
     assertTrue(shorter25 > 0, "no sum of 25 terms got shorter linear reasons");
   }
 
+  @Test
+  void lcgSplitsSumsOfMoreThan400TermsIntoATree() throws IOException {
+    // a sum of 1,700 terms: blocks of sqrt(1700) = 42 terms and a sum of 41 blocks give
+    // reasons of about 41 atoms; lcg-split-tree (the default) keeps every sum at 20 terms or
+    // fewer, with the same optimum
+    java.util.Random rnd = new java.util.Random(5);
+    int n = 1700;
+    for (int run = 0; run < 2; run++) {
+      StringBuilder model = new StringBuilder();
+      for (int j = 0; j < 6; j++) {
+        model.append("var 0..2: y%d;\n".formatted(j));
+      }
+      for (int i = 0; i < n; i++) {
+        model.append("var 0..2: x%d;\n".formatted(i));
+      }
+      model.append("var -100000..100000: s;\n");
+      model.append("var -100000..100000: obj :: output_var;\n");
+      for (int i = 0; i < n; i++) {
+        model.append("constraint int_le(x%d, y%d);\n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);\n".formatted(i % 6, i));
+      }
+      String xs =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(","));
+      String ys = "y0,y1,y2,y3,y4,y5";
+      String[] ws = new String[2];
+      for (int k = 0; k < 2; k++) {
+        ws[k] =
+            java.util.stream.IntStream.range(0, n)
+                .mapToObj(
+                    i -> Integer.toString((1 + rnd.nextInt(3)) * (rnd.nextBoolean() ? 1 : -1)))
+                .collect(Collectors.joining(","));
+      }
+      // one long sum: two over the same terms would also be factored (linear overlap)
+      model.append(
+          "constraint int_lin_le([%s], [%s], %d);\n".formatted("1,1,1,1,1,1", ys, 4 + run));
+      model.append("constraint int_lin_eq([%s,-1], [%s,s], 0);\n".formatted(ws[1], xs));
+      model.append("constraint int_lin_eq([1,1,-1], [s,y0,obj], 0);\n");
+      model.append(
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
+              .formatted(run == 0 ? "minimize" : "maximize"));
+      String cp = lastObjective(run(model.toString()));
+      String[] blocks =
+          run(
+              model.toString(),
+              "--lcg",
+              "--search-statistics",
+              "--free-config",
+              "lcg-split-tree=0");
+      String[] tree = run(model.toString(), "--lcg", "--search-statistics");
+      assertEquals(cp, lastObjective(blocks), model.toString());
+      assertEquals(cp, lastObjective(tree), model.toString());
+      // 1,701 terms with s: 41 blocks of up to 42 terms; in the tree 86 blocks of up to 20
+      // terms, and 9 sums of up to 10 of those
+      assertEquals(41, statistic(blocks[0], "lcgSplitSums"), blocks[0]);
+      assertEquals(86 + 9, statistic(tree[0], "lcgSplitSums"), tree[0]);
+      double treeAtoms = linearAtoms(tree[0]);
+      assertTrue(treeAtoms <= 20, tree[0]);
+    }
+  }
+
   // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
   private static double linearAtoms(String out) {
     java.util.regex.Matcher m =
