@@ -46,7 +46,7 @@ import java.util.Set;
  *
  * @param <E> the type of the elements
  */
-final class SmallScope<E> extends AbstractSet<E> {
+class SmallScope<E> extends AbstractSet<E> {
 
   /**
    * The largest scope whose membership test is a scan; a larger one is looked up by hash code. A
@@ -56,13 +56,7 @@ final class SmallScope<E> extends AbstractSet<E> {
    */
   static final int MAX_SIZE = 8;
 
-  private final Object[] elements;
-
-  // for a scope of more than MAX_SIZE elements, the elements sorted by hash code with their hash
-  // codes, built by the first membership test
-  private volatile HashIndex index;
-
-  private record HashIndex(int[] hashes, Object[] byHash) {}
+  final Object[] elements;
 
   private SmallScope(Object[] elements) {
     this.elements = elements;
@@ -87,7 +81,7 @@ final class SmallScope<E> extends AbstractSet<E> {
           distinct[n++] = e;
         }
       }
-      return new SmallScope<>(n == distinct.length ? distinct : Arrays.copyOf(distinct, n));
+      return new Large<>(n == distinct.length ? distinct : Arrays.copyOf(distinct, n));
     }
     Object[] distinct = new Object[elements.length];
     int n = 0;
@@ -110,29 +104,47 @@ final class SmallScope<E> extends AbstractSet<E> {
 
   @Override
   public boolean contains(Object o) {
-    if (elements.length <= MAX_SIZE) {
-      return indexOf(elements, elements.length, o) >= 0;
+    return indexOf(elements, elements.length, o) >= 0;
+  }
+
+  /**
+   * A scope of more than {@link #MAX_SIZE} elements, whose membership test looks the element up by
+   * hash code; the field of the index is only in these, so the small scopes keep their size.
+   */
+  private static final class Large<E> extends SmallScope<E> {
+
+    // the elements sorted by hash code with their hash codes, built by the first membership test
+    private volatile HashIndex index;
+
+    private Large(Object[] elements) {
+      super(elements);
     }
-    HashIndex h = index;
-    if (h == null) {
-      h = hashIndex(elements);
-      index = h;
-    }
-    int hash = Objects.hashCode(o);
-    int k = Arrays.binarySearch(h.hashes(), hash);
-    if (k < 0) {
+
+    @Override
+    public boolean contains(Object o) {
+      HashIndex h = index;
+      if (h == null) {
+        h = hashIndex(elements);
+        index = h;
+      }
+      int hash = Objects.hashCode(o);
+      int k = Arrays.binarySearch(h.hashes(), hash);
+      if (k < 0) {
+        return false;
+      }
+      while (k > 0 && h.hashes()[k - 1] == hash) {
+        k--;
+      }
+      for (; k < h.hashes().length && h.hashes()[k] == hash; k++) {
+        if (Objects.equals(h.byHash()[k], o)) {
+          return true;
+        }
+      }
       return false;
     }
-    while (k > 0 && h.hashes()[k - 1] == hash) {
-      k--;
-    }
-    for (; k < h.hashes().length && h.hashes()[k] == hash; k++) {
-      if (Objects.equals(h.byHash()[k], o)) {
-        return true;
-      }
-    }
-    return false;
   }
+
+  private record HashIndex(int[] hashes, Object[] byHash) {}
 
   private static HashIndex hashIndex(Object[] elements) {
     int n = elements.length;
