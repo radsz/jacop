@@ -5125,6 +5125,27 @@ class LcgSolverTest {
     assertThat(exhausted).isPositive();
   }
 
+  /**
+   * With a time limit the phases of the core-guided schedule have work limits: an exhaustion test
+   * takes only a share of the work its phase has left, and one that refutes nothing gives its work
+   * back. Neither may change the optimum.
+   */
+  @Test
+  void cappedExhaustionKeepsTheOptimum() {
+    Random rnd = new Random(37);
+    long exhausted = 0;
+    for (int instance = 0; instance < 60; instance++) {
+      long seed = rnd.nextLong();
+      long[] stats = new long[1];
+      Integer expected = maxSatOptimum(seed, -1, stats);
+      assertThat(maxSatOptimum(seed, DEFAULT_EXHAUST, stats, 1 + instance % 20))
+          .as("instance %d (seed %d)", instance, seed)
+          .isEqualTo(expected);
+      exhausted += stats[0];
+    }
+    assertThat(exhausted).isPositive();
+  }
+
   private static final int DEFAULT_EXHAUST = Integer.MAX_VALUE;
 
   /** Core exhaustion is on by default. */
@@ -5150,6 +5171,15 @@ class LcgSolverTest {
    * outputs to {@code stats[0]}.
    */
   private static Integer maxSatOptimum(long seed, int exhaust, long[] stats) {
+    return maxSatOptimum(seed, exhaust, stats, 0);
+  }
+
+  /**
+   * As {@link #maxSatOptimum(long, int, long[])}, with a time limit in milliseconds for the
+   * core-guided schedule (0 = none): its phases then have work limits, which also cap each
+   * exhaustion test, and the work of the tests that refute nothing is given back to the phase.
+   */
+  private static Integer maxSatOptimum(long seed, int exhaust, long[] stats, long timeLimit) {
     Random rnd = new Random(seed);
     Store store = new Store();
     int n = 14 + rnd.nextInt(8);
@@ -5194,6 +5224,7 @@ class LcgSolverTest {
     if (exhaust != DEFAULT_EXHAUST) {
       solver.setCoreExhaust(exhaust);
     }
+    solver.setTimeLimit(timeLimit);
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
     if (solver.coreSearch() != null) {
