@@ -80,11 +80,51 @@ public class ExpPeqR extends Constraint
 
   @Override
   public void consistency(Store store) {
-
+    if (p == q) {
+      consistencySameVariable(store);
+      return;
+    }
+    // each projection is computed again only when the bounds of the other variable changed since
+    // it was last computed; with unchanged inputs it narrows nothing, so the fixpoint is the one of
+    // recomputing both until a round changes nothing
+    boolean pStale = true;
+    boolean qStale = true;
     do {
       if (p.min() == p.max() && q.min() == q.max() && satisfied()) {
         // a ground pair that agrees within the float precision, such as (x, Math.exp(x)); the
         // pruning below rounds outward and need not keep the other value
+        return;
+      }
+
+      if (pStale) {
+        pStale = false;
+        double min = p.min();
+        double max = p.max();
+        double[] pBounds = computeFirstBoundsFromSecond();
+        p.domain.in(store.level, p, pBounds[0], pBounds[1]);
+        if (min != p.min() || max != p.max()) {
+          qStale = true;
+        }
+      }
+
+      if (qStale) {
+        qStale = false;
+        double min = q.min();
+        double max = q.max();
+        double[] qBounds = computeSecondBoundsFromFirst();
+        q.domain.in(store.level, q, qBounds[0], qBounds[1]);
+        if (min != q.min() || max != q.max()) {
+          pStale = true;
+        }
+      }
+    } while (pStale || qStale);
+    store.propagationHasOccurred = false;
+  }
+
+  // exp(p) = p: a change of one side is a change of the other
+  private void consistencySameVariable(Store store) {
+    do {
+      if (p.min() == p.max() && q.min() == q.max() && satisfied()) {
         return;
       }
 
