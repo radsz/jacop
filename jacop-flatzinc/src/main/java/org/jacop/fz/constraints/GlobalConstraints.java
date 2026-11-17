@@ -211,6 +211,9 @@ class GlobalConstraints implements ParserTreeConstants {
   private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
+  // the binary tables of the reformulations above, by their pairs, so that the many tables over
+  // one relation share the index of each binary part
+  private final Map<int[][], HybridTable> binaryParts = new IdentityHashMap<>();
 
   // The first HybridTable posted for the rows of a short table, compared by content.
   private final Map<ShortTableRows, HybridTable> shortTables = new HashMap<>();
@@ -2389,7 +2392,8 @@ class GlobalConstraints implements ParserTreeConstants {
   private void poseTableBySize(IntVar[] v, int[][] t) {
     if (v.length >= 2 && TableReformulation.enabled() && support.options.proof() == null) {
       TableReformulation.Result parts;
-      if (tableByTuples.containsKey(t)) {
+      boolean cached = tableByTuples.containsKey(t);
+      if (cached) {
         if (!reformulations.containsKey(t)) {
           reformulations.put(t, TableReformulation.reformulate(t));
         }
@@ -2398,15 +2402,16 @@ class GlobalConstraints implements ParserTreeConstants {
         parts = TableReformulation.reformulate(t);
       }
       if (parts != null) {
-        poseReformulatedTable(v, parts);
+        poseReformulatedTable(v, parts, cached);
         return;
       }
     }
     poseTableBySizePlain(v, t);
   }
 
-  // the parts of an exactly reformulated table: unary domains, binary tables, the rest
-  private void poseReformulatedTable(IntVar[] v, TableReformulation.Result parts) {
+  // the parts of an exactly reformulated table: unary domains, binary tables, the rest; the parts
+  // of a cached reformulation are shared by every table over the same tuples
+  private void poseReformulatedTable(IntVar[] v, TableReformulation.Result parts, boolean cached) {
     for (TableReformulation.Unary u : parts.unary()) {
       IntervalDomain d = new IntervalDomain();
       for (int value : u.values()) {
@@ -2421,7 +2426,14 @@ class GlobalConstraints implements ParserTreeConstants {
       if (b.identity()) {
         support.pose(new XeqY(x, y));
       } else {
-        support.pose(new HybridTable(new IntVar[] {x, y}, b.pairs()));
+        IntVar[] xy = {x, y};
+        HybridTable same = binaryParts.get(b.pairs());
+        HybridTable table =
+            same == null ? new HybridTable(xy, b.pairs()) : new HybridTable(xy, same);
+        if (same == null && cached) {
+          binaryParts.put(b.pairs(), table);
+        }
+        support.pose(table);
       }
     }
     int[] rest = parts.rest();
@@ -2429,6 +2441,9 @@ class GlobalConstraints implements ParserTreeConstants {
       IntVar[] rv = new IntVar[rest.length];
       for (int c = 0; c < rest.length; c++) {
         rv[c] = v[rest[c]];
+      }
+      if (cached) {
+        tableByTuples.putIfAbsent(parts.restRows(), null);
       }
       poseTableBySizePlain(rv, parts.restRows());
     }

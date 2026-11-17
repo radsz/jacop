@@ -392,6 +392,9 @@ public class HybridTable extends Constraint
     int[][] sparseStart;
     int[][] sparseWord;
     long[][] sparseBits;
+
+    /** The key column of the cells it was computed for, see keyColumn(). */
+    KeyIndex key;
   }
 
   private void setTuples(Restriction[][] rows) {
@@ -2103,10 +2106,20 @@ public class HybridTable extends Constraint
     return best;
   }
 
-  // the cells keyColumn() was computed for, the column, and the tuple of each key value
-  private Restriction[] keyedCells;
-  private int keyColumn = -1;
-  private Map<Integer, Integer> keyTuple;
+  // the key of the cells it was computed for, shared by the tables over the same cells
+  private KeyIndex key;
+
+  /**
+   * The key column of some cells: the values of the key in increasing order and the tuple of each.
+   */
+  private record KeyIndex(Restriction[] cells, int column, int[] values, int[] tuples) {
+
+    // the tuple with the key value, or -1
+    int tuple(int value) {
+      int i = Arrays.binarySearch(values, value);
+      return i < 0 ? -1 : tuples[i];
+    }
+  }
 
   /**
    * Finds a key: a column in which every hybrid tuple has a different {@code = v}, when every other
@@ -2116,32 +2129,55 @@ public class HybridTable extends Constraint
    * @return the column of the key, or -1 if there is none.
    */
   public int keyColumn() {
-    if (keyedCells == cells) {
-      return keyColumn;
+    return keyIndex().column;
+  }
+
+  private KeyIndex keyIndex() {
+    KeyIndex k = key;
+    if (k != null && k.cells == cells) {
+      return k;
     }
-    keyedCells = cells;
-    keyColumn = -1;
-    keyTuple = null;
-    for (Restriction r : cells) {
-      if (r.kind != Restriction.Kind.EQ) {
-        return -1;
-      }
-    }
-    for (int i = 0; i < arity; i++) {
-      Map<Integer, Integer> tuple = new HashMap<>();
-      for (int t = 0; t < tupleCount; t++) {
-        if (tuple.put(cells[t * arity + i].value, t) != null) {
-          tuple = null;
-          break;
+    synchronized (shared) {
+      k = shared.key;
+      if (k == null || k.cells != cells) {
+        k = computeKey(cells, arity, tupleCount);
+        if (shared.key == null) {
+          shared.key = k;
         }
       }
-      if (tuple != null) {
-        keyColumn = i;
-        keyTuple = tuple;
-        return i;
+    }
+    key = k;
+    return k;
+  }
+
+  private static KeyIndex computeKey(Restriction[] cells, int arity, int tupleCount) {
+    KeyIndex none = new KeyIndex(cells, -1, null, null);
+    for (Restriction r : cells) {
+      if (r.kind != Restriction.Kind.EQ) {
+        return none;
       }
     }
-    return -1;
+    long[] packed = new long[tupleCount];
+    for (int i = 0; i < arity; i++) {
+      for (int t = 0; t < tupleCount; t++) {
+        packed[t] = (long) cells[t * arity + i].value << 32 | t;
+      }
+      Arrays.sort(packed);
+      boolean distinct = true;
+      for (int t = 1; t < tupleCount && distinct; t++) {
+        distinct = packed[t] >> 32 != packed[t - 1] >> 32;
+      }
+      if (distinct) {
+        int[] values = new int[tupleCount];
+        int[] tuples = new int[tupleCount];
+        for (int t = 0; t < tupleCount; t++) {
+          values[t] = (int) (packed[t] >> 32);
+          tuples[t] = (int) packed[t];
+        }
+        return new KeyIndex(cells, i, values, tuples);
+      }
+    }
+    return none;
   }
 
   /**
@@ -2153,11 +2189,12 @@ public class HybridTable extends Constraint
    * @return the value of the column, or otherwise.
    */
   public int keyedValue(int column, int key, int otherwise) {
-    if (keyColumn() < 0) {
+    KeyIndex k = keyIndex();
+    if (k.column < 0) {
       return otherwise;
     }
-    Integer t = keyTuple.get(key);
-    return t == null ? otherwise : cells[t * arity + column].value;
+    int t = k.tuple(key);
+    return t < 0 ? otherwise : cells[t * arity + column].value;
   }
 
   /**

@@ -10544,6 +10544,57 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void hybridTableKeyMatchesItsTuples() {
+    // the key of a table was a map of boxed values in every table (24 million entries for 300
+    // tables over 80,000 words); it is now a sorted index shared by the tables over the same tuples
+    Random random = new Random(7);
+    for (int trial = 0; trial < 300; trial++) {
+      int arity = 2 + random.nextInt(3);
+      int n = 1 + random.nextInt(30);
+      int keyed = random.nextInt(arity + 1);
+      int[][] tuples = new int[n][arity];
+      Set<List<Integer>> distinct = new HashSet<>();
+      for (int t = 0; t < n; t++) {
+        do {
+          for (int i = 0; i < arity; i++) {
+            tuples[t][i] = i == keyed ? 3 * t - 20 : random.nextInt(8);
+          }
+        } while (!distinct.add(Arrays.stream(tuples[t]).boxed().toList()));
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[arity];
+      IntVar[] y = new IntVar[arity];
+      for (int i = 0; i < arity; i++) {
+        x[i] = new IntVar(store, -30, 100);
+        y[i] = new IntVar(store, -30, 100);
+      }
+      HybridTable first = new HybridTable(x, tuples);
+      HybridTable second = new HybridTable(y, first);
+      int expected = -1;
+      for (int i = 0; i < arity && expected < 0; i++) {
+        Set<Integer> values = new HashSet<>();
+        boolean unique = true;
+        for (int[] t : tuples) {
+          unique &= values.add(t[i]);
+        }
+        expected = unique ? i : -1;
+      }
+      for (HybridTable table : List.of(first, second)) {
+        assertThat(table.keyColumn()).isEqualTo(expected);
+        for (int v = -25; v < 100 && expected >= 0; v++) {
+          int[] row = null;
+          for (int[] t : tuples) {
+            row = t[expected] == v ? t : row;
+          }
+          for (int c = 0; c < arity; c++) {
+            assertThat(table.keyedValue(c, v, -99)).isEqualTo(row == null ? -99 : row[c]);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
   void diffnKChecksBoxesFixedBeforeARaisedLevel() {
     Store store = new Store();
     IntVar[][] r = overlappingRectanglesVars(store);
