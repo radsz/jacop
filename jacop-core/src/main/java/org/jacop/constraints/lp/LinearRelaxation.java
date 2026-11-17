@@ -4541,10 +4541,21 @@ public class LinearRelaxation extends Constraint
    * @return whether the rows moved
    */
   private boolean moveToSparse() {
+    return moveToSparse(false);
+  }
+
+  /**
+   * Moves the rows of the dense tableau to the sparse simplex, as {@link #moveToSparse()}, also
+   * when the tableau has room left if force is true.
+   *
+   * @param force true to move whatever room the tableau has
+   * @return whether the rows moved
+   */
+  private boolean moveToSparse(boolean force) {
     int m = lp.rows();
     int n = lp.columns();
     long room = (long) (m + CUTS_PER_ROUND) * (m + CUTS_PER_ROUND + n + 1);
-    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
+    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap && !force) {
       return false;
     }
     LpSolver s = sparseCopy();
@@ -5043,6 +5054,30 @@ public class LinearRelaxation extends Constraint
     return MirCut.row(cs, ws, rhs, cut.efficacy());
   }
 
+  // the dense tableau kept by moveToSparse is not needed any more
+  private void forgetDense() {
+    denseBeforeCuts = null;
+    denseLpRow = null;
+    denseInLp = null;
+    denseInactive = null;
+  }
+
+  // back to the dense tableau kept by moveToSparse, at the same optimum, when the cuts on the
+  // sparse simplex were all dropped
+  private void backToDense() {
+    droppedPivots += lp.pivots();
+    lp = denseBeforeCuts;
+    simplex = Simplex.DENSE;
+    truncateRows(denseRows);
+    lpRow = denseLpRow;
+    inLp = denseInLp;
+    inactive = denseInactive;
+    identityRows = denseIdentity;
+    dormant = denseDormant;
+    sparseCuts = false;
+    forgetDense();
+  }
+
   /**
    * Rounds of cuts from a separation at the root, each followed by a re-solve, shared by the Hall
    * and tree cuts.
@@ -5059,6 +5094,7 @@ public class LinearRelaxation extends Constraint
     int firstCount = rows();
     LpSolver first = lp.copy();
     int[] firstRows = lpRow;
+    boolean forced = false;
     int added = 0;
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
@@ -5072,10 +5108,7 @@ public class LinearRelaxation extends Constraint
         // and the cuts so far move to the sparse simplex for good (ch130 of surface-based-tsp
         // needs about 1,300 tree cuts, which the dense cap stops at a third of the bound's gain);
         // the bound has moved, so the cuts are not dropped at the end either
-        denseBeforeCuts = null;
-        denseLpRow = null;
-        denseInLp = null;
-        denseInactive = null;
+        forgetDense();
       }
       List<MirCut> found = separation.get();
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
@@ -5103,6 +5136,25 @@ public class LinearRelaxation extends Constraint
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
         status = DualSimplex.OPTIMAL;
+        if (toSparse && simplex == Simplex.DENSE && moveToSparse(true)) {
+          // the dense tableau ran out of pivots for the round: the rows and the cuts so far move
+          // to the sparse simplex and the round is tried again there (prize-collecting 32-4-8-2
+          // of the Challenge 2016: the dense tableau of 800 rows stops at 127 after one round of
+          // tree cuts, or at 172 before any under free search, the sparse simplex goes on to
+          // 102.5, for the optimum 92); the dense tableau comes back below if the cuts do not
+          // move the bound
+          if (added == 0) {
+            first = lp.copy();
+            firstRows = lpRow;
+            forced = true;
+          } else {
+            forgetDense();
+          }
+          for (MirCut row : chosen) {
+            seen.remove(key(row));
+          }
+          continue;
+        }
         break;
       }
       added += chosen.size();
@@ -5118,6 +5170,13 @@ public class LinearRelaxation extends Constraint
       // cuts that do not move the bound only make each solve dearer
       dropCuts(added, first, firstRows);
       added = 0;
+    }
+    if (forced) {
+      if (added == 0) {
+        backToDense();
+      } else {
+        forgetDense();
+      }
     }
     keepCapacityForms(firstCount, added);
     return new long[] {status, added};

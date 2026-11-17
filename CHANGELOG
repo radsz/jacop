@@ -7563,7 +7563,25 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
-419. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+419. Subtour cuts for successor models (opt-in,
+   -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
+   output array x and an element list pos whose arcs x[i] = j are proved
+   acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
+   Miller-Tucker-Zemlin formulation of a path or tour (Miller, Tucker and
+   Zemlin, JACM 1960), and posts a redundant graph.Forest over the arc and
+   node literals. The linear relaxation separates on it the generalized
+   subtour elimination cuts of TreeCuts (Lucena and Resende, Discrete
+   Applied Mathematics 2004; Fischetti, Salazar-Gonzalez and Toth, INFORMS
+   Journal on Computing 1998). The tree cut rounds now also move to the
+   sparse simplex when the dense tableau runs out of pivots before the
+   bound has moved. On prize-collecting 32-4-8-2 (MiniZinc Challenge 2016)
+   the root bound goes from 172 (the assignment relaxation) to 102.5, for
+   the optimum 92, and on cvrp simple2 from 24 to 34 (optimal). It stays
+   off by default: of 187 optimisation instances of the wide set it fires
+   on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
+   28 s -> 34 s by default, 27-38 s -> 20 s with -f).
+
+420. The linear relaxation (--lp, and LCG free search -f) keeps the rows
    that linear overlap factoring (272) reduces to the shared sum alone.
    A row k * S rel c whose whole sum S became the new variable z is
    k * z rel c, which the FlatZinc front end posts as a bound of z or as
@@ -7579,7 +7597,7 @@ Version 5.0 (unreleased)
    warehouse olil4, cap6000). The rows are counted in the statistic
    lpUnitRows.
 
-420. JaSAT substitutes equivalent literals before variable elimination. The
+421. JaSAT substitutes equivalent literals before variable elimination. The
    strongly connected components of the binary implication graph (B.
    Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
    the truth of certain quantified Boolean formulas, Information Processing
