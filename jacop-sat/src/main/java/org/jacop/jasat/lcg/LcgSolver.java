@@ -1153,9 +1153,9 @@ public final class LcgSolver implements ExternalPropagator {
       hypotheses(lines.counterPosition, ids, atoms, from, entry, restricted, counterLiterals);
       for (int k = 0; k < m; k++) {
         if (freeCounter[k] >= 0) {
-          count[k] = restricted[k];
-          proofCounterBounds(
-              freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
+          count[k] =
+              proofCounterBounds(
+                  freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
         }
       }
     }
@@ -1435,8 +1435,10 @@ public final class LcgSolver implements ExternalPropagator {
    * literals of the counter does not reach a bound from the count of the value literals (the count
    * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}). The hole can be the model's
    * or a hypothesis's (counter != 1 with the count pinned to 1).
+   *
+   * @return the restricted domain within the bounds written
    */
-  private void proofCounterBounds(
+  private IntDomain proofCounterBounds(
       int counter,
       IntDomain restricted,
       int value,
@@ -1447,7 +1449,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (d.getSize() == (long) d.max() - d.min() + 1
         && (restricted.isEmpty()
             || restricted.getSize() == (long) restricted.max() - restricted.min() + 1)) {
-      return;
+      return restricted;
     }
     int fixed = 0;
     int possible = 0;
@@ -1461,8 +1463,18 @@ public final class LcgSolver implements ExternalPropagator {
       }
       clause.append(literals[j]);
     }
-    proofBound(counter, clause, fixed, true);
-    proofBound(counter, clause, possible, false);
+    // the bounds written are unit propagated (the order literals step over the holes), so the
+    // flow takes them too: a split on the counter's values (proofCardinalitySplit) otherwise
+    // spends its cases on values these bounds rule out, and a case the flow cannot refute fails
+    // the clause (a global cardinality failure under x = -1 twice and count(-1) in {0, 1, 3})
+    IntDomain bounded = restricted;
+    if (proofBound(counter, clause, fixed, true) > 0) {
+      bounded = bounded.intersect(fixed, IntDomain.MAX_INT);
+    }
+    if (proofBound(counter, clause, possible, false) > 0) {
+      bounded = bounded.intersect(IntDomain.MIN_INT, possible);
+    }
+    return bounded;
   }
 
   /**
@@ -1609,17 +1621,27 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int[] starts = lines.starts();
     int n = starts.length;
-    int[] variables = Arrays.copyOf(starts, n + 1);
-    variables[n] = lines.limit();
+    // a start of several tasks is one variable of the hypotheses (two tasks at x, x in 1..2, need
+    // the energy of both in 1..3), whose domain each of its tasks takes
+    int[] slot = new int[n + 1];
     Map<Integer, Integer> position = new HashMap<>();
     for (int j = 0; j <= n; j++) {
-      if (position.put(variables[j], j) != null) {
-        return; // a variable in two places
-      }
+      int variable = j < n ? starts[j] : lines.limit();
+      Integer seen = position.putIfAbsent(variable, position.size());
+      slot[j] = seen == null ? position.size() - 1 : seen;
     }
+    if (slot[n] != position.size() - 1) {
+      return; // the limit is a start
+    }
+    int[] variables = new int[position.size()];
+    position.forEach((variable, j) -> variables[j] = variable);
+    IntDomain[] unique = new IntDomain[variables.length];
+    hypotheses(
+        position, variables, atoms, from, entry, unique, new StringBuilder[variables.length]);
     IntDomain[] dom = new IntDomain[n + 1];
-    StringBuilder[] literals = new StringBuilder[n + 1];
-    hypotheses(position, variables, atoms, from, entry, dom, literals);
+    for (int j = 0; j <= n; j++) {
+      dom[j] = unique[slot[j]];
+    }
     for (IntDomain x : dom) {
       if (x.isEmpty()) {
         return; // unit propagation empties the domain
@@ -2075,8 +2097,11 @@ public final class LcgSolver implements ExternalPropagator {
       f = proofKnapsackRow(k);
     }
     if (f == null && proofStarted && c.getClass() == IncreasingSum.class) {
-      // the sum's row, which a hole of the sum hides from unit propagation
-      f = ((IncreasingSum) c).sumRow();
+      // the sum's row, which a hole of the sum hides from unit propagation, over the bounds that
+      // unit propagation derives along the order clauses of the chain
+      IncreasingSum increasing = (IncreasingSum) c;
+      proofLinearBounds(increasing.sumRow(), atoms, from, entry, "", increasing);
+      return;
     }
     proofLinearBounds(f, atoms, from, entry, "");
   }
@@ -2306,6 +2331,16 @@ public final class LcgSolver implements ExternalPropagator {
    * lemma (the literal of a reification's b, or empty).
    */
   private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry, String guard) {
+    proofLinearBounds(f, atoms, from, entry, guard, null);
+  }
+
+  /**
+   * Writes the bounds of a row under the hypotheses of a clause, as above, with the domains of the
+   * chain x_1 &lt;= x_2 &lt;= ... (or &lt;) of an increasing sum tightened as unit propagation over
+   * its order clauses tightens them, or chain null.
+   */
+  private void proofLinearBounds(
+      LinearForm f, EntryList atoms, int from, int entry, String guard, IncreasingSum chain) {
     if (f == null || f.relation() == LinearForm.NE) {
       return;
     }
@@ -2333,8 +2368,13 @@ public final class LcgSolver implements ExternalPropagator {
       // unit propagation over weight times the order literals does not round a bound
       rounds |= Math.abs(weight) > 1;
     }
-    if (!hypotheses(position, variables, atoms, from, entry, dom, literals) && !rounds) {
+    if (!hypotheses(position, variables, atoms, from, entry, dom, literals)
+        && !rounds
+        && chain == null) {
       return;
+    }
+    if (chain != null) {
+      tightenChain(chain, position, dom);
     }
     StringBuilder clause = new StringBuilder(guard);
     for (StringBuilder l : literals) {
@@ -2343,6 +2383,41 @@ public final class LcgSolver implements ExternalPropagator {
     if (!proofRowBounds(f, variables, w, dom, clause)) {
       proofRowSplit(f, variables, w, dom, clause, PROOF_SPLIT_LEAVES);
     }
+  }
+
+  /**
+   * Tightens the domains of the chain of an increasing sum along its order: x_i &gt;= min x_(i-1) +
+   * step forwards and x_(i-1) &lt;= max x_i - step backwards. Leaves the domains as they were when
+   * the chain empties one, as a variable repeated in a strict chain does.
+   */
+  private void tightenChain(IncreasingSum chain, Map<Integer, Integer> position, IntDomain[] dom) {
+    IntVar[] x = chain.chain();
+    int step = chain.step();
+    int[] at = new int[x.length];
+    for (int i = 0; i < x.length; i++) {
+      at[i] = position.get(trail.id(x[i]));
+    }
+    IntDomain[] tight = dom.clone();
+    for (int i = 1; i < x.length; i++) {
+      IntDomain previous = tight[at[i - 1]];
+      if (previous.isEmpty()) {
+        return;
+      }
+      tight[at[i]] = tight[at[i]].intersect(previous.min() + step, IntDomain.MAX_INT);
+    }
+    for (int i = x.length - 1; i > 0; i--) {
+      IntDomain next = tight[at[i]];
+      if (next.isEmpty()) {
+        return;
+      }
+      tight[at[i - 1]] = tight[at[i - 1]].intersect(IntDomain.MIN_INT, next.max() - step);
+    }
+    for (IntDomain d : tight) {
+      if (d.isEmpty()) {
+        return;
+      }
+    }
+    System.arraycopy(tight, 0, dom, 0, dom.length);
   }
 
   // the most cases a row's bounds are split into, for a domain consistent row (LinearIntDom)
