@@ -7563,6 +7563,24 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+419. A Hamiltonian path written as a numbering gets a redundant circuit.
+   NumberedPathDetector finds an all_different over N variables with values
+   in 1..N where every cell c holds N or a neighbour holds x[c] + 1
+   (among over the model's reified x[d] - x[c] = 1, or a short table of
+   (v, *, .., v + 1, .., *) rows), as in the CalvinPuzzle models of the
+   XCSP 2023 competition. It posts successor variables, s[c] = d <-> x[d] =
+   x[c] + 1 with the model's own literals, a start node whose successor is
+   the cell of value 1, and Circuit over them, so subtours are pruned (G.
+   Pesant, M. Gendreau, J.-Y. Potvin and J.-M. Rousseau, "An exact
+   constraint logic programming algorithm for the traveling salesman
+   problem with time windows", Transportation Science 32(1), 1998). The
+   numbering alone finds the dead ends of a path only when it is nearly
+   complete. On the 14 CalvinPuzzle instances of XCSP 2023 (05-12 and
+   their table variants) with -f at 600 s, it goes from 11 to 14 solved and
+   the total time from 3007 to 49 s (CalvinPuzzle-10/12 and table-12
+   unknown -> 2-15 s, 09 424 -> 2 s).
+   -Dorg.jacop.fz.numberedPath=false turns it off; it is off with --proof.
+
 Version 4.11
 =============
 

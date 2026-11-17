@@ -57,9 +57,10 @@ import org.jacop.fz.SimpleNode;
  * <p>The numbering model gives N cells the values 1..N (an all_different over N variables with
  * values in 1..N) and says, for each cell c, that c holds N or a neighbour d of c holds x[c] + 1:
  * {@code x[c] = N \/ among([x[d] = x[c] + 1 | d in nbr(c)], {1}) >= 1}. This is how the XCSP3
- * CalvinPuzzle models of the XCSP 2023 competition (pycsp3) number a tour of an n x n grid. The
- * numbering alone sees no subtours: search finds the dead ends of a path only once it is nearly
- * complete.
+ * CalvinPuzzle models of the XCSP 2023 competition (pycsp3) number a tour of an n x n grid; their
+ * table variants write the same as a short table over [x[c], x[d1], ..., x[dk]] with rows (v, *,
+ * .., v + 1, .., *) and (N, *, .., *), which is recognised too. The numbering alone sees no
+ * subtours: search finds the dead ends of a path only once it is nearly complete.
  *
  * <p>The added model has a successor variable s[c] in nbr(c) plus a node "end", and a node "start"
  * whose successor is the cell of value 1. Given the numbering, s[c] = d exactly when x[d] = x[c] +
