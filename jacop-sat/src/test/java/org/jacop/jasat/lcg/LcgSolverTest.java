@@ -631,20 +631,20 @@ class LcgSolverTest {
     for (int p = 0; p < 8; p++) {
       allowed[p] = Integer.bitCount(p) != 1;
     }
-    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 100)).hasSize(3);
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 100).orElseThrow()).hasSize(3);
     // x0 or x1 (x2 free): one prime cube, x0 = 0 and x1 = 0
     for (int p = 0; p < 8; p++) {
       allowed[p] = (p & 3) != 0;
     }
-    List<long[]> primes = LcgSolver.forbiddenPrimeCubes(allowed, 3, 100);
+    List<long[]> primes = LcgSolver.forbiddenPrimeCubes(allowed, 3, 100).orElseThrow();
     assertThat(primes).hasSize(1);
     assertThat(primes.get(0)).containsExactly(3, 0);
     // the limit
     for (int p = 0; p < 8; p++) {
       allowed[p] = Integer.bitCount(p) % 2 == 0;
     }
-    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 3)).isNull();
-    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 4)).hasSize(4);
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 3)).isEmpty();
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 4).orElseThrow()).hasSize(4);
   }
 
   @Test

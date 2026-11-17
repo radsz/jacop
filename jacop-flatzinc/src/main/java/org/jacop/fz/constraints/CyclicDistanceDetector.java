@@ -78,11 +78,45 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
 
   private final Map<IntVar, Absolute> absolutes = new IdentityHashMap<>();
 
-  // b = c - a, by b: {a, c}
+  // the complement of a on the cycle of c positions, keyed by the complement
   private record Complement(IntVar a, int c, SimpleNode node) {}
 
-  // e = sign * (rhs - sum weights * others), by e
-  private record Definition(IntVar[] others, int[] weights, int sign, int rhs, SimpleNode node) {}
+  // the linear equation that defines e: sign * e + sum weights * others = rhs, keyed by e
+  private static final class Definition {
+    private final IntVar[] others;
+    private final int[] weights;
+    private final int sign;
+    private final int rhs;
+    private final SimpleNode node;
+
+    Definition(IntVar[] others, int[] weights, int sign, int rhs, SimpleNode node) {
+      this.others = others;
+      this.weights = weights;
+      this.sign = sign;
+      this.rhs = rhs;
+      this.node = node;
+    }
+
+    IntVar[] others() {
+      return others;
+    }
+
+    int[] weights() {
+      return weights;
+    }
+
+    int sign() {
+      return sign;
+    }
+
+    int rhs() {
+      return rhs;
+    }
+
+    SimpleNode node() {
+      return node;
+    }
+  }
 
   private final Map<IntVar, Definition> definitions = new IdentityHashMap<>();
 
@@ -279,11 +313,13 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
       IntVar[] others = new IntVar[v.length - 1];
       int[] ow = new int[v.length - 1];
       boolean once = true;
-      for (int i = 0, n = 0; i < v.length; i++) {
+      int n = 0;
+      for (int i = 0; i < v.length; i++) {
         if (i != j) {
           once &= v[i] != v[j];
           others[n] = v[i];
-          ow[n++] = w[i];
+          ow[n] = w[i];
+          n++;
         }
       }
       if (once) {

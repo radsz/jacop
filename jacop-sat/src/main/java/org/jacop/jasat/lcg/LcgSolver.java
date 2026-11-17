@@ -47,6 +47,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
@@ -6449,7 +6450,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (t.hasColumnRestrictions()) {
       return false;
     }
-    int[] free = new int[arity];
+    int[] freeColumns = new int[arity];
     int nFree = 0;
     for (int k = 0; k < arity; k++) {
       IntVar x = t.column(k);
@@ -6460,7 +6461,7 @@ public final class LcgSolver implements ExternalPropagator {
             || TABLE_OBJECTIVE_TERMS && objectiveTerms.contains(x)) {
           return false;
         }
-        free[nFree++] = k;
+        freeColumns[nFree++] = k;
       }
     }
     if (nFree < 2) {
@@ -6469,8 +6470,8 @@ public final class LcgSolver implements ExternalPropagator {
     int[] lo = new int[nFree];
     int[] hi = new int[nFree];
     for (int j = 0; j < nFree; j++) {
-      lo[j] = t.column(free[j]).min();
-      hi[j] = t.column(free[j]).max();
+      lo[j] = t.column(freeColumns[j]).min();
+      hi[j] = t.column(freeColumns[j]).max();
     }
     int points = 1 << nFree;
     boolean[] allowed = new boolean[points];
@@ -6483,46 +6484,36 @@ public final class LcgSolver implements ExternalPropagator {
         live = !x.singleton() || t.cellAccepts(u, k, x.value());
       }
       for (int j = 0; j < nFree && live; j++) {
-        accepts0[j] = t.cellAccepts(u, free[j], lo[j]);
-        accepts1[j] = t.cellAccepts(u, free[j], hi[j]);
+        accepts0[j] = t.cellAccepts(u, freeColumns[j], lo[j]);
+        accepts1[j] = t.cellAccepts(u, freeColumns[j], hi[j]);
         live = accepts0[j] || accepts1[j];
       }
       if (live) {
         markPoints(allowed, accepts0, accepts1, 0, 0);
       }
     }
-    List<long[]> primes = forbiddenPrimeCubes(allowed, nFree, BOOLEAN_LIMIT);
-    if (primes == null) {
+    Optional<List<long[]>> found = forbiddenPrimeCubes(allowed, nFree, BOOLEAN_LIMIT);
+    if (found.isEmpty()) {
       return false;
     }
+    List<long[]> primes = found.get();
     int[] ids = new int[nFree];
     for (int j = 0; j < nFree; j++) {
-      ids[j] = trail.id(t.column(free[j]));
+      ids[j] = trail.id(t.column(freeColumns[j]));
     }
     List<int[]> cs = new ArrayList<>(primes.size());
-    for (long[] cube : primes) {
-      int mask = (int) cube[0];
-      int val = (int) cube[1];
+    for (long[] prime : primes) {
+      int mask = (int) prime[0];
+      int val = (int) prime[1];
       int[] cl = new int[Integer.bitCount(mask)];
       int n = 0;
       for (int j = 0; j < nFree; j++) {
         if ((mask >> j & 1) != 0) {
           // the cube fixes column j to a value: the clause asks for the column to differ
-          cl[n++] = -valueLit(ids[j], (val >> j & 1) != 0 ? hi[j] : lo[j]);
+          cl[n++] = -valueLit(ids[j], (val >> j & 1) == 0 ? lo[j] : hi[j]);
         }
       }
       cs.add(cl);
-    }
-    if (TABLE_DEBUG) {
-      System.out.println(
-          "% boolean table clauses "
-              + cs.size()
-              + " arity "
-              + arity
-              + " free "
-              + nFree
-              + " tuples "
-              + t.tupleCount());
     }
     return addTableClauses(t, cs, auxiliaryVariables);
   }
@@ -6549,11 +6540,12 @@ public final class LcgSolver implements ExternalPropagator {
    * @param allowed whether each point is allowed
    * @param n the dimension
    * @param limit the most prime cubes
-   * @return the prime cubes, an empty list when every point is allowed, or null
+   * @return the prime cubes (an empty list when every point is allowed), or empty when there are
+   *     more than limit
    */
-  static List<long[]> forbiddenPrimeCubes(boolean[] allowed, int n, int limit) {
+  static Optional<List<long[]>> forbiddenPrimeCubes(boolean[] allowed, int n, int limit) {
     int full = (1 << n) - 1;
-    java.util.Set<Long> level = new java.util.HashSet<>();
+    Set<Long> level = new HashSet<>();
     for (int p = 0; p < allowed.length; p++) {
       if (!allowed[p]) {
         level.add((long) full << 32 | p);
@@ -6561,34 +6553,34 @@ public final class LcgSolver implements ExternalPropagator {
     }
     List<long[]> primes = new ArrayList<>();
     while (!level.isEmpty()) {
-      java.util.Set<Long> next = new java.util.HashSet<>();
-      java.util.Set<Long> merged = new java.util.HashSet<>();
-      for (long cube : level) {
-        int mask = (int) (cube >>> 32);
-        int val = (int) cube;
+      Set<Long> next = new HashSet<>();
+      Set<Long> merged = new HashSet<>();
+      for (long c : level) {
+        int mask = (int) (c >>> 32);
+        int val = (int) c;
         for (int b = 0; b < n; b++) {
           int bit = 1 << b;
           if ((mask & bit) != 0 && (val & bit) == 0) {
             long other = (long) mask << 32 | (val | bit);
             if (level.contains(other)) {
-              merged.add(cube);
+              merged.add(c);
               merged.add(other);
               next.add((long) (mask & ~bit) << 32 | val);
             }
           }
         }
       }
-      for (long cube : level) {
-        if (!merged.contains(cube)) {
+      for (long c : level) {
+        if (!merged.contains(c)) {
           if (primes.size() == limit) {
-            return null;
+            return Optional.empty();
           }
-          primes.add(new long[] {cube >>> 32, (int) cube});
+          primes.add(new long[] {c >>> 32, (int) c});
         }
       }
       level = next;
     }
-    return primes;
+    return Optional.of(primes);
   }
 
   /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */
