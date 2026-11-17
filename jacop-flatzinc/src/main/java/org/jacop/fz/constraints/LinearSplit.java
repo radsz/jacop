@@ -74,6 +74,8 @@ final class LinearSplit {
    * @param store the store the blocks are imposed in
    * @param c the constraint
    * @param limit the most terms a constraint keeps
+   * @param tree whether a block keeps at most limit terms and the sum of the blocks is split again
+   *     while it has more than limit terms (a tree of sums), instead of blocks of sqrt(n) terms
    * @param defined receives the variable of each block sum, which its block defines
    * @return the sum of the blocks with c's relation and right-hand side, or null
    */
@@ -107,7 +109,19 @@ final class LinearSplit {
     return others <= 1;
   }
 
-  static Constraint split(Store store, Constraint c, int limit, Consumer<IntVar> defined) {
+  static Constraint split(
+      Store store, Constraint c, int limit, boolean tree, Consumer<IntVar> defined) {
+    return split(store, c, limit, tree, defined, null);
+  }
+
+  // weighted: the terms of the constraint that this sum of blocks came from, or null
+  private static Constraint split(
+      Store store,
+      Constraint c,
+      int limit,
+      boolean tree,
+      Consumer<IntVar> defined,
+      IntVar[] weighted) {
     LinearForm f = form(c);
     if (limit <= 0 || f == null || f.relation() == LinearForm.NE || f.vars().length <= limit) {
       return null;
@@ -128,6 +142,12 @@ final class LinearSplit {
       }
     }
     int size = (int) Math.ceil(Math.sqrt(n));
+    // blocks of one term would leave the sum as long as it was (the threads of a split portfolio
+    // search set lcg-split=1)
+    boolean deeper = tree && limit > 1;
+    if (deeper) {
+      size = Math.min(size, limit);
+    }
     List<IntVar> sums = new ArrayList<>();
     List<Constraint> blocks = new ArrayList<>();
     List<IntVar> blockSums = new ArrayList<>();
@@ -159,7 +179,7 @@ final class LinearSplit {
       blockSums.add(s);
       LinearInt block = new LinearInt(bv, bw, "==", 0);
       // a block's failure weighs its terms, not the block sum, which no search branches on first
-      block.setWeightedVariables(Arrays.copyOfRange(x, from, to));
+      block.setWeightedVariables(weighted == null ? Arrays.copyOfRange(x, from, to) : weighted);
       blocks.add(block);
     }
     for (Constraint b : blocks) {
@@ -178,7 +198,15 @@ final class LinearSplit {
     LinearInt sum = new LinearInt(top, ones, rel, (int) f.c());
     // dom/wdeg weighs the terms when the sum of the blocks fails, as when the unsplit constraint
     // fails; with only the block sums weighed, cutstock type04_TEST9 found no solution in 60 s
-    sum.setWeightedVariables(x);
+    IntVar[] terms = weighted == null ? x : weighted;
+    sum.setWeightedVariables(terms);
+    if (deeper && top.length > limit && top.length < n) {
+      // a sum of more than limit^2 terms: its blocks sum to more than limit terms, split again
+      Constraint upper = split(store, sum, limit, true, defined, terms);
+      if (upper != null) {
+        return upper;
+      }
+    }
     return sum;
   }
 

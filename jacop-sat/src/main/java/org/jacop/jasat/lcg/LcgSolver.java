@@ -5293,6 +5293,22 @@ public final class LcgSolver implements ExternalPropagator {
 
   private boolean graphClauses = GRAPH_CLAUSES;
 
+  /**
+   * The share of the heap that the clauses of layered graphs may take, {@code
+   * jacop.lcg.graphClauses.heapShare}; graphs past it are propagated and explained by cuts.
+   */
+  static final double GRAPH_CLAUSES_HEAP_SHARE =
+      Double.parseDouble(System.getProperty("jacop.lcg.graphClauses.heapShare", "0.125"));
+
+  // The bytes that a described edge or node of a layered graph takes in the solver once it is
+  // clauses: a literal with its solver arrays and watches, and up to four clauses.
+  // MagicSquare-mdd-10
+  // (XCSP 2023), 22 diagrams of 201,000 edges and nodes, took about 2 GB.
+  private static final long GRAPH_CLAUSE_BYTES = 400;
+
+  /** Statistics: layered-graph constraints left as propagators because their clauses do not fit. */
+  public long graphConstraintsTooLarge;
+
   /** Whether {@link #encodeGraphs} ran. */
   private boolean graphsEncoded;
 
@@ -5352,10 +5368,22 @@ public final class LcgSolver implements ExternalPropagator {
           }
         };
     boolean propagatorLeft = false;
+    // the described edges and nodes the clauses of the graphs may take in all
+    long graphBudget =
+        (long) (GRAPH_CLAUSES_HEAP_SHARE * Runtime.getRuntime().maxMemory()) / GRAPH_CLAUSE_BYTES;
+    long graphUnits = 0;
     objectiveTerms = objectiveTerms();
     permutationOnly = permutationOnlyVariables();
     for (Constraint c : store.getConstraints()) {
-      if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
+      if (graphClauses
+          && c instanceof LayeredGraphConstraint g
+          && graphUnits + g.describedSize() > graphBudget) {
+        // too large to be clauses: WordDesign2-words-mdd-025 (XCSP 2023) has 300 diagrams of 2.4
+        // million edges and nodes
+        graphConstraintsTooLarge++;
+        propagatorLeft = true;
+      } else if (graphClauses && c instanceof LayeredGraphConstraint g && g.encodeClauses(model)) {
+        graphUnits += g.describedSize();
         g.removeConstraint();
         encodedGraphs.add(g);
         graphConstraintsEncoded++;

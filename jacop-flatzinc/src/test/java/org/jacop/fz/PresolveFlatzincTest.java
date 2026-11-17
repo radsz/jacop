@@ -340,8 +340,7 @@ class PresolveFlatzincTest {
       System.setOut(capture);
       List<String> args =
           new ArrayList<>(
-              List.of(
-                  "-a", "-n", String.valueOf(LIMIT), "--default-search", "input", "--presolve"));
+              List.of("-n", String.valueOf(LIMIT), "--default-search", "input", "--presolve"));
       args.add(presolve);
       args.addAll(Arrays.asList(options));
       args.add(DIR + model);

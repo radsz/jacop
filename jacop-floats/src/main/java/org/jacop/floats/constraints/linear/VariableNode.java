@@ -39,4 +39,24 @@ public abstract class VariableNode extends BinaryNode {
   Store store;
   FloatVar v;
   byte rel;
+
+  /** The linear constraint of this leaf, or null when it is not known. */
+  Linear owner;
+
+  /** The position of {@link #v} in the list of {@link #owner}. */
+  int position = -1;
+
+  /**
+   * Narrows the variable of this leaf, telling the owner its position first, so that {@link
+   * Linear#queueVariable} finds the changed variable without a lookup.
+   *
+   * @param min the new minimum.
+   * @param max the new maximum.
+   */
+  final void narrow(double min, double max) {
+    if (owner != null) {
+      owner.narrowing = position;
+    }
+    v.domain.in(store.level, v, min, max);
+  }
 }

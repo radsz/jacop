@@ -250,6 +250,9 @@ public class Options {
                 makes fewer than lcg-slow-rate conflicts per second and has no solution
                 after this share of the time limit gives way to free search without
                 learning, default 0.5; 0 = off),
+                free-first=<share> (with --lcg, -f and an objective that sums at least four
+                squares: free search without learning runs first for this share of the
+                time limit, then LCG goes on from its best solution, default 0.1; 0 = off),
                 first-input=<runs> (-f, an objective and no search annotation: after slow
                 LCG gave way without a solution, one free search run in this many fixes the
                 variables in the model's order with their least values, until the first
@@ -314,6 +317,9 @@ public class Options {
                 at restarts; share-clauses=0 = off),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
                 blocks of about sqrt of its size, for shorter explanations; default 20; 0 = off),
+                lcg-split-tree=0|1 (with lcg-split: blocks of at most n terms, and a sum of blocks
+                of more than n terms split again, so a sum of more than n*n terms becomes a tree of
+                sums; default 1),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
                 at its lower bound or a growing offset above it, per failure of the other runs;
                 default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100),

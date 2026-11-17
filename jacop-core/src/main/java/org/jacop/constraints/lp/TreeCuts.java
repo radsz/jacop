@@ -35,13 +35,15 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import org.jacop.api.VarMap;
+import org.jacop.constraints.graph.Forest;
 import org.jacop.constraints.graph.Reachable;
 import org.jacop.core.IntVar;
 
 /**
  * Generalized subtour elimination cuts of a forest of selected edges over selected nodes (the
  * acyclic {@link Reachable} of {@link org.jacop.constraints.graph.Tree} and {@link
- * org.jacop.constraints.graph.Path}): for every set S of nodes and every node k of S,
+ * org.jacop.constraints.graph.Path}, and of a redundant {@link Forest}): for every set S of nodes
+ * and every node k of S,
  *
  * <pre>
  *   sum(e inside S) y[e] &lt;= sum(i in S, i != k) x[i]
@@ -115,7 +117,8 @@ public final class TreeCuts {
   }
 
   /**
-   * It returns the cuts of an acyclic {@link Reachable}, or null for any other constraint.
+   * It returns the cuts of an acyclic {@link Reachable} or of a {@link Forest}, or null for any
+   * other constraint.
    *
    * @param c a constraint
    * @return the cuts, or null
@@ -123,6 +126,9 @@ public final class TreeCuts {
   public static TreeCuts of(Object c) {
     if (c instanceof Reachable r && r.acyclic() && r.edges().length > 1) {
       return new TreeCuts(r.nodes(), r.edges(), r.tails(), r.heads());
+    }
+    if (c instanceof Forest f && f.edges().length > 1) {
+      return new TreeCuts(f.nodes(), f.edges(), f.tails(), f.heads());
     }
     return null;
   }

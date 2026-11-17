@@ -41,7 +41,7 @@ import java.io.PrintStream;
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
  *          [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--jump share] [--ema 0|1]
- *          [--seed n] [--elim-interval conflicts] [--lucky 0|1]
+ *          [--seed n] [--elim-interval conflicts] [--lucky 0|1] [--substitute 0|1] [--congruence 0|1]
  *          file.cnf[.gz]
  * </pre>
  *
@@ -54,7 +54,8 @@ import java.io.PrintStream;
  * Glucose's LBD queue instead of fast and slow LBD averages. {@code --seed} changes the initial
  * decision order and {@code --elim-interval} sets when elimination runs again during search (0 for
  * never). {@code --lucky 0} turns the lucky assignments before the search off ({@link
- * CdclSolver#setLucky}).
+ * CdclSolver#setLucky}). {@code --substitute 0} turns equivalent-literal substitution off and
+ * {@code --congruence 0} its congruence closure on gates.
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -90,6 +91,8 @@ public final class CdclMain {
     boolean lucky = true;
     long seed = 0;
     int elimInterval = 5000;
+    boolean substitute = true;
+    boolean congruence = true;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);
@@ -107,6 +110,8 @@ public final class CdclMain {
         case "--lucky" -> lucky = !"0".equals(args[++i]);
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
+        case "--substitute" -> substitute = !"0".equals(args[++i]);
+        case "--congruence" -> congruence = !"0".equals(args[++i]);
         default -> file = args[i];
       }
     }
@@ -115,7 +120,7 @@ public final class CdclMain {
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
               + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1]"
               + " [--jump share] [--ema 0|1] [--seed n]"
-              + " [--elim-interval conflicts] [--lucky 0|1] file.cnf[.gz]");
+              + " [--elim-interval conflicts] [--lucky 0|1] [--substitute 0|1] [--congruence 0|1] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -133,6 +138,8 @@ public final class CdclMain {
     solver.setLucky(lucky);
     solver.setSeed(seed);
     solver.setEliminationInterval(elimInterval);
+    solver.setSubstitution(substitute);
+    solver.setCongruence(congruence);
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }
@@ -165,6 +172,14 @@ public final class CdclMain {
           solver.jumpCalls,
           solver.jumpModels(),
           solver.jumpSolved());
+      out.printf(
+          "c substituted variables %d, scc equivalences %d, gate equivalences %d, gates %d,"
+              + " substitution %.2f s%n",
+          solver.substitutedVars,
+          solver.sccEquivalences,
+          solver.gateEquivalences,
+          solver.gatesFound,
+          solver.substitutionNanos / 1e9);
       out.printf(
           "c factored variables %d, clauses %d, effort %d, factor %.2f s%n",
           solver.factoredVars, solver.factoredClauses, solver.factorWork, solver.factorNanos / 1e9);
