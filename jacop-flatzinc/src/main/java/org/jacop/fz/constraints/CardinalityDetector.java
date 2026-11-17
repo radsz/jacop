@@ -91,6 +91,10 @@ public class CardinalityDetector implements ParserTreeConstants {
   private final Support support;
 
   // GCCs also for counts with fixed bounds only
+  // -Dorg.jacop.fz.gccSums=false: no implied sums next to the redundant GCC
+  private final boolean impliedSums =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.gccSums", "true"));
+
   private final boolean all =
       "all".equalsIgnoreCase(System.getProperty("org.jacop.fz.cardinality"));
 
@@ -300,7 +304,59 @@ public class CardinalityDetector implements ParserTreeConstants {
           "% redundant GCC on " + n + " variables, " + byValue.size() + " counted values");
     }
     support.delayedConstraints.add(gcc);
+    if (impliedSums) {
+      postImpliedSums(g.x, counter, min);
+    }
     return true;
+  }
+
+  /**
+   * Posts the two sums that every GCC whose counters cover all values of x implies: the counters
+   * add up to the number of variables, and the values weighted by their counters add up to the sum
+   * of x. GCC's bound consistency does not see them, which matters when the counted variables are
+   * also counters (the self-describing sequences of nmseq and the magic series): there the
+   * propagator's own fixpoint lowers one bound by one per round, and with holes in the domains (for
+   * instance the facts of root probing) it ran 125 rounds per call, where the weighted sum bounds
+   * the large values at once. The sums are the classic redundant constraints of the magic series:
+   * B. M. Smith, Modelling, in Handbook of Constraint Programming, chapter 11, 2006; P. Van
+   * Hentenryck, The OPL Optimization Programming Language, MIT Press, 1999. Variables that occur in
+   * both x and the counters get one term.
+   */
+  private void postImpliedSums(IntVar[] x, IntVar[] counter, int min) {
+    IntVar[] ones = new IntVar[counter.length];
+    int[] unit = new int[counter.length];
+    for (int k = 0; k < counter.length; k++) {
+      ones[k] = counter[k];
+      unit[k] = 1;
+    }
+    support.delayedConstraints.add(new LinearInt(ones, unit, "==", x.length).setDegreeWeight(0));
+    Map<IntVar, Long> weight = new LinkedHashMap<>();
+    for (int k = 0; k < counter.length; k++) {
+      weight.merge(counter[k], (long) min + k, Long::sum);
+    }
+    for (IntVar v : x) {
+      weight.merge(v, -1L, Long::sum);
+    }
+    weight.values().removeIf(w -> w == 0);
+    long bound = 0;
+    for (Map.Entry<IntVar, Long> e : weight.entrySet()) {
+      long w = e.getValue();
+      if (w > Integer.MAX_VALUE || w < -Integer.MAX_VALUE) {
+        return;
+      }
+      bound +=
+          Math.abs(w)
+              * Math.max(Math.abs((long) e.getKey().min()), Math.abs((long) e.getKey().max()));
+    }
+    if (weight.isEmpty() || bound > Integer.MAX_VALUE) {
+      return;
+    }
+    IntVar[] vs = weight.keySet().toArray(new IntVar[0]);
+    int[] ws = weight.values().stream().mapToInt(Long::intValue).toArray();
+    support.delayedConstraints.add(new LinearInt(vs, ws, "==", 0).setDegreeWeight(0));
+    if (support.options.debug()) {
+      FzConsole.println("% implied GCC sums on " + vs.length + " terms");
+    }
   }
 
   // the counter of one value: the variable y of a count a * count - a * y = 0 when there is one

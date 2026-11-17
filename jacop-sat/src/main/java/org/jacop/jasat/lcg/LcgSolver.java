@@ -3332,7 +3332,7 @@ public final class LcgSolver implements ExternalPropagator {
         rootFailed = true;
       }
       for (int i : booleans) {
-        if (vars[i].singleton() || sat.value(geLit(i, 1)) != 0) {
+        if (fixedAtRoot(i)) {
           probeFixedBooleans++;
         }
       }
@@ -3344,10 +3344,25 @@ public final class LcgSolver implements ExternalPropagator {
     }
   }
 
+  // whether a 0/1 variable is fixed at the root, without making its literal: a literal made here
+  // would stay linked to the variable, and every change of it in the search would then push the
+  // literal with an explanation (counting the fixed variables of 81,608 made nmseq 202 -f twice as
+  // slow)
+  private boolean fixedAtRoot(int i) {
+    if (vars[i].singleton()) {
+      return true;
+    }
+    int d = ge[i].get(1);
+    return d != LiteralMap.NONE && sat.value(d) != 0;
+  }
+
   // probes both values of a 0/1 variable
   private int probeBoolean(int i) {
+    if (fixedAtRoot(i)) {
+      return NOTHING;
+    }
     int one = geLit(i, 1);
-    if (vars[i].singleton() || sat.value(one) != 0) {
+    if (sat.value(one) != 0) {
       return NOTHING;
     }
     probeProbes++;
