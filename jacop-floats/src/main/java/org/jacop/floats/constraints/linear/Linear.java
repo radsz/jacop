@@ -101,6 +101,13 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
   /** Lists up to this length find a variable's position by scanning {@link #list}. */
   private static final int SCAN_LIMIT = 8;
 
+  /**
+   * The position of the variable a leaf of this constraint narrowed last, or -1. A variable occurs
+   * once in {@link #list}, so when the variable at this position is the changed one, {@link
+   * #queueVariable} needs no lookup.
+   */
+  int narrowing = -1;
+
   /** Positions of the queued variables, a circular buffer holding each position at most once. */
   private int[] queue;
 
@@ -259,6 +266,8 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       leafNodes[i].rel = relationType;
 
       nodes[i] = leafNodes[i];
+      leafNodes[i].owner = this;
+      leafNodes[i].position = i;
       if (positionKeys != null) {
         int slot = slotOf(this.list[i].index());
         positionKeys[slot] = this.list[i].index();
@@ -550,7 +559,10 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
 
   @Override
   public void queueVariable(int level, Var v) {
-    int i = positionOf(v);
+    int i = narrowing;
+    if (i < 0 || list[i] != v) {
+      i = positionOf(v);
+    }
     if (i >= 0) {
       enqueue(i);
     }

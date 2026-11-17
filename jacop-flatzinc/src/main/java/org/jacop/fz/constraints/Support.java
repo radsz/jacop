@@ -1566,7 +1566,8 @@ public class Support implements ParserTreeConstants {
           LinearSplit.split(
               store,
               c,
-              Integer.parseInt(options.freeConfig("lcg-split", "40")),
+              Integer.parseInt(options.freeConfig("lcg-split", "20")),
+              !"0".equals(options.freeConfig("lcg-split-tree", "1")),
               // free LCG search branches on the block sums last, as on other defined variables, and
               // the linear relaxation replaces them by their blocks
               dictionary::addSplitSum);

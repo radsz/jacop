@@ -410,6 +410,28 @@ public final class CdclSolver {
 
   // --- variable elimination before the first search (see Eliminator)
   private boolean elimination = true;
+  // equivalent-literal substitution before elimination (see Congruence), and congruence closure
+  // on gates in it
+  private boolean substitution = !"false".equals(System.getProperty("jacop.jasat.substitute"));
+  private boolean congruence = !"false".equals(System.getProperty("jacop.jasat.congruence"));
+  // gate extraction runs again at a later elimination only if the last one found a gate
+  private boolean gatesPaid = true;
+
+  /** Statistics: variables replaced by an equivalent literal. */
+  public long substitutedVars;
+
+  /** Statistics: equivalences found in the binary implication graph. */
+  public long sccEquivalences;
+
+  /** Statistics: equivalences found by congruence closure. */
+  public long gateEquivalences;
+
+  /** Statistics: gates extracted for congruence closure. */
+  public long gatesFound;
+
+  /** Statistics: time spent in substitution and congruence closure. */
+  public long substitutionNanos;
+
   private boolean eliminationTried;
   private boolean externalUsed;
   private boolean[] eliminatedVar = new boolean[0];
@@ -1153,6 +1175,28 @@ public final class CdclSolver {
    */
   public void setElimination(boolean on) {
     elimination = on;
+  }
+
+  /**
+   * Turns equivalent-literal substitution on or off: before each variable elimination, the
+   * equivalences of the binary implication graph and, with {@link #setCongruence}, of congruent
+   * gates replace their literals (see {@link Congruence}). On by default (system property {@code
+   * jacop.jasat.substitute}); it runs only where elimination runs.
+   *
+   * @param on whether to substitute
+   */
+  public void setSubstitution(boolean on) {
+    substitution = on;
+  }
+
+  /**
+   * Turns congruence closure on AND, XOR and ITE gates in the substitution on or off. On by default
+   * (system property {@code jacop.jasat.congruence}).
+   *
+   * @param on whether to look for congruent gates
+   */
+  public void setCongruence(boolean on) {
+    congruence = on;
   }
 
   /**
@@ -4378,6 +4422,7 @@ public final class CdclSolver {
         input[n++] = new int[] {a, b};
       }
     }
+    boolean sat = true;
     if (factoring && !factored) {
       factored = true;
       long begin = System.nanoTime();
@@ -4395,8 +4440,25 @@ public final class CdclSolver {
       factorWork = f.effort();
       factorNanos = System.nanoTime() - begin;
     }
-    Eliminator e = new Eliminator(numVars, input, n, frozen, proof);
-    boolean sat = e.run();
+    Congruence cc = null;
+    if (substitution) {
+      long t0 = System.nanoTime();
+      cc = new Congruence(numVars, input, n, frozen, proof);
+      cc.gatesOn = congruence && gatesPaid;
+      sat = cc.run();
+      gatesPaid = cc.gatesOn && cc.andGates + cc.xorGates + cc.iteGates > 0;
+      substitutionNanos += System.nanoTime() - t0;
+      if (sat) {
+        input = cc.clauses();
+        n = input.length;
+        substitutedVars += cc.numSubstituted();
+        sccEquivalences += cc.sccEquivalences;
+        gateEquivalences += cc.gateEquivalences;
+        gatesFound += cc.andGates + cc.xorGates + cc.iteGates;
+      }
+    }
+    Eliminator e = new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof);
+    sat = sat && e.run();
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];
       if ((mem[ref + META] & DELETED) == 0) {
@@ -4413,6 +4475,13 @@ public final class CdclSolver {
     }
     rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
+    if (cc != null && sat) {
+      boolean[] replaced = cc.substituted();
+      // bounded variable addition may have added variables after the substitution
+      for (int v = 0; v < replaced.length; v++) {
+        gone[v] |= replaced[v];
+      }
+    }
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
     Arrays.fill(binSize, 0);
@@ -4437,15 +4506,24 @@ public final class CdclSolver {
     }
     numEliminated += e.numEliminated();
     int[] removed = e.stack();
+    if (cc != null) {
+      numEliminated += cc.numSubstituted();
+      int[] first = cc.stack();
+      int[] both = Arrays.copyOf(first, first.length + removed.length);
+      System.arraycopy(removed, 0, both, first.length, removed.length);
+      removed = both;
+    }
     int old = extension.length;
     extension = Arrays.copyOf(extension, old + removed.length);
     System.arraycopy(removed, 0, extension, old, removed.length);
-    for (int u : e.units()) {
-      if (vals[u] < 0) {
-        return refuted();
-      }
-      if (vals[u] == 0) {
-        assign(u, NO_REASON);
+    for (int[] found : new int[][] {cc == null ? new int[0] : cc.units(), e.units()}) {
+      for (int u : found) {
+        if (vals[u] < 0) {
+          return refuted();
+        }
+        if (vals[u] == 0) {
+          assign(u, NO_REASON);
+        }
       }
     }
     if (propagate() != NO_CONFLICT) {

@@ -70,10 +70,15 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cfn.CostNetworkBound;
@@ -950,7 +955,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
       // linear constraints are split into block sums: the relaxation gets the clauses as rows and
       // the blocks substituted back, so it has the rows of the model as without --lcg
-      List<LinearForm> clauses = new ArrayList<>();
+      List<LinearForm> clauses = new ArrayList<>(dictionary.overlapUnitRows());
       if (options.lcg()) {
         for (IntVar[][] clause : sat.collectedClauses()) {
           clauses.add(clauseRow(clause[0], clause[1]));
@@ -1032,6 +1037,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: lpRows="
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat: lpUnitRows="
+              + dictionary.overlapUnitRows().size()
               + "\n%%%mzn-stat: lpTableClauses="
               + (linearRelaxation == null ? 0 : linearRelaxation.tableClauses)
               + (cliques == null
@@ -1248,6 +1255,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.sparseCuts
             + "\n%%%mzn-stat: lpCapacityCuts="
             + r.capacityCuts
+            + "\n%%%mzn-stat: lpTwoPathCuts="
+            + r.twoPathCuts()
+            + "\n%%%mzn-stat: lpArcTimeRows="
+            + r.arcTimeRows
             + "\n%%%mzn-stat: lpEnergyCuts="
             + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
@@ -2531,6 +2542,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         fixedLabel = label;
         fixedSelect = select;
         fixedSolveType = solveType;
+        if (freeSearchFirst(costVar)) {
+          return freeSearch.getSolutions() > 0;
+        }
         return executeLcgSearch(costVar);
       }
       if (lpProbing && useFreeSearchEngine(costVar)) {
@@ -3085,6 +3099,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = ls.getCostValue();
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    } else if (freeFirstValues != null) {
+      // the best solution of free search without learning, which ran first
+      lcg.setIncumbent(freeFirstVars, freeFirstValues);
+      lcgLastCost = freeFirstCost;
     } else if (scheduled != null) {
       // the schedule is the solver's first solution: branch and bound and neighbourhood search
       // go on from it (as a bound and phase alone, neighbourhood search never ran: j60_45_1)
@@ -3966,6 +3984,86 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return cost == Integer.MAX_VALUE || after - before >= gain * (cost - before);
+  }
+
+  /**
+   * The number of squares x * x among the terms of the objective: the variables that the linear
+   * constraints over the cost variable tie to it, followed through up to three such constraints (an
+   * objective w1 * norm + w2 * violations with norm a sum of squares counts the squares of norm). A
+   * sum of squared deviations is a balancing objective (balanced academic curricula, nurse
+   * workloads, low autocorrelation): under LCG its bound literals say little about which value of a
+   * decision raises the cost, while free search without learning chooses each value by its bound on
+   * the objective ({@code value-impact}).
+   *
+   * @param costVar the cost variable
+   * @return the number of squared terms, 0 for none
+   */
+  int squaredObjectiveTerms(Var costVar) {
+    if (squaredTerms < 0) {
+      squaredTerms = countSquaredObjectiveTerms(costVar);
+    }
+    return squaredTerms;
+  }
+
+  // the squares among the objective's terms, -1 before they are counted
+  private int squaredTerms = -1;
+
+  private int countSquaredObjectiveTerms(Var costVar) {
+    Set<Var> squares = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<Constraint> linear = new ArrayList<>();
+    for (Constraint c : store.getConstraints()) {
+      Var square = squareOf(c);
+      if (square != null) {
+        squares.add(square);
+      } else if (c instanceof LinearInt || c instanceof SumWeight || c instanceof SumInt) {
+        linear.add(c);
+      }
+    }
+    if (squares.isEmpty()) {
+      return 0;
+    }
+    Set<Var> reached = Collections.newSetFromMap(new IdentityHashMap<>());
+    reached.add(costVar);
+    Set<Constraint> used = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<Var> frontier = Set.of(costVar);
+    for (int depth = 0; depth < 3 && !frontier.isEmpty(); depth++) {
+      frontier = linearStep(frontier, linear, used, reached, squares);
+    }
+    return (int) reached.stream().filter(squares::contains).count();
+  }
+
+  // z of z = x * x or z = x ^ 2 with x not fixed, null for any other constraint
+  private static Var squareOf(Constraint c) {
+    if (c instanceof XmulYeqZ m && m.x() == m.y() && !m.x().singleton()) {
+      return m.z();
+    }
+    if (c instanceof XexpYeqZ e && e.y().singleton(2) && !e.x().singleton()) {
+      return e.z();
+    }
+    return null;
+  }
+
+  // one step from the frontier through the linear constraints not used yet: the variables reached
+  // for the first time that are not squares, whose terms are followed in the next step
+  private static Set<Var> linearStep(
+      Set<Var> frontier,
+      List<Constraint> linear,
+      Set<Constraint> used,
+      Set<Var> reached,
+      Set<Var> squares) {
+    Set<Var> next = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint c : linear) {
+      Set<Var> args = c.arguments();
+      if (!used.contains(c) && args.stream().anyMatch(frontier::contains)) {
+        used.add(c);
+        for (Var v : args) {
+          if (reached.add(v) && !squares.contains(v)) {
+            next.add(v);
+          }
+        }
+      }
+    }
+    return next;
   }
 
   /**
@@ -4941,6 +5039,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + elementPositionCount
             + "\n%%%mzn-stat: lcgInputOrder="
             + inputOrderCount
+            + "\n%%%mzn-stat: lcgSplitSums="
+            + dictionary.splitSums().size()
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgTargetDecisions="
@@ -6142,7 +6242,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else if (options.getTimeOut() > 0) {
       // the time left now, not when the search starts: building the neighbourhoods and the
       // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
-      builder.deadline(System.currentTimeMillis() + options.getRemainingTimeOut());
+      builder.deadline(
+          System.currentTimeMillis()
+              + (freeFirstMillis > 0
+                  ? Math.min(freeFirstMillis, options.getRemainingTimeOut())
+                  : options.getRemainingTimeOut()));
+    }
+    IntVar[] recorded = freeFirstMillis > 0 ? hintedVariables() : null;
+    if (recorded != null) {
+      builder.record(recorded);
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
@@ -6200,7 +6308,71 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
     freeSearchStatus = freeSearch.solve();
+    if (recorded != null && freeSearch.getSolution() != null) {
+      freeFirstVars = recorded;
+      freeFirstValues = freeSearch.getSolution();
+      freeFirstCost = freeSearch.getCostValue();
+    }
     return freeSearch.getSolutions() > 0;
+  }
+
+  // the squares among the objective's terms from which it is a balancing objective
+  private static final int SQUARED_OBJECTIVE_TERMS =
+      Integer.getInteger("org.jacop.fz.squaredObjectiveTerms", 4);
+
+  // with a balancing objective, the time free search without learning runs before LCG, in
+  // milliseconds (0 = none), and the best solution it found, which LCG starts from
+  private long freeFirstMillis;
+  private IntVar[] freeFirstVars;
+  private int[] freeFirstValues;
+  private int freeFirstCost;
+
+  /**
+   * Runs free search without learning before LCG free search when the objective is a balancing
+   * objective, a sum of squares ({@link #squaredObjectiveTerms}), for the share free-first of the
+   * time (default 0.1; 0 = off). Its search chooses each value by its bound on the objective
+   * (value-impact), which builds balanced loads at once, while LCG's bound literals on a sum of
+   * squares say little about which value raises it: at 120 s on XCSP 2023 GBACP-UD05 LCG free
+   * search ends at 1,253 to 3,777 and free search without learning at 228 to 333. Free search alone
+   * stalls on others where LCG goes on improving (GBACP-UD04 542 from 12 s on, LCG 396), so LCG
+   * then starts from free search's best solution. Handing the search back to free search without
+   * learning each time LCG stalled lost that again (UD04 469 at 240 s), so LCG keeps it under the
+   * usual check of {@link #slowLcgCheck}.
+   *
+   * @param costVar the cost variable
+   * @return true if free search finished the search (an optimum or no solution proved)
+   */
+  private boolean freeSearchFirst(Var costVar) {
+    double share = Double.parseDouble(options.freeConfig("free-first", "0.1"));
+    if (share <= 0
+        || !options.freeSearch()
+        || options.getTimeOut() <= 0
+        || options.portfolioWorker() != null
+        || options.proof() != null
+        || !(costVar instanceof IntVar)
+        || squaredObjectiveTerms(costVar) < SQUARED_OBJECTIVE_TERMS) {
+      return false;
+    }
+    if (options.getStatistics()) {
+      IO.println("%%%mzn-stat: freeFirstSquares=" + squaredObjectiveTerms(costVar));
+    }
+    freeFirstMillis = Math.max(1, (long) (share * options.getRemainingTimeOut()));
+    try {
+      executeFreeSearch(costVar);
+    } finally {
+      freeFirstMillis = 0;
+    }
+    if (options.debug()) {
+      IO.println(
+          "% free search first: "
+              + freeSearch.getSolutions()
+              + " solutions, best "
+              + (freeFirstValues == null ? "none" : freeFirstCost)
+              + ", "
+              + freeSearchStatus);
+    }
+    return freeSearchStatus == FreeSearch.Status.OPTIMAL
+        || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE;
   }
 
   /**
