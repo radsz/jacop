@@ -91,7 +91,7 @@ public class VarWeightNode extends VariableNode {
     double divMin = d.min();
     double divMax = d.max();
 
-    v.domain.in(store.level, v, divMin, divMax);
+    narrow(divMin, divMax);
   }
 
   @Override

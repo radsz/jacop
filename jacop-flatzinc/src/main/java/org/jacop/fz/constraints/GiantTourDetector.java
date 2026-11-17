@@ -167,12 +167,26 @@ public class GiantTourDetector implements ParserTreeConstants {
   private static final class Tour {
     final IntVar[] x;
     final int offset;
+    // a subcircuit, a tour only when no node can be its own successor
+    final boolean sub;
 
-    Tour(IntVar[] x, int offset) {
+    Tour(IntVar[] x, int offset, boolean sub) {
       this.x = x;
       this.offset = offset;
+      this.sub = sub;
     }
   }
+
+  // p = q + c for the variables p of two-variable equations: aliasOf.get(p) = q, shiftOf.get(p) = c
+  private final Map<IntVar, IntVar> aliasOf = new IdentityHashMap<>();
+  private final Map<IntVar, Integer> shiftOf = new IdentityHashMap<>();
+
+  // the other literal of each binary clause (r \/ e) over two Booleans
+  private final Map<IntVar, List<IntVar>> clausePartners = new IdentityHashMap<>();
+
+  // e -> y = k (int_eq_imp): the variable y and the value k of each literal e
+  private final Map<IntVar, IntVar> impliedVar = new IdentityHashMap<>();
+  private final Map<IntVar, Integer> impliedValue = new IdentityHashMap<>();
 
   // the elements value = array[index - first] of each index variable
   private final Map<IntVar, List<Element>> elements = new IdentityHashMap<>();
@@ -201,6 +215,8 @@ public class GiantTourDetector implements ParserTreeConstants {
     final IntVar[] x;
     final long rhs;
     final boolean equation;
+    // the literal that enforces the row (int_lin_le_imp), or null for a row that always holds
+    IntVar condition;
 
     Row(long[] a, IntVar[] x, long rhs, boolean equation) {
       this.a = a;
@@ -251,7 +267,7 @@ public class GiantTourDetector implements ParserTreeConstants {
       }
     }
     for (Tour t : tours) {
-      tour(t.x, t.offset);
+      tour(t.x, t.offset, t.sub);
     }
   }
 
@@ -265,9 +281,15 @@ public class GiantTourDetector implements ParserTreeConstants {
 
   private void collect(ASTConstElem node) {
     switch (node.getName()) {
-      case "jacop_circuit" -> tours.add(new Tour(support.getVarArray(child(node, 0)), 1));
+      case "jacop_circuit" -> tours.add(new Tour(support.getVarArray(child(node, 0)), 1, false));
       case "jacop_circuit_offset" ->
-          tours.add(new Tour(support.getVarArray(child(node, 0)), support.getInt(scalar(node, 1))));
+          tours.add(
+              new Tour(
+                  support.getVarArray(child(node, 0)), support.getInt(scalar(node, 1)), false));
+      case "jacop_subcircuit" -> tours.add(new Tour(support.getVarArray(child(node, 0)), 1, true));
+      case "int_lin_le_imp" -> row(node, false);
+      case "bool_clause" -> clause(node);
+      case "int_eq_imp" -> implied(node);
       case "array_int_element" -> element(node, null, support.getIntArray(child(node, 1)), 1);
       case "array_var_int_element" -> element(node, support.getVarArray(child(node, 1)), null, 1);
       case "jacop_array_var_int_element_nonshifted" ->
@@ -275,6 +297,7 @@ public class GiantTourDetector implements ParserTreeConstants {
       case "int_lin_eq" -> {
         equations.add(node);
         row(node, true);
+        alias(node);
       }
       case "int_lin_le" -> row(node, false);
       default -> {
@@ -334,15 +357,112 @@ public class GiantTourDetector implements ParserTreeConstants {
             vs.toArray(new IntVar[0]),
             rhs,
             equation);
+    if ("int_lin_le_imp".equals(node.getName())) {
+      IntVar enforced = support.getVariable(scalar(node, 3));
+      if (enforced.singleton()) {
+        if (enforced.value() == 0) {
+          return;
+        }
+      } else {
+        row.condition = enforced;
+      }
+    }
     for (IntVar v : vs) {
       rows.computeIfAbsent(v, k -> new ArrayList<>()).add(row);
     }
   }
 
+  // p = q + c from int_lin_eq([1, -1], [p, q], c) or its negation
+  private void alias(ASTConstElem node) {
+    int[] a = support.getIntArray(child(node, 0));
+    IntVar[] x = support.getVarArray(child(node, 1));
+    if (a == null || x == null || a.length != 2 || a[0] != -a[1] || Math.abs(a[0]) != 1) {
+      return;
+    }
+    ASTScalarFlatExpr r = scalar(node, 2);
+    if (r.getType() == 2 && support.dictionary.getVariable(r.getIdent()) != null) {
+      return;
+    }
+    long rhs = support.getVariable(r).value();
+    if (x[0] == x[1] || x[0].singleton() || x[1].singleton()) {
+      return;
+    }
+    // a[0] (p - q) = rhs
+    long c = a[0] > 0 ? rhs : -rhs;
+    if (Math.abs(c) > 1_000_000) {
+      return;
+    }
+    aliasOf.putIfAbsent(x[0], x[1]);
+    shiftOf.putIfAbsent(x[0], (int) c);
+    aliasOf.putIfAbsent(x[1], x[0]);
+    shiftOf.putIfAbsent(x[1], (int) -c);
+  }
+
+  // bool_clause([r, e], []): r or e
+  private void clause(ASTConstElem node) {
+    IntVar[] pos = support.getVarArray(child(node, 0));
+    IntVar[] neg = support.getVarArray(child(node, 1));
+    if (pos == null || neg == null || pos.length != 2 || neg.length != 0 || pos[0] == pos[1]) {
+      return;
+    }
+    clausePartners.computeIfAbsent(pos[0], k -> new ArrayList<>()).add(pos[1]);
+    clausePartners.computeIfAbsent(pos[1], k -> new ArrayList<>()).add(pos[0]);
+  }
+
+  // int_eq_imp(y, k, e): e -> y = k
+  private void implied(ASTConstElem node) {
+    IntVar y = support.getVariable(scalar(node, 0));
+    IntVar k = support.getVariable(scalar(node, 1));
+    IntVar e = support.getVariable(scalar(node, 2));
+    if (!k.singleton() || y.singleton() || e.singleton()) {
+      return;
+    }
+    impliedVar.putIfAbsent(e, y);
+    impliedValue.putIfAbsent(e, k.value());
+  }
+
+  // the successor value w + offset of x that the negation of the condition of a row implies (not
+  // r -> e by a binary clause, e -> x = value, also through an alias of x), or null: the row holds
+  // on every arc of x except the one to that value
+  private Integer exemptValue(IntVar condition, IntVar xv) {
+    for (IntVar e : clausePartners.getOrDefault(condition, List.of())) {
+      IntVar y = impliedVar.get(e);
+      if (y == null) {
+        continue;
+      }
+      if (y == xv) {
+        return impliedValue.get(e);
+      }
+      if (aliasOf.get(xv) == y) {
+        return impliedValue.get(e) + shiftOf.get(xv);
+      }
+    }
+    return null;
+  }
+
   // ---------------------------------------------------------------------------------------------
 
-  private void tour(IntVar[] x, int offset) {
+  private void tour(IntVar[] x, int offset, boolean sub) {
     int n = x.length;
+    for (int v = 0; v < n; v++) {
+      if (sub && x[v].domain.contains(v + offset)) {
+        // a node may stay out of the subcircuit
+        IntVar q = aliasOf.get(x[v]);
+        if (q == null || q.domain.contains(v + offset - shiftOf.get(x[v]))) {
+          return;
+        }
+      }
+      // the elements read through an alias q = x[v] - c of a successor that has none of its own
+      IntVar q = aliasOf.get(x[v]);
+      if (q != null && elements.containsKey(q) && !elements.containsKey(x[v])) {
+        int c = shiftOf.get(x[v]);
+        List<Element> own = new ArrayList<>();
+        for (Element e : elements.get(q)) {
+          own.add(new Element(e.vars, e.values, e.first + c, e.value));
+        }
+        elements.put(x[v], own);
+      }
+    }
     // the fixed links: their tails and heads are depot nodes
     boolean[] fixed = new boolean[n];
     boolean[] target = new boolean[n];
@@ -363,9 +483,9 @@ public class GiantTourDetector implements ParserTreeConstants {
     if (tsp && !"false".equals(System.getProperty("org.jacop.fz.tspElimination"))) {
       eliminateEdges(x, offset);
     }
-    if (tsp && !Boolean.getBoolean("org.jacop.fz.tsp")) {
-      return;
-    }
+    // a travelling salesman tour gets the relaxation only with time windows of its own, or in the
+    // opt-in TSP mode (org.jacop.fz.tsp)
+    boolean tspMode = Boolean.getBoolean("org.jacop.fz.tsp");
     // customer number (1..k) of each node, or 0 for a depot node
     int[] customer = new int[n];
     List<Integer> customers = new ArrayList<>();
@@ -437,6 +557,9 @@ public class GiantTourDetector implements ParserTreeConstants {
           }
         }
       }
+    }
+    if (tsp && !tspMode && timed == null) {
+      return;
     }
     for (Chain c : chainList) {
       posted.add(c.sum);
@@ -908,7 +1031,10 @@ public class GiantTourDetector implements ParserTreeConstants {
           demand[i] = q;
         }
       }
-      if (demand == null || !localRows) {
+      long[][] lag = lags(x, offset, fixed, a, t);
+      if (demand == null ? lag == null : !localRows) {
+        // a chain of times along the arcs only (rows enforced on the arcs to the customers, as in
+        // a travelling salesman tour with time windows) has no increment on every arc
         continue;
       }
       // sum over the nodes not fixed of T[x[n]] = sum of T over the nodes no fixed link enters
@@ -933,9 +1059,9 @@ public class GiantTourDetector implements ParserTreeConstants {
                   "==",
                   (int) rhs)
               .setDegreeWeight(0);
-      Chain chain = new Chain(t, nonNegative ? demand : null, sum);
+      Chain chain = new Chain(t, demand != null && nonNegative ? demand : null, sum);
       chain.a = a;
-      chain.lag = lags(x, offset, fixed, a, t);
+      chain.lag = lag;
       out.add(chain);
     }
     return out;
@@ -1032,6 +1158,11 @@ public class GiantTourDetector implements ParserTreeConstants {
       travel[a] = t == Long.MAX_VALUE ? NO_LAG : t;
     }
     routes.setTimeWindows(earliest, latest, travel);
+    IntVar[] times = new IntVar[k + 1];
+    for (int i = 1; i <= k; i++) {
+      times[i] = c.t[customers.get(i)];
+    }
+    routes.setTimes(times);
   }
 
   // the share of the customers whose window is at most half the span of the routes
@@ -1124,10 +1255,22 @@ public class GiantTourDetector implements ParserTreeConstants {
         }
       }
       long[] best = null;
-      for (Row r : rows.getOrDefault(a[v], List.of())) {
+      for (Row given : rows.getOrDefault(a[v], List.of())) {
+        Integer exempt = null;
+        if (given.condition != null) {
+          exempt = exemptValue(given.condition, x[v]);
+          if (exempt == null) {
+            continue;
+          }
+        }
+        Row r = withTime(given, a[v], t[v], costs);
         long[] l = lag(r, a[v], t[v], x[v], offset, n, costs);
         if (l == null) {
           continue;
+        }
+        if (exempt != null && exempt - offset >= 0 && exempt - offset < n) {
+          // the row does not hold on the arc to the exempt successor
+          l[exempt - offset] = NO_LAG;
         }
         if (best == null) {
           best = l;
@@ -1153,6 +1296,57 @@ public class GiantTourDetector implements ParserTreeConstants {
       }
     }
     return varies ? lag : null;
+  }
+
+  // the row with a variable s replaced by its definition when the row does not hold t itself and
+  // an equation s = t + y (coefficient of s 1 or -1) defines s, as a flattened a[x[v]] >= t[v] +
+  // d[v] has it (XCSP TSPTW: s = t + d, s <= a); the row itself otherwise
+  private Row withTime(Row r, IntVar a, IntVar t, Map<IntVar, Element> costs) {
+    for (IntVar v : r.x) {
+      if (v == t) {
+        return r;
+      }
+    }
+    for (int i = 0; i < r.x.length; i++) {
+      IntVar s = r.x[i];
+      if (s == a || costs.containsKey(s)) {
+        continue;
+      }
+      for (Row eq : rows.getOrDefault(s, List.of())) {
+        if (!eq.equation || eq.condition != null || eq == r) {
+          continue;
+        }
+        long es = 0;
+        boolean hasT = false;
+        boolean hasA = false;
+        for (int k = 0; k < eq.x.length; k++) {
+          if (eq.x[k] == s) {
+            es += eq.a[k];
+          }
+          hasT |= eq.x[k] == t;
+          hasA |= eq.x[k] == a;
+        }
+        if (!hasT || hasA || Math.abs(es) != 1) {
+          continue;
+        }
+        // r - (r_s / e_s) eq, with e_s = 1 or -1
+        long f = r.a[i] * es;
+        Map<IntVar, Long> w = new IdentityHashMap<>();
+        for (int k = 0; k < r.x.length; k++) {
+          w.merge(r.x[k], r.a[k], Long::sum);
+        }
+        for (int k = 0; k < eq.x.length; k++) {
+          w.merge(eq.x[k], -f * eq.a[k], Long::sum);
+        }
+        w.values().removeIf(c -> c == 0);
+        IntVar[] xs = w.keySet().toArray(new IntVar[0]);
+        long[] as = w.values().stream().mapToLong(Long::longValue).toArray();
+        Row out = new Row(as, xs, r.rhs - f * eq.rhs, r.equation);
+        out.condition = r.condition;
+        return out;
+      }
+    }
+    return r;
   }
 
   // the lags of one row over the successors w of v, NO_LAG where the row gives none; null when
@@ -1334,6 +1528,9 @@ public class GiantTourDetector implements ParserTreeConstants {
     }
     Long best = null;
     for (Row r : rows.getOrDefault(a, List.of())) {
+      if (r.condition != null) {
+        continue;
+      }
       long alpha = 0;
       long beta = 0;
       for (int i = 0; i < r.x.length; i++) {

@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.SaturatedProducts;
 import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.LinearForm;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -145,6 +146,10 @@ public class Tables {
   boolean overlapSetRows;
 
   final ArrayList<IntVar> overlapSetRowsDefined = new ArrayList<>();
+
+  // the rows that linear overlap factoring reduced to a multiple of one sub-sum, k * z rel c:
+  // posted as bounds of z, they reach the linear relaxation only from here
+  final ArrayList<LinearForm> overlapUnitRows = new ArrayList<>();
 
   // the tables of the model, for the clique rows of the linear relaxation
   private final ArrayList<TableCliques.Table> tables = new ArrayList<>();
@@ -736,6 +741,13 @@ public class Tables {
     t.splitSums.addAll(map.get(splitSums));
     t.overlapSetRows = overlapSetRows;
     t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
+    for (LinearForm f : overlapUnitRows) {
+      IntVar[] vs = new IntVar[f.vars().length];
+      for (int k = 0; k < vs.length; k++) {
+        vs[k] = map.get(f.vars()[k]);
+      }
+      t.overlapUnitRows.add(new LinearForm(vs, f.weights(), f.c(), f.relation()));
+    }
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.indexDisjunctions = indexDisjunctions == null ? null : indexDisjunctions.copy(map);
@@ -1312,6 +1324,26 @@ public class Tables {
    */
   public List<IntVar> splitSums() {
     return splitSums;
+  }
+
+  /**
+   * Records a row that linear overlap factoring reduced to a multiple of one sub-sum variable.
+   *
+   * @param f the row, over the sub-sum variable
+   */
+  public void addOverlapUnitRow(LinearForm f) {
+    overlapUnitRows.add(f);
+  }
+
+  /**
+   * Returns the rows that linear overlap factoring reduced to a multiple of one sub-sum variable,
+   * which the store holds as bounds of that variable; the linear relaxation substitutes the sum
+   * back and has the rows of the model.
+   *
+   * @return the rows
+   */
+  public List<LinearForm> overlapUnitRows() {
+    return overlapUnitRows;
   }
 
   /**

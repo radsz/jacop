@@ -267,6 +267,19 @@ public final class CdclSolver {
   private long nextReduce = 2000;
   private int reduceBase = 2000;
   private int reduceInc = 300;
+  // A reduction is also made, at most every MEMORY_REDUCE_GAP conflicts, when the learnt clauses
+  // take more than LEARNT_HEAP_SHARE of the heap: under lazy clause generation a diagram given as
+  // clauses (MagicSquare-mdd-10, XCSP 2023: 4.4 million literals) made learnt clauses of 4,000
+  // literals on average, mostly in the core tier, and 6,000 conflicts ran a 6 GB heap out of memory
+  // (12 GB a little later) when the arena of 870 MB grew by half; the growth needs the old and the
+  // new arena at once.
+  private static final double LEARNT_HEAP_SHARE = 1.0 / 16;
+  private static final int MEMORY_REDUCE_GAP = 16;
+  private long learntBudget =
+      (long) (LEARNT_HEAP_SHARE * Runtime.getRuntime().maxMemory()) / Integer.BYTES;
+  private long nextMemoryCheck;
+  // the bytes that elimination and local search may take for their copies of the clauses
+  private long copyBudget = Runtime.getRuntime().maxMemory() / 4;
   // vivification of learnt clauses at the next restart, after each reduction
   private boolean vivification = true;
   private boolean vivifyDue;
@@ -382,8 +395,43 @@ public final class CdclSolver {
   private int numLowWatched;
   private boolean lowWatchedDue;
 
+  // --- lucky assignments before the first search (see lucky())
+  private boolean lucky = true;
+  private boolean luckyTried;
+
+  /** Statistics: time spent in the lucky assignments, in nanoseconds. */
+  public long luckyNanos;
+
+  /**
+   * Statistics: the lucky assignment that found a model ("all-true", "all-false", "forward-false",
+   * "forward-true", "backward-false", "backward-true"), or null when none did.
+   */
+  public String luckyFound;
+
   // --- variable elimination before the first search (see Eliminator)
   private boolean elimination = true;
+  // equivalent-literal substitution before elimination (see Congruence), and congruence closure
+  // on gates in it
+  private boolean substitution = !"false".equals(System.getProperty("jacop.jasat.substitute"));
+  private boolean congruence = !"false".equals(System.getProperty("jacop.jasat.congruence"));
+  // gate extraction runs again at a later elimination only if the last one found a gate
+  private boolean gatesPaid = true;
+
+  /** Statistics: variables replaced by an equivalent literal. */
+  public long substitutedVars;
+
+  /** Statistics: equivalences found in the binary implication graph. */
+  public long sccEquivalences;
+
+  /** Statistics: equivalences found by congruence closure. */
+  public long gateEquivalences;
+
+  /** Statistics: gates extracted for congruence closure. */
+  public long gatesFound;
+
+  /** Statistics: time spent in substitution and congruence closure. */
+  public long substitutionNanos;
+
   private boolean eliminationTried;
   private boolean externalUsed;
   private boolean[] eliminatedVar = new boolean[0];
@@ -497,6 +545,9 @@ public final class CdclSolver {
 
   /** Number of learnt clause database reductions so far. */
   public long reductions;
+
+  /** Statistics: reductions of the learnt clauses made because they took too much of the heap. */
+  public long memoryReductions;
 
   /** Statistics: literals of the learnt clauses, after minimisation. */
   public long learntLiterals;
@@ -717,10 +768,30 @@ public final class CdclSolver {
     interrupted = cancelled;
     outOfTime = false;
     backtrack(0);
-    if (elimination && !eliminationTried && conflicts == 0 && !externalUsed && numUnits == 0) {
+    // lucky assignments before and after elimination (Kissat's luckyearly and luckylate), in the
+    // first plain search only
+    boolean luckyNow =
+        lucky && !luckyTried && assumptions.length == 0 && external == null && !externalUsed;
+    luckyTried |= luckyNow;
+    int luckyResult = luckyNow ? lucky() : UNKNOWN;
+    if (luckyResult == UNSAT) {
+      return UNSAT;
+    }
+    if (luckyResult == UNKNOWN
+        && elimination
+        && !eliminationTried
+        && conflicts == 0
+        && !externalUsed
+        && numUnits == 0) {
       eliminationTried = true;
       if (!eliminate()) {
         return UNSAT;
+      }
+      if (luckyNow && numEliminated > 0) {
+        luckyResult = lucky();
+        if (luckyResult == UNSAT) {
+          return UNSAT;
+        }
       }
     }
     // chronological backtracking would assign literals below the current level, which the level
@@ -729,8 +800,8 @@ public final class CdclSolver {
     notifying = external != null;
     int result;
     try {
-      result = search();
-      if (result == SAT && jumpPhases != null) {
+      result = luckyResult == SAT ? SAT : search();
+      if (result == SAT && luckyResult != SAT && jumpPhases != null) {
         jumpSolved = true;
       }
       if (result == SAT) {
@@ -1104,6 +1175,28 @@ public final class CdclSolver {
    */
   public void setElimination(boolean on) {
     elimination = on;
+  }
+
+  /**
+   * Turns equivalent-literal substitution on or off: before each variable elimination, the
+   * equivalences of the binary implication graph and, with {@link #setCongruence}, of congruent
+   * gates replace their literals (see {@link Congruence}). On by default (system property {@code
+   * jacop.jasat.substitute}); it runs only where elimination runs.
+   *
+   * @param on whether to substitute
+   */
+  public void setSubstitution(boolean on) {
+    substitution = on;
+  }
+
+  /**
+   * Turns congruence closure on AND, XOR and ITE gates in the substitution on or off. On by default
+   * (system property {@code jacop.jasat.congruence}).
+   *
+   * @param on whether to look for congruent gates
+   */
+  public void setCongruence(boolean on) {
+    congruence = on;
   }
 
   /**
@@ -2725,6 +2818,8 @@ public final class CdclSolver {
     if (conflicts >= nextReduce) {
       nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
       reduceDb();
+    } else if (learntsTooLarge()) {
+      reduceForMemory();
     }
     return propagateUnits();
   }
@@ -3107,6 +3202,8 @@ public final class CdclSolver {
         nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
         reduceDb();
         vivifyDue = vivification;
+      } else if (learntsTooLarge()) {
+        reduceForMemory();
       }
       if (decisionLevel == 0 && trailSize != simplifyAssigns && propagations >= simplifyProps) {
         simplifyDb();
@@ -3538,6 +3635,160 @@ public final class CdclSolver {
   }
 
   /**
+   * Turns the lucky assignments before the first search on or off (on by default). They run in the
+   * first {@link #solve} without assumptions and without an external propagator, before variable
+   * elimination and again after it.
+   *
+   * @param on whether to try the lucky assignments
+   */
+  public void setLucky(boolean on) {
+    lucky = on;
+  }
+
+  /**
+   * Lucky assignments, as Kissat's lucky.c (Biere and Fleury, "Gimsatul, IsaSAT and Kissat entering
+   * the SAT Competition 2022", Proc. SAT Competition 2022): formulas from applications are often
+   * satisfied by a trivial assignment. First the solver checks whether every irredundant clause has
+   * a positive (negative) literal that is not false at the root, so that setting all variables true
+   * (false) satisfies the formula. Otherwise it decides the variables in input order, forward then
+   * backward, all false and then all true, with propagation after each decision; on a conflict it
+   * flips the last decision once and gives the pass up when the flipped one conflicts too. Unlike
+   * Kissat, a first decision that fails does not become a root unit: when no pass finds a model,
+   * the saved phases, the watches, the order of the clause literals and the propagation count are
+   * put back as they were, so the search that follows is exactly the one without lucky assignments
+   * (root units changed the search by luck on SAT instances, waerden 9 -> 95 s).
+   *
+   * @return {@link #SAT} with every variable assigned, {@link #UNSAT} when the root propagation
+   *     refutes the formula, {@link #UNKNOWN} at the root when no assignment was lucky
+   */
+  private int lucky() {
+    long begin = System.nanoTime();
+    try {
+      if (propagate() != NO_CONFLICT) {
+        return refutedAtRoot();
+      }
+      // the passes move watches and reorder clause literals: a failed attempt puts them back, so
+      // that the search afterwards is the one without lucky assignments, units aside
+      byte[] phases = Arrays.copyOf(savedSign, numVars);
+      int[] arena = Arrays.copyOf(mem, memSize);
+      int[][] watched = new int[2 * numVars][];
+      for (int l = 0; l < 2 * numVars; l++) {
+        watched[l] = Arrays.copyOf(watches[l], watchSize[l]);
+      }
+      long props = propagations;
+      int result = UNKNOWN;
+      if (noClauseWithoutSign(0)) {
+        result = luckyPass(true, 0, "all-true");
+      }
+      if (result == UNKNOWN && noClauseWithoutSign(1)) {
+        result = luckyPass(true, 1, "all-false");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(true, 1, "forward-false");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(true, 0, "forward-true");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(false, 1, "backward-false");
+      }
+      if (result == UNKNOWN) {
+        result = luckyPass(false, 0, "backward-true");
+      }
+      if (result == UNKNOWN) {
+        System.arraycopy(phases, 0, savedSign, 0, numVars);
+        System.arraycopy(arena, 0, mem, 0, arena.length);
+        for (int l = 0; l < 2 * numVars; l++) {
+          int n = watched[l].length;
+          if (n > 0 && watches[l].length < n) {
+            watches[l] = watched[l];
+          } else if (n > 0) {
+            System.arraycopy(watched[l], 0, watches[l], 0, n);
+          }
+          watchSize[l] = n;
+        }
+        propagations = props;
+      }
+      return result;
+    } finally {
+      luckyNanos += System.nanoTime() - begin;
+    }
+  }
+
+  /**
+   * Whether every irredundant clause has a literal of the sign (0 positive, 1 negative) that is not
+   * false at the root.
+   */
+  private boolean noClauseWithoutSign(int sign) {
+    for (int i = 0; i < numOriginals; i++) {
+      int ref = originals[i];
+      if ((mem[ref + META] & DELETED) != 0) {
+        continue;
+      }
+      boolean found = false;
+      for (int k = 0, size = mem[ref + SIZE]; k < size && !found; k++) {
+        int l = mem[ref + HEADER + k];
+        found = (l & 1) == sign && vals[l] >= 0;
+      }
+      if (!found) {
+        return false;
+      }
+    }
+    for (int i = 0; i < numOriginalBinaries; i += 2) {
+      int a = originalBinaries[i];
+      int b = originalBinaries[i + 1];
+      if (((a & 1) != sign || vals[a] < 0) && ((b & 1) != sign || vals[b] < 0)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * One lucky pass: decides each unassigned variable in input order (forward) or in reverse order
+   * with the literal of the sign, propagating after each decision.
+   *
+   * @return SAT when every variable got a value without a conflict left, UNKNOWN (back at the root)
+   *     otherwise
+   */
+  private int luckyPass(boolean forward, int sign, String name) {
+    for (int k = 0; k < numVars; k++) {
+      int v = forward ? k : numVars - 1 - k;
+      if (vals[2 * v] != 0 || eliminatedVar[v]) {
+        continue;
+      }
+      if ((k & 1023) == 0 && pastDeadline()) {
+        backtrack(0);
+        return UNKNOWN;
+      }
+      int lit = 2 * v + sign;
+      newDecisionLevel();
+      assign(lit, NO_REASON);
+      if (propagate() == NO_CONFLICT) {
+        continue;
+      }
+      backtrack(decisionLevel - 1);
+      newDecisionLevel();
+      assign(lit ^ 1, NO_REASON);
+      if (propagate() != NO_CONFLICT) {
+        backtrack(0);
+        return UNKNOWN;
+      }
+    }
+    luckyFound = name;
+    return SAT;
+  }
+
+  /** The root propagation found a conflict: the formula is refuted. */
+  private int refutedAtRoot() {
+    ok = false;
+    if (proof != null) {
+      proof.add(learnt, 0, 0);
+    }
+    return UNSAT;
+  }
+
+  /**
    * Sets the initial phase of the variables, which rephasing also returns to: true as in CaDiCaL
    * (the default), or false as in MiniSat and CP-SAT.
    *
@@ -3598,7 +3849,9 @@ public final class CdclSolver {
       case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) (1 - originalSign));
       case 'W' -> {
         System.arraycopy(bestSign, 0, savedSign, 0, numVars);
-        walk();
+        if (walkFits()) {
+          walk();
+        }
       }
       default -> System.arraycopy(bestSign, 0, savedSign, 0, numVars);
     }
@@ -3993,6 +4246,54 @@ public final class CdclSolver {
 
   // ------------------------------------------------------------------------- clause database
 
+  /**
+   * Whether the learnt clauses take more than their share of the heap, checked at most every
+   * MEMORY_REDUCE_GAP conflicts and only once the arena is that large.
+   */
+  private boolean learntsTooLarge() {
+    if (conflicts < nextMemoryCheck || memSize - wasted <= learntBudget) {
+      return false;
+    }
+    nextMemoryCheck = conflicts + MEMORY_REDUCE_GAP;
+    return learntInts() > learntBudget;
+  }
+
+  /** The ints that the learnt clauses take in the arena. */
+  private long learntInts() {
+    long ints = 0;
+    for (int i = 0; i < numLearnts; i++) {
+      ints += HEADER + mem[learnts[i] + SIZE];
+    }
+    return ints;
+  }
+
+  /**
+   * It deletes the longest learnt clauses that are not the reason of an assignment, whatever their
+   * tier, until the learnt clauses take half of their budget. Long clauses of a low LBD stay in the
+   * core tier for good, so the scheduled reductions never delete them: under lazy clause generation
+   * over a diagram given as clauses they were the clauses of tens of thousands of literals that
+   * filled the heap.
+   */
+  private void reduceForMemory() {
+    memoryReductions++;
+    long ints = learntInts();
+    long[] keys = new long[numLearnts];
+    int candidates = 0;
+    for (int i = 0; i < numLearnts; i++) {
+      int ref = learnts[i];
+      if (!isLocked(ref)) {
+        keys[candidates++] = ((long) mem[ref + SIZE] << 32) | i;
+      }
+    }
+    Arrays.sort(keys, 0, candidates);
+    for (int c = candidates - 1; c >= 0 && ints > learntBudget / 2; c--) {
+      int ref = learnts[(int) keys[c]];
+      ints -= HEADER + mem[ref + SIZE];
+      deleteClause(ref);
+    }
+    purge();
+  }
+
   private void reduceDb() {
     long[] keys = new long[numLearnts];
     int candidates = 0;
@@ -4034,6 +4335,41 @@ public final class CdclSolver {
   }
 
   /**
+   * Whether the copies that elimination makes of the original clauses fit in a quarter of the heap:
+   * the clauses as arrays, the eliminator's own lists and its occurrence lists, about three times
+   * the clauses. Under lazy clause generation a diagram or table posted as clauses gives tens of
+   * millions of them, and the copies ran a 6 GB heap out of memory on MagicSquare-mdd-10 (XCSP
+   * 2023); elimination is then skipped. The heap size, not the free heap, decides, so that the run
+   * does not depend on the garbage collector.
+   */
+  private boolean eliminationFits() {
+    long clauses = numOriginals + numOriginalBinaries / 2L;
+    long need = 3 * (24 * clauses + 4 * (originalLiterals() + numOriginalBinaries)) + 48L * numVars;
+    return need < copyBudget;
+  }
+
+  /**
+   * Whether the copy of the original clauses that the local search walks on fits in a quarter of
+   * the heap: their literals and starts, an occurrence list for each literal of a clause and its
+   * arrays per variable.
+   */
+  private boolean walkFits() {
+    long clauses = numOriginals + numOriginalBinaries / 2L;
+    long literals = originalLiterals() + numOriginalBinaries;
+    long need = 8 * literals + 4 * clauses + 48L * numVars;
+    return need < copyBudget;
+  }
+
+  /** The literals of the original clauses that are not binary. */
+  private long originalLiterals() {
+    long literals = 0;
+    for (int i = 0; i < numOriginals; i++) {
+      literals += mem[originals[i] + SIZE];
+    }
+    return literals;
+  }
+
+  /**
    * Runs the Eliminator on the irredundant clauses at level 0 (before any conflict, so there are no
    * learnt clauses) and replaces them by its result.
    *
@@ -4042,6 +4378,9 @@ public final class CdclSolver {
   private boolean eliminate() {
     if (propagate() != NO_CONFLICT) {
       return refuted();
+    }
+    if (!eliminationFits()) {
+      return true;
     }
     boolean[] frozen = Arrays.copyOf(observed, numVars);
     for (int a : assumptions) {
@@ -4083,6 +4422,7 @@ public final class CdclSolver {
         input[n++] = new int[] {a, b};
       }
     }
+    boolean sat = true;
     if (factoring && !factored) {
       factored = true;
       long begin = System.nanoTime();
@@ -4100,8 +4440,25 @@ public final class CdclSolver {
       factorWork = f.effort();
       factorNanos = System.nanoTime() - begin;
     }
-    Eliminator e = new Eliminator(numVars, input, n, frozen, proof);
-    boolean sat = e.run();
+    Congruence cc = null;
+    if (substitution) {
+      long t0 = System.nanoTime();
+      cc = new Congruence(numVars, input, n, frozen, proof);
+      cc.gatesOn = congruence && gatesPaid;
+      sat = cc.run();
+      gatesPaid = cc.gatesOn && cc.andGates + cc.xorGates + cc.iteGates > 0;
+      substitutionNanos += System.nanoTime() - t0;
+      if (sat) {
+        input = cc.clauses();
+        n = input.length;
+        substitutedVars += cc.numSubstituted();
+        sccEquivalences += cc.sccEquivalences;
+        gateEquivalences += cc.gateEquivalences;
+        gatesFound += cc.andGates + cc.xorGates + cc.iteGates;
+      }
+    }
+    Eliminator e = new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof);
+    sat = sat && e.run();
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];
       if ((mem[ref + META] & DELETED) == 0) {
@@ -4118,6 +4475,13 @@ public final class CdclSolver {
     }
     rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
+    if (cc != null && sat) {
+      boolean[] replaced = cc.substituted();
+      // bounded variable addition may have added variables after the substitution
+      for (int v = 0; v < replaced.length; v++) {
+        gone[v] |= replaced[v];
+      }
+    }
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
     Arrays.fill(binSize, 0);
@@ -4142,15 +4506,24 @@ public final class CdclSolver {
     }
     numEliminated += e.numEliminated();
     int[] removed = e.stack();
+    if (cc != null) {
+      numEliminated += cc.numSubstituted();
+      int[] first = cc.stack();
+      int[] both = Arrays.copyOf(first, first.length + removed.length);
+      System.arraycopy(removed, 0, both, first.length, removed.length);
+      removed = both;
+    }
     int old = extension.length;
     extension = Arrays.copyOf(extension, old + removed.length);
     System.arraycopy(removed, 0, extension, old, removed.length);
-    for (int u : e.units()) {
-      if (vals[u] < 0) {
-        return refuted();
-      }
-      if (vals[u] == 0) {
-        assign(u, NO_REASON);
+    for (int[] found : new int[][] {cc == null ? new int[0] : cc.units(), e.units()}) {
+      for (int u : found) {
+        if (vals[u] < 0) {
+          return refuted();
+        }
+        if (vals[u] == 0) {
+          assign(u, NO_REASON);
+        }
       }
     }
     if (propagate() != NO_CONFLICT) {
@@ -5002,6 +5375,26 @@ public final class CdclSolver {
   }
 
   /** Reduces the learnt clauses after this many conflicts and then more often, for tests. */
+  /**
+   * Sets the size, in ints of the clause arena, past which the learnt clauses are reduced before
+   * their next scheduled reduction, for tests; by default 1/16 of the heap.
+   *
+   * @param ints the size
+   */
+  void setLearntBudget(long ints) {
+    learntBudget = ints;
+  }
+
+  /**
+   * Sets the bytes that elimination and local search may take for their copies of the clauses, for
+   * tests; by default a quarter of the heap. Past it they are skipped.
+   *
+   * @param bytes the budget
+   */
+  void setCopyBudget(long bytes) {
+    copyBudget = bytes;
+  }
+
   void setReduceBase(int conflicts) {
     reduceBase = conflicts;
     reduceInc = Math.max(1, conflicts * 3 / 20);

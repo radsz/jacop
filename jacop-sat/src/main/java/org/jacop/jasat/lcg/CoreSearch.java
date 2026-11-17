@@ -1389,7 +1389,12 @@ public final class CoreSearch {
       long target = Math.min(from + step, best);
       IntVar x = lcg.variable(objective);
       if (target <= x.min()) {
+        // already implied: once that reaches the best solution there is nothing left to probe,
+        // and the step would double until it overflowed
         objectiveFloor = Math.max(objectiveFloor, x.min());
+        if (target >= best) {
+          return true;
+        }
         continue;
       }
       if (target > x.max() + 1L) {

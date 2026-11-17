@@ -32,7 +32,10 @@ package org.jacop.fz;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.XeqY;
 import org.jacop.core.BooleanVar;
@@ -1560,16 +1563,57 @@ public class VariablesParameters implements ParserTreeConstants {
     };
   }
 
+  // Arrays of set parameters at least this long keep each distinct set once.
+  private static final int SHARED_SETS_LENGTH = 1024;
+
+  // The distinct sets of long set parameter arrays, by their intervals.
+  private final Map<SetKey, IntDomain> sharedSets = new HashMap<>();
+
+  /** A set of integers compared by its intervals. */
+  private record SetKey(int[] bounds) {
+    static SetKey of(IntDomain d) {
+      if (!(d instanceof IntervalDomain id)) {
+        return null;
+      }
+      int[] bounds = new int[2 * id.noIntervals()];
+      for (int i = 0; i < id.noIntervals(); i++) {
+        bounds[2 * i] = id.getInterval(i).min();
+        bounds[2 * i + 1] = id.getInterval(i).max();
+      }
+      return new SetKey(bounds);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof SetKey(int[] other) && Arrays.equals(bounds, other);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode(bounds);
+    }
+
+    @Override
+    public String toString() {
+      return "SetKey" + Arrays.toString(bounds);
+    }
+  }
+
   IntDomain[] getSetLiteralArray(SimpleNode node, int index, int size) {
     IntDomain[] s = new IntDomain[size];
     int arrayIndex = 0;
+    // the labels of an MDD repeat a few sets millions of times: 31 million sets, 4.2 GB, while
+    // MagicSquare-mdd-16 (XCSP 2023) was read; parameters are never changed, so they are shared
+    boolean shared = size >= SHARED_SETS_LENGTH;
 
     SimpleNode child = (SimpleNode) node.jjtGetChild(index);
     if (child.getId() == JJTARRAYLITERAL) {
       int count = child.jjtGetNumChildren();
       if (count == size) {
         for (int i = 0; i < count; i++) {
-          s[arrayIndex++] = getSetLiteral(child, i);
+          IntDomain d = getSetLiteral(child, i);
+          SetKey key = shared ? SetKey.of(d) : null;
+          s[arrayIndex++] = key == null ? d : sharedSets.computeIfAbsent(key, k -> d);
         }
       } else {
         throw new IllegalArgumentException(

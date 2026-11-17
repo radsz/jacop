@@ -68,6 +68,16 @@ class SymmetryBreakingFlatzincTest {
 
   @TempDir Path tmp;
 
+  /**
+   * Fails unless a run printed a solution or proved the model unsatisfiable, so that a model the
+   * front end rejects (it printed an error on stderr) does not pass every comparison unchecked.
+   */
+  private static void assertAnswered(String out, String model) {
+    assertTrue(
+        out.contains("----------") || out.contains("=====UNSATISFIABLE====="),
+        "no answer for\n" + model + "\n" + out);
+  }
+
   @Test
   void pigeonholeIsRefutedWithFewFailures() throws IOException {
     int holes = 7;
@@ -366,6 +376,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
       String what = "trial " + trial + "\n" + model + "\n" + on;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
@@ -374,7 +385,7 @@ class SymmetryBreakingFlatzincTest {
         assertEquals(objective(off), objective(on), what);
       }
       // without presolve, as fzn-jacop runs by default; compared with LCG without symmetry
-      // breaking, since LCG rejects some of these models (array_int_maximum) that CP refutes
+      // breaking
       String lcgOff = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
       String lcgOn = FlatzincTestRunner.run(tmp, model, "--symmetry", "on", "--lcg");
       // a search for the largest values first keeps the largest solution of each orbit
@@ -416,7 +427,8 @@ class SymmetryBreakingFlatzincTest {
               default -> randomMatrixModel(random, optimise);
             };
         String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
-        // LCG rejects some variable-symmetric models (array_int_maximum) that CP refutes
+        assertAnswered(off, model);
+        // the LCG arms of variable-symmetric models are compared with LCG without symmetry breaking
         String lcgOff =
             kind == 0 ? FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg") : off;
         String what = "trial " + trial + "\n" + model;
@@ -472,6 +484,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomSetModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -568,6 +581,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomSetValueModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -795,6 +809,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomEncodedModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -1328,6 +1343,7 @@ class SymmetryBreakingFlatzincTest {
       }
       String model = haplotypeModel(genotypes, 2 + random.nextInt(3), random.nextBoolean());
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
+      assertAnswered(off, model);
       String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
       String lcg = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--lcg");
       boolean refuted = off.contains("=====UNSATISFIABLE=====");
@@ -1520,6 +1536,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomValueModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String what = "trial " + trial + "\n" + model;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
@@ -1561,6 +1578,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomMatrixModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String what = "trial " + trial + "\n" + model;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
@@ -1820,9 +1838,7 @@ class SymmetryBreakingFlatzincTest {
         for (int i = 0; i < bounded; i++) {
           xs.add("x" + i);
         }
-        fzn.append("constraint array_int_maximum(obj,[")
-            .append(String.join(",", xs))
-            .append("]);\n");
+        fzn.append("constraint jacop_maximum(obj,[").append(String.join(",", xs)).append("]);\n");
       } else {
         for (int i = 0; i < bounded; i++) {
           fzn.append(
@@ -2129,7 +2145,7 @@ class SymmetryBreakingFlatzincTest {
                       + ")";
           case 7 ->
               (xs, bs) ->
-                  "array_int_maximum("
+                  "jacop_maximum("
                       + xv(xs, 3)
                       + ",["
                       + xv(xs, 0)
@@ -2221,6 +2237,7 @@ class SymmetryBreakingFlatzincTest {
       String model = patienceModel(random, trial % 3 == 2);
       for (String lcg : new String[] {"on", "off"}) {
         String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg", lcg);
+        assertAnswered(off, model);
         String on =
             FlatzincTestRunner.run(
                 tmp, model, "--search-statistics", "--symmetry", "on", "--lcg", lcg);
