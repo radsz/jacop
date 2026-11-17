@@ -567,6 +567,14 @@ public class XorSystemDetector implements ParserTreeConstants {
   // the clauses read, at most, from the occurrences of a variable to extend a set
   static final int MAX_EXTENSION_OCCURRENCES = 256;
 
+  // -Djacop.fz.xorExtensionWork: the most clause literals that extending the sets reads (about 0.3
+  // s); the sets found within it are kept. Without it MiniZinc Challenge 2024 aircraft-disassembly
+  // B737NG-600-06 (109k clauses, no parity) read 83 million in 0.7 s and found nothing
+  static final long EXTENSION_WORK = Long.getLong("jacop.fz.xorExtensionWork", 40_000_000L);
+
+  // the literals of clauses read to extend the sets of clause columns
+  private long extensionWork;
+
   /**
    * The sets of variables of a clause of at least three variables, with the one more variable of
    * each clause that has all but one of its variables in it, of at most {@link #MAX_CLAUSE_XOR}
@@ -585,17 +593,29 @@ public class XorSystemDetector implements ParserTreeConstants {
       if (cols.length < 3 || cols.length >= MAX_CLAUSE_XOR) {
         continue;
       }
+      if (extensionWork > EXTENSION_WORK) {
+        break;
+      }
       support.checkTimeOut();
-      java.util.TreeSet<Integer> extra = new java.util.TreeSet<>();
+      // the extra variables, distinct; a set that would outgrow MAX_CLAUSE_XOR is dropped as soon
+      // as it does, without reading the rest of the occurrences
+      int room = MAX_CLAUSE_XOR - cols.length;
+      int[] extra = new int[room + 1];
+      int extras = 0;
       int found = 0;
       for (int v : cols) {
         List<int[]> occ = occurrences.get(v);
+        if (extras > room) {
+          break;
+        }
         if (occ.size() > MAX_EXTENSION_OCCURRENCES) {
           continue;
         }
+        extensionWork += occ.size();
         for (int[] d : occ) {
           // d shares at least two variables with c and has exactly one more; the clause is
           // seen from its first variable in c only
+          extensionWork += d.length;
           int outside = -1;
           int inside = 0;
           int firstInside = -1;
@@ -612,26 +632,35 @@ public class XorSystemDetector implements ParserTreeConstants {
             }
           }
           if (firstInside == v && inside >= 2 && outside >= 0) {
-            extra.add(outside);
             found++;
+            if (indexOf(extra, extras, outside) < 0) {
+              extra[extras++] = outside;
+              if (extras > room) {
+                break;
+              }
+            }
           }
         }
       }
-      if (found < 2 || extra.isEmpty() || cols.length + extra.size() > MAX_CLAUSE_XOR) {
+      if (found < 2 || extras == 0 || extras > room) {
         continue;
       }
-      int[] set = new int[cols.length + extra.size()];
-      int n = 0;
-      for (int v : cols) {
-        set[n++] = v;
-      }
-      for (int v : extra) {
-        set[n++] = v;
-      }
+      int[] set = Arrays.copyOf(cols, cols.length + extras);
+      System.arraycopy(extra, 0, set, cols.length, extras);
       Arrays.sort(set);
       result.add(new Columns(set));
     }
     return result;
+  }
+
+  // the position of a value among the first n of an array, or -1
+  private static int indexOf(int[] a, int n, int value) {
+    for (int i = 0; i < n; i++) {
+      if (a[i] == value) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   /**
