@@ -382,6 +382,7 @@ setup to run configuration. -->
                                 <include>**/CumulativeReductionsTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -659,6 +660,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -931,6 +933,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
@@ -1201,6 +1204,7 @@ setup to run configuration. -->
                                 <include>**/ObjectivePresolveTest.java</include>
                                 <include>**/AffineSubstitutionTest.java</include>
                                 <include>**/CircuitCostFlatzincTest.java</include>
+                                <include>**/CyclicDistanceFlatzincTest.java</include>
                                 <include>**/CostAlldifferentFlatzincTest.java</include>
                                 <include>**/BinPackingCliqueFlatzincTest.java</include>
                                 <include>**/SubcircuitCostFlatzincTest.java</include>
