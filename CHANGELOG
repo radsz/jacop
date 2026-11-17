@@ -7845,6 +7845,44 @@ Version 5.0 (unreleased)
    all 10 Crypto1 instances in 20 to 152 s with free search, none before
    in 600 s. -Dorg.jacop.fz.shortTableClauses=false turns this off.
 
+432. Under --lcg a table whose unfixed columns all have two values (0/1
+   tables, differential cryptanalysis S-boxes) is posted as the clauses
+   of all prime implicates of its forbidden points, computed with the
+   Quine-McCluskey method (W. V. Quine, The problem of simplifying truth
+   functions, American Mathematical Monthly 59(8), 1952; E. J. McCluskey,
+   Minimization of Boolean functions, Bell System Technical Journal 35(6),
+   1956). Unit propagation on all prime implicates of a relation is domain
+   consistent, so the clauses prune what the table pruned, without a
+   literal per tuple and without calling the table propagator. Tables up
+   to 12 unfixed columns and 512 prime implicates are encoded
+   (jacop.lcg.tableClauses.boolean.arity, .limit); the statistic
+   lcgBooleanTablesAsClauses counts them and
+   -Djacop.lcg.tableClauses.boolean=false turns it off. On XCSP 2022
+   DC-rijndael-xor5-r08 LCG makes about 6 times as many conflicts per
+   second. At 600 s with -f, on the 45 XCSP 2022-2025 instances where it
+   fires (DC, Crypto1, Spot5, Nonogram, Fortress, Tal, Ortholatin,
+   Fillomino, SolitaireBattleship), solved goes from 31 to 38 (6 Crypto1,
+   DC-midori r14) and the total time from 8,936 to 4,805 s
+   (DC-rijndael r06 316 -> 42 s; r07 29 -> 24 and r08 46 -> 36 at the
+   limit); Nonogram-069 takes 16 s instead of 9 s. It fires on 6 of the
+   240 wide instances (spot5, connect, table-layout, project-planning),
+   with the same results in default mode and with -f.
+
+433. The FlatZinc front end can rewrite a distance on a cycle,
+   m = min(|e|, c - |e|) with -c < e < c, as m = |f| with
+   e + c * k = f, k in -1..1 and -c/2 <= f <= c/2 (opt-in,
+   -Dorg.jacop.fz.cyclicDistance=true). The minimum prunes nothing on e
+   until |e| is decided, so a bound on the cyclic bandwidth does not
+   narrow the positions; once k is fixed, the linear equation does. When
+   the intermediate variables are used only there, the minimum is
+   replaced and a difference e = x - y is substituted. At 600 s with -f,
+   on XCSP 2022 CyclicBandwidth caterpillar35 goes from 105 to 29 (the
+   best of the 2022 field), caterpillar29 from 64 to 24 and mesh2D25x26
+   from 112 to 34, but the lower bounds of lazy clause generation grow
+   more slowly, so caterpillar13, 16 and 19, proved in 21, 213 and 336 s
+   without it, are not proved in 600 s; it therefore stays off. It fires
+   on none of the 240 wide instances.
+
 Version 4.11
 =============
 
