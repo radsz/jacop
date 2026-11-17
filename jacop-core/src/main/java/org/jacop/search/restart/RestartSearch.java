@@ -268,10 +268,31 @@ public class RestartSearch<T extends Var> {
     }
   }
 
+  /**
+   * Whether the solutions found reach the solution limit. The limit is the master search's, which
+   * counts the solutions, when it has one: a later search of the chain can have a limit of its own
+   * that is not one of the whole search, such as the FlatZinc search that only checks that the
+   * variables a search on output variables leaves out can be completed, which stops at its first
+   * solution also when all solutions are requested. Its limit of 1 ended the restart search after
+   * its first run as if the search were complete, and Fz2jacop -a claimed a solution of the probe
+   * run (org.jacop.fz.lpProbe) optimal. The limit of the last search is taken only when the master
+   * search has none.
+   */
+  private boolean solutionLimitReached() {
+    int sl = limitOf(search.getSolutionListener());
+    if (sl <= 0) {
+      sl = limitOf(lastNotNullSearch.getSolutionListener());
+    }
+    return sl > 0 && search.getSolutionListener().solutionsNo() >= sl;
+  }
+
+  private static int limitOf(SolutionListener<?> listener) {
+    return listener instanceof SimpleSolutionListener<?> s ? s.solutionLimit : -1;
+  }
+
   /** Returns Optional.of(true) for success, Optional.of(false) for failure, empty to continue. */
   private Optional<Boolean> checkRestartExitConditions() {
-    int sl = ((SimpleSolutionListener<?>) lastNotNullSearch.getSolutionListener()).solutionLimit;
-    if (sl > 0 && search.getSolutionListener().solutionsNo() >= sl) {
+    if (solutionLimitReached()) {
       return Optional.of(Boolean.FALSE);
     }
     if (timeOutCheck && System.currentTimeMillis() > timeOut) {
