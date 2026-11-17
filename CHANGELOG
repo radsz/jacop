@@ -7563,7 +7563,24 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
-419. With --lcg, -f and an objective that sums at least four squares (x * x
+419. The split of long linear constraints for lazy clause generation
+   (lcg-split) keeps every sum at 20 terms or fewer: a constraint of more
+   than 400 terms, whose blocks of sqrt(n) terms and sum of blocks were
+   both longer than 20 terms, becomes blocks of 20 terms whose sum is split
+   again, a tree of sums (as the lazy decomposition of Abio and Stuckey,
+   "Conflict directed lazy decomposition", CP 2012, introduces partial
+   sums). It fires on 21 of the 240 wide instances, mostly on objectives.
+   At 600 s: same 12 proved with -f, total time 5,588 -> 5,542 s, better
+   objectives on gbac UD3 (269 -> 173), ihtc i01, unit-commitment, worse
+   on warehouse olil4 (47,617 -> 61,327); default search, same 8 proved,
+   better objectives on roster chicroster large_20 (no solution -> 98),
+   surface-based-tsp ch130 (9,040 -> 8,110), celar graph11 and
+   unit-commitment, worse on none. At 240 s with -f: total 2,448 ->
+   2,323 s (roster chicroster 79 -> 37 s, network_50_cstr 88 -> 16 s).
+   --free-config lcg-split-tree=0 restores blocks of sqrt(n) terms; with -s
+   it prints lcgSplitSums.
+
+420. With --lcg, -f and an objective that sums at least four squares (x * x
    or x ^ 2 among the terms reached through up to three linear constraints
    from the cost variable), free search without learning runs first for
    10 % of the time limit and LCG then goes on from its best solution. A
@@ -7577,7 +7594,7 @@ Version 5.0 (unreleased)
    LowAutocorrelation 0.98. Of the 240 wide instances only two gbac instances are reached.
    --free-config free-first=<share> sets the share, 0 turns it off.
 
-420. The core-guided phase of LCG no longer loops forever when it probes
+421. The core-guided phase of LCG no longer loops forever when it probes
    the objective's bound (the probes of commit 7c2bc093d) after the
    objective's own minimum has reached the best solution: every probe
    target was already implied, so the step doubled until it overflowed
@@ -7586,7 +7603,7 @@ Version 5.0 (unreleased)
    both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
    instances it is the only one that met the loop at 240 s.
 
-421. Subtour cuts for successor models (opt-in,
+422. Subtour cuts for successor models (opt-in,
    -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
    output array x and an element list pos whose arcs x[i] = j are proved
    acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
@@ -7604,7 +7621,7 @@ Version 5.0 (unreleased)
    on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
    28 s -> 34 s by default, 27-38 s -> 20 s with -f).
 
-422. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+423. The linear relaxation (--lp, and LCG free search -f) keeps the rows
    that linear overlap factoring (272) reduces to the shared sum alone.
    A row k * S rel c whose whole sum S became the new variable z is
    k * z rel c, which the FlatZinc front end posts as a bound of z or as
@@ -7620,7 +7637,7 @@ Version 5.0 (unreleased)
    warehouse olil4, cap6000). The rows are counted in the statistic
    lpUnitRows.
 
-423. JaSAT substitutes equivalent literals before variable elimination. The
+424. JaSAT substitutes equivalent literals before variable elimination. The
    strongly connected components of the binary implication graph (B.
    Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
    the truth of certain quantified Boolean formulas, Information Processing
