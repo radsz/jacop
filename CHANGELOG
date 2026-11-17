@@ -7576,11 +7576,12 @@ Version 5.0 (unreleased)
    assumption variables never being replaced. The new GateExtractor finds
    the gates and is shared with variable elimination. DRAT proofs cover the
    new steps (XOR and ITE equivalences by case splits on the gate inputs).
-   On the 90 SAT Competition instances of the JaSAT comparison at 240 s it
-   solves 30 -> 34 (hardware-model-checking 2.2 s, crafted-cec,
-   cryptography-simon, planning, stedman-triples; scheduling lost;
-   grs-fp-comm proved in 232 s in one of three rounds), total time 16,105
-   -> 15,436 s. Under --lcg it fires on 19 of the 240 wide instances, with
+   On the 90 SAT Competition instances of the JaSAT comparison at 240 s,
+   against develop with bounded variable addition, two rounds: solved 32 ->
+   33 and 34 -> 33, total time 15,656 -> 15,552 s and 15,520 -> 15,396 s;
+   hardware-model-checking (2.2 s, unsolved at 600 s before) and
+   grs-fp-comm (210-237 s) are proved only with it, the other flips
+   (puzzle, planning, scheduling) go both ways between rounds. Under --lcg it fires on 19 of the 240 wide instances, with
    the same results. --substitute 0 and --congruence 0 in CdclMain,
    -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
    it off.
