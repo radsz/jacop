@@ -7563,6 +7563,18 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+419. Next to the redundant GCC that the FlatZinc front end posts on counts
+   written by hand, it posts the two sums every complete GCC implies when
+   the counted variables count themselves (self-describing sequences,
+   magic series): sum(c) = n and sum(v * c[v]) = sum(x) (B. M. Smith,
+   Modelling, Handbook of Constraint Programming, 2006). GCC's bound
+   consistency alone lowered one bound by one per round of its fixpoint;
+   with holes in the domains, as the facts of root probing under -f leave
+   them, it ran 125 rounds per call. MiniZinc Challenge nmseq 202 -f takes
+   11 s instead of 32 s, nmseq 395 25 s instead of 37 s (default search
+   11 s and 25 s instead of 15 s and 35 s). -Dorg.jacop.fz.gccSums=false
+   turns them off.
+
 Version 4.11
 =============
 
