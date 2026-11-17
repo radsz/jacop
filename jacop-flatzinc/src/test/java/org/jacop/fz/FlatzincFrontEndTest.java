@@ -64,6 +64,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
@@ -4247,6 +4248,51 @@ class FlatzincFrontEndTest {
     for (HybridTable h : binary) {
       assertEquals(0, h.keyColumn());
     }
+  }
+
+  @Test
+  void regularsOverOneAutomatonShareItsGraph(@TempDir Path dir) throws Exception {
+    // each regular built its own automaton and layered graph: 200 regulars over one automaton of
+    // 500 states held 1.5 GB. They share one automaton, and the graph over equal domains.
+    StringBuilder m = new StringBuilder();
+    m.append("predicate jacop_regular(array [int] of var int: x,int: Q,int: S,");
+    m.append("array [int] of int: d,int: q0,set of int: F,int: min_index);\n");
+    for (int i = 0; i < 12; i++) {
+      m.append("var 0..1: x").append(i).append(":: output_var;\n");
+    }
+    for (int r = 0; r < 3; r++) {
+      m.append("constraint jacop_regular([");
+      for (int i = 0; i < 4; i++) {
+        m.append(i > 0 ? "," : "").append('x').append(r * 4 + i);
+      }
+      // no two consecutive ones
+      m.append("],2,2,[1,2,1,0],1,1..2,0);\n");
+    }
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("regular.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    List<Regular> regulars = new ArrayList<>();
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof Regular r) {
+        regulars.add(r);
+      }
+    }
+    assertEquals(3, regulars.size());
+    assertSame(regulars.get(0).fsm, regulars.get(1).fsm);
+    assertSame(regulars.get(0).fsm, regulars.get(2).fsm);
+    assertTrue(regulars.get(0).sharesGraphWith(regulars.get(1)));
+    assertTrue(regulars.get(0).sharesGraphWith(regulars.get(2)));
+    assertTrue(run(m.toString())[0].contains("----------"));
   }
 
   @Test

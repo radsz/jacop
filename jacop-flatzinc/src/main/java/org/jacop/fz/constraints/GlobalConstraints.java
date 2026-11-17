@@ -2635,6 +2635,28 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  // the automata of the regular constraints by their description, so that the regular constraints
+  // over one automaton share it and its layered graph (200 regulars over a 500-state automaton
+  // built 200 automata and graphs, 1.5 GB)
+  private final Map<List<Object>, Fsm> automata = new HashMap<>();
+
+  private Fsm automaton(List<Object> description, java.util.function.Supplier<Fsm> build) {
+    return automata.computeIfAbsent(description, k -> build.get());
+  }
+
+  // an array of ints compared by its contents
+  private record IntArrayKey(int[] values) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof IntArrayKey k && Arrays.equals(values, k.values);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode(values);
+    }
+  }
+
   void gen_jacop_regular(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -2649,22 +2671,29 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(numStates, q0, F);
-    Fsm dfa = (Fsm) dfaParts[0];
-    FsmState[] s = (FsmState[]) dfaParts[1];
+    Fsm dfa =
+        automaton(
+            List.of("dfa", numStates, alphabetSize, new IntArrayKey(d), q0, F.toString(), minIndex),
+            () -> {
+              Object[] dfaParts = buildDfaStructure(numStates, q0, F);
+              Fsm built = (Fsm) dfaParts[0];
+              FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int i = 0; i < numStates; i++) {
-      // mapping current -> next & transition condition
-      Map<Integer, IntDomain> condition = new HashMap<>();
-      for (int j = 0; j < alphabetSize; j++) {
-        if (d[i * alphabetSize + j] != 0) {
-          addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
-        }
-      }
-      addTransitionsFromCondition(s[i], condition, s);
-    }
+              for (int i = 0; i < numStates; i++) {
+                // mapping current -> next & transition condition
+                Map<Integer, IntDomain> condition = new HashMap<>();
+                for (int j = 0; j < alphabetSize; j++) {
+                  if (d[i * alphabetSize + j] != 0) {
+                    addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
+                  }
+                }
+                addTransitionsFromCondition(s[i], condition, s);
+              }
 
-    support.delayedConstraints.add(new Regular(dfa, xx));
+              return built;
+            });
+
+    support.delayedConstraints.add(new Regular(dfa, xx).shareGraph());
   }
 
   void gen_jacop_cost_regular(SimpleNode node) {
@@ -2724,33 +2753,50 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(numStates, q0, finalStates.intersect(1, numStates));
-    Fsm nfa = (Fsm) dfaParts[0];
-    FsmState[] s = (FsmState[]) dfaParts[1];
+    Fsm nfa =
+        automaton(
+            List.of(
+                "nfa",
+                numStates,
+                symbols.toString(),
+                Arrays.toString(d),
+                q0,
+                finalStates.toString(),
+                minState,
+                minSymbol,
+                columns),
+            () -> {
+              Object[] dfaParts =
+                  buildDfaStructure(numStates, q0, finalStates.intersect(1, numStates));
+              Fsm built = (Fsm) dfaParts[0];
+              FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int q = 1; q <= numStates; q++) {
-      int row = q - minState;
-      if (row < 0 || (row + 1) * columns > d.length) {
-        continue;
-      }
-      Map<Integer, IntDomain> condition = new HashMap<>();
-      for (int j = 0; j < columns; j++) {
-        int symbol = minSymbol + j;
-        if (!symbols.contains(symbol)) {
-          continue;
-        }
-        ValueEnumeration next = d[row * columns + j].valueEnumeration();
-        while (next.hasMoreElements()) {
-          int nextState = next.nextElement();
-          if (nextState >= 1 && nextState <= numStates) {
-            addTransitionValue(condition, nextState - 1, symbol);
-          }
-        }
-      }
-      addTransitionsFromCondition(s[q - 1], condition, s);
-    }
+              for (int q = 1; q <= numStates; q++) {
+                int row = q - minState;
+                if (row < 0 || (row + 1) * columns > d.length) {
+                  continue;
+                }
+                Map<Integer, IntDomain> condition = new HashMap<>();
+                for (int j = 0; j < columns; j++) {
+                  int symbol = minSymbol + j;
+                  if (!symbols.contains(symbol)) {
+                    continue;
+                  }
+                  ValueEnumeration next = d[row * columns + j].valueEnumeration();
+                  while (next.hasMoreElements()) {
+                    int nextState = next.nextElement();
+                    if (nextState >= 1 && nextState <= numStates) {
+                      addTransitionValue(condition, nextState - 1, symbol);
+                    }
+                  }
+                }
+                addTransitionsFromCondition(s[q - 1], condition, s);
+              }
 
-    support.delayedConstraints.add(new Regular(nfa, xx));
+              return built;
+            });
+
+    support.delayedConstraints.add(new Regular(nfa, xx).shareGraph());
   }
 
   void gen_jacop_cost_mdd(SimpleNode node) {
@@ -2927,26 +2973,33 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(numStates, q0, F);
-    Fsm dfa = (Fsm) dfaParts[0];
-    FsmState[] s = (FsmState[]) dfaParts[1];
+    Fsm dfa =
+        automaton(
+            List.of("set", numStates, S.toString(), new IntArrayKey(d), q0, F.toString()),
+            () -> {
+              Object[] dfaParts = buildDfaStructure(numStates, q0, F);
+              Fsm built = (Fsm) dfaParts[0];
+              FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int i = 0; i < numStates; i++) {
-      // mapping current -> next & transition condition
-      ValueEnumeration valueTransition = S.valueEnumeration();
-      Map<Integer, IntDomain> condition = new HashMap<>();
-      for (int j = 0; j < S.getSize(); j++) {
-        int valTran = valueTransition.nextElement();
-        // d holds 1-based next states (0 is the failure state); min_index is the smallest
-        // symbol of the alphabet, not of the states
-        if (d[i * S.getSize() + j] != 0) {
-          addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
-        }
-      }
-      addTransitionsFromCondition(s[i], condition, s);
-    }
+              for (int i = 0; i < numStates; i++) {
+                // mapping current -> next & transition condition
+                ValueEnumeration valueTransition = S.valueEnumeration();
+                Map<Integer, IntDomain> condition = new HashMap<>();
+                for (int j = 0; j < S.getSize(); j++) {
+                  int valTran = valueTransition.nextElement();
+                  // d holds 1-based next states (0 is the failure state); min_index is the smallest
+                  // symbol of the alphabet, not of the states
+                  if (d[i * S.getSize() + j] != 0) {
+                    addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
+                  }
+                }
+                addTransitionsFromCondition(s[i], condition, s);
+              }
 
-    support.delayedConstraints.add(new Regular(dfa, xx));
+              return built;
+            });
+
+    support.delayedConstraints.add(new Regular(dfa, xx).shareGraph());
   }
 
   void gen_jacop_knapsack(SimpleNode node) {
