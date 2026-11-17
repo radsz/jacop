@@ -4292,7 +4292,9 @@ class FlatzincFrontEndTest {
     assertSame(regulars.get(0).fsm, regulars.get(2).fsm);
     assertTrue(regulars.get(0).sharesGraphWith(regulars.get(1)));
     assertTrue(regulars.get(0).sharesGraphWith(regulars.get(2)));
-    assertTrue(run(m.toString())[0].contains("----------"));
+    // the words of 4 letters without two consecutive ones, 8 of them, for each of the 3 regulars
+    String all = run(m.toString(), "-a")[0];
+    assertEquals(8 * 8 * 8, all.split("----------", -1).length - 1, all);
   }
 
   @Test
