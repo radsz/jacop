@@ -1656,6 +1656,20 @@ setup to run configuration. -->
                 </executions>
             </plugin>
 
+            <!-- sets ${org.mockito:mockito-core:jar}, the agent the tests load at start up -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.8.1</version>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>properties</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
@@ -1680,8 +1694,10 @@ setup to run configuration. -->
                              (fair_split_into_3_groups); LpProbeFlatzincTest sets its own -->
                         <org.jacop.fz.lpProbe>0</org.jacop.fz.lpProbe>
                     </systemPropertyVariables>
-                    <!-- same stack size as fzn-jacop: deep searches recurse once per decision -->
-                    <argLine>@{argLine} -Xss100m</argLine>
+                    <!-- same stack size as fzn-jacop: deep searches recurse once per decision;
+                         Mockito's inline mock maker is loaded as an agent at start up, since the
+                         JDK warns about (and will refuse) agents attached while running -->
+                    <argLine>@{argLine} -Xss100m -javaagent:${org.mockito:mockito-core:jar}</argLine>
                     <rerunFailingTestsCount>1</rerunFailingTestsCount>
                     <includes>
                         <include>**/IntDomainTest.java</include>

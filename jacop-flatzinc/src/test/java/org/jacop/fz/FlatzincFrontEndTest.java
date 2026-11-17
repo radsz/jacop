@@ -104,6 +104,30 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void valueChoiceIndomainIsAscendingOrderWithoutWarning() throws IOException {
+    // indomain is the MiniZinc value choice "assign values in ascending order"; it was searched as
+    // indomain_min but reported on stderr as a not implemented value choice
+    String fzn =
+        """
+        array [1..2] of var 1..3: x:: output_array([1..2]);
+        constraint int_ne(x[1],x[2]);
+        solve :: int_search(x,input_order,indomain,complete) satisfy;
+        """;
+    ByteArrayOutputStream errors = new ByteArrayOutputStream();
+    PrintStream originalErr = System.err;
+    List<String> solutions;
+    try (PrintStream capture = new PrintStream(errors, true, StandardCharsets.UTF_8)) {
+      System.setErr(capture);
+      solutions = solveAllInOrder(fzn);
+    } finally {
+      System.setErr(originalErr);
+    }
+    assertEquals("x = array1d(1..2, [1, 2]);", solutions.get(0));
+    assertEquals(6, solutions.size());
+    assertFalse(errors.toString(StandardCharsets.UTF_8).contains("indomain"), errors::toString);
+  }
+
+  @Test
   void secondBool2IntOfAnIntegerJoinsTheTwoBooleans() throws IOException {
     // x is the alias of a after the first bool2int; the second one, which makes b equal to a, was
     // dropped with "Double int var alias for bool var", so a != b was accepted
