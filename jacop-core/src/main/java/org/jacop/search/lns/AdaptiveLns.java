@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.IntToDoubleFunction;
 import org.jacop.constraints.AbstractElement;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.Alldistinct;
@@ -147,7 +148,68 @@ public final class AdaptiveLns {
      * A whole new assignment of some variables proposed by a heuristic from the best solution, such
      * as a schedule of the tasks built by a genetic algorithm; the other variables are free.
      */
-    PROPOSALS
+    PROPOSALS,
+    /**
+     * Relaxation-induced: the variables whose value in the best solution differs from their value
+     * in the solution of the linear relaxation are free, the others fixed (RINS, E. Danna, E.
+     * Rothberg and C. Le Pape, Exploring relaxation induced neighborhoods to improve MIP solutions,
+     * Mathematical Programming 102, 2005); free variables are added at random up to the share of
+     * the kind, and the farthest from the relaxation are kept when there are more.
+     */
+    RINS
+  }
+
+  // the value of each variable in the solution of the linear relaxation, NaN when it has none
+  private IntToDoubleFunction lpValue;
+
+  /**
+   * Gives the {@link Kind#RINS} neighbourhood the values of the variables in a solution of the
+   * linear relaxation.
+   *
+   * @param values the value of the variable of each index, or NaN when unknown
+   * @return this
+   */
+  public AdaptiveLns setLpValues(IntToDoubleFunction values) {
+    lpValue = values;
+    return this;
+  }
+
+  // the variables that disagree with the relaxation relaxed, the farthest first, then random
+  // ones up to relaxed
+  private boolean[] rinsRelax(int relaxed) {
+    if (lpValue == null) {
+      return randomRelax(relaxed);
+    }
+    int[] order = freeOrder();
+    double[] distance = new double[vars.length];
+    int known = 0;
+    for (int i : order) {
+      double v = lpValue.applyAsDouble(i);
+      if (Double.isNaN(v)) {
+        distance[i] = -1;
+      } else {
+        distance[i] = Math.abs(v - incumbent[i]);
+        known++;
+      }
+    }
+    if (known == 0) {
+      return randomRelax(relaxed);
+    }
+    Integer[] sorted = new Integer[order.length];
+    for (int k = 0; k < order.length; k++) {
+      sorted[k] = order[k];
+    }
+    // stable: ties (the agreeing variables, and those without a value) stay in random order
+    Arrays.sort(sorted, (a, b) -> Double.compare(rinsKey(distance[b]), rinsKey(distance[a])));
+    boolean[] relax = new boolean[vars.length];
+    for (int k = 0; k < relaxed && k < sorted.length; k++) {
+      relax[sorted[k]] = true;
+    }
+    return relax;
+  }
+
+  private static double rinsKey(double distance) {
+    return distance > 1e-6 ? distance : 0;
   }
 
   /** Proposes new values of some variables from their values in the best solution. */
@@ -699,6 +761,15 @@ public final class AdaptiveLns {
     return this;
   }
 
+  /**
+   * Returns whether the neighbourhoods follow vehicle routes (route and related removal).
+   *
+   * @return true when the variables hold the successors or arcs of routes.
+   */
+  public boolean hasRoutes() {
+    return !routings.isEmpty();
+  }
+
   /** The routing structures, for tests. */
   List<RouteStructure> routings() {
     return routings;
@@ -726,17 +797,13 @@ public final class AdaptiveLns {
    * Records as the best solution one given by values rather than held by the store: the solution
    * that another search found before this one, which the store no longer admits once the search
    * must improve on it. Nothing is recorded when a variable of the neighbourhoods, a node they
-   * read, has no value given and is not fixed, or when the neighbourhoods follow vehicle routes,
-   * which read their solution from the store.
+   * read, or a variable of the vehicle routes, has no value given and is not fixed.
    *
    * @param xs variables of the store
    * @param values their values in the solution
    * @return true when the solution was recorded
    */
   public boolean solution(IntVar[] xs, int[] values) {
-    if (!routings.isEmpty()) {
-      return false;
-    }
     Map<IntVar, Integer> valueOf = new IdentityHashMap<>();
     for (int k = 0; k < xs.length; k++) {
       valueOf.put(xs[k], values[k]);
@@ -762,6 +829,18 @@ public final class AdaptiveLns {
       if (!known[terms[k]]) {
         return false;
       }
+    }
+    for (RouteStructure r : routings) {
+      if (!r.knows(valueOf)) {
+        return false;
+      }
+    }
+    // the routes are read from the given values: LCG hands its best solution over to free search
+    // without learning, which must improve on it. Without them a model with routes started its
+    // neighbourhoods only once free search found a better solution from scratch: CVRPLIB X-n110-k13
+    // (giant tour of the 2015 Challenge model) at 600 s never ran a neighbourhood before 490 s
+    for (RouteStructure r : routings) {
+      r.solution(valueOf);
     }
     System.arraycopy(given, 0, incumbent, 0, vars.length);
     for (int k = 0; k < terms.length; k++) {
@@ -846,6 +925,7 @@ public final class AdaptiveLns {
           case PACKING -> packingRelax(relaxed);
           case BLOCKS -> blocksRelax(relaxed);
           case LINES -> linesRelax(relaxed);
+          case RINS -> rinsRelax(relaxed);
           default -> null;
         };
     if (relax == null) {
@@ -1012,6 +1092,7 @@ public final class AdaptiveLns {
       case LINES -> lines.length > 1;
       case ROUTES, RELATED -> !routings.isEmpty();
       case PROPOSALS -> proposer != null;
+      case RINS -> lpValue != null;
       default -> true;
     };
   }

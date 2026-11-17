@@ -264,6 +264,92 @@ class LinearOverlapFlatzincTest {
     assertEquals(solutions(run(model, false, "-f")), solutions(run(model, true, "-f")));
   }
 
+  /**
+   * Twelve nested covering rows, the k-th over x0..x(4k+3): the factoring makes a chain of twelve
+   * shared sums, each the previous one plus four variables. The relaxation replaces the sums by
+   * their definitions up to depth 8 only, and kept no definition: the deeper sums were free
+   * columns, and the relaxation had no row left and no bound (CSPLib bus driver scheduling c1: root
+   * bound 4.4 instead of 25.4, optimum 26).
+   */
+  @Test
+  void nestedSharedSumsKeepTheirDefinitionsInTheRelaxation() throws IOException {
+    int n = 12;
+    int size = 4 * n + 4;
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < size; i++) {
+      fzn.append("var 0..1: x").append(i).append(";\n");
+    }
+    fzn.append("var 0..").append(size).append(": obj:: output_var;\n");
+    for (int k = 0; k < n; k++) {
+      int m = 4 * k + 4;
+      fzn.append("constraint int_lin_le([")
+          .append(String.join(",", Collections.nCopies(m, "-1")))
+          .append("],")
+          .append(
+              IntStream.range(0, m)
+                  .mapToObj(i -> "x" + i)
+                  .collect(Collectors.joining(",", "[", "]")))
+          .append(",")
+          .append(-(1 + k / 3))
+          .append(");\n");
+    }
+    fzn.append("constraint int_lin_eq([")
+        .append(String.join(",", Collections.nCopies(size, "1")))
+        .append(",-1],")
+        .append(
+            IntStream.range(0, size)
+                .mapToObj(i -> "x" + i)
+                .collect(Collectors.joining(",", "[", ",obj]")))
+        .append(",0);\n");
+    fzn.append("solve minimize obj;\n");
+    String model = fzn.toString();
+    assertTrue(run(model, true, "-debug").contains("12 sub-sums factored"), "not factored");
+    String factored = run(model, true, "--lcg", "-f", "-s", "--search-statistics");
+    assertTrue(factored.contains("lpRootBound=4.0"), factored);
+    assertTrue(
+        run(model, false, "--lcg", "-f", "-s", "--search-statistics").contains("lpRootBound=4.0"));
+    assertEquals("4", optimum(factored, model));
+  }
+
+  /**
+   * A row that is a multiple of the shared sub-sum, {@code 2 * (x0 + ... + x4) <= 7}, becomes the
+   * bound {@code 2 * z <= 7} of the sum's variable, which the store holds as a domain and not as a
+   * constraint. The linear relaxation substitutes z back and must still get the row: it has the
+   * rows of the unfactored model (MIPLIB p0548 lost 88 of its 174 rows, root cut bound 464 instead
+   * of 7,325, optimum 8,691).
+   */
+  @Test
+  void rowReducedToTheSharedSumStaysInTheRelaxation() throws IOException {
+    StringBuilder fzn = new StringBuilder();
+    for (int i = 0; i < 8; i++) {
+      fzn.append("var 0..1: x").append(i).append(";\n");
+    }
+    fzn.append("var 0..100: obj:: output_var;\n");
+    fzn.append("constraint int_lin_le([2,2,2,2,2],[x0,x1,x2,x3,x4],7);\n");
+    fzn.append("constraint int_lin_le([1,1,1,1,1,1,1],[x0,x1,x2,x3,x4,x5,x6],5);\n");
+    fzn.append("constraint int_lin_le([1,1,1,1,1,1,1,1],[x0,x1,x2,x3,x4,x5,x6,x7],6);\n");
+    fzn.append("constraint int_lin_eq([3,5,7,9,11,4,6,8,-1],[x0,x1,x2,x3,x4,x5,x6,x7,obj],0);\n");
+    fzn.append("solve maximize obj;\n");
+    String model = fzn.toString();
+    String factored = run(model, true, "--lcg", "off", "-s", "-v", "--search-statistics");
+    String plain = run(model, false, "--lcg", "off", "-s", "-v", "--search-statistics");
+    assertTrue(run(model, true, "-debug").contains("% linear overlap"), "not factored");
+    assertTrue(factored.contains("lpUnitRows=1"), factored);
+    // the rows give 47.5 (x0..x4 at 3.5, x5, x6 at 1.5, x7 at 1); without 2 * z <= 7 it is 53
+    assertEquals(47.5, Double.parseDouble(stat(factored, "lpRootBound")), 1e-6, factored);
+    assertEquals(optimum(plain, model), optimum(factored, model));
+  }
+
+  // the first value of a statistic
+  private static String stat(String out, String name) {
+    for (String line : out.split("\\R")) {
+      if (line.startsWith("%%%mzn-stat: " + name + "=")) {
+        return line.substring(line.indexOf('=') + 1);
+      }
+    }
+    return null;
+  }
+
   private String run(String model, boolean factoring, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

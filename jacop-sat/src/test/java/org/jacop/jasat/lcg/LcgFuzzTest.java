@@ -31,6 +31,8 @@ package org.jacop.jasat.lcg;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -53,6 +55,7 @@ import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
 import org.jacop.constraints.AndBool;
 import org.jacop.constraints.AndBoolSimple;
+import org.jacop.constraints.ArcTimes;
 import org.jacop.constraints.ArgMax;
 import org.jacop.constraints.ArgMaxMonotone;
 import org.jacop.constraints.ArgMin;
@@ -254,6 +257,10 @@ class LcgFuzzTest {
 
   private static final boolean HOLES = Boolean.getBoolean("lcg.fuzz.holes");
 
+  // with lcg.fuzz.repeated=true, about a third of the positions of a picked list repeat a variable
+  // already in that list, so constraints see one variable at several positions of their scope
+  private static final boolean REPEATED = Boolean.getBoolean("lcg.fuzz.repeated");
+
   // with lcg.fuzz.ground=true one variable in eight is ground before the constraints on it are
   // imposed, and another one in eight after they are imposed, before the first consistency
   private static final boolean GROUND = Boolean.getBoolean("lcg.fuzz.ground");
@@ -309,6 +316,8 @@ class LcgFuzzTest {
 
     final Random holes;
 
+    final Random repeats;
+
     // grounds variables, from its own generator so the model is otherwise the same
     final Random ground;
     final List<IntVar> groundLater = new ArrayList<>();
@@ -316,6 +325,7 @@ class LcgFuzzTest {
     Model(long seed) {
       rnd = new Random(seed);
       holes = HOLES ? new Random(seed * 31 + 7) : null;
+      repeats = REPEATED ? new Random(seed * 41 + 13) : null;
       ground = GROUND ? new Random(seed * 37 + 11) : null;
       int n = 4 + rnd.nextInt(4);
       x = new IntVar[n];
@@ -440,7 +450,10 @@ class LcgFuzzTest {
       List<IntVar> pool = new ArrayList<>(List.of(from));
       IntVar[] result = new IntVar[Math.min(k, pool.size())];
       for (int i = 0; i < result.length; i++) {
-        result[i] = pool.remove(rnd.nextInt(pool.size()));
+        result[i] =
+            repeats != null && i > 0 && repeats.nextInt(3) == 0
+                ? result[repeats.nextInt(i)]
+                : pool.remove(rnd.nextInt(pool.size()));
       }
       return result;
     }
@@ -619,7 +632,7 @@ class LcgFuzzTest {
 
     private Constraint recentGlobal() {
       IntVar[] p = pick(x, 3);
-      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(43);
+      int which = RECENT != null ? RECENT[rnd.nextInt(RECENT.length)] : rnd.nextInt(44);
       return switch (which) {
         case 0 -> new IncreasingNValue(p, intVar("nv", 1, 3));
         case 1 -> new IncreasingSum(p, intVar("is", -2, 8), rnd.nextBoolean());
@@ -768,8 +781,26 @@ class LcgFuzzTest {
                 pick(x, 2),
                 new IntVar[] {intVar("my", -1, 3), rnd.nextBoolean() ? null : intVar("mz", 0, 2)},
                 intVar("mm", -2, 7));
+        case 43 -> arcTimes();
         default -> new OverlappingAlldiff(pick(x, 3), pick(x, 3));
       };
+    }
+
+    // arc-time precedences of 3 or 4 nodes over successors and times among the variables
+    private ArcTimes arcTimes() {
+      int n = 3 + rnd.nextInt(2);
+      IntVar[] succ = chain("as", n, 0, n - 1);
+      IntVar[] times = pick(x, n);
+      long[][] lag = new long[n][];
+      for (int v = 0; v < n; v++) {
+        if (rnd.nextInt(4) > 0) {
+          lag[v] = new long[n];
+          for (int w = 0; w < n; w++) {
+            lag[v][w] = rnd.nextInt(4) == 0 ? ArcTimes.NO_LAG : rnd.nextInt(4) - 1;
+          }
+        }
+      }
+      return new ArcTimes(succ, 0, times, lag);
     }
 
     // a 2 x 2 or 2 x 3 matrix of the 0/1 variables and the variables, with counted rows and columns
@@ -2283,6 +2314,72 @@ class LcgFuzzTest {
     return new Object[] {status, counts == null ? 0L : counts[3] - counts[4]};
   }
 
+  /**
+   * With {@code -Dlcg.fuzz.proof=true}: solves the random models with --proof logging and checks
+   * every proof with {@link RupChecker}, and its conclusion against the reference search (on
+   * demand, off by default). A model with a constraint that proof logging does not support is
+   * skipped.
+   */
+  @Test
+  void proofsCheckOnRandomModels() {
+    if (!Boolean.getBoolean("lcg.fuzz.proof")) {
+      return;
+    }
+    int checkedProofs = 0;
+    int unsupported = 0;
+    int rootFailures = 0;
+    for (int run = 0; run < RUNS; run++) {
+      long seed = SEED + (long) run;
+      Integer expected;
+      try {
+        expected = reference(new Model(seed));
+      } catch (FailException | ReferenceTimeout _) {
+        continue;
+      }
+      Model model = new Model(seed);
+      String where0 = "seed " + seed + "\n" + model.describe();
+      ByteArrayOutputStream opb = new ByteArrayOutputStream();
+      ByteArrayOutputStream pbp = new ByteArrayOutputStream();
+      int status;
+      try {
+        LcgSolver solver = new LcgSolver(model.store);
+        solver.sat().setExternalReasonKeep(1 + (int) (seed % 3));
+        solver.setProof(opb, pbp);
+        status = model.objective == null ? solver.solve() : solver.minimize(model.objective);
+      } catch (UnsupportedOperationException _) {
+        unsupported++;
+        continue;
+      } catch (RuntimeException e) {
+        throw new AssertionError(where0, e);
+      }
+      String proofText = pbp.toString(StandardCharsets.US_ASCII);
+      String where =
+          where0
+              + (Boolean.getBoolean("lcg.fuzz.proofPrint")
+                  ? "\n" + opb.toString(StandardCharsets.US_ASCII) + "\n" + proofText
+                  : "");
+      RupChecker checker = new RupChecker();
+      String error = checker.check(opb.toString(StandardCharsets.US_ASCII), proofText);
+      assertThat(error).as(where).isNull();
+      if (expected == null && proofText.contains("failed at the root")) {
+        // without a root trail the root failure is not derived (FlatZinc proves it separately)
+        rootFailures++;
+      } else if (expected == null) {
+        // an optimisation without a solution concludes with infinite bounds
+        assertThat(checker.conclusion)
+            .as(where)
+            .isEqualTo(model.objective == null ? "UNSAT" : "BOUNDS INF INF");
+      } else if (model.objective != null) {
+        assertThat(checker.conclusion).as(where).isEqualTo("BOUNDS " + expected + " " + expected);
+      }
+      assertThat(status == CdclSolver.SAT).as(where).isEqualTo(expected != null);
+      checkedProofs++;
+    }
+    System.out.printf(
+        "lcg proof fuzz: %d runs, %d proofs checked, %d unsupported, %d root failures%n",
+        RUNS, checkedProofs, unsupported, rootFailures);
+  }
+
   @Test
   void agreesWithSearchOnRandomModels() {
     Map<String, long[]> statistics = new TreeMap<>();
@@ -2400,6 +2497,108 @@ class LcgFuzzTest {
           .as("failures held while their fixpoint's atoms were pushed")
           .isPositive();
     }
+  }
+
+  // explanation-size golden: lcg.sizes.runs fixed seeds, the file in the test resources
+  private static final int SIZE_RUNS = Integer.getInteger("lcg.sizes.runs", 40_000);
+
+  private static final java.nio.file.Path SIZE_GOLDEN =
+      java.nio.file.Path.of("src/test/resources/org/jacop/jasat/lcg/explanation-sizes.tsv");
+
+  /** Reasons (or failures) of a class below this count are too few for a stable average. */
+  private static final int SIZE_MIN_SAMPLES = 100;
+
+  /**
+   * Explanation-size oracle: solves fixed random models (seeds 1 to {@code lcg.sizes.runs}) with
+   * LCG and compares, per constraint class, the share of reasons and failures that fall back to the
+   * generic reason and the atoms per reason and per failure with a golden file. Every reason is
+   * still checked for validity by the other tests; this one fails when an explanation gets weaker
+   * but stays valid (a dropped {@code truncate}, a fallback to the generic reason, a weaker bound),
+   * which no answer-based test can see and which costs LCG node rate and learning. Classes with at
+   * least {@value #SIZE_MIN_SAMPLES} samples are compared: the generic share may grow by at most
+   * two points and the atoms per explanation by at most 10 %. After a change meant to alter the
+   * explanations (or the model generator), rewrite the file with {@code -Dlcg.sizes.write=true} and
+   * commit it with the change.
+   */
+  @Test
+  void explanationSizesMatchGolden() throws java.io.IOException {
+    if (HOLES || REPEATED || GROUND || RECENT != null || FOCUS != null) {
+      return; // the golden file holds the models of the default generator
+    }
+    Map<String, long[]> statistics = new TreeMap<>();
+    for (int run = 0; run < SIZE_RUNS; run++) {
+      long seed = 1 + (long) run;
+      Model model;
+      try {
+        model = new Model(seed);
+      } catch (FailException _) {
+        continue;
+      }
+      LcgSolver solver = new LcgSolver(model.store);
+      if (model.objective == null) {
+        solver.solve();
+      } else {
+        solver.minimize(model.objective);
+      }
+      solver
+          .explanationStatistics()
+          .forEach((k, v) -> statistics.merge(k, v.clone(), LcgFuzzTest::add));
+    }
+    StringBuilder table =
+        new StringBuilder("# class\treasons\tgeneric\tatoms\tfailures\tgeneric\tatoms\n");
+    statistics.forEach(
+        (k, v) ->
+            table.append(
+                String.format(
+                    "%s\t%d\t%d\t%d\t%d\t%d\t%d%n", k, v[0], v[1], v[2], v[3], v[4], v[5])));
+    if (Boolean.getBoolean("lcg.sizes.write")) {
+      java.nio.file.Files.writeString(SIZE_GOLDEN, table.toString());
+      return;
+    }
+    List<String> worse = new ArrayList<>();
+    for (String line : java.nio.file.Files.readAllLines(SIZE_GOLDEN)) {
+      if (line.startsWith("#") || line.isBlank()) {
+        continue;
+      }
+      String[] f = line.split("\t");
+      long[] g = new long[6];
+      for (int i = 0; i < 6; i++) {
+        g[i] = Long.parseLong(f[i + 1]);
+      }
+      long[] v = statistics.getOrDefault(f[0], new long[8]);
+      for (int at = 0; at < 6; at += 3) {
+        String kind = at == 0 ? "reasons" : "failures";
+        if (g[at] < SIZE_MIN_SAMPLES) {
+          continue;
+        }
+        if (v[at] < SIZE_MIN_SAMPLES / 2) {
+          worse.add(f[0] + " " + kind + ": " + v[at] + " now, " + g[at] + " in the golden");
+          continue;
+        }
+        double genericGolden = (double) g[at + 1] / g[at];
+        double generic = (double) v[at + 1] / v[at];
+        if (generic > genericGolden + 0.02) {
+          worse.add(
+              String.format(
+                  "%s %s: generic %.1f %% now, %.1f %% in the golden",
+                  f[0], kind, 100 * generic, 100 * genericGolden));
+        }
+        double atomsGolden = (double) g[at + 2] / g[at];
+        double atoms = (double) v[at + 2] / v[at];
+        if (atoms > atomsGolden * 1.10) {
+          worse.add(
+              String.format(
+                  "%s %s: %.2f atoms per explanation now, %.2f in the golden",
+                  f[0], kind, atoms, atomsGolden));
+        }
+      }
+    }
+    assertThat(worse)
+        .as(
+            "explanations weaker than the golden %s (rewrite it with -Dlcg.sizes.write=true only"
+                + " for an intended change); now:%n%s",
+            SIZE_GOLDEN, table)
+        .isEmpty();
   }
 
   /**

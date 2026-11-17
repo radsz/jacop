@@ -212,6 +212,50 @@ class GlobalConstraints implements ParserTreeConstants {
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
 
+  // The first HybridTable posted for the rows of a short table, compared by content.
+  private final Map<ShortTableRows, HybridTable> shortTables = new HashMap<>();
+
+  /** The rows of a short table and its star value, compared by content. */
+  private record ShortTableRows(List<int[]> rows, int star, int hash) {
+    ShortTableRows(List<int[]> rows, int star) {
+      this(rows, star, hash(rows, star));
+    }
+
+    private static int hash(List<int[]> rows, int star) {
+      int h = star;
+      for (int[] row : rows) {
+        h = 31 * h + Arrays.hashCode(row);
+      }
+      return h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof ShortTableRows(List<int[]> otherRows, int otherStar, int otherHash))
+          || otherHash != hash
+          || otherStar != star
+          || otherRows.size() != rows.size()) {
+        return false;
+      }
+      for (int i = 0; i < rows.size(); i++) {
+        if (!Arrays.equals(rows.get(i), otherRows.get(i))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "ShortTableRows[rows=" + rows.size() + ", star=" + star + ", hash=" + hash + "]";
+    }
+  }
+
   /** The tuples of a table, compared by content. */
   private record TableTuples(int[][] tuples, int hash) {
     TableTuples(int[][] tuples) {
@@ -2046,7 +2090,17 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       return;
     }
-    support.pose(new HybridTable(nv, kept.toArray(new int[0][]), star));
+    // short tables with the same rows after the filtering (CrosswordDesign, XCSP 2026, posts each
+    // of its dictionary tables of up to 330,000 rows on 24 slots) share the bit-sets of the first
+    HybridTable same = shortTables.get(new ShortTableRows(kept, star));
+    HybridTable table =
+        same == null
+            ? new HybridTable(nv, kept.toArray(new int[0][]), star)
+            : new HybridTable(nv, same);
+    if (same == null) {
+      shortTables.put(new ShortTableRows(kept, star), table);
+    }
+    support.pose(table);
   }
 
   /**
@@ -2201,26 +2255,26 @@ class GlobalConstraints implements ParserTreeConstants {
   }
 
   private int[][] filterFeasibleTuples(int[] tbl, IntVar[] v, int size) {
-    int[][] t = new int[tbl.length / size][size];
-    boolean[] tuplesToRemove = new boolean[t.length];
-    int n = 0;
-    for (int i = 0; i < t.length; i++) {
-      for (int j = 0; j < size; j++) {
-        if (!v[j].domain.contains(tbl[size * i + j])) {
-          tuplesToRemove[i] = true;
-        }
-        t[i][j] = tbl[size * i + j];
+    // only the rows that fit are copied: a table of 26 million rows (Inglenook, XCSP 2026) fits
+    // the domains of most of its constraints with a small part of its rows
+    int rows = tbl.length / size;
+    boolean[] fits = new boolean[rows];
+    int k = 0;
+    for (int i = 0; i < rows; i++) {
+      boolean fit = true;
+      for (int j = 0; j < size && fit; j++) {
+        fit = v[j].domain.contains(tbl[size * i + j]);
       }
-      if (tuplesToRemove[i]) {
-        n++;
+      fits[i] = fit;
+      if (fit) {
+        k++;
       }
     }
-    int k = t.length - n;
     int[][] newT = new int[k][];
     int m = 0;
-    for (int i = 0; i < t.length; i++) {
-      if (!tuplesToRemove[i]) {
-        newT[m++] = t[i];
+    for (int i = 0; i < rows; i++) {
+      if (fits[i]) {
+        newT[m++] = Arrays.copyOfRange(tbl, size * i, size * i + size);
       }
     }
     return newT;
@@ -2257,6 +2311,9 @@ class GlobalConstraints implements ParserTreeConstants {
         toRemove[i] = true;
         numberToRemove++;
       }
+    }
+    if (numberToRemove == 0) {
+      return new TableVarsTuples(v, t);
     }
     int[][] newT = new int[t.length][size - numberToRemove];
     for (int i = 0; i < t.length; i++) {
@@ -2481,6 +2538,10 @@ class GlobalConstraints implements ParserTreeConstants {
     if (f.length != invf.length) {
       throw Store.failException;
     }
+    // and each of f and invf takes distinct values, so a variable repeated in one of them cannot
+    // be satisfied (the implied Alldistinct under ::domain rejects such a list)
+    checkForDuplicateVariables(f);
+    checkForDuplicateVariables(invf);
 
     // inverse(x, x) is symmetric all different, a perfect matching of the variables
     String symmetric = symmetricAlldifferent(f.length);

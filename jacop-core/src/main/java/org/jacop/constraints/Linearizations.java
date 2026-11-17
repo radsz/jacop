@@ -47,6 +47,7 @@ import org.jacop.constraints.lp.AlldifferentCuts;
 import org.jacop.constraints.lp.LpColumn;
 import org.jacop.constraints.regular.LayeredGraphConstraint;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.ValueEnumeration;
@@ -100,6 +101,21 @@ public final class Linearizations {
    * @return the rows
    */
   public static List<LinearForm> encodings(Collection<Constraint> constraints) {
+    return encodings(constraints, null);
+  }
+
+  /**
+   * Returns the rows of {@link #encodings(Collection)}, and puts in linked each {@link
+   * ElementInteger} whose value got its row {@code y = sum a[v] b_v}: that row, with {@code sum b_v
+   * = 1} and {@code x = sum v b_v}, gives the convex hull of the points {@code (v, a[v])}, so the
+   * hull rows of {@link #of(Constraint)} for that constraint add nothing.
+   *
+   * @param constraints the constraints
+   * @param linked the set that receives the element constraints linked to an encoding, or null
+   * @return the rows
+   */
+  public static List<LinearForm> encodings(
+      Collection<Constraint> constraints, Set<Constraint> linked) {
     Map<IntVar, Map<Integer, IntVar>> byVar = valueBooleans(constraints);
     List<LinearForm> out = new ArrayList<>();
     Map<IntVar, Map<Integer, IntVar>> covering = new IdentityHashMap<>();
@@ -139,6 +155,7 @@ public final class Linearizations {
     if (IMPLIED_VALUES) {
       impliedValues(constraints, byVar, out);
     }
+    keyedTables(constraints, covering, out);
     // value = list[index - offset] over an encoded index: value = sum list[v - offset] b_v
     for (Constraint c : constraints) {
       if (c.getClass() != ElementInteger.class) {
@@ -167,6 +184,9 @@ public final class Linearizations {
         vars[k] = el.value;
         w[k] = -1;
         out.add(new LinearForm(vars, w, 0, LinearForm.EQ));
+        if (linked != null) {
+          linked.add(el);
+        }
       }
     }
     return out;
@@ -306,6 +326,68 @@ public final class Linearizations {
     }
     return out;
   }
+
+  /**
+   * Adds, for each table with a key column over an encoded variable x ({@link
+   * HybridTable#keyColumn()}: every tuple has its own value of x, and the other columns are values,
+   * so each of them is a function {@code y = t(x)}), the row {@code y = sum_v t(v) b_v} of every
+   * other column y over the value Booleans {@code b_v <-> x = v}. These are the rows of {@link
+   * ElementInteger} for the element constraints that the front end merged into one table per index
+   * (the options of a class in car sequencing): without them the relaxation has no link between the
+   * option variables and the classes.
+   */
+  private static void keyedTables(
+      Collection<Constraint> constraints,
+      Map<IntVar, Map<Integer, IntVar>> covering,
+      List<LinearForm> out) {
+    if (!KEYED_TABLES) {
+      return;
+    }
+    for (Constraint c : constraints) {
+      if (c instanceof HybridTable t && t.keyColumn() >= 0) {
+        Map<Integer, IntVar> m = covering.get(t.column(t.keyColumn()));
+        if (m != null) {
+          keyedRows(t, m, out);
+        }
+      }
+    }
+  }
+
+  // the rows y = sum_v t(v) b_v of the columns y of table t, keyed by the encoded column of m
+  private static void keyedRows(HybridTable t, Map<Integer, IntVar> m, List<LinearForm> out) {
+    int key = t.keyColumn();
+    IntVar x = t.column(key);
+    for (int j = 0; j < t.columnCount(); j++) {
+      IntVar y = t.column(j);
+      if (j != key && y != x && !y.singleton() && !m.containsValue(y)) {
+        keyedRow(t, j, y, m, out);
+      }
+    }
+  }
+
+  private static void keyedRow(
+      HybridTable t, int j, IntVar y, Map<Integer, IntVar> m, List<LinearForm> out) {
+    IntVar[] vars = new IntVar[m.size() + 1];
+    long[] w = new long[vars.length];
+    int i = 0;
+    for (Map.Entry<Integer, IntVar> v : m.entrySet()) {
+      // a value of x without a tuple has no solution: its term is left out
+      int value = t.keyedValue(j, v.getKey(), 0);
+      if (value != 0) {
+        vars[i] = v.getValue();
+        w[i++] = value;
+      }
+    }
+    vars[i] = y;
+    w[i++] = -1;
+    if (i >= 2) {
+      out.add(new LinearForm(Arrays.copyOf(vars, i), Arrays.copyOf(w, i), 0, LinearForm.EQ));
+    }
+  }
+
+  // the rows of keyedTables: on or off
+  private static final boolean KEYED_TABLES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.lp.keyedTables", "true"));
 
   /**
    * Returns the rows of the value conjunctions ({@link #selectedValues}), with the conjunctions
@@ -1184,9 +1266,38 @@ public final class Linearizations {
      * @param list the variables of the levels
      * @param edges the edges on a path, four ints each (level, source, value, target)
      */
+    /**
+     * The arc columns of a flow model: an edge whose (level, value) labels no other edge is the
+     * value column itself, unless the variable is fixed; all other edges are arcs.
+     */
+    private static int arcColumns(IntVar[] list, int[] edges, int size) {
+      long[] keys = new long[size];
+      for (int e = 0; e < size; e++) {
+        keys[e] = ((long) edges[4 * e] << 32) | (edges[4 * e + 2] & 0xffffffffL);
+      }
+      Arrays.sort(keys);
+      int arcs = 0;
+      for (int i = 0; i < size; ) {
+        int j = i + 1;
+        while (j < size && keys[j] == keys[i]) {
+          j++;
+        }
+        boolean single = j - i == 1 && !list[(int) (keys[i] >>> 32)].singleton();
+        arcs += single ? 0 : j - i;
+        i = j;
+      }
+      return arcs;
+    }
+
     void flow(IntVar[] list, int[] edges) {
       int size = edges.length / 4;
       if (size == 0) {
+        return;
+      }
+      // the arc columns, counted before the edges are grouped: a graph of millions of edges is
+      // left out without boxing them (300 diagrams of 1.8 million edges in
+      // WordDesign2-words-mdd-025, XCSP 2023)
+      if (made + arcColumns(list, edges, size) > VALUE_ENCODINGS_MAX) {
         return;
       }
       // the edges of each (level, value)
@@ -1199,9 +1310,6 @@ public final class Linearizations {
       for (List<Integer> es : byValue.values()) {
         IntVar x = list[edges[4 * es.get(0)]];
         arcs += es.size() == 1 && !x.singleton() ? 0 : es.size();
-      }
-      if (made + arcs > VALUE_ENCODINGS_MAX) {
-        return;
       }
       Map<IntVar, Map<Integer, IntVar>> m = of(list);
       if (m == null || made + arcs > VALUE_ENCODINGS_MAX) {

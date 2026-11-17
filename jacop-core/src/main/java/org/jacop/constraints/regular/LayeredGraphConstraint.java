@@ -30,10 +30,14 @@
 
 package org.jacop.constraints.regular;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.WeakHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -100,6 +104,9 @@ public abstract class LayeredGraphConstraint extends Constraint
 
   /** The graph as described, kept for explanations. */
   private LayeredGraphDescription description;
+
+  /** The graph built when the constraint was imposed, possibly shared with other constraints. */
+  private BuiltGraph built;
 
   /** The described graph ordered by level, built at the first explanation. */
   private LayeredGraphExplanation.Graph explanationGraph;
@@ -188,6 +195,9 @@ public abstract class LayeredGraphConstraint extends Constraint
   private long inMask;
   private long inOne;
   private int slotBase;
+  // the numbers of nodes and slots of the graph
+  private int nodeCount;
+  private int slotCount;
   private int levelBase;
 
   /** Record holding the number of alive edges. */
@@ -251,7 +261,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   private int[] removedSlotNext;
 
   /** The count of a node before its level was recounted. */
-  private long[] previousCount;
+  private int[] previousCount;
 
   private int inShift;
 
@@ -541,6 +551,24 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
     new GraphClauses(model).encode();
     return true;
+  }
+
+  /**
+   * It returns the size of the graph described when the constraint was imposed, its edges (one per
+   * value of an edge label) and nodes: {@link #encodeClauses} makes at most one literal and four
+   * clauses for each of them.
+   *
+   * @return the number of described edges and nodes, 0 before the constraint is imposed
+   */
+  public long describedSize() {
+    if (description == null) {
+      return 0;
+    }
+    long size = description.size;
+    for (int n : description.levelNodes) {
+      size += n;
+    }
+    return size;
   }
 
   /**
@@ -924,155 +952,406 @@ public abstract class LayeredGraphConstraint extends Constraint
       return null;
     }
     if (explanationGraph == null) {
-      explanationGraph = new LayeredGraphExplanation.Graph(description);
+      explanationGraph = built.explanation();
     }
     return explanationGraph;
   }
 
   /**
-   * It builds the layered graph from its description. Edges with values outside the domains are
-   * dropped, a forward and a backward pass keep the nodes on a path from level 0 to the last level,
-   * and the static adjacency arrays are created. All work is proportional to the size of the
-   * description.
+   * The layered graph built from a description over the domains of the levels when the constraint
+   * was imposed: the kept nodes and edges, the slots and the static adjacency arrays. It is never
+   * changed after it is built, so constraints with the same diagram over equal domains share it:
+   * MiniZinc posts one MDD for every pair of words of WordDesign2-words-mdd-025 (XCSP 2023), 300
+   * constraints on one diagram of 1.8 million edges, and a graph of their own for each of them did
+   * not fit in 6 GB.
    */
-  private void buildLayeredGraph() {
+  static final class BuiltGraph {
+    final LayeredGraphDescription description;
+    final int levels;
+    final int nodes;
+    final int slots;
+    final int edges;
+    final int[] levelNodeStart;
+    final int[] levelSlotStart;
+    final int[] slotValue;
+    final int[] slotLevel;
+    final int[] nodeLevel;
+    final int[] outStart;
+    final int[] outEdge;
+    final int[] inStart;
+    final int[] inEdge;
+    final int[] slotStart;
+    final int[] slotEdge;
+    final int outBits;
+    final int inBits;
+    // the domains of the levels the graph was built over and the rest of the key it is shared by
+    private final IntDomain[] domains;
+    private final Object[] key;
+    private LayeredGraphExplanation.Graph explanation;
+
+    /**
+     * It builds the graph. Edges with values outside the domains are dropped, a forward and a
+     * backward pass keep the nodes on a path from level 0 to the last level, and the static
+     * adjacency arrays are created. All work is proportional to the size of the description.
+     */
+    BuiltGraph(LayeredGraphDescription description, IntDomain[] domains, Object[] key) {
+      this.description = description;
+      this.domains = domains;
+      this.key = key;
+      levels = domains.length;
+      final int[] edge = description.edges;
+      final int described = description.size;
+
+      // Edges in level order, keeping the order of description within a level.
+      int[] levelEdgeStart = new int[levels + 1];
+      for (int e = 0; e < described; e++) {
+        levelEdgeStart[edge[4 * e] + 1]++;
+      }
+      for (int level = 0; level < levels; level++) {
+        levelEdgeStart[level + 1] += levelEdgeStart[level];
+      }
+      int[] order = new int[described];
+      int[] fill = Arrays.copyOf(levelEdgeStart, levels);
+      for (int e = 0; e < described; e++) {
+        int level = edge[4 * e];
+        if (domains[level].contains(edge[4 * e + 2])) {
+          order[fill[level]++] = e;
+        }
+      }
+      // fill[level] now ends the usable edges of each level.
+
+      int[] describedStart = new int[levels + 2];
+      for (int level = 0; level <= levels; level++) {
+        describedStart[level + 1] = describedStart[level] + description.levelNodes[level];
+      }
+      boolean[] reached = new boolean[describedStart[levels + 1]];
+      boolean[] kept = new boolean[describedStart[levels + 1]];
+      Arrays.fill(reached, 0, describedStart[1], true);
+      for (int level = 0; level < levels; level++) {
+        for (int i = levelEdgeStart[level]; i < fill[level]; i++) {
+          int e = order[i];
+          if (reached[describedStart[level] + edge[4 * e + 1]]) {
+            reached[describedStart[level + 1] + edge[4 * e + 3]] = true;
+          }
+        }
+      }
+      for (int n = describedStart[levels]; n < describedStart[levels + 1]; n++) {
+        kept[n] = reached[n];
+      }
+      for (int level = levels - 1; level >= 0; level--) {
+        for (int i = levelEdgeStart[level]; i < fill[level]; i++) {
+          int e = order[i];
+          int src = describedStart[level] + edge[4 * e + 1];
+          if (reached[src] && kept[describedStart[level + 1] + edge[4 * e + 3]]) {
+            kept[src] = true;
+          }
+        }
+      }
+
+      // Kept nodes get consecutive ids, level by level; kept edges are the usable edges between
+      // them.
+      int[] nodeId = new int[describedStart[levels + 1]];
+      levelNodeStart = new int[levels + 2];
+      int nodeCount = 0;
+      for (int level = 0; level <= levels; level++) {
+        levelNodeStart[level] = nodeCount;
+        for (int n = describedStart[level]; n < describedStart[level + 1]; n++) {
+          nodeId[n] = kept[n] ? nodeCount++ : -1;
+        }
+      }
+      levelNodeStart[levels + 1] = nodeCount;
+      nodes = nodeCount;
+      int keptEdges = 0;
+      int[] keptStart = new int[levels + 1];
+      for (int level = 0; level < levels; level++) {
+        keptStart[level] = keptEdges;
+        for (int i = levelEdgeStart[level]; i < fill[level]; i++) {
+          int e = order[i];
+          if (kept[describedStart[level] + edge[4 * e + 1]]
+              && kept[describedStart[level + 1] + edge[4 * e + 3]]) {
+            order[keptEdges++] = e;
+          }
+        }
+      }
+      keptStart[levels] = keptEdges;
+
+      // Slots: the values labelling edges of each level.
+      levelSlotStart = new int[levels + 1];
+      int[][] levelValues = new int[levels][];
+      for (int level = 0; level < levels; level++) {
+        int[] values = new int[keptStart[level + 1] - keptStart[level]];
+        for (int i = 0; i < values.length; i++) {
+          values[i] = edge[4 * order[keptStart[level] + i] + 2];
+        }
+        Arrays.sort(values);
+        int k = 0;
+        for (int i = 0; i < values.length; i++) {
+          if (k == 0 || values[k - 1] != values[i]) {
+            values[k++] = values[i];
+          }
+        }
+        levelValues[level] = Arrays.copyOf(values, k);
+        levelSlotStart[level + 1] = levelSlotStart[level] + k;
+      }
+      slots = levelSlotStart[levels];
+      slotValue = new int[slots];
+      slotLevel = new int[slots];
+      for (int level = 0; level < levels; level++) {
+        System.arraycopy(
+            levelValues[level], 0, slotValue, levelSlotStart[level], levelValues[level].length);
+        Arrays.fill(slotLevel, levelSlotStart[level], levelSlotStart[level + 1], level);
+      }
+
+      // Kept edges as global source, slot and target.
+      edges = keptEdges;
+      int[] edgeSource = new int[edges];
+      int[] edgeSlot = new int[edges];
+      int[] edgeTarget = new int[edges];
+      for (int level = 0; level < levels; level++) {
+        for (int i = keptStart[level]; i < keptStart[level + 1]; i++) {
+          int e = order[i];
+          edgeSource[i] = nodeId[describedStart[level] + edge[4 * e + 1]];
+          edgeTarget[i] = nodeId[describedStart[level + 1] + edge[4 * e + 3]];
+          edgeSlot[i] =
+              levelSlotStart[level] + Arrays.binarySearch(levelValues[level], edge[4 * e + 2]);
+        }
+      }
+
+      // Count edges per node and per slot.
+      int[] outCount = new int[nodes + 1];
+      int[] inCount = new int[nodes + 1];
+      int[] slotCount = new int[slots + 1];
+      for (int e = 0; e < edges; e++) {
+        outCount[edgeSource[e]]++;
+        inCount[edgeTarget[e]]++;
+        slotCount[edgeSlot[e]]++;
+      }
+      int maxOut = 1;
+      int maxIn = 1;
+      for (int n = 0; n < nodes; n++) {
+        maxOut = Math.max(maxOut, outCount[n]);
+        maxIn = Math.max(maxIn, inCount[n]);
+      }
+      outBits = 32 - Integer.numberOfLeadingZeros(maxOut);
+      inBits = 32 - Integer.numberOfLeadingZeros(maxIn);
+
+      outStart = segmentStarts(outCount);
+      inStart = segmentStarts(inCount);
+      slotStart = segmentStarts(slotCount);
+      outEdge = new int[2 * edges];
+      inEdge = new int[2 * edges];
+      slotEdge = new int[2 * edges];
+      int[] slotFill = new int[slots];
+      int[] outFill = new int[nodes];
+      int[] inFill = new int[nodes];
+      for (int e = 0; e < edges; e++) {
+        int src = edgeSource[e];
+        int dst = edgeTarget[e];
+        int slot = edgeSlot[e];
+        int o = outStart[src] + outFill[src]++;
+        outEdge[2 * o] = dst;
+        outEdge[2 * o + 1] = slot;
+        int in = inStart[dst] + inFill[dst]++;
+        inEdge[2 * in] = src;
+        inEdge[2 * in + 1] = slot;
+        int se = slotStart[slot] + slotFill[slot]++;
+        slotEdge[2 * se] = src;
+        slotEdge[2 * se + 1] = dst;
+      }
+
+      nodeLevel = new int[nodes];
+      for (int level = 0; level <= levels; level++) {
+        Arrays.fill(nodeLevel, levelNodeStart[level], levelNodeStart[level + 1], level);
+      }
+    }
+
+    /** The graph for explanations by cuts, made once for all constraints sharing this graph. */
+    synchronized LayeredGraphExplanation.Graph explanation() {
+      if (explanation == null) {
+        explanation = new LayeredGraphExplanation.Graph(description);
+      }
+      return explanation;
+    }
+
+    /** Whether this graph was built for the given key over equal domains. */
+    boolean builtFor(Object[] otherKey, IntDomain[] otherDomains) {
+      if (otherKey.length != key.length || otherDomains.length != domains.length) {
+        return false;
+      }
+      for (int i = 0; i < key.length; i++) {
+        if (otherKey[i] != key[i]) {
+          return false;
+        }
+      }
+      for (int i = 0; i < domains.length; i++) {
+        if (!domains[i].eq(otherDomains[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+  }
+
+  // Built graphs by the first object of their key (see sharedGraphKey). The key objects are held
+  // by the constraints, so a graph is kept while a constraint that may share it is alive. Guarded
+  // by itself, as the workers of a parallel search impose their copies at the same time.
+  private static final Map<Object, List<BuiltGraph>> BUILT_GRAPHS = new WeakHashMap<>();
+
+  /**
+   * Identifies the diagram this constraint describes, so that constraints with the same diagram
+   * over equal domains share one built graph. Two constraints whose keys hold the same objects
+   * (compared by identity, element by element) must describe the same graph. The objects must be
+   * held by the constraint and the first one must not be reachable from the others.
+   *
+   * @return the key, or null when the graph is not shared
+   */
+  protected Object[] sharedGraphKey() {
+    return null;
+  }
+
+  /** Statistics: the graphs taken from another constraint with the same diagram. */
+  private static final AtomicLong sharedGraphs = new AtomicLong();
+
+  /**
+   * It returns how many constraints took the graph built for another constraint with the same
+   * diagram instead of building their own.
+   *
+   * @return the number of shared graphs since the start
+   */
+  public static long sharedGraphs() {
+    return sharedGraphs.get();
+  }
+
+  /**
+   * It builds the layered graph from its description over the current domains, or takes the one
+   * built for another constraint with the same diagram over equal domains, and creates the
+   * backtrackable state of this constraint.
+   */
+  private void buildLayeredGraph(Store store) {
     int levels = list.length;
-    LayeredGraphDescription localDescription = new LayeredGraphDescription(levels);
-    describeGraph(localDescription);
-    this.description = localDescription;
-    final int[] edge = localDescription.edges;
-    final int described = localDescription.size;
-
-    // Edges in level order, keeping the order of description within a level.
-    int[] levelEdgeStart = new int[levels + 1];
-    for (int e = 0; e < described; e++) {
-      levelEdgeStart[edge[4 * e] + 1]++;
-    }
+    IntDomain[] domains = new IntDomain[levels];
     for (int level = 0; level < levels; level++) {
-      levelEdgeStart[level + 1] += levelEdgeStart[level];
+      domains[level] = list[level].domain.cloneLight();
     }
-    int[] order = new int[described];
-    int[] fill = Arrays.copyOf(levelEdgeStart, levels);
-    for (int e = 0; e < described; e++) {
-      int level = edge[4 * e];
-      if (list[level].domain.contains(edge[4 * e + 2])) {
-        order[fill[level]++] = e;
-      }
-    }
-    // fill[level] now ends the usable edges of each level.
-
-    int[] describedStart = new int[levels + 2];
-    for (int level = 0; level <= levels; level++) {
-      describedStart[level + 1] = describedStart[level] + localDescription.levelNodes[level];
-    }
-    boolean[] reached = new boolean[describedStart[levels + 1]];
-    boolean[] kept = new boolean[describedStart[levels + 1]];
-    Arrays.fill(reached, 0, describedStart[1], true);
-    for (int level = 0; level < levels; level++) {
-      for (int i = levelEdgeStart[level]; i < fill[level]; i++) {
-        int e = order[i];
-        if (reached[describedStart[level] + edge[4 * e + 1]]) {
-          reached[describedStart[level + 1] + edge[4 * e + 3]] = true;
+    Object[] key = sharedGraphKey();
+    BuiltGraph built = key == null ? null : sharedGraph(key, domains);
+    if (built == null) {
+      LayeredGraphDescription localDescription = new LayeredGraphDescription(levels);
+      describeGraph(localDescription);
+      built = new BuiltGraph(localDescription, domains, key == null ? new Object[0] : key);
+      if (key != null) {
+        synchronized (BUILT_GRAPHS) {
+          BUILT_GRAPHS.computeIfAbsent(key[0], k -> new ArrayList<>(1)).add(built);
         }
       }
+    } else {
+      sharedGraphs.incrementAndGet();
     }
-    for (int n = describedStart[levels]; n < describedStart[levels + 1]; n++) {
-      kept[n] = reached[n];
-    }
-    for (int level = levels - 1; level >= 0; level--) {
-      for (int i = levelEdgeStart[level]; i < fill[level]; i++) {
-        int e = order[i];
-        int src = describedStart[level] + edge[4 * e + 1];
-        if (reached[src] && kept[describedStart[level + 1] + edge[4 * e + 3]]) {
-          kept[src] = true;
+    installGraph(built, store);
+  }
+
+  /**
+   * It tells whether this constraint uses the graph built for the other one, or the other way
+   * round, after both were imposed.
+   *
+   * @param other another layered graph constraint
+   * @return true when both constraints use one built graph
+   */
+  public boolean sharesGraphWith(LayeredGraphConstraint other) {
+    return built != null && built == other.built;
+  }
+
+  private static BuiltGraph sharedGraph(Object[] key, IntDomain[] domains) {
+    synchronized (BUILT_GRAPHS) {
+      List<BuiltGraph> graphs = BUILT_GRAPHS.get(key[0]);
+      if (graphs != null) {
+        for (BuiltGraph g : graphs) {
+          if (g.builtFor(key, domains)) {
+            return g;
+          }
         }
       }
+      return null;
     }
+  }
 
-    // Kept nodes get consecutive ids, level by level; kept edges are the usable edges between them.
-    int[] nodeId = new int[describedStart[levels + 1]];
-    levelNodeStart = new int[levels + 2];
-    int nodes = 0;
-    for (int level = 0; level <= levels; level++) {
-      levelNodeStart[level] = nodes;
-      for (int n = describedStart[level]; n < describedStart[level + 1]; n++) {
-        nodeId[n] = kept[n] ? nodes++ : -1;
-      }
-    }
-    levelNodeStart[levels + 1] = nodes;
-    int keptEdges = 0;
-    int[] keptStart = new int[levels + 1];
-    for (int level = 0; level < levels; level++) {
-      keptStart[level] = keptEdges;
-      for (int i = levelEdgeStart[level]; i < fill[level]; i++) {
-        int e = order[i];
-        if (kept[describedStart[level] + edge[4 * e + 1]]
-            && kept[describedStart[level + 1] + edge[4 * e + 3]]) {
-          order[keptEdges++] = e;
-        }
-      }
-    }
-    keptStart[levels] = keptEdges;
+  // The bytes that the counters of one node take: its record and its lists in the state, about
+  // two saved records on the trail along a branch, and the scratch of a recount.
+  private static final long COUNTER_BYTES_PER_NODE = 64;
 
-    // Slots: the values labelling edges of each level.
-    levelSlotStart = new int[levels + 1];
-    int[][] levelValues = new int[levels][];
-    for (int level = 0; level < levels; level++) {
-      int[] values = new int[keptStart[level + 1] - keptStart[level]];
-      for (int i = 0; i < values.length; i++) {
-        values[i] = edge[4 * order[keptStart[level] + i] + 2];
-      }
-      Arrays.sort(values);
-      int k = 0;
-      for (int i = 0; i < values.length; i++) {
-        if (k == 0 || values[k - 1] != values[i]) {
-          values[k++] = values[i];
-        }
-      }
-      levelValues[level] = Arrays.copyOf(values, k);
-      levelSlotStart[level + 1] = levelSlotStart[level] + k;
-    }
-    int slots = levelSlotStart[levels];
-    slotValue = new int[slots];
-    slotLevel = new int[slots];
-    for (int level = 0; level < levels; level++) {
-      System.arraycopy(
-          levelValues[level], 0, slotValue, levelSlotStart[level], levelValues[level].length);
-      Arrays.fill(slotLevel, levelSlotStart[level], levelSlotStart[level + 1], level);
-    }
+  // The share of the heap that the counters of the layered graphs of one store may take.
+  private static final double COUNTER_HEAP_SHARE = 0.25;
 
-    // Kept edges as global source, slot and target.
-    edges = keptEdges;
-    int[] edgeSource = new int[edges];
-    int[] edgeSlot = new int[edges];
-    int[] edgeTarget = new int[edges];
-    for (int level = 0; level < levels; level++) {
-      for (int i = keptStart[level]; i < keptStart[level + 1]; i++) {
-        int e = order[i];
-        edgeSource[i] = nodeId[describedStart[level] + edge[4 * e + 1]];
-        edgeTarget[i] = nodeId[describedStart[level + 1] + edge[4 * e + 3]];
-        edgeSlot[i] =
-            levelSlotStart[level] + Arrays.binarySearch(levelValues[level], edge[4 * e + 2]);
+  // The bytes taken by the counters of the layered graphs of each store, guarded by itself.
+  private static final Map<Store, long[]> COUNTER_BYTES = new WeakHashMap<>();
+
+  /**
+   * Whether the counters of a graph fit in the share of the heap left to the counters of the store,
+   * which then takes them. Each constraint keeps its own counters, and their trail grows with the
+   * nodes removed along a branch: the 300 diagrams of 525,720 nodes of WordDesign2-words-mdd-025
+   * (XCSP 2023) need more than 6 GB for them. Past the share, the automatic choice takes support
+   * search, which keeps a stamp and a position per node and saves one record per call.
+   */
+  private static boolean countersFit(Store store, int nodes, int slots) {
+    long need = COUNTER_BYTES_PER_NODE * nodes + 16L * slots;
+    long budget = (long) (COUNTER_HEAP_SHARE * Runtime.getRuntime().maxMemory());
+    synchronized (COUNTER_BYTES) {
+      long[] used = COUNTER_BYTES.computeIfAbsent(store, s -> new long[1]);
+      if (used[0] + need > budget) {
+        return false;
       }
+      used[0] += need;
+      return true;
     }
+  }
 
-    // Count edges per node and per slot.
-    int[] outCount = new int[nodes + 1];
-    int[] inCount = new int[nodes + 1];
-    int[] slotCount = new int[slots + 1];
-    for (int e = 0; e < edges; e++) {
-      outCount[edgeSource[e]]++;
-      inCount[edgeTarget[e]]++;
-      slotCount[edgeSlot[e]]++;
-    }
-
-    outStart = segmentStarts(outCount);
-    inStart = segmentStarts(inCount);
-    slotStart = segmentStarts(slotCount);
+  /** It takes the static arrays of a built graph and creates the state of this constraint. */
+  private void installGraph(BuiltGraph built, Store store) {
+    this.built = built;
+    int levels = list.length;
+    this.description = built.description;
+    int nodes = built.nodes;
+    int slots = built.slots;
+    levelNodeStart = built.levelNodeStart;
+    levelSlotStart = built.levelSlotStart;
+    slotValue = built.slotValue;
+    slotLevel = built.slotLevel;
+    nodeLevel = built.nodeLevel;
+    edges = built.edges;
     aliveEdges = edges;
-    outEdge = new int[2 * edges];
-    inEdge = new int[2 * edges];
-    slotEdge = new int[2 * edges];
+    outStart = built.outStart;
+    outEdge = built.outEdge;
+    inStart = built.inStart;
+    inEdge = built.inEdge;
+    slotStart = built.slotStart;
+    slotEdge = built.slotEdge;
+
+    nodeCount = nodes;
+    slotCount = slots;
+    emptySlots = new int[Math.max(1, slots)];
+    residue = Arrays.copyOf(slotStart, slots);
+    adjacency[0] = saveAdjacency(new Adjacency(), -1);
+    adjacencyTop = 1;
+    touchedLevels = new int[levels];
+    levelTouched = new boolean[levels];
+    Engine chosen = resolveEngine();
+    if (chosen == Engine.AUTO && !countersFit(store, nodes, slots)) {
+      chosen = Engine.SUPPORT_SEARCH;
+    }
+    supportSearch = chosen == Engine.SUPPORT_SEARCH;
+    probing = chosen == Engine.AUTO;
+    if (supportSearch) {
+      // Support search from the start never reads the counters: its only records are the alive
+      // edges, restored by removeLevel, and the size of the set of nodes without support.
+      edgeRecord = 0;
+      noRecord = 1;
+      slotBase = -1;
+      levelBase = -1;
+      aliveBase = -1;
+      state = new long[2];
+      state[edgeRecord] = edges;
+      return;
+    }
 
     slotBase = nodes;
     levelBase = nodes + slots;
@@ -1080,47 +1359,15 @@ public abstract class LayeredGraphConstraint extends Constraint
     aliveBase = edgeRecord + 1;
     noRecord = aliveBase + levels + 1;
     state = new long[noRecord + 1];
-    int[] slotFill = new int[slots];
-    int[] outFill = new int[nodes];
-    int[] inFill = new int[nodes];
     for (int level = 0; level < levels; level++) {
       state[levelBase + level] = (long) levelSlotStart[level + 1] - levelSlotStart[level];
     }
     state[edgeRecord] = edges;
-
-    for (int e = 0; e < edges; e++) {
-      int src = edgeSource[e];
-      int dst = edgeTarget[e];
-      int slot = edgeSlot[e];
-      int o = outStart[src] + outFill[src]++;
-      outEdge[2 * o] = dst;
-      outEdge[2 * o + 1] = slot;
-      int in = inStart[dst] + inFill[dst]++;
-      inEdge[2 * in] = src;
-      inEdge[2 * in + 1] = slot;
-      int se = slotStart[slot] + slotFill[slot]++;
-      slotEdge[2 * se] = src;
-      slotEdge[2 * se + 1] = dst;
-    }
-
-    emptySlots = new int[Math.max(1, slots)];
-    Engine chosen = resolveEngine();
-    supportSearch = chosen == Engine.SUPPORT_SEARCH;
-    probing = chosen == Engine.AUTO;
-    residue = Arrays.copyOf(slotStart, slots);
-    adjacency[0] = saveAdjacency(new Adjacency(), -1);
-    adjacencyTop = 1;
     for (int slot = 0; slot < slots; slot++) {
       state[slotBase + slot] = 1;
     }
-    int maxOut = 1;
-    int maxIn = 1;
-    for (int n = 0; n < nodes; n++) {
-      maxOut = Math.max(maxOut, outFill[n]);
-      maxIn = Math.max(maxIn, inFill[n]);
-    }
-    int outBits = 32 - Integer.numberOfLeadingZeros(maxOut);
-    int inBits = 32 - Integer.numberOfLeadingZeros(maxIn);
+    int outBits = built.outBits;
+    int inBits = built.inBits;
     if (outBits + inBits > STAMP_SHIFT) {
       throw new IllegalArgumentException(
           getClass().getSimpleName() + ": too many edges per node in the layered graph");
@@ -1130,14 +1377,9 @@ public abstract class LayeredGraphConstraint extends Constraint
     inOne = 1L << outBits;
     inMask = ((1L << inBits) - 1) << outBits;
     for (int n = 0; n < nodes; n++) {
-      state[n] = ((long) inFill[n] << outBits) | outFill[n];
+      state[n] =
+          ((long) (inStart[n + 1] - inStart[n]) << outBits) | (outStart[n + 1] - outStart[n]);
     }
-    nodeLevel = new int[nodes];
-    for (int level = 0; level <= levels; level++) {
-      Arrays.fill(nodeLevel, levelNodeStart[level], levelNodeStart[level + 1], level);
-    }
-    touchedLevels = new int[levels];
-    levelTouched = new boolean[levels];
     layeredRemoval = nodes > LAYERED_REMOVAL_NODES;
     if (layeredRemoval) {
       forwardHead = new int[levels + 1];
@@ -1160,7 +1402,6 @@ public abstract class LayeredGraphConstraint extends Constraint
       removedSlotHead = new int[levels];
       Arrays.fill(removedSlotHead, -1);
       removedSlotNext = new int[slots];
-      previousCount = new long[nodes];
     }
   }
 
@@ -1215,8 +1456,8 @@ public abstract class LayeredGraphConstraint extends Constraint
       a = new Adjacency();
       adjacency[adjacencyTop] = a;
     }
-    int nodes = slotBase;
-    int slots = levelBase - slotBase;
+    int nodes = nodeCount;
+    int slots = slotCount;
     int[] newOutStart = reuse(a.outStart, nodes + 1);
     int[] newOutEdge = reuse(a.outEdge, 2 * aliveEdges);
     int[] newInStart = reuse(a.inStart, nodes + 1);
@@ -1606,11 +1847,15 @@ public abstract class LayeredGraphConstraint extends Constraint
     int to = levelNodeStart[level + 1];
     int toEnd = to + aliveNodes(level + 1);
     long before = 0;
+    if (previousCount == null) {
+      // scratch of this call only, made at the first recount: many large graphs never need it
+      previousCount = new int[nodeCount];
+    }
     for (int i = to; i < toEnd; i++) {
       int v = levelOrder[i];
       save(v);
       long in = (state[v] & inMask) >>> inShift;
-      previousCount[v] = in;
+      previousCount[v] = (int) in;
       before += in;
       state[v] &= ~inMask;
     }
@@ -1908,6 +2153,9 @@ public abstract class LayeredGraphConstraint extends Constraint
                 || probeSearchTime < SWITCH_EARLY_SHARE * probeCountersTime)) {
       probing = false;
       supportSearch = preferSupportSearch(probeCountersTime, probeSearchTime);
+      if (!supportSearch) {
+        releaseSearchArrays();
+      }
     }
   }
 
@@ -1981,22 +2229,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   @Override
   public void impose(Store store) {
 
-    buildLayeredGraph();
-
-    if (supportSearch || probing) {
-      int nodes = slotBase;
-      int slots = levelBase - slotBase;
-      noNodes = new int[nodes];
-      noPosition = new int[nodes];
-      for (int n = 0; n < nodes; n++) {
-        noNodes[n] = n;
-        noPosition[n] = n;
-      }
-      yesStamp = new int[nodes];
-      inDomainStamp = new int[slots];
-      supportedStamp = new int[slots];
-      levelUnsupported = new int[list.length];
-    }
+    buildLayeredGraph(store);
 
     mapping = Var.positionMapping(list, true, this.getClass());
     int min = Integer.MAX_VALUE;
@@ -2033,7 +2266,7 @@ public abstract class LayeredGraphConstraint extends Constraint
       }
     }
     Adjacency initial = adjacency[0];
-    int nodes = slotBase;
+    int nodes = nodeCount;
     boolean[] reached = new boolean[nodes];
     int[] frontier = new int[nodes];
     int size = 0;
@@ -2078,10 +2311,47 @@ public abstract class LayeredGraphConstraint extends Constraint
    * @return the number of nodes.
    */
   protected int graphNodes() {
-    return slotBase;
+    return nodeCount;
+  }
+
+  /**
+   * It creates the arrays of the support search at its first call: with the automatic choice they
+   * are needed only once the probe starts, and constraints that settle on the counters release
+   * them, which matters for models with hundreds of large diagrams.
+   */
+  private void createSearchArrays() {
+    int nodes = nodeCount;
+    int slots = slotCount;
+    noNodes = new int[nodes];
+    noPosition = new int[nodes];
+    for (int n = 0; n < nodes; n++) {
+      noNodes[n] = n;
+      noPosition[n] = n;
+    }
+    yesStamp = new int[nodes];
+    inDomainStamp = new int[slots];
+    supportedStamp = new int[slots];
+    levelUnsupported = new int[list.length];
+    searchStamp = 0;
+  }
+
+  /**
+   * It releases the arrays of the support search once the counters were chosen for good. The record
+   * of the nodes without support is left as it is; it is not read by the counters.
+   */
+  private void releaseSearchArrays() {
+    noNodes = null;
+    noPosition = null;
+    yesStamp = null;
+    inDomainStamp = null;
+    supportedStamp = null;
+    levelUnsupported = null;
   }
 
   private void searchSupports(Store store) {
+    if (noNodes == null) {
+      createSearchArrays();
+    }
     if (++searchStamp == Integer.MAX_VALUE) {
       Arrays.fill(yesStamp, 0);
       Arrays.fill(inDomainStamp, 0);
@@ -2105,7 +2375,7 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
     deepestUnsupported = levels - 1;
     boolean supported = levels == 0;
-    for (int root = 0; root < slotBase && nodeLevel[root] == 0; root++) {
+    for (int root = 0; root < nodeCount && nodeLevel[root] == 0; root++) {
       if (seekSupport(root, 0)) {
         supported = true;
         if (deepestUnsupported < 0) {

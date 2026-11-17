@@ -250,6 +250,9 @@ public class Options {
                 makes fewer than lcg-slow-rate conflicts per second and has no solution
                 after this share of the time limit gives way to free search without
                 learning, default 0.5; 0 = off),
+                free-first=<share> (with --lcg, -f and an objective that sums at least four
+                squares: free search without learning runs first for this share of the
+                time limit, then LCG goes on from its best solution, default 0.1; 0 = off),
                 first-input=<runs> (-f, an objective and no search annotation: after slow
                 LCG gave way without a solution, one free search run in this many fixes the
                 variables in the model's order with their least values, until the first
@@ -257,6 +260,8 @@ public class Options {
                 lcg-slow-stall=<share> (a slow LCG goes on while, in the last window of
                 this share of the time limit, it raised the bound or its best cost fell by
                 lcg-slow-gain of itself; default 0.05), lcg-slow-gain=<share> (default 0.005),
+                lcg-slow-bound-gain=<share> (a bound raise in the window counts when it
+                closes this share of the gap to the best cost, default 0.0005),
                 lcg-core=<share> (with --lcg and a linear objective: share of the time for
                 core-guided search before branch and bound, default 0.5, 0.1 with
                 objective cost variables; 0 = off),
@@ -311,7 +316,10 @@ public class Options {
                 learnt clauses of at most this size and LBD, default 8 and 2, and root bounds,
                 at restarts; share-clauses=0 = off),
                 lcg-split=<n> (with --lcg: a linear constraint of more than n terms becomes sums of
-                blocks of about sqrt of its size, for shorter explanations; default 40; 0 = off),
+                blocks of about sqrt of its size, for shorter explanations; default 20; 0 = off),
+                lcg-split-tree=0|1 (with lcg-split: blocks of at most n terms, and a sum of blocks
+                of more than n terms split again, so a sum of more than n*n terms becomes a tree of
+                sums; default 1),
                 probe=<share> (optimisation: failures of objective probes, runs with the objective
                 at its lower bound or a growing offset above it, per failure of the other runs;
                 default 0.05, 0 = off), probe-fails=<n> (fail limit of the first probe, default 100),
@@ -323,9 +331,10 @@ public class Options {
                 routes of two-index vrp models, default 1),
                 lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
                 default 1), lns-kinds=<kind>+<kind>... (the neighbourhoods used, of random, graph,
-                propagation, objective, constraints, scheduling, packing, routes, related, blocks;
+                propagation, objective, constraints, scheduling, packing, routes, related, blocks, rins;
                 default all), lns-blocks=0|1 (whole blocks of the decomposition bound as
-                neighbourhoods, default 1),
+                neighbourhoods, default 1), lns-rins=0|1 (relax the variables farthest from the
+                linear relaxation, default 1),
                 lcg-core-delay=<share> (share of the time for branch and bound between a short
                 core-guided probe and the rest of core-guided search, default 0.05; 0 = core-guided
                 search first), lcg-core-probe=<share> (share of the time for that probe, default 0.02);

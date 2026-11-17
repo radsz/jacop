@@ -184,6 +184,9 @@ public final class CoreSearch {
   private long runBound; // the lower bound when the last run started
   private long runEnd; // the solver's work when the last run stopped
   private boolean grouped; // the at-most-one groups were looked for
+  private boolean regrouped; // they were looked for again after hardening
+  private long hardenedAtGroup; // the soft literals hardened when the groups were looked for
+  private boolean expandValues = true; // the groups expand terms into their value literals
   private long threshold = -1; // soft literals of at least this weight are assumed
   private boolean exhausted; // all soft literals were assumed and a solution still cost more
 
@@ -320,6 +323,7 @@ public final class CoreSearch {
       grouped = true;
       return true;
     }
+    hardenedAtGroup = hardened;
     return relaxAtMostOnes();
   }
 
@@ -333,6 +337,35 @@ public final class CoreSearch {
     }
     return true;
   }
+
+  /**
+   * Looks for the at-most-one groups once more when soft literals were hardened since they were
+   * looked for: a heavy soft clause between two light soft literals, such as a conflict of weight
+   * 221 between the unit soft clauses of weight 1 of a weighted MaxSAT independent set (MaxSAT
+   * Evaluation frb_wt), becomes hard only once a solution cheaper than its weight is known, and
+   * only then does it put the two literals in one group. Without it, the cores raise the bound by
+   * one each: 200 cores and 120 s on frb_wt-frb20-11-1, whose 20 domain cliques give the bound at
+   * once. The values of terms are not expanded again. Returns false when the solver is
+   * unsatisfiable at the root.
+   */
+  private boolean regroup() {
+    if (regrouped || !grouped || proof != null || hardened == hardenedAtGroup) {
+      return true;
+    }
+    regrouped = true;
+    hardenedAtGroup = hardened;
+    regroups++;
+    expandValues = false;
+    return relaxAtMostOnes();
+  }
+
+  /** The value literals of a term to expand into the groups, none once the values were expanded. */
+  private int[] expandedValues(Soft s) {
+    return expandValues ? valueLiterals(s) : new int[0];
+  }
+
+  /** Statistics: times the at-most-one groups were looked for again after hardening. */
+  public long regroups;
 
   /** The number of levels of the terms' variables, summed. */
   private static long span(LcgSolver lcg, Map<Integer, Long> terms) {
@@ -621,10 +654,15 @@ public final class CoreSearch {
   /**
    * Makes hard each soft literal whose weight exceeds the gap between the best solution and the
    * lower bound: any assignment that violates it costs at least the lower bound plus its weight, so
-   * no better solution violates it (hardening, as in RC2 and Geas). Returns false when the solver
-   * becomes unsatisfiable.
+   * no better solution violates it (hardening, as in RC2 and Geas), then looks for the at-most-one
+   * groups again if it hardened some ({@link #regroup}). Returns false when the solver becomes
+   * unsatisfiable.
    */
   private boolean harden() {
+    return hardenSoft() && regroup();
+  }
+
+  private boolean hardenSoft() {
     long best = lcg.boundObjective();
     if (best == Long.MAX_VALUE) {
       return true;
@@ -692,7 +730,7 @@ public final class CoreSearch {
     long expansionCost = 0; // what the expansion takes from the bound
     BitSet expanded = new BitSet();
     for (int i = 0; i < terms; i++) {
-      int[] values = valueLiterals(owner.get(i));
+      int[] values = expandedValues(owner.get(i));
       if (values.length == 0) {
         continue;
       }
@@ -1351,7 +1389,12 @@ public final class CoreSearch {
       long target = Math.min(from + step, best);
       IntVar x = lcg.variable(objective);
       if (target <= x.min()) {
+        // already implied: once that reaches the best solution there is nothing left to probe,
+        // and the step would double until it overflowed
         objectiveFloor = Math.max(objectiveFloor, x.min());
+        if (target >= best) {
+          return true;
+        }
         continue;
       }
       if (target > x.max() + 1L) {
@@ -1455,6 +1498,9 @@ public final class CoreSearch {
 
   private Totalizer lastTotalizer;
 
+  // cores whose first output exhaustion tested without refuting it
+  private long exhaustMisses;
+
   /**
    * Core exhaustion as in RC2 (Ignatiev, Morgado and Marques-Silva, JSAT 11, 2019): after a core of
    * at least two literals is relaxed, the outputs "at least j of them false" of its new totalizer,
@@ -1465,7 +1511,11 @@ public final class CoreSearch {
    * @return false when the solver became unsatisfiable at the root
    */
   private boolean exhaust(int size, long phaseLimit) {
-    if (lcg.coreExhaust() <= 0 || size < 2 || lastTotalizer == null) {
+    int patience = lcg.coreExhaustPatience();
+    if (lcg.coreExhaust() <= 0
+        || size < 2
+        || lastTotalizer == null
+        || patience > 0 && exhaustMisses >= patience * (1 + exhaustedOutputs)) {
       return true;
     }
     Totalizer tot = lastTotalizer;
@@ -1484,6 +1534,9 @@ public final class CoreSearch {
         // an empty core: unsatisfiable without assumptions
         open = failed.length != 0;
         refuted = failed.length == 1;
+        if (!refuted && k == 2) {
+          exhaustMisses++;
+        }
         if (refuted) {
           exhaustedOutputs++;
           open = relax(failed, true);

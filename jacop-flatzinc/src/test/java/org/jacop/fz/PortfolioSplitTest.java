@@ -80,6 +80,19 @@ class PortfolioSplitTest {
   }
 
   @Test
+  void splitThreadsKeepTheLinearSplitLimit() {
+    // the setting joins the tree with its own key: lcg-split=1 split every linear constraint of
+    // two terms or more into blocks
+    List<String> flags =
+        new ArrayList<>(
+            List.of(Portfolio.SPLIT_SETTING).subList(1, Portfolio.SPLIT_SETTING.length));
+    flags.add("model.fzn");
+    Options options = new Options(flags.toArray(new String[0]));
+    assertEquals("1", options.freeConfig("lcg-tree-split", "0"));
+    assertEquals("20", options.freeConfig("lcg-split", "20"));
+  }
+
+  @Test
   void splitThreadsJoinAndSolveALargerModel() throws IOException {
     // a knapsack of 60 items with profits close to the weights
     Path fzn = write(knapsack(new Random(5), 60, 1000, 1000, 45000));
@@ -152,6 +165,29 @@ class PortfolioSplitTest {
             out.contains("portfolioDfsSplitThreads="), String.join(" ", layout) + "\n" + out);
       }
     }
+  }
+
+  // a subset sum with no solution whose only variables are the elements of an array: the LCG split
+  // threads split on no variable but scalar ones, so the first thread searched the whole tree while
+  // the other three waited (the 60-item knapsack split only on its objective and timed out at 30 s
+  // under load, about one run in a hundred)
+  private static final String SUBSET_SUM =
+      """
+      array [1..24] of var 0..1: x :: output_array([1..24]);
+      constraint int_lin_eq([2125, 1975, 1813, 2308, 2763, 1308, 1474, 2300, 1310, 2777, 2896, \
+      2071, 1798, 2518, 1031, 2375, 2591, 1131, 1326, 2552, 2960, 2210, 1087, 1616], x, 40718);
+      solve :: int_search(x, input_order, indomain_max, complete) satisfy;
+      """;
+
+  @Test
+  void splitThreadsSplitOnTheElementsOfArrays() throws IOException {
+    Path fzn = write(SUBSET_SUM);
+    String[] layout = LAYOUTS[0];
+    String out = run(args(layout, fzn));
+    assertTrue(out.contains("=====UNSATISFIABLE====="), String.join(" ", layout) + "\n" + out);
+    Matcher splits = Pattern.compile("portfolioSplits=(\\d+)").matcher(out);
+    assertTrue(splits.find(), out);
+    assertTrue(Integer.parseInt(splits.group(1)) > 0, out);
   }
 
   @Test

@@ -45,8 +45,10 @@ the work is truly done.
 ## Checking propagator strength (consistency checker)
 
 `jacop-core/src/test/java/org/jacop/ConsistencyChecker.java` measures the consistency a propagator
-actually reaches. It is a tool for improving constraints, not part of the build: no Maven profile
-includes it, so run it on demand with `-Dtest`.
+actually reaches. It is a tool for improving constraints and a guard against weakened propagators:
+the profiles run it with few instances (`consistency.instances` 50 in `min`, about 40 s, and 200 in
+`commit`), since it is the only test that fails when a propagator still answers right but prunes
+less. Run it at volume on demand with `-Dtest`.
 
 ```
 mvn -Pmin -pl jacop-core test -Dtest=ConsistencyChecker -Dsurefire.rerunFailingTestsCount=0
@@ -69,9 +71,11 @@ then reports the strongest level held at every node:
 - bounds(D): the same with the other variables in their domains;
 - domain (GAC): every value has a support in the domains.
 
-It also fails a case that removes a solution or fails while a solution exists (wrong pruning), and
-counts nodes where a missing support would be pruned by running the constraint again (not at
-fixpoint). Each case prints its level, the node count and the first counterexample of the next
+It also fails a case that removes a solution or fails while a solution exists (wrong pruning),
+accepts a fixed assignment that is no solution, or claims `satisfied()` while some tuple of the
+domains is no solution (checked after propagation and right after each decision, since the LCG
+represolve and the FlatZinc component split drop a constraint that says it is satisfied), and counts nodes where a missing support would be pruned by running the
+constraint again (not at fixpoint). Each case prints its level, the node count and the first counterexample of the next
 level, with the instance and the decision path that reproduces it.
 
 Using it to improve a propagator:
@@ -82,6 +86,13 @@ Using it to improve a propagator:
 3. Re-run the checker with a high `consistency.instances` and raise the case's level in
    `ConsistencyChecker.cases()` to what it now reaches, so a later weakening is caught when the
    checker is run.
+
+`-Dconsistency.repeated=true` checks the same cases with a variable repeated in the scope: about a
+third of the time, the variable helpers of a generator (`aVar`, `interval`, `bools`, `aBool`) return
+a variable already made for the instance whose domain fits, and the brute force enumerates only the
+tuples in which the positions of one variable agree. Only soundness is checked in that mode (a
+repeated variable may weaken a propagator), and an instance whose constructor rejects the repeat is
+counted as rejected. Run it after changing how a constraint handles its variables.
 
 To check another propagator, add a `Case` to `cases()`: a name, the level it reaches, and a
 generator returning a `Model` (the constraint, the relation as a `Predicate<int[]>` on complete
@@ -177,7 +188,36 @@ mvn -Pmin -pl jacop-sat test -Dtest=LcgFuzzTest -Dsurefire.rerunFailingTestsCoun
 ```
 
 A failure names the seed; the model of a seed is rebuilt with `-Dlcg.fuzz.runs=1 -Dlcg.fuzz.seed=N`.
+Add `-Dlcg.fuzz.repeated=true` to repeat a variable at about a third of the positions of each picked
+list, so constraints and their explanations see one variable at several positions.
 Add `-Dlcg.fuzz.holes=true` for up to two holes in every variable's domain: reasons of bounds that
 skip holes were the most frequent explanation bug (LinearIntDom, Diffn, WeightedCompletion).
 A constraint whose pruning depends on a variable that is not among its arguments (such as an
 internal counter) needs that variable in its scope, or the generic reason is unsound.
+
+`LcgFuzzTest#explanationSizesMatchGolden` is the explanation-size oracle: it solves 40,000 fixed
+random models (`lcg.sizes.runs`, about 10 s) and compares, per constraint class with at least 100
+samples, the share of reasons and failures explained by the generic reason and the atoms per
+explanation with `jacop-sat/src/test/resources/org/jacop/jasat/lcg/explanation-sizes.tsv`. It fails
+when a share grows by more than two points or the atoms by more than 10 %: a weaker but valid
+explanation, which the checker cannot see. After a change meant to alter explanations or the model
+generator, rewrite the file with `-Dlcg.sizes.write=true` and commit it with the change.
+`MutationGapsTest` (jacop-core, in every profile, about 2 s) does the same outside the solver for
+Max, Min, Member, ElementInteger, BinaryBitTable, ArgMaxMonotone, AllDifferentLists, ChannelOrder,
+ConjunctionSum, MaxCliqueBound and reified LinearInt: random narrowings, every reason of the
+constraint's own explanation checked by `ExplanationChecker`, and exact goldens per seed of the atoms
+it explains and their literals. A new explanation gets a case there; update a golden only for a
+change meant to alter the reasons. The osolpro kit `benchmarks/mutation-testing` runs PIT on the
+classes a change touches.
+
+`-Dlcg.fuzz.proof=true` instead solves the random models with `--proof` logging and checks every
+proof with `RupChecker` and its conclusion against the reference (models with a constraint that
+proof logging does not support are skipped; `-Dlcg.fuzz.proofPrint=true` prints the OPB model and
+the proof of a failure). Proof steps that unit propagation cannot derive were mostly holes in
+domains and rows unit propagation does not round:
+
+```
+mvn -Pmin -pl jacop-sat test -Dtest='LcgFuzzTest#proofsCheckOnRandomModels' \
+    -Dsurefire.rerunFailingTestsCount=0 -Dlcg.fuzz.proof=true -Dlcg.fuzz.holes=true \
+    -Dlcg.fuzz.runs=1000000 -Dlcg.fuzz.seed=30000000
+```

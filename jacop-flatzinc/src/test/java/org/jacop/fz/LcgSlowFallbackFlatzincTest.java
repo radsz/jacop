@@ -37,13 +37,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jacop.jasat.lcg.LcgSolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -91,13 +96,32 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void optimumAfterGivingWayAtOnce() throws IOException {
-    String out = run("lcg-slow-rate=1,lcg-slow-at=0");
+    // without the MaxSAT local search, whose optimal first solution leaves LCG nothing to give way
+    // on
+    String out = run("lcg-slow-rate=1,lcg-slow-at=0,maxsat=0");
     // LCG gives way at its first test; only the core-guided probe's trimming of its first cores
     // can have made a few conflicts by then
     Matcher conflicts = Pattern.compile("lcgSlowConflicts=(\\d+)").matcher(out);
     assertTrue(conflicts.find(), out);
     assertTrue(Long.parseLong(conflicts.group(1)) < 10, out);
     checkOptimum(out);
+  }
+
+  @Test
+  void solverThatGaveWayIsNotKept() {
+    // free search keeps only the conflicts, deadline and clock of the LCG solver that gave way: the
+    // solver, with its clauses and three literal maps per variable, held 2.35 million variables'
+    // worth while the clauses were posted again (rcpsp-wet-diverse j90_48_4 -f out of 4 GB)
+    // the running solver, and the early prober (dropped when search starts)
+    Set<String> solvers = Set.of("lcg", "earlyProber");
+    for (Field f : Solve.class.getDeclaredFields()) {
+      if (LcgSolver.class.isAssignableFrom(f.getType())) {
+        assertTrue(solvers.contains(f.getName()), f.toString());
+      }
+    }
+    for (RecordComponent c : Solve.SlowLcg.class.getRecordComponents()) {
+      assertTrue(c.getType().isPrimitive() || c.getType() == LongSupplier.class, c.toString());
+    }
   }
 
   @Test
@@ -192,6 +216,16 @@ class LcgSlowFallbackFlatzincTest {
     // the first solution inside the window counts as progress, none at all does not
     assertTrue(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, 700));
     assertFalse(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, noCost));
+  }
+
+  @Test
+  void aBoundRaiseCountsOnlyWhenItClosesAShareOfTheGap() {
+    // CVRPLIB X-n110-k13: the bound rose from 4 to 5 against a best cost of 59,211
+    assertFalse(Solve.boundClosesGap(4, 5, 0.005, 59_211));
+    assertTrue(Solve.boundClosesGap(4, 400, 0.005, 59_211));
+    assertFalse(Solve.boundClosesGap(5, 5, 0.005, 59_211));
+    // without a solution any raise counts
+    assertTrue(Solve.boundClosesGap(4, 5, 0.005, Integer.MAX_VALUE));
   }
 
   @Test

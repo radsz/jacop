@@ -79,9 +79,11 @@ import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
 import org.jacop.fz.constraints.LinearRelaxationCheck;
 import org.jacop.fz.constraints.LinearSystemDetector;
+import org.jacop.fz.constraints.ListsDifferDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MaxCliqueDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
+import org.jacop.fz.constraints.NumberedPathDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -90,10 +92,12 @@ import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
 import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
+import org.jacop.fz.constraints.SaturatedProducts;
 import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
+import org.jacop.fz.constraints.SuccessorForestDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
@@ -169,6 +173,9 @@ public class Constraints implements ParserTreeConstants {
     if (dictionary.domainsClamped()) {
       System.err.println(dictionary.clampedDomainsWarning());
       dictionary.recordDeclaredDomains();
+      dictionary.setSaturationCandidates(
+          SaturatedProducts.find(
+              support, astTree, ObjectiveScaling.objective(dictionary, astTree)));
     }
 
     Options options = support.options;
@@ -323,6 +330,21 @@ public class Constraints implements ParserTreeConstants {
           replaced = new HashSet<>(replaced);
           replaced.addAll(tables.replaced());
         }
+      }
+
+      // short tables saying that two lists differ become AllDifferentLists over groups of lists
+      if (ListsDifferDetector.enabled() && options.proof() == null) {
+        ListsDifferDetector lists = new ListsDifferDetector(support);
+        lists.detect(astTree);
+        if (!lists.replaced().isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(lists.replaced());
+        }
+      }
+
+      // a Hamiltonian path written as a numbering gets its successor model with a circuit
+      if (NumberedPathDetector.enabled() && options.proof() == null) {
+        new NumberedPathDetector(support).detect(astTree);
       }
 
       // the variables of degree two between tables and elements are joined out of the model, and
@@ -515,7 +537,11 @@ public class Constraints implements ParserTreeConstants {
         // reads the rows as declared, to show the narrowing of domains harmless at the end
         dictionary.setClampedBounds(
             new ClampedBounds(
-                support, astTree, dictionary.narrowedVariables(), dictionary::declaredBounds));
+                support,
+                astTree,
+                dictionary.narrowedVariables(),
+                dictionary::declaredBounds,
+                dictionary.saturatedProducts()));
       }
       cf.poseCounts();
       cf.poseDiffnProjections();
@@ -727,6 +753,12 @@ public class Constraints implements ParserTreeConstants {
 
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
+    }
+
+    // the forest of the successor arcs along which positions grow, redundant, for the subtour
+    // elimination cuts of the linear relaxation; --proof does not encode it
+    if (SuccessorForestDetector.enabled() && options.proof() == null) {
+      new SuccessorForestDetector(support).detect(astTree);
     }
   }
 

@@ -34,6 +34,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -53,9 +54,11 @@ import org.jacop.core.Var;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.fz.constraints.ClampedBounds;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
+import org.jacop.fz.constraints.SaturatedProducts;
 import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.LinearForm;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -139,6 +142,10 @@ public class Tables {
   boolean overlapSetRows;
 
   final ArrayList<IntVar> overlapSetRowsDefined = new ArrayList<>();
+
+  // the rows that linear overlap factoring reduced to a multiple of one sub-sum, k * z rel c:
+  // posted as bounds of z, they reach the linear relaxation only from here
+  final ArrayList<LinearForm> overlapUnitRows = new ArrayList<>();
 
   // the tables of the model, for the clique rows of the linear relaxation
   private final ArrayList<TableCliques.Table> tables = new ArrayList<>();
@@ -348,6 +355,9 @@ public class Tables {
   private final IdentityHashMap<IntVar, long[]> clampedDeclared = new IdentityHashMap<>();
   // the reasoning that may show the narrowing harmless, or null
   private ClampedBounds clampedBounds;
+  // the narrowed products that may be posted saturated (SaturatedProducts), and those posted so
+  private Set<IntVar> saturationCandidates = Set.of();
+  private final Set<IntVar> saturatedProducts = Collections.newSetFromMap(new IdentityHashMap<>());
 
   /**
    * Records the domains of the variables as declared, before any constraint narrows them, when a
@@ -401,7 +411,7 @@ public class Tables {
    * @param v the variable
    * @return {low, high}
    */
-  long[] declaredBounds(IntVar v) {
+  public long[] declaredBounds(IntVar v) {
     long[] b = clampedDeclared.get(v);
     if (b != null) {
       return b;
@@ -436,6 +446,39 @@ public class Tables {
       }
     }
     return list;
+  }
+
+  /**
+   * Sets the narrowed products that may be posted saturated at the ends of JaCoP's range.
+   *
+   * @param products the products {@link SaturatedProducts} found
+   */
+  public void setSaturationCandidates(Set<IntVar> products) {
+    saturationCandidates = products;
+  }
+
+  /**
+   * Tells whether the product z of int_times is posted saturated at the ends of JaCoP's range, and
+   * records that it is.
+   *
+   * @param z the product, after aliases
+   * @return true if z is one of the products {@link SaturatedProducts} found
+   */
+  public boolean postSaturated(IntVar z) {
+    if (!saturationCandidates.contains(z)) {
+      return false;
+    }
+    saturatedProducts.add(z);
+    return true;
+  }
+
+  /**
+   * The products posted saturated at the ends of JaCoP's range.
+   *
+   * @return the products
+   */
+  public Set<IntVar> saturatedProducts() {
+    return saturatedProducts;
   }
 
   /**
@@ -694,6 +737,13 @@ public class Tables {
     t.splitSums.addAll(map.get(splitSums));
     t.overlapSetRows = overlapSetRows;
     t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
+    for (LinearForm f : overlapUnitRows) {
+      IntVar[] vs = new IntVar[f.vars().length];
+      for (int k = 0; k < vs.length; k++) {
+        vs[k] = map.get(f.vars()[k]);
+      }
+      t.overlapUnitRows.add(new LinearForm(vs, f.weights(), f.c(), f.relation()));
+    }
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.indexDisjunctions = indexDisjunctions == null ? null : indexDisjunctions.copy(map);
@@ -844,8 +894,44 @@ public class Tables {
    * @param array the array being stored.
    */
   public void addIntArray(String ident, int[] array) {
-    // already exists ";
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedIntArrays.computeIfAbsent(new IntArrayContents(array), k -> k).array();
+    }
     intArrayTable.put(ident, array);
+  }
+
+  /**
+   * Arrays of integer parameters of at least this length are kept once for each content. MiniZinc
+   * writes a table posted on many scopes as a separate array for each constraint: Steiner3-11 (XCSP
+   * 2026) has 153 copies of one table of 5 million entries, 3 GB as separate arrays.
+   */
+  static final int INTERNED_ARRAY_LENGTH = 1024;
+
+  // the long arrays of integer parameters read so far, by content
+  private final Map<IntArrayContents, IntArrayContents> internedIntArrays = new HashMap<>();
+
+  /** An array of integers compared by content. */
+  private record IntArrayContents(int[] array, int hash) {
+    IntArrayContents(int[] array) {
+      this(array, Arrays.hashCode(array));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof IntArrayContents(int[] other, int otherHash)
+          && otherHash == hash
+          && Arrays.equals(other, array);
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "IntArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
   }
 
   /**
@@ -885,7 +971,57 @@ public class Tables {
    * @param array the array being added.
    */
   public void addSetArray(String ident, IntDomain[] array) {
+    if (array != null && array.length >= INTERNED_ARRAY_LENGTH) {
+      array = internedSetArrays.computeIfAbsent(new SetArrayContents(array), k -> k).array();
+    }
     setArrayTable.put(ident, array);
+  }
+
+  // the long arrays of set parameters read so far, by content: MiniZinc writes the label sets of an
+  // MDD again for every constraint that uses it (WordDesign2-words-mdd-025, XCSP 2023: 31 copies of
+  // 1.8 million sets, 230 MB each)
+  private final Map<SetArrayContents, SetArrayContents> internedSetArrays = new HashMap<>();
+
+  /** An array of sets compared by content. */
+  private record SetArrayContents(IntDomain[] array, int hash) {
+    SetArrayContents(IntDomain[] array) {
+      this(array, hash(array));
+    }
+
+    private static int hash(IntDomain[] array) {
+      int h = 1;
+      for (IntDomain d : array) {
+        h = 31 * h + (d == null || d.isEmpty() ? 0 : 31 * (31 * d.min() + d.max()) + d.getSize());
+      }
+      return h;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      if (!(o instanceof SetArrayContents(IntDomain[] other, int otherHash))
+          || otherHash != hash
+          || other.length != array.length) {
+        return false;
+      }
+      for (int i = 0; i < array.length; i++) {
+        IntDomain a = array[i];
+        IntDomain b = other[i];
+        if (a != b && (a == null || b == null || !a.eq(b))) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode() {
+      return hash;
+    }
+
+    @Override
+    public String toString() {
+      return "SetArrayContents[length=" + array.length + ", hash=" + hash + "]";
+    }
   }
 
   /**
@@ -993,6 +1129,21 @@ public class Tables {
       }
     }
     return a;
+  }
+
+  /**
+   * It returns the array of variables of the given identity, or null if there is none. Unlike
+   * {@link #getVariableArray(String)} it does not read an array of integer parameters as an array
+   * of constants, so the passes that look for the variables of the constraints skip the tables:
+   * reading a table of millions of entries as constants cost an array of millions of references at
+   * every look and made one constant variable for each distinct value of the table (84,000 on
+   * CrosswordDesign-09, XCSP 2026, each then a variable of LCG).
+   *
+   * @param ident the identity of the array.
+   * @return the array of variables, or null if ident is not an array of variables.
+   */
+  public IntVar[] getDeclaredVariableArray(String ident) {
+    return variableArrayTable.containsKey(ident) ? getVariableArray(ident) : null;
   }
 
   /**
@@ -1157,6 +1308,26 @@ public class Tables {
    */
   public List<IntVar> splitSums() {
     return splitSums;
+  }
+
+  /**
+   * Records a row that linear overlap factoring reduced to a multiple of one sub-sum variable.
+   *
+   * @param f the row, over the sub-sum variable
+   */
+  public void addOverlapUnitRow(LinearForm f) {
+    overlapUnitRows.add(f);
+  }
+
+  /**
+   * Returns the rows that linear overlap factoring reduced to a multiple of one sub-sum variable,
+   * which the store holds as bounds of that variable; the linear relaxation substitutes the sum
+   * back and has the rows of the model.
+   *
+   * @return the rows
+   */
+  public List<LinearForm> overlapUnitRows() {
+    return overlapUnitRows;
   }
 
   /**

@@ -281,6 +281,79 @@ class LcgSolverTest {
     }
   }
 
+  /**
+   * An incumbent leaves the core-guided phase as without it: with its bound before the phase every
+   * stratum had to improve on it, and the phase found no core (MaxSAT 2024 upgradeability rand653
+   * and warehouses cap91 lost their proofs). Weighted vertex covers, from the cheapest cover above
+   * the optimum.
+   */
+  @Test
+  void incumbentKeepsTheCoreGuidedPhase() {
+    Random rnd = new Random(71);
+    long cores = 0;
+    for (int instance = 0; instance < 20; instance++) {
+      Store store = new Store();
+      int n = 10;
+      IntVar[] b = new IntVar[n];
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        b[i] = new IntVar(store, "b" + i, 0, 1);
+        w[i] = 1 + rnd.nextInt(9);
+      }
+      List<int[]> edges = new ArrayList<>();
+      for (int e = 0; e < 2 * n; e++) {
+        int i = rnd.nextInt(n);
+        int j = rnd.nextInt(n);
+        if (i != j) {
+          edges.add(new int[] {i, j});
+          store.impose(new LinearInt(new IntVar[] {b[i], b[j]}, new int[] {1, 1}, ">=", 1));
+        }
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 100);
+      IntVar[] terms = Arrays.copyOf(b, n + 1);
+      terms[n] = cost;
+      int[] coefficients = Arrays.copyOf(w, n + 1);
+      coefficients[n] = -1;
+      store.impose(new LinearInt(terms, coefficients, "==", 0));
+      // the optimum, and the cheapest cover above it as the incumbent
+      int optimum = Integer.MAX_VALUE;
+      int[] covers = new int[1 << n];
+      for (int mask = 0; mask < 1 << n; mask++) {
+        final int m = mask;
+        covers[mask] = Integer.MAX_VALUE;
+        if (edges.stream().allMatch(e -> ((m >> e[0]) & 1) + ((m >> e[1]) & 1) >= 1)) {
+          int c = 0;
+          for (int i = 0; i < n; i++) {
+            c += ((mask >> i) & 1) * w[i];
+          }
+          covers[mask] = c;
+          optimum = Math.min(optimum, c);
+        }
+      }
+      int given = (1 << n) - 1;
+      for (int mask = 0; mask < 1 << n; mask++) {
+        if (covers[mask] > optimum
+            && covers[mask] < Integer.MAX_VALUE
+            && covers[mask] < covers[given]) {
+          given = mask;
+        }
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setCoreSearch(1, 1_000_000, 100_000);
+      int[] values = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        values[i] = (given >> i) & 1;
+      }
+      values[n] = covers[given];
+      solver.setIncumbent(terms, values);
+      assertThat(solver.minimize(cost)).as("instance %d", instance).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(cost)).as("instance %d", instance).isEqualTo(optimum);
+      cores += solver.coreSearch().cores;
+    }
+    assertThat(cores).isPositive();
+  }
+
   @Test
   void deferredValueRemovalsAgreeWithBruteForce() {
     // with no literal budget every value removal without a literal stays out of the solver, and
@@ -463,6 +536,72 @@ class LcgSolverTest {
     for (long e : encoded) {
       assertThat(e).isGreaterThan(20);
     }
+  }
+
+  @Test
+  void rootActionWaitsForItsTimeOverEarlierRestarts() {
+    // the action of atRootAfter runs at a restart to the root once its time has come, not at the
+    // first restart before it: under free search, which restarts at once, a relaxation suspended
+    // for a probe of 200 ms came back at the first restart
+    Store store = new Store();
+    IntVar[] x = new IntVar[9];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 1, 8);
+    }
+    for (int i = 0; i < x.length; i++) {
+      for (int j = i + 1; j < x.length; j++) {
+        store.impose(new XneqY(x[i], x[j]));
+      }
+    }
+    LcgSolver solver = new LcgSolver(store);
+    boolean[] ran = {false};
+    solver.atRootAfter(3_600_000_000_000L, () -> ran[0] = true);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.UNSAT);
+    assertThat(solver.sat().restarts).isGreaterThan(0);
+    assertThat(ran[0]).isFalse();
+    assertThat(solver.rootActionPending()).isTrue();
+  }
+
+  @Test
+  void detachOnAStoreLevelOfItsOwnLeavesTheModelAsItWas() {
+    // a solver built on a store level that the caller removes after detach: the backtrack restores
+    // the table the solver took as clauses, which is in the store once (release imposes it again)
+    Store store = new Store();
+    IntVar[] x = new IntVar[3];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    int[][] tuples = {{0, 1, 2}, {1, 2, 3}, {2, 3, 0}, {3, 0, 1}};
+    store.impose(new HybridTable(x, tuples));
+    store.impose(new XneqY(x[0], x[1]));
+    assertThat(store.consistency()).isTrue();
+    int[] before = new int[x.length];
+    for (int i = 0; i < x.length; i++) {
+      before[i] = x[i].dom().sizeConstraints();
+    }
+    store.setLevel(store.level + 1);
+    LcgSolver solver = new LcgSolver(store);
+    solver.setTableClauses("support");
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.tablesAsClauses).isGreaterThan(0);
+    // changes on the solver's level that no consistency followed: the table queued their columns
+    x[0].domain.in(store.level, x[0], 0, 2);
+    x[1].domain.in(store.level, x[1], 1, 3);
+    solver.detach();
+    store.removeLevel(store.level);
+    store.setLevel(store.level - 1);
+    for (int i = 0; i < x.length; i++) {
+      assertThat(x[i].dom().sizeConstraints()).as("x%d", i).isEqualTo(before[i]);
+      assertThat(x[i].min()).isZero();
+      assertThat(x[i].max()).isEqualTo(3);
+    }
+    // the model is whole: every solution of plain search is a tuple of the table
+    DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+    search.setPrintInfo(false);
+    search.getSolutionListener().searchAll(true);
+    search.getSolutionListener().recordSolutions(true);
+    assertThat(search.labeling(store, new SimpleSelect<>(x, null, new IndomainMin<>()))).isTrue();
+    assertThat(search.getSolutionListener().solutionsNo()).isEqualTo(tuples.length);
   }
 
   @Test
@@ -4184,6 +4323,50 @@ class LcgSolverTest {
   }
 
   /**
+   * A propagator that joins the search at the root once the search has started, as the linear
+   * relaxation does after its probe (org.jacop.fz.lpProbe), can fail there on the root domains
+   * while the solver has assigned nothing: miplib2003 disctom (PB 2025) threw "the constraints
+   * failed on the root domains", since the conflict clause was empty and no assigned literal was
+   * left to stand in for it. The empty clause now goes to the solver, which answers UNSAT.
+   */
+  @Test
+  void failureResumedAtTheRootWithNothingAssignedProvesUnsatisfiable() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    store.impose(new XplusYeqZ(x, y, new IntVar(store, "z", 0, 20)));
+    Constraint gate = new FailsOnceOpened(x, y);
+    store.impose(gate);
+    LcgSolver solver = new LcgSolver(store);
+    solver.atRootAfter(
+        0,
+        () -> {
+          ((FailsOnceOpened) gate).open = true;
+          store.addChanged(gate);
+        });
+    int result = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> solver.solve());
+    assertThat(result).isEqualTo(CdclSolver.UNSAT);
+  }
+
+  // a constraint without pruning until opened, then failing whatever the domains
+  private static final class FailsOnceOpened extends Constraint {
+    private static final AtomicInteger ID = new AtomicInteger();
+    boolean open;
+
+    FailsOnceOpened(IntVar... vars) {
+      super(new IntVar[][] {vars});
+      numberId = ID.incrementAndGet();
+    }
+
+    @Override
+    public void consistency(Store store) {
+      if (open) {
+        throw Store.failException;
+      }
+    }
+  }
+
+  /**
    * Free search branches on the 0/1 variables before the others, as CP-SAT does: here the integer
    * variable y is first on the heap, and only branching on b first ([b <= 0], then y above 50)
    * gives b = 0 and y = 51. With the property off, y goes first ([y <= 50] makes b = 1, then y =
@@ -4942,10 +5125,29 @@ class LcgSolverTest {
     assertThat(exhausted).isPositive();
   }
 
+  private static final int DEFAULT_EXHAUST = Integer.MAX_VALUE;
+
+  /** Core exhaustion is on by default. */
+  @Test
+  void coresAreExhaustedByDefault() {
+    Random rnd = new Random(31);
+    long exhausted = 0;
+    for (int instance = 0; instance < 40; instance++) {
+      long seed = rnd.nextLong();
+      long[] stats = new long[1];
+      assertThat(maxSatOptimum(seed, DEFAULT_EXHAUST, stats))
+          .as("instance %d (seed %d)", instance, seed)
+          .isEqualTo(maxSatOptimum(seed, -1, stats));
+      exhausted += stats[0];
+    }
+    assertThat(exhausted).isPositive();
+  }
+
   /**
    * Minimises the number of true variables under random 3-literal clauses: by depth-first search
    * when {@code exhaust} is negative, otherwise by core-guided search with that many outputs
-   * exhausted per core; adds the exhausted outputs to {@code stats[0]}.
+   * exhausted per core ({@link #DEFAULT_EXHAUST}: the solver's defaults); adds the exhausted
+   * outputs to {@code stats[0]}.
    */
   private static Integer maxSatOptimum(long seed, int exhaust, long[] stats) {
     Random rnd = new Random(seed);
@@ -4989,7 +5191,9 @@ class LcgSolverTest {
     LcgSolver solver = new LcgSolver(store);
     solver.setChecking(true);
     solver.setCoreSearch(1, 1_000_000, 100_000);
-    solver.setCoreExhaust(exhaust);
+    if (exhaust != DEFAULT_EXHAUST) {
+      solver.setCoreExhaust(exhaust);
+    }
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
     if (solver.coreSearch() != null) {
@@ -5267,6 +5471,93 @@ class LcgSolverTest {
     }
     assertThat(first[0]).isPositive();
     assertThat(first[3]).isZero();
+  }
+
+  @Test
+  void heavySoftConflictsFormAtMostOneGroupsOnceHardened() {
+    // a weighted MaxSAT independent set as frb_wt of the MaxSAT Evaluation: unit soft clauses of
+    // weight 1 select vertices, and soft conflict clauses of a weight above all units together
+    // forbid pairs, the groups' cliques among them. The conflicts become hard only once a solution
+    // is known; the at-most-one groups are then looked for again, and the groups give the bound
+    // without a core (there were one core per unit of the bound before)
+    Random rnd = new Random(11);
+    long proved = 0;
+    for (int instance = 0; instance < 30; instance++) {
+      long seed = rnd.nextLong();
+      Integer expected = independentSetOptimum(seed, false, new long[3]);
+      long[] stats = new long[3];
+      Integer found = independentSetOptimum(seed, true, stats);
+      assertThat(found).as("instance %d (seed %d)", instance, seed).isEqualTo(expected);
+      assertThat(stats[0]).as("groups of instance %d", instance).isPositive();
+      assertThat(stats[1]).as("regroups of instance %d", instance).isEqualTo(1);
+      proved += stats[2];
+    }
+    assertThat(proved).isEqualTo(30);
+  }
+
+  /**
+   * Minimises the units left out of a random independent set with soft conflicts, by depth-first
+   * search or by LCG with core-guided search alone; stats gets the at-most-one groups, the regroups
+   * and whether core-guided search proved the optimum.
+   */
+  private static Integer independentSetOptimum(long seed, boolean lcg, long[] stats) {
+    Random rnd = new Random(seed);
+    Store store = new Store();
+    int groups = 3 + rnd.nextInt(3);
+    int size = 3 + rnd.nextInt(2);
+    int n = groups * size;
+    int heavy = n + 1;
+    IntVar[] v = new IntVar[n];
+    List<IntVar> relax = new ArrayList<>();
+    List<Integer> weight = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      v[i] = new IntVar(store, "v" + i, 0, 1);
+      IntVar r = new IntVar(store, "u" + i, 0, 1);
+      store.impose(new LinearInt(new IntVar[] {v[i], r}, new int[] {1, 1}, ">=", 1));
+      relax.add(r);
+      weight.add(1);
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        boolean sameGroup = i / size == j / size;
+        if (sameGroup || rnd.nextInt(4) == 0) {
+          IntVar r = new IntVar(store, "c" + i + "_" + j, 0, 1);
+          store.impose(new LinearInt(new IntVar[] {v[i], v[j], r}, new int[] {1, 1, -1}, "<=", 1));
+          relax.add(r);
+          weight.add(heavy);
+        }
+      }
+    }
+    int m = relax.size();
+    IntVar cost = new IntVar(store, "cost", 0, n + heavy * (m - n));
+    IntVar[] terms = relax.toArray(new IntVar[m + 1]);
+    terms[m] = cost;
+    int[] w = new int[m + 1];
+    for (int k = 0; k < m; k++) {
+      w[k] = weight.get(k);
+    }
+    w[m] = -1;
+    store.impose(new LinearInt(terms, w, "==", 0));
+    if (!lcg) {
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      IntVar[] all = Arrays.copyOf(v, n + m);
+      for (int k = 0; k < m; k++) {
+        all[n + k] = relax.get(k);
+      }
+      boolean found =
+          search.labeling(store, new SimpleSelect<>(all, null, new IndomainMin<>()), cost);
+      return found ? search.getCostValue() : null;
+    }
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    solver.setCoreSearch(1, 1_000_000, 100_000);
+    int status = solver.minimize(cost);
+    assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
+    stats[0] += solver.coreSearch().amoGroups;
+    stats[1] += solver.coreSearch().regroups;
+    stats[2] += solver.coreSearch().proved ? 1 : 0;
+    return status == CdclSolver.SAT ? solver.value(cost) : null;
   }
 
   @Test
@@ -5796,6 +6087,51 @@ class LcgSolverTest {
     }
   }
 
+  // the lowest value of the objective's domain in coreModelOptimum (tests that start it at the
+  // optimum)
+  private static int objectiveFloor = Integer.MIN_VALUE;
+
+  @Test
+  void objectiveProbeEndsWhenTheObjectiveIsAlreadyAtTheBestSolution() {
+    // the objective's domain starts at the optimum, so its minimum meets the best solution while
+    // the cores' bound, which counts only the soft literals, is still below it: each probe target
+    // is then already implied, and the probe loop doubled its step until it overflowed and never
+    // ended (MiniZinc Challenge 2023 roster-shifts-bool s100_e20_c8 under -f -t 240 s)
+    long saved = CoreSearch.objectiveProbeAfter;
+    CoreSearch.objectiveProbeAfter = 1;
+    try {
+      Random rnd = new Random(37);
+      int checked = 0;
+      long probes = 0;
+      for (int instance = 0; instance < 2000; instance++) {
+        long seed = rnd.nextLong();
+        objectiveFloor = Integer.MIN_VALUE;
+        Integer expected = coreModelOptimum(seed, -1, new long[3]);
+        if (expected == null) {
+          continue;
+        }
+        objectiveFloor = expected;
+        for (int mode = 0; mode < 4; mode++) {
+          int m = mode;
+          long[] stats = new long[5];
+          Integer found =
+              assertTimeoutPreemptively(
+                  Duration.ofSeconds(20), () -> coreModelOptimum(seed, m, stats, null, null));
+          probes += stats[4];
+          assertThat(found)
+              .as("instance %d (seed %d), mode %d", instance, seed, mode)
+              .isEqualTo(expected);
+          checked++;
+        }
+      }
+      assertThat(checked).isPositive();
+      assertThat(probes).isPositive();
+    } finally {
+      objectiveFloor = Integer.MIN_VALUE;
+      CoreSearch.objectiveProbeAfter = saved;
+    }
+  }
+
   @Test
   void coreGuidedSearchTakesTheDefinitionWithTheHigherRootBound() {
     // obj = a + b with a, b in 0..10, and obj = y0 + y1 with y0, y1 in {3, 5}, as presolve adds the
@@ -5912,7 +6248,7 @@ class LcgSolverTest {
       lo += Math.min(w[i] * x[i].min(), w[i] * x[i].max());
       hi += Math.max(w[i] * x[i].min(), w[i] * x[i].max());
     }
-    IntVar objective = new IntVar(store, "obj", lo, hi);
+    IntVar objective = new IntVar(store, "obj", Math.max(lo, Math.min(hi, objectiveFloor)), hi);
     terms[n] = objective;
     w[n] = -1;
     store.impose(new LinearInt(terms, w, "==", 0));

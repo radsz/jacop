@@ -169,6 +169,7 @@ import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulCeqZ;
 import org.jacop.constraints.XmulYeqC;
 import org.jacop.constraints.XmulYeqZ;
+import org.jacop.constraints.XmulYeqZSaturated;
 import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.Xor;
@@ -195,9 +196,11 @@ import org.jacop.constraints.geost.GeostObject;
 import org.jacop.constraints.geost.NonOverlapping;
 import org.jacop.constraints.geost.Shape;
 import org.jacop.constraints.graph.ColouredSpanningTreeBound;
+import org.jacop.constraints.graph.Forest;
 import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.knapsack.KnapsackDP;
+import org.jacop.constraints.lp.TreeCuts;
 import org.jacop.constraints.netflow.NetworkBuilder;
 import org.jacop.constraints.netflow.simplex.Node;
 import org.jacop.constraints.regular.CostRegular;
@@ -462,6 +465,38 @@ class SingleConstraintTest extends TestHelper {
           }
         }
       }
+      assertThat((long) countSolutions(store, v, random)).as("trial " + trial).isEqualTo(expected);
+    }
+  }
+
+  /**
+   * An element with its index fixed and a reification or an implication with its Boolean fixed
+   * during search rewrite themselves to an equality and to the nested constraint; the solutions
+   * stay those of the original constraints.
+   */
+  @Test
+  void testRewritingDuringSearchKeepsSolutions() {
+    Random random = new Random(20261115);
+    for (int trial = 0; trial < 200; trial++) {
+      Store store = new Store();
+      IntVar[] v = new IntVar[7];
+      v[0] = new IntVar(store, "i", 1, 3);
+      for (int k = 1; k <= 4; k++) {
+        v[k] = new IntVar(store, "x" + k, 0, 2 + random.nextInt(2));
+      }
+      v[5] = new IntVar(store, "b", 0, 1);
+      v[6] = new IntVar(store, "c", 0, 1);
+      store.impose(new ElementVariableFast(v[0], new IntVar[] {v[1], v[2], v[3]}, v[4]));
+      store.impose(new Reified(new XlteqY(v[1], v[2]), v[5]));
+      store.impose(new Implies(v[6], new XneqY(v[2], v[3])));
+      long expected =
+          bruteForce(
+                  v,
+                  a ->
+                      a[4] == a[a[0]]
+                          && (a[5] == 1) == (a[1] <= a[2])
+                          && (a[6] == 0 || a[2] != a[3]))
+              .size();
       assertThat((long) countSolutions(store, v, random)).as("trial " + trial).isEqualTo(expected);
     }
   }
@@ -1276,6 +1311,75 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(x.dom().toString()).isEqualTo("4");
     assertThat(y.dom().toString()).isEqualTo("-2");
+  }
+
+  @Test
+  void xmulYeqZSaturatedKeepsEveryPairOfFactors() {
+    // z = x * y saturated at the ends of the range stands for a product declared beyond it (2022
+    // arithmetic-target): XmulYeqZ over the narrowed z removed every pair whose product does not
+    // fit. Factors around sqrt(MAX_INT) = 23170, of both signs, and z within a random interval
+    // around an end: the solutions are the pairs whose saturated product lies in it.
+    Random random = new Random(11);
+    for (int trial = 0; trial < 300; trial++) {
+      Store store = new Store();
+      int sx = random.nextBoolean() ? 1 : -1;
+      int sy = random.nextBoolean() ? 1 : -1;
+      IntVar x = randomSubsetVar(store, "x", 23160, 23185, random);
+      IntVar y = randomSubsetVar(store, "y", 23160, 23185, random);
+      IntVar fx = new IntVar(store, "fx", -23185, 23185);
+      IntVar fy = new IntVar(store, "fy", -23185, 23185);
+      store.impose(new XmulCeqZ(x, sx, fx));
+      store.impose(new XmulCeqZ(y, sy, fy));
+      boolean positive = sx == sy;
+      int end = positive ? IntDomain.MAX_INT : IntDomain.MIN_INT;
+      int width = 1 + random.nextInt(2_000_000);
+      int low = positive ? end - random.nextInt(2_000_000) : end;
+      int high = positive ? IntDomain.MAX_INT : end + width;
+      if (random.nextBoolean()) {
+        // an interval away from the end, where z is the product itself
+        low =
+            positive
+                ? 535_000_000 + random.nextInt(1_000_000)
+                : Math.max(-536_000_000 - width, IntDomain.MIN_INT + 1);
+        high = positive ? Math.min(low + width, IntDomain.MAX_INT - 1) : -535_000_000;
+      }
+      IntVar z = new IntVar(store, "z", low, high);
+      store.impose(new XmulYeqZSaturated(fx, fy, z));
+      long expected = 0;
+      for (int a : valuesOf(x)) {
+        for (int b : valuesOf(y)) {
+          int p = XmulYeqZSaturated.saturatedProduct(sx * a, sy * b);
+          if (p >= low && p <= high) {
+            expected++;
+          }
+        }
+      }
+      if (!store.consistency()) {
+        assertThat(expected).as("trial " + trial).isZero();
+        continue;
+      }
+      assertThat((long) countSolutions(store, new IntVar[] {x, y, z}, random))
+          .as("trial " + trial)
+          .isEqualTo(expected);
+    }
+
+    // the end of the range stands for every product beyond it, and only for those
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 68720);
+    IntVar y = new IntVar(store, "y", 0, 68720);
+    IntVar z = new IntVar(store, "z", IntDomain.MAX_INT, IntDomain.MAX_INT);
+    store.impose(new XmulYeqZSaturated(x, y, z));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    x.domain.in(1, x, 68720, 68720);
+    assertThat(store.consistency()).isTrue();
+    y.domain.in(1, y, 7813, 7813); // 68720 * 7813 = 536,909,360
+    assertThat(store.consistency()).isTrue();
+    store.removeLevel(1);
+    store.setLevel(1);
+    x.domain.in(1, x, 68720, 68720);
+    y.domain.in(1, y, 7812, 7812); // 536,840,640 fits
+    assertThat(store.consistency()).isFalse();
   }
 
   @Test
@@ -4237,6 +4341,85 @@ class SingleConstraintTest extends TestHelper {
             .isTrue();
       }
     }
+  }
+
+  @Test
+  void knapsackDpKeepsSolutionsWhenAVariableIsRepeated() {
+    // A quantity which is also the capacity, the profit or another quantity changed during a pass:
+    // the supports of the next quantities were read with its new minimum from tables built with the
+    // old one, and solutions were lost (run 192: quantities x0, x1 with weights 0, 1, capacity x2
+    // and profit x1).
+    Random random = new Random(20261116);
+    for (int run = 0; run < 3000; run++) {
+      Store store = new Store();
+      int n = 1 + random.nextInt(3);
+      int[] weights = new int[n];
+      int[] profits = new int[n];
+      for (int i = 0; i < n; i++) {
+        weights[i] = random.nextInt(4);
+        profits[i] = random.nextInt(4);
+      }
+      IntVar[] distinct = new IntVar[n + 2];
+      IntVar[] positions = new IntVar[n + 2];
+      int count = 0;
+      for (int k = 0; k < n + 2; k++) {
+        if (count > 0 && random.nextInt(3) == 0) {
+          positions[k] = distinct[random.nextInt(count)];
+        } else {
+          IntVar v = new IntVar(store, "x" + count);
+          for (int value = 0; value <= 10; value++) {
+            if (random.nextInt(k < n ? 2 : 3) == 0) {
+              v.addDom(value, value);
+            }
+          }
+          if (v.getSize() == 0) {
+            int low = random.nextInt(3);
+            v.addDom(low, low + 1);
+          }
+          distinct[count++] = v;
+          positions[k] = v;
+        }
+      }
+      IntVar[] vars = Arrays.copyOf(distinct, count);
+      long expected =
+          bruteForce(
+                  vars,
+                  t -> {
+                    long weight = 0;
+                    long profit = 0;
+                    for (int i = 0; i < n; i++) {
+                      int q = t[indexIn(vars, positions[i])];
+                      weight += (long) q * weights[i];
+                      profit += (long) q * profits[i];
+                    }
+                    return weight == t[indexIn(vars, positions[n])]
+                        && profit == t[indexIn(vars, positions[n + 1])];
+                  })
+              .size();
+      String instance =
+          "run "
+              + run
+              + " weights "
+              + Arrays.toString(weights)
+              + " profits "
+              + Arrays.toString(profits)
+              + " scope "
+              + Arrays.toString(positions);
+      store.impose(
+          new KnapsackDP(
+              profits, weights, Arrays.copyOf(positions, n), positions[n], positions[n + 1]));
+      int found = store.consistency() ? countSolutions(store, vars, random) : 0;
+      assertThat(found).as(instance).isEqualTo(expected);
+    }
+  }
+
+  private static int indexIn(IntVar[] vars, IntVar v) {
+    for (int i = 0; i < vars.length; i++) {
+      if (vars[i] == v) {
+        return i;
+      }
+    }
+    throw new IllegalArgumentException(v.id());
   }
 
   @Test
@@ -10220,6 +10403,33 @@ class SingleConstraintTest extends TestHelper {
     assertThat(cx.max()).isEqualTo(1);
   }
 
+  @Test
+  void elementIsNotQueuedForAPositionTheIndexCannotSelect() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "i", 1, 3);
+    IntVar[] list = new IntVar[3];
+    for (int p = 0; p < 3; p++) {
+      list[p] = new IntVar(store, "x" + p, 0, 10);
+    }
+    IntVar value = new IntVar(store, "v", 0, 10);
+    store.impose(new ElementVariableFast(index, list, value));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    index.domain.in(store.level, index, 1, 2);
+    assertThat(store.consistency()).isTrue();
+    // the third position cannot be selected: its change does not wake the element
+    list[2].domain.in(store.level, list[2], 5, 5);
+    long calls = store.numberConsistencyCalls;
+    assertThat(store.consistency()).isTrue();
+    assertThat(store.numberConsistencyCalls).isEqualTo(calls);
+    // a change at a selectable position still prunes the value
+    list[0].domain.in(store.level, list[0], 7, 7);
+    list[1].domain.in(store.level, list[1], 8, 8);
+    assertThat(store.consistency()).isTrue();
+    assertThat(value.min()).isEqualTo(7);
+    assertThat(value.max()).isEqualTo(8);
+  }
+
   /**
    * An exact TableCover requires the values that tuples cover in the range of the domains, but a
    * value that no variable can take (a hole in that range) cannot be taken: the all different over
@@ -10373,5 +10583,96 @@ class SingleConstraintTest extends TestHelper {
       v = parent[v];
     }
     return v;
+  }
+
+  @Test
+  void forestCutsHoldOnEveryForest() {
+    // the generalized subtour elimination cuts of a Forest (SuccessorForestDetector) cut off a
+    // fractional cycle and hold on every assignment the Forest accepts, over all 0/1 assignments
+    // of 4 nodes and the 6 edges between them
+    int[] tail = {0, 0, 0, 1, 1, 2};
+    int[] head = {1, 2, 3, 2, 3, 3};
+    Store store = new Store();
+    IntVar[] ns = new IntVar[4];
+    IntVar[] es = new IntVar[6];
+    for (int i = 0; i < ns.length; i++) {
+      ns[i] = new IntVar(store, "n" + i, 0, 1);
+    }
+    for (int e = 0; e < es.length; e++) {
+      es[e] = new IntVar(store, "e" + e, 0, 1);
+    }
+    Forest forest = new Forest(ns, es, tail, head);
+    TreeCuts cuts = TreeCuts.of(forest);
+    assertThat(cuts).isNotNull();
+    // the triangle 0-1-2 with its edges at 1 and at 0.8 (node 3 out): 3 and 2.4 > 3 - 1
+    double[][] points = {{1, 1, 1, 1, 1, 1, 0, 1, 0, 0}, {1, 1, 1, 0, 0.8, 0.8, 0, 0.8, 0, 0}};
+    List<TreeCuts.Cut> found = new ArrayList<>();
+    for (double[] point : points) {
+      List<TreeCuts.Cut> c = cuts.separate(point, 10);
+      assertThat(c).isNotEmpty();
+      found.addAll(c);
+    }
+    int forests = 0;
+    for (int bits = 0; bits < 1 << 10; bits++) {
+      int level = store.level;
+      store.setLevel(level + 1);
+      int[] value = new int[10];
+      for (int a = 0; a < 10; a++) {
+        value[a] = bits >> a & 1;
+        IntVar v = a < 4 ? ns[a] : es[a - 4];
+        v.domain.in(store.level, v, value[a], value[a]);
+      }
+      if (forest.satisfied()) {
+        forests++;
+        for (TreeCuts.Cut cut : found) {
+          int lhs = 0;
+          for (int e : cut.edges()) {
+            lhs += value[4 + e];
+          }
+          for (int i : cut.nodes()) {
+            lhs -= value[i];
+          }
+          assertThat(lhs).as("cut on assignment %s", Arrays.toString(value)).isLessThanOrEqualTo(0);
+        }
+      }
+      store.removeLevel(level + 1);
+      store.setLevel(level);
+    }
+    // as many assignments as a plain count over all subsets gives
+    assertThat(forests).isEqualTo(countForests(tail, head, 4));
+  }
+
+  // the assignments of nodes and edges where every selected edge joins two selected nodes and the
+  // selected edges have no cycle, by a plain count over all subsets
+  private static int countForests(int[] tail, int[] head, int n) {
+    int count = 0;
+    for (int nodes = 0; nodes < 1 << n; nodes++) {
+      for (int edges = 0; edges < 1 << tail.length; edges++) {
+        boolean ok = true;
+        int[] parent = new int[n];
+        for (int i = 0; i < n; i++) {
+          parent[i] = i;
+        }
+        for (int e = 0; e < tail.length && ok; e++) {
+          if ((edges >> e & 1) == 1) {
+            int a = tail[e];
+            int b = head[e];
+            ok = (nodes >> a & 1) == 1 && (nodes >> b & 1) == 1;
+            while (parent[a] != a) {
+              a = parent[a];
+            }
+            while (parent[b] != b) {
+              b = parent[b];
+            }
+            ok &= a != b;
+            parent[a] = b;
+          }
+        }
+        if (ok) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 }

@@ -68,6 +68,16 @@ class SymmetryBreakingFlatzincTest {
 
   @TempDir Path tmp;
 
+  /**
+   * Fails unless a run printed a solution or proved the model unsatisfiable, so that a model the
+   * front end rejects (it printed an error on stderr) does not pass every comparison unchecked.
+   */
+  private static void assertAnswered(String out, String model) {
+    assertTrue(
+        out.contains("----------") || out.contains("=====UNSATISFIABLE====="),
+        "no answer for\n" + model + "\n" + out);
+  }
+
   @Test
   void pigeonholeIsRefutedWithFewFailures() throws IOException {
     int holes = 7;
@@ -366,6 +376,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
       String what = "trial " + trial + "\n" + model + "\n" + on;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
@@ -374,7 +385,7 @@ class SymmetryBreakingFlatzincTest {
         assertEquals(objective(off), objective(on), what);
       }
       // without presolve, as fzn-jacop runs by default; compared with LCG without symmetry
-      // breaking, since LCG rejects some of these models (array_int_maximum) that CP refutes
+      // breaking
       String lcgOff = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
       String lcgOn = FlatzincTestRunner.run(tmp, model, "--symmetry", "on", "--lcg");
       // a search for the largest values first keeps the largest solution of each orbit
@@ -416,7 +427,8 @@ class SymmetryBreakingFlatzincTest {
               default -> randomMatrixModel(random, optimise);
             };
         String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
-        // LCG rejects some variable-symmetric models (array_int_maximum) that CP refutes
+        assertAnswered(off, model);
+        // the LCG arms of variable-symmetric models are compared with LCG without symmetry breaking
         String lcgOff =
             kind == 0 ? FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg") : off;
         String what = "trial " + trial + "\n" + model;
@@ -472,6 +484,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomSetModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -568,6 +581,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomSetValueModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -795,6 +809,7 @@ class SymmetryBreakingFlatzincTest {
       String model = randomEncodedModel(random, optimise);
       String what = "trial " + trial + "\n" + model;
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off");
+      assertAnswered(off, model);
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
           new String[][] {
@@ -1141,6 +1156,155 @@ class SymmetryBreakingFlatzincTest {
     assertEquals(3, objective(on, "colours"), on);
   }
 
+  /**
+   * A bin packing that minimizes the bins used, flattened as MiniZinc flattens {@code bin[i] <=
+   * bins} and {@code b > bins -> load[b] = 0}: {@code bool_clause([r1, r2], [])} with {@code
+   * int_eq_imp(load[b], 0, r1)} and {@code int_le_imp(c, bins, r2)}, here with c = b + shift.
+   */
+  private static String emptiedBins(int shift) {
+    return emptiedBins(new int[] {5, 5, 4, 4, 3, 3}, 9, 4, shift);
+  }
+
+  private static String emptiedBins(int[] sizes, int capacity, int bins, int shift) {
+    StringBuilder fzn = new StringBuilder("var 1..").append(bins).append(": bins :: output_var;\n");
+    for (int b = 1; b <= bins; b++) {
+      fzn.append("var 0..").append(capacity).append(": l").append(b).append(";\n");
+    }
+    StringBuilder xs = new StringBuilder();
+    StringBuilder ls = new StringBuilder();
+    StringBuilder ws = new StringBuilder();
+    for (int i = 0; i < sizes.length; i++) {
+      fzn.append("var 1..").append(bins).append(": x").append(i).append(" :: output_var;\n");
+      xs.append(i == 0 ? "" : ",").append('x').append(i);
+      ws.append(i == 0 ? "" : ",").append(sizes[i]);
+    }
+    for (int b = 1; b <= bins; b++) {
+      ls.append(b == 1 ? "" : ",").append('l').append(b);
+    }
+    for (int b = 2; b <= bins; b++) {
+      fzn.append("var bool: e").append(b).append(";\nvar bool: a").append(b).append(";\n");
+    }
+    fzn.append("constraint jacop_bin_packing([")
+        .append(xs)
+        .append("],[")
+        .append(ls)
+        .append("],[")
+        .append(ws)
+        .append("],1);\n");
+    for (int i = 0; i < sizes.length; i++) {
+      fzn.append("constraint int_lin_le([1,-1],[x").append(i).append(",bins],0);\n");
+    }
+    for (int b = 2; b <= bins; b++) {
+      fzn.append("constraint bool_clause([e").append(b).append(",a").append(b).append("],[]);\n");
+      fzn.append("constraint int_eq_imp(l").append(b).append(",0,e").append(b).append(");\n");
+      fzn.append("constraint int_le_imp(")
+          .append(b + shift)
+          .append(",bins,a")
+          .append(b)
+          .append(");\n");
+    }
+    fzn.append("solve minimize bins;\n");
+    return fzn.toString();
+  }
+
+  /** The fewest bins of the given capacity that hold the items, by trying every assignment. */
+  private static int fewestBins(int[] sizes, int capacity) {
+    for (int bins = 1; ; bins++) {
+      if (packs(sizes, 0, new int[bins], capacity)) {
+        return bins;
+      }
+    }
+  }
+
+  private static boolean packs(int[] sizes, int i, int[] load, int capacity) {
+    if (i == sizes.length) {
+      return true;
+    }
+    for (int b = 0; b < load.length; b++) {
+      if (load[b] + sizes[i] <= capacity) {
+        load[b] += sizes[i];
+        boolean ok = packs(sizes, i + 1, load, capacity);
+        load[b] -= sizes[i];
+        if (ok) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  @Test
+  void binCompletionPacksShuffledTripletsAtTheBound() throws IOException {
+    // three bins of 10, each full with three items, listed out of order: bin completion finds the
+    // packing at the bound, which is printed as the first solution and proved optimal
+    int[] sizes = {4, 3, 2, 5, 3, 3, 2, 4, 4};
+    String out =
+        FlatzincTestRunner.run(
+            tmp,
+            emptiedBins(sizes, 10, 5, 0),
+            "--search-statistics",
+            "--presolve",
+            "check",
+            "--lcg",
+            "on");
+    assertTrue(out.contains("binCompletionFound=true"), out);
+    assertEquals(3, objective(out, "bins"), out);
+    assertTrue(out.contains("=========="), out);
+  }
+
+  @Test
+  void binCompletionAgreesWithBruteForce() throws IOException {
+    Random random = new Random(5);
+    for (int trial = 0; trial < 12; trial++) {
+      int n = 3 + random.nextInt(5);
+      int capacity = 6 + random.nextInt(8);
+      int[] sizes = new int[n];
+      for (int i = 0; i < n; i++) {
+        sizes[i] = 1 + random.nextInt(capacity);
+      }
+      int optimum = fewestBins(sizes, capacity);
+      for (String completion : new String[] {"on", "off"}) {
+        String out =
+            FlatzincTestRunner.run(
+                tmp,
+                emptiedBins(sizes, capacity, n, 0),
+                "--presolve",
+                "check",
+                "--lcg",
+                "on",
+                "--free-config",
+                "bin-completion=" + completion);
+        assertEquals(optimum, objective(out, "bins"), Arrays.toString(sizes) + " " + out);
+        assertTrue(out.contains("=========="), out);
+      }
+    }
+  }
+
+  @Test
+  void binsEmptiedAboveTheObjectiveKeepValuePrecedence() throws IOException {
+    // z < b -> load[b] = 0 bounds the bins used like x <= z: relabelling the bins by first use
+    // leaves every bin above the largest one used empty, so the bins get a value precedence chain
+    for (String lcg : new String[] {"on", "off"}) {
+      String on =
+          FlatzincTestRunner.run(
+              tmp, emptiedBins(0), "--search-statistics", "--presolve", "check", "--lcg", lcg);
+      assertEquals(1, precedences(on), on);
+      assertEquals(3, objective(on, "bins"), on);
+    }
+  }
+
+  @Test
+  void binsEmptiedBelowTheirNumberStayDistinct() throws IOException {
+    // z < b + 1 -> load[b] = 0 also empties bin b when z = b, so bin b is not like the bins below
+    // it
+    String on =
+        FlatzincTestRunner.run(tmp, emptiedBins(1), "--search-statistics", "--presolve", "check");
+    assertEquals(0, precedences(on), on);
+    // bin b holds items only when bins > b, bin 4 never: with 3 bins only bins 1 and 2 hold the
+    // items (24 > 2 * 9), with 4 bins bins 1 to 3 do
+    assertEquals(4, objective(on, "bins"), on);
+  }
+
   @Test
   void haplotypesChosenByIndexAreInterchangeable() throws IOException {
     // pure parsimony haplotyping: three genotypes, each explained by two of k binary haplotypes
@@ -1179,6 +1343,7 @@ class SymmetryBreakingFlatzincTest {
       }
       String model = haplotypeModel(genotypes, 2 + random.nextInt(3), random.nextBoolean());
       String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg");
+      assertAnswered(off, model);
       String on = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--presolve", "check");
       String lcg = FlatzincTestRunner.run(tmp, model, "--search-statistics", "--lcg");
       boolean refuted = off.contains("=====UNSATISFIABLE=====");
@@ -1371,6 +1536,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomValueModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String what = "trial " + trial + "\n" + model;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
@@ -1412,6 +1578,7 @@ class SymmetryBreakingFlatzincTest {
       boolean optimise = random.nextBoolean();
       String model = randomMatrixModel(random, optimise);
       String off = FlatzincTestRunner.run(tmp, model, "--presolve", "off");
+      assertAnswered(off, model);
       String what = "trial " + trial + "\n" + model;
       boolean unsat = off.contains("=====UNSATISFIABLE=====");
       for (String[] options :
@@ -1671,9 +1838,7 @@ class SymmetryBreakingFlatzincTest {
         for (int i = 0; i < bounded; i++) {
           xs.add("x" + i);
         }
-        fzn.append("constraint array_int_maximum(obj,[")
-            .append(String.join(",", xs))
-            .append("]);\n");
+        fzn.append("constraint jacop_maximum(obj,[").append(String.join(",", xs)).append("]);\n");
       } else {
         for (int i = 0; i < bounded; i++) {
           fzn.append(
@@ -1980,7 +2145,7 @@ class SymmetryBreakingFlatzincTest {
                       + ")";
           case 7 ->
               (xs, bs) ->
-                  "array_int_maximum("
+                  "jacop_maximum("
                       + xv(xs, 3)
                       + ",["
                       + xv(xs, 0)
@@ -2072,6 +2237,7 @@ class SymmetryBreakingFlatzincTest {
       String model = patienceModel(random, trial % 3 == 2);
       for (String lcg : new String[] {"on", "off"}) {
         String off = FlatzincTestRunner.run(tmp, model, "--symmetry", "off", "--lcg", lcg);
+        assertAnswered(off, model);
         String on =
             FlatzincTestRunner.run(
                 tmp, model, "--search-statistics", "--symmetry", "on", "--lcg", lcg);

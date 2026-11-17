@@ -62,20 +62,30 @@ class LpProbeFlatzincTest {
 
   @Test
   void probedSearchKeepsTheOptimumUnderLcg() throws IOException {
-    check(new Random(20261114), 60, "--lcg", "on");
+    check(new Random(20261114), 60, false, "--lcg", "on");
   }
 
   @Test
   void probedSearchKeepsTheOptimumWithoutLcg() throws IOException {
-    check(new Random(20261115), 40, "--lcg", "off");
+    check(new Random(20261115), 40, false, "--lcg", "off");
   }
 
-  private void check(Random random, int models, String... options) throws IOException {
+  @Test
+  void probedSearchKeepsTheOptimumUnderFreeSearch() throws IOException {
+    check(new Random(20261116), 30, true, "-f", "--lcg", "on");
+  }
+
+  // with table, a table over three of the variables: free search's probe solver takes it as
+  // clauses,
+  // and the probe that does not finish must leave it in the store once (imposed a second time, a
+  // HybridTable overran its queue)
+  private void check(Random random, int models, boolean table, String... options)
+      throws IOException {
     int finished = 0;
     int restarted = 0;
     StringBuilder states = new StringBuilder();
     for (int t = 0; t < models; t++) {
-      String fzn = randomModel(random, t % 4 == 3);
+      String fzn = randomModel(random, t % 4 == 3, table);
       String off = run(fzn, 0, options);
       // a probe of 1 ms restarts with the relaxation on some models (how many depends on the speed
       // of the machine: 8-17 of 40 without LCG on a 4-core container, 3-4 on a GitHub runner), a
@@ -86,7 +96,8 @@ class LpProbeFlatzincTest {
         assertEquals(objective(off), objective(on), fzn + "\n" + off + "\n" + on);
         assertTrue(on.contains("==========") || on.contains(UNSAT), fzn + "\n" + on);
         String state = group(PROBE, on);
-        states.append(probe).append(':').append(state).append(' ');
+        if (probe > 1 && "solved".equals(state))
+          states.append(probe).append(':').append(state).append(' ');
         finished += probe > 1 && "finished".equals(state) ? 1 : 0;
         restarted += probe == 1 && "solved".equals(state) ? 1 : 0;
       }
@@ -98,7 +109,7 @@ class LpProbeFlatzincTest {
 
   // a knapsack with several capacity rows and equalities between pairs of items: rows enough for a
   // relaxation, and a search of some thousands of nodes; satisfiable models when unsat is false
-  private static String randomModel(Random random, boolean unsat) {
+  private static String randomModel(Random random, boolean unsat, boolean table) {
     int n = 10 + random.nextInt(5);
     StringBuilder fzn = new StringBuilder();
     for (int j = 0; j < n; j++) {
@@ -129,6 +140,20 @@ class LpProbeFlatzincTest {
     a.add("-1");
     x.add("z");
     fzn.append("constraint int_lin_eq(").append(a).append(',').append(x).append(",0);\n");
+    if (table) {
+      // the tuples of x0, x1, x2 (domains 0..3 at least) that are not all equal, two thirds of them
+      StringJoiner tuples = new StringJoiner(",", "[", "]");
+      for (int u = 0; u <= 3; u++) {
+        for (int v = 0; v <= 3; v++) {
+          for (int w = 0; w <= 3; w++) {
+            if (!(u == v && v == w) && random.nextInt(3) > 0) {
+              tuples.add(u + "," + v + "," + w);
+            }
+          }
+        }
+      }
+      fzn.append("constraint jacop_table_int([x0,x1,x2],").append(tuples).append(");\n");
+    }
     StringJoiner vars = new StringJoiner(",", "[", "]");
     for (int j = 0; j < n; j++) {
       vars.add("x" + j);
@@ -162,16 +187,26 @@ class LpProbeFlatzincTest {
     args[options.length + 1] = "-t";
     args[options.length + 2] = "20000";
     args[options.length + 3] = fzn.toString();
-    System.setProperty("org.jacop.fz.lpProbe", Long.toString(probe));
-    System.setProperty("org.jacop.fz.lpProbeSize", "0");
+    // the build sets org.jacop.fz.lpProbe to 0 for every test (pom.xml): restore it afterwards, as
+    // clearing it turned the 200 ms probe on for the tests that ran later in the same JVM
+    String previousProbe = System.setProperty("org.jacop.fz.lpProbe", Long.toString(probe));
+    String previousSize = System.setProperty("org.jacop.fz.lpProbeSize", "0");
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);
       new Fz2jacop().callMain(args);
     } finally {
       System.setOut(originalOut);
-      System.clearProperty("org.jacop.fz.lpProbe");
-      System.clearProperty("org.jacop.fz.lpProbeSize");
+      restore("org.jacop.fz.lpProbe", previousProbe);
+      restore("org.jacop.fz.lpProbeSize", previousSize);
     }
     return buffer.toString(StandardCharsets.UTF_8);
+  }
+
+  private static void restore(String key, String value) {
+    if (value == null) {
+      System.clearProperty(key);
+    } else {
+      System.setProperty(key, value);
+    }
   }
 }

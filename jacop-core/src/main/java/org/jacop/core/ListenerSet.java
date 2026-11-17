@@ -81,13 +81,22 @@ final class ListenerSet<T> extends LinkedHashSet<T> {
   @Override
   public boolean remove(Object element) {
     boolean removed = super.remove(element);
-    changed |= removed;
+    if (removed) {
+      dropCopy();
+    }
     return removed;
   }
 
   @Override
   public void clear() {
     super.clear();
+    dropCopy();
+  }
+
+  // the copy of a removed listener would keep it alive until the next call of elements(): a
+  // detached LCG trail kept its whole solver while free search posted 3.5 million clauses
+  private void dropCopy() {
+    elements = EMPTY;
     changed = true;
   }
 
@@ -108,7 +117,7 @@ final class ListenerSet<T> extends LinkedHashSet<T> {
       @Override
       public void remove() {
         iterator.remove();
-        changed = true;
+        dropCopy();
       }
     };
   }

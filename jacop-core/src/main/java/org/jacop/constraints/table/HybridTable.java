@@ -563,6 +563,9 @@ public class HybridTable extends Constraint
     words = valid.words;
     queue = new int[arity];
     queued = new boolean[arity];
+    // an imposition again (LcgSolver.release hands a held table back to the store) starts with an
+    // empty queue: the columns queued by the first one were never taken off it
+    queueSize = 0;
     buildIndex();
 
     state = valid.state;

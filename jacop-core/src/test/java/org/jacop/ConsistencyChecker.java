@@ -178,6 +178,20 @@ class ConsistencyChecker {
   private static final int DIVES = 3;
 
   /**
+   * Repeated-variable mode, from -Dconsistency.repeated=true: the variable helpers of the
+   * generators return, about a third of the time, a variable created earlier for the same instance
+   * whose domain fits the requested range, so a constraint sees one variable at several positions
+   * of its scope.
+   */
+  static final boolean REPEATED = Boolean.getBoolean("consistency.repeated");
+
+  /** The variables created so far for the current instance, while repeated-variable mode is on. */
+  private static List<IntVar> pool;
+
+  /** The random generator of the current instance, to pick a repeated variable. */
+  private static Random poolRandom;
+
+  /**
    * Whether vars[i] = value has a support with the other variables anywhere in the real box lo..hi.
    */
   interface RealSupport {
@@ -192,6 +206,27 @@ class ConsistencyChecker {
 
     Model(Object constraint, Predicate<int[]> relation, IntVar[] vars) {
       this(constraint, relation, vars, null);
+    }
+
+    /** For each position, the first position holding the same variable. */
+    int[] alias() {
+      int[] first = new int[vars.length];
+      for (int i = 0; i < vars.length; i++) {
+        first[i] = i;
+        for (int j = 0; j < i; j++) {
+          if (vars[j] == vars[i]) {
+            first[i] = j;
+            break;
+          }
+        }
+      }
+      return first;
+    }
+
+    /** Whether some variable appears at more than one position. */
+    boolean repeats() {
+      int[] first = alias();
+      return IntStream.range(0, first.length).anyMatch(i -> first[i] != i);
     }
 
     @SuppressWarnings("unchecked")
@@ -217,6 +252,15 @@ class ConsistencyChecker {
     final String name;
     int nodes;
     int skipped;
+
+    /** Instances whose constructor or imposition rejected the variables, in repeated mode. */
+    int rejected;
+
+    String rejectedExample;
+
+    /** Instances with a repeated variable, in repeated mode. */
+    int repeated;
+
     boolean realChecked = true;
 
     /** Nodes where a bound has no support but running the constraint again would prune more. */
@@ -260,6 +304,12 @@ class ConsistencyChecker {
       if (skipped > 0) {
         b.append(" skipped ").append(skipped);
       }
+      if (REPEATED) {
+        b.append(" repeated ").append(repeated);
+      }
+      if (rejected > 0) {
+        b.append(" rejected ").append(rejected).append(" (").append(rejectedExample).append(')');
+      }
       if (notFixpoint > 0) {
         b.append(" not at fixpoint ").append(notFixpoint);
       }
@@ -289,12 +339,44 @@ class ConsistencyChecker {
     Random random = new Random(seed);
     for (int run = 0; run < instances && result.errors.size() < 5; run++) {
       Store store = new Store();
-      Model m = c.generator().apply(store, random);
+      pool = REPEATED ? new ArrayList<>() : null;
+      poolRandom = random;
+      Model m;
+      try {
+        m = c.generator().apply(store, random);
+      } catch (IllegalArgumentException e) {
+        if (!REPEATED) {
+          throw e;
+        }
+        result.rejected++;
+        result.rejectedExample =
+            result.rejectedExample == null ? e.toString() : result.rejectedExample;
+        continue;
+      } finally {
+        pool = null;
+      }
+      if (REPEATED && !m.repeats()) {
+        continue;
+      }
+      result.repeated += REPEATED ? 1 : 0;
       String instance =
           c.name() + " run " + run + " " + domainsOf(m.vars()) + describe(m.constraint());
       result.realChecked &= m.real() != null;
       List<int[]> before = solutions(m);
-      m.post(store);
+      try {
+        m.post(store);
+      } catch (IllegalArgumentException e) {
+        if (!REPEATED) {
+          throw e;
+        }
+        result.rejected++;
+        result.rejectedExample =
+            result.rejectedExample == null ? e.toString() : result.rejectedExample;
+        continue;
+      } catch (RuntimeException e) {
+        result.errors.add(instance + " impose threw " + e);
+        continue;
+      }
       boolean consistent = propagate(store, result, instance);
       checkNode(result, instance, store, m, before, consistent);
       if (!consistent) {
@@ -304,7 +386,8 @@ class ConsistencyChecker {
       for (int dive = 0; dive < DIVES; dive++) {
         StringBuilder path = new StringBuilder(instance).append(" then");
         while (true) {
-          List<IntVar> free = Arrays.stream(m.vars()).filter(v -> !v.singleton()).toList();
+          List<IntVar> free =
+              Arrays.stream(m.vars()).filter(v -> !v.singleton()).distinct().toList();
           if (free.isEmpty()) {
             break;
           }
@@ -312,6 +395,7 @@ class ConsistencyChecker {
           path.append(' ').append(decide(store, free.get(random.nextInt(free.size())), random));
           before = solutions(m);
           String atNode = path + " gives " + domainsOf(m.vars());
+          checkSatisfiedBefore(result, path.toString(), m);
           consistent = propagate(store, result, atNode);
           checkNode(result, atNode, store, m, before, consistent);
           if (!consistent) {
@@ -325,6 +409,68 @@ class ConsistencyChecker {
       }
     }
     return result;
+  }
+
+  /**
+   * Whether satisfied() claims nothing false: when it says true, every tuple of the domains is a
+   * solution. Checked after propagation and also just after a decision, before propagation, since
+   * the LCG represolve and the FlatZinc component split drop a constraint that says it is satisfied
+   * at whatever state they find it.
+   */
+  private static boolean satisfiedIsSound(
+      Result result, String where, Model m, int[] lo, int[] hi, int[] first) {
+    IntVar[] vars = m.vars();
+    if (m.constraint() instanceof org.jacop.api.SatisfiedPresent sp) {
+      boolean claimed;
+      try {
+        claimed = sp.satisfied();
+      } catch (RuntimeException e) {
+        result.errors.add(where + ": satisfied() threw " + e);
+        return false;
+      }
+      if (claimed) {
+        int[][] counter = new int[1][];
+        forEachTuple(
+            lo,
+            hi,
+            first,
+            t -> {
+              if (counter[0] == null && inDomains(vars, t) && !m.relation().test(t)) {
+                counter[0] = t.clone();
+              }
+            });
+        if (counter[0] != null) {
+          result.errors.add(
+              where
+                  + ": satisfied() is true, but "
+                  + Arrays.toString(counter[0])
+                  + " is no solution");
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /** The satisfied() check on the domains a decision left, before propagation. */
+  private static void checkSatisfiedBefore(Result result, String where, Model m) {
+    if (m.constraint() instanceof DifferenceCycles || m.constraint() instanceof EnergyPrecedence) {
+      return;
+    }
+    IntVar[] vars = m.vars();
+    int n = vars.length;
+    int[] lo = new int[n];
+    int[] hi = new int[n];
+    for (int i = 0; i < n; i++) {
+      if (vars[i].domain.isEmpty()) {
+        return;
+      }
+      lo[i] = vars[i].min();
+      hi[i] = vars[i].max();
+    }
+    if (boxSize(lo, hi, m.alias()) <= MAX_BOX) {
+      satisfiedIsSound(result, where + " (before propagation)", m, lo, hi, m.alias());
+    }
   }
 
   /** The constraint's own text, with -Dconsistency.describe=true, to read a counterexample. */
@@ -387,14 +533,29 @@ class ConsistencyChecker {
       }
     }
     int n = vars.length;
+    int[] first = m.alias();
     int[] lo = new int[n];
     int[] hi = new int[n];
     for (int i = 0; i < n; i++) {
       lo[i] = vars[i].min();
       hi[i] = vars[i].max();
     }
-    if (boxSize(lo, hi) > MAX_BOX) {
+    if (boxSize(lo, hi, first) > MAX_BOX) {
       result.skipped++;
+      return;
+    }
+    // DifferenceCycles and EnergyPrecedence add pruning to precedences the model posts itself, so
+    // they may accept a fixed assignment that breaks one of them
+    boolean complete =
+        !(m.constraint() instanceof DifferenceCycles || m.constraint() instanceof EnergyPrecedence);
+    if (complete && Arrays.stream(vars).allMatch(IntVar::singleton)) {
+      int[] t = Arrays.stream(vars).mapToInt(IntVar::value).toArray();
+      if (!m.relation().test(t)) {
+        result.errors.add(where + ": accepted the non-solution " + Arrays.toString(t));
+        return;
+      }
+    }
+    if (complete && !satisfiedIsSound(result, where, m, lo, hi, first)) {
       return;
     }
     // supportedZ[i][k]: value lo[i] + k of vars[i] has a support in the intervals; supportedD in
@@ -408,6 +569,7 @@ class ConsistencyChecker {
     forEachTuple(
         lo,
         hi,
+        first,
         t -> {
           if (m.relation().test(t)) {
             boolean inDomains = inDomains(vars, t);
@@ -472,13 +634,15 @@ class ConsistencyChecker {
     IntVar[] vars = m.vars();
     int[] lo = Arrays.stream(vars).mapToInt(IntVar::min).toArray();
     int[] hi = Arrays.stream(vars).mapToInt(IntVar::max).toArray();
-    if (boxSize(lo, hi) > MAX_BOX) {
+    int[] first = m.alias();
+    if (boxSize(lo, hi, first) > MAX_BOX) {
       return null;
     }
     List<int[]> result = new ArrayList<>();
     forEachTuple(
         lo,
         hi,
+        first,
         t -> {
           if (inDomains(vars, t) && m.relation().test(t)) {
             result.add(t.clone());
@@ -487,21 +651,34 @@ class ConsistencyChecker {
     return result;
   }
 
-  private static long boxSize(int[] lo, int[] hi) {
+  /** The number of tuples over the distinct variables, a repeated one counted once. */
+  private static long boxSize(int[] lo, int[] hi, int[] first) {
     long size = 1;
     for (int i = 0; i < lo.length && size <= MAX_BOX; i++) {
-      size *= hi[i] - lo[i] + 1;
+      if (first[i] == i) {
+        size *= hi[i] - lo[i] + 1;
+      }
     }
     return size;
   }
 
-  private static void forEachTuple(int[] lo, int[] hi, java.util.function.Consumer<int[]> action) {
+  /**
+   * Every tuple of the box lo..hi in which positions of one variable hold one value (first[i] is
+   * the first position of the variable at position i).
+   */
+  private static void forEachTuple(
+      int[] lo, int[] hi, int[] first, java.util.function.Consumer<int[]> action) {
     int[] t = lo.clone();
     while (true) {
+      for (int i = 0; i < t.length; i++) {
+        t[i] = t[first[i]];
+      }
       action.accept(t);
       int k = 0;
-      while (k < t.length && t[k] == hi[k]) {
-        t[k] = lo[k];
+      while (k < t.length && (first[k] != k || t[k] == hi[k])) {
+        if (first[k] == k) {
+          t[k] = lo[k];
+        }
         k++;
       }
       if (k == t.length) {
@@ -565,6 +742,10 @@ class ConsistencyChecker {
   }
 
   private static IntVar aVar(Store store, String name, int lo, int hi, Random random) {
+    IntVar again = repeated(lo, hi, false, false);
+    if (again != null) {
+      return again;
+    }
     IntVar v = new IntVar(store, name);
     for (int k = lo; k <= hi; k++) {
       if (random.nextInt(5) > 0) {
@@ -573,6 +754,31 @@ class ConsistencyChecker {
     }
     if (v.getSize() == 0) {
       v.addDom(lo, lo);
+    }
+    return pooled(v);
+  }
+
+  /**
+   * In repeated-variable mode, about a third of the time, a variable of this instance created
+   * earlier whose domain lies in lo..hi (without holes if interval, a BooleanVar if bool); null
+   * otherwise.
+   */
+  private static IntVar repeated(int lo, int hi, boolean interval, boolean bool) {
+    if (pool == null || pool.isEmpty() || poolRandom.nextInt(3) != 0) {
+      return null;
+    }
+    List<IntVar> fit =
+        pool.stream()
+            .filter(v -> v.min() >= lo && v.max() <= hi)
+            .filter(v -> !interval || v.getSize() == v.max() - v.min() + 1)
+            .filter(v -> !bool || v instanceof BooleanVar)
+            .toList();
+    return fit.isEmpty() ? null : fit.get(poolRandom.nextInt(fit.size()));
+  }
+
+  private static <T extends IntVar> T pooled(T v) {
+    if (pool != null) {
+      pool.add(v);
     }
     return v;
   }
@@ -648,15 +854,25 @@ class ConsistencyChecker {
 
   /** A variable over lo..hi with a random sub-interval, so without holes. */
   private static IntVar interval(Store store, String name, int lo, int hi, Random random) {
+    IntVar again = repeated(lo, hi, true, false);
+    if (again != null) {
+      return again;
+    }
     int a = lo + random.nextInt(hi - lo + 1);
     int b = lo + random.nextInt(hi - lo + 1);
-    return new IntVar(store, name, Math.min(a, b), Math.max(a, b));
+    return pooled(new IntVar(store, name, Math.min(a, b), Math.max(a, b)));
   }
 
   private static IntVar[] vars(Store store, String prefix, int n, int lo, int hi, Random random) {
     return IntStream.range(0, n)
         .mapToObj(i -> aVar(store, prefix + i, lo, hi, random))
         .toArray(IntVar[]::new);
+  }
+
+  /** A BooleanVar, or in repeated-variable mode sometimes one created earlier. */
+  private static IntVar aBool(Store store, String name) {
+    IntVar again = repeated(0, 1, true, true);
+    return again != null ? again : pooled(new BooleanVar(store, name));
   }
 
   private static IntVar[] concat(IntVar[]... parts) {
@@ -705,10 +921,7 @@ class ConsistencyChecker {
     IntVar[] b = new IntVar[n];
     for (int i = 0; i < n; i++) {
       w[i] = (1 + random.nextInt(5)) * (random.nextBoolean() ? 1 : -1);
-      b[i] =
-          random.nextBoolean()
-              ? new BooleanVar(store, "b" + i)
-              : aVar(store, "b" + i, 0, 1, random);
+      b[i] = random.nextBoolean() ? aBool(store, "b" + i) : aVar(store, "b" + i, 0, 1, random);
     }
     if (constant) {
       int c = random.nextInt(13) - 6;
@@ -1367,7 +1580,7 @@ class ConsistencyChecker {
             Level.DOMAIN,
             (s, r) -> {
               int c = r.nextInt(7) - 3;
-              IntVar b = r.nextBoolean() ? new BooleanVar(s, "b") : aVar(s, "b", 0, 1, r);
+              IntVar b = r.nextBoolean() ? aBool(s, "b") : aVar(s, "b", 0, 1, r);
               IntVar x = aVar(s, "x", -4, 4, r);
               IntVar z = aVar(s, "z", -4, 4, r);
               return new Model(
@@ -1664,6 +1877,10 @@ class ConsistencyChecker {
         new Case("HybridTableShort", Level.DOMAIN, (s, r) -> hybridTable(s, r, true)),
         // constraint audit, 2026-11-15: constraints added to develop-5.0 since the last round
         new Case("BinaryBitTable", Level.DOMAIN, ConsistencyChecker::binaryBitTable),
+        new Case(
+            "ChannelOrder",
+            SHARED_ORDER_LITERALS ? Level.NONE : Level.DOMAIN,
+            ConsistencyChecker::channelOrder),
         new Case("ArgMax", Level.DOMAIN, (s, r) -> argMaxMonotone(s, r, false)),
         new Case(
             "ArgMin",
@@ -2191,7 +2408,11 @@ class ConsistencyChecker {
 
   private static IntVar[] bools(Store store, String prefix, int n) {
     return IntStream.range(0, n)
-        .mapToObj(i -> new IntVar(store, prefix + i, 0, 1))
+        .mapToObj(
+            i -> {
+              IntVar again = repeated(0, 1, true, false);
+              return again != null ? again : pooled(new IntVar(store, prefix + i, 0, 1));
+            })
         .toArray(IntVar[]::new);
   }
 
@@ -2321,6 +2542,52 @@ class ConsistencyChecker {
   /**
    * A random table of 2 to 4 columns, plain or with unary restrictions (short and smart tables).
    */
+  /*
+   * b[i] <=> (x <= t[i]) when atMost[i], b[i] <=> (x > t[i]) otherwise, an implied item only the
+   * implication b[i] => comparison. Items with their own 0/1 variables reach domain consistency;
+   * with a shared one (consistency.sharedOrder=true, only soundness then) they do not reason
+   * across the items, by design.
+   */
+  private static final boolean SHARED_ORDER_LITERALS =
+      Boolean.getBoolean("consistency.sharedOrder");
+
+  private static Model channelOrder(Store store, Random random) {
+    IntVar x = aVar(store, "x", -2, 5, random);
+    int k = 2 + random.nextInt(3);
+    IntVar[] own = bools(store, "b", k);
+    IntVar[] b = new IntVar[k];
+    int[] t = new int[k];
+    boolean[] atMost = new boolean[k];
+    boolean[] implied = new boolean[k];
+    for (int i = 0; i < k; i++) {
+      b[i] =
+          SHARED_ORDER_LITERALS && i > 0 && random.nextInt(4) == 0 ? b[random.nextInt(i)] : own[i];
+      t[i] = random.nextInt(8) - 2;
+      atMost[i] = random.nextBoolean();
+      implied[i] = random.nextInt(3) == 0;
+    }
+    IntVar[] vars = new IntVar[k + 1];
+    System.arraycopy(own, 0, vars, 0, k);
+    vars[k] = x;
+    int[] index = new int[k];
+    for (int i = 0; i < k; i++) {
+      index[i] = Arrays.asList(own).indexOf(b[i]);
+    }
+    return new Model(
+        new org.jacop.constraints.ChannelOrder(x, b, t, atMost, implied),
+        a -> {
+          for (int i = 0; i < k; i++) {
+            boolean holds = atMost[i] ? a[k] <= t[i] : a[k] > t[i];
+            boolean bi = a[index[i]] == 1;
+            if (implied[i] ? bi && !holds : bi != holds) {
+              return false;
+            }
+          }
+          return true;
+        },
+        vars);
+  }
+
   private static Model binaryBitTable(Store store, Random random) {
     IntVar[] x = vars(store, "x", 2, -1, 4, random);
     int[][] tuples = new int[1 + random.nextInt(12)][];
@@ -2567,9 +2834,12 @@ class ConsistencyChecker {
                       Result result = check(c, INSTANCES, c.name().hashCode());
                       System.out.println(result);
                       assertThat(result.errors).as(result.toString()).isEmpty();
-                      assertThat(result.level())
-                          .as(result.toString())
-                          .isGreaterThanOrEqualTo(c.reaches());
+                      if (!REPEATED) {
+                        // a repeated variable may weaken a propagator; only soundness is checked
+                        assertThat(result.level())
+                            .as(result.toString())
+                            .isGreaterThanOrEqualTo(c.reaches());
+                      }
                     }));
   }
 }
