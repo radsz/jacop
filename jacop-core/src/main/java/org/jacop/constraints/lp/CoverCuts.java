@@ -61,6 +61,9 @@ import java.util.TreeMap;
  * lambda}, and likewise for the second condition. It is the integral step of Gu, Nemhauser and
  * Savelsbergh's function and at least Balas' simultaneous lifting ({@code h} for {@code mu_h <= z <
  * mu_(h+1)}; E. Balas, Facets of the knapsack polytope, Mathematical Programming 8, 1975, 146-164).
+ * By default ({@code -Dorg.jacop.lp.coverScaled=true}) the cut takes their function itself, {@code
+ * g} with its fractional steps, every weight multiplied by {@code rho_1} so that it stays integral
+ * (see {@link #lifted(int, long[], boolean[], long, boolean)}).
  *
  * <p>The cut holds over the global bounds it is given, as the MIR cuts of the same rows do, so it
  * holds everywhere in search.
