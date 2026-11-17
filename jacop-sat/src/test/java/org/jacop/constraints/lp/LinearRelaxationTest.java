@@ -595,7 +595,7 @@ class LinearRelaxationTest {
         }
         double sign = model.maximize ? -1 : 1;
         if (expected[0] == 1) {
-          double optimum = model.maximize ? -expected[1] : expected[1];
+          double optimum = (double) (model.maximize ? -expected[1] : expected[1]);
           assertThat(sign * bound[k]).as("seed %d", run).isLessThanOrEqualTo(sign * optimum + 1e-6);
         }
         if (k == 0) {

@@ -4555,7 +4555,7 @@ public class LinearRelaxation extends Constraint
         }
         break;
       }
-      if (stallKept != null && status == DualSimplex.OPTIMAL) {
+      if (stallKept != null && status == LpSolver.OPTIMAL) {
         cutStallsRecovered++;
         stallKept = null;
         stallRows = null;
@@ -4587,7 +4587,7 @@ public class LinearRelaxation extends Constraint
         break;
       }
     }
-    if (stallKept != null && status == DualSimplex.OPTIMAL) {
+    if (stallKept != null && status == LpSolver.OPTIMAL) {
       // the rounds ended on stalled rounds: their cuts never moved the bound
       dropCuts(stallCuts, stallKept, stallRows);
     }
