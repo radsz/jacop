@@ -833,7 +833,7 @@ public final class FunctionalTabuSearch {
   private boolean walk(BooleanSupplier stop) {
     int nd = decisions.length;
     walks++;
-    long walkSteps = nd / 2 + random.nextInt(nd + 1) + 1;
+    long walkSteps = nd / 2L + random.nextInt(nd + 1) + 1;
     int minTenure = Math.max(1, (int) (walkSteps / 10));
     int extraTenure = Math.max(1, (int) (walkSteps / 50));
     Arrays.fill(tabu, 0);
