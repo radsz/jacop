@@ -142,7 +142,10 @@ final class LinearSplit {
       }
     }
     int size = (int) Math.ceil(Math.sqrt(n));
-    if (tree) {
+    // blocks of one term would leave the sum as long as it was (the threads of a split portfolio
+    // search set lcg-split=1)
+    boolean deeper = tree && limit > 1;
+    if (deeper) {
       size = Math.min(size, limit);
     }
     List<IntVar> sums = new ArrayList<>();
@@ -197,7 +200,7 @@ final class LinearSplit {
     // fails; with only the block sums weighed, cutstock type04_TEST9 found no solution in 60 s
     IntVar[] terms = weighted == null ? x : weighted;
     sum.setWeightedVariables(terms);
-    if (tree && top.length > limit) {
+    if (deeper && top.length > limit && top.length < n) {
       // a sum of more than limit^2 terms: its blocks sum to more than limit terms, split again
       Constraint upper = split(store, sum, limit, true, defined, terms);
       if (upper != null) {

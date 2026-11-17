@@ -2897,16 +2897,16 @@ class FlatzincFrontEndTest {
     for (int run = 0; run < 2; run++) {
       StringBuilder model = new StringBuilder();
       for (int j = 0; j < 6; j++) {
-        model.append("var 0..2: y%d;\n".formatted(j));
+        model.append("var 0..2: y%d;%n".formatted(j));
       }
       for (int i = 0; i < n; i++) {
-        model.append("var 0..2: x%d;\n".formatted(i));
+        model.append("var 0..2: x%d;%n".formatted(i));
       }
       model.append("var -100000..100000: s;\n");
       model.append("var -100000..100000: obj :: output_var;\n");
       for (int i = 0; i < n; i++) {
-        model.append("constraint int_le(x%d, y%d);\n".formatted(i, i % 6));
-        model.append("constraint int_le(y%d, x%d);\n".formatted(i % 6, i));
+        model.append("constraint int_le(x%d, y%d);%n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);%n".formatted(i % 6, i));
       }
       String xs =
           java.util.stream.IntStream.range(0, n)
@@ -2923,11 +2923,11 @@ class FlatzincFrontEndTest {
       }
       // one long sum: two over the same terms would also be factored (linear overlap)
       model.append(
-          "constraint int_lin_le([%s], [%s], %d);\n".formatted("1,1,1,1,1,1", ys, 4 + run));
-      model.append("constraint int_lin_eq([%s,-1], [%s,s], 0);\n".formatted(ws[1], xs));
+          "constraint int_lin_le([%s], [%s], %d);%n".formatted("1,1,1,1,1,1", ys, 4 + run));
+      model.append("constraint int_lin_eq([%s,-1], [%s,s], 0);%n".formatted(ws[1], xs));
       model.append("constraint int_lin_eq([1,1,-1], [s,y0,obj], 0);\n");
       model.append(
-          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;%n"
               .formatted(run == 0 ? "minimize" : "maximize"));
       String cp = lastObjective(run(model.toString()));
       String[] blocks =
