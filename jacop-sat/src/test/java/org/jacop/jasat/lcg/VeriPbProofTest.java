@@ -583,6 +583,31 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("UNSAT");
   }
 
+  @Test
+  void energyOfTasksSharingAStartIsRefuted() {
+    // two tasks start at x0, so under x0 in 1..2 they and the task at x3 in 1..2 need energy 6 in
+    // 1..3, but the energy step gave up on a start in two places (fuzz seed 40273238)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 3);
+    IntVar x3 = values(store, "x3", 0, 1, 2, 4);
+    IntVar x4 = values(store, "x4", 0, 1, 4);
+    IntVar x5 = new IntVar(store, "x5", 1, 2);
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar two = new IntVar(store, "two", 2, 2);
+    store.impose(new AbsXeqY(x5, x3));
+    store.impose(
+        new Cumulative(
+            new IntVar[] {x0, x0, x3},
+            new IntVar[] {one, one, one},
+            new IntVar[] {two, two, two},
+            two));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(x4)).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
+  }
+
   // random fixed tasks under Cumulative (edge finding and energy rules): every reason is a rup
   // step once its overloaded window is summed, and the optimum is the brute-force one
   @Test

@@ -1621,17 +1621,27 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int[] starts = lines.starts();
     int n = starts.length;
-    int[] variables = Arrays.copyOf(starts, n + 1);
-    variables[n] = lines.limit();
+    // a start of several tasks is one variable of the hypotheses (two tasks at x, x in 1..2, need
+    // the energy of both in 1..3), whose domain each of its tasks takes
+    int[] slot = new int[n + 1];
     Map<Integer, Integer> position = new HashMap<>();
     for (int j = 0; j <= n; j++) {
-      if (position.put(variables[j], j) != null) {
-        return; // a variable in two places
-      }
+      int variable = j < n ? starts[j] : lines.limit();
+      Integer seen = position.putIfAbsent(variable, position.size());
+      slot[j] = seen == null ? position.size() - 1 : seen;
     }
+    if (slot[n] != position.size() - 1) {
+      return; // the limit is a start
+    }
+    int[] variables = new int[position.size()];
+    position.forEach((variable, j) -> variables[j] = variable);
+    IntDomain[] unique = new IntDomain[variables.length];
+    hypotheses(
+        position, variables, atoms, from, entry, unique, new StringBuilder[variables.length]);
     IntDomain[] dom = new IntDomain[n + 1];
-    StringBuilder[] literals = new StringBuilder[n + 1];
-    hypotheses(position, variables, atoms, from, entry, dom, literals);
+    for (int j = 0; j <= n; j++) {
+      dom[j] = unique[slot[j]];
+    }
     for (IntDomain x : dom) {
       if (x.isEmpty()) {
         return; // unit propagation empties the domain
