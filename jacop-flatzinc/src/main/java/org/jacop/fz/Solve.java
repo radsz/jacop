@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntFunction;
+import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
@@ -3466,6 +3467,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (slowCheck != null) {
       slowCheck.interrupt();
+      // a finished virtual thread keeps its task, and the task the solver: free search without
+      // learning, which runs in this frame, would keep the solver and its clauses
+      slowCheck = null;
     }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
@@ -3530,8 +3534,26 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
   private volatile int lcgSlowDeferred;
-  // the LCG solver free search took over from, for the statistics
-  private LcgSolver slowLcg;
+  // what free search needs of the LCG solver it took over from: the solver itself, with its
+  // clauses and per-variable literal maps, is dropped (rcpsp-wet-diverse j90_48_4 under -f kept
+  // 2.35 million variables' worth of it while the clauses were posted again, and ran out of 4 GB)
+  private SlowLcg slowLcg;
+
+  /**
+   * The LCG solver that gave way to search without learning, as far as free search and the
+   * statistics need it.
+   *
+   * @param conflicts the conflicts of LCG search
+   * @param deadline the deadline of LCG search, a time of its clock
+   * @param clock the clock of LCG search, still running
+   */
+  record SlowLcg(long conflicts, long deadline, LongSupplier clock) {
+    static SlowLcg of(LcgSolver solver) {
+      return new SlowLcg(
+          solver.sat().conflicts, solver.sat().deadline(), solver.sat().stoppedClock());
+    }
+  }
+
   private long lcgStart;
 
   // the wait of the slow LCG check (nanoseconds of CdclSolver.now), and the time before which it
@@ -4046,31 +4068,44 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * solution of LCG, with its values first, and must improve on it.
    */
   private boolean continueWithoutLcg(Var costVar) {
-    slowLcg = lcg;
-    lcg = null;
-    slowLcg.release();
+    // in a method of its own: a local of this frame would keep the solver during free search
+    releaseSlowLcg();
+    // the clauses go to the store once the solver is gone: on rcpsp-wet-diverse j90_48_4 posting
+    // its 3.5 million clauses next to it filled 6 GB
     postCollectedClauses();
+    return executeFreeSearch(costVar) || numberSolutions > 0;
+  }
+
+  /**
+   * Keeps what free search needs of the LCG solver that gave way, its best solution as a hint among
+   * it, and hands its constraints back to the store.
+   */
+  private void releaseSlowLcg() {
+    LcgSolver stopped = lcg;
+    lcg = null;
+    slowLcg = SlowLcg.of(stopped);
     if (numberSolutions > 0) {
       List<IntVar> hinted = new ArrayList<>();
       List<Integer> values = new ArrayList<>();
       for (IntVar x : hintedVariables()) {
-        if (slowLcg.hasValue(x)) {
+        if (stopped.hasValue(x)) {
           hinted.add(x);
-          values.add(slowLcg.value(x));
+          values.add(stopped.value(x));
         }
       }
       lcgHinted = hinted.toArray(new IntVar[0]);
       lcgHint = values.stream().mapToInt(Integer::intValue).toArray();
     }
+    // after reading the solution: reading numbers the variables for the trail again
+    stopped.release();
     if (options.debug()) {
       IO.println(
           "%% LCG stopped after "
-              + slowLcg.sat().conflicts
+              + slowLcg.conflicts()
               + " conflicts in "
-              + String.format(Locale.ROOT, "%.1f", (slowLcg.sat().now() - lcgStart) / 1e9)
+              + String.format(Locale.ROOT, "%.1f", (slowLcg.clock().getAsLong() - lcgStart) / 1e9)
               + " s; free search without learning");
     }
-    return executeFreeSearch(costVar) || numberSolutions > 0;
   }
 
   // the search of the annotation, for fixed search when LCG gives way to it
@@ -4088,14 +4123,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return whether a solution was found
    */
   private boolean continueFixedWithoutLcg(Var costVar) {
-    slowLcg = lcg;
+    slowLcg = SlowLcg.of(lcg);
+    lcg.release();
     lcg = null;
-    slowLcg.release();
     postCollectedClauses();
     if (options.debug()) {
       IO.println(
           "%% LCG stopped after "
-              + slowLcg.sat().conflicts
+              + slowLcg.conflicts()
               + " conflicts without a solution; the annotation's search without learning");
     }
     if (restartCalculator != null) {
@@ -6136,7 +6171,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // time-out, counted in propagations, so that the run repeats whatever the load
       long left =
           slowLcg != null
-              ? Math.max(1, (slowLcg.sat().deadline() - slowLcg.sat().now()) / 1_000_000L)
+              ? Math.max(1, (slowLcg.deadline() - slowLcg.clock().getAsLong()) / 1_000_000L)
               : options.getTimeOut();
       builder.timeLimit(Duration.ofMillis(left));
     } else if (options.getTimeOut() > 0) {
@@ -7327,7 +7362,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             (int) freeSearch.getSolutions());
         if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
-          IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
+          IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.conflicts());
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
           IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
           IO.println("%%%mzn-stat: lcgHopeless=" + lcgHopeless);

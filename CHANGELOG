@@ -7601,6 +7601,18 @@ Version 5.0 (unreleased)
    the same results. --substitute 0 and --congruence 0 in CdclMain,
    -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
    it off.
+421. Free search without learning (-f, when LCG free search gives way)
+   no longer keeps the LCG solver it took over from: its SAT clauses,
+   trail and three literal maps per variable stayed live next to the
+   clauses posted again as constraints. Five references held it: the
+   solver kept for its statistics, the finished speed-check thread, the
+   trail pointer of every Boolean variable (AtomicTrail.detach now clears
+   it), a local of the method that runs free search, and the store's
+   cached copy of its level listeners after the trail was removed
+   (ListenerSet now drops the copy on removal). On rcpsp-wet-diverse
+   j90_48_4 (MiniZinc Challenge 2019, 2.35 million variables) with a
+   6 GB heap the live heap in free search is 4.3-4.8 GB instead of the
+   whole 6 GB.
 
 Version 4.11
 =============
