@@ -4661,7 +4661,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           in.addAll(Arrays.asList(list));
           boolean covers = true;
           for (IntVar x : vars) {
-            if (!x.singleton() && !in.contains(x)) {
+            // a variable in no constraint, such as a cell outside the board of an XCSP grid,
+            // takes any value of its domain and leaves the dive's solution one
+            if (!x.singleton() && !in.contains(x) && x.dom().sizeConstraints() > 0) {
               covers = false;
               break;
             }
