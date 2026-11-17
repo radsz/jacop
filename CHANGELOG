@@ -7771,6 +7771,19 @@ Version 5.0 (unreleased)
    j90_48_4 (MiniZinc Challenge 2019, 2.35 million variables) with a
    6 GB heap the live heap in free search is 4.3-4.8 GB instead of the
    whole 6 GB.
+422. The root cut rounds of the linear relaxation go past up to two rounds
+   that leave the LP bound unchanged, instead of stopping at the first.
+   The first rounds of a dual degenerate LP often change only the basis;
+   the next round then moves the bound (MIPLIB p2756: root bound
+   2689.7 -> 3102 for the optimum 3124, proved in about 100 s under
+   default search and -f at 600 s, unproved before). Cuts of stalled
+   rounds that never move the bound are dropped again. A stalled round
+   happens on 39 of the 240 wide instances and the bound moves after it
+   on 6; at 600 s these 39 solve 29 = 29 (default) and 31 -> 32 (-f,
+   total time 0.92), a 29-instance MIPLIB set 17 -> 16 and 17 -> 18 (the
+   default-mode losses have no stalled round). The extra rounds cost a
+   median of 0.00 s, at most 0.25 s. -Dorg.jacop.lp.cutStalls=0 restores
+   the old rule; statistics lpCutStalls and lpCutStallsRecovered.
 
 Version 4.11
 =============

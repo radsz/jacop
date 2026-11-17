@@ -564,6 +564,68 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Root cut rounds that leave the bound unchanged (a dual degenerate optimum) no longer end the
+   * rounds: the next round goes on from the new basis. The optimum stays, the bound stays below it,
+   * the rounds past a stall raise the bound on some models, and a run of stalled rounds that never
+   * moves the bound leaves no cut of it behind.
+   */
+  @Test
+  void cutRoundsPastStalledRoundsKeepTheOptimum() {
+    int stalled = 0;
+    int recovered = 0;
+    int stronger = 0;
+    int weaker = 0;
+    for (int run = 0; run < RUNS; run++) {
+      Model probe = new Model(run);
+      if (probe.objective == null) {
+        continue;
+      }
+      long[] expected = search(probe);
+      double[] bound = new double[2];
+      for (int k = 0; k < 2; k++) {
+        Model model = new Model(run);
+        LinearRelaxation r = new LinearRelaxation(model.rows, model.objective, model.maximize);
+        r.setCutStalls(k == 0 ? 0 : 2);
+        model.store.impose(r);
+        long[] actual = search(model);
+        assertThat(actual).as("seed %d stalls %d", run, 2 * k).isEqualTo(expected);
+        bound[k] = r.calls == 0 ? Double.NaN : r.cutBound;
+        if (Double.isNaN(bound[k])) {
+          continue;
+        }
+        double sign = model.maximize ? -1 : 1;
+        if (expected[0] == 1) {
+          double optimum = model.maximize ? -expected[1] : expected[1];
+          assertThat(sign * bound[k]).as("seed %d", run).isLessThanOrEqualTo(sign * optimum + 1e-6);
+        }
+        if (k == 0) {
+          assertThat(r.cutStalls).as("seed %d", run).isZero();
+        } else {
+          stalled += r.cutStalls > 0 ? 1 : 0;
+          recovered += r.cutStallsRecovered > 0 ? 1 : 0;
+        }
+      }
+      if (!Double.isNaN(bound[0]) && !Double.isNaN(bound[1])) {
+        double gain = probe.maximize ? bound[0] - bound[1] : bound[1] - bound[0];
+        stronger += gain > 1e-6 ? 1 : 0;
+        weaker += gain < -1e-6 ? 1 : 0;
+      }
+    }
+    String seen =
+        "stalled "
+            + stalled
+            + " recovered "
+            + recovered
+            + " stronger "
+            + stronger
+            + " weaker "
+            + weaker;
+    System.out.println("cut stalls: " + seen);
+    assertThat(stalled).as(seen).isPositive();
+    assertThat(stronger).as(seen).isGreaterThanOrEqualTo(weaker);
+  }
+
+  /**
    * With the dense tableau at its size cap, the cut rounds move the rows to the sparse simplex of
    * JaLP; the cuts made there keep the optimum, and the move is undone when they do not raise the
    * bound of the integer objective.

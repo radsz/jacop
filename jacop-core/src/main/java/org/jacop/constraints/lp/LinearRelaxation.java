@@ -802,6 +802,8 @@ public class LinearRelaxation extends Constraint
   /** Statistics: root cut rounds that moved the bound after a stalled round. */
   public long cutStallsRecovered;
 
+  private int stallLimit = CUT_STALLS;
+
   // zero-half cuts in the cut rounds, from sets of tight rows whose sum is odd on the right side
   // (ZeroHalfCuts), rounded with the MIR of divisor 2. Off by default
   // (-Dorg.jacop.lp.zeroHalf=true):
@@ -4531,7 +4533,7 @@ public class LinearRelaxation extends Constraint
               : rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
-        if (stalls < CUT_STALLS) {
+        if (stalls < stallLimit) {
           // a degenerate optimum: the cuts may only have moved the basis, the next round goes on
           // from it
           stalls++;
@@ -4768,6 +4770,16 @@ public class LinearRelaxation extends Constraint
    */
   public void setSlackGomory(boolean on) {
     slackGomory = on;
+  }
+
+  /**
+   * Sets how many root cut rounds that leave the bound unchanged the rounds go past (property
+   * org.jacop.lp.cutStalls, 2 by default; 0 stops at the first such round).
+   *
+   * @param limit the stalled rounds kept
+   */
+  public void setCutStalls(int limit) {
+    stallLimit = limit;
   }
 
   /**
