@@ -7563,6 +7563,215 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+420. Free search (-f) runs a memetic tabu search before lazy clause
+   generation when every constraint of the model defines one variable from
+   others (products and other functional constraints, linear equalities)
+   and the cost is a function of at most 64-value decision variables, as on
+   low autocorrelation binary sequences (Gallardo, Cotta and Fernandez,
+   Finding low autocorrelation binary sequences with memetic algorithms,
+   Applied Soft Computing 9(4), 1252-1262, 2009). org.jacop.fz.FunctionalModel detects such models and
+   org.jacop.search.ls.FunctionalTabuSearch evaluates the definitions
+   incrementally (linear sums by deltas, partial sums inlined) and runs a
+   population with crossover, mutation and tabu walks. Its best assignment
+   is checked in the store and printed; LCG then starts from it with its
+   cost as bound and without the core-guided phase, and LNS continues the
+   tabu search from the incumbent as a proposer. --free-config tabu=0
+   turns it off; tabu-share (0.9 of the time left), tabu-max, tabu-stall,
+   tabu-generations and tabu-lns tune it. On the XCSP 2025
+   LowAutocorrelation instances at 240 s it finds 108 (optimum) for n=40,
+   about 856 for n=100 and 3820-4020 for n=200 (before 180, 1226-1354 and
+   4976-5172; Choco 120, 1038 and 4292 at 1800 s).
+
+421. Next to the redundant GCC that the FlatZinc front end posts on counts
+   written by hand, it posts the two sums every complete GCC implies when
+   the counted variables count themselves (self-describing sequences,
+   magic series): sum(c) = n and sum(v * c[v]) = sum(x) (B. M. Smith,
+   Modelling, Handbook of Constraint Programming, 2006). GCC's bound
+   consistency alone lowered one bound by one per round of its fixpoint;
+   with holes in the domains, as the facts of root probing under -f leave
+   them, it ran 125 rounds per call. MiniZinc Challenge nmseq 202 -f takes
+   11 s instead of 32 s, nmseq 395 25 s instead of 37 s (default search
+   11 s and 25 s instead of 15 s and 35 s). -Dorg.jacop.fz.gccSums=false
+   turns them off.
+
+422. A Hamiltonian path written as a numbering gets a redundant circuit.
+   NumberedPathDetector finds an all_different over N variables with values
+   in 1..N where every cell c holds N or a neighbour holds x[c] + 1
+   (among over the model's reified x[d] - x[c] = 1, or a short table of
+   (v, *, .., v + 1, .., *) rows), as in the CalvinPuzzle and Hidato
+   models of the XCSP competitions. It posts successor variables, s[c] = d <-> x[d] =
+   x[c] + 1 with the model's own literals, a start node whose successor is
+   the cell of value 1, and Circuit over them, so subtours are pruned (G.
+   Pesant, M. Gendreau, J.-Y. Potvin and J.-M. Rousseau, "An exact
+   constraint logic programming algorithm for the traveling salesman
+   problem with time windows", Transportation Science 32(1), 1998). The
+   numbering alone finds the dead ends of a path only when it is nearly
+   complete. Over the 1,761 XCSP FlatZinc files of 2022-2025 it fires on
+   the 14 CalvinPuzzle (2023, 05-12 and their table variants) and the 9
+   Hidato-table (2022) instances only. With -f at 600 s, CalvinPuzzle goes
+   from 11 to 14 solved and the total time from 3007 to 49 s
+   (CalvinPuzzle-10/12 and table-12 unknown -> 2-15 s, 09 424 -> 2 s), and
+   Hidato-table from 5 to 9 solved and 2779 to 1162 s (11-11 257 -> 19 s,
+   12..15 unknown -> 30-591 s).
+   -Dorg.jacop.fz.numberedPath=false turns it off; it is off with --proof.
+
+423. Memory of large layered graphs (mdd, regular) and of large clause sets.
+   Constraints ExtensionalSupportMdd given the same arrays (the FlatZinc
+   front end keeps equal long arrays once) share the graph built from them
+   when their variables have equal domains, instead of a graph each; the
+   arrays are no longer copied. The automatic choice of the propagation
+   engine of a layered graph keeps the counters while their state fits in
+   a quarter of the heap and takes support search past it, which keeps no
+   counter per node. Under lazy clause generation, layered graphs become
+   clauses while those fit in 1/8 of the heap
+   (-Djacop.lcg.graphClauses.heapShare); larger ones are propagated and
+   explained by cuts. The linear relaxation counts the arcs of a flow
+   model before it builds it. In JaSAT, elimination and the local search
+   walk are skipped when their copies of the clauses would not fit in a
+   quarter of the heap, and the learnt clauses are reduced early when they
+   take more than 1/16 of it. The FlatZinc front end keeps the equal sets
+   of a set array of 1024 or more sets once (MagicSquare-mdd-16 read 31
+   million label sets, 4.2 GB). WordDesign2-words-mdd-025 (XCSP 2023, 300
+   MDDs on one diagram of 525,720 nodes and 1.8 million edges) ran out of
+   memory at 6 GB while posting and is now solved in 147 s;
+   MagicSquare-mdd-10 (-f) ran out of memory at 6 GB (and 12 GB) during
+   the search and MagicSquare-mdd-16 while reading; both now run to the
+   time limit.
+
+424. Routing with time windows: the LP relaxation of a Routes constraint
+   whose customers have times gets big-M arc-time rows
+   t_j >= t_i + d_ij - M (1 - x_ij), M = latest_i + d_ij - earliest_j over
+   the reduced windows (M. Desrochers, G. Laporte, Improvements and
+   extensions to the Miller-Tucker-Zemlin subtour elimination constraints,
+   Operations Research Letters 10(1), 1991, 27-36), kept in the search LP,
+   so its reduced-cost fixing prunes arc literals at every node; and
+   2-path cuts x(delta-(S)) >= 2 for customer sets that one route cannot
+   visit in one stretch within their windows (B. Kohl, J. Desrosiers,
+   O. B. G. Madsen, M. M. Solomon, F. Soumis, 2-path cuts for the vehicle
+   routing problem with time windows, Transportation Science 33(1), 1999,
+   101-116), checked exactly by a bounded search over the windows. At most
+   1,000 arc-time rows are kept (org.jacop.lp.arcTimeMax), those whose
+   travel time is the largest share of M.
+   GiantTourDetector now also reads the XCSP TSPTW form (subcircuit over
+   x + 1, time rows enforced by int_lin_le_imp and exempt on the arc back
+   to the depot). On the 44 instances that post Routes (18 Solomon VRPTW,
+   16 XCSP 2023 TSPTW, 5 MZNC 2025 tsptw and the 5 wide-set routing
+   instances) at 240 s the default mode proves 30 -> 34 (total time 0.80)
+   and -f 31 -> 34 (0.90); at 600 s on the 14 still open it proves
+   0 -> 6 and 1 -> 5 (TSPTW2 n040w060, n040w080, n060w040 and n060w060,
+   RC101_50, tsptw n100w120.003).
+   -Dorg.jacop.lp.arcTimeRows=false and -Dorg.jacop.lp.twoPathCuts=false
+   turn them off.
+
+425. The split of long linear constraints for lazy clause generation
+   (lcg-split) keeps every sum at 20 terms or fewer: a constraint of more
+   than 400 terms, whose blocks of sqrt(n) terms and sum of blocks were
+   both longer than 20 terms, becomes blocks of 20 terms whose sum is split
+   again, a tree of sums (as the lazy decomposition of Abio and Stuckey,
+   "Conflict directed lazy decomposition", CP 2012, introduces partial
+   sums). It fires on 21 of the 240 wide instances, mostly on objectives.
+   At 600 s: same 12 proved with -f, total time 5,588 -> 5,542 s, better
+   objectives on gbac UD3 (269 -> 173), ihtc i01, unit-commitment, worse
+   on warehouse olil4 (47,617 -> 61,327); default search, same 8 proved,
+   better objectives on roster chicroster large_20 (no solution -> 98),
+   surface-based-tsp ch130 (9,040 -> 8,110), celar graph11 and
+   unit-commitment, worse on none. At 240 s with -f: total 2,448 ->
+   2,323 s (roster chicroster 79 -> 37 s, network_50_cstr 88 -> 16 s).
+   --free-config lcg-split-tree=0 restores blocks of sqrt(n) terms; with -s
+   it prints lcgSplitSums.
+
+426. With --lcg, -f and an objective that sums at least four squares (x * x
+   or x ^ 2 among the terms reached through up to three linear constraints
+   from the cost variable), free search without learning runs first for
+   10 % of the time limit and LCG then goes on from its best solution. A
+   sum of squared deviations is a balancing objective (balanced academic
+   curricula, nurse workloads, low autocorrelation): LCG's bound literals
+   say little about which value of a decision raises it, while free search
+   picks each value by its bound on the objective (value-impact). XCSP 2023
+   GBACP at 600 s: geometric mean of the best objective 0.63 of before,
+   UD07 7149 -> 378, UD03 2911 -> 177, UD05 340 -> 217 (CoSoCo in the 2023
+   competition: 2338 and 273); MiniZinc Challenge gbac 0.98,
+   LowAutocorrelation 0.98. Of the 240 wide instances only two gbac instances are reached.
+   --free-config free-first=<share> sets the share, 0 turns it off.
+
+427. The core-guided phase of LCG no longer loops forever when it probes
+   the objective's bound (the probes of commit 7c2bc093d) after the
+   objective's own minimum has reached the best solution: every probe
+   target was already implied, so the step doubled until it overflowed
+   and the loop never ended. MiniZinc Challenge 2023 roster-shifts-bool
+   s100_e20_c8 under -f with -t 240 s or more never ended (bound and best
+   both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
+   instances it is the only one that met the loop at 240 s.
+
+428. Subtour cuts for successor models (opt-in,
+   -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
+   output array x and an element list pos whose arcs x[i] = j are proved
+   acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
+   Miller-Tucker-Zemlin formulation of a path or tour (Miller, Tucker and
+   Zemlin, JACM 1960), and posts a redundant graph.Forest over the arc and
+   node literals. The linear relaxation separates on it the generalized
+   subtour elimination cuts of TreeCuts (Lucena and Resende, Discrete
+   Applied Mathematics 2004; Fischetti, Salazar-Gonzalez and Toth, INFORMS
+   Journal on Computing 1998). The tree cut rounds now also move to the
+   sparse simplex when the dense tableau runs out of pivots before the
+   bound has moved. On prize-collecting 32-4-8-2 (MiniZinc Challenge 2016)
+   the root bound goes from 172 (the assignment relaxation) to 102.5, for
+   the optimum 92, and on cvrp simple2 from 24 to 34 (optimal). It stays
+   off by default: of 187 optimisation instances of the wide set it fires
+   on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
+   28 s -> 34 s by default, 27-38 s -> 20 s with -f).
+
+429. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+   that linear overlap factoring (272) reduces to the shared sum alone.
+   A row k * S rel c whose whole sum S became the new variable z is
+   k * z rel c, which the FlatZinc front end posts as a bound of z or as
+   XmulCeqZ, so the relaxation, which substitutes S for z, never saw it.
+   These rows are now recorded at posting and given to the relaxation,
+   which expands them back into the original row. On MIPLIB p0548 (pure
+   integer, generic MPS model) the root cut bound goes from 464 to 7,325
+   (optimum 8,691) and -f proves it in 26 s instead of 297 s. At 600 s,
+   on the 18 MIPLIB and wide instances where the extra rows exist and
+   240 s results differed, the 7 proved instances take 7,271 s against
+   7,624 s in total (all 7 faster), and 8 of the 11 others end with a
+   better objective (mitre and p2756 at the optimum), 3 worse (air04,
+   warehouse olil4, cap6000). The rows are counted in the statistic
+   lpUnitRows.
+
+430. JaSAT substitutes equivalent literals before variable elimination. The
+   strongly connected components of the binary implication graph (B.
+   Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
+   the truth of certain quantified Boolean formulas, Information Processing
+   Letters 8(3), 1979; A. Van Gelder, Toward leaner binary-clause reasoning
+   in a satisfiability solver, Annals of Mathematics and Artificial
+   Intelligence 43, 2005) and clausal congruence closure over AND, XOR and
+   ITE gates found in the clauses (A. Biere, K. Fazekas, M. Fleury, N.
+   Froleyks, Clausal Congruence Closure, SAT 2024) give classes of equal
+   literals; each class is replaced by one representative, observed and
+   assumption variables never being replaced. The new GateExtractor finds
+   the gates and is shared with variable elimination. DRAT proofs cover the
+   new steps (XOR and ITE equivalences by case splits on the gate inputs).
+   On the 90 SAT Competition instances of the JaSAT comparison at 240 s,
+   against develop with bounded variable addition, two rounds: solved 32 ->
+   33 and 34 -> 33, total time 15,656 -> 15,552 s and 15,520 -> 15,396 s;
+   hardware-model-checking (2.2 s, unsolved at 600 s before) and
+   grs-fp-comm (210-237 s) are proved only with it, the other flips
+   (puzzle, planning, scheduling) go both ways between rounds. Under --lcg it fires on 19 of the 240 wide instances, with
+   the same results. --substitute 0 and --congruence 0 in CdclMain,
+   -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
+   it off.
+421. Free search without learning (-f, when LCG free search gives way)
+   no longer keeps the LCG solver it took over from: its SAT clauses,
+   trail and three literal maps per variable stayed live next to the
+   clauses posted again as constraints. Five references held it: the
+   solver kept for its statistics, the finished speed-check thread, the
+   trail pointer of every Boolean variable (AtomicTrail.detach now clears
+   it), a local of the method that runs free search, and the store's
+   cached copy of its level listeners after the trail was removed
+   (ListenerSet now drops the copy on removal). On rcpsp-wet-diverse
+   j90_48_4 (MiniZinc Challenge 2019, 2.35 million variables) with a
+   6 GB heap the live heap in free search is 4.3-4.8 GB instead of the
+   whole 6 GB.
+
 Version 4.11
 =============
 

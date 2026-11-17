@@ -83,6 +83,7 @@ import org.jacop.fz.constraints.ListsDifferDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MaxCliqueDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
+import org.jacop.fz.constraints.NumberedPathDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -96,6 +97,7 @@ import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
+import org.jacop.fz.constraints.SuccessorForestDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
@@ -338,6 +340,11 @@ public class Constraints implements ParserTreeConstants {
           replaced = new HashSet<>(replaced);
           replaced.addAll(lists.replaced());
         }
+      }
+
+      // a Hamiltonian path written as a numbering gets its successor model with a circuit
+      if (NumberedPathDetector.enabled() && options.proof() == null) {
+        new NumberedPathDetector(support).detect(astTree);
       }
 
       // the variables of degree two between tables and elements are joined out of the model, and
@@ -746,6 +753,12 @@ public class Constraints implements ParserTreeConstants {
 
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
+    }
+
+    // the forest of the successor arcs along which positions grow, redundant, for the subtour
+    // elimination cuts of the linear relaxation; --proof does not encode it
+    if (SuccessorForestDetector.enabled() && options.proof() == null) {
+      new SuccessorForestDetector(support).detect(astTree);
     }
   }
 

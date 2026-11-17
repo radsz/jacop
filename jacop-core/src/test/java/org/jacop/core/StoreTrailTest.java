@@ -32,6 +32,7 @@ package org.jacop.core;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.lang.reflect.Field;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -210,5 +211,32 @@ class StoreTrailTest {
       }
       assertThat(set.elements()).containsExactly(set.toArray());
     }
+  }
+
+  /**
+   * A removed listener is not kept by the copy of the listeners: a detached LCG trail, and through
+   * it the whole solver, stayed live until the store next removed a level (rcpsp-wet-diverse
+   * j90_48_4 under -f, while free search posted the solver's clauses again).
+   */
+  @Test
+  void removedListenerIsNotKeptByTheCopy() throws ReflectiveOperationException {
+    ListenerSet<Object> set = new ListenerSet<>();
+    Object kept = new Object();
+    Object removed = new Object();
+    set.add(kept);
+    set.add(removed);
+    assertThat(set.elements()).containsExactly(kept, removed);
+    Field copy = ListenerSet.class.getDeclaredField("elements");
+    copy.setAccessible(true);
+    set.remove(removed);
+    assertThat((Object[]) copy.get(set)).doesNotContain(removed);
+    assertThat(set.elements()).containsExactly(kept);
+    set.add(removed);
+    set.elements();
+    set.removeIf(x -> x == removed);
+    assertThat((Object[]) copy.get(set)).doesNotContain(removed);
+    set.elements();
+    set.clear();
+    assertThat((Object[]) copy.get(set)).isEmpty();
   }
 }

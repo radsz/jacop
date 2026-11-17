@@ -580,6 +580,31 @@ class AtomicTrailTest {
    * explanation never count.
    */
   @Test
+  void detachedTrailIsNotKeptByTheBooleanVariablesItNumbered() {
+    // every Boolean variable pointed to the trail that numbered it, and the trail to the LCG solver
+    // through its callbacks: after LCG gave way to free search without learning, the whole solver
+    // stayed live (rcpsp-wet-diverse j90_48_4 under -f, 2.35 million variables)
+    Store store = new Store();
+    BooleanVar a = new BooleanVar(store, "a");
+    BooleanVar b = new BooleanVar(store, "b");
+    AtomicTrail trail = new AtomicTrail(store);
+    int idA = trail.id(a);
+    int idB = trail.id(b);
+    assertThat(a.trailOwner).isSameAs(trail);
+    trail.detach();
+    assertThat(a.trailOwner).isNull();
+    assertThat(b.trailOwner).isNull();
+    // a detached trail still knows its variables by the same numbers
+    assertThat(trail.id(b)).isEqualTo(idB);
+    assertThat(trail.id(a)).isEqualTo(idA);
+    // another trail's numbering stays
+    AtomicTrail other = new AtomicTrail(store);
+    other.id(a);
+    trail.detach();
+    assertThat(a.trailOwner).isSameAs(other);
+  }
+
+  @Test
   void entryMarksAreFreshForEveryCallAndCoverThePosition() {
     AtomicTrail trail = new AtomicTrail(new Store());
     int first = trail.newEntryMark(10);
