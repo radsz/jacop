@@ -5369,6 +5369,11 @@ public final class LcgSolver implements ExternalPropagator {
           && c.getClass() == HybridTable.class
           && encodeTable((HybridTable) c)) {
         tablesAsClauses++;
+      } else if (booleanTables
+          && c.getClass() == HybridTable.class
+          && encodeBooleanTable((HybridTable) c)) {
+        tablesAsClauses++;
+        booleanTablesAsClauses++;
       } else if (compressedTables
           && c.getClass() == HybridTable.class
           && encodeCompressedTable((HybridTable) c)) {
@@ -5709,7 +5714,8 @@ public final class LcgSolver implements ExternalPropagator {
   private java.util.Set<IntVar> objectiveTerms() {
     if ("none".equals(CLAUSE_CLASSES)
         && !COUNTERS
-        && ("none".equals(tableMode) && !compressedTables || !TABLE_OBJECTIVE_TERMS)) {
+        && ("none".equals(tableMode) && !compressedTables && !booleanTables
+            || !TABLE_OBJECTIVE_TERMS)) {
       return java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     }
     return objectiveDefinition();
@@ -6395,6 +6401,194 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     return cs;
+  }
+
+  /**
+   * Whether a table whose unfixed columns all have two values is written as the clauses of all
+   * prime implicates of its relation, {@code jacop.lcg.tableClauses.boolean}. Unit propagation on
+   * all prime implicates of a Boolean function is domain consistent (an implied literal l under a
+   * partial assignment a makes the clause (not a or l) an implicate, and a prime implicate inside
+   * it is unit under a), with no literal per tuple: the forbidden points are grouped into the
+   * largest cubes by Quine-McCluskey (Quine, Amer. Math. Monthly 59, 1952; McCluskey, Bell Syst.
+   * Tech. J. 35, 1956) and each prime cube becomes the clause that excludes it. Differential
+   * cryptanalysis models (XCSP 2022 DC-rijndael) post thousands of such tables over their
+   * difference bits, whose propagators made LCG run a few hundred conflicts per second.
+   */
+  static final boolean BOOLEAN_TABLES =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.tableClauses.boolean", "true"));
+
+  private boolean booleanTables = BOOLEAN_TABLES;
+
+  /**
+   * Sets whether tables over two-valued columns become the clauses of their prime implicates,
+   * before the solver starts (see {@link #BOOLEAN_TABLES}).
+   *
+   * @param on true to write them as clauses
+   */
+  public void setBooleanTableClauses(boolean on) {
+    booleanTables = on;
+  }
+
+  /** The most unfixed columns of a table written as prime implicates, {@code ...boolean.arity}. */
+  static final int BOOLEAN_ARITY = Integer.getInteger("jacop.lcg.tableClauses.boolean.arity", 12);
+
+  /** The most prime implicates of such a table, {@code ...boolean.limit}. */
+  static final int BOOLEAN_LIMIT = Integer.getInteger("jacop.lcg.tableClauses.boolean.limit", 512);
+
+  /**
+   * Statistics: tables over two-valued columns written as the clauses of their prime implicates.
+   */
+  public long booleanTablesAsClauses;
+
+  /**
+   * Writes a table whose unfixed columns all have two values as the clauses of the prime implicates
+   * of its relation on those columns (see {@link #BOOLEAN_TABLES}).
+   */
+  private boolean encodeBooleanTable(HybridTable t) {
+    int arity = t.columnCount();
+    if (t.hasColumnRestrictions()) {
+      return false;
+    }
+    int[] free = new int[arity];
+    int nFree = 0;
+    for (int k = 0; k < arity; k++) {
+      IntVar x = t.column(k);
+      if (!x.singleton()) {
+        if (x.getSize() != 2
+            || nFree == BOOLEAN_ARITY
+            || trail.id(x) >= vars.length
+            || TABLE_OBJECTIVE_TERMS && objectiveTerms.contains(x)) {
+          return false;
+        }
+        free[nFree++] = k;
+      }
+    }
+    if (nFree < 2) {
+      return false;
+    }
+    int[] lo = new int[nFree];
+    int[] hi = new int[nFree];
+    for (int j = 0; j < nFree; j++) {
+      lo[j] = t.column(free[j]).min();
+      hi[j] = t.column(free[j]).max();
+    }
+    int points = 1 << nFree;
+    boolean[] allowed = new boolean[points];
+    boolean[] accepts0 = new boolean[nFree];
+    boolean[] accepts1 = new boolean[nFree];
+    for (int u = 0; u < t.tupleCount(); u++) {
+      boolean live = true;
+      for (int k = 0; k < arity && live; k++) {
+        IntVar x = t.column(k);
+        live = !x.singleton() || t.cellAccepts(u, k, x.value());
+      }
+      for (int j = 0; j < nFree && live; j++) {
+        accepts0[j] = t.cellAccepts(u, free[j], lo[j]);
+        accepts1[j] = t.cellAccepts(u, free[j], hi[j]);
+        live = accepts0[j] || accepts1[j];
+      }
+      if (live) {
+        markPoints(allowed, accepts0, accepts1, 0, 0);
+      }
+    }
+    List<long[]> primes = forbiddenPrimeCubes(allowed, nFree, BOOLEAN_LIMIT);
+    if (primes == null) {
+      return false;
+    }
+    int[] ids = new int[nFree];
+    for (int j = 0; j < nFree; j++) {
+      ids[j] = trail.id(t.column(free[j]));
+    }
+    List<int[]> cs = new ArrayList<>(primes.size());
+    for (long[] cube : primes) {
+      int mask = (int) cube[0];
+      int val = (int) cube[1];
+      int[] cl = new int[Integer.bitCount(mask)];
+      int n = 0;
+      for (int j = 0; j < nFree; j++) {
+        if ((mask >> j & 1) != 0) {
+          // the cube fixes column j to a value: the clause asks for the column to differ
+          cl[n++] = -valueLit(ids[j], (val >> j & 1) != 0 ? hi[j] : lo[j]);
+        }
+      }
+      cs.add(cl);
+    }
+    if (TABLE_DEBUG) {
+      System.out.println(
+          "% boolean table clauses "
+              + cs.size()
+              + " arity "
+              + arity
+              + " free "
+              + nFree
+              + " tuples "
+              + t.tupleCount());
+    }
+    return addTableClauses(t, cs, auxiliaryVariables);
+  }
+
+  /** Marks every point that agrees with the accepted values of a tuple's columns from j on. */
+  private static void markPoints(
+      boolean[] allowed, boolean[] accepts0, boolean[] accepts1, int j, int point) {
+    if (j == accepts0.length) {
+      allowed[point] = true;
+      return;
+    }
+    if (accepts0[j]) {
+      markPoints(allowed, accepts0, accepts1, j + 1, point);
+    }
+    if (accepts1[j]) {
+      markPoints(allowed, accepts0, accepts1, j + 1, point | 1 << j);
+    }
+  }
+
+  /**
+   * The prime cubes of the points of {0,1}^n that are not allowed, by Quine-McCluskey: each cube is
+   * {mask of its fixed coordinates, their values}. Null when there are more than limit.
+   *
+   * @param allowed whether each point is allowed
+   * @param n the dimension
+   * @param limit the most prime cubes
+   * @return the prime cubes, an empty list when every point is allowed, or null
+   */
+  static List<long[]> forbiddenPrimeCubes(boolean[] allowed, int n, int limit) {
+    int full = (1 << n) - 1;
+    java.util.Set<Long> level = new java.util.HashSet<>();
+    for (int p = 0; p < allowed.length; p++) {
+      if (!allowed[p]) {
+        level.add((long) full << 32 | p);
+      }
+    }
+    List<long[]> primes = new ArrayList<>();
+    while (!level.isEmpty()) {
+      java.util.Set<Long> next = new java.util.HashSet<>();
+      java.util.Set<Long> merged = new java.util.HashSet<>();
+      for (long cube : level) {
+        int mask = (int) (cube >>> 32);
+        int val = (int) cube;
+        for (int b = 0; b < n; b++) {
+          int bit = 1 << b;
+          if ((mask & bit) != 0 && (val & bit) == 0) {
+            long other = (long) mask << 32 | (val | bit);
+            if (level.contains(other)) {
+              merged.add(cube);
+              merged.add(other);
+              next.add((long) (mask & ~bit) << 32 | val);
+            }
+          }
+        }
+      }
+      for (long cube : level) {
+        if (!merged.contains(cube)) {
+          if (primes.size() == limit) {
+            return null;
+          }
+          primes.add(new long[] {cube >>> 32, (int) cube});
+        }
+      }
+      level = next;
+    }
+    return primes;
   }
 
   /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */

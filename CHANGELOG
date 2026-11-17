@@ -7772,6 +7772,29 @@ Version 5.0 (unreleased)
    6 GB heap the live heap in free search is 4.3-4.8 GB instead of the
    whole 6 GB.
 
+432. Under --lcg a table whose unfixed columns all have two values (0/1
+   tables, differential cryptanalysis S-boxes) is posted as the clauses
+   of all prime implicates of its forbidden points, computed with the
+   Quine-McCluskey method (W. V. Quine, The problem of simplifying truth
+   functions, American Mathematical Monthly 59(8), 1952; E. J. McCluskey,
+   Minimization of Boolean functions, Bell System Technical Journal 35(6),
+   1956). Unit propagation on all prime implicates of a relation is domain
+   consistent, so the clauses prune what the table pruned, without a
+   literal per tuple and without calling the table propagator. Tables up
+   to 12 unfixed columns and 512 prime implicates are encoded
+   (jacop.lcg.tableClauses.boolean.arity, .limit); the statistic
+   lcgBooleanTablesAsClauses counts them and
+   -Djacop.lcg.tableClauses.boolean=false turns it off. On XCSP 2022
+   DC-rijndael-xor5-r08 LCG makes about 6 times as many conflicts per
+   second. At 600 s with -f, on the 45 XCSP 2022-2025 instances where it
+   fires (DC, Crypto1, Spot5, Nonogram, Fortress, Tal, Ortholatin,
+   Fillomino, SolitaireBattleship), solved goes from 31 to 38 (6 Crypto1,
+   DC-midori r14) and the total time from 8,936 to 4,805 s
+   (DC-rijndael r06 316 -> 42 s; r07 29 -> 24 and r08 46 -> 36 at the
+   limit); Nonogram-069 takes 16 s instead of 9 s. It fires on 6 of the
+   240 wide instances (spot5, connect, table-layout, project-planning),
+   with the same results in default mode and with -f.
+
 Version 4.11
 =============
 

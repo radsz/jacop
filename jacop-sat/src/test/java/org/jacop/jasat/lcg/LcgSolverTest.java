@@ -539,6 +539,115 @@ class LcgSolverTest {
   }
 
   @Test
+  void booleanTablesAsPrimeImplicatesAgreeWithBruteForce() {
+    // tables of 2 to 6 columns over two-valued variables (some {0, 1}, some two other values, one
+    // possibly fixed), written as the clauses of their prime implicates next to other
+    // constraints; tuples may name values outside the domains
+    Random rnd = new Random(91);
+    long encoded = 0;
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(4);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int lo = rnd.nextInt(3) == 0 ? rnd.nextInt(3) - 1 : 0;
+        int hi = lo + 1 + (rnd.nextInt(3) == 0 ? rnd.nextInt(3) : 0);
+        x[i] = new IntVar(store, "x" + i, lo, lo);
+        x[i].domain.unionAdapt(hi, hi);
+        x[i].refreshBounds();
+      }
+      if (rnd.nextInt(5) == 0) {
+        x[0] = new IntVar(store, "c", 1, 1);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        IntVar[] scope = Arrays.copyOf(x, 2 + rnd.nextInt(n - 1));
+        Collections.shuffle(Arrays.asList(scope), rnd);
+        int[][] tuples = new int[1 + rnd.nextInt(3 << scope.length)][scope.length];
+        for (int[] tuple : tuples) {
+          for (int k = 0; k < tuple.length; k++) {
+            tuple[k] =
+                rnd.nextInt(8) == 0
+                    ? 7
+                    : scope[k].min() + rnd.nextInt(2) * (scope[k].max() - scope[k].min());
+          }
+        }
+        IntVar[] sc = scope;
+        int[] position = new int[scope.length];
+        for (int k = 0; k < scope.length; k++) {
+          position[k] = Arrays.asList(x).indexOf(scope[k]);
+        }
+        relations.add(
+            new Relation(
+                new HybridTable(sc, tuples),
+                t ->
+                    Arrays.stream(tuples)
+                        .anyMatch(
+                            row ->
+                                IntStream.range(0, row.length)
+                                    .allMatch(k -> row[k] == t[position[k]]))));
+      }
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setTableClauses("none");
+      solver.setCompressedTableClauses(false);
+      solver.setBooleanTableClauses(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      encoded += solver.booleanTablesAsClauses;
+    }
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(encoded).isGreaterThan(500);
+  }
+
+  @Test
+  void primeCubesOfForbiddenPoints() {
+    // x0 + x1 + x2 != 1: the forbidden points 001, 010, 100 merge with no other, three primes
+    boolean[] allowed = new boolean[8];
+    for (int p = 0; p < 8; p++) {
+      allowed[p] = Integer.bitCount(p) != 1;
+    }
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 100)).hasSize(3);
+    // x0 or x1 (x2 free): one prime cube, x0 = 0 and x1 = 0
+    for (int p = 0; p < 8; p++) {
+      allowed[p] = (p & 3) != 0;
+    }
+    List<long[]> primes = LcgSolver.forbiddenPrimeCubes(allowed, 3, 100);
+    assertThat(primes).hasSize(1);
+    assertThat(primes.get(0)).containsExactly(3, 0);
+    // the limit
+    for (int p = 0; p < 8; p++) {
+      allowed[p] = Integer.bitCount(p) % 2 == 0;
+    }
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 3)).isNull();
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 4)).hasSize(4);
+  }
+
+  @Test
   void rootActionWaitsForItsTimeOverEarlierRestarts() {
     // the action of atRootAfter runs at a restart to the root once its time has come, not at the
     // first restart before it: under free search, which restarts at once, a relaxation suspended
@@ -660,6 +769,8 @@ class LcgSolverTest {
       LcgSolver solver = new LcgSolver(store);
       solver.setChecking(true);
       solver.setCompressedTableClauses(true);
+      // two-valued tables would go to the prime implicate encoding first
+      solver.setBooleanTableClauses(false);
       int status = solver.solve();
       assertThat(status)
           .as("instance %d", instance)
