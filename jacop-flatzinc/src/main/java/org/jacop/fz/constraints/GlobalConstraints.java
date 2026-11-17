@@ -36,6 +36,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1985,6 +1986,73 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       poseTableBySize(v, t);
     }
+  }
+
+  /**
+   * Whether short tables whose rows each fix one 0/1 variable are posted as clauses, {@code
+   * org.jacop.fz.shortTableClauses} (default true).
+   */
+  static final boolean SHORT_TABLE_CLAUSES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.shortTableClauses", "true"));
+
+  /**
+   * The clause of a short table over 0/1 variables whose every row fixes one variable and leaves
+   * the others free: the table then allows x[j] = v for one of its rows, the disjunction of these
+   * literals. XCSP writes CNF formulas so (Crypto1 of the 2022 competition: 31,334 tables of up to
+   * 7 rows over 1,906 Booleans, a key-recovery attack written as clauses), and as a clause the
+   * relation is watched by two literals and is a clause of the SAT solver under LCG, while a {@link
+   * HybridTable} is woken by every column and is no clause of LCG (it has stars).
+   *
+   * @param node the jacop_short_table_int node: x, the rows flattened row by row, and star.
+   * @return null when the table is not such a clause; an empty array when it holds on every
+   *     assignment; else the positive and the negative literals of the clause, posted by the caller
+   */
+  IntVar[][] shortTableClause(SimpleNode node) {
+    if (!SHORT_TABLE_CLAUSES) {
+      return null;
+    }
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int size = v.length;
+    if (size == 0) {
+      return null;
+    }
+    for (IntVar x : v) {
+      if (x.min() < 0 || x.max() > 1) {
+        return null;
+      }
+    }
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int star = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    // the star is any value the rows do not use otherwise, 0 too (a table whose values are all 1
+    // gets star 0 from the XCSP translation): an entry equal to it matches every value
+    if (tbl.length == 0) {
+      return null;
+    }
+    Set<IntVar> positive = new LinkedHashSet<>();
+    Set<IntVar> negative = new LinkedHashSet<>();
+    for (int i = 0; i < tbl.length / size; i++) {
+      int column = -1;
+      for (int j = 0; j < size; j++) {
+        if (tbl[size * i + j] != star) {
+          if (column >= 0) {
+            return null;
+          }
+          column = j;
+        }
+      }
+      if (column < 0) {
+        // a row of stars matches every assignment
+        return new IntVar[0][];
+      }
+      int value = tbl[size * i + column];
+      if (value == 1) {
+        positive.add(v[column]);
+      } else if (value == 0) {
+        negative.add(v[column]);
+      }
+      // another value matches no assignment of a 0/1 variable: the row is dropped
+    }
+    return new IntVar[][] {positive.toArray(new IntVar[0]), negative.toArray(new IntVar[0])};
   }
 
   /**

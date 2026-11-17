@@ -812,7 +812,12 @@ public final class ConstraintFncs {
 
   /** Handles the jacop_short_table_int FlatZinc constraint. */
   public void jacop_short_table_int(SimpleNode n) {
-    gc.gen_jacop_short_table_int(n);
+    IntVar[][] clause = gc.shortTableClause(n);
+    if (clause == null) {
+      gc.gen_jacop_short_table_int(n);
+    } else if (clause.length == 2) {
+      bc.poseClause(clause[0], clause[1]);
+    }
   }
 
   /** Handles the jacop_negative_table_int FlatZinc constraint. */

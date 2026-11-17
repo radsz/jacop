@@ -7563,6 +7563,14 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+419. The FlatZinc front end posts a short table over 0/1 variables whose
+   every row fixes one variable (the others are stars) as the clause of
+   those literals, instead of a HybridTable. XCSP writes CNF formulas so:
+   Crypto1 of the XCSP 2022 competition is 31,334 such tables over 1,906
+   Booleans, which now form a model of clauses alone that JaSAT solves
+   (3 of 3 unsolved instances solved in 42 to 143 s at 600 s, free
+   search). -Dorg.jacop.fz.shortTableClauses=false turns this off.
+
 Version 4.11
 =============
 

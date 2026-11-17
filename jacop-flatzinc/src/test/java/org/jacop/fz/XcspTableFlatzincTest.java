@@ -333,6 +333,57 @@ class XcspTableFlatzincTest {
     return "constraint jacop_short_table_int(" + xs + "," + cells + "," + STAR + ");\n";
   }
 
+  /**
+   * Short tables over 0/1 variables whose rows each fix one variable are posted as clauses: rows
+   * that fix a variable to a value outside {0, 1} are dropped, a variable fixed to 0 and to 1 makes
+   * the table always true, and the star can be 0 when the rows use only 1 (Crypto1 of XCSP 2022).
+   */
+  @Test
+  void clauseShortTablesMatchBruteForce() throws IOException {
+    Random random = new Random(20261117);
+    for (int run = 0; run < 40; run++) {
+      int vars = 1 + random.nextInt(4);
+      int arity = 1 + random.nextInt(4);
+      int star = random.nextBoolean() ? STAR : 0;
+      int[] scope = new int[arity];
+      for (int i = 0; i < arity; i++) {
+        scope[i] = random.nextInt(vars);
+      }
+      int[][] rows = new int[1 + random.nextInt(5)][arity];
+      for (int[] row : rows) {
+        Arrays.fill(row, star);
+        int[] values = star == 0 ? new int[] {1, 1, 1, 3} : new int[] {0, 1, 1, 0, 3};
+        row[random.nextInt(arity)] = values[random.nextInt(values.length)];
+      }
+      Set<String> expected = new TreeSet<>();
+      for (int a = 0; a < 1 << vars; a++) {
+        int[] x = new int[vars];
+        for (int i = 0; i < vars; i++) {
+          x[i] = a >> i & 1;
+        }
+        boolean match =
+            Arrays.stream(rows)
+                .anyMatch(
+                    row ->
+                        IntStream.range(0, arity)
+                            .allMatch(i -> row[i] == star || x[scope[i]] == row[i]));
+        if (match) {
+          expected.add(
+              Arrays.stream(x)
+                  .mapToObj(String::valueOf)
+                  .collect(Collectors.joining(", ", "x = array1d(1.." + vars + ", [", "]);")));
+        }
+      }
+      String fzn =
+          model(scope, vars, rows, true)
+              .replace("var {0,1,3,4}:", "var 0..1:")
+              .replace("," + STAR + ");\nsolve", "," + star + ");\nsolve");
+      String message = "run " + run + "\n" + fzn;
+      assertEquals(expected, solveAll(fzn), message);
+      assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
+    }
+  }
+
   private void randomTables(boolean positive, long seed) throws IOException {
     Random random = new Random(seed);
     for (int run = 0; run < 30; run++) {
