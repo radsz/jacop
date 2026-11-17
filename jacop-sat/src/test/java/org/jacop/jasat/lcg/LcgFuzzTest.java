@@ -2426,6 +2426,8 @@ class LcgFuzzTest {
         if (!LcgSolver.PUSH_BEFORE_CONFLICT_SET) {
           // every other pair of runs pushes the fixpoint's atoms before a failure's conflict
           solver.setPushBeforeConflict(seed / 2 % 2 == 0);
+          // and every other one of those pushes only the failure's cone
+          solver.setPushCone(seed / 4 % 2 == 0);
         }
         annotate(solver, model, seed);
         // one run in four probes the 0/1 variables at the root first; a refuted root is UNSAT

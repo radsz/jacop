@@ -7792,17 +7792,25 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: failures whose fixpoint atoms were pushed before the conflict. */
   public long heldFailures;
 
-  /** Statistics: held failures that pushed only the atoms of their cone (see collectCone). */
-  public long coneFailures;
-
-  /** Statistics: atoms of the fixpoints of held failures, and the atoms of their cones. */
+  /** Statistics: unpushed atoms of the fixpoints of held failures. */
   public long heldFixpointAtoms;
 
+  /** Statistics: atoms of the cones of held failures (see collectCone). */
   public long heldConeAtoms;
 
-  // whether a held failure pushes only its cone; the system property jacop.lcg.pushCone
-  private static final boolean PUSH_CONE =
-      Boolean.parseBoolean(System.getProperty("jacop.lcg.pushCone", "true"));
+  // whether a held failure pushes only its cone (see setPushCone)
+  private boolean pushCone = Boolean.parseBoolean(System.getProperty("jacop.lcg.pushCone", "true"));
+
+  /**
+   * Sets whether a failure held for {@link #setPushBeforeConflict} hands the solver only the
+   * unpushed atoms it depends on, its cone, in trail order, instead of every unpushed atom of the
+   * fixpoint. The default is the system property jacop.lcg.pushCone, true when unset.
+   *
+   * @param on whether to push only the cone
+   */
+  public void setPushCone(boolean on) {
+    pushCone = on;
+  }
 
   // the held failure pushes the entries of cone, from coneNext on, instead of pushed..trail.size()
   private boolean heldCone;
@@ -7812,7 +7820,7 @@ public final class LcgSolver implements ExternalPropagator {
   // a cone was pushed at the current decision level: the entries outside it are not in the solver
   private boolean conePushed;
 
-  /** Statistics: reasons of pushed cone atoms that cited an entry outside the cone. */
+  /** Statistics: entries outside a pushed cone that a reason cited, explained in its place. */
   public long coneMisses;
 
   /**
@@ -7849,15 +7857,13 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Collects in {@link #cone} the unpushed entries a failure depends on: its atoms not in the
-   * solver and, recursively, the entries their explanations cite that are not in the solver, in
-   * trail order. A fixpoint records many atoms that no failure cites; pushing all of them gave a
-   * literal, unit propagation and its undo to each (fast-food ff58: 250 atoms pushed per failure,
-   * 3.4 times the unit propagations per conflict and 50 % more time per node, against a cone of
-   * about 27). Returns whether the cone is smaller than the fixpoint's unpushed atoms.
+   * Collects in {@link #cone} the entries a failure depends on that the solver does not have: its
+   * atoms not in the solver and, recursively, the entries their explanations cite that are not in
+   * the solver, in trail order. A fixpoint records many atoms that no failure cites: on fast-food
+   * ff58 a failure had 327 unpushed atoms on average and a cone of 17, and pushing all of them gave
+   * each a literal, its unit propagation and its undo.
    */
-  private int collectCone(EntryList atoms) {
-    int expanded = 0;
+  private void collectCone(EntryList atoms) {
     int seen = nextStamp();
     if (entryStamp.length < trail.size()) {
       entryStamp = Arrays.copyOf(entryStamp, Math.max(trail.size(), 2 * entryStamp.length));
@@ -7876,39 +7882,19 @@ public final class LcgSolver implements ExternalPropagator {
         continue;
       }
       entryStamp[e] = seen;
-      if (inSolver(e)) {
-        expanded++;
-      } else {
+      if (!inSolver(e)) {
         cone.add(e);
         if (trail.reason(e) == null) {
           trail.atomsBefore(trail.variable(e), e, stack);
-          expanded++; // the solver literal applied
         } else {
           trail.explain(e, stack);
         }
       }
     }
     cone.sortUnique(0);
-    if (PUSH_CHAIN < Integer.MAX_VALUE) {
-      int kept = 0;
-      for (int k = 0; k < cone.size(); k++) {
-        int e = cone.get(k);
-        int i = trail.id(trail.variable(e));
-        if (trail.reason(e) == null || i >= linkedCount.length || linkedCount[i] < PUSH_CHAIN) {
-          cone.set(kept++, e);
-        }
-      }
-      cone.truncate(kept);
-    }
     heldFixpointAtoms += trail.size() - pushed;
     heldConeAtoms += cone.size();
-    return expanded;
   }
-
-  private static final int PUSH_CHAIN =
-      Integer.getInteger("jacop.lcg.pushChain", Integer.MAX_VALUE);
-
-  private static final int PUSH_MIN_CLAUSE = Integer.getInteger("jacop.lcg.pushMinClause", 0);
 
   @Override
   public int propagate() {
@@ -7994,21 +7980,18 @@ public final class LcgSolver implements ExternalPropagator {
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
         }
-        if (pushBeforeConflict
-            && pushed < trail.size()
-            && proof == null
-            && collectCone(atoms) >= PUSH_MIN_CLAUSE) {
+        if (pushBeforeConflict && pushed < trail.size() && proof == null) {
           heldFailures++;
           heldAtoms.clear();
           for (int k = 0; k < atoms.size(); k++) {
             heldAtoms.addFrom(atoms, k);
           }
           heldFailure = heldAtoms;
-          heldCone = PUSH_CONE && cone.size() < trail.size() - pushed;
-          if (heldCone) {
-            coneFailures++;
+          if (pushCone) {
+            collectCone(heldAtoms);
+            heldCone = cone.size() < trail.size() - pushed;
+            conePushed |= heldCone;
           }
-          conePushed |= heldCone;
           numPending = 0;
           continue;
         }
