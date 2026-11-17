@@ -1153,9 +1153,9 @@ public final class LcgSolver implements ExternalPropagator {
       hypotheses(lines.counterPosition, ids, atoms, from, entry, restricted, counterLiterals);
       for (int k = 0; k < m; k++) {
         if (freeCounter[k] >= 0) {
-          count[k] = restricted[k];
-          proofCounterBounds(
-              freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
+          count[k] =
+              proofCounterBounds(
+                  freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
         }
       }
     }
@@ -1435,8 +1435,10 @@ public final class LcgSolver implements ExternalPropagator {
    * literals of the counter does not reach a bound from the count of the value literals (the count
    * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}). The hole can be the model's
    * or a hypothesis's (counter != 1 with the count pinned to 1).
+   *
+   * @return the restricted domain within the bounds written
    */
-  private void proofCounterBounds(
+  private IntDomain proofCounterBounds(
       int counter,
       IntDomain restricted,
       int value,
@@ -1447,7 +1449,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (d.getSize() == (long) d.max() - d.min() + 1
         && (restricted.isEmpty()
             || restricted.getSize() == (long) restricted.max() - restricted.min() + 1)) {
-      return;
+      return restricted;
     }
     int fixed = 0;
     int possible = 0;
@@ -1461,8 +1463,18 @@ public final class LcgSolver implements ExternalPropagator {
       }
       clause.append(literals[j]);
     }
-    proofBound(counter, clause, fixed, true);
-    proofBound(counter, clause, possible, false);
+    // the bounds written are unit propagated (the order literals step over the holes), so the
+    // flow takes them too: a split on the counter's values (proofCardinalitySplit) otherwise
+    // spends its cases on values these bounds rule out, and a case the flow cannot refute fails
+    // the clause (a global cardinality failure under x = -1 twice and count(-1) in {0, 1, 3})
+    IntDomain bounded = restricted;
+    if (proofBound(counter, clause, fixed, true) > 0) {
+      bounded = bounded.intersect(fixed, IntDomain.MAX_INT);
+    }
+    if (proofBound(counter, clause, possible, false) > 0) {
+      bounded = bounded.intersect(IntDomain.MIN_INT, possible);
+    }
+    return bounded;
   }
 
   /**

@@ -912,6 +912,28 @@ class VeriPbProofTest {
   }
 
   @Test
+  void gccCounterBoundsBoundTheSplit() {
+    // x2 = x0 = -1 make count(-1) 3 of {0, 1, 3}, which the counter's bound lemmas give; the split
+    // on the counters' values ignored them and ran out of cases on 0 and 1 (fuzz seed 41677534)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", -1, 0, 1, 2);
+    IntVar x1 = values(store, "x1", -1, 1, 2, 3, 4);
+    IntVar x2 = values(store, "x2", -1, 2, 3, 4);
+    IntVar x3 = values(store, "x3", 1, 2);
+    IntVar g0 = values(store, "g0", 0, 1, 3);
+    IntVar g1 = values(store, "g1", 0, 3);
+    IntVar g2 = values(store, "g2", 0, 2, 3);
+    IntVar g3 = values(store, "g3", 0, 2, 3);
+    IntVar g4 = values(store, "g4", 0, 2, 3);
+    store.impose(new GCC(new IntVar[] {x2, x1, x0, x3}, new IntVar[] {g0, g1, g2, g3, g4}, -1));
+    store.impose(new SumInt(new IntVar[] {x0, x0, x2}, "<=", x3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(withProof(store).solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void reifiedRowUnderARootFixedBIsDerived() {
     // b = 0 at the root (b -> x5 = 1 with 1 not in x5) holds 2 x1 + 2 x5 - x0 = 5, which has no
     // solution by parity, but b is in no reason (fuzz seed 6060968)
