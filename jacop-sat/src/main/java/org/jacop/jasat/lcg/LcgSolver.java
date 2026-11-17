@@ -3013,6 +3013,28 @@ public final class LcgSolver implements ExternalPropagator {
     return sat.value(atomLit(entry)) > 0;
   }
 
+  // further solver literals of a reason built after a cone push (see explainDeferred)
+  private int[] extraLits = new int[4];
+  private int numExtraLits;
+
+  private boolean extraLit(int lit) {
+    for (int k = 0; k < numExtraLits; k++) {
+      if (extraLits[k] == lit) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // whether the solver has a trail entry's atom true before the literal whose reason is built
+  private boolean inSolverBefore(int entry) {
+    if (trail.kind(entry) == AtomicTrail.NE) {
+      int d = eq[trail.id(trail.variable(entry))].get(trail.value(entry));
+      return d != LiteralMap.NONE && holdsBefore(-d);
+    }
+    return holdsBefore(atomLit(entry));
+  }
+
   /**
    * Replaces the deferred value removals of a reason by their explanations, which are earlier on
    * the trail, until every entry left has its atom in the solver. Returns the solver literal of the
@@ -3034,22 +3056,37 @@ public final class LcgSolver implements ExternalPropagator {
     while (stack.size() > 0) {
       int last = stack.size() - 1;
       int f = stack.get(last);
-      if (trail.kind(f) != AtomicTrail.NE || inSolver(f)) {
+      if ((trail.kind(f) != AtomicTrail.NE && !conePushed)
+          || stack.slack(last) > 0
+          || (conePushed ? inSolverBefore(f) : inSolver(f))) {
         reason.addFrom(stack, last);
         stack.truncate(last);
         continue;
       }
       stack.truncate(last);
+      if (trail.kind(f) != AtomicTrail.NE) {
+        // after a cone push, an entry outside the cone is not in the solver: it is explained
+        coneMisses++;
+      }
       if (entryStamp[f] == seen) {
         continue;
       }
       entryStamp[f] = seen;
       int lit = explainEntry(f, stack);
       if (lit != 0) {
-        if (extra != 0 && extra != lit) {
-          throw new IllegalStateException("a reason with two solver literals");
+        if (extra != 0 && extra != lit && !extraLit(lit)) {
+          if (!conePushed) {
+            throw new IllegalStateException("a reason with two solver literals");
+          }
+          // an entry outside a pushed cone, explained here, brings the solver literal applied
+          // before it, which is true before the literal whose reason this is
+          if (numExtraLits == extraLits.length) {
+            extraLits = Arrays.copyOf(extraLits, 2 * numExtraLits);
+          }
+          extraLits[numExtraLits++] = lit;
+        } else if (extra == 0) {
+          extra = lit;
         }
-        extra = lit;
       }
     }
     return extra;
@@ -6586,6 +6623,8 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     heldFailure = null;
+    heldCone = false;
+    conePushed = false;
     trail.beginBacktrack();
     try {
       while (store.level > baseLevel + level) {
@@ -7753,6 +7792,124 @@ public final class LcgSolver implements ExternalPropagator {
   /** Statistics: failures whose fixpoint atoms were pushed before the conflict. */
   public long heldFailures;
 
+  /** Statistics: held failures that pushed only the atoms of their cone (see collectCone). */
+  public long coneFailures;
+
+  /** Statistics: atoms of the fixpoints of held failures, and the atoms of their cones. */
+  public long heldFixpointAtoms;
+
+  public long heldConeAtoms;
+
+  // whether a held failure pushes only its cone; the system property jacop.lcg.pushCone
+  private static final boolean PUSH_CONE =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.pushCone", "true"));
+
+  // the held failure pushes the entries of cone, from coneNext on, instead of pushed..trail.size()
+  private boolean heldCone;
+  private final EntryList cone = new EntryList();
+  private final EntryList coneStack = new EntryList();
+  private int coneNext;
+  // a cone was pushed at the current decision level: the entries outside it are not in the solver
+  private boolean conePushed;
+
+  /** Statistics: reasons of pushed cone atoms that cited an entry outside the cone. */
+  public long coneMisses;
+
+  /**
+   * Hands the solver the atom of a trail entry: returns its literal, or the nearest linked literal
+   * it implies when that literal is transient, with the entry as the reason; 0 when there is
+   * nothing left to push for the entry (deferred, or true in the solver with its neighbour).
+   */
+  private int pushEntry(int e) {
+    if (defer(e)) {
+      deferredAtoms++;
+      return 0;
+    }
+    int lit = atomLit(e);
+    if (sat.value(lit) > 0) {
+      // a transient literal implies no linked one by a clause: the nearest is pushed too
+      int next = linkedNeighbour(e, lit);
+      if (next != 0 && sat.value(next) <= 0) {
+        setPropagated(Math.abs(next), e);
+        return next;
+      }
+      return 0;
+    }
+    int dimacsVar = Math.abs(lit);
+    setPropagated(dimacsVar, e);
+    if (dimacsVar >= atomUse.length) {
+      atomUse = Arrays.copyOf(atomUse, propagated.length);
+    }
+    if (atomUse[dimacsVar] == 0) {
+      atomUse[dimacsVar] = 1;
+      atomLiterals++;
+    }
+    atomsPropagated++;
+    return lit;
+  }
+
+  /**
+   * Collects in {@link #cone} the unpushed entries a failure depends on: its atoms not in the
+   * solver and, recursively, the entries their explanations cite that are not in the solver, in
+   * trail order. A fixpoint records many atoms that no failure cites; pushing all of them gave a
+   * literal, unit propagation and its undo to each (fast-food ff58: 250 atoms pushed per failure,
+   * 3.4 times the unit propagations per conflict and 50 % more time per node, against a cone of
+   * about 27). Returns whether the cone is smaller than the fixpoint's unpushed atoms.
+   */
+  private int collectCone(EntryList atoms) {
+    int expanded = 0;
+    int seen = nextStamp();
+    if (entryStamp.length < trail.size()) {
+      entryStamp = Arrays.copyOf(entryStamp, Math.max(trail.size(), 2 * entryStamp.length));
+    }
+    EntryList stack = coneStack;
+    stack.clear();
+    for (int k = 0; k < atoms.size(); k++) {
+      stack.add(atoms.get(k));
+    }
+    cone.clear();
+    coneNext = 0;
+    while (stack.size() > 0) {
+      int e = stack.get(stack.size() - 1);
+      stack.truncate(stack.size() - 1);
+      if (entryStamp[e] == seen) {
+        continue;
+      }
+      entryStamp[e] = seen;
+      if (inSolver(e)) {
+        expanded++;
+      } else {
+        cone.add(e);
+        if (trail.reason(e) == null) {
+          trail.atomsBefore(trail.variable(e), e, stack);
+          expanded++; // the solver literal applied
+        } else {
+          trail.explain(e, stack);
+        }
+      }
+    }
+    cone.sortUnique(0);
+    if (PUSH_CHAIN < Integer.MAX_VALUE) {
+      int kept = 0;
+      for (int k = 0; k < cone.size(); k++) {
+        int e = cone.get(k);
+        int i = trail.id(trail.variable(e));
+        if (trail.reason(e) == null || i >= linkedCount.length || linkedCount[i] < PUSH_CHAIN) {
+          cone.set(kept++, e);
+        }
+      }
+      cone.truncate(kept);
+    }
+    heldFixpointAtoms += trail.size() - pushed;
+    heldConeAtoms += cone.size();
+    return expanded;
+  }
+
+  private static final int PUSH_CHAIN =
+      Integer.getInteger("jacop.lcg.pushChain", Integer.MAX_VALUE);
+
+  private static final int PUSH_MIN_CLAUSE = Integer.getInteger("jacop.lcg.pushMinClause", 0);
+
   @Override
   public int propagate() {
     if (failed) {
@@ -7766,39 +7923,28 @@ public final class LcgSolver implements ExternalPropagator {
           return lit;
         }
       }
-      while (pushed < trail.size()) {
-        int e = pushed;
-        if (defer(e)) {
-          deferredAtoms++;
-          pushed++;
-          continue;
+      if (heldFailure != null && heldCone) {
+        // only the atoms the failure depends on, in trail order (see collectCone)
+        while (coneNext < cone.size()) {
+          int lit = pushEntry(cone.get(coneNext));
+          if (lit != 0) {
+            return lit;
+          }
+          coneNext++;
         }
-        int lit = atomLit(e);
-        if (sat.value(lit) > 0) {
-          // a transient literal implies no linked one by a clause: the nearest is pushed too
-          int next = linkedNeighbour(e, lit);
-          if (next != 0 && sat.value(next) <= 0) {
-            setPropagated(Math.abs(next), e);
-            return next;
+      } else {
+        while (pushed < trail.size()) {
+          int lit = pushEntry(pushed);
+          if (lit != 0) {
+            return lit;
           }
           pushed++;
-          continue;
         }
-        int dimacsVar = Math.abs(lit);
-        setPropagated(dimacsVar, e);
-        if (dimacsVar >= atomUse.length) {
-          atomUse = Arrays.copyOf(atomUse, propagated.length);
-        }
-        if (atomUse[dimacsVar] == 0) {
-          atomUse[dimacsVar] = 1;
-          atomLiterals++;
-        }
-        atomsPropagated++;
-        return lit;
       }
       if (heldFailure != null) {
         EntryList atoms = heldFailure;
         heldFailure = null;
+        heldCone = false;
         return conflict(atoms, 0);
       }
       if (numPending == 0 && !store.hasPendingConstraints()) {
@@ -7848,13 +7994,21 @@ public final class LcgSolver implements ExternalPropagator {
         if (checker != null) {
           verify(checker.checkFailure(store.recentlyFailedConstraint, atoms));
         }
-        if (pushBeforeConflict && pushed < trail.size() && proof == null) {
+        if (pushBeforeConflict
+            && pushed < trail.size()
+            && proof == null
+            && collectCone(atoms) >= PUSH_MIN_CLAUSE) {
           heldFailures++;
           heldAtoms.clear();
           for (int k = 0; k < atoms.size(); k++) {
             heldAtoms.addFrom(atoms, k);
           }
           heldFailure = heldAtoms;
+          heldCone = PUSH_CONE && cone.size() < trail.size() - pushed;
+          if (heldCone) {
+            coneFailures++;
+          }
+          conePushed |= heldCone;
           numPending = 0;
           continue;
         }
@@ -8141,18 +8295,22 @@ public final class LcgSolver implements ExternalPropagator {
     reason.clear();
     liftBefore = sat.trailPosition(lit);
     int extra;
+    numExtraLits = 0;
     try {
       extra = explainEntry(e, reason);
-      if (deferredAtoms > 0) {
+      if (deferredAtoms > 0 || conePushed) {
         extra = explainDeferred(reason, extra);
       }
     } finally {
       liftBefore = Integer.MAX_VALUE;
     }
-    int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2)];
+    int[] clause = new int[reason.size() + (extra == 0 ? 1 : 2) + numExtraLits];
     clause[0] = lit;
     for (int k = 0; k < reason.size(); k++) {
       clause[k + 1] = -atomLit(reason.get(k), reason.slack(k));
+    }
+    for (int k = 0; k < numExtraLits; k++) {
+      clause[reason.size() + 1 + k] = -extraLits[k];
     }
     if (extra != 0) {
       clause[clause.length - 1] = -extra;

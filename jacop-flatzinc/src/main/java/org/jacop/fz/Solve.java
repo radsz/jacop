@@ -4829,6 +4829,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.literalsReleased
             + "\n%%%mzn-stat: lcgDeferredAtoms="
             + lcg.deferredAtoms
+            + "\n%%%mzn-stat: lcgHeldFailures="
+            + lcg.heldFailures
+            + "\n%%%mzn-stat: lcgConeFailures="
+            + lcg.coneFailures
+            + "\n%%%mzn-stat: lcgHeldFixpointAtoms="
+            + lcg.heldFixpointAtoms
+            + "\n%%%mzn-stat: lcgHeldConeAtoms="
+            + lcg.heldConeAtoms
+            + "\n%%%mzn-stat: lcgConeMisses="
+            + lcg.coneMisses
             + "\n%%%mzn-stat: lcgLiftedLiterals="
             + lcg.liftedLiterals
             + "\n%%%mzn-stat: lcgBoundLiterals="
