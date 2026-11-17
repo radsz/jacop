@@ -37,13 +37,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.RecordComponent;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.function.LongSupplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import org.jacop.jasat.lcg.LcgSolver;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -100,6 +105,23 @@ class LcgSlowFallbackFlatzincTest {
     assertTrue(conflicts.find(), out);
     assertTrue(Long.parseLong(conflicts.group(1)) < 10, out);
     checkOptimum(out);
+  }
+
+  @Test
+  void solverThatGaveWayIsNotKept() {
+    // free search keeps only the conflicts, deadline and clock of the LCG solver that gave way: the
+    // solver, with its clauses and three literal maps per variable, held 2.35 million variables'
+    // worth while the clauses were posted again (rcpsp-wet-diverse j90_48_4 -f out of 4 GB)
+    // the running solver, and the early prober (dropped when search starts)
+    Set<String> solvers = Set.of("lcg", "earlyProber");
+    for (Field f : Solve.class.getDeclaredFields()) {
+      if (LcgSolver.class.isAssignableFrom(f.getType())) {
+        assertTrue(solvers.contains(f.getName()), f.toString());
+      }
+    }
+    for (RecordComponent c : Solve.SlowLcg.class.getRecordComponents()) {
+      assertTrue(c.getType().isPrimitive() || c.getType() == LongSupplier.class, c.toString());
+    }
   }
 
   @Test

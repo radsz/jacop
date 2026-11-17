@@ -347,6 +347,56 @@ class ImplicitGlobalsFlatzincTest {
         Set.of("s = array1d(1..12, [8, 2, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0]);"), solutions(out));
   }
 
+  // the sums implied by the GCC of a magic sequence: with holes in some domains (as root probing
+  // leaves them) GCC alone lowered one bound by one per round of its fixpoint (nmseq 202 under -f
+  // took 20 s of search instead of 1.5 s)
+  @Test
+  void magicSequenceWithHolesGetsImpliedSums() throws IOException {
+    int n = 60;
+    String model = magicSequence(n);
+    StringBuilder holes = new StringBuilder();
+    for (int i = 5; i < 10; i++) {
+      holes.append("constraint int_ne(s").append(i).append(",7);\n");
+    }
+    model = model.replace("solve ::", holes + "solve ::");
+    String out = run(model, "-debug", "-s", "--search-statistics");
+    // s1 weighs 1 as a counter and -1 as a counted variable
+    assertTrue(out.contains("% implied GCC sums on " + (n - 1) + " terms"), out);
+    System.setProperty("org.jacop.fz.gccSums", "false");
+    String without;
+    try {
+      without = run(model, "-debug", "-s", "--search-statistics");
+    } finally {
+      System.clearProperty("org.jacop.fz.gccSums");
+    }
+    assertFalse(without.contains("% implied GCC sums"), without);
+    assertEquals(solutions(without), solutions(out));
+  }
+
+  // all solutions of small magic sequences, some with a hole in a domain, are the same with and
+  // without the implied sums (n = 4 and 5 have two solutions, n = 7 one)
+  @Test
+  void impliedSumsKeepAllSolutionsOfMagicSequences() throws IOException {
+    for (int n = 3; n <= 9; n++) {
+      for (int hole = -1; hole < 3; hole++) {
+        String model = magicSequence(n);
+        if (hole >= 0) {
+          model = model.replace("solve ::", "constraint int_ne(s" + hole + ",1);\nsolve ::");
+        }
+        String out = run(model, "-a", "-debug");
+        assertTrue(out.contains("% implied GCC sums"), out);
+        System.setProperty("org.jacop.fz.gccSums", "false");
+        String without;
+        try {
+          without = run(model, "-a");
+        } finally {
+          System.clearProperty("org.jacop.fz.gccSums");
+        }
+        assertEquals(solutions(without), solutions(out), "n " + n + " hole " + hole);
+      }
+    }
+  }
+
   // n-queens with the rows and both diagonals written as pairwise disequalities
   private static String queens(int n) {
     StringBuilder fzn = new StringBuilder();

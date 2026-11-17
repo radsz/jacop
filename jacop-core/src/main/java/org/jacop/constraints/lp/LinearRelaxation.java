@@ -667,6 +667,23 @@ public class LinearRelaxation extends Constraint
   /** Statistics: rounded capacity cuts added. */
   public long capacityCuts;
 
+  /**
+   * Statistics: the 2-path cuts of the Routes with time windows among the capacity cuts, at the
+   * root and in search ({@link CapacityCuts#twoPathCuts}).
+   *
+   * @return the number of 2-path cuts separated
+   */
+  public long twoPathCuts() {
+    long sum = 0;
+    for (CapacityCuts c : capacity) {
+      sum += c.twoPathCuts();
+    }
+    return sum;
+  }
+
+  /** Statistics: the arc-time rows of the Routes with time windows in the relaxation. */
+  public int arcTimeRows;
+
   // Hall cuts of the all-different constraints ({@link AlldifferentCuts}) at the root, after the
   // capacity and energy cuts and before the MIR cuts, in rounds like those; for an objective only
   private static final boolean ALLDIFF_CUTS =
@@ -809,6 +826,12 @@ public class LinearRelaxation extends Constraint
   // capacity and self loops), go into the row pool and leave the simplex when they age.
   private static final boolean CAPACITY_SEARCH =
       !FALSE.equals(System.getProperty("org.jacop.lp.capacitySearch"));
+  // the big-M arc-time rows of Routes with time windows and node times (CapacityCuts.arcTimeRows),
+  // as rows of the relaxation, or tried like the linearized rows with ARC_TIME_TRIED
+  private static final boolean ARC_TIME_ROWS =
+      !FALSE.equals(System.getProperty("org.jacop.lp.arcTimeRows"));
+  private static final boolean ARC_TIME_TRIED =
+      "tried".equals(System.getProperty("org.jacop.lp.arcTimeRows"));
   private static final int CAPACITY_SEARCH_CUTS =
       Integer.getInteger("org.jacop.lp.capacitySearchCuts", 10);
   private static final int CAPACITY_MAX_PERIOD = 1024;
@@ -1264,6 +1287,7 @@ public class LinearRelaxation extends Constraint
     boolean encodingsLead = false;
     int valueCliqueRows = 0;
     List<CapacityCuts> separations = new ArrayList<>();
+    int arcTimeCount = 0;
     List<EnergyCuts> resources = new ArrayList<>();
     List<AlldifferentCuts> hall = new ArrayList<>();
     List<TreeCuts> trees = new ArrayList<>();
@@ -1288,6 +1312,16 @@ public class LinearRelaxation extends Constraint
       }
       if (CAPACITY_CUTS && c instanceof Routes routes) {
         separations.add(new CapacityCuts(routes));
+      }
+      if (ARC_TIME_ROWS && objective != null && c instanceof Routes routes) {
+        List<LinearForm> rows = CapacityCuts.arcTimeRows(routes, store.level == 0);
+        if (ARC_TIME_TRIED) {
+          relaxed.addAll(rows);
+        } else {
+          localForms.addAll(rows);
+        }
+        tag(tags, rows, "arcTime");
+        arcTimeCount += rows.size();
       }
       if (ENERGY_CUTS && objective != null) {
         EnergyCuts e = energyCuts(c);
@@ -1314,7 +1348,12 @@ public class LinearRelaxation extends Constraint
     // clauses of lazy clause generation make thousands of rows on some models (rel2onto: 65 rows
     // become 1,135), and a relaxation that large stalls at its pivot limit and prunes nothing
     for (LinearForm f : extra) {
-      if (f != null) {
+      if (f != null && overSubstituted(f, substituted)) {
+        // a row of the model over a substituted variable (linear overlap factoring reduced it to a
+        // bound of its sub-sum): substituted back below, it is the row of the model again
+        localForms.add(f);
+        tags.putIfAbsent(f, "unit");
+      } else if (f != null) {
         relaxed.add(f);
         tags.putIfAbsent(f, "given");
       }
@@ -1603,6 +1642,7 @@ public class LinearRelaxation extends Constraint
     r.tableClauses = tableClauses;
     r.formSource = tags;
     r.capacity = separations;
+    r.arcTimeRows = arcTimeCount;
     r.energy = resources;
     r.hall = hall;
     r.trees = trees;
@@ -2505,45 +2545,75 @@ public class LinearRelaxation extends Constraint
     return result;
   }
 
+  // the number of terms a row may grow to while its defined variables are replaced
+  private static final int MAX_EXPANDED_TERMS = 4096;
+
   // f with every defined variable replaced by its definition; definitions may use defined
-  // variables, up to a small depth
+  // variables, up to a small depth. Repeated variables are merged and zero weights dropped after
+  // every level: chained definitions repeat variables, and without merging the term lists
+  // multiplied at every level (XCSP 2022 CarSequencing-table, 200 small tables and 1215 window
+  // sums: 6 GB of terms before search). A row that grows past MAX_EXPANDED_TERMS stays as it was;
+  // its defined variables then keep their definitions.
   private static LinearForm expand(
       LinearForm f, Map<IntVar, LinearForm> definition, Map<IntVar, Long> weight, int depth) {
-    boolean any = false;
-    for (IntVar v : f.vars()) {
-      any |= definition.containsKey(v);
-    }
-    if (!any || depth > 8) {
-      return f;
-    }
-    List<IntVar> vs = new ArrayList<>();
-    List<Long> ws = new ArrayList<>();
-    long c = f.c();
-    for (int k = 0; k < f.vars().length; k++) {
-      IntVar v = f.vars()[k];
-      long w = f.weights()[k];
-      LinearForm d = definition.get(v);
-      if (d == null) {
-        vs.add(v);
-        ws.add(w);
-        continue;
-      }
-      // d: sum a x + ws s = cd, so w s = w ws cd - w ws sum a x (ws is 1 or -1)
-      long f0 = Math.multiplyExact(w, weight.get(v));
-      c = Math.subtractExact(c, Math.multiplyExact(f0, d.c()));
-      for (int j = 0; j < d.vars().length; j++) {
-        if (d.vars()[j] != v) {
-          vs.add(d.vars()[j]);
-          ws.add(Math.negateExact(Math.multiplyExact(f0, d.weights()[j])));
+    LinearForm e = f;
+    for (int level = depth; level <= 8 && hasDefined(e, definition); level++) {
+      Map<IntVar, Long> terms = new LinkedHashMap<>();
+      long c = e.c();
+      for (int k = 0; k < e.vars().length; k++) {
+        IntVar v = e.vars()[k];
+        long w = e.weights()[k];
+        LinearForm d = definition.get(v);
+        if (d == null) {
+          addTerm(terms, v, w);
+          continue;
+        }
+        // d: sum a x + ws s = cd, so w s = w ws cd - w ws sum a x (ws is 1 or -1)
+        long f0 = Math.multiplyExact(w, weight.get(v));
+        c = Math.subtractExact(c, Math.multiplyExact(f0, d.c()));
+        for (int j = 0; j < d.vars().length; j++) {
+          if (d.vars()[j] != v) {
+            addTerm(terms, d.vars()[j], Math.negateExact(Math.multiplyExact(f0, d.weights()[j])));
+          }
         }
       }
+      terms.values().removeIf(w -> w == 0);
+      if (terms.size() > MAX_EXPANDED_TERMS) {
+        return f;
+      }
+      IntVar[] vs = new IntVar[terms.size()];
+      long[] ws = new long[vs.length];
+      int i = 0;
+      for (Map.Entry<IntVar, Long> t : terms.entrySet()) {
+        vs[i] = t.getKey();
+        ws[i++] = t.getValue();
+      }
+      e = new LinearForm(vs, ws, c, e.relation());
     }
-    long[] w = new long[ws.size()];
-    for (int k = 0; k < w.length; k++) {
-      w[k] = ws.get(k);
+    return e;
+  }
+
+  private static boolean hasDefined(LinearForm f, Map<IntVar, LinearForm> definition) {
+    for (IntVar v : f.vars()) {
+      if (definition.containsKey(v)) {
+        return true;
+      }
     }
-    LinearForm e = new LinearForm(vs.toArray(new IntVar[0]), w, c, f.relation());
-    return expand(e, definition, weight, depth + 1);
+    return false;
+  }
+
+  private static void addTerm(Map<IntVar, Long> terms, IntVar v, long w) {
+    Long old = terms.get(v);
+    terms.put(v, old == null ? w : Math.addExact(old, w));
+  }
+
+  private static boolean overSubstituted(LinearForm f, Set<? extends IntVar> substituted) {
+    for (IntVar v : f.vars()) {
+      if (substituted.contains(v)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private static int indexOf(LinearForm f, IntVar v) {
@@ -4527,10 +4597,21 @@ public class LinearRelaxation extends Constraint
    * @return whether the rows moved
    */
   private boolean moveToSparse() {
+    return moveToSparse(false);
+  }
+
+  /**
+   * Moves the rows of the dense tableau to the sparse simplex, as {@link #moveToSparse()}, also
+   * when the tableau has room left if force is true.
+   *
+   * @param force true to move whatever room the tableau has
+   * @return whether the rows moved
+   */
+  private boolean moveToSparse(boolean force) {
     int m = lp.rows();
     int n = lp.columns();
     long room = (long) (m + CUTS_PER_ROUND) * (m + CUTS_PER_ROUND + n + 1);
-    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap) {
+    if (!SPARSE_CUTS || simplex != Simplex.DENSE || room <= tableauCap && !force) {
       return false;
     }
     LpSolver s = sparseCopy();
@@ -5029,6 +5110,30 @@ public class LinearRelaxation extends Constraint
     return MirCut.row(cs, ws, rhs, cut.efficacy());
   }
 
+  // the dense tableau kept by moveToSparse is not needed any more
+  private void forgetDense() {
+    denseBeforeCuts = null;
+    denseLpRow = null;
+    denseInLp = null;
+    denseInactive = null;
+  }
+
+  // back to the dense tableau kept by moveToSparse, at the same optimum, when the cuts on the
+  // sparse simplex were all dropped
+  private void backToDense() {
+    droppedPivots += lp.pivots();
+    lp = denseBeforeCuts;
+    simplex = Simplex.DENSE;
+    truncateRows(denseRows);
+    lpRow = denseLpRow;
+    inLp = denseInLp;
+    inactive = denseInactive;
+    identityRows = denseIdentity;
+    dormant = denseDormant;
+    sparseCuts = false;
+    forgetDense();
+  }
+
   /**
    * Rounds of cuts from a separation at the root, each followed by a re-solve, shared by the Hall
    * and tree cuts.
@@ -5045,6 +5150,7 @@ public class LinearRelaxation extends Constraint
     int firstCount = rows();
     LpSolver first = lp.copy();
     int[] firstRows = lpRow;
+    boolean forced = false;
     int added = 0;
     int stall = 0;
     int status = DualSimplex.OPTIMAL;
@@ -5058,10 +5164,7 @@ public class LinearRelaxation extends Constraint
         // and the cuts so far move to the sparse simplex for good (ch130 of surface-based-tsp
         // needs about 1,300 tree cuts, which the dense cap stops at a third of the bound's gain);
         // the bound has moved, so the cuts are not dropped at the end either
-        denseBeforeCuts = null;
-        denseLpRow = null;
-        denseInLp = null;
-        denseInactive = null;
+        forgetDense();
       }
       List<MirCut> found = separation.get();
       found.sort(Comparator.comparingDouble((MirCut c) -> -c.efficacy));
@@ -5089,6 +5192,25 @@ public class LinearRelaxation extends Constraint
       if (status == DualSimplex.LIMIT) {
         dropCuts(chosen.size(), kept, keptRows);
         status = DualSimplex.OPTIMAL;
+        if (toSparse && simplex == Simplex.DENSE && moveToSparse(true)) {
+          // the dense tableau ran out of pivots for the round: the rows and the cuts so far move
+          // to the sparse simplex and the round is tried again there (prize-collecting 32-4-8-2
+          // of the Challenge 2016: the dense tableau of 800 rows stops at 127 after one round of
+          // tree cuts, or at 172 before any under free search, the sparse simplex goes on to
+          // 102.5, for the optimum 92); the dense tableau comes back below if the cuts do not
+          // move the bound
+          if (added == 0) {
+            first = lp.copy();
+            firstRows = lpRow;
+            forced = true;
+          } else {
+            forgetDense();
+          }
+          for (MirCut row : chosen) {
+            seen.remove(key(row));
+          }
+          continue;
+        }
         break;
       }
       added += chosen.size();
@@ -5104,6 +5226,13 @@ public class LinearRelaxation extends Constraint
       // cuts that do not move the bound only make each solve dearer
       dropCuts(added, first, firstRows);
       added = 0;
+    }
+    if (forced) {
+      if (added == 0) {
+        backToDense();
+      } else {
+        forgetDense();
+      }
     }
     keepCapacityForms(firstCount, added);
     return new long[] {status, added};
