@@ -55,6 +55,8 @@ final class Eliminator {
   // effort (literals visited) allowed in one run
   private static final long EFFORT_LIMIT = 300_000_000L;
 
+  private static final int[] NO_OCCURRENCES = new int[0];
+
   private final int numVars;
   private final boolean[] frozen;
   private final ProofOutput proof;
@@ -109,8 +111,11 @@ final class Eliminator {
         count[l]++;
       }
     }
+    // a literal of no clause shares the empty list: under LCG most literals (order and value atoms)
+    // are in no clause of the root database, and a list of four for each of them took 3.9 GB on
+    // MagicSquare-mdd-10 (XCSP 2023)
     for (int l = 0; l < 2 * numVars; l++) {
-      occ[l] = new int[Math.max(4, count[l])];
+      occ[l] = count[l] == 0 ? NO_OCCURRENCES : new int[count[l]];
     }
     for (int i = 0; i < numInput; i++) {
       add(input[i]);
@@ -235,7 +240,7 @@ final class Eliminator {
   private void addOcc(int l, int i) {
     int[] o = occ[l];
     if (occSize[l] == o.length) {
-      o = Arrays.copyOf(o, 2 * o.length);
+      o = Arrays.copyOf(o, Math.max(4, 2 * o.length));
       occ[l] = o;
     }
     o[occSize[l]++] = i;

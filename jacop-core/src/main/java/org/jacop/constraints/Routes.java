@@ -258,6 +258,35 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
     return travel == null ? null : travel.clone();
   }
 
+  // the time of each node (null for the depot, or for a node without one), or null: only the
+  // linear relaxation uses them, for the arc-time rows
+  private IntVar[] times;
+
+  /**
+   * It gives the nodes the variables of their times, for the arc-time rows of the linear relaxation
+   * ({@link org.jacop.constraints.lp.LinearRelaxation}): an arc a = (i, j) with a known travel time
+   * ({@link #setTimeWindows}) gives {@code t[j] >= t[i] + travel[a] - M (1 - x[a])}, with M from
+   * the time windows. The propagation does not use them. The times must satisfy the windows and
+   * {@code x[a] = 1 -> t[j] >= t[i] + travel[a]} in every solution.
+   *
+   * @param times the time variable of each node, null for the depot or a node without one.
+   */
+  public void setTimes(IntVar[] times) {
+    if (times.length < n) {
+      throw new IllegalArgumentException("Routes needs a time variable slot for each node");
+    }
+    this.times = Arrays.copyOf(times, n);
+  }
+
+  /**
+   * It returns the time variable of each node.
+   *
+   * @return the times, a copy, or null when the nodes have none.
+   */
+  public IntVar[] times() {
+    return times == null ? null : times.clone();
+  }
+
   /**
    * It tells whether the constraint keeps the degrees itself (one arc out of and one into each node
    * other than the depot). A model whose own constraints keep them can turn this off, so the
@@ -912,6 +941,12 @@ public class Routes extends Constraint implements SatisfiedPresent, Copyable<Rou
     c.earliest = earliest;
     c.latest = latest;
     c.travel = travel;
+    if (times != null) {
+      c.times = new IntVar[times.length];
+      for (int v = 0; v < times.length; v++) {
+        c.times[v] = times[v] == null ? null : map.get(times[v]);
+      }
+    }
     return c;
   }
 }
