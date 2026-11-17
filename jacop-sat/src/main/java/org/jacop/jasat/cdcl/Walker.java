@@ -45,6 +45,8 @@ import java.util.SplittableRandom;
  */
 final class Walker {
 
+  private static final int[] NO_OCCURRENCES = new int[0];
+
   // ProbSAT break bases by average clause length (CaDiCaL's fitted values)
   private static final double[] BASES = {2.0, 2.0, 2.0, 2.5, 3.7, 5.1, 7.3};
 
@@ -84,7 +86,8 @@ final class Walker {
     }
     occ = new int[2 * numVars][];
     for (int l = 0; l < 2 * numVars; l++) {
-      occ[l] = new int[occSize[l]];
+      // most LCG literals are in no original clause; they share the empty list
+      occ[l] = occSize[l] == 0 ? NO_OCCURRENCES : new int[occSize[l]];
       occSize[l] = 0;
     }
     for (int i = 0; i < numClauses; i++) {

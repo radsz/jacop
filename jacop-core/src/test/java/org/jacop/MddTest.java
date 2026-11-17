@@ -396,6 +396,49 @@ class MddTest {
     }
   }
 
+  // Constraints given the same diagram arrays share the graph built from them when their variables
+  // have equal domains (WordDesign2-words-mdd-025 posts one diagram of 1.8 million edges on 300
+  // scopes), and each keeps its own state: the solutions must still be those of brute force.
+  @Test
+  void mddsOnOneDiagramShareTheGraphAndFindAllSolutions() {
+
+    Random random = new Random(29);
+    for (int trial = 0; trial < 30; trial++) {
+      Diagram diagram = randomDiagram(random, 3, 3, 3);
+      Store store = new Store();
+      IntVar[] x = variables(store, 6, 3);
+      // a narrower domain on the last scope gives it a graph of its own
+      x[5].domain.in(store.level, x[5], 0, 2);
+      IntVar[][] scopes = {{x[0], x[1], x[2]}, {x[1], x[2], x[3]}, {x[3], x[4], x[5]}};
+      ExtensionalSupportMdd[] constraints = new ExtensionalSupportMdd[scopes.length];
+      for (int c = 0; c < scopes.length; c++) {
+        constraints[c] = diagram.constraint(scopes[c]);
+        constraints[c].setPropagation(propagation(trial + c));
+        store.impose(constraints[c]);
+      }
+      assertThat(constraints[1].sharesGraphWith(constraints[0])).as("trial " + trial).isTrue();
+      assertThat(constraints[2].sharesGraphWith(constraints[0])).as("trial " + trial).isFalse();
+
+      long expected =
+          bruteForce(
+                  x,
+                  w ->
+                      w[5] <= 2
+                          && diagram.accepts(new int[] {w[0], w[1], w[2]})
+                          && diagram.accepts(new int[] {w[1], w[2], w[3]})
+                          && diagram.accepts(new int[] {w[3], w[4], w[5]}))
+              .size();
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      boolean found = search.labeling(store, new InputOrderSelect<>(store, x, new IndomainMin<>()));
+      assertThat(found ? (long) search.getSolutionListener().solutionsNo() : 0L)
+          .as("trial " + trial)
+          .isEqualTo(expected);
+    }
+  }
+
   @Test
   void mddRejectsEdgesThatSkipALevel() {
     Store store = new Store();

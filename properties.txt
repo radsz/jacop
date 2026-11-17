@@ -1133,6 +1133,13 @@ Rows and encodings:
   linear relations; default true.
 - org.jacop.lp.smallExtra: such rows are kept when they move the bound,
   find infeasibility or are at most this many; default 100.
+- org.jacop.lp.extraLimits: the extra rows and cuts are dropped from the
+  relaxation once this many search solves stopped at the pivot limit
+  (and at least 1 in 20 solves did); 1000000 keeps them; default 3.
+  Keeping them gave tighter dual bounds on TankAllocation1 with
+  org.jacop.lp.zeroHalf=true and no change in time or solved instances
+  on the wide-set instances where the rows are dropped (osolpro
+  benchmarks/extra-limits).
 - org.jacop.lp.valueColumns: value encodings over LP-only columns;
   default true.
 - org.jacop.lp.valueColumnsDomain, org.jacop.lp.valueColumnsMax: the
