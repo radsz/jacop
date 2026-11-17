@@ -48,6 +48,8 @@ import org.jacop.constraints.AtLeast;
 import org.jacop.constraints.AtMost;
 import org.jacop.constraints.Constraint;
 import org.jacop.constraints.ElementInteger;
+import org.jacop.constraints.ElementVariable;
+import org.jacop.constraints.ElementVariableFast;
 import org.jacop.constraints.GCC;
 import org.jacop.constraints.LexChain;
 import org.jacop.constraints.LinearInt;
@@ -59,11 +61,15 @@ import org.jacop.constraints.Span;
 import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.Values;
 import org.jacop.constraints.XdivYeqZ;
+import org.jacop.constraints.XeqY;
 import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XlteqY;
 import org.jacop.constraints.XmodYeqZ;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XneqY;
+import org.jacop.constraints.XplusCeqZ;
+import org.jacop.constraints.XplusCneqZ;
+import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.cumulative.Cumulative;
 import org.jacop.constraints.cumulative.CumulativeOptional;
@@ -228,6 +234,46 @@ class AtomicTrailTest {
           IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd)};
           return new Model(new XneqY(v[0], v[1]), t -> t[0] != t[1], v);
         });
+    // shifts and element over variables explain disjoint ranges by the bounds that separate them
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd)};
+          return new Model(new XeqY(v[0], v[1]), t -> t[0] == t[1], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "z", rnd)};
+          return new Model(new XplusCeqZ(v[0], 2, v[1]), t -> t[0] + 2 == t[1], v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd)};
+          return new Model(new XplusYeqC(v[0], v[1], 1), t -> t[0] + t[1] == 1, v);
+        });
+    m.add(
+        s -> {
+          IntVar[] v = {newVar(s, "x", rnd), newVar(s, "z", rnd)};
+          return new Model(new XplusCneqZ(v[0], -1, v[1]), t -> t[0] - 1 != t[1], v);
+        });
+    for (boolean fast : new boolean[] {false, true}) {
+      m.add(
+          s -> {
+            IntVar[] v = {
+              new IntVar(s, "i", 0, 4),
+              newVar(s, "a", rnd),
+              newVar(s, "b", rnd),
+              newVar(s, "c", rnd),
+              newVar(s, "d", rnd),
+              newVar(s, "v", rnd)
+            };
+            IntVar[] list = {v[1], v[2], v[3], v[4]};
+            Constraint c =
+                fast
+                    ? new ElementVariableFast(v[0], list, v[5], 0)
+                    : new ElementVariable(v[0], list, v[5], 0);
+            return new Model(c, t -> t[0] >= 1 && t[0] <= 4 && t[t[0]] == t[5], v);
+          });
+    }
     m.add(
         s -> {
           IntVar[] v = {newVar(s, "x", rnd), newVar(s, "y", rnd), new BooleanVar(s, "b")};
@@ -1703,6 +1749,53 @@ class AtomicTrailTest {
       }
       assertThat(covered).as("position %d", j).isTrue();
     }
+    trail.detach();
+  }
+
+  /**
+   * value = list[index] with the value fixed to 31 and list[1] fixed to 16 after list[1] <= 20: the
+   * index drops 1 because list[1] stays below 31, so the reason is value >= 31 and the weakest
+   * bound list[1] <= 20, not both bounds of both variables, which would tie a learnt clause to the
+   * exact value of list[1] (binpack nogoods naming the bin of every earlier item).
+   */
+  @Test
+  void disjointElementPositionCitesTheSeparatingBounds() {
+    Store store = new Store();
+    IntVar index = new IntVar(store, "index", 1, 2);
+    IntVar a = new IntVar(store, "a", 0, 40);
+    IntVar b = new IntVar(store, "b", 0, 40);
+    IntVar value = new IntVar(store, "value", 0, 40);
+    AtomicTrail trail = new AtomicTrail(store);
+    store.impose(new ElementVariable(index, new IntVar[] {a, b}, value, 0));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a.domain.inMax(store.level, a, 20);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    a.domain.in(store.level, a, 16, 16);
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    value.domain.in(store.level, value, 31, 31);
+    assertThat(store.consistency()).isTrue();
+    assertThat(index.value()).isEqualTo(2);
+    int removal = trail.lastEntry(index, trail.size());
+    EntryList reason = new EntryList();
+    assertThat(trail.explain(removal, reason)).isTrue();
+    List<String> atoms = new ArrayList<>();
+    for (int k = 0; k < reason.size(); k++) {
+      int e = reason.get(k);
+      if (trail.variable(e) == index) {
+        continue;
+      }
+      String op =
+          switch (trail.kind(e)) {
+            case AtomicTrail.GE -> ">=";
+            case AtomicTrail.LE -> "<=";
+            default -> "!=";
+          };
+      atoms.add(trail.variable(e).id() + op + trail.value(e));
+    }
+    assertThat(atoms).containsExactlyInAnyOrder("value>=31", "a<=20");
     trail.detach();
   }
 

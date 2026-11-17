@@ -47,6 +47,10 @@ public final class ShiftExplanation {
   // values walked for one reason before giving up on it
   private static final int MAX_VALUES = 4096;
 
+  // disjointness explained by the bounds that make it, not by both bounds of both variables
+  private static final boolean SPLIT_BOUNDS =
+      !"false".equals(System.getProperty("jacop.lcg.shiftSplitBounds"));
+
   private ShiftExplanation() {}
 
   /**
@@ -152,8 +156,17 @@ public final class ShiftExplanation {
       EntryList out) {
     long sourceMin = trail.minBefore(source, position);
     long sourceMax = trail.maxBefore(source, position);
-    long lo = Math.max(trail.minBefore(target, position), sign > 0 ? sourceMin + k : k - sourceMax);
-    long hi = Math.min(trail.maxBefore(target, position), sign > 0 ? sourceMax + k : k - sourceMin);
+    long targetMin = trail.minBefore(target, position);
+    long targetMax = trail.maxBefore(target, position);
+    // the source's range seen in the target's values
+    long imageMin = sign > 0 ? sourceMin + k : k - sourceMax;
+    long imageMax = sign > 0 ? sourceMax + k : k - sourceMin;
+    if (SPLIT_BOUNDS && (targetMin > imageMax || targetMax < imageMin)) {
+      separated(trail, position, target, source, k, sign, targetMin > imageMax, out);
+      return true;
+    }
+    long lo = Math.max(targetMin, imageMin);
+    long hi = Math.min(targetMax, imageMax);
     if (hi - lo >= MAX_VALUES) {
       return false;
     }
@@ -162,11 +175,63 @@ public final class ShiftExplanation {
         return false;
       }
     }
-    trail.addLowerBound(target, position, out);
-    trail.addUpperBound(target, position, out);
-    trail.addLowerBound(source, position, out);
-    trail.addUpperBound(source, position, out);
+    if (!SPLIT_BOUNDS) {
+      trail.addLowerBound(target, position, out);
+      trail.addUpperBound(target, position, out);
+      trail.addLowerBound(source, position, out);
+      trail.addUpperBound(source, position, out);
+      return true;
+    }
+    // only the bounds that make the common range [lo, hi]: the values outside it are out of the
+    // target's domain or have no counterpart in the source's
+    if (targetMin >= imageMin) {
+      trail.addLowerBound(target, position, out);
+    } else if (sign > 0) {
+      trail.addLowerBound(source, position, out);
+    } else {
+      trail.addUpperBound(source, position, out);
+    }
+    if (targetMax <= imageMax) {
+      trail.addUpperBound(target, position, out);
+    } else if (sign > 0) {
+      trail.addUpperBound(source, position, out);
+    } else {
+      trail.addLowerBound(source, position, out);
+    }
     return true;
+  }
+
+  /**
+   * Explains ranges without a common value by one bound of each variable: the target above the
+   * source's image takes the target's lower bound and the source's bound giving the image's upper
+   * one, each as weak as the other allows.
+   */
+  private static void separated(
+      AtomicTrail trail,
+      int position,
+      IntVar target,
+      IntVar source,
+      long k,
+      int sign,
+      boolean above,
+      EntryList out) {
+    long targetBound =
+        above ? trail.minBefore(target, position) : trail.maxBefore(target, position);
+    if (above) {
+      // image max <= target min - 1
+      long image =
+          sign > 0
+              ? trail.addBoundReaching(source, position, false, targetBound - 1 - k, out) + k
+              : k - trail.addBoundReaching(source, position, true, k - targetBound + 1, out);
+      trail.addBoundReaching(target, position, true, image + 1, out);
+    } else {
+      // image min >= target max + 1
+      long image =
+          sign > 0
+              ? trail.addBoundReaching(source, position, true, targetBound + 1 - k, out) + k
+              : k - trail.addBoundReaching(source, position, false, k - targetBound - 1, out);
+      trail.addBoundReaching(target, position, false, image - 1, out);
+    }
   }
 
   /**
