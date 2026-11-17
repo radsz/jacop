@@ -7563,7 +7563,16 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
-419. Subtour cuts for successor models (opt-in,
+419. The core-guided phase of LCG no longer loops forever when it probes
+   the objective's bound (the probes of commit 7c2bc093d) after the
+   objective's own minimum has reached the best solution: every probe
+   target was already implied, so the step doubled until it overflowed
+   and the loop never ended. MiniZinc Challenge 2023 roster-shifts-bool
+   s100_e20_c8 under -f with -t 240 s or more never ended (bound and best
+   both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
+   instances it is the only one that met the loop at 240 s.
+
+420. Subtour cuts for successor models (opt-in,
    -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
    output array x and an element list pos whose arcs x[i] = j are proved
    acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
@@ -7581,7 +7590,7 @@ Version 5.0 (unreleased)
    on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
    28 s -> 34 s by default, 27-38 s -> 20 s with -f).
 
-420. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+421. The linear relaxation (--lp, and LCG free search -f) keeps the rows
    that linear overlap factoring (272) reduces to the shared sum alone.
    A row k * S rel c whose whole sum S became the new variable z is
    k * z rel c, which the FlatZinc front end posts as a bound of z or as
@@ -7597,7 +7606,7 @@ Version 5.0 (unreleased)
    warehouse olil4, cap6000). The rows are counted in the statistic
    lpUnitRows.
 
-421. JaSAT substitutes equivalent literals before variable elimination. The
+422. JaSAT substitutes equivalent literals before variable elimination. The
    strongly connected components of the binary implication graph (B.
    Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
    the truth of certain quantified Boolean formulas, Information Processing
