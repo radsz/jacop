@@ -7401,8 +7401,10 @@ Version 5.0 (unreleased)
    Optimization 4(1), 2000; Lifted cover inequalities for 0-1 integer
    programs: computation, INFORMS Journal on Computing 10(4), 1998).
    -Dorg.jacop.lp.coverSearch=true also separates them in search.
-   Statistic lpCoverCuts. On OR-Library GAP types b-d at 240 s
-   gapc_10x100 and gapc_20x100 are proved, which they were not before.
+   Statistic lpCoverCuts. On the 18 OR-Library GAP instances of types b-d
+   at 600 s, proved 7 -> 8 (default) and 7 -> 9 (-f), total time 0.93 and
+   0.92 (gapc_10x100 and gapc_20x100 are proved, root bound of gapc_10x100
+   1396.0 -> 1399.0, optimum 1402).
 
 
 Version 4.11
