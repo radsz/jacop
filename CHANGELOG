@@ -7563,6 +7563,24 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+419. The FlatZinc front end posts the job view of an open shop written in
+   the order of its operations (PermutedTasksDetector): when the
+   operations of a chain s[j] + d[j] <= s[j+1] run on all different
+   resources m[j] that use every resource of their union, each start is
+   channelled by an element s[j] = t[m[j]] over one array t and each
+   duration is the same function of the resource (a table or a constant
+   element), it posts a unary resource over t with those durations and
+   the window rows s[first] <= t[k], t[k] + p[k] <= s[last] + d[last].
+   These are the redundant constraints of a dual model (Cheng, Lee and Wu,
+   Constraints 4(2), 1999), the job disjunctive of Malapert, Cambazard,
+   Gueret, Jussien, Langevin and Rousseau (INFORMS J. Computing 24(2),
+   2012). On the 14 XCSP 2025 SchedulingOS instances (Gueret-Prins) at
+   240 s: proved 12 -> 14 in both modes, total time 758 -> 191 s (default)
+   and 723 -> 140 s (-f); gp-10-01 1194 -> optimum 1093 in 41 s, gp-10-05
+   proved 1071 (no 2025 solver proved it). It fires on no other XCSP
+   2022-2025 instance and on none of the wide set.
+   -Dorg.jacop.fz.permutedTasks=false turns it off.
+
 Version 4.11
 =============
 
