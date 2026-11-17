@@ -80,8 +80,10 @@ public final class CapacityCuts {
   private static final double MIN_VIOLATION = 1e-4;
 
   // the multistar cuts, also separated over the sets of the capacity cuts
+  private static final String OFF = "false";
+
   private static final boolean MULTISTAR =
-      !"false".equals(System.getProperty("org.jacop.lp.multistarCuts"));
+      !OFF.equals(System.getProperty("org.jacop.lp.multistarCuts"));
 
   // the blossom and comb cuts of the customers (CombCuts): true or false for all Routes; by default
   // only for Routes without a capacity (travelling salesman tours), as on CVRP they were level
@@ -99,7 +101,7 @@ public final class CapacityCuts {
   private boolean[] mandatory;
 
   // the infeasible path cuts of routes with time windows
-  private static final boolean PATHS = !"false".equals(System.getProperty("org.jacop.lp.pathCuts"));
+  private static final boolean PATHS = !OFF.equals(System.getProperty("org.jacop.lp.pathCuts"));
 
   // the most nodes of an infeasible path, and the most extensions tried in one separation
   private static final int MAX_PATH = 16;
@@ -116,7 +118,7 @@ public final class CapacityCuts {
   // the 2-path cuts of routes with time windows (Kohl et al. 1999): a set of at most MAX_TWO_PATH
   // customers that no route can visit in one stretch within the windows is entered twice
   private static final boolean TWO_PATH =
-      !"false".equals(System.getProperty("org.jacop.lp.twoPathCuts"));
+      !OFF.equals(System.getProperty("org.jacop.lp.twoPathCuts"));
   private static final int MAX_TWO_PATH = Integer.getInteger("org.jacop.lp.twoPathSize", 12);
   private static final int TWO_PATH_STEPS = 200_000;
 
@@ -130,6 +132,9 @@ public final class CapacityCuts {
   private final java.util.Map<BitSet, Boolean> oneStretch = new java.util.HashMap<>();
   // the steps left to the feasibility checks of the current separation
   private int twoPathSteps;
+  private static final int FOUND = 1;
+  private static final int NOT_FOUND = 0;
+  private static final int UNKNOWN = -1;
 
   // the 2-path cuts separated, and whether the last set needed two routes for its windows only
   private int twoPathCuts;
@@ -239,11 +244,15 @@ public final class CapacityCuts {
     for (int a = 0; a < routes.tails.length; a++) {
       int i = routes.tails[a];
       int j = routes.heads[a];
-      if (i == 0 || j == 0 || i == j || t[i] == null || t[j] == null || t[i] == t[j]) {
-        continue;
-      }
       long d = travel[a];
-      if (d == Long.MIN_VALUE || routes.literals[a].singleton()) {
+      if (i == 0
+          || j == 0
+          || i == j
+          || t[i] == null
+          || t[j] == null
+          || t[i] == t[j]
+          || d == Long.MIN_VALUE
+          || routes.literals[a].singleton()) {
         continue;
       }
       long hi = global ? Math.min(latest[i], t[i].max()) : latest[i];
@@ -251,25 +260,28 @@ public final class CapacityCuts {
       long big;
       try {
         big = Math.subtractExact(Math.addExact(hi, d), lo);
-        if (big <= 0) {
-          continue;
+        if (big > 0) {
+          rows.add(
+              new LinearForm(
+                  new IntVar[] {t[j], t[i], routes.literals[a]},
+                  new long[] {1, -1, -big},
+                  Math.subtractExact(d, big),
+                  LinearForm.GE));
+          strength.add(new double[] {(double) d / big, rows.size() - 1});
         }
-        rows.add(
-            new LinearForm(
-                new IntVar[] {t[j], t[i], routes.literals[a]},
-                new long[] {1, -1, -big},
-                Math.subtractExact(d, big),
-                LinearForm.GE));
-        strength.add(new double[] {(double) d / big, rows.size() - 1});
       } catch (ArithmeticException _) {
         // a window too wide for a row
       }
     }
+    return strongest(rows, strength);
+  }
+
+  // A row binds only when its arc is nearly taken unless the travel time is a large part of M:
+  // keep the ARC_TIME_MAX rows whose travel time is the largest share of M.
+  private static List<LinearForm> strongest(List<LinearForm> rows, List<double[]> strength) {
     if (rows.size() <= ARC_TIME_MAX) {
       return rows;
     }
-    // A row binds only when its arc is nearly taken unless the travel time is a large part of M:
-    // keep the rows whose travel time is the largest share of M.
     strength.sort((x, y) -> Double.compare(y[0], x[0]));
     List<LinearForm> kept = new ArrayList<>(ARC_TIME_MAX);
     for (int k = 0; k < ARC_TIME_MAX; k++) {
@@ -415,7 +427,7 @@ public final class CapacityCuts {
     // blossoms and combs only take the slots the capacity cuts leave: competing for them by
     // efficacy, they lowered the root bound on CVRP (A-n37-k5 659 to 643)
     boolean uncapacitated = demands == null || capacity <= 0;
-    if (combs && ("true".equals(COMBS) || uncapacitated && !"false".equals(COMBS))) {
+    if (combs && ("true".equals(COMBS) || uncapacitated && !OFF.equals(COMBS))) {
       List<Cut> found = CombCuts.separate(tails, heads, value, mandatory, flow);
       found.sort(Comparator.comparingDouble((Cut c) -> -c.efficacy()));
       cuts.addAll(found.subList(0, Math.min(found.size(), limit - cuts.size())));
@@ -437,8 +449,9 @@ public final class CapacityCuts {
     if (k == 1 && twoPaths() && s.cardinality() > 1 && s.cardinality() <= MAX_TWO_PATH) {
       Boolean one = oneStretch.get(s);
       if (one == null && twoPathSteps > 0) {
-        one = stretch(s);
-        if (one != null) {
+        int found = stretch(s);
+        if (found != UNKNOWN) {
+          one = found == FOUND;
           oneStretch.put((BitSet) s.clone(), one);
         }
       }
@@ -456,8 +469,9 @@ public final class CapacityCuts {
 
   // whether some order visits all nodes of s one after the other within their windows, each at
   // the earliest time its predecessor in the order allows (the earliest time at the first): the
-  // earliest arrival dominates, so the search is exact. Null when the check ran out of steps
-  private Boolean stretch(BitSet s) {
+  // earliest arrival dominates, so the search is exact: FOUND, NOT_FOUND, or UNKNOWN when the
+  // check ran out of steps
+  private int stretch(BitSet s) {
     if (arcAt == null) {
       arcAt = new int[n][n];
       for (int[] row : arcAt) {
@@ -473,47 +487,46 @@ public final class CapacityCuts {
     boolean[] used = new boolean[nodes.length];
     for (int f = 0; f < nodes.length; f++) {
       used[f] = true;
-      Boolean found = extend(nodes, used, nodes[f], earliest[nodes[f]], 1);
+      int found = extend(nodes, used, nodes[f], earliest[nodes[f]], 1);
       used[f] = false;
-      if (found == null || found) {
+      if (found != NOT_FOUND) {
         return found;
       }
     }
-    return Boolean.FALSE;
+    return NOT_FOUND;
   }
 
-  private Boolean extend(int[] nodes, boolean[] used, int last, long time, int count) {
+  private int extend(int[] nodes, boolean[] used, int last, long time, int count) {
     if (count == nodes.length) {
-      return Boolean.TRUE;
+      return FOUND;
     }
     if (--twoPathSteps < 0) {
-      return null;
+      return UNKNOWN;
     }
     for (int f = 0; f < nodes.length; f++) {
-      if (used[f]) {
-        continue;
-      }
-      int a = arcAt[last][nodes[f]];
-      if (a < 0) {
-        continue;
-      }
-      // an arc without a known travel time does not order the times: the next one may be as early
-      // as its window opens
-      long t =
-          travel[a] == Long.MIN_VALUE
-              ? earliest[nodes[f]]
-              : Math.max(earliest[nodes[f]], time + travel[a]);
-      if (t > latest[nodes[f]]) {
-        continue;
-      }
-      used[f] = true;
-      Boolean found = extend(nodes, used, nodes[f], t, count + 1);
-      used[f] = false;
-      if (found == null || found) {
-        return found;
+      long t = used[f] ? Long.MAX_VALUE : arrival(last, nodes[f], time);
+      if (t <= latest[nodes[f]]) {
+        used[f] = true;
+        int found = extend(nodes, used, nodes[f], t, count + 1);
+        used[f] = false;
+        if (found != NOT_FOUND) {
+          return found;
+        }
       }
     }
-    return Boolean.FALSE;
+    return NOT_FOUND;
+  }
+
+  // the earliest arrival at next after leaving last at time, Long.MAX_VALUE without an arc; an arc
+  // without a known travel time does not order the times: next may be as early as its window opens
+  private long arrival(int last, int next, long time) {
+    int a = arcAt[last][next];
+    if (a < 0) {
+      return Long.MAX_VALUE;
+    }
+    return travel[a] == Long.MIN_VALUE
+        ? earliest[next]
+        : Math.max(earliest[next], time + travel[a]);
   }
 
   // the connected components of the support graph over the mandatory nodes
