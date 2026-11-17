@@ -7824,6 +7824,14 @@ Version 5.0 (unreleased)
    2022-2025 instance and on none of the wide set.
    -Dorg.jacop.fz.permutedTasks=false turns it off.
 
+431. The FlatZinc front end posts a short table over 0/1 variables whose
+   every row fixes one variable (the others are stars) as the clause of
+   those literals, instead of a HybridTable. XCSP writes CNF formulas so:
+   Crypto1 of the XCSP 2022 competition is 31,334 such tables over 1,906
+   Booleans, which now form a model of clauses alone that JaSAT solves:
+   all 10 Crypto1 instances in 20 to 152 s with free search, none before
+   in 600 s. -Dorg.jacop.fz.shortTableClauses=false turns this off.
+
 Version 4.11
 =============
 

@@ -36,10 +36,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.BiConsumer;
 import org.jacop.constraints.AllDifferentLists;
 import org.jacop.constraints.AllEqual;
 import org.jacop.constraints.Alldiff;
@@ -1985,6 +1987,87 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       poseTableBySize(v, t);
     }
+  }
+
+  /**
+   * Whether short tables whose rows each fix one 0/1 variable are posted as clauses, {@code
+   * org.jacop.fz.shortTableClauses} (default true).
+   */
+  static final boolean SHORT_TABLE_CLAUSES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.shortTableClauses", "true"));
+
+  /**
+   * Posts as a clause a short table over 0/1 variables whose every row fixes one variable and
+   * leaves the others free: the table then allows x[j] = v for one of its rows, the disjunction of
+   * these literals. XCSP writes CNF formulas so (Crypto1 of the 2022 competition: 31,334 tables of
+   * up to 7 rows over 1,906 Booleans, a key-recovery attack written as clauses), and as a clause
+   * the relation is watched by two literals and is a clause of the SAT solver under LCG, while a
+   * {@link HybridTable} is woken by every column and is no clause of LCG (it has stars).
+   *
+   * @param node the jacop_short_table_int node: x, the rows flattened row by row, and star.
+   * @param clause posts the clause of the positive and the negative literals; not called when the
+   *     table holds on every assignment
+   * @return false when the table is not such a clause and was not posted
+   */
+  boolean shortTableAsClause(SimpleNode node, BiConsumer<IntVar[], IntVar[]> clause) {
+    if (!SHORT_TABLE_CLAUSES) {
+      return false;
+    }
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int size = v.length;
+    if (size == 0 || Arrays.stream(v).anyMatch(x -> x.min() < 0 || x.max() > 1)) {
+      return false;
+    }
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    // the star is any value the rows do not use otherwise, 0 too (a table whose values are all 1
+    // gets star 0 from the XCSP translation): an entry equal to it matches every value
+    int star = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
+    int rows = tbl.length / size;
+    int[] columns = new int[rows];
+    for (int i = 0; i < rows; i++) {
+      columns[i] = fixedColumn(tbl, size * i, size, star);
+      if (columns[i] == MANY_FIXED) {
+        return false;
+      }
+    }
+    if (rows == 0) {
+      return false;
+    }
+    Set<IntVar> positive = new LinkedHashSet<>();
+    Set<IntVar> negative = new LinkedHashSet<>();
+    for (int i = 0; i < rows; i++) {
+      if (columns[i] == NONE_FIXED) {
+        // a row of stars matches every assignment
+        return true;
+      }
+      int value = tbl[size * i + columns[i]];
+      if (value == 1) {
+        positive.add(v[columns[i]]);
+      } else if (value == 0) {
+        negative.add(v[columns[i]]);
+      }
+      // another value matches no assignment of a 0/1 variable: the row is dropped
+    }
+    clause.accept(positive.toArray(new IntVar[0]), negative.toArray(new IntVar[0]));
+    return true;
+  }
+
+  private static final int NONE_FIXED = -1;
+  private static final int MANY_FIXED = -2;
+
+  // the only column of the row starting at from whose entry is not the star, or NONE_FIXED or
+  // MANY_FIXED
+  private static int fixedColumn(int[] tbl, int from, int size, int star) {
+    int column = NONE_FIXED;
+    for (int j = 0; j < size; j++) {
+      if (tbl[from + j] != star) {
+        if (column != NONE_FIXED) {
+          return MANY_FIXED;
+        }
+        column = j;
+      }
+    }
+    return column;
   }
 
   /**
