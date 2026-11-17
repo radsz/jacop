@@ -951,6 +951,22 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns a clock that goes on reading like {@link #now} once the solver has stopped, without
+   * holding the solver: the virtual clock keeps the solver's own work as it is now and goes on
+   * counting the external work. The caller can then drop the solver and its clauses.
+   *
+   * @return the clock, in nanoseconds
+   */
+  public LongSupplier stoppedClock() {
+    LongSupplier work = externalWork;
+    if (!virtualClock) {
+      return System::nanoTime;
+    }
+    long own = propagations;
+    return () -> (own + work.getAsLong()) * 1_000_000L / VIRTUAL_WORK_PER_MS;
+  }
+
+  /**
    * Turns the virtual clock of this solver on or off; it is on by default under {@link
    * #VIRTUAL_CLOCK}. Set it before the deadline, which is a time of {@link #now}.
    *
