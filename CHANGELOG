@@ -7579,6 +7579,28 @@ Version 5.0 (unreleased)
    warehouse olil4, cap6000). The rows are counted in the statistic
    lpUnitRows.
 
+420. JaSAT substitutes equivalent literals before variable elimination. The
+   strongly connected components of the binary implication graph (B.
+   Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
+   the truth of certain quantified Boolean formulas, Information Processing
+   Letters 8(3), 1979; A. Van Gelder, Toward leaner binary-clause reasoning
+   in a satisfiability solver, Annals of Mathematics and Artificial
+   Intelligence 43, 2005) and clausal congruence closure over AND, XOR and
+   ITE gates found in the clauses (A. Biere, K. Fazekas, M. Fleury, N.
+   Froleyks, Clausal Congruence Closure, SAT 2024) give classes of equal
+   literals; each class is replaced by one representative, observed and
+   assumption variables never being replaced. The new GateExtractor finds
+   the gates and is shared with variable elimination. DRAT proofs cover the
+   new steps (XOR and ITE equivalences by case splits on the gate inputs).
+   On the 90 SAT Competition instances of the JaSAT comparison at 240 s,
+   against develop with bounded variable addition, two rounds: solved 32 ->
+   33 and 34 -> 33, total time 15,656 -> 15,552 s and 15,520 -> 15,396 s;
+   hardware-model-checking (2.2 s, unsolved at 600 s before) and
+   grs-fp-comm (210-237 s) are proved only with it, the other flips
+   (puzzle, planning, scheduling) go both ways between rounds. Under --lcg it fires on 19 of the 240 wide instances, with
+   the same results. --substitute 0 and --congruence 0 in CdclMain,
+   -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
+   it off.
 
 Version 4.11
 =============
