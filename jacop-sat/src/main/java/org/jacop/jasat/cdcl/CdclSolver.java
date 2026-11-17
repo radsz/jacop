@@ -1345,7 +1345,7 @@ public final class CdclSolver {
       watches[lit] = ws;
     }
     ws[n] = watch(blocker, ref);
-    ws[0] = n + 1;
+    ws[0] = n + 1L;
   }
 
   private void attach(int ref) {
@@ -3012,7 +3012,7 @@ public final class CdclSolver {
     for (int i = 1; i < n; i++) {
       if (watchRef(ws[i]) == ref) {
         System.arraycopy(ws, i + 1, ws, i, n - i - 1);
-        ws[0] = n - 1;
+        ws[0] = n - 1L;
         return;
       }
     }
@@ -5580,13 +5580,13 @@ public final class CdclSolver {
     int top = 0;
     // watched clauses first, in the order propagation visits them: the watch lists of the most
     // active variables first, each list's clauses side by side (CaDiCaL's arena moving)
-    long[] order = new long[numVars];
+    long[] byActivity = new long[numVars];
     for (int v = 0; v < numVars; v++) {
-      order[v] = (long) Float.floatToRawIntBits((float) Math.log1p(activity[v])) << 32 | v;
+      byActivity[v] = (long) Float.floatToRawIntBits((float) Math.log1p(activity[v])) << 32 | v;
     }
-    Arrays.sort(order);
+    Arrays.sort(byActivity);
     for (int o = numVars - 1; o >= 0; o--) {
-      int v = (int) order[o];
+      int v = (int) byActivity[o];
       for (int lit = 2 * v; lit <= 2 * v + 1; lit++) {
         long[] ws = watches[lit];
         int n = (int) ws[0];
