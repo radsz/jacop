@@ -2824,12 +2824,14 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgSplitsLongLinearConstraintsAndKeepsTheOptimum() throws IOException {
-    // --lcg splits a linear constraint of more than 40 terms into sums of blocks of about
+    // --lcg splits a linear constraint of more than 20 terms into sums of blocks of about
     // sqrt(n) terms: the optimum stays that of the flat constraints and of the CP solver, and the
-    // linear reasons, about 32 atoms on the flat sums, get below 16
+    // linear reasons, about 32 atoms on the flat sums of 60 terms, get below 16; sums of 25 terms
+    // are split too, with shorter reasons than flat
     java.util.Random rnd = new java.util.Random(3);
-    for (int run = 0; run < 12; run++) {
-      int n = 60;
+    int shorter25 = 0;
+    for (int run = 0; run < 16; run++) {
+      int n = run < 12 ? 60 : 25;
       StringBuilder model = new StringBuilder();
       // 60 terms over 6 independent values: each x(i) equals y(i mod 6), so the search is small
       for (int j = 0; j < 6; j++) {
@@ -2866,18 +2868,31 @@ class FlatzincFrontEndTest {
       model.append(
           "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
               .formatted(run % 2 == 0 ? "minimize" : "maximize"));
-      String flat = lastObjective(run(model.toString(), "--lcg", "--free-config", "lcg-split=0"));
+      String[] flatRun =
+          run(model.toString(), "--lcg", "--search-statistics", "--free-config", "lcg-split=0");
+      String flat = lastObjective(flatRun);
       String cp = lastObjective(run(model.toString()));
-      String[] split = run(model.toString(), "--lcg", "-s");
+      String[] split = run(model.toString(), "--lcg", "--search-statistics");
       assertEquals(cp, flat, model.toString());
       assertEquals(cp, lastObjective(split), model.toString());
-      java.util.regex.Matcher m =
-          java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
-              .matcher(split[0]);
-      if (m.find() && Long.parseLong(m.group(1)) > 0) {
-        assertTrue(Double.parseDouble(m.group(2)) < 16, split[0]);
+      double splitAtoms = linearAtoms(split[0]);
+      if (n == 60 && splitAtoms >= 0) {
+        assertTrue(splitAtoms < 16, split[0]);
+      }
+      double flatAtoms = linearAtoms(flatRun[0]);
+      if (n == 25 && splitAtoms >= 0 && flatAtoms >= 0) {
+        shorter25 += splitAtoms < flatAtoms ? 1 : 0;
       }
     }
+    assertTrue(shorter25 > 0, "no sum of 25 terms got shorter linear reasons");
+  }
+
+  // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
+  private static double linearAtoms(String out) {
+    java.util.regex.Matcher m =
+        java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
+            .matcher(out);
+    return m.find() && Long.parseLong(m.group(1)) > 0 ? Double.parseDouble(m.group(2)) : -1;
   }
 
   // the last obj = value or status line printed
