@@ -80,6 +80,19 @@ class PortfolioSplitTest {
   }
 
   @Test
+  void splitThreadsKeepTheLinearSplitLimit() {
+    // the setting joins the tree with its own key: lcg-split=1 split every linear constraint of
+    // two terms or more into blocks
+    List<String> flags =
+        new ArrayList<>(
+            List.of(Portfolio.SPLIT_SETTING).subList(1, Portfolio.SPLIT_SETTING.length));
+    flags.add("model.fzn");
+    Options options = new Options(flags.toArray(new String[0]));
+    assertEquals("1", options.freeConfig("lcg-tree-split", "0"));
+    assertEquals("20", options.freeConfig("lcg-split", "20"));
+  }
+
+  @Test
   void splitThreadsJoinAndSolveALargerModel() throws IOException {
     // a knapsack of 60 items with profits close to the weights
     Path fzn = write(knapsack(new Random(5), 60, 1000, 1000, 45000));

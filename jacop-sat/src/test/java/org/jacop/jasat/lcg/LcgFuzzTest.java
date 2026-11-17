@@ -2522,6 +2522,9 @@ class LcgFuzzTest {
    */
   @Test
   void explanationSizesMatchGolden() throws java.io.IOException {
+    if (HOLES || REPEATED || GROUND || RECENT != null || FOCUS != null) {
+      return; // the golden file holds the models of the default generator
+    }
     Map<String, long[]> statistics = new TreeMap<>();
     for (int run = 0; run < SIZE_RUNS; run++) {
       long seed = 1 + (long) run;

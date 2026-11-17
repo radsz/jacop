@@ -77,7 +77,161 @@ class CdclFuzzTest {
     }
   }
 
+  /**
+   * A random circuit of AND, XOR and ITE gates in which some gates are copies of others over
+   * equivalent inputs (permuted, with negations that cancel, through equivalence chains), so that
+   * congruence closure and substitution have work; with random clauses and sometimes a miter that
+   * asks two equivalent outputs to differ.
+   */
+  static List<int[]> circuitFormula(Random rnd, int[] varsOut) {
+    List<int[]> f = new ArrayList<>();
+    int inputs = 2 + rnd.nextInt(8);
+    int gates = 2 + rnd.nextInt(30);
+    // per node (variable), the variable of its class's first member
+    int[] canon = new int[inputs + 3 * gates + 2];
+    List<int[]> specs = new ArrayList<>(); // kind, output, inputs...
+    int next = inputs + 1;
+    for (int v = 1; v <= inputs; v++) {
+      canon[v] = v;
+    }
+    for (int g = 0; g < gates; g++) {
+      int out = next++;
+      int[] spec;
+      if (!specs.isEmpty() && rnd.nextInt(3) == 0) {
+        // a copy of an earlier gate over members of the same classes
+        int[] old = specs.get(rnd.nextInt(specs.size()));
+        spec = old.clone();
+        spec[1] = out;
+        canon[out] = canon[old[1]];
+        for (int i = 2; i < spec.length; i++) {
+          int c = canon[Math.abs(spec[i])];
+          int member = c;
+          for (int v = 1; v < next; v++) {
+            if (canon[v] == c && rnd.nextInt(3) == 0) {
+              member = v;
+            }
+          }
+          spec[i] = spec[i] > 0 ? member : -member;
+        }
+        if (spec[0] != 2 && spec.length > 3) {
+          // AND and XOR: permute the inputs
+          for (int i = spec.length - 1; i > 2; i--) {
+            int j = 2 + rnd.nextInt(i - 1);
+            int t = spec[i];
+            spec[i] = spec[j];
+            spec[j] = t;
+          }
+        }
+        if (spec[0] == 1 && rnd.nextBoolean()) {
+          spec[2] = -spec[2]; // XOR: two negations cancel
+          spec[3] = -spec[3];
+        }
+        if (spec[0] == 2 && rnd.nextBoolean()) {
+          spec[2] = -spec[2]; // ITE: c ? t : e = -c ? e : t
+          int t = spec[3];
+          spec[3] = spec[4];
+          spec[4] = t;
+        }
+      } else {
+        int kind = rnd.nextInt(3); // 0 AND, 1 XOR, 2 ITE
+        int arity = kind == 2 ? 3 : 2 + rnd.nextInt(2);
+        spec = new int[2 + arity];
+        spec[0] = kind;
+        spec[1] = out;
+        if (out - 1 < arity) {
+          next--;
+          continue;
+        }
+        int[] picked = rnd.ints(1, out).distinct().limit(arity).toArray();
+        for (int i = 0; i < arity; i++) {
+          spec[2 + i] = rnd.nextBoolean() ? picked[i] : -picked[i];
+        }
+        canon[out] = out;
+      }
+      specs.add(spec);
+      encodeGate(f, spec);
+      if (rnd.nextInt(6) == 0) {
+        // an equivalence chain node: e = out through binary clauses
+        int e = next++;
+        canon[e] = canon[out];
+        f.add(new int[] {-e, out});
+        f.add(new int[] {e, -out});
+      }
+    }
+    int vars = next - 1;
+    int extra = rnd.nextInt(Math.max(1, vars / 2));
+    for (int k = 0; k < extra; k++) {
+      int[] c = new int[1 + rnd.nextInt(3)];
+      for (int i = 0; i < c.length; i++) {
+        int v = 1 + rnd.nextInt(vars);
+        c[i] = rnd.nextBoolean() ? v : -v;
+      }
+      f.add(c);
+    }
+    if (rnd.nextBoolean()) {
+      // a miter on two members of one class
+      for (int tries = 0; tries < 20; tries++) {
+        int a = 1 + rnd.nextInt(vars);
+        int b = 1 + rnd.nextInt(vars);
+        if (a != b && canon[a] == canon[b]) {
+          f.add(new int[] {a, b});
+          f.add(new int[] {-a, -b});
+          break;
+        }
+      }
+    }
+    java.util.Collections.shuffle(f, rnd);
+    varsOut[0] = vars;
+    return f;
+  }
+
+  // the clauses of a gate: kind (0 AND, 1 XOR, 2 ITE), output, inputs
+  private static void encodeGate(List<int[]> f, int[] spec) {
+    int o = spec[1];
+    int[] in = Arrays.copyOfRange(spec, 2, spec.length);
+    if (spec[0] == 0) {
+      int[] big = new int[in.length + 1];
+      big[0] = o;
+      for (int i = 0; i < in.length; i++) {
+        f.add(new int[] {-o, in[i]});
+        big[i + 1] = -in[i];
+      }
+      f.add(big);
+    } else if (spec[0] == 1) {
+      // forbid every assignment of inputs and output with o != xor of the inputs
+      int n = in.length;
+      for (int m = 0; m < 1 << n; m++) {
+        boolean x = false;
+        int[] c = new int[n + 1];
+        for (int i = 0; i < n; i++) {
+          boolean bit = (m >> i & 1) != 0;
+          x ^= bit;
+          c[i] = bit ? -in[i] : in[i];
+        }
+        c[n] = x ? o : -o; // the assignment with output !x is forbidden
+        f.add(c);
+      }
+    } else {
+      int c = in[0];
+      int t = in[1];
+      int e = in[2];
+      f.add(new int[] {-o, -c, t});
+      f.add(new int[] {-o, c, e});
+      f.add(new int[] {o, -c, -t});
+      f.add(new int[] {o, c, -e});
+    }
+  }
+
   /** Random formulas of several shapes; mostly near the satisfiability threshold. */
+  // the formula of a seed: a circuit for one seed in five, chosen apart from the seed's stream so
+  // the other seeds keep the formulas they had before circuits were added (and replay as before)
+  static List<int[]> formula(long seed, Random rnd, int[] varsOut) {
+    if (new Random(~seed).nextInt(5) == 0) {
+      return circuitFormula(rnd, varsOut);
+    }
+    return randomFormula(rnd, varsOut);
+  }
+
   static List<int[]> randomFormula(Random rnd, int[] varsOut) {
     int shape = rnd.nextInt(4);
     int vars;
@@ -242,6 +396,19 @@ class CdclFuzzTest {
         });
   }
 
+  /**
+   * Some seeds reduce the learnt clauses for memory after almost every conflict, or skip
+   * elimination and local search for memory, as models too large for the heap do.
+   */
+  private static void memoryBudgets(CdclSolver s, long seed) {
+    if (Math.floorMod(seed, 3L) == 1) {
+      s.setLearntBudget(64);
+    }
+    if (Math.floorMod(seed, 7L) == 2) {
+      s.setCopyBudget(0);
+    }
+  }
+
   // solves in which bounded variable addition added a variable
   private static long factoredRuns;
 
@@ -257,6 +424,7 @@ class CdclFuzzTest {
       s.setReduceBase(10);
     }
     s.setVmtf(Math.floorMod(seed, 3L) != 2);
+    memoryBudgets(s, seed);
     s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
     for (int[] c : f) {
@@ -290,6 +458,7 @@ class CdclFuzzTest {
       s.setReduceBase(10);
     }
     s.setVmtf(Math.floorMod(seed, 3L) != 2);
+    memoryBudgets(s, seed);
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
     s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
@@ -341,7 +510,7 @@ class CdclFuzzTest {
   static int replay(long seed) throws IOException {
     Random rnd = new Random(seed);
     int[] vars = new int[1];
-    List<int[]> f = randomFormula(rnd, vars);
+    List<int[]> f = formula(seed, rnd, vars);
     return solveChecked(f, vars[0], seed);
   }
 
@@ -358,7 +527,7 @@ class CdclFuzzTest {
       }
       Random rnd = new Random(seed);
       int[] vars = new int[1];
-      List<int[]> f = randomFormula(rnd, vars);
+      List<int[]> f = formula(seed, rnd, vars);
       if (solveChecked(f, vars[0], seed) == CdclSolver.UNSAT) {
         unsat++;
       }
