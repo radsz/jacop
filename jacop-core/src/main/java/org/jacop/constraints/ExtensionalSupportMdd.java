@@ -132,6 +132,11 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint
    * allowed when it labels a path from the root to the terminal node. The diagram may be
    * non-deterministic, that is several edges leaving a node may share values.
    *
+   * <p>The arrays are kept as references, not copied, and must not be changed afterwards.
+   * Constraints given the same arrays (the same objects) share the graph built from them when their
+   * variables have equal domains at impose, so a model that posts one large diagram on many scopes
+   * keeps it once.
+   *
    * @param vars the variables, the i-th of them labels the edges leaving the nodes of level i + 1.
    * @param level the level of each node 1..N, from 1 (the root) to vars.length; level[n - 1] is the
    *     level of node n.
@@ -169,11 +174,20 @@ public class ExtensionalSupportMdd extends LayeredGraphConstraint
       }
     }
     this.mdd = null;
-    this.nodeLevel = Arrays.copyOf(level, level.length);
-    this.from = Arrays.copyOf(from, from.length);
-    this.label = Arrays.copyOf(label, label.length);
-    this.to = Arrays.copyOf(to, to.length);
+    // kept, not copied: MiniZinc posts the same diagram on many scopes (300 constraints on one
+    // diagram of 1.8 million edges in WordDesign2-words-mdd-025, XCSP 2023), and a copy each did
+    // not fit in the heap
+    this.nodeLevel = level;
+    this.from = from;
+    this.label = label;
+    this.to = to;
     numberId = idNumber.incrementAndGet();
+  }
+
+  @Override
+  protected Object[] sharedGraphKey() {
+    // the graph of an Mdd depends on the views of its variables, so only the edge form is shared
+    return mdd != null ? null : new Object[] {from, getClass(), nodeLevel, label, to};
   }
 
   @Override

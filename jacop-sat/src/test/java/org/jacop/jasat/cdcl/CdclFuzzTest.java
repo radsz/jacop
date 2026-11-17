@@ -396,6 +396,19 @@ class CdclFuzzTest {
         });
   }
 
+  /**
+   * Some seeds reduce the learnt clauses for memory after almost every conflict, or skip
+   * elimination and local search for memory, as models too large for the heap do.
+   */
+  private static void memoryBudgets(CdclSolver s, long seed) {
+    if (Math.floorMod(seed, 3L) == 1) {
+      s.setLearntBudget(64);
+    }
+    if (Math.floorMod(seed, 7L) == 2) {
+      s.setCopyBudget(0);
+    }
+  }
+
   // solves in which bounded variable addition added a variable
   private static long factoredRuns;
 
@@ -410,6 +423,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    memoryBudgets(s, seed);
     s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
     for (int[] c : f) {
@@ -442,6 +456,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    memoryBudgets(s, seed);
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
     s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
