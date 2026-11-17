@@ -162,7 +162,7 @@ final class RupChecker {
     }
     for (int i = 0; i < numClauses; i++) {
       int[] d = clauses[i];
-      if (Arrays.stream(d).noneMatch(x -> x == -p)) {
+      if (d == null || Arrays.stream(d).noneMatch(x -> x == -p)) {
         continue;
       }
       int[] resolvent = new int[rest.length + d.length - 1];

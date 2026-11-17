@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +51,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.LongSupplier;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -494,6 +496,33 @@ class CdclSolverTest {
     }
     assertTrue(conflicts[0] > 0);
     assertEquals(conflicts[0], conflicts[1]);
+  }
+
+  @Test
+  void stoppedClockReadsLikeTheSolverWithoutHoldingIt() {
+    // free search keeps this clock of the LCG solver that gave way, and drops the solver and its
+    // clauses (rcpsp-wet-diverse j90_48_4 under -f ran out of 4 GB while it kept them)
+    CdclSolver s = new CdclSolver();
+    s.setVirtualClock(true);
+    long[] external = {1_000};
+    s.setExternalWork(() -> external[0]);
+    pigeonhole(s, 8);
+    s.setDeadline(s.now() + 2 * 1_000_000L);
+    assertEquals(CdclSolver.UNKNOWN, s.solve());
+    LongSupplier clock = s.stoppedClock();
+    assertEquals(s.now(), clock.getAsLong());
+    external[0] += CdclSolver.VIRTUAL_WORK_PER_MS;
+    // the store's propagations after the hand-over still count
+    assertEquals(s.now(), clock.getAsLong());
+    assertEquals(s.deadline() - s.now(), s.deadline() - clock.getAsLong());
+    // the clock holds the work done, not the solver
+    for (Field f : clock.getClass().getDeclaredFields()) {
+      assertFalse(CdclSolver.class.isAssignableFrom(f.getType()), f.toString());
+    }
+    CdclSolver wall = new CdclSolver();
+    long before = System.nanoTime();
+    long now = wall.stoppedClock().getAsLong();
+    assertTrue(now >= before && now <= System.nanoTime());
   }
 
   @Test
