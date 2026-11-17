@@ -1006,6 +1006,28 @@ class VeriPbProofTest {
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
 
+  @Test
+  void increasingSumRowUsesTheBoundsOfTheChain() {
+    // x1 >= 2 and x3 <= 2 fix x2 = 2 along the chain, so the sum 6 falls in a hole of s; the row's
+    // bounds over the reason's domains alone, without the chain, left literals of x2 in the lemmas
+    // and the failure clause was not derived (fuzz seed 49430381)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 2);
+    IntVar x1 = values(store, "x1", -1, 1, 2);
+    IntVar x2 = values(store, "x2", -1, 0, 1, 2, 3);
+    IntVar x3 = values(store, "x3", -1, 0, 1, 2, 4);
+    IntVar s = values(store, "s", -2, -1, 0, 1, 2, 3, 4, 5, 7, 8);
+    IntVar c0 = values(store, "c0", 0, 3);
+    IntVar c1 = values(store, "c1", 0, 1, 3);
+    store.impose(new IncreasingSum(new IntVar[] {x1, x2, x3}, s, false));
+    store.impose(
+        new CountValues(new IntVar[] {x3, x1, x0, x2}, new IntVar[] {c0, c1}, new int[] {2, 0}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(withProof(store).solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
   private static IntVar values(Store store, String name, int... values) {
     IntVar x = new IntVar(store, name);
     for (int v : values) {

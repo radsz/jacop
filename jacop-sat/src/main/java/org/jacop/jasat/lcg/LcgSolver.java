@@ -2097,8 +2097,11 @@ public final class LcgSolver implements ExternalPropagator {
       f = proofKnapsackRow(k);
     }
     if (f == null && proofStarted && c.getClass() == IncreasingSum.class) {
-      // the sum's row, which a hole of the sum hides from unit propagation
-      f = ((IncreasingSum) c).sumRow();
+      // the sum's row, which a hole of the sum hides from unit propagation, over the bounds that
+      // unit propagation derives along the order clauses of the chain
+      IncreasingSum increasing = (IncreasingSum) c;
+      proofLinearBounds(increasing.sumRow(), atoms, from, entry, "", increasing);
+      return;
     }
     proofLinearBounds(f, atoms, from, entry, "");
   }
@@ -2328,6 +2331,16 @@ public final class LcgSolver implements ExternalPropagator {
    * lemma (the literal of a reification's b, or empty).
    */
   private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry, String guard) {
+    proofLinearBounds(f, atoms, from, entry, guard, null);
+  }
+
+  /**
+   * Writes the bounds of a row under the hypotheses of a clause, as above, with the domains of the
+   * chain x_1 &lt;= x_2 &lt;= ... (or &lt;) of an increasing sum tightened as unit propagation over
+   * its order clauses tightens them, or chain null.
+   */
+  private void proofLinearBounds(
+      LinearForm f, EntryList atoms, int from, int entry, String guard, IncreasingSum chain) {
     if (f == null || f.relation() == LinearForm.NE) {
       return;
     }
@@ -2355,8 +2368,13 @@ public final class LcgSolver implements ExternalPropagator {
       // unit propagation over weight times the order literals does not round a bound
       rounds |= Math.abs(weight) > 1;
     }
-    if (!hypotheses(position, variables, atoms, from, entry, dom, literals) && !rounds) {
+    if (!hypotheses(position, variables, atoms, from, entry, dom, literals)
+        && !rounds
+        && chain == null) {
       return;
+    }
+    if (chain != null) {
+      tightenChain(chain, position, dom);
     }
     StringBuilder clause = new StringBuilder(guard);
     for (StringBuilder l : literals) {
@@ -2365,6 +2383,41 @@ public final class LcgSolver implements ExternalPropagator {
     if (!proofRowBounds(f, variables, w, dom, clause)) {
       proofRowSplit(f, variables, w, dom, clause, PROOF_SPLIT_LEAVES);
     }
+  }
+
+  /**
+   * Tightens the domains of the chain of an increasing sum along its order: x_i &gt;= min x_(i-1) +
+   * step forwards and x_(i-1) &lt;= max x_i - step backwards. Leaves the domains as they were when
+   * the chain empties one, as a variable repeated in a strict chain does.
+   */
+  private void tightenChain(IncreasingSum chain, Map<Integer, Integer> position, IntDomain[] dom) {
+    IntVar[] x = chain.chain();
+    int step = chain.step();
+    int[] at = new int[x.length];
+    for (int i = 0; i < x.length; i++) {
+      at[i] = position.get(trail.id(x[i]));
+    }
+    IntDomain[] tight = dom.clone();
+    for (int i = 1; i < x.length; i++) {
+      IntDomain previous = tight[at[i - 1]];
+      if (previous.isEmpty()) {
+        return;
+      }
+      tight[at[i]] = tight[at[i]].intersect(previous.min() + step, IntDomain.MAX_INT);
+    }
+    for (int i = x.length - 1; i > 0; i--) {
+      IntDomain next = tight[at[i]];
+      if (next.isEmpty()) {
+        return;
+      }
+      tight[at[i - 1]] = tight[at[i - 1]].intersect(IntDomain.MIN_INT, next.max() - step);
+    }
+    for (IntDomain d : tight) {
+      if (d.isEmpty()) {
+        return;
+      }
+    }
+    System.arraycopy(tight, 0, dom, 0, dom.length);
   }
 
   // the most cases a row's bounds are split into, for a domain consistent row (LinearIntDom)
