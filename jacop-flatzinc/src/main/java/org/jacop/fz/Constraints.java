@@ -65,6 +65,7 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
+import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -414,6 +415,18 @@ public class Constraints implements ParserTreeConstants {
           replaced.addAll(merged);
           dictionary.removeFromDefaultSearch(minOfSums.removed());
           dictionary.unusedVariables.addAll(minOfSums.removed());
+        }
+      }
+
+      // a cyclic distance min(|e|, c - |e|) also as |e + c * k|, which a bound narrows
+      if (CyclicDistanceDetector.enabled() && options.proof() == null) {
+        CyclicDistanceDetector cyclic = new CyclicDistanceDetector(support);
+        Set<SimpleNode> distances = cyclic.detect(astTree);
+        if (!distances.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(distances);
+          dictionary.removeFromDefaultSearch(cyclic.removed());
+          dictionary.unusedVariables.addAll(cyclic.removed());
         }
       }
 

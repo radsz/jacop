@@ -7795,6 +7795,21 @@ Version 5.0 (unreleased)
    240 wide instances (spot5, connect, table-layout, project-planning),
    with the same results in default mode and with -f.
 
+433. The FlatZinc front end can rewrite a distance on a cycle,
+   m = min(|e|, c - |e|) with -c < e < c, as m = |f| with
+   e + c * k = f, k in -1..1 and -c/2 <= f <= c/2 (opt-in,
+   -Dorg.jacop.fz.cyclicDistance=true). The minimum prunes nothing on e
+   until |e| is decided, so a bound on the cyclic bandwidth does not
+   narrow the positions; once k is fixed, the linear equation does. When
+   the intermediate variables are used only there, the minimum is
+   replaced and a difference e = x - y is substituted. At 600 s with -f,
+   on XCSP 2022 CyclicBandwidth caterpillar35 goes from 105 to 29 (the
+   best of the 2022 field), caterpillar29 from 64 to 24 and mesh2D25x26
+   from 112 to 34, but the lower bounds of lazy clause generation grow
+   more slowly, so caterpillar13, 16 and 19, proved in 21, 213 and 336 s
+   without it, are not proved in 600 s; it therefore stays off. It fires
+   on none of the 240 wide instances.
+
 Version 4.11
 =============
 
