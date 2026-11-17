@@ -101,6 +101,7 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
@@ -2503,6 +2504,19 @@ class VeriPbProofTest {
     assertThatThrownBy(lcg::solve)
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("Not of Member");
+  }
+
+  @Test
+  void impliedRowOfOneVariableWithItselfIsRefused() {
+    // b -> x + 1 <= x has no linear form: the encoder dereferenced it (fuzz seed 40000014, NPE)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    store.impose(new XplusClteqZImplied(b, x, 1, x));
+    store.impose(new XplusYeqZ(x, b, y));
+    LcgSolver lcg = withProof(store);
+    assertThatThrownBy(lcg::solve).isInstanceOf(UnsupportedOperationException.class);
   }
 
   /**
