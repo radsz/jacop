@@ -427,6 +427,12 @@ public class LinearRelaxation extends Constraint
   /** Statistics: whether those rows were dropped in search, as too many solves hit the limit. */
   public boolean extraDropped;
 
+  /** Statistics: the extra rows of a satisfaction model kept on probation at the root. */
+  public boolean probationKept;
+
+  /** Statistics: the solves charged as pruning ones because the relaxation failed nodes often. */
+  public long failingSolves;
+
   /**
    * Statistics: whether those rows moved the dense tableau to the sparse simplex, as it left too
    * few pivots for a solve in search.
@@ -524,6 +530,23 @@ public class LinearRelaxation extends Constraint
   private boolean extraCarry;
   // the call at which the extra rows were added
   private long extraCall;
+  // the failures of the relaxation before the extra rows were added
+  private long extraFailures;
+
+  // the extra rows of a satisfaction model are kept at the root on probation: after this many
+  // solves they are dropped unless at least FAIL_RATE of the solves since then failed the node;
+  // 0 turns the probation off (the rows are then kept only when the root LP is infeasible)
+  private static final int SATISFACTION_PROBATION =
+      Integer.getInteger("org.jacop.lp.satisfactionProbation", 64);
+  private boolean probation;
+
+  // the share of solves that fail the node above which the relaxation is taken to pay for itself:
+  // its solves that deduce nothing are charged a PRUNE_DISCOUNT-th of their work, and its extra
+  // rows are not dropped for the pivot limits they hit
+  private static final double FAIL_RATE =
+      Double.parseDouble(System.getProperty("org.jacop.lp.failRate", "0.1"));
+  // the share of the recent solves that failed the node, decaying by 1/32 a solve
+  private double recentFailures;
 
   // whether the sparse simplex was chosen by the size of the relaxation in place of the dense one
   private boolean bySize;
@@ -1997,6 +2020,19 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Tells which pass made this refutation: "values" for the value encodings of {@link #refutation},
+   * "objective" for {@link #pseudoObjectiveRefutation}, "clauses" for {@link #clauseRefutation}.
+   *
+   * @return the kind of the refutation
+   */
+  public String refutationKind() {
+    if (pseudoObjective) {
+      return "objective";
+    }
+    return clauseRefutation ? "clauses" : "values";
+  }
+
+  /**
    * Returns the outcome of the root solve of a relaxation made by {@link #refutation}.
    *
    * @return "refuted" when it proved that the model has no solution, "feasible", "limit" when it
@@ -2875,6 +2911,15 @@ public class LinearRelaxation extends Constraint
   }
 
   /**
+   * Tells whether solving the relaxation is suspended, see {@link #suspend(boolean)}.
+   *
+   * @return true while suspended.
+   */
+  public boolean isSuspended() {
+    return suspended;
+  }
+
+  /**
    * Returns the size of the dense tableau of the first solve, its rows and the rows of the other
    * constraints that the first solve tries, times those rows and the columns: an estimate of the
    * cost of the root solve and its cut rounds, known before it runs.
@@ -2939,6 +2984,7 @@ public class LinearRelaxation extends Constraint
     long pivots = pivots();
     long work = lp.work();
     boolean first = calls == 0;
+    long callsBefore = calls;
     // the bound of the objective's domain before the first solve, which the root bound must cut
     long domainBound = 0;
     if (objective != null) {
@@ -2978,11 +3024,17 @@ public class LinearRelaxation extends Constraint
         cost = Math.min(cost, WORK);
       }
       // back off while the relaxation finds nothing, come back as soon as it does
+      if (calls > callsBefore) {
+        recentFailures += ((failures > failed ? 1 : 0) - recentFailures) / 32;
+      }
       if (failures > failed) {
         idle = 0;
         period = Math.max(1, period / 2);
         credit = WORK;
-      } else if (prunings > pruned) {
+      } else if (prunings > pruned || FAIL_RATE > 0 && recentFailures >= FAIL_RATE) {
+        if (prunings == pruned) {
+          failingSolves++;
+        }
         idle = 0;
         period = Math.max(1, period / 2);
         credit -= PRUNE_DISCOUNT == 0 ? 0 : cost / PRUNE_DISCOUNT;
@@ -3209,6 +3261,12 @@ public class LinearRelaxation extends Constraint
       // solution guides the search and its reduced costs fix columns at the root level
       return;
     }
+    if (probation && calls - extraCall >= SATISFACTION_PROBATION) {
+      probation = false;
+      if (beforeExtra != null && !failingWithExtra()) {
+        dropExtraRows();
+      }
+    }
     calls++;
     boolean jump = calls > 1 && lastSolveLevel - store.level >= BASIS_JUMP;
     long pivotsBefore = lp.pivots();
@@ -3327,6 +3385,7 @@ public class LinearRelaxation extends Constraint
           && !keepEncodings
           && !extraCarry
           && trees.isEmpty()
+          && !failingWithExtra()
           && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
               || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
         dropExtraRows();
@@ -5798,6 +5857,7 @@ public class LinearRelaxation extends Constraint
       baseRows = m;
       extraLimits = limits;
       extraCall = calls;
+      extraFailures = failures;
       droppedPivots += lp.pivots();
       lp = full;
       allRowsInSimplex(m + k);
@@ -5922,7 +5982,22 @@ public class LinearRelaxation extends Constraint
     // the other rows of a model with trees are kept: alone they rarely move the bound, but with
     // the tree cuts made later they do (st70 of surface-based-tsp: 633 without them, 675 with)
     trialStatus = withExtra;
-    if (trialKeep || !trialCut && (keepExtra || !trees.isEmpty())) {
+    boolean kept = trialKeep || !trialCut && (keepExtra || !trees.isEmpty());
+    if (!kept
+        && !trialCut
+        && objective == null
+        && SATISFACTION_PROBATION > 0
+        && k == extraColumns.length
+        && withExtra == LpSolver.OPTIMAL) {
+      // a satisfaction model has no bound to raise: the rows stay on probation, and are dropped
+      // unless they fail nodes in search (car sequencing p6-76: the class encodings and option
+      // tables fail one LP solve in six and prove it in 17 s, 300 conflicts; without them the
+      // window rows fail one in twenty and the proof takes 295 s and 1.2 million conflicts)
+      kept = true;
+      probation = true;
+      probationKept = true;
+    }
+    if (kept) {
       return full;
     }
     droppedPivots += full.pivots();
@@ -6194,6 +6269,12 @@ public class LinearRelaxation extends Constraint
       identityRows = false;
       pooledExtra = pooled.size();
     }
+  }
+
+  // whether at least FAIL_RATE of the solves since the extra rows were added failed the node
+  private boolean failingWithExtra() {
+    long solves = calls - extraCall;
+    return FAIL_RATE > 0 && solves > 0 && failures - extraFailures >= FAIL_RATE * solves;
   }
 
   // the rows of the other constraints make too many solves in search stop at the pivot limit: back

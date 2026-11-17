@@ -281,6 +281,79 @@ class LcgSolverTest {
     }
   }
 
+  /**
+   * An incumbent leaves the core-guided phase as without it: with its bound before the phase every
+   * stratum had to improve on it, and the phase found no core (MaxSAT 2024 upgradeability rand653
+   * and warehouses cap91 lost their proofs). Weighted vertex covers, from the cheapest cover above
+   * the optimum.
+   */
+  @Test
+  void incumbentKeepsTheCoreGuidedPhase() {
+    Random rnd = new Random(71);
+    long cores = 0;
+    for (int instance = 0; instance < 20; instance++) {
+      Store store = new Store();
+      int n = 10;
+      IntVar[] b = new IntVar[n];
+      int[] w = new int[n];
+      for (int i = 0; i < n; i++) {
+        b[i] = new IntVar(store, "b" + i, 0, 1);
+        w[i] = 1 + rnd.nextInt(9);
+      }
+      List<int[]> edges = new ArrayList<>();
+      for (int e = 0; e < 2 * n; e++) {
+        int i = rnd.nextInt(n);
+        int j = rnd.nextInt(n);
+        if (i != j) {
+          edges.add(new int[] {i, j});
+          store.impose(new LinearInt(new IntVar[] {b[i], b[j]}, new int[] {1, 1}, ">=", 1));
+        }
+      }
+      IntVar cost = new IntVar(store, "cost", 0, 100);
+      IntVar[] terms = Arrays.copyOf(b, n + 1);
+      terms[n] = cost;
+      int[] coefficients = Arrays.copyOf(w, n + 1);
+      coefficients[n] = -1;
+      store.impose(new LinearInt(terms, coefficients, "==", 0));
+      // the optimum, and the cheapest cover above it as the incumbent
+      int optimum = Integer.MAX_VALUE;
+      int[] covers = new int[1 << n];
+      for (int mask = 0; mask < 1 << n; mask++) {
+        final int m = mask;
+        covers[mask] = Integer.MAX_VALUE;
+        if (edges.stream().allMatch(e -> ((m >> e[0]) & 1) + ((m >> e[1]) & 1) >= 1)) {
+          int c = 0;
+          for (int i = 0; i < n; i++) {
+            c += ((mask >> i) & 1) * w[i];
+          }
+          covers[mask] = c;
+          optimum = Math.min(optimum, c);
+        }
+      }
+      int given = (1 << n) - 1;
+      for (int mask = 0; mask < 1 << n; mask++) {
+        if (covers[mask] > optimum
+            && covers[mask] < Integer.MAX_VALUE
+            && covers[mask] < covers[given]) {
+          given = mask;
+        }
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setCoreSearch(1, 1_000_000, 100_000);
+      int[] values = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        values[i] = (given >> i) & 1;
+      }
+      values[n] = covers[given];
+      solver.setIncumbent(terms, values);
+      assertThat(solver.minimize(cost)).as("instance %d", instance).isEqualTo(CdclSolver.SAT);
+      assertThat(solver.value(cost)).as("instance %d", instance).isEqualTo(optimum);
+      cores += solver.coreSearch().cores;
+    }
+    assertThat(cores).isPositive();
+  }
+
   @Test
   void deferredValueRemovalsAgreeWithBruteForce() {
     // with no literal budget every value removal without a literal stays out of the solver, and
@@ -4246,6 +4319,50 @@ class LcgSolverTest {
         solver.setAnnotation(annotation, false);
       }
       assertThat(solver.solve()).isEqualTo(CdclSolver.UNSAT);
+    }
+  }
+
+  /**
+   * A propagator that joins the search at the root once the search has started, as the linear
+   * relaxation does after its probe (org.jacop.fz.lpProbe), can fail there on the root domains
+   * while the solver has assigned nothing: miplib2003 disctom (PB 2025) threw "the constraints
+   * failed on the root domains", since the conflict clause was empty and no assigned literal was
+   * left to stand in for it. The empty clause now goes to the solver, which answers UNSAT.
+   */
+  @Test
+  void failureResumedAtTheRootWithNothingAssignedProvesUnsatisfiable() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 10);
+    IntVar y = new IntVar(store, "y", 0, 10);
+    store.impose(new XplusYeqZ(x, y, new IntVar(store, "z", 0, 20)));
+    Constraint gate = new FailsOnceOpened(x, y);
+    store.impose(gate);
+    LcgSolver solver = new LcgSolver(store);
+    solver.atRootAfter(
+        0,
+        () -> {
+          ((FailsOnceOpened) gate).open = true;
+          store.addChanged(gate);
+        });
+    int result = assertTimeoutPreemptively(Duration.ofSeconds(10), () -> solver.solve());
+    assertThat(result).isEqualTo(CdclSolver.UNSAT);
+  }
+
+  // a constraint without pruning until opened, then failing whatever the domains
+  private static final class FailsOnceOpened extends Constraint {
+    private static final AtomicInteger ID = new AtomicInteger();
+    boolean open;
+
+    FailsOnceOpened(IntVar... vars) {
+      super(new IntVar[][] {vars});
+      numberId = ID.incrementAndGet();
+    }
+
+    @Override
+    public void consistency(Store store) {
+      if (open) {
+        throw Store.failException;
+      }
     }
   }
 
