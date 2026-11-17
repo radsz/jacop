@@ -321,6 +321,150 @@ class GiantTourFlatzincTest {
     assertTrue(solved > 3, "too few satisfiable trials: " + solved);
   }
 
+  // a travelling salesman tour with time windows as the XCSP translation writes it (TSPTW of the
+  // XCSP 2023 competition): node 0 is the depot, x[i] the successor of i numbered from 0, the
+  // subcircuit over x[i] + 1 with no node its own successor, the travel time d[i] = c[i][x[i]],
+  // the time a[i] in the window of i, and s[i] = a[i] + d[i] <= a[x[i]] on every arc except the
+  // one back to the depot (r[i] -> s[i] <= y[i], r[i] or x[i] = 0); the objective is the travel
+  // time, or a budget on it without one
+  private static String tsptwModel(Random random, boolean optimize) {
+    int n = 5 + random.nextInt(2);
+    int[][] c = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        c[i][j] = i == j ? 0 : 1 + random.nextInt(9);
+      }
+    }
+    // the windows around the times of a random tour, which keeps them
+    int[] order = new int[n - 1];
+    for (int k = 0; k < order.length; k++) {
+      order[k] = k + 1;
+    }
+    for (int k = order.length - 1; k > 0; k--) {
+      int j = random.nextInt(k + 1);
+      int z = order[k];
+      order[k] = order[j];
+      order[j] = z;
+    }
+    int[] when = new int[n];
+    int last = 0;
+    for (int k : order) {
+      when[k] = when[last] + c[last][k] + random.nextInt(2);
+      last = k;
+    }
+    int horizon = 10 * n;
+    StringBuilder f = new StringBuilder();
+    StringBuilder xs = new StringBuilder();
+    StringBuilder succ = new StringBuilder();
+    StringBuilder times = new StringBuilder("0");
+    StringBuilder ds = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      StringBuilder dom = new StringBuilder();
+      for (int j = 0; j < n; j++) {
+        if (j != i) {
+          dom.append(dom.isEmpty() ? "" : ",").append(j);
+        }
+      }
+      f.append("var {").append(dom).append("}: x").append(i).append(":: output_var;\n");
+      f.append("var 1..").append(n).append(": X").append(i).append(";\n");
+      xs.append(xs.isEmpty() ? "" : ",").append('x').append(i);
+      succ.append(succ.isEmpty() ? "" : ",").append('X').append(i);
+      f.append("var 0..9: d").append(i).append(";\n");
+      ds.append(ds.isEmpty() ? "" : ",").append('d').append(i);
+      f.append("var 0..").append(horizon).append(": y").append(i).append(";\n");
+      if (i > 0) {
+        // narrow windows keep the waiting times, which -a enumerates, few
+        int wide = optimize ? 10 : 4;
+        int open = Math.max(0, when[i] - random.nextInt(wide));
+        int close = when[i] + random.nextInt(wide);
+        f.append("var ").append(open).append("..").append(close).append(": a").append(i);
+        f.append(":: output_var;\n");
+        f.append("var 0..").append(horizon + 9).append(": s").append(i).append(";\n");
+        f.append("var bool: r").append(i).append(";\n");
+        f.append("var bool: e").append(i).append(";\n");
+        times.append(",a").append(i);
+      }
+    }
+    if (optimize) {
+      f.append("var 0..").append(9 * n).append(": obj:: output_var;\n");
+    }
+    f.append("array [1..").append(n).append("] of var int: succ = [").append(succ).append("];\n");
+    f.append("array [1..").append(n).append("] of var int: times = [").append(times).append("];\n");
+    for (int i = 0; i < n; i++) {
+      StringBuilder row = new StringBuilder();
+      for (int j = 0; j < n; j++) {
+        row.append(j == 0 ? "" : ",").append(c[i][j]);
+      }
+      f.append("array [1..").append(n).append("] of int: c").append(i).append(" = [");
+      f.append(row).append("];\n");
+    }
+    f.append("constraint jacop_subcircuit(succ);\n");
+    for (int i = 0; i < n; i++) {
+      f.append("constraint int_lin_eq([1,-1],[x").append(i).append(",X").append(i);
+      f.append("],-1);\n");
+      f.append("constraint jacop_array_var_int_element_nonshifted(x").append(i).append(",c");
+      f.append(i).append(",d").append(i).append(",0);\n");
+      f.append("constraint jacop_array_var_int_element_nonshifted(x").append(i);
+      f.append(",times,y").append(i).append(",0);\n");
+      if (i == 0) {
+        f.append("constraint int_lin_le([1,-1],[d0,y0],0);\n");
+      } else {
+        f.append("constraint int_lin_eq([1,-1,-1],[s").append(i).append(",a").append(i);
+        f.append(",d").append(i).append("],0);\n");
+        f.append("constraint int_lin_le_imp([1,-1],[s").append(i).append(",y").append(i);
+        f.append("],0,r").append(i).append(");\n");
+        f.append("constraint bool_clause([r").append(i).append(",e").append(i);
+        f.append("],[]);\n");
+        f.append("constraint int_eq_imp(x").append(i).append(",0,e").append(i).append(");\n");
+      }
+    }
+    int[] ones = new int[n];
+    Arrays.fill(ones, 1);
+    String sum = Arrays.toString(ones).replace(" ", "");
+    if (optimize) {
+      f.append("constraint int_lin_eq(").append(sum.replace("]", ",-1]")).append(",[");
+      f.append(ds).append(",obj],0);\n");
+      f.append("solve minimize obj;\n");
+    } else {
+      f.append("constraint int_lin_le(").append(sum).append(",[").append(ds).append("],");
+      f.append(5 * n).append(");\n");
+      f.append("solve satisfy;\n");
+    }
+    return f.toString();
+  }
+
+  @Test
+  @Timeout(120)
+  void travellingSalesmanWithWindowsKeepsAllSolutionsAndTheOptimum() throws IOException {
+    // the XCSP form reaches the detection: Routes, its rows, the time window reduction, ArcTimes
+    // and the arc-time rows of the relaxation, with the arc back to the depot exempt
+    Random random = new Random(31);
+    int detected = 0;
+    int solved = 0;
+    for (int trial = 0; trial < 30; trial++) {
+      boolean optimize = trial % 2 == 1;
+      String model = tsptwModel(random, optimize);
+      System.setProperty(PROPERTY, "false");
+      String plain = run(model, "-a");
+      System.clearProperty(PROPERTY);
+      String out = run(model, "-a", "-debug");
+      if (out.contains("% redundant Routes of a travelling salesman tour")) {
+        detected++;
+      } else {
+        Files.writeString(Path.of("/tmp/tsptw" + trial + ".fzn"), model); // DBG
+      }
+      if (optimize) {
+        assertEquals(optimum(plain), optimum(out), "trial " + trial + "\n" + model);
+      } else {
+        Set<String> without = solutions(plain);
+        solved += without.isEmpty() ? 0 : 1;
+        assertEquals(without, solutions(out), "trial " + trial + "\n" + model);
+      }
+    }
+    assertTrue(detected >= 10, "too few detections: " + detected);
+    assertTrue(solved > 3, "too few satisfiable trials: " + solved);
+  }
+
   @Test
   void detectionCanBeTurnedOff() throws IOException {
     String model = randomModel(new Random(3), false);
