@@ -250,6 +250,9 @@ public class Options {
                 makes fewer than lcg-slow-rate conflicts per second and has no solution
                 after this share of the time limit gives way to free search without
                 learning, default 0.5; 0 = off),
+                free-first=<share> (with --lcg, -f and an objective that sums at least four
+                squares: free search without learning runs first for this share of the
+                time limit, then LCG goes on from its best solution, default 0.1; 0 = off),
                 first-input=<runs> (-f, an objective and no search annotation: after slow
                 LCG gave way without a solution, one free search run in this many fixes the
                 variables in the model's order with their least values, until the first
