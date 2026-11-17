@@ -7782,7 +7782,9 @@ Version 5.0 (unreleased)
    CaDiCaL's arena moving); chronological backtracking stops looking for
    the assignment level at the current level. On the 83 SAT Competition
    2024/25 CNFs of the SAT screen that run at least 3 s, reaching the same
-   conflict count takes 0.91x the time (geomean); on fpga-routing JaSAT
+   conflict count takes 0.91x the time (geomean) before congruence
+   closure, scheduled vivification and jump search came in, and 0.95x
+   with them (they spend time this change does not touch); on fpga-routing JaSAT
    makes as many propagations as Kissat but visits about 80 watches per
    propagation, 86 % of them stopped by the blocking literal. CdclMain
    takes --conflicts N (stop after N conflicts) and prints the learnt
