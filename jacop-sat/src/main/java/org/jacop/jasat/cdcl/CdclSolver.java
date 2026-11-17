@@ -588,8 +588,8 @@ public final class CdclSolver {
       qStamp = Arrays.copyOf(qStamp, c);
     }
     order.grow(n, activity);
-    for (int v = numVars; v < n; v++) {
-      queueAppend(v);
+    for (int v = n - 1; v >= numVars; v--) {
+      queueAppend(v); // the first variable last, so decided first
       qSearch = v;
     }
     for (int v = numVars; v < n; v++) {
@@ -1714,8 +1714,7 @@ public final class CdclSolver {
       if (qToBumpSize == qToBump.length) {
         qToBump = Arrays.copyOf(qToBump, 2 * qToBumpSize);
       }
-      qToBump[qToBumpSize++] = v;
-      return;
+      qToBump[qToBumpSize++] = v; // and bumped in the heap too, for the next stable phase
     }
     if ((activity[v] += varInc) > 1e100) {
       for (int i = 0; i < numVars; i++) {
@@ -3143,7 +3142,7 @@ public final class CdclSolver {
         if (wasted > (1 << 20) && wasted > memSize / 2) {
           purge(); // temporary external reasons freed by the backtrack
         }
-        decayActivities();
+        varInc /= varDecay;
         claInc /= CLA_DECAY;
         if (!stable && varDecay < 0.95 && conflicts % 5000 == 0) {
           varDecay += 0.01;
@@ -5265,25 +5264,17 @@ public final class CdclSolver {
    * CaDiCaL and Kissat, Biere and Fröhlich, "Evaluating CDCL Variable Scoring Schemes", SAT 2015)
    * instead of the activity heap, which then serves stable mode only (off by default). The
    * variables of a conflict analysis move to the end of the queue in their old order, and a
-   * decision takes the most recently moved unassigned variable. Each mode bumps only its own
-   * heuristic, so a stable phase leaves the queue of the next focused phase as it was. Ignored
-   * under an external propagator.
+   * decision takes the most recently moved unassigned variable; the queue starts with the first
+   * variable at its end. A stable phase leaves the queue of the next focused phase as it was, while
+   * focused mode still bumps the activities, so the heap of the next stable phase keeps learning
+   * (CaDiCaL and Kissat bump only the heuristic of the mode: on the 90 CNFs of the SAT screen that
+   * solved 38 instead of 41 at 240 s). Ignored under an external propagator.
    *
    * @param on whether focused mode uses the queue
    */
   public void setVmtf(boolean on) {
     vmtf = on;
     qSearch = qLast;
-  }
-
-  /**
-   * Raises the activity increment, except while the queue decides (the activities rest: no
-   * overflow).
-   */
-  private void decayActivities() {
-    if (!queueInUse()) {
-      varInc /= varDecay;
-    }
   }
 
   /**

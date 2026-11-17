@@ -7548,20 +7548,22 @@ Version 5.0 (unreleased)
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
 418. JaSAT can decide by a VMTF queue (variable move-to-front) in focused
-   mode, as CaDiCaL and Kissat do, keeping VSIDS for stable mode, each
-   mode bumping only its own heuristic: CdclSolver.setVmtf(true), CdclMain
-   --vmtf 1; off by default, and ignored under an external propagator
-   (LCG). With one VSIDS heap for both modes, the stable phases leave
-   scores that steer the focused phases. L. Ryan, Efficient algorithms
-   for clause-learning SAT solvers, MSc thesis, Simon Fraser University,
-   2004; A. Biere, A. Froehlich, Evaluating CDCL variable scoring schemes,
-   SAT 2015. Of the 90 SAT Competition 2024/25 instances of the SAT gap
-   screen at 240 s both versions solve 30, five each that the other does
-   not; at 600 s VMTF proves hardware-verification in 24 s and sgen in
-   97 s (both unsolved before) and solves crafted-cec 318 -> 130 s,
-   ensemble-computation 380 -> 8 s, pythagorean-triples 353 -> 77 s,
-   but loses edge-matching, heule-nol, scheduling and waerden (9 to 93 s
-   before) and is slower on most UNSAT instances, hence off by default.
+   mode, as CaDiCaL and Kissat do, and by its activity heap in stable
+   mode: CdclSolver.setVmtf(true), CdclMain --vmtf 1; off by default,
+   and ignored under an external propagator (LCG). With one heap for
+   both modes, the stable phases leave scores that steer the focused
+   phases. Unlike CaDiCaL and Kissat, focused mode still bumps the heap,
+   and the queue starts with the first variable at its end. L. Ryan,
+   Efficient algorithms for clause-learning SAT solvers, MSc thesis,
+   Simon Fraser University, 2004; A. Biere, A. Froehlich, Evaluating CDCL
+   variable scoring schemes, SAT 2015. Of the 90 SAT Competition 2024/25
+   instances of the SAT gap screen at 240 s it solves 41 instead of 40,
+   total time 0.955 (with the queue alone 38); on the 25 instances that
+   changed, at 600 s, 24 instead of 21 and 0.740 (hardware-verification,
+   scheduling, stedman-triples, unknown-cases newly solved, random-csp
+   513 -> 37 s, edge-matching lost), but most UNSAT instances are slower
+   (tseitin-formulas 184 -> 564 s, planning 200 -> 496 s), hence off by
+   default.
 
 Version 4.11
 =============
