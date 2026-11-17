@@ -575,6 +575,9 @@ public class XorSystemDetector implements ParserTreeConstants {
   // the literals of clauses read to extend the sets of clause columns
   private long extensionWork;
 
+  // no extended set
+  private static final int[] NO_SET = new int[0];
+
   /**
    * The sets of variables of a clause of at least three variables, with the one more variable of
    * each clause that has all but one of its variables in it, of at most {@link #MAX_CLAUSE_XOR}
@@ -594,9 +597,9 @@ public class XorSystemDetector implements ParserTreeConstants {
       }
       int[] set =
           c.cols.length < 3 || c.cols.length >= MAX_CLAUSE_XOR
-              ? null
+              ? NO_SET
               : extendedSet(c.cols, occurrences);
-      if (set != null) {
+      if (set.length > 0) {
         result.add(new Columns(set));
       }
     }
@@ -604,7 +607,7 @@ public class XorSystemDetector implements ParserTreeConstants {
   }
 
   // the columns of a clause with the one more variable of each clause that has all but one of its
-  // variables in it, or null when fewer than two clauses do so or the set would outgrow
+  // variables in it, or NO_SET when fewer than two clauses do so or the set would outgrow
   // MAX_CLAUSE_XOR; such a set is dropped as soon as it does, without reading the rest of the
   // occurrences
   private int[] extendedSet(int[] cols, Map<Integer, List<int[]>> occurrences) {
@@ -622,7 +625,7 @@ public class XorSystemDetector implements ParserTreeConstants {
     }
     int extras = counts[0];
     if (counts[1] < 2 || extras == 0 || extras > room) {
-      return null;
+      return NO_SET;
     }
     int[] set = Arrays.copyOf(cols, cols.length + extras);
     System.arraycopy(extra, 0, set, cols.length, extras);
