@@ -31,6 +31,8 @@
 package org.jacop.fz.constraints;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import org.jacop.constraints.ElementBool;
 import org.jacop.constraints.ElementInteger;
@@ -63,6 +65,30 @@ class ElementConstraints implements ParserTreeConstants {
 
   final Support support;
   final Store store;
+
+  // elements over equal lists of parameters, by the list and the index offset: they share the list
+  // and what ElementInteger derives from it (2000 elements over one array of 20,000 held 350 KB
+  // each); lists shorter than SHARED_LIST cost less than looking them up
+  private final Map<ListKey, ElementInteger> elementsByList = new HashMap<>();
+
+  private static final int SHARED_LIST = 64;
+
+  private record ListKey(int[] list, int offset) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof ListKey k && offset == k.offset && Arrays.equals(list, k.list);
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * Arrays.hashCode(list) + offset;
+    }
+
+    @Override
+    public String toString() {
+      return "ListKey[" + list.length + ", " + offset + "]";
+    }
+  }
 
   public ElementConstraints(Support support) {
     this.support = support;
@@ -137,7 +163,7 @@ class ElementConstraints implements ParserTreeConstants {
     } else if (support.options.getBoundConsistency()) {
       support.pose(new ElementIntegerFast(p1, newP2, p3, p1.min() - 1));
     } else {
-      support.pose(new ElementInteger(p1, newP2, p3, p1.min() - 1));
+      support.pose(elementInteger(p1, newP2, p3, p1.min() - 1));
     }
   }
 
@@ -161,6 +187,20 @@ class ElementConstraints implements ParserTreeConstants {
     } else {
       support.pose(new ElementBool(p1, newP2, p3, p1.min() - 1));
     }
+  }
+
+  private ElementInteger elementInteger(IntVar index, int[] list, IntVar value, int offset) {
+    if (list.length < SHARED_LIST) {
+      return new ElementInteger(index, list, value, offset);
+    }
+    ListKey key = new ListKey(list, offset);
+    ElementInteger same = elementsByList.get(key);
+    if (same != null) {
+      return new ElementInteger(index, value, same);
+    }
+    ElementInteger c = new ElementInteger(index, list, value, offset);
+    elementsByList.put(key, c);
+    return c;
   }
 
   /** Returns the part of p2 from index p1.min(), where first is the index of p2[0]. */
