@@ -7563,6 +7563,25 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+419. Free search (-f) runs a memetic tabu search before lazy clause
+   generation when every constraint of the model defines one variable from
+   others (products and other functional constraints, linear equalities)
+   and the cost is a function of at most 64-value decision variables, as on
+   low autocorrelation binary sequences (Gallardo, Cotta and Fernandez,
+   Finding low autocorrelation binary sequences with memetic algorithms,
+   Applied Soft Computing 9(4), 1252-1262, 2009). org.jacop.fz.FunctionalModel detects such models and
+   org.jacop.search.ls.FunctionalTabuSearch evaluates the definitions
+   incrementally (linear sums by deltas, partial sums inlined) and runs a
+   population with crossover, mutation and tabu walks. Its best assignment
+   is checked in the store and printed; LCG then starts from it with its
+   cost as bound and without the core-guided phase, and LNS continues the
+   tabu search from the incumbent as a proposer. --free-config tabu=0
+   turns it off; tabu-share (0.9 of the time left), tabu-max, tabu-stall,
+   tabu-generations and tabu-lns tune it. On the XCSP 2025
+   LowAutocorrelation instances at 240 s it finds 108 (optimum) for n=40,
+   about 856 for n=100 and 3820-4020 for n=200 (before 180, 1226-1354 and
+   4976-5172; Choco 120, 1038 and 4292 at 1800 s).
+
 Version 4.11
 =============
 
