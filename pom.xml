@@ -269,6 +269,8 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/ElementIntegerSharingTest.java</include>
+                                <include>**/SmallScopeTest.java</include>
                                 <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
@@ -544,6 +546,8 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/ElementIntegerSharingTest.java</include>
+                                <include>**/SmallScopeTest.java</include>
                                 <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
@@ -819,6 +823,8 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/ElementIntegerSharingTest.java</include>
+                                <include>**/SmallScopeTest.java</include>
                                 <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>
@@ -1094,6 +1100,8 @@ setup to run configuration. -->
                                 <include>**/RootExtendTest.java</include>
                                 <include>**/FeasibilityPumpTest.java</include>
                                 <include>**/LinearizationsTest.java</include>
+                                <include>**/ElementIntegerSharingTest.java</include>
+                                <include>**/SmallScopeTest.java</include>
                                 <include>**/BinpackingSameWeightTest.java</include>
                                 <include>**/DivModPowBoundsTest.java</include>
                                 <include>**/LcgSolverTest.java</include>

@@ -780,6 +780,7 @@ public class Constraints implements ParserTreeConstants {
     if (SuccessorForestDetector.enabled() && options.proof() == null) {
       new SuccessorForestDetector(support).detect(astTree);
     }
+    dictionary.releaseConstantArrays();
   }
 
   // a constraint item, imposed as implied by the others when implied is true

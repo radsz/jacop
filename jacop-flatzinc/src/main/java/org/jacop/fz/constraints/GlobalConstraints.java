@@ -213,6 +213,9 @@ class GlobalConstraints implements ParserTreeConstants {
   private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
+  // the binary tables of the reformulations above, by their pairs, so that the many tables over
+  // one relation share the index of each binary part
+  private final Map<int[][], HybridTable> binaryParts = new IdentityHashMap<>();
 
   // The first HybridTable posted for the rows of a short table, compared by content.
   private final Map<ShortTableRows, HybridTable> shortTables = new HashMap<>();
@@ -2472,7 +2475,8 @@ class GlobalConstraints implements ParserTreeConstants {
   private void poseTableBySize(IntVar[] v, int[][] t) {
     if (v.length >= 2 && TableReformulation.enabled() && support.options.proof() == null) {
       TableReformulation.Result parts;
-      if (tableByTuples.containsKey(t)) {
+      boolean cached = tableByTuples.containsKey(t);
+      if (cached) {
         if (!reformulations.containsKey(t)) {
           reformulations.put(t, TableReformulation.reformulate(t));
         }
@@ -2481,22 +2485,38 @@ class GlobalConstraints implements ParserTreeConstants {
         parts = TableReformulation.reformulate(t);
       }
       if (parts != null) {
-        poseReformulatedTable(v, parts);
+        poseReformulatedTable(v, parts, cached);
         return;
       }
     }
     poseTableBySizePlain(v, t);
   }
 
-  // the parts of an exactly reformulated table: unary domains, binary tables, the rest
-  private void poseReformulatedTable(IntVar[] v, TableReformulation.Result parts) {
+  private static IntervalDomain valuesDomain(int[] values) {
+    IntervalDomain d = new IntervalDomain();
+    for (int value : values) {
+      d.unionAdapt(value, value);
+    }
+    return d;
+  }
+
+  // a binary part of a reformulated table, sharing the index of the part over the same pairs of a
+  // cached reformulation
+  private HybridTable binaryPart(IntVar[] xy, int[][] pairs, boolean cached) {
+    HybridTable same = binaryParts.get(pairs);
+    HybridTable table = same == null ? new HybridTable(xy, pairs) : new HybridTable(xy, same);
+    if (same == null && cached) {
+      binaryParts.put(pairs, table);
+    }
+    return table;
+  }
+
+  // the parts of an exactly reformulated table: unary domains, binary tables, the rest; the parts
+  // of a cached reformulation are shared by every table over the same tuples
+  private void poseReformulatedTable(IntVar[] v, TableReformulation.Result parts, boolean cached) {
     for (TableReformulation.Unary u : parts.unary()) {
-      IntervalDomain d = new IntervalDomain();
-      for (int value : u.values()) {
-        d.unionAdapt(value, value);
-      }
       IntVar x = v[u.column()];
-      x.domain.in(store.level, x, d);
+      x.domain.in(store.level, x, valuesDomain(u.values()));
     }
     for (TableReformulation.Binary b : parts.binary()) {
       IntVar x = v[b.from()];
@@ -2504,7 +2524,7 @@ class GlobalConstraints implements ParserTreeConstants {
       if (b.identity()) {
         support.pose(new XeqY(x, y));
       } else {
-        support.pose(new HybridTable(new IntVar[] {x, y}, b.pairs()));
+        support.pose(binaryPart(new IntVar[] {x, y}, b.pairs(), cached));
       }
     }
     int[] rest = parts.rest();
@@ -2512,6 +2532,9 @@ class GlobalConstraints implements ParserTreeConstants {
       IntVar[] rv = new IntVar[rest.length];
       for (int c = 0; c < rest.length; c++) {
         rv[c] = v[rest[c]];
+      }
+      if (cached) {
+        tableByTuples.putIfAbsent(parts.restRows(), null);
       }
       poseTableBySizePlain(rv, parts.restRows());
     }
@@ -2703,6 +2726,33 @@ class GlobalConstraints implements ParserTreeConstants {
     }
   }
 
+  // the automata of the regular constraints by their description, so that the regular constraints
+  // over one automaton share it and its layered graph (200 regulars over a 500-state automaton
+  // built 200 automata and graphs, 1.5 GB)
+  private final Map<List<Object>, Fsm> automata = new HashMap<>();
+
+  private Fsm automaton(List<Object> description, java.util.function.Supplier<Fsm> build) {
+    return automata.computeIfAbsent(description, k -> build.get());
+  }
+
+  // an array of ints compared by its contents
+  private record IntArrayKey(int[] values) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof IntArrayKey(int[] other) && Arrays.equals(values, other);
+    }
+
+    @Override
+    public int hashCode() {
+      return Arrays.hashCode(values);
+    }
+
+    @Override
+    public String toString() {
+      return Arrays.toString(values);
+    }
+  }
+
   void gen_jacop_regular(SimpleNode node) {
     IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(0));
     int numStates = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(1));
@@ -2717,22 +2767,29 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(numStates, q0, F);
-    Fsm dfa = (Fsm) dfaParts[0];
-    FsmState[] s = (FsmState[]) dfaParts[1];
+    Fsm dfa =
+        automaton(
+            List.of("dfa", numStates, alphabetSize, new IntArrayKey(d), q0, F.toString(), minIndex),
+            () -> {
+              Object[] dfaParts = buildDfaStructure(numStates, q0, F);
+              Fsm built = (Fsm) dfaParts[0];
+              FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int i = 0; i < numStates; i++) {
-      // mapping current -> next & transition condition
-      Map<Integer, IntDomain> condition = new HashMap<>();
-      for (int j = 0; j < alphabetSize; j++) {
-        if (d[i * alphabetSize + j] != 0) {
-          addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
-        }
-      }
-      addTransitionsFromCondition(s[i], condition, s);
-    }
+              for (int i = 0; i < numStates; i++) {
+                // mapping current -> next & transition condition
+                Map<Integer, IntDomain> condition = new HashMap<>();
+                for (int j = 0; j < alphabetSize; j++) {
+                  if (d[i * alphabetSize + j] != 0) {
+                    addTransitionValue(condition, d[i * alphabetSize + j] - 1, j + minIndex);
+                  }
+                }
+                addTransitionsFromCondition(s[i], condition, s);
+              }
 
-    support.delayedConstraints.add(new Regular(dfa, xx));
+              return built;
+            });
+
+    support.delayedConstraints.add(new Regular(dfa, xx).shareGraph());
   }
 
   void gen_jacop_cost_regular(SimpleNode node) {
@@ -2792,33 +2849,50 @@ class GlobalConstraints implements ParserTreeConstants {
 
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(numStates, q0, finalStates.intersect(1, numStates));
-    Fsm nfa = (Fsm) dfaParts[0];
-    FsmState[] s = (FsmState[]) dfaParts[1];
+    Fsm nfa =
+        automaton(
+            List.of(
+                "nfa",
+                numStates,
+                symbols.toString(),
+                Arrays.toString(d),
+                q0,
+                finalStates.toString(),
+                minState,
+                minSymbol,
+                columns),
+            () -> {
+              Object[] dfaParts =
+                  buildDfaStructure(numStates, q0, finalStates.intersect(1, numStates));
+              Fsm built = (Fsm) dfaParts[0];
+              FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int q = 1; q <= numStates; q++) {
-      int row = q - minState;
-      if (row < 0 || (row + 1) * columns > d.length) {
-        continue;
-      }
-      Map<Integer, IntDomain> condition = new HashMap<>();
-      for (int j = 0; j < columns; j++) {
-        int symbol = minSymbol + j;
-        if (!symbols.contains(symbol)) {
-          continue;
-        }
-        ValueEnumeration next = d[row * columns + j].valueEnumeration();
-        while (next.hasMoreElements()) {
-          int nextState = next.nextElement();
-          if (nextState >= 1 && nextState <= numStates) {
-            addTransitionValue(condition, nextState - 1, symbol);
-          }
-        }
-      }
-      addTransitionsFromCondition(s[q - 1], condition, s);
-    }
+              for (int q = 1; q <= numStates; q++) {
+                int row = q - minState;
+                if (row < 0 || (row + 1) * columns > d.length) {
+                  continue;
+                }
+                Map<Integer, IntDomain> condition = new HashMap<>();
+                for (int j = 0; j < columns; j++) {
+                  int symbol = minSymbol + j;
+                  if (!symbols.contains(symbol)) {
+                    continue;
+                  }
+                  ValueEnumeration next = d[row * columns + j].valueEnumeration();
+                  while (next.hasMoreElements()) {
+                    int nextState = next.nextElement();
+                    if (nextState >= 1 && nextState <= numStates) {
+                      addTransitionValue(condition, nextState - 1, symbol);
+                    }
+                  }
+                }
+                addTransitionsFromCondition(s[q - 1], condition, s);
+              }
 
-    support.delayedConstraints.add(new Regular(nfa, xx));
+              return built;
+            });
+
+    support.delayedConstraints.add(new Regular(nfa, xx).shareGraph());
   }
 
   void gen_jacop_cost_mdd(SimpleNode node) {
@@ -2995,26 +3069,33 @@ class GlobalConstraints implements ParserTreeConstants {
     // different variables and equality constraints here
     IntVar[] xx = removeDuplicates(x);
 
-    Object[] dfaParts = buildDfaStructure(numStates, q0, F);
-    Fsm dfa = (Fsm) dfaParts[0];
-    FsmState[] s = (FsmState[]) dfaParts[1];
+    Fsm dfa =
+        automaton(
+            List.of("set", numStates, S.toString(), new IntArrayKey(d), q0, F.toString()),
+            () -> {
+              Object[] dfaParts = buildDfaStructure(numStates, q0, F);
+              Fsm built = (Fsm) dfaParts[0];
+              FsmState[] s = (FsmState[]) dfaParts[1];
 
-    for (int i = 0; i < numStates; i++) {
-      // mapping current -> next & transition condition
-      ValueEnumeration valueTransition = S.valueEnumeration();
-      Map<Integer, IntDomain> condition = new HashMap<>();
-      for (int j = 0; j < S.getSize(); j++) {
-        int valTran = valueTransition.nextElement();
-        // d holds 1-based next states (0 is the failure state); min_index is the smallest
-        // symbol of the alphabet, not of the states
-        if (d[i * S.getSize() + j] != 0) {
-          addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
-        }
-      }
-      addTransitionsFromCondition(s[i], condition, s);
-    }
+              for (int i = 0; i < numStates; i++) {
+                // mapping current -> next & transition condition
+                ValueEnumeration valueTransition = S.valueEnumeration();
+                Map<Integer, IntDomain> condition = new HashMap<>();
+                for (int j = 0; j < S.getSize(); j++) {
+                  int valTran = valueTransition.nextElement();
+                  // d holds 1-based next states (0 is the failure state); min_index is the smallest
+                  // symbol of the alphabet, not of the states
+                  if (d[i * S.getSize() + j] != 0) {
+                    addTransitionValue(condition, d[i * S.getSize() + j] - 1, valTran);
+                  }
+                }
+                addTransitionsFromCondition(s[i], condition, s);
+              }
 
-    support.delayedConstraints.add(new Regular(dfa, xx));
+              return built;
+            });
+
+    support.delayedConstraints.add(new Regular(dfa, xx).shareGraph());
   }
 
   void gen_jacop_knapsack(SimpleNode node) {

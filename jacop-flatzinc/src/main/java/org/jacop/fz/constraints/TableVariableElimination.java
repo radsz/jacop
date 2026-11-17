@@ -521,7 +521,53 @@ public class TableVariableElimination implements ParserTreeConstants {
     if (index == value || index.singleton() || value.singleton()) {
       return null;
     }
-    IntVar[] vars = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+    int[] array = fixedArray(node);
+    if (array == null) {
+      return null;
+    }
+    // the rows are read when a join needs them, as for tables: most elements join with nothing,
+    // and the rows of 2000 elements over one array of 20,000 took 1.3 GB
+    return new Relation(
+        new IntVar[] {index, value},
+        () -> elementRows(index, value, array, first),
+        elementRowCount(index, value, array, first),
+        List.of(node));
+  }
+
+  // the rows (index, value) of an element
+  private static int[][] elementRows(IntVar index, IntVar value, int[] array, int first) {
+    int[][] rows = new int[elementRowCount(index, value, array, first)][];
+    int n = 0;
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int i = e.nextElement();
+      int k = i - first;
+      if (k >= 0 && k < array.length && value.domain.contains(array[k])) {
+        rows[n++] = new int[] {i, array[k]};
+      }
+    }
+    return n == rows.length ? rows : Arrays.copyOf(rows, n);
+  }
+
+  private static int elementRowCount(IntVar index, IntVar value, int[] array, int first) {
+    int n = 0;
+    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
+      int k = e.nextElement() - first;
+      if (k >= 0 && k < array.length && value.domain.contains(array[k])) {
+        n++;
+      }
+    }
+    return n;
+  }
+
+  // the values of the array of an element, or null when one is not fixed; an array of parameters
+  // is read as integers, since reading it as variables boxed every entry and made a constant
+  // variable per value at every element (2000 elements over one array of 20,000: 6 GB allocated)
+  private int[] fixedArray(ASTConstElem node) {
+    SimpleNode a = (SimpleNode) node.jjtGetChild(1);
+    if (!node.getName().contains("var")) {
+      return support.getIntArray(a);
+    }
+    IntVar[] vars = support.getVarArray(a);
     int[] array = new int[vars.length];
     for (int k = 0; k < vars.length; k++) {
       if (!vars[k].singleton()) {
@@ -529,16 +575,7 @@ public class TableVariableElimination implements ParserTreeConstants {
       }
       array[k] = vars[k].value();
     }
-    List<int[]> rows = new ArrayList<>();
-    for (ValueEnumeration e = index.domain.valueEnumeration(); e.hasMoreElements(); ) {
-      int i = e.nextElement();
-      int k = i - first;
-      if (k >= 0 && k < array.length && value.domain.contains(array[k])) {
-        rows.add(new int[] {i, array[k]});
-      }
-    }
-    return new Relation(
-        new IntVar[] {index, value}, rows.toArray(new int[0][]), List.of(node), false);
+    return array;
   }
 
   private static boolean distinctUnfixed(IntVar[] v) {
