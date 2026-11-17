@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -662,6 +663,31 @@ class CdclSolverTest {
     s.setDeadline(System.nanoTime() - 1);
     assertNotNull(s.probe(vars + 1));
     assertFalse(early[0], "a decision with " + (vars - implied[0]) + " root consequences to come");
+  }
+
+  @Test
+  void subsumptionCountsTheOccurrencesItScans() {
+    // The triples {x, y, x^y} of nonzero vectors of GF(2)^6 (a Steiner triple system on 63
+    // variables, each in 31 triples, two triples sharing at most one variable): every clause's
+    // signature rejects every other one, so the effort counted only compared clauses and stayed
+    // 0 however long the scanned lists were (DiamondFree-70 of XCSP 2022, 917,000 clauses over
+    // 4,830 variables, scanned for the whole 300 s run under LCG)
+    int[][] triples = new int[651][];
+    int n = 0;
+    for (int x = 1; x < 64; x++) {
+      for (int y = x + 1; y < 64; y++) {
+        if ((x ^ y) > y) {
+          triples[n++] = new int[] {2 * (x - 1), 2 * (y - 1), 2 * ((x ^ y) - 1)};
+        }
+      }
+    }
+    assertEquals(651, n);
+    boolean[] frozen = new boolean[63];
+    Arrays.fill(frozen, true);
+    Eliminator e = new Eliminator(63, triples, n, frozen, null);
+    assertTrue(e.run());
+    // each clause scans the 31 occurrences of one of its literals
+    assertTrue(e.effort() >= 651 * 31, "effort " + e.effort());
   }
 
   @Test
