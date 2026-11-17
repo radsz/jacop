@@ -31,6 +31,8 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -304,10 +306,22 @@ public class CardinalityDetector implements ParserTreeConstants {
           "% redundant GCC on " + n + " variables, " + byValue.size() + " counted values");
     }
     support.delayedConstraints.add(gcc);
-    if (impliedSums) {
+    if (impliedSums && countsItself(g.x, counter)) {
       postImpliedSums(g.x, counter, min);
     }
     return true;
+  }
+
+  // whether some counter is also a counted variable, as in a self-describing sequence
+  private static boolean countsItself(IntVar[] x, IntVar[] counter) {
+    Set<IntVar> counted = Collections.newSetFromMap(new IdentityHashMap<>());
+    counted.addAll(Arrays.asList(x));
+    for (IntVar c : counter) {
+      if (counted.contains(c)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /**
@@ -320,7 +334,9 @@ public class CardinalityDetector implements ParserTreeConstants {
    * the large values at once. The sums are the classic redundant constraints of the magic series:
    * B. M. Smith, Modelling, in Handbook of Constraint Programming, chapter 11, 2006; P. Van
    * Hentenryck, The OPL Optimization Programming Language, MIT Press, 1999. Variables that occur in
-   * both x and the counters get one term.
+   * both x and the counters get one term. They are posted only for such GCCs: on the wide set the
+   * four GCCs whose counters are other variables (fillomino, freepizza, prize-collecting,
+   * skill-allocation) were up to 1.3 times slower with them.
    */
   private void postImpliedSums(IntVar[] x, IntVar[] counter, int min) {
     IntVar[] ones = new IntVar[counter.length];
