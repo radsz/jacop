@@ -7563,6 +7563,23 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
+419. Lifted cover cuts of knapsack rows in the LP cut rounds
+   (-Dorg.jacop.lp.coverCuts=true, off by default). Each row is relaxed
+   to a 0/1 knapsack over its 0/1 columns (fixed columns to the side,
+   other integer columns at their bound, negative weights complemented),
+   a minimal cover is chosen greedily from the LP solution (Crowder,
+   Johnson and Padberg, Operations Research 31(5), 1983) and the items
+   outside it are lifted at once with the superadditive lifting function
+   of Gu, Nemhauser and Savelsbergh, scaled to integers (Sequence independent
+   lifting in mixed integer programming, Journal of Combinatorial
+   Optimization 4(1), 2000; Lifted cover inequalities for 0-1 integer
+   programs: computation, INFORMS Journal on Computing 10(4), 1998).
+   -Dorg.jacop.lp.coverSearch=true also separates them in search.
+   Statistic lpCoverCuts. On the 18 OR-Library GAP instances of types b-d
+   at 600 s, proved 7 -> 8 (default) and 7 -> 9 (-f), total time 0.93 and
+   0.92 (gapc_10x100 and gapc_20x100 are proved, root bound of gapc_10x100
+   1396.0 -> 1399.0, optimum 1402).
+
 420. Free search (-f) runs a memetic tabu search before lazy clause
    generation when every constraint of the model defines one variable from
    others (products and other functional constraints, linear equalities)
