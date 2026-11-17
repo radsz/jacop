@@ -1128,8 +1128,14 @@ public final class Derivation implements VarMap {
       attached.addAll(store.valueWatchers(v));
       attached.addAll(store.watchedLiteralConstraints(v));
       for (Constraint c : attached) {
-        if (c != null && !c.isEntailed() && seen.put(c, Boolean.TRUE) == null) {
-          result.add(c);
+        if (c == null || c.isEntailed()) {
+          continue;
+        }
+        // a constraint rewritten during search (Constraint.rewriteTo) is carried as the one it
+        // replaces, which is entailed at this level but equivalent under the domains the child gets
+        Constraint owner = c.reasonOwner();
+        if (seen.put(owner, Boolean.TRUE) == null) {
+          result.add(owner);
         }
       }
     }

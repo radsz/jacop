@@ -254,6 +254,71 @@ class PresolveFlatzincTest {
         .contains("%%%mzn-stat: presolveDualRounds=");
   }
 
+  /**
+   * A reification whose Boolean the presolve fixes is rewritten to its nested constraint during the
+   * presolve's propagation; the derivation copies the reification it replaces, not the rewritten
+   * constraint, which cannot be copied (fuzz seed 2020384: ClassCastException).
+   */
+  @Test
+  void aReificationRewrittenDuringPresolveIsCopied(@TempDir Path dir) throws IOException {
+    Path model = dir.resolve("rewritten.fzn");
+    Files.writeString(
+        model,
+        """
+      predicate jacop_value_precede_int(int: s,int: t,array [int] of var int: x);
+      predicate jacop_alldiff(array [int] of var int: x);
+      array [1..1] of int: X_INTRODUCED_21_ = [3];
+      array [1..2] of int: X_INTRODUCED_30_ = [1,-1];
+      var -1..1: x_1:: output_var;
+      var {-5,-4,-3,-2,0}: x_2:: output_var;
+      var 3..6: x_3:: output_var;
+      var 0..6: x_4:: output_var;
+      var -2..6: x_5:: output_var;
+      var -4..39: obj:: is_defined_var;
+      var bool: X_INTRODUCED_20_ ::var_is_introduced :: is_defined_var;
+      var -6..3: X_INTRODUCED_25_ ::var_is_introduced :: is_defined_var;
+      var 0..6: X_INTRODUCED_26_ ::var_is_introduced :: is_defined_var;
+      var bool: X_INTRODUCED_31_ ::var_is_introduced :: is_defined_var;
+      var bool: X_INTRODUCED_32_ ::var_is_introduced :: is_defined_var;
+      var bool: X_INTRODUCED_33_ ::var_is_introduced :: is_defined_var;
+      array [1..4] of var int: X_INTRODUCED_18_ ::var_is_introduced  = [x_2,x_3,x_5,x_4];
+      array [1..5] of var int: X_INTRODUCED_23_ ::var_is_introduced  = [x_2,x_3,x_4,x_5,x_1];
+      array [1..4] of var int: X_INTRODUCED_27_ ::var_is_introduced  = [x_3,x_2,x_1,x_5];
+      array [1..4] of var int: X_INTRODUCED_29_ ::var_is_introduced  = [x_3,x_2,x_4,x_5];
+      constraint jacop_value_precede_int(0,2,X_INTRODUCED_18_);
+      constraint int_lin_ne_reif(X_INTRODUCED_21_,[x_3],-4,X_INTRODUCED_20_);
+      constraint jacop_value_precede_int(0,2,X_INTRODUCED_23_);
+      constraint int_abs(X_INTRODUCED_25_,X_INTRODUCED_26_):: defines_var(X_INTRODUCED_26_);
+      constraint jacop_value_precede_int(2,2,X_INTRODUCED_29_);
+      constraint jacop_alldiff(X_INTRODUCED_27_);
+      constraint int_lin_eq([-3,2,2,-1],[x_2,x_5,x_4,obj],0):: defines_var(obj);
+      constraint array_bool_and([X_INTRODUCED_31_,X_INTRODUCED_32_,X_INTRODUCED_33_],X_INTRODUCED_20_):: defines_var(X_INTRODUCED_20_);
+      constraint int_lin_eq([1,-1,-1],[x_4,x_3,X_INTRODUCED_25_],0):: defines_var(X_INTRODUCED_25_);
+      constraint int_lin_ne_reif(X_INTRODUCED_30_,[x_5,x_4],0,X_INTRODUCED_31_):: defines_var(X_INTRODUCED_31_);
+      constraint int_lin_ne_reif(X_INTRODUCED_30_,[x_5,x_2],0,X_INTRODUCED_32_):: defines_var(X_INTRODUCED_32_);
+      constraint int_lin_ne_reif(X_INTRODUCED_30_,[x_4,x_2],0,X_INTRODUCED_33_):: defines_var(X_INTRODUCED_33_);
+      solve  minimize obj;
+        """);
+    String plain = run("-a", "--presolve", "off", model.toString());
+    // the clauses of the presolve, which fix the Boolean, come with the LCG front end
+    String presolved = run("-a", "--lcg", "on", "--presolve", "on", model.toString());
+    assertThat(plain).contains("==========");
+    assertThat(presolved).contains("==========");
+    assertThat(lastObjective(presolved)).isEqualTo(lastObjective(plain));
+  }
+
+  /** The objective -3 x_2 + 2 x_4 + 2 x_5 of the last solution printed. */
+  private static int lastObjective(String printed) {
+    String last = printed.substring(0, printed.lastIndexOf("----------"));
+    last = last.substring(last.lastIndexOf("x_1 = "));
+    return -3 * value(last, "x_2") + 2 * value(last, "x_4") + 2 * value(last, "x_5");
+  }
+
+  private static int value(String solution, String name) {
+    int at = solution.indexOf(name + " = ") + name.length() + 3;
+    return Integer.parseInt(solution.substring(at, solution.indexOf(';', at)).trim());
+  }
+
   /** Runs the front end, as from the command line, and returns what it prints. */
   private static String run(String... args) {
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
