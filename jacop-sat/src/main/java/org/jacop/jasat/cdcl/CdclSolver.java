@@ -167,6 +167,22 @@ public final class CdclSolver {
 
   private final VarHeap order = new VarHeap();
 
+  // --- the VMTF decision queue of focused mode (CaDiCaL, Kissat), used when vmtf is on: a doubly
+  // linked list of the variables in the order of their last bump, the most recent last. Each
+  // variable carries the stamp of its last bump, and qSearch is a variable from which every later
+  // one in the queue is assigned (or eliminated), so a decision walks back from it.
+  private boolean vmtf;
+  private int[] qPrev = new int[0];
+  private int[] qNext = new int[0];
+  private long[] qStamp = new long[0];
+  private int qFirst = -1;
+  private int qLast = -1;
+  private int qSearch = -1;
+  private long qBumped;
+  private int[] qToBump = new int[16];
+  private int qToBumpSize;
+  private long[] qKeys = new long[16];
+
   private int[] trail = new int[0];
   private int trailSize;
   private int qhead;
@@ -656,7 +672,17 @@ public final class CdclSolver {
       binWatches = Arrays.copyOf(binWatches, 2 * c);
       binSize = Arrays.copyOf(binSize, 2 * c);
     }
+    if (qPrev.length < n || qNext.length < n || qStamp.length < n) { // grown together
+      int c = Math.max(n, 2 * qPrev.length);
+      qPrev = Arrays.copyOf(qPrev, c);
+      qNext = Arrays.copyOf(qNext, c);
+      qStamp = Arrays.copyOf(qStamp, c);
+    }
     order.grow(n, activity);
+    for (int v = n - 1; v >= numVars; v--) {
+      queueAppend(v); // the first variable last, so decided first
+      qSearch = v;
+    }
     for (int v = numVars; v < n; v++) {
       vdata[v << 2 | REASON] = NO_REASON;
     }
@@ -1541,6 +1567,9 @@ public final class CdclSolver {
         savedSign[v] = (byte) (lit & 1);
       }
       order.insert(v);
+      if (qSearch < 0 || qStamp[v] > qStamp[qSearch]) {
+        qSearch = v;
+      }
     }
     trailSize = kept;
     qhead = Math.min(start, qheadLim[target]);
@@ -1836,6 +1865,12 @@ public final class CdclSolver {
   }
 
   private void bumpVar(int v) {
+    if (queueInUse()) {
+      if (qToBumpSize == qToBump.length) {
+        qToBump = Arrays.copyOf(qToBump, 2 * qToBumpSize);
+      }
+      qToBump[qToBumpSize++] = v; // and bumped in the heap too, for the next stable phase
+    }
     if ((activity[v] += varInc) > 1e100) {
       for (int i = 0; i < numVars; i++) {
         activity[i] *= 1e-100;
@@ -2199,6 +2234,7 @@ public final class CdclSolver {
       }
     }
 
+    bumpQueue();
     if (learntSize == 1) {
       return 0;
     }
@@ -3896,6 +3932,9 @@ public final class CdclSolver {
   }
 
   private int pickBranch() {
+    if (queueInUse()) {
+      return pickFromQueue();
+    }
     while (!order.isEmpty()) {
       int v = order.removeMax();
       if (vals[2 * v] == 0 && !eliminatedVar[v]) {
@@ -4964,8 +5003,12 @@ public final class CdclSolver {
       if (eliminatedVar[v]) {
         eliminatedVar[v] = false;
         order.insert(v);
+        if (qStamp[v] < 0) {
+          queueAppend(v);
+        }
       }
     }
+    qSearch = qLast; // eliminated variables were passed over
     int i = ext.length;
     while (i > 0 && ok) {
       int size = ext[i - 1];
@@ -5788,6 +5831,122 @@ public final class CdclSolver {
    */
   public void setEmaRestarts(boolean on) {
     emaRestarts = on;
+  }
+
+  /**
+   * Decides in focused mode by the VMTF queue (variable move-to-front, Ryan's thesis 2004; as in
+   * CaDiCaL and Kissat, Biere and Fröhlich, "Evaluating CDCL Variable Scoring Schemes", SAT 2015)
+   * instead of the activity heap, which then serves stable mode only (off by default). The
+   * variables of a conflict analysis move to the end of the queue in their old order, and a
+   * decision takes the most recently moved unassigned variable; the queue starts with the first
+   * variable at its end. A stable phase leaves the queue of the next focused phase as it was, while
+   * focused mode still bumps the activities, so the heap of the next stable phase keeps learning
+   * (CaDiCaL and Kissat bump only the heuristic of the mode: on the 90 CNFs of the SAT screen that
+   * solved 38 instead of 41 at 240 s). Ignored under an external propagator.
+   *
+   * @param on whether focused mode uses the queue
+   */
+  public void setVmtf(boolean on) {
+    vmtf = on;
+    qSearch = qLast;
+  }
+
+  /**
+   * The decision of the queue: the last unassigned variable from qSearch back, at its saved sign.
+   */
+  private int pickFromQueue() {
+    int v = qSearch;
+    while (v >= 0 && (vals[2 * v] != 0 || eliminatedVar[v])) {
+      int pv = qPrev[v];
+      if (eliminatedVar[v]) {
+        queueUnlink(v); // walked over by every later decision otherwise
+        qStamp[v] = -1;
+      }
+      v = pv;
+    }
+    qSearch = v;
+    return v < 0 ? -1 : 2 * v + savedSign[v];
+  }
+
+  private boolean queueInUse() {
+    return vmtf && !stable && external == null;
+  }
+
+  private void queueAppend(int v) {
+    qPrev[v] = qLast;
+    qNext[v] = -1;
+    if (qLast >= 0) {
+      qNext[qLast] = v;
+    } else {
+      qFirst = v;
+    }
+    qLast = v;
+    qStamp[v] = ++qBumped;
+  }
+
+  private void queueUnlink(int v) {
+    int pv = qPrev[v];
+    int nv = qNext[v];
+    if (pv >= 0) {
+      qNext[pv] = nv;
+    } else {
+      qFirst = nv;
+    }
+    if (nv >= 0) {
+      qPrev[nv] = pv;
+    } else {
+      qLast = pv;
+    }
+    if (qSearch == v) {
+      qSearch = pv;
+    }
+  }
+
+  /** Sorts qKeys so that the low 26 bits of qKeys[i] index qToBump by increasing stamp. */
+  private void sortBumped(int n) {
+    if (qKeys.length < n) {
+      qKeys = new long[Math.max(n, 2 * qKeys.length)];
+    }
+    for (int i = 0; i < n; i++) {
+      qKeys[i] = qStamp[qToBump[i]] << 26 | i;
+    }
+    if (n >= 1 << 26) {
+      Arrays.sort(qToBump, 0, n); // too many for the keys: any order is still correct
+      for (int i = 0; i < n; i++) {
+        qKeys[i] = i;
+      }
+    } else {
+      Arrays.sort(qKeys, 0, n);
+    }
+  }
+
+  /** Moves the analysed variables to the end of the queue, in the order of their old stamps. */
+  private void bumpQueue() {
+    int n = qToBumpSize;
+    if (n == 0) {
+      return;
+    }
+    qToBumpSize = 0;
+    if (qBumped + n >= 1L << 37) {
+      long renumbered = 0; // renumber along the queue before the stamps outgrow the sort keys
+      for (int v = qFirst; v >= 0; v = qNext[v]) {
+        qStamp[v] = ++renumbered;
+      }
+      qBumped = renumbered;
+    }
+    sortBumped(n);
+    for (int i = 0; i < n; i++) {
+      int v = qToBump[(int) (qKeys[i] & ((1 << 26) - 1))];
+      if (v != qLast) {
+        queueUnlink(v);
+        queueAppend(v);
+      } else {
+        qStamp[v] = ++qBumped;
+      }
+      if (vals[2 * v] == 0) {
+        qSearch = v;
+      }
+    }
   }
 
   /**

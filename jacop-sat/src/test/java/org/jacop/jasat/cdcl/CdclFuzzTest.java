@@ -513,6 +513,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    s.setVmtf(Math.floorMod(seed, 3L) != 2);
     memoryBudgets(s, seed);
     s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
@@ -564,6 +565,7 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    s.setVmtf(Math.floorMod(seed, 3L) != 2);
     memoryBudgets(s, seed);
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
     // substituted variables come back when a later clause or assumption uses them
