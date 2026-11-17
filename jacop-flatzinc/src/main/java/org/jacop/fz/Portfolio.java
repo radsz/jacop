@@ -110,10 +110,13 @@ final class Portfolio {
   /**
    * The setting of the threads that divide one search tree (option {@code --free-config
    * portfolio-split=<threads>}): LCG free search as branch and bound, each thread under the cube of
-   * the tree it took; see {@link SharedTree}.
+   * the tree it took; see {@link SharedTree}. The thread joins the tree with {@code
+   * lcg-tree-split=1}, not with {@code lcg-split}, which is the term limit of long linear
+   * constraints: {@code lcg-split=1} split every linear constraint of two terms or more into
+   * blocks.
    */
   static final String[] SPLIT_SETTING = {
-    "lcg-split", LCG, "on", "-f", FREE_CONFIG, "lcg-split=1,lcg-core=0,lcg-lb=0"
+    "lcg-split", LCG, "on", "-f", FREE_CONFIG, "lcg-tree-split=1,lcg-core=0,lcg-lb=0"
   };
 
   /**
