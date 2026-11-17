@@ -7563,7 +7563,32 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
-419. The split of long linear constraints for lazy clause generation
+419. Routing with time windows: the LP relaxation of a Routes constraint
+   whose customers have times gets big-M arc-time rows
+   t_j >= t_i + d_ij - M (1 - x_ij), M = latest_i + d_ij - earliest_j over
+   the reduced windows (M. Desrochers, G. Laporte, Improvements and
+   extensions to the Miller-Tucker-Zemlin subtour elimination constraints,
+   Operations Research Letters 10(1), 1991, 27-36), kept in the search LP,
+   so its reduced-cost fixing prunes arc literals at every node; and
+   2-path cuts x(delta-(S)) >= 2 for customer sets that one route cannot
+   visit in one stretch within their windows (B. Kohl, J. Desrosiers,
+   O. B. G. Madsen, M. M. Solomon, F. Soumis, 2-path cuts for the vehicle
+   routing problem with time windows, Transportation Science 33(1), 1999,
+   101-116), checked exactly by a bounded search over the windows. At most
+   1,000 arc-time rows are kept (org.jacop.lp.arcTimeMax), those whose
+   travel time is the largest share of M.
+   GiantTourDetector now also reads the XCSP TSPTW form (subcircuit over
+   x + 1, time rows enforced by int_lin_le_imp and exempt on the arc back
+   to the depot). On the 44 instances that post Routes (18 Solomon VRPTW,
+   16 XCSP 2023 TSPTW, 5 MZNC 2025 tsptw and the 5 wide-set routing
+   instances) at 240 s the default mode proves 30 -> 34 (total time 0.80)
+   and -f 31 -> 34 (0.90); at 600 s on the 14 still open it proves
+   0 -> 6 and 1 -> 5 (TSPTW2 n040w060, n040w080, n060w040 and n060w060,
+   RC101_50, tsptw n100w120.003).
+   -Dorg.jacop.lp.arcTimeRows=false and -Dorg.jacop.lp.twoPathCuts=false
+   turn them off.
+
+420. The split of long linear constraints for lazy clause generation
    (lcg-split) keeps every sum at 20 terms or fewer: a constraint of more
    than 400 terms, whose blocks of sqrt(n) terms and sum of blocks were
    both longer than 20 terms, becomes blocks of 20 terms whose sum is split
@@ -7580,7 +7605,7 @@ Version 5.0 (unreleased)
    --free-config lcg-split-tree=0 restores blocks of sqrt(n) terms; with -s
    it prints lcgSplitSums.
 
-420. With --lcg, -f and an objective that sums at least four squares (x * x
+421. With --lcg, -f and an objective that sums at least four squares (x * x
    or x ^ 2 among the terms reached through up to three linear constraints
    from the cost variable), free search without learning runs first for
    10 % of the time limit and LCG then goes on from its best solution. A
@@ -7594,7 +7619,7 @@ Version 5.0 (unreleased)
    LowAutocorrelation 0.98. Of the 240 wide instances only two gbac instances are reached.
    --free-config free-first=<share> sets the share, 0 turns it off.
 
-421. The core-guided phase of LCG no longer loops forever when it probes
+422. The core-guided phase of LCG no longer loops forever when it probes
    the objective's bound (the probes of commit 7c2bc093d) after the
    objective's own minimum has reached the best solution: every probe
    target was already implied, so the step doubled until it overflowed
@@ -7603,7 +7628,7 @@ Version 5.0 (unreleased)
    both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
    instances it is the only one that met the loop at 240 s.
 
-422. Subtour cuts for successor models (opt-in,
+423. Subtour cuts for successor models (opt-in,
    -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
    output array x and an element list pos whose arcs x[i] = j are proved
    acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
@@ -7621,7 +7646,7 @@ Version 5.0 (unreleased)
    on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
    28 s -> 34 s by default, 27-38 s -> 20 s with -f).
 
-423. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+424. The linear relaxation (--lp, and LCG free search -f) keeps the rows
    that linear overlap factoring (272) reduces to the shared sum alone.
    A row k * S rel c whose whole sum S became the new variable z is
    k * z rel c, which the FlatZinc front end posts as a bound of z or as
@@ -7637,7 +7662,7 @@ Version 5.0 (unreleased)
    warehouse olil4, cap6000). The rows are counted in the statistic
    lpUnitRows.
 
-424. JaSAT substitutes equivalent literals before variable elimination. The
+425. JaSAT substitutes equivalent literals before variable elimination. The
    strongly connected components of the binary implication graph (B.
    Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
    the truth of certain quantified Boolean formulas, Information Processing
