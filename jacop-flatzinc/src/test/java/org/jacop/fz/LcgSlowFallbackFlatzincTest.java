@@ -91,7 +91,9 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void optimumAfterGivingWayAtOnce() throws IOException {
-    String out = run("lcg-slow-rate=1,lcg-slow-at=0");
+    // without the MaxSAT local search, whose optimal first solution leaves LCG nothing to give way
+    // on
+    String out = run("lcg-slow-rate=1,lcg-slow-at=0,maxsat=0");
     // LCG gives way at its first test; only the core-guided probe's trimming of its first cores
     // can have made a few conflicts by then
     Matcher conflicts = Pattern.compile("lcgSlowConflicts=(\\d+)").matcher(out);
@@ -192,6 +194,16 @@ class LcgSlowFallbackFlatzincTest {
     // the first solution inside the window counts as progress, none at all does not
     assertTrue(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, 700));
     assertFalse(Solve.stillProgressing(100 * s, 10 * s, 0.01, none, noCost, noCost));
+  }
+
+  @Test
+  void aBoundRaiseCountsOnlyWhenItClosesAShareOfTheGap() {
+    // CVRPLIB X-n110-k13: the bound rose from 4 to 5 against a best cost of 59,211
+    assertFalse(Solve.boundClosesGap(4, 5, 0.005, 59_211));
+    assertTrue(Solve.boundClosesGap(4, 400, 0.005, 59_211));
+    assertFalse(Solve.boundClosesGap(5, 5, 0.005, 59_211));
+    // without a solution any raise counts
+    assertTrue(Solve.boundClosesGap(4, 5, 0.005, Integer.MAX_VALUE));
   }
 
   @Test

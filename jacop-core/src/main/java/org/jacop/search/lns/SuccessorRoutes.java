@@ -33,6 +33,7 @@ package org.jacop.search.lns;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.jacop.core.IntVar;
 
 /**
@@ -139,6 +140,20 @@ final class SuccessorRoutes extends RouteStructure {
       next[v] = successors[v].singleton() ? successors[v].value() - offset : v;
     }
     routes = null;
+  }
+
+  @Override
+  void solution(Map<IntVar, Integer> valueOf) {
+    for (int v = 0; v < n; v++) {
+      Integer w = valueOf.get(successors[v]);
+      next[v] = (w == null ? successors[v].value() : w) - offset;
+    }
+    routes = null;
+  }
+
+  @Override
+  IntVar[] routeVariables() {
+    return successors;
   }
 
   @Override
