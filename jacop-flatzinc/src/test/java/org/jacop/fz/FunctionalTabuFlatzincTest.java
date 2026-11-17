@@ -277,7 +277,8 @@ class FunctionalTabuFlatzincTest {
             "-f",
             "--search-statistics",
             "--free-config",
-            "tabu-max=2000");
+            // free search first (#810) proves this optimum before LCG and its tabu search start
+            "tabu-max=2000,free-first=0");
     String tag = fzn + out;
     assertTrue(out.contains("tabuVariables=13"), tag);
     assertTrue(out.contains("tabuBest=6"), tag);
