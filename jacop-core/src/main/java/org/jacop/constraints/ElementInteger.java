@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
@@ -139,13 +138,16 @@ public class ElementInteger extends AbstractElement
   /** For each position of the list, the rank of its value in sortedValues. */
   private int[] valueRank;
 
-  /** A buffer for the ranks of the values supported by the current index domain. */
-  private int[] supportedRanks;
+  /**
+   * The list and what impose derives from it alone, shared with the elements made by {@link
+   * #ElementInteger(IntVar, IntVar, ElementInteger)} and by {@link #copy(VarMap)}: each element
+   * over one long list of 20,000 values held its own copy of the list, of the ranks of its values
+   * and of the groups of duplicates, 350 KB an element.
+   */
+  private final Shared shared;
 
-  /** For each rank, the stamp of the last call that found the value supported. */
-  private int[] rankStamp;
-
-  private int stamp;
+  // the buffers of supportedValuesByRank, one per thread instead of one per constraint
+  private static final ThreadLocal<Buffers> BUFFERS = ThreadLocal.withInitial(Buffers::new);
 
   /**
    * It constructs an element constraint.
@@ -181,6 +183,30 @@ public class ElementInteger extends AbstractElement
     this.value = value;
     this.list = Arrays.copyOf(list, list.length);
     this.queueIndex = 1;
+    this.shared = new Shared();
+
+    setScope(index, value);
+  }
+
+  /**
+   * It constructs an element constraint over the list of another one, with its index offset and
+   * treatment of duplicates. The two share the list and what is derived from it, so many elements
+   * over one long list keep it once.
+   *
+   * @param index variable index
+   * @param value a value of the index-th element from the list of same
+   * @param same the element whose list, index offset and treatment of duplicates are used
+   */
+  public ElementInteger(IntVar index, IntVar value, ElementInteger same) {
+    super(index, same.indexOffset);
+    checkInputForNullness(
+        new String[] {"index", "value", "same"}, new Object[] {index, value, same});
+    this.checkDuplicates = same.checkDuplicates;
+    this.numberId = idNumber.incrementAndGet();
+    this.value = value;
+    this.list = same.list;
+    this.queueIndex = 1;
+    this.shared = same.shared;
 
     setScope(index, value);
   }
@@ -316,6 +342,8 @@ public class ElementInteger extends AbstractElement
    */
   private IntervalDomain supportedValuesByRank(boolean useDuplicates) {
 
+    Buffers buffers = BUFFERS.get();
+    int[] supportedRanks = buffers.ranks(list.length);
     int count = 0;
     IntDomain indexDom = index.dom();
     if (useDuplicates && !duplicates.isEmpty()) {
@@ -347,11 +375,8 @@ public class ElementInteger extends AbstractElement
         }
       }
     } else {
-      if (stamp == Integer.MAX_VALUE) {
-        Arrays.fill(rankStamp, 0);
-        stamp = 0;
-      }
-      stamp++;
+      int[] rankStamp = buffers.stamps(sortedValues.length);
+      int stamp = buffers.nextStamp();
       for (int i = 0; i < count; i++) {
         rankStamp[supportedRanks[i]] = stamp;
       }
@@ -391,60 +416,14 @@ public class ElementInteger extends AbstractElement
 
     imposeInit(store);
 
-    duplicates = new ArrayList<>();
-    duplicatesIndexes = new IntervalDomain();
-
-    if (checkDuplicates) {
-
-      TreeMap<Integer, IntervalDomain> map = new TreeMap<>();
-
-      for (int pos = 0; pos < list.length; pos++) {
-
-        int el = list[pos];
-        IntervalDomain indexes = map.get(el);
-        int elementIndex = pos + 1 + indexOffset;
-        if (indexes == null) {
-          indexes = new IntervalDomain(elementIndex, elementIndex);
-          map.put(el, indexes);
-        } else {
-          indexes.addLastElement(elementIndex);
-        }
-      }
-
-      for (IntDomain duplicate : map.values()) {
-        if (duplicate.getSize() > minDuplicatesSize) {
-          duplicates.add(duplicate);
-
-          duplicatesIndexes.unionAdapt(duplicate);
-        }
-      }
-    }
-
-    if (list.length >= limitForDomainPruning) {
-      computeValueRanks();
-    }
+    shared.derive(this);
+    duplicates = shared.duplicates;
+    duplicatesIndexes = shared.duplicatesIndexes;
+    sortedValues = shared.sortedValues;
+    valueRank = shared.valueRank;
 
     valueHasChanged = true;
     indexHasChanged = true;
-  }
-
-  private void computeValueRanks() {
-    int[] values = Arrays.copyOf(list, list.length);
-    Arrays.sort(values);
-    int distinct = 0;
-    for (int i = 0; i < values.length; i++) {
-      if (i == 0 || values[i] != values[i - 1]) {
-        values[distinct++] = values[i];
-      }
-    }
-    sortedValues = Arrays.copyOf(values, distinct);
-    valueRank = new int[list.length];
-    for (int pos = 0; pos < list.length; pos++) {
-      valueRank[pos] = Arrays.binarySearch(sortedValues, list[pos]);
-    }
-    supportedRanks = new int[list.length];
-    rankStamp = new int[distinct];
-    stamp = 0;
   }
 
   @Override
@@ -510,7 +489,7 @@ public class ElementInteger extends AbstractElement
 
   @Override
   public ElementInteger copy(VarMap map) {
-    return new ElementInteger(map.get(index), list, map.get(value), indexOffset, checkDuplicates);
+    return new ElementInteger(map.get(index), map.get(value), this);
   }
 
   @Override
@@ -576,5 +555,121 @@ public class ElementInteger extends AbstractElement
    */
   public IntVar value() {
     return value;
+  }
+
+  /**
+   * The groups of duplicate positions and the ranks of the values of a list, computed by the first
+   * impose of the elements sharing the list.
+   */
+  private static final class Shared {
+
+    private boolean derived;
+
+    private List<IntDomain> duplicates;
+
+    private IntDomain duplicatesIndexes;
+
+    private int[] sortedValues;
+
+    private int[] valueRank;
+
+    synchronized void derive(ElementInteger c) {
+      if (derived) {
+        return;
+      }
+      int[] list = c.list;
+      int n = list.length;
+      // the positions sorted by value, then by position
+      long[] byValue = new long[n];
+      for (int pos = 0; pos < n; pos++) {
+        byValue[pos] = ((long) list[pos] << 32) | pos;
+      }
+      Arrays.sort(byValue);
+      duplicates = new ArrayList<>();
+      duplicatesIndexes = new IntervalDomain();
+      if (c.checkDuplicates) {
+        deriveDuplicates(byValue, c.indexOffset);
+      }
+      if (n >= limitForDomainPruning) {
+        deriveRanks(byValue);
+      }
+      derived = true;
+    }
+
+    // the groups of more than minDuplicatesSize positions with one value, in increasing value
+    private void deriveDuplicates(long[] byValue, int indexOffset) {
+      int n = byValue.length;
+      int start = 0;
+      while (start < n) {
+        int end = start + 1;
+        while (end < n && byValue[end] >> 32 == byValue[start] >> 32) {
+          end++;
+        }
+        if (end - start > minDuplicatesSize) {
+          IntervalDomain indexes = new IntervalDomain();
+          for (int k = start; k < end; k++) {
+            int elementIndex = (int) byValue[k] + 1 + indexOffset;
+            if (indexes.isEmpty()) {
+              indexes.unionAdapt(elementIndex, elementIndex);
+            } else {
+              indexes.addLastElement(elementIndex);
+            }
+          }
+          duplicates.add(indexes);
+          duplicatesIndexes.unionAdapt(indexes);
+        }
+        start = end;
+      }
+    }
+
+    // the distinct values in increasing order and the rank of the value of each position
+    private void deriveRanks(long[] byValue) {
+      int n = byValue.length;
+      int distinct = 0;
+      int[] values = new int[n];
+      valueRank = new int[n];
+      for (int k = 0; k < n; k++) {
+        int v = (int) (byValue[k] >> 32);
+        if (distinct == 0 || values[distinct - 1] != v) {
+          values[distinct++] = v;
+        }
+        valueRank[(int) byValue[k]] = distinct - 1;
+      }
+      sortedValues = Arrays.copyOf(values, distinct);
+    }
+  }
+
+  /** The buffers of {@link #supportedValuesByRank(boolean)} of one thread. */
+  private static final class Buffers {
+
+    private int[] ranks = new int[0];
+
+    // for each rank, the stamp of the last call that found the value supported
+    private int[] stamps = new int[0];
+
+    private int stamp;
+
+    int[] ranks(int n) {
+      if (ranks.length < n) {
+        ranks = new int[n];
+      }
+      return ranks;
+    }
+
+    int[] stamps(int n) {
+      if (stamps.length < n) {
+        stamps = new int[n];
+        stamp = 0;
+      }
+      return stamps;
+    }
+
+    int nextStamp() {
+      if (stamp == Integer.MAX_VALUE) {
+        Arrays.fill(stamps, 0);
+        stamp = 0;
+      }
+      return ++stamp;
+    }
   }
 }
