@@ -75,6 +75,11 @@ public class RootBnode extends Bnode {
   }
 
   @Override
+  void propagateAndPrune(BinaryNode from) {
+    propagateAndPrune();
+  }
+
+  @Override
   void propagate() {
 
     propagateForRoot();

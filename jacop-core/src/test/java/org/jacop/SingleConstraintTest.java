@@ -8721,6 +8721,50 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
   }
 
+  // The negation of AtMost (at least counter + 1 values) woke only on GROUND, so a bound that
+  // removed the value from a variable left the last candidate unfixed (WakeUpFixpointTest seed
+  // 2154389).
+  @Test
+  void testNegatedAtMostWakesWhenAVariableLosesTheValue() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 4);
+    IntVar x1 = new IntVar(store, "x1", -2, 4);
+    IntVar x2 = new IntVar(store, "x2", 0, 0);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new AtMost(new IntVar[] {x2, x0, x1}, 0, 4), r));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.max()).isEqualTo(4);
+
+    store.setLevel(store.level + 1);
+    x1.domain.in(store.level, x1, -2, 2);
+    assertThat(store.consistency()).isTrue();
+
+    // x0 is the only variable left that can be 4
+    assertThat(x0.singleton(4)).isTrue();
+  }
+
+  // GCC drops the counters of values no variable can take; with none left, toString read
+  // counters[-1] (LCG fuzz, a model grounded at impose).
+  @Test
+  void testGccWithoutACounterOfAReachableValue() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 5, 6)};
+    IntVar[] counters = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    GCC gcc = new GCC(x, counters, 0);
+
+    assertThat(gcc.toString()).contains("GCC ([x0::{5..6}], [])");
+    store.impose(gcc);
+
+    // x0 can take only the counted values 0 and 1
+    assertThat(store.consistency()).isFalse();
+  }
+
   // GCC computed its counted values again at impose, so a variable ground between creating the
   // constraint and imposing it made impose throw IllegalArgumentException.
   @Test

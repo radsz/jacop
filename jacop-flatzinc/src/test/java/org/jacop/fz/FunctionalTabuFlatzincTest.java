@@ -204,6 +204,7 @@ class FunctionalTabuFlatzincTest {
       String out =
           run(
               model.fzn(),
+              20000,
               "--lcg",
               "on",
               "-f",
@@ -236,10 +237,8 @@ class FunctionalTabuFlatzincTest {
     assertTrue(fired >= trials / 2, "the tabu search runs on the functional models: " + fired);
   }
 
-  @Test
-  void tabuSearchFindsTheOptimalSequence() throws IOException {
-    // low autocorrelation binary sequence of length 13: the Barker sequence, energy 6
-    int n = 13;
+  // low autocorrelation binary sequence of length n, minimising z
+  private static String sequenceModel(int n) {
     StringBuilder fzn = new StringBuilder();
     StringBuilder cons = new StringBuilder();
     for (int i = 0; i < n; i++) {
@@ -264,14 +263,23 @@ class FunctionalTabuFlatzincTest {
       cons.append("constraint int_times(c_").append(k).append(",c_").append(k).append(",s_");
       cons.append(k).append(");\n");
     }
-    fzn.append("var 0..10000: z:: output_var:: is_defined_var;\n");
+    fzn.append("var 0..100000: z:: output_var:: is_defined_var;\n");
     fzn.append(cons);
     fzn.append("constraint int_lin_eq([").append("1,".repeat(n - 1)).append("-1],[");
     fzn.append(squares).append(",z],0):: defines_var(z);\n");
     fzn.append("solve minimize z;\n");
+    return fzn.toString();
+  }
+
+  @Test
+  void tabuSearchFindsTheOptimalSequence() throws IOException {
+    // low autocorrelation binary sequence of length 13: the Barker sequence, energy 6; the tabu
+    // search runs instead of free search first, which a sum of squares otherwise starts
+    String fzn = sequenceModel(13);
     String out =
         run(
-            fzn.toString(),
+            fzn,
+            20000,
             "--lcg",
             "on",
             "-f",
@@ -286,6 +294,36 @@ class FunctionalTabuFlatzincTest {
     assertEquals(6, lastCost(out), tag);
   }
 
+  @Test
+  void solutionsAfterFreeSearchFirstImprove() throws IOException {
+    // without the tabu search, free search first runs on the sum of squares and prints its
+    // solutions; the LP probe after it printed worse ones (labs 22: 3311 after 39), so the last
+    // solution was not the best. The build turns the probe off (org.jacop.fz.lpProbe=0).
+    String fzn = sequenceModel(22);
+    String probe = System.getProperty("org.jacop.fz.lpProbe");
+    System.setProperty("org.jacop.fz.lpProbe", "200");
+    String out;
+    try {
+      out = run(fzn, 8000, "--lcg", "on", "-f", "--free-config", "tabu=0");
+    } finally {
+      if (probe == null) {
+        System.clearProperty("org.jacop.fz.lpProbe");
+      } else {
+        System.setProperty("org.jacop.fz.lpProbe", probe);
+      }
+    }
+    Matcher m = Pattern.compile("(?m)^z = (-?\\d+);").matcher(out);
+    int previous = Integer.MAX_VALUE;
+    int count = 0;
+    while (m.find()) {
+      int cost = Integer.parseInt(m.group(1));
+      assertTrue(cost < previous, "printed " + cost + " after " + previous + "\n" + out);
+      previous = cost;
+      count++;
+    }
+    assertTrue(count > 0, out);
+  }
+
   private static int lastCost(String out) {
     Matcher m = Pattern.compile("(?m)^z = (-?\\d+);").matcher(out);
     int cost = Integer.MIN_VALUE;
@@ -295,7 +333,7 @@ class FunctionalTabuFlatzincTest {
     return cost;
   }
 
-  private String run(String model, String... options) throws IOException {
+  private String run(String model, int millis, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
     ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -303,7 +341,7 @@ class FunctionalTabuFlatzincTest {
     String[] args = Arrays.copyOf(options, options.length + 4);
     args[options.length] = "-a";
     args[options.length + 1] = "-t";
-    args[options.length + 2] = "20000";
+    args[options.length + 2] = Integer.toString(millis);
     args[options.length + 3] = fzn.toString();
     try (PrintStream capture = new PrintStream(buffer, true, StandardCharsets.UTF_8)) {
       System.setOut(capture);

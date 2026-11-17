@@ -203,6 +203,27 @@ class SlotDiveFlatzincTest {
     assertEquals(40, dived, "the dive fills the slots of every model");
   }
 
+  /**
+   * A variable in no constraint, as the cells outside the board of XCSP 2024 AztecDiamondSym, does
+   * not stop the dive: it once required every free variable in the cardinality, so free search
+   * found no solution of AztecDiamondSym-12 in 240 s.
+   */
+  @Test
+  void slotDiveIgnoresUnconstrainedVariables() throws IOException {
+    Random random = new Random(43);
+    for (int trial = 0; trial < 10; trial++) {
+      Model model = randomModel(random);
+      String fzn = "var 0..5: outside:: output_var;\n" + model.fzn();
+      String on = run(fzn, "--lcg", "on", "-f", "-debug");
+      assertTrue(
+          on.contains("% slot dive: " + model.bins() * model.bins() + " slots, a solution"),
+          "trial " + trial + "\n" + on);
+      assertTrue(on.contains("=========="), "trial " + trial + "\n" + on);
+      assertEquals(model.optimum(), lastCost(on), "trial " + trial + "\n" + fzn);
+      checkPackings(model, on, trial);
+    }
+  }
+
   // the cost of the last solution printed
   private static int lastCost(String out) {
     Matcher m = Pattern.compile("(?m)^z = (\\d+);").matcher(out);
