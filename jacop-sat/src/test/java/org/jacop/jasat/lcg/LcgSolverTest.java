@@ -5638,6 +5638,40 @@ class LcgSolverTest {
    * the test pass before, so the phase always ran its whole share: city-position spent half of its
    * time on cores that raised the bound to 435 against an optimum of 3,493.
    */
+  /**
+   * A core that the assumptions meet at their first conflict ends the solver's call before it
+   * checks its work limit, so the core-guided phase checks the limit itself between cores. Here
+   * every core is one clause of three soft literals, all false under the assumptions: the phase
+   * used to find all 300 of them, far past its share of the work, and now stops at that share.
+   */
+  @Test
+  void corePhaseStopsAtItsWorkLimitWhenEveryCoreFailsAtOnce() {
+    Store store = new Store();
+    int n = 300;
+    IntVar[] x = new IntVar[3 * n + 1];
+    int[] w = new int[3 * n + 1];
+    for (int i = 0; i < 3 * n; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+      w[i] = 1;
+    }
+    for (int i = 0; i < n; i++) {
+      IntVar[] clause = {x[3 * i], x[3 * i + 1], x[3 * i + 2]};
+      store.impose(new LinearInt(clause, new int[] {1, 1, 1}, ">=", 1));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 3 * n);
+    x[3 * n] = cost;
+    w[3 * n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+    solver.setTimeLimit(100); // 200,000 units of work at the nominal rate
+    // the deadline only ends branch and bound, which does not prove the bound of 300 in time
+    solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
+    solver.minimize(cost);
+    assertThat(solver.coreSearch().limitStops).isPositive();
+    assertThat(solver.coreSearch().cores).isLessThan(n);
+  }
+
   @Test
   void corePhaseWithoutItsOwnSolutionStopsAfterAThird() {
     // 12 pigeons; hole 0 takes any number of them and costs 1 each, holes 1 to 11 take one each.
