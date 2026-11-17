@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -61,6 +62,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.jacop.core.IntVar;
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -4013,6 +4016,26 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("a = array1d(1..2, [0, 0]);"), out);
       assertFalse(out.contains("true,") || out.contains("false,"), out);
     }
+  }
+
+  @Test
+  void anArrayOfParametersIsReadAsConstantsOnce() {
+    // every detector that looked at an element read its array of parameters as constants again,
+    // boxing each entry: 2000 elements over one array of 20,000 allocated 5 GB of Integer
+    Tables tables = new Tables(new Store());
+    int[] values = new int[2000];
+    for (int i = 0; i < values.length; i++) {
+      values[i] = i % 7;
+    }
+    tables.addIntArray("a", values);
+    IntVar[] first = tables.getVariableArray("a");
+    assertEquals(2000, first.length);
+    assertEquals(3, first[3].value());
+    assertSame(first, tables.getVariableArray("a"));
+    tables.releaseConstantArrays();
+    IntVar[] again = tables.getVariableArray("a");
+    assertNotSame(first, again);
+    assertSame(first[3], again[3]);
   }
 
   @Test

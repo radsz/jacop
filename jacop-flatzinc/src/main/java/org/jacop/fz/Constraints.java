@@ -747,6 +747,7 @@ public class Constraints implements ParserTreeConstants {
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
     }
+    dictionary.releaseConstantArrays();
   }
 
   // a constraint item, imposed as implied by the others when implied is true

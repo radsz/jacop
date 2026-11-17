@@ -89,6 +89,10 @@ public class Tables {
   final HashMap<String, Double> floatTable = new HashMap<>();
   final HashMap<String, int[]> intArrayTable =
       new HashMap<>(); // boolean are also stored here as 0/1 values
+  // arrays of parameters read as arrays of constants while the constraints are posted: each
+  // detector that looked at an element read the array again, boxing every entry (2000 elements
+  // over one array of 20,000 integers: 5 GB of Integer allocated by six detectors)
+  private final HashMap<String, IntVar[]> constantArrayTable = new HashMap<>();
   final HashMap<String, double[]> floatArrayTable = new HashMap<>();
   final HashMap<String, IntDomain> setTable = new HashMap<>();
   final HashMap<String, IntDomain[]> setArrayTable = new HashMap<>();
@@ -1104,9 +1108,13 @@ public class Tables {
     if (a == null) {
       int[] intA = intArrayTable.get(ident);
       if (intA != null) {
-        a = new IntVar[intA.length];
-        for (int i = 0; i < intA.length; i++) {
-          a[i] = getConstant(intA[i]);
+        a = constantArrayTable.get(ident);
+        if (a == null) {
+          a = new IntVar[intA.length];
+          for (int i = 0; i < intA.length; i++) {
+            a[i] = getConstant(intA[i]);
+          }
+          constantArrayTable.put(ident, a);
         }
       } else {
         return null;
@@ -1117,6 +1125,14 @@ public class Tables {
       }
     }
     return a;
+  }
+
+  /**
+   * It forgets the arrays of parameters read as arrays of constants by {@link
+   * #getVariableArray(String)}, once the constraints are posted.
+   */
+  void releaseConstantArrays() {
+    constantArrayTable.clear();
   }
 
   /**
