@@ -541,6 +541,17 @@ public final class LcgSolver implements ExternalPropagator {
 
   private AdaptiveLns lns;
   private double lnsShare;
+
+  // neighbourhood runs pause while no better solution has come for lnsStall times the time from the
+  // start of minimize to the last better one, and at least lnsStallMin nanoseconds; 0 never pauses
+  private double lnsStall;
+  private long lnsStallMin;
+  private long minimizeStart;
+  private long lastImprovement;
+
+  /** The rounds of {@link #minimize} that skipped their neighbourhood runs as stalled. */
+  public long lnsStallSkips;
+
   private long lnsConflicts;
   private int[] lnsIds;
 
@@ -3617,6 +3628,8 @@ public final class LcgSolver implements ExternalPropagator {
    *     there is no solution, or {@link CdclSolver#UNKNOWN} when a limit stopped the search
    */
   public int minimize(IntVar objective) {
+    minimizeStart = sat.now();
+    lastImprovement = minimizeStart;
     clauseObjective = objective;
     encodeGraphs();
     this.objective = trail.id(objective);
@@ -4658,6 +4671,24 @@ public final class LcgSolver implements ExternalPropagator {
    * assumption impossible, the lower bound goes up by a clause; when it finds a solution, the
    * solution is optimal. The budget of conflicts grows by half at each round.
    */
+  /**
+   * Tells whether the neighbourhood runs of {@link #minimizeWithLowerBoundSearch} pause: no better
+   * solution has come for {@link #setLnsStall} times the time it took to find the last one. Once
+   * the best solution is optimal, the runs cannot improve it and only take time from the search
+   * that proves it; a better solution from branch and bound resumes them. On java-routing trip_8_3,
+   * fox-geese-corn 17, valve-network horizon20 and trains18 (MiniZinc Challenge 2021-2024) under
+   * free search the optimum came within 25 s, the runs then took more than half of the time, and
+   * the proof did not come in 600 s; with the pause it came in 330 to 590 s.
+   */
+  private boolean lnsStalled() {
+    if (lnsStall <= 0) {
+      return false;
+    }
+    long now = sat.now();
+    long found = lastImprovement - minimizeStart;
+    return now - lastImprovement > Math.max(lnsStallMin, (long) (lnsStall * found));
+  }
+
   private int minimizeWithLowerBoundSearch() {
     long budget = lowerBoundBudget;
     double share = lowerBoundShare;
@@ -4675,7 +4706,9 @@ public final class LcgSolver implements ExternalPropagator {
       if (result != CdclSolver.UNKNOWN || sat.conflicts < limit) {
         return result; // done, or stopped by the deadline
       }
-      if (lns != null && best != null) {
+      if (lns != null && best != null && lnsStalled()) {
+        lnsStallSkips++;
+      } else if (lns != null && best != null) {
         result = neighbourhoodRuns((long) (lnsShare * (sat.now() - start)));
         if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
           return result;
@@ -4957,6 +4990,19 @@ public final class LcgSolver implements ExternalPropagator {
    * @param share the time of neighbourhood runs per unit of time of branch and bound
    * @param conflicts the conflicts of one neighbourhood run
    */
+  /**
+   * Pauses the neighbourhood runs of large neighbourhood search (see {@link #setLns}) while no
+   * better solution has come for the given multiple of the time it took to find the last one, and
+   * for at least the given time; a better solution resumes them.
+   *
+   * @param factor the multiple of the time to the last better solution, 0 never to pause
+   * @param minMillis the shortest time without a better solution that pauses the runs, in ms
+   */
+  public void setLnsStall(double factor, long minMillis) {
+    lnsStall = Math.max(0, factor);
+    lnsStallMin = Math.max(0, minMillis) * 1_000_000L;
+  }
+
   public void setLns(AdaptiveLns neighbourhoods, double share, long conflicts) {
     lns = neighbourhoods;
     lnsShare = share;
@@ -8661,6 +8707,7 @@ public final class LcgSolver implements ExternalPropagator {
       return true;
     }
     if (improving) {
+      lastImprovement = sat.now();
       improvedInRun = true;
       best = solution;
       phase = solution;

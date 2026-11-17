@@ -3399,6 +3399,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           lns,
           Double.parseDouble(options.freeConfig("lns-share", "3")),
           Long.parseLong(options.freeConfig("lns-conflicts", "200")));
+      // the runs pause once the best solution stops improving: then it is often optimal, and the
+      // time goes to the proof
+      lcg.setLnsStall(
+          Double.parseDouble(options.freeConfig("lns-stall", "2")),
+          Long.parseLong(options.freeConfig("lns-stall-min", "30000")));
     }
     if (!free && annotated != null) {
       // restarts under the annotation: off (followed down each branch, as without learning),
@@ -5120,6 +5125,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + bisectStatistics(lcg)
             + coreStatistics()
             + lnsStatistics(lcg.lns())
+            + (lcg.lnsStallSkips > 0 ? "\n%%%mzn-stat: lcgLnsStallSkips=" + lcg.lnsStallSkips : "")
             + sharingStatistics(lcg)
             + "\n%%%mzn-stat-end\n"
             + perClass);
