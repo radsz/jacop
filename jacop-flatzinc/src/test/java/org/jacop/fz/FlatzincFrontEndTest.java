@@ -4016,6 +4016,46 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void differenceCyclesKeepElementArcsWithinTheirBudget() throws IOException {
+    // each y = a[index] adds two difference arcs per value of the index: 800 elements over one
+    // array of 5000 variables made 8 million arcs (570 MB). Over the budget an element adds none.
+    int n = 40;
+    StringBuilder m = new StringBuilder();
+    for (int j = 0; j < n; j++) {
+      m.append("var 0..9: a").append(j).append(";\n");
+    }
+    for (int i = 0; i < 3; i++) {
+      m.append("var 1..").append(n).append(": i").append(i).append(";\n");
+      m.append("var 0..9: y").append(i).append(":: output_var;\n");
+    }
+    m.append("array [1..").append(n).append("] of var int: a = [");
+    for (int j = 0; j < n; j++) {
+      m.append(j > 0 ? "," : "").append('a').append(j);
+    }
+    m.append("];\n");
+    for (int i = 0; i < 3; i++) {
+      m.append("constraint array_var_int_element(i").append(i).append(",a,y").append(i);
+      m.append(");\n");
+    }
+    m.append("solve satisfy;\n");
+    String model = m.toString();
+    assertTrue(run(model, "-debug")[0].contains("% difference cycles: 240 difference"));
+    String old = System.getProperty("org.jacop.fz.differenceElements.maxArcs");
+    System.setProperty("org.jacop.fz.differenceElements.maxArcs", "100");
+    try {
+      String out = run(model, "-debug")[0];
+      assertTrue(out.contains("% difference cycles: 80 difference"), out);
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.differenceElements.maxArcs");
+      } else {
+        System.setProperty("org.jacop.fz.differenceElements.maxArcs", old);
+      }
+    }
+  }
+
+  @Test
   void differenceCyclesSurvivePresolveFixingAVariableOfAnArc() throws IOException {
     // fuzz seed 1300110: x <= y or y < x is a conditional cycle, so DifferenceCycles is posted with
     // the arc f1 <= x too. Presolve fixes f1, which only the literals of the constraint name, and
