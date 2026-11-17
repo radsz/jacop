@@ -7563,7 +7563,23 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
-419. JaSAT substitutes equivalent literals before variable elimination. The
+419. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+   that linear overlap factoring (272) reduces to the shared sum alone.
+   A row k * S rel c whose whole sum S became the new variable z is
+   k * z rel c, which the FlatZinc front end posts as a bound of z or as
+   XmulCeqZ, so the relaxation, which substitutes S for z, never saw it.
+   These rows are now recorded at posting and given to the relaxation,
+   which expands them back into the original row. On MIPLIB p0548 (pure
+   integer, generic MPS model) the root cut bound goes from 464 to 7,325
+   (optimum 8,691) and -f proves it in 26 s instead of 297 s. At 600 s,
+   on the 18 MIPLIB and wide instances where the extra rows exist and
+   240 s results differed, the 7 proved instances take 7,271 s against
+   7,624 s in total (all 7 faster), and 8 of the 11 others end with a
+   better objective (mitre and p2756 at the optimum), 3 worse (air04,
+   warehouse olil4, cap6000). The rows are counted in the statistic
+   lpUnitRows.
+
+420. JaSAT substitutes equivalent literals before variable elimination. The
    strongly connected components of the binary implication graph (B.
    Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
    the truth of certain quantified Boolean formulas, Information Processing
