@@ -4992,7 +4992,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the tree's cubes are also over the elements of arrays of variables, on which the model
     // usually branches: with its scalar variables alone, a knapsack declared as an array split
     // only on the objective, and its last cube stayed with one thread while three waited
-    if ("1".equals(options.freeConfig("lcg-split", "0"))
+    if ("1".equals(options.freeConfig("lcg-tree-split", "0"))
         && !lcg.setSharedTree(worker.sharedTree(), added, modelVariableNames()::get)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
     }
