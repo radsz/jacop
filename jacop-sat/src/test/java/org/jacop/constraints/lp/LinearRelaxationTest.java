@@ -1154,7 +1154,7 @@ class LinearRelaxationTest {
       Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
       distinct.addAll(Arrays.asList(f.vars()));
       assertThat(distinct).as("%s", f).hasSize(f.vars().length);
-      assertThat(f.vars().length).as("%s", f).isLessThanOrEqualTo(3);
+      assertThat(f.vars()).as("%s", f).hasSizeLessThanOrEqualTo(3);
       for (long weight : f.weights()) {
         assertThat(weight).as("%s", f).isNotZero();
       }
