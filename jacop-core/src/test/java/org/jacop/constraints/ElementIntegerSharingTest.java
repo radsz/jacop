@@ -92,7 +92,7 @@ class ElementIntegerSharingTest {
           v3.domain.inComplement(store.level, v3, a);
         }
         ok = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         ok = false;
       }
       if (ok) {

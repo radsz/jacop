@@ -73,7 +73,7 @@ class SmallScope<E> extends AbstractSet<E> {
   @SafeVarargs
   static <E> Set<E> of(E... elements) {
     if (elements.length > MAX_SIZE) {
-      Set<Object> seen = new HashSet<>(2 * elements.length);
+      Set<Object> seen = HashSet.newHashSet(elements.length);
       Object[] distinct = new Object[elements.length];
       int n = 0;
       for (E e : elements) {
@@ -121,45 +121,68 @@ class SmallScope<E> extends AbstractSet<E> {
     }
 
     @Override
+    public boolean equals(Object o) {
+      return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    @Override
     public boolean contains(Object o) {
       HashIndex h = index;
       if (h == null) {
-        h = hashIndex(elements);
+        h = new HashIndex(elements);
         index = h;
       }
       int hash = Objects.hashCode(o);
-      int k = Arrays.binarySearch(h.hashes(), hash);
+      int k = Arrays.binarySearch(h.hashes, hash);
       if (k < 0) {
         return false;
       }
-      while (k > 0 && h.hashes()[k - 1] == hash) {
+      while (k > 0 && h.hashes[k - 1] == hash) {
         k--;
       }
-      for (; k < h.hashes().length && h.hashes()[k] == hash; k++) {
-        if (Objects.equals(h.byHash()[k], o)) {
+      for (; k < h.hashes.length && h.hashes[k] == hash; k++) {
+        if (Objects.equals(h.byHash[k], o)) {
           return true;
         }
       }
       return false;
     }
+
+    // the hash codes in increasing order and the element of each
+    private static final class HashIndex {
+      private final int[] hashes;
+      private final Object[] byHash;
+
+      private HashIndex(Object[] elements) {
+        int n = elements.length;
+        long[] keyed = new long[n];
+        for (int i = 0; i < n; i++) {
+          keyed[i] = ((long) Objects.hashCode(elements[i]) << 32) | i;
+        }
+        Arrays.sort(keyed);
+        hashes = new int[n];
+        byHash = new Object[n];
+        for (int i = 0; i < n; i++) {
+          hashes[i] = (int) (keyed[i] >> 32);
+          byHash[i] = elements[(int) keyed[i]];
+        }
+      }
+    }
   }
 
-  private record HashIndex(int[] hashes, Object[] byHash) {}
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
 
-  private static HashIndex hashIndex(Object[] elements) {
-    int n = elements.length;
-    long[] keyed = new long[n];
-    for (int i = 0; i < n; i++) {
-      keyed[i] = ((long) Objects.hashCode(elements[i]) << 32) | i;
-    }
-    Arrays.sort(keyed);
-    int[] hashes = new int[n];
-    Object[] byHash = new Object[n];
-    for (int i = 0; i < n; i++) {
-      hashes[i] = (int) (keyed[i] >> 32);
-      byHash[i] = elements[(int) keyed[i]];
-    }
-    return new HashIndex(hashes, byHash);
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 
   @Override

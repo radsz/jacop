@@ -2409,16 +2409,31 @@ class GlobalConstraints implements ParserTreeConstants {
     poseTableBySizePlain(v, t);
   }
 
+  private static IntervalDomain valuesDomain(int[] values) {
+    IntervalDomain d = new IntervalDomain();
+    for (int value : values) {
+      d.unionAdapt(value, value);
+    }
+    return d;
+  }
+
+  // a binary part of a reformulated table, sharing the index of the part over the same pairs of a
+  // cached reformulation
+  private HybridTable binaryPart(IntVar[] xy, int[][] pairs, boolean cached) {
+    HybridTable same = binaryParts.get(pairs);
+    HybridTable table = same == null ? new HybridTable(xy, pairs) : new HybridTable(xy, same);
+    if (same == null && cached) {
+      binaryParts.put(pairs, table);
+    }
+    return table;
+  }
+
   // the parts of an exactly reformulated table: unary domains, binary tables, the rest; the parts
   // of a cached reformulation are shared by every table over the same tuples
   private void poseReformulatedTable(IntVar[] v, TableReformulation.Result parts, boolean cached) {
     for (TableReformulation.Unary u : parts.unary()) {
-      IntervalDomain d = new IntervalDomain();
-      for (int value : u.values()) {
-        d.unionAdapt(value, value);
-      }
       IntVar x = v[u.column()];
-      x.domain.in(store.level, x, d);
+      x.domain.in(store.level, x, valuesDomain(u.values()));
     }
     for (TableReformulation.Binary b : parts.binary()) {
       IntVar x = v[b.from()];
@@ -2426,14 +2441,7 @@ class GlobalConstraints implements ParserTreeConstants {
       if (b.identity()) {
         support.pose(new XeqY(x, y));
       } else {
-        IntVar[] xy = {x, y};
-        HybridTable same = binaryParts.get(b.pairs());
-        HybridTable table =
-            same == null ? new HybridTable(xy, b.pairs()) : new HybridTable(xy, same);
-        if (same == null && cached) {
-          binaryParts.put(b.pairs(), table);
-        }
-        support.pose(table);
+        support.pose(binaryPart(new IntVar[] {x, y}, b.pairs(), cached));
       }
     }
     int[] rest = parts.rest();
@@ -2648,12 +2656,17 @@ class GlobalConstraints implements ParserTreeConstants {
   private record IntArrayKey(int[] values) {
     @Override
     public boolean equals(Object o) {
-      return o instanceof IntArrayKey k && Arrays.equals(values, k.values);
+      return o instanceof IntArrayKey(int[] other) && Arrays.equals(values, other);
     }
 
     @Override
     public int hashCode() {
       return Arrays.hashCode(values);
+    }
+
+    @Override
+    public String toString() {
+      return Arrays.toString(values);
     }
   }
 

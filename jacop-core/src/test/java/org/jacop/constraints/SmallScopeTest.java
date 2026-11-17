@@ -78,7 +78,8 @@ class SmallScopeTest {
       }
       assertFalse(scope.contains(null));
       assertTrue(scope.containsAll(expected));
-      assertThrows(UnsupportedOperationException.class, () -> scope.add(new Key(-5)));
+      Key extra = new Key(-5);
+      assertThrows(UnsupportedOperationException.class, () -> scope.add(extra));
     }
   }
 }

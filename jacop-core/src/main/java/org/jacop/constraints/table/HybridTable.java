@@ -2115,7 +2115,18 @@ public class HybridTable extends Constraint
   /**
    * The key column of some cells: the values of the key in increasing order and the tuple of each.
    */
-  private record KeyIndex(Restriction[] cells, int column, int[] values, int[] tuples) {
+  private static final class KeyIndex {
+    private final Restriction[] cells;
+    private final int column;
+    private final int[] values;
+    private final int[] tuples;
+
+    KeyIndex(Restriction[] cells, int column, int[] values, int[] tuples) {
+      this.cells = cells;
+      this.column = column;
+      this.values = values;
+      this.tuples = tuples;
+    }
 
     // the tuple with the key value, or -1
     int tuple(int value) {

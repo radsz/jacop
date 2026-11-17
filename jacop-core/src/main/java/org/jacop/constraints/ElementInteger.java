@@ -588,41 +588,54 @@ public class ElementInteger extends AbstractElement
       duplicates = new ArrayList<>();
       duplicatesIndexes = new IntervalDomain();
       if (c.checkDuplicates) {
-        for (int start = 0; start < n; ) {
-          int end = start + 1;
-          while (end < n && byValue[end] >> 32 == byValue[start] >> 32) {
-            end++;
-          }
-          if (end - start > minDuplicatesSize) {
-            IntervalDomain indexes = new IntervalDomain();
-            for (int k = start; k < end; k++) {
-              int elementIndex = (int) byValue[k] + 1 + c.indexOffset;
-              if (indexes.isEmpty()) {
-                indexes.unionAdapt(elementIndex, elementIndex);
-              } else {
-                indexes.addLastElement(elementIndex);
-              }
-            }
-            duplicates.add(indexes);
-            duplicatesIndexes.unionAdapt(indexes);
-          }
-          start = end;
-        }
+        deriveDuplicates(byValue, c.indexOffset);
       }
       if (n >= limitForDomainPruning) {
-        int distinct = 0;
-        int[] values = new int[n];
-        valueRank = new int[n];
-        for (int k = 0; k < n; k++) {
-          int v = (int) (byValue[k] >> 32);
-          if (distinct == 0 || values[distinct - 1] != v) {
-            values[distinct++] = v;
-          }
-          valueRank[(int) byValue[k]] = distinct - 1;
-        }
-        sortedValues = Arrays.copyOf(values, distinct);
+        deriveRanks(byValue);
       }
       derived = true;
+    }
+
+    // the groups of more than minDuplicatesSize positions with one value, in increasing value
+    private void deriveDuplicates(long[] byValue, int indexOffset) {
+      int n = byValue.length;
+      int start = 0;
+      while (start < n) {
+        int end = start + 1;
+        while (end < n && byValue[end] >> 32 == byValue[start] >> 32) {
+          end++;
+        }
+        if (end - start > minDuplicatesSize) {
+          IntervalDomain indexes = new IntervalDomain();
+          for (int k = start; k < end; k++) {
+            int elementIndex = (int) byValue[k] + 1 + indexOffset;
+            if (indexes.isEmpty()) {
+              indexes.unionAdapt(elementIndex, elementIndex);
+            } else {
+              indexes.addLastElement(elementIndex);
+            }
+          }
+          duplicates.add(indexes);
+          duplicatesIndexes.unionAdapt(indexes);
+        }
+        start = end;
+      }
+    }
+
+    // the distinct values in increasing order and the rank of the value of each position
+    private void deriveRanks(long[] byValue) {
+      int n = byValue.length;
+      int distinct = 0;
+      int[] values = new int[n];
+      valueRank = new int[n];
+      for (int k = 0; k < n; k++) {
+        int v = (int) (byValue[k] >> 32);
+        if (distinct == 0 || values[distinct - 1] != v) {
+          values[distinct++] = v;
+        }
+        valueRank[(int) byValue[k]] = distinct - 1;
+      }
+      sortedValues = Arrays.copyOf(values, distinct);
     }
   }
 

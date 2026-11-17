@@ -76,7 +76,9 @@ class ElementConstraints implements ParserTreeConstants {
   private record ListKey(int[] list, int offset) {
     @Override
     public boolean equals(Object o) {
-      return o instanceof ListKey k && offset == k.offset && Arrays.equals(list, k.list);
+      return o instanceof ListKey(int[] otherList, int otherOffset)
+          && offset == otherOffset
+          && Arrays.equals(list, otherList);
     }
 
     @Override
