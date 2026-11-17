@@ -86,6 +86,7 @@ import org.jacop.fz.constraints.MinOfSumsDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.PermutedTasksDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
@@ -584,6 +585,12 @@ public class Constraints implements ParserTreeConstants {
       // the weighted completion bound it adds is redundant, and --proof does not encode it
       if (WeightedCompletionDetector.enabled() && options.proof() == null) {
         new WeightedCompletionDetector(support).detect(astTree);
+      }
+
+      // the unary resource of a chain of tasks over permuted resources (the job view of an open
+      // shop), redundant; --proof does not encode it
+      if (PermutedTasksDetector.enabled() && options.proof() == null) {
+        new PermutedTasksDetector(support).detect(astTree);
       }
 
       if (CardinalityDetector.enabled()) {
