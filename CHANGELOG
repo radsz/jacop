@@ -7577,6 +7577,72 @@ Version 5.0 (unreleased)
    LowAutocorrelation 0.98. Of the 240 wide instances only two gbac instances are reached.
    --free-config free-first=<share> sets the share, 0 turns it off.
 
+420. The core-guided phase of LCG no longer loops forever when it probes
+   the objective's bound (the probes of commit 7c2bc093d) after the
+   objective's own minimum has reached the best solution: every probe
+   target was already implied, so the step doubled until it overflowed
+   and the loop never ended. MiniZinc Challenge 2023 roster-shifts-bool
+   s100_e20_c8 under -f with -t 240 s or more never ended (bound and best
+   both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
+   instances it is the only one that met the loop at 240 s.
+
+421. Subtour cuts for successor models (opt-in,
+   -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
+   output array x and an element list pos whose arcs x[i] = j are proved
+   acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
+   Miller-Tucker-Zemlin formulation of a path or tour (Miller, Tucker and
+   Zemlin, JACM 1960), and posts a redundant graph.Forest over the arc and
+   node literals. The linear relaxation separates on it the generalized
+   subtour elimination cuts of TreeCuts (Lucena and Resende, Discrete
+   Applied Mathematics 2004; Fischetti, Salazar-Gonzalez and Toth, INFORMS
+   Journal on Computing 1998). The tree cut rounds now also move to the
+   sparse simplex when the dense tableau runs out of pivots before the
+   bound has moved. On prize-collecting 32-4-8-2 (MiniZinc Challenge 2016)
+   the root bound goes from 172 (the assignment relaxation) to 102.5, for
+   the optimum 92, and on cvrp simple2 from 24 to 34 (optimal). It stays
+   off by default: of 187 optimisation instances of the wide set it fires
+   on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
+   28 s -> 34 s by default, 27-38 s -> 20 s with -f).
+
+422. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+   that linear overlap factoring (272) reduces to the shared sum alone.
+   A row k * S rel c whose whole sum S became the new variable z is
+   k * z rel c, which the FlatZinc front end posts as a bound of z or as
+   XmulCeqZ, so the relaxation, which substitutes S for z, never saw it.
+   These rows are now recorded at posting and given to the relaxation,
+   which expands them back into the original row. On MIPLIB p0548 (pure
+   integer, generic MPS model) the root cut bound goes from 464 to 7,325
+   (optimum 8,691) and -f proves it in 26 s instead of 297 s. At 600 s,
+   on the 18 MIPLIB and wide instances where the extra rows exist and
+   240 s results differed, the 7 proved instances take 7,271 s against
+   7,624 s in total (all 7 faster), and 8 of the 11 others end with a
+   better objective (mitre and p2756 at the optimum), 3 worse (air04,
+   warehouse olil4, cap6000). The rows are counted in the statistic
+   lpUnitRows.
+
+423. JaSAT substitutes equivalent literals before variable elimination. The
+   strongly connected components of the binary implication graph (B.
+   Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
+   the truth of certain quantified Boolean formulas, Information Processing
+   Letters 8(3), 1979; A. Van Gelder, Toward leaner binary-clause reasoning
+   in a satisfiability solver, Annals of Mathematics and Artificial
+   Intelligence 43, 2005) and clausal congruence closure over AND, XOR and
+   ITE gates found in the clauses (A. Biere, K. Fazekas, M. Fleury, N.
+   Froleyks, Clausal Congruence Closure, SAT 2024) give classes of equal
+   literals; each class is replaced by one representative, observed and
+   assumption variables never being replaced. The new GateExtractor finds
+   the gates and is shared with variable elimination. DRAT proofs cover the
+   new steps (XOR and ITE equivalences by case splits on the gate inputs).
+   On the 90 SAT Competition instances of the JaSAT comparison at 240 s,
+   against develop with bounded variable addition, two rounds: solved 32 ->
+   33 and 34 -> 33, total time 15,656 -> 15,552 s and 15,520 -> 15,396 s;
+   hardware-model-checking (2.2 s, unsolved at 600 s before) and
+   grs-fp-comm (210-237 s) are proved only with it, the other flips
+   (puzzle, planning, scheduling) go both ways between rounds. Under --lcg it fires on 19 of the 240 wide instances, with
+   the same results. --substitute 0 and --congruence 0 in CdclMain,
+   -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
+   it off.
+
 Version 4.11
 =============
 

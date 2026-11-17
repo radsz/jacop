@@ -4215,4 +4215,112 @@ class FlatzincFrontEndTest {
       }
     }
   }
+
+  // a prize-collecting path from node 1 as the MiniZinc Challenge 2016 model flattens it: next[i]
+  // is 0 for an unused node, 1 for the edge back to node 1, and pos[next[i]] = pos[i] + 1 (MTZ)
+  private static String prizeCollecting(int n, long seed) {
+    Random r = new Random(seed);
+    StringBuilder v = new StringBuilder();
+    StringBuilder c = new StringBuilder();
+    v.append("predicate jacop_array_var_int_element_nonshifted(var int: idx,")
+        .append("array [int] of var int: xs,var int: y,int: min_index);\n");
+    v.append("predicate int_lin_eq_imp(array [int] of int: as,array [int] of var int: bs,int: c,")
+        .append("var bool: r);\n");
+    v.append("predicate int_eq_imp(var int: a,var int: b,var bool: r);\n");
+    StringJoiner pos = new StringJoiner(",");
+    StringJoiner next = new StringJoiner(",");
+    StringJoiner prize = new StringJoiner(",");
+    StringJoiner ones = new StringJoiner(",");
+    for (int i = 1; i <= n; i++) {
+      v.append("var 0..").append(n).append(": p").append(i).append(";\n");
+      v.append("var 0..").append(n).append(": x").append(i).append(";\n");
+      v.append("var -1000..20: w").append(i).append(";\n");
+      v.append("var 0..").append(n).append(": e").append(i).append(";\n");
+      v.append("var bool: u").append(i).append(";\n");
+      v.append("var bool: b").append(i).append(";\n");
+      v.append("var 1..").append(n).append(": y").append(i).append(";\n");
+      pos.add("p" + i);
+      next.add("x" + i);
+      prize.add("w" + i);
+      ones.add("1");
+    }
+    v.append("var 0..1000: obj :: output_var;\n");
+    v.append("array [1..").append(n).append("] of var int: next :: output_array([1..").append(n);
+    v.append("]) = [").append(next).append("];\n");
+    c.append("constraint int_eq(p1,1);\n");
+    for (int i = 1; i <= n; i++) {
+      // a used node has a successor, and a successor other than node 1 is one position later
+      c.append("constraint int_le_reif(1,p").append(i).append(",u").append(i).append(");\n");
+      c.append("constraint int_le_reif(1,x").append(i).append(",u").append(i).append(");\n");
+      c.append("constraint int_le_reif(2,x").append(i).append(",b").append(i).append(");\n");
+      c.append("constraint int_eq_imp(y").append(i).append(",x").append(i).append(",b").append(i);
+      c.append(");\n");
+      c.append("constraint jacop_array_var_int_element_nonshifted(y").append(i);
+      c.append(",[").append(pos).append("],e").append(i).append(",1);\n");
+      c.append("constraint int_lin_eq_imp([1,-1],[e").append(i).append(",p").append(i);
+      c.append("],1,b").append(i).append(");\n");
+      // the prize of the edge to next[i]; small for the edges back to node 1, so that the
+      // assignment relaxation prefers the cycles the subtour cuts remove
+      StringJoiner row = new StringJoiner(",");
+      row.add("0");
+      for (int j = 1; j <= n; j++) {
+        row.add(j == i ? "-1000" : j == 1 ? "1" : Integer.toString(5 + r.nextInt(16)));
+      }
+      c.append("constraint jacop_array_var_int_element_nonshifted(x").append(i);
+      c.append(",[").append(row).append("],w").append(i).append(",0);\n");
+    }
+    for (int j = 2; j <= n; j++) {
+      // node j has at most one predecessor
+      StringJoiner is = new StringJoiner(",");
+      for (int i = 1; i <= n; i++) {
+        String q = "q" + i + "_" + j;
+        v.append("var bool: ").append(q).append(";\n");
+        v.append("var 0..1: c").append(q).append(";\n");
+        c.append("constraint int_eq_reif(x").append(i).append(',').append(j);
+        c.append(',').append(q).append(");\n");
+        c.append("constraint bool2int(").append(q).append(",c").append(q).append(");\n");
+        is.add("c" + q);
+      }
+      c.append("constraint int_lin_le([").append(ones).append("],[").append(is).append("],1);\n");
+    }
+    c.append("constraint int_lin_eq([").append(ones).append(",-1],[").append(prize);
+    c.append(",obj],0);\n");
+    c.append("solve maximize obj;\n");
+    return v.toString() + c;
+  }
+
+  @Test
+  void successorForestCutsKeepTheOptimum() throws IOException {
+    // the subtour cuts of a successor forest (off by default) remove the subtours of the LP
+    // relaxation and the optimum stays the same; under free search the dense tableau of
+    // prize-collecting 32-4-8-2 ran out of pivots in the first round, and the round now goes on
+    // on the sparse simplex (the LP statistics are printed with -debug)
+    String[][] runs = {{"-s", "-debug"}, {"-s", "-debug", "-f"}, {"-s", "-debug", "--lcg", "off"}};
+    int[] cuts = new int[runs.length];
+    for (long seed = 1; seed <= 5; seed++) {
+      String model = prizeCollecting(8, seed);
+      String base = run(model)[0];
+      assertTrue(base.contains("=========="), base);
+      int from = base.lastIndexOf("obj = ");
+      String optimum = base.substring(from, base.indexOf('\n', from));
+      try {
+        System.setProperty("org.jacop.fz.successorForest", "true");
+        for (int k = 0; k < runs.length; k++) {
+          String out = run(model, runs[k])[0];
+          String what = Arrays.toString(runs[k]) + out;
+          assertTrue(out.contains("==========") && out.contains("% successor forest:"), what);
+          from = out.lastIndexOf("obj = ");
+          assertEquals(optimum, out.substring(from, out.indexOf('\n', from)), what);
+          Matcher m = Pattern.compile("lpTreeCuts=(\\d+)").matcher(out);
+          assertTrue(m.find(), what);
+          cuts[k] += Integer.parseInt(m.group(1));
+        }
+      } finally {
+        System.clearProperty("org.jacop.fz.successorForest");
+      }
+    }
+    for (int k = 0; k < runs.length; k++) {
+      assertTrue(cuts[k] > 0, Arrays.toString(runs[k]));
+    }
+  }
 }
