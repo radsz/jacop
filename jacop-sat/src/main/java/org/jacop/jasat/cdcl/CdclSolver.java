@@ -942,12 +942,12 @@ public final class CdclSolver {
    * @return the clock, in nanoseconds
    */
   public LongSupplier stoppedClock() {
-    LongSupplier external = externalWork;
+    LongSupplier work = externalWork;
     if (!virtualClock) {
       return System::nanoTime;
     }
     long own = propagations;
-    return () -> (own + external.getAsLong()) * 1_000_000L / VIRTUAL_WORK_PER_MS;
+    return () -> (own + work.getAsLong()) * 1_000_000L / VIRTUAL_WORK_PER_MS;
   }
 
   /**

@@ -3552,6 +3552,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return new SlowLcg(
           solver.sat().conflicts, solver.sat().deadline(), solver.sat().stoppedClock());
     }
+
+    // read like the SAT solver it stands for, so the code that read the solver stays as it was
+    SlowLcg sat() {
+      return this;
+    }
+
+    long now() {
+      return clock.getAsLong();
+    }
   }
 
   private long lcgStart;
@@ -4101,9 +4110,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.debug()) {
       IO.println(
           "%% LCG stopped after "
-              + slowLcg.conflicts()
+              + slowLcg.sat().conflicts
               + " conflicts in "
-              + String.format(Locale.ROOT, "%.1f", (slowLcg.clock().getAsLong() - lcgStart) / 1e9)
+              + String.format(Locale.ROOT, "%.1f", (slowLcg.sat().now() - lcgStart) / 1e9)
               + " s; free search without learning");
     }
   }
@@ -4130,7 +4139,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.debug()) {
       IO.println(
           "%% LCG stopped after "
-              + slowLcg.conflicts()
+              + slowLcg.sat().conflicts
               + " conflicts without a solution; the annotation's search without learning");
     }
     if (restartCalculator != null) {
@@ -6171,7 +6180,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // time-out, counted in propagations, so that the run repeats whatever the load
       long left =
           slowLcg != null
-              ? Math.max(1, (slowLcg.deadline() - slowLcg.clock().getAsLong()) / 1_000_000L)
+              ? Math.max(1, (slowLcg.sat().deadline() - slowLcg.sat().now()) / 1_000_000L)
               : options.getTimeOut();
       builder.timeLimit(Duration.ofMillis(left));
     } else if (options.getTimeOut() > 0) {
@@ -7362,7 +7371,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             (int) freeSearch.getSolutions());
         if (slowLcg != null && options.searchStatistics()) {
           // the conflicts of LCG free search before it gave way
-          IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.conflicts());
+          IO.println("%%%mzn-stat: lcgSlowConflicts=" + slowLcg.sat().conflicts);
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
           IO.println("%%%mzn-stat: lcgSlowUnsolved=" + lcgSlowUnsolved);
           IO.println("%%%mzn-stat: lcgHopeless=" + lcgHopeless);
