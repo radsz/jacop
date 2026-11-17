@@ -8719,6 +8719,23 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
   }
 
+  // GCC drops the counters of values no variable can take; with none left, toString read
+  // counters[-1] (LCG fuzz, a model grounded at impose).
+  @Test
+  void testGccWithoutACounterOfAReachableValue() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 5, 6)};
+    IntVar[] counters = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    GCC gcc = new GCC(x, counters, 0);
+
+    assertThat(gcc.toString()).contains("GCC ([x0::{5..6}], [])");
+    store.impose(gcc);
+
+    // x0 can take only the counted values 0 and 1
+    assertThat(store.consistency()).isFalse();
+  }
+
   // GCC computed its counted values again at impose, so a variable ground between creating the
   // constraint and imposing it made impose throw IllegalArgumentException.
   @Test
