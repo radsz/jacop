@@ -2505,45 +2505,66 @@ public class LinearRelaxation extends Constraint
     return result;
   }
 
+  // the number of terms a row may grow to while its defined variables are replaced
+  private static final int MAX_EXPANDED_TERMS = 4096;
+
   // f with every defined variable replaced by its definition; definitions may use defined
-  // variables, up to a small depth
+  // variables, up to a small depth. Repeated variables are merged and zero weights dropped after
+  // every level: chained definitions repeat variables, and without merging the term lists
+  // multiplied at every level (XCSP 2022 CarSequencing-table, 200 small tables and 1215 window
+  // sums: 6 GB of terms before search). A row that grows past MAX_EXPANDED_TERMS stays as it was;
+  // its defined variables then keep their definitions.
   private static LinearForm expand(
       LinearForm f, Map<IntVar, LinearForm> definition, Map<IntVar, Long> weight, int depth) {
-    boolean any = false;
-    for (IntVar v : f.vars()) {
-      any |= definition.containsKey(v);
-    }
-    if (!any || depth > 8) {
-      return f;
-    }
-    List<IntVar> vs = new ArrayList<>();
-    List<Long> ws = new ArrayList<>();
-    long c = f.c();
-    for (int k = 0; k < f.vars().length; k++) {
-      IntVar v = f.vars()[k];
-      long w = f.weights()[k];
-      LinearForm d = definition.get(v);
-      if (d == null) {
-        vs.add(v);
-        ws.add(w);
-        continue;
-      }
-      // d: sum a x + ws s = cd, so w s = w ws cd - w ws sum a x (ws is 1 or -1)
-      long f0 = Math.multiplyExact(w, weight.get(v));
-      c = Math.subtractExact(c, Math.multiplyExact(f0, d.c()));
-      for (int j = 0; j < d.vars().length; j++) {
-        if (d.vars()[j] != v) {
-          vs.add(d.vars()[j]);
-          ws.add(Math.negateExact(Math.multiplyExact(f0, d.weights()[j])));
+    LinearForm e = f;
+    for (int level = depth; level <= 8 && hasDefined(e, definition); level++) {
+      Map<IntVar, Long> terms = new LinkedHashMap<>();
+      long c = e.c();
+      for (int k = 0; k < e.vars().length; k++) {
+        IntVar v = e.vars()[k];
+        long w = e.weights()[k];
+        LinearForm d = definition.get(v);
+        if (d == null) {
+          addTerm(terms, v, w);
+          continue;
+        }
+        // d: sum a x + ws s = cd, so w s = w ws cd - w ws sum a x (ws is 1 or -1)
+        long f0 = Math.multiplyExact(w, weight.get(v));
+        c = Math.subtractExact(c, Math.multiplyExact(f0, d.c()));
+        for (int j = 0; j < d.vars().length; j++) {
+          if (d.vars()[j] != v) {
+            addTerm(terms, d.vars()[j], Math.negateExact(Math.multiplyExact(f0, d.weights()[j])));
+          }
         }
       }
+      terms.values().removeIf(w -> w == 0);
+      if (terms.size() > MAX_EXPANDED_TERMS) {
+        return f;
+      }
+      IntVar[] vs = new IntVar[terms.size()];
+      long[] ws = new long[vs.length];
+      int i = 0;
+      for (Map.Entry<IntVar, Long> t : terms.entrySet()) {
+        vs[i] = t.getKey();
+        ws[i++] = t.getValue();
+      }
+      e = new LinearForm(vs, ws, c, e.relation());
     }
-    long[] w = new long[ws.size()];
-    for (int k = 0; k < w.length; k++) {
-      w[k] = ws.get(k);
+    return e;
+  }
+
+  private static boolean hasDefined(LinearForm f, Map<IntVar, LinearForm> definition) {
+    for (IntVar v : f.vars()) {
+      if (definition.containsKey(v)) {
+        return true;
+      }
     }
-    LinearForm e = new LinearForm(vs.toArray(new IntVar[0]), w, c, f.relation());
-    return expand(e, definition, weight, depth + 1);
+    return false;
+  }
+
+  private static void addTerm(Map<IntVar, Long> terms, IntVar v, long w) {
+    Long old = terms.get(v);
+    terms.put(v, old == null ? w : Math.addExact(old, w));
   }
 
   private static int indexOf(LinearForm f, IntVar v) {

@@ -1121,6 +1121,47 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Chained definitions that use the variables of the level below twice merge their terms: each
+   * level replaced {@code y_k} and {@code z_k} by both {@code y_k-1} and {@code z_k-1}, so without
+   * merging a row over the top level doubled at every level (XCSP 2022 CarSequencing-table ran out
+   * of a 6 GB heap before search). The row keeps exactly its solutions.
+   */
+  @Test
+  void substitutionMergesRepeatedVariablesOfChainedDefinitions() {
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar y = x[0];
+    IntVar z = x[1];
+    Set<IntVar> sums = new HashSet<>();
+    for (int k = 1; k <= 12; k++) {
+      int span = 1 << k;
+      IntVar ny = new IntVar(store, "y" + k, -span, span);
+      IntVar nz = new IntVar(store, "z" + k, -span, span);
+      // y_k = y_k-1 + z_k-1 and z_k = y_k-1 - z_k-1, each with its defined variable first
+      store.impose(new LinearInt(new IntVar[] {ny, y, z}, new int[] {1, -1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {nz, y, z}, new int[] {1, -1, 1}, "==", 0));
+      sums.add(ny);
+      sums.add(nz);
+      y = ny;
+      z = nz;
+    }
+    IntVar w = new IntVar(store, "w", 0, 9);
+    store.impose(new LinearInt(new IntVar[] {y, z, w}, new int[] {1, 1, 1}, "<=", 64));
+    LinearRelaxation r = LinearRelaxation.of(store, null, false, List.of(), sums);
+    assertThat(r).isNotNull();
+    assertThat(r.allRows()).anyMatch(f -> Arrays.asList(f.vars()).contains(w));
+    for (LinearForm f : r.allRows()) {
+      Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
+      distinct.addAll(Arrays.asList(f.vars()));
+      assertThat(distinct).as("%s", f).hasSize(f.vars().length);
+      assertThat(f.vars().length).as("%s", f).isLessThanOrEqualTo(3);
+      for (long weight : f.weights()) {
+        assertThat(weight).as("%s", f).isNotZero();
+      }
+    }
+  }
+
+  /**
    * Many extra rows that do not change the root bound are not kept: on rel2onto under lazy clause
    * generation the clauses made 1,135 rows of a relaxation that had 65, and the large relaxation
    * stalled at its pivot limit and pruned nothing.
