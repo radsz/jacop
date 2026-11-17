@@ -1267,6 +1267,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.capacityBound
             + "\n%%%mzn-stat: lpCutLimits="
             + r.cutLimits
+            + "\n%%%mzn-stat: lpCutStalls="
+            + r.cutStalls
+            + "\n%%%mzn-stat: lpCutStallsRecovered="
+            + r.cutStallsRecovered
             + "\n%%%mzn-stat: lpZeroHalfCuts="
             + r.zeroHalfCuts
             + "\n%%%mzn-stat: lpDualCuts="

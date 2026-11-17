@@ -576,6 +576,11 @@ public class LinearRelaxation extends Constraint
   private static final boolean CUTS_ENABLED =
       !FALSE.equals(System.getProperty("org.jacop.lp.cuts"));
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
+  // root cut rounds that leave the bound unchanged and still go on: the first rounds of a dual
+  // degenerate LP often move only the basis, and the cuts of the next round then move the bound
+  // (MIPLIB p2756: 2689.7 -> 3102 for the optimum 3124 with 2). When the stalled rounds are used
+  // up, every cut since the first stall of the last run of stalls is dropped again
+  private static final int CUT_STALLS = Integer.getInteger("org.jacop.lp.cutStalls", 2);
   // rounds after the first CUT_ROUNDS, while each still moves the bound: at most this many rounds
   // in all, within CUT_EXTRA_NANOS of the end of the first CUT_ROUNDS
   private static final int CUT_ROUNDS_MAX = Integer.getInteger("org.jacop.lp.cutRoundsMax", 50);
@@ -790,6 +795,12 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: rounds of root cuts whose re-solve stopped at its pivot limit. */
   public long cutLimits;
+
+  /** Statistics: root cut rounds that left the bound unchanged and were kept for the next round. */
+  public long cutStalls;
+
+  /** Statistics: root cut rounds that moved the bound after a stalled round. */
+  public long cutStallsRecovered;
 
   // zero-half cuts in the cut rounds, from sets of tight rows whose sum is odd on the right side
   // (ZeroHalfCuts), rounded with the MIR of divisor 2. Off by default
@@ -4489,6 +4500,11 @@ public class LinearRelaxation extends Constraint
     boolean slack = slackGomory;
     double start = lp.value(0);
     long extraDeadline = 0;
+    int stalls = 0;
+    // the simplex before the first stalled round of the current run of stalls, and the cuts since
+    LpSolver stallKept = null;
+    int[] stallRows = null;
+    int stallCuts = 0;
     for (int round = 0; round < Math.max(CUT_ROUNDS, CUT_ROUNDS_MAX); round++) {
       if (round >= CUT_ROUNDS) {
         // further rounds only while the cuts still move the bound, and for a short time
@@ -4515,9 +4531,32 @@ public class LinearRelaxation extends Constraint
               : rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
+        if (stalls < CUT_STALLS) {
+          // a degenerate optimum: the cuts may only have moved the basis, the next round goes on
+          // from it
+          stalls++;
+          cutStalls++;
+          if (stallKept == null) {
+            stallKept = kept;
+            stallRows = keptRows;
+            stallCuts = 0;
+          }
+          stallCuts += chosen.size();
+          continue;
+        }
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
-        dropCuts(chosen.size(), kept, keptRows);
+        if (stallKept != null) {
+          dropCuts(stallCuts + chosen.size(), stallKept, stallRows);
+          stallKept = null;
+        } else {
+          dropCuts(chosen.size(), kept, keptRows);
+        }
         break;
+      }
+      if (stallKept != null && status == DualSimplex.OPTIMAL) {
+        cutStallsRecovered++;
+        stallKept = null;
+        stallRows = null;
       }
       if (status == LpSolver.LIMIT) {
         cutLimits++;
@@ -4545,6 +4584,10 @@ public class LinearRelaxation extends Constraint
       if (round >= CUT_ROUNDS - 1 && gain < CUT_PROGRESS * Math.abs(lp.value(0) - start)) {
         break;
       }
+    }
+    if (stallKept != null && status == DualSimplex.OPTIMAL) {
+      // the rounds ended on stalled rounds: their cuts never moved the bound
+      dropCuts(stallCuts, stallKept, stallRows);
     }
     slackGomory = slack;
     timed("mir", mirStart);
