@@ -159,6 +159,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.BinCompletion;
+import org.jacop.search.ls.FunctionalTabuSearch;
 import org.jacop.search.ls.LocalSearch;
 import org.jacop.search.ls.MaxSatLocalSearch;
 import org.jacop.search.ls.ProjectSchedule;
@@ -3048,6 +3049,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // the model has no search annotation to follow
       scheduled = maxSatHint(c, worker);
     }
+    if (scheduled == null && options.freeSearch() && ls == null && costVar instanceof IntVar c) {
+      // a cost that is a function of a few decision variables: their tabu search
+      scheduled = functionalHint(c, worker);
+      tabuHint = scheduled;
+    }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -3108,7 +3114,13 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // go on from it (as a bound and phase alone, neighbourhood search never ran: j60_45_1)
       lcg.setIncumbent(scheduled.vars, scheduled.values);
       lcgLastCost = scheduledCost;
-      if (worker != null) {
+      if (scheduled == tabuHint) {
+        // the tabu search's cost also as a bound from the start: with the incumbent alone, the
+        // proof of low autocorrelation n = 20 took 100 s instead of 5 s
+        int tabuCost = scheduledCost;
+        lcg.setSharedBound(
+            () -> worker == null ? tabuCost : Math.min(tabuCost, worker.sharedBound()));
+      } else if (worker != null) {
         lcg.setSharedBound(worker::sharedBound);
       }
     } else if (probed) {
@@ -3357,8 +3369,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // first, branch and bound finds near-optimal solutions at once and needs the time more:
       // jp-encoding data300 is proved in 1.7 s with a share of 0.1, in 25 s with 0.5.
       boolean costsFirst = objectiveCosts != null && objectiveCosts.length > 0;
+      // after the tabu search of a functional model, branch and bound goes on from its solution:
+      // the core-guided phase left low autocorrelation n = 22 unproved in 240 s (156 s without)
+      String coreShare = tabuHint != null ? "0" : costsFirst ? "0.1" : "0.5";
       lcg.setCoreSearch(
-          Double.parseDouble(options.freeConfig("lcg-core", costsFirst ? "0.1" : "0.5")),
+          Double.parseDouble(options.freeConfig("lcg-core", coreShare)),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
       // a short core-guided probe, then branch and bound for a share of the time, then the rest
@@ -3371,6 +3386,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
     addScheduleProposer(lns);
     addMaxSatProposer(lns);
+    addFunctionalProposer(lns);
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -5867,6 +5883,176 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         });
   }
 
+  // the functional reading of the model and its tabu search, or null
+  private FunctionalModel functional;
+  private FunctionalTabuSearch functionalSearch;
+  private SymmetryCanonicalizer functionalCanonical;
+  private Hint tabuHint;
+
+  /**
+   * Runs tabu search ({@link FunctionalTabuSearch}) when the cost is a function of a few decision
+   * variables ({@link FunctionalModel}): every constraint defines one variable from others. The
+   * best assignment it finds in its share of the time is checked in the store and printed, and
+   * becomes the first solution of the solver; the search then goes on from the best solution of the
+   * solver as a kind of neighbourhood. --free-config tabu=0 turns it off, tabu-share gives the
+   * first run its share of the time left (default 0.9) and tabu-max caps it in milliseconds; the
+   * run ends early once it found nothing better for tabu-stall (default 0.9) of its time and for
+   * tabu-generations (default 20) generations of its population. After a hint the core-guided phase
+   * of LCG is off and its bound is the cost of the hint, since the tabu search already gives a good
+   * upper bound.
+   *
+   * @return the best assignment, as a hint of the decision variables, or null
+   */
+  private Hint functionalHint(IntVar cost, Portfolio.Worker worker) {
+    if ("0".equals(options.freeConfig("tabu", "1"))) {
+      return null;
+    }
+    long begin = System.currentTimeMillis();
+    SymmetryCanonicalizer canonical = symmetry == null ? null : symmetry.canonicalizer();
+    Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (canonical != null && !canonical.constraints().isEmpty()) {
+      ignored.addAll(canonical.constraints());
+      functionalCanonical = canonical;
+    }
+    FunctionalModel model =
+        FunctionalModel.detect(
+            store,
+            sat.collectedClauses(),
+            cost,
+            ignored,
+            options.debug() ? why -> IO.println("% no functional model: " + why) : null);
+    if (options.debug() && model != null) {
+      IO.println("% functional model of " + model.vars.length + " decision variables");
+    }
+    if (model == null) {
+      return null;
+    }
+    FunctionalTabuSearch ts = model.search(options.getRandomSeed());
+    if (options.debug()) {
+      IO.println("% " + ts);
+    }
+    long budget = Long.parseLong(options.freeConfig("tabu-max", "0"));
+    if (options.getTimeOut() > 0) {
+      long part =
+          (long)
+              (Double.parseDouble(options.freeConfig("tabu-share", "0.9"))
+                  * options.getRemainingTimeOut());
+      budget = budget > 0 ? Math.min(budget, part) : part;
+    } else if (budget <= 0) {
+      budget = 10_000;
+    }
+    long deadline = begin + budget;
+    boolean[] stopped = {false};
+    if (worker != null) {
+      worker.onStop(() -> stopped[0] = true);
+    }
+    int[] hintValues = null;
+    long best = Long.MAX_VALUE;
+    long improvedAt = begin;
+    double stall = Double.parseDouble(options.freeConfig("tabu-stall", "0.9"));
+    // and no improvement for this many generations of the population
+    long stallSteps =
+        Long.parseLong(options.freeConfig("tabu-generations", "20"))
+            * ts.populationSize()
+            * ts.decisions();
+    long improvedStep = 0;
+    for (int attempt = 0; attempt < 100 && !ts.start(null); attempt++) {
+      // a random assignment outside the domains of the defined variables
+    }
+    if (ts.best() < Long.MAX_VALUE) {
+      functional = model;
+      functionalSearch = ts;
+      while (!stopped[0]) {
+        long now = System.currentTimeMillis();
+        if (now > deadline
+            || (now - begin > 1000
+                && now - improvedAt > stall * (now - begin)
+                && ts.steps() - improvedStep > stallSteps)) {
+          break;
+        }
+        long found = ts.run(1000, () -> stopped[0] || System.currentTimeMillis() > deadline);
+        if (found < best) {
+          best = found;
+          improvedAt = System.currentTimeMillis();
+          improvedStep = ts.steps();
+          if (options.debug()) {
+            IO.println(
+                "% tabu search: "
+                    + found
+                    + " at "
+                    + (improvedAt - begin)
+                    + " ms, "
+                    + ts.steps()
+                    + " steps");
+          }
+          if (found < bestPrintedCost.get() && found >= Integer.MIN_VALUE) {
+            int[] values = functionalValues(ts.bestValues());
+            int[] checked = checkSchedule(model.vars, values, cost, (int) found, hintedVariables());
+            if (checked != null) {
+              hintValues = checked;
+              scheduledCost = (int) found;
+            } else if (options.debug()) {
+              IO.println("% tabu search: the store rejected cost " + found);
+            }
+          }
+        }
+      }
+    }
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: tabuVariables="
+              + ts.decisions()
+              + "\n%%%mzn-stat: tabuSteps="
+              + ts.steps()
+              + "\n%%%mzn-stat: tabuWalks="
+              + ts.walks()
+              + "\n%%%mzn-stat: tabuTime="
+              + (System.currentTimeMillis() - begin) / 1000.0
+              + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: tabuBest=" + best));
+    }
+    return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  // the values of the decision variables, moved onto a symmetric assignment that the symmetry
+  // breaking constraints accept
+  private int[] functionalValues(int[] assignment) {
+    if (functionalCanonical != null) {
+      // the constraints may be over defined variables, which the symmetry moves too
+      functionalCanonical.canonicalize(functional.all, assignment);
+    }
+    return functional.values(assignment);
+  }
+
+  /**
+   * Lets tabu search go on in slices of tabu-lns steps (default 20 per decision variable) from the
+   * best solution of the search, as a kind of neighbourhood whose runs fix the decision variables
+   * to a better assignment.
+   */
+  private void addFunctionalProposer(AdaptiveLns lns) {
+    if (lns == null || functional == null) {
+      return;
+    }
+    FunctionalModel model = functional;
+    FunctionalTabuSearch ts = functionalSearch;
+    long slice =
+        Long.parseLong(
+            options.freeConfig("tabu-lns", Long.toString(Math.max(1000, 20L * ts.decisions()))));
+    if (slice <= 0) {
+      return;
+    }
+    lns.setProposer(
+        model.vars,
+        incumbent -> {
+          if (!ts.start(model.assignment(incumbent))) {
+            return null;
+          }
+          long from = ts.cost();
+          ts.forgetBest();
+          long found = ts.improve(slice, () -> false);
+          return found < from ? functionalValues(ts.bestValues()) : null;
+        });
+  }
+
   private static final class Hint {
     final IntVar[] vars;
     final int[] values;
@@ -6281,6 +6467,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       freeLns = lnsNeighbourhoods(costVar);
       addScheduleProposer(freeLns);
       addMaxSatProposer(freeLns);
+      addFunctionalProposer(freeLns);
       if (freeLns != null && lcgHint != null) {
         // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
         // they waited for free search's own first solution, which must improve on it, and on

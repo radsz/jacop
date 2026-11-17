@@ -7563,7 +7563,26 @@ Version 5.0 (unreleased)
    now 0.14 s as Kissat; subgraph-isomorphism) and cost at most 0.24 s.
    CdclSolver.setLucky(false) and CdclMain --lucky 0 turn them off.
 
-419. Next to the redundant GCC that the FlatZinc front end posts on counts
+420. Free search (-f) runs a memetic tabu search before lazy clause
+   generation when every constraint of the model defines one variable from
+   others (products and other functional constraints, linear equalities)
+   and the cost is a function of at most 64-value decision variables, as on
+   low autocorrelation binary sequences (Gallardo, Cotta and Fernandez,
+   Finding low autocorrelation binary sequences with memetic algorithms,
+   Applied Soft Computing 9(4), 1252-1262, 2009). org.jacop.fz.FunctionalModel detects such models and
+   org.jacop.search.ls.FunctionalTabuSearch evaluates the definitions
+   incrementally (linear sums by deltas, partial sums inlined) and runs a
+   population with crossover, mutation and tabu walks. Its best assignment
+   is checked in the store and printed; LCG then starts from it with its
+   cost as bound and without the core-guided phase, and LNS continues the
+   tabu search from the incumbent as a proposer. --free-config tabu=0
+   turns it off; tabu-share (0.9 of the time left), tabu-max, tabu-stall,
+   tabu-generations and tabu-lns tune it. On the XCSP 2025
+   LowAutocorrelation instances at 240 s it finds 108 (optimum) for n=40,
+   about 856 for n=100 and 3820-4020 for n=200 (before 180, 1226-1354 and
+   4976-5172; Choco 120, 1038 and 4292 at 1800 s).
+
+421. Next to the redundant GCC that the FlatZinc front end posts on counts
    written by hand, it posts the two sums every complete GCC implies when
    the counted variables count themselves (self-describing sequences,
    magic series): sum(c) = n and sum(v * c[v]) = sum(x) (B. M. Smith,
@@ -7575,7 +7594,7 @@ Version 5.0 (unreleased)
    11 s and 25 s instead of 15 s and 35 s). -Dorg.jacop.fz.gccSums=false
    turns them off.
 
-420. A Hamiltonian path written as a numbering gets a redundant circuit.
+422. A Hamiltonian path written as a numbering gets a redundant circuit.
    NumberedPathDetector finds an all_different over N variables with values
    in 1..N where every cell c holds N or a neighbour holds x[c] + 1
    (among over the model's reified x[d] - x[c] = 1, or a short table of
@@ -7596,7 +7615,7 @@ Version 5.0 (unreleased)
    12..15 unknown -> 30-591 s).
    -Dorg.jacop.fz.numberedPath=false turns it off; it is off with --proof.
 
-421. Memory of large layered graphs (mdd, regular) and of large clause sets.
+423. Memory of large layered graphs (mdd, regular) and of large clause sets.
    Constraints ExtensionalSupportMdd given the same arrays (the FlatZinc
    front end keeps equal long arrays once) share the graph built from them
    when their variables have equal domains, instead of a graph each; the
@@ -7619,7 +7638,7 @@ Version 5.0 (unreleased)
    the search and MagicSquare-mdd-16 while reading; both now run to the
    time limit.
 
-422. Routing with time windows: the LP relaxation of a Routes constraint
+424. Routing with time windows: the LP relaxation of a Routes constraint
    whose customers have times gets big-M arc-time rows
    t_j >= t_i + d_ij - M (1 - x_ij), M = latest_i + d_ij - earliest_j over
    the reduced windows (M. Desrochers, G. Laporte, Improvements and
@@ -7644,7 +7663,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.lp.arcTimeRows=false and -Dorg.jacop.lp.twoPathCuts=false
    turn them off.
 
-423. The split of long linear constraints for lazy clause generation
+425. The split of long linear constraints for lazy clause generation
    (lcg-split) keeps every sum at 20 terms or fewer: a constraint of more
    than 400 terms, whose blocks of sqrt(n) terms and sum of blocks were
    both longer than 20 terms, becomes blocks of 20 terms whose sum is split
@@ -7661,7 +7680,7 @@ Version 5.0 (unreleased)
    --free-config lcg-split-tree=0 restores blocks of sqrt(n) terms; with -s
    it prints lcgSplitSums.
 
-424. With --lcg, -f and an objective that sums at least four squares (x * x
+426. With --lcg, -f and an objective that sums at least four squares (x * x
    or x ^ 2 among the terms reached through up to three linear constraints
    from the cost variable), free search without learning runs first for
    10 % of the time limit and LCG then goes on from its best solution. A
@@ -7675,7 +7694,7 @@ Version 5.0 (unreleased)
    LowAutocorrelation 0.98. Of the 240 wide instances only two gbac instances are reached.
    --free-config free-first=<share> sets the share, 0 turns it off.
 
-425. The core-guided phase of LCG no longer loops forever when it probes
+427. The core-guided phase of LCG no longer loops forever when it probes
    the objective's bound (the probes of commit 7c2bc093d) after the
    objective's own minimum has reached the best solution: every probe
    target was already implied, so the step doubled until it overflowed
@@ -7684,7 +7703,7 @@ Version 5.0 (unreleased)
    both 4955 at 7 s); it now proves the optimum in 7 s. Of the 240 wide
    instances it is the only one that met the loop at 240 s.
 
-426. Subtour cuts for successor models (opt-in,
+428. Subtour cuts for successor models (opt-in,
    -Dorg.jacop.fz.successorForest=true). The FlatZinc front end finds an
    output array x and an element list pos whose arcs x[i] = j are proved
    acyclic by probing (posting pos[j] <= pos[i] fails after x[i] = j), the
@@ -7702,7 +7721,7 @@ Version 5.0 (unreleased)
    on 9, cuts on 2, and the proof times are no better (32-4-8-2 at 240 s:
    28 s -> 34 s by default, 27-38 s -> 20 s with -f).
 
-427. The linear relaxation (--lp, and LCG free search -f) keeps the rows
+429. The linear relaxation (--lp, and LCG free search -f) keeps the rows
    that linear overlap factoring (272) reduces to the shared sum alone.
    A row k * S rel c whose whole sum S became the new variable z is
    k * z rel c, which the FlatZinc front end posts as a bound of z or as
@@ -7718,7 +7737,7 @@ Version 5.0 (unreleased)
    warehouse olil4, cap6000). The rows are counted in the statistic
    lpUnitRows.
 
-428. JaSAT substitutes equivalent literals before variable elimination. The
+430. JaSAT substitutes equivalent literals before variable elimination. The
    strongly connected components of the binary implication graph (B.
    Aspvall, M. F. Plass, R. E. Tarjan, A linear-time algorithm for testing
    the truth of certain quantified Boolean formulas, Information Processing
