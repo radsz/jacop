@@ -7776,6 +7776,19 @@ Version 5.0 (unreleased)
    the same results. --substitute 0 and --congruence 0 in CdclMain,
    -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
    it off.
+431. The core-guided phase of LCG (-f) stops at its time and work limits
+   between two cores. The SAT solver checks those limits only after a
+   conflict it learns from, and a core that the assumptions meet at their
+   first conflict ends the call before that check, so a phase whose cores
+   all came that way ran on: on MiniZinc Challenge 2012 train instance.2,
+   the core probe, given about 2 s of a 60 s run, took 33 s, and branch and
+   bound found 71820 only after it. The probe now ends at 0.9 s, and 71820
+   comes at 8 s instead of 233 s of a 240 s run. The statistic
+   lcgCoreLimitStops counts the phases so ended. It fires on 51 of the 240
+   wide instances at 60 s; on those, -f at 240 s takes 3,669 -> 3,593 s
+   (39 = 39 proved), at 600 s 7,382 -> 7,675 s with one proof lost
+   (crosswords grid-05.04, proved by base once in 166 s and by neither in
+   four 400 s reruns), and default search at 240 s 5,684 -> 5,719 s.
 421. Free search without learning (-f, when LCG free search gives way)
    no longer keeps the LCG solver it took over from: its SAT clauses,
    trail and three literal maps per variable stayed live next to the

@@ -5235,6 +5235,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.exhaustedOutputs
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
+        + "\n%%%mzn-stat: lcgCoreLimitStops="
+        + core.limitStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
         + lcg.clockStops
         + "\n%%%mzn-stat: lcgCoreSkips="

@@ -645,7 +645,7 @@ public final class CoreSearch {
         return CdclSolver.SAT;
       }
       lcg.reportBound(Math.max(lowerBound, objectiveFloor));
-      if (tooSlow()) {
+      if (tooSlow() || pastLimits()) {
         return CdclSolver.UNKNOWN;
       }
     }
@@ -1024,6 +1024,23 @@ public final class CoreSearch {
     }
     return false;
   }
+
+  /**
+   * Whether the phase is past the solver's deadline or work limit. The solver checks both only
+   * after a conflict it learns from: a core that the assumptions meet at their first conflict ends
+   * the call before any check, so a phase whose cores are all found that way runs on past its
+   * limits (MiniZinc Challenge train instance.2: 33 s for a probe given 2 s of a 60 s run).
+   */
+  private boolean pastLimits() {
+    if (sat.now() > sat.deadline() || sat.work() >= sat.workLimit()) {
+      limitStops++;
+      return true;
+    }
+    return false;
+  }
+
+  /** Statistics: the phases ended by {@link #pastLimits} between two cores. */
+  public long limitStops;
 
   /** Statistics: the phases ended because the bound stalled over their second half. */
   public long stallStops;
