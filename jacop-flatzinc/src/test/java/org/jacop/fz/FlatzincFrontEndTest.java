@@ -104,6 +104,30 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void valueChoiceIndomainIsAscendingOrderWithoutWarning() throws IOException {
+    // indomain is the MiniZinc value choice "assign values in ascending order"; it was searched as
+    // indomain_min but reported on stderr as a not implemented value choice
+    String fzn =
+        """
+        array [1..2] of var 1..3: x:: output_array([1..2]);
+        constraint int_ne(x[1],x[2]);
+        solve :: int_search(x,input_order,indomain,complete) satisfy;
+        """;
+    ByteArrayOutputStream errors = new ByteArrayOutputStream();
+    PrintStream originalErr = System.err;
+    List<String> solutions;
+    try (PrintStream capture = new PrintStream(errors, true, StandardCharsets.UTF_8)) {
+      System.setErr(capture);
+      solutions = solveAllInOrder(fzn);
+    } finally {
+      System.setErr(originalErr);
+    }
+    assertEquals("x = array1d(1..2, [1, 2]);", solutions.get(0));
+    assertEquals(6, solutions.size());
+    assertFalse(errors.toString(StandardCharsets.UTF_8).contains("indomain"), errors::toString);
+  }
+
+  @Test
   void secondBool2IntOfAnIntegerJoinsTheTwoBooleans() throws IOException {
     // x is the alias of a after the first bool2int; the second one, which makes b equal to a, was
     // dropped with "Double int var alias for bool var", so a != b was accepted
@@ -2887,6 +2911,68 @@ class FlatzincFrontEndTest {
     assertTrue(shorter25 > 0, "no sum of 25 terms got shorter linear reasons");
   }
 
+  @Test
+  void lcgSplitsSumsOfMoreThan400TermsIntoATree() throws IOException {
+    // a sum of 1,700 terms: blocks of sqrt(1700) = 42 terms and a sum of 41 blocks give
+    // reasons of about 41 atoms; lcg-split-tree (the default) keeps every sum at 20 terms or
+    // fewer, with the same optimum
+    java.util.Random rnd = new java.util.Random(5);
+    int n = 1700;
+    for (int run = 0; run < 2; run++) {
+      StringBuilder model = new StringBuilder();
+      for (int j = 0; j < 6; j++) {
+        model.append("var 0..2: y%d;%n".formatted(j));
+      }
+      for (int i = 0; i < n; i++) {
+        model.append("var 0..2: x%d;%n".formatted(i));
+      }
+      model.append("var -100000..100000: s;\n");
+      model.append("var -100000..100000: obj :: output_var;\n");
+      for (int i = 0; i < n; i++) {
+        model.append("constraint int_le(x%d, y%d);%n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);%n".formatted(i % 6, i));
+      }
+      String xs =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(","));
+      String ys = "y0,y1,y2,y3,y4,y5";
+      String[] ws = new String[2];
+      for (int k = 0; k < 2; k++) {
+        ws[k] =
+            java.util.stream.IntStream.range(0, n)
+                .mapToObj(
+                    i -> Integer.toString((1 + rnd.nextInt(3)) * (rnd.nextBoolean() ? 1 : -1)))
+                .collect(Collectors.joining(","));
+      }
+      // one long sum: two over the same terms would also be factored (linear overlap)
+      model.append(
+          "constraint int_lin_le([%s], [%s], %d);%n".formatted("1,1,1,1,1,1", ys, 4 + run));
+      model.append("constraint int_lin_eq([%s,-1], [%s,s], 0);%n".formatted(ws[1], xs));
+      model.append("constraint int_lin_eq([1,1,-1], [s,y0,obj], 0);\n");
+      model.append(
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;%n"
+              .formatted(run == 0 ? "minimize" : "maximize"));
+      String cp = lastObjective(run(model.toString()));
+      String[] blocks =
+          run(
+              model.toString(),
+              "--lcg",
+              "--search-statistics",
+              "--free-config",
+              "lcg-split-tree=0");
+      String[] tree = run(model.toString(), "--lcg", "--search-statistics");
+      assertEquals(cp, lastObjective(blocks), model.toString());
+      assertEquals(cp, lastObjective(tree), model.toString());
+      // 1,701 terms with s: 41 blocks of up to 42 terms; in the tree 86 blocks of up to 20
+      // terms, and 9 sums of up to 10 of those
+      assertEquals(41, statistic(blocks[0], "lcgSplitSums"), blocks[0]);
+      assertEquals(86 + 9, statistic(tree[0], "lcgSplitSums"), tree[0]);
+      double treeAtoms = linearAtoms(tree[0]);
+      assertTrue(treeAtoms <= 20, tree[0]);
+    }
+  }
+
   // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
   private static double linearAtoms(String out) {
     java.util.regex.Matcher m =
@@ -4213,6 +4299,114 @@ class FlatzincFrontEndTest {
       if (solutions == 0) {
         assertTrue(out.contains("=====UNSATISFIABLE====="), model + out);
       }
+    }
+  }
+
+  // a prize-collecting path from node 1 as the MiniZinc Challenge 2016 model flattens it: next[i]
+  // is 0 for an unused node, 1 for the edge back to node 1, and pos[next[i]] = pos[i] + 1 (MTZ)
+  private static String prizeCollecting(int n, long seed) {
+    Random r = new Random(seed);
+    StringBuilder v = new StringBuilder();
+    StringBuilder c = new StringBuilder();
+    v.append("predicate jacop_array_var_int_element_nonshifted(var int: idx,")
+        .append("array [int] of var int: xs,var int: y,int: min_index);\n");
+    v.append("predicate int_lin_eq_imp(array [int] of int: as,array [int] of var int: bs,int: c,")
+        .append("var bool: r);\n");
+    v.append("predicate int_eq_imp(var int: a,var int: b,var bool: r);\n");
+    StringJoiner pos = new StringJoiner(",");
+    StringJoiner next = new StringJoiner(",");
+    StringJoiner prize = new StringJoiner(",");
+    StringJoiner ones = new StringJoiner(",");
+    for (int i = 1; i <= n; i++) {
+      v.append("var 0..").append(n).append(": p").append(i).append(";\n");
+      v.append("var 0..").append(n).append(": x").append(i).append(";\n");
+      v.append("var -1000..20: w").append(i).append(";\n");
+      v.append("var 0..").append(n).append(": e").append(i).append(";\n");
+      v.append("var bool: u").append(i).append(";\n");
+      v.append("var bool: b").append(i).append(";\n");
+      v.append("var 1..").append(n).append(": y").append(i).append(";\n");
+      pos.add("p" + i);
+      next.add("x" + i);
+      prize.add("w" + i);
+      ones.add("1");
+    }
+    v.append("var 0..1000: obj :: output_var;\n");
+    v.append("array [1..").append(n).append("] of var int: next :: output_array([1..").append(n);
+    v.append("]) = [").append(next).append("];\n");
+    c.append("constraint int_eq(p1,1);\n");
+    for (int i = 1; i <= n; i++) {
+      // a used node has a successor, and a successor other than node 1 is one position later
+      c.append("constraint int_le_reif(1,p").append(i).append(",u").append(i).append(");\n");
+      c.append("constraint int_le_reif(1,x").append(i).append(",u").append(i).append(");\n");
+      c.append("constraint int_le_reif(2,x").append(i).append(",b").append(i).append(");\n");
+      c.append("constraint int_eq_imp(y").append(i).append(",x").append(i).append(",b").append(i);
+      c.append(");\n");
+      c.append("constraint jacop_array_var_int_element_nonshifted(y").append(i);
+      c.append(",[").append(pos).append("],e").append(i).append(",1);\n");
+      c.append("constraint int_lin_eq_imp([1,-1],[e").append(i).append(",p").append(i);
+      c.append("],1,b").append(i).append(");\n");
+      // the prize of the edge to next[i]; small for the edges back to node 1, so that the
+      // assignment relaxation prefers the cycles the subtour cuts remove
+      StringJoiner row = new StringJoiner(",");
+      row.add("0");
+      for (int j = 1; j <= n; j++) {
+        row.add(j == i ? "-1000" : j == 1 ? "1" : Integer.toString(5 + r.nextInt(16)));
+      }
+      c.append("constraint jacop_array_var_int_element_nonshifted(x").append(i);
+      c.append(",[").append(row).append("],w").append(i).append(",0);\n");
+    }
+    for (int j = 2; j <= n; j++) {
+      // node j has at most one predecessor
+      StringJoiner is = new StringJoiner(",");
+      for (int i = 1; i <= n; i++) {
+        String q = "q" + i + "_" + j;
+        v.append("var bool: ").append(q).append(";\n");
+        v.append("var 0..1: c").append(q).append(";\n");
+        c.append("constraint int_eq_reif(x").append(i).append(',').append(j);
+        c.append(',').append(q).append(");\n");
+        c.append("constraint bool2int(").append(q).append(",c").append(q).append(");\n");
+        is.add("c" + q);
+      }
+      c.append("constraint int_lin_le([").append(ones).append("],[").append(is).append("],1);\n");
+    }
+    c.append("constraint int_lin_eq([").append(ones).append(",-1],[").append(prize);
+    c.append(",obj],0);\n");
+    c.append("solve maximize obj;\n");
+    return v.toString() + c;
+  }
+
+  @Test
+  void successorForestCutsKeepTheOptimum() throws IOException {
+    // the subtour cuts of a successor forest (off by default) remove the subtours of the LP
+    // relaxation and the optimum stays the same; under free search the dense tableau of
+    // prize-collecting 32-4-8-2 ran out of pivots in the first round, and the round now goes on
+    // on the sparse simplex (the LP statistics are printed with -debug)
+    String[][] runs = {{"-s", "-debug"}, {"-s", "-debug", "-f"}, {"-s", "-debug", "--lcg", "off"}};
+    int[] cuts = new int[runs.length];
+    for (long seed = 1; seed <= 5; seed++) {
+      String model = prizeCollecting(8, seed);
+      String base = run(model)[0];
+      assertTrue(base.contains("=========="), base);
+      int from = base.lastIndexOf("obj = ");
+      String optimum = base.substring(from, base.indexOf('\n', from));
+      try {
+        System.setProperty("org.jacop.fz.successorForest", "true");
+        for (int k = 0; k < runs.length; k++) {
+          String out = run(model, runs[k])[0];
+          String what = Arrays.toString(runs[k]) + out;
+          assertTrue(out.contains("==========") && out.contains("% successor forest:"), what);
+          from = out.lastIndexOf("obj = ");
+          assertEquals(optimum, out.substring(from, out.indexOf('\n', from)), what);
+          Matcher m = Pattern.compile("lpTreeCuts=(\\d+)").matcher(out);
+          assertTrue(m.find(), what);
+          cuts[k] += Integer.parseInt(m.group(1));
+        }
+      } finally {
+        System.clearProperty("org.jacop.fz.successorForest");
+      }
+    }
+    for (int k = 0; k < runs.length; k++) {
+      assertTrue(cuts[k] > 0, Arrays.toString(runs[k]));
     }
   }
 }
