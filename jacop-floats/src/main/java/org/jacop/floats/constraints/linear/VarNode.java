@@ -53,7 +53,7 @@ public class VarNode extends VariableNode {
   @Override
   void propagateAndPrune() {
 
-    parent.propagateAndPrune();
+    parent.propagateAndPrune(this);
   }
 
   @Override

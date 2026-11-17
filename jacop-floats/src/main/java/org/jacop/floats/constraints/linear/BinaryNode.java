@@ -50,6 +50,16 @@ public abstract class BinaryNode {
 
   abstract void propagateAndPrune();
 
+  /**
+   * Propagates a change of the child {@code from} of this node and prunes. The default is {@link
+   * #propagateAndPrune()}.
+   *
+   * @param from the child whose bounds changed.
+   */
+  void propagateAndPrune(BinaryNode from) {
+    propagateAndPrune();
+  }
+
   abstract void prune();
 
   abstract void propagate();
@@ -119,7 +129,7 @@ public abstract class BinaryNode {
 
   private void propagateToParent(boolean andPrune) {
     if (andPrune) {
-      parent.propagateAndPrune();
+      parent.propagateAndPrune(this);
     } else {
       parent.propagate();
     }
