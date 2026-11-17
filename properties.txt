@@ -1355,6 +1355,10 @@ Simplex choice and bases:
   after the first org.jacop.lp.cutRounds while each still moves the
   bound: at most this many rounds in all, within this many seconds;
   default 50 and 1.
+- org.jacop.lp.cutStalls: root cut rounds that leave the bound
+  unchanged and still go on to the next round; the cuts of stalled
+  rounds that never move the bound are dropped again; default 2 (0 stops
+  at the first such round).
 - org.jacop.lp.sparseCuts: the rows of a dense tableau with no room for
   a round of cuts move to the sparse simplex for the cut rounds; default
   true.

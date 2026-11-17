@@ -7776,6 +7776,7 @@ Version 5.0 (unreleased)
    the same results. --substitute 0 and --congruence 0 in CdclMain,
    -Djacop.jasat.substitute=false and -Djacop.jasat.congruence=false turn
    it off.
+
 431. The core-guided phase of LCG (-f) stops at its time and work limits
    between two cores. The SAT solver checks those limits only after a
    conflict it learns from, and a core that the assumptions meet at their
@@ -7789,7 +7790,8 @@ Version 5.0 (unreleased)
    (39 = 39 proved), at 600 s 7,382 -> 7,675 s with one proof lost
    (crosswords grid-05.04, proved by base once in 166 s and by neither in
    four 400 s reruns), and default search at 240 s 5,684 -> 5,719 s.
-421. Free search without learning (-f, when LCG free search gives way)
+
+432. Free search without learning (-f, when LCG free search gives way)
    no longer keeps the LCG solver it took over from: its SAT clauses,
    trail and three literal maps per variable stayed live next to the
    clauses posted again as constraints. Five references held it: the
@@ -7801,7 +7803,22 @@ Version 5.0 (unreleased)
    j90_48_4 (MiniZinc Challenge 2019, 2.35 million variables) with a
    6 GB heap the live heap in free search is 4.3-4.8 GB instead of the
    whole 6 GB.
-431. JaSAT can decide by a VMTF queue (variable move-to-front) in focused
+
+433. The root cut rounds of the linear relaxation go past up to two rounds
+   that leave the LP bound unchanged, instead of stopping at the first.
+   The first rounds of a dual degenerate LP often change only the basis;
+   the next round then moves the bound (MIPLIB p2756: root bound
+   2689.7 -> 3102 for the optimum 3124, proved in about 100 s under
+   default search and -f at 600 s, unproved before). Cuts of stalled
+   rounds that never move the bound are dropped again. A stalled round
+   happens on 39 of the 240 wide instances and the bound moves after it
+   on 6; at 600 s these 39 solve 29 = 29 (default) and 31 -> 32 (-f,
+   total time 0.92), a 29-instance MIPLIB set 17 -> 16 and 17 -> 18 (the
+   default-mode losses have no stalled round). The extra rounds cost a
+   median of 0.00 s, at most 0.25 s. -Dorg.jacop.lp.cutStalls=0 restores
+   the old rule; statistics lpCutStalls and lpCutStallsRecovered.
+
+434. JaSAT can decide by a VMTF queue (variable move-to-front) in focused
    mode, as CaDiCaL and Kissat do, and by its activity heap in stable
    mode: CdclSolver.setVmtf(true), CdclMain --vmtf 1; off by default,
    and ignored under an external propagator (LCG). With one heap for
@@ -7819,7 +7836,7 @@ Version 5.0 (unreleased)
    (tseitin-formulas 184 -> 564 s, planning 200 -> 496 s), hence off by
    default.
 
-431. The FlatZinc front end posts the job view of an open shop written in
+435. The FlatZinc front end posts the job view of an open shop written in
    the order of its operations (PermutedTasksDetector): when the
    operations of a chain s[j] + d[j] <= s[j+1] run on all different
    resources m[j] that use every resource of their union, each start is
@@ -7837,7 +7854,7 @@ Version 5.0 (unreleased)
    2022-2025 instance and on none of the wide set.
    -Dorg.jacop.fz.permutedTasks=false turns it off.
 
-431. The FlatZinc front end posts a short table over 0/1 variables whose
+436. The FlatZinc front end posts a short table over 0/1 variables whose
    every row fixes one variable (the others are stars) as the clause of
    those literals, instead of a HybridTable. XCSP writes CNF formulas so:
    Crypto1 of the XCSP 2022 competition is 31,334 such tables over 1,906
@@ -7868,7 +7885,7 @@ Version 5.0 (unreleased)
    240 wide instances (spot5, connect, table-layout, project-planning),
    with the same results in default mode and with -f.
 
-433. The FlatZinc front end can rewrite a distance on a cycle,
+437. The FlatZinc front end can rewrite a distance on a cycle,
    m = min(|e|, c - |e|) with -c < e < c, as m = |f| with
    e + c * k = f, k in -1..1 and -c/2 <= f <= c/2 (opt-in,
    -Dorg.jacop.fz.cyclicDistance=true). The minimum prunes nothing on e
