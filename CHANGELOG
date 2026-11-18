@@ -6870,8 +6870,8 @@ Version 5.0 (unreleased)
 383. Free search (-f) on satisfaction models gives LCG away to free search
    without learning when learning does not cut the search: at 10 % of -t
    (then each time the elapsed time doubles) the conflicts so far jump
-   back fewer than 1.5 levels on average and their learnt clauses have
-   an LBD of at least 0.4 of the conflict depth, so the clauses act like
+   back fewer than 1.3 levels on average and their learnt clauses have
+   an LBD of at least 0.35 of the conflict depth, so the clauses act like
    chronological backtracking. Before, only optimisation searches gave
    way (lcg-slow-rate). --free-config lcg-sat-probe=on|report|off,
    lcg-sat-at=<share of -t> (0 gives way at once), lcg-sat-jump and
@@ -6881,7 +6881,12 @@ Version 5.0 (unreleased)
    set and the XCSP competitions where -f LCG runs for more than 10 s, at
    600 s in two repeats it solves 20 -> 25 and 21 -> 26, total time 0.73
    and 0.78 (Subisomorphism g11-g30 and g11-g44, AnotherMagicSquare-04
-   proved UNSAT, FRB-45-21-3 solved).
+   proved UNSAT, FRB-45-21-3 solved). The first thresholds (1.5 levels,
+   LBD 0.4) lost on unseen instances (137 XCSP 2026 CSP and CSPLib
+   satisfaction instances, 240 s: solved 48 -> 42 and 47 -> 42); the
+   current ones were fitted on both sets with a cross-validation split by
+   problem family (37 instances where a rule fires, 600 s, two repeats:
+   probe off 21 and 20 solved, first rule 14 and 12, current 19 and 19).
 
 384. The LP relaxation keeps the value encodings of the model's variables
    (sum b_v = 1, x = sum v b_v) when the other rows do not all fit its
