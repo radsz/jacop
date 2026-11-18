@@ -7888,9 +7888,9 @@ class SingleConstraintTest extends TestHelper {
                 "DisjointNoProfile",
                 "solutions=247963 nodes=265933 decisions=256928 wrong=9005 hash=5fb343dc7ec8745",
                 "DisjointConditional",
-                "solutions=737646 nodes=765448 decisions=751527 wrong=13921 hash=f7e9e3977ef731a1",
+                "solutions=737646 nodes=757904 decisions=747755 wrong=10149 hash=f7e9e3977ef731a1",
                 "DisjointConditionalNoProfile",
-                "solutions=737646 nodes=766920 decisions=752263 wrong=14657 hash=5f89905bc162726d"));
+                "solutions=737646 nodes=759402 decisions=748504 wrong=10898 hash=5f89905bc162726d"));
   }
 
   private static String rectangleSearchFingerprint(String kind) {
@@ -11060,6 +11060,23 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(sum.value()).isEqualTo(4);
     assertThat(x1.value()).isEqualTo(-2);
+  }
+
+  /**
+   * The condition of a DisjointConditional pair was never fixed: when the compulsory parts of the
+   * two rectangles overlap, they cannot be kept apart and the condition is 0.
+   */
+  @Test
+  void disjointConditionalReleasesAPairThatMustOverlap() {
+    Store store = new Store();
+    IntVar[][] r = {
+      {new IntVar(store, "x1", 0, 0), new IntVar(store, "y1", 0, 0), one(store), one(store)},
+      {new IntVar(store, "x2", 0, 0), new IntVar(store, "y2", 0, 0), oneTwo(store), one(store)}
+    };
+    IntVar c = new IntVar(store, "c", 0, 1);
+    store.impose(new DisjointConditional(r, List.of(List.of(1, 2)), List.of(c)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isEqualTo(0);
   }
 
   /**
