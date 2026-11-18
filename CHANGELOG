@@ -7900,6 +7900,37 @@ Version 5.0 (unreleased)
    without it, are not proved in 600 s; it therefore stays off. It fires
    on none of the 240 wide instances.
 
+434. JaSAT (CdclMain, plain SAT) sweeps and probes before variable
+   elimination. Sweeping (Kissat's sweep) takes, for each variable, the
+   clauses within two or three steps of it (at most 256 variables and
+   1024 clauses, widened after each completed round), solves them with a
+   small separate CDCL solver, and refines backbone and equivalence
+   candidates by its models and by flipping literals; confirmed backbone
+   literals become units and confirmed equivalences are substituted in
+   place, with an extension stack for the models. Failed-literal probing
+   propagates the roots of the binary implication graph, learns the 1UIP
+   unit of a failed literal and lifts units and equivalences implied by
+   both signs. Both write DRAT steps. Sweeping gets 100 million steps of
+   work in its first round and 10 % of the search's propagations after
+   that, and is delayed after unproductive rounds. CdclMain --sweep 0|1
+   and --probe 0|1 (default 1); CdclSolver.setSweeping and setProbing are
+   off by default, so LCG and FlatZinc are unchanged. On the SAT
+   Competition 2024 bitvector instance from the 90-instance SAT gap set
+   JaSAT finds 5,757 equivalences and refutes it in 2.5 s (unsolved at
+   600 s before, Kissat 4.0.4 18 s); at 600 s on the 18 instances where
+   the 240 s round differed, 15 -> 17 solved and total time 3,188 ->
+   2,770 s. References: Biere, Fleury, Froleyks, Heule, The Kissat SAT
+   solver entering the SAT Competition 2023 (sweeping with the kitten
+   sub-solver); Biere, Fazekas, Fleury, Froleyks, Clausal congruence
+   closure, SAT 2024; Kuehlmann, Dynamic transition relation
+   simplification for bounded property checking, ICCAD 2004; Mishchenko,
+   Chatterjee, Jiang, Brayton, FRAIGs: a unifying representation for
+   logic synthesis and verification, ERL Technical Report 2005; Lynce,
+   Marques-Silva, Probing-based preprocessing techniques for
+   propositional satisfiability, ICTAI 2003; Heule, Jarvisalo, Biere,
+   Efficient CNF simplification based on binary implication graphs,
+   SAT 2011.
+
 438. JaSAT (CdclSolver) visits watches faster, with the same search: a
    watch is one long (clause and blocking literal), so a visit whose
    blocking literal is true is one load, and the watch is written back

@@ -466,6 +466,59 @@ public final class CdclSolver {
   private int eliminationRounds;
   private long seed;
 
+  // inprocessing statistics per round on standard output
+  private static final boolean VERBOSE = Boolean.getBoolean("jacop.jasat.verbose");
+
+  // --- SAT sweeping (see Sweeper), at each elimination round
+  private boolean sweeping;
+  private boolean[] sweepDone = new boolean[0];
+  private int sweepCompleted;
+  private long propagationsAtSweep;
+  private static final long SWEEP_FIRST_EFFORT =
+      Long.getLong("jacop.jasat.sweepFirst", 100_000_000);
+  private static final long SWEEP_MIN_EFFORT = Long.getLong("jacop.jasat.sweepMin", 20_000_000);
+  private int sweepRounds;
+  private int sweepDelay;
+  private int sweepDelayLimit;
+  private static final int SWEEP_EFFORT_PER_MILLE = 100;
+
+  // --- failed-literal probing, at each elimination round
+  private boolean probing;
+  private int probeCursor;
+  private long propagationsAtProbe;
+  private static final long PROBE_MIN_EFFORT = 1_000_000;
+  private static final int PROBE_EFFORT_PER_MILLE = 50;
+
+  /** Statistics: propagations of failed-literal probing, not counted in {@link #propagations}. */
+  public long probePropagations;
+
+  /** Statistics: literals probed. */
+  public long probedLiterals;
+
+  /** Statistics: failed literals found by probing (each gives a unit). */
+  public long failedLiterals;
+
+  /** Statistics: units implied by both a probed literal and its negation. */
+  public long liftedUnits;
+
+  /** Statistics: equivalences found by probing both signs of a literal. */
+  public long probeEquivalences;
+
+  /** Statistics: time spent probing, in nanoseconds. */
+  public long probeNanos;
+
+  /** Statistics: units found by SAT sweeping. */
+  public long sweepUnits;
+
+  /** Statistics: literal equivalences found by SAT sweeping. */
+  public long sweepEquivalences;
+
+  /** Statistics: variables swept. */
+  public long sweptVariables;
+
+  /** Statistics: time spent sweeping, in nanoseconds. */
+  public long sweepNanos;
+
   // --- bounded variable addition before the first elimination (see Factorizer)
   private boolean factoring;
   private boolean factored;
@@ -1222,6 +1275,32 @@ public final class CdclSolver {
    */
   public void setElimination(boolean on) {
     elimination = on;
+  }
+
+  /**
+   * Turns SAT sweeping on or off (off by default). When on, each elimination round (see {@link
+   * #setElimination}) first sweeps variables as Kissat does (see {@link Sweeper}): the clauses
+   * around a variable are solved by a small sub-solver to find units and equivalent literals, which
+   * are added as unit and binary clauses. It spends about a tenth of the propagations of the search
+   * since the last round.
+   *
+   * @param on whether to sweep
+   */
+  public void setSweeping(boolean on) {
+    sweeping = on;
+  }
+
+  /**
+   * Turns failed-literal probing on or off (off by default). When on, each elimination round (see
+   * {@link #setElimination}) first probes the roots of the binary implication graph at level 0: a
+   * literal whose propagation conflicts gives the unit of the conflict's first UIP; the literals
+   * implied by both signs of a probed variable are units, and a literal implied by one sign whose
+   * negation the other sign implies is equivalent to it (added as binary clauses).
+   *
+   * @param on whether to probe
+   */
+  public void setProbing(boolean on) {
+    probing = on;
   }
 
   /**
@@ -4460,6 +4539,9 @@ public final class CdclSolver {
     if (propagate() != NO_CONFLICT) {
       return refuted();
     }
+    if (probing && !probe()) {
+      return false;
+    }
     if (!eliminationFits()) {
       return true;
     }
@@ -4521,6 +4603,15 @@ public final class CdclSolver {
       factorWork = f.effort();
       factorNanos = System.nanoTime() - begin;
     }
+    Sweeper sw = null;
+    if (sweeping) {
+      sw = sweep(input, n, frozen);
+      if (sw.unsat()) {
+        return refuted();
+      }
+      input = sw.clauses();
+      n = input.length;
+    }
     Congruence cc = null;
     if (substitution) {
       long t0 = System.nanoTime();
@@ -4556,6 +4647,12 @@ public final class CdclSolver {
     }
     rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
+    if (sw != null) {
+      boolean[] replaced = sw.substituted();
+      for (int v = 0; v < replaced.length; v++) {
+        gone[v] |= replaced[v];
+      }
+    }
     if (cc != null && sat) {
       boolean[] replaced = cc.substituted();
       // bounded variable addition may have added variables after the substitution
@@ -4592,18 +4689,19 @@ public final class CdclSolver {
       eliminatedVar[v] |= gone[v];
     }
     numEliminated += e.numEliminated();
-    int[] removed = e.stack();
+    // the substitutions before the eliminations, in their order: a model is extended backwards
+    if (sw != null) {
+      numEliminated += sw.numSubstituted();
+      appendExtension(sw.stack());
+    }
     if (cc != null) {
       numEliminated += cc.numSubstituted();
-      int[] first = cc.stack();
-      int[] both = Arrays.copyOf(first, first.length + removed.length);
-      System.arraycopy(removed, 0, both, first.length, removed.length);
-      removed = both;
+      appendExtension(cc.stack());
     }
-    int old = extension.length;
-    extension = Arrays.copyOf(extension, old + removed.length);
-    System.arraycopy(removed, 0, extension, old, removed.length);
-    for (int[] found : new int[][] {cc == null ? new int[0] : cc.units(), e.units()}) {
+    appendExtension(e.stack());
+    int[] none = new int[0];
+    for (int[] found :
+        new int[][] {sw == null ? none : sw.units(), cc == null ? none : cc.units(), e.units()}) {
       for (int u : found) {
         if (vals[u] < 0) {
           return refuted();
@@ -4617,6 +4715,260 @@ public final class CdclSolver {
       return refuted();
     }
     return true;
+  }
+
+  /**
+   * Failed-literal probing at level 0 (see {@link #setProbing}), within a twentieth of the
+   * propagations of the search since the last round. Each probe is a decision at level 1 followed
+   * by unit propagation; a conflict is analysed as in search, which at level 1 gives a unit (the
+   * first UIP). The roots of the binary implication graph (literals with binary implications and no
+   * binary clause implying them) are probed in turn from where the last round stopped, and the
+   * negation of a root too, which gives units implied by both signs (lifting) and equivalent
+   * literals. References: I. Lynce, J. Marques-Silva, "Probing-Based Preprocessing Techniques for
+   * Propositional Satisfiability", ICTAI 2003; M. J. H. Heule, M. Järvisalo, A. Biere, "Efficient
+   * CNF Simplification Based on Binary Implication Graphs", SAT 2011.
+   *
+   * @return false when the formula is unsatisfiable
+   */
+  private boolean probe() {
+    if (propagate() != NO_CONFLICT) {
+      return refuted();
+    }
+    long start = System.nanoTime();
+    long propagationsBefore = propagations;
+    long budget =
+        propagations
+            + Math.max(
+                PROBE_MIN_EFFORT,
+                (propagations - propagationsAtProbe) * PROBE_EFFORT_PER_MILLE / 1000);
+    boolean wasChrono = chrono;
+    chrono = false;
+    boolean wasNotifying = notifying;
+    notifying = false; // the probing levels are internal
+    // probing must not move the saved phases: when it finds nothing, the search stays as it was
+    byte[] phases = Arrays.copyOf(savedSign, numVars);
+    if (probeMark.length < 2 * numVars) {
+      probeMark = new int[2 * numVars];
+      probeStamp = 0;
+    }
+    int result = 0;
+    int tried = 0;
+    try {
+      while (tried < numVars && propagations < budget && result >= 0 && !pastDeadline()) {
+        int v = probeCursor;
+        probeCursor = (probeCursor + 1) % numVars;
+        tried++;
+        if (eliminatedVar[v]) {
+          continue;
+        }
+        for (int sign = 0; sign < 2 && result >= 0 && vals[2 * v] == 0; sign++) {
+          int p = 2 * v + sign;
+          // a root: p has binary implications and no binary clause implies it
+          if (binWatches[p ^ 1][0] != 1 && binWatches[p][0] == 1) {
+            result = probeRoot(p);
+          }
+        }
+      }
+    } finally {
+      chrono = wasChrono;
+      notifying = wasNotifying;
+      System.arraycopy(phases, 0, savedSign, 0, numVars);
+    }
+    probePropagations += propagations - propagationsBefore;
+    propagations = propagationsBefore; // the search's schedules count its own propagations
+    propagationsAtProbe = propagations;
+    probeNanos += System.nanoTime() - start;
+    return result >= 0 && (propagate() == NO_CONFLICT || refuted());
+  }
+
+  // probing: literals implied by the last probe, and marks of those implied by the first sign
+  private int[] probeImplied = new int[16];
+  private int[] probeFirst = new int[16];
+  private int[] probeMark = new int[0];
+  private int probeStamp;
+
+  /**
+   * Probes a root and its negation.
+   *
+   * @return 0, or -1 when the formula is unsatisfiable
+   */
+  private int probeRoot(int p) {
+    probedLiterals++;
+    int n = probeLiteral(p);
+    if (n < 0) {
+      return n == -1 ? 0 : -1;
+    }
+    if (probeFirst.length < n) {
+      probeFirst = new int[2 * n];
+    }
+    System.arraycopy(probeImplied, 0, probeFirst, 0, n);
+    if (++probeStamp == Integer.MAX_VALUE) {
+      Arrays.fill(probeMark, 0);
+      probeStamp = 1;
+    }
+    for (int i = 0; i < n; i++) {
+      probeMark[probeFirst[i]] = probeStamp;
+    }
+    int m = probeLiteral(p ^ 1);
+    if (m < 0) {
+      return m == -1 ? 0 : -1;
+    }
+    int[] c = new int[2];
+    for (int i = 0; i < m; i++) {
+      int q = probeImplied[i];
+      if (vals[q] != 0) {
+        continue; // an earlier lifted unit implied it
+      }
+      if (probeMark[q] == probeStamp) {
+        // p -> q and -p -> q: q holds
+        liftedUnits++;
+        if (proof != null) {
+          c[0] = p ^ 1;
+          c[1] = q;
+          proof.add(c, 0, 2);
+          c[0] = p;
+          proof.add(c, 0, 2);
+          proof.add(c, 1, 1);
+          c[0] = p ^ 1;
+          proof.delete(c, 0, 2);
+          c[0] = p;
+          proof.delete(c, 0, 2);
+        }
+        assign(q, NO_REASON);
+        if (propagate() != NO_CONFLICT) {
+          refuted();
+          return -1;
+        }
+      } else if (probeMark[q ^ 1] == probeStamp && (q >> 1) != (p >> 1)) {
+        // p -> -q and -p -> q: q is the negation of p
+        probeEquivalences++;
+        if (proof != null) {
+          c[0] = p;
+          c[1] = q;
+          proof.add(c, 0, 2);
+          c[0] = p ^ 1;
+          c[1] = q ^ 1;
+          proof.add(c, 0, 2);
+        }
+        addOriginalBinary(p, q);
+        addOriginalBinary(p ^ 1, q ^ 1);
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Probes one literal at level 1 and goes back to level 0.
+   *
+   * @return the number of literals it implies, in {@code probeImplied}; -1 when it failed and the
+   *     unit learnt from the conflict holds now; -2 when the formula is unsatisfiable
+   */
+  private int probeLiteral(int p) {
+    newDecisionLevel();
+    int start = trailSize;
+    assign(p, NO_REASON);
+    if (propagate() != NO_CONFLICT) {
+      failedLiterals++;
+      analyze();
+      backtrack(0);
+      int[] u = learntSize == 1 ? learnt : new int[] {p ^ 1};
+      if (proof != null) {
+        proof.add(u, 0, 1);
+      }
+      if (vals[u[0]] == 0) {
+        assign(u[0], NO_REASON);
+      }
+      if (vals[u[0]] < 0 || propagate() != NO_CONFLICT) {
+        refuted();
+        return -2;
+      }
+      return -1;
+    }
+    int n = trailSize - start - 1;
+    if (probeImplied.length < n) {
+      probeImplied = new int[2 * n];
+    }
+    System.arraycopy(trail, start + 1, probeImplied, 0, n);
+    backtrack(0);
+    return n;
+  }
+
+  private void appendExtension(int[] removed) {
+    int old = extension.length;
+    extension = Arrays.copyOf(extension, old + removed.length);
+    System.arraycopy(removed, 0, extension, old, removed.length);
+  }
+
+  /**
+   * SAT sweeping (see {@link Sweeper}) of the irredundant clauses given to elimination, in the
+   * order of fewest occurrences first, continuing from where the last round stopped. Its effort is
+   * a tenth of the propagations of the search since the last round.
+   *
+   * @return the sweeper, with the clauses, units and substitutions it found
+   */
+  private Sweeper sweep(int[][] input, int n, boolean[] frozen) {
+    long start = System.nanoTime();
+    if (sweepDelay > 0) {
+      // the last rounds found almost nothing: skip rounds, as Kissat's sweep delay
+      sweepDelay--;
+      return new Sweeper(numVars, input, n, frozen, proof, 0, sweepCompleted);
+    }
+    // the first round, before any search, gets a fixed effort: equivalences found then pay most
+    long budget =
+        Math.max(
+            sweepRounds++ == 0 ? SWEEP_FIRST_EFFORT : SWEEP_MIN_EFFORT,
+            (propagations - propagationsAtSweep) * SWEEP_EFFORT_PER_MILLE / 1000);
+    Sweeper s = new Sweeper(numVars, input, n, frozen, proof, budget, sweepCompleted);
+    if (sweepDone.length < numVars) {
+      sweepDone = Arrays.copyOf(sweepDone, numVars);
+    }
+    long[] keys = new long[numVars];
+    int m = 0;
+    for (int v = 0; v < numVars; v++) {
+      if (vals[2 * v] != 0 || eliminatedVar[v] || sweepDone[v]) {
+        continue;
+      }
+      int occ = s.candidate(v);
+      if (occ < 0) {
+        sweepDone[v] = true;
+        continue;
+      }
+      keys[m++] = (long) occ << 32 | v;
+    }
+    Arrays.sort(keys, 0, m);
+    int[] order = new int[m];
+    for (int i = 0; i < m; i++) {
+      order[i] = (int) keys[i];
+    }
+    int swept = s.run(order, m, sweepDone);
+    if (swept == m && !s.unsat()) {
+      sweepCompleted++;
+      Arrays.fill(sweepDone, false);
+    }
+    sweptVariables += s.swept;
+    sweepUnits += s.units().length;
+    sweepEquivalences += s.equivalences;
+    if (s.units().length + s.equivalences < s.swept / 1000.0) {
+      sweepDelayLimit = Math.min(2 * sweepDelayLimit + 1, 64);
+      sweepDelay = sweepDelayLimit;
+    } else {
+      sweepDelayLimit = 0;
+    }
+    propagationsAtSweep = propagations;
+    sweepNanos += System.nanoTime() - start;
+    if (VERBOSE) {
+      System.out.printf(
+          "c sweep round at %d conflicts: swept %d of %d, %d units, %d equivalences, %d substituted,"
+              + " %.2f s%n",
+          conflicts,
+          s.swept,
+          m,
+          s.units().length,
+          s.equivalences,
+          s.numSubstituted(),
+          (System.nanoTime() - start) / 1e9);
+    }
+    return s;
   }
 
   /**
