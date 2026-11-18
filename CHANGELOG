@@ -7907,6 +7907,21 @@ Version 5.0 (unreleased)
    printed a solution as good as the best one again. It now prints only
    solutions better than every solution printed.
 
+439. LCG free search (-f) pauses its neighbourhood search when it has not
+   improved the best solution for longer than twice the time it took to
+   find it, and at least 30 s (--free-config lns-stall=2,
+   lns-stall-min=30000; lns-stall=0 turns the pause off): branch and bound
+   and the lower-bound searches then get the time to prove the optimum.
+   Neighbourhood search after an optimum found early took 130-155 s of
+   240 s on instances that never proved it. At 600 s, on the 23 wide
+   instances that stay in LCG and
+   were not proved, proved goes from 5 to 8 (fox-geese-corn 17,
+   java-routing trip_8_3, valve-network horizon20, trains18) at the same
+   total time; on a second seed of the 7 that change, from 1 to 4
+   (pigment20a 233 -> 98 s). On wide-quick at 240 s, 53 = 53 solved,
+   total 2,587 vs 2,562 s; on the other 31 wide optimisation instances
+   not proved in 45 s, 12 = 12 solved at 600 s.
+
 Version 4.11
 =============
 
