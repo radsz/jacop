@@ -3845,20 +3845,24 @@ public final class CdclSolver {
       if (result == UNKNOWN) {
         System.arraycopy(phases, 0, savedSign, 0, numVars);
         System.arraycopy(arena, 0, mem, 0, arena.length);
-        for (int l = 0; l < 2 * numVars; l++) {
-          // slot 0 of the copy holds its length
-          int n = watched[l].length;
-          if (watches[l].length < n) {
-            watches[l] = watched[l];
-          } else {
-            System.arraycopy(watched[l], 0, watches[l], 0, n);
-          }
-        }
+        restoreWatches(watched);
         propagations = props;
       }
       return result;
     } finally {
       luckyNanos += System.nanoTime() - begin;
+    }
+  }
+
+  /** Puts back the watch lists copied by {@link #lucky()}; slot 0 of each copy holds its length. */
+  private void restoreWatches(long[][] watched) {
+    for (int l = 0; l < 2 * numVars; l++) {
+      int n = watched[l].length;
+      if (watches[l].length < n) {
+        watches[l] = watched[l];
+      } else {
+        System.arraycopy(watched[l], 0, watches[l], 0, n);
+      }
     }
   }
 
