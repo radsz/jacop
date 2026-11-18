@@ -885,6 +885,25 @@ class VeriPbProofTest {
   }
 
   @Test
+  void countOfARepeatedVariableIntoAHoleIsDerived() {
+    // x4 = 1 fixes x0 = 0, so the count of 1 in [x0, x4, x0] is 1, a hole of c in {0, 2, 3}: the
+    // bounds of c were not written for a list holding x0 twice, one term of weight 2 in the row
+    // (fuzz seed 57069766, repeated variables)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 1, 3);
+    IntVar x4 = new IntVar(store, "x4", 1, 2);
+    IntVar c = values(store, "c", 0, 2, 3);
+    store.impose(new ElementIntegerFast(x4, new int[] {0, 3}, x0, 0));
+    store.impose(new Count(new IntVar[] {x0, x4, x0}, c, 1));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void countIntoAHoleOfACountIsDerived() {
     // x1 = -1 and x2 = 2 count one 2, a hole of the counter c in {0, 2}: the row of Count counts
     // value literals, which unit propagation does not round into c's order literals (fuzz seed
