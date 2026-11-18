@@ -217,8 +217,7 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
       IntVar k = new IntVar(support.store, -1, 1);
       IntVar f = new IntVar(support.store, -h, h);
       boolean replace =
-          !Boolean.getBoolean("tmp.cyclicKeep")
-              && occurrences.getOrDefault(a, 0) == 3
+          occurrences.getOrDefault(a, 0) == 3
               && occurrences.getOrDefault(b, 0) == 2
               && abs.node() != null
               && cm.node() != null
