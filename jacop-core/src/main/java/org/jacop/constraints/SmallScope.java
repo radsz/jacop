@@ -32,9 +32,8 @@ package org.jacop.constraints;
 
 import java.util.AbstractSet;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
@@ -47,12 +46,17 @@ import java.util.Set;
  *
  * @param <E> the type of the elements
  */
-final class SmallScope<E> extends AbstractSet<E> {
+class SmallScope<E> extends AbstractSet<E> {
 
-  /** The largest scope kept in an array; a larger one is a {@code LinkedHashSet}. */
+  /**
+   * The largest scope whose membership test is a scan; a larger one is looked up by hash code. A
+   * larger scope was a {@code LinkedHashSet}, about 45 bytes an element, which a linear constraint
+   * over 2000 variables or an element over 5000 paid in every constraint; the array and the hash
+   * index take 12.
+   */
   static final int MAX_SIZE = 8;
 
-  private final Object[] elements;
+  final Object[] elements;
 
   private SmallScope(Object[] elements) {
     this.elements = elements;
@@ -69,7 +73,15 @@ final class SmallScope<E> extends AbstractSet<E> {
   @SafeVarargs
   static <E> Set<E> of(E... elements) {
     if (elements.length > MAX_SIZE) {
-      return Collections.unmodifiableSet(new LinkedHashSet<>(Arrays.asList(elements)));
+      Set<Object> seen = HashSet.newHashSet(elements.length);
+      Object[] distinct = new Object[elements.length];
+      int n = 0;
+      for (E e : elements) {
+        if (seen.add(e)) {
+          distinct[n++] = e;
+        }
+      }
+      return new Large<>(n == distinct.length ? distinct : Arrays.copyOf(distinct, n));
     }
     Object[] distinct = new Object[elements.length];
     int n = 0;
@@ -93,6 +105,84 @@ final class SmallScope<E> extends AbstractSet<E> {
   @Override
   public boolean contains(Object o) {
     return indexOf(elements, elements.length, o) >= 0;
+  }
+
+  /**
+   * A scope of more than {@link #MAX_SIZE} elements, whose membership test looks the element up by
+   * hash code; the field of the index is only in these, so the small scopes keep their size.
+   */
+  private static final class Large<E> extends SmallScope<E> {
+
+    // the elements sorted by hash code with their hash codes, built by the first membership test
+    private volatile HashIndex index;
+
+    private Large(Object[] elements) {
+      super(elements);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+      return super.equals(o);
+    }
+
+    @Override
+    public int hashCode() {
+      return super.hashCode();
+    }
+
+    @Override
+    public boolean contains(Object o) {
+      HashIndex h = index;
+      if (h == null) {
+        h = new HashIndex(elements);
+        index = h;
+      }
+      int hash = Objects.hashCode(o);
+      int k = Arrays.binarySearch(h.hashes, hash);
+      if (k < 0) {
+        return false;
+      }
+      while (k > 0 && h.hashes[k - 1] == hash) {
+        k--;
+      }
+      for (; k < h.hashes.length && h.hashes[k] == hash; k++) {
+        if (Objects.equals(h.byHash[k], o)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // the hash codes in increasing order and the element of each
+    private static final class HashIndex {
+      private final int[] hashes;
+      private final Object[] byHash;
+
+      private HashIndex(Object[] elements) {
+        int n = elements.length;
+        long[] keyed = new long[n];
+        for (int i = 0; i < n; i++) {
+          keyed[i] = ((long) Objects.hashCode(elements[i]) << 32) | i;
+        }
+        Arrays.sort(keyed);
+        hashes = new int[n];
+        byHash = new Object[n];
+        for (int i = 0; i < n; i++) {
+          hashes[i] = (int) (keyed[i] >> 32);
+          byHash[i] = elements[(int) keyed[i]];
+        }
+      }
+    }
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return super.equals(o);
+  }
+
+  @Override
+  public int hashCode() {
+    return super.hashCode();
   }
 
   @Override

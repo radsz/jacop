@@ -233,6 +233,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   LcgSolver lcg;
   // the solver of a model of clauses alone, which JaSAT solves without lazy clause generation
   private CdclSolver pureSat;
+
+  // a variable of the pure clause model fixed by its complement symmetry
+  private boolean pureComplementFixed;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -507,6 +510,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } else {
         return;
       }
+    }
+    // free search: -f, or no search annotation (searchCountOne sets it for the search later)
+    boolean free =
+        opt.freeSearch()
+            || item.jjtGetNumChildren() == 1
+                && opt.freeSearchWithoutAnnotation()
+                && !opt.complementarySearch();
+    if (satisfy
+        && opt.lcg()
+        && free
+        && opt.proof() == null
+        && opt.portfolioWorker() == null
+        && PureClauseModel.complementSymmetric(store, sat.collectedClauses())) {
+      // clauses closed under complement go to JaSAT with one variable fixed instead
+      if (opt.debug()) {
+        FzConsole.println("% complement symmetric clauses: no lex-leader symmetry breaking");
+      }
+      return;
     }
     List<Var> order = new ArrayList<>();
     for (int i = 0; i < item.jjtGetNumChildren() - 1; i++) {
@@ -1267,8 +1288,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.capacityBound
             + "\n%%%mzn-stat: lpCutLimits="
             + r.cutLimits
+            + "\n%%%mzn-stat: lpCutStalls="
+            + r.cutStalls
+            + "\n%%%mzn-stat: lpCutStallsRecovered="
+            + r.cutStallsRecovered
             + "\n%%%mzn-stat: lpZeroHalfCuts="
             + r.zeroHalfCuts
+            + "\n%%%mzn-stat: lpCoverCuts="
+            + r.coverCuts
             + "\n%%%mzn-stat: lpDualCuts="
             + r.dualCuts
             + "\n%%%mzn-stat: lpMirSearchCuts="
@@ -2052,6 +2079,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void searchCountOne(ASTSolveItem node) {
+    ASTSolveKind solve = (ASTSolveKind) node.jjtGetChild(0);
+    if (pathSearch(getKind(solve.getKind()))) {
+      // the cells of the values 1, 2, ... in turn, the lowest cell first: the search follows the
+      // path from its first cell, and the Circuit of the successors prunes the cells it cut off
+      SearchItem<T> path = new SearchItem<>(store, dictionary);
+      path.inputOrderMin(dictionary.pathPositions.getFirst());
+      if (options.debug()) {
+        IO.println("%% numbered path search over the positions of the values");
+      }
+      solveKind = getKind(solve.getKind());
+      annotatedSearch = path;
+      run_single_search(solveKind, solve, path);
+      return;
+    }
     if (options.freeSearchWithoutAnnotation() && !options.complementarySearch()) {
       // nothing to follow: the model is solved as with -f
       options.freeSearch = true;
@@ -2590,6 +2631,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Whether a model without an annotation searches the path of a numbering ({@link
+   * org.jacop.fz.constraints.NumberedPathDetector}): one solution of a satisfaction model with one
+   * such path, not under -f, without on_restart built-ins. On the Hidato-table instances of the
+   * XCSP 2022 competition, which give no cell (a Hamiltonian path of the king's graph), the 12x12,
+   * 14x14 and 15x15 grids take 3-4 s instead of 30-590 s with the Circuit alone. The system
+   * property org.jacop.fz.numberedPath.search=false keeps the default search.
+   */
+  private boolean pathSearch(int kind) {
+    return dictionary.pathPositions.size() == 1
+        && kind == 0
+        && !options.freeSearch()
+        && !options.getAll()
+        && options.getNumberSolutions() <= 1
+        && dictionary.onRestart == null
+        && options.proof() == null
+        && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.numberedPath.search"));
+  }
+
+  /**
    * Whether the search is the branching of a tiling by arithmetic progressions ({@link
    * org.jacop.fz.constraints.ProgressionTilingDetector}): one solution of a satisfaction model
    * without an annotation to follow (or under -f), without on_restart built-ins. The system
@@ -3106,7 +3166,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = ls.getCostValue();
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
-    } else if (freeFirstValues != null) {
+    } else if (freeFirstValues != null && (scheduled == null || freeFirstCost <= scheduledCost)) {
       // the best solution of free search without learning, which ran first
       lcg.setIncumbent(freeFirstVars, freeFirstValues);
       lcgLastCost = freeFirstCost;
@@ -3150,7 +3210,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if ((ls != null || scheduled != null || probed) && costVar instanceof IntVar cost) {
+    if ((ls != null || scheduled != null || probed || freeFirstValues != null)
+        && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better
       lcg.onSolution(
@@ -3515,6 +3576,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executePureClauseSearch(PureClauseModel cnf) {
     pureSat = cnf.solver;
+    pureComplementFixed = cnf.complementFixed != 0;
     if (options.debug()) {
       FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
     }
@@ -4822,7 +4884,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           in.addAll(Arrays.asList(list));
           boolean covers = true;
           for (IntVar x : vars) {
-            if (!x.singleton() && !in.contains(x)) {
+            // a variable in no constraint, such as a cell outside the board of an XCSP grid,
+            // takes any value of its domain and leaves the dive's solution one
+            if (!x.singleton() && !in.contains(x) && x.dom().sizeConstraints() > 0) {
               covers = false;
               break;
             }
@@ -4906,6 +4970,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (pureSat != null) {
         IO.println("%%%mzn-stat: pureClauseModel=true");
+        if (pureComplementFixed) {
+          IO.println("%%%mzn-stat: complementSymmetry=true");
+        }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
         if (lcgSlowDeferred > 0) {
@@ -5020,6 +5087,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.tablesAsClauses
             + "\n%%%mzn-stat: lcgCompressedTablesAsClauses="
             + lcg.compressedTablesAsClauses
+            + "\n%%%mzn-stat: lcgBooleanTablesAsClauses="
+            + lcg.booleanTablesAsClauses
             + "\n%%%mzn-stat: lcgTableClauses="
             + lcg.tableClauses
             + "\n%%%mzn-stat: lcgTableTupleLiterals="
@@ -5231,8 +5300,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.coreShrunk
         + "\n%%%mzn-stat: lcgCoreExhausted="
         + core.exhaustedOutputs
+        + "\n%%%mzn-stat: lcgCoreExhaustDiscounted="
+        + core.exhaustDiscounted
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
+        + "\n%%%mzn-stat: lcgCoreLimitStops="
+        + core.limitStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
         + lcg.clockStops
         + "\n%%%mzn-stat: lcgCoreSkips="
@@ -5955,19 +6028,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return null;
     }
     long begin = System.currentTimeMillis();
-    SymmetryCanonicalizer canonical = symmetry == null ? null : symmetry.canonicalizer();
-    Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (canonical != null && !canonical.constraints().isEmpty()) {
-      ignored.addAll(canonical.constraints());
-      functionalCanonical = canonical;
-    }
-    FunctionalModel model =
-        FunctionalModel.detect(
-            store,
-            sat.collectedClauses(),
-            cost,
-            ignored,
-            options.debug() ? why -> IO.println("% no functional model: " + why) : null);
+    FunctionalModel model = detectFunctional(cost, options.debug());
     if (options.debug() && model != null) {
       IO.println("% functional model of " + model.vars.length + " decision variables");
     }
@@ -6058,6 +6119,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: tabuBest=" + best));
     }
     return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  /**
+   * The functional reading of the model ({@link FunctionalModel}) with the symmetry breaking
+   * constraints left to the canonicalizer, or null.
+   *
+   * @param cost the cost variable
+   * @param log whether to print why the model is not functional
+   * @return the model, or null
+   */
+  private FunctionalModel detectFunctional(IntVar cost, boolean log) {
+    SymmetryCanonicalizer canonical = symmetry == null ? null : symmetry.canonicalizer();
+    Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (canonical != null && !canonical.constraints().isEmpty()) {
+      ignored.addAll(canonical.constraints());
+      functionalCanonical = canonical;
+    }
+    return FunctionalModel.detect(
+        store,
+        sat.collectedClauses(),
+        cost,
+        ignored,
+        log ? why -> IO.println("% no functional model: " + why) : null);
   }
 
   // the values of the decision variables, moved onto a symmetric assignment that the symmetry
@@ -6587,6 +6671,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || squaredObjectiveTerms(costVar) < SQUARED_OBJECTIVE_TERMS) {
       return false;
     }
+    if (!"0".equals(options.freeConfig("tabu", "1"))
+        && detectFunctional((IntVar) costVar, false) != null) {
+      // the tabu search of functional models runs instead (functionalHint): on low autocorrelation
+      // binary sequences at 240 s free search first left it 10 % less time and ended worse on 7
+      // of 10 XCSP 2025 instances (n = 60: 302 against 238)
+      if (options.debug()) {
+        IO.println("% free search first: skipped for the tabu search of a functional model");
+      }
+      return false;
+    }
     if (options.getStatistics()) {
       IO.println("%%%mzn-stat: freeFirstSquares=" + squaredObjectiveTerms(costVar));
     }
@@ -6989,7 +7083,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       probe.addClause(clause[0], clause[1]);
     }
-    probe.onSolution(this::printSolution);
+    if (costVar instanceof IntVar cost) {
+      // free search may have printed better solutions before (freeSearchFirst)
+      probe.onSolution(
+          () -> {
+            if (cost.value() < bestPrintedCost.get()) {
+              printSolution();
+            }
+          });
+    } else {
+      probe.onSolution(this::printSolution);
+    }
     if (costVar instanceof IntVar) {
       probe.onBound(
           lower -> {

@@ -26,6 +26,8 @@
 package org.jacop.fz.constraints;
 
 import org.jacop.core.IntVar;
+import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.FzConsole;
 import org.jacop.fz.SimpleNode;
 
 /** Registry of constraint generation functions for flatzinc. */
@@ -44,6 +46,8 @@ public final class ConstraintFncs {
   final FloatLinearConstraints flc;
   final FloatOperationConstraints foc;
 
+  private final Support support;
+
   /**
    * Constructs the constraint functions registry.
    *
@@ -51,6 +55,7 @@ public final class ConstraintFncs {
    */
   public ConstraintFncs(Support support) {
 
+    this.support = support;
     bc = new BoolConstraints(support);
     cc = new ComparisonConstraints(support);
     lc = new LinearConstraints(support);
@@ -747,7 +752,57 @@ public final class ConstraintFncs {
 
   /** Handles the jacop_nvalue FlatZinc constraint. */
   public void jacop_nvalue(SimpleNode n) {
-    gc.gen_jacop_nvalue(n);
+    if (!booleanNValue(n)) {
+      gc.gen_jacop_nvalue(n);
+    }
+  }
+
+  /**
+   * An nvalue over 0/1 variables with a fixed count is a pair of clauses or a chain of
+   * equivalences: two values say that not all of the variables are equal (x1 \/ ... \/ xk and not
+   * x1 \/ ... \/ not xk, the not-all-equal triples of the Boolean Pythagorean triples problem), one
+   * value that they all are. Posted as clauses when Boolean constraints become clauses, so that
+   * lazy clause generation explains them by the clauses and a model of such clauses alone goes to
+   * JaSAT whole ({@code PureClauseModel}).
+   *
+   * @return true when the constraint was posted as clauses
+   */
+  private boolean booleanNValue(SimpleNode node) {
+    if (!support.options.useSat()
+        || "false".equalsIgnoreCase(System.getProperty("org.jacop.fz.booleanNValue"))) {
+      return false;
+    }
+    IntVar n = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+    IntVar[] x = support.unique(support.getVarArray((SimpleNode) node.jjtGetChild(1)));
+    if (!n.singleton() || x.length < 2) {
+      return false;
+    }
+    for (IntVar v : x) {
+      if (v.min() < 0 || v.max() > 1) {
+        return false;
+      }
+    }
+    if (n.value() != 1 && n.value() != 2) {
+      return false;
+    }
+    if (support.options.debug()) {
+      FzConsole.println(
+          "% nvalue(" + n.value() + ") over " + x.length + " 0/1 variables as clauses");
+    }
+    IntVar[] none = new IntVar[0];
+    if (n.value() == 2) {
+      bc.poseClause(x, none);
+      bc.poseClause(none, x);
+      return true;
+    }
+    if (n.value() == 1) {
+      for (int i = 1; i < x.length; i++) {
+        bc.poseClause(new IntVar[] {x[i]}, new IntVar[] {x[0]});
+        bc.poseClause(new IntVar[] {x[0]}, new IntVar[] {x[i]});
+      }
+      return true;
+    }
+    return false;
   }
 
   /** Handles the jacop_minimum_arg_int FlatZinc constraint. */
@@ -812,7 +867,9 @@ public final class ConstraintFncs {
 
   /** Handles the jacop_short_table_int FlatZinc constraint. */
   public void jacop_short_table_int(SimpleNode n) {
-    gc.gen_jacop_short_table_int(n);
+    if (!gc.shortTableAsClause(n, bc::poseClause)) {
+      gc.gen_jacop_short_table_int(n);
+    }
   }
 
   /** Handles the jacop_negative_table_int FlatZinc constraint. */

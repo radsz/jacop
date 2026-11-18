@@ -298,6 +298,123 @@ class XcspTableFlatzincTest {
     }
   }
 
+  @Test
+  void numberedPathSearchFindsAPath() throws IOException {
+    // without an annotation, one solution follows the path over the positions of the values
+    Random random = new Random(20261118);
+    for (int run = 0; run < 40; run++) {
+      int k = 4 + random.nextInt(3);
+      boolean fixedFirst = random.nextBoolean();
+      boolean table = random.nextBoolean();
+      boolean[][] arc = new boolean[k][k];
+      for (int c = 0; c < k; c++) {
+        for (int d = 0; d < k; d++) {
+          arc[c][d] = c != d && random.nextInt(10) < 5;
+        }
+        int d = 1 + random.nextInt(k - 1);
+        arc[c][d == c ? (c + 1) % k == 0 ? 1 : (c + 1) % k : d] = true;
+      }
+      String fzn = numberedPath(k, arc, fixedFirst, table, random);
+      Set<String> expected = new TreeSet<>();
+      enumeratePaths(new int[k], 0, new boolean[k + 1], arc, fixedFirst, expected);
+      String message = "run " + run + "\n" + fzn;
+      for (String[] options : new String[][] {{}, {"--lcg", "off"}}) {
+        String[] debug = Arrays.copyOf(options, options.length + 1);
+        debug[options.length] = "-debug";
+        String out = solve(fzn, debug);
+        assertTrue(out.contains("numbered path search"), message);
+        Set<String> found = firstSolution(fzn, options);
+        if (expected.isEmpty()) {
+          assertTrue(solve(fzn, options).contains("=====UNSATISFIABLE====="), message);
+        } else {
+          assertTrue(expected.containsAll(found) && found.size() == 1, message);
+        }
+      }
+    }
+  }
+
+  private Set<String> firstSolution(String model, String... options) throws IOException {
+    Set<String> solutions = new TreeSet<>();
+    Arrays.stream(solve(model, options).split("----------"))
+        .map(String::strip)
+        .filter(s -> s.startsWith("x = "))
+        .forEach(solutions::add);
+    return solutions;
+  }
+
+  @Test
+  void booleanNValueMatchesBruteForce() throws IOException {
+    // nvalue over 0/1 variables with a count of 1 or 2 is posted as clauses
+    Random random = new Random(20261118);
+    for (int run = 0; run < 40; run++) {
+      int n = 3 + random.nextInt(4);
+      int m = 1 + random.nextInt(4);
+      int[][] scopes = new int[m][];
+      int[] counts = new int[m];
+      StringBuilder fzn =
+          new StringBuilder("predicate jacop_nvalue(var int: n,array [int] of var int: x);\n");
+      for (int i = 0; i < n; i++) {
+        fzn.append("var bool: b").append(i).append(";\nvar 0..1: x").append(i).append(";\n");
+      }
+      StringBuilder constraints = new StringBuilder();
+      for (int i = 0; i < n; i++) {
+        constraints.append("constraint bool2int(b").append(i).append(",x").append(i).append(");\n");
+      }
+      for (int j = 0; j < m; j++) {
+        scopes[j] = random.ints(2 + random.nextInt(2), 0, n).toArray();
+        counts[j] = 1 + random.nextInt(2);
+        constraints
+            .append("constraint jacop_nvalue(")
+            .append(counts[j])
+            .append(",[")
+            .append(
+                Arrays.stream(scopes[j]).mapToObj(i -> "x" + i).collect(Collectors.joining(",")))
+            .append("]);\n");
+      }
+      fzn.append("array [1..").append(n).append("] of var int: x:: output_array([1..").append(n);
+      fzn.append("]) = [");
+      fzn.append(
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(",")));
+      fzn.append("];\n").append(constraints).append("solve satisfy;\n");
+      Set<String> expected = new TreeSet<>();
+      for (int a = 0; a < 1 << n; a++) {
+        boolean ok = true;
+        for (int j = 0; j < m && ok; j++) {
+          Set<Integer> values = new java.util.HashSet<>();
+          for (int i : scopes[j]) {
+            values.add((a >> i) & 1);
+          }
+          ok = values.size() == counts[j];
+        }
+        if (ok) {
+          int[] x = new int[n];
+          for (int i = 0; i < n; i++) {
+            x[i] = (a >> i) & 1;
+          }
+          expected.add(
+              "x = array1d(1.."
+                  + n
+                  + ", "
+                  + Arrays.stream(x)
+                      .mapToObj(String::valueOf)
+                      .collect(Collectors.joining(", ", "[", "]"))
+                  + ");");
+        }
+      }
+      String message = "run " + run + "\n" + fzn;
+      assertEquals(expected, solveAll(fzn.toString()), message);
+      assertEquals(expected, solveAll(fzn.toString(), "--lcg", "off"), message);
+      String one = solve(fzn.toString(), "-s");
+      if (expected.isEmpty()) {
+        assertTrue(one.contains("=====UNSATISFIABLE====="), message);
+      } else {
+        assertTrue(expected.containsAll(firstSolution(fzn.toString())), message);
+      }
+    }
+  }
+
   private static String numberedPath(
       int k, boolean[][] arc, boolean fixedFirst, boolean table, Random random) {
     StringBuilder fzn = new StringBuilder();
@@ -503,6 +620,57 @@ class XcspTableFlatzincTest {
     String xs =
         Arrays.stream(scope).mapToObj(i -> "x" + i).collect(Collectors.joining(",", "[", "]"));
     return "constraint jacop_short_table_int(" + xs + "," + cells + "," + STAR + ");\n";
+  }
+
+  /**
+   * Short tables over 0/1 variables whose rows each fix one variable are posted as clauses: rows
+   * that fix a variable to a value outside {0, 1} are dropped, a variable fixed to 0 and to 1 makes
+   * the table always true, and the star can be 0 when the rows use only 1 (Crypto1 of XCSP 2022).
+   */
+  @Test
+  void clauseShortTablesMatchBruteForce() throws IOException {
+    Random random = new Random(20261117);
+    for (int run = 0; run < 40; run++) {
+      int vars = 1 + random.nextInt(4);
+      int arity = 1 + random.nextInt(4);
+      int star = random.nextBoolean() ? STAR : 0;
+      int[] scope = new int[arity];
+      for (int i = 0; i < arity; i++) {
+        scope[i] = random.nextInt(vars);
+      }
+      int[][] rows = new int[1 + random.nextInt(5)][arity];
+      for (int[] row : rows) {
+        Arrays.fill(row, star);
+        int[] values = star == 0 ? new int[] {1, 1, 1, 3} : new int[] {0, 1, 1, 0, 3};
+        row[random.nextInt(arity)] = values[random.nextInt(values.length)];
+      }
+      Set<String> expected = new TreeSet<>();
+      for (int a = 0; a < 1 << vars; a++) {
+        int[] x = new int[vars];
+        for (int i = 0; i < vars; i++) {
+          x[i] = a >> i & 1;
+        }
+        boolean match =
+            Arrays.stream(rows)
+                .anyMatch(
+                    row ->
+                        IntStream.range(0, arity)
+                            .allMatch(i -> row[i] == star || x[scope[i]] == row[i]));
+        if (match) {
+          expected.add(
+              Arrays.stream(x)
+                  .mapToObj(String::valueOf)
+                  .collect(Collectors.joining(", ", "x = array1d(1.." + vars + ", [", "]);")));
+        }
+      }
+      String fzn =
+          model(scope, vars, rows, true)
+              .replace("var {0,1,3,4}:", "var 0..1:")
+              .replace("," + STAR + ");\nsolve", "," + star + ");\nsolve");
+      String message = "run " + run + "\n" + fzn;
+      assertEquals(expected, solveAll(fzn), message);
+      assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
+    }
   }
 
   private void randomTables(boolean positive, long seed) throws IOException {

@@ -75,6 +75,9 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
 
   List<Constraint> constraints;
 
+  // whether the layered graph is shared with the other regulars over the same automaton
+  private boolean shareGraph;
+
   /**
    * It constructs a regular constraint.
    *
@@ -298,9 +301,28 @@ public class Regular extends LayeredGraphConstraint implements Copyable<Regular>
     return constraints;
   }
 
+  /**
+   * It lets this constraint share its layered graph with the other regular constraints over the
+   * same automaton (the same object) whose variables have equal domains when they are imposed, as
+   * the FlatZinc front end does for many regular constraints over one automaton. The automaton must
+   * not change after the first of them is imposed.
+   *
+   * @return this constraint.
+   */
+  public Regular shareGraph() {
+    shareGraph = true;
+    return this;
+  }
+
+  @Override
+  protected Object[] sharedGraphKey() {
+    return shareGraph ? new Object[] {fsm, getClass()} : null;
+  }
+
   @Override
   public Regular copy(VarMap map) {
     Regular copy = new Regular(fsm, map.get(list));
+    copy.shareGraph = shareGraph;
     copyEngineTo(copy);
     return copy;
   }

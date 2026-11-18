@@ -35,6 +35,7 @@ import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
 import org.jacop.api.Violation;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
@@ -121,6 +122,18 @@ public class AtMost extends AbstractAtLeastMost
   // imposed on its own: a reification explains its own atoms
   private boolean explains() {
     return getClass() == AtMost.class && !reified;
+  }
+
+  // the negation, at least counter + 1 values, prunes when a variable loses the value, imposed on
+  // its own (a reification with b fixed is rewritten to it) as well as nested
+  @Override
+  protected int getDefaultNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
+  }
+
+  @Override
+  protected int getDefaultNestedNotConsistencyPruningEvent() {
+    return IntDomain.ANY;
   }
 
   @Override
