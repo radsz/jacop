@@ -271,6 +271,20 @@ public class Tables {
   }
 
   /**
+   * Adds the variables of the pairs declarations make equal. A detector that removes or merges
+   * variables must keep them, like the variables of the alias table, since the equality posted for
+   * a declaration is not among the model's constraint items.
+   *
+   * @param into the set the variables are added to
+   */
+  public void addDeclaredEqualities(Collection<IntVar> into) {
+    for (IntVar[] pair : declaredEqualities) {
+      into.add(pair[0]);
+      into.add(pair[1]);
+    }
+  }
+
+  /**
    * The declared bounds of a variable narrowed to JaCoP's range, or null for one not narrowed.
    *
    * @param v the variable

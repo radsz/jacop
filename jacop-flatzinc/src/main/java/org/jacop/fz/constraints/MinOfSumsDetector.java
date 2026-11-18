@@ -121,6 +121,7 @@ public class MinOfSumsDetector implements ParserTreeConstants {
     }
     Set<IntVar> aliased = new HashSet<>(support.dictionary.aliasTable.keySet());
     aliased.addAll(support.dictionary.aliasTable.values());
+    support.dictionary.addDeclaredEqualities(aliased);
     for (ASTConstElem node : minimums) {
       IntVar m;
       IntVar[] list;
