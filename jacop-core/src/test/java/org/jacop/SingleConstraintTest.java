@@ -124,6 +124,7 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxCliqueBound;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
@@ -11047,6 +11048,22 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(sum.value()).isEqualTo(4);
     assertThat(x1.value()).isEqualTo(-2);
+  }
+
+  /**
+   * MaxCliqueBound.satisfied() read the value of a vertex in conflict with a vertex fixed to 1
+   * before checking that it is fixed, and threw.
+   */
+  @Test
+  void maxCliqueBoundSatisfiedWithAnOpenVertex() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 0, 1), new IntVar(store, "x2", 0, 0)
+    };
+    IntVar sum = new IntVar(store, "sum", 1, 1);
+    MaxCliqueBound c = new MaxCliqueBound(x, new int[][] {{1}, {}, {}}, sum);
+    store.impose(c);
+    assertThat(c.satisfied()).isFalse();
   }
 
   private static IntVar valuesVar(Store store, String name, int... values) {
