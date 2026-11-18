@@ -191,6 +191,19 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
    * @param node the parse tree node containing search annotations
    * @param n the index of the child node to process
    */
+  /**
+   * The search int_search(x, input_order, indomain_min, complete), as the model would annotate it.
+   *
+   * @param x the variables.
+   */
+  void inputOrderMin(IntVar[] x) {
+    searchType = "int_search";
+    searchVariables = x;
+    varSelectionHeuristic = INPUT_ORDER;
+    indomain = INDOMAIN_MIN;
+    explore = COMPLETE;
+  }
+
   void searchParameters(SimpleNode node, int n) {
 
     ASTAnnotation ann = (ASTAnnotation) node.jjtGetChild(n);
