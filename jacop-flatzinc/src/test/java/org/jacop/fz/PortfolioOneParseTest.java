@@ -209,6 +209,22 @@ class PortfolioOneParseTest {
     }
   }
 
+  // issue 797: a portfolio slower than one thread could not be attributed to a thread
+  @Test
+  void searchStatisticsPrintEachThread() throws IOException {
+    Path fzn = write(MINIMISE);
+    for (String[] stats : new String[][] {{"-s", "-v"}, {"-s", "--search-statistics"}}) {
+      String out = run(stats[0], stats[1], "-p", "2", "-t", "20000", fzn.toString());
+      assertTrue(out.contains("cost = 14;"), out);
+      String block = out.substring(out.lastIndexOf("%%%mzn-stat: portfolioThread.given.ended="));
+      assertTrue(block.contains("%%%mzn-stat: portfolioThread.given.nodes="), block);
+      assertTrue(block.matches("(?s).*%%%mzn-stat: portfolioThread\\.[^.]+\\.solveTime=.*"), block);
+      assertTrue(block.endsWith("%%%mzn-stat-end\n"), block);
+    }
+    // plain -s prints no thread statistics
+    assertTrue(!run("-s", "-p", "2", fzn.toString()).contains("portfolioThread."));
+  }
+
   @Test
   void aModelThatDoesNotParseIsReportedByTheThreads() throws IOException {
     Path fzn = write("var 1..3: x :: output_var;\nconstraint int_le(x, ;\nsolve satisfy;\n");

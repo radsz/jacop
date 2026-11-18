@@ -7995,6 +7995,16 @@ Version 5.0 (unreleased)
    (08 and table-08 3.3 -> 6.6 s and 4.6 -> 10.4 s). Fires on none of
    the 240 wide instances.
 
+440. With -s -v (or --search-statistics), the portfolio (-p) prints the
+   statistics of each thread after its answer, in a block of
+   portfolioThread.<name>.<key> lines: how the thread ended (complete,
+   stopped, done, or running when it had not stopped 10 s after the
+   answer), its solve time, nodes, failures, restarts, propagations,
+   solutions and objective, and when it ran them, its LCG conflicts, SAT
+   propagations, average learnt clause length, conflicts before LCG gave
+   way and LNS runs. A portfolio slower than one thread can then be
+   traced to its threads (issue 797).
+
 Version 4.11
 =============
 
