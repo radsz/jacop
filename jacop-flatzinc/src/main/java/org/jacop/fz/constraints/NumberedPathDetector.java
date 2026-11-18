@@ -31,6 +31,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
@@ -515,7 +516,7 @@ public class NumberedPathDetector {
       }
       // a value that one cell alone can hold
       int[] holder = new int[n + 1];
-      java.util.Arrays.fill(holder, -1);
+      Arrays.fill(holder, -1);
       for (int c = 0; c < n; c++) {
         IntDomain d = x[c].dom();
         for (var e = d.valueEnumeration(); e.hasMoreElements(); ) {
@@ -542,7 +543,7 @@ public class NumberedPathDetector {
   // breadth-first numbers of steps from a cell, 0 for the cell and -1 when unreachable
   private static int[] distances(int[][] arcs, int from) {
     int[] dist = new int[arcs.length];
-    java.util.Arrays.fill(dist, -1);
+    Arrays.fill(dist, -1);
     int[] queue = new int[arcs.length];
     int head = 0;
     int tail = 0;

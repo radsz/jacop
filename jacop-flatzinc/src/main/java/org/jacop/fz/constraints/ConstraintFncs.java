@@ -27,6 +27,7 @@ package org.jacop.fz.constraints;
 
 import org.jacop.core.IntVar;
 import org.jacop.fz.ASTScalarFlatExpr;
+import org.jacop.fz.FzConsole;
 import org.jacop.fz.SimpleNode;
 
 /** Registry of constraint generation functions for flatzinc. */
@@ -785,7 +786,7 @@ public final class ConstraintFncs {
       return false;
     }
     if (support.options.debug()) {
-      org.jacop.fz.FzConsole.println(
+      FzConsole.println(
           "% nvalue(" + n.value() + ") over " + x.length + " 0/1 variables as clauses");
     }
     IntVar[] none = new IntVar[0];

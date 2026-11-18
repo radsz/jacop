@@ -7952,7 +7952,7 @@ Version 5.0 (unreleased)
    163 s and 314 s); 7824 and the unsatisfiable 7825 stay open. Fires on
    none of the 240 wide instances (no model there is clauses alone) and,
    of the 90 SAT Competition formulas of the pure clause screen, on
-   heule-folkman only.
+   heule-folkman only (unsolved in 600 s with and without it).
 
 439. Hamiltonian paths written as a numbering (NumberedPathDetector) are
    searched along the path. The detector also posts the cell of each
@@ -7961,12 +7961,18 @@ Version 5.0 (unreleased)
    int_search(cells, input_order, indomain_min): the cells of the values
    1, 2, ... in turn, so each decision extends the path from its last
    cell, and the Circuit of the successors fails a partial path that cut
-   off cells. The XCSP 2022 Hidato-table instances give no cell (a
-   Hamiltonian path of the king's graph); 12x12, 14x14 and 15x15 take
-   2-5 s instead of 30, 590 and 297 s (Glasgow 6-31 s in the 2022 field),
-   and all 14 CalvinPuzzle instances of 2023 stay at 1.4-5.4 s.
-   -Dorg.jacop.fz.numberedPath.search=false keeps the default search.
-   Fires on none of the 240 wide instances.
+   off cells (-Dorg.jacop.fz.numberedPath.search=false keeps the default
+   search). It also removes, at the root, the values that a cell cannot
+   hold at its distance from the cells of known values: a cell at
+   distance d from the cell of value v holds no value within d - 1 of v
+   (-Dorg.jacop.fz.numberedPathDistances=false turns it off). The XCSP
+   2022 Hidato-table instances that give no cell are Hamiltonian paths
+   of the king's graph; at 600 s in default mode the 12x12 to 15x15
+   grids take 3.1-4.5 s instead of 72-280 s (Glasgow 6-31 s in the 2022
+   field) and the 9 Hidato instances 26 s instead of 777 s in total; the
+   14 CalvinPuzzle instances of 2023 take 66 s instead of 92 s in total
+   (08 and table-08 3.3 -> 6.6 s and 4.6 -> 10.4 s). Fires on none of
+   the 240 wide instances.
 
 Version 4.11
 =============
