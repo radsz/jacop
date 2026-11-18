@@ -172,6 +172,13 @@ public class Tables {
   public org.jacop.fz.constraints.ProgressionTilingDetector.Tiling progressionTiling;
 
   /**
+   * The positions of the values of the Hamiltonian paths written as a numbering ({@link
+   * org.jacop.fz.constraints.NumberedPathDetector}): positions[k] is the cell (1-based) of value k
+   * + 1. The satisfaction search of a model without an annotation follows the path over them.
+   */
+  public final List<IntVar[]> pathPositions = new ArrayList<>();
+
+  /**
    * The bound of a model of maximum clique and nothing else ({@link
    * org.jacop.fz.constraints.MaxCliqueDetector}), whose search without an annotation branches on
    * its vertices, or null.
@@ -268,6 +275,20 @@ public class Tables {
    */
   public List<IntVar[]> declaredEqualities() {
     return declaredEqualities;
+  }
+
+  /**
+   * Adds the variables of the pairs declarations make equal. A detector that removes or merges
+   * variables must keep them, like the variables of the alias table, since the equality posted for
+   * a declaration is not among the model's constraint items.
+   *
+   * @param into the set the variables are added to
+   */
+  public void addDeclaredEqualities(Collection<IntVar> into) {
+    for (IntVar[] pair : declaredEqualities) {
+      into.add(pair[0]);
+      into.add(pair[1]);
+    }
   }
 
   /**
