@@ -704,6 +704,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
     options = opt;
+    // split-bounds disjointness reasons: on for fixed search, where binpack_11 goes from 293k to
+    // 7.5k failures and wide-quick at 240 s takes 0.944 of the time; off under -f, where costas
+    // and blocks-world lost on three paired rounds at 600 s (total 1.038). Set before any solver
+    // (root probing, decomposition bounds) explains.
+    ShiftExplanation.setSplitBounds(!options.freeSearch());
     initProbe();
     dictionary = table;
     output = table;
@@ -3056,10 +3061,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       scheduled = functionalHint(c, worker);
       tabuHint = scheduled;
     }
-    // split-bounds disjointness reasons: on for fixed search, where binpack_11 goes from 293k to
-    // 7.5k failures and wide-quick at 240 s takes 0.944 of the time; off under -f, where costas
-    // and blocks-world lost on three paired rounds at 600 s (total 1.038)
-    ShiftExplanation.setSplitBounds(!options.freeSearch());
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
