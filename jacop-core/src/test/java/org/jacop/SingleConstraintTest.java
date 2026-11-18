@@ -7883,9 +7883,9 @@ class SingleConstraintTest extends TestHelper {
                 "Diff2Exclusive",
                 "solutions=274199 nodes=281043 decisions=277601 wrong=3442 hash=e3ba8c5362d530ad",
                 "Disjoint",
-                "solutions=250703 nodes=258629 decisions=254646 wrong=3983 hash=688d304cb8d0f443",
+                "solutions=247963 nodes=260991 decisions=254457 wrong=6534 hash=a1fa0a58cbb797cb",
                 "DisjointNoProfile",
-                "solutions=250683 nodes=263587 decisions=257115 wrong=6472 hash=37879c275e329ec3",
+                "solutions=247963 nodes=265933 decisions=256928 wrong=9005 hash=5fb343dc7ec8745",
                 "DisjointConditional",
                 "solutions=737646 nodes=765448 decisions=751527 wrong=13921 hash=f7e9e3977ef731a1",
                 "DisjointConditionalNoProfile",
@@ -11091,5 +11091,37 @@ class SingleConstraintTest extends TestHelper {
     store.impose(c);
     assertThat(c.satisfied()).isFalse();
     assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * A rectangle of width 0 may lie on the common border of two touching rectangles: B at x = 2
+   * between A (x in [0, 2)) and C (x in [2, 3)). The merged barrier of A and C left no gap, so
+   * Disjoint forced the height of B to 0 although B = (2, 1, 0, 2) is a solution.
+   */
+  @Test
+  void disjointLetsASegmentLieOnTheBorderOfTouchingRectangles() {
+    Store store = new Store();
+    IntVar bh = new IntVar(store, "bh", 0, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {
+              new IntVar(store, "ax", 0, 0),
+              new IntVar(store, "bx", 1, 2),
+              new IntVar(store, "cx", 2, 2)
+            },
+            new IntVar[] {
+              new IntVar(store, "ay", 0, 1),
+              new IntVar(store, "by", 1, 1),
+              new IntVar(store, "cy", 1, 1)
+            },
+            new IntVar[] {
+              new IntVar(store, "aw", 2, 2),
+              new IntVar(store, "bw", 0, 2),
+              new IntVar(store, "cw", 1, 1)
+            },
+            new IntVar[] {new IntVar(store, "ah", 2, 2), bh, new IntVar(store, "ch", 1, 1)},
+            false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bh.max()).isEqualTo(2);
   }
 }

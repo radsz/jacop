@@ -370,11 +370,46 @@ abstract class AbstractDiff extends Constraint
       }
     }
 
-    boolean excludedState = checkBarrierFit(barrier, minJ, maxJ, durJ);
+    boolean excludedState =
+        durJ == 0
+            ? !pointFits(i, consideredRect, j, minJ, maxJ, barierPosition)
+            : checkBarrierFit(barrier, minJ, maxJ, durJ);
     if (excludedState) {
       fillBarrierGapsAndSetMinPosition(barrier, minJ, maxJ, durJ, 0);
     }
     return excludedState;
+  }
+
+  /**
+   * Checks whether a rectangle of zero length in dimension j fits between the hindering rectangles.
+   * The merged barrier profile cannot tell: two touching rectangles leave no gap in it, yet a
+   * segment may lie on their common border.
+   */
+  private static boolean pointFits(
+      int i, List<IntRectangle> consideredRect, int j, int minJ, int maxJ, int barierPosition) {
+    if (fitsAt(i, consideredRect, j, minJ, barierPosition)) {
+      return true;
+    }
+    for (IntRectangle hinder : consideredRect) {
+      int end = hinder.origins[j] + hinder.lengths[j];
+      if (end > minJ && end <= maxJ && fitsAt(i, consideredRect, j, end, barierPosition)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean fitsAt(
+      int i, List<IntRectangle> consideredRect, int j, int x, int barierPosition) {
+    for (IntRectangle hinder : consideredRect) {
+      int hinderJ = hinder.origins[j];
+      if (hinder.origins[i] + hinder.lengths[i] - barierPosition > 0
+          && hinderJ < x
+          && x < hinderJ + hinder.lengths[j]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private void fillBarrierGapsAndSetMinPosition(
