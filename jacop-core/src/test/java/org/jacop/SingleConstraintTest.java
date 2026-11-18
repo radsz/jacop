@@ -11095,6 +11095,27 @@ class SingleConstraintTest extends TestHelper {
     assertThat(c.satisfied()).isFalse();
   }
 
+  /**
+   * ConditionalSelect was woken only by bound changes, but a hole can rule a branch out: x0 = 3 and
+   * y loses 3 inside its bounds, so the first branch can no longer be selected and b0 = 0.
+   */
+  @Test
+  void conditionalSelectWakesOnAHole() {
+    Store store = new Store();
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    IntVar x0 = new IntVar(store, "x0", 3, 3);
+    IntVar x1 = new IntVar(store, "x1", 1, 4);
+    IntVar y = new IntVar(store, "y", 1, 4);
+    store.impose(new ConditionalSelect(new IntVar[] {b0, b1}, new IntVar[] {x0, x1}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.max()).isEqualTo(1);
+    store.setLevel(1);
+    y.domain.inComplement(1, y, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.max()).isZero();
+  }
+
   private static IntVar valuesVar(Store store, String name, int... values) {
     IntVar v = new IntVar(store, name);
     for (int value : values) {
