@@ -3885,8 +3885,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             level,
             jump,
             lbd,
-            Double.parseDouble(options.freeConfig("lcg-sat-jump", "1.5")),
-            Double.parseDouble(options.freeConfig("lcg-sat-lbd", "0.4")));
+            Double.parseDouble(options.freeConfig("lcg-sat-jump", "1.3")),
+            Double.parseDouble(options.freeConfig("lcg-sat-lbd", "0.35")));
     if (report) {
       IO.println(
           String.format(
@@ -3920,7 +3920,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the searches that plain CP solves sooner jump back 1.0 to 1.4 levels a conflict with an LBD of
    * 0.45 to 1.0 times the depth; those where learning wins clearly (whirlpool, PegSolitaire,
    * Pb-fpga, nonogram, GracefulGraph) jump 1.8 to 15 levels with LBDs of 0.1 to 0.45 times the
-   * depth.
+   * depth. Searches jumping 1.3 to 1.45 levels lose when they give way on unseen instances (XCSP
+   * 2026 CSP and CSPLib: Dominoes, ColoredGrid, RectPacking, car sequencing), so the defaults (jump
+   * below 1.3, LBD at least 0.35 times the depth) were fitted on both sets with a cross-validation
+   * split by problem family (osolpro benchmarks/satisfaction-holdout).
    *
    * @param conflicts the conflicts so far
    * @param level the mean decision level of a conflict
