@@ -1162,6 +1162,8 @@ public final class Linearizations {
     private final List<IntVar> order = new ArrayList<>();
     private List<LinearForm> out = new ArrayList<>();
     private int made;
+    // the arc columns of the flow models of the edge arrays seen, by identity
+    private final Map<int[], Integer> arcCounts = new IdentityHashMap<>();
     // whether count bounds and set membership are encoded
     private boolean sets;
     // the reified comparisons linked so far
@@ -1297,7 +1299,9 @@ public final class Linearizations {
       // the arc columns, counted before the edges are grouped: a graph of millions of edges is
       // left out without boxing them (300 diagrams of 1.8 million edges in
       // WordDesign2-words-mdd-025, XCSP 2023)
-      if (made + arcColumns(list, edges, size) > VALUE_ENCODINGS_MAX) {
+      // the diagrams of one graph over equal domains share their edges and so their count
+      if (made + arcCounts.computeIfAbsent(edges, k -> arcColumns(list, k, size))
+          > VALUE_ENCODINGS_MAX) {
         return;
       }
       // the edges of each (level, value)

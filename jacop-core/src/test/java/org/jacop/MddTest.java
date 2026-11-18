@@ -490,6 +490,55 @@ class MddTest {
   }
 
   @Test
+  void pathEdgesOfOneGraphAreSharedOverEqualDomainsAndFollowNarrowedOnes() {
+    // The diagrams of one built graph share the edges on a path while their domains are equal
+    // (the linear relaxation asks for them thousands of times), and compute them again over
+    // narrowed domains: those must equal the edges of a graph built over the narrowed domains.
+    Random random = new Random(37);
+    int compared = 0;
+    for (int trial = 0; trial < 60; trial++) {
+      Diagram diagram = randomDiagram(random, 3, 3, 3);
+      Store store = new Store();
+      IntVar[] x = variables(store, 6, 3);
+      ExtensionalSupportMdd first = diagram.constraint(new IntVar[] {x[0], x[1], x[2]});
+      ExtensionalSupportMdd second = diagram.constraint(new IntVar[] {x[3], x[4], x[5]});
+      store.impose(first);
+      store.impose(second);
+      if (!store.consistency() || first.pathEdges() == null) {
+        continue;
+      }
+      boolean equal = true;
+      for (int i = 0; i < 3; i++) {
+        equal &= x[i].dom().eq(x[i + 3].dom());
+      }
+      if (equal) {
+        assertThat(second.pathEdges()).as("trial " + trial).isSameAs(first.pathEdges());
+      }
+      int position = random.nextInt(3);
+      if (x[position].singleton()) {
+        continue;
+      }
+      int value = x[position].min();
+      store.setLevel(store.level + 1);
+      x[position].domain.in(store.level, x[position], value + 1, x[position].max());
+      if (!store.consistency()) {
+        continue;
+      }
+      Store fresh = new Store();
+      IntVar[] y = new IntVar[3];
+      for (int i = 0; i < 3; i++) {
+        y[i] = new IntVar(fresh, "y" + i, x[i].dom().cloneLight());
+      }
+      ExtensionalSupportMdd rebuilt = diagram.constraint(y);
+      fresh.impose(rebuilt);
+      assertThat(fresh.consistency()).as("trial " + trial).isTrue();
+      assertThat(first.pathEdges()).as("trial " + trial).isEqualTo(rebuilt.pathEdges());
+      compared++;
+    }
+    assertThat(compared).isGreaterThan(10);
+  }
+
+  @Test
   void mddRejectsEdgesThatSkipALevel() {
     Store store = new Store();
     IntVar[] x = variables(store, 3, 1);

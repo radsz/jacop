@@ -38,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import org.jacop.api.Stateful;
 import org.jacop.api.UsesQueueVariable;
 import org.jacop.constraints.Constraint;
@@ -611,12 +612,19 @@ public abstract class LayeredGraphConstraint extends Constraint
    * integer programming", CPAIOR 2007).
    *
    * @return the edges, or null when the paths of the graph are not exactly the solutions of the
-   *     constraint or the graph is not built yet
+   *     constraint or the graph is not built yet; the constraints of one shared graph over equal
+   *     domains return the same array, which must not be changed
    */
   public int[] pathEdges() {
     if (description == null || !explainedByPaths()) {
       return null;
     }
+    // the thousands of diagrams of one graph mostly see equal domains at the root (1,485 diagrams
+    // of 1.8 million edges in WordDesign2-words-mdd-055, XCSP 2023)
+    return built != null ? built.pathEdges(list, this::computePathEdges) : computePathEdges();
+  }
+
+  private int[] computePathEdges() {
     int levels = list.length;
     int[] edge = description.edges;
     PathNodes paths = new PathNodes();
@@ -1027,6 +1035,9 @@ public abstract class LayeredGraphConstraint extends Constraint
     private final Object[] key;
     private LayeredGraphExplanation.Graph explanation;
     private final Map<Store, SearchScratch> scratches = new WeakHashMap<>();
+    // the edges on a path last computed, over the domains they were computed over
+    private IntDomain[] pathDomains;
+    private int[] pathEdges;
 
     /**
      * It builds the graph. Edges with values outside the domains are dropped, a forward and a
@@ -1206,6 +1217,25 @@ public abstract class LayeredGraphConstraint extends Constraint
 
     /** The graph for explanations by cuts, made once for all constraints sharing this graph. */
     /** The stamps of the support search for the constraints of a store on this graph. */
+    /**
+     * Returns the edges on a path over the domains of the list, computed again only when they
+     * differ from the domains of the last call.
+     */
+    synchronized int[] pathEdges(IntVar[] list, Supplier<int[]> compute) {
+      boolean same = pathDomains != null && pathDomains.length == list.length;
+      for (int i = 0; same && i < list.length; i++) {
+        same = pathDomains[i].eq(list[i].domain);
+      }
+      if (!same) {
+        pathEdges = compute.get();
+        pathDomains = new IntDomain[list.length];
+        for (int i = 0; i < list.length; i++) {
+          pathDomains[i] = list[i].domain.cloneLight();
+        }
+      }
+      return pathEdges;
+    }
+
     synchronized SearchScratch scratch(Store store) {
       return scratches.computeIfAbsent(store, s -> new SearchScratch(nodes, slots, levels));
     }

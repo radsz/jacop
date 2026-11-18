@@ -523,7 +523,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private final Map<String, Atom[]> namedArrays = new HashMap<>();
   // one atom for each integer constant
   private final Map<Integer, Atom> intAtoms = new HashMap<>();
+
   // the key of each array of constants, the same for arrays with the same elements
+  /** The length above which an array is read once however many constraints share it. */
+  private static final int SHARED_ARRAY = 64;
+
   private final Map<Atom[], String> constantArrays = new IdentityHashMap<>();
   private final Map<Contents, String> contentKeys = new HashMap<>();
 
@@ -720,8 +724,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
         ranked.add(iv);
       }
     }
+    // an array shared by many constraints (the diagram of thousands of MDDs) is read once
+    Set<Atom[]> readArrays = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Item item : items) {
       for (Atom[] arg : item.args()) {
+        if (arg.length > SHARED_ARRAY && !readArrays.add(arg)) {
+          continue;
+        }
         for (Atom a : arg) {
           if (a.aVar() != null && seen.add(a.aVar())) {
             ranked.add(a.aVar());
@@ -1786,6 +1795,8 @@ final class SymmetryBreaking implements ParserTreeConstants {
     if (objective != null) {
       numeric.add(objective);
     }
+    // an array of parameters shared by many constraints adds nothing
+    Map<Atom[], Boolean> constantArrays = new IdentityHashMap<>();
     for (Item item : items) {
       ValueSpec spec = valueSpec(item);
       boolean[] shared = new boolean[item.args().length];
@@ -1796,7 +1807,13 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       IntVar first = null;
       for (int a = 0; a < item.args().length; a++) {
-        for (Atom atom : item.args()[a]) {
+        Atom[] arg = item.args()[a];
+        if (arg.length > SHARED_ARRAY
+            && constantArrays.computeIfAbsent(
+                arg, k -> Arrays.stream(k).allMatch(atom -> atom.aVar() == null))) {
+          continue;
+        }
+        for (Atom atom : arg) {
           IntVar x = atom.aVar();
           if (x == null) {
             continue;
