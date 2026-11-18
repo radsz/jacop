@@ -4084,6 +4084,67 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void reachableWithAnOpenRootRemovesNodesNoRootValueReaches() {
+    // undirected, root in {0..2, 4}: once node 4 is out, node 3 (only a self-loop) is reached from
+    // no root value, but it stayed selectable since no node was selected yet
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 5);
+    IntVar[] es = graphBooleans(store, "e", 5);
+    IntVar root = new IntVar(store, "r", 0, 2);
+    root.addDom(4, 4);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {3, 0, 1, 1, 4}, new int[] {3, 4, 4, 2, 2}, root, ns, es, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    ns[4].domain.in(1, ns[4], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(ns[3].singleton(0)).isTrue();
+    assertThat(root.dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void reachableWithAnOpenRootSelectsWhatEveryRootValueGoesThrough() {
+    // undirected, root in {1..3}, node 0 selected: its edges both lead to node 1, so node 1 is on
+    // the way to every root value
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 4);
+    IntVar[] es = graphBooleans(store, "e", 5);
+    IntVar root = new IntVar(store, "r", 1, 3);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {1, 3, 1, 1, 2}, new int[] {0, 1, 1, 0, 1}, root, ns, es, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    ns[0].domain.in(1, ns[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(ns[1].singleton(1)).isTrue();
+
+    // directed, root in {2, 3}: node 0 is selected and its only possible incoming edge is 3 -> 0
+    store = new Store();
+    ns = graphBooleans(store, "n", 4);
+    es = graphBooleans(store, "e", 6);
+    root = new IntVar(store, "r", 2, 3);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {1, 0, 3, 3, 2, 2}, new int[] {3, 3, 2, 0, 3, 0}, root, ns, es, true));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    es[5].domain.in(1, es[5], 0, 0);
+    ns[0].domain.in(1, ns[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(es[3].singleton(1)).isTrue();
+  }
+
+  private static IntVar[] graphBooleans(Store store, String prefix, int n) {
+    IntVar[] vs = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      vs[i] = new IntVar(store, prefix + i, 0, 1);
+    }
+    return vs;
+  }
+
+  @Test
   void amongReRunAfterLowerBorderReachesNDoesNotFail() {
     // hakank_among_global: once the lower border reaches n the remaining variables are pruned
     // out of the set and moved behind the new upper border; they are still in the variable queue.
