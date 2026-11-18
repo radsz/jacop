@@ -6685,8 +6685,7 @@ class SingleConstraintTest extends TestHelper {
     QueueForward<PrimitiveConstraint> none =
         new QueueForward<>(new XlteqC(x, 4), List.<Var>of(x, y));
     assertThat(none.isEmpty()).isTrue();
-    assertThat(none.forwardMap).isEmpty();
-    assertThat(none.forwardMap).isNotInstanceOf(java.util.LinkedHashMap.class);
+    assertThat(none.forwardMap).isNotInstanceOf(java.util.LinkedHashMap.class).isEmpty();
     PrimitiveConstraint and = new And(new XlteqC(x, 4), new XlteqC(y, 3));
     QueueForward<PrimitiveConstraint> forwarding = new QueueForward<>(and, List.<Var>of(x, y));
     assertThat(forwarding.isEmpty()).isFalse();
