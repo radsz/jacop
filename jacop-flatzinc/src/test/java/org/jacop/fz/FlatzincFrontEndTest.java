@@ -55,6 +55,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -4188,6 +4189,38 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("a = array1d(1..2, [0, 0]);"), out);
       assertFalse(out.contains("true,") || out.contains("false,"), out);
     }
+  }
+
+  @Test
+  void constraintNodesWithAnInlinedControlAreReleasedAfterPosting(@TempDir Path dir)
+      throws Exception {
+    // the constraint nodes posted with an eliminated control stayed in a map for the whole search
+    // and, through their parents, the parse tree of every such constraint: 38 MB of rcpsp_max
+    // psp_ubo500_33 (99,000 disjunctions b1 -> s1 + d1 <= s2, b2 -> s2 + d2 <= s1, b1 \/ b2)
+    String model =
+        """
+        var 0..10: s1:: output_var;
+        var 0..10: s2:: output_var;
+        var bool: b1;
+        var bool: b2;
+        constraint int_lin_le_imp([1,-1],[s1,s2],-3,b1);
+        constraint int_lin_le_imp([1,-1],[s2,s1],-4,b2);
+        constraint bool_clause([b1,b2],[]);
+        solve satisfy;
+        """;
+    Path file = dir.resolve("disjunction.fzn");
+    Files.writeString(file, model);
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    org.jacop.fz.constraints.Support support = loader.parser.cc.support;
+    java.lang.reflect.Field substituted =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("substitutedControls");
+    substituted.setAccessible(true);
+    assertFalse(((Map<?, ?>) substituted.get(support)).isEmpty(), "a control was eliminated");
+    java.lang.reflect.Field nodes =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("controlSubstitutions");
+    nodes.setAccessible(true);
+    assertTrue(((Map<?, ?>) nodes.get(support)).isEmpty());
   }
 
   @Test

@@ -1493,6 +1493,14 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * Forgets the constraint nodes posted with a substituted control once all constraints are posted,
+   * since through their parents they hold the parse tree of every such constraint.
+   */
+  public void releaseControlSubstitutions() {
+    controlSubstitutions.clear();
+  }
+
+  /**
    * Starts posting a constraint node with a substituted control.
    *
    * @param s the substitution.
