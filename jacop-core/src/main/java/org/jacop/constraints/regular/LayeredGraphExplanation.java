@@ -58,7 +58,7 @@ import org.jacop.lcg.EntryList;
  */
 final class LayeredGraphExplanation {
 
-  /** The edges of a graph, ordered by level. */
+  /** The edges of a graph, ordered by level and within a level by value. */
   static final class Graph {
     final int levels;
     final int[] levelNodes;
@@ -66,6 +66,13 @@ final class LayeredGraphExplanation {
     final int[] source;
     final int[] value;
     final int[] target;
+    // the edges of a level by value: the blocks of level l are levelBlock[l] to levelBlock[l + 1] -
+    // 1, block b holds the edges blockStart[b] to blockStart[b + 1] - 1, all labelled
+    // blockValue[b]; a pass over the graph skips the blocks of removed values (three of the four
+    // letters at most levels deep in the search of WordDesign2-words-mdd, XCSP 2023)
+    final int[] levelBlock;
+    final int[] blockStart;
+    final int[] blockValue;
     // the first node of each level in a numbering of all nodes, level by level
     final int[] nodeBase;
     // the edges into each node (inEdge[inStart[u] .. inStart[u + 1]]) and out of it
@@ -91,12 +98,39 @@ final class LayeredGraphExplanation {
       source = new int[size];
       value = new int[size];
       target = new int[size];
+      // the edges of each level by value, in the order of the description within a value
+      int[] byLevel = new int[size];
       for (int k = 0; k < size; k++) {
-        int at = next[e[4 * k]]++;
-        source[at] = e[4 * k + 1];
-        value[at] = e[4 * k + 2];
-        target[at] = e[4 * k + 3];
+        byLevel[next[e[4 * k]]++] = k;
       }
+      levelBlock = new int[levels + 1];
+      int blocks = 0;
+      int[] starts = new int[size + 1];
+      int[] values = new int[size];
+      for (int l = 0; l < levels; l++) {
+        int from = levelStart[l];
+        int count = levelStart[l + 1] - from;
+        long[] keys = new long[count];
+        for (int j = 0; j < count; j++) {
+          keys[j] = ((long) e[4 * byLevel[from + j] + 2] << 32) | j;
+        }
+        Arrays.sort(keys);
+        for (int j = 0; j < count; j++) {
+          int k = byLevel[from + (int) keys[j]];
+          int at = from + j;
+          source[at] = e[4 * k + 1];
+          value[at] = e[4 * k + 2];
+          target[at] = e[4 * k + 3];
+          if (j == 0 || value[at] != value[at - 1]) {
+            starts[blocks] = at;
+            values[blocks++] = value[at];
+          }
+        }
+        levelBlock[l + 1] = blocks;
+      }
+      starts[blocks] = size;
+      blockStart = Arrays.copyOf(starts, blocks + 1);
+      blockValue = Arrays.copyOf(values, blocks);
       nodeBase = new int[levels + 2];
       for (int l = 0; l <= levels; l++) {
         nodeBase[l + 1] = nodeBase[l] + levelNodes[l];
@@ -290,14 +324,15 @@ final class LayeredGraphExplanation {
     boolean[][] forward = forward(i);
     boolean[][] backward = backward(i + 1);
     // every edge of level i with a removed value that is still in y's domain is cut
-    for (int k = graph.levelStart[i]; k < graph.levelStart[i + 1]; k++) {
-      int v = graph.value[k];
-      if (v >= lo
-          && v <= hi
-          && own.contains(v)
-          && forward[i][graph.source[k]]
-          && backward[i + 1][graph.target[k]]) {
-        return false;
+    for (int b = graph.levelBlock[i]; b < graph.levelBlock[i + 1]; b++) {
+      int v = graph.blockValue[b];
+      if (v < lo || v > hi || !own.contains(v)) {
+        continue;
+      }
+      for (int k = graph.blockStart[b]; k < graph.blockStart[b + 1]; k++) {
+        if (forward[i][graph.source[k]] && backward[i + 1][graph.target[k]]) {
+          return false;
+        }
       }
     }
     // removed values of y that were holes before
@@ -344,9 +379,12 @@ final class LayeredGraphExplanation {
       EntryList out) {
     boolean[] unreachable = new boolean[graph.levelNodes[i]];
     boolean[] deadEnd = new boolean[graph.levelNodes[i + 1]];
-    for (int k = graph.levelStart[i]; k < graph.levelStart[i + 1]; k++) {
-      int v = graph.value[k];
-      if (v >= lo && v <= hi && own.contains(v)) {
+    for (int b = graph.levelBlock[i]; b < graph.levelBlock[i + 1]; b++) {
+      int v = graph.blockValue[b];
+      if (v < lo || v > hi || !own.contains(v)) {
+        continue;
+      }
+      for (int k = graph.blockStart[b]; k < graph.blockStart[b + 1]; k++) {
         boolean bySource = !forward[i][graph.source[k]];
         if (bySource && (viaSource || backward[i + 1][graph.target[k]])) {
           unreachable[graph.source[k]] = true;
@@ -489,9 +527,15 @@ final class LayeredGraphExplanation {
     for (int l = 0; l < upTo; l++) {
       reached[l + 1] = new boolean[graph.levelNodes[l + 1]];
       Before d = level(l);
-      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
-        if (reached[l][graph.source[k]] && d.contains(graph.value[k])) {
-          reached[l + 1][graph.target[k]] = true;
+      boolean[] from = reached[l];
+      boolean[] to = reached[l + 1];
+      for (int b = graph.levelBlock[l]; b < graph.levelBlock[l + 1]; b++) {
+        if (d.contains(graph.blockValue[b])) {
+          for (int k = graph.blockStart[b]; k < graph.blockStart[b + 1]; k++) {
+            if (from[graph.source[k]]) {
+              to[graph.target[k]] = true;
+            }
+          }
         }
       }
     }
@@ -506,9 +550,15 @@ final class LayeredGraphExplanation {
     for (int l = graph.levels - 1; l >= from; l--) {
       reached[l] = new boolean[graph.levelNodes[l]];
       Before d = level(l);
-      for (int k = graph.levelStart[l]; k < graph.levelStart[l + 1]; k++) {
-        if (reached[l + 1][graph.target[k]] && d.contains(graph.value[k])) {
-          reached[l][graph.source[k]] = true;
+      boolean[] to = reached[l + 1];
+      boolean[] at = reached[l];
+      for (int b = graph.levelBlock[l]; b < graph.levelBlock[l + 1]; b++) {
+        if (d.contains(graph.blockValue[b])) {
+          for (int k = graph.blockStart[b]; k < graph.blockStart[b + 1]; k++) {
+            if (to[graph.target[k]]) {
+              at[graph.source[k]] = true;
+            }
+          }
         }
       }
     }

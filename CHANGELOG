@@ -7941,8 +7941,19 @@ Version 5.0 (unreleased)
    a list with a bitset instead of three arrays over the nodes, and the
    constraints of a store on one built graph share the stamps of the
    search, which are only read during one call (66 KB instead of 6 MB
-   per constraint on that diagram). WordDesign2-words-mdd-035 and -045
-   (595 and 990 MDDs) are solved; -045 ran out of memory at 6 GB.
+   per constraint on that diagram). The symmetry pass reads an array
+   longer than 64 once however many constraints share it, and the flow
+   encodings of the linear relaxation take the edges on a path and
+   their arc columns once per built graph over equal domains: both read
+   the 1.8 million edges again for each MDD (setup of -055, 1,485 MDDs,
+   164 s -> 9 s). The explanations of a layered graph keep the edges of
+   a level by value and skip the values gone from the domain (20 % more
+   LCG conflicts per second on -035, same explanations). All sizes,
+   -035 to -100 (4,951 MDDs), now set up in 6 to 23 s within 6 GB;
+   -035 and -045 are solved (-045 ran out of memory at 6 GB before),
+   -055 to -100 stay unsolved at 600 s: LCG makes about one conflict a
+   second on these diagrams, and search without learning does not find
+   a solution either.
 
 Version 4.11
 =============
