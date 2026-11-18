@@ -440,6 +440,56 @@ class MddTest {
   }
 
   @Test
+  void supportSearchesOnOneGraphShareTheirStampsAndFindAllSolutions() {
+    // The support searches of the constraints of a store on one built graph share their stamps,
+    // and each keeps the nodes without support as a list with bits, cleared after backtracking:
+    // four overlapping scopes on one diagram, all searched for supports, against brute force.
+    Random random = new Random(31);
+    for (int trial = 0; trial < 40; trial++) {
+      Diagram diagram = randomDiagram(random, 3, 3, 3);
+      Store store = new Store();
+      IntVar[] x = variables(store, 6, 3);
+      IntVar[][] scopes = {
+        {x[0], x[1], x[2]}, {x[1], x[2], x[3]}, {x[2], x[3], x[4]}, {x[3], x[4], x[5]}
+      };
+      ExtensionalSupportMdd[] constraints = new ExtensionalSupportMdd[scopes.length];
+      for (int c = 0; c < scopes.length; c++) {
+        constraints[c] = diagram.constraint(scopes[c]);
+        constraints[c].setPropagation(ExtensionalSupportMdd.Propagation.SUPPORT_SEARCH);
+        store.impose(constraints[c]);
+      }
+      for (int c = 1; c < scopes.length; c++) {
+        assertThat(constraints[c].sharesGraphWith(constraints[0])).as("trial " + trial).isTrue();
+      }
+      long expected =
+          bruteForce(
+                  x,
+                  w ->
+                      diagram.accepts(new int[] {w[0], w[1], w[2]})
+                          && diagram.accepts(new int[] {w[1], w[2], w[3]})
+                          && diagram.accepts(new int[] {w[2], w[3], w[4]})
+                          && diagram.accepts(new int[] {w[3], w[4], w[5]}))
+              .size();
+      IntVar[] order = x.clone();
+      for (int i = order.length - 1; i > 0; i--) {
+        int j = random.nextInt(i + 1);
+        IntVar t = order[i];
+        order[i] = order[j];
+        order[j] = t;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      boolean found =
+          search.labeling(store, new InputOrderSelect<>(store, order, new IndomainMin<>()));
+      assertThat(found ? (long) search.getSolutionListener().solutionsNo() : 0L)
+          .as("trial " + trial)
+          .isEqualTo(expected);
+    }
+  }
+
+  @Test
   void mddRejectsEdgesThatSkipALevel() {
     Store store = new Store();
     IntVar[] x = variables(store, 3, 1);

@@ -7931,6 +7931,19 @@ Version 5.0 (unreleased)
    Efficient CNF simplification based on binary implication graphs,
    SAT 2011.
 
+438. Memory of many MDDs on one diagram, in the MiniZinc library and in
+   support search. fzn_mdd, fzn_mdd_nondet and fzn_cost_mdd pass the
+   arrays of the diagram as they are: array1d made a new array at each
+   call, which MiniZinc wrote again every few calls (WordDesign2-words-
+   mdd-025, XCSP 2023: 31 copies of 1.8 million edges, a FlatZinc of
+   1.1 GB that took 7 GB and 170 s to flatten; now 36 MB in 6 s). The
+   support search of a layered graph keeps the nodes without support as
+   a list with a bitset instead of three arrays over the nodes, and the
+   constraints of a store on one built graph share the stamps of the
+   search, which are only read during one call (66 KB instead of 6 MB
+   per constraint on that diagram). WordDesign2-words-mdd-035 and -045
+   (595 and 990 MDDs) are solved; -045 ran out of memory at 6 GB.
+
 Version 4.11
 =============
 
