@@ -11124,4 +11124,26 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(bh.max()).isEqualTo(2);
   }
+
+  /**
+   * A successor variable of ArcTimes that is also a time variable queues nodes while the constraint
+   * prunes it; they were dropped at the end of the pass. Here t0 = t1 = x1, so node 1 can follow
+   * neither node 0 (t1 &ge; t0 + 1) nor itself (lag 1), and node 1 cannot reach node 0 (t0 &ge; t1
+   * + 2): there is no solution, but the root propagation stopped once x1 was pruned.
+   */
+  @Test
+  void arcTimesFollowsItsOwnPruningOfASharedVariable() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 3);
+    IntVar x1 = new IntVar(store, "x1", 1, 2);
+    IntVar x2 = new IntVar(store, "x2", 2, 3);
+    IntVar t2 = new IntVar(store, "t2", 0, 4);
+    store.impose(
+        new org.jacop.constraints.ArcTimes(
+            new IntVar[] {x0, x1, x2},
+            1,
+            new IntVar[] {x1, x1, t2},
+            new long[][] {{2, 1, 1}, {2, 1, -1}, {2, 0, -1}}));
+    assertThat(store.consistency()).isFalse();
+  }
 }
