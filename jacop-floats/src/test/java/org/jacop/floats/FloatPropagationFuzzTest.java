@@ -447,7 +447,7 @@ class FloatPropagationFuzzTest {
           if (!b.isPoint()) {
             yield 0;
           }
-          yield b.lo().signum() != 0 ? h : -h;
+          yield b.lo().signum() == 0 ? -h : h;
         }
       };
     }
@@ -925,8 +925,8 @@ class FloatPropagationFuzzTest {
       double hi = w.hi()[i];
       if (v instanceof IntVar x) {
         boolean kept = false;
-        for (double k = Math.ceil(lo); k <= hi && !kept; k++) {
-          kept = x.domain.contains((int) k);
+        for (int k = (int) Math.ceil(lo); k <= hi && !kept; k++) {
+          kept = x.domain.contains(k);
         }
         if (!kept) {
           return i;
@@ -1713,8 +1713,8 @@ class FloatPropagationFuzzTest {
           function(
               "HyperbolicPeqR inverse " + h,
               kinds(F, F),
-              tanh ? r(-1, -4) : r(-30, -4),
-              tanh ? r(1, 4) : r(30, 4),
+              r(tanh ? -1 : -30, -4),
+              r(tanh ? 1 : 30, 4),
               1,
               x -> tanh && Math.abs(x[0]) >= 1 ? Double.NaN : guess.applyAsDouble(x[0]),
               x ->
