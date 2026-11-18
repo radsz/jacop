@@ -1272,7 +1272,12 @@ public final class Linearizations {
      * The arc columns of a flow model: an edge whose (level, value) labels no other edge is the
      * value column itself, unless the variable is fixed; all other edges are arcs.
      */
-    private static int arcColumns(IntVar[] list, int[] edges, int size) {
+    private int arcColumns(IntVar[] list, int[] edges, int size) {
+      // the diagrams of one graph over equal domains share their edges and so their count
+      return arcCounts.computeIfAbsent(edges, k -> countArcColumns(list, k, size));
+    }
+
+    private static int countArcColumns(IntVar[] list, int[] edges, int size) {
       long[] keys = new long[size];
       for (int e = 0; e < size; e++) {
         keys[e] = ((long) edges[4 * e] << 32) | (edges[4 * e + 2] & 0xffffffffL);
@@ -1299,9 +1304,7 @@ public final class Linearizations {
       // the arc columns, counted before the edges are grouped: a graph of millions of edges is
       // left out without boxing them (300 diagrams of 1.8 million edges in
       // WordDesign2-words-mdd-025, XCSP 2023)
-      // the diagrams of one graph over equal domains share their edges and so their count
-      if (made + arcCounts.computeIfAbsent(edges, k -> arcColumns(list, k, size))
-          > VALUE_ENCODINGS_MAX) {
+      if (made + arcColumns(list, edges, size) > VALUE_ENCODINGS_MAX) {
         return;
       }
       // the edges of each (level, value)

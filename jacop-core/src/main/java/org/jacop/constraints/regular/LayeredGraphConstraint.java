@@ -1215,8 +1215,6 @@ public abstract class LayeredGraphConstraint extends Constraint
       }
     }
 
-    /** The graph for explanations by cuts, made once for all constraints sharing this graph. */
-    /** The stamps of the support search for the constraints of a store on this graph. */
     /**
      * Returns the edges on a path over the domains of the list, computed again only when they
      * differ from the domains of the last call.
@@ -1236,10 +1234,12 @@ public abstract class LayeredGraphConstraint extends Constraint
       return pathEdges;
     }
 
+    /** The stamps of the support search for the constraints of a store on this graph. */
     synchronized SearchScratch scratch(Store store) {
       return scratches.computeIfAbsent(store, s -> new SearchScratch(nodes, slots, levels));
     }
 
+    /** The graph for explanations by cuts, made once for all constraints sharing this graph. */
     synchronized LayeredGraphExplanation.Graph explanation() {
       if (explanation == null) {
         explanation = new LayeredGraphExplanation.Graph(description);

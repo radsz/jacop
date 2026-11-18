@@ -516,6 +516,12 @@ final class SymmetryBreaking implements ParserTreeConstants {
   // the constraints posted, as their kind and variables, for added()
   private final List<String> postedKinds = new ArrayList<>();
   private final List<IntVar[][]> postedVariables = new ArrayList<>();
+
+  /** The length above which an array is read once however many constraints share it. */
+  private static final int SHARED_ARRAY = 64;
+
+  private static final Atom[] NO_ATOMS = new Atom[0];
+
   // the constraints posted with their symmetries, for local search
   private final SymmetryCanonicalizer canonicalizer = new SymmetryCanonicalizer();
   // the atoms of each named array, read once: a table of a hundred thousand tuples is often an
@@ -523,11 +529,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
   private final Map<String, Atom[]> namedArrays = new HashMap<>();
   // one atom for each integer constant
   private final Map<Integer, Atom> intAtoms = new HashMap<>();
-
   // the key of each array of constants, the same for arrays with the same elements
-  /** The length above which an array is read once however many constraints share it. */
-  private static final int SHARED_ARRAY = 64;
-
   private final Map<Atom[], String> constantArrays = new IdentityHashMap<>();
   private final Map<Contents, String> contentKeys = new HashMap<>();
 
@@ -724,14 +726,10 @@ final class SymmetryBreaking implements ParserTreeConstants {
         ranked.add(iv);
       }
     }
-    // an array shared by many constraints (the diagram of thousands of MDDs) is read once
     Set<Atom[]> readArrays = Collections.newSetFromMap(new IdentityHashMap<>());
     for (Item item : items) {
       for (Atom[] arg : item.args()) {
-        if (arg.length > SHARED_ARRAY && !readArrays.add(arg)) {
-          continue;
-        }
-        for (Atom a : arg) {
+        for (Atom a : unread(arg, readArrays)) {
           if (a.aVar() != null && seen.add(a.aVar())) {
             ranked.add(a.aVar());
           }
@@ -1784,6 +1782,26 @@ final class SymmetryBreaking implements ParserTreeConstants {
   }
 
   /**
+   * Returns the array, or no atoms when it is longer than {@link #SHARED_ARRAY} and was read
+   * before: an array shared by many constraints (the diagram of thousands of MDDs) is read once.
+   */
+  private static Atom[] unread(Atom[] arg, Set<Atom[]> read) {
+    return arg.length > SHARED_ARRAY && !read.add(arg) ? NO_ATOMS : arg;
+  }
+
+  /**
+   * Returns the array, or no atoms when it is longer than {@link #SHARED_ARRAY} and holds only
+   * parameters, which a constraint sharing it with many others reads in vain.
+   */
+  private static Atom[] withVariables(Atom[] arg, Map<Atom[], Atom[]> seen) {
+    if (arg.length <= SHARED_ARRAY) {
+      return arg;
+    }
+    return seen.computeIfAbsent(
+        arg, k -> Arrays.stream(k).allMatch(atom -> atom.aVar() == null) ? NO_ATOMS : k);
+  }
+
+  /**
    * Finds the value spaces of the model: the integer variables joined by constraints that only
    * compare their values. A space with a variable that is used as a number anywhere, or that is the
    * objective or a Boolean, is not one.
@@ -1795,8 +1813,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
     if (objective != null) {
       numeric.add(objective);
     }
-    // an array of parameters shared by many constraints adds nothing
-    Map<Atom[], Boolean> constantArrays = new IdentityHashMap<>();
+    Map<Atom[], Atom[]> parameterArrays = new IdentityHashMap<>();
     for (Item item : items) {
       ValueSpec spec = valueSpec(item);
       boolean[] shared = new boolean[item.args().length];
@@ -1807,13 +1824,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
       IntVar first = null;
       for (int a = 0; a < item.args().length; a++) {
-        Atom[] arg = item.args()[a];
-        if (arg.length > SHARED_ARRAY
-            && constantArrays.computeIfAbsent(
-                arg, k -> Arrays.stream(k).allMatch(atom -> atom.aVar() == null))) {
-          continue;
-        }
-        for (Atom atom : arg) {
+        for (Atom atom : withVariables(item.args()[a], parameterArrays)) {
           IntVar x = atom.aVar();
           if (x == null) {
             continue;
