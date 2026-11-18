@@ -4617,6 +4617,48 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void successorForestNearMissesKeepTheOptimum() throws IOException {
+    // models one constraint away from the path: node 3 without its position link (a cycle through
+    // it is allowed), node 4 used without a successor or without a position, node 2 with two
+    // predecessors; the forest must keep only what still holds, so the optimum stays
+    String[] drops = {
+      "constraint int_lin_eq_imp([1,-1],[e3,p3],1,b3);\n",
+      "constraint int_le_reif(1,x4,u4);\n",
+      "constraint int_le_reif(1,p4,u4);\n",
+      "constraint int_eq(p1,1);\n"
+    };
+    int posted = 0;
+    for (long seed = 1; seed <= 3; seed++) {
+      for (int k = 0; k < drops.length + 1; k++) {
+        String model = prizeCollecting(7, seed);
+        model =
+            k < drops.length
+                ? model.replace(drops[k], "")
+                : model.replaceFirst(
+                    "(constraint int_lin_le\\(\\[[1,]*\\],\\[[^]]*\\]),1\\)", "$1,2)");
+        assertTrue(k == drops.length || !model.contains(drops[k]), model);
+        String[] options = seed == 2 ? new String[] {"-s", "-f"} : new String[] {"-s"};
+        String base = run(model, options)[0];
+        String expected = base.substring(base.lastIndexOf("obj = "));
+        expected = expected.substring(0, expected.indexOf('\n'));
+        try {
+          System.setProperty("org.jacop.fz.successorForest", "true");
+          String[] debug = Arrays.copyOf(options, options.length + 1);
+          debug[options.length] = "-debug";
+          String out = run(model, debug)[0];
+          posted += out.contains("% successor forest:") ? 1 : 0;
+          String got = out.substring(out.lastIndexOf("obj = "));
+          assertEquals(
+              expected, got.substring(0, got.indexOf('\n')), k + " " + seed + "\n" + model);
+        } finally {
+          System.clearProperty("org.jacop.fz.successorForest");
+        }
+      }
+    }
+    assertTrue(posted > 0, "posted " + posted);
+  }
+
+  @Test
   void successorForestCutsKeepTheOptimum() throws IOException {
     // the subtour cuts of a successor forest (off by default) remove the subtours of the LP
     // relaxation and the optimum stays the same; under free search the dense tableau of
