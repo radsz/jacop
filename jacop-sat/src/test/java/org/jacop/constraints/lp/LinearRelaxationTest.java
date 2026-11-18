@@ -33,6 +33,7 @@ package org.jacop.constraints.lp;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.offset;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -881,6 +882,35 @@ class LinearRelaxationTest {
     store.impose(r);
     assertThat(store.consistency()).isTrue();
     assertThat(cost.min()).isEqualTo(n / 2);
+  }
+
+  @Test
+  void rowSourcesAreDroppedAtImposeWithoutTheirStatistics() throws Exception {
+    // the source of every row ("row:LinearInt", ...) is read only by -Dorg.jacop.lp.sourceStats;
+    // kept always, it held a string for each of the 210,000 rows of rcpsp_max psp_ubo500_33
+    Field formSource = LinearRelaxation.class.getDeclaredField("formSource");
+    formSource.setAccessible(true);
+    boolean previous = LpSources.on;
+    try {
+      for (boolean on : new boolean[] {false, true}) {
+        LpSources.on = on;
+        Store store = new Store();
+        IntVar x = new IntVar(store, "x", 0, 4);
+        IntVar y = new IntVar(store, "y", 0, 4);
+        IntVar cost = new IntVar(store, "cost", 0, 8);
+        store.impose(new LinearInt(new IntVar[] {x, y}, new int[] {1, 1}, ">=", 3));
+        store.impose(new LinearInt(new IntVar[] {x, y, cost}, new int[] {1, 2, -1}, "==", 0));
+        LinearRelaxation r = LinearRelaxation.of(store, cost, false);
+        assertThat(r).isNotNull();
+        assertThat((Map<?, ?>) formSource.get(r)).as("before impose, statistics %b", on).hasSize(2);
+        store.impose(r);
+        assertThat(store.consistency()).isTrue();
+        assertThat((Map<?, ?>) formSource.get(r)).as("statistics %b", on).hasSize(on ? 2 : 0);
+        assertThat(cost.min()).isEqualTo(3);
+      }
+    } finally {
+      LpSources.on = previous;
+    }
   }
 
   // shifts that overlap pairwise: the pair rows x_i + x_j <= 1 allow half of each set of shifts
