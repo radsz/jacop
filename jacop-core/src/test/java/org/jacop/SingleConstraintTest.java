@@ -234,6 +234,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SplitSelect;
 import org.jacop.util.DominatorTree;
+import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -6674,6 +6675,24 @@ class SingleConstraintTest extends TestHelper {
   // exactly what the probe of each arc by pivots of the network simplex prunes: random dives over
   // random networks with
   // parallel arcs, capacities up to 9 and a tight cost bound, compared domain by domain.
+  // an implication of a constraint that forwards no variable events kept an empty LinkedHashMap of
+  // its own: 105 MB over the 623,000 implications of XCSP 2022 RoomMate-sr0700
+  @Test
+  void queueForwardWithoutForwardingKeepsNoMapOfItsOwn() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    QueueForward<PrimitiveConstraint> none =
+        new QueueForward<>(new XlteqC(x, 4), List.<Var>of(x, y));
+    assertThat(none.isEmpty()).isTrue();
+    assertThat(none.forwardMap).isEmpty();
+    assertThat(none.forwardMap).isNotInstanceOf(java.util.LinkedHashMap.class);
+    PrimitiveConstraint and = new And(new XlteqC(x, 4), new XlteqC(y, 3));
+    QueueForward<PrimitiveConstraint> forwarding = new QueueForward<>(and, List.<Var>of(x, y));
+    assertThat(forwarding.isEmpty()).isFalse();
+    assertThat(forwarding.forwardMap).containsOnlyKeys(x, y);
+  }
+
   @Test
   void testNetworkFlowShortestPathDecisionsMatchProbes() {
     assertNetworkFlowSettingsAgree(
