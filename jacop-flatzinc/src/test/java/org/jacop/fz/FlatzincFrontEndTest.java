@@ -2760,6 +2760,59 @@ class FlatzincFrontEndTest {
     }
   }
 
+  /** Pigeons x0..x(n-1) in 1..holes, pairwise different by binary tables (minus one pair). */
+  private static String tablePigeons(int n, int holes, boolean dropPair) {
+    StringBuilder ne = new StringBuilder();
+    for (int a = 1; a <= holes; a++) {
+      for (int b = 1; b <= holes; b++) {
+        if (a != b && !(dropPair && a == 1 && b == 2)) {
+          ne.append(ne.isEmpty() ? "" : ",").append(a).append(',').append(b);
+        }
+      }
+    }
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    fzn.append("array [1..").append(ne.toString().split(",").length).append("] of int: T = [");
+    fzn.append(ne).append("];\n");
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 1..").append(holes).append(": x").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        fzn.append("constraint jacop_table_int([x").append(i).append(",x").append(j);
+        fzn.append("],T);\n");
+      }
+    }
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void binaryTablesOfDisequalitiesBecomeAllDifferent() throws IOException {
+    // XCSP3 pigeonsPlus writes x_i != x_j as binary tables; read as disequalities they give an
+    // all-different over 13 pigeons in 12 holes, which fails at the root; the tables alone search
+    // for hours (pigeonsPlus-11-04 took millions of failures)
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60),
+            () -> run(tablePigeons(13, 12, false), "--lcg", "off", "-t", "5000"))[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void binaryTableMissingOnlySomeEqualPairsIsNoDisequality() throws IOException {
+    // (1,2) is missing as well, so the table is no disequality: the solutions stay those of the
+    // tables (4 pigeons in 4 holes, 1 never at a smaller index than 2: 12 of 24)
+    String model = tablePigeons(4, 4, true);
+    Set<String> withDetection = solveAll(model);
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      assertEquals(solveAll(model), withDetection);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
+    assertEquals(12, withDetection.size(), withDetection.toString());
+  }
+
   @Test
   void intComparisonWithConstantAndFixedBooleanKeepsExactlyTheSolutions() throws IOException {
     // int_ne_reif(x, c, false) left x unconstrained instead of fixing it to c, and the half-reified
