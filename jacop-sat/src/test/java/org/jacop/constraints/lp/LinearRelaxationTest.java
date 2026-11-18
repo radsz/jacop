@@ -886,8 +886,8 @@ class LinearRelaxationTest {
 
   @Test
   void rowSourcesAreDroppedAtImposeWithoutTheirStatistics() throws Exception {
-    // the source of every row ("row:LinearInt", ...) is read only by -Dorg.jacop.lp.sourceStats;
-    // kept always, it held a string for each of the 210,000 rows of rcpsp_max psp_ubo500_33
+    // The source of each row is read only by the LP source statistics. Kept always, it held a
+    // string for each of the 210,000 rows of rcpsp_max psp_ubo500_33.
     Field formSource = LinearRelaxation.class.getDeclaredField("formSource");
     formSource.setAccessible(true);
     boolean previous = LpSources.on;
