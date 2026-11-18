@@ -5009,6 +5009,87 @@ class LcgSolverTest {
   }
 
   /**
+   * Neighbourhood runs pause while the best solution stops improving ({@link
+   * LcgSolver#setLnsStall}), so that the time goes to the proof, and the optimum is still found and
+   * proved. Under free search they took more than half of the time after the optimum on
+   * java-routing trip_8_3 and fox-geese-corn 17 (MiniZinc Challenge), whose proofs then did not
+   * come in 600 s.
+   */
+  @Test
+  void lnsStallPausesNeighbourhoodRuns() {
+    Random rnd = new Random(31);
+    long runsPaused = 0;
+    long runsAlways = 0;
+    long skips = 0;
+    for (int k = 0; k < 30; k++) {
+      int n = 6;
+      int[][] neq = new int[n * n][];
+      int edges = 0;
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            neq[edges++] = new int[] {i, j};
+          }
+        }
+      }
+      int[] w = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(11) - 3;
+      }
+      w[n] = -1;
+      int best = Integer.MAX_VALUE;
+      int[] v = new int[n];
+      for (int code = 0; code < 46656; code++) {
+        int c = code;
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+          v[i] = c % 6;
+          c /= 6;
+          sum += w[i] * v[i];
+        }
+        boolean ok = true;
+        for (int e = 0; e < edges; e++) {
+          ok &= v[neq[e][0]] != v[neq[e][1]];
+        }
+        if (ok) {
+          best = Math.min(best, sum);
+        }
+      }
+      for (boolean pause : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 5);
+        }
+        for (int e = 0; e < edges; e++) {
+          store.impose(new XneqY(x[neq[e][0]], x[neq[e][1]]));
+        }
+        IntVar cost = new IntVar(store, "cost", -1000, 1000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        store.impose(new LinearInt(terms, w, "==", 0));
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setLowerBoundSearch(0.5, 2);
+        solver.setLns(new AdaptiveLns(store, x, cost, new Random(k)), 4.0, 2);
+        // a pause as soon as any time passes without a better solution
+        solver.setLnsStall(pause ? 1e-9 : 0, 0);
+        assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+        assertThat(solver.value(cost)).isEqualTo(best);
+        if (pause) {
+          runsPaused += solver.lnsRuns;
+          skips += solver.lnsStallSkips;
+        } else {
+          runsAlways += solver.lnsRuns;
+          assertThat(solver.lnsStallSkips).isZero();
+        }
+      }
+    }
+    assertThat(skips).isPositive();
+    assertThat(runsPaused).isLessThan(runsAlways);
+  }
+
+  /**
    * A stop during the runs in large neighbourhoods ends them: the runs that follow return at once
    * without a conflict and must not count as neighbourhoods too large. The slow-LCG hand-over of
    * free search stopped LCG in its runs on MaximumAgreementForest2-exact12 (XCSP 2026), which went
