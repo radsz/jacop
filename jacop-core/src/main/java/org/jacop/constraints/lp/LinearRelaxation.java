@@ -3310,7 +3310,22 @@ public class LinearRelaxation extends Constraint
   private int[] sentMin = new int[0];
   private int[] sentMax = new int[0];
 
+  // rows on probation whose solves stop at the limit and have failed no node yet are dropped: the
+  // backed-off solves may never reach the end of the probation, and the base rows alone can fail
+  // nodes (rotating workforce Example1370: 892 extra rows, 32 of 34 solves at the limit in 20 s;
+  // without them the regular flow rows prove it infeasible in 1 s)
+  private void endProbation() {
+    if (probation
+        && beforeExtra != null
+        && failures == extraFailures
+        && limits - extraLimits >= PROBATION_LIMITS) {
+      probation = false;
+      dropExtraRows();
+    }
+  }
+
   private void sendBounds() {
+    endProbation();
     int n = lp.columns();
     boolean all = boundsOf != lp || sentMin.length != n;
     if (all) {
@@ -3475,16 +3490,6 @@ public class LinearRelaxation extends Constraint
           && !failingWithExtra()
           && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
               || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
-        dropExtraRows();
-      } else if (probation
-          && beforeExtra != null
-          && failures == extraFailures
-          && extraHits >= PROBATION_LIMITS) {
-        // rows on probation whose solves stop at the limit and have failed no node yet: the
-        // backed-off solves may never reach the end of the probation, and the base rows alone
-        // can fail nodes (rotating workforce Example1370: 892 extra rows, 32 of 34 solves at the
-        // limit in 20 s; without them the regular flow rows prove it infeasible in 1 s)
-        probation = false;
         dropExtraRows();
       }
       if (!ANYTIME_BOUND || objective == null) {
