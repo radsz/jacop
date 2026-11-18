@@ -666,6 +666,17 @@ public abstract class Constraint extends DecomposedConstraint<Constraint> {
    * @param target the equivalent constraint, not imposed yet.
    */
   protected final void rewriteTo(Store store, Constraint target) {
+    store.requestRewrite(this, target);
+  }
+
+  /**
+   * Imposes the target of {@link #rewriteTo(Store, Constraint)} and entails this constraint. The
+   * store calls it after this constraint's consistency() has returned.
+   *
+   * @param store the store.
+   * @param target the equivalent constraint, not imposed yet.
+   */
+  public final void completeRewrite(Store store, Constraint target) {
     target.rewrittenFrom = reasonOwner();
     target.impose(store);
     removeConstraint();

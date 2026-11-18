@@ -942,6 +942,32 @@ public class Store {
     return false;
   }
 
+  // a rewriting asked for by the running constraint (Constraint.rewriteTo), done once it returns
+  private Constraint rewriteSource;
+
+  private Constraint rewriteTarget;
+
+  /**
+   * Records that the running constraint is replaced by an equivalent one. The store imposes the
+   * target and entails the source once the source's consistency() returns, so the imposing code is
+   * compiled once here instead of into every constraint that rewrites itself.
+   *
+   * @param source the running constraint.
+   * @param target the equivalent constraint, not imposed yet.
+   */
+  public void requestRewrite(Constraint source, Constraint target) {
+    rewriteSource = source;
+    rewriteTarget = target;
+  }
+
+  private void applyRewrite() {
+    Constraint source = rewriteSource;
+    Constraint target = rewriteTarget;
+    rewriteSource = null;
+    rewriteTarget = null;
+    source.completeRewrite(this, target);
+  }
+
   /**
    * This function computes the consistency function. It evaluates all constraints which are in the
    * changed queue. With {@link #setReturnAfterPruning(boolean)} it returns after the first
@@ -987,6 +1013,9 @@ public class Store {
           currentConstraint.countConsistencyCall();
           long changesBefore = domainChanges;
           currentConstraint.consistency(this);
+          if (rewriteTarget != null) {
+            applyRewrite();
+          }
           if (variableActivityManagement) {
             updateActivities(currentConstraint);
             variablesPrunned.clear();
@@ -1000,6 +1029,8 @@ public class Store {
       }
 
     } catch (FailException _) {
+      rewriteSource = null;
+      rewriteTarget = null;
       handleConsistencyFailure();
       return false;
     }
