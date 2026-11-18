@@ -772,6 +772,7 @@ public class GiantTourDetector implements ParserTreeConstants {
     Set<IntVar> aliased = Collections.newSetFromMap(new IdentityHashMap<>());
     aliased.addAll(support.dictionary.aliasTable.keySet());
     aliased.addAll(support.dictionary.aliasTable.values());
+    support.dictionary.addDeclaredEqualities(aliased);
     IntVar[] cost = new IntVar[n];
     Element[] element = new Element[n];
     Map<IntVar, Integer> node = new IdentityHashMap<>();
