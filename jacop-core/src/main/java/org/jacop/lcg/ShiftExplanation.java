@@ -47,9 +47,29 @@ public final class ShiftExplanation {
   // values walked for one reason before giving up on it
   private static final int MAX_VALUES = 4096;
 
+  /**
+   * The system property that turns the split-bounds reasons on or off whatever the search; unset,
+   * the solver decides by its search (see {@link #setSplitBounds}).
+   */
+  public static final String SPLIT_BOUNDS_PROPERTY = "jacop.lcg.shiftSplitBounds";
+
   // disjointness explained by the bounds that make it, not by both bounds of both variables
-  private static final boolean SPLIT_BOUNDS =
-      !"false".equals(System.getProperty("jacop.lcg.shiftSplitBounds"));
+  private static boolean splitBounds = !"false".equals(System.getProperty(SPLIT_BOUNDS_PROPERTY));
+
+  /**
+   * Sets whether disjoint ranges are explained by the bounds that separate them (one bound of each
+   * variable, lifted) and overlapping ranges by the bounds that make the common range, instead of
+   * both bounds of both variables. With both variables fixed the old reason named their values, so
+   * a learnt clause pinned the value of every variable it went through (an element over variables
+   * choosing a bin named the bin of every earlier item). The system property {@value
+   * #SPLIT_BOUNDS_PROPERTY} overrides it.
+   *
+   * @param on whether the split reasons are used
+   */
+  public static void setSplitBounds(boolean on) {
+    String p = System.getProperty(SPLIT_BOUNDS_PROPERTY);
+    splitBounds = p == null ? on : Boolean.parseBoolean(p);
+  }
 
   private ShiftExplanation() {}
 
@@ -161,7 +181,7 @@ public final class ShiftExplanation {
     // the source's range seen in the target's values
     long imageMin = sign > 0 ? sourceMin + k : k - sourceMax;
     long imageMax = sign > 0 ? sourceMax + k : k - sourceMin;
-    if (SPLIT_BOUNDS && (targetMin > imageMax || targetMax < imageMin)) {
+    if (splitBounds && (targetMin > imageMax || targetMax < imageMin)) {
       separated(trail, position, target, source, k, sign, targetMin > imageMax, out);
       return true;
     }
@@ -175,7 +195,7 @@ public final class ShiftExplanation {
         return false;
       }
     }
-    if (!SPLIT_BOUNDS) {
+    if (!splitBounds) {
       trail.addLowerBound(target, position, out);
       trail.addUpperBound(target, position, out);
       trail.addLowerBound(source, position, out);
