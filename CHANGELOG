@@ -8018,6 +8018,24 @@ Version 5.0 (unreleased)
    (08 and table-08 3.3 -> 6.6 s and 4.6 -> 10.4 s). Fires on none of
    the 240 wide instances.
 
+440. JaSAT (CdclSolver) visits watches faster, with the same search: a
+   watch is one long (clause and blocking literal), so a visit whose
+   blocking literal is true is one load, and the watch is written back
+   only once an earlier watch has left the list; every watch list keeps
+   its length in its first slot (no separate size arrays, one cache line
+   fewer per added watch); arena compaction copies the clauses in the
+   order the watch lists of the most active variables visit them (as
+   CaDiCaL's arena moving); chronological backtracking stops looking for
+   the assignment level at the current level. On the 83 SAT Competition
+   2024/25 CNFs of the SAT screen that run at least 3 s, reaching the same
+   conflict count takes 0.91x the time (geomean) before congruence
+   closure, scheduled vivification and jump search came in, and 0.95x
+   with them (they spend time this change does not touch); on fpga-routing JaSAT
+   makes as many propagations as Kissat but visits about 80 watches per
+   propagation, 86 % of them stopped by the blocking literal. CdclMain
+   takes --conflicts N (stop after N conflicts) and prints the learnt
+   clause count and arena size.
+
 Version 4.11
 =============
 
