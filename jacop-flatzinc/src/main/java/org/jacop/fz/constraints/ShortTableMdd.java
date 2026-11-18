@@ -62,15 +62,44 @@ import org.jacop.core.IntervalEnumeration;
  */
 final class ShortTableMdd {
 
-  /**
-   * A diagram in the MiniZinc form.
-   *
-   * @param level the level of each node 1..N, from 1 (the root).
-   * @param from the source node of each edge.
-   * @param label the values of each edge.
-   * @param to the target node of each edge, 0 for the terminal node.
-   */
-  record Diagram(int[] level, int[] from, IntDomain[] label, int[] to) {}
+  /** A diagram in the MiniZinc form; the arrays are shared, not copied. */
+  static final class Diagram {
+    private final int[] level;
+    private final int[] from;
+    private final IntDomain[] label;
+    private final int[] to;
+
+    /**
+     * It creates a diagram from its arrays.
+     *
+     * @param level the level of each node 1..N, from 1 (the root).
+     * @param from the source node of each edge.
+     * @param label the values of each edge.
+     * @param to the target node of each edge, 0 for the terminal node.
+     */
+    Diagram(int[] level, int[] from, IntDomain[] label, int[] to) {
+      this.level = level;
+      this.from = from;
+      this.label = label;
+      this.to = to;
+    }
+
+    int[] level() {
+      return level;
+    }
+
+    int[] from() {
+      return from;
+    }
+
+    IntDomain[] label() {
+      return label;
+    }
+
+    int[] to() {
+      return to;
+    }
+  }
 
   /** It is thrown when the diagram has more edges than allowed. */
   private static final class TooLarge extends RuntimeException {
@@ -164,7 +193,7 @@ final class ShortTableMdd {
     try {
       int root = builder.node(0, all);
       return root < 0 ? null : builder.miniZincForm(root);
-    } catch (TooLarge e) {
+    } catch (TooLarge _) {
       return null;
     }
   }

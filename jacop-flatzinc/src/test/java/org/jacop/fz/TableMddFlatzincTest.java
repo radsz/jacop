@@ -192,7 +192,8 @@ class TableMddFlatzincTest {
     // 1,000-odd rows, a diagram of a few dozen edges
     String line =
         Arrays.stream(on.split("\\R")).filter(l -> l.contains(" edges")).findFirst().orElseThrow();
-    int edges = Integer.parseInt(line.replaceAll(".*: (\\d+) edges.*", "$1"));
+    int edges =
+        Integer.parseInt(line.substring(line.lastIndexOf(": ") + 2, line.indexOf(" edges")));
     assertTrue(edges < 100, line);
   }
 

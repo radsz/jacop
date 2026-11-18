@@ -2286,18 +2286,19 @@ class GlobalConstraints implements ParserTreeConstants {
       key.add(domains[i].toString());
     }
     long limit = Math.min(Integer.MAX_VALUE, (long) rows.size() * x.length / tableMddRatio());
-    Optional<ShortTableMdd.Diagram> diagram = tableDiagrams.get(key);
-    if (diagram == null) {
-      diagram = Optional.ofNullable(ShortTableMdd.compile(rows, star, domains, (int) limit));
-      tableDiagrams.put(key, diagram);
+    if (!tableDiagrams.containsKey(key)) {
+      Optional<ShortTableMdd.Diagram> compiled =
+          Optional.ofNullable(ShortTableMdd.compile(rows, star, domains, (int) limit));
+      tableDiagrams.put(key, compiled);
       if (support.options.debug()) {
         FzConsole.println(
             "% table of "
                 + rows.size()
                 + " rows as diagram: "
-                + diagram.map(d -> d.from().length + " edges").orElse("too large"));
+                + compiled.map(d -> d.from().length + " edges").orElse("too large"));
       }
     }
+    Optional<ShortTableMdd.Diagram> diagram = tableDiagrams.get(key);
     if (diagram.isEmpty()) {
       return null;
     }
