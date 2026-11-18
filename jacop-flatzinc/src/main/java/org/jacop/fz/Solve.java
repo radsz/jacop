@@ -111,6 +111,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ShiftExplanation;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.BooleanProducts;
@@ -724,6 +725,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
     options = opt;
+    // split-bounds disjointness reasons: on for fixed search, where binpack_11 goes from 293k to
+    // 7.5k failures and wide-quick at 240 s takes 0.944 of the time; off under -f, where costas
+    // and blocks-world lost on three paired rounds at 600 s (total 1.038). Set before any solver
+    // (root probing, decomposition bounds) explains.
+    ShiftExplanation.setSplitBounds(!options.freeSearch());
     initProbe();
     dictionary = table;
     output = table;

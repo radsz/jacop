@@ -8041,6 +8041,23 @@ Version 5.0 (unreleased)
    takes --conflicts N (stop after N conflicts) and prints the learnt
    clause count and arena size.
 
+445. Under lazy clause generation, the reason why two variables have no
+   common value (an element over variables dropping an index, x = y,
+   x + c = z, x + y = c, x != y) cites only the bounds that separate their
+   ranges, each weakened as far as the other allows, and, when the ranges
+   overlap, only the bounds that set the common range; before, it cited
+   both bounds of both variables. With both variables fixed the old reason
+   named both values, so a learnt clause pinned the value of every
+   variable it went through. MiniZinc Challenge 2016 java-auto-gen
+   binpack_11 under its search annotation: 293k -> 7.5k failures,
+   27 -> 2.1 s (Chuffed 0.14 32k failures). Paired runs at 600 s on the
+   85 wide instances it reaches: binpack_11 38 -> 6 s, lot-sizing
+   pigment20a 184 -> 88 s, evm-super-compilation 140 -> 75 s, oocsp_racks
+   030_mii8 95 -> 47 s, seat-moving sm-10-13-00 loses its proof; wide-quick
+   at 240 s takes 0.944 of the time. On for fixed search, off under -f
+   (costas-array and blocks-world slower over three rounds);
+   -Djacop.lcg.shiftSplitBounds=true|false overrides.
+
 Version 4.11
 =============
 
