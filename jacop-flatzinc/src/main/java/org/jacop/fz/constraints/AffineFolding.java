@@ -500,5 +500,20 @@ public class AffineFolding implements ParserTreeConstants {
     public int size() {
       return size;
     }
+
+    // equal to any set with the same constraints, as a set is
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Set<?> other && other.size() == size && containsAll(other);
+    }
+
+    @Override
+    public int hashCode() {
+      int h = 0;
+      for (int k = 0; k < size; k++) {
+        h += elements[k].hashCode();
+      }
+      return h;
+    }
   }
 }

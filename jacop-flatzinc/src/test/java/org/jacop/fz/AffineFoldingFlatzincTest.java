@@ -179,6 +179,9 @@ class AffineFoldingFlatzincTest {
     assertEquals(List.of(a, b, c), new ArrayList<>(set));
     assertEquals(3, set.size());
     assertFalse(set instanceof HashSet);
+    assertEquals(Set.of(a, b, c), set);
+    assertEquals(set, Set.of(c, b, a));
+    assertEquals(Set.of(a, b, c).hashCode(), set.hashCode());
   }
 
   @Test
