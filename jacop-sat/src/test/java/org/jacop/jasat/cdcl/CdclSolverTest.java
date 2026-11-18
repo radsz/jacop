@@ -41,6 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -50,6 +51,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.locks.LockSupport;
+import java.util.function.LongSupplier;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -494,6 +496,33 @@ class CdclSolverTest {
     }
     assertTrue(conflicts[0] > 0);
     assertEquals(conflicts[0], conflicts[1]);
+  }
+
+  @Test
+  void stoppedClockReadsLikeTheSolverWithoutHoldingIt() {
+    // free search keeps this clock of the LCG solver that gave way, and drops the solver and its
+    // clauses (rcpsp-wet-diverse j90_48_4 under -f ran out of 4 GB while it kept them)
+    CdclSolver s = new CdclSolver();
+    s.setVirtualClock(true);
+    long[] external = {1_000};
+    s.setExternalWork(() -> external[0]);
+    pigeonhole(s, 8);
+    s.setDeadline(s.now() + 2 * 1_000_000L);
+    assertEquals(CdclSolver.UNKNOWN, s.solve());
+    LongSupplier clock = s.stoppedClock();
+    assertEquals(s.now(), clock.getAsLong());
+    external[0] += CdclSolver.VIRTUAL_WORK_PER_MS;
+    // the store's propagations after the hand-over still count
+    assertEquals(s.now(), clock.getAsLong());
+    assertEquals(s.deadline() - s.now(), s.deadline() - clock.getAsLong());
+    // the clock holds the work done, not the solver
+    for (Field f : clock.getClass().getDeclaredFields()) {
+      assertFalse(CdclSolver.class.isAssignableFrom(f.getType()), f.toString());
+    }
+    CdclSolver wall = new CdclSolver();
+    long before = System.nanoTime();
+    long now = wall.stoppedClock().getAsLong();
+    assertTrue(now >= before && now <= System.nanoTime());
   }
 
   @Test
@@ -1195,5 +1224,86 @@ class CdclSolverTest {
       }
       assertEquals(in.size(), count, "run " + run);
     }
+  }
+
+  /** Solves with sweeping and probing on or off, checks a model or the DRAT proof. */
+  private static CdclSolver solveInprocessing(List<int[]> f, int vars, boolean on)
+      throws IOException {
+    CdclSolver s = new CdclSolver();
+    s.setChecking(true);
+    s.setSweeping(on);
+    s.setProbing(on);
+    // lucky assignments solve these small formulas before the elimination round
+    s.setLucky(false);
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
+    DratWriter drat = new DratWriter(out);
+    s.setProof(drat);
+    s.ensureVars(vars);
+    for (int[] c : f) {
+      s.addClause(c);
+    }
+    int result = s.solve();
+    drat.close();
+    if (result == CdclSolver.SAT) {
+      assertTrue(satisfies(f, model(s, vars)), "model");
+    } else {
+      assertEquals(CdclSolver.UNSAT, result);
+      assertNull(RupChecker.check(vars, f, out.toString(StandardCharsets.US_ASCII), true));
+    }
+    return s;
+  }
+
+  @Test
+  void sweepingRefutesMitersOfEquivalentCircuits() throws IOException {
+    // two differently built copies of a circuit and a miter: sweeping finds the equivalent signals,
+    // substitutes them and often refutes the miter before any conflict
+    int refutedBySweeping = 0;
+    for (int run = 0; run < 300; run++) {
+      int[] vars = new int[1];
+      List<int[]> f = CdclFuzzTest.circuitFormula(new Random(run), vars);
+      CdclSolver on = solveInprocessing(f, vars[0], true);
+      CdclSolver off = solveInprocessing(f, vars[0], false);
+      assertEquals(off.isOk(), on.isOk(), "run " + run);
+      if (!on.isOk() && on.conflicts == 0 && on.sweepEquivalences > 0) {
+        refutedBySweeping++;
+      }
+    }
+    assertTrue(refutedBySweeping > 0, "no miter refuted by sweeping alone");
+  }
+
+  @Test
+  void probingFindsAFailedLiteral() throws IOException {
+    // 1 implies 2 and 3 through binary clauses, which clash: probing 1 gives the unit -1
+    List<int[]> f = new ArrayList<>();
+    f.add(new int[] {-1, 2});
+    f.add(new int[] {-1, 3});
+    f.add(new int[] {-2, -3});
+    f.add(new int[] {1, 4, 5});
+    f.add(new int[] {1, -4, 5});
+    f.add(new int[] {1, 4, -5});
+    CdclSolver s = solveInprocessing(f, 5, true);
+    assertTrue(s.failedLiterals > 0);
+    assertFalse(s.modelValue(1));
+    assertTrue(s.modelValue(4) && s.modelValue(5));
+  }
+
+  @Test
+  void sweptEquivalencesExtendModels() throws IOException {
+    // x1 = x2 AND x3 twice (x4 the copy); sweeping substitutes one copy, and the model of the
+    // reduced formula gives the substituted variable its value back
+    List<int[]> f = new ArrayList<>();
+    f.add(new int[] {-1, 2});
+    f.add(new int[] {-1, 3});
+    f.add(new int[] {1, -2, -3});
+    f.add(new int[] {-4, 2});
+    f.add(new int[] {-4, 3});
+    f.add(new int[] {4, -2, -3});
+    f.add(new int[] {1, 4, 5});
+    f.add(new int[] {2, 6});
+    f.add(new int[] {3, -6});
+    CdclSolver s = solveInprocessing(f, 6, true);
+    assertTrue(s.isOk());
+    assertTrue(s.sweepEquivalences > 0);
+    assertEquals(s.modelValue(1), s.modelValue(4));
   }
 }

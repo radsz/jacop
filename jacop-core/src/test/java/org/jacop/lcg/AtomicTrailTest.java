@@ -580,6 +580,31 @@ class AtomicTrailTest {
    * explanation never count.
    */
   @Test
+  void detachedTrailIsNotKeptByTheBooleanVariablesItNumbered() {
+    // every Boolean variable pointed to the trail that numbered it, and the trail to the LCG solver
+    // through its callbacks: after LCG gave way to free search without learning, the whole solver
+    // stayed live (rcpsp-wet-diverse j90_48_4 under -f, 2.35 million variables)
+    Store store = new Store();
+    BooleanVar a = new BooleanVar(store, "a");
+    BooleanVar b = new BooleanVar(store, "b");
+    AtomicTrail trail = new AtomicTrail(store);
+    int idA = trail.id(a);
+    int idB = trail.id(b);
+    assertThat(a.trailOwner).isSameAs(trail);
+    trail.detach();
+    assertThat(a.trailOwner).isNull();
+    assertThat(b.trailOwner).isNull();
+    // a detached trail still knows its variables by the same numbers
+    assertThat(trail.id(b)).isEqualTo(idB);
+    assertThat(trail.id(a)).isEqualTo(idA);
+    // another trail's numbering stays
+    AtomicTrail other = new AtomicTrail(store);
+    other.id(a);
+    trail.detach();
+    assertThat(a.trailOwner).isSameAs(other);
+  }
+
+  @Test
   void entryMarksAreFreshForEveryCallAndCoverThePosition() {
     AtomicTrail trail = new AtomicTrail(new Store());
     int first = trail.newEntryMark(10);
@@ -601,6 +626,25 @@ class AtomicTrailTest {
    * reason is the compulsory part, not one removal per value (carpet-cutting had cumulative reasons
    * of 300 to 600 atoms this way).
    */
+  @Test
+  void rootDomainOfAVariableFirstChangedAboveTheRootIsItsDomainThere() {
+    // a variable created after the trail and first changed at level 1 took the domain of level 1
+    // as its root: the objective of a --proof run, fixed while tabu search checked a solution,
+    // was a constant in the OPB model (MiniZinc fuzz seed 2022446)
+    Store store = new Store();
+    new IntVar(store, "a", 0, 1);
+    AtomicTrail trail = new AtomicTrail(store);
+    IntVar late = new IntVar(store, "late", -2, 0);
+    store.setLevel(1);
+    late.domain.in(store.level, late, -2, -2);
+    assertThat(trail.rootDomain(late).min()).isEqualTo(-2);
+    assertThat(trail.rootDomain(late).max()).isZero();
+    store.removeLevel(1);
+    store.setLevel(0);
+    assertThat(late.max()).isZero();
+    assertThat(trail.rootDomain(late).max()).isZero();
+  }
+
   @Test
   void rootDomainOfAVariableCreatedLaterGrowsTheArrays() {
     // root[slot(x)] read the array before slot(x) grew it: an index out of bounds

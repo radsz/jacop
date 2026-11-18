@@ -30,6 +30,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -268,6 +269,177 @@ class XcspTableFlatzincTest {
     }
   }
 
+  @Test
+  void numberedPathMatchesBruteForce() throws IOException {
+    // a tour numbered 1..k over random arcs (CalvinPuzzle of XCSP 2023) gets a redundant circuit
+    Random random = new Random(20261117);
+    for (int run = 0; run < 40; run++) {
+      int k = 4 + random.nextInt(3);
+      boolean fixedFirst = random.nextBoolean();
+      boolean table = random.nextBoolean();
+      boolean[][] arc = new boolean[k][k];
+      for (int c = 0; c < k; c++) {
+        for (int d = 0; d < k; d++) {
+          arc[c][d] = c != d && random.nextInt(10) < 5;
+        }
+        // at least one arc that the cell of value 1 does not make impossible
+        int d = 1 + random.nextInt(k - 1);
+        arc[c][d == c ? (c + 1) % k == 0 ? 1 : (c + 1) % k : d] = true;
+      }
+      String fzn = numberedPath(k, arc, fixedFirst, table, random);
+      Set<String> expected = new TreeSet<>();
+      int[] x = new int[k];
+      enumeratePaths(x, 0, new boolean[k + 1], arc, fixedFirst, expected);
+      String message = "run " + run + "\n" + fzn;
+      assertTrue(
+          solve(fzn, "-debug").contains("numbered path detector: circuit over " + k), message);
+      assertEquals(expected, solveAll(fzn), message);
+      assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
+    }
+  }
+
+  private static String numberedPath(
+      int k, boolean[][] arc, boolean fixedFirst, boolean table, Random random) {
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder constraints = new StringBuilder();
+    String[] cell = new String[k];
+    for (int c = 0; c < k; c++) {
+      cell[c] = c == 0 && fixedFirst ? "1" : "x" + c;
+      if (!cell[c].equals("1")) {
+        fzn.append("var 1..").append(k).append(": x").append(c).append(";\n");
+      }
+    }
+    for (int c = 0; c < k; c++) {
+      List<Integer> next = new ArrayList<>();
+      for (int d = 0; d < k; d++) {
+        if (arc[c][d]) {
+          next.add(d);
+        }
+      }
+      if (table) {
+        List<int[]> rows = new ArrayList<>();
+        for (int v = 1; v < k; v++) {
+          for (int i = 0; i < next.size(); i++) {
+            int[] row = new int[next.size() + 1];
+            Arrays.fill(row, STAR);
+            row[0] = v;
+            row[i + 1] = v + 1;
+            rows.add(row);
+          }
+        }
+        int[] last = new int[next.size() + 1];
+        Arrays.fill(last, STAR);
+        last[0] = k;
+        rows.add(last);
+        String scope =
+            cell[c] + next.stream().map(d -> "," + cell[d]).collect(Collectors.joining());
+        String cells =
+            rows.stream()
+                .flatMapToInt(Arrays::stream)
+                .mapToObj(String::valueOf)
+                .collect(Collectors.joining(","));
+        constraints
+            .append("constraint jacop_short_table_int([")
+            .append(scope)
+            .append("],[")
+            .append(cells)
+            .append("],")
+            .append(STAR)
+            .append(");\n");
+        continue;
+      }
+      // the literals x[d] = x[c] + 1 as the MiniZinc compiler writes them
+      List<String> literals = new ArrayList<>();
+      for (int d : next) {
+        String e = "e" + c + "_" + d;
+        String i = "i" + c + "_" + d;
+        if (fixedFirst && d == 0) {
+          literals.add("0");
+          continue;
+        }
+        fzn.append("var bool: ").append(e).append(";\nvar 0..1: ").append(i).append(";\n");
+        if (fixedFirst && c == 0) {
+          constraints.append("constraint int_eq_reif(").append(cell[d]).append(",2,");
+        } else if (random.nextBoolean()) {
+          constraints.append(
+              "constraint int_lin_eq_reif([1,-1],[" + cell[d] + "," + cell[c] + "],1,");
+        } else {
+          constraints.append(
+              "constraint int_lin_eq_reif([-1,1],[" + cell[d] + "," + cell[c] + "],-1,");
+        }
+        constraints.append(e).append(");\nconstraint bool2int(").append(e).append(',');
+        constraints.append(i).append(");\n");
+        literals.add(i);
+      }
+      boolean first = fixedFirst && c == 0;
+      fzn.append("var ").append(first ? 1 : 0).append("..").append(next.size());
+      fzn.append(": a").append(c).append(";\n");
+      constraints
+          .append("constraint jacop_among([")
+          .append(String.join(",", literals))
+          .append("],1..1,a")
+          .append(c)
+          .append(");\n");
+      if (!first) {
+        fzn.append("var bool: r").append(c).append(";\nvar bool: q").append(c).append(";\n");
+        constraints.append("constraint int_le_imp(1,a").append(c).append(",r").append(c);
+        constraints.append(");\nconstraint int_eq_imp(x").append(c).append(',').append(k);
+        constraints.append(",q").append(c).append(");\nconstraint bool_clause([r").append(c);
+        constraints.append(",q").append(c).append("],[]);\n");
+      }
+    }
+    String all = String.join(",", cell);
+    constraints.append("constraint jacop_alldiff([").append(all).append("]);\n");
+    fzn.append("array [1..")
+        .append(k)
+        .append("] of var int: x:: output_array([1..")
+        .append(k)
+        .append("]) = [")
+        .append(all)
+        .append("];\n");
+    return "predicate jacop_alldiff(array [int] of var int: x);\n"
+        + "predicate jacop_among(array [int] of var int: x,set of int: v,var int: n);\n"
+        + "predicate jacop_short_table_int(array [int] of var int: x,array [int] of int: t,int: s);\n"
+        + "predicate int_le_imp(var int: a,var int: b,var bool: r);\n"
+        + "predicate int_eq_imp(var int: a,var int: b,var bool: r);\n"
+        + fzn
+        + constraints
+        + "solve satisfy;\n";
+  }
+
+  private static void enumeratePaths(
+      int[] x, int c, boolean[] used, boolean[][] arc, boolean fixedFirst, Set<String> solutions) {
+    int k = x.length;
+    if (c == k) {
+      for (int a = 0; a < k; a++) {
+        boolean ok = x[a] == k;
+        for (int d = 0; d < k && !ok; d++) {
+          ok = arc[a][d] && x[d] == x[a] + 1;
+        }
+        if (!ok) {
+          return;
+        }
+      }
+      solutions.add(
+          "x = array1d(1.."
+              + k
+              + ", "
+              + Arrays.stream(x)
+                  .mapToObj(String::valueOf)
+                  .collect(Collectors.joining(", ", "[", "]"))
+              + ");");
+      return;
+    }
+    for (int v = 1; v <= k; v++) {
+      if (!used[v] && (!fixedFirst || (c == 0) == (v == 1))) {
+        used[v] = true;
+        x[c] = v;
+        enumeratePaths(x, c + 1, used, arc, fixedFirst, solutions);
+        used[v] = false;
+      }
+    }
+  }
+
   private static void enumerateLists(
       int[] x,
       int i,
@@ -331,6 +503,57 @@ class XcspTableFlatzincTest {
     String xs =
         Arrays.stream(scope).mapToObj(i -> "x" + i).collect(Collectors.joining(",", "[", "]"));
     return "constraint jacop_short_table_int(" + xs + "," + cells + "," + STAR + ");\n";
+  }
+
+  /**
+   * Short tables over 0/1 variables whose rows each fix one variable are posted as clauses: rows
+   * that fix a variable to a value outside {0, 1} are dropped, a variable fixed to 0 and to 1 makes
+   * the table always true, and the star can be 0 when the rows use only 1 (Crypto1 of XCSP 2022).
+   */
+  @Test
+  void clauseShortTablesMatchBruteForce() throws IOException {
+    Random random = new Random(20261117);
+    for (int run = 0; run < 40; run++) {
+      int vars = 1 + random.nextInt(4);
+      int arity = 1 + random.nextInt(4);
+      int star = random.nextBoolean() ? STAR : 0;
+      int[] scope = new int[arity];
+      for (int i = 0; i < arity; i++) {
+        scope[i] = random.nextInt(vars);
+      }
+      int[][] rows = new int[1 + random.nextInt(5)][arity];
+      for (int[] row : rows) {
+        Arrays.fill(row, star);
+        int[] values = star == 0 ? new int[] {1, 1, 1, 3} : new int[] {0, 1, 1, 0, 3};
+        row[random.nextInt(arity)] = values[random.nextInt(values.length)];
+      }
+      Set<String> expected = new TreeSet<>();
+      for (int a = 0; a < 1 << vars; a++) {
+        int[] x = new int[vars];
+        for (int i = 0; i < vars; i++) {
+          x[i] = a >> i & 1;
+        }
+        boolean match =
+            Arrays.stream(rows)
+                .anyMatch(
+                    row ->
+                        IntStream.range(0, arity)
+                            .allMatch(i -> row[i] == star || x[scope[i]] == row[i]));
+        if (match) {
+          expected.add(
+              Arrays.stream(x)
+                  .mapToObj(String::valueOf)
+                  .collect(Collectors.joining(", ", "x = array1d(1.." + vars + ", [", "]);")));
+        }
+      }
+      String fzn =
+          model(scope, vars, rows, true)
+              .replace("var {0,1,3,4}:", "var 0..1:")
+              .replace("," + STAR + ");\nsolve", "," + star + ");\nsolve");
+      String message = "run " + run + "\n" + fzn;
+      assertEquals(expected, solveAll(fzn), message);
+      assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
+    }
   }
 
   private void randomTables(boolean positive, long seed) throws IOException {

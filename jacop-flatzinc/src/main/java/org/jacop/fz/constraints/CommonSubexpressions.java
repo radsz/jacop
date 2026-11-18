@@ -143,6 +143,9 @@ public class CommonSubexpressions implements ParserTreeConstants {
   // the variables that are aliases of each variable, as bool2int makes them
   private final Map<IntVar, List<IntVar>> aliasesOf = new IdentityHashMap<>();
 
+  // the model whose occurrences are still to count (see countAll), or null
+  private SimpleNode tree;
+
   private int merged;
 
   private int duplicates;
@@ -219,8 +222,9 @@ public class CommonSubexpressions implements ParserTreeConstants {
     if (nodes.size() < 2) {
       return;
     }
-    // the occurrences in every constraint, not only the merged kinds, guard against repeats
-    countAll(astTree);
+    // the occurrences in every constraint, not only the merged kinds, guard against repeats; they
+    // are counted at the first merge, as most models have none
+    tree = astTree;
     support.dictionary.aliasTable.forEach(
         (alias, target) -> aliasesOf.computeIfAbsent(target, v -> new ArrayList<>()).add(alias));
     for (int round = 0; round < ROUNDS; round++) {
@@ -316,6 +320,10 @@ public class CommonSubexpressions implements ParserTreeConstants {
         || support.reif.size(out2) > 0
         || support.imply.size(out2) > 0) {
       return false;
+    }
+    if (tree != null) {
+      countAll(tree);
+      tree = null;
     }
     Set<Integer> o1 = occurrences.getOrDefault(out1, Set.of());
     for (Integer c : occurrences.getOrDefault(out2, Set.of())) {

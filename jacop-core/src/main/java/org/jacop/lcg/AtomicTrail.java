@@ -106,6 +106,9 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   // the variables first seen after the trail was created
   private int lateVariables;
 
+  // the store level when the trail was created, the level of the root domains
+  private final int rootLevel;
+
   // boolean variables, which have no store index, by the order they were first seen
   private final Map<IntVar, Integer> booleanIds = new IdentityHashMap<>();
 
@@ -122,6 +125,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    */
   public AtomicTrail(Store store) {
     this.store = store;
+    this.rootLevel = store.level;
     for (int i = 0; i < store.size(); i++) {
       Var v = store.vars[i];
       if (v instanceof IntVar x) {
@@ -174,12 +178,23 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     return lateVariables;
   }
 
-  /** Stops recording; a trail attached after this one keeps recording. */
+  /**
+   * Stops recording; a trail attached after this one keeps recording. The Boolean variables it
+   * numbered let go of it (they get their numbers back when asked again), so that a trail and the
+   * solver it reports to are not kept alive by the model's variables once detached:
+   * rcpsp-wet-diverse j90_48_4 under -f kept the whole LCG solver after free search without
+   * learning took over.
+   */
   public void detach() {
     if (store.domainChangeRecorder == this) {
       store.domainChangeRecorder = null;
     }
     store.removeLevelLateListeners.remove(this);
+    for (IntVar x : booleanIds.keySet()) {
+      if (x instanceof BooleanVar b && b.trailOwner == this) {
+        b.trailOwner = null;
+      }
+    }
   }
 
   /**
@@ -224,7 +239,13 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     }
     if (root[i] == null) {
       lateVariables++;
-      root[i] = x.dom().cloneLight();
+      // first seen when it changed above the level the trail started at: the root is its domain
+      // at that level, before the changes made above it, which backtracking undoes
+      IntDomain d = x.dom();
+      while (d.stamp() > rootLevel && d.previousDomain != null) {
+        d = d.previousDomain;
+      }
+      root[i] = d.cloneLight();
       setShadow(i, root[i]);
     }
     return i;

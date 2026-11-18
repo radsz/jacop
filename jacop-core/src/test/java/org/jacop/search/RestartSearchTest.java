@@ -613,4 +613,52 @@ class RestartSearchTest {
     assertTrue(rs.complete());
     assertFalse(rs.restartsLimitReached());
   }
+
+  @Test
+  void completionSearchWithItsOwnLimitDoesNotEndTheSearch() {
+    // Fz2jacop -a adds a last search that only checks that the variables left out of the search
+    // can be completed, and stops at its first solution. RestartSearch took its limit of 1 as the
+    // limit of the whole search and stopped after the first run, so the probe run of the linear
+    // relaxation (org.jacop.fz.lpProbe) claimed bacp15 optimal at 34 (optimum 29).
+    Random rnd = new Random(20261117);
+    int improvedAfterARestart = 0;
+    for (int k = 0; k < 100; k++) {
+      Instance instance = Instance.random(rnd);
+      Integer optimum = instance.bruteForceOptimum();
+      Model model = new Model(instance);
+      // variables outside the cost that every solution can complete
+      IntVar[] z = new IntVar[N];
+      for (int i = 0; i < N; i++) {
+        z[i] = new IntVar(model.store, "z" + i, 0, MAX_VALUE);
+        model.store.impose(new XneqY(z[i], model.x[i]));
+      }
+      if (!model.store.consistency()) {
+        assertNull(optimum, "root failure on a satisfiable instance " + instance);
+        continue;
+      }
+      DepthFirstSearch<IntVar> search = new DepthFirstSearch<>();
+      search.setPrintInfo(false);
+      search.getSolutionListener().searchAll(true);
+      search.getSolutionListener().recordSolutions(false);
+      DepthFirstSearch<IntVar> completion = new DepthFirstSearch<>();
+      completion.setPrintInfo(false);
+      completion.setSelectChoicePoint(new SimpleSelect<>(z, null, new IndomainMin<>()));
+      completion.getSolutionListener().searchAll(false);
+      completion.getSolutionListener().recordSolutions(false);
+      completion.getSolutionListener().setParentSolutionListener(search.getSolutionListener());
+      search.addChildSearch(completion);
+      SelectChoicePoint<IntVar> select = new SimpleSelect<>(model.x, null, new IndomainMin<>());
+      RestartSearch<IntVar> rs =
+          new RestartSearch<>(model.store, search, select, new LubyCalculator(1), model.cost);
+      boolean found = rs.labeling();
+      assertEquals(optimum != null, found, "satisfiability of " + instance);
+      if (optimum != null) {
+        assertEquals(optimum.intValue(), rs.getIntCost(), "optimum of " + instance);
+        if (rs.restarts() > 0) {
+          improvedAfterARestart++;
+        }
+      }
+    }
+    assertTrue(improvedAfterARestart > 30, "too few instances needed a restart");
+  }
 }

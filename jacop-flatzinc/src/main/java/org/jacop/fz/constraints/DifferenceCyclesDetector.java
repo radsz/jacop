@@ -32,6 +32,7 @@
 package org.jacop.fz.constraints;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -75,11 +76,22 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
 
   private final List<IntVar> xs = new ArrayList<>();
   private final List<IntVar> ys = new ArrayList<>();
-  private final List<Integer> cs = new ArrayList<>();
   private final List<IntVar> bs = new ArrayList<>();
-  private final List<Integer> vs = new ArrayList<>();
   private final List<IntVar> os = new ArrayList<>();
-  private final List<Integer> ss = new ArrayList<>();
+  // constants, literal values and offset signs of the arcs, unboxed: an element over n variables
+  // adds 2n arcs, and boxed lists of them took most of the front end's heap on large elements
+  private int[] cs = new int[16];
+  private int[] vs = new int[16];
+  private int[] ss = new int[16];
+  // arcs of the elements so far, within elementArcBudget
+  private long elementArcs;
+  // the most arcs of elements, set by org.jacop.fz.differenceElements.maxArcs (default 2^20): an
+  // element y = a[index] adds two arcs per value of the index, so many elements over one long
+  // array of variables made a graph of elements times length (800 elements over 5000 variables:
+  // 8 million arcs, 570 MB live); an element that would pass the budget adds no arcs. The most
+  // element arcs of a wide-set model are about 20,000 (multi-agent-graph-coverage).
+  private final long elementArcBudget =
+      Long.getLong("org.jacop.fz.differenceElements.maxArcs", 1L << 20);
   private final Store scratch = new Store();
   private final Map<Integer, IntVar> constants = new HashMap<>();
 
@@ -114,14 +126,9 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
       return;
     }
     int m = xs.size();
-    int[] c = new int[m];
-    int[] v = new int[m];
-    int[] s = new int[m];
-    for (int i = 0; i < m; i++) {
-      c[i] = cs.get(i);
-      v[i] = vs.get(i);
-      s[i] = ss.get(i);
-    }
+    int[] c = Arrays.copyOf(cs, m);
+    int[] v = Arrays.copyOf(vs, m);
+    int[] s = Arrays.copyOf(ss, m);
     DifferenceCycles cycles =
         new DifferenceCycles(
             xs.toArray(new IntVar[0]),
@@ -314,13 +321,7 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
         || c > Integer.MAX_VALUE) {
       return;
     }
-    xs.add(x);
-    ys.add(y);
-    cs.add((int) c);
-    bs.add(null);
-    vs.add(1);
-    os.add(z);
-    ss.add(s);
+    add(x, y, (int) c, null, 1, z, s);
   }
 
   // y = a[index - first]: for each value j of the index, y - a[j] <= 0 and a[j] - y <= 0 hold
@@ -332,6 +333,11 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
     if (a == null || y.singleton()) {
       return;
     }
+    long arcs = 2L * index.getSize();
+    if (elementArcs + arcs > elementArcBudget) {
+      return;
+    }
+    elementArcs += arcs;
     for (ValueEnumeration e = index.dom().valueEnumeration(); e.hasMoreElements(); ) {
       int j = e.nextElement();
       int at = j - first;
@@ -353,13 +359,7 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
     if (x == y || x.singleton() || y.singleton()) {
       return;
     }
-    xs.add(x);
-    ys.add(y);
-    cs.add((int) c);
-    bs.add(literal);
-    vs.add(value);
-    os.add(null);
-    ss.add(1);
+    add(x, y, (int) c, literal, value, null, 1);
   }
 
   // the variables of an array (of length n, or any length for n < 0), or null
@@ -406,12 +406,22 @@ public class DifferenceCyclesDetector implements ParserTreeConstants {
     if (b != null && (b.min() < 0 || b.max() > 1)) {
       return;
     }
+    add(x, y, (int) c, b, value, null, 1);
+  }
+
+  private void add(IntVar x, IntVar y, int c, IntVar b, int value, IntVar o, int s) {
+    int i = xs.size();
+    if (i == cs.length) {
+      cs = Arrays.copyOf(cs, 2 * i);
+      vs = Arrays.copyOf(vs, 2 * i);
+      ss = Arrays.copyOf(ss, 2 * i);
+    }
     xs.add(x);
     ys.add(y);
-    cs.add((int) c);
+    cs[i] = c;
     bs.add(b);
-    vs.add(value);
-    os.add(null);
-    ss.add(1);
+    vs[i] = value;
+    os.add(o);
+    ss[i] = s;
   }
 }

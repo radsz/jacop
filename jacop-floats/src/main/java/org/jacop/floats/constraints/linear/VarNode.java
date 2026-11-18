@@ -53,7 +53,7 @@ public class VarNode extends VariableNode {
   @Override
   void propagateAndPrune() {
 
-    parent.propagateAndPrune();
+    parent.propagateAndPrune(this);
   }
 
   @Override
@@ -92,7 +92,7 @@ public class VarNode extends VariableNode {
   @Override
   void updateBounds(double min, double max, double lb, double ub) {
 
-    v.domain.in(store.level, v, min, max);
+    narrow(min, max);
   }
 
   /**

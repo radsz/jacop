@@ -61,6 +61,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.DoubleUnaryOperator;
 import java.util.function.IntFunction;
+import java.util.function.LongSupplier;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.SolutionHint;
 import org.jacop.api.VarMap;
@@ -70,10 +71,15 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementVariable;
 import org.jacop.constraints.ElementVariableFast;
+import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.Routes;
+import org.jacop.constraints.SumInt;
+import org.jacop.constraints.SumWeight;
 import org.jacop.constraints.TableCliques;
+import org.jacop.constraints.XexpYeqZ;
 import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
+import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cfn.CostNetworkBound;
@@ -154,6 +160,7 @@ import org.jacop.search.free.LastConflict;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.BinCompletion;
+import org.jacop.search.ls.FunctionalTabuSearch;
 import org.jacop.search.ls.LocalSearch;
 import org.jacop.search.ls.MaxSatLocalSearch;
 import org.jacop.search.ls.ProjectSchedule;
@@ -950,7 +957,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // under lazy clause generation the clauses go to the SAT solver, not to the store, and long
       // linear constraints are split into block sums: the relaxation gets the clauses as rows and
       // the blocks substituted back, so it has the rows of the model as without --lcg
-      List<LinearForm> clauses = new ArrayList<>();
+      List<LinearForm> clauses = new ArrayList<>(dictionary.overlapUnitRows());
       if (options.lcg()) {
         for (IntVar[][] clause : sat.collectedClauses()) {
           clauses.add(clauseRow(clause[0], clause[1]));
@@ -1032,6 +1039,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (timer.getCpuTime() - start) / 1_000_000_000.0
               + "\n%%%mzn-stat: lpRows="
               + (linearRelaxation == null ? 0 : linearRelaxation.rows())
+              + "\n%%%mzn-stat: lpUnitRows="
+              + dictionary.overlapUnitRows().size()
               + "\n%%%mzn-stat: lpTableClauses="
               + (linearRelaxation == null ? 0 : linearRelaxation.tableClauses)
               + (cliques == null
@@ -1248,14 +1257,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.sparseCuts
             + "\n%%%mzn-stat: lpCapacityCuts="
             + r.capacityCuts
+            + "\n%%%mzn-stat: lpTwoPathCuts="
+            + r.twoPathCuts()
+            + "\n%%%mzn-stat: lpArcTimeRows="
+            + r.arcTimeRows
             + "\n%%%mzn-stat: lpEnergyCuts="
             + r.energyCuts
             + "\n%%%mzn-stat: lpCapacityBound="
             + r.capacityBound
             + "\n%%%mzn-stat: lpCutLimits="
             + r.cutLimits
+            + "\n%%%mzn-stat: lpCutStalls="
+            + r.cutStalls
+            + "\n%%%mzn-stat: lpCutStallsRecovered="
+            + r.cutStallsRecovered
             + "\n%%%mzn-stat: lpZeroHalfCuts="
             + r.zeroHalfCuts
+            + "\n%%%mzn-stat: lpCoverCuts="
+            + r.coverCuts
             + "\n%%%mzn-stat: lpDualCuts="
             + r.dualCuts
             + "\n%%%mzn-stat: lpMirSearchCuts="
@@ -2531,6 +2550,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         fixedLabel = label;
         fixedSelect = select;
         fixedSolveType = solveType;
+        if (freeSearchFirst(costVar)) {
+          return freeSearch.getSolutions() > 0;
+        }
         return executeLcgSearch(costVar);
       }
       if (lpProbing && useFreeSearchEngine(costVar)) {
@@ -3034,6 +3056,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // the model has no search annotation to follow
       scheduled = maxSatHint(c, worker);
     }
+    if (scheduled == null && options.freeSearch() && ls == null && costVar instanceof IntVar c) {
+      // a cost that is a function of a few decision variables: their tabu search
+      scheduled = functionalHint(c, worker);
+      tabuHint = scheduled;
+    }
     lcg = new LcgSolver(store);
     lcg.setSeed(options.getRandomSeed());
     lcg.setUnusedVariables(dictionary.unusedVariables);
@@ -3085,12 +3112,22 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = ls.getCostValue();
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
+    } else if (freeFirstValues != null && (scheduled == null || freeFirstCost <= scheduledCost)) {
+      // the best solution of free search without learning, which ran first
+      lcg.setIncumbent(freeFirstVars, freeFirstValues);
+      lcgLastCost = freeFirstCost;
     } else if (scheduled != null) {
       // the schedule is the solver's first solution: branch and bound and neighbourhood search
       // go on from it (as a bound and phase alone, neighbourhood search never ran: j60_45_1)
       lcg.setIncumbent(scheduled.vars, scheduled.values);
       lcgLastCost = scheduledCost;
-      if (worker != null) {
+      if (scheduled == tabuHint) {
+        // the tabu search's cost also as a bound from the start: with the incumbent alone, the
+        // proof of low autocorrelation n = 20 took 100 s instead of 5 s
+        int tabuCost = scheduledCost;
+        lcg.setSharedBound(
+            () -> worker == null ? tabuCost : Math.min(tabuCost, worker.sharedBound()));
+      } else if (worker != null) {
         lcg.setSharedBound(worker::sharedBound);
       }
     } else if (probed) {
@@ -3119,7 +3156,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if ((ls != null || scheduled != null || probed) && costVar instanceof IntVar cost) {
+    if ((ls != null || scheduled != null || probed || freeFirstValues != null)
+        && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better
       lcg.onSolution(
@@ -3339,8 +3377,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // first, branch and bound finds near-optimal solutions at once and needs the time more:
       // jp-encoding data300 is proved in 1.7 s with a share of 0.1, in 25 s with 0.5.
       boolean costsFirst = objectiveCosts != null && objectiveCosts.length > 0;
+      // after the tabu search of a functional model, branch and bound goes on from its solution:
+      // the core-guided phase left low autocorrelation n = 22 unproved in 240 s (156 s without)
+      String coreShare = tabuHint != null ? "0" : costsFirst ? "0.1" : "0.5";
       lcg.setCoreSearch(
-          Double.parseDouble(options.freeConfig("lcg-core", costsFirst ? "0.1" : "0.5")),
+          Double.parseDouble(options.freeConfig("lcg-core", coreShare)),
           100_000,
           Long.parseLong(options.freeConfig("lcg-core-call", "5000")));
       // a short core-guided probe, then branch and bound for a share of the time, then the rest
@@ -3353,6 +3394,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     AdaptiveLns lns = free ? lnsNeighbourhoods(costVar) : null;
     addScheduleProposer(lns);
     addMaxSatProposer(lns);
+    addFunctionalProposer(lns);
     if (lns != null) {
       // propagating the store between solver calls would pass the solver's view of the root
       lns.disable(AdaptiveLns.Kind.PROPAGATION);
@@ -3464,6 +3506,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
     if (slowCheck != null) {
       slowCheck.interrupt();
+      // a finished virtual thread keeps its task, and the task the solver: free search without
+      // learning, which runs in this frame, would keep the solver and its clauses
+      slowCheck = null;
     }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
@@ -3528,8 +3573,35 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   private volatile boolean lcgSlowUnsolved;
   // the checks of LCG's speed that found it slow but let it go on, because it made progress
   private volatile int lcgSlowDeferred;
-  // the LCG solver free search took over from, for the statistics
-  private LcgSolver slowLcg;
+  // what free search needs of the LCG solver it took over from: the solver itself, with its
+  // clauses and per-variable literal maps, is dropped (rcpsp-wet-diverse j90_48_4 under -f kept
+  // 2.35 million variables' worth of it while the clauses were posted again, and ran out of 4 GB)
+  private SlowLcg slowLcg;
+
+  /**
+   * The LCG solver that gave way to search without learning, as far as free search and the
+   * statistics need it.
+   *
+   * @param conflicts the conflicts of LCG search
+   * @param deadline the deadline of LCG search, a time of its clock
+   * @param clock the clock of LCG search, still running
+   */
+  record SlowLcg(long conflicts, long deadline, LongSupplier clock) {
+    static SlowLcg of(LcgSolver solver) {
+      return new SlowLcg(
+          solver.sat().conflicts, solver.sat().deadline(), solver.sat().stoppedClock());
+    }
+
+    // read like the SAT solver it stands for, so the code that read the solver stays as it was
+    SlowLcg sat() {
+      return this;
+    }
+
+    long now() {
+      return clock.getAsLong();
+    }
+  }
+
   private long lcgStart;
 
   // the wait of the slow LCG check (nanoseconds of CdclSolver.now), and the time before which it
@@ -3969,6 +4041,86 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * The number of squares x * x among the terms of the objective: the variables that the linear
+   * constraints over the cost variable tie to it, followed through up to three such constraints (an
+   * objective w1 * norm + w2 * violations with norm a sum of squares counts the squares of norm). A
+   * sum of squared deviations is a balancing objective (balanced academic curricula, nurse
+   * workloads, low autocorrelation): under LCG its bound literals say little about which value of a
+   * decision raises the cost, while free search without learning chooses each value by its bound on
+   * the objective ({@code value-impact}).
+   *
+   * @param costVar the cost variable
+   * @return the number of squared terms, 0 for none
+   */
+  int squaredObjectiveTerms(Var costVar) {
+    if (squaredTerms < 0) {
+      squaredTerms = countSquaredObjectiveTerms(costVar);
+    }
+    return squaredTerms;
+  }
+
+  // the squares among the objective's terms, -1 before they are counted
+  private int squaredTerms = -1;
+
+  private int countSquaredObjectiveTerms(Var costVar) {
+    Set<Var> squares = Collections.newSetFromMap(new IdentityHashMap<>());
+    List<Constraint> linear = new ArrayList<>();
+    for (Constraint c : store.getConstraints()) {
+      Var square = squareOf(c);
+      if (square != null) {
+        squares.add(square);
+      } else if (c instanceof LinearInt || c instanceof SumWeight || c instanceof SumInt) {
+        linear.add(c);
+      }
+    }
+    if (squares.isEmpty()) {
+      return 0;
+    }
+    Set<Var> reached = Collections.newSetFromMap(new IdentityHashMap<>());
+    reached.add(costVar);
+    Set<Constraint> used = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<Var> frontier = Set.of(costVar);
+    for (int depth = 0; depth < 3 && !frontier.isEmpty(); depth++) {
+      frontier = linearStep(frontier, linear, used, reached, squares);
+    }
+    return (int) reached.stream().filter(squares::contains).count();
+  }
+
+  // z of z = x * x or z = x ^ 2 with x not fixed, null for any other constraint
+  private static Var squareOf(Constraint c) {
+    if (c instanceof XmulYeqZ m && m.x() == m.y() && !m.x().singleton()) {
+      return m.z();
+    }
+    if (c instanceof XexpYeqZ e && e.y().singleton(2) && !e.x().singleton()) {
+      return e.z();
+    }
+    return null;
+  }
+
+  // one step from the frontier through the linear constraints not used yet: the variables reached
+  // for the first time that are not squares, whose terms are followed in the next step
+  private static Set<Var> linearStep(
+      Set<Var> frontier,
+      List<Constraint> linear,
+      Set<Constraint> used,
+      Set<Var> reached,
+      Set<Var> squares) {
+    Set<Var> next = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (Constraint c : linear) {
+      Set<Var> args = c.arguments();
+      if (!used.contains(c) && args.stream().anyMatch(frontier::contains)) {
+        used.add(c);
+        for (Var v : args) {
+          if (reached.add(v) && !squares.contains(v)) {
+            next.add(v);
+          }
+        }
+      }
+    }
+    return next;
+  }
+
+  /**
    * The rate in conflicts per second below which LCG free search counts as slow: lcg-slow-rate, or
    * lcg-slow-literal conflicts per second for each literal of an average learnt clause when that is
    * more. A conflict whose learnt clause has hundreds of literals prunes little of the search, so
@@ -4044,22 +4196,36 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * solution of LCG, with its values first, and must improve on it.
    */
   private boolean continueWithoutLcg(Var costVar) {
-    slowLcg = lcg;
-    lcg = null;
-    slowLcg.release();
+    // in a method of its own: a local of this frame would keep the solver during free search
+    releaseSlowLcg();
+    // the clauses go to the store once the solver is gone: on rcpsp-wet-diverse j90_48_4 posting
+    // its 3.5 million clauses next to it filled 6 GB
     postCollectedClauses();
+    return executeFreeSearch(costVar) || numberSolutions > 0;
+  }
+
+  /**
+   * Keeps what free search needs of the LCG solver that gave way, its best solution as a hint among
+   * it, and hands its constraints back to the store.
+   */
+  private void releaseSlowLcg() {
+    LcgSolver stopped = lcg;
+    lcg = null;
+    slowLcg = SlowLcg.of(stopped);
     if (numberSolutions > 0) {
       List<IntVar> hinted = new ArrayList<>();
       List<Integer> values = new ArrayList<>();
       for (IntVar x : hintedVariables()) {
-        if (slowLcg.hasValue(x)) {
+        if (stopped.hasValue(x)) {
           hinted.add(x);
-          values.add(slowLcg.value(x));
+          values.add(stopped.value(x));
         }
       }
       lcgHinted = hinted.toArray(new IntVar[0]);
       lcgHint = values.stream().mapToInt(Integer::intValue).toArray();
     }
+    // after reading the solution: reading numbers the variables for the trail again
+    stopped.release();
     if (options.debug()) {
       IO.println(
           "%% LCG stopped after "
@@ -4068,7 +4234,6 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + String.format(Locale.ROOT, "%.1f", (slowLcg.sat().now() - lcgStart) / 1e9)
               + " s; free search without learning");
     }
-    return executeFreeSearch(costVar) || numberSolutions > 0;
   }
 
   // the search of the annotation, for fixed search when LCG gives way to it
@@ -4086,9 +4251,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * @return whether a solution was found
    */
   private boolean continueFixedWithoutLcg(Var costVar) {
-    slowLcg = lcg;
+    slowLcg = SlowLcg.of(lcg);
+    lcg.release();
     lcg = null;
-    slowLcg.release();
     postCollectedClauses();
     if (options.debug()) {
       IO.println(
@@ -4661,7 +4826,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           in.addAll(Arrays.asList(list));
           boolean covers = true;
           for (IntVar x : vars) {
-            if (!x.singleton() && !in.contains(x)) {
+            // a variable in no constraint, such as a cell outside the board of an XCSP grid,
+            // takes any value of its domain and leaves the dive's solution one
+            if (!x.singleton() && !in.contains(x) && x.dom().sizeConstraints() > 0) {
               covers = false;
               break;
             }
@@ -4841,6 +5008,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.auxiliaryVariables
             + "\n%%%mzn-stat: lcgGraphClauseConstraints="
             + lcg.graphConstraintsEncoded
+            + "\n%%%mzn-stat: lcgGraphConstraintsTooLarge="
+            + lcg.graphConstraintsTooLarge
             + "\n%%%mzn-stat: lcgConstraintsAsClauses="
             + lcg.constraintsAsClauses
             + "\n%%%mzn-stat: lcgClauseShaped="
@@ -4857,6 +5026,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.tablesAsClauses
             + "\n%%%mzn-stat: lcgCompressedTablesAsClauses="
             + lcg.compressedTablesAsClauses
+            + "\n%%%mzn-stat: lcgBooleanTablesAsClauses="
+            + lcg.booleanTablesAsClauses
             + "\n%%%mzn-stat: lcgTableClauses="
             + lcg.tableClauses
             + "\n%%%mzn-stat: lcgTableTupleLiterals="
@@ -4939,6 +5110,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + elementPositionCount
             + "\n%%%mzn-stat: lcgInputOrder="
             + inputOrderCount
+            + "\n%%%mzn-stat: lcgSplitSums="
+            + dictionary.splitSums().size()
             + "\n%%%mzn-stat: lcgLateDecisions="
             + lcg.lateDecisions
             + "\n%%%mzn-stat: lcgTargetDecisions="
@@ -4992,7 +5165,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     // the tree's cubes are also over the elements of arrays of variables, on which the model
     // usually branches: with its scalar variables alone, a knapsack declared as an array split
     // only on the objective, and its last cube stayed with one thread while three waited
-    if ("1".equals(options.freeConfig("lcg-split", "0"))
+    if ("1".equals(options.freeConfig("lcg-tree-split", "0"))
         && !lcg.setSharedTree(worker.sharedTree(), added, modelVariableNames()::get)) {
       FzConsole.printlnErr("%% portfolio: this thread cannot join the split search");
     }
@@ -5066,8 +5239,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.coreShrunk
         + "\n%%%mzn-stat: lcgCoreExhausted="
         + core.exhaustedOutputs
+        + "\n%%%mzn-stat: lcgCoreExhaustDiscounted="
+        + core.exhaustDiscounted
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
+        + "\n%%%mzn-stat: lcgCoreLimitStops="
+        + core.limitStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
         + lcg.clockStops
         + "\n%%%mzn-stat: lcgCoreSkips="
@@ -5765,6 +5942,187 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         });
   }
 
+  // the functional reading of the model and its tabu search, or null
+  private FunctionalModel functional;
+  private FunctionalTabuSearch functionalSearch;
+  private SymmetryCanonicalizer functionalCanonical;
+  private Hint tabuHint;
+
+  /**
+   * Runs tabu search ({@link FunctionalTabuSearch}) when the cost is a function of a few decision
+   * variables ({@link FunctionalModel}): every constraint defines one variable from others. The
+   * best assignment it finds in its share of the time is checked in the store and printed, and
+   * becomes the first solution of the solver; the search then goes on from the best solution of the
+   * solver as a kind of neighbourhood. --free-config tabu=0 turns it off, tabu-share gives the
+   * first run its share of the time left (default 0.9) and tabu-max caps it in milliseconds; the
+   * run ends early once it found nothing better for tabu-stall (default 0.9) of its time and for
+   * tabu-generations (default 20) generations of its population. After a hint the core-guided phase
+   * of LCG is off and its bound is the cost of the hint, since the tabu search already gives a good
+   * upper bound.
+   *
+   * @return the best assignment, as a hint of the decision variables, or null
+   */
+  private Hint functionalHint(IntVar cost, Portfolio.Worker worker) {
+    if ("0".equals(options.freeConfig("tabu", "1"))) {
+      return null;
+    }
+    long begin = System.currentTimeMillis();
+    FunctionalModel model = detectFunctional(cost, options.debug());
+    if (options.debug() && model != null) {
+      IO.println("% functional model of " + model.vars.length + " decision variables");
+    }
+    if (model == null) {
+      return null;
+    }
+    FunctionalTabuSearch ts = model.search(options.getRandomSeed());
+    if (options.debug()) {
+      IO.println("% " + ts);
+    }
+    long budget = Long.parseLong(options.freeConfig("tabu-max", "0"));
+    if (options.getTimeOut() > 0) {
+      long part =
+          (long)
+              (Double.parseDouble(options.freeConfig("tabu-share", "0.9"))
+                  * options.getRemainingTimeOut());
+      budget = budget > 0 ? Math.min(budget, part) : part;
+    } else if (budget <= 0) {
+      budget = 10_000;
+    }
+    long deadline = begin + budget;
+    boolean[] stopped = {false};
+    if (worker != null) {
+      worker.onStop(() -> stopped[0] = true);
+    }
+    int[] hintValues = null;
+    long best = Long.MAX_VALUE;
+    long improvedAt = begin;
+    double stall = Double.parseDouble(options.freeConfig("tabu-stall", "0.9"));
+    // and no improvement for this many generations of the population
+    long stallSteps =
+        Long.parseLong(options.freeConfig("tabu-generations", "20"))
+            * ts.populationSize()
+            * ts.decisions();
+    long improvedStep = 0;
+    for (int attempt = 0; attempt < 100 && !ts.start(null); attempt++) {
+      // a random assignment outside the domains of the defined variables
+    }
+    if (ts.best() < Long.MAX_VALUE) {
+      functional = model;
+      functionalSearch = ts;
+      while (!stopped[0]) {
+        long now = System.currentTimeMillis();
+        if (now > deadline
+            || (now - begin > 1000
+                && now - improvedAt > stall * (now - begin)
+                && ts.steps() - improvedStep > stallSteps)) {
+          break;
+        }
+        long found = ts.run(1000, () -> stopped[0] || System.currentTimeMillis() > deadline);
+        if (found < best) {
+          best = found;
+          improvedAt = System.currentTimeMillis();
+          improvedStep = ts.steps();
+          if (options.debug()) {
+            IO.println(
+                "% tabu search: "
+                    + found
+                    + " at "
+                    + (improvedAt - begin)
+                    + " ms, "
+                    + ts.steps()
+                    + " steps");
+          }
+          if (found < bestPrintedCost.get() && found >= Integer.MIN_VALUE) {
+            int[] values = functionalValues(ts.bestValues());
+            int[] checked = checkSchedule(model.vars, values, cost, (int) found, hintedVariables());
+            if (checked != null) {
+              hintValues = checked;
+              scheduledCost = (int) found;
+            } else if (options.debug()) {
+              IO.println("% tabu search: the store rejected cost " + found);
+            }
+          }
+        }
+      }
+    }
+    if (options.searchStatistics()) {
+      IO.println(
+          "%%%mzn-stat: tabuVariables="
+              + ts.decisions()
+              + "\n%%%mzn-stat: tabuSteps="
+              + ts.steps()
+              + "\n%%%mzn-stat: tabuWalks="
+              + ts.walks()
+              + "\n%%%mzn-stat: tabuTime="
+              + (System.currentTimeMillis() - begin) / 1000.0
+              + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: tabuBest=" + best));
+    }
+    return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  /**
+   * The functional reading of the model ({@link FunctionalModel}) with the symmetry breaking
+   * constraints left to the canonicalizer, or null.
+   *
+   * @param cost the cost variable
+   * @param log whether to print why the model is not functional
+   * @return the model, or null
+   */
+  private FunctionalModel detectFunctional(IntVar cost, boolean log) {
+    SymmetryCanonicalizer canonical = symmetry == null ? null : symmetry.canonicalizer();
+    Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (canonical != null && !canonical.constraints().isEmpty()) {
+      ignored.addAll(canonical.constraints());
+      functionalCanonical = canonical;
+    }
+    return FunctionalModel.detect(
+        store,
+        sat.collectedClauses(),
+        cost,
+        ignored,
+        log ? why -> IO.println("% no functional model: " + why) : null);
+  }
+
+  // the values of the decision variables, moved onto a symmetric assignment that the symmetry
+  // breaking constraints accept
+  private int[] functionalValues(int[] assignment) {
+    if (functionalCanonical != null) {
+      // the constraints may be over defined variables, which the symmetry moves too
+      functionalCanonical.canonicalize(functional.all, assignment);
+    }
+    return functional.values(assignment);
+  }
+
+  /**
+   * Lets tabu search go on in slices of tabu-lns steps (default 20 per decision variable) from the
+   * best solution of the search, as a kind of neighbourhood whose runs fix the decision variables
+   * to a better assignment.
+   */
+  private void addFunctionalProposer(AdaptiveLns lns) {
+    if (lns == null || functional == null) {
+      return;
+    }
+    FunctionalModel model = functional;
+    FunctionalTabuSearch ts = functionalSearch;
+    long slice =
+        Long.parseLong(
+            options.freeConfig("tabu-lns", Long.toString(Math.max(1000, 20L * ts.decisions()))));
+    if (slice <= 0) {
+      return;
+    }
+    lns.setProposer(
+        model.vars,
+        incumbent -> {
+          if (!ts.start(model.assignment(incumbent))) {
+            return null;
+          }
+          long from = ts.cost();
+          ts.forgetBest();
+          long found = ts.improve(slice, () -> false);
+          return found < from ? functionalValues(ts.bestValues()) : null;
+        });
+  }
+
   private static final class Hint {
     final IntVar[] vars;
     final int[] values;
@@ -6140,7 +6498,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     } else if (options.getTimeOut() > 0) {
       // the time left now, not when the search starts: building the neighbourhoods and the
       // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
-      builder.deadline(System.currentTimeMillis() + options.getRemainingTimeOut());
+      builder.deadline(
+          System.currentTimeMillis()
+              + (freeFirstMillis > 0
+                  ? Math.min(freeFirstMillis, options.getRemainingTimeOut())
+                  : options.getRemainingTimeOut()));
+    }
+    IntVar[] recorded = freeFirstMillis > 0 ? hintedVariables() : null;
+    if (recorded != null) {
+      builder.record(recorded);
     }
     if (costVar != null) {
       builder.minimize((IntVar) costVar);
@@ -6171,6 +6537,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       freeLns = lnsNeighbourhoods(costVar);
       addScheduleProposer(freeLns);
       addMaxSatProposer(freeLns);
+      addFunctionalProposer(freeLns);
       if (freeLns != null && lcgHint != null) {
         // the neighbourhoods start from the best solution of LCG, which the store no longer admits:
         // they waited for free search's own first solution, which must improve on it, and on
@@ -6198,7 +6565,81 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
     freeSearchStatus = freeSearch.solve();
+    if (recorded != null && freeSearch.getSolution() != null) {
+      freeFirstVars = recorded;
+      freeFirstValues = freeSearch.getSolution();
+      freeFirstCost = freeSearch.getCostValue();
+    }
     return freeSearch.getSolutions() > 0;
+  }
+
+  // the squares among the objective's terms from which it is a balancing objective
+  private static final int SQUARED_OBJECTIVE_TERMS =
+      Integer.getInteger("org.jacop.fz.squaredObjectiveTerms", 4);
+
+  // with a balancing objective, the time free search without learning runs before LCG, in
+  // milliseconds (0 = none), and the best solution it found, which LCG starts from
+  private long freeFirstMillis;
+  private IntVar[] freeFirstVars;
+  private int[] freeFirstValues;
+  private int freeFirstCost;
+
+  /**
+   * Runs free search without learning before LCG free search when the objective is a balancing
+   * objective, a sum of squares ({@link #squaredObjectiveTerms}), for the share free-first of the
+   * time (default 0.1; 0 = off). Its search chooses each value by its bound on the objective
+   * (value-impact), which builds balanced loads at once, while LCG's bound literals on a sum of
+   * squares say little about which value raises it: at 120 s on XCSP 2023 GBACP-UD05 LCG free
+   * search ends at 1,253 to 3,777 and free search without learning at 228 to 333. Free search alone
+   * stalls on others where LCG goes on improving (GBACP-UD04 542 from 12 s on, LCG 396), so LCG
+   * then starts from free search's best solution. Handing the search back to free search without
+   * learning each time LCG stalled lost that again (UD04 469 at 240 s), so LCG keeps it under the
+   * usual check of {@link #slowLcgCheck}.
+   *
+   * @param costVar the cost variable
+   * @return true if free search finished the search (an optimum or no solution proved)
+   */
+  private boolean freeSearchFirst(Var costVar) {
+    double share = Double.parseDouble(options.freeConfig("free-first", "0.1"));
+    if (share <= 0
+        || !options.freeSearch()
+        || options.getTimeOut() <= 0
+        || options.portfolioWorker() != null
+        || options.proof() != null
+        || !(costVar instanceof IntVar)
+        || squaredObjectiveTerms(costVar) < SQUARED_OBJECTIVE_TERMS) {
+      return false;
+    }
+    if (!"0".equals(options.freeConfig("tabu", "1"))
+        && detectFunctional((IntVar) costVar, false) != null) {
+      // the tabu search of functional models runs instead (functionalHint): on low autocorrelation
+      // binary sequences at 240 s free search first left it 10 % less time and ended worse on 7
+      // of 10 XCSP 2025 instances (n = 60: 302 against 238)
+      if (options.debug()) {
+        IO.println("% free search first: skipped for the tabu search of a functional model");
+      }
+      return false;
+    }
+    if (options.getStatistics()) {
+      IO.println("%%%mzn-stat: freeFirstSquares=" + squaredObjectiveTerms(costVar));
+    }
+    freeFirstMillis = Math.max(1, (long) (share * options.getRemainingTimeOut()));
+    try {
+      executeFreeSearch(costVar);
+    } finally {
+      freeFirstMillis = 0;
+    }
+    if (options.debug()) {
+      IO.println(
+          "% free search first: "
+              + freeSearch.getSolutions()
+              + " solutions, best "
+              + (freeFirstValues == null ? "none" : freeFirstCost)
+              + ", "
+              + freeSearchStatus);
+    }
+    return freeSearchStatus == FreeSearch.Status.OPTIMAL
+        || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE;
   }
 
   /**
@@ -6581,7 +7022,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       probe.addClause(clause[0], clause[1]);
     }
-    probe.onSolution(this::printSolution);
+    if (costVar instanceof IntVar cost) {
+      // free search may have printed better solutions before (freeSearchFirst)
+      probe.onSolution(
+          () -> {
+            if (cost.value() < bestPrintedCost.get()) {
+              printSolution();
+            }
+          });
+    } else {
+      probe.onSolution(this::printSolution);
+    }
     if (costVar instanceof IntVar) {
       probe.onBound(
           lower -> {

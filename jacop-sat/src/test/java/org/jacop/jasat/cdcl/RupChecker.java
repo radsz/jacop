@@ -31,8 +31,11 @@
 
 package org.jacop.jasat.cdcl;
 
+import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Checks a DRAT proof. Each lemma must lead to a conflict by unit propagation over the formula and
@@ -57,6 +60,8 @@ final class RupChecker {
   private int trailSize;
   private int head;
   private boolean inconsistent;
+  // with deletions: the stored clauses by their sorted literals, as added
+  private Map<String, ArrayDeque<Integer>> byKey;
 
   private RupChecker(int vars) {
     watchLists = new int[2 * vars + 2][];
@@ -74,7 +79,25 @@ final class RupChecker {
    * @return null if the proof derives the empty clause by RUP steps, otherwise what is wrong
    */
   static String check(int vars, List<int[]> formula, String drat) {
+    return check(vars, formula, drat, false);
+  }
+
+  /**
+   * Checks a refutation, optionally honouring the deletions of the proof as drat-trim does: a
+   * deleted clause no longer propagates (deletions of unit clauses are ignored, and literals
+   * already assigned at the root stay).
+   *
+   * @param vars the number of variables
+   * @param formula the clauses (DIMACS literals)
+   * @param drat the proof in DRAT text format
+   * @param deletions whether deleted clauses stop propagating
+   * @return null if the proof derives the empty clause by RUP steps, otherwise what is wrong
+   */
+  static String check(int vars, List<int[]> formula, String drat, boolean deletions) {
     RupChecker c = new RupChecker(vars);
+    if (deletions) {
+      c.byKey = new HashMap<>();
+    }
     for (int[] clause : formula) {
       c.add(clause);
     }
@@ -82,7 +105,17 @@ final class RupChecker {
     for (String text : drat.split("\n")) {
       line++;
       text = text.strip();
-      if (text.isEmpty() || text.startsWith("d")) {
+      if (text.isEmpty()) {
+        continue;
+      }
+      if (text.startsWith("d")) {
+        if (c.byKey != null) {
+          c.delete(
+              Arrays.stream(text.substring(1).strip().split("\\s+"))
+                  .mapToInt(Integer::parseInt)
+                  .filter(x -> x != 0)
+                  .toArray());
+        }
         continue;
       }
       int[] lemma = Arrays.stream(text.split("\\s+")).mapToInt(Integer::parseInt).toArray();
@@ -129,7 +162,7 @@ final class RupChecker {
     }
     for (int i = 0; i < numClauses; i++) {
       int[] d = clauses[i];
-      if (Arrays.stream(d).noneMatch(x -> x == -p)) {
+      if (d == null || Arrays.stream(d).noneMatch(x -> x == -p)) {
         continue;
       }
       int[] resolvent = new int[rest.length + d.length - 1];
@@ -153,10 +186,22 @@ final class RupChecker {
     return lit > 0 ? 2 * lit : 2 * -lit + 1;
   }
 
+  private static String key(int[] lits) {
+    return Arrays.toString(Arrays.stream(lits).distinct().sorted().toArray());
+  }
+
+  private void delete(int[] lits) {
+    ArrayDeque<Integer> list = byKey.get(key(lits));
+    if (list != null && !list.isEmpty()) {
+      clauses[list.pop()] = null;
+    }
+  }
+
   private void add(int[] lits) {
     if (inconsistent) {
       return;
     }
+    String k = byKey == null ? null : key(lits);
     int[] c = Arrays.stream(lits).distinct().toArray();
     int n = 0;
     for (int l : c) {
@@ -183,6 +228,9 @@ final class RupChecker {
     clauses[numClauses] = c;
     watch(c[0], numClauses);
     watch(c[1], numClauses);
+    if (k != null) {
+      byKey.computeIfAbsent(k, x -> new ArrayDeque<>()).push(numClauses);
+    }
     numClauses++;
   }
 
@@ -213,6 +261,9 @@ final class RupChecker {
       for (int k = 0; k < n; k++) {
         int ci = ws[k];
         int[] c = clauses[ci];
+        if (c == null) {
+          continue; // deleted: its watches go
+        }
         if (c[0] == falseLit) {
           c[0] = c[1];
           c[1] = falseLit;

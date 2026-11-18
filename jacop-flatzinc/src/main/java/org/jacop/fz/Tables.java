@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.SaturatedProducts;
 import org.jacop.fz.constraints.TableVariableElimination;
 import org.jacop.fz.constraints.ZeroSumDetector;
 import org.jacop.lcg.AtomicTrail;
+import org.jacop.lcg.LinearForm;
 import org.jacop.set.core.BoundSetDomain;
 import org.jacop.set.core.SetVar;
 
@@ -89,6 +90,10 @@ public class Tables {
   final HashMap<String, Double> floatTable = new HashMap<>();
   final HashMap<String, int[]> intArrayTable =
       new HashMap<>(); // boolean are also stored here as 0/1 values
+  // arrays of parameters read as arrays of constants while the constraints are posted: each
+  // detector that looked at an element read the array again, boxing every entry (2000 elements
+  // over one array of 20,000 integers: 5 GB of Integer allocated by six detectors)
+  private final HashMap<String, IntVar[]> constantArrayTable = new HashMap<>();
   final HashMap<String, double[]> floatArrayTable = new HashMap<>();
   final HashMap<String, IntDomain> setTable = new HashMap<>();
   final HashMap<String, IntDomain[]> setArrayTable = new HashMap<>();
@@ -141,6 +146,10 @@ public class Tables {
   boolean overlapSetRows;
 
   final ArrayList<IntVar> overlapSetRowsDefined = new ArrayList<>();
+
+  // the rows that linear overlap factoring reduced to a multiple of one sub-sum, k * z rel c:
+  // posted as bounds of z, they reach the linear relaxation only from here
+  final ArrayList<LinearForm> overlapUnitRows = new ArrayList<>();
 
   // the tables of the model, for the clique rows of the linear relaxation
   private final ArrayList<TableCliques.Table> tables = new ArrayList<>();
@@ -732,6 +741,13 @@ public class Tables {
     t.splitSums.addAll(map.get(splitSums));
     t.overlapSetRows = overlapSetRows;
     t.overlapSetRowsDefined.addAll(map.get(overlapSetRowsDefined));
+    for (LinearForm f : overlapUnitRows) {
+      IntVar[] vs = new IntVar[f.vars().length];
+      for (int k = 0; k < vs.length; k++) {
+        vs[k] = map.get(f.vars()[k]);
+      }
+      t.overlapUnitRows.add(new LinearForm(vs, f.weights(), f.c(), f.relation()));
+    }
     lnsRoutes.forEach(r -> t.lnsRoutes.add(r.copy(map)));
     t.zeroSums = zeroSums == null ? null : zeroSums.copy(map);
     t.indexDisjunctions = indexDisjunctions == null ? null : indexDisjunctions.copy(map);
@@ -1104,9 +1120,13 @@ public class Tables {
     if (a == null) {
       int[] intA = intArrayTable.get(ident);
       if (intA != null) {
-        a = new IntVar[intA.length];
-        for (int i = 0; i < intA.length; i++) {
-          a[i] = getConstant(intA[i]);
+        a = constantArrayTable.get(ident);
+        if (a == null) {
+          a = new IntVar[intA.length];
+          for (int i = 0; i < intA.length; i++) {
+            a[i] = getConstant(intA[i]);
+          }
+          constantArrayTable.put(ident, a);
         }
       } else {
         return null;
@@ -1117,6 +1137,14 @@ public class Tables {
       }
     }
     return a;
+  }
+
+  /**
+   * It forgets the arrays of parameters read as arrays of constants by {@link
+   * #getVariableArray(String)}, once the constraints are posted.
+   */
+  void releaseConstantArrays() {
+    constantArrayTable.clear();
   }
 
   /**
@@ -1296,6 +1324,26 @@ public class Tables {
    */
   public List<IntVar> splitSums() {
     return splitSums;
+  }
+
+  /**
+   * Records a row that linear overlap factoring reduced to a multiple of one sub-sum variable.
+   *
+   * @param f the row, over the sub-sum variable
+   */
+  public void addOverlapUnitRow(LinearForm f) {
+    overlapUnitRows.add(f);
+  }
+
+  /**
+   * Returns the rows that linear overlap factoring reduced to a multiple of one sub-sum variable,
+   * which the store holds as bounds of that variable; the linear relaxation substitutes the sum
+   * back and has the rows of the model.
+   *
+   * @return the rows
+   */
+  public List<LinearForm> overlapUnitRows() {
+    return overlapUnitRows;
   }
 
   /**

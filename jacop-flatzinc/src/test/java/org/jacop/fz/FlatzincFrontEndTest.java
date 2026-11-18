@@ -34,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -42,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -51,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -61,6 +64,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
+import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -101,6 +110,30 @@ class FlatzincFrontEndTest {
         """;
 
     assertEquals(Set.of("r = false; x = true;", "r = true; x = false;"), solveAll(fzn));
+  }
+
+  @Test
+  void valueChoiceIndomainIsAscendingOrderWithoutWarning() throws IOException {
+    // indomain is the MiniZinc value choice "assign values in ascending order"; it was searched as
+    // indomain_min but reported on stderr as a not implemented value choice
+    String fzn =
+        """
+        array [1..2] of var 1..3: x:: output_array([1..2]);
+        constraint int_ne(x[1],x[2]);
+        solve :: int_search(x,input_order,indomain,complete) satisfy;
+        """;
+    ByteArrayOutputStream errors = new ByteArrayOutputStream();
+    PrintStream originalErr = System.err;
+    List<String> solutions;
+    try (PrintStream capture = new PrintStream(errors, true, StandardCharsets.UTF_8)) {
+      System.setErr(capture);
+      solutions = solveAllInOrder(fzn);
+    } finally {
+      System.setErr(originalErr);
+    }
+    assertEquals("x = array1d(1..2, [1, 2]);", solutions.get(0));
+    assertEquals(6, solutions.size());
+    assertFalse(errors.toString(StandardCharsets.UTF_8).contains("indomain"), errors::toString);
   }
 
   @Test
@@ -415,6 +448,71 @@ class FlatzincFrontEndTest {
       }
     }
     assertEquals(expected, solveAll(fzn));
+  }
+
+  @Test
+  void equalSetsOfLongSetArraysAreKeptOnce(@TempDir Path dir) throws IOException {
+    // The label sets of an MDD repeat a few sets millions of times (31 million sets, 4.2 GB while
+    // MagicSquare-mdd-16 of XCSP 2023 was read). Sets of arrays of 1024 or more sets are kept once
+    // for each content; shorter arrays keep their own sets. z may take 0..3, x and y 0..2.
+    int n = 1024;
+    StringBuilder sets = new StringBuilder();
+    StringBuilder other = new StringBuilder();
+    StringBuilder from = new StringBuilder();
+    StringBuilder to = new StringBuilder();
+    for (int i = 0; i < n; i++) {
+      String sep = i == 0 ? "" : ",";
+      sets.append(sep).append('{').append(i % 3).append('}');
+      other.append(sep).append(i == n - 1 ? "1..3" : "{" + i % 3 + "}");
+      from.append(sep).append(1);
+      to.append(sep).append(0);
+    }
+    String model =
+        "array [1..%d] of set of int: S1 = [%s];%n".formatted(n, sets)
+            + "array [1..%d] of set of int: S2 = [%s];%n".formatted(n, other)
+            + "array [1..3] of set of int: S3 = [{0},{1},{0}];\n"
+            + "array [1..%d] of int: F = [%s];%n".formatted(n, from)
+            + "array [1..%d] of int: T = [%s];%n".formatted(n, to)
+            + """
+            var 0..5: x:: output_var;
+            var 0..5: y:: output_var;
+            var 0..5: z:: output_var;
+            constraint jacop_mdd([x],[1],F,S1,T);
+            constraint jacop_mdd([y],[1],[1,1,1],S3,[0,0,0]);
+            constraint jacop_mdd([z],[1],F,S2,T);
+            solve satisfy;
+            """;
+    Path fzn = dir.resolve("sets.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    PrintStream out = System.out;
+    Tables tables;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {fzn.toString()});
+      loader.load();
+      tables = loader.getTables();
+    } finally {
+      System.setOut(out);
+    }
+    IntDomain[] s1 = tables.getSetArray("S1");
+    IntDomain[] s2 = tables.getSetArray("S2");
+    IntDomain[] s3 = tables.getSetArray("S3");
+    assertSame(s1[0], s1[3]);
+    assertSame(s1[1], s2[1]);
+    assertNotSame(s1[0], s1[1]);
+    assertNotSame(s2[n - 2], s2[n - 1]);
+    assertTrue(new IntervalDomain(1, 3).eq(s2[n - 1]));
+    assertNotSame(s3[0], s3[2]);
+
+    Set<String> expected = new HashSet<>();
+    for (int x = 0; x <= 2; x++) {
+      for (int y = 0; y <= 1; y++) {
+        for (int z = 0; z <= 3; z++) {
+          expected.add("x = " + x + "; y = " + y + "; z = " + z + ";");
+        }
+      }
+    }
+    assertEquals(expected, solveAll(model));
   }
 
   @Test
@@ -2824,12 +2922,14 @@ class FlatzincFrontEndTest {
 
   @Test
   void lcgSplitsLongLinearConstraintsAndKeepsTheOptimum() throws IOException {
-    // --lcg splits a linear constraint of more than 40 terms into sums of blocks of about
+    // --lcg splits a linear constraint of more than 20 terms into sums of blocks of about
     // sqrt(n) terms: the optimum stays that of the flat constraints and of the CP solver, and the
-    // linear reasons, about 32 atoms on the flat sums, get below 16
+    // linear reasons, about 32 atoms on the flat sums of 60 terms, get below 16; sums of 25 terms
+    // are split too, with shorter reasons than flat
     java.util.Random rnd = new java.util.Random(3);
-    for (int run = 0; run < 12; run++) {
-      int n = 60;
+    int shorter25 = 0;
+    for (int run = 0; run < 16; run++) {
+      int n = run < 12 ? 60 : 25;
       StringBuilder model = new StringBuilder();
       // 60 terms over 6 independent values: each x(i) equals y(i mod 6), so the search is small
       for (int j = 0; j < 6; j++) {
@@ -2866,18 +2966,93 @@ class FlatzincFrontEndTest {
       model.append(
           "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;\n"
               .formatted(run % 2 == 0 ? "minimize" : "maximize"));
-      String flat = lastObjective(run(model.toString(), "--lcg", "--free-config", "lcg-split=0"));
+      String[] flatRun =
+          run(model.toString(), "--lcg", "--search-statistics", "--free-config", "lcg-split=0");
+      String flat = lastObjective(flatRun);
       String cp = lastObjective(run(model.toString()));
-      String[] split = run(model.toString(), "--lcg", "-s");
+      String[] split = run(model.toString(), "--lcg", "--search-statistics");
       assertEquals(cp, flat, model.toString());
       assertEquals(cp, lastObjective(split), model.toString());
-      java.util.regex.Matcher m =
-          java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
-              .matcher(split[0]);
-      if (m.find() && Long.parseLong(m.group(1)) > 0) {
-        assertTrue(Double.parseDouble(m.group(2)) < 16, split[0]);
+      double splitAtoms = linearAtoms(split[0]);
+      if (n == 60 && splitAtoms >= 0) {
+        assertTrue(splitAtoms < 16, split[0]);
+      }
+      double flatAtoms = linearAtoms(flatRun[0]);
+      if (n == 25 && splitAtoms >= 0 && flatAtoms >= 0) {
+        shorter25 += splitAtoms < flatAtoms ? 1 : 0;
       }
     }
+    assertTrue(shorter25 > 0, "no sum of 25 terms got shorter linear reasons");
+  }
+
+  @Test
+  void lcgSplitsSumsOfMoreThan400TermsIntoATree() throws IOException {
+    // a sum of 1,700 terms: blocks of sqrt(1700) = 42 terms and a sum of 41 blocks give
+    // reasons of about 41 atoms; lcg-split-tree (the default) keeps every sum at 20 terms or
+    // fewer, with the same optimum
+    java.util.Random rnd = new java.util.Random(5);
+    int n = 1700;
+    for (int run = 0; run < 2; run++) {
+      StringBuilder model = new StringBuilder();
+      for (int j = 0; j < 6; j++) {
+        model.append("var 0..2: y%d;%n".formatted(j));
+      }
+      for (int i = 0; i < n; i++) {
+        model.append("var 0..2: x%d;%n".formatted(i));
+      }
+      model.append("var -100000..100000: s;\n");
+      model.append("var -100000..100000: obj :: output_var;\n");
+      for (int i = 0; i < n; i++) {
+        model.append("constraint int_le(x%d, y%d);%n".formatted(i, i % 6));
+        model.append("constraint int_le(y%d, x%d);%n".formatted(i % 6, i));
+      }
+      String xs =
+          java.util.stream.IntStream.range(0, n)
+              .mapToObj(i -> "x" + i)
+              .collect(Collectors.joining(","));
+      String ys = "y0,y1,y2,y3,y4,y5";
+      String[] ws = new String[2];
+      for (int k = 0; k < 2; k++) {
+        ws[k] =
+            java.util.stream.IntStream.range(0, n)
+                .mapToObj(
+                    i -> Integer.toString((1 + rnd.nextInt(3)) * (rnd.nextBoolean() ? 1 : -1)))
+                .collect(Collectors.joining(","));
+      }
+      // one long sum: two over the same terms would also be factored (linear overlap)
+      model.append(
+          "constraint int_lin_le([%s], [%s], %d);%n".formatted("1,1,1,1,1,1", ys, 4 + run));
+      model.append("constraint int_lin_eq([%s,-1], [%s,s], 0);%n".formatted(ws[1], xs));
+      model.append("constraint int_lin_eq([1,1,-1], [s,y0,obj], 0);\n");
+      model.append(
+          "solve :: int_search([y0,y1,y2,y3,y4,y5], input_order, indomain_min, complete) %s obj;%n"
+              .formatted(run == 0 ? "minimize" : "maximize"));
+      String cp = lastObjective(run(model.toString()));
+      String[] blocks =
+          run(
+              model.toString(),
+              "--lcg",
+              "--search-statistics",
+              "--free-config",
+              "lcg-split-tree=0");
+      String[] tree = run(model.toString(), "--lcg", "--search-statistics");
+      assertEquals(cp, lastObjective(blocks), model.toString());
+      assertEquals(cp, lastObjective(tree), model.toString());
+      // 1,701 terms with s: 41 blocks of up to 42 terms; in the tree 86 blocks of up to 20
+      // terms, and 9 sums of up to 10 of those
+      assertEquals(41, statistic(blocks[0], "lcgSplitSums"), blocks[0]);
+      assertEquals(86 + 9, statistic(tree[0], "lcgSplitSums"), tree[0]);
+      double treeAtoms = linearAtoms(tree[0]);
+      assertTrue(treeAtoms <= 20, tree[0]);
+    }
+  }
+
+  // the average atoms of the LinearInt reasons in the -s statistics, or -1 without such reasons
+  private static double linearAtoms(String out) {
+    java.util.regex.Matcher m =
+        java.util.regex.Pattern.compile("%% lcg LinearInt: reasons=(\\d+) .*?avgAtoms=([0-9.]+)")
+            .matcher(out);
+    return m.find() && Long.parseLong(m.group(1)) > 0 ? Double.parseDouble(m.group(2)) : -1;
   }
 
   // the last obj = value or status line printed
@@ -4016,6 +4191,173 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void tablesOverOneKeyedRelationShareTheirBinaryParts(@TempDir Path dir) throws Exception {
+    // a table whose first column is a key is posted as one binary table per other column; over a
+    // relation of 80,000 words, 60 such tables built 300 binary tables with their own tuples and
+    // index (5.8 GB). The tables over the same relation share the binary part of each column.
+    StringBuilder m = new StringBuilder("array [1..24] of int: t = [");
+    int[][] rows = {
+      {1, 0, 2, 1}, {2, 1, 0, 2}, {3, 2, 2, 0}, {4, 0, 1, 1}, {5, 1, 1, 2}, {6, 2, 0, 0}
+    };
+    StringJoiner cells = new StringJoiner(",");
+    for (int[] r : rows) {
+      for (int v : r) {
+        cells.add(Integer.toString(v));
+      }
+    }
+    m.append(cells).append("];\n");
+    for (int i = 0; i < 3; i++) {
+      m.append("var 1..6: w").append(i).append(":: output_var;\n");
+    }
+    for (int j = 0; j < 9; j++) {
+      m.append("var 0..2: l").append(j).append(":: output_var;\n");
+    }
+    for (int i = 0; i < 3; i++) {
+      m.append("constraint jacop_table_int([w").append(i);
+      for (int k = 0; k < 3; k++) {
+        m.append(",l").append((i * 2 + k) % 9);
+      }
+      m.append("],t);\n");
+    }
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("words.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    java.lang.reflect.Field shared = HybridTable.class.getDeclaredField("shared");
+    shared.setAccessible(true);
+    List<HybridTable> binary = new ArrayList<>();
+    Set<Object> indexes = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof HybridTable h && h.columnCount() == 2) {
+        binary.add(h);
+        indexes.add(shared.get(h));
+      }
+    }
+    // the last letter is a function of the first one, so each table has two parts with the word
+    assertEquals(6, binary.size(), binary.toString());
+    assertEquals(2, indexes.size());
+    for (HybridTable h : binary) {
+      assertEquals(0, h.keyColumn());
+    }
+  }
+
+  @Test
+  void regularsOverOneAutomatonShareItsGraph(@TempDir Path dir) throws Exception {
+    // each regular built its own automaton and layered graph: 200 regulars over one automaton of
+    // 500 states held 1.5 GB. They share one automaton, and the graph over equal domains.
+    StringBuilder m = new StringBuilder();
+    m.append("predicate jacop_regular(array [int] of var int: x,int: Q,int: S,");
+    m.append("array [int] of int: d,int: q0,set of int: F,int: min_index);\n");
+    for (int i = 0; i < 12; i++) {
+      m.append("var 0..1: x").append(i).append(":: output_var;\n");
+    }
+    for (int r = 0; r < 3; r++) {
+      m.append("constraint jacop_regular([");
+      for (int i = 0; i < 4; i++) {
+        m.append(i > 0 ? "," : "").append('x').append(r * 4 + i);
+      }
+      // no two consecutive ones
+      m.append("],2,2,[1,2,1,0],1,1..2,0);\n");
+    }
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("regular.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    List<Regular> regulars = new ArrayList<>();
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof Regular r) {
+        regulars.add(r);
+      }
+    }
+    assertEquals(3, regulars.size());
+    assertSame(regulars.get(0).fsm, regulars.get(1).fsm);
+    assertSame(regulars.get(0).fsm, regulars.get(2).fsm);
+    assertTrue(regulars.get(0).sharesGraphWith(regulars.get(1)));
+    assertTrue(regulars.get(0).sharesGraphWith(regulars.get(2)));
+    // the words of 4 letters without two consecutive ones, 8 of them, for each of the 3 regulars
+    String all = run(m.toString(), "-a")[0];
+    assertEquals(8 * 8 * 8, all.split("----------", -1).length - 1, all);
+  }
+
+  @Test
+  void anArrayOfParametersIsReadAsConstantsOnce() {
+    // every detector that looked at an element read its array of parameters as constants again,
+    // boxing each entry: 2000 elements over one array of 20,000 allocated 5 GB of Integer
+    Tables tables = new Tables(new Store());
+    int[] values = new int[2000];
+    for (int i = 0; i < values.length; i++) {
+      values[i] = i % 7;
+    }
+    tables.addIntArray("a", values);
+    IntVar[] first = tables.getVariableArray("a");
+    assertEquals(2000, first.length);
+    assertEquals(3, first[3].value());
+    assertSame(first, tables.getVariableArray("a"));
+    tables.releaseConstantArrays();
+    IntVar[] again = tables.getVariableArray("a");
+    assertNotSame(first, again);
+    assertSame(first[3], again[3]);
+  }
+
+  @Test
+  void differenceCyclesKeepElementArcsWithinTheirBudget() throws IOException {
+    // each y = a[index] adds two difference arcs per value of the index: 800 elements over one
+    // array of 5000 variables made 8 million arcs (570 MB). Over the budget an element adds none.
+    int n = 40;
+    StringBuilder m = new StringBuilder();
+    for (int j = 0; j < n; j++) {
+      m.append("var 0..9: a").append(j).append(";\n");
+    }
+    for (int i = 0; i < 3; i++) {
+      m.append("var 1..").append(n).append(": i").append(i).append(";\n");
+      m.append("var 0..9: y").append(i).append(":: output_var;\n");
+    }
+    m.append("array [1..").append(n).append("] of var int: a = [");
+    for (int j = 0; j < n; j++) {
+      m.append(j > 0 ? "," : "").append('a').append(j);
+    }
+    m.append("];\n");
+    for (int i = 0; i < 3; i++) {
+      m.append("constraint array_var_int_element(i").append(i).append(",a,y").append(i);
+      m.append(");\n");
+    }
+    m.append("solve satisfy;\n");
+    String model = m.toString();
+    assertTrue(run(model, "-debug")[0].contains("% difference cycles: 240 difference"));
+    String old = System.getProperty("org.jacop.fz.differenceElements.maxArcs");
+    System.setProperty("org.jacop.fz.differenceElements.maxArcs", "100");
+    try {
+      String out = run(model, "-debug")[0];
+      assertTrue(out.contains("% difference cycles: 80 difference"), out);
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.differenceElements.maxArcs");
+      } else {
+        System.setProperty("org.jacop.fz.differenceElements.maxArcs", old);
+      }
+    }
+  }
+
+  @Test
   void differenceCyclesSurvivePresolveFixingAVariableOfAnArc() throws IOException {
     // fuzz seed 1300110: x <= y or y < x is a conditional cycle, so DifferenceCycles is posted with
     // the arc f1 <= x too. Presolve fixes f1, which only the literals of the constraint name, and
@@ -4198,6 +4540,114 @@ class FlatzincFrontEndTest {
       if (solutions == 0) {
         assertTrue(out.contains("=====UNSATISFIABLE====="), model + out);
       }
+    }
+  }
+
+  // a prize-collecting path from node 1 as the MiniZinc Challenge 2016 model flattens it: next[i]
+  // is 0 for an unused node, 1 for the edge back to node 1, and pos[next[i]] = pos[i] + 1 (MTZ)
+  private static String prizeCollecting(int n, long seed) {
+    Random r = new Random(seed);
+    StringBuilder v = new StringBuilder();
+    StringBuilder c = new StringBuilder();
+    v.append("predicate jacop_array_var_int_element_nonshifted(var int: idx,")
+        .append("array [int] of var int: xs,var int: y,int: min_index);\n");
+    v.append("predicate int_lin_eq_imp(array [int] of int: as,array [int] of var int: bs,int: c,")
+        .append("var bool: r);\n");
+    v.append("predicate int_eq_imp(var int: a,var int: b,var bool: r);\n");
+    StringJoiner pos = new StringJoiner(",");
+    StringJoiner next = new StringJoiner(",");
+    StringJoiner prize = new StringJoiner(",");
+    StringJoiner ones = new StringJoiner(",");
+    for (int i = 1; i <= n; i++) {
+      v.append("var 0..").append(n).append(": p").append(i).append(";\n");
+      v.append("var 0..").append(n).append(": x").append(i).append(";\n");
+      v.append("var -1000..20: w").append(i).append(";\n");
+      v.append("var 0..").append(n).append(": e").append(i).append(";\n");
+      v.append("var bool: u").append(i).append(";\n");
+      v.append("var bool: b").append(i).append(";\n");
+      v.append("var 1..").append(n).append(": y").append(i).append(";\n");
+      pos.add("p" + i);
+      next.add("x" + i);
+      prize.add("w" + i);
+      ones.add("1");
+    }
+    v.append("var 0..1000: obj :: output_var;\n");
+    v.append("array [1..").append(n).append("] of var int: next :: output_array([1..").append(n);
+    v.append("]) = [").append(next).append("];\n");
+    c.append("constraint int_eq(p1,1);\n");
+    for (int i = 1; i <= n; i++) {
+      // a used node has a successor, and a successor other than node 1 is one position later
+      c.append("constraint int_le_reif(1,p").append(i).append(",u").append(i).append(");\n");
+      c.append("constraint int_le_reif(1,x").append(i).append(",u").append(i).append(");\n");
+      c.append("constraint int_le_reif(2,x").append(i).append(",b").append(i).append(");\n");
+      c.append("constraint int_eq_imp(y").append(i).append(",x").append(i).append(",b").append(i);
+      c.append(");\n");
+      c.append("constraint jacop_array_var_int_element_nonshifted(y").append(i);
+      c.append(",[").append(pos).append("],e").append(i).append(",1);\n");
+      c.append("constraint int_lin_eq_imp([1,-1],[e").append(i).append(",p").append(i);
+      c.append("],1,b").append(i).append(");\n");
+      // the prize of the edge to next[i]; small for the edges back to node 1, so that the
+      // assignment relaxation prefers the cycles the subtour cuts remove
+      StringJoiner row = new StringJoiner(",");
+      row.add("0");
+      for (int j = 1; j <= n; j++) {
+        row.add(j == i ? "-1000" : j == 1 ? "1" : Integer.toString(5 + r.nextInt(16)));
+      }
+      c.append("constraint jacop_array_var_int_element_nonshifted(x").append(i);
+      c.append(",[").append(row).append("],w").append(i).append(",0);\n");
+    }
+    for (int j = 2; j <= n; j++) {
+      // node j has at most one predecessor
+      StringJoiner is = new StringJoiner(",");
+      for (int i = 1; i <= n; i++) {
+        String q = "q" + i + "_" + j;
+        v.append("var bool: ").append(q).append(";\n");
+        v.append("var 0..1: c").append(q).append(";\n");
+        c.append("constraint int_eq_reif(x").append(i).append(',').append(j);
+        c.append(',').append(q).append(");\n");
+        c.append("constraint bool2int(").append(q).append(",c").append(q).append(");\n");
+        is.add("c" + q);
+      }
+      c.append("constraint int_lin_le([").append(ones).append("],[").append(is).append("],1);\n");
+    }
+    c.append("constraint int_lin_eq([").append(ones).append(",-1],[").append(prize);
+    c.append(",obj],0);\n");
+    c.append("solve maximize obj;\n");
+    return v.toString() + c;
+  }
+
+  @Test
+  void successorForestCutsKeepTheOptimum() throws IOException {
+    // the subtour cuts of a successor forest (off by default) remove the subtours of the LP
+    // relaxation and the optimum stays the same; under free search the dense tableau of
+    // prize-collecting 32-4-8-2 ran out of pivots in the first round, and the round now goes on
+    // on the sparse simplex (the LP statistics are printed with -debug)
+    String[][] runs = {{"-s", "-debug"}, {"-s", "-debug", "-f"}, {"-s", "-debug", "--lcg", "off"}};
+    int[] cuts = new int[runs.length];
+    for (long seed = 1; seed <= 5; seed++) {
+      String model = prizeCollecting(8, seed);
+      String base = run(model)[0];
+      assertTrue(base.contains("=========="), base);
+      int from = base.lastIndexOf("obj = ");
+      String optimum = base.substring(from, base.indexOf('\n', from));
+      try {
+        System.setProperty("org.jacop.fz.successorForest", "true");
+        for (int k = 0; k < runs.length; k++) {
+          String out = run(model, runs[k])[0];
+          String what = Arrays.toString(runs[k]) + out;
+          assertTrue(out.contains("==========") && out.contains("% successor forest:"), what);
+          from = out.lastIndexOf("obj = ");
+          assertEquals(optimum, out.substring(from, out.indexOf('\n', from)), what);
+          Matcher m = Pattern.compile("lpTreeCuts=(\\d+)").matcher(out);
+          assertTrue(m.find(), what);
+          cuts[k] += Integer.parseInt(m.group(1));
+        }
+      } finally {
+        System.clearProperty("org.jacop.fz.successorForest");
+      }
+    }
+    for (int k = 0; k < runs.length; k++) {
+      assertTrue(cuts[k] > 0, Arrays.toString(runs[k]));
     }
   }
 }

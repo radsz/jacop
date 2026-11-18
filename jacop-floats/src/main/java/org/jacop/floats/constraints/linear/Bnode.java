@@ -91,6 +91,11 @@ public class Bnode extends BinaryNode {
 
   @Override
   void propagateAndPrune() {
+    propagateAndPrune(null);
+  }
+
+  @Override
+  void propagateAndPrune(BinaryNode from) {
 
     FloatDomain d = FloatDomain.addBounds(left.min(), left.max(), right.min(), right.max());
     double min = d.min();
@@ -110,14 +115,14 @@ public class Bnode extends BinaryNode {
         }
         updateBounds(min, max, lb, ub);
         prune(min, max);
-        parent.propagateAndPrune();
+        parent.propagateAndPrune(this);
       } else {
         if (min > nodeMax) {
           throw Store.failException;
         }
         updateBounds(min, nodeMax, lb, ub);
         prune(min, nodeMax);
-        parent.propagateAndPrune();
+        parent.propagateAndPrune(this);
       }
     } else if (max < nodeMax) {
       if (nodeMin > max) {
@@ -125,10 +130,21 @@ public class Bnode extends BinaryNode {
       }
       updateBounds(nodeMin, max, lb, ub);
       prune(nodeMin, max);
-      parent.propagateAndPrune();
+      parent.propagateAndPrune(this);
     } else {
-      // no change in the domain but it was called since the children have been changed
-      prune(nodeMin, nodeMax);
+      // no change in the domain but it was called since a child has changed: with the bounds of
+      // this node unchanged, only the other child can be narrowed
+      if (from == left) {
+        if (pruneNode(nodeMin, nodeMax, right, left)) {
+          right.prune();
+        }
+      } else if (from == right) {
+        if (pruneNode(nodeMin, nodeMax, left, right)) {
+          left.prune();
+        }
+      } else {
+        prune(nodeMin, nodeMax);
+      }
     }
   }
 

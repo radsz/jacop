@@ -167,6 +167,22 @@ public final class CdclSolver {
 
   private final VarHeap order = new VarHeap();
 
+  // --- the VMTF decision queue of focused mode (CaDiCaL, Kissat), used when vmtf is on: a doubly
+  // linked list of the variables in the order of their last bump, the most recent last. Each
+  // variable carries the stamp of its last bump, and qSearch is a variable from which every later
+  // one in the queue is assigned (or eliminated), so a decision walks back from it.
+  private boolean vmtf;
+  private int[] qPrev = new int[0];
+  private int[] qNext = new int[0];
+  private long[] qStamp = new long[0];
+  private int qFirst = -1;
+  private int qLast = -1;
+  private int qSearch = -1;
+  private long qBumped;
+  private int[] qToBump = new int[16];
+  private int qToBumpSize;
+  private long[] qKeys = new long[16];
+
   private int[] trail = new int[0];
   private int trailSize;
   private int qhead;
@@ -267,6 +283,19 @@ public final class CdclSolver {
   private long nextReduce = 2000;
   private int reduceBase = 2000;
   private int reduceInc = 300;
+  // A reduction is also made, at most every MEMORY_REDUCE_GAP conflicts, when the learnt clauses
+  // take more than LEARNT_HEAP_SHARE of the heap: under lazy clause generation a diagram given as
+  // clauses (MagicSquare-mdd-10, XCSP 2023: 4.4 million literals) made learnt clauses of 4,000
+  // literals on average, mostly in the core tier, and 6,000 conflicts ran a 6 GB heap out of memory
+  // (12 GB a little later) when the arena of 870 MB grew by half; the growth needs the old and the
+  // new arena at once.
+  private static final double LEARNT_HEAP_SHARE = 1.0 / 16;
+  private static final int MEMORY_REDUCE_GAP = 16;
+  private long learntBudget =
+      (long) (LEARNT_HEAP_SHARE * Runtime.getRuntime().maxMemory()) / Integer.BYTES;
+  private long nextMemoryCheck;
+  // the bytes that elimination and local search may take for their copies of the clauses
+  private long copyBudget = Runtime.getRuntime().maxMemory() / 4;
   // vivification of learnt clauses at the next restart, after each reduction
   private boolean vivification = true;
   private boolean vivifyDue;
@@ -397,6 +426,28 @@ public final class CdclSolver {
 
   // --- variable elimination before the first search (see Eliminator)
   private boolean elimination = true;
+  // equivalent-literal substitution before elimination (see Congruence), and congruence closure
+  // on gates in it
+  private boolean substitution = !"false".equals(System.getProperty("jacop.jasat.substitute"));
+  private boolean congruence = !"false".equals(System.getProperty("jacop.jasat.congruence"));
+  // gate extraction runs again at a later elimination only if the last one found a gate
+  private boolean gatesPaid = true;
+
+  /** Statistics: variables replaced by an equivalent literal. */
+  public long substitutedVars;
+
+  /** Statistics: equivalences found in the binary implication graph. */
+  public long sccEquivalences;
+
+  /** Statistics: equivalences found by congruence closure. */
+  public long gateEquivalences;
+
+  /** Statistics: gates extracted for congruence closure. */
+  public long gatesFound;
+
+  /** Statistics: time spent in substitution and congruence closure. */
+  public long substitutionNanos;
+
   private boolean eliminationTried;
   private boolean externalUsed;
   private boolean[] eliminatedVar = new boolean[0];
@@ -407,6 +458,59 @@ public final class CdclSolver {
   private int eliminationInterval = 5000;
   private int eliminationRounds;
   private long seed;
+
+  // inprocessing statistics per round on standard output
+  private static final boolean VERBOSE = Boolean.getBoolean("jacop.jasat.verbose");
+
+  // --- SAT sweeping (see Sweeper), at each elimination round
+  private boolean sweeping;
+  private boolean[] sweepDone = new boolean[0];
+  private int sweepCompleted;
+  private long propagationsAtSweep;
+  private static final long SWEEP_FIRST_EFFORT =
+      Long.getLong("jacop.jasat.sweepFirst", 100_000_000);
+  private static final long SWEEP_MIN_EFFORT = Long.getLong("jacop.jasat.sweepMin", 20_000_000);
+  private int sweepRounds;
+  private int sweepDelay;
+  private int sweepDelayLimit;
+  private static final int SWEEP_EFFORT_PER_MILLE = 100;
+
+  // --- failed-literal probing, at each elimination round
+  private boolean probing;
+  private int probeCursor;
+  private long propagationsAtProbe;
+  private static final long PROBE_MIN_EFFORT = 1_000_000;
+  private static final int PROBE_EFFORT_PER_MILLE = 50;
+
+  /** Statistics: propagations of failed-literal probing, not counted in {@link #propagations}. */
+  public long probePropagations;
+
+  /** Statistics: literals probed. */
+  public long probedLiterals;
+
+  /** Statistics: failed literals found by probing (each gives a unit). */
+  public long failedLiterals;
+
+  /** Statistics: units implied by both a probed literal and its negation. */
+  public long liftedUnits;
+
+  /** Statistics: equivalences found by probing both signs of a literal. */
+  public long probeEquivalences;
+
+  /** Statistics: time spent probing, in nanoseconds. */
+  public long probeNanos;
+
+  /** Statistics: units found by SAT sweeping. */
+  public long sweepUnits;
+
+  /** Statistics: literal equivalences found by SAT sweeping. */
+  public long sweepEquivalences;
+
+  /** Statistics: variables swept. */
+  public long sweptVariables;
+
+  /** Statistics: time spent sweeping, in nanoseconds. */
+  public long sweepNanos;
 
   // --- bounded variable addition before the first elimination (see Factorizer)
   private boolean factoring;
@@ -511,6 +615,9 @@ public final class CdclSolver {
   /** Number of learnt clause database reductions so far. */
   public long reductions;
 
+  /** Statistics: reductions of the learnt clauses made because they took too much of the heap. */
+  public long memoryReductions;
+
   /** Statistics: literals of the learnt clauses, after minimisation. */
   public long learntLiterals;
 
@@ -565,7 +672,17 @@ public final class CdclSolver {
       binWatches = Arrays.copyOf(binWatches, 2 * c);
       binSize = Arrays.copyOf(binSize, 2 * c);
     }
+    if (qPrev.length < n || qNext.length < n || qStamp.length < n) { // grown together
+      int c = Math.max(n, 2 * qPrev.length);
+      qPrev = Arrays.copyOf(qPrev, c);
+      qNext = Arrays.copyOf(qNext, c);
+      qStamp = Arrays.copyOf(qStamp, c);
+    }
     order.grow(n, activity);
+    for (int v = n - 1; v >= numVars; v--) {
+      queueAppend(v); // the first variable last, so decided first
+      qSearch = v;
+    }
     for (int v = numVars; v < n; v++) {
       vdata[v << 2 | REASON] = NO_REASON;
     }
@@ -913,6 +1030,22 @@ public final class CdclSolver {
   }
 
   /**
+   * Returns a clock that goes on reading like {@link #now} once the solver has stopped, without
+   * holding the solver: the virtual clock keeps the solver's own work as it is now and goes on
+   * counting the external work. The caller can then drop the solver and its clauses.
+   *
+   * @return the clock, in nanoseconds
+   */
+  public LongSupplier stoppedClock() {
+    LongSupplier work = externalWork;
+    if (!virtualClock) {
+      return System::nanoTime;
+    }
+    long own = propagations;
+    return () -> (own + work.getAsLong()) * 1_000_000L / VIRTUAL_WORK_PER_MS;
+  }
+
+  /**
    * Turns the virtual clock of this solver on or off; it is on by default under {@link
    * #VIRTUAL_CLOCK}. Set it before the deadline, which is a time of {@link #now}.
    *
@@ -1137,6 +1270,54 @@ public final class CdclSolver {
    */
   public void setElimination(boolean on) {
     elimination = on;
+  }
+
+  /**
+   * Turns SAT sweeping on or off (off by default). When on, each elimination round (see {@link
+   * #setElimination}) first sweeps variables as Kissat does (see {@link Sweeper}): the clauses
+   * around a variable are solved by a small sub-solver to find units and equivalent literals, which
+   * are added as unit and binary clauses. It spends about a tenth of the propagations of the search
+   * since the last round.
+   *
+   * @param on whether to sweep
+   */
+  public void setSweeping(boolean on) {
+    sweeping = on;
+  }
+
+  /**
+   * Turns failed-literal probing on or off (off by default). When on, each elimination round (see
+   * {@link #setElimination}) first probes the roots of the binary implication graph at level 0: a
+   * literal whose propagation conflicts gives the unit of the conflict's first UIP; the literals
+   * implied by both signs of a probed variable are units, and a literal implied by one sign whose
+   * negation the other sign implies is equivalent to it (added as binary clauses).
+   *
+   * @param on whether to probe
+   */
+  public void setProbing(boolean on) {
+    probing = on;
+  }
+
+  /**
+   * Turns equivalent-literal substitution on or off: before each variable elimination, the
+   * equivalences of the binary implication graph and, with {@link #setCongruence}, of congruent
+   * gates replace their literals (see {@link Congruence}). On by default (system property {@code
+   * jacop.jasat.substitute}); it runs only where elimination runs.
+   *
+   * @param on whether to substitute
+   */
+  public void setSubstitution(boolean on) {
+    substitution = on;
+  }
+
+  /**
+   * Turns congruence closure on AND, XOR and ITE gates in the substitution on or off. On by default
+   * (system property {@code jacop.jasat.congruence}).
+   *
+   * @param on whether to look for congruent gates
+   */
+  public void setCongruence(boolean on) {
+    congruence = on;
   }
 
   /**
@@ -1386,6 +1567,9 @@ public final class CdclSolver {
         savedSign[v] = (byte) (lit & 1);
       }
       order.insert(v);
+      if (qSearch < 0 || qStamp[v] > qStamp[qSearch]) {
+        qSearch = v;
+      }
     }
     trailSize = kept;
     qhead = Math.min(start, qheadLim[target]);
@@ -1681,6 +1865,12 @@ public final class CdclSolver {
   }
 
   private void bumpVar(int v) {
+    if (queueInUse()) {
+      if (qToBumpSize == qToBump.length) {
+        qToBump = Arrays.copyOf(qToBump, 2 * qToBumpSize);
+      }
+      qToBump[qToBumpSize++] = v; // and bumped in the heap too, for the next stable phase
+    }
     if ((activity[v] += varInc) > 1e100) {
       for (int i = 0; i < numVars; i++) {
         activity[i] *= 1e-100;
@@ -2044,6 +2234,7 @@ public final class CdclSolver {
       }
     }
 
+    bumpQueue();
     if (learntSize == 1) {
       return 0;
     }
@@ -2758,6 +2949,8 @@ public final class CdclSolver {
     if (conflicts >= nextReduce) {
       nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
       reduceDb();
+    } else if (learntsTooLarge()) {
+      reduceForMemory();
     }
     return propagateUnits();
   }
@@ -3140,6 +3333,8 @@ public final class CdclSolver {
         nextReduce = conflicts + reduceBase + reduceInc * ++reductions;
         reduceDb();
         vivifyDue = vivification;
+      } else if (learntsTooLarge()) {
+        reduceForMemory();
       }
       if (decisionLevel == 0 && trailSize != simplifyAssigns && propagations >= simplifyProps) {
         simplifyDb();
@@ -3737,6 +3932,9 @@ public final class CdclSolver {
   }
 
   private int pickBranch() {
+    if (queueInUse()) {
+      return pickFromQueue();
+    }
     while (!order.isEmpty()) {
       int v = order.removeMax();
       if (vals[2 * v] == 0 && !eliminatedVar[v]) {
@@ -3785,7 +3983,9 @@ public final class CdclSolver {
       case 'I' -> Arrays.fill(savedSign, 0, numVars, (byte) (1 - originalSign));
       case 'W' -> {
         System.arraycopy(bestSign, 0, savedSign, 0, numVars);
-        walk();
+        if (walkFits()) {
+          walk();
+        }
       }
       default -> System.arraycopy(bestSign, 0, savedSign, 0, numVars);
     }
@@ -4180,6 +4380,54 @@ public final class CdclSolver {
 
   // ------------------------------------------------------------------------- clause database
 
+  /**
+   * Whether the learnt clauses take more than their share of the heap, checked at most every
+   * MEMORY_REDUCE_GAP conflicts and only once the arena is that large.
+   */
+  private boolean learntsTooLarge() {
+    if (conflicts < nextMemoryCheck || memSize - wasted <= learntBudget) {
+      return false;
+    }
+    nextMemoryCheck = conflicts + MEMORY_REDUCE_GAP;
+    return learntInts() > learntBudget;
+  }
+
+  /** The ints that the learnt clauses take in the arena. */
+  private long learntInts() {
+    long ints = 0;
+    for (int i = 0; i < numLearnts; i++) {
+      ints += HEADER + mem[learnts[i] + SIZE];
+    }
+    return ints;
+  }
+
+  /**
+   * It deletes the longest learnt clauses that are not the reason of an assignment, whatever their
+   * tier, until the learnt clauses take half of their budget. Long clauses of a low LBD stay in the
+   * core tier for good, so the scheduled reductions never delete them: under lazy clause generation
+   * over a diagram given as clauses they were the clauses of tens of thousands of literals that
+   * filled the heap.
+   */
+  private void reduceForMemory() {
+    memoryReductions++;
+    long ints = learntInts();
+    long[] keys = new long[numLearnts];
+    int candidates = 0;
+    for (int i = 0; i < numLearnts; i++) {
+      int ref = learnts[i];
+      if (!isLocked(ref)) {
+        keys[candidates++] = ((long) mem[ref + SIZE] << 32) | i;
+      }
+    }
+    Arrays.sort(keys, 0, candidates);
+    for (int c = candidates - 1; c >= 0 && ints > learntBudget / 2; c--) {
+      int ref = learnts[(int) keys[c]];
+      ints -= HEADER + mem[ref + SIZE];
+      deleteClause(ref);
+    }
+    purge();
+  }
+
   private void reduceDb() {
     long[] keys = new long[numLearnts];
     int candidates = 0;
@@ -4221,6 +4469,41 @@ public final class CdclSolver {
   }
 
   /**
+   * Whether the copies that elimination makes of the original clauses fit in a quarter of the heap:
+   * the clauses as arrays, the eliminator's own lists and its occurrence lists, about three times
+   * the clauses. Under lazy clause generation a diagram or table posted as clauses gives tens of
+   * millions of them, and the copies ran a 6 GB heap out of memory on MagicSquare-mdd-10 (XCSP
+   * 2023); elimination is then skipped. The heap size, not the free heap, decides, so that the run
+   * does not depend on the garbage collector.
+   */
+  private boolean eliminationFits() {
+    long clauses = numOriginals + numOriginalBinaries / 2L;
+    long need = 3 * (24 * clauses + 4 * (originalLiterals() + numOriginalBinaries)) + 48L * numVars;
+    return need < copyBudget;
+  }
+
+  /**
+   * Whether the copy of the original clauses that the local search walks on fits in a quarter of
+   * the heap: their literals and starts, an occurrence list for each literal of a clause and its
+   * arrays per variable.
+   */
+  private boolean walkFits() {
+    long clauses = numOriginals + numOriginalBinaries / 2L;
+    long literals = originalLiterals() + numOriginalBinaries;
+    long need = 8 * literals + 4 * clauses + 48L * numVars;
+    return need < copyBudget;
+  }
+
+  /** The literals of the original clauses that are not binary. */
+  private long originalLiterals() {
+    long literals = 0;
+    for (int i = 0; i < numOriginals; i++) {
+      literals += mem[originals[i] + SIZE];
+    }
+    return literals;
+  }
+
+  /**
    * Runs the Eliminator on the irredundant clauses at level 0 (before any conflict, so there are no
    * learnt clauses) and replaces them by its result.
    *
@@ -4229,6 +4512,12 @@ public final class CdclSolver {
   private boolean eliminate() {
     if (propagate() != NO_CONFLICT) {
       return refuted();
+    }
+    if (probing && !probe()) {
+      return false;
+    }
+    if (!eliminationFits()) {
+      return true;
     }
     boolean[] frozen = Arrays.copyOf(observed, numVars);
     for (int a : assumptions) {
@@ -4270,6 +4559,7 @@ public final class CdclSolver {
         input[n++] = new int[] {a, b};
       }
     }
+    boolean sat = true;
     if (factoring && !factored) {
       factored = true;
       long begin = System.nanoTime();
@@ -4287,8 +4577,34 @@ public final class CdclSolver {
       factorWork = f.effort();
       factorNanos = System.nanoTime() - begin;
     }
-    Eliminator e = new Eliminator(numVars, input, n, frozen, proof);
-    boolean sat = e.run();
+    Sweeper sw = null;
+    if (sweeping) {
+      sw = sweep(input, n, frozen);
+      if (sw.unsat()) {
+        return refuted();
+      }
+      input = sw.clauses();
+      n = input.length;
+    }
+    Congruence cc = null;
+    if (substitution) {
+      long t0 = System.nanoTime();
+      cc = new Congruence(numVars, input, n, frozen, proof);
+      cc.gatesOn = congruence && gatesPaid;
+      sat = cc.run();
+      gatesPaid = cc.gatesOn && cc.andGates + cc.xorGates + cc.iteGates > 0;
+      substitutionNanos += System.nanoTime() - t0;
+      if (sat) {
+        input = cc.clauses();
+        n = input.length;
+        substitutedVars += cc.numSubstituted();
+        sccEquivalences += cc.sccEquivalences;
+        gateEquivalences += cc.gateEquivalences;
+        gatesFound += cc.andGates + cc.xorGates + cc.iteGates;
+      }
+    }
+    Eliminator e = new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof);
+    sat = sat && e.run();
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];
       if ((mem[ref + META] & DELETED) == 0) {
@@ -4305,6 +4621,19 @@ public final class CdclSolver {
     }
     rootFactsLogged = Math.max(rootFactsLogged, trailSize);
     boolean[] gone = e.eliminated();
+    if (sw != null) {
+      boolean[] replaced = sw.substituted();
+      for (int v = 0; v < replaced.length; v++) {
+        gone[v] |= replaced[v];
+      }
+    }
+    if (cc != null && sat) {
+      boolean[] replaced = cc.substituted();
+      // bounded variable addition may have added variables after the substitution
+      for (int v = 0; v < replaced.length; v++) {
+        gone[v] |= replaced[v];
+      }
+    }
     numOriginalBinaries = 0;
     Arrays.fill(watchSize, 0);
     Arrays.fill(binSize, 0);
@@ -4328,22 +4657,286 @@ public final class CdclSolver {
       eliminatedVar[v] |= gone[v];
     }
     numEliminated += e.numEliminated();
-    int[] removed = e.stack();
-    int old = extension.length;
-    extension = Arrays.copyOf(extension, old + removed.length);
-    System.arraycopy(removed, 0, extension, old, removed.length);
-    for (int u : e.units()) {
-      if (vals[u] < 0) {
-        return refuted();
-      }
-      if (vals[u] == 0) {
-        assign(u, NO_REASON);
+    // the substitutions before the eliminations, in their order: a model is extended backwards
+    if (sw != null) {
+      numEliminated += sw.numSubstituted();
+      appendExtension(sw.stack());
+    }
+    if (cc != null) {
+      numEliminated += cc.numSubstituted();
+      appendExtension(cc.stack());
+    }
+    appendExtension(e.stack());
+    int[] none = new int[0];
+    for (int[] found :
+        new int[][] {sw == null ? none : sw.units(), cc == null ? none : cc.units(), e.units()}) {
+      for (int u : found) {
+        if (vals[u] < 0) {
+          return refuted();
+        }
+        if (vals[u] == 0) {
+          assign(u, NO_REASON);
+        }
       }
     }
     if (propagate() != NO_CONFLICT) {
       return refuted();
     }
     return true;
+  }
+
+  /**
+   * Failed-literal probing at level 0 (see {@link #setProbing}), within a twentieth of the
+   * propagations of the search since the last round. Each probe is a decision at level 1 followed
+   * by unit propagation; a conflict is analysed as in search, which at level 1 gives a unit (the
+   * first UIP). The roots of the binary implication graph (literals with binary implications and no
+   * binary clause implying them) are probed in turn from where the last round stopped, and the
+   * negation of a root too, which gives units implied by both signs (lifting) and equivalent
+   * literals. References: I. Lynce, J. Marques-Silva, "Probing-Based Preprocessing Techniques for
+   * Propositional Satisfiability", ICTAI 2003; M. J. H. Heule, M. Järvisalo, A. Biere, "Efficient
+   * CNF Simplification Based on Binary Implication Graphs", SAT 2011.
+   *
+   * @return false when the formula is unsatisfiable
+   */
+  private boolean probe() {
+    if (propagate() != NO_CONFLICT) {
+      return refuted();
+    }
+    long start = System.nanoTime();
+    long propagationsBefore = propagations;
+    long budget =
+        propagations
+            + Math.max(
+                PROBE_MIN_EFFORT,
+                (propagations - propagationsAtProbe) * PROBE_EFFORT_PER_MILLE / 1000);
+    boolean wasChrono = chrono;
+    chrono = false;
+    boolean wasNotifying = notifying;
+    notifying = false; // the probing levels are internal
+    // probing must not move the saved phases: when it finds nothing, the search stays as it was
+    byte[] phases = Arrays.copyOf(savedSign, numVars);
+    if (probeMark.length < 2 * numVars) {
+      probeMark = new int[2 * numVars];
+      probeStamp = 0;
+    }
+    int result = 0;
+    int tried = 0;
+    try {
+      while (tried < numVars && propagations < budget && result >= 0 && !pastDeadline()) {
+        int v = probeCursor;
+        probeCursor = (probeCursor + 1) % numVars;
+        tried++;
+        if (eliminatedVar[v]) {
+          continue;
+        }
+        for (int sign = 0; sign < 2 && result >= 0 && vals[2 * v] == 0; sign++) {
+          int p = 2 * v + sign;
+          // a root: p has binary implications and no binary clause implies it
+          if (binSize[p ^ 1] != 0 && binSize[p] == 0) {
+            result = probeRoot(p);
+          }
+        }
+      }
+    } finally {
+      chrono = wasChrono;
+      notifying = wasNotifying;
+      System.arraycopy(phases, 0, savedSign, 0, numVars);
+    }
+    probePropagations += propagations - propagationsBefore;
+    propagations = propagationsBefore; // the search's schedules count its own propagations
+    propagationsAtProbe = propagations;
+    probeNanos += System.nanoTime() - start;
+    return result >= 0 && (propagate() == NO_CONFLICT || refuted());
+  }
+
+  // probing: literals implied by the last probe, and marks of those implied by the first sign
+  private int[] probeImplied = new int[16];
+  private int[] probeFirst = new int[16];
+  private int[] probeMark = new int[0];
+  private int probeStamp;
+
+  /**
+   * Probes a root and its negation.
+   *
+   * @return 0, or -1 when the formula is unsatisfiable
+   */
+  private int probeRoot(int p) {
+    probedLiterals++;
+    int n = probeLiteral(p);
+    if (n < 0) {
+      return n == -1 ? 0 : -1;
+    }
+    if (probeFirst.length < n) {
+      probeFirst = new int[2 * n];
+    }
+    System.arraycopy(probeImplied, 0, probeFirst, 0, n);
+    if (++probeStamp == Integer.MAX_VALUE) {
+      Arrays.fill(probeMark, 0);
+      probeStamp = 1;
+    }
+    for (int i = 0; i < n; i++) {
+      probeMark[probeFirst[i]] = probeStamp;
+    }
+    int m = probeLiteral(p ^ 1);
+    if (m < 0) {
+      return m == -1 ? 0 : -1;
+    }
+    int[] c = new int[2];
+    for (int i = 0; i < m; i++) {
+      int q = probeImplied[i];
+      if (vals[q] != 0) {
+        continue; // an earlier lifted unit implied it
+      }
+      if (probeMark[q] == probeStamp) {
+        // p -> q and -p -> q: q holds
+        liftedUnits++;
+        if (proof != null) {
+          c[0] = p ^ 1;
+          c[1] = q;
+          proof.add(c, 0, 2);
+          c[0] = p;
+          proof.add(c, 0, 2);
+          proof.add(c, 1, 1);
+          c[0] = p ^ 1;
+          proof.delete(c, 0, 2);
+          c[0] = p;
+          proof.delete(c, 0, 2);
+        }
+        assign(q, NO_REASON);
+        if (propagate() != NO_CONFLICT) {
+          refuted();
+          return -1;
+        }
+      } else if (probeMark[q ^ 1] == probeStamp && (q >> 1) != (p >> 1)) {
+        // p -> -q and -p -> q: q is the negation of p
+        probeEquivalences++;
+        if (proof != null) {
+          c[0] = p;
+          c[1] = q;
+          proof.add(c, 0, 2);
+          c[0] = p ^ 1;
+          c[1] = q ^ 1;
+          proof.add(c, 0, 2);
+        }
+        addOriginalBinary(p, q);
+        addOriginalBinary(p ^ 1, q ^ 1);
+      }
+    }
+    return 0;
+  }
+
+  /**
+   * Probes one literal at level 1 and goes back to level 0.
+   *
+   * @return the number of literals it implies, in {@code probeImplied}; -1 when it failed and the
+   *     unit learnt from the conflict holds now; -2 when the formula is unsatisfiable
+   */
+  private int probeLiteral(int p) {
+    newDecisionLevel();
+    int start = trailSize;
+    assign(p, NO_REASON);
+    if (propagate() != NO_CONFLICT) {
+      failedLiterals++;
+      analyze();
+      backtrack(0);
+      int[] u = learntSize == 1 ? learnt : new int[] {p ^ 1};
+      if (proof != null) {
+        proof.add(u, 0, 1);
+      }
+      if (vals[u[0]] == 0) {
+        assign(u[0], NO_REASON);
+      }
+      if (vals[u[0]] < 0 || propagate() != NO_CONFLICT) {
+        refuted();
+        return -2;
+      }
+      return -1;
+    }
+    int n = trailSize - start - 1;
+    if (probeImplied.length < n) {
+      probeImplied = new int[2 * n];
+    }
+    System.arraycopy(trail, start + 1, probeImplied, 0, n);
+    backtrack(0);
+    return n;
+  }
+
+  private void appendExtension(int[] removed) {
+    int old = extension.length;
+    extension = Arrays.copyOf(extension, old + removed.length);
+    System.arraycopy(removed, 0, extension, old, removed.length);
+  }
+
+  /**
+   * SAT sweeping (see {@link Sweeper}) of the irredundant clauses given to elimination, in the
+   * order of fewest occurrences first, continuing from where the last round stopped. Its effort is
+   * a tenth of the propagations of the search since the last round.
+   *
+   * @return the sweeper, with the clauses, units and substitutions it found
+   */
+  private Sweeper sweep(int[][] input, int n, boolean[] frozen) {
+    long start = System.nanoTime();
+    if (sweepDelay > 0) {
+      // the last rounds found almost nothing: skip rounds, as Kissat's sweep delay
+      sweepDelay--;
+      return new Sweeper(numVars, input, n, frozen, proof, 0, sweepCompleted);
+    }
+    // the first round, before any search, gets a fixed effort: equivalences found then pay most
+    long budget =
+        Math.max(
+            sweepRounds++ == 0 ? SWEEP_FIRST_EFFORT : SWEEP_MIN_EFFORT,
+            (propagations - propagationsAtSweep) * SWEEP_EFFORT_PER_MILLE / 1000);
+    Sweeper s = new Sweeper(numVars, input, n, frozen, proof, budget, sweepCompleted);
+    if (sweepDone.length < numVars) {
+      sweepDone = Arrays.copyOf(sweepDone, numVars);
+    }
+    long[] keys = new long[numVars];
+    int m = 0;
+    for (int v = 0; v < numVars; v++) {
+      if (vals[2 * v] != 0 || eliminatedVar[v] || sweepDone[v]) {
+        continue;
+      }
+      int occ = s.candidate(v);
+      if (occ < 0) {
+        sweepDone[v] = true;
+        continue;
+      }
+      keys[m++] = (long) occ << 32 | v;
+    }
+    Arrays.sort(keys, 0, m);
+    int[] order = new int[m];
+    for (int i = 0; i < m; i++) {
+      order[i] = (int) keys[i];
+    }
+    int swept = s.run(order, m, sweepDone);
+    if (swept == m && !s.unsat()) {
+      sweepCompleted++;
+      Arrays.fill(sweepDone, false);
+    }
+    sweptVariables += s.swept;
+    sweepUnits += s.units().length;
+    sweepEquivalences += s.equivalences;
+    if (s.units().length + s.equivalences < s.swept / 1000.0) {
+      sweepDelayLimit = Math.min(2 * sweepDelayLimit + 1, 64);
+      sweepDelay = sweepDelayLimit;
+    } else {
+      sweepDelayLimit = 0;
+    }
+    propagationsAtSweep = propagations;
+    sweepNanos += System.nanoTime() - start;
+    if (VERBOSE) {
+      System.out.printf(
+          "c sweep round at %d conflicts: swept %d of %d, %d units, %d equivalences, %d substituted,"
+              + " %.2f s%n",
+          conflicts,
+          s.swept,
+          m,
+          s.units().length,
+          s.equivalences,
+          s.numSubstituted(),
+          (System.nanoTime() - start) / 1e9);
+    }
+    return s;
   }
 
   /**
@@ -4410,8 +5003,12 @@ public final class CdclSolver {
       if (eliminatedVar[v]) {
         eliminatedVar[v] = false;
         order.insert(v);
+        if (qStamp[v] < 0) {
+          queueAppend(v);
+        }
       }
     }
+    qSearch = qLast; // eliminated variables were passed over
     int i = ext.length;
     while (i > 0 && ok) {
       int size = ext[i - 1];
@@ -5189,6 +5786,26 @@ public final class CdclSolver {
   }
 
   /** Reduces the learnt clauses after this many conflicts and then more often, for tests. */
+  /**
+   * Sets the size, in ints of the clause arena, past which the learnt clauses are reduced before
+   * their next scheduled reduction, for tests; by default 1/16 of the heap.
+   *
+   * @param ints the size
+   */
+  void setLearntBudget(long ints) {
+    learntBudget = ints;
+  }
+
+  /**
+   * Sets the bytes that elimination and local search may take for their copies of the clauses, for
+   * tests; by default a quarter of the heap. Past it they are skipped.
+   *
+   * @param bytes the budget
+   */
+  void setCopyBudget(long bytes) {
+    copyBudget = bytes;
+  }
+
   void setReduceBase(int conflicts) {
     reduceBase = conflicts;
     reduceInc = Math.max(1, conflicts * 3 / 20);
@@ -5214,6 +5831,122 @@ public final class CdclSolver {
    */
   public void setEmaRestarts(boolean on) {
     emaRestarts = on;
+  }
+
+  /**
+   * Decides in focused mode by the VMTF queue (variable move-to-front, Ryan's thesis 2004; as in
+   * CaDiCaL and Kissat, Biere and Fröhlich, "Evaluating CDCL Variable Scoring Schemes", SAT 2015)
+   * instead of the activity heap, which then serves stable mode only (off by default). The
+   * variables of a conflict analysis move to the end of the queue in their old order, and a
+   * decision takes the most recently moved unassigned variable; the queue starts with the first
+   * variable at its end. A stable phase leaves the queue of the next focused phase as it was, while
+   * focused mode still bumps the activities, so the heap of the next stable phase keeps learning
+   * (CaDiCaL and Kissat bump only the heuristic of the mode: on the 90 CNFs of the SAT screen that
+   * solved 38 instead of 41 at 240 s). Ignored under an external propagator.
+   *
+   * @param on whether focused mode uses the queue
+   */
+  public void setVmtf(boolean on) {
+    vmtf = on;
+    qSearch = qLast;
+  }
+
+  /**
+   * The decision of the queue: the last unassigned variable from qSearch back, at its saved sign.
+   */
+  private int pickFromQueue() {
+    int v = qSearch;
+    while (v >= 0 && (vals[2 * v] != 0 || eliminatedVar[v])) {
+      int pv = qPrev[v];
+      if (eliminatedVar[v]) {
+        queueUnlink(v); // walked over by every later decision otherwise
+        qStamp[v] = -1;
+      }
+      v = pv;
+    }
+    qSearch = v;
+    return v < 0 ? -1 : 2 * v + savedSign[v];
+  }
+
+  private boolean queueInUse() {
+    return vmtf && !stable && external == null;
+  }
+
+  private void queueAppend(int v) {
+    qPrev[v] = qLast;
+    qNext[v] = -1;
+    if (qLast >= 0) {
+      qNext[qLast] = v;
+    } else {
+      qFirst = v;
+    }
+    qLast = v;
+    qStamp[v] = ++qBumped;
+  }
+
+  private void queueUnlink(int v) {
+    int pv = qPrev[v];
+    int nv = qNext[v];
+    if (pv >= 0) {
+      qNext[pv] = nv;
+    } else {
+      qFirst = nv;
+    }
+    if (nv >= 0) {
+      qPrev[nv] = pv;
+    } else {
+      qLast = pv;
+    }
+    if (qSearch == v) {
+      qSearch = pv;
+    }
+  }
+
+  /** Sorts qKeys so that the low 26 bits of qKeys[i] index qToBump by increasing stamp. */
+  private void sortBumped(int n) {
+    if (qKeys.length < n) {
+      qKeys = new long[Math.max(n, 2 * qKeys.length)];
+    }
+    for (int i = 0; i < n; i++) {
+      qKeys[i] = qStamp[qToBump[i]] << 26 | i;
+    }
+    if (n >= 1 << 26) {
+      Arrays.sort(qToBump, 0, n); // too many for the keys: any order is still correct
+      for (int i = 0; i < n; i++) {
+        qKeys[i] = i;
+      }
+    } else {
+      Arrays.sort(qKeys, 0, n);
+    }
+  }
+
+  /** Moves the analysed variables to the end of the queue, in the order of their old stamps. */
+  private void bumpQueue() {
+    int n = qToBumpSize;
+    if (n == 0) {
+      return;
+    }
+    qToBumpSize = 0;
+    if (qBumped + n >= 1L << 37) {
+      long renumbered = 0; // renumber along the queue before the stamps outgrow the sort keys
+      for (int v = qFirst; v >= 0; v = qNext[v]) {
+        qStamp[v] = ++renumbered;
+      }
+      qBumped = renumbered;
+    }
+    sortBumped(n);
+    for (int i = 0; i < n; i++) {
+      int v = qToBump[(int) (qKeys[i] & ((1 << 26) - 1))];
+      if (v != qLast) {
+        queueUnlink(v);
+        queueAppend(v);
+      } else {
+        qStamp[v] = ++qBumped;
+      }
+      if (vals[2 * v] == 0) {
+        qSearch = v;
+      }
+    }
   }
 
   /**

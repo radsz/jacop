@@ -65,6 +65,7 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
+import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -83,9 +84,11 @@ import org.jacop.fz.constraints.ListsDifferDetector;
 import org.jacop.fz.constraints.LoadFunctionDetector;
 import org.jacop.fz.constraints.MaxCliqueDetector;
 import org.jacop.fz.constraints.MinOfSumsDetector;
+import org.jacop.fz.constraints.NumberedPathDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.PermutedTasksDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
@@ -96,6 +99,7 @@ import org.jacop.fz.constraints.SequenceDetector;
 import org.jacop.fz.constraints.SequenceMddDetector;
 import org.jacop.fz.constraints.SetUnionDetector;
 import org.jacop.fz.constraints.StockingCostDetector;
+import org.jacop.fz.constraints.SuccessorForestDetector;
 import org.jacop.fz.constraints.Support;
 import org.jacop.fz.constraints.SymmetricGCCDetector;
 import org.jacop.fz.constraints.TableCoverDetector;
@@ -340,6 +344,11 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // a Hamiltonian path written as a numbering gets its successor model with a circuit
+      if (NumberedPathDetector.enabled() && options.proof() == null) {
+        new NumberedPathDetector(support).detect(astTree);
+      }
+
       // the variables of degree two between tables and elements are joined out of the model, and
       // given values again when a solution is printed
       if (TableVariableElimination.enabled() && options.proof() == null && !manySolutions) {
@@ -407,6 +416,18 @@ public class Constraints implements ParserTreeConstants {
           replaced.addAll(merged);
           dictionary.removeFromDefaultSearch(minOfSums.removed());
           dictionary.unusedVariables.addAll(minOfSums.removed());
+        }
+      }
+
+      // a cyclic distance min(|e|, c - |e|) also as |e + c * k|, which a bound narrows
+      if (CyclicDistanceDetector.enabled() && options.proof() == null) {
+        CyclicDistanceDetector cyclic = new CyclicDistanceDetector(support);
+        Set<SimpleNode> distances = cyclic.detect(astTree);
+        if (!distances.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(distances);
+          dictionary.removeFromDefaultSearch(cyclic.removed());
+          dictionary.unusedVariables.addAll(cyclic.removed());
         }
       }
 
@@ -586,6 +607,12 @@ public class Constraints implements ParserTreeConstants {
         new WeightedCompletionDetector(support).detect(astTree);
       }
 
+      // the unary resource of a chain of tasks over permuted resources (the job view of an open
+      // shop), redundant; --proof does not encode it
+      if (PermutedTasksDetector.enabled() && options.proof() == null) {
+        new PermutedTasksDetector(support).detect(astTree);
+      }
+
       if (CardinalityDetector.enabled()) {
         new CardinalityDetector(support).detect(astTree);
       }
@@ -747,6 +774,13 @@ public class Constraints implements ParserTreeConstants {
     if (!support.probeDiffnKHandles()) {
       throw Store.failException;
     }
+
+    // the forest of the successor arcs along which positions grow, redundant, for the subtour
+    // elimination cuts of the linear relaxation; --proof does not encode it
+    if (SuccessorForestDetector.enabled() && options.proof() == null) {
+      new SuccessorForestDetector(support).detect(astTree);
+    }
+    dictionary.releaseConstantArrays();
   }
 
   // a constraint item, imposed as implied by the others when implied is true

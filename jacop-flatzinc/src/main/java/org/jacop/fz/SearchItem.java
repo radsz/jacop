@@ -205,7 +205,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         varSelectionHeuristic = getVarSelectHeuristic(expr2);
 
         ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
-        indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
+        indomain = valueChoice(((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent());
 
         ASTAnnotation expr4 = (ASTAnnotation) ann.jjtGetChild(3);
         explorationType(expr4);
@@ -218,7 +218,7 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
         varSelectionHeuristic = getVarSelectHeuristic(expr2);
 
         ASTAnnExpr expr3 = (ASTAnnExpr) ann.jjtGetChild(2).jjtGetChild(0);
-        indomain = ((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent();
+        indomain = valueChoice(((ASTScalarFlatExpr) expr3.jjtGetChild(0)).getIdent());
 
         ASTAnnotation expr4 = (ASTAnnotation) ann.jjtGetChild(3);
         explorationType(expr4);
@@ -805,6 +805,18 @@ public class SearchItem<T extends Var> implements ParserTreeConstants {
     } else {
       return new SimpleSelect<>(searchVars, varSel, tieBreaking, indom);
     }
+  }
+
+  /**
+   * Returns the value choice of a search annotation, with the MiniZinc value choice {@code
+   * indomain} (assign values in ascending order) read as {@code indomain_min} instead of being
+   * reported as not implemented.
+   *
+   * @param choice the value choice of the annotation
+   * @return the value choice used by the searches
+   */
+  static String valueChoice(String choice) {
+    return "indomain".equals(choice) ? INDOMAIN_MIN : choice;
   }
 
   /**

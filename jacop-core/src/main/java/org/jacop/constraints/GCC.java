@@ -38,6 +38,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.jacop.api.Copyable;
 import org.jacop.api.SatisfiedPresent;
@@ -591,16 +592,13 @@ public class GCC extends Constraint
 
     StringBuilder toString = new StringBuilder(id());
 
+    // the counters of values no variable can take are dropped, possibly all of them
     toString.append(" : GCC ([");
-    for (int i = 0; i < xSize - 1; i++) {
-      toString.append(x[i].toString()).append(", ");
-    }
-    toString.append(x[xSize - 1].toString());
+    toString.append(Arrays.stream(x).map(IntVar::toString).collect(Collectors.joining(", ")));
     toString.append("], [");
-    for (int j = 0; j < ySize - 1; j++) {
-      toString.append(counters[j].toString()).append(", ");
-    }
-    toString.append(counters[ySize - 1].toString()).append("])");
+    toString.append(
+        Arrays.stream(counters).map(IntVar::toString).collect(Collectors.joining(", ")));
+    toString.append("])");
 
     return toString.toString();
   }

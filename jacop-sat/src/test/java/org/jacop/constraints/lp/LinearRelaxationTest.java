@@ -564,6 +564,68 @@ class LinearRelaxationTest {
   }
 
   /**
+   * Root cut rounds that leave the bound unchanged (a dual degenerate optimum) no longer end the
+   * rounds: the next round goes on from the new basis. The optimum stays, the bound stays below it,
+   * the rounds past a stall raise the bound on some models, and a run of stalled rounds that never
+   * moves the bound leaves no cut of it behind.
+   */
+  @Test
+  void cutRoundsPastStalledRoundsKeepTheOptimum() {
+    int stalled = 0;
+    int recovered = 0;
+    int stronger = 0;
+    int weaker = 0;
+    for (int run = 0; run < RUNS; run++) {
+      Model probe = new Model(run);
+      if (probe.objective == null) {
+        continue;
+      }
+      long[] expected = search(probe);
+      double[] bound = new double[2];
+      for (int k = 0; k < 2; k++) {
+        Model model = new Model(run);
+        LinearRelaxation r = new LinearRelaxation(model.rows, model.objective, model.maximize);
+        r.setCutStalls(k == 0 ? 0 : 2);
+        model.store.impose(r);
+        long[] actual = search(model);
+        assertThat(actual).as("seed %d stalls %d", run, 2 * k).isEqualTo(expected);
+        bound[k] = r.calls == 0 ? Double.NaN : r.cutBound;
+        if (Double.isNaN(bound[k])) {
+          continue;
+        }
+        double sign = model.maximize ? -1 : 1;
+        if (expected[0] == 1) {
+          double optimum = (double) (model.maximize ? -expected[1] : expected[1]);
+          assertThat(sign * bound[k]).as("seed %d", run).isLessThanOrEqualTo(sign * optimum + 1e-6);
+        }
+        if (k == 0) {
+          assertThat(r.cutStalls).as("seed %d", run).isZero();
+        } else {
+          stalled += r.cutStalls > 0 ? 1 : 0;
+          recovered += r.cutStallsRecovered > 0 ? 1 : 0;
+        }
+      }
+      if (!Double.isNaN(bound[0]) && !Double.isNaN(bound[1])) {
+        double gain = probe.maximize ? bound[0] - bound[1] : bound[1] - bound[0];
+        stronger += gain > 1e-6 ? 1 : 0;
+        weaker += gain < -1e-6 ? 1 : 0;
+      }
+    }
+    String seen =
+        "stalled "
+            + stalled
+            + " recovered "
+            + recovered
+            + " stronger "
+            + stronger
+            + " weaker "
+            + weaker;
+    System.out.println("cut stalls: " + seen);
+    assertThat(stalled).as(seen).isPositive();
+    assertThat(stronger).as(seen).isGreaterThanOrEqualTo(weaker);
+  }
+
+  /**
    * With the dense tableau at its size cap, the cut rounds move the rows to the sparse simplex of
    * JaLP; the cuts made there keep the optimum, and the move is undone when they do not raise the
    * bound of the integer objective.
@@ -1117,6 +1179,47 @@ class LinearRelaxationTest {
       assertThat(r.rows()).as("seed %d", run).isEqualTo(rows);
       split.impose(r);
       assertThat(solutions(split, y, c)).as("seed %d", run).isEqualTo(solutions(plain, x, b));
+    }
+  }
+
+  /**
+   * Chained definitions that use the variables of the level below twice merge their terms: each
+   * level replaced {@code y_k} and {@code z_k} by both {@code y_k-1} and {@code z_k-1}, so without
+   * merging a row over the top level doubled at every level (XCSP 2022 CarSequencing-table ran out
+   * of a 6 GB heap before search). The row keeps exactly its solutions.
+   */
+  @Test
+  void substitutionMergesRepeatedVariablesOfChainedDefinitions() {
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 0, 1), new IntVar(store, "x1", 0, 1)};
+    IntVar y = x[0];
+    IntVar z = x[1];
+    Set<IntVar> sums = new HashSet<>();
+    for (int k = 1; k <= 12; k++) {
+      int span = 1 << k;
+      IntVar ny = new IntVar(store, "y" + k, -span, span);
+      IntVar nz = new IntVar(store, "z" + k, -span, span);
+      // y_k = y_k-1 + z_k-1 and z_k = y_k-1 - z_k-1, each with its defined variable first
+      store.impose(new LinearInt(new IntVar[] {ny, y, z}, new int[] {1, -1, -1}, "==", 0));
+      store.impose(new LinearInt(new IntVar[] {nz, y, z}, new int[] {1, -1, 1}, "==", 0));
+      sums.add(ny);
+      sums.add(nz);
+      y = ny;
+      z = nz;
+    }
+    IntVar w = new IntVar(store, "w", 0, 9);
+    store.impose(new LinearInt(new IntVar[] {y, z, w}, new int[] {1, 1, 1}, "<=", 64));
+    LinearRelaxation r = LinearRelaxation.of(store, null, false, List.of(), sums);
+    assertThat(r).isNotNull();
+    assertThat(r.allRows()).anyMatch(f -> Arrays.asList(f.vars()).contains(w));
+    for (LinearForm f : r.allRows()) {
+      Set<IntVar> distinct = Collections.newSetFromMap(new IdentityHashMap<>());
+      distinct.addAll(Arrays.asList(f.vars()));
+      assertThat(distinct).as("%s", f).hasSize(f.vars().length);
+      assertThat(f.vars()).as("%s", f).hasSizeLessThanOrEqualTo(3);
+      for (long weight : f.weights()) {
+        assertThat(weight).as("%s", f).isNotZero();
+      }
     }
   }
 
