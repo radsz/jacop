@@ -1760,6 +1760,8 @@ class AtomicTrailTest {
    */
   @Test
   void disjointElementPositionCitesTheSeparatingBounds() {
+    // the FlatZinc front end turns them off under -f; a test of it may have run before
+    ShiftExplanation.setSplitBounds(true);
     Store store = new Store();
     IntVar index = new IntVar(store, "index", 1, 2);
     IntVar a = new IntVar(store, "a", 0, 40);
