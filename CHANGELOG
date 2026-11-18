@@ -7900,6 +7900,16 @@ Version 5.0 (unreleased)
    without it, are not proved in 600 s; it therefore stays off. It fires
    on none of the 240 wide instances.
 
+438. Reachable (and Tree, Path, Steiner, which post it) prunes with a root
+   variable that is not fixed yet: in an undirected graph, nodes that no
+   root value reaches are removed and what every path from a selected node
+   to the root values goes through is selected; in a directed graph the
+   nodes and edges that every path from the valid roots to a selected node
+   goes through are selected, as they were for a fixed root. Reachable,
+   connected and undirected tree now reach domain consistency in the
+   consistency checker, which gets cases for the graph globals. Forest
+   fails a complete assignment whose selected edges close a cycle.
+
 434. JaSAT (CdclMain, plain SAT) sweeps and probes before variable
    elimination. Sweeping (Kissat's sweep) takes, for each variable, the
    clauses within two or three steps of it (at most 256 variables and
