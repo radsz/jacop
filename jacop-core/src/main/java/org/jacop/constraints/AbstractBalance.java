@@ -93,6 +93,14 @@ public abstract class AbstractBalance extends Constraint implements SatisfiedPre
 
   final long[] hi;
 
+  /**
+   * Every cost is congruent to residue modulo modulus (1 when no congruence is known), set by the
+   * subclasses with {@link #congruence}.
+   */
+  long modulus = 1;
+
+  long residue;
+
   /** Sums of lo and hi at the start of a pass. */
   long sumLo;
 
@@ -141,6 +149,68 @@ public abstract class AbstractBalance extends Constraint implements SatisfiedPre
   abstract long least(int skip, long t);
 
   /**
+   * It records that every cost is congruent to c modulo m, given as exact products that may
+   * overflow; the congruence is ignored when they do.
+   *
+   * @param m the modulus, a positive product of at most three factors.
+   * @param c the residue, a product of at most two factors.
+   */
+  final void congruence(long[] m, long[] c) {
+    try {
+      long mm = 1;
+      for (long f : m) {
+        mm = Math.multiplyExact(mm, f);
+      }
+      long cc = 1;
+      for (long f : c) {
+        cc = Math.multiplyExact(cc, f);
+      }
+      if (mm > 1 && mm <= Integer.MAX_VALUE) {
+        modulus = mm;
+        residue = Math.floorMod(cc, mm);
+      }
+    } catch (ArithmeticException e) {
+      // the products overflow: no congruence, the pruning stays as without it
+      modulus = 1;
+    }
+  }
+
+  /**
+   * The greatest common divisor of a and b.
+   *
+   * @return gcd(a, |b|), a when b is 0.
+   */
+  final long gcdOfAAndB() {
+    long u = a;
+    long v = Math.abs((long) b);
+    while (v != 0) {
+      long t = u % v;
+      u = v;
+      v = t;
+    }
+    return u;
+  }
+
+  /**
+   * The sum of the signed distances, a * sum - n * b.
+   *
+   * @return the sum of a * x[i] - b over all i.
+   */
+  final long signedTotal() {
+    return (long) a * sum - (long) n * b;
+  }
+
+  // the least value at least v congruent to the residue
+  private long roundUp(long v) {
+    return v + Math.floorMod(residue - v, modulus);
+  }
+
+  // the greatest value at most v congruent to the residue
+  private long roundDown(long v) {
+    return v - Math.floorMod(v - residue, modulus);
+  }
+
+  /**
    * It narrows the bounds of x before the main pass, so that the costs computed later stay small.
    * The default does nothing.
    *
@@ -183,6 +253,17 @@ public abstract class AbstractBalance extends Constraint implements SatisfiedPre
             cost,
             (int) Math.max(best, cost.min()),
             (int) Math.min(largest, cost.max()));
+      }
+      if (modulus > 1) {
+        // every term is a multiple of gcd(a, b), so the cost has a fixed residue (see congruence)
+        long from = roundUp(cost.min());
+        long to = roundDown(cost.max());
+        if (from > to) {
+          throw Store.failException;
+        }
+        if (from > cost.min() || to < cost.max()) {
+          cost.domain.in(store.level, cost, (int) from, (int) to);
+        }
       }
       long limit = cost.max();
 
@@ -362,7 +443,7 @@ public abstract class AbstractBalance extends Constraint implements SatisfiedPre
 
   // whether the box has no solution, by the checks of consistency
   private boolean infeasible() {
-    if (costLo > costHi) {
+    if (costLo > costHi || modulus > 1 && roundUp(costLo) > costHi) {
       return true;
     }
     sumLo = 0;

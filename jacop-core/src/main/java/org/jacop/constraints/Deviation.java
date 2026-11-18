@@ -97,6 +97,9 @@ public class Deviation extends AbstractBalance implements Copyable<Deviation> {
     this.r = Math.floorMod(b, a);
     this.down = new long[n];
     this.middle = new long[n];
+    // each a * x[i] - b is a multiple t of g = gcd(a, b) and |t| = t (mod 2g)
+    long g = gcdOfAAndB();
+    congruence(new long[] {2, g}, new long[] {signedTotal()});
   }
 
   @Override

@@ -41,6 +41,7 @@ import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.core.Var;
 import org.jacop.jasat.cdcl.CdclSolver;
+import org.jacop.jasat.cdcl.ComplementSymmetry;
 import org.jacop.satwrapper.SatWrapper;
 
 /**
@@ -75,6 +76,19 @@ final class PureClauseModel {
     return Boolean.parseBoolean(System.getProperty("org.jacop.fz.pureClauses", "true"));
   }
 
+  /**
+   * Returns whether a variable is fixed when the clauses have the complement symmetry, the property
+   * {@code org.jacop.fz.complementSymmetry}, read at every run.
+   *
+   * @return true unless the property is false
+   */
+  static boolean complementSymmetry() {
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.complementSymmetry", "true"));
+  }
+
+  /** The variable (DIMACS number) fixed to 1 by the complement symmetry, 0 when none. */
+  int complementFixed;
+
   /** The solver, with the clauses added. */
   final CdclSolver solver = new CdclSolver();
 
@@ -101,22 +115,8 @@ final class PureClauseModel {
     if (clauses.isEmpty()) {
       return null;
     }
-    for (Constraint c : store.unlistedConstraints()) {
-      if (!allowed(c, ignored)) {
-        return null;
-      }
-    }
-    // all variables, Boolean ones included (they are not in store.vars), stopping at the first
-    // propagator of a model that is not of clauses alone
-    for (Var v : store.variablesHashMap.values()) {
-      if (!(v instanceof IntVar) && !v.singleton()) {
-        return null;
-      }
-      for (Constraint c : v.dom().constraints()) {
-        if (!allowed(c, ignored)) {
-          return null;
-        }
-      }
+    if (!onlyClauses(store, ignored)) {
+      return null;
     }
     Map<IntVar, Integer> index = new IdentityHashMap<>();
     List<IntVar> order = new ArrayList<>();
@@ -156,6 +156,8 @@ final class PureClauseModel {
     PureClauseModel model = new PureClauseModel(vars);
     model.solver.ensureVars(n);
     int[] lits = new int[16];
+    List<int[]> added = new ArrayList<>(clauses.size());
+    boolean empty = false;
     for (IntVar[][] clause : clauses) {
       int size = 0;
       boolean satisfied = false;
@@ -182,11 +184,91 @@ final class PureClauseModel {
       if (size == 0) {
         // a clause false at the root: addClause of no literal fails the formula
         model.solver.addClause(new int[0], 0);
+        empty = true;
         continue;
       }
       model.solver.addClause(lits, size);
+      added.add(Arrays.copyOf(lits, size));
+    }
+    if (!empty && complementSymmetry()) {
+      // every clause has its complement: the complement of a model is a model
+      int v = ComplementSymmetry.fixedVariable(added, n);
+      if (v != 0) {
+        model.solver.addClause(new int[] {v}, 1);
+        model.complementFixed = v;
+      }
     }
     return model;
+  }
+
+  // no propagator but the clauses' own and the ignored ones
+  private static boolean onlyClauses(Store store, Set<Constraint> ignored) {
+    for (Constraint c : store.unlistedConstraints()) {
+      if (!allowed(c, ignored)) {
+        return false;
+      }
+    }
+    // all variables, Boolean ones included (they are not in store.vars), stopping at the first
+    // propagator of a model that is not of clauses alone
+    for (Var v : store.variablesHashMap.values()) {
+      if (!(v instanceof IntVar) && !v.singleton()) {
+        return false;
+      }
+      for (Constraint c : v.dom().constraints()) {
+        if (!allowed(c, ignored)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Returns whether the store holds clauses alone that have the complement symmetry, which a pure
+   * clause model breaks by fixing one variable (see {@link ComplementSymmetry}). Symmetry breaking
+   * by lex-leader constraints is then left out: the model would stop being of clauses alone, and
+   * the complement symmetry, which is a value symmetry of all variables at once, is not one the
+   * automorphisms of the model graph find.
+   *
+   * @param store the store, with every constraint of the model posted
+   * @param clauses the collected clauses, each as its positive and its negative variables
+   * @return true when the clauses go to JaSAT with a variable fixed
+   */
+  static boolean complementSymmetric(Store store, List<IntVar[][]> clauses) {
+    if (!enabled() || !complementSymmetry() || clauses.isEmpty() || !onlyClauses(store, Set.of())) {
+      return false;
+    }
+    Map<IntVar, Integer> index = new IdentityHashMap<>();
+    List<int[]> added = new ArrayList<>(clauses.size());
+    for (IntVar[][] clause : clauses) {
+      int[] lits = new int[clause[0].length + clause[1].length];
+      int size = 0;
+      boolean satisfied = false;
+      for (int side = 0; side < 2 && !satisfied; side++) {
+        for (IntVar x : clause[side]) {
+          if (x.singleton()) {
+            satisfied = (x.value() == 1) == (side == 0);
+            if (satisfied) {
+              break;
+            }
+            continue;
+          }
+          if (x.min() != 0 || x.max() != 1) {
+            return false;
+          }
+          int variable = index.computeIfAbsent(x, k -> index.size() + 1);
+          lits[size++] = side == 0 ? variable : -variable;
+        }
+      }
+      if (satisfied) {
+        continue;
+      }
+      if (size == 0) {
+        return false;
+      }
+      added.add(Arrays.copyOf(lits, size));
+    }
+    return ComplementSymmetry.fixedVariable(added, index.size()) != 0;
   }
 
   private static boolean allowed(Constraint c, Set<Constraint> ignored) {
