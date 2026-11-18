@@ -218,6 +218,34 @@ class RegularFlowFlatzincTest {
     assertTrue(satisfiable > trials / 10, "satisfiable " + satisfiable);
   }
 
+  /**
+   * The flows prove the rotating workforce instance the detector was made for infeasible: 2019
+   * Example1370, which the search alone does not decide in minutes, is UNSAT after a few nodes with
+   * them. The solution test above cannot see a flow posted weaker (a count or a conservation row
+   * left out, a looser bound) or not at all, since that keeps every solution.
+   */
+  @Test
+  void flowRefutesRotatingWorkforce() throws IOException {
+    String model =
+        Files.readString(
+            Path.of("../jacop-benchmarks/src/test/fz/upTo5sec/rotating-workforce/Example1370.fzn"),
+            StandardCharsets.UTF_8);
+    String on = run(model, true, "-s", "--lcg", "on", "--default-search", "input", "-t", "20000");
+    assertTrue(on.contains("=====UNSATISFIABLE====="), on);
+    assertTrue(nodes(on) < 10_000, "nodes " + nodes(on));
+    String off = run(model, false, "-s", "--lcg", "on", "--default-search", "input", "-t", "2000");
+    assertTrue(!off.contains("UNSATISFIABLE") && nodes(off) > nodes(on), off);
+  }
+
+  private static long nodes(String out) {
+    for (String line : out.split("\\R")) {
+      if (line.startsWith("%%%mzn-stat: nodes=")) {
+        return Long.parseLong(line.substring(19).replace(",", "").strip());
+      }
+    }
+    return -1;
+  }
+
   private String run(String model, boolean flow, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

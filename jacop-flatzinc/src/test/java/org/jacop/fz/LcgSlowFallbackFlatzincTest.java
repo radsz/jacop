@@ -257,17 +257,19 @@ class LcgSlowFallbackFlatzincTest {
 
   @Test
   void satisfactionProbeTellsWeakLearning() {
-    // Subisomorphism g11-g30 at 12 s: conflicts at depth 87 jump back 1.4 levels, LBD 39
-    assertTrue(Solve.learningCutsLittle(19_248, 87.3, 1.405, 38.6, 1.5, 0.4));
+    // costas-array 17: conflicts at depth 22 jump back 1.17 levels, LBD 11
+    assertTrue(Solve.learningCutsLittle(430_606, 21.8, 1.169, 10.7, 1.3, 0.35));
+    // Dominoes-table-45-286 (XCSP 2026): 1.38 levels is too long a jump, learning finds it in 60 s
+    assertFalse(Solve.learningCutsLittle(1_844, 18.7, 1.377, 14.2, 1.3, 0.35));
     // nmseq 395: conflicts at depth 1
-    assertTrue(Solve.learningCutsLittle(316, 1.0, 0.997, 1.0, 1.5, 0.4));
+    assertTrue(Solve.learningCutsLittle(316, 1.0, 0.997, 1.0, 1.3, 0.35));
     // whirlpool d29 and PegSolitaire: long jumps, short clauses
-    assertFalse(Solve.learningCutsLittle(7_288, 792.2, 19.8, 63.1, 1.5, 0.4));
-    assertFalse(Solve.learningCutsLittle(42_078, 262.0, 12.3, 23.8, 1.5, 0.4));
+    assertFalse(Solve.learningCutsLittle(7_288, 792.2, 19.8, 63.1, 1.3, 0.35));
+    assertFalse(Solve.learningCutsLittle(42_078, 262.0, 12.3, 23.8, 1.3, 0.35));
     // short jumps but clauses far shorter than the depth: learning generalises
-    assertFalse(Solve.learningCutsLittle(31_000, 90.8, 1.2, 23.5, 1.5, 0.4));
+    assertFalse(Solve.learningCutsLittle(31_000, 90.8, 1.2, 23.5, 1.3, 0.35));
     // no conflict yet: nothing to tell
-    assertFalse(Solve.learningCutsLittle(0, 0, 0, 0, 1.5, 0.4));
+    assertFalse(Solve.learningCutsLittle(0, 0, 0, 0, 1.3, 0.35));
   }
 
   @Test

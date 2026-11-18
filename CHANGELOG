@@ -6870,8 +6870,8 @@ Version 5.0 (unreleased)
 383. Free search (-f) on satisfaction models gives LCG away to free search
    without learning when learning does not cut the search: at 10 % of -t
    (then each time the elapsed time doubles) the conflicts so far jump
-   back fewer than 1.5 levels on average and their learnt clauses have
-   an LBD of at least 0.4 of the conflict depth, so the clauses act like
+   back fewer than 1.3 levels on average and their learnt clauses have
+   an LBD of at least 0.35 of the conflict depth, so the clauses act like
    chronological backtracking. Before, only optimisation searches gave
    way (lcg-slow-rate). --free-config lcg-sat-probe=on|report|off,
    lcg-sat-at=<share of -t> (0 gives way at once), lcg-sat-jump and
@@ -6881,7 +6881,12 @@ Version 5.0 (unreleased)
    set and the XCSP competitions where -f LCG runs for more than 10 s, at
    600 s in two repeats it solves 20 -> 25 and 21 -> 26, total time 0.73
    and 0.78 (Subisomorphism g11-g30 and g11-g44, AnotherMagicSquare-04
-   proved UNSAT, FRB-45-21-3 solved).
+   proved UNSAT, FRB-45-21-3 solved). The first thresholds (1.5 levels,
+   LBD 0.4) lost on unseen instances (137 XCSP 2026 CSP and CSPLib
+   satisfaction instances, 240 s: solved 48 -> 42 and 47 -> 42); the
+   current ones were fitted on both sets with a cross-validation split by
+   problem family (37 instances where a rule fires, 600 s, two repeats:
+   probe off 21 and 20 solved, first rule 14 and 12, current 19 and 19).
 
 384. The LP relaxation keeps the value encodings of the model's variables
    (sum b_v = 1, x = sum v b_v) when the other rows do not all fit its
@@ -8036,7 +8041,24 @@ Version 5.0 (unreleased)
    takes --conflicts N (stop after N conflicts) and prints the learnt
    clause count and arena size.
 
-445. Regular, ExtensionalSupportMdd and Among (set and int forms) no
+445. Under lazy clause generation, the reason why two variables have no
+   common value (an element over variables dropping an index, x = y,
+   x + c = z, x + y = c, x != y) cites only the bounds that separate their
+   ranges, each weakened as far as the other allows, and, when the ranges
+   overlap, only the bounds that set the common range; before, it cited
+   both bounds of both variables. With both variables fixed the old reason
+   named both values, so a learnt clause pinned the value of every
+   variable it went through. MiniZinc Challenge 2016 java-auto-gen
+   binpack_11 under its search annotation: 293k -> 7.5k failures,
+   27 -> 2.1 s (Chuffed 0.14 32k failures). Paired runs at 600 s on the
+   85 wide instances it reaches: binpack_11 38 -> 6 s, lot-sizing
+   pigment20a 184 -> 88 s, evm-super-compilation 140 -> 75 s, oocsp_racks
+   030_mii8 95 -> 47 s, seat-moving sm-10-13-00 loses its proof; wide-quick
+   at 240 s takes 0.944 of the time. On for fixed search, off under -f
+   (costas-array and blocks-world slower over three rounds);
+   -Djacop.lcg.shiftSplitBounds=true|false overrides.
+
+446. Regular, ExtensionalSupportMdd and Among (set and int forms) no
    longer listen to the removal of every store level. They record a level
    with Store.recordChange when they first change their state there, and
    the store calls their removeLevel only for those levels. Before, every

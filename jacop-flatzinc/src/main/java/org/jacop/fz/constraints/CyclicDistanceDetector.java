@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Set;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.LinearInt;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Var;
 import org.jacop.fz.ASTConstElem;
@@ -287,7 +288,8 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
   private void absolute(ASTConstElem node) {
     IntVar a = variable(node, 1);
     IntVar e = variable(node, 0);
-    Absolute old = absolutes.putIfAbsent(a, new Absolute(e, node));
+    // a domain of a narrower than |e| is a constraint the replacement would drop
+    Absolute old = absolutes.putIfAbsent(a, new Absolute(e, holdsAbsolute(a, e) ? node : null));
     if (old != null) {
       // two definitions: neither is replaced
       absolutes.put(a, new Absolute(old.e(), null));
@@ -323,7 +325,9 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
         }
       }
       if (once) {
-        Definition old = definitions.put(v[j], new Definition(others, ow, w[j], rhs, node));
+        // a domain of e narrower than its definition is a constraint the substitution would drop
+        SimpleNode where = holdsDefinition(v[j], others, ow, w[j], rhs) ? node : null;
+        Definition old = definitions.put(v[j], new Definition(others, ow, w[j], rhs, where));
         if (old != null) {
           // two definitions: neither is substituted
           definitions.put(v[j], new Definition(others, ow, w[j], rhs, null));
@@ -340,8 +344,59 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
       return;
     }
     int c = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)) * w[0];
-    complements.computeIfAbsent(v[1], z -> new ArrayList<>()).add(new Complement(v[0], c, node));
-    complements.computeIfAbsent(v[0], z -> new ArrayList<>()).add(new Complement(v[1], c, node));
+    // keyed by b = c - a; a domain of b narrower than c - a is a constraint the replacement would
+    // drop
+    complements
+        .computeIfAbsent(v[1], z -> new ArrayList<>())
+        .add(new Complement(v[0], c, holdsComplement(v[1], v[0], c) ? node : null));
+    complements
+        .computeIfAbsent(v[0], z -> new ArrayList<>())
+        .add(new Complement(v[1], c, holdsComplement(v[0], v[1], c) ? node : null));
+  }
+
+  // the domain of a contains |v| for every v of the domain of e
+  private static boolean holdsAbsolute(IntVar a, IntVar e) {
+    IntDomain d = e.dom();
+    for (int i = 0; i < d.noIntervals(); i++) {
+      int lo = d.leftElement(i);
+      int hi = d.rightElement(i);
+      boolean holds =
+          lo >= 0
+              ? a.dom().contains(lo, hi)
+              : hi <= 0 ? a.dom().contains(-hi, -lo) : a.dom().contains(0, Math.max(-lo, hi));
+      if (!holds) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // the domain of b contains c - v for every v of the domain of a
+  private static boolean holdsComplement(IntVar b, IntVar a, int c) {
+    IntDomain d = a.dom();
+    for (int i = 0; i < d.noIntervals(); i++) {
+      long lo = (long) c - d.rightElement(i);
+      long hi = (long) c - d.leftElement(i);
+      if (lo < b.min() || hi > b.max() || !b.dom().contains((int) lo, (int) hi)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // the domain of e contains every value of sign * (rhs - sum w_i v_i) over the bounds of the v_i
+  private static boolean holdsDefinition(IntVar e, IntVar[] v, int[] w, int sign, int rhs) {
+    long lo = 0;
+    long hi = 0;
+    for (int i = 0; i < v.length; i++) {
+      long p = (long) w[i] * v[i].min();
+      long q = (long) w[i] * v[i].max();
+      lo += Math.min(p, q);
+      hi += Math.max(p, q);
+    }
+    long min = sign > 0 ? rhs - hi : lo - rhs;
+    long max = sign > 0 ? rhs - lo : hi - rhs;
+    return min >= e.min() && max <= e.max() && e.dom().contains((int) min, (int) max);
   }
 
   private IntVar variable(SimpleNode node, int i) {
