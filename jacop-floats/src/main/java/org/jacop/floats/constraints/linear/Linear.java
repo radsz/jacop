@@ -289,7 +289,7 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
     Map<FloatVar, Double> parameters = new LinkedHashMap<>();
     for (int i = 0; i < list.length; i++) {
       if (weights[i] != 0) {
-        if (list[i].min() == list[i].max()) {
+        if (list[i].min() == list[i].max() && foldsExactly(list[i].value(), weights[i])) {
           this.sum -= list[i].value() * weights[i];
         } else if (parameters.get(list[i]) != null) {
           Double coeff = parameters.get(list[i]);
@@ -301,6 +301,24 @@ public class Linear extends PrimitiveConstraint implements UsesQueueVariable {
       }
     }
     return parameters;
+  }
+
+  /**
+   * Whether the sum minus value times weight is a double, so that the fixed variable can move into
+   * the constant without rounding: a rounded constant cuts off real solutions, for example 2x - 3y
+   * - z = 0 with x and y fixed then wrongly fails on a z that lies one ulp from the rounded value.
+   * A fixed variable that does not fold exactly stays in the sum, whose bounds round outward.
+   */
+  private boolean foldsExactly(double value, double weight) {
+    double product = value * weight;
+    if (!Double.isFinite(product) || Math.fma(value, weight, -product) != 0) {
+      return false;
+    }
+    double s = this.sum - product;
+    // TwoSum: the rounding error of s, zero exactly when s is the exact difference
+    double bv = s - this.sum;
+    double av = s - bv;
+    return Double.isFinite(s) && (this.sum - av) + (-product - bv) == 0;
   }
 
   private void installListAndWeights(Map<FloatVar, Double> parameters) {

@@ -233,6 +233,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   LcgSolver lcg;
   // the solver of a model of clauses alone, which JaSAT solves without lazy clause generation
   private CdclSolver pureSat;
+
+  // a variable of the pure clause model fixed by its complement symmetry
+  private boolean pureComplementFixed;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -507,6 +510,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       } else {
         return;
       }
+    }
+    // free search: -f, or no search annotation (searchCountOne sets it for the search later)
+    boolean free =
+        opt.freeSearch()
+            || item.jjtGetNumChildren() == 1
+                && opt.freeSearchWithoutAnnotation()
+                && !opt.complementarySearch();
+    if (satisfy
+        && opt.lcg()
+        && free
+        && opt.proof() == null
+        && opt.portfolioWorker() == null
+        && PureClauseModel.complementSymmetric(store, sat.collectedClauses())) {
+      // clauses closed under complement go to JaSAT with one variable fixed instead
+      if (opt.debug()) {
+        FzConsole.println("% complement symmetric clauses: no lex-leader symmetry breaking");
+      }
+      return;
     }
     List<Var> order = new ArrayList<>();
     for (int i = 0; i < item.jjtGetNumChildren() - 1; i++) {
@@ -2058,6 +2079,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void searchCountOne(ASTSolveItem node) {
+    ASTSolveKind solve = (ASTSolveKind) node.jjtGetChild(0);
+    if (pathSearch(getKind(solve.getKind()))) {
+      // the cells of the values 1, 2, ... in turn, the lowest cell first: the search follows the
+      // path from its first cell, and the Circuit of the successors prunes the cells it cut off
+      SearchItem<T> path = new SearchItem<>(store, dictionary);
+      path.inputOrderMin(dictionary.pathPositions.getFirst());
+      if (options.debug()) {
+        IO.println("%% numbered path search over the positions of the values");
+      }
+      solveKind = getKind(solve.getKind());
+      annotatedSearch = path;
+      run_single_search(solveKind, solve, path);
+      return;
+    }
     if (options.freeSearchWithoutAnnotation() && !options.complementarySearch()) {
       // nothing to follow: the model is solved as with -f
       options.freeSearch = true;
@@ -2593,6 +2628,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return store.consistency();
+  }
+
+  /**
+   * Whether a model without an annotation searches the path of a numbering ({@link
+   * org.jacop.fz.constraints.NumberedPathDetector}): one solution of a satisfaction model with one
+   * such path, not under -f, without on_restart built-ins. On the Hidato-table instances of the
+   * XCSP 2022 competition, which give no cell (a Hamiltonian path of the king's graph), the 12x12,
+   * 14x14 and 15x15 grids take 3-4 s instead of 30-590 s with the Circuit alone. The system
+   * property org.jacop.fz.numberedPath.search=false keeps the default search.
+   */
+  private boolean pathSearch(int kind) {
+    return dictionary.pathPositions.size() == 1
+        && kind == 0
+        && !options.freeSearch()
+        && !options.getAll()
+        && options.getNumberSolutions() <= 1
+        && dictionary.onRestart == null
+        && options.proof() == null
+        && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.numberedPath.search"));
   }
 
   /**
@@ -3522,6 +3576,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executePureClauseSearch(PureClauseModel cnf) {
     pureSat = cnf.solver;
+    pureComplementFixed = cnf.complementFixed != 0;
     if (options.debug()) {
       FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
     }
@@ -4912,6 +4967,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (pureSat != null) {
         IO.println("%%%mzn-stat: pureClauseModel=true");
+        if (pureComplementFixed) {
+          IO.println("%%%mzn-stat: complementSymmetry=true");
+        }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
         if (lcgSlowDeferred > 0) {
