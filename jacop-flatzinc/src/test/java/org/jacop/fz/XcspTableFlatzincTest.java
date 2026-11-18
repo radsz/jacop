@@ -396,10 +396,9 @@ class XcspTableFlatzincTest {
 
   /**
    * Numbering models one change away from the pattern, so that the detector must not post its
-   * circuit, or the circuit must still hold: a cell without its condition, a cell whose condition
-   * ends at N - 1, a literal x[d] = x[c] + 2, or a cell whose domain goes past N. A circuit posted
-   * on any of them as if it were a numbered path would remove solutions; the solutions are compared
-   * with the detector off.
+   * circuit: a cell without its condition, a cell whose condition ends at N - 1, a literal x[d] =
+   * x[c] + 2, or a cell whose domain goes past N. A circuit posted on any of them as if it were a
+   * numbered path could remove solutions; the solutions are compared with the detector off.
    */
   @Test
   void numberedPathNearMissesKeepTheirSolutions() throws IOException {
@@ -433,6 +432,15 @@ class XcspTableFlatzincTest {
           };
       changed += near.equals(fzn) ? 0 : 1;
       String message = "run " + run + "\n" + near;
+      if (!near.equals(fzn)) {
+        System.err.println(
+            "NPNEAR "
+                + run / 2 % 4
+                + " table="
+                + table
+                + " circuit="
+                + solve(near, "-debug").contains("numbered path detector: circuit"));
+      }
       System.setProperty("org.jacop.fz.numberedPath", "false");
       Set<String> expected;
       try {
