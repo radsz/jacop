@@ -11031,6 +11031,24 @@ class SingleConstraintTest extends TestHelper {
     assertThat(mp.min()).isEqualTo(1);
   }
 
+  /**
+   * Sum read the bounds of the sum before narrowing it: with x0 = x2 = 3, x1 in {-2, -1} and the
+   * sum in {4, 6, 7}, the sum becomes 4 through its hole, which leaves x1 = -2, but the variables
+   * were not narrowed and the constraint stopped short of its fixpoint.
+   */
+  @Test
+  void sumFollowsTheSumThroughAHole() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 3, 3);
+    IntVar x1 = valuesVar(store, "x1", -2, -1);
+    IntVar x2 = new IntVar(store, "x2", 3, 3);
+    IntVar sum = valuesVar(store, "sum", 4, 6, 7);
+    store.impose(new Sum(new IntVar[] {x0, x1, x2}, sum));
+    assertThat(store.consistency()).isTrue();
+    assertThat(sum.value()).isEqualTo(4);
+    assertThat(x1.value()).isEqualTo(-2);
+  }
+
   private static IntVar valuesVar(Store store, String name, int... values) {
     IntVar v = new IntVar(store, name);
     for (int value : values) {
