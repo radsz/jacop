@@ -11076,7 +11076,7 @@ class SingleConstraintTest extends TestHelper {
     IntVar c = new IntVar(store, "c", 0, 1);
     store.impose(new DisjointConditional(r, List.of(List.of(1, 2)), List.of(c)));
     assertThat(store.consistency()).isTrue();
-    assertThat(c.max()).isEqualTo(0);
+    assertThat(c.max()).isZero();
   }
 
   /**

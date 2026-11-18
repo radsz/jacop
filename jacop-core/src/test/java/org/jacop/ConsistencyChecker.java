@@ -1089,6 +1089,127 @@ class ConsistencyChecker {
         concat(x, new IntVar[] {cost}));
   }
 
+  private static Model costRegular(Store store, Random random, boolean multi) {
+    int states = 1 + random.nextInt(3);
+    int values = 3;
+    int[][] transition = new int[states][values];
+    for (int[] row : transition) {
+      for (int v = 0; v < values; v++) {
+        row[v] = random.nextInt(4) == 0 ? -1 : random.nextInt(states);
+      }
+    }
+    int[] finals = IntStream.range(0, states).filter(q -> q == 0 || random.nextBoolean()).toArray();
+    int n = 2 + random.nextInt(3);
+    int resources = multi ? 1 + random.nextInt(2) : 1;
+    int[][][][] costs = new int[resources][n][states][values];
+    for (int[][][] byPosition : costs) {
+      for (int[][] byState : byPosition) {
+        for (int[] row : byState) {
+          for (int v = 0; v < values; v++) {
+            row[v] = random.nextInt(4) - 1;
+          }
+        }
+      }
+    }
+    IntVar[] x = vars(store, "x", n, 0, values - 1, random);
+    IntVar[] cost = new IntVar[resources];
+    for (int r = 0; r < resources; r++) {
+      cost[r] = aVar(store, "cost" + r, -n, 2 * n, random);
+    }
+    Object c =
+        multi
+            ? new org.jacop.constraints.regular.MultiCostRegular(
+                x, transition, 0, 0, finals, costs, cost)
+            : new org.jacop.constraints.regular.CostRegular(
+                x, transition, 0, 0, finals, costs[0], cost[0]);
+    return new Model(
+        c,
+        t -> {
+          int q = 0;
+          int[] total = new int[resources];
+          for (int i = 0; i < n; i++) {
+            int next = transition[q][t[i]];
+            if (next < 0) {
+              return false;
+            }
+            for (int r = 0; r < resources; r++) {
+              total[r] += costs[r][i][q][t[i]];
+            }
+            q = next;
+          }
+          int end = q;
+          if (Arrays.stream(finals).noneMatch(f -> f == end)) {
+            return false;
+          }
+          for (int r = 0; r < resources; r++) {
+            if (t[n + r] != total[r]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(x, cost));
+  }
+
+  private static Model softGcc(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int k = 1 + random.nextInt(2);
+    int[] counted = random.nextBoolean() ? new int[] {0, 1, 2}.clone() : new int[] {1, 2, 3};
+    counted = Arrays.copyOf(counted, k);
+    int[] lower = new int[k];
+    int[] upper = new int[k];
+    for (int j = 0; j < k; j++) {
+      lower[j] = random.nextInt(2);
+      upper[j] = lower[j] + random.nextInt(2);
+    }
+    IntVar[] hard = vars(store, "h", k, 0, n, random);
+    boolean valueBased = random.nextBoolean();
+    IntVar cost = aVar(store, "cost", 0, 2 * n, random);
+    int[] values = counted;
+    return new Model(
+        new org.jacop.constraints.SoftGCC(
+            x,
+            hard,
+            values,
+            lower,
+            upper,
+            cost,
+            valueBased
+                ? org.jacop.constraints.ViolationMeasure.VALUE_BASED
+                : org.jacop.constraints.ViolationMeasure.VARIABLE_BASED),
+        t -> {
+          int shortage = 0;
+          int excess = 0;
+          for (int j = 0; j < k; j++) {
+            int v = values[j];
+            int count = (int) Arrays.stream(t, 0, n).filter(a -> a == v).count();
+            if (t[n + j] != count) {
+              return false;
+            }
+            shortage += Math.max(0, lower[j] - count);
+            excess += Math.max(0, count - upper[j]);
+          }
+          if (!valueBased && Arrays.stream(lower).sum() > n) {
+            return false;
+          }
+          int violation = valueBased ? shortage + excess : Math.max(shortage, excess);
+          return t[n + k] == violation;
+        },
+        concat(x, hard, new IntVar[] {cost}));
+  }
+
+  private static Model ifThenElseBool(Store store, Random random) {
+    org.jacop.core.BooleanVar[] b = new org.jacop.core.BooleanVar[3];
+    for (int i = 0; i < 3; i++) {
+      b[i] = new org.jacop.core.BooleanVar(store, "b" + i);
+    }
+    return new Model(
+        new org.jacop.constraints.IfThenElseBool(b[0], b[1], b[2]),
+        t -> t[0] == 1 ? t[1] == 1 : t[2] == 1,
+        b);
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2212,7 +2333,11 @@ class ConsistencyChecker {
         new Case("MaxCliqueBound", Level.NONE, ConsistencyChecker::maxCliqueBound),
         new Case("DisjointConditional", Level.NONE, ConsistencyChecker::disjointConditional),
         new Case("TableCover", Level.NONE, ConsistencyChecker::tableCover),
-        new Case("SoftAlldifferent", Level.NONE, ConsistencyChecker::softAlldifferent));
+        new Case("SoftAlldifferent", Level.NONE, ConsistencyChecker::softAlldifferent),
+        new Case("CostRegular", Level.NONE, (s, r) -> costRegular(s, r, false)),
+        new Case("MultiCostRegular", Level.NONE, (s, r) -> costRegular(s, r, true)),
+        new Case("SoftGCC", Level.NONE, ConsistencyChecker::softGcc),
+        new Case("IfThenElseBool", Level.DOMAIN, ConsistencyChecker::ifThenElseBool));
   }
 
   /**
