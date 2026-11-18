@@ -10846,4 +10846,35 @@ class SingleConstraintTest extends TestHelper {
     }
     return count;
   }
+
+  /**
+   * Every term |a * x[i] - b| of a deviation is a multiple of g = gcd(a, b) and congruent to a *
+   * x[i] - b modulo 2g, so the deviation is congruent to a * sum - n * b modulo 2g; a spread is
+   * congruent to g (a * sum - n * b) modulo 2g<sup>2</sup>. Here the deviation is a multiple of 8
+   * and the spread is even.
+   */
+  @Test
+  void balancingCostsKeepTheirResidue() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar d = new IntVar(store, "d", 0, 0);
+    d.addDom(4, 14);
+    store.impose(new Deviation(x, 4, 4, 4, d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d.min()).isZero();
+    assertThat(d.max()).isEqualTo(8);
+
+    store = new Store();
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 3);
+    }
+    IntVar s = new IntVar(store, "s", 0, 7);
+    store.impose(new Spread(y, 4, s));
+    assertThat(store.consistency()).isTrue();
+    assertThat(s.singleton(6)).as(s.toString()).isTrue();
+  }
 }
