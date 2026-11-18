@@ -104,6 +104,9 @@ public class Spread extends AbstractBalance implements Copyable<Spread> {
     this.lowSquares = new long[n + 1];
     this.highSum = new long[n + 1];
     this.highSquares = new long[n + 1];
+    // each a * x[i] - b is g * u for g = gcd(a, b), and g^2 u^2 = g^2 u (mod 2 g^2)
+    long g = gcdOfAAndB();
+    congruence(new long[] {2, g, g}, new long[] {g, signedTotal()});
   }
 
   @Override
