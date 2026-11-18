@@ -875,6 +875,220 @@ class ConsistencyChecker {
     return again != null ? again : pooled(new BooleanVar(store, name));
   }
 
+  private static Model boolReif(Store store, Random random, String kind) {
+    int n = (kind.equals("orSimple") ? 2 : 1 + random.nextInt(4));
+    IntVar[] x = bools(store, "x", n);
+    IntVar y = aBool(store, "y");
+    Object c =
+        switch (kind) {
+          case "and" -> new org.jacop.constraints.AndBool(x, y);
+          case "or" -> new org.jacop.constraints.OrBool(x, y);
+          case "andVector" -> new org.jacop.constraints.AndBoolVector(x, y);
+          case "orVector" -> new org.jacop.constraints.OrBoolVector(x, y);
+          case "orWatched" -> new org.jacop.constraints.OrBoolWatched(x, y, false);
+          case "norWatched" -> new org.jacop.constraints.OrBoolWatched(x, y, true);
+          case "orSimple" -> new org.jacop.constraints.OrBoolSimple(x[0], x[1], y);
+          default -> new org.jacop.constraints.EqBool(x, y);
+        };
+    return new Model(
+        c,
+        t -> {
+          int ones = Arrays.stream(t, 0, n).sum();
+          boolean value =
+              switch (kind) {
+                case "and", "andVector" -> ones == n;
+                case "norWatched" -> ones == 0;
+                case "eq" -> ones == 0 || ones == n;
+                default -> ones > 0;
+              };
+          return t[n] == (value ? 1 : 0);
+        },
+        concat(x, new IntVar[] {y}));
+  }
+
+  private static Model ifThenBool(Store store, Random random) {
+    IntVar[] x = bools(store, "x", 3);
+    return new Model(
+        new org.jacop.constraints.IfThenBool(x[0], x[1], x[2]),
+        t -> (t[0] == 0 || t[1] == 1) == (t[2] == 1),
+        x);
+  }
+
+  private static Model in(Store store, Random random) {
+    IntVar x = aVar(store, "x", -3, 6, random);
+    IntervalDomain d = new IntervalDomain();
+    for (int v = -3; v <= 6; v++) {
+      if (random.nextInt(3) > 0) {
+        d.unionAdapt(v, v);
+      }
+    }
+    if (d.isEmpty()) {
+      d.unionAdapt(0, 0);
+    }
+    return new Model(new org.jacop.constraints.In(x, d), t -> d.contains(t[0]), new IntVar[] {x});
+  }
+
+  private static Model weightedSum(Store store, Random random, boolean weighted) {
+    int n = 1 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, -2, 3, random);
+    int[] w = new int[n];
+    for (int i = 0; i < n; i++) {
+      w[i] = weighted ? random.nextInt(7) - 3 : 1;
+    }
+    IntVar sum = aVar(store, "sum", -8, 8, random);
+    return new Model(
+        weighted
+            ? new org.jacop.constraints.SumWeight(x, w, sum)
+            : new org.jacop.constraints.Sum(x, sum),
+        t -> IntStream.range(0, n).map(i -> w[i] * t[i]).sum() == t[n],
+        concat(x, new IntVar[] {sum}));
+  }
+
+  private static Model maxCliqueBound(Store store, Random random) {
+    int n = 2 + random.nextInt(5);
+    IntVar[] x = bools(store, "x", n);
+    List<int[]> pairs = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (random.nextInt(2) == 0) {
+          pairs.add(new int[] {i, j});
+        }
+      }
+    }
+    int[][] conflicts =
+        IntStream.range(0, n)
+            .mapToObj(i -> pairs.stream().filter(p -> p[0] == i).mapToInt(p -> p[1]).toArray())
+            .toArray(int[][]::new);
+    IntVar sum = aVar(store, "sum", 0, n, random);
+    return new Model(
+        new org.jacop.constraints.MaxCliqueBound(x, conflicts, sum),
+        t -> {
+          for (int[] p : pairs) {
+            if (t[p[0]] == 1 && t[p[1]] == 1) {
+              return false;
+            }
+          }
+          return t[n] <= Arrays.stream(t, 0, n).sum();
+        },
+        concat(x, new IntVar[] {sum}));
+  }
+
+  private static Model disjointConditional(Store store, Random random) {
+    // lengths of at least 1: what a zero length means here is not documented
+    int k = 2 + random.nextInt(2);
+    IntVar[][] rect = new IntVar[k][];
+    for (int i = 0; i < k; i++) {
+      rect[i] =
+          new IntVar[] {
+            aVar(store, "o" + i + "_0", 0, 2, random),
+            aVar(store, "o" + i + "_1", 0, 2, random),
+            aVar(store, "l" + i + "_0", 1, 2, random),
+            aVar(store, "l" + i + "_1", 1, 2, random)
+          };
+    }
+    List<List<Integer>> pairs = new ArrayList<>();
+    for (int i = 0; i < k; i++) {
+      for (int j = i + 1; j < k; j++) {
+        if (random.nextBoolean()) {
+          pairs.add(List.of(i + 1, j + 1));
+        }
+      }
+    }
+    IntVar[] cond = new IntVar[pairs.size()];
+    for (int p = 0; p < cond.length; p++) {
+      cond[p] = aBool(store, "c" + p);
+    }
+    IntVar[] all = concat(concat(rect), cond);
+    return new Model(
+        new org.jacop.constraints.DisjointConditional(
+            rect, pairs, Arrays.asList(cond), random.nextBoolean()),
+        t -> {
+          for (int i = 0; i < k; i++) {
+            for (int j = i + 1; j < k; j++) {
+              boolean apart =
+                  t[4 * i] + t[4 * i + 2] <= t[4 * j]
+                      || t[4 * j] + t[4 * j + 2] <= t[4 * i]
+                      || t[4 * i + 1] + t[4 * i + 3] <= t[4 * j + 1]
+                      || t[4 * j + 1] + t[4 * j + 3] <= t[4 * i + 1];
+              int p = pairs.indexOf(List.of(i + 1, j + 1));
+              if (!apart && (p < 0 || t[4 * k + p] == 1)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        all);
+  }
+
+  private static Model tableCover(Store store, Random random) {
+    int groups = 2 + random.nextInt(2);
+    IntVar[][] g = new IntVar[groups][];
+    int[][][] tuples = new int[groups][][];
+    for (int i = 0; i < groups; i++) {
+      int size = 1 + random.nextInt(2);
+      g[i] = vars(store, "g" + i + "_", size, 0, 4, random);
+      int count = 1 + random.nextInt(5);
+      tuples[i] = new int[count][size];
+      for (int[] tuple : tuples[i]) {
+        for (int l = 0; l < size; l++) {
+          tuple[l] = random.nextInt(5);
+        }
+      }
+    }
+    IntVar[] all = concat(g);
+    return new Model(
+        new org.jacop.constraints.TableCover(g, tuples, false),
+        t -> {
+          if (Arrays.stream(t).distinct().count() != t.length) {
+            return false;
+          }
+          int at = 0;
+          for (int i = 0; i < groups; i++) {
+            int from = at;
+            boolean found =
+                Arrays.stream(tuples[i])
+                    .anyMatch(
+                        tuple ->
+                            Arrays.equals(tuple, Arrays.copyOfRange(t, from, from + tuple.length)));
+            if (!found) {
+              return false;
+            }
+            at += g[i].length;
+          }
+          return true;
+        },
+        all);
+  }
+
+  private static Model softAlldifferent(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    boolean decomposition = random.nextBoolean();
+    IntVar cost = aVar(store, "cost", 0, 6, random);
+    return new Model(
+        new org.jacop.constraints.SoftAlldifferent(
+            x,
+            cost,
+            decomposition
+                ? org.jacop.constraints.ViolationMeasure.DECOMPOSITION_BASED
+                : org.jacop.constraints.ViolationMeasure.VARIABLE_BASED),
+        t -> {
+          int violations = 0;
+          if (decomposition) {
+            for (int i = 0; i < n; i++) {
+              for (int j = i + 1; j < n; j++) {
+                violations += t[i] == t[j] ? 1 : 0;
+              }
+            }
+          } else {
+            violations = n - (int) Arrays.stream(t, 0, n).distinct().count();
+          }
+          return t[n] == violations;
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -1044,7 +1258,7 @@ class ConsistencyChecker {
           concat(new IntVar[] {index, value}, list));
     }
     int[] list = IntStream.range(0, n).map(i -> random.nextInt(6)).toArray();
-    Constraint c =
+    Object c =
         fast
             ? new ElementIntegerFast(index, list, value)
             : new ElementInteger(index, list, value, 0);
@@ -1094,7 +1308,7 @@ class ConsistencyChecker {
             .mapToObj(i -> interval(store, "r" + i, 1, 2, random))
             .toArray(IntVar[]::new);
     IntVar limit = aVar(store, "b", 1, 3, random);
-    Constraint c =
+    Object c =
         switch (kind) {
           case 1 -> new CumulativeBasic(s, d, r, limit);
           case 2 -> new HornFlow(s, d, r, limit);
@@ -1982,7 +2196,23 @@ class ConsistencyChecker {
         new Case("SubcircuitCost", Level.NONE, ConsistencyChecker::subcircuitCost),
         new Case("WeightedSubcircuits", Level.NONE, ConsistencyChecker::weightedSubcircuits),
         new Case("Routes", Level.NONE, ConsistencyChecker::routes),
-        new Case("ArcTimes", Level.NONE, ConsistencyChecker::arcTimes));
+        new Case("ArcTimes", Level.NONE, ConsistencyChecker::arcTimes),
+        new Case("AndBool", Level.DOMAIN, (s, r) -> boolReif(s, r, "and")),
+        new Case("OrBool", Level.DOMAIN, (s, r) -> boolReif(s, r, "or")),
+        new Case("AndBoolVector", Level.DOMAIN, (s, r) -> boolReif(s, r, "andVector")),
+        new Case("OrBoolVector", Level.DOMAIN, (s, r) -> boolReif(s, r, "orVector")),
+        new Case("OrBoolWatched", Level.DOMAIN, (s, r) -> boolReif(s, r, "orWatched")),
+        new Case("NorBoolWatched", Level.DOMAIN, (s, r) -> boolReif(s, r, "norWatched")),
+        new Case("OrBoolSimple", Level.DOMAIN, (s, r) -> boolReif(s, r, "orSimple")),
+        new Case("EqBool", Level.DOMAIN, (s, r) -> boolReif(s, r, "eq")),
+        new Case("IfThenBool", Level.DOMAIN, ConsistencyChecker::ifThenBool),
+        new Case("In(domain)", Level.DOMAIN, ConsistencyChecker::in),
+        new Case("Sum(list)", Level.BOUNDS_Z, (s, r) -> weightedSum(s, r, false)),
+        new Case("SumWeight", Level.NONE, (s, r) -> weightedSum(s, r, true)),
+        new Case("MaxCliqueBound", Level.NONE, ConsistencyChecker::maxCliqueBound),
+        new Case("DisjointConditional", Level.NONE, ConsistencyChecker::disjointConditional),
+        new Case("TableCover", Level.NONE, ConsistencyChecker::tableCover),
+        new Case("SoftAlldifferent", Level.NONE, ConsistencyChecker::softAlldifferent));
   }
 
   /**
