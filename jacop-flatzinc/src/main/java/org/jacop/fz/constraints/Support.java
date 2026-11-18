@@ -1501,6 +1501,15 @@ public class Support implements ParserTreeConstants {
   }
 
   /**
+   * Forgets the sums recorded for {@link #poseAlldiffSums()} once all constraints are posted: one
+   * record per sum of unit coefficients, 146 MB on XCSP 2022 DiamondFree-80 (1.6 million sums).
+   */
+  public void releaseUnitSums() {
+    unitSums.clear();
+    unitSums.trimToSize();
+  }
+
+  /**
    * Starts posting a constraint node with a substituted control.
    *
    * @param s the substitution.

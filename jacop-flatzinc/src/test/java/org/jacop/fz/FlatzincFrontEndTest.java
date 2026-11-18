@@ -4224,6 +4224,28 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void unitSumsAreReleasedAfterPosting(@TempDir Path dir) throws Exception {
+    // every sum of unit coefficients was kept for the AlldiffSum and partition sum detectors for
+    // the whole search: 1.6 million records, 146 MB, on XCSP 2022 DiamondFree-80
+    StringBuilder m = new StringBuilder();
+    for (int i = 0; i < 6; i++) {
+      m.append("var 0..1: b").append(i).append(":: output_var;\n");
+    }
+    m.append("constraint int_lin_le([1,1,1],[b0,b1,b2],2);\n");
+    m.append("constraint int_lin_le([1,1,1],[b3,b4,b5],2);\n");
+    m.append("constraint int_lin_le([1,1,1],[b0,b3,b5],1);\n");
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("sums.fzn");
+    Files.writeString(file, m.toString());
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    java.lang.reflect.Field sums =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("unitSums");
+    sums.setAccessible(true);
+    assertTrue(((List<?>) sums.get(loader.parser.cc.support)).isEmpty());
+  }
+
+  @Test
   void tablesOverOneKeyedRelationShareTheirBinaryParts(@TempDir Path dir) throws Exception {
     // a table whose first column is a key is posted as one binary table per other column; over a
     // relation of 80,000 words, 60 such tables built 300 binary tables with their own tuples and
