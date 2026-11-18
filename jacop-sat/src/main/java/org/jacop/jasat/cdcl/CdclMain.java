@@ -95,6 +95,7 @@ public final class CdclMain {
     boolean lucky = true;
     long seed = 0;
     int elimInterval = 5000;
+    long maxConflicts = 0;
     boolean sweep = true;
     boolean probe = true;
     boolean vmtf = false;
@@ -117,6 +118,7 @@ public final class CdclMain {
         case "--lucky" -> lucky = !"0".equals(args[++i]);
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
+        case "--conflicts" -> maxConflicts = Long.parseLong(args[++i]);
         case "--sweep" -> sweep = !"0".equals(args[++i]);
         case "--probe" -> probe = !"0".equals(args[++i]);
         case "--vmtf" -> vmtf = !"0".equals(args[++i]);
@@ -131,7 +133,8 @@ public final class CdclMain {
               + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1]"
               + " [--jump share] [--ema 0|1] [--seed n]"
               + " [--elim-interval conflicts] [--lucky 0|1] [--sweep 0|1] [--probe 0|1]"
-              + " [--substitute 0|1] [--congruence 0|1] [--vmtf 0|1] file.cnf[.gz]");
+              + " [--substitute 0|1] [--congruence 0|1] [--vmtf 0|1] [--conflicts limit]"
+              + " file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -149,6 +152,9 @@ public final class CdclMain {
     solver.setLucky(lucky);
     solver.setSeed(seed);
     solver.setEliminationInterval(elimInterval);
+    if (maxConflicts > 0) {
+      solver.setConflictLimit(maxConflicts);
+    }
     solver.setSweeping(sweep);
     solver.setProbing(probe);
     solver.setVmtf(vmtf);
@@ -230,6 +236,7 @@ public final class CdclMain {
             solver.probeEquivalences,
             solver.probeNanos / 1e9);
       }
+      out.printf("c learnts %d, arena %d ints%n", solver.learntCount(), solver.arenaSize());
     }
     if (result == CdclSolver.SAT) {
       out.println("s SATISFIABLE");

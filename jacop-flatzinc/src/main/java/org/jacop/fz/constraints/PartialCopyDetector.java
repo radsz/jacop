@@ -125,6 +125,7 @@ public class PartialCopyDetector implements ParserTreeConstants {
 
     Set<IntVar> aliased = new HashSet<>(support.dictionary.aliasTable.keySet());
     aliased.addAll(support.dictionary.aliasTable.values());
+    support.dictionary.addDeclaredEqualities(aliased);
     Map<Key, IntVar> first = new HashMap<>();
     Set<SimpleNode> skipped = new HashSet<>();
     for (Map.Entry<IntVar, List<ConstImp>> e : constImps.entrySet()) {

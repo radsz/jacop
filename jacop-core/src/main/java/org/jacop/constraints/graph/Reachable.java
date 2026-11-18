@@ -121,6 +121,11 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
 
   private DominatorTree dominators;
 
+  // the chain of dominators of the first root candidate, for markCandidatesDominator
+  private int[] chainPosition;
+  private int[] chainMark;
+  private int chainStamp;
+
   /**
    * It constructs a reachable constraint.
    *
@@ -396,7 +401,12 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
    */
   private void selectDominators(Store store, int r) {
 
-    boolean needed = false;
+    // in an undirected graph with the root still open, r is a selected node and the root is one of
+    // the candidates, so what dominates every candidate reached from r is selected too
+    // r < 0: the valid candidates of a directed graph's open root, joined under one extra vertex
+    int top = r >= 0 ? r : n + m;
+    boolean openRoot = r >= 0 && !directed && root != null && !root.singleton() && !isCandidate(r);
+    boolean needed = openRoot;
     for (int v = 0; v < n && !needed; v++) {
       needed = v != r && ns[v].min() == 1;
     }
@@ -405,7 +415,7 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
     }
 
     if (dominators == null) {
-      dominators = new DominatorTree(n + m);
+      dominators = new DominatorTree(n + m + 1);
     }
     DominatorTree d = dominators;
     d.clear();
@@ -422,7 +432,14 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
         d.addArc(n + e, u);
       }
     }
-    d.computeReachable(r);
+    if (r < 0) {
+      for (int c = 0; c < n; c++) {
+        if (valid[c] == validStamp) {
+          d.addArc(top, c);
+        }
+      }
+    }
+    d.computeReachable(top);
 
     dominatedStamp++;
     for (int v = 0; v < n; v++) {
@@ -433,15 +450,56 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
         throw Store.failException;
       }
       int x = d.immediateDominator(v);
-      while (x != r && dominated[x] != dominatedStamp) {
+      while (x != top && dominated[x] != dominatedStamp) {
         dominated[x] = dominatedStamp;
         x = d.immediateDominator(x);
       }
+    }
+    if (openRoot) {
+      markCandidatesDominator(d, r);
     }
     for (int x = 0; x < n + m; x++) {
       if (dominated[x] == dominatedStamp) {
         setTrue(store, x < n ? ns[x] : es[x - n]);
       }
+    }
+  }
+
+  // marks the nearest common dominator of the reached root candidates and its dominators below r
+  private void markCandidatesDominator(DominatorTree d, int r) {
+    if (chainPosition == null) {
+      chainPosition = new int[n + m];
+      chainMark = new int[n + m];
+    }
+    chainStamp++;
+    int lca = -1;
+    for (int c = 0; c < n; c++) {
+      if (!isCandidate(c) || !d.reached(c)) {
+        continue;
+      }
+      if (lca < 0) {
+        // the chain from the first candidate up to r, numbered from the candidate
+        int position = 0;
+        for (int x = c; x != r; x = d.immediateDominator(x)) {
+          chainMark[x] = chainStamp;
+          chainPosition[x] = position++;
+        }
+        lca = c;
+        continue;
+      }
+      int x = c;
+      while (x != r && chainMark[x] != chainStamp) {
+        x = d.immediateDominator(x);
+      }
+      if (x == r) {
+        return;
+      }
+      if (chainPosition[x] > chainPosition[lca]) {
+        lca = x;
+      }
+    }
+    for (int x = lca; x >= 0 && x != r; x = d.immediateDominator(x)) {
+      dominated[x] = dominatedStamp;
     }
   }
 
@@ -524,6 +582,9 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
       // the only possible root
       setTrue(store, ns[lastValid]);
       selectDominators(store, lastValid);
+    } else {
+      // what every path from a valid candidate to a selected node goes through
+      selectDominators(store, -1);
     }
   }
 
@@ -531,7 +592,8 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
     return ns[v].max() == 1 && (root == null || root.domain.contains(base + v));
   }
 
-  // undirected graph without a selected node: the subgraph still has at least one node
+  // undirected graph without a selected node: the subgraph still has at least one node, and with
+  // a root variable only the nodes connected to a root value can be selected
   private void propagateNonEmpty(Store store) {
     int possible = 0;
     int last = -1;
@@ -546,6 +608,20 @@ public class Reachable extends Constraint implements SatisfiedPresent, Copyable<
     }
     if (possible == 1) {
       setTrue(store, ns[last]);
+    }
+    if (root != null) {
+      // a selected node is connected to the root, so nodes that no root value reaches are removed
+      visitStamp++;
+      for (int c = 0; c < n; c++) {
+        if (visited[c] != visitStamp && isCandidate(c)) {
+          search(c, -1);
+        }
+      }
+      for (int v = 0; v < n; v++) {
+        if (visited[v] != visitStamp && ns[v].max() == 1) {
+          setFalse(store, ns[v]);
+        }
+      }
     }
   }
 

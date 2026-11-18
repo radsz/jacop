@@ -287,6 +287,7 @@ public class TableVariableElimination implements ParserTreeConstants {
     Set<IntVar> aliased = Collections.newSetFromMap(new IdentityHashMap<>());
     aliased.addAll(support.dictionary.aliasTable.keySet());
     aliased.addAll(support.dictionary.aliasTable.values());
+    support.dictionary.addDeclaredEqualities(aliased);
     while (!queue.isEmpty()) {
       support.checkTimeOut();
       IntVar y = queue.poll();

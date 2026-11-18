@@ -143,7 +143,8 @@ public abstract class AbstractImplication extends AbstractReifiedConstraint {
   @Override
   public boolean satisfied() {
 
-    return (enforced() && c.satisfied()) || released();
+    // the implication holds once c holds, whatever b is
+    return released() || c.satisfied();
   }
 
   @Override
