@@ -31,18 +31,22 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -148,6 +152,33 @@ class AffineFoldingFlatzincTest {
       fzn.append("solve satisfy;\n");
     }
     return fzn.toString();
+  }
+
+  /**
+   * The occurrences of each variable are kept in a small array set, not in a HashSet with its own
+   * map and table: those took 250 MB of the 1.46 million Boolean variables of XCSP 2022
+   * RoomMate-sr0700 while the model was read. A constraint is a repeat only of the last one added,
+   * since the arguments of one constraint are read together.
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  void occurrencesAreSmallSetsWithoutRepeats() throws Exception {
+    Constructor<?> make =
+        Class.forName("org.jacop.fz.constraints.AffineFolding$Occurrences")
+            .getDeclaredConstructor();
+    make.setAccessible(true);
+    Set<ASTConstElem> set = (Set<ASTConstElem>) make.newInstance();
+    ASTConstElem a = new ASTConstElem(ParserTreeConstants.JJTCONSTELEM);
+    ASTConstElem b = new ASTConstElem(ParserTreeConstants.JJTCONSTELEM);
+    ASTConstElem c = new ASTConstElem(ParserTreeConstants.JJTCONSTELEM);
+    assertTrue(set.add(a));
+    assertFalse(set.add(a));
+    assertTrue(set.add(b));
+    assertTrue(set.add(c));
+    assertFalse(set.add(c));
+    assertEquals(List.of(a, b, c), new ArrayList<>(set));
+    assertEquals(3, set.size());
+    assertFalse(set instanceof HashSet);
   }
 
   @Test
