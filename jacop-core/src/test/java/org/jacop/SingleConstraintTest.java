@@ -10927,4 +10927,48 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(e[1].singleton(2)).isTrue();
   }
+
+  /**
+   * Alternative unifies the master with its present interval value by value and Span makes the
+   * master present once its duration loses 0, so a hole in a domain must wake them.
+   */
+  @Test
+  void optionalIntervalsWakeOnHoles() {
+    Store store = new Store();
+    IntVar ms = new IntVar(store, "ms", 1, 1);
+    ms.addDom(3, 3);
+    IntVar[] p = {new IntVar(store, "p0", 0, 1), new IntVar(store, "p1", 0, 1)};
+    IntVar[] d = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 0, 2)};
+    store.impose(
+        new org.jacop.constraints.Alternative(
+            new IntVar(store, "mp", 1, 1),
+            ms,
+            new IntVar(store, "md", 1, 1),
+            p,
+            new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)},
+            d));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    d[1].domain.inComplement(store.level, d[1], 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p[1].max()).isZero();
+    assertThat(p[0].min()).isEqualTo(1);
+
+    store = new Store();
+    IntVar mp = new IntVar(store, "mp", 0, 1);
+    IntVar md = new IntVar(store, "md", -1, 2);
+    store.impose(
+        new org.jacop.constraints.Span(
+            mp,
+            new IntVar(store, "ms", 0, 3),
+            md,
+            new IntVar[] {new IntVar(store, "p0", 0, 1)},
+            new IntVar[] {new IntVar(store, "s0", 0, 3)},
+            new IntVar[] {new IntVar(store, "d0", 0, 2)}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    md.domain.inComplement(store.level, md, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(mp.min()).isEqualTo(1);
+  }
 }

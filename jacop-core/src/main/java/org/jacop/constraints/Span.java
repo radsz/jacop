@@ -33,8 +33,10 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -73,6 +75,19 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
   public Span(IntVar p0, IntVar s0, IntVar d0, IntVar[] p, IntVar[] s, IntVar[] d) {
     super(p0, s0, d0, p, s, d, "Span");
     this.numberId = idNumber.incrementAndGet();
+  }
+
+  /**
+   * The master is made present once its duration cannot be 0, a hole, so its duration wakes the
+   * constraint on any change; the other variables only on their bounds.
+   */
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    Integer event = getConsistencyPruningEventFromMap(v);
+    if (event != null) {
+      return event;
+    }
+    return v == d0 ? IntDomain.ANY : getDefaultConsistencyPruningEvent();
   }
 
   @Override
