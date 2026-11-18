@@ -242,6 +242,7 @@ public class IntensionTableDetector implements ParserTreeConstants {
     }
     pinned.addAll(support.dictionary.aliasTable.keySet());
     pinned.addAll(support.dictionary.aliasTable.values());
+    support.dictionary.addDeclaredEqualities(pinned);
 
     // groups: union-find over the items, joined by the variables only they hold
     Map<IntVar, Integer> firstItem = new IdentityHashMap<>();

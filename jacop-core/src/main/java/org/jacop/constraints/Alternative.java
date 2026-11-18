@@ -33,6 +33,7 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
 import org.jacop.lcg.AtomicTrail;
@@ -72,6 +73,15 @@ public class Alternative extends AbstractOptionalIntervals
   public Alternative(IntVar p0, IntVar s0, IntVar d0, IntVar[] p, IntVar[] s, IntVar[] d) {
     super(p0, s0, d0, p, s, d, "Alternative");
     this.numberId = idNumber.incrementAndGet();
+  }
+
+  /**
+   * The master and its present interval are unified value by value, and a candidate is dropped when
+   * its domains do not meet the master's, so every change of a domain is an event.
+   */
+  @Override
+  public int getDefaultConsistencyPruningEvent() {
+    return IntDomain.ANY;
   }
 
   @Override

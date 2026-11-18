@@ -327,6 +327,9 @@ public class Options {
                 lns-share=<share> (propagations of neighbourhood runs per propagation of the other
                 runs, default 0.8; with --lcg time per unit of time, default 3), lns-fails=<failures> (one neighbourhood run, default 100),
                 lns-conflicts=<conflicts> (with --lcg: one neighbourhood run, default 200),
+                lns-stall=<factor> (with --lcg: neighbourhood runs pause while no better solution has
+                come for factor times the time to the last one, default 2, 0 = never),
+                lns-stall-min=<ms> (with --lcg: the shortest such pause, default 30000),
                 lns-routes=0|1 (route removal and related-customer neighbourhoods over the vehicle
                 routes of two-index vrp models, default 1),
                 lns-defined=0|1 (leave variables defined by a constraint out of the neighbourhoods,
