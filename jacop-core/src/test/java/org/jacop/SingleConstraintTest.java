@@ -4084,6 +4084,82 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void reachableWithAnOpenRootRemovesNodesNoRootValueReaches() {
+    // undirected, root in {0..2, 4}: once node 4 is out, node 3 (only a self-loop) is reached from
+    // no root value, but it stayed selectable since no node was selected yet
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 5);
+    IntVar[] es = graphBooleans(store, "e", 5);
+    IntVar root = new IntVar(store, "r", 0, 2);
+    root.addDom(4, 4);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {3, 0, 1, 1, 4}, new int[] {3, 4, 4, 2, 2}, root, ns, es, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    ns[4].domain.in(1, ns[4], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(ns[3].singleton(0)).isTrue();
+    assertThat(root.dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void reachableWithAnOpenRootSelectsWhatEveryRootValueGoesThrough() {
+    // undirected, root in {1..3}, node 0 selected: its edges both lead to node 1, so node 1 is on
+    // the way to every root value
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 4);
+    IntVar[] es = graphBooleans(store, "e", 5);
+    IntVar root = new IntVar(store, "r", 1, 3);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {1, 3, 1, 1, 2}, new int[] {0, 1, 1, 0, 1}, root, ns, es, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    ns[0].domain.in(1, ns[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(ns[1].singleton(1)).isTrue();
+
+    // directed, root in {2, 3}: node 0 is selected and its only possible incoming edge is 3 -> 0
+    store = new Store();
+    ns = graphBooleans(store, "n", 4);
+    es = graphBooleans(store, "e", 6);
+    root = new IntVar(store, "r", 2, 3);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {1, 0, 3, 3, 2, 2}, new int[] {3, 3, 2, 0, 3, 0}, root, ns, es, true));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    es[5].domain.in(1, es[5], 0, 0);
+    ns[0].domain.in(1, ns[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(es[3].singleton(1)).isTrue();
+  }
+
+  @Test
+  void forestRejectsACompleteAssignmentWithACycle() {
+    // a triangle of selected edges; the redundant forest accepted it
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 3);
+    IntVar[] es = graphBooleans(store, "e", 3);
+    store.impose(
+        new org.jacop.constraints.graph.Forest(ns, es, new int[] {0, 1, 2}, new int[] {1, 2, 0}));
+    assertThat(store.consistency()).isTrue();
+    for (IntVar v : Stream.concat(Arrays.stream(ns), Arrays.stream(es)).toList()) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    assertThat(store.consistency()).isFalse();
+  }
+
+  private static IntVar[] graphBooleans(Store store, String prefix, int n) {
+    IntVar[] vs = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      vs[i] = new IntVar(store, prefix + i, 0, 1);
+    }
+    return vs;
+  }
+
+  @Test
   void amongReRunAfterLowerBorderReachesNDoesNotFail() {
     // hakank_among_global: once the lower border reaches n the remaining variables are pruned
     // out of the set and moved behind the new upper border; they are still in the variable queue.
@@ -10828,5 +10904,130 @@ class SingleConstraintTest extends TestHelper {
       }
     }
     return count;
+  }
+
+  /**
+   * Every term |a * x[i] - b| of a deviation is a multiple of g = gcd(a, b) and congruent to a *
+   * x[i] - b modulo 2g, so the deviation is congruent to a * sum - n * b modulo 2g; a spread is
+   * congruent to g (a * sum - n * b) modulo 2g<sup>2</sup>. Here the deviation is a multiple of 8
+   * and the spread is even.
+   */
+  @Test
+  void balancingCostsKeepTheirResidue() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar d = new IntVar(store, "d", 0, 0);
+    d.addDom(4, 14);
+    store.impose(new Deviation(x, 4, 4, 4, d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d.min()).isZero();
+    assertThat(d.max()).isEqualTo(8);
+
+    store = new Store();
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 3);
+    }
+    IntVar s = new IntVar(store, "s", 0, 7);
+    store.impose(new Spread(y, 4, s));
+    assertThat(store.consistency()).isTrue();
+    assertThat(s.singleton(6)).as(s.toString()).isTrue();
+  }
+
+  /**
+   * A present interval of a span starts no earlier than the master and ends no later, so the master
+   * lasts at least as long as it.
+   */
+  @Test
+  void spanLastsAtLeastAsLongAsAPresentInterval() {
+    Store store = new Store();
+    IntVar p0 = new IntVar(store, "mp", 1, 1);
+    IntVar s0 = new IntVar(store, "ms", 0, 3);
+    IntVar d0 = new IntVar(store, "md", 0, 2);
+    IntVar[] p = {new IntVar(store, "p0", 0, 1), new IntVar(store, "p1", 1, 1)};
+    IntVar[] st = {new IntVar(store, "s0", 0, 0), new IntVar(store, "s1", 0, 3)};
+    st[0].addDom(2, 2);
+    IntVar[] d = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 1, 2)};
+    store.impose(new org.jacop.constraints.Span(p0, s0, d0, p, st, d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d0.min()).isEqualTo(1);
+
+    // an interval longer than the master is absent, and so is the master without other intervals
+    store = new Store();
+    IntVar q0 = new IntVar(store, "mp", 0, 1);
+    IntVar[] q = {new IntVar(store, "p0", 0, 1)};
+    store.impose(
+        new org.jacop.constraints.Span(
+            q0,
+            new IntVar(store, "ms", 0, 3),
+            new IntVar(store, "md", 0, 0),
+            q,
+            new IntVar[] {new IntVar(store, "s0", 0, 3)},
+            new IntVar[] {new IntVar(store, "d0", 1, 2)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q[0].max()).isZero();
+    assertThat(q0.max()).isZero();
+
+    // the only present interval is the master: it has the master's duration
+    store = new Store();
+    IntVar[] r = {new IntVar(store, "p0", 0, 0), new IntVar(store, "p1", 1, 1)};
+    IntVar[] e = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 1, 2)};
+    store.impose(
+        new org.jacop.constraints.Span(
+            new IntVar(store, "mp", 1, 1),
+            new IntVar(store, "ms", 0, 3),
+            new IntVar(store, "md", 2, 2),
+            r,
+            new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)},
+            e));
+    assertThat(store.consistency()).isTrue();
+    assertThat(e[1].singleton(2)).isTrue();
+  }
+
+  /**
+   * Alternative unifies the master with its present interval value by value and Span makes the
+   * master present once its duration loses 0, so a hole in a domain must wake them.
+   */
+  @Test
+  void optionalIntervalsWakeOnHoles() {
+    Store store = new Store();
+    IntVar ms = new IntVar(store, "ms", 1, 1);
+    ms.addDom(3, 3);
+    IntVar[] p = {new IntVar(store, "p0", 0, 1), new IntVar(store, "p1", 0, 1)};
+    IntVar[] d = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 0, 2)};
+    store.impose(
+        new org.jacop.constraints.Alternative(
+            new IntVar(store, "mp", 1, 1),
+            ms,
+            new IntVar(store, "md", 1, 1),
+            p,
+            new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)},
+            d));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    d[1].domain.inComplement(store.level, d[1], 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p[1].max()).isZero();
+    assertThat(p[0].min()).isEqualTo(1);
+
+    store = new Store();
+    IntVar mp = new IntVar(store, "mp", 0, 1);
+    IntVar md = new IntVar(store, "md", -1, 2);
+    store.impose(
+        new org.jacop.constraints.Span(
+            mp,
+            new IntVar(store, "ms", 0, 3),
+            md,
+            new IntVar[] {new IntVar(store, "p0", 0, 1)},
+            new IntVar[] {new IntVar(store, "s0", 0, 3)},
+            new IntVar[] {new IntVar(store, "d0", 0, 2)}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    md.domain.inComplement(store.level, md, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(mp.min()).isEqualTo(1);
   }
 }

@@ -7900,6 +7900,27 @@ Version 5.0 (unreleased)
    without it, are not proved in 600 s; it therefore stays off. It fires
    on none of the 240 wide instances.
 
+438. Reachable (and Tree, Path, Steiner, which post it) prunes with a root
+   variable that is not fixed yet: in an undirected graph, nodes that no
+   root value reaches are removed and what every path from a selected node
+   to the root values goes through is selected; in a directed graph the
+   nodes and edges that every path from the valid roots to a selected node
+   goes through are selected, as they were for a fixed root. Reachable,
+   connected and undirected tree now reach domain consistency in the
+   consistency checker, which gets cases for the graph globals. Forest
+   fails a complete assignment whose selected edges close a cycle.
+
+439. Deviation and Spread round the bounds of their cost to its residue:
+   every term a * x[i] - b is a multiple of g = gcd(a, b), so a deviation
+   is congruent to a * sum - n * b modulo 2g and a spread to
+   g (a * sum - n * b) modulo 2g^2. Span gives a present master at least the
+   duration of each present interval, makes absent an interval longer than
+   the master can be, and equates the master with the only interval that
+   can give both its start and its end. Alternative and Span now wake on
+   holes, which their propagation reads. The consistency checker gets cases
+   for tables, sequence, stretch, same, exact cover, among, alternative,
+   span, diffn, deviation, spread, the GCC variants and reservoir.
+
 434. JaSAT (CdclMain, plain SAT) sweeps and probes before variable
    elimination. Sweeping (Kissat's sweep) takes, for each variable, the
    clauses within two or three steps of it (at most 256 variables and

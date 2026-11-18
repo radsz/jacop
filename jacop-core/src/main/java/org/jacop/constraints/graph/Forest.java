@@ -141,7 +141,25 @@ public class Forest extends Constraint implements SatisfiedPresent, Copyable<For
 
   @Override
   public void consistency(Store store) {
-    // redundant: the model implies the relation, which is here for the linear relaxation
+    // redundant: the model implies the relation, which is here for the linear relaxation; a
+    // complete assignment is still checked, so that the constraint holds on its own
+    if (allFixed() && !satisfied()) {
+      throw Store.failException;
+    }
+  }
+
+  private boolean allFixed() {
+    for (IntVar v : ns) {
+      if (!v.singleton()) {
+        return false;
+      }
+    }
+    for (IntVar v : es) {
+      if (!v.singleton()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override

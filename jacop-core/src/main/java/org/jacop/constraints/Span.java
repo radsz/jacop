@@ -33,8 +33,10 @@ package org.jacop.constraints;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.jacop.api.Copyable;
 import org.jacop.api.VarMap;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.Store;
+import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
@@ -75,6 +77,19 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
     this.numberId = idNumber.incrementAndGet();
   }
 
+  /**
+   * The master is made present once its duration cannot be 0, a hole, so its duration wakes the
+   * constraint on any change; the other variables only on their bounds.
+   */
+  @Override
+  public int getConsistencyPruningEvent(Var v) {
+    Integer event = getConsistencyPruningEventFromMap(v);
+    if (event != null) {
+      return event;
+    }
+    return v == d0 ? IntDomain.ANY : getDefaultConsistencyPruningEvent();
+  }
+
   @Override
   public void consistency(Store store) {
     do {
@@ -110,12 +125,15 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
         continue;
       }
 
-      // a candidate is made absent if, present, it would start before the master or end after it
+      // a candidate is made absent if, present, it would start before the master, end after it or
+      // last longer than it
       long masterEndHi = (long) s0.max() + d0.max();
       for (int i = 0; i < n; i++) {
         if (p[i].min() == 0
             && p[i].max() == 1
-            && (s[i].max() < s0.min() || (long) s[i].min() + d[i].min() > masterEndHi)) {
+            && (s[i].max() < s0.min()
+                || (long) s[i].min() + d[i].min() > masterEndHi
+                || d[i].min() > d0.max())) {
           fix(store, p[i], 0);
         }
       }
@@ -166,7 +184,14 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
 
       restrict(store, s0, startLo, startHi);
       // s0 + d0 within [endLo, endHi]
-      restrict(store, d0, endLo - s0.max(), endHi - s0.min());
+      // a present interval starts no earlier than the master and ends no later, so it is no longer
+      long longest = endLo - s0.max();
+      for (int i = 0; i < n; i++) {
+        if (p[i].min() == 1) {
+          longest = Math.max(longest, d[i].min());
+        }
+      }
+      restrict(store, d0, longest, endHi - s0.min());
       restrict(store, s0, endLo - d0.max(), endHi - d0.min());
       long startMin = s0.min();
       long startMax = s0.max();
@@ -206,6 +231,15 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
         fix(store, p[ender], 1);
         restrict(store, s[ender], endMin - d[ender].max(), endMax - d[ender].min());
         restrict(store, d[ender], endMin - s[ender].max(), endMax - s[ender].min());
+      }
+      if (starters == 1) {
+        // the master starts with its only possible first interval
+        restrict(store, s0, s[starter].min(), s[starter].max());
+      }
+      if (starters == 1 && enders == 1 && starter == ender) {
+        // one interval gives both the start and the end: it is the master
+        restrict(store, d0, d[starter].min(), d[starter].max());
+        restrict(store, d[starter], d0.min(), d0.max());
       }
     } while (store.propagationHasOccurred);
   }
@@ -263,6 +297,13 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
       trail.addLowerBound(d[i], entry, out);
       trail.addUpperBound(s0, entry, out);
       trail.addUpperBound(d0, entry, out);
+      return true;
+    }
+    int durationMin = trail.minBefore(d[i], entry);
+    if (durationMin > trail.maxBefore(d0, entry)) {
+      // it would last longer than the master
+      trail.addLowerBound(d[i], entry, out);
+      trail.addBoundReaching(d0, entry, false, (long) durationMin - 1, out);
       return true;
     }
     return false;
@@ -357,6 +398,14 @@ public class Span extends AbstractOptionalIntervals implements Copyable<Span>, E
         trail.addLowerBound(s[i], entry, out);
         trail.addLowerBound(d[i], entry, out);
         trail.addUpperBound(s0, entry, out);
+        return true;
+      }
+    }
+    // the master lasts at least as long as a present interval
+    for (int i = 0; i < n; i++) {
+      if (presentBefore(trail, p[i], entry) && trail.minBefore(d[i], entry) >= v) {
+        trail.addLowerBound(p[i], entry, out);
+        trail.addBoundReaching(d[i], entry, true, v, out);
         return true;
       }
     }
