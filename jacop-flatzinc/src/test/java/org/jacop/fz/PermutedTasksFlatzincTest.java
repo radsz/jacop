@@ -244,6 +244,68 @@ class PermutedTasksFlatzincTest {
     }
   }
 
+  /**
+   * Open shops one change away from the pattern, so that the detector must leave them alone or post
+   * what still holds: a job whose machines may repeat (no all_different), a duration table that is
+   * not a function of the machine, a precedence that lets two operations overlap by one, a channel
+   * from one index too far, or a machine variable that may take a value outside the job's machines.
+   * The optimum with the detector must be the optimum without it.
+   */
+  @Test
+  void nearMissesKeepTheOptimum() throws IOException {
+    Random random = new Random(11);
+    for (int trial = 0; trial < 15; trial++) {
+      int jobs = 2;
+      int machines = 3;
+      int[][] p = new int[jobs][machines];
+      int horizon = 0;
+      for (int[] row : p) {
+        for (int k = 0; k < machines; k++) {
+          row[k] = 1 + random.nextInt(5);
+          horizon += row[k];
+        }
+      }
+      String fzn = openShop(p, horizon);
+      String near =
+          switch (trial % 5) {
+            case 0 ->
+                fzn.replaceFirst("constraint jacop_alldiff\\(\\[mc_0_0,mc_0_1,mc_0_2\\]\\);\n", "");
+            case 1 ->
+                fzn.replaceFirst(
+                    "(jacop_table_int\\(\\[mc_0_1,d_0_1\\],\\[)", "$10," + (p[0][0] + 1) + ",");
+            case 2 ->
+                fzn.replaceFirst(
+                    "(int_lin_le\\(\\[1,1,-1\\],\\[s_0_0,d_0_0,s_0_1\\]),0\\)", "$1,1)");
+            case 3 ->
+                fzn.replaceFirst(
+                    "(element_nonshifted\\(mc_0_1,\\[sd_0_0,sd_0_1,sd_0_2\\],s_0_1),0\\)", "$1,1)");
+            default ->
+                fzn.replaceFirst(
+                    "var 0.." + (machines - 1) + ": mc_0_2;", "var 0.." + machines + ": mc_0_2;");
+          };
+      assertTrue(!near.equals(fzn), "trial " + trial + " unchanged");
+      String on = run(near, "-debug");
+      // job 1 is untouched; job 0 is rejected, except the machine value outside the job's
+      // machines, which its element and table constraints remove before the detector runs
+      int posted = on.split("% permuted tasks: unary resource", -1).length - 1;
+      assertEquals(trial % 5 == 4 ? 2 : 1, posted, "trial " + trial + "\n" + near);
+      String previous = System.getProperty("org.jacop.fz.permutedTasks");
+      System.setProperty("org.jacop.fz.permutedTasks", "false");
+      String off;
+      try {
+        off = run(near);
+      } finally {
+        if (previous == null) {
+          System.clearProperty("org.jacop.fz.permutedTasks");
+        } else {
+          System.setProperty("org.jacop.fz.permutedTasks", previous);
+        }
+      }
+      assertEquals(off.contains("=====UNSATISFIABLE====="), on.contains("=====UNSATISFIABLE====="));
+      assertEquals(lastCost(off), lastCost(on), "trial " + trial + "\n" + near);
+    }
+  }
+
   // the cost of the last solution printed
   private static int lastCost(String out) {
     Matcher m = Pattern.compile("(?m)^z = (\\d+);").matcher(out);
