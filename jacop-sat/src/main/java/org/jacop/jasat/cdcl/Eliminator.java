@@ -122,6 +122,11 @@ final class Eliminator {
     }
   }
 
+  /** Returns the effort spent so far, in literals and occurrences visited. */
+  long effort() {
+    return effort;
+  }
+
   /**
    * Runs subsumption and elimination.
    *
@@ -316,6 +321,10 @@ final class Eliminator {
     }
     for (int polarity = 0; polarity < 2; polarity++) {
       int l = best ^ polarity;
+      // the scan of the occurrence list counts too: on long lists whose clauses the signatures
+      // reject it is the whole cost (DiamondFree of XCSP 2022, millions of clauses of 5 literals
+      // over 4,830 variables, scanned for hours under an effort that only counted compared clauses)
+      effort += occSize[l];
       int[] list = Arrays.copyOf(occ[l], occSize[l]);
       for (int j : list) {
         if (j == i || clauses[j] == null || clauses[i] == null) {
