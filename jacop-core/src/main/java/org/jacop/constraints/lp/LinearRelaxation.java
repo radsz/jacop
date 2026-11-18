@@ -1664,8 +1664,7 @@ public class LinearRelaxation extends Constraint
     r.encodedElements = linked.size();
     r.encodingsSparse = bySparse;
     r.tableClauses = tableClauses;
-    // read only by the statistics: kept otherwise, the tags held a string for every row
-    r.formSource = LpSources.on ? tags : Map.of();
+    r.formSource = tags;
     r.capacity = separations;
     r.arcTimeRows = arcTimeCount;
     r.energy = resources;
@@ -6615,12 +6614,11 @@ public class LinearRelaxation extends Constraint
     }
     lp.addRows(cs, ws, lo, hi);
     cuts += k;
-    if (sources != null) {
-      cutSource = Arrays.copyOf(cutSource, m + k);
-      for (int q = 0; q < k; q++) {
-        String source = chosen.get(q).source;
-        cutSource[m + q] =
-            (calls > 1 && !restarting ? "s-" : "") + (source == null ? "cut" : source);
+    cutSource = Arrays.copyOf(cutSource, m + k);
+    for (int q = 0; q < k; q++) {
+      String source = chosen.get(q).source;
+      cutSource[m + q] = (calls > 1 && !restarting ? "s-" : "") + (source == null ? "cut" : source);
+      if (sources != null) {
         sources.of(cutSource[m + q]).rows++;
       }
     }
