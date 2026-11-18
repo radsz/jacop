@@ -199,9 +199,6 @@ public class Store {
   /** It stores constraint which is currently re-evaluated. */
   public Constraint currentConstraint;
 
-  /** The number of variables put in this store, the next {@link Var#storeNumber}. */
-  private int variablesPut;
-
   /**
    * Receives every domain change of an integer variable when set (lazy clause generation); null by
    * default, which costs one test per change.
@@ -1300,8 +1297,6 @@ public class Store {
    * @return position of the variable at which it is being stored.
    */
   public int putVariable(Var v) {
-
-    v.storeNumber = variablesPut++;
 
     Var previousVar = variablesHashMap.put(v.id(), v);
 
