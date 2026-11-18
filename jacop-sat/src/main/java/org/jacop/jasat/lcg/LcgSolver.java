@@ -4741,13 +4741,6 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Alternates branch and bound with objective lower-bound search: runs of branch and bound end
-   * after a number of conflicts, and each is followed by a run under the assumption that the
-   * objective is at its lower bound, with a share of those conflicts. When that run proves the
-   * assumption impossible, the lower bound goes up by a clause; when it finds a solution, the
-   * solution is optimal. The budget of conflicts grows by half at each round.
-   */
-  /**
    * Tells whether the neighbourhood runs of {@link #minimizeWithLowerBoundSearch} pause: no better
    * solution has come for {@link #setLnsStall} times the time it took to find the last one. Once
    * the best solution is optimal, the runs cannot improve it and only take time from the search
@@ -4765,6 +4758,13 @@ public final class LcgSolver implements ExternalPropagator {
     return now - lastImprovement > Math.max(lnsStallMin, (long) (lnsStall * found));
   }
 
+  /**
+   * Alternates branch and bound with objective lower-bound search: runs of branch and bound end
+   * after a number of conflicts, and each is followed by a run under the assumption that the
+   * objective is at its lower bound, with a share of those conflicts. When that run proves the
+   * assumption impossible, the lower bound goes up by a clause; when it finds a solution, the
+   * solution is optimal. The budget of conflicts grows by half at each round.
+   */
   private int minimizeWithLowerBoundSearch() {
     long budget = lowerBoundBudget;
     double share = lowerBoundShare;
@@ -5058,15 +5058,6 @@ public final class LcgSolver implements ExternalPropagator {
   }
 
   /**
-   * Turns on large neighbourhood search in {@link #minimize}: after each run of branch and bound
-   * from the first solution on, runs in neighbourhoods of the best solution take the given share of
-   * the time that run took. The neighbourhoods fix their variables by assumptions.
-   *
-   * @param neighbourhoods the neighbourhoods, over variables of the store; null turns it off
-   * @param share the time of neighbourhood runs per unit of time of branch and bound
-   * @param conflicts the conflicts of one neighbourhood run
-   */
-  /**
    * Pauses the neighbourhood runs of large neighbourhood search (see {@link #setLns}) while no
    * better solution has come for the given multiple of the time it took to find the last one, and
    * for at least the given time; a better solution resumes them.
@@ -5079,6 +5070,15 @@ public final class LcgSolver implements ExternalPropagator {
     lnsStallMin = Math.max(0, minMillis) * 1_000_000L;
   }
 
+  /**
+   * Turns on large neighbourhood search in {@link #minimize}: after each run of branch and bound
+   * from the first solution on, runs in neighbourhoods of the best solution take the given share of
+   * the time that run took. The neighbourhoods fix their variables by assumptions.
+   *
+   * @param neighbourhoods the neighbourhoods, over variables of the store; null turns it off
+   * @param share the time of neighbourhood runs per unit of time of branch and bound
+   * @param conflicts the conflicts of one neighbourhood run
+   */
   public void setLns(AdaptiveLns neighbourhoods, double share, long conflicts) {
     lns = neighbourhoods;
     lnsShare = share;
