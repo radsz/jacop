@@ -4136,6 +4136,21 @@ class SingleConstraintTest extends TestHelper {
     assertThat(es[3].singleton(1)).isTrue();
   }
 
+  @Test
+  void forestRejectsACompleteAssignmentWithACycle() {
+    // a triangle of selected edges; the redundant forest accepted it
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 3);
+    IntVar[] es = graphBooleans(store, "e", 3);
+    store.impose(
+        new org.jacop.constraints.graph.Forest(ns, es, new int[] {0, 1, 2}, new int[] {1, 2, 0}));
+    assertThat(store.consistency()).isTrue();
+    for (IntVar v : Stream.concat(Arrays.stream(ns), Arrays.stream(es)).toList()) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    assertThat(store.consistency()).isFalse();
+  }
+
   private static IntVar[] graphBooleans(Store store, String prefix, int n) {
     IntVar[] vs = new IntVar[n];
     for (int i = 0; i < n; i++) {
