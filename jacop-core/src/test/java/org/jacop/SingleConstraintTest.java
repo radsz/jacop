@@ -11030,4 +11030,45 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(mp.min()).isEqualTo(1);
   }
+
+  private static IntVar valuesVar(Store store, String name, int... values) {
+    IntVar v = new IntVar(store, name);
+    for (int value : values) {
+      v.addDom(value, value);
+    }
+    return v;
+  }
+
+  /**
+   * After a forbidden region a rectangle's length was limited by the gap between the region and the
+   * interval of its start domain that met the region, not the least start before the region, and
+   * starts past the region were left out when the domain had a hole right at its end.
+   */
+  @Test
+  void disjointKeepsTheLengthsOfStartsAcrossHoles() {
+    // B (x 2, y 0 or 2) fits on top of A ([1, 3) x [0, 1)) with any height
+    Store store = new Store();
+    IntVar by = valuesVar(store, "by", 0, 2);
+    IntVar bh = valuesVar(store, "bh", 0, 1, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {valuesVar(store, "ax", 1), valuesVar(store, "bx", 2)},
+            new IntVar[] {valuesVar(store, "ay", 0), by},
+            new IntVar[] {valuesVar(store, "aw", 2), valuesVar(store, "bw", 1)},
+            new IntVar[] {valuesVar(store, "ah", 1), bh}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bh.max()).isEqualTo(2);
+
+    // B at x 0 may be 1 wide next to A ([1 or 2, +2) x [0, 2))
+    store = new Store();
+    IntVar bw = valuesVar(store, "bw", 0, 1, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {valuesVar(store, "ax", 1, 2), valuesVar(store, "bx", 0, 2)},
+            new IntVar[] {valuesVar(store, "ay", 0), valuesVar(store, "by", 0)},
+            new IntVar[] {valuesVar(store, "aw", 2), bw},
+            new IntVar[] {valuesVar(store, "ah", 2), valuesVar(store, "bh", 1, 2)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bw.max()).isPositive();
+  }
 }
