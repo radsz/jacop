@@ -1976,7 +1976,244 @@ class ConsistencyChecker {
         new Case("Decreasing", Level.DOMAIN, ConsistencyChecker::decreasing),
         new Case("CardinalityMatrix", Level.NONE, ConsistencyChecker::cardinalityMatrix),
         new Case("ConjunctionSum", Level.NONE, ConsistencyChecker::conjunctionSum),
-        new Case("UnaryEarlinessTardiness", Level.NONE, ConsistencyChecker::unaryEarliness));
+        new Case("UnaryEarlinessTardiness", Level.NONE, ConsistencyChecker::unaryEarliness),
+        new Case("Disjoint", Level.NONE, (s, r) -> disjoint(s, r, true)),
+        new Case("Diff2Lengths", Level.NONE, (s, r) -> disjoint(s, r, false)),
+        new Case("SubcircuitCost", Level.NONE, ConsistencyChecker::subcircuitCost),
+        new Case("WeightedSubcircuits", Level.NONE, ConsistencyChecker::weightedSubcircuits),
+        new Case("Routes", Level.NONE, ConsistencyChecker::routes),
+        new Case("ArcTimes", Level.NONE, ConsistencyChecker::arcTimes));
+  }
+
+  /**
+   * Disjoint (a rectangle of length 0 may not lie strictly inside another) or Diff2 (it overlaps
+   * nothing): 2 or 3 rectangles in two dimensions with variable lengths.
+   */
+  private static Model disjoint(Store store, Random random, boolean disjoint) {
+    int k = 2 + random.nextInt(2);
+    List<IntVar> o1 = new ArrayList<>();
+    List<IntVar> o2 = new ArrayList<>();
+    List<IntVar> l1 = new ArrayList<>();
+    List<IntVar> l2 = new ArrayList<>();
+    IntVar[] all = new IntVar[4 * k];
+    for (int i = 0; i < k; i++) {
+      o1.add(aVar(store, "o" + i + "_0", 0, 2, random));
+      o2.add(aVar(store, "o" + i + "_1", 0, 2, random));
+      l1.add(aVar(store, "l" + i + "_0", 0, 2, random));
+      l2.add(aVar(store, "l" + i + "_1", 0, 2, random));
+      all[4 * i] = o1.get(i);
+      all[4 * i + 1] = o2.get(i);
+      all[4 * i + 2] = l1.get(i);
+      all[4 * i + 3] = l2.get(i);
+    }
+    return new Model(
+        disjoint
+            ? new org.jacop.constraints.Disjoint(o1, o2, l1, l2, random.nextBoolean())
+            : new org.jacop.constraints.Diff2(o1, o2, l1, l2, random.nextBoolean()),
+        t -> {
+          for (int i = 0; i < k; i++) {
+            for (int j = i + 1; j < k; j++) {
+              boolean apart = false;
+              boolean empty = false;
+              for (int dim = 0; dim < 2; dim++) {
+                int oi = t[4 * i + dim];
+                int li = t[4 * i + 2 + dim];
+                int oj = t[4 * j + dim];
+                int lj = t[4 * j + 2 + dim];
+                apart |= oi + li <= oj || oj + lj <= oi;
+                empty |= li == 0 || lj == 0;
+              }
+              if (!apart && (disjoint || !empty)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        all);
+  }
+
+  private static int[][] costMatrix(int n, Random random) {
+    int[][] c = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        c[i][j] = random.nextInt(5);
+      }
+    }
+    return c;
+  }
+
+  /** SubcircuitCost over 3 or 4 successors from 1; costs[i][i] is the cost of leaving i out. */
+  private static Model subcircuitCost(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    int[][] c = costMatrix(n, random);
+    IntVar cost = aVar(store, "cost", 0, 4 * n, random);
+    return new Model(
+        new org.jacop.constraints.SubcircuitCost(x, c, cost),
+        t -> {
+          if (!circuitHolds(t, n, true)) {
+            return false;
+          }
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            total += c[i][t[i] - 1];
+          }
+          return t[n] == total;
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
+  /** WeightedSubcircuits over 3 or 4 successors from 1 with 2 tours. */
+  private static Model weightedSubcircuits(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    int tours = 2;
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    IntVar[] tour = vars(store, "t", n, 0, tours, random);
+    int[][] c = costMatrix(n, random);
+    IntVar[] tourCost = vars(store, "tc", tours, 0, 4 * n, random);
+    IntVar cost = aVar(store, "cost", 0, 4 * n, random);
+    return new Model(
+        new org.jacop.constraints.WeightedSubcircuits(x, tour, c, tourCost, cost),
+        t -> {
+          boolean[] seen = new boolean[n];
+          int total = 0;
+          int[] perTour = new int[tours];
+          for (int i = 0; i < n; i++) {
+            int next = t[i] - 1;
+            if (next < 0 || next >= n || seen[next]) {
+              return false;
+            }
+            seen[next] = true;
+            int k = t[n + i];
+            if ((next == i) != (k == 0) || t[n + next] != k) {
+              return false;
+            }
+            total += c[i][next];
+            if (k > 0) {
+              perTour[k - 1] += c[i][next];
+            }
+          }
+          for (int k = 1; k <= tours; k++) {
+            int start = -1;
+            int size = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[n + i] == k) {
+                start = i;
+                size++;
+              }
+            }
+            if (start >= 0) {
+              int len = 0;
+              int i = start;
+              do {
+                i = t[i] - 1;
+                len++;
+              } while (i != start);
+              if (len != size) {
+                return false;
+              }
+            }
+            if (t[2 * n + k - 1] != perTour[k - 1]) {
+              return false;
+            }
+          }
+          return t[2 * n + tours] == total;
+        },
+        concat(x, tour, tourCost, new IntVar[] {cost}));
+  }
+
+  /** Routes over 3 or 4 nodes, depot 0, on a random set of arcs with some self loops. */
+  private static Model routes(Store store, Random random) {
+    int nodes = 3 + random.nextInt(2);
+    List<int[]> arcs = new ArrayList<>();
+    for (int i = 0; i < nodes; i++) {
+      for (int j = 0; j < nodes; j++) {
+        if (i == j ? i > 0 && random.nextBoolean() : random.nextInt(4) > 0) {
+          arcs.add(new int[] {i, j});
+        }
+      }
+    }
+    int m = arcs.size();
+    // the constraint knows the nodes up to the largest one on an arc
+    int n = arcs.stream().mapToInt(a -> Math.max(a[0], a[1])).max().orElse(0) + 1;
+    int[] tails = arcs.stream().mapToInt(a -> a[0]).toArray();
+    int[] heads = arcs.stream().mapToInt(a -> a[1]).toArray();
+    IntVar[] lit = bools(store, "a", m);
+    return new Model(
+        new org.jacop.constraints.Routes(tails, heads, lit),
+        t -> {
+          int[] in = new int[n];
+          int[] out = new int[n];
+          boolean[] loop = new boolean[n];
+          int[] parent = IntStream.range(0, n).toArray();
+          for (int a = 0; a < m; a++) {
+            if (t[a] == 1) {
+              if (tails[a] == heads[a]) {
+                loop[tails[a]] = true;
+              } else {
+                out[tails[a]]++;
+                in[heads[a]]++;
+                int u = tails[a];
+                while (parent[u] != u) {
+                  u = parent[u];
+                }
+                int v = heads[a];
+                while (parent[v] != v) {
+                  v = parent[v];
+                }
+                parent[u] = v;
+              }
+            }
+          }
+          int depot = 0;
+          while (parent[depot] != depot) {
+            depot = parent[depot];
+          }
+          for (int v = 1; v < n; v++) {
+            boolean outside = loop[v] && in[v] == 0 && out[v] == 0;
+            boolean inside = !loop[v] && in[v] == 1 && out[v] == 1;
+            if (!outside && !inside) {
+              return false;
+            }
+            if (inside) {
+              int u = v;
+              while (parent[u] != u) {
+                u = parent[u];
+              }
+              if (u != depot) {
+                return false;
+              }
+            }
+          }
+          return in[0] == out[0];
+        },
+        lit);
+  }
+
+  /** ArcTimes: x[v] = w + 1 implies t[w] >= t[v] + lag[v][w], over 3 nodes. */
+  private static Model arcTimes(Store store, Random random) {
+    int n = 3;
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    IntVar[] time = vars(store, "t", n, 0, 4, random);
+    long[][] lag = new long[n][n];
+    for (int v = 0; v < n; v++) {
+      for (int w = 0; w < n; w++) {
+        lag[v][w] = random.nextInt(4) - 1;
+      }
+    }
+    return new Model(
+        new org.jacop.constraints.ArcTimes(x, 1, time, lag),
+        t -> {
+          for (int v = 0; v < n; v++) {
+            int w = t[v] - 1;
+            if (t[n + w] < t[n + v] + lag[v][w]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(x, time));
   }
 
   /** GlobalCardinality over 3 or 4 variables, with counter variables or fixed bounds. */
@@ -2719,37 +2956,40 @@ class ConsistencyChecker {
     IntVar[] x = vars(store, "x", n, 1, n, random);
     return new Model(
         sub ? new org.jacop.constraints.Subcircuit(x) : new org.jacop.constraints.Circuit(x),
-        t -> {
-          // successors form a permutation whose non-fixed points make one cycle (all of them for
-          // circuit)
-          boolean[] seen = new boolean[n];
-          int moving = 0;
-          int start = -1;
-          for (int i = 0; i < n; i++) {
-            if (t[i] < 1 || t[i] > n || seen[t[i] - 1]) {
-              return false;
-            }
-            seen[t[i] - 1] = true;
-            if (t[i] != i + 1) {
-              moving++;
-              start = i;
-            }
-          }
-          if (!sub && moving != n) {
-            return false;
-          }
-          if (moving == 0) {
-            return sub;
-          }
-          int len = 0;
-          int i = start;
-          do {
-            i = t[i] - 1;
-            len++;
-          } while (i != start && len <= n);
-          return len == moving;
-        },
+        t -> circuitHolds(t, n, sub),
         x);
+  }
+
+  /** Whether t[0..n-1], successors from 1, form a circuit (or a subcircuit when sub). */
+  private static boolean circuitHolds(int[] t, int n, boolean sub) {
+    // successors form a permutation whose non-fixed points make one cycle (all of them for
+    // circuit)
+    boolean[] seen = new boolean[n];
+    int moving = 0;
+    int start = -1;
+    for (int i = 0; i < n; i++) {
+      if (t[i] < 1 || t[i] > n || seen[t[i] - 1]) {
+        return false;
+      }
+      seen[t[i] - 1] = true;
+      if (t[i] != i + 1) {
+        moving++;
+        start = i;
+      }
+    }
+    if (!sub && moving != n) {
+      return false;
+    }
+    if (moving == 0) {
+      return sub;
+    }
+    int len = 0;
+    int i = start;
+    do {
+      i = t[i] - 1;
+      len++;
+    } while (i != start && len <= n);
+    return len == moving;
   }
 
   /** load[b] = sum of w[i] over the items i with bin[i] = b, bins numbered from 0. */
