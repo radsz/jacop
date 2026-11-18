@@ -8721,6 +8721,31 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
   }
 
+  // An implication whose conclusion holds holds whatever its condition is, but Implies and IfThen
+  // reported satisfied() only with the condition true: a reification of one stayed open, and after
+  // its b was fixed to 0 during search (rewritten to the negation) nothing failed although the
+  // conclusion, 2 x2 + 2 x3 - 2 x0 != -1, always holds (WakeUpFixpointTest seed 4624408).
+  @Test
+  void testReifiedImplicationWithAConclusionThatHoldsIsTrue() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 6);
+    IntVar x3 = new IntVar(store, "x3", -2, 3);
+    IntVar[] v = {x2, x3, x0};
+    int[] w = {2, 2, -2};
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new Implies(b, new LinearInt(v, w, "!=", -1)), r));
+    IntVar c = new IntVar(store, "c", 0, 1);
+    IntVar s = new IntVar(store, "s", 0, 1);
+    store.impose(new Reified(new IfThen(new XeqC(c, 1), new LinearInt(v, w, "!=", -1)), s));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(r.singleton(1)).isTrue();
+    assertThat(s.singleton(1)).isTrue();
+  }
+
   // IfThenElse decided its condition from a branch that cannot hold only when imposed itself, so a
   // reification with b = 1, rewritten to its nested constraint during search, missed that the then
   // branch (2 x3 + 2 x2 - 2 x1 = -1, odd) never holds while the condition holds
