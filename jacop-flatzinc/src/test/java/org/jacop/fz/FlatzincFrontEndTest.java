@@ -4246,6 +4246,43 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void channelMapsAreReleasedAfterPosting(@TempDir Path dir) throws Exception {
+    // the int_eq_reif and int_eq_imp constraints collected for the channels were kept for the
+    // whole search: 115 MB on XCSP 2022 RoomMate-sr0700 (490,000 implications)
+    String model =
+        """
+        var 1..3: x:: output_var;
+        var bool: a;
+        var bool: b;
+        var bool: c;
+        var bool: d;
+        constraint int_eq_reif(x,1,a);
+        constraint int_eq_reif(x,2,b);
+        constraint int_eq_imp(x,2,c);
+        constraint int_eq_imp(x,3,d);
+        constraint bool_clause([a,b,c,d],[]);
+        solve satisfy;
+        """;
+    Path file = dir.resolve("channels.fzn");
+    Files.writeString(file, model);
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    org.jacop.fz.constraints.Support support = loader.parser.cc.support;
+    Class<?> channelMap = Class.forName("org.jacop.fz.constraints.ChannelMap");
+    java.lang.reflect.Field cs = channelMap.getDeclaredField("cs");
+    java.lang.reflect.Field byBoolean = channelMap.getDeclaredField("byBoolean");
+    cs.setAccessible(true);
+    byBoolean.setAccessible(true);
+    for (String name : new String[] {"reif", "imply"}) {
+      java.lang.reflect.Field f = org.jacop.fz.constraints.Support.class.getDeclaredField(name);
+      f.setAccessible(true);
+      Object map = f.get(support);
+      assertTrue(((Map<?, ?>) cs.get(map)).isEmpty(), name);
+      assertTrue(((Map<?, ?>) byBoolean.get(map)).isEmpty(), name);
+    }
+  }
+
+  @Test
   void tablesOverOneKeyedRelationShareTheirBinaryParts(@TempDir Path dir) throws Exception {
     // a table whose first column is a key is posted as one binary table per other column; over a
     // relation of 80,000 words, 60 such tables built 300 binary tables with their own tuples and

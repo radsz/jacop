@@ -1461,7 +1461,7 @@ public class Support implements ParserTreeConstants {
   public record ControlSubstitution(IntVar from, IntVar to, boolean negated) {}
 
   /** The constraint nodes posted with a substituted control. */
-  final Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
+  Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
 
   /** The substitutions by eliminated control, for detectors that read controls as literals. */
   final Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
@@ -1497,7 +1497,8 @@ public class Support implements ParserTreeConstants {
    * since through their parents they hold the parse tree of every such constraint.
    */
   public void releaseControlSubstitutions() {
-    controlSubstitutions.clear();
+    // a new map, since a cleared one keeps its table
+    controlSubstitutions = new IdentityHashMap<>();
   }
 
   /**
@@ -1507,6 +1508,12 @@ public class Support implements ParserTreeConstants {
   public void releaseUnitSums() {
     unitSums.clear();
     unitSums.trimToSize();
+  }
+
+  /** Forgets the equalities collected for the channel constraints once all are posted. */
+  public void releaseChannelMaps() {
+    reif.release();
+    imply.release();
   }
 
   /**

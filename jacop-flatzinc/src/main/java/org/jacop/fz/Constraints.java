@@ -783,6 +783,7 @@ public class Constraints implements ParserTreeConstants {
     dictionary.releaseConstantArrays();
     support.releaseControlSubstitutions();
     support.releaseUnitSums();
+    support.releaseChannelMaps();
   }
 
   // a constraint item, imposed as implied by the others when implied is true
