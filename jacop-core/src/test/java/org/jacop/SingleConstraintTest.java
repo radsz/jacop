@@ -11032,6 +11032,18 @@ class SingleConstraintTest extends TestHelper {
     assertThat(mp.min()).isEqualTo(1);
   }
 
+  /** An EqBool over a single variable holds whatever its value, so the result is 1. */
+  @Test
+  void eqBoolOfOneVariableHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new EqBool(new IntVar[] {x}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(1);
+    assertThat(x.max() - x.min()).isEqualTo(1);
+  }
+
   /**
    * Sum read the bounds of the sum before narrowing it: with x0 = x2 = 3, x1 in {-2, -1} and the
    * sum in {4, 6, 7}, the sum becomes 4 through its hole, which leaves x1 = -2, but the variables
