@@ -7918,9 +7918,10 @@ Version 5.0 (unreleased)
    were not proved, proved goes from 5 to 8 (fox-geese-corn 17,
    java-routing trip_8_3, valve-network horizon20, trains18) at the same
    total time; on a second seed of the 7 that change, from 1 to 4
-   (pigment20a 233 -> 98 s). On wide-quick at 240 s, 53 = 53 solved,
-   total 2,587 vs 2,562 s; on the other 31 wide optimisation instances
-   not proved in 45 s, 12 = 12 solved at 600 s.
+   (pigment20a 233 -> 98 s), total 3,833 -> 3,206 s. On wide-quick at
+   240 s, 53 = 53 solved, total 5,147 -> 5,177 s; on the other 31 wide
+   optimisation instances not proved in 45 s, 12 = 12 solved at 600 s,
+   total 12,422 -> 12,209 s (timeouts counted at the limit).
 
 Version 4.11
 =============
