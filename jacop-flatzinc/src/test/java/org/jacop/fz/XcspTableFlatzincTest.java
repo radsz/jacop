@@ -30,6 +30,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -421,7 +422,7 @@ class XcspTableFlatzincTest {
             case 0 -> table ? dropTableOf(fzn, "x" + c) : dropLine(fzn, "bool_clause([r" + c + ",");
             case 1 ->
                 table
-                    ? fzn.replace("[" + k + ",", "[" + (k - 1) + ",")
+                    ? fzn.replaceFirst("," + k + "((," + STAR + ")+)\\]", "," + (k - 1) + "$1]")
                     : fzn.replace("int_eq_imp(x" + c + "," + k, "int_eq_imp(x" + c + "," + (k - 1));
             case 2 ->
                 table
@@ -433,13 +434,7 @@ class XcspTableFlatzincTest {
       changed += near.equals(fzn) ? 0 : 1;
       String message = "run " + run + "\n" + near;
       if (!near.equals(fzn)) {
-        System.err.println(
-            "NPNEAR "
-                + run / 2 % 4
-                + " table="
-                + table
-                + " circuit="
-                + solve(near, "-debug").contains("numbered path detector: circuit"));
+        assertFalse(solve(near, "-debug").contains("numbered path detector: circuit"), message);
       }
       System.setProperty("org.jacop.fz.numberedPath", "false");
       Set<String> expected;
@@ -451,7 +446,7 @@ class XcspTableFlatzincTest {
       assertEquals(expected, solveAll(near), message);
       assertEquals(expected, solveAll(near, "--lcg", "off"), message);
     }
-    assertTrue(changed >= 40, "changed " + changed);
+    assertEquals(48, changed);
   }
 
   // the model without the constraint line that contains the given text
