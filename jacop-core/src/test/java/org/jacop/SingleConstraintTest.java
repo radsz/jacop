@@ -10877,4 +10877,54 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(s.singleton(6)).as(s.toString()).isTrue();
   }
+
+  /**
+   * A present interval of a span starts no earlier than the master and ends no later, so the master
+   * lasts at least as long as it.
+   */
+  @Test
+  void spanLastsAtLeastAsLongAsAPresentInterval() {
+    Store store = new Store();
+    IntVar p0 = new IntVar(store, "mp", 1, 1);
+    IntVar s0 = new IntVar(store, "ms", 0, 3);
+    IntVar d0 = new IntVar(store, "md", 0, 2);
+    IntVar[] p = {new IntVar(store, "p0", 0, 1), new IntVar(store, "p1", 1, 1)};
+    IntVar[] st = {new IntVar(store, "s0", 0, 0), new IntVar(store, "s1", 0, 3)};
+    st[0].addDom(2, 2);
+    IntVar[] d = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 1, 2)};
+    store.impose(new org.jacop.constraints.Span(p0, s0, d0, p, st, d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d0.min()).isEqualTo(1);
+
+    // an interval longer than the master is absent, and so is the master without other intervals
+    store = new Store();
+    IntVar q0 = new IntVar(store, "mp", 0, 1);
+    IntVar[] q = {new IntVar(store, "p0", 0, 1)};
+    store.impose(
+        new org.jacop.constraints.Span(
+            q0,
+            new IntVar(store, "ms", 0, 3),
+            new IntVar(store, "md", 0, 0),
+            q,
+            new IntVar[] {new IntVar(store, "s0", 0, 3)},
+            new IntVar[] {new IntVar(store, "d0", 1, 2)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q[0].max()).isZero();
+    assertThat(q0.max()).isZero();
+
+    // the only present interval is the master: it has the master's duration
+    store = new Store();
+    IntVar[] r = {new IntVar(store, "p0", 0, 0), new IntVar(store, "p1", 1, 1)};
+    IntVar[] e = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 1, 2)};
+    store.impose(
+        new org.jacop.constraints.Span(
+            new IntVar(store, "mp", 1, 1),
+            new IntVar(store, "ms", 0, 3),
+            new IntVar(store, "md", 2, 2),
+            r,
+            new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)},
+            e));
+    assertThat(store.consistency()).isTrue();
+    assertThat(e[1].singleton(2)).isTrue();
+  }
 }
