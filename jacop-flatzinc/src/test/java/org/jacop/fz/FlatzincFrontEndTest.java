@@ -2813,6 +2813,59 @@ class FlatzincFrontEndTest {
     assertEquals(12, withDetection.size(), withDetection.toString());
   }
 
+  /** Courses of credit 1..n over 3 periods, as XCSP3 BACP rows: credit in the period column. */
+  private static String tableCourses(int n) {
+    StringBuilder par = new StringBuilder();
+    StringBuilder var = new StringBuilder();
+    StringBuilder con = new StringBuilder();
+    par.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    par.append("predicate jacop_maximum(var int: m,array [int] of var int: x);\n");
+    for (int i = 1; i <= n; i++) {
+      par.append("array [1..12] of int: T").append(i).append(" = [").append(i);
+      par.append(",0,0,0,0,").append(i).append(",0,1,0,0,").append(i).append(",2];\n");
+      for (int j = 0; j < 3; j++) {
+        var.append("var 0..").append(i).append(": c").append(i).append('_').append(j);
+        var.append(" :: output_var;\n");
+      }
+      var.append("var 0..2: p").append(i).append(" :: output_var;\n");
+      con.append("constraint jacop_table_int([c").append(i).append("_0,c").append(i);
+      con.append("_1,c").append(i).append("_2,p").append(i).append("],T").append(i).append(");\n");
+    }
+    for (int j = 0; j < 3; j++) {
+      var.append("var 0..100: l").append(j).append(" :: output_var;\n");
+      StringBuilder w = new StringBuilder("-1");
+      StringBuilder x = new StringBuilder("l").append(j);
+      for (int i = 1; i <= n; i++) {
+        w.append(",1");
+        x.append(",c").append(i).append('_').append(j);
+      }
+      con.append("constraint int_lin_eq([").append(w).append("],[").append(x).append("],0);\n");
+    }
+    var.append("var 0..100: m :: output_var;\n");
+    con.append("constraint jacop_maximum(m,[l0,l1,l2]);\n");
+    return par.append(var).append(con).append("solve minimize m;\n").toString();
+  }
+
+  @Test
+  void tableColumnsWithConstantSumPostTheSum() throws IOException {
+    // every row of a course table holds its credit in one period column, so the credit columns
+    // sum to the credit; the sum is posted (Bacp-m1-08a, XCSP 2018, proved in 0.2 s instead of
+    // not in 240 s) and the optimum stays the same
+    String model = tableCourses(4);
+    String out = run(model, "-s", "--search-statistics")[0];
+    assertTrue(out.contains("%%%mzn-stat: impliedTableSums=1"), out);
+    // credits 1..4 over 3 periods: the largest load is at least 10 / 3, so 4
+    assertTrue(out.contains("m = 4;") && out.contains("=========="), out);
+    System.setProperty("org.jacop.fz.tableSums", "false");
+    try {
+      String off = run(model, "--search-statistics")[0];
+      assertFalse(off.contains("impliedTableSums"), off);
+      assertTrue(off.contains("m = 4;") && off.contains("=========="), off);
+    } finally {
+      System.clearProperty("org.jacop.fz.tableSums");
+    }
+  }
+
   @Test
   void intComparisonWithConstantAndFixedBooleanKeepsExactlyTheSolutions() throws IOException {
     // int_ne_reif(x, c, false) left x unconstrained instead of fixing it to c, and the half-reified

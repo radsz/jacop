@@ -1988,8 +1988,112 @@ class GlobalConstraints implements ParserTreeConstants {
         tableByTuples.putIfAbsent(t, null);
         support.dictionary.addTable(v, t);
       }
+      poseImpliedTableSums(v, t);
       poseTableBySize(v, t);
     }
+  }
+
+  /**
+   * Whether a table posts the sums of columns that are the same in all its rows, {@code
+   * org.jacop.fz.tableSums} (default true).
+   *
+   * @return true unless the property is false.
+   */
+  static boolean tableSums() {
+    return Boolean.parseBoolean(System.getProperty("org.jacop.fz.tableSums", "true"));
+  }
+
+  /** The most rows times columns squared a table is scanned for constant column sums. */
+  static final long TABLE_SUMS_WORK = 10_000_000L;
+
+  // the column subsets with a constant sum of each table, by identity of its (interned) rows
+  private final Map<int[][], int[][]> tableSums = new IdentityHashMap<>();
+
+  int impliedTableSums;
+
+  /**
+   * It posts, as a redundant constraint, the sum of the columns of a table that is the same in
+   * every row: all columns, or all but one. XCSP3 BACP models give each course a row per period
+   * with its credit in the column of that period, so the credit columns sum to the credit; the sum
+   * links the period loads to the total and the linear relaxation then bounds the largest load
+   * (Bacp-m1-08a, XCSP 2018: unproved in 240 s, proved in 0.2 s). CP-SAT's presolve finds such sums
+   * too.
+   */
+  private void poseImpliedTableSums(IntVar[] v, int[][] t) {
+    int k = v.length;
+    if (!tableSums()
+        || support.options.proof() != null
+        || k < 3
+        || t.length < 2
+        || (long) t.length * k * k > TABLE_SUMS_WORK) {
+      return;
+    }
+    int[][] sums = tableSums.computeIfAbsent(t, GlobalConstraints::constantColumnSums);
+    for (int[] sum : sums) {
+      // sum[0] is the column left out (-1 for none), sum[1] the constant
+      IntVar[] x = new IntVar[sum[0] < 0 ? k : k - 1];
+      int[] w = new int[x.length];
+      for (int c = 0, i = 0; c < k; c++) {
+        if (c != sum[0]) {
+          x[i] = v[c];
+          w[i++] = 1;
+        }
+      }
+      if (impliedTableSums++ == 0
+          && (support.options.debug() || support.options.searchStatistics())) {
+        FzConsole.println("%%%mzn-stat: impliedTableSums=1\n%%%mzn-stat-end");
+      }
+      support.pose(new LinearInt(x, w, "==", sum[1]));
+    }
+  }
+
+  // {left-out column or -1, constant} of each sum of all columns, or all columns but one, that is
+  // the same in every row and not implied by a constant column (that one is fixed anyway)
+  private static int[][] constantColumnSums(int[][] t) {
+    int k = t[0].length;
+    long[] total = new long[t.length];
+    for (int r = 0; r < t.length; r++) {
+      for (int c = 0; c < k; c++) {
+        total[r] += t[r][c];
+      }
+    }
+    boolean[] constantColumn = new boolean[k];
+    for (int c = 0; c < k; c++) {
+      constantColumn[c] = true;
+      for (int[] row : t) {
+        if (row[c] != t[0][c]) {
+          constantColumn[c] = false;
+          break;
+        }
+      }
+    }
+    List<int[]> found = new ArrayList<>();
+    boolean allConstant = true;
+    for (long s : total) {
+      allConstant &= s == total[0];
+    }
+    if (allConstant && fitsInt(total[0])) {
+      found.add(new int[] {-1, (int) total[0]});
+    } else {
+      for (int out = 0; out < k; out++) {
+        if (constantColumn[out]) {
+          continue;
+        }
+        long first = total[0] - t[0][out];
+        boolean same = fitsInt(first);
+        for (int r = 1; r < t.length && same; r++) {
+          same = total[r] - t[r][out] == first;
+        }
+        if (same) {
+          found.add(new int[] {out, (int) first});
+        }
+      }
+    }
+    return found.toArray(new int[0][]);
+  }
+
+  private static boolean fitsInt(long value) {
+    return value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE;
   }
 
   /**
