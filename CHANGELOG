@@ -8018,6 +8018,22 @@ Version 5.0 (unreleased)
    (08 and table-08 3.3 -> 6.6 s and 4.6 -> 10.4 s). Fires on none of
    the 240 wide instances.
 
+445. Disjoint and Diff2 limit a rectangle's length from the least start of
+   each segment of its start domain, not from the interval of the domain
+   that meets a forbidden region, and begin a new segment after a region
+   whose end is a hole of the domain. Disjoint lets a rectangle of zero
+   width take its place, as documented now: it fails a segment or point
+   strictly inside another rectangle, which satisfied() and the fixed
+   check accepted, and lets it lie on the common border of two touching
+   rectangles, which the merged barrier profile pruned. Disjoint and
+   DisjointNoProfile now count the same solutions as a brute force on the
+   rectangle fingerprint. ArcTimes runs its passes until the nodes queued
+   by its own pruning of a variable that is both a successor and a time
+   are done. The consistency checker gets cases for Disjoint, Diff2 with
+   zero lengths, SubcircuitCost, WeightedSubcircuits, Routes, ArcTimes,
+   GlobalCardinality, Alldifferent, Decreasing, CardinalityMatrix,
+   ConjunctionSum and UnaryEarlinessTardiness.
+
 Version 4.11
 =============
 
