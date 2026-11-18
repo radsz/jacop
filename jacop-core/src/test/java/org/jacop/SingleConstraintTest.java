@@ -10873,6 +10873,68 @@ class SingleConstraintTest extends TestHelper {
     assertThat(forests).isEqualTo(countForests(tail, head, 4));
   }
 
+  @Test
+  void forestChecksItsArgumentsAndCopies() {
+    Store store = new Store();
+    IntVar[] ns = {new IntVar(store, 0, 1), new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    IntVar[] es = {new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    int[] tail = {0, 1};
+    int[] head = {1, 2};
+    // each bound of each check is crossed by one value
+    int[][][] edges = {
+      {{0}, {1, 2}}, {{0, 1}, {1}}, {{0, 3}, head}, {{-1, 1}, head}, {tail, {1, 3}}, {tail, {-1, 2}}
+    };
+    for (int[][] edge : edges) {
+      assertThatThrownBy(() -> new Forest(ns, es, edge[0], edge[1]))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+    for (IntVar bad : new IntVar[] {new IntVar(store, -1, 1), new IntVar(store, 0, 2)}) {
+      assertThatThrownBy(() -> new Forest(ns, new IntVar[] {es[0], bad}, tail, head))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> new Forest(new IntVar[] {ns[0], ns[1], bad}, es, tail, head))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+    assertThatThrownBy(() -> new Forest(null, es, tail, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(ns, null, tail, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(ns, es, null, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(ns, es, tail, null))
+        .isInstanceOf(IllegalArgumentException.class);
+    Forest forest = new Forest(ns, es, tail, head);
+    assertThat(forest.arguments()).hasSize(5);
+    // not yet ground: not satisfied, whatever is fixed
+    es[0].domain.in(store.level, es[0], 1, 1);
+    assertThat(forest.satisfied()).isFalse();
+    for (IntVar v : ns) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    assertThat(forest.satisfied()).isFalse();
+    es[1].domain.in(store.level, es[1], 0, 0);
+    assertThat(forest.satisfied()).isTrue();
+    Store copy = new Store();
+    Map<Var, Var> copies = new HashMap<>();
+    VarMap map =
+        new VarMap() {
+          @Override
+          public Store target() {
+            return copy;
+          }
+
+          @Override
+          @SuppressWarnings("unchecked")
+          public <V extends Var> V get(V v) {
+            return (V)
+                copies.computeIfAbsent(
+                    v, k -> new IntVar(copy, ((IntVar) k).min(), ((IntVar) k).max()));
+          }
+        };
+    Forest other = forest.copy(map);
+    assertThat(other.arguments()).hasSize(5);
+    assertThat(other.toString()).contains("Forest(").contains("[0, 1]").contains("[1, 2]");
+  }
+
   // the assignments of nodes and edges where every selected edge joins two selected nodes and the
   // selected edges have no cycle, by a plain count over all subsets
   private static int countForests(int[] tail, int[] head, int n) {
