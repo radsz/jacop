@@ -1969,7 +1969,205 @@ class ConsistencyChecker {
         new Case("Spread", Level.NONE, (s, r) -> deviation(s, r, true)),
         new Case("SymmetricGCC", Level.NONE, ConsistencyChecker::symmetricGcc),
         new Case("CostGCC", Level.NONE, ConsistencyChecker::costGcc),
-        new Case("Reservoir", Level.NONE, ConsistencyChecker::reservoir));
+        new Case("Reservoir", Level.NONE, ConsistencyChecker::reservoir),
+        new Case("GlobalCardinality", Level.NONE, (s, r) -> globalCardinality(s, r, true)),
+        new Case("GlobalCardinalityBounds", Level.DOMAIN, (s, r) -> globalCardinality(s, r, false)),
+        new Case("Alldifferent", Level.NONE, ConsistencyChecker::alldifferent),
+        new Case("Decreasing", Level.DOMAIN, ConsistencyChecker::decreasing),
+        new Case("CardinalityMatrix", Level.NONE, ConsistencyChecker::cardinalityMatrix),
+        new Case("ConjunctionSum", Level.NONE, ConsistencyChecker::conjunctionSum),
+        new Case("UnaryEarlinessTardiness", Level.NONE, ConsistencyChecker::unaryEarliness));
+  }
+
+  /** GlobalCardinality over 3 or 4 variables, with counter variables or fixed bounds. */
+  private static Model globalCardinality(Store store, Random random, boolean counters) {
+    int n = 3 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int[] values = IntStream.range(0, 4).filter(v -> random.nextBoolean()).toArray();
+    if (values.length == 0) {
+      values = new int[] {random.nextInt(4)};
+    }
+    int[] vs = values;
+    int m = vs.length;
+    if (counters) {
+      IntVar[] c = vars(store, "c", m, 0, n, random);
+      return new Model(
+          new org.jacop.constraints.GlobalCardinality(x, vs, c),
+          t -> {
+            for (int k = 0; k < m; k++) {
+              int value = vs[k];
+              if (IntStream.range(0, n).filter(i -> t[i] == value).count() != t[n + k]) {
+                return false;
+              }
+            }
+            return true;
+          },
+          concat(x, c));
+    }
+    int[] low = new int[m];
+    int[] up = new int[m];
+    for (int k = 0; k < m; k++) {
+      low[k] = random.nextInt(2);
+      up[k] = low[k] + random.nextInt(3);
+    }
+    return new Model(
+        new org.jacop.constraints.GlobalCardinality(x, vs, low, up),
+        t -> {
+          for (int k = 0; k < m; k++) {
+            int value = vs[k];
+            long count = IntStream.range(0, n).filter(i -> t[i] == value).count();
+            if (count < low[k] || count > up[k]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /** Alldifferent over 2 to 4 variables. */
+  private static Model alldifferent(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 2 + random.nextInt(3), 0, 3, random);
+    return new Model(
+        new org.jacop.constraints.Alldifferent(x),
+        t -> Arrays.stream(t).distinct().count() == t.length,
+        x);
+  }
+
+  /** Decreasing, strict or not, over 2 to 4 variables. */
+  private static Model decreasing(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 2 + random.nextInt(3), 0, 4, random);
+    boolean strict = random.nextBoolean();
+    return new Model(
+        new org.jacop.constraints.Decreasing(x, strict),
+        t -> {
+          for (int i = 1; i < t.length; i++) {
+            if (strict ? t[i] >= t[i - 1] : t[i] > t[i - 1]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /** CardinalityMatrix of 2 rows and 2 or 3 columns over the values 0..2. */
+  private static Model cardinalityMatrix(Store store, Random random) {
+    int rows = 2;
+    int cols = 2 + random.nextInt(2);
+    int[] values = random.nextBoolean() ? new int[] {0, 1} : new int[] {1, 2};
+    int m = values.length;
+    IntVar[][] x = new IntVar[rows][];
+    for (int r = 0; r < rows; r++) {
+      x[r] = vars(store, "x" + r + "_", cols, 0, 2, random);
+    }
+    IntVar[][] rowCount = new IntVar[rows][];
+    for (int r = 0; r < rows; r++) {
+      rowCount[r] = vars(store, "r" + r + "_", m, 0, cols, random);
+    }
+    IntVar[][] colCount = new IntVar[cols][];
+    for (int c = 0; c < cols; c++) {
+      colCount[c] = vars(store, "k" + c + "_", m, 0, rows, random);
+    }
+    int cells = rows * cols;
+    return new Model(
+        new org.jacop.constraints.CardinalityMatrix(x, values, rowCount, colCount),
+        t -> {
+          for (int k = 0; k < m; k++) {
+            for (int r = 0; r < rows; r++) {
+              int count = 0;
+              for (int c = 0; c < cols; c++) {
+                count += t[r * cols + c] == values[k] ? 1 : 0;
+              }
+              if (count != t[cells + r * m + k]) {
+                return false;
+              }
+            }
+            for (int c = 0; c < cols; c++) {
+              int count = 0;
+              for (int r = 0; r < rows; r++) {
+                count += t[r * cols + c] == values[k] ? 1 : 0;
+              }
+              if (count != t[cells + rows * m + c * m + k]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(concat(x), concat(rowCount), concat(colCount)));
+  }
+
+  /** ConjunctionSum: sum bounds from below 1 to 3 weighted conjunctions over 3 variables. */
+  private static Model conjunctionSum(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 3, 0, 2, random);
+    int terms = 1 + random.nextInt(3);
+    IntVar[][] termVars = new IntVar[terms][];
+    int[][] termIndex = new int[terms][];
+    int[][] termValues = new int[terms][];
+    boolean[][] termEq = new boolean[terms][];
+    int[] weights = new int[terms];
+    for (int k = 0; k < terms; k++) {
+      int size = 1 + random.nextInt(2);
+      int first = random.nextInt(3);
+      termIndex[k] = size == 1 ? new int[] {first} : new int[] {first, (first + 1) % 3};
+      termVars[k] = new IntVar[size];
+      termValues[k] = new int[size];
+      termEq[k] = new boolean[size];
+      for (int l = 0; l < size; l++) {
+        termVars[k][l] = x[termIndex[k][l]];
+        termValues[k][l] = random.nextInt(3);
+        termEq[k][l] = random.nextInt(3) > 0;
+      }
+      weights[k] = random.nextInt(4);
+    }
+    IntVar sum = aVar(store, "sum", 0, 8, random);
+    return new Model(
+        new org.jacop.constraints.ConjunctionSum(termVars, termValues, termEq, weights, sum),
+        t -> {
+          int total = 0;
+          for (int k = 0; k < terms; k++) {
+            boolean holds = true;
+            for (int l = 0; l < termIndex[k].length; l++) {
+              holds &= (t[termIndex[k][l]] == termValues[k][l]) == termEq[k][l];
+            }
+            total += holds ? weights[k] : 0;
+          }
+          return t[3] >= total;
+        },
+        concat(x, new IntVar[] {sum}));
+  }
+
+  /** UnaryEarlinessTardiness: 2 or 3 tasks on one machine with a due date each. */
+  private static Model unaryEarliness(Store store, Random random) {
+    int n = 2 + random.nextInt(2);
+    IntVar[] s = vars(store, "s", n, 0, 4, random);
+    int[] p = new int[n];
+    int[] due = new int[n];
+    int[] early = new int[n];
+    int[] late = new int[n];
+    for (int i = 0; i < n; i++) {
+      p[i] = 1 + random.nextInt(2);
+      due[i] = random.nextInt(5);
+      early[i] = random.nextInt(3);
+      late[i] = random.nextInt(3);
+    }
+    IntVar cost = aVar(store, "cost", 0, 12, random);
+    return new Model(
+        new org.jacop.constraints.UnaryEarlinessTardiness(s, p, due, early, late, cost),
+        t -> {
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+              if (t[i] < t[j] + p[j] && t[j] < t[i] + p[i]) {
+                return false;
+              }
+            }
+            total += early[i] * Math.max(0, due[i] - t[i]) + late[i] * Math.max(0, t[i] - due[i]);
+          }
+          return t[n] >= total;
+        },
+        concat(s, new IntVar[] {cost}));
   }
 
   /** at_most(k, x, v) or at_least(k, x, v) over 2 to 5 variables. */
