@@ -1933,7 +1933,16 @@ class ConsistencyChecker {
         new Case("MinOfSums", Level.BOUNDS_Z, ConsistencyChecker::minOfSums),
         new Case("StockingCost", Level.NONE, ConsistencyChecker::stockingCost),
         new Case("CostAlldifferent", Level.NONE, ConsistencyChecker::costAlldifferent),
-        new Case("CircuitCost", Level.NONE, ConsistencyChecker::circuitCost));
+        new Case("CircuitCost", Level.NONE, ConsistencyChecker::circuitCost),
+        new Case("Reachable", Level.DOMAIN, (s, r) -> graph(s, r, "reachable", false)),
+        new Case("ReachableDirected", Level.NONE, (s, r) -> graph(s, r, "reachable", true)),
+        new Case("Connected", Level.DOMAIN, (s, r) -> graph(s, r, "connected", false)),
+        new Case("ConnectedDirected", Level.NONE, (s, r) -> graph(s, r, "connected", true)),
+        new Case("Tree", Level.DOMAIN, (s, r) -> graph(s, r, "tree", false)),
+        new Case("TreeDirected", Level.NONE, (s, r) -> graph(s, r, "tree", true)),
+        new Case("Path", Level.NONE, (s, r) -> graph(s, r, "path", false)),
+        new Case("PathDirected", Level.NONE, (s, r) -> graph(s, r, "path", true)),
+        new Case("Forest", Level.NONE, (s, r) -> graph(s, r, "forest", false)));
   }
 
   /** at_most(k, x, v) or at_least(k, x, v) over 2 to 5 variables. */
@@ -2144,6 +2153,181 @@ class ConsistencyChecker {
           return c == t[n] && isCircuit(t, n);
         },
         concat(x, new IntVar[] {cost}));
+  }
+
+  /**
+   * A graph global over a random graph of 3 to 5 nodes: node Booleans, edge Booleans and, for
+   * reachable and tree, the root, for path the two ends.
+   */
+  private static Model graph(Store store, Random random, String kind, boolean directed) {
+    int n = 3 + random.nextInt(3);
+    int m = n - 1 + random.nextInt(4);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = random.nextInt(10) == 0 ? from[e] : (from[e] + 1 + random.nextInt(n - 1)) % n;
+    }
+    IntVar[] ns = bools(store, "n", n);
+    IntVar[] es = bools(store, "e", m);
+    IntVar[] ends =
+        switch (kind) {
+          case "reachable", "tree" ->
+              new IntVar[] {
+                aVar(
+                    store,
+                    "r"
+                        + java.util.Arrays.toString(from).replaceAll("[^0-9]+", "_")
+                        + "T"
+                        + java.util.Arrays.toString(to).replaceAll("[^0-9]+", "_"),
+                    0,
+                    n - 1,
+                    random)
+              };
+          case "path" ->
+              new IntVar[] {aVar(store, "s", 0, n - 1, random), aVar(store, "t", 0, n - 1, random)};
+          default -> new IntVar[0];
+        };
+    Object constraint =
+        switch (kind) {
+          case "reachable" ->
+              new org.jacop.constraints.graph.Reachable(from, to, ends[0], ns, es, directed);
+          case "connected" ->
+              new org.jacop.constraints.graph.Reachable(from, to, null, ns, es, directed);
+          case "tree" -> new org.jacop.constraints.graph.Tree(from, to, ends[0], ns, es, directed);
+          case "path" ->
+              new org.jacop.constraints.graph.Path(from, to, ends[0], ends[1], ns, es, directed);
+          default -> new org.jacop.constraints.graph.Forest(ns, es, from, to);
+        };
+    return new Model(
+        constraint, t -> graphHolds(t, kind, directed, n, from, to), concat(concat(ns, es), ends));
+  }
+
+  private static boolean graphHolds(
+      int[] t, String kind, boolean directed, int n, int[] from, int[] to) {
+    int m = from.length;
+    int nodes = 0;
+    int edges = 0;
+    for (int i = 0; i < n; i++) {
+      nodes += t[i];
+    }
+    for (int e = 0; e < m; e++) {
+      if (t[n + e] == 1) {
+        edges++;
+        if (t[from[e]] == 0 || t[to[e]] == 0) {
+          return false;
+        }
+      }
+    }
+    if (kind.equals("forest")) {
+      int[] comp = new int[n];
+      for (int i = 0; i < n; i++) {
+        comp[i] = i;
+      }
+      for (int e = 0; e < m; e++) {
+        if (t[n + e] == 1) {
+          int a = comp[from[e]];
+          int b = comp[to[e]];
+          if (a == b) {
+            return false;
+          }
+          for (int i = 0; i < n; i++) {
+            if (comp[i] == b) {
+              comp[i] = a;
+            }
+          }
+        }
+      }
+      return true;
+    }
+    int root = kind.equals("connected") ? -1 : t[n + m];
+    if (root >= 0 && t[root] == 0) {
+      return false;
+    }
+    if (root < 0) {
+      boolean some = false;
+      for (int r = 0; r < n && !some; r++) {
+        some = t[r] == 1 && reachesAll(t, r, directed, n, from, to);
+      }
+      return some;
+    }
+    if (!reachesAll(t, root, directed, n, from, to)) {
+      return false;
+    }
+    if (kind.equals("reachable")) {
+      return true;
+    }
+    if (edges != nodes - 1) {
+      return false;
+    }
+    int[] in = new int[n];
+    int[] out = new int[n];
+    for (int e = 0; e < m; e++) {
+      if (t[n + e] == 1) {
+        out[from[e]]++;
+        in[to[e]]++;
+      }
+    }
+    if (kind.equals("tree")) {
+      // a connected graph with one edge fewer than its nodes is a tree; directed: away from root
+      for (int i = 0; directed && i < n; i++) {
+        if (t[i] == 1 && in[i] != (i == root ? 0 : 1)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    int last = t[n + m + 1];
+    if (t[last] == 0) {
+      return false;
+    }
+    for (int i = 0; i < n; i++) {
+      if (t[i] == 0) {
+        continue;
+      }
+      int ends = (i == root ? 1 : 0) + (i == last ? 1 : 0);
+      if (directed) {
+        int wantIn = i == root ? 0 : 1;
+        int wantOut = i == last ? 0 : 1;
+        if (root == last && i == root) {
+          wantIn = 0;
+          wantOut = 0;
+        }
+        if (in[i] != wantIn || out[i] != wantOut) {
+          return false;
+        }
+      } else if (in[i] + out[i] != (root == last ? (i == root ? 0 : 2) : 2 - ends)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Whether every selected node is reached from r over the selected edges. */
+  private static boolean reachesAll(int[] t, int r, boolean directed, int n, int[] from, int[] to) {
+    boolean[] seen = new boolean[n];
+    seen[r] = true;
+    boolean grew = true;
+    while (grew) {
+      grew = false;
+      for (int e = 0; e < from.length; e++) {
+        if (t[n + e] == 1) {
+          if (seen[from[e]] && !seen[to[e]]) {
+            seen[to[e]] = true;
+            grew = true;
+          } else if (!directed && seen[to[e]] && !seen[from[e]]) {
+            seen[from[e]] = true;
+            grew = true;
+          }
+        }
+      }
+    }
+    for (int i = 0; i < n; i++) {
+      if (t[i] == 1 && !seen[i]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /** Whether the first n values, numbered from 1, are the successors of one Hamiltonian circuit. */
