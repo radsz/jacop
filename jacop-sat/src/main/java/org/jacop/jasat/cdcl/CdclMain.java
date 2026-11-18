@@ -41,7 +41,7 @@ import java.io.PrintStream;
  * <pre>
  * CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1] [--elim 0|1]
  *          [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1] [--jump share] [--ema 0|1]
- *          [--seed n] [--elim-interval conflicts] [--lucky 0|1] [--substitute 0|1] [--congruence 0|1]
+ *          [--seed n] [--elim-interval conflicts] [--lucky 0|1] [--substitute 0|1] [--congruence 0|1] [--vmtf 0|1]
  *          file.cnf[.gz]
  * </pre>
  *
@@ -55,7 +55,8 @@ import java.io.PrintStream;
  * decision order and {@code --elim-interval} sets when elimination runs again during search (0 for
  * never). {@code --lucky 0} turns the lucky assignments before the search off ({@link
  * CdclSolver#setLucky}). {@code --substitute 0} turns equivalent-literal substitution off and
- * {@code --congruence 0} its congruence closure on gates.
+ * {@code --congruence 0} its congruence closure on gates. {@code --vmtf 1} decides by a VMTF queue
+ * in focused mode ({@link CdclSolver#setVmtf}).
  *
  * <p>Prints {@code s SATISFIABLE} with {@code v} lines, {@code s UNSATISFIABLE} or {@code s
  * UNKNOWN}, and exits with 10, 20 or 0.
@@ -92,6 +93,7 @@ public final class CdclMain {
     long seed = 0;
     int elimInterval = 5000;
     long maxConflicts = 0;
+    boolean vmtf = false;
     boolean substitute = true;
     boolean congruence = true;
     for (int i = 0; i < args.length; i++) {
@@ -112,6 +114,7 @@ public final class CdclMain {
         case "--seed" -> seed = Long.parseLong(args[++i]);
         case "--elim-interval" -> elimInterval = Integer.parseInt(args[++i]);
         case "--conflicts" -> maxConflicts = Long.parseLong(args[++i]);
+        case "--vmtf" -> vmtf = !"0".equals(args[++i]);
         case "--substitute" -> substitute = !"0".equals(args[++i]);
         case "--congruence" -> congruence = !"0".equals(args[++i]);
         default -> file = args[i];
@@ -122,7 +125,7 @@ public final class CdclMain {
           "usage: CdclMain [-t seconds] [-q] [--drat proof-file] [--chrono limit] [--shrink 0|1]"
               + " [--elim 0|1] [--factor 0|1] [--factor-effort n] [--vivify 0|1] [--walk 0|1]"
               + " [--jump share] [--ema 0|1] [--seed n] [--elim-interval conflicts] [--lucky 0|1]"
-              + " [--substitute 0|1] [--congruence 0|1] [--conflicts limit] file.cnf[.gz]");
+              + " [--substitute 0|1] [--congruence 0|1] [--vmtf 0|1] [--conflicts limit] file.cnf[.gz]");
       System.exit(1);
     }
     CdclSolver solver = new CdclSolver();
@@ -143,6 +146,7 @@ public final class CdclMain {
     if (maxConflicts > 0) {
       solver.setConflictLimit(maxConflicts);
     }
+    solver.setVmtf(vmtf);
     solver.setSubstitution(substitute);
     solver.setCongruence(congruence);
     if (timeout > 0) {

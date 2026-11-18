@@ -39,6 +39,7 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.LinearForm;
 import org.jacop.lcg.PbEncodable;
 import org.jacop.lcg.PbModel;
 import org.jacop.lcg.ReifiedExplanation;
@@ -267,13 +268,15 @@ public class XplusClteqZImplied extends PrimitiveConstraint
   // b = on -> x + c <= z, as the inequality under the guard b (or not b)
   @Override
   public boolean encode(PbModel model) {
-    if (!own() || model.domain(b).min() < 0 || model.domain(b).max() > 1) {
+    // x + c <= x has no linear form (x is z): the model is not encoded
+    LinearForm form = nested().linearForm();
+    if (!own() || form == null || model.domain(b).min() < 0 || model.domain(b).max() > 1) {
       return false;
     }
     if (on == 1) {
-      model.reified(b, nested().linearForm(), false);
+      model.reified(b, form, false);
     } else {
-      model.guarded(PbModel.not(model.equalTo(b, 1)), nested().linearForm());
+      model.guarded(PbModel.not(model.equalTo(b, 1)), form);
     }
     return true;
   }
