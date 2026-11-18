@@ -47,6 +47,7 @@ import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.TreeMap;
@@ -1153,9 +1154,9 @@ public final class LcgSolver implements ExternalPropagator {
       hypotheses(lines.counterPosition, ids, atoms, from, entry, restricted, counterLiterals);
       for (int k = 0; k < m; k++) {
         if (freeCounter[k] >= 0) {
-          count[k] = restricted[k];
-          proofCounterBounds(
-              freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
+          count[k] =
+              proofCounterBounds(
+                  freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
         }
       }
     }
@@ -1435,8 +1436,10 @@ public final class LcgSolver implements ExternalPropagator {
    * literals of the counter does not reach a bound from the count of the value literals (the count
    * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}). The hole can be the model's
    * or a hypothesis's (counter != 1 with the count pinned to 1).
+   *
+   * @return the restricted domain within the bounds written
    */
-  private void proofCounterBounds(
+  private IntDomain proofCounterBounds(
       int counter,
       IntDomain restricted,
       int value,
@@ -1447,7 +1450,7 @@ public final class LcgSolver implements ExternalPropagator {
     if (d.getSize() == (long) d.max() - d.min() + 1
         && (restricted.isEmpty()
             || restricted.getSize() == (long) restricted.max() - restricted.min() + 1)) {
-      return;
+      return restricted;
     }
     int fixed = 0;
     int possible = 0;
@@ -1461,8 +1464,18 @@ public final class LcgSolver implements ExternalPropagator {
       }
       clause.append(literals[j]);
     }
-    proofBound(counter, clause, fixed, true);
-    proofBound(counter, clause, possible, false);
+    // the bounds written are unit propagated (the order literals step over the holes), so the
+    // flow takes them too: a split on the counter's values (proofCardinalitySplit) otherwise
+    // spends its cases on values these bounds rule out, and a case the flow cannot refute fails
+    // the clause (a global cardinality failure under x = -1 twice and count(-1) in {0, 1, 3})
+    IntDomain bounded = restricted;
+    if (proofBound(counter, clause, fixed, true) > 0) {
+      bounded = bounded.intersect(fixed, IntDomain.MAX_INT);
+    }
+    if (proofBound(counter, clause, possible, false) > 0) {
+      bounded = bounded.intersect(IntDomain.MIN_INT, possible);
+    }
+    return bounded;
   }
 
   /**
@@ -1609,17 +1622,27 @@ public final class LcgSolver implements ExternalPropagator {
     }
     int[] starts = lines.starts();
     int n = starts.length;
-    int[] variables = Arrays.copyOf(starts, n + 1);
-    variables[n] = lines.limit();
+    // a start of several tasks is one variable of the hypotheses (two tasks at x, x in 1..2, need
+    // the energy of both in 1..3), whose domain each of its tasks takes
+    int[] slot = new int[n + 1];
     Map<Integer, Integer> position = new HashMap<>();
     for (int j = 0; j <= n; j++) {
-      if (position.put(variables[j], j) != null) {
-        return; // a variable in two places
-      }
+      int variable = j < n ? starts[j] : lines.limit();
+      Integer seen = position.putIfAbsent(variable, position.size());
+      slot[j] = seen == null ? position.size() - 1 : seen;
     }
+    if (slot[n] != position.size() - 1) {
+      return; // the limit is a start
+    }
+    int[] variables = new int[position.size()];
+    position.forEach((variable, j) -> variables[j] = variable);
+    IntDomain[] unique = new IntDomain[variables.length];
+    hypotheses(
+        position, variables, atoms, from, entry, unique, new StringBuilder[variables.length]);
     IntDomain[] dom = new IntDomain[n + 1];
-    StringBuilder[] literals = new StringBuilder[n + 1];
-    hypotheses(position, variables, atoms, from, entry, dom, literals);
+    for (int j = 0; j <= n; j++) {
+      dom[j] = unique[slot[j]];
+    }
     for (IntDomain x : dom) {
       if (x.isEmpty()) {
         return; // unit propagation empties the domain
@@ -2075,8 +2098,11 @@ public final class LcgSolver implements ExternalPropagator {
       f = proofKnapsackRow(k);
     }
     if (f == null && proofStarted && c.getClass() == IncreasingSum.class) {
-      // the sum's row, which a hole of the sum hides from unit propagation
-      f = ((IncreasingSum) c).sumRow();
+      // the sum's row, which a hole of the sum hides from unit propagation, over the bounds that
+      // unit propagation derives along the order clauses of the chain
+      IncreasingSum increasing = (IncreasingSum) c;
+      proofLinearBounds(increasing.sumRow(), atoms, from, entry, "", increasing);
+      return;
     }
     proofLinearBounds(f, atoms, from, entry, "");
   }
@@ -2306,6 +2332,16 @@ public final class LcgSolver implements ExternalPropagator {
    * lemma (the literal of a reification's b, or empty).
    */
   private void proofLinearBounds(LinearForm f, EntryList atoms, int from, int entry, String guard) {
+    proofLinearBounds(f, atoms, from, entry, guard, null);
+  }
+
+  /**
+   * Writes the bounds of a row under the hypotheses of a clause, as above, with the domains of the
+   * chain x_1 &lt;= x_2 &lt;= ... (or &lt;) of an increasing sum tightened as unit propagation over
+   * its order clauses tightens them, or chain null.
+   */
+  private void proofLinearBounds(
+      LinearForm f, EntryList atoms, int from, int entry, String guard, IncreasingSum chain) {
     if (f == null || f.relation() == LinearForm.NE) {
       return;
     }
@@ -2333,8 +2369,13 @@ public final class LcgSolver implements ExternalPropagator {
       // unit propagation over weight times the order literals does not round a bound
       rounds |= Math.abs(weight) > 1;
     }
-    if (!hypotheses(position, variables, atoms, from, entry, dom, literals) && !rounds) {
+    if (!hypotheses(position, variables, atoms, from, entry, dom, literals)
+        && !rounds
+        && chain == null) {
       return;
+    }
+    if (chain != null) {
+      tightenChain(chain, position, dom);
     }
     StringBuilder clause = new StringBuilder(guard);
     for (StringBuilder l : literals) {
@@ -2343,6 +2384,41 @@ public final class LcgSolver implements ExternalPropagator {
     if (!proofRowBounds(f, variables, w, dom, clause)) {
       proofRowSplit(f, variables, w, dom, clause, PROOF_SPLIT_LEAVES);
     }
+  }
+
+  /**
+   * Tightens the domains of the chain of an increasing sum along its order: x_i &gt;= min x_(i-1) +
+   * step forwards and x_(i-1) &lt;= max x_i - step backwards. Leaves the domains as they were when
+   * the chain empties one, as a variable repeated in a strict chain does.
+   */
+  private void tightenChain(IncreasingSum chain, Map<Integer, Integer> position, IntDomain[] dom) {
+    IntVar[] x = chain.chain();
+    int step = chain.step();
+    int[] at = new int[x.length];
+    for (int i = 0; i < x.length; i++) {
+      at[i] = position.get(trail.id(x[i]));
+    }
+    IntDomain[] tight = dom.clone();
+    for (int i = 1; i < x.length; i++) {
+      IntDomain previous = tight[at[i - 1]];
+      if (previous.isEmpty()) {
+        return;
+      }
+      tight[at[i]] = tight[at[i]].intersect(previous.min() + step, IntDomain.MAX_INT);
+    }
+    for (int i = x.length - 1; i > 0; i--) {
+      IntDomain next = tight[at[i]];
+      if (next.isEmpty()) {
+        return;
+      }
+      tight[at[i - 1]] = tight[at[i - 1]].intersect(IntDomain.MIN_INT, next.max() - step);
+    }
+    for (IntDomain d : tight) {
+      if (d.isEmpty()) {
+        return;
+      }
+    }
+    System.arraycopy(tight, 0, dom, 0, dom.length);
   }
 
   // the most cases a row's bounds are split into, for a domain consistent row (LinearIntDom)
@@ -5369,6 +5445,11 @@ public final class LcgSolver implements ExternalPropagator {
           && c.getClass() == HybridTable.class
           && encodeTable((HybridTable) c)) {
         tablesAsClauses++;
+      } else if (booleanTables
+          && c.getClass() == HybridTable.class
+          && encodeBooleanTable((HybridTable) c)) {
+        tablesAsClauses++;
+        booleanTablesAsClauses++;
       } else if (compressedTables
           && c.getClass() == HybridTable.class
           && encodeCompressedTable((HybridTable) c)) {
@@ -5709,7 +5790,8 @@ public final class LcgSolver implements ExternalPropagator {
   private java.util.Set<IntVar> objectiveTerms() {
     if ("none".equals(CLAUSE_CLASSES)
         && !COUNTERS
-        && ("none".equals(tableMode) && !compressedTables || !TABLE_OBJECTIVE_TERMS)) {
+        && ("none".equals(tableMode) && !compressedTables && !booleanTables
+            || !TABLE_OBJECTIVE_TERMS)) {
       return java.util.Collections.newSetFromMap(new IdentityHashMap<>());
     }
     return objectiveDefinition();
@@ -6395,6 +6477,185 @@ public final class LcgSolver implements ExternalPropagator {
       }
     }
     return cs;
+  }
+
+  /**
+   * Whether a table whose unfixed columns all have two values is written as the clauses of all
+   * prime implicates of its relation, {@code jacop.lcg.tableClauses.boolean}. Unit propagation on
+   * all prime implicates of a Boolean function is domain consistent (an implied literal l under a
+   * partial assignment a makes the clause (not a or l) an implicate, and a prime implicate inside
+   * it is unit under a), with no literal per tuple: the forbidden points are grouped into the
+   * largest cubes by Quine-McCluskey (Quine, Amer. Math. Monthly 59, 1952; McCluskey, Bell Syst.
+   * Tech. J. 35, 1956) and each prime cube becomes the clause that excludes it. Differential
+   * cryptanalysis models (XCSP 2022 DC-rijndael) post thousands of such tables over their
+   * difference bits, whose propagators made LCG run a few hundred conflicts per second.
+   */
+  static final boolean BOOLEAN_TABLES =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.tableClauses.boolean", "true"));
+
+  private boolean booleanTables = BOOLEAN_TABLES;
+
+  /**
+   * Sets whether tables over two-valued columns become the clauses of their prime implicates,
+   * before the solver starts (see {@link #BOOLEAN_TABLES}).
+   *
+   * @param on true to write them as clauses
+   */
+  public void setBooleanTableClauses(boolean on) {
+    booleanTables = on;
+  }
+
+  /** The most unfixed columns of a table written as prime implicates, {@code ...boolean.arity}. */
+  static final int BOOLEAN_ARITY = Integer.getInteger("jacop.lcg.tableClauses.boolean.arity", 12);
+
+  /** The most prime implicates of such a table, {@code ...boolean.limit}. */
+  static final int BOOLEAN_LIMIT = Integer.getInteger("jacop.lcg.tableClauses.boolean.limit", 512);
+
+  /**
+   * Statistics: tables over two-valued columns written as the clauses of their prime implicates.
+   */
+  public long booleanTablesAsClauses;
+
+  /**
+   * Writes a table whose unfixed columns all have two values as the clauses of the prime implicates
+   * of its relation on those columns (see {@link #BOOLEAN_TABLES}).
+   */
+  private boolean encodeBooleanTable(HybridTable t) {
+    int arity = t.columnCount();
+    if (t.hasColumnRestrictions()) {
+      return false;
+    }
+    int[] freeColumns = new int[arity];
+    int nFree = 0;
+    for (int k = 0; k < arity; k++) {
+      IntVar x = t.column(k);
+      if (!x.singleton()) {
+        if (x.getSize() != 2
+            || nFree == BOOLEAN_ARITY
+            || trail.id(x) >= vars.length
+            || TABLE_OBJECTIVE_TERMS && objectiveTerms.contains(x)) {
+          return false;
+        }
+        freeColumns[nFree++] = k;
+      }
+    }
+    if (nFree < 2) {
+      return false;
+    }
+    int[] lo = new int[nFree];
+    int[] hi = new int[nFree];
+    for (int j = 0; j < nFree; j++) {
+      lo[j] = t.column(freeColumns[j]).min();
+      hi[j] = t.column(freeColumns[j]).max();
+    }
+    int points = 1 << nFree;
+    boolean[] allowed = new boolean[points];
+    boolean[] accepts0 = new boolean[nFree];
+    boolean[] accepts1 = new boolean[nFree];
+    for (int u = 0; u < t.tupleCount(); u++) {
+      boolean live = true;
+      for (int k = 0; k < arity && live; k++) {
+        IntVar x = t.column(k);
+        live = !x.singleton() || t.cellAccepts(u, k, x.value());
+      }
+      for (int j = 0; j < nFree && live; j++) {
+        accepts0[j] = t.cellAccepts(u, freeColumns[j], lo[j]);
+        accepts1[j] = t.cellAccepts(u, freeColumns[j], hi[j]);
+        live = accepts0[j] || accepts1[j];
+      }
+      if (live) {
+        markPoints(allowed, accepts0, accepts1, 0, 0);
+      }
+    }
+    Optional<List<long[]>> found = forbiddenPrimeCubes(allowed, nFree, BOOLEAN_LIMIT);
+    if (found.isEmpty()) {
+      return false;
+    }
+    List<long[]> primes = found.get();
+    int[] ids = new int[nFree];
+    for (int j = 0; j < nFree; j++) {
+      ids[j] = trail.id(t.column(freeColumns[j]));
+    }
+    List<int[]> cs = new ArrayList<>(primes.size());
+    for (long[] prime : primes) {
+      int mask = (int) prime[0];
+      int val = (int) prime[1];
+      int[] cl = new int[Integer.bitCount(mask)];
+      int n = 0;
+      for (int j = 0; j < nFree; j++) {
+        if ((mask >> j & 1) != 0) {
+          // the cube fixes column j to a value: the clause asks for the column to differ
+          cl[n++] = -valueLit(ids[j], (val >> j & 1) == 0 ? lo[j] : hi[j]);
+        }
+      }
+      cs.add(cl);
+    }
+    return addTableClauses(t, cs, auxiliaryVariables);
+  }
+
+  /** Marks every point that agrees with the accepted values of a tuple's columns from j on. */
+  private static void markPoints(
+      boolean[] allowed, boolean[] accepts0, boolean[] accepts1, int j, int point) {
+    if (j == accepts0.length) {
+      allowed[point] = true;
+      return;
+    }
+    if (accepts0[j]) {
+      markPoints(allowed, accepts0, accepts1, j + 1, point);
+    }
+    if (accepts1[j]) {
+      markPoints(allowed, accepts0, accepts1, j + 1, point | 1 << j);
+    }
+  }
+
+  /**
+   * The prime cubes of the points of {0,1}^n that are not allowed, by Quine-McCluskey: each cube is
+   * {mask of its fixed coordinates, their values}. Null when there are more than limit.
+   *
+   * @param allowed whether each point is allowed
+   * @param n the dimension
+   * @param limit the most prime cubes
+   * @return the prime cubes (an empty list when every point is allowed), or empty when there are
+   *     more than limit
+   */
+  static Optional<List<long[]>> forbiddenPrimeCubes(boolean[] allowed, int n, int limit) {
+    int full = (1 << n) - 1;
+    Set<Long> level = new HashSet<>();
+    for (int p = 0; p < allowed.length; p++) {
+      if (!allowed[p]) {
+        level.add((long) full << 32 | p);
+      }
+    }
+    List<long[]> primes = new ArrayList<>();
+    while (!level.isEmpty()) {
+      Set<Long> next = new HashSet<>();
+      Set<Long> merged = new HashSet<>();
+      for (long c : level) {
+        int mask = (int) (c >>> 32);
+        int val = (int) c;
+        for (int b = 0; b < n; b++) {
+          int bit = 1 << b;
+          if ((mask & bit) != 0 && (val & bit) == 0) {
+            long other = (long) mask << 32 | (val | bit);
+            if (level.contains(other)) {
+              merged.add(c);
+              merged.add(other);
+              next.add((long) (mask & ~bit) << 32 | val);
+            }
+          }
+        }
+      }
+      for (long c : level) {
+        if (!merged.contains(c)) {
+          if (primes.size() == limit) {
+            return Optional.empty();
+          }
+          primes.add(new long[] {c >>> 32, (int) c});
+        }
+      }
+      level = next;
+    }
+    return Optional.of(primes);
   }
 
   /** Whether every variable of the model has at most two values, so that it is a 0/1 CNF. */

@@ -435,6 +435,24 @@ public class IncreasingSum extends Constraint
   }
 
   /**
+   * Returns the increasing variables x_1, ..., x_n.
+   *
+   * @return the variables, in their order
+   */
+  public IntVar[] chain() {
+    return x.clone();
+  }
+
+  /**
+   * Returns the least difference between consecutive variables: 1 if strict, else 0.
+   *
+   * @return the step
+   */
+  public int step() {
+    return step;
+  }
+
+  /**
    * Returns the row of the sum, x_1 + ... + x_n - sum = 0, as the encoding writes it.
    *
    * @return the row

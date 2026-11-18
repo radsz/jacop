@@ -84,10 +84,11 @@ class MutationGapsTest {
 
   /**
    * Counts from one run of {@link #check}: atoms the constraint propagated, atoms its own
-   * explanation explained and their reason literals, failures it explained and their literals.
+   * explanation explained and their reason literals, failures it explained and their literals, and
+   * the consistency calls of the stores ({@link Store#numberConsistencyCalls}).
    */
   private record Counts(
-      int atoms, int explained, int literals, int failures, int failureLiterals) {}
+      int atoms, int explained, int literals, int failures, int failureLiterals, long calls) {}
 
   /**
    * Imposes a constraint built over fresh variables, narrows random domains in steps, then checks
@@ -100,6 +101,7 @@ class MutationGapsTest {
     int literals = 0;
     int failures = 0;
     int failureLiterals = 0;
+    long calls = 0;
     for (int instance = 0; instance < instances; instance++) {
       Instance in = generator.apply(rnd);
       Store store = in.store;
@@ -167,8 +169,9 @@ class MutationGapsTest {
         }
       }
       trail.detach();
+      calls += store.numberConsistencyCalls;
     }
-    return new Counts(atoms, explained, literals, failures, failureLiterals);
+    return new Counts(atoms, explained, literals, failures, failureLiterals, calls);
   }
 
   private record Instance(Store store, Constraint constraint, IntVar[] vars) {}
@@ -178,11 +181,17 @@ class MutationGapsTest {
    * and the failures explained and their literals, over a fixed seed. A change that makes an
    * explanation fall back to the generic reason or give a longer reason fails here even though
    * every reason stays valid; update the numbers only for a change meant to alter the reasons.
+   *
+   * <p>The consistency calls are a cost golden: a lost or extra wake-up, or a constraint that runs
+   * itself again to reach its fixpoint, changes them while every pruning stays the same, which no
+   * answer check sees (the "speed only" survivors of the mutation testing follow-up, osolpro
+   * docs/assessment/mutation-testing-followup.md). Update them only for a change meant to alter
+   * when the constraint runs.
    */
   private static void golden(
-      Counts n, int explained, int literals, int failures, int failureLiterals) {
+      Counts n, int explained, int literals, int failures, int failureLiterals, long calls) {
     assertEquals(
-        new Counts(n.atoms, explained, literals, failures, failureLiterals),
+        new Counts(n.atoms, explained, literals, failures, failureLiterals, calls),
         n,
         "explanation-size golden");
   }
@@ -216,7 +225,7 @@ class MutationGapsTest {
   @Test
   void maxReasonsImplyTheirAtoms() {
     Counts n = check(1, 1500, rnd -> maxOrMin(rnd, true));
-    golden(n, 4482, 2452, 122, 260);
+    golden(n, 4482, 2452, 122, 260, 4563);
     assertTrue(n.atoms > 1000, "atoms " + n);
     assertTrue(n.failures > 50, "failures " + n);
   }
@@ -224,7 +233,7 @@ class MutationGapsTest {
   @Test
   void minReasonsImplyTheirAtoms() {
     Counts n = check(2, 1500, rnd -> maxOrMin(rnd, false));
-    golden(n, 4571, 2596, 90, 195);
+    golden(n, 4571, 2596, 90, 195, 4659);
     assertTrue(n.atoms > 1000, "atoms " + n);
     assertTrue(n.failures > 50, "failures " + n);
   }
@@ -241,7 +250,7 @@ class MutationGapsTest {
               IntVar e = new IntVar(store, "e", 0, 6);
               return new Instance(store, new Member(x, e), withLast(x, e));
             });
-    golden(n, 3626, 6447, 70, 297);
+    golden(n, 3626, 6447, 70, 297, 5644);
     assertTrue(n.atoms > 500, "atoms " + n);
     assertTrue(n.failures > 50, "failures " + n);
   }
@@ -269,15 +278,15 @@ class MutationGapsTest {
   @Test
   void elementReasonsWithOffsets() {
     Counts exact = check(4, 1500, rnd -> element(rnd, false, true));
-    golden(exact, 6012, 3033, 214, 519);
+    golden(exact, 6012, 3033, 214, 519, 3277);
     assertTrue(exact.atoms > 1000, "atoms " + exact);
     assertTrue(exact.failures > 50, "failures " + exact);
     Counts wide = check(5, 1500, rnd -> element(rnd, false, false));
-    golden(wide, 5314, 1879, 216, 534);
+    golden(wide, 5314, 1879, 216, 534, 3304);
     assertTrue(wide.atoms > 1000, "atoms " + wide);
     assertTrue(wide.failures > 50, "failures " + wide);
     Counts fast = check(6, 1500, rnd -> element(rnd, true, false));
-    golden(fast, 4029, 1923, 314, 731);
+    golden(fast, 4029, 1923, 314, 731, 3520);
     assertTrue(fast.atoms > 1000, "atoms " + fast);
     assertTrue(fast.failures > 50, "failures " + fast);
   }
@@ -534,7 +543,7 @@ class MutationGapsTest {
               }
               return new Instance(store, new BinaryBitTable(x[0], x[1], tuples), x);
             });
-    golden(n, 2044, 203, 665, 56);
+    golden(n, 2044, 203, 665, 56, 1773);
   }
 
   @Test
@@ -565,7 +574,7 @@ class MutationGapsTest {
               return new Instance(
                   store, new ArgMaxMonotone(q, f, first, index, -1), withLast(q, index));
             });
-    golden(n, 3876, 2270, 53, 137);
+    golden(n, 3876, 2270, 53, 137, 4683);
   }
 
   @Test
@@ -582,7 +591,7 @@ class MutationGapsTest {
                   rnd.nextBoolean() ? new int[0][] : new int[][] {{rnd.nextInt(3), rnd.nextInt(3)}};
               return new Instance(store, new AllDifferentLists(rows, except), x);
             });
-    golden(n, 940, 1626, 125, 328);
+    golden(n, 940, 1626, 125, 328, 4531);
   }
 
   @Test
@@ -610,7 +619,7 @@ class MutationGapsTest {
               return new Instance(
                   store, new ChannelOrder(x, b, t, atMost, implied), withLast(own, x));
             });
-    golden(n, 3235, 1142, 207, 308);
+    golden(n, 3235, 1142, 207, 308, 2490);
   }
 
   @Test
@@ -643,7 +652,7 @@ class MutationGapsTest {
               return new Instance(
                   store, new ConjunctionSum(tv, values, eq, w, sum), withLast(x, sum));
             });
-    golden(n, 553, 286, 17, 42);
+    golden(n, 553, 286, 17, 42, 5469);
   }
 
   @Test
@@ -670,7 +679,7 @@ class MutationGapsTest {
               IntVar s = new IntVar(store, "s", 0, k);
               return new Instance(store, new MaxCliqueBound(x, conflicts, s), withLast(x, s));
             });
-    golden(n, 4669, 3581, 66, 158);
+    golden(n, 4669, 3581, 66, 158, 5076);
   }
 
   /**
@@ -701,7 +710,7 @@ class MutationGapsTest {
               IntVar s = new IntVar(store, "s", 0, k);
               return new Instance(store, new MaxCliqueBound(x, conflicts, s), withLast(x, s));
             });
-    golden(n, 4950, 4922, 0, 0);
+    golden(n, 4950, 4922, 0, 0, 208);
   }
 
   /** LinearForm explains the entailment of a reified linear constraint (all four relations). */
@@ -726,7 +735,7 @@ class MutationGapsTest {
               LinearInt sum = new LinearInt(x, w, relations[rnd.nextInt(4)], rnd.nextInt(9) - 4);
               return new Instance(store, new Reified(sum, b), withLast(x, b));
             });
-    golden(n, 1522, 1213, 90, 217);
+    golden(n, 1522, 1213, 90, 217, 3304);
   }
 
   /**

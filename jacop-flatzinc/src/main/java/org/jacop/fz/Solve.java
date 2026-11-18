@@ -1273,8 +1273,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.capacityBound
             + "\n%%%mzn-stat: lpCutLimits="
             + r.cutLimits
+            + "\n%%%mzn-stat: lpCutStalls="
+            + r.cutStalls
+            + "\n%%%mzn-stat: lpCutStallsRecovered="
+            + r.cutStallsRecovered
             + "\n%%%mzn-stat: lpZeroHalfCuts="
             + r.zeroHalfCuts
+            + "\n%%%mzn-stat: lpCoverCuts="
+            + r.coverCuts
             + "\n%%%mzn-stat: lpDualCuts="
             + r.dualCuts
             + "\n%%%mzn-stat: lpMirSearchCuts="
@@ -3112,7 +3118,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       lcgLastCost = ls.getCostValue();
       int lsCost = ls.getCostValue();
       lcg.setSharedBound(() -> worker == null ? lsCost : Math.min(lsCost, worker.sharedBound()));
-    } else if (freeFirstValues != null) {
+    } else if (freeFirstValues != null && (scheduled == null || freeFirstCost <= scheduledCost)) {
       // the best solution of free search without learning, which ran first
       lcg.setIncumbent(freeFirstVars, freeFirstValues);
       lcgLastCost = freeFirstCost;
@@ -3156,7 +3162,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       lcg.addClause(clause[0], clause[1]);
     }
-    if ((ls != null || scheduled != null || probed) && costVar instanceof IntVar cost) {
+    if ((ls != null || scheduled != null || probed || freeFirstValues != null)
+        && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
       // the bound, or the first descent, before the bound is taken, can find one no better
       lcg.onSolution(
@@ -4825,7 +4832,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           in.addAll(Arrays.asList(list));
           boolean covers = true;
           for (IntVar x : vars) {
-            if (!x.singleton() && !in.contains(x)) {
+            // a variable in no constraint, such as a cell outside the board of an XCSP grid,
+            // takes any value of its domain and leaves the dive's solution one
+            if (!x.singleton() && !in.contains(x) && x.dom().sizeConstraints() > 0) {
               covers = false;
               break;
             }
@@ -5023,6 +5032,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + lcg.tablesAsClauses
             + "\n%%%mzn-stat: lcgCompressedTablesAsClauses="
             + lcg.compressedTablesAsClauses
+            + "\n%%%mzn-stat: lcgBooleanTablesAsClauses="
+            + lcg.booleanTablesAsClauses
             + "\n%%%mzn-stat: lcgTableClauses="
             + lcg.tableClauses
             + "\n%%%mzn-stat: lcgTableTupleLiterals="
@@ -5234,8 +5245,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + core.coreShrunk
         + "\n%%%mzn-stat: lcgCoreExhausted="
         + core.exhaustedOutputs
+        + "\n%%%mzn-stat: lcgCoreExhaustDiscounted="
+        + core.exhaustDiscounted
         + "\n%%%mzn-stat: lcgCoreStallStops="
         + core.stallStops
+        + "\n%%%mzn-stat: lcgCoreLimitStops="
+        + core.limitStops
         + "\n%%%mzn-stat: lcgCoreClockStops="
         + lcg.clockStops
         + "\n%%%mzn-stat: lcgCoreSkips="
@@ -5958,19 +5973,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return null;
     }
     long begin = System.currentTimeMillis();
-    SymmetryCanonicalizer canonical = symmetry == null ? null : symmetry.canonicalizer();
-    Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (canonical != null && !canonical.constraints().isEmpty()) {
-      ignored.addAll(canonical.constraints());
-      functionalCanonical = canonical;
-    }
-    FunctionalModel model =
-        FunctionalModel.detect(
-            store,
-            sat.collectedClauses(),
-            cost,
-            ignored,
-            options.debug() ? why -> IO.println("% no functional model: " + why) : null);
+    FunctionalModel model = detectFunctional(cost, options.debug());
     if (options.debug() && model != null) {
       IO.println("% functional model of " + model.vars.length + " decision variables");
     }
@@ -6061,6 +6064,29 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               + (best == Long.MAX_VALUE ? "" : "\n%%%mzn-stat: tabuBest=" + best));
     }
     return hintValues == null ? null : new Hint(hintedVariables(), hintValues);
+  }
+
+  /**
+   * The functional reading of the model ({@link FunctionalModel}) with the symmetry breaking
+   * constraints left to the canonicalizer, or null.
+   *
+   * @param cost the cost variable
+   * @param log whether to print why the model is not functional
+   * @return the model, or null
+   */
+  private FunctionalModel detectFunctional(IntVar cost, boolean log) {
+    SymmetryCanonicalizer canonical = symmetry == null ? null : symmetry.canonicalizer();
+    Set<Constraint> ignored = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (canonical != null && !canonical.constraints().isEmpty()) {
+      ignored.addAll(canonical.constraints());
+      functionalCanonical = canonical;
+    }
+    return FunctionalModel.detect(
+        store,
+        sat.collectedClauses(),
+        cost,
+        ignored,
+        log ? why -> IO.println("% no functional model: " + why) : null);
   }
 
   // the values of the decision variables, moved onto a symmetric assignment that the symmetry
@@ -6590,6 +6616,16 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         || squaredObjectiveTerms(costVar) < SQUARED_OBJECTIVE_TERMS) {
       return false;
     }
+    if (!"0".equals(options.freeConfig("tabu", "1"))
+        && detectFunctional((IntVar) costVar, false) != null) {
+      // the tabu search of functional models runs instead (functionalHint): on low autocorrelation
+      // binary sequences at 240 s free search first left it 10 % less time and ended worse on 7
+      // of 10 XCSP 2025 instances (n = 60: 302 against 238)
+      if (options.debug()) {
+        IO.println("% free search first: skipped for the tabu search of a functional model");
+      }
+      return false;
+    }
     if (options.getStatistics()) {
       IO.println("%%%mzn-stat: freeFirstSquares=" + squaredObjectiveTerms(costVar));
     }
@@ -6992,7 +7028,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     for (IntVar[][] clause : sat.collectedClauses()) {
       probe.addClause(clause[0], clause[1]);
     }
-    probe.onSolution(this::printSolution);
+    if (costVar instanceof IntVar cost) {
+      // free search may have printed better solutions before (freeSearchFirst)
+      probe.onSolution(
+          () -> {
+            if (cost.value() < bestPrintedCost.get()) {
+              printSolution();
+            }
+          });
+    } else {
+      probe.onSolution(this::printSolution);
+    }
     if (costVar instanceof IntVar) {
       probe.onBound(
           lower -> {

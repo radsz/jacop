@@ -673,6 +673,25 @@ class AtomicTrailTest {
    * of 300 to 600 atoms this way).
    */
   @Test
+  void rootDomainOfAVariableFirstChangedAboveTheRootIsItsDomainThere() {
+    // a variable created after the trail and first changed at level 1 took the domain of level 1
+    // as its root: the objective of a --proof run, fixed while tabu search checked a solution,
+    // was a constant in the OPB model (MiniZinc fuzz seed 2022446)
+    Store store = new Store();
+    new IntVar(store, "a", 0, 1);
+    AtomicTrail trail = new AtomicTrail(store);
+    IntVar late = new IntVar(store, "late", -2, 0);
+    store.setLevel(1);
+    late.domain.in(store.level, late, -2, -2);
+    assertThat(trail.rootDomain(late).min()).isEqualTo(-2);
+    assertThat(trail.rootDomain(late).max()).isZero();
+    store.removeLevel(1);
+    store.setLevel(0);
+    assertThat(late.max()).isZero();
+    assertThat(trail.rootDomain(late).max()).isZero();
+  }
+
+  @Test
   void rootDomainOfAVariableCreatedLaterGrowsTheArrays() {
     // root[slot(x)] read the array before slot(x) grew it: an index out of bounds
     Store store = new Store();

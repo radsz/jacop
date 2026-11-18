@@ -293,6 +293,96 @@ class CdclFuzzTest {
   }
 
   /**
+   * A gate circuit and a copy of it built differently (De Morgan forms, XOR as two ANDs and an OR),
+   * with a miter asserting that some output differs between them: equivalent signals for SAT
+   * sweeping and probing to find. The copy has a changed gate now and then, so that some miters are
+   * satisfiable.
+   */
+  static List<int[]> miterFormula(Random rnd, int[] varsOut) {
+    int inputs = 2 + rnd.nextInt(7);
+    int gates = 3 + rnd.nextInt(30);
+    int[] kind = new int[gates];
+    int[] left = new int[gates];
+    int[] right = new int[gates];
+    for (int g = 0; g < gates; g++) {
+      kind[g] = rnd.nextInt(3);
+      // a signal: an input or an earlier gate, maybe negated (DIMACS literal in the first copy)
+      left[g] = signal(rnd, inputs + g);
+      right[g] = signal(rnd, inputs + g);
+    }
+    List<int[]> f = new ArrayList<>();
+    int[] next = {inputs};
+    int[] first = new int[gates];
+    int[] second = new int[gates];
+    int mutated = rnd.nextInt(3) == 0 ? rnd.nextInt(gates) : -1;
+    for (int copy = 0; copy < 2; copy++) {
+      int[] out = copy == 0 ? first : second;
+      for (int g = 0; g < gates; g++) {
+        int a = mapSignal(left[g], inputs, out);
+        int b = mapSignal(right[g], inputs, out);
+        int k = copy == 1 && g == mutated ? (kind[g] + 1) % 3 : kind[g];
+        out[g] = copy == 0 ? gate(f, next, k, a, b) : gateOtherForm(f, next, k, a, b, rnd);
+      }
+    }
+    // the miter over a few outputs: at least one pair differs
+    int pairs = 1 + rnd.nextInt(Math.min(3, gates));
+    int[] miter = new int[pairs];
+    for (int i = 0; i < pairs; i++) {
+      int g = gates - 1 - rnd.nextInt(gates);
+      miter[i] = gate(f, next, 2, first[g], second[g]);
+    }
+    f.add(miter);
+    varsOut[0] = next[0];
+    return f;
+  }
+
+  private static int signal(Random rnd, int bound) {
+    int v = rnd.nextInt(bound);
+    return rnd.nextBoolean() ? v + 1 : -(v + 1);
+  }
+
+  private static int mapSignal(int signal, int inputs, int[] out) {
+    int v = Math.abs(signal) - 1;
+    int lit = v < inputs ? v + 1 : out[v - inputs];
+    return signal > 0 ? lit : -lit;
+  }
+
+  /** z = a AND b (kind 0), a OR b (1), a XOR b (2), Tseitin encoded; returns z. */
+  private static int gate(List<int[]> f, int[] next, int kind, int a, int b) {
+    int z = ++next[0];
+    switch (kind) {
+      case 0 -> {
+        f.add(new int[] {-z, a});
+        f.add(new int[] {-z, b});
+        f.add(new int[] {z, -a, -b});
+      }
+      case 1 -> {
+        f.add(new int[] {z, -a});
+        f.add(new int[] {z, -b});
+        f.add(new int[] {-z, a, b});
+      }
+      default -> {
+        f.add(new int[] {-z, a, b});
+        f.add(new int[] {-z, -a, -b});
+        f.add(new int[] {z, -a, b});
+        f.add(new int[] {z, a, -b});
+      }
+    }
+    return z;
+  }
+
+  private static int gateOtherForm(List<int[]> f, int[] next, int kind, int a, int b, Random rnd) {
+    if (rnd.nextBoolean()) {
+      return gate(f, next, kind, a, b);
+    }
+    return switch (kind) {
+      case 0 -> -gate(f, next, 1, -a, -b); // a AND b = NOT(NOT a OR NOT b)
+      case 1 -> -gate(f, next, 0, -a, -b);
+      default -> gate(f, next, 1, gate(f, next, 0, a, -b), gate(f, next, 0, -a, b));
+    };
+  }
+
+  /**
    * Formulas that bounded variable addition rewrites: grids of factor literals times quotient
    * clauses, at-most-one cliques, and random clauses over the same variables.
    */
@@ -423,12 +513,17 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    s.setVmtf(Math.floorMod(seed, 3L) != 2);
     memoryBudgets(s, seed);
     s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
     for (int[] c : f) {
       s.addClause(c);
     }
+    // SAT sweeping and failed-literal probing on most seeds, checked with the proof's deletions
+    boolean inprocessing = Math.floorMod(seed / 7, 4L) != 0;
+    s.setSweeping(inprocessing && !Boolean.getBoolean("fuzz.noSweep"));
+    s.setProbing(inprocessing && !Boolean.getBoolean("fuzz.noProbe"));
     if (Math.floorMod(seed, 5L) == 3) {
       inputOrderDecisions(s, vars, seed);
     }
@@ -441,7 +536,21 @@ class CdclFuzzTest {
       check(satisfiedBy(f, s), seed, "model does not satisfy the formula", f);
     } else {
       check(result == CdclSolver.UNSAT, seed, "answer " + result, f);
-      String error = RupChecker.check(vars, f, proof.toString(StandardCharsets.US_ASCII));
+      String error =
+          RupChecker.check(vars, f, proof.toString(StandardCharsets.US_ASCII), inprocessing);
+      String dump = System.getProperty("fuzz.dump");
+      if (error != null && dump != null) {
+        StringBuilder cnf = new StringBuilder("p cnf " + vars + " " + f.size() + "\n");
+        for (int[] c : f) {
+          for (int l : c) {
+            cnf.append(l).append(' ');
+          }
+          cnf.append("0\n");
+        }
+        java.nio.file.Files.writeString(java.nio.file.Path.of(dump + ".cnf"), cnf);
+        java.nio.file.Files.writeString(
+            java.nio.file.Path.of(dump + ".drat"), proof.toString(StandardCharsets.US_ASCII));
+      }
       check(error == null, seed, "proof rejected: " + error, f);
     }
     return result;
@@ -456,8 +565,13 @@ class CdclFuzzTest {
     if (seed % 2 == 0) {
       s.setReduceBase(10);
     }
+    s.setVmtf(Math.floorMod(seed, 3L) != 2);
     memoryBudgets(s, seed);
     s.setAssumptionsOnOneLevel(Math.floorMod(seed, 5L) != 0);
+    // substituted variables come back when a later clause or assumption uses them
+    boolean inprocessing = Math.floorMod(seed / 7, 4L) != 0;
+    s.setSweeping(inprocessing && !Boolean.getBoolean("fuzz.noSweep"));
+    s.setProbing(inprocessing && !Boolean.getBoolean("fuzz.noProbe"));
     s.setFactoring(Math.floorMod(seed / 2, 2L) == 1);
     s.ensureVars(vars);
     List<int[]> added = new ArrayList<>();
@@ -531,6 +645,13 @@ class CdclFuzzTest {
       }
       if (rnd.nextInt(4) == 0) {
         incremental(rnd, f, vars[0], seed);
+      }
+      if (Math.floorMod(seed, 4L) == 0) {
+        // circuits with equivalent signals, from a generator of their own
+        List<int[]> c = miterFormula(new Random(~seed), vars);
+        if (solveChecked(c, vars[0], seed) == CdclSolver.UNSAT) {
+          unsat++;
+        }
       }
       if (run % 2 == 0) {
         Random gridRnd = new Random(~seed);

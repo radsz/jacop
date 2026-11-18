@@ -65,6 +65,7 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
+import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -87,6 +88,7 @@ import org.jacop.fz.constraints.NumberedPathDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.PermutedTasksDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
@@ -417,6 +419,18 @@ public class Constraints implements ParserTreeConstants {
         }
       }
 
+      // a cyclic distance min(|e|, c - |e|) also as |e + c * k|, which a bound narrows
+      if (CyclicDistanceDetector.enabled() && options.proof() == null) {
+        CyclicDistanceDetector cyclic = new CyclicDistanceDetector(support);
+        Set<SimpleNode> distances = cyclic.detect(astTree);
+        if (!distances.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(distances);
+          dictionary.removeFromDefaultSearch(cyclic.removed());
+          dictionary.unusedVariables.addAll(cyclic.removed());
+        }
+      }
+
       IncreasingDetector increasing = null;
       if (IncreasingDetector.sumEnabled() || IncreasingDetector.nvalueEnabled()) {
         increasing = new IncreasingDetector(support);
@@ -593,6 +607,12 @@ public class Constraints implements ParserTreeConstants {
         new WeightedCompletionDetector(support).detect(astTree);
       }
 
+      // the unary resource of a chain of tasks over permuted resources (the job view of an open
+      // shop), redundant; --proof does not encode it
+      if (PermutedTasksDetector.enabled() && options.proof() == null) {
+        new PermutedTasksDetector(support).detect(astTree);
+      }
+
       if (CardinalityDetector.enabled()) {
         new CardinalityDetector(support).detect(astTree);
       }
@@ -760,6 +780,7 @@ public class Constraints implements ParserTreeConstants {
     if (SuccessorForestDetector.enabled() && options.proof() == null) {
       new SuccessorForestDetector(support).detect(astTree);
     }
+    dictionary.releaseConstantArrays();
   }
 
   // a constraint item, imposed as implied by the others when implied is true
