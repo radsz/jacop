@@ -154,6 +154,48 @@ class CyclicDistanceFlatzincTest {
     }
   }
 
+  /**
+   * A distance whose a, b or e is declared with a domain narrower than |e|, c - a or the difference
+   * it stands for: the declaration is a constraint, which the replacement of a and b and the
+   * substitution of e would drop. The solutions must stay those of the detector off (13 or 19 here,
+   * where dropping a domain gave 25).
+   */
+  @Test
+  void narrowDomainsOfTheDroppedVariablesAreKept() throws IOException {
+    String[][] domains = {
+      {"-4..4", "0..4", "1..5"},
+      {"-4..4", "0..1", "1..5"},
+      {"-4..4", "0..2", "1..5"},
+      {"-4..4", "1..4", "1..5"},
+      {"-4..4", "0..4", "4..5"},
+      {"-4..4", "0..4", "1..4"},
+      {"-2..2", "0..4", "1..5"},
+      {"-4..3", "0..4", "1..5"},
+      {"0..4", "0..4", "1..5"}
+    };
+    for (String[] d : domains) {
+      String model =
+          "var 0..4: x0:: output_var;\n"
+              + "var 0..4: x1:: output_var;\n"
+              + "var "
+              + d[0]
+              + ": e0;\nvar "
+              + d[1]
+              + ": a0;\nvar "
+              + d[2]
+              + ": b0;\n"
+              + "var 0..5: d0:: output_var;\n"
+              + "constraint int_lin_eq([1,-1,-1],[x0,x1,e0],0);\n"
+              + "constraint int_abs(e0,a0);\n"
+              + "constraint int_lin_eq([-1,-1],[a0,b0],-5);\n"
+              + "constraint int_min(a0,b0,d0);\n"
+              + "solve satisfy;\n";
+      String on = run(model, true, "-a", "-debug");
+      assertTrue(on.contains("% cyclic distances: 1"), on);
+      assertEquals(solutions(run(model, false, "-a")), solutions(on), Arrays.toString(d));
+    }
+  }
+
   private static int solutions(String out) {
     return out.split("----------", -1).length - 1;
   }

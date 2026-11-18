@@ -30,6 +30,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -269,6 +270,102 @@ class XcspTableFlatzincTest {
     }
   }
 
+  /**
+   * Tables that are one row away from saying that two lists differ, so that the detector must leave
+   * them alone: a row fixing both lists to the same value, a row fixing a third cell, a row whose
+   * two cells are not the same position of both lists, a row fixing two cells of one list, or a
+   * list with a variable twice. A detector that took any of them for "the lists differ" and
+   * replaced the table would add solutions.
+   */
+  @Test
+  void listsDifferNearMissesMatchBruteForce() throws IOException {
+    Random random = new Random(20261118);
+    int fired = 0;
+    for (int run = 0; run < 60; run++) {
+      int[] values = random.nextBoolean() ? new int[] {0, 1} : new int[] {0, 1, 3};
+      int n = 2;
+      int m = 2 + random.nextInt(2);
+      int vars = m * n;
+      int[][] lists = new int[m][n];
+      for (int i = 0; i < m; i++) {
+        for (int k = 0; k < n; k++) {
+          lists[i][k] = i * n + k;
+        }
+      }
+      int perturb = run % 6;
+      if (perturb == 5) {
+        lists[0][1] = lists[0][0];
+      }
+      StringBuilder constraints = new StringBuilder();
+      List<int[]> pairs = new ArrayList<>();
+      for (int i = 0; i < m; i++) {
+        for (int j = i + 1; j < m; j++) {
+          pairs.add(new int[] {i, j});
+        }
+      }
+      List<int[][]> tables = new ArrayList<>();
+      for (int p = 0; p < pairs.size(); p++) {
+        int[] pair = pairs.get(p);
+        List<int[]> rows = new ArrayList<>();
+        for (int k = 0; k < n; k++) {
+          for (int a : values) {
+            for (int b : values) {
+              if (a != b) {
+                int[] row = new int[2 * n];
+                Arrays.fill(row, STAR);
+                row[k] = a;
+                row[n + k] = b;
+                rows.add(row);
+              }
+            }
+          }
+        }
+        if (p == 0) {
+          int[] row = rows.get(random.nextInt(rows.size()));
+          int k = row[0] != STAR ? 0 : 1;
+          switch (perturb) {
+            case 1 -> row[n + k] = row[k]; // the same value in both lists
+            case 2 -> row[1 - k] = values[random.nextInt(values.length)]; // a third cell
+            case 3 -> { // the second cell at another position of the other list
+              row[n + 1 - k] = row[n + k];
+              row[n + k] = STAR;
+            }
+            case 4 -> { // both cells in the first list
+              row[1 - k] = row[n + k];
+              row[n + k] = STAR;
+            }
+            default -> {
+              // unchanged: the detector replaces the table
+            }
+          }
+        }
+        int[][] table = rows.toArray(new int[0][]);
+        tables.add(table);
+        int[] scope = new int[2 * n];
+        System.arraycopy(lists[pair[0]], 0, scope, 0, n);
+        System.arraycopy(lists[pair[1]], 0, scope, n, n);
+        constraints.append(shortTable(scope, table));
+      }
+      Set<String> expected = new TreeSet<>();
+      enumerateLists(new int[vars], 0, values, lists, pairs, tables, expected);
+      String fzn = header(vars, values) + constraints + "solve satisfy;\n";
+      String message = "run " + run + " perturb " + perturb + "\n" + fzn;
+      java.util.regex.Matcher detected =
+          java.util.regex.Pattern.compile("% lists differ detector: (\\d+) tables")
+              .matcher(solve(fzn, "-debug"));
+      int replaced = detected.find() ? Integer.parseInt(detected.group(1)) : 0;
+      if (perturb == 0) {
+        assertEquals(pairs.size(), replaced, message);
+        fired++;
+      } else {
+        assertTrue(replaced < pairs.size(), "replaced " + replaced + "\n" + message);
+      }
+      assertEquals(expected, solveAll(fzn), message);
+      assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
+    }
+    assertEquals(10, fired);
+  }
+
   @Test
   void numberedPathMatchesBruteForce() throws IOException {
     // a tour numbered 1..k over random arcs (CalvinPuzzle of XCSP 2023) gets a redundant circuit
@@ -296,6 +393,73 @@ class XcspTableFlatzincTest {
       assertEquals(expected, solveAll(fzn), message);
       assertEquals(expected, solveAll(fzn, "--lcg", "off"), message);
     }
+  }
+
+  /**
+   * Numbering models one change away from the pattern, so that the detector must not post its
+   * circuit: a cell without its condition, a cell whose condition ends at N - 1, a literal x[d] =
+   * x[c] + 2, or a cell whose domain goes past N. A circuit posted on any of them as if it were a
+   * numbered path could remove solutions; the solutions are compared with the detector off.
+   */
+  @Test
+  void numberedPathNearMissesKeepTheirSolutions() throws IOException {
+    Random random = new Random(20261118);
+    int changed = 0;
+    for (int run = 0; run < 48; run++) {
+      int k = 4 + random.nextInt(2);
+      boolean table = run % 2 == 1;
+      boolean[][] arc = new boolean[k][k];
+      for (int c = 0; c < k; c++) {
+        for (int d = 0; d < k; d++) {
+          arc[c][d] = c != d && random.nextInt(10) < 6;
+        }
+        arc[c][(c + 1) % k] = true;
+      }
+      String fzn = numberedPath(k, arc, false, table, random);
+      int c = 1 + random.nextInt(k - 1);
+      String near =
+          switch (run / 2 % 4) {
+            case 0 -> table ? dropTableOf(fzn, "x" + c) : dropLine(fzn, "bool_clause([r" + c + ",");
+            case 1 ->
+                table
+                    ? fzn.replaceFirst("," + k + "((," + STAR + ")+)\\]", "," + (k - 1) + "$1]")
+                    : fzn.replace("int_eq_imp(x" + c + "," + k, "int_eq_imp(x" + c + "," + (k - 1));
+            case 2 ->
+                table
+                    ? fzn.replaceFirst(",1," + STAR, ",2," + STAR)
+                    : fzn.replaceFirst("\\],1,e", "],2,e").replaceFirst("\\],-1,e", "],-2,e");
+            default ->
+                fzn.replace("var 1.." + k + ": x" + c + ";", "var 1.." + (k + 1) + ": x" + c + ";");
+          };
+      changed += near.equals(fzn) ? 0 : 1;
+      String message = "run " + run + "\n" + near;
+      if (!near.equals(fzn)) {
+        assertFalse(solve(near, "-debug").contains("numbered path detector: circuit"), message);
+      }
+      System.setProperty("org.jacop.fz.numberedPath", "false");
+      Set<String> expected;
+      try {
+        expected = solveAll(near);
+      } finally {
+        System.clearProperty("org.jacop.fz.numberedPath");
+      }
+      assertEquals(expected, solveAll(near), message);
+      assertEquals(expected, solveAll(near, "--lcg", "off"), message);
+    }
+    assertEquals(48, changed);
+  }
+
+  // the model without the constraint line that contains the given text
+  private static String dropLine(String fzn, String text) {
+    return Arrays.stream(fzn.split("\n"))
+            .filter(l -> !l.contains(text))
+            .collect(Collectors.joining("\n"))
+        + "\n";
+  }
+
+  // the model without the short table whose scope starts with the given variable
+  private static String dropTableOf(String fzn, String x) {
+    return dropLine(fzn, "jacop_short_table_int([" + x + ",");
   }
 
   @Test
