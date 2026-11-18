@@ -2786,3 +2786,5 @@ testSimple/power_test
 testSimple/test_fzn_arith
 testSimple/test_fzn_arrays
 testSimple/test_fzn_comparison
+rotating-workforce/Example1370
+gcc_domain_matrix/gcc_domain_matrix
