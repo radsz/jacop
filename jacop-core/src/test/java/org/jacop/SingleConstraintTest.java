@@ -8721,6 +8721,50 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
   }
 
+  // The negation of AtMost (at least counter + 1 values) woke only on GROUND, so a bound that
+  // removed the value from a variable left the last candidate unfixed (WakeUpFixpointTest seed
+  // 2154389).
+  @Test
+  void testNegatedAtMostWakesWhenAVariableLosesTheValue() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 4);
+    IntVar x1 = new IntVar(store, "x1", -2, 4);
+    IntVar x2 = new IntVar(store, "x2", 0, 0);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new AtMost(new IntVar[] {x2, x0, x1}, 0, 4), r));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.max()).isEqualTo(4);
+
+    store.setLevel(store.level + 1);
+    x1.domain.in(store.level, x1, -2, 2);
+    assertThat(store.consistency()).isTrue();
+
+    // x0 is the only variable left that can be 4
+    assertThat(x0.singleton(4)).isTrue();
+  }
+
+  // GCC drops the counters of values no variable can take; with none left, toString read
+  // counters[-1] (LCG fuzz, a model grounded at impose).
+  @Test
+  void testGccWithoutACounterOfAReachableValue() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 5, 6)};
+    IntVar[] counters = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    GCC gcc = new GCC(x, counters, 0);
+
+    assertThat(gcc.toString()).contains("GCC ([x0::{5..6}], [])");
+    store.impose(gcc);
+
+    // x0 can take only the counted values 0 and 1
+    assertThat(store.consistency()).isFalse();
+  }
+
   // GCC computed its counted values again at impose, so a variable ground between creating the
   // constraint and imposing it made impose throw IllegalArgumentException.
   @Test
@@ -10542,6 +10586,57 @@ class SingleConstraintTest extends TestHelper {
       fixOverlappingRectangles(store, r);
       store.raiseLevelBeforeConsistency = true;
       assertThat(store.consistency()).as(kind).isFalse();
+    }
+  }
+
+  @Test
+  void hybridTableKeyMatchesItsTuples() {
+    // the key of a table was a map of boxed values in every table (24 million entries for 300
+    // tables over 80,000 words); it is now a sorted index shared by the tables over the same tuples
+    Random random = new Random(7);
+    for (int trial = 0; trial < 300; trial++) {
+      int arity = 2 + random.nextInt(3);
+      int n = 1 + random.nextInt(30);
+      int keyed = random.nextInt(arity + 1);
+      int[][] tuples = new int[n][arity];
+      Set<List<Integer>> distinct = new HashSet<>();
+      for (int t = 0; t < n; t++) {
+        do {
+          for (int i = 0; i < arity; i++) {
+            tuples[t][i] = i == keyed ? 3 * t - 20 : random.nextInt(8);
+          }
+        } while (!distinct.add(Arrays.stream(tuples[t]).boxed().toList()));
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[arity];
+      IntVar[] y = new IntVar[arity];
+      for (int i = 0; i < arity; i++) {
+        x[i] = new IntVar(store, -30, 100);
+        y[i] = new IntVar(store, -30, 100);
+      }
+      HybridTable first = new HybridTable(x, tuples);
+      HybridTable second = new HybridTable(y, first);
+      int expected = -1;
+      for (int i = 0; i < arity && expected < 0; i++) {
+        Set<Integer> values = new HashSet<>();
+        boolean unique = true;
+        for (int[] t : tuples) {
+          unique &= values.add(t[i]);
+        }
+        expected = unique ? i : -1;
+      }
+      for (HybridTable table : List.of(first, second)) {
+        assertThat(table.keyColumn()).isEqualTo(expected);
+        for (int v = -25; v < 100 && expected >= 0; v++) {
+          int[] row = null;
+          for (int[] t : tuples) {
+            row = t[expected] == v ? t : row;
+          }
+          for (int c = 0; c < arity; c++) {
+            assertThat(table.keyedValue(c, v, -99)).isEqualTo(row == null ? -99 : row[c]);
+          }
+        }
+      }
     }
   }
 

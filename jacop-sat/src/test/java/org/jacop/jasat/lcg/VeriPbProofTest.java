@@ -101,6 +101,7 @@ import org.jacop.constraints.XneqC;
 import org.jacop.constraints.XneqY;
 import org.jacop.constraints.XorBool;
 import org.jacop.constraints.XplusClteqZ;
+import org.jacop.constraints.XplusClteqZImplied;
 import org.jacop.constraints.XplusYeqC;
 import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.XplusYlteqZ;
@@ -582,6 +583,31 @@ class VeriPbProofTest {
     assertThat(checker.conclusion).isEqualTo("UNSAT");
   }
 
+  @Test
+  void energyOfTasksSharingAStartIsRefuted() {
+    // two tasks start at x0, so under x0 in 1..2 they and the task at x3 in 1..2 need energy 6 in
+    // 1..3, but the energy step gave up on a start in two places (fuzz seed 40273238)
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 3);
+    IntVar x3 = values(store, "x3", 0, 1, 2, 4);
+    IntVar x4 = values(store, "x4", 0, 1, 4);
+    IntVar x5 = new IntVar(store, "x5", 1, 2);
+    IntVar one = new IntVar(store, "one", 1, 1);
+    IntVar two = new IntVar(store, "two", 2, 2);
+    store.impose(new AbsXeqY(x5, x3));
+    store.impose(
+        new Cumulative(
+            new IntVar[] {x0, x0, x3},
+            new IntVar[] {one, one, one},
+            new IntVar[] {two, two, two},
+            two));
+    LcgSolver lcg = withProof(store);
+    assertThat(lcg.minimize(x4)).isEqualTo(CdclSolver.UNSAT);
+    RupChecker checker = new RupChecker();
+    assertThat(checker.check(opb(), proof.toString(StandardCharsets.US_ASCII))).isNull();
+    assertThat(checker.conclusion).isEqualTo("BOUNDS INF INF");
+  }
+
   // random fixed tasks under Cumulative (edge finding and energy rules): every reason is a rup
   // step once its overloaded window is summed, and the optimum is the brute-force one
   @Test
@@ -911,6 +937,28 @@ class VeriPbProofTest {
   }
 
   @Test
+  void gccCounterBoundsBoundTheSplit() {
+    // x2 = x0 = -1 make count(-1) 3 of {0, 1, 3}, which the counter's bound lemmas give; the split
+    // on the counters' values ignored them and ran out of cases on 0 and 1 (fuzz seed 41677534)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", -1, 0, 1, 2);
+    IntVar x1 = values(store, "x1", -1, 1, 2, 3, 4);
+    IntVar x2 = values(store, "x2", -1, 2, 3, 4);
+    IntVar x3 = values(store, "x3", 1, 2);
+    IntVar g0 = values(store, "g0", 0, 1, 3);
+    IntVar g1 = values(store, "g1", 0, 3);
+    IntVar g2 = values(store, "g2", 0, 2, 3);
+    IntVar g3 = values(store, "g3", 0, 2, 3);
+    IntVar g4 = values(store, "g4", 0, 2, 3);
+    store.impose(new GCC(new IntVar[] {x2, x1, x0, x3}, new IntVar[] {g0, g1, g2, g3, g4}, -1));
+    store.impose(new SumInt(new IntVar[] {x0, x0, x2}, "<=", x3));
+    assertThat(store.consistency()).isTrue();
+    assertThat(withProof(store).solve()).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void reifiedRowUnderARootFixedBIsDerived() {
     // b = 0 at the root (b -> x5 = 1 with 1 not in x5) holds 2 x1 + 2 x5 - x0 = 5, which has no
     // solution by parity, but b is in no reason (fuzz seed 6060968)
@@ -954,6 +1002,28 @@ class VeriPbProofTest {
     LcgSolver lcg = new LcgSolver(store);
     lcg.setProof(model, proof);
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void increasingSumRowUsesTheBoundsOfTheChain() {
+    // x1 >= 2 and x3 <= 2 fix x2 = 2 along the chain, so the sum 6 falls in a hole of s; the row's
+    // bounds over the reason's domains alone, without the chain, left literals of x2 in the lemmas
+    // and the failure clause was not derived (fuzz seed 49430381)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 2);
+    IntVar x1 = values(store, "x1", -1, 1, 2);
+    IntVar x2 = values(store, "x2", -1, 0, 1, 2, 3);
+    IntVar x3 = values(store, "x3", -1, 0, 1, 2, 4);
+    IntVar s = values(store, "s", -2, -1, 0, 1, 2, 3, 4, 5, 7, 8);
+    IntVar c0 = values(store, "c0", 0, 3);
+    IntVar c1 = values(store, "c1", 0, 1, 3);
+    store.impose(new IncreasingSum(new IntVar[] {x1, x2, x3}, s, false));
+    store.impose(
+        new CountValues(new IntVar[] {x3, x1, x0, x2}, new IntVar[] {c0, c1}, new int[] {2, 0}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(withProof(store).solve()).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
@@ -2503,6 +2573,19 @@ class VeriPbProofTest {
     assertThatThrownBy(lcg::solve)
         .isInstanceOf(UnsupportedOperationException.class)
         .hasMessageContaining("Not of Member");
+  }
+
+  @Test
+  void impliedRowOfOneVariableWithItselfIsRefused() {
+    // b -> x + 1 <= x has no linear form: the encoder dereferenced it (fuzz seed 40000014, NPE)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    store.impose(new XplusClteqZImplied(b, x, 1, x));
+    store.impose(new XplusYeqZ(x, b, y));
+    LcgSolver lcg = withProof(store);
+    assertThatThrownBy(lcg::solve).isInstanceOf(UnsupportedOperationException.class);
   }
 
   /**

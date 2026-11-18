@@ -53,6 +53,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Random;
 import java.util.Set;
@@ -63,8 +64,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.IntDomain;
+import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
+import org.jacop.core.Store;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.fz.constraints.AlldifferentDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
@@ -4182,6 +4187,173 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("a = array1d(1..2, [1, 1]);"), out);
       assertTrue(out.contains("a = array1d(1..2, [0, 0]);"), out);
       assertFalse(out.contains("true,") || out.contains("false,"), out);
+    }
+  }
+
+  @Test
+  void tablesOverOneKeyedRelationShareTheirBinaryParts(@TempDir Path dir) throws Exception {
+    // a table whose first column is a key is posted as one binary table per other column; over a
+    // relation of 80,000 words, 60 such tables built 300 binary tables with their own tuples and
+    // index (5.8 GB). The tables over the same relation share the binary part of each column.
+    StringBuilder m = new StringBuilder("array [1..24] of int: t = [");
+    int[][] rows = {
+      {1, 0, 2, 1}, {2, 1, 0, 2}, {3, 2, 2, 0}, {4, 0, 1, 1}, {5, 1, 1, 2}, {6, 2, 0, 0}
+    };
+    StringJoiner cells = new StringJoiner(",");
+    for (int[] r : rows) {
+      for (int v : r) {
+        cells.add(Integer.toString(v));
+      }
+    }
+    m.append(cells).append("];\n");
+    for (int i = 0; i < 3; i++) {
+      m.append("var 1..6: w").append(i).append(":: output_var;\n");
+    }
+    for (int j = 0; j < 9; j++) {
+      m.append("var 0..2: l").append(j).append(":: output_var;\n");
+    }
+    for (int i = 0; i < 3; i++) {
+      m.append("constraint jacop_table_int([w").append(i);
+      for (int k = 0; k < 3; k++) {
+        m.append(",l").append((i * 2 + k) % 9);
+      }
+      m.append("],t);\n");
+    }
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("words.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    java.lang.reflect.Field shared = HybridTable.class.getDeclaredField("shared");
+    shared.setAccessible(true);
+    List<HybridTable> binary = new ArrayList<>();
+    Set<Object> indexes = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof HybridTable h && h.columnCount() == 2) {
+        binary.add(h);
+        indexes.add(shared.get(h));
+      }
+    }
+    // the last letter is a function of the first one, so each table has two parts with the word
+    assertEquals(6, binary.size(), binary.toString());
+    assertEquals(2, indexes.size());
+    for (HybridTable h : binary) {
+      assertEquals(0, h.keyColumn());
+    }
+  }
+
+  @Test
+  void regularsOverOneAutomatonShareItsGraph(@TempDir Path dir) throws Exception {
+    // each regular built its own automaton and layered graph: 200 regulars over one automaton of
+    // 500 states held 1.5 GB. They share one automaton, and the graph over equal domains.
+    StringBuilder m = new StringBuilder();
+    m.append("predicate jacop_regular(array [int] of var int: x,int: Q,int: S,");
+    m.append("array [int] of int: d,int: q0,set of int: F,int: min_index);\n");
+    for (int i = 0; i < 12; i++) {
+      m.append("var 0..1: x").append(i).append(":: output_var;\n");
+    }
+    for (int r = 0; r < 3; r++) {
+      m.append("constraint jacop_regular([");
+      for (int i = 0; i < 4; i++) {
+        m.append(i > 0 ? "," : "").append('x').append(r * 4 + i);
+      }
+      // no two consecutive ones
+      m.append("],2,2,[1,2,1,0],1,1..2,0);\n");
+    }
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("regular.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    List<Regular> regulars = new ArrayList<>();
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof Regular r) {
+        regulars.add(r);
+      }
+    }
+    assertEquals(3, regulars.size());
+    assertSame(regulars.get(0).fsm, regulars.get(1).fsm);
+    assertSame(regulars.get(0).fsm, regulars.get(2).fsm);
+    assertTrue(regulars.get(0).sharesGraphWith(regulars.get(1)));
+    assertTrue(regulars.get(0).sharesGraphWith(regulars.get(2)));
+    // the words of 4 letters without two consecutive ones, 8 of them, for each of the 3 regulars
+    String all = run(m.toString(), "-a")[0];
+    assertEquals(8 * 8 * 8, all.split("----------", -1).length - 1, all);
+  }
+
+  @Test
+  void anArrayOfParametersIsReadAsConstantsOnce() {
+    // every detector that looked at an element read its array of parameters as constants again,
+    // boxing each entry: 2000 elements over one array of 20,000 allocated 5 GB of Integer
+    Tables tables = new Tables(new Store());
+    int[] values = new int[2000];
+    for (int i = 0; i < values.length; i++) {
+      values[i] = i % 7;
+    }
+    tables.addIntArray("a", values);
+    IntVar[] first = tables.getVariableArray("a");
+    assertEquals(2000, first.length);
+    assertEquals(3, first[3].value());
+    assertSame(first, tables.getVariableArray("a"));
+    tables.releaseConstantArrays();
+    IntVar[] again = tables.getVariableArray("a");
+    assertNotSame(first, again);
+    assertSame(first[3], again[3]);
+  }
+
+  @Test
+  void differenceCyclesKeepElementArcsWithinTheirBudget() throws IOException {
+    // each y = a[index] adds two difference arcs per value of the index: 800 elements over one
+    // array of 5000 variables made 8 million arcs (570 MB). Over the budget an element adds none.
+    int n = 40;
+    StringBuilder m = new StringBuilder();
+    for (int j = 0; j < n; j++) {
+      m.append("var 0..9: a").append(j).append(";\n");
+    }
+    for (int i = 0; i < 3; i++) {
+      m.append("var 1..").append(n).append(": i").append(i).append(";\n");
+      m.append("var 0..9: y").append(i).append(":: output_var;\n");
+    }
+    m.append("array [1..").append(n).append("] of var int: a = [");
+    for (int j = 0; j < n; j++) {
+      m.append(j > 0 ? "," : "").append('a').append(j);
+    }
+    m.append("];\n");
+    for (int i = 0; i < 3; i++) {
+      m.append("constraint array_var_int_element(i").append(i).append(",a,y").append(i);
+      m.append(");\n");
+    }
+    m.append("solve satisfy;\n");
+    String model = m.toString();
+    assertTrue(run(model, "-debug")[0].contains("% difference cycles: 240 difference"));
+    String old = System.getProperty("org.jacop.fz.differenceElements.maxArcs");
+    System.setProperty("org.jacop.fz.differenceElements.maxArcs", "100");
+    try {
+      String out = run(model, "-debug")[0];
+      assertTrue(out.contains("% difference cycles: 80 difference"), out);
+      assertTrue(out.contains("----------"), out);
+    } finally {
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.differenceElements.maxArcs");
+      } else {
+        System.setProperty("org.jacop.fz.differenceElements.maxArcs", old);
+      }
     }
   }
 
