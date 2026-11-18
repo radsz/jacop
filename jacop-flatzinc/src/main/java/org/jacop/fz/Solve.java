@@ -3159,10 +3159,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if ((ls != null || scheduled != null || probed || freeFirstValues != null)
         && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
-      // the bound, or the first descent, before the bound is taken, can find one no better
+      // the bound, or the first descent, before the bound is taken, can find one no better. The
+      // incumbent may be the hint of local search or of the probe, worse than the best solution
+      // free search without learning printed before them: it printed 10 again after 10
       lcg.onSolution(
           () -> {
-            if (cost.value() < lcgLastCost) {
+            if (cost.value() < Math.min(lcgLastCost, bestPrintedCost.get())) {
               printSolution();
             }
           });

@@ -7900,6 +7900,13 @@ Version 5.0 (unreleased)
    without it, are not proved in 600 s; it therefore stays off. It fires
    on none of the 240 wide instances.
 
+438. After free search without learning (-f, an objective that sums
+   squares), lazy clause generation printed a solution only when it was
+   better than its incumbent, which can be the hint of the search before
+   the linear relaxation and worse than the best solution printed: it
+   printed a solution as good as the best one again. It now prints only
+   solutions better than every solution printed.
+
 Version 4.11
 =============
 
