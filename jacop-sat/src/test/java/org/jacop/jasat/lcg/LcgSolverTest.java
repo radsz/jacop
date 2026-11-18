@@ -5887,11 +5887,9 @@ class LcgSolverTest {
     store.impose(new LinearInt(x, w, "==", 0));
     LcgSolver solver = new LcgSolver(store);
     solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
-    // without core exhaustion: the tests of the first cores' outputs (at least 2 of 3 false) all
-    // fail, and the phase gets their work back (jacop #837), about as much as its whole limit, so
-    // that it reaches 292 cores before its limit and extends to the last ones as the bound closes
-    solver.setCoreExhaust(0);
-    solver.setTimeLimit(100); // 200,000 units of work at the nominal rate
+    // 100,000 units of work at the nominal rate: since the exhaustion tests that refute nothing are
+    // left out of the phase's work (#837), the cores alone must take more than its share
+    solver.setTimeLimit(50);
     // the deadline only ends branch and bound, which does not prove the bound of 300 in time
     solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
     solver.minimize(cost);

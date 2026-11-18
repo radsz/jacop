@@ -8721,6 +8721,65 @@ class SingleConstraintTest extends TestHelper {
     assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
   }
 
+  // An implication whose conclusion holds holds whatever its condition is, but Implies and IfThen
+  // reported satisfied() only with the condition true: a reification of one stayed open, and after
+  // its b was fixed to 0 during search (rewritten to the negation) nothing failed although the
+  // conclusion, 2 x2 + 2 x3 - 2 x0 != -1, always holds (WakeUpFixpointTest seed 4624408).
+  @Test
+  void testReifiedImplicationWithAConclusionThatHoldsIsTrue() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 6);
+    IntVar x3 = new IntVar(store, "x3", -2, 3);
+    IntVar[] v = {x2, x3, x0};
+    int[] w = {2, 2, -2};
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new Implies(b, new LinearInt(v, w, "!=", -1)), r));
+    IntVar c = new IntVar(store, "c", 0, 1);
+    IntVar s = new IntVar(store, "s", 0, 1);
+    store.impose(new Reified(new IfThen(new XeqC(c, 1), new LinearInt(v, w, "!=", -1)), s));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(r.singleton(1)).isTrue();
+    assertThat(s.singleton(1)).isTrue();
+  }
+
+  // IfThenElse decided its condition from a branch that cannot hold only when imposed itself, so a
+  // reification with b = 1, rewritten to its nested constraint during search, missed that the then
+  // branch (2 x3 + 2 x2 - 2 x1 = -1, odd) never holds while the condition holds
+  // (WakeUpFixpointTest seed 3418738).
+  @Test
+  void testReifiedIfThenElseDecidesTheConditionFromABranchThatCannotHold() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -2, 4);
+    IntVar x1 = new IntVar(store, "x1", -1, 2);
+    IntVar x2 = new IntVar(store, "x2", -2, 1);
+    IntVar x3 = new IntVar(store, "x3", 0, 0);
+    x3.addDom(2, 3);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    IntVar b2 = new IntVar(store, "b2", 0, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(
+        new Reified(
+            new IfThenElse(
+                new SumInt(new IntVar[] {x0, x2}, "!=", x3),
+                new LinearInt(new IntVar[] {x3, x2, x1}, new int[] {2, 2, -2}, "==", -1),
+                new OrBoolVector(new IntVar[] {b1, b0}, b2)),
+            r));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 1, 1);
+    assertThat(store.consistency()).isTrue();
+
+    // the condition must fail, x0 + x2 = x3, which x0 = -2 cannot satisfy
+    assertThat(x0.min()).isEqualTo(-1);
+  }
+
   // The negation of AtMost (at least counter + 1 values) woke only on GROUND, so a bound that
   // removed the value from a variable left the last candidate unfixed (WakeUpFixpointTest seed
   // 2154389).

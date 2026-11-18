@@ -62,10 +62,6 @@ public class IfThenElse extends PrimitiveConstraint
   /** It specifies constraint elseC in the IfThenElse constraint. */
   private final PrimitiveConstraint elseC;
 
-  // imposed variable to manifest that constraint has been imposed (top-level)
-  // constraint
-  boolean imposed;
-
   /** Set when a variable changes, so consistency() repeats until no part prunes more. */
   private boolean propagation;
 
@@ -108,17 +104,16 @@ public class IfThenElse extends PrimitiveConstraint
         elseC.consistency(store);
       }
 
-      if (imposed) {
+      // consistency() enforces the constraint, also nested (a reification whose b is 1, rewritten
+      // to RewrittenNested): a branch that cannot hold decides the condition
+      if (thenC.notSatisfied()) {
+        condC.notConsistency(store);
+        elseC.consistency(store);
+      }
 
-        if (thenC.notSatisfied()) {
-          condC.notConsistency(store);
-          elseC.consistency(store);
-        }
-
-        if (elseC.notSatisfied()) {
-          condC.consistency(store);
-          thenC.consistency(store);
-        }
+      if (elseC.notSatisfied()) {
+        condC.consistency(store);
+        thenC.consistency(store);
       }
     } while (propagation);
   }
@@ -194,14 +189,6 @@ public class IfThenElse extends PrimitiveConstraint
       }
     }
     return computeMaxPruningEvent(v, condC, thenC, elseC);
-  }
-
-  @Override
-  public void impose(Store store) {
-
-    super.impose(store);
-
-    imposed = true;
   }
 
   @Override
