@@ -540,6 +540,10 @@ public class LinearRelaxation extends Constraint
       Integer.getInteger("org.jacop.lp.satisfactionProbation", 64);
   private boolean probation;
 
+  // the solves at the pivot limit, with no node failed, after which rows on probation are dropped
+  private static final int PROBATION_LIMITS =
+      Integer.getInteger("org.jacop.lp.probationLimits", 16);
+
   // the share of solves that fail the node above which the relaxation is taken to pay for itself:
   // its solves that deduce nothing are charged a PRUNE_DISCOUNT-th of their work, and its extra
   // rows are not dropped for the pivot limits they hit
@@ -3471,6 +3475,16 @@ public class LinearRelaxation extends Constraint
           && !failingWithExtra()
           && (extraHits >= EXTRA_LIMITS && extraHits * 20 > calls && calls >= 20L * EXTRA_LIMITS
               || tableClauses > 0 && extraHits >= 8 && extraHits * 2 > calls)) {
+        dropExtraRows();
+      } else if (probation
+          && beforeExtra != null
+          && failures == extraFailures
+          && extraHits >= PROBATION_LIMITS) {
+        // rows on probation whose solves stop at the limit and have failed no node yet: the
+        // backed-off solves may never reach the end of the probation, and the base rows alone
+        // can fail nodes (rotating workforce Example1370: 892 extra rows, 32 of 34 solves at the
+        // limit in 20 s; without them the regular flow rows prove it infeasible in 1 s)
+        probation = false;
         dropExtraRows();
       }
       if (!ANYTIME_BOUND || objective == null) {
