@@ -7921,7 +7921,7 @@ Version 5.0 (unreleased)
    for tables, sequence, stretch, same, exact cover, among, alternative,
    span, diffn, deviation, spread, the GCC variants and reservoir.
 
-434. JaSAT (CdclMain, plain SAT) sweeps and probes before variable
+440. JaSAT (CdclMain, plain SAT) sweeps and probes before variable
    elimination. Sweeping (Kissat's sweep) takes, for each variable, the
    clauses within two or three steps of it (at most 256 variables and
    1024 clauses, widened after each completed round), solves them with a
@@ -7952,7 +7952,30 @@ Version 5.0 (unreleased)
    Efficient CNF simplification based on binary implication graphs,
    SAT 2011.
 
-438. Not-all-equal clauses go to JaSAT with one variable fixed. The
+441. After free search without learning (-f, an objective that sums
+   squares), lazy clause generation printed a solution only when it was
+   better than its incumbent, which can be the hint of the search before
+   the linear relaxation and worse than the best solution printed: it
+   printed a solution as good as the best one again. It now prints only
+   solutions better than every solution printed.
+
+442. LCG free search (-f) pauses its neighbourhood search when it has not
+   improved the best solution for longer than twice the time it took to
+   find it, and at least 30 s (--free-config lns-stall=2,
+   lns-stall-min=30000; lns-stall=0 turns the pause off): branch and bound
+   and the lower-bound searches then get the time to prove the optimum.
+   Neighbourhood search after an optimum found early took 130-155 s of
+   240 s on instances that never proved it. At 600 s, on the 23 wide
+   instances that stay in LCG and
+   were not proved, proved goes from 5 to 8 (fox-geese-corn 17,
+   java-routing trip_8_3, valve-network horizon20, trains18) at the same
+   total time; on a second seed of the 7 that change, from 1 to 4
+   (pigment20a 233 -> 98 s), total 3,833 -> 3,206 s. On wide-quick at
+   240 s, 53 = 53 solved, total 5,147 -> 5,177 s; on the other 31 wide
+   optimisation instances not proved in 45 s, 12 = 12 solved at 600 s,
+   total 12,422 -> 12,209 s (timeouts counted at the limit).
+
+443. Not-all-equal clauses go to JaSAT with one variable fixed. The
    FlatZinc front end posts nvalue over 0/1 variables with a fixed count
    of 2 (not all equal) as the clause and its complement, and with a
    count of 1 as equivalences, under lazy clause generation, instead of
@@ -7975,7 +7998,7 @@ Version 5.0 (unreleased)
    of the 90 SAT Competition formulas of the pure clause screen, on
    heule-folkman only (unsolved in 600 s with and without it).
 
-439. Hamiltonian paths written as a numbering (NumberedPathDetector) are
+444. Hamiltonian paths written as a numbering (NumberedPathDetector) are
    searched along the path. The detector also posts the cell of each
    value (Assignment, the inverse of the numbering), and a satisfaction
    model without a search annotation (not under -f) then follows
