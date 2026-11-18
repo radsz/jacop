@@ -7910,6 +7910,17 @@ Version 5.0 (unreleased)
    consistency checker, which gets cases for the graph globals. Forest
    fails a complete assignment whose selected edges close a cycle.
 
+439. Deviation and Spread round the bounds of their cost to its residue:
+   every term a * x[i] - b is a multiple of g = gcd(a, b), so a deviation
+   is congruent to a * sum - n * b modulo 2g and a spread to
+   g (a * sum - n * b) modulo 2g^2. Span gives a present master at least the
+   duration of each present interval, makes absent an interval longer than
+   the master can be, and equates the master with the only interval that
+   can give both its start and its end. Alternative and Span now wake on
+   holes, which their propagation reads. The consistency checker gets cases
+   for tables, sequence, stretch, same, exact cover, among, alternative,
+   span, diffn, deviation, spread, the GCC variants and reservoir.
+
 434. JaSAT (CdclMain, plain SAT) sweeps and probes before variable
    elimination. Sweeping (Kissat's sweep) takes, for each variable, the
    clauses within two or three steps of it (at most 256 variables and
