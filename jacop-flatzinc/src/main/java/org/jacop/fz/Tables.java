@@ -172,6 +172,13 @@ public class Tables {
   public org.jacop.fz.constraints.ProgressionTilingDetector.Tiling progressionTiling;
 
   /**
+   * The positions of the values of the Hamiltonian paths written as a numbering ({@link
+   * org.jacop.fz.constraints.NumberedPathDetector}): positions[k] is the cell (1-based) of value k
+   * + 1. The satisfaction search of a model without an annotation follows the path over them.
+   */
+  public final List<IntVar[]> pathPositions = new ArrayList<>();
+
+  /**
    * The bound of a model of maximum clique and nothing else ({@link
    * org.jacop.fz.constraints.MaxCliqueDetector}), whose search without an annotation branches on
    * its vertices, or null.

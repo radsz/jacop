@@ -36,6 +36,7 @@ import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.jacop.constraints.Assignment;
 import org.jacop.constraints.Circuit;
 import org.jacop.constraints.Reified;
 import org.jacop.constraints.XeqC;
@@ -78,6 +79,10 @@ import org.jacop.fz.SimpleNode;
 public class NumberedPathDetector {
 
   private final Support support;
+
+  // the distance filter of the values by the cells of known values
+  private static final boolean DISTANCES =
+      !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.numberedPathDistances"));
 
   /** The model's literals b with b &lt;-&gt; x[p] - x[q] = 1, by b. */
   private final Map<IntVar, IntVar[]> successorLiterals = new IdentityHashMap<>();
@@ -386,6 +391,9 @@ public class NumberedPathDetector {
     if (support.options.debug()) {
       FzConsole.println("% numbered path detector: circuit over " + n + " cells");
     }
+    if (DISTANCES) {
+      distanceFilter(x, rows);
+    }
     // node n + 1 is start and end; values are 1-based
     IntVar[] s = new IntVar[n + 1];
     for (int c = 0; c < n; c++) {
@@ -433,6 +441,122 @@ public class NumberedPathDetector {
       }
     }
     support.pose(new Circuit(s));
+    // the cell of each value, for the search that follows the path (Solve.pathSearch)
+    IntVar[] position = new IntVar[n];
+    for (int k = 0; k < n; k++) {
+      position[k] = new IntVar(store, "path" + paths + "_cell" + (k + 1), 1, n);
+    }
+    support.delayedConstraints.add(new Assignment(x, position, 1, 1));
+    support.dictionary.pathPositions.add(position);
     paths++;
+  }
+
+  /*
+   * The values of a cell are bounded by its distances from the cells of known values: if x[g] = v
+   * and the shortest path of neighbour steps from g to c has length f, then x[c] >= v + f or x[c] <
+   * v, and if the one from c to g has length b, then x[c] <= v - b or x[c] > v (a path visits the
+   * cells of values v, v + 1, ..., x[c] in neighbour steps). Hidato puzzles give many cells, and
+   * the numbering model only finds such distances one step at a time in search. Repeated while it
+   * fixes cells, together with the values that only one cell can hold.
+   */
+  private void distanceFilter(IntVar[] x, List<Map<Integer, IntVar>> rows) {
+    int n = x.length;
+    var store = support.store;
+    int[][] out = new int[n][];
+    int[] inDegree = new int[n];
+    for (int c = 0; c < n; c++) {
+      Map<Integer, IntVar> row = rows.get(c);
+      out[c] =
+          row == null ? new int[0] : row.keySet().stream().mapToInt(Integer::intValue).toArray();
+      for (int d : out[c]) {
+        inDegree[d]++;
+      }
+    }
+    int[][] in = new int[n][];
+    for (int d = 0; d < n; d++) {
+      in[d] = new int[inDegree[d]];
+      inDegree[d] = 0;
+    }
+    for (int c = 0; c < n; c++) {
+      for (int d : out[c]) {
+        in[d][inDegree[d]++] = c;
+      }
+    }
+    boolean[] done = new boolean[n];
+    long before = 0;
+    for (IntVar v : x) {
+      before += v.getSize();
+    }
+    boolean changed = true;
+    while (changed) {
+      changed = false;
+      for (int g = 0; g < n; g++) {
+        if (done[g] || !x[g].singleton()) {
+          continue;
+        }
+        done[g] = true;
+        int v = x[g].value();
+        int[] forward = distances(out, g);
+        int[] backward = distances(in, g);
+        for (int c = 0; c < n; c++) {
+          if (c == g || x[c].singleton()) {
+            continue;
+          }
+          IntervalDomain allowed = new IntervalDomain();
+          if (backward[c] > 0 && v - backward[c] >= 1) {
+            allowed.unionAdapt(1, v - backward[c]);
+          }
+          if (forward[c] > 0 && v + forward[c] <= n) {
+            allowed.unionAdapt(v + forward[c], n);
+          }
+          x[c].domain.in(store.level, x[c], allowed);
+          changed |= x[c].singleton();
+        }
+      }
+      // a value that one cell alone can hold
+      int[] holder = new int[n + 1];
+      java.util.Arrays.fill(holder, -1);
+      for (int c = 0; c < n; c++) {
+        IntDomain d = x[c].dom();
+        for (var e = d.valueEnumeration(); e.hasMoreElements(); ) {
+          int k = e.nextElement();
+          holder[k] = holder[k] == -1 ? c : -2;
+        }
+      }
+      for (int k = 1; k <= n; k++) {
+        if (holder[k] >= 0 && !x[holder[k]].singleton()) {
+          x[holder[k]].domain.in(store.level, x[holder[k]], k, k);
+          changed = true;
+        }
+      }
+    }
+    long after = 0;
+    for (IntVar v : x) {
+      after += v.getSize();
+    }
+    if (support.options.debug()) {
+      FzConsole.println("% numbered path distances: " + (before - after) + " values removed");
+    }
+  }
+
+  // breadth-first numbers of steps from a cell, 0 for the cell and -1 when unreachable
+  private static int[] distances(int[][] arcs, int from) {
+    int[] dist = new int[arcs.length];
+    java.util.Arrays.fill(dist, -1);
+    int[] queue = new int[arcs.length];
+    int head = 0;
+    int tail = 0;
+    dist[from] = 0;
+    queue[tail++] = from;
+    while (head < tail) {
+      int c = queue[head++];
+      for (int d : arcs[c]) {
+        if (dist[d] < 0) {
+          dist[d] = dist[c] + 1;
+          queue[tail++] = d;
+        }
+      }
+    }
+    return dist;
   }
 }
