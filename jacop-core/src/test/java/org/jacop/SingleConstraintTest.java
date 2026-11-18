@@ -11071,4 +11071,25 @@ class SingleConstraintTest extends TestHelper {
     assertThat(store.consistency()).isTrue();
     assertThat(bw.max()).isPositive();
   }
+
+  /** A rectangle of Disjoint 0 long in both dimensions is a point and may not lie in another. */
+  @Test
+  void disjointRejectsAPointInsideARectangle() {
+    Store store = new Store();
+    IntVar[] fixed = {
+      valuesVar(store, "ax", 1), valuesVar(store, "px", 2),
+      valuesVar(store, "ay", 0), valuesVar(store, "py", 1),
+      valuesVar(store, "aw", 2), valuesVar(store, "pw", 0),
+      valuesVar(store, "ah", 2), valuesVar(store, "ph", 0)
+    };
+    Disjoint c =
+        new Disjoint(
+            new IntVar[] {fixed[0], fixed[1]},
+            new IntVar[] {fixed[2], fixed[3]},
+            new IntVar[] {fixed[4], fixed[5]},
+            new IntVar[] {fixed[6], fixed[7]});
+    store.impose(c);
+    assertThat(c.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
 }
