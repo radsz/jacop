@@ -10737,6 +10737,52 @@ class SingleConstraintTest extends TestHelper {
     assertThat(forests).isEqualTo(countForests(tail, head, 4));
   }
 
+  @Test
+  void forestChecksItsArgumentsAndCopies() {
+    Store store = new Store();
+    IntVar[] ns = {new IntVar(store, 0, 1), new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    IntVar[] es = {new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    int[] tail = {0, 1};
+    int[] head = {1, 2};
+    IntVar[] wide = {new IntVar(store, 0, 1), new IntVar(store, 0, 2)};
+    IntVar[] wideNodes = {ns[0], ns[1], new IntVar(store, -1, 1)};
+    for (int[][] edge : new int[][][] {{{0}, {1, 2}}, {{0, 3}, head}, {{0, 1}, {-1, 2}}}) {
+      assertThatThrownBy(() -> new Forest(ns, es, edge[0], edge[1]))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+    assertThatThrownBy(() -> new Forest(ns, wide, tail, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(wideNodes, es, tail, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(null, es, tail, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    Forest forest = new Forest(ns, es, tail, head);
+    assertThat(forest.arguments()).hasSize(5);
+    // not yet ground: not satisfied, whatever is fixed
+    es[0].domain.in(store.level, es[0], 1, 1);
+    assertThat(forest.satisfied()).isFalse();
+    Store copy = new Store();
+    Map<Var, Var> copies = new HashMap<>();
+    VarMap map =
+        new VarMap() {
+          @Override
+          public Store target() {
+            return copy;
+          }
+
+          @Override
+          @SuppressWarnings("unchecked")
+          public <V extends Var> V get(V v) {
+            return (V)
+                copies.computeIfAbsent(
+                    v, k -> new IntVar(copy, ((IntVar) k).min(), ((IntVar) k).max()));
+          }
+        };
+    Forest other = forest.copy(map);
+    assertThat(other.arguments()).hasSize(5);
+    assertThat(other.toString()).contains("Forest(").contains("[0, 1]").contains("[1, 2]");
+  }
+
   // the assignments of nodes and edges where every selected edge joins two selected nodes and the
   // selected edges have no cycle, by a plain count over all subsets
   private static int countForests(int[] tail, int[] head, int n) {
