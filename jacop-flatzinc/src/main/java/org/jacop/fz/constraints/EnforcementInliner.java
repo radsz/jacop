@@ -114,8 +114,17 @@ public class EnforcementInliner implements ParserTreeConstants {
     }
   }
 
-  /** A half-reified constraint: its node, its control and the variables of its body. */
-  private record Imp(ASTConstElem node, IntVar control, Set<IntVar> body) {}
+  /**
+   * A half-reified constraint: its node, its control and the variables of its body. The body is
+   * kept as a compact immutable set (variables compare by identity): the identity set it is
+   * collected in has a table of 64 slots, 272 bytes for the one or two variables of most bodies
+   * (196,000 bodies, 53 MB of XCSP 2022 RoomMate-sr0300 while the model is read).
+   */
+  private record Imp(ASTConstElem node, IntVar control, Set<IntVar> body) {
+    Imp {
+      body = Set.copyOf(body);
+    }
+  }
 
   /** The occurrences of a variable. */
   private static final class Info {

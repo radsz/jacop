@@ -148,6 +148,8 @@ import org.junit.jupiter.api.Test;
 /** VeriPB proofs of LCG searches, checked by {@link RupChecker}. */
 class VeriPbProofTest {
 
+  private static final int SELF_COUNTING_SEEDS = Integer.getInteger("proof.selfCounting", 300);
+
   private final ByteArrayOutputStream model = new ByteArrayOutputStream();
   private final ByteArrayOutputStream proof = new ByteArrayOutputStream();
 
@@ -886,6 +888,27 @@ class VeriPbProofTest {
   }
 
   @Test
+  void clauseOverAVariableNarrowedToZeroOneAtTheRootIsWritten() {
+    // x in 0..6 is 0/1 after the root propagation when the clause x = 1 or y = 0 is added, but the
+    // model states x over 0..6 before that propagation: writing the clause threw "x::{0..1} is
+    // not a 0/1 variable" (MiniZinc fuzz seed 2029932, --proof)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 6);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new XlteqC(x, 1));
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    lcg.addClause(new IntVar[] {x}, new IntVar[] {y});
+    lcg.addClause(new IntVar[] {y}, new IntVar[0]);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(x.value()).isOne();
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void countOfARepeatedVariableIntoAHoleIsDerived() {
     // x4 = 1 fixes x0 = 0, so the count of 1 in [x0, x4, x0] is 1, a hole of c in {0, 2, 3}: the
     // bounds of c were not written for a list holding x0 twice, one term of weight 2 in the row
@@ -927,6 +950,43 @@ class VeriPbProofTest {
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  // self-counting cardinalities as the FlatZinc front end posts them under --proof (the magic
+  // sequences of nmseq): x[i] counts the value i in x through a copy of x[i] linked by an equality,
+  // and some counters are other variables
+  @Test
+  void selfCountingCardinalitiesAreProved() {
+    optimaAreProved(
+        SELF_COUNTING_SEEDS,
+        (store, random) -> {
+          int n = 4 + random.nextInt(3);
+          IntVar[] x = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, n - 1);
+            if (random.nextBoolean()) {
+              x[i].domain.in(store.level, x[i], x[i].domain.subtract(random.nextInt(n)));
+            }
+          }
+          IntVar[] counters = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            counters[i] = new IntVar(store, "c" + i, 0, n);
+            if (random.nextInt(3) != 0) {
+              store.impose(new XeqY(x[i], counters[i]));
+            }
+          }
+          store.impose(new GCC(x, counters, 0));
+          IntVar obj = new IntVar(store, "obj", -100, 100);
+          IntVar[] terms = Arrays.copyOf(x, n + 1);
+          terms[n] = obj;
+          int[] w = new int[n + 1];
+          for (int i = 0; i < n; i++) {
+            w[i] = random.nextInt(7) - 3;
+          }
+          w[n] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
   }
 
   @Test
