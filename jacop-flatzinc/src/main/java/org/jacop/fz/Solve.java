@@ -81,6 +81,7 @@ import org.jacop.constraints.XgteqC;
 import org.jacop.constraints.XlteqC;
 import org.jacop.constraints.XmulYeqZ;
 import org.jacop.constraints.XplusYeqC;
+import org.jacop.constraints.XplusYeqZ;
 import org.jacop.constraints.binpacking.Binpacking;
 import org.jacop.constraints.cfn.CostNetworkBound;
 import org.jacop.constraints.cumulative.CumulativeBasic;
@@ -4113,8 +4114,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * The number of squares x * x among the terms of the objective: the variables that the linear
-   * constraints over the cost variable tie to it, followed through up to three such constraints (an
-   * objective w1 * norm + w2 * violations with norm a sum of squares counts the squares of norm). A
+   * constraints over the cost variable tie to it, followed through up to {@link
+   * #SQUARE_SEARCH_DEPTH} such constraints (an objective w1 * norm + w2 * violations with norm a
+   * sum of squares counts the squares of norm; a long sum whose declared bound reaches beyond
+   * JaCoP's range is posted as a tree of partial sums, four levels deep on XCSP 2023 GBACP-UD01). A
    * sum of squared deviations is a balancing objective (balanced academic curricula, nurse
    * workloads, low autocorrelation): under LCG its bound literals say little about which value of a
    * decision raises the cost, while free search without learning chooses each value by its bound on
@@ -4130,6 +4133,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     return squaredTerms;
   }
 
+  // the linear constraints followed from the cost variable to its squared terms: three missed the
+  // 333 squares of XCSP 2023 GBACP-UD01, whose objective is a tree of partial sums
+  private static final int SQUARE_SEARCH_DEPTH = 8;
+
   // the squares among the objective's terms, -1 before they are counted
   private int squaredTerms = -1;
 
@@ -4140,7 +4147,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       Var square = squareOf(c);
       if (square != null) {
         squares.add(square);
-      } else if (c instanceof LinearInt || c instanceof SumWeight || c instanceof SumInt) {
+      } else if (c instanceof LinearInt
+          || c instanceof SumWeight
+          || c instanceof SumInt
+          || c instanceof XplusYeqZ) {
         linear.add(c);
       }
     }
@@ -4151,7 +4161,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     reached.add(costVar);
     Set<Constraint> used = Collections.newSetFromMap(new IdentityHashMap<>());
     Set<Var> frontier = Set.of(costVar);
-    for (int depth = 0; depth < 3 && !frontier.isEmpty(); depth++) {
+    for (int depth = 0; depth < SQUARE_SEARCH_DEPTH && !frontier.isEmpty(); depth++) {
       frontier = linearStep(frontier, linear, used, reached, squares);
     }
     return (int) reached.stream().filter(squares::contains).count();
