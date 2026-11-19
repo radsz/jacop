@@ -2519,7 +2519,21 @@ class ConsistencyChecker {
         new Case("SequenceMdd", Level.NONE, ConsistencyChecker::sequenceMdd),
         new Case("CostMdd", Level.NONE, ConsistencyChecker::costMdd),
         new Case("NetworkFlow(const)", Level.NONE, (s, r) -> networkFlow(s, r, false)),
-        new Case("NetworkFlow(var weight)", Level.NONE, (s, r) -> networkFlow(s, r, true)));
+        new Case("NetworkFlow(var weight)", Level.NONE, (s, r) -> networkFlow(s, r, true)),
+        new Case(
+            "Steiner(undirected)", Level.NONE, (s, r) -> weightedGraph(s, r, "steiner", false)),
+        new Case("Steiner(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "steiner", true)),
+        new Case(
+            "WeightedSpanningTree(undirected)",
+            Level.NONE,
+            (s, r) -> weightedGraph(s, r, "spanning", false)),
+        new Case(
+            "WeightedSpanningTree(directed)",
+            Level.NONE,
+            (s, r) -> weightedGraph(s, r, "spanning", true)),
+        new Case(
+            "BoundedPath(undirected)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", false)),
+        new Case("BoundedPath(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", true)));
   }
 
   /**
@@ -3200,6 +3214,56 @@ class ConsistencyChecker {
         };
     return new Model(
         constraint, t -> graphHolds(t, kind, directed, n, from, to), concat(concat(ns, es), ends));
+  }
+
+  private static Model weightedGraph(Store store, Random random, String kind, boolean directed) {
+    int n = 3 + random.nextInt(2);
+    int m = n - 1 + random.nextInt(3);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] weights = new int[m];
+    int total = 0;
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = (from[e] + 1 + random.nextInt(n - 1)) % n;
+      weights[e] = random.nextInt(4);
+      total += weights[e];
+    }
+    boolean spanning = kind.equals("spanning");
+    IntVar[] ns = spanning ? new IntVar[0] : bools(store, "n", n);
+    IntVar[] es = bools(store, "e", m);
+    IntVar[] ends =
+        kind.equals("path")
+            ? new IntVar[] {aVar(store, "s", 0, n - 1, random), aVar(store, "t", 0, n - 1, random)}
+            : new IntVar[] {aVar(store, "r", 0, n - 1, random)};
+    IntVar cost = aVar(store, "cost", 0, total, random);
+    Object constraint =
+        switch (kind) {
+          case "steiner" ->
+              new org.jacop.constraints.graph.Steiner(
+                  from, to, weights, ends[0], ns, es, cost, 0, directed);
+          case "spanning" ->
+              new org.jacop.constraints.graph.WeightedSpanningTree(
+                  n, from, to, weights, ends[0], es, cost, 0, directed);
+          default ->
+              new org.jacop.constraints.graph.BoundedPath(
+                  from, to, weights, ends[0], ends[1], ns, es, cost, 0, directed);
+        };
+    int offset = spanning ? n : 0;
+    return new Model(
+        constraint,
+        t -> {
+          int[] full = new int[t.length + offset];
+          Arrays.fill(full, 0, offset, 1);
+          System.arraycopy(t, 0, full, offset, t.length);
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += full[n + e] * weights[e];
+          }
+          return sum == full[full.length - 1]
+              && graphHolds(full, kind.equals("path") ? "path" : "tree", directed, n, from, to);
+        },
+        concat(concat(ns, es), concat(ends, new IntVar[] {cost})));
   }
 
   private static boolean graphHolds(
