@@ -100,6 +100,18 @@ public final class ClampedBounds {
   // ids of narrowed variables -> rows they occur in
   private final Map<Integer, List<Integer>> rowsOf = new HashMap<>();
 
+  // functional constraints whose result is bounded by its arguments: {kind, result, args...}, or
+  // for an element over constants {ELEMENT_CONST, result, low, high}
+  private final List<long[]> functions = new ArrayList<>();
+  private static final int TIMES = 0;
+  private static final int MAX = 1;
+  private static final int MIN = 2;
+  private static final int ABS = 3;
+  private static final int DIV = 4;
+  private static final int MOD = 5;
+  private static final int ELEMENT_CONST = 6;
+  private static final int HULL = 7;
+
   /**
    * Collects the linear rows of the model and the occurrences of its narrowed variables.
    *
@@ -151,6 +163,9 @@ public final class ClampedBounds {
   private void collect(Support support, ASTConstElem node) {
     int row = coefficients.size();
     boolean linear = row(support, node);
+    if (!linear) {
+      function(support, node);
+    }
     List<IntVar> occurring = new ArrayList<>();
     occurrences(support, node, occurring);
     for (IntVar v : occurring) {
@@ -206,6 +221,153 @@ public final class ClampedBounds {
       // a form this reading does not cover: the constraint counts as an occurrence of any kind
       return false;
     }
+  }
+
+  // notes a constraint that bounds a result by its arguments (interval arithmetic, forwards only)
+  private void function(Support support, ASTConstElem node) {
+    String name = node.getName();
+    try {
+      switch (name) {
+        case "int_times", "int_max", "int_min", "int_div", "int_mod" -> {
+          IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+          IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+          IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+          int kind =
+              switch (name) {
+                case "int_times" -> TIMES;
+                case "int_max" -> MAX;
+                case "int_min" -> MIN;
+                case "int_div" -> DIV;
+                default -> MOD;
+              };
+          functions.add(new long[] {kind, id(z), id(x), id(y)});
+        }
+        case "int_abs" -> {
+          IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+          IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+          functions.add(new long[] {ABS, id(z), id(x)});
+        }
+        case "jacop_maximum", "jacop_minimum", "array_int_maximum", "array_int_minimum" -> {
+          IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
+          IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+          functions.add(withArgs(name.endsWith("maximum") ? MAX : MIN, z, x));
+        }
+        case "array_int_element" -> {
+          int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+          IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+          if (a != null && a.length > 0) {
+            functions.add(
+                new long[] {
+                  ELEMENT_CONST,
+                  id(z),
+                  Arrays.stream(a).min().getAsInt(),
+                  Arrays.stream(a).max().getAsInt()
+                });
+          }
+        }
+        case "array_var_int_element" -> {
+          IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
+          IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
+          functions.add(withArgs(HULL, z, x));
+        }
+        case "bool2int" -> {
+          IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
+          functions.add(new long[] {ELEMENT_CONST, id(z), 0, 1});
+        }
+        default -> {
+          // no bound on a result
+        }
+      }
+    } catch (RuntimeException _) {
+      // a form this reading does not cover: no bound is taken from it
+    }
+  }
+
+  private long[] withArgs(int kind, IntVar z, IntVar[] x) {
+    long[] f = new long[2 + x.length];
+    f[0] = kind;
+    f[1] = id(z);
+    for (int i = 0; i < x.length; i++) {
+      f[2 + i] = id(x[i]);
+    }
+    return f;
+  }
+
+  // narrows the results of the functional constraints to the bounds of their arguments; false when
+  // some bounds cross
+  private boolean propagateFunctions(long[] lo, long[] hi, boolean[] changed) {
+    for (long[] f : functions) {
+      int z = (int) f[1];
+      long low;
+      long high;
+      switch ((int) f[0]) {
+        case TIMES -> {
+          int x = (int) f[2];
+          int y = (int) f[3];
+          long[] p = {
+            multiply(lo[x], lo[y]),
+            multiply(lo[x], hi[y]),
+            multiply(hi[x], lo[y]),
+            multiply(hi[x], hi[y])
+          };
+          low = Arrays.stream(p).min().getAsLong();
+          high = Arrays.stream(p).max().getAsLong();
+        }
+        case MAX, MIN, HULL -> {
+          boolean max = f[0] == MAX;
+          boolean min = f[0] == MIN;
+          low = max ? -INF : INF;
+          high = min ? INF : -INF;
+          for (int i = 2; i < f.length; i++) {
+            int x = (int) f[i];
+            if (max) {
+              low = Math.max(low, lo[x]);
+              high = Math.max(high, hi[x]);
+            } else if (min) {
+              low = Math.min(low, lo[x]);
+              high = Math.min(high, hi[x]);
+            } else {
+              low = Math.min(low, lo[x]);
+              high = Math.max(high, hi[x]);
+            }
+          }
+        }
+        case ABS -> {
+          int x = (int) f[2];
+          long m = Math.max(Math.abs(lo[x]), Math.abs(hi[x]));
+          low = lo[x] > 0 ? lo[x] : hi[x] < 0 ? -hi[x] : 0;
+          high = m;
+        }
+        case DIV -> {
+          // |x div y| <= |x|
+          int x = (int) f[2];
+          long m = Math.max(Math.abs(lo[x]), Math.abs(hi[x]));
+          low = -m;
+          high = m;
+        }
+        case MOD -> {
+          // |x mod y| <= |x| and < |y|
+          int x = (int) f[2];
+          int y = (int) f[3];
+          long m =
+              Math.min(
+                  Math.max(Math.abs(lo[x]), Math.abs(hi[x])),
+                  Math.max(Math.abs(lo[y]), Math.abs(hi[y])));
+          low = -m;
+          high = m;
+        }
+        default -> {
+          low = f[2];
+          high = f[3];
+        }
+      }
+      changed[0] |= raise(lo, z, Math.max(-INF, low));
+      changed[0] |= lower(hi, z, Math.min(INF, high));
+      if (lo[z] > hi[z]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private void add(long[] c, IntVar[] x, long b, boolean eq) {
@@ -394,7 +556,11 @@ public final class ClampedBounds {
           }
         }
       }
-      if (!changed) {
+      boolean[] functionChanged = {false};
+      if (!propagateFunctions(lo, hi, functionChanged)) {
+        return false;
+      }
+      if (!changed && !functionChanged[0]) {
         break;
       }
     }
