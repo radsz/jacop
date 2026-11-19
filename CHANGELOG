@@ -8363,6 +8363,37 @@ Version 5.0 (unreleased)
    optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
    turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
 
+463. A search that follows the root solution of the linear relaxation
+   (LpGuidedSelect) no longer scans every column at each decision when
+   the relaxation has no value column: it decides only from value
+   columns, so it fell back to its other heuristic every time after the
+   scan. On MiniZinc Challenge 2021 physician-scheduling instance10 the
+   scan took 18 % of the run (12,440 columns at each of 1.3 million
+   decisions); at 600 s the objective goes from 10295 to 8260. The search
+   is unchanged.
+
+464. Large neighbourhood search under -f (AdaptiveLns) finds the decision
+   variables near a node of the constraint graph with a walk that expands
+   only the nodes on a shortest path to a decision variable, using the
+   distances of all nodes computed once; it finds the same variables in
+   the same order. On MiniZinc Challenge 2019 rcpsp-wet-diverse j60_19_6
+   each walk visited about a million constraint memberships and the
+   walks took 61 % of a 300 s run; now 1.4 %, with 20 times the nodes
+   (objective 45397 -> 66765 at 300 s, the best known 69664 at 600 s).
+
+465. Free search (-f) on models with vehicle routes: LNS uses only route
+   removal, related (Shaw) removal and random neighbourhoods (the graph,
+   propagation, objective, constraint and line neighbourhoods are off
+   unless lns-kinds names them), and takes lns-share-routes 10 instead of
+   3 of free search's calls. On CVRPLIB X-n110-k13 (giant tour of the
+   MiniZinc Challenge 2015 model) the generic neighbourhoods took 44 % of
+   the runs for 6 of 101 improvements. Paired runs, -f: the 10 X instances
+   at 600 s 9 better and 1 worse (X-n110-k13 19,389 -> 18,722, X-n115-k10
+   17,240 -> 14,877, X-n120-k6 20,089 -> 16,397); 38 routing instances at
+   240 s 18 better, 11 worse, time 7,167 -> 7,080 s; the 88 wide-set
+   instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
+   3 of them running route neighbourhoods (the rest run unchanged code).
+
 Version 4.11
 =============
 
