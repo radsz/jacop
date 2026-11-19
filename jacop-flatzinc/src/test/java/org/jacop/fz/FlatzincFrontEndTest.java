@@ -2873,6 +2873,15 @@ class FlatzincFrontEndTest {
     assertTrue(out.contains("lpRefutation=refuted"), out);
     // 3 pigeons in 3 holes, at least one hole each and none shared: 3! = 6 ways, as clauses too
     assertEquals(6, solveAll(conflictTableHoles(3, 3)).size());
+    assertTrue(
+        run(conflictTableHoles(3, 3), "--search-statistics")[0].contains("negativeTableClauses=1"));
+    // with a constraint other than a clause the tables stay tables (StillLife: sums and tables ran
+    // 1.4-3x slower with the tables as clauses)
+    String mixed =
+        conflictTableHoles(3, 3)
+            .replace("solve ", "constraint int_lin_le([1,1],[x0_0,x1_1],2);\nsolve ");
+    assertFalse(run(mixed, "--search-statistics")[0].contains("negativeTableClauses"));
+    assertEquals(6, solveAll(mixed).size());
   }
 
   /** Courses of credit 1..n over 3 periods, as XCSP3 BACP rows: credit in the period column. */

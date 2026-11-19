@@ -2120,6 +2120,11 @@ class GlobalConstraints implements ParserTreeConstants {
 
   int negativeTableClauses;
 
+  // every constraint of the model is a clause or a negative table: only then the tables become
+  // clauses, as a model with other constraints (StillLife: sums and tables) was 1.4-3x slower
+  // with its single-row negative tables as clauses
+  boolean clauseModel;
+
   /** The most rows of a negative table over 0/1 variables posted as clauses. */
   static final int NEGATIVE_TABLE_CLAUSE_ROWS = 64;
 
@@ -2135,7 +2140,7 @@ class GlobalConstraints implements ParserTreeConstants {
    * @return false when the table is not over 0/1 variables and was not posted
    */
   boolean negativeTableAsClauses(SimpleNode node, BiConsumer<IntVar[], IntVar[]> clause) {
-    if (!NEGATIVE_TABLE_CLAUSES || support.options.proof() != null) {
+    if (!NEGATIVE_TABLE_CLAUSES || !clauseModel || support.options.proof() != null) {
       return false;
     }
     IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));

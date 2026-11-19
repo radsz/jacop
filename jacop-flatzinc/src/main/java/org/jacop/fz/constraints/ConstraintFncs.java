@@ -1075,6 +1075,15 @@ public final class ConstraintFncs {
     gc.gen_jacop_channel(n);
   }
 
+  /**
+   * It tells whether every constraint of the model is a clause or a negative table.
+   *
+   * @param clauseModel true when the model has only clauses and negative tables.
+   */
+  public void setClauseModel(boolean clauseModel) {
+    gc.clauseModel = clauseModel;
+  }
+
   /** Handles the jacop_all_equal_int FlatZinc constraint. */
   public void jacop_all_equal_int(SimpleNode n) {
     gc.gen_jacop_all_equal_int(n);
