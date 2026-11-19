@@ -8380,6 +8380,14 @@ Version 5.0 (unreleased)
    the model ran out of memory at -Xmx4G while posting; it is now proved
    unsatisfiable.
 
+465. The FlatZinc parser keeps an array literal whose elements are all int
+   literals as one int[] instead of one node per element (48 bytes each);
+   a node is made for an element only when it is read. Reading
+   pigeonsPlus-08-08 (six arrays of 46 million entries) took 165 s and
+   up to 2 GB of nodes per array; with both changes the instance is
+   proved unsatisfiable in 60 s at -Xmx4G (out of memory before), the
+   highest live heap after a collection going from 4.1 GB to 2.5 GB.
+
 Version 4.11
 =============
 
