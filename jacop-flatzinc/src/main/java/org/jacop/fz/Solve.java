@@ -5390,6 +5390,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         + lcg.probeSkips
         + "\n%%%mzn-stat: lcgCoreProbeHalfWays="
         + lcg.probeHalfWays
+        + "\n%%%mzn-stat: lcgCoreProbeRateKeeps="
+        + lcg.probeRateKeeps
         + "\n%%%mzn-stat: lcgCoreTermsBySpanRatio="
         + core.termsBySpanRatio
         + "\n%%%mzn-stat: lcgBoundDives="
