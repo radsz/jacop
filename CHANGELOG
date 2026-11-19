@@ -8161,6 +8161,23 @@ Version 5.0 (unreleased)
    GBACP instances 0.50. No wide instance changes: only two gbac
    instances have a squared objective, found at both depths.
 
+452. jacop_nvalue over variables whose domains fall into blocks that share
+   no value is posted as one count of distinct values (Values) per block
+   and a sum of the counts. Each count then has the bound of its own
+   block (the NValue bounds of Bessiere, Hebrard, Hnich, Kiziltan and
+   Walsh, Constraints 11(4), 2006, hold per block and add up), and a
+   learnt clause or a core over one block leaves the others out. In MiniZinc Challenge gfd-schedule each kind of item takes its
+   group from a range of its own: the proof that 2018 n200f5d50m40k6
+   needs 17 groups (no 16 without deadline penalty) took LCG more than
+   250,000 conflicts without an end under one count, and 1,153 failures
+   with one count per kind. On the 20 gfd-schedule instances at 240 s
+   with -f: solved 15 -> 20 (2016 and 2022 n180, 2018 n80 and n200, 2022
+   n200; CP-SAT proves them in 11 to 24 s), total time 1,398 -> 261 s;
+   default search solved 12 -> 13, total 1,974 -> 1,750 s. Easy
+   instances take up to 4 s more. It splits no other jacop_nvalue of the
+   MiniZinc Challenge or the 53 XCSP instances with one.
+   -Dorg.jacop.fz.nvalueBlocks=false turns it off.
+
 Version 4.11
 =============
 

@@ -1917,11 +1917,13 @@ class GlobalConstraints implements ParserTreeConstants {
    * Whether jacop_nvalue counts the distinct values of each block of its variables separately and
    * sums the counts, when the variables fall into blocks whose domains share no value: {@code
    * org.jacop.fz.nvalueBlocks} (default true). The bound of each count then comes from its own
-   * block, and a learnt clause or a core over one block leaves the others out. In MiniZinc
-   * Challenge gfd-schedule the items of each kind take their group from a range of their own; the
-   * proof that 2018 n200f5d50m40k6 needs 17 groups, at most 16 over all kinds without deadline
-   * penalty refuted after 250,000 conflicts under one count, is reached in 1,153 failures with one
-   * count per kind.
+   * block (the lower bounds of Values, Bessiere, Hebrard, Hnich, Kiziltan and Walsh, Filtering
+   * algorithms for the NValue constraint, Constraints 11(4), 2006, hold per block and add up), and
+   * a learnt clause or a core over one block leaves the others out. In MiniZinc Challenge
+   * gfd-schedule the items of each kind take their group from a range of their own: the proof that
+   * 2018 n200f5d50m40k6 needs 17 groups, refuting 16 groups without deadline penalty, took LCG more
+   * than 250,000 conflicts without an end under one count and 1,153 failures with one count per
+   * kind.
    */
   private static final boolean NVALUE_BLOCKS =
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.nvalueBlocks", "true"));
