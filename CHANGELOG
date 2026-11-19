@@ -8095,7 +8095,13 @@ Version 5.0 (unreleased)
    the same for the set constraints: AdiffBeqC puts in b an element of a
    that c cannot hold, CardAeqX passes holes of its cardinality variable
    to the set, and Match keeps its list increasing and gives an element
-   of the glb to the only list variable that can take it.
+   of the glb to the only list variable that can take it. XmulYeqC is
+   domain consistent: with c != 0 it keeps the divisors of c whose
+   quotient is in the other factor (dividing by an interval around 0 kept
+   every value up to |c|), and with c = 0 a factor without 0 fixes the
+   other one to 0. The checker gets cases for NetworkFlow, Steiner,
+   WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
+   VectorBinpacking, XplusYgtC and XplusClteqZ.
 
 Version 4.11
 =============
