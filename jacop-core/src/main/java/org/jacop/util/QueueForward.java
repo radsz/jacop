@@ -63,31 +63,23 @@ public class QueueForward<T extends Constraint> {
    */
   public QueueForward(Collection<T> constraints, Collection<Var> variables) {
 
-    forwardMap = Var.createEmptyPositioning();
+    Map<Var, List<T>> map = Var.createEmptyPositioning();
 
     for (Var v : variables) {
-      forwardMap.put(v, new ArrayList<>());
+      List<T> varConstraints = new ArrayList<>();
       for (T constraint : constraints) {
-
         if (constraintUsesQueueVariable(constraint, v)) {
-          forwardMap.get(v).add(constraint);
+          varConstraints.add(constraint);
         }
       }
-    }
-
-    for (Var v : variables) {
-
-      List<T> varConstraints = forwardMap.get(v);
-
-      if (varConstraints == null) {
-        continue;
-      }
-
-      if (varConstraints.isEmpty()) {
-        forwardMap.remove(v);
+      if (!varConstraints.isEmpty()) {
+        map.put(v, varConstraints);
       }
     }
 
+    // most constraints forward nothing; an empty map of their own cost about 170 bytes each
+    // (623,000 implications of XCSP 2022 RoomMate-sr0700: 105 MB)
+    forwardMap = map.isEmpty() ? Map.of() : map;
     isEmpty = forwardMap.isEmpty();
   }
 

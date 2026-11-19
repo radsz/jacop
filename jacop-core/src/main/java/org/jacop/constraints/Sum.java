@@ -158,10 +158,11 @@ public class Sum extends Constraint implements SatisfiedPresent, Copyable<Sum>, 
 
   private void applySumDomainAndPropagateToVariables(
       Store store, int pointer, long lowerBoundSum, long upperBoundSum) {
+    sum.domain.in(store.level, sum, long2int(lowerBoundSum), long2int(upperBoundSum));
+    // read the bounds of the sum after narrowing it: a hole of its domain can move a bound past the
+    // bound of the variables, which the variables must then follow
     boolean needAdaptMin = sum.min() > lowerBoundSum;
     boolean needAdaptMax = sum.max() < upperBoundSum;
-
-    sum.domain.in(store.level, sum, long2int(lowerBoundSum), long2int(upperBoundSum));
     // a change of the sum is already used below, unless the sum is also in the list and so
     // changes the bounds it was computed from
     if (!sumInList) {

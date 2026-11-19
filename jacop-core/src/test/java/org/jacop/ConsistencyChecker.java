@@ -115,6 +115,7 @@ import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -875,6 +876,739 @@ class ConsistencyChecker {
     return again != null ? again : pooled(new BooleanVar(store, name));
   }
 
+  private static Model boolReif(Store store, Random random, String kind) {
+    int n = (kind.equals("orSimple") ? 2 : 1 + random.nextInt(4));
+    IntVar[] x = bools(store, "x", n);
+    IntVar y = aBool(store, "y");
+    Object c =
+        switch (kind) {
+          case "and" -> new org.jacop.constraints.AndBool(x, y);
+          case "or" -> new org.jacop.constraints.OrBool(x, y);
+          case "andVector" -> new org.jacop.constraints.AndBoolVector(x, y);
+          case "orVector" -> new org.jacop.constraints.OrBoolVector(x, y);
+          case "orWatched" -> new org.jacop.constraints.OrBoolWatched(x, y, false);
+          case "norWatched" -> new org.jacop.constraints.OrBoolWatched(x, y, true);
+          case "orSimple" -> new org.jacop.constraints.OrBoolSimple(x[0], x[1], y);
+          default -> new org.jacop.constraints.EqBool(x, y);
+        };
+    return new Model(
+        c,
+        t -> {
+          int ones = Arrays.stream(t, 0, n).sum();
+          boolean value =
+              switch (kind) {
+                case "and", "andVector" -> ones == n;
+                case "norWatched" -> ones == 0;
+                case "eq" -> ones == 0 || ones == n;
+                default -> ones > 0;
+              };
+          return t[n] == (value ? 1 : 0);
+        },
+        concat(x, new IntVar[] {y}));
+  }
+
+  private static Model ifThenBool(Store store, Random random) {
+    IntVar[] x = bools(store, "x", 3);
+    return new Model(
+        new org.jacop.constraints.IfThenBool(x[0], x[1], x[2]),
+        t -> (t[0] == 0 || t[1] == 1) == (t[2] == 1),
+        x);
+  }
+
+  private static Model in(Store store, Random random) {
+    IntVar x = aVar(store, "x", -3, 6, random);
+    IntervalDomain d = new IntervalDomain();
+    for (int v = -3; v <= 6; v++) {
+      if (random.nextInt(3) > 0) {
+        d.unionAdapt(v, v);
+      }
+    }
+    if (d.isEmpty()) {
+      d.unionAdapt(0, 0);
+    }
+    return new Model(new org.jacop.constraints.In(x, d), t -> d.contains(t[0]), new IntVar[] {x});
+  }
+
+  private static Model weightedSum(Store store, Random random, boolean weighted) {
+    int n = 1 + random.nextInt(4);
+    IntVar[] x = vars(store, "x", n, -2, 3, random);
+    int[] w = new int[n];
+    for (int i = 0; i < n; i++) {
+      w[i] = weighted ? random.nextInt(7) - 3 : 1;
+    }
+    IntVar sum = aVar(store, "sum", -8, 8, random);
+    return new Model(
+        weighted
+            ? new org.jacop.constraints.SumWeight(x, w, sum)
+            : new org.jacop.constraints.Sum(x, sum),
+        t -> IntStream.range(0, n).map(i -> w[i] * t[i]).sum() == t[n],
+        concat(x, new IntVar[] {sum}));
+  }
+
+  private static Model maxCliqueBound(Store store, Random random) {
+    int n = 2 + random.nextInt(5);
+    IntVar[] x = bools(store, "x", n);
+    List<int[]> pairs = new ArrayList<>();
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (random.nextInt(2) == 0) {
+          pairs.add(new int[] {i, j});
+        }
+      }
+    }
+    int[][] conflicts =
+        IntStream.range(0, n)
+            .mapToObj(i -> pairs.stream().filter(p -> p[0] == i).mapToInt(p -> p[1]).toArray())
+            .toArray(int[][]::new);
+    IntVar sum = aVar(store, "sum", 0, n, random);
+    return new Model(
+        new org.jacop.constraints.MaxCliqueBound(x, conflicts, sum),
+        t -> {
+          for (int[] p : pairs) {
+            if (t[p[0]] == 1 && t[p[1]] == 1) {
+              return false;
+            }
+          }
+          return t[n] <= Arrays.stream(t, 0, n).sum();
+        },
+        concat(x, new IntVar[] {sum}));
+  }
+
+  private static Model disjointConditional(Store store, Random random) {
+    // lengths of at least 1: what a zero length means here is not documented
+    int k = 2 + random.nextInt(2);
+    IntVar[][] rect = new IntVar[k][];
+    for (int i = 0; i < k; i++) {
+      rect[i] =
+          new IntVar[] {
+            aVar(store, "o" + i + "_0", 0, 2, random),
+            aVar(store, "o" + i + "_1", 0, 2, random),
+            aVar(store, "l" + i + "_0", 1, 2, random),
+            aVar(store, "l" + i + "_1", 1, 2, random)
+          };
+    }
+    List<List<Integer>> pairs = new ArrayList<>();
+    for (int i = 0; i < k; i++) {
+      for (int j = i + 1; j < k; j++) {
+        if (random.nextBoolean()) {
+          pairs.add(List.of(i + 1, j + 1));
+        }
+      }
+    }
+    IntVar[] cond = new IntVar[pairs.size()];
+    for (int p = 0; p < cond.length; p++) {
+      cond[p] = aBool(store, "c" + p);
+    }
+    IntVar[] all = concat(concat(rect), cond);
+    return new Model(
+        new org.jacop.constraints.DisjointConditional(
+            rect, pairs, Arrays.asList(cond), random.nextBoolean()),
+        t -> {
+          for (int i = 0; i < k; i++) {
+            for (int j = i + 1; j < k; j++) {
+              boolean apart =
+                  t[4 * i] + t[4 * i + 2] <= t[4 * j]
+                      || t[4 * j] + t[4 * j + 2] <= t[4 * i]
+                      || t[4 * i + 1] + t[4 * i + 3] <= t[4 * j + 1]
+                      || t[4 * j + 1] + t[4 * j + 3] <= t[4 * i + 1];
+              int p = pairs.indexOf(List.of(i + 1, j + 1));
+              if (!apart && (p < 0 || t[4 * k + p] == 1)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        all);
+  }
+
+  private static Model tableCover(Store store, Random random) {
+    int groups = 2 + random.nextInt(2);
+    IntVar[][] g = new IntVar[groups][];
+    int[][][] tuples = new int[groups][][];
+    for (int i = 0; i < groups; i++) {
+      int size = 1 + random.nextInt(2);
+      g[i] = vars(store, "g" + i + "_", size, 0, 4, random);
+      int count = 1 + random.nextInt(5);
+      tuples[i] = new int[count][size];
+      for (int[] tuple : tuples[i]) {
+        for (int l = 0; l < size; l++) {
+          tuple[l] = random.nextInt(5);
+        }
+      }
+    }
+    IntVar[] all = concat(g);
+    return new Model(
+        new org.jacop.constraints.TableCover(g, tuples, false),
+        t -> {
+          if (Arrays.stream(t).distinct().count() != t.length) {
+            return false;
+          }
+          int at = 0;
+          for (int i = 0; i < groups; i++) {
+            int from = at;
+            boolean found =
+                Arrays.stream(tuples[i])
+                    .anyMatch(
+                        tuple ->
+                            Arrays.equals(tuple, Arrays.copyOfRange(t, from, from + tuple.length)));
+            if (!found) {
+              return false;
+            }
+            at += g[i].length;
+          }
+          return true;
+        },
+        all);
+  }
+
+  private static Model softAlldifferent(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    boolean decomposition = random.nextBoolean();
+    IntVar cost = aVar(store, "cost", 0, 6, random);
+    return new Model(
+        new org.jacop.constraints.SoftAlldifferent(
+            x,
+            cost,
+            decomposition
+                ? org.jacop.constraints.ViolationMeasure.DECOMPOSITION_BASED
+                : org.jacop.constraints.ViolationMeasure.VARIABLE_BASED),
+        t -> {
+          int violations = 0;
+          if (decomposition) {
+            for (int i = 0; i < n; i++) {
+              for (int j = i + 1; j < n; j++) {
+                violations += t[i] == t[j] ? 1 : 0;
+              }
+            }
+          } else {
+            violations = n - (int) Arrays.stream(t, 0, n).distinct().count();
+          }
+          return t[n] == violations;
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
+  private static Model costRegular(Store store, Random random, boolean multi) {
+    int states = 1 + random.nextInt(3);
+    int values = 3;
+    int[][] transition = new int[states][values];
+    for (int[] row : transition) {
+      for (int v = 0; v < values; v++) {
+        row[v] = random.nextInt(4) == 0 ? -1 : random.nextInt(states);
+      }
+    }
+    int[] finals = IntStream.range(0, states).filter(q -> q == 0 || random.nextBoolean()).toArray();
+    int n = 2 + random.nextInt(3);
+    int resources = multi ? 1 + random.nextInt(2) : 1;
+    int[][][][] costs = new int[resources][n][states][values];
+    for (int[][][] byPosition : costs) {
+      for (int[][] byState : byPosition) {
+        for (int[] row : byState) {
+          for (int v = 0; v < values; v++) {
+            row[v] = random.nextInt(4) - 1;
+          }
+        }
+      }
+    }
+    IntVar[] x = vars(store, "x", n, 0, values - 1, random);
+    IntVar[] cost = new IntVar[resources];
+    for (int r = 0; r < resources; r++) {
+      cost[r] = aVar(store, "cost" + r, -n, 2 * n, random);
+    }
+    Object c =
+        multi
+            ? new org.jacop.constraints.regular.MultiCostRegular(
+                x, transition, 0, 0, finals, costs, cost)
+            : new org.jacop.constraints.regular.CostRegular(
+                x, transition, 0, 0, finals, costs[0], cost[0]);
+    return new Model(
+        c,
+        t -> {
+          int q = 0;
+          int[] total = new int[resources];
+          for (int i = 0; i < n; i++) {
+            int next = transition[q][t[i]];
+            if (next < 0) {
+              return false;
+            }
+            for (int r = 0; r < resources; r++) {
+              total[r] += costs[r][i][q][t[i]];
+            }
+            q = next;
+          }
+          int end = q;
+          if (Arrays.stream(finals).noneMatch(f -> f == end)) {
+            return false;
+          }
+          for (int r = 0; r < resources; r++) {
+            if (t[n + r] != total[r]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(x, cost));
+  }
+
+  private static Model softGcc(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int k = 1 + random.nextInt(2);
+    int[] counted = random.nextBoolean() ? new int[] {0, 1, 2}.clone() : new int[] {1, 2, 3};
+    counted = Arrays.copyOf(counted, k);
+    int[] lower = new int[k];
+    int[] upper = new int[k];
+    for (int j = 0; j < k; j++) {
+      lower[j] = random.nextInt(2);
+      upper[j] = lower[j] + random.nextInt(2);
+    }
+    IntVar[] hard = vars(store, "h", k, 0, n, random);
+    boolean valueBased = random.nextBoolean();
+    IntVar cost = aVar(store, "cost", 0, 2 * n, random);
+    int[] values = counted;
+    return new Model(
+        new org.jacop.constraints.SoftGCC(
+            x,
+            hard,
+            values,
+            lower,
+            upper,
+            cost,
+            valueBased
+                ? org.jacop.constraints.ViolationMeasure.VALUE_BASED
+                : org.jacop.constraints.ViolationMeasure.VARIABLE_BASED),
+        t -> {
+          int shortage = 0;
+          int excess = 0;
+          for (int j = 0; j < k; j++) {
+            int v = values[j];
+            int count = (int) Arrays.stream(t, 0, n).filter(a -> a == v).count();
+            if (t[n + j] != count) {
+              return false;
+            }
+            shortage += Math.max(0, lower[j] - count);
+            excess += Math.max(0, count - upper[j]);
+          }
+          if (!valueBased && Arrays.stream(lower).sum() > n) {
+            return false;
+          }
+          int violation = valueBased ? shortage + excess : Math.max(shortage, excess);
+          return t[n + k] == violation;
+        },
+        concat(x, hard, new IntVar[] {cost}));
+  }
+
+  private static Model ifThenElseBool(Store store, Random random) {
+    org.jacop.core.BooleanVar[] b = new org.jacop.core.BooleanVar[3];
+    for (int i = 0; i < 3; i++) {
+      b[i] = new org.jacop.core.BooleanVar(store, "b" + i);
+    }
+    return new Model(
+        new org.jacop.constraints.IfThenElseBool(b[0], b[1], b[2]),
+        t -> t[0] == 1 ? t[1] == 1 : t[2] == 1,
+        b);
+  }
+
+  private static Model sequenceMdd(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    boolean pred = random.nextBoolean();
+    IntVar[] arcs = vars(store, "a", n, 0, n - 1, random);
+    IntVar[] in = vars(store, "in", n, 0, 6, random);
+    IntVar[] out = vars(store, "out", n, 0, 6, random);
+    int none = org.jacop.constraints.SequenceMdd.NONE;
+    int[][] travel = new int[n][n];
+    for (int[] row : travel) {
+      for (int j = 0; j < n; j++) {
+        row[j] = random.nextInt(5) == 0 ? none : random.nextInt(3);
+      }
+    }
+    int[] delta = new int[n];
+    for (int j = 0; j < n; j++) {
+      delta[j] = random.nextInt(5) == 0 ? none : random.nextInt(2);
+    }
+    return new Model(
+        new org.jacop.constraints.SequenceMdd(
+            arcs, pred, 0, in, out, travel, delta, 0, 1 + random.nextInt(3)),
+        t -> {
+          int[] succ = new int[n];
+          for (int i = 0; i < n; i++) {
+            if (pred) {
+              succ[t[i]] = i;
+            } else {
+              succ[i] = t[i];
+            }
+          }
+          if (pred && Arrays.stream(t, 0, n).distinct().count() != n) {
+            return false;
+          }
+          int at = 0;
+          for (int k = 0; k < n; k++) {
+            int next = succ[at];
+            if (travel[at][next] != none && t[n + next] < t[2 * n + at] + travel[at][next]) {
+              return false;
+            }
+            at = next;
+            if (at == 0 && k < n - 1) {
+              return false;
+            }
+          }
+          if (at != 0) {
+            return false;
+          }
+          for (int j = 1; j < n; j++) {
+            if (delta[j] != none && t[2 * n + j] < t[n + j] + delta[j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(arcs, in, out));
+  }
+
+  private static Model costMdd(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    // nodes 1..N by level; node 1 is the root, node 0 the terminal
+    List<Integer> levelList = new ArrayList<>();
+    List<int[]> byLevel = new ArrayList<>();
+    for (int l = 1; l <= n; l++) {
+      int width = l == 1 ? 1 : 1 + random.nextInt(2);
+      int[] ids = new int[width];
+      for (int w = 0; w < width; w++) {
+        levelList.add(l);
+        ids[w] = levelList.size();
+      }
+      byLevel.add(ids);
+    }
+    List<int[]> edges = new ArrayList<>(); // from, lo, hi, cost, to
+    for (int l = 0; l < n; l++) {
+      for (int u : byLevel.get(l)) {
+        int[] next = l + 1 < n ? byLevel.get(l + 1) : new int[] {0};
+        for (int e = 1 + random.nextInt(2); e > 0; e--) {
+          int lo = random.nextInt(3);
+          int hi = lo + random.nextInt(2);
+          edges.add(
+              new int[] {u, lo, hi, random.nextInt(4) - 1, next[random.nextInt(next.length)]});
+        }
+      }
+    }
+    int[] level = levelList.stream().mapToInt(Integer::intValue).toArray();
+    int m = edges.size();
+    int[] from = new int[m];
+    IntDomain[] label = new IntDomain[m];
+    int[] edgeCost = new int[m];
+    int[] to = new int[m];
+    for (int e = 0; e < m; e++) {
+      int[] d = edges.get(e);
+      from[e] = d[0];
+      label[e] = new IntervalDomain(d[1], d[2]);
+      edgeCost[e] = d[3];
+      to[e] = d[4];
+    }
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    IntVar cost = aVar(store, "cost", -n, 2 * n, random);
+    return new Model(
+        new org.jacop.constraints.regular.CostMdd(x, level, from, label, edgeCost, to, cost),
+        t -> {
+          // (node, cost so far) pairs reachable after each variable
+          java.util.Set<Long> at = new java.util.HashSet<>();
+          at.add((long) 1 << 32);
+          for (int i = 0; i < n; i++) {
+            java.util.Set<Long> next = new java.util.HashSet<>();
+            for (long state : at) {
+              int node = (int) (state >> 32);
+              int c = (int) state;
+              for (int[] d : edges) {
+                if (d[0] == node && d[1] <= t[i] && t[i] <= d[2]) {
+                  next.add(((long) d[4] << 32) | ((c + d[3]) & 0xffffffffL));
+                }
+              }
+            }
+            at = next;
+          }
+          return at.contains(t[n] & 0xffffffffL);
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
+  private static Model networkFlow(Store store, Random random, boolean varWeight) {
+    int nodes = 3 + random.nextInt(2);
+    int arcs = 3 + random.nextInt(3);
+    int[] from = new int[arcs];
+    int[] to = new int[arcs];
+    int[] weight = new int[arcs];
+    for (int k = 0; k < arcs; k++) {
+      from[k] = random.nextInt(nodes);
+      to[k] = (from[k] + 1 + random.nextInt(nodes - 1)) % nodes;
+      weight[k] = random.nextInt(5) - 1;
+    }
+    int[] balance = new int[nodes];
+    balance[0] = random.nextInt(3);
+    balance[1 + random.nextInt(nodes - 1)] -= balance[0];
+    IntVar[] x = new IntVar[arcs];
+    for (int k = 0; k < arcs; k++) {
+      x[k] = aVar(store, "f" + k, 0, 3, random);
+    }
+    IntVar w = varWeight ? aVar(store, "w", -1, 2, random) : null;
+    IntVar cost = aVar(store, "cost", -4, 12, random);
+    org.jacop.constraints.netflow.NetworkBuilder net =
+        new org.jacop.constraints.netflow.NetworkBuilder();
+    org.jacop.constraints.netflow.simplex.Node[] node =
+        new org.jacop.constraints.netflow.simplex.Node[nodes];
+    for (int i = 0; i < nodes; i++) {
+      node[i] = net.addNode("n" + i, balance[i]);
+    }
+    for (int k = 0; k < arcs; k++) {
+      if (varWeight && k == 0) {
+        net.addArc(node[from[k]], node[to[k]], w, x[k]);
+      } else {
+        net.addArc(node[from[k]], node[to[k]], weight[k], x[k]);
+      }
+    }
+    net.setCostVariable(cost);
+    IntVar[] vars = varWeight ? concat(x, new IntVar[] {w, cost}) : concat(x, new IntVar[] {cost});
+    return new Model(
+        new org.jacop.constraints.netflow.NetworkFlow(net),
+        t -> {
+          int[] out = new int[nodes];
+          long total = 0;
+          for (int k = 0; k < arcs; k++) {
+            out[from[k]] += t[k];
+            out[to[k]] -= t[k];
+            total += (long) (varWeight && k == 0 ? t[arcs] : weight[k]) * t[k];
+          }
+          for (int i = 0; i < nodes; i++) {
+            if (out[i] != balance[i]) {
+              return false;
+            }
+          }
+          return total == t[t.length - 1];
+        },
+        vars);
+  }
+
+  private static Model unaryTransition(Store store, Random random, boolean withOptional) {
+    int n = 3;
+    IntVar[] starts = vars(store, "s", n, 0, 6, random);
+    IntVar[] durations = vars(store, "d", n, 0, 2, random);
+    int[] family = new int[n];
+    for (int i = 0; i < n; i++) {
+      family[i] = random.nextInt(2);
+    }
+    int[][] transitions = new int[2][2];
+    for (int[] row : transitions) {
+      for (int g = 0; g < 2; g++) {
+        row[g] = random.nextInt(3);
+      }
+    }
+    IntVar[] optional = withOptional ? bools(store, "o", n) : null;
+    Object constraint =
+        withOptional
+            ? new org.jacop.constraints.cumulative.UnaryTransition(
+                starts, durations, family, transitions, optional)
+            : new org.jacop.constraints.cumulative.UnaryTransition(
+                starts, durations, family, transitions);
+    return new Model(
+        constraint,
+        t -> {
+          for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+              if (withOptional && (t[2 * n + i] == 0 || t[2 * n + j] == 0)) {
+                continue;
+              }
+              boolean before = t[i] + t[n + i] + transitions[family[i]][family[j]] <= t[j];
+              boolean after = t[j] + t[n + j] + transitions[family[j]][family[i]] <= t[i];
+              if (!before && !after) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        withOptional ? concat(starts, durations, optional) : concat(starts, durations));
+  }
+
+  private static Model multiCumulative(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    int resources = 2;
+    IntVar[] starts = vars(store, "s", n, 0, 4, random);
+    int[] durations = new int[n];
+    int[][] heights = new int[resources][n];
+    for (int i = 0; i < n; i++) {
+      durations[i] = random.nextInt(4);
+      for (int r = 0; r < resources; r++) {
+        heights[r][i] = random.nextInt(3);
+      }
+    }
+    IntVar[] limits = vars(store, "l", resources, 0, 4, random);
+    return new Model(
+        new org.jacop.constraints.cumulative.MultiCumulative(starts, durations, heights, limits),
+        t -> {
+          for (int r = 0; r < resources; r++) {
+            for (int time = 0; time <= 8; time++) {
+              int use = 0;
+              for (int i = 0; i < n; i++) {
+                if (t[i] <= time && time < t[i] + durations[i]) {
+                  use += heights[r][i];
+                }
+              }
+              if (use > t[n + r]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(starts, limits));
+  }
+
+  private static Model vectorBinpacking(Store store, Random random) {
+    int items = 3 + random.nextInt(2);
+    int bins = 2;
+    int dims = 2;
+    IntVar[] bin = vars(store, "b", items, 1, bins, random);
+    int[][] w = new int[dims][items];
+    IntVar[][] load = new IntVar[dims][bins];
+    for (int d = 0; d < dims; d++) {
+      for (int i = 0; i < items; i++) {
+        w[d][i] = random.nextInt(4);
+      }
+      load[d] = vars(store, "l" + d + "_", bins, 0, 6, random);
+    }
+    return new Model(
+        new org.jacop.constraints.binpacking.VectorBinpacking(bin, load, w, 1),
+        t -> {
+          for (int d = 0; d < dims; d++) {
+            for (int b = 0; b < bins; b++) {
+              int sum = 0;
+              for (int i = 0; i < items; i++) {
+                if (t[i] == b + 1) {
+                  sum += w[d][i];
+                }
+              }
+              if (sum != t[items + d * bins + b]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(bin, load[0], load[1]));
+  }
+
+  private static Model colouredSpanningTree(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    int m = n + random.nextInt(3);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] weights = new int[m];
+    int[] colours = new int[m];
+    int total = 0;
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = (from[e] + 1 + random.nextInt(n - 1)) % n;
+      weights[e] = random.nextInt(4);
+      colours[e] = random.nextInt(3) - 1;
+      total += weights[e];
+    }
+    int[] caps = {random.nextInt(3), random.nextInt(3)};
+    IntVar[] es = bools(store, "e", m);
+    IntVar cost = aVar(store, "cost", 0, total, random);
+    List<Constraint> parts =
+        new ArrayList<>(
+            new org.jacop.constraints.graph.WeightedSpanningTree(
+                    n, from, to, weights, null, es, cost, 0, false)
+                .decompose(store));
+    for (int c = 0; c < caps.length; c++) {
+      final int colour = c;
+      IntVar[] ofColour =
+          IntStream.range(0, m)
+              .filter(e -> colours[e] == colour)
+              .mapToObj(e -> es[e])
+              .toArray(IntVar[]::new);
+      if (ofColour.length > 0) {
+        parts.add(new SumInt(ofColour, "<=", new IntVar(store, caps[c], caps[c])));
+      }
+    }
+    parts.add(
+        new org.jacop.constraints.graph.ColouredSpanningTreeBound(
+            n, from, to, weights, colours, caps, es, cost, 0));
+    return new Model(
+        parts,
+        t -> {
+          int[] full = new int[n + m + 2];
+          Arrays.fill(full, 0, n, 1);
+          System.arraycopy(t, 0, full, n, m);
+          int[] used = new int[caps.length];
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += t[e] * weights[e];
+            if (colours[e] >= 0) {
+              used[colours[e]] += t[e];
+            }
+          }
+          for (int c = 0; c < caps.length; c++) {
+            if (used[c] > caps[c]) {
+              return false;
+            }
+          }
+          full[n + m] = 0;
+          return sum == t[m] && graphHolds(full, "tree", false, n, from, to);
+        },
+        concat(es, new IntVar[] {cost}));
+  }
+
+  private static Model knapsackDP(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    int[] w = random.ints(n, 0, 4).toArray();
+    int[] p = random.ints(n, 0, 5).toArray();
+    IntVar[] q = vars(store, "q", n, 0, 2, random);
+    IntVar cap = aVar(store, "c", 0, 12, random);
+    IntVar profit = aVar(store, "p", 0, 16, random);
+    return new Model(
+        new org.jacop.constraints.knapsack.KnapsackDP(p, w, q, cap, profit),
+        t -> {
+          int sw = 0;
+          int sp = 0;
+          for (int i = 0; i < n; i++) {
+            sw += w[i] * t[i];
+            sp += p[i] * t[i];
+          }
+          return sw == t[n] && sp == t[n + 1];
+        },
+        concat(q, new IntVar[] {cap, profit}));
+  }
+
+  private static Model subcircuitCostPair(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    int[][] c1 = costMatrix(n, random);
+    int[][] c2 = costMatrix(n, random);
+    IntVar cost1 = aVar(store, "cost1", 0, 4 * n, random);
+    IntVar cost2 = aVar(store, "cost2", 0, 4 * n, random);
+    return new Model(
+        List.of(
+            new org.jacop.constraints.Subcircuit(x),
+            // the pair only bounds the sums, which other constraints define
+            new org.jacop.constraints.SubcircuitCost(x, c1, cost1),
+            new org.jacop.constraints.SubcircuitCost(x, c2, cost2),
+            new org.jacop.constraints.SubcircuitCostPair(x, c1, cost1, c2, cost2, 1)),
+        t -> {
+          if (!circuitHolds(t, n, true)) {
+            return false;
+          }
+          int total1 = 0;
+          int total2 = 0;
+          for (int i = 0; i < n; i++) {
+            total1 += c1[i][t[i] - 1];
+            total2 += c2[i][t[i] - 1];
+          }
+          return t[n] == total1 && t[n + 1] == total2;
+        },
+        concat(x, new IntVar[] {cost1, cost2}));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -1044,7 +1778,7 @@ class ConsistencyChecker {
           concat(new IntVar[] {index, value}, list));
     }
     int[] list = IntStream.range(0, n).map(i -> random.nextInt(6)).toArray();
-    Constraint c =
+    Object c =
         fast
             ? new ElementIntegerFast(index, list, value)
             : new ElementInteger(index, list, value, 0);
@@ -1094,7 +1828,7 @@ class ConsistencyChecker {
             .mapToObj(i -> interval(store, "r" + i, 1, 2, random))
             .toArray(IntVar[]::new);
     IntVar limit = aVar(store, "b", 1, 3, random);
-    Constraint c =
+    Object c =
         switch (kind) {
           case 1 -> new CumulativeBasic(s, d, r, limit);
           case 2 -> new HornFlow(s, d, r, limit);
@@ -1969,7 +2703,523 @@ class ConsistencyChecker {
         new Case("Spread", Level.NONE, (s, r) -> deviation(s, r, true)),
         new Case("SymmetricGCC", Level.NONE, ConsistencyChecker::symmetricGcc),
         new Case("CostGCC", Level.NONE, ConsistencyChecker::costGcc),
-        new Case("Reservoir", Level.NONE, ConsistencyChecker::reservoir));
+        new Case("Reservoir", Level.NONE, ConsistencyChecker::reservoir),
+        new Case("GlobalCardinality", Level.NONE, (s, r) -> globalCardinality(s, r, true)),
+        new Case("GlobalCardinalityBounds", Level.DOMAIN, (s, r) -> globalCardinality(s, r, false)),
+        new Case("Alldifferent", Level.NONE, ConsistencyChecker::alldifferent),
+        new Case("Decreasing", Level.DOMAIN, ConsistencyChecker::decreasing),
+        new Case("CardinalityMatrix", Level.NONE, ConsistencyChecker::cardinalityMatrix),
+        new Case("ConjunctionSum", Level.NONE, ConsistencyChecker::conjunctionSum),
+        new Case("UnaryEarlinessTardiness", Level.NONE, ConsistencyChecker::unaryEarliness),
+        new Case("Disjoint", Level.NONE, (s, r) -> disjoint(s, r, true)),
+        new Case("Diff2Lengths", Level.NONE, (s, r) -> disjoint(s, r, false)),
+        new Case("SubcircuitCost", Level.NONE, ConsistencyChecker::subcircuitCost),
+        new Case("WeightedSubcircuits", Level.NONE, ConsistencyChecker::weightedSubcircuits),
+        new Case("Routes", Level.NONE, ConsistencyChecker::routes),
+        new Case("ArcTimes", Level.NONE, ConsistencyChecker::arcTimes),
+        new Case("AndBool", Level.DOMAIN, (s, r) -> boolReif(s, r, "and")),
+        new Case("OrBool", Level.DOMAIN, (s, r) -> boolReif(s, r, "or")),
+        new Case("AndBoolVector", Level.DOMAIN, (s, r) -> boolReif(s, r, "andVector")),
+        new Case("OrBoolVector", Level.DOMAIN, (s, r) -> boolReif(s, r, "orVector")),
+        new Case("OrBoolWatched", Level.DOMAIN, (s, r) -> boolReif(s, r, "orWatched")),
+        new Case("NorBoolWatched", Level.DOMAIN, (s, r) -> boolReif(s, r, "norWatched")),
+        new Case("OrBoolSimple", Level.DOMAIN, (s, r) -> boolReif(s, r, "orSimple")),
+        new Case("EqBool", Level.DOMAIN, (s, r) -> boolReif(s, r, "eq")),
+        new Case("IfThenBool", Level.DOMAIN, ConsistencyChecker::ifThenBool),
+        new Case("In(domain)", Level.DOMAIN, ConsistencyChecker::in),
+        new Case("Sum(list)", Level.BOUNDS_Z, (s, r) -> weightedSum(s, r, false)),
+        new Case("SumWeight", Level.NONE, (s, r) -> weightedSum(s, r, true)),
+        new Case("MaxCliqueBound", Level.NONE, ConsistencyChecker::maxCliqueBound),
+        new Case("DisjointConditional", Level.NONE, ConsistencyChecker::disjointConditional),
+        new Case("TableCover", Level.NONE, ConsistencyChecker::tableCover),
+        new Case("SoftAlldifferent", Level.NONE, ConsistencyChecker::softAlldifferent),
+        new Case("CostRegular", Level.NONE, (s, r) -> costRegular(s, r, false)),
+        new Case("MultiCostRegular", Level.NONE, (s, r) -> costRegular(s, r, true)),
+        new Case("SoftGCC", Level.NONE, ConsistencyChecker::softGcc),
+        new Case("IfThenElseBool", Level.DOMAIN, ConsistencyChecker::ifThenElseBool),
+        new Case("SequenceMdd", Level.NONE, ConsistencyChecker::sequenceMdd),
+        new Case("CostMdd", Level.NONE, ConsistencyChecker::costMdd),
+        new Case("NetworkFlow(const)", Level.NONE, (s, r) -> networkFlow(s, r, false)),
+        new Case("NetworkFlow(var weight)", Level.NONE, (s, r) -> networkFlow(s, r, true)),
+        new Case(
+            "Steiner(undirected)", Level.NONE, (s, r) -> weightedGraph(s, r, "steiner", false)),
+        new Case("Steiner(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "steiner", true)),
+        new Case(
+            "WeightedSpanningTree(undirected)",
+            Level.NONE,
+            (s, r) -> weightedGraph(s, r, "spanning", false)),
+        new Case(
+            "WeightedSpanningTree(directed)",
+            Level.NONE,
+            (s, r) -> weightedGraph(s, r, "spanning", true)),
+        new Case(
+            "BoundedPath(undirected)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", false)),
+        new Case("BoundedPath(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", true)),
+        new Case("ColouredSpanningTree", Level.NONE, ConsistencyChecker::colouredSpanningTree),
+        new Case("KnapsackDP", Level.NONE, ConsistencyChecker::knapsackDP),
+        new Case("SubcircuitCostPair", Level.NONE, ConsistencyChecker::subcircuitCostPair),
+        new Case("UnaryTransition(all)", Level.NONE, (s, r) -> unaryTransition(s, r, false)),
+        new Case("UnaryTransition(optional)", Level.NONE, (s, r) -> unaryTransition(s, r, true)),
+        new Case("MultiCumulative", Level.NONE, ConsistencyChecker::multiCumulative),
+        new Case("VectorBinpacking", Level.NONE, ConsistencyChecker::vectorBinpacking),
+        new Case(
+            "XmulYeqC",
+            Level.DOMAIN,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar y = aVar(s, "y", -4, 4, r);
+              int c = r.nextInt(13) - 6;
+              return new Model(
+                  new org.jacop.constraints.XmulYeqC(x, y, c),
+                  t -> t[0] * t[1] == c,
+                  new IntVar[] {x, y});
+            }),
+        new Case(
+            "XplusYgtC",
+            Level.NONE,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar y = aVar(s, "y", -4, 4, r);
+              int c = r.nextInt(9) - 4;
+              return new Model(
+                  new org.jacop.constraints.XplusYgtC(x, y, c),
+                  t -> t[0] + t[1] > c,
+                  new IntVar[] {x, y});
+            }),
+        new Case(
+            "XplusClteqZ",
+            Level.NONE,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar z = aVar(s, "z", -4, 4, r);
+              int c = r.nextInt(7) - 3;
+              return new Model(
+                  new org.jacop.constraints.XplusClteqZ(x, c, z),
+                  t -> t[0] + c <= t[1],
+                  new IntVar[] {x, z});
+            }));
+  }
+
+  /**
+   * Disjoint (a rectangle of length 0 may not lie strictly inside another) or Diff2 (it overlaps
+   * nothing): 2 or 3 rectangles in two dimensions with variable lengths.
+   */
+  private static Model disjoint(Store store, Random random, boolean disjoint) {
+    int k = 2 + random.nextInt(2);
+    List<IntVar> o1 = new ArrayList<>();
+    List<IntVar> o2 = new ArrayList<>();
+    List<IntVar> l1 = new ArrayList<>();
+    List<IntVar> l2 = new ArrayList<>();
+    IntVar[] all = new IntVar[4 * k];
+    for (int i = 0; i < k; i++) {
+      o1.add(aVar(store, "o" + i + "_0", 0, 2, random));
+      o2.add(aVar(store, "o" + i + "_1", 0, 2, random));
+      l1.add(aVar(store, "l" + i + "_0", 0, 2, random));
+      l2.add(aVar(store, "l" + i + "_1", 0, 2, random));
+      all[4 * i] = o1.get(i);
+      all[4 * i + 1] = o2.get(i);
+      all[4 * i + 2] = l1.get(i);
+      all[4 * i + 3] = l2.get(i);
+    }
+    return new Model(
+        disjoint
+            ? new org.jacop.constraints.Disjoint(o1, o2, l1, l2, random.nextBoolean())
+            : new org.jacop.constraints.Diff2(o1, o2, l1, l2, random.nextBoolean()),
+        t -> {
+          for (int i = 0; i < k; i++) {
+            for (int j = i + 1; j < k; j++) {
+              boolean apart = false;
+              boolean empty = false;
+              for (int dim = 0; dim < 2; dim++) {
+                int oi = t[4 * i + dim];
+                int li = t[4 * i + 2 + dim];
+                int oj = t[4 * j + dim];
+                int lj = t[4 * j + 2 + dim];
+                apart |= oi + li <= oj || oj + lj <= oi;
+                empty |= li == 0 || lj == 0;
+              }
+              if (!apart && (disjoint || !empty)) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        all);
+  }
+
+  private static int[][] costMatrix(int n, Random random) {
+    int[][] c = new int[n][n];
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        c[i][j] = random.nextInt(5);
+      }
+    }
+    return c;
+  }
+
+  /** SubcircuitCost over 3 or 4 successors from 1; costs[i][i] is the cost of leaving i out. */
+  private static Model subcircuitCost(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    int[][] c = costMatrix(n, random);
+    IntVar cost = aVar(store, "cost", 0, 4 * n, random);
+    return new Model(
+        new org.jacop.constraints.SubcircuitCost(x, c, cost),
+        t -> {
+          if (!circuitHolds(t, n, true)) {
+            return false;
+          }
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            total += c[i][t[i] - 1];
+          }
+          return t[n] == total;
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
+  /** WeightedSubcircuits over 3 or 4 successors from 1 with 2 tours. */
+  private static Model weightedSubcircuits(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    int tours = 2;
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    IntVar[] tour = vars(store, "t", n, 0, tours, random);
+    int[][] c = costMatrix(n, random);
+    IntVar[] tourCost = vars(store, "tc", tours, 0, 4 * n, random);
+    IntVar cost = aVar(store, "cost", 0, 4 * n, random);
+    return new Model(
+        new org.jacop.constraints.WeightedSubcircuits(x, tour, c, tourCost, cost),
+        t -> {
+          boolean[] seen = new boolean[n];
+          int total = 0;
+          int[] perTour = new int[tours];
+          for (int i = 0; i < n; i++) {
+            int next = t[i] - 1;
+            if (next < 0 || next >= n || seen[next]) {
+              return false;
+            }
+            seen[next] = true;
+            int k = t[n + i];
+            if ((next == i) != (k == 0) || t[n + next] != k) {
+              return false;
+            }
+            total += c[i][next];
+            if (k > 0) {
+              perTour[k - 1] += c[i][next];
+            }
+          }
+          for (int k = 1; k <= tours; k++) {
+            int start = -1;
+            int size = 0;
+            for (int i = 0; i < n; i++) {
+              if (t[n + i] == k) {
+                start = i;
+                size++;
+              }
+            }
+            if (start >= 0) {
+              int len = 0;
+              int i = start;
+              do {
+                i = t[i] - 1;
+                len++;
+              } while (i != start);
+              if (len != size) {
+                return false;
+              }
+            }
+            if (t[2 * n + k - 1] != perTour[k - 1]) {
+              return false;
+            }
+          }
+          return t[2 * n + tours] == total;
+        },
+        concat(x, tour, tourCost, new IntVar[] {cost}));
+  }
+
+  /** Routes over 3 or 4 nodes, depot 0, on a random set of arcs with some self loops. */
+  private static Model routes(Store store, Random random) {
+    int nodes = 3 + random.nextInt(2);
+    List<int[]> arcs = new ArrayList<>();
+    for (int i = 0; i < nodes; i++) {
+      for (int j = 0; j < nodes; j++) {
+        if (i == j ? i > 0 && random.nextBoolean() : random.nextInt(4) > 0) {
+          arcs.add(new int[] {i, j});
+        }
+      }
+    }
+    int m = arcs.size();
+    // the constraint knows the nodes up to the largest one on an arc
+    int n = arcs.stream().mapToInt(a -> Math.max(a[0], a[1])).max().orElse(0) + 1;
+    int[] tails = arcs.stream().mapToInt(a -> a[0]).toArray();
+    int[] heads = arcs.stream().mapToInt(a -> a[1]).toArray();
+    IntVar[] lit = bools(store, "a", m);
+    return new Model(
+        new org.jacop.constraints.Routes(tails, heads, lit),
+        t -> {
+          int[] in = new int[n];
+          int[] out = new int[n];
+          boolean[] loop = new boolean[n];
+          int[] parent = IntStream.range(0, n).toArray();
+          for (int a = 0; a < m; a++) {
+            if (t[a] == 1) {
+              if (tails[a] == heads[a]) {
+                loop[tails[a]] = true;
+              } else {
+                out[tails[a]]++;
+                in[heads[a]]++;
+                int u = tails[a];
+                while (parent[u] != u) {
+                  u = parent[u];
+                }
+                int v = heads[a];
+                while (parent[v] != v) {
+                  v = parent[v];
+                }
+                parent[u] = v;
+              }
+            }
+          }
+          int depot = 0;
+          while (parent[depot] != depot) {
+            depot = parent[depot];
+          }
+          for (int v = 1; v < n; v++) {
+            boolean outside = loop[v] && in[v] == 0 && out[v] == 0;
+            boolean inside = !loop[v] && in[v] == 1 && out[v] == 1;
+            if (!outside && !inside) {
+              return false;
+            }
+            if (inside) {
+              int u = v;
+              while (parent[u] != u) {
+                u = parent[u];
+              }
+              if (u != depot) {
+                return false;
+              }
+            }
+          }
+          return in[0] == out[0];
+        },
+        lit);
+  }
+
+  /** ArcTimes: x[v] = w + 1 implies t[w] >= t[v] + lag[v][w], over 3 nodes. */
+  private static Model arcTimes(Store store, Random random) {
+    int n = 3;
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    IntVar[] time = vars(store, "t", n, 0, 4, random);
+    long[][] lag = new long[n][n];
+    for (int v = 0; v < n; v++) {
+      for (int w = 0; w < n; w++) {
+        lag[v][w] = random.nextInt(4) - 1;
+      }
+    }
+    return new Model(
+        new org.jacop.constraints.ArcTimes(x, 1, time, lag),
+        t -> {
+          for (int v = 0; v < n; v++) {
+            int w = t[v] - 1;
+            if (t[n + w] < t[n + v] + lag[v][w]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(x, time));
+  }
+
+  /** GlobalCardinality over 3 or 4 variables, with counter variables or fixed bounds. */
+  private static Model globalCardinality(Store store, Random random, boolean counters) {
+    int n = 3 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    int[] values = IntStream.range(0, 4).filter(v -> random.nextBoolean()).toArray();
+    if (values.length == 0) {
+      values = new int[] {random.nextInt(4)};
+    }
+    int[] vs = values;
+    int m = vs.length;
+    if (counters) {
+      IntVar[] c = vars(store, "c", m, 0, n, random);
+      return new Model(
+          new org.jacop.constraints.GlobalCardinality(x, vs, c),
+          t -> {
+            for (int k = 0; k < m; k++) {
+              int value = vs[k];
+              if (IntStream.range(0, n).filter(i -> t[i] == value).count() != t[n + k]) {
+                return false;
+              }
+            }
+            return true;
+          },
+          concat(x, c));
+    }
+    int[] low = new int[m];
+    int[] up = new int[m];
+    for (int k = 0; k < m; k++) {
+      low[k] = random.nextInt(2);
+      up[k] = low[k] + random.nextInt(3);
+    }
+    return new Model(
+        new org.jacop.constraints.GlobalCardinality(x, vs, low, up),
+        t -> {
+          for (int k = 0; k < m; k++) {
+            int value = vs[k];
+            long count = IntStream.range(0, n).filter(i -> t[i] == value).count();
+            if (count < low[k] || count > up[k]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /** Alldifferent over 2 to 4 variables. */
+  private static Model alldifferent(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 2 + random.nextInt(3), 0, 3, random);
+    return new Model(
+        new org.jacop.constraints.Alldifferent(x),
+        t -> Arrays.stream(t).distinct().count() == t.length,
+        x);
+  }
+
+  /** Decreasing, strict or not, over 2 to 4 variables. */
+  private static Model decreasing(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 2 + random.nextInt(3), 0, 4, random);
+    boolean strict = random.nextBoolean();
+    return new Model(
+        new org.jacop.constraints.Decreasing(x, strict),
+        t -> {
+          for (int i = 1; i < t.length; i++) {
+            if (strict ? t[i] >= t[i - 1] : t[i] > t[i - 1]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        x);
+  }
+
+  /** CardinalityMatrix of 2 rows and 2 or 3 columns over the values 0..2. */
+  private static Model cardinalityMatrix(Store store, Random random) {
+    int rows = 2;
+    int cols = 2 + random.nextInt(2);
+    int[] values = random.nextBoolean() ? new int[] {0, 1} : new int[] {1, 2};
+    int m = values.length;
+    IntVar[][] x = new IntVar[rows][];
+    for (int r = 0; r < rows; r++) {
+      x[r] = vars(store, "x" + r + "_", cols, 0, 2, random);
+    }
+    IntVar[][] rowCount = new IntVar[rows][];
+    for (int r = 0; r < rows; r++) {
+      rowCount[r] = vars(store, "r" + r + "_", m, 0, cols, random);
+    }
+    IntVar[][] colCount = new IntVar[cols][];
+    for (int c = 0; c < cols; c++) {
+      colCount[c] = vars(store, "k" + c + "_", m, 0, rows, random);
+    }
+    int cells = rows * cols;
+    return new Model(
+        new org.jacop.constraints.CardinalityMatrix(x, values, rowCount, colCount),
+        t -> {
+          for (int k = 0; k < m; k++) {
+            for (int r = 0; r < rows; r++) {
+              int count = 0;
+              for (int c = 0; c < cols; c++) {
+                count += t[r * cols + c] == values[k] ? 1 : 0;
+              }
+              if (count != t[cells + r * m + k]) {
+                return false;
+              }
+            }
+            for (int c = 0; c < cols; c++) {
+              int count = 0;
+              for (int r = 0; r < rows; r++) {
+                count += t[r * cols + c] == values[k] ? 1 : 0;
+              }
+              if (count != t[cells + rows * m + c * m + k]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(concat(x), concat(rowCount), concat(colCount)));
+  }
+
+  /** ConjunctionSum: sum bounds from below 1 to 3 weighted conjunctions over 3 variables. */
+  private static Model conjunctionSum(Store store, Random random) {
+    IntVar[] x = vars(store, "x", 3, 0, 2, random);
+    int terms = 1 + random.nextInt(3);
+    IntVar[][] termVars = new IntVar[terms][];
+    int[][] termIndex = new int[terms][];
+    int[][] termValues = new int[terms][];
+    boolean[][] termEq = new boolean[terms][];
+    int[] weights = new int[terms];
+    for (int k = 0; k < terms; k++) {
+      int size = 1 + random.nextInt(2);
+      int first = random.nextInt(3);
+      termIndex[k] = size == 1 ? new int[] {first} : new int[] {first, (first + 1) % 3};
+      termVars[k] = new IntVar[size];
+      termValues[k] = new int[size];
+      termEq[k] = new boolean[size];
+      for (int l = 0; l < size; l++) {
+        termVars[k][l] = x[termIndex[k][l]];
+        termValues[k][l] = random.nextInt(3);
+        termEq[k][l] = random.nextInt(3) > 0;
+      }
+      weights[k] = random.nextInt(4);
+    }
+    IntVar sum = aVar(store, "sum", 0, 8, random);
+    return new Model(
+        new org.jacop.constraints.ConjunctionSum(termVars, termValues, termEq, weights, sum),
+        t -> {
+          int total = 0;
+          for (int k = 0; k < terms; k++) {
+            boolean holds = true;
+            for (int l = 0; l < termIndex[k].length; l++) {
+              holds &= (t[termIndex[k][l]] == termValues[k][l]) == termEq[k][l];
+            }
+            total += holds ? weights[k] : 0;
+          }
+          return t[3] >= total;
+        },
+        concat(x, new IntVar[] {sum}));
+  }
+
+  /** UnaryEarlinessTardiness: 2 or 3 tasks on one machine with a due date each. */
+  private static Model unaryEarliness(Store store, Random random) {
+    int n = 2 + random.nextInt(2);
+    IntVar[] s = vars(store, "s", n, 0, 4, random);
+    int[] p = new int[n];
+    int[] due = new int[n];
+    int[] early = new int[n];
+    int[] late = new int[n];
+    for (int i = 0; i < n; i++) {
+      p[i] = 1 + random.nextInt(2);
+      due[i] = random.nextInt(5);
+      early[i] = random.nextInt(3);
+      late[i] = random.nextInt(3);
+    }
+    IntVar cost = aVar(store, "cost", 0, 12, random);
+    return new Model(
+        new org.jacop.constraints.UnaryEarlinessTardiness(s, p, due, early, late, cost),
+        t -> {
+          int total = 0;
+          for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+              if (t[i] < t[j] + p[j] && t[j] < t[i] + p[i]) {
+                return false;
+              }
+            }
+            total += early[i] * Math.max(0, due[i] - t[i]) + late[i] * Math.max(0, t[i] - due[i]);
+          }
+          return t[n] >= total;
+        },
+        concat(s, new IntVar[] {cost}));
   }
 
   /** at_most(k, x, v) or at_least(k, x, v) over 2 to 5 variables. */
@@ -2228,6 +3478,56 @@ class ConsistencyChecker {
         };
     return new Model(
         constraint, t -> graphHolds(t, kind, directed, n, from, to), concat(concat(ns, es), ends));
+  }
+
+  private static Model weightedGraph(Store store, Random random, String kind, boolean directed) {
+    int n = 3 + random.nextInt(2);
+    int m = n - 1 + random.nextInt(3);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] weights = new int[m];
+    int total = 0;
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = (from[e] + 1 + random.nextInt(n - 1)) % n;
+      weights[e] = random.nextInt(4);
+      total += weights[e];
+    }
+    boolean spanning = kind.equals("spanning");
+    IntVar[] ns = spanning ? new IntVar[0] : bools(store, "n", n);
+    IntVar[] es = bools(store, "e", m);
+    IntVar[] ends =
+        kind.equals("path")
+            ? new IntVar[] {aVar(store, "s", 0, n - 1, random), aVar(store, "t", 0, n - 1, random)}
+            : new IntVar[] {aVar(store, "r", 0, n - 1, random)};
+    IntVar cost = aVar(store, "cost", 0, total, random);
+    Object constraint =
+        switch (kind) {
+          case "steiner" ->
+              new org.jacop.constraints.graph.Steiner(
+                  from, to, weights, ends[0], ns, es, cost, 0, directed);
+          case "spanning" ->
+              new org.jacop.constraints.graph.WeightedSpanningTree(
+                  n, from, to, weights, ends[0], es, cost, 0, directed);
+          default ->
+              new org.jacop.constraints.graph.BoundedPath(
+                  from, to, weights, ends[0], ends[1], ns, es, cost, 0, directed);
+        };
+    int offset = spanning ? n : 0;
+    return new Model(
+        constraint,
+        t -> {
+          int[] full = new int[t.length + offset];
+          Arrays.fill(full, 0, offset, 1);
+          System.arraycopy(t, 0, full, offset, t.length);
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += full[n + e] * weights[e];
+          }
+          return sum == full[full.length - 1]
+              && graphHolds(full, kind.equals("path") ? "path" : "tree", directed, n, from, to);
+        },
+        concat(concat(ns, es), concat(ends, new IntVar[] {cost})));
   }
 
   private static boolean graphHolds(
@@ -2521,37 +3821,40 @@ class ConsistencyChecker {
     IntVar[] x = vars(store, "x", n, 1, n, random);
     return new Model(
         sub ? new org.jacop.constraints.Subcircuit(x) : new org.jacop.constraints.Circuit(x),
-        t -> {
-          // successors form a permutation whose non-fixed points make one cycle (all of them for
-          // circuit)
-          boolean[] seen = new boolean[n];
-          int moving = 0;
-          int start = -1;
-          for (int i = 0; i < n; i++) {
-            if (t[i] < 1 || t[i] > n || seen[t[i] - 1]) {
-              return false;
-            }
-            seen[t[i] - 1] = true;
-            if (t[i] != i + 1) {
-              moving++;
-              start = i;
-            }
-          }
-          if (!sub && moving != n) {
-            return false;
-          }
-          if (moving == 0) {
-            return sub;
-          }
-          int len = 0;
-          int i = start;
-          do {
-            i = t[i] - 1;
-            len++;
-          } while (i != start && len <= n);
-          return len == moving;
-        },
+        t -> circuitHolds(t, n, sub),
         x);
+  }
+
+  /** Whether t[0..n-1], successors from 1, form a circuit (or a subcircuit when sub). */
+  private static boolean circuitHolds(int[] t, int n, boolean sub) {
+    // successors form a permutation whose non-fixed points make one cycle (all of them for
+    // circuit)
+    boolean[] seen = new boolean[n];
+    int moving = 0;
+    int start = -1;
+    for (int i = 0; i < n; i++) {
+      if (t[i] < 1 || t[i] > n || seen[t[i] - 1]) {
+        return false;
+      }
+      seen[t[i] - 1] = true;
+      if (t[i] != i + 1) {
+        moving++;
+        start = i;
+      }
+    }
+    if (!sub && moving != n) {
+      return false;
+    }
+    if (moving == 0) {
+      return sub;
+    }
+    int len = 0;
+    int i = start;
+    do {
+      i = t[i] - 1;
+      len++;
+    } while (i != start && len <= n);
+    return len == moving;
   }
 
   /** load[b] = sum of w[i] over the items i with bin[i] = b, bins numbered from 0. */
