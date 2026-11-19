@@ -8163,6 +8163,17 @@ Version 5.0 (unreleased)
    and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
    (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
 
+452. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
+   on by default for models with at least 400 cyclic distances
+   (-Dorg.jacop.fz.cyclicDistance.minDistances, default 400). There
+   proofs are out of reach and the upper bound counts: at 600 s with -f,
+   XCSP 2022 CyclicBandwidth caterpillar29 goes from 71 to 24,
+   caterpillar35 from 103 to 29 and mesh2D25x26 from 106 to 25. The nine
+   smaller instances (67 to 299 distances) keep the minimum, and with it
+   the proofs of caterpillar13 and 16. -Dorg.jacop.fz.cyclicDistance=true
+   still rewrites every model, and =false none. No other instance of the
+   wide set or of the XCSP 2022-2025 sets has the pattern.
+
 Version 4.11
 =============
 
