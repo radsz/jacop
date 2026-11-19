@@ -101,6 +101,9 @@ public final class CdclMain {
     boolean vmtf = false;
     boolean substitute = true;
     boolean congruence = true;
+    int elimBound = -1;
+    int elimClauseLimit = -1;
+    int elimGates = -1;
     for (int i = 0; i < args.length; i++) {
       switch (args[i]) {
         case "-t" -> timeout = Double.parseDouble(args[++i]);
@@ -124,6 +127,9 @@ public final class CdclMain {
         case "--vmtf" -> vmtf = !"0".equals(args[++i]);
         case "--substitute" -> substitute = !"0".equals(args[++i]);
         case "--congruence" -> congruence = !"0".equals(args[++i]);
+        case "--elim-bound" -> elimBound = Integer.parseInt(args[++i]);
+        case "--elim-clause-limit" -> elimClauseLimit = Integer.parseInt(args[++i]);
+        case "--elim-gates" -> elimGates = Integer.parseInt(args[++i]);
         default -> file = args[i];
       }
     }
@@ -160,6 +166,15 @@ public final class CdclMain {
     solver.setVmtf(vmtf);
     solver.setSubstitution(substitute);
     solver.setCongruence(congruence);
+    if (elimBound >= 0) {
+      solver.setMaxEliminationBound(elimBound);
+    }
+    if (elimClauseLimit >= 0) {
+      solver.setResolventLimit(elimClauseLimit);
+    }
+    if (elimGates >= 0) {
+      solver.setEliminationGates(elimGates != 0);
+    }
     if (timeout > 0) {
       solver.setDeadline(start + (long) (timeout * 1e9));
     }

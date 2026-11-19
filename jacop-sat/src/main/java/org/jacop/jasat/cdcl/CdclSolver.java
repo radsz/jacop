@@ -464,6 +464,19 @@ public final class CdclSolver {
   private long nextElimination = 5000;
   private int eliminationInterval = 5000;
   private int eliminationRounds;
+  // the elimination bound reached so far, the largest one, and the longest resolvent
+  private int eliminationBound;
+  private int maxEliminationBound = 16;
+  private int resolventLimit = 100;
+  private boolean eliminationGates = true;
+  int gateEliminations;
+  // time spent in elimination
+  long eliminationNanos;
+  // after a round that eliminated nothing: the root trail and irredundant clause counts it saw;
+  // the next round during search waits until one of them grows
+  private boolean eliminationFruitless;
+  private int eliminationTrail;
+  private int eliminationOriginals;
   private long seed;
 
   // inprocessing statistics per round on standard output
@@ -3339,7 +3352,7 @@ public final class CdclSolver {
             && !externalUsed
             && numUnits == 0) {
           nextElimination = conflicts + (long) eliminationInterval * ++eliminationRounds;
-          if (!eliminate()) {
+          if (eliminationDue() && !eliminate()) {
             return UNSAT;
           }
         }
@@ -4189,6 +4202,37 @@ public final class CdclSolver {
   }
 
   /**
+   * Sets the largest bound of variable elimination: an elimination may add this many clauses more
+   * than it removes. The bound is 0 in the first run before the search and rises through 1, 2, 4, 8
+   * and 16 up to this one with each complete run during search (default 16; 0 never adds clauses).
+   *
+   * @param bound the largest bound
+   */
+  public void setMaxEliminationBound(int bound) {
+    maxEliminationBound = Math.max(0, bound);
+  }
+
+  /**
+   * Turns gate detection in variable elimination on or off (on by default). When a variable is the
+   * output of an AND, OR, ITE, XOR gate or an equivalence, only the resolvents of its defining
+   * clauses with the others are added.
+   *
+   * @param on whether to use gates
+   */
+  public void setEliminationGates(boolean on) {
+    eliminationGates = on;
+  }
+
+  /**
+   * Sets the longest resolvent variable elimination may add (default 100).
+   *
+   * @param literals the limit
+   */
+  public void setResolventLimit(int literals) {
+    resolventLimit = Math.max(2, literals);
+  }
+
+  /**
    * Sets how often elimination runs again during search, after its first run before the search.
    *
    * @param conflicts the conflicts before the first round (later rounds are further apart), or 0
@@ -4637,8 +4681,25 @@ public final class CdclSolver {
         gatesFound += cc.andGates + cc.xorGates + cc.iteGates;
       }
     }
-    Eliminator e = new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof);
+    long elimBegin = System.nanoTime();
+    // with an external propagator (lazy clause generation) elimination stays as in MiniSat
+    int[][] elimInput = sat ? input : new int[0][];
+    int elimCount = sat ? n : 0;
+    Eliminator.Limits limits =
+        new Eliminator.Limits(eliminationBound, eliminationBound, resolventLimit, eliminationGates);
+    Eliminator e =
+        external != null
+            ? new Eliminator(numVars, elimInput, elimCount, frozen, proof)
+            : new Eliminator(numVars, elimInput, elimCount, frozen, proof, limits);
     sat = sat && e.run();
+    gateEliminations += e.numGateEliminations();
+    // the bound rises by one step after each complete run, so the first run before the search
+    // adds no clauses and later runs during search add more (Kissat's eliminatebound schedule)
+    eliminationFruitless = e.numEliminated() == 0 && eliminationBound >= maxEliminationBound;
+    if (e.completed()) {
+      eliminationBound = Eliminator.nextBound(eliminationBound, maxEliminationBound);
+    }
+    eliminationNanos += System.nanoTime() - elimBegin;
     for (int i = 0; i < numOriginals; i++) {
       int ref = originals[i];
       if ((mem[ref + META] & DELETED) == 0) {
@@ -4722,6 +4783,8 @@ public final class CdclSolver {
     if (propagate() != NO_CONFLICT) {
       return refuted();
     }
+    eliminationTrail = trailSize;
+    eliminationOriginals = numOriginals + numOriginalBinaries;
     return true;
   }
 
@@ -4977,6 +5040,17 @@ public final class CdclSolver {
           (System.nanoTime() - start) / 1e9);
     }
     return s;
+  }
+
+  /**
+   * Whether an elimination round during search can find more than the last one: it eliminated
+   * something, or new root facts or irredundant clauses appeared since.
+   */
+  private boolean eliminationDue() {
+    return external != null
+        || !eliminationFruitless
+        || trailSize > eliminationTrail
+        || numOriginals + numOriginalBinaries != eliminationOriginals;
   }
 
   /**

@@ -8187,8 +8187,48 @@ Version 5.0 (unreleased)
    at 600 s NurseRostering-10 goes from 5,584 to 5,147 (field best 5,054)
    and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
    (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
+452. The FlatZinc front end reads three more forms of XCSP 2017-2019
+   models: a binary table whose missing pairs are exactly x - y = d is an
+   edge x - y != d of the all-different detection (the table stays
+   posted; pigeonsPlus-11-04 35 -> 0.7 s); when the columns of a table
+   (all, or all but one) have the same sum in every row, that sum of 3
+   or more terms is posted as a linear equality (Bacp: 16 -> 24 of 24
+   proved at 240 s, total 2,084 -> 50 s; -Dorg.jacop.fz.tableSums=false
+   turns it off); and a model of clauses and 0/1 negative tables only
+   posts the tables as clauses, so it is a pure clause model, whose root
+   clause refutation now runs before JaSAT takes it (hole-10: unknown at
+   240 s -> 0.7 s; -Dorg.jacop.fz.negativeTableClauses=false turns it
+   off). None of them fires on the wide set or XCSP 2022-2025 except the
+   disequality edges, which fire without a clique on spot5.
 
-453. Sampling dives for float objectives (FloatDive): a float search that
+453. JaSAT (CdclSolver) eliminates variables with a rising bound and with
+   gates, as Kissat: the bound (resolvents allowed over the clauses they
+   replace) is 0 before the search and rises through 1, 2, 4, 8 to 16
+   with each complete elimination run during search, resolvents may have
+   up to 100 literals, and when a variable is the output of an AND, XOR,
+   ITE gate or an equivalence (GateExtractor) only the resolvents of its
+   defining clauses with the other clauses are added (Een, Biere,
+   "Effective Preprocessing in SAT through Variable and Clause
+   Elimination", SAT 2005; Biere, Jarvisalo, Kiesl, "Preprocessing in SAT
+   Solving", Handbook of Satisfiability, 2nd ed., 2021). Later rounds try
+   only the variables whose clauses changed, and a run during search is
+   skipped when the last one found nothing and no new root fact or clause
+   came. With an external propagator (lazy clause generation) elimination
+   stays as before. On the 90 SAT Competition 2024/25 CNFs at 240 s JaSAT
+   solves 44 instead of 39 (seed 1: 45 instead of 41) in 0.94x (0.977x)
+   the time; on the structured UNSAT ones it made 2-3x the propagations
+   per conflict of Kissat because it eliminated far fewer variables
+   (algorithm-equivalence-checking 344 vs 124), now 136. At 600 s on 36
+   affected instances 31 instead of 26 are solved (planning,
+   grs-fp-comm, quasigroup-completion faster or new), total 0.71x.
+   CdclMain takes --elim-bound, --elim-clause-limit and --elim-gates.
+   GateExtractor looks for an XOR only on clause variable sets that have
+   enough clauses of one parity, each set once (sorted keys of both
+   occurrence lists instead of a scan of both lists per base clause): the
+   same gates in less time, Hamming-20-10-05-09 (XCSP 2024 as CNF) reaches
+   100k conflicts in 14.9 s instead of 20.1 s.
+
+454. Sampling dives for float objectives (FloatDive): a float search that
    has not proved its optimum after 10 % of the time-out alternates runs
    of branch and bound (node budget 10,000, doubling) with batches of
    dives under the bound best - gap. A dive narrows the float search
@@ -8213,7 +8253,7 @@ Version 5.0 (unreleased)
    time unchanged. -Dorg.jacop.fz.floatDives=false turns them off;
    org.jacop.fz.floatDiveStart (0.1) and floatDiveNodes (10000) tune them.
 
-454. Explanations of large layered graphs (MDD, regular, cost MDD) under
+455. Explanations of large layered graphs (MDD, regular, cost MDD) under
    lazy clause generation are found with less work, with the same
    reasons. The four cuts of an explanation (nearest and far, source or
    target first; Gange, Stuckey and Szymanek, MDD propagators with
@@ -8232,7 +8272,7 @@ Version 5.0 (unreleased)
    conflicts a second instead of 1; WordDesign2-words-mdd-035 and 045
    are solved in about 70 s instead of 485 s.
 
-455. JaLP proves infeasibility that its presolve sees without simplex
+456. JaLP proves infeasibility that its presolve sees without simplex
    pivots where it can. When the presolve finds the bounds infeasible, or
    its reduced LP ends infeasible, BoundProof propagates the row activity
    bounds over the whole LP with a trail and resolves the conflict
