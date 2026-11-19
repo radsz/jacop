@@ -767,6 +767,9 @@ public class LinearRelaxation extends Constraint
   private static final int PARTITION_ROUNDS =
       Integer.getInteger("org.jacop.lp.partitionRounds", 100);
 
+  // the most rows between the objective and a pair literal of a partition whose cuts are made
+  private static final int PARTITION_REACH = Integer.getInteger("org.jacop.lp.partitionReach", 3);
+
   /** Statistics: triangle and clique cuts of the partitions of pair indicators added. */
   public long partitionCuts;
 
@@ -1420,6 +1423,13 @@ public class LinearRelaxation extends Constraint
         PARTITION_CUTS && objective != null && store.level == 0
             ? PartitionCuts.of(constraints)
             : new ArrayList<>();
+    if (!partitions.isEmpty()) {
+      // only a partition whose pair literals the objective sums, at most three rows away (the
+      // 2026 community-detection rnd_n100_e50_s50_d30_c10_p50 needs three): on
+      // work-task-variation the rows of the others made each solve dearer and the search worse
+      Set<IntVar> reach = objectiveReach(localForms, objective, PARTITION_REACH);
+      partitions.removeIf(p -> Arrays.stream(p.literals()).noneMatch(reach::contains));
+    }
     if (!partitions.isEmpty()) {
       Set<IntVar> present = Collections.newSetFromMap(new IdentityHashMap<>());
       for (LinearForm f : localForms) {
@@ -5230,6 +5240,36 @@ public class LinearRelaxation extends Constraint
       treeBound = lp.value(0);
     }
     return (int) result[0];
+  }
+
+  // the variables reached from the objective over at most depth rows of forms
+  private static Set<IntVar> objectiveReach(List<LinearForm> forms, IntVar objective, int depth) {
+    Map<IntVar, List<LinearForm>> rows = new IdentityHashMap<>();
+    for (LinearForm f : forms) {
+      for (IntVar v : f.vars()) {
+        rows.computeIfAbsent(v, k -> new ArrayList<>()).add(f);
+      }
+    }
+    Set<IntVar> reached = Collections.newSetFromMap(new IdentityHashMap<>());
+    Set<LinearForm> used = Collections.newSetFromMap(new IdentityHashMap<>());
+    reached.add(objective);
+    List<IntVar> front = List.of(objective);
+    for (int d = 0; d < depth && !front.isEmpty(); d++) {
+      List<IntVar> next = new ArrayList<>();
+      for (IntVar v : front) {
+        for (LinearForm f : rows.getOrDefault(v, List.of())) {
+          if (used.add(f)) {
+            for (IntVar w : f.vars()) {
+              if (reached.add(w)) {
+                next.add(w);
+              }
+            }
+          }
+        }
+      }
+      front = next;
+    }
+    return reached;
   }
 
   /**
