@@ -1595,10 +1595,11 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     Map<Object, Integer> ids = new IdentityHashMap<>();
+    Map<Contents, Integer> contents = new HashMap<>();
     Set<String> keys = new HashSet<>();
     for (Item item : items) {
       if (!lexItems.contains(item)) {
-        keys.add(itemKey(item, null, ids));
+        keys.add(itemKey(item, null, ids, contents));
       }
     }
     for (IntVar[][] pair : pairs) {
@@ -1619,7 +1620,7 @@ final class SymmetryBreaking implements ParserTreeConstants {
         return null;
       }
       for (Item item : items) {
-        if (!lexItems.contains(item) && !keys.contains(itemKey(item, sigma, ids))) {
+        if (!lexItems.contains(item) && !keys.contains(itemKey(item, sigma, ids, contents))) {
           return null;
         }
       }
@@ -1672,20 +1673,38 @@ final class SymmetryBreaking implements ParserTreeConstants {
    * A key of a constraint with its integer variables renamed by sigma (null for none), the same for
    * two constraints that differ only in an order of arguments that the constraint may permute.
    */
-  private static String itemKey(Item item, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
+  private static String itemKey(
+      Item item,
+      Map<IntVar, IntVar> sigma,
+      Map<Object, Integer> ids,
+      Map<Contents, Integer> contents) {
     Atom[][] args = item.args();
+    Spec spec = SPECS.get(item.name());
     String[][] atoms = new String[args.length][];
+    String[] parts = new String[args.length];
     for (int a = 0; a < args.length; a++) {
+      if (args[a].length >= CONSTANT_ARRAY_KEY && !inBag(spec, a)) {
+        // an array of constants is keyed once by its contents: a table of four million tuples
+        // on 728 constraints (Benzenoide, XCSP 2023) made a key of 70 MB for each of them
+        Integer id = ids.get(args[a]);
+        if (id == null) {
+          id =
+              allConstant(args[a])
+                  ? contents.computeIfAbsent(new Contents(args[a]), k -> contents.size())
+                  : -1;
+          ids.put(args[a], id);
+        }
+        if (id >= 0) {
+          parts[a] = (item.array()[a] ? "[" : "") + "K" + id;
+          continue;
+        }
+      }
       atoms[a] = new String[args[a].length];
       for (int i = 0; i < args[a].length; i++) {
         atoms[a][i] = atomKey(args[a][i], sigma, ids);
       }
-    }
-    String[] parts = new String[args.length];
-    for (int a = 0; a < args.length; a++) {
       parts[a] = (item.array()[a] ? "[" : "") + String.join(",", atoms[a]);
     }
-    Spec spec = SPECS.get(item.name());
     if (spec != null) {
       for (int[] bag : spec.bags) {
         if (bag[bag.length - 1] >= args.length) {
@@ -1725,6 +1744,32 @@ final class SymmetryBreaking implements ParserTreeConstants {
       }
     }
     return item.name() + "(" + String.join("|", parts) + ")";
+  }
+
+  // arrays of constants at least this long are keyed by their contents in itemKey
+  private static final int CONSTANT_ARRAY_KEY = 64;
+
+  private static boolean inBag(Spec spec, int argument) {
+    if (spec == null) {
+      return false;
+    }
+    for (int[] bag : spec.bags) {
+      for (int b : bag) {
+        if (b == argument) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  private static boolean allConstant(Atom[] atoms) {
+    for (Atom atom : atoms) {
+      if (!atom.isConstant()) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private static String atomKey(Atom atom, Map<IntVar, IntVar> sigma, Map<Object, Integer> ids) {
