@@ -234,6 +234,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SplitSelect;
 import org.jacop.util.DominatorTree;
+import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -6750,11 +6751,59 @@ class SingleConstraintTest extends TestHelper {
   // exactly what the probe of each arc by pivots of the network simplex prunes: random dives over
   // random networks with
   // parallel arcs, capacities up to 9 and a tight cost bound, compared domain by domain.
+  // an implication of a constraint that forwards no variable events kept an empty LinkedHashMap of
+  // its own: 105 MB over the 623,000 implications of XCSP 2022 RoomMate-sr0700
+  @Test
+  void queueForwardWithoutForwardingKeepsNoMapOfItsOwn() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    QueueForward<PrimitiveConstraint> none =
+        new QueueForward<>(new XlteqC(x, 4), List.<Var>of(x, y));
+    assertThat(none.isEmpty()).isTrue();
+    assertThat(none.forwardMap).isNotInstanceOf(java.util.LinkedHashMap.class).isEmpty();
+    PrimitiveConstraint and = new And(new XlteqC(x, 4), new XlteqC(y, 3));
+    QueueForward<PrimitiveConstraint> forwarding = new QueueForward<>(and, List.<Var>of(x, y));
+    assertThat(forwarding.isEmpty()).isFalse();
+    assertThat(forwarding.forwardMap).containsOnlyKeys(x, y);
+  }
+
   @Test
   void testNetworkFlowShortestPathDecisionsMatchProbes() {
-    Random random = new Random(1215);
-    for (int trial = 0; trial < 300; trial++) {
-      int nodeCount = 3 + random.nextInt(5);
+    assertNetworkFlowSettingsAgree(
+        new Random(1215),
+        300,
+        3,
+        5,
+        new String[] {"org.jacop.netflow.generalArcs", "org.jacop.netflow.shortestPaths"},
+        new String[][] {{"false", "false"}, {"true", "true"}});
+  }
+
+  // Block search pricing (the default) and Dantzig pricing reach different optimal bases; the
+  // pruning, decided by the costs of residual paths, must be the same. Networks of up to 60 arcs,
+  // so that a scan stops after a block of 16.
+  @Test
+  void testNetworkFlowBlockSearchPricingMatchesDantzig() {
+    assertNetworkFlowSettingsAgree(
+        new Random(1118),
+        300,
+        6,
+        15,
+        new String[] {"org.jacop.netflow.pricing"},
+        new String[][] {{"dantzig"}, {"block"}});
+  }
+
+  // random dives over random networks with parallel arcs, capacities up to 9 and a tight cost
+  // bound, imposed once under each setting of the given properties and compared domain by domain
+  private static void assertNetworkFlowSettingsAgree(
+      Random random,
+      int trials,
+      int minNodes,
+      int extraNodes,
+      String[] properties,
+      String[][] settings) {
+    for (int trial = 0; trial < trials; trial++) {
+      int nodeCount = minNodes + random.nextInt(extraNodes);
       int arcCount = nodeCount + random.nextInt(2 * nodeCount);
       int[][] arcs = new int[arcCount][2];
       int[] weights = new int[arcCount];
@@ -6775,12 +6824,15 @@ class SingleConstraintTest extends TestHelper {
       int costMax = (int) (flowCost * (50 + random.nextInt(60)) / 100);
       Store[] stores = new Store[2];
       IntVar[][] vars = new IntVar[2][];
-      String previous = System.getProperty("org.jacop.netflow.generalArcs");
-      String previousPaths = System.getProperty("org.jacop.netflow.shortestPaths");
+      String[] previous = new String[properties.length];
+      for (int p = 0; p < properties.length; p++) {
+        previous[p] = System.getProperty(properties[p]);
+      }
       try {
         for (int s = 0; s < 2; s++) {
-          System.setProperty("org.jacop.netflow.generalArcs", s == 0 ? "false" : "true");
-          System.setProperty("org.jacop.netflow.shortestPaths", s == 0 ? "false" : "true");
+          for (int p = 0; p < properties.length; p++) {
+            System.setProperty(properties[p], settings[s][p]);
+          }
           stores[s] = new Store();
           NetworkBuilder net = new NetworkBuilder();
           Node[] nodes = new Node[nodeCount];
@@ -6797,15 +6849,12 @@ class SingleConstraintTest extends TestHelper {
           stores[s].impose(net.build());
         }
       } finally {
-        if (previous == null) {
-          System.clearProperty("org.jacop.netflow.generalArcs");
-        } else {
-          System.setProperty("org.jacop.netflow.generalArcs", previous);
-        }
-        if (previousPaths == null) {
-          System.clearProperty("org.jacop.netflow.shortestPaths");
-        } else {
-          System.setProperty("org.jacop.netflow.shortestPaths", previousPaths);
+        for (int p = 0; p < properties.length; p++) {
+          if (previous[p] == null) {
+            System.clearProperty(properties[p]);
+          } else {
+            System.setProperty(properties[p], previous[p]);
+          }
         }
       }
       String network =
