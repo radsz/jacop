@@ -8338,7 +8338,7 @@ Version 5.0 (unreleased)
    rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
    11,670.
 
-452. Under LCG free search (-f), the core-guided phase is no longer skipped
+456. Under LCG free search (-f), the core-guided phase is no longer skipped
    after a probe without a solution of its own when the search makes
    fewer than 50 conflicts per second of work (too slow for branch and
    bound to prove the optimum) and the probe's cores raise the lower bound
@@ -8366,6 +8366,19 @@ Version 5.0 (unreleased)
    each walk visited about a million constraint memberships and the
    walks took 61 % of a 300 s run; now 1.4 %, with 20 times the nodes
    (objective 45397 -> 66765 at 300 s, the best known 69664 at 600 s).
+
+459. Free search (-f) on models with vehicle routes: LNS uses only route
+   removal, related (Shaw) removal and random neighbourhoods (the graph,
+   propagation, objective, constraint and line neighbourhoods are off
+   unless lns-kinds names them), and takes lns-share-routes 10 instead of
+   3 of free search's calls. On CVRPLIB X-n110-k13 (giant tour of the
+   MiniZinc Challenge 2015 model) the generic neighbourhoods took 44 % of
+   the runs for 6 of 101 improvements. Paired runs, -f: the 10 X instances
+   at 600 s 9 better and 1 worse (X-n110-k13 19,389 -> 18,722, X-n115-k10
+   17,240 -> 14,877, X-n120-k6 20,089 -> 16,397); 38 routing instances at
+   240 s 18 better, 11 worse, time 7,167 -> 7,080 s; the 88 wide-set
+   instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
+   3 of them running route neighbourhoods (the rest run unchanged code).
 
 Version 4.11
 =============
