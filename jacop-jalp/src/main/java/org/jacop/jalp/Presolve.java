@@ -188,7 +188,7 @@ final class Presolve {
   // a row bound was dropped as implied by the column bounds
   private boolean relaxed;
   // the bounds proved the problem infeasible
-  private boolean infeasible;
+  private boolean provedInfeasible;
 
   // the reduced problem: the old index of each new row and column, the new index of each old one
   int[] oldRow;
@@ -277,7 +277,7 @@ final class Presolve {
   boolean run() {
     for (int round = 0; round < MAX_ROUNDS; round++) {
       if (!passes()) {
-        infeasible = true;
+        provedInfeasible = true;
         return false;
       }
       if (!PARALLEL_RULES) {
@@ -285,7 +285,7 @@ final class Presolve {
       }
       int found = parallelRows();
       if (found < 0) {
-        infeasible = true;
+        provedInfeasible = true;
         return false;
       }
       found += parallelColumns();
@@ -319,7 +319,7 @@ final class Presolve {
 
   // whether run() stopped because the bounds proved the problem infeasible
   boolean infeasible() {
-    return infeasible;
+    return provedInfeasible;
   }
 
   // the passes over the rows and columns until nothing changes; false when the bounds cannot hold

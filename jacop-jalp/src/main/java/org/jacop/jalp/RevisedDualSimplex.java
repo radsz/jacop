@@ -506,6 +506,9 @@ public final class RevisedDualSimplex {
     weightsFrom = o.weightsFrom;
     infeasibleRow = o.infeasibleRow;
     boundRay = o.boundRay;
+    presolveInfeasible = o.presolveInfeasible;
+    reducedRay = o.reducedRay;
+    provingCosts = o.provingCosts == null ? null : o.provingCosts.clone();
     rowEpoch = o.rowEpoch;
     crashRows = o.crashRows;
     crashPending = o.crashPending;
@@ -1642,23 +1645,20 @@ public final class RevisedDualSimplex {
 
   // a proof of infeasibility by bound propagation over the whole problem, as the presolve found
   private boolean boundProof() {
-    BoundProof b = new BoundProof(n, m, rowIdx, rowVal, colIdx, colLen, boundLo, boundHi);
-    double[] y = null;
-    if (reducedRay != null) {
-      y = b.holds(reducedRay) ? reducedRay : null;
-      reducedRay = null;
-      if (PRESOLVE_TRACE) {
-        System.err.println("reduced ray " + (y != null));
-      }
+    BoundProof b = new BoundProof(n, rowIdx, rowVal, colIdx, colLen, boundLo, boundHi);
+    double[] y = {};
+    if (reducedRay != null && b.holds(reducedRay)) {
+      y = reducedRay;
     }
-    if (y == null) {
+    reducedRay = null;
+    if (y.length == 0) {
       y = b.run();
     }
     ops += b.work();
     if (PRESOLVE_TRACE) {
-      System.err.println("bound proof " + (y != null) + " work " + b.work());
+      System.err.println("bound proof " + (y.length > 0) + " work " + b.work());
     }
-    if (y == null) {
+    if (y.length == 0) {
       return false;
     }
     boundRay = y;

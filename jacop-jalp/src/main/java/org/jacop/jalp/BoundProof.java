@@ -96,7 +96,10 @@ final class BoundProof {
   private boolean conflictSide;
   private int conflictAt;
 
-  private long work;
+  private long visited;
+
+  // no ray
+  private static final double[] NO_RAY = {};
 
   /**
    * Prepares the propagation over the internal problem of a simplex: the columns {@code 0..n-1} and
@@ -104,7 +107,6 @@ final class BoundProof {
    */
   BoundProof(
       int n,
-      int m,
       int[][] rowIdx,
       double[][] rowVal,
       int[][] colIdx,
@@ -112,7 +114,7 @@ final class BoundProof {
       double[] boundLo,
       double[] boundHi) {
     this.n = n;
-    this.m = m;
+    this.m = rowIdx.length;
     this.rowIdx = rowIdx;
     this.rowVal = rowVal;
     this.colIdx = colIdx;
@@ -131,7 +133,7 @@ final class BoundProof {
    * Propagates the bounds and, at a conflict, resolves it into a Farkas ray.
    *
    * @return the ray over the rows, {@code y (A x - s)} with a range over the bounds that excludes
-   *     zero, or null when the propagation found no conflict or the ray does not hold
+   *     zero, or an empty array when the propagation found no conflict or the ray does not hold
    */
   double[] run() {
     long nonzeros = 0;
@@ -147,7 +149,7 @@ final class BoundProof {
       queue[i] = i;
       queued[i] = true;
     }
-    while (size > 0 && work < budget) {
+    while (size > 0 && visited < budget) {
       int i = queue[head];
       head = head + 1 == m ? 0 : head + 1;
       size--;
@@ -159,7 +161,7 @@ final class BoundProof {
       for (int t = touchedFrom; t < trail; t++) {
         int j = tCol[t];
         int[] ci = colIdx[j];
-        work += colLen[j];
+        visited += colLen[j];
         for (int e = 0; e < colLen[j]; e++) {
           int k = ci[e];
           if (!queued[k] && k < m) {
@@ -171,7 +173,7 @@ final class BoundProof {
         }
       }
     }
-    return null;
+    return NO_RAY;
   }
 
   // the first trail entry of the last call of propagate
@@ -182,7 +184,7 @@ final class BoundProof {
     touchedFrom = trail;
     int[] ri = rowIdx[i];
     double[] rv = rowVal[i];
-    work += 2L * ri.length;
+    visited += 2L * ri.length;
     double rlo = boundLo[n + i];
     double rhi = boundHi[n + i];
     if (rhi < Double.POSITIVE_INFINITY && !side(i, ri, rv, rhi, true)) {
@@ -211,10 +213,7 @@ final class BoundProof {
       }
     }
     if (infinite == 0 && min > b + CONFLICT * (1 + size)) {
-      conflictRow = i;
-      conflictSide = upperSide;
-      conflictAt = trail;
-      return false;
+      return conflict(i, upperSide);
     }
     if (infinite > 1) {
       return true;
@@ -222,52 +221,55 @@ final class BoundProof {
     for (int e = 0; e < ri.length; e++) {
       int j = ri[e];
       double a = s * rv[e];
-      double rest;
-      if (infinite == 1) {
-        if (j != infiniteAt) {
-          continue;
-        }
-        rest = min;
-      } else {
-        rest = min - a * (a > 0 ? lo[j] : hi[j]);
-      }
-      double bound = (b - rest) / a;
-      if (Math.abs(bound) > HUGE) {
+      if (infinite == 1 && j != infiniteAt) {
         continue;
       }
-      if (a > 0) {
-        // x_j <= bound
-        if (hi[j] == Double.POSITIVE_INFINITY || bound < hi[j] - step(j)) {
-          if (bound < lo[j] - CONFLICT * (1 + Math.abs(lo[j]) + size / Math.abs(a))) {
-            conflictRow = i;
-            conflictSide = upperSide;
-            conflictAt = trail;
-            return false;
-          }
-          push(j, true, i, upperSide);
-          hi[j] = Math.max(bound, lo[j]);
-        }
-      } else if (lo[j] == Double.NEGATIVE_INFINITY || bound > lo[j] + step(j)) {
-        if (bound > hi[j] + CONFLICT * (1 + Math.abs(hi[j]) + size / Math.abs(a))) {
-          conflictRow = i;
-          conflictSide = upperSide;
-          conflictAt = trail;
-          return false;
-        }
-        push(j, false, i, upperSide);
-        lo[j] = Math.min(bound, hi[j]);
+      // the least activity of the other columns
+      double rest = infinite == 1 ? min : min - a * (a > 0 ? lo[j] : hi[j]);
+      if (!tighten(i, j, a, (b - rest) / a, size, upperSide)) {
+        return false;
       }
     }
     return true;
   }
 
+  // the bound s a x <= b of row i implies on column j (x_j <= bound for a > 0, x_j >= bound
+  // otherwise); false at a conflict
+  private boolean tighten(int i, int j, double a, double bound, double size, boolean upperSide) {
+    if (Math.abs(bound) > HUGE) {
+      return true;
+    }
+    if (a > 0) {
+      if (hi[j] == Double.POSITIVE_INFINITY || bound < hi[j] - step(j)) {
+        if (bound < lo[j] - CONFLICT * (1 + Math.abs(lo[j]) + size / Math.abs(a))) {
+          return conflict(i, upperSide);
+        }
+        push(j, true, i, upperSide);
+        hi[j] = Math.max(bound, lo[j]);
+      }
+    } else if (lo[j] == Double.NEGATIVE_INFINITY || bound > lo[j] + step(j)) {
+      if (bound > hi[j] + CONFLICT * (1 + Math.abs(hi[j]) + size / Math.abs(a))) {
+        return conflict(i, upperSide);
+      }
+      push(j, false, i, upperSide);
+      lo[j] = Math.min(bound, hi[j]);
+    }
+    return true;
+  }
+
+  // records a conflict of the side of row i at the end of the trail; false
+  private boolean conflict(int i, boolean upperSide) {
+    conflictRow = i;
+    conflictSide = upperSide;
+    conflictAt = trail;
+    return false;
+  }
+
   // the least change of a finite bound of column j worth a trail entry
   private double step(int j) {
     double range = hi[j] - lo[j];
-    return STEP
-        * (Double.isInfinite(range)
-            ? Math.max(1, Math.min(Math.abs(lo[j]), Math.abs(hi[j])))
-            : Math.max(1, range));
+    double scale = Double.isInfinite(range) ? Math.min(Math.abs(lo[j]), Math.abs(hi[j])) : range;
+    return STEP * Math.max(1, scale);
   }
 
   private void push(int j, boolean upperBound, int i, boolean upperSide) {
@@ -309,17 +311,14 @@ final class BoundProof {
       // the row side s a_r x <= b_r implied this bound: add it so that x_j leaves the combination
       int r = tRow[t];
       double a = (tSide[t] ? 1 : -1) * entry(r, j);
-      if (a == 0) {
-        return null;
-      }
-      double lambda = -gj / a;
-      if (!(lambda > 0) || Double.isInfinite(lambda)) {
-        return null;
+      double lambda = a == 0 ? Double.NaN : -gj / a;
+      if (Double.isNaN(lambda) || lambda <= 0 || Double.isInfinite(lambda)) {
+        return NO_RAY;
       }
       add(g, y, r, tSide[t], lambda);
       g[j] = 0;
     }
-    return holds(y) ? y : null;
+    return holds(y) ? y : NO_RAY;
   }
 
   // adds lambda times the side of row r, s a_r x <= b_r, to the combination
@@ -328,7 +327,7 @@ final class BoundProof {
     y[r] += f;
     int[] ri = rowIdx[r];
     double[] rv = rowVal[r];
-    work += ri.length;
+    visited += ri.length;
     for (int e = 0; e < ri.length; e++) {
       g[ri[e]] += f * rv[e];
     }
@@ -388,6 +387,6 @@ final class BoundProof {
 
   /** Returns the entries visited, for the work count of the simplex. */
   long work() {
-    return work;
+    return visited;
   }
 }
