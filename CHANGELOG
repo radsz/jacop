@@ -8187,6 +8187,19 @@ Version 5.0 (unreleased)
    at 600 s NurseRostering-10 goes from 5,584 to 5,147 (field best 5,054)
    and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
    (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
+452. The FlatZinc front end reads three more forms of XCSP 2017-2019
+   models: a binary table whose missing pairs are exactly x - y = d is an
+   edge x - y != d of the all-different detection (the table stays
+   posted; pigeonsPlus-11-04 35 -> 0.7 s); when the columns of a table
+   (all, or all but one) have the same sum in every row, that sum of 3
+   or more terms is posted as a linear equality (Bacp: 16 -> 24 of 24
+   proved at 240 s, total 2,084 -> 50 s; -Dorg.jacop.fz.tableSums=false
+   turns it off); and a model of clauses and 0/1 negative tables only
+   posts the tables as clauses, so it is a pure clause model, whose root
+   clause refutation now runs before JaSAT takes it (hole-10: unknown at
+   240 s -> 0.7 s; -Dorg.jacop.fz.negativeTableClauses=false turns it
+   off). None of them fires on the wide set or XCSP 2022-2025 except the
+   disequality edges, which fire without a clique on spot5.
 
 453. JaSAT (CdclSolver) eliminates variables with a rising bound and with
    gates, as Kissat: the bound (resolvents allowed over the clauses they
