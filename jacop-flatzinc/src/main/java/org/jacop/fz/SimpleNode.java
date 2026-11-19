@@ -4,12 +4,17 @@
 
 package org.jacop.fz;
 
+import java.util.Arrays;
+
 /** Simple AST node for flatzinc parser. */
 public class SimpleNode implements Node, Cloneable {
 
   protected final int id;
   protected Node parent;
-  protected Node[] children;
+  // the child of a node with one child (most annotations, annotation expressions and constraint
+  // items without annotations), the array of the children of a node with more, or null: an array
+  // of one child cost 24 bytes of each of about 5 million such nodes of XCSP 2022 RoomMate-sr0700
+  protected Object children;
 
   /**
    * Constructs a simple node with the specified id.
@@ -59,19 +64,25 @@ public class SimpleNode implements Node, Cloneable {
       throw new IllegalStateException(e);
     }
     c.parent = null;
-    if (children != null) {
-      c.children = new Node[children.length];
-      for (int i = 0; i < children.length; i++) {
-        if (children[i] instanceof SimpleNode child) {
-          SimpleNode d = child.copy();
-          d.parent = c;
-          c.children[i] = d;
-        } else {
-          c.children[i] = children[i];
-        }
+    if (children instanceof Node[] all) {
+      Node[] copied = new Node[all.length];
+      for (int i = 0; i < all.length; i++) {
+        copied[i] = copyOf(all[i], c);
       }
+      c.children = copied;
+    } else if (children instanceof Node only) {
+      c.children = copyOf(only, c);
     }
     return c;
+  }
+
+  private static Node copyOf(Node child, SimpleNode parent) {
+    if (child instanceof SimpleNode node) {
+      SimpleNode d = node.copy();
+      d.parent = parent;
+      return d;
+    }
+    return child;
   }
 
   /** {@inheritDoc} */
@@ -96,24 +107,63 @@ public class SimpleNode implements Node, Cloneable {
 
   /** {@inheritDoc} */
   public void jjtAddChild(Node n, int i) {
-    if (children == null) {
-      children = new Node[i + 1];
-    } else if (i >= children.length) {
-      Node[] c = new Node[i + 1];
-      System.arraycopy(children, 0, c, 0, children.length);
-      children = c;
+    if (children == null && i == 0) {
+      children = n;
+      return;
     }
-    children[i] = n;
+    Node[] all;
+    if (children instanceof Node[] array) {
+      all = array;
+    } else {
+      all = new Node[1];
+      all[0] = (Node) children;
+    }
+    if (i >= all.length) {
+      all = Arrays.copyOf(all, i + 1);
+    }
+    all[i] = n;
+    children = all;
   }
 
   /** {@inheritDoc} */
   public Node jjtGetChild(int i) {
-    return children[i];
+    if (children instanceof Node[] all) {
+      return all[i];
+    }
+    if (i != 0 || children == null) {
+      throw new ArrayIndexOutOfBoundsException(i);
+    }
+    return (Node) children;
   }
 
   /** {@inheritDoc} */
   public int jjtGetNumChildren() {
-    return children == null ? 0 : children.length;
+    if (children instanceof Node[] all) {
+      return all.length;
+    }
+    return children == null ? 0 : 1;
+  }
+
+  /**
+   * Drops the child at a position, which keeps its place: the number of children stays.
+   *
+   * @param i the position of the child
+   */
+  void releaseChild(int i) {
+    if (children instanceof Node[] all) {
+      all[i] = null;
+    } else if (i == 0 && children != null) {
+      children = new Node[1];
+    } else {
+      throw new ArrayIndexOutOfBoundsException(i);
+    }
+  }
+
+  /** Drops every child, which keeps its place: the number of children stays. */
+  void releaseChildren() {
+    for (int i = 0; i < jjtGetNumChildren(); i++) {
+      releaseChild(i);
+    }
   }
 
   /* You can override these two methods in subclasses of SimpleNode to
@@ -148,12 +198,10 @@ public class SimpleNode implements Node, Cloneable {
    */
   public void dump(String prefix) {
     FzConsole.println(toString(prefix));
-    if (children != null) {
-      for (Node child : children) {
-        SimpleNode n = (SimpleNode) child;
-        if (n != null) {
-          n.dump(prefix + " ");
-        }
+    for (int i = 0; i < jjtGetNumChildren(); i++) {
+      SimpleNode n = (SimpleNode) jjtGetChild(i);
+      if (n != null) {
+        n.dump(prefix + " ");
       }
     }
   }

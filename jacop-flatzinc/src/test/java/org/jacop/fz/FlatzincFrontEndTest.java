@@ -4528,6 +4528,56 @@ class FlatzincFrontEndTest {
     assertEquals(List.of("children", "id", "parent"), fields);
   }
 
+  /**
+   * A node with one child keeps the child itself, not an array of one: most annotations, annotation
+   * expressions and constraint items without annotations have one child, an array of 24 bytes for
+   * each of about 5 million nodes of XCSP 2022 RoomMate-sr0700. The children read, copy and release
+   * as before.
+   */
+  @Test
+  void nodesWithOneChildKeepNoArray() {
+    SimpleNode one = new SimpleNode(ParserTreeConstants.JJTANNOTATION);
+    SimpleNode child = new SimpleNode(ParserTreeConstants.JJTANNEXPR);
+    child.jjtSetParent(one);
+    one.jjtAddChild(child, 0);
+    assertFalse(one.children instanceof Node[]);
+    assertEquals(1, one.jjtGetNumChildren());
+    assertSame(child, one.jjtGetChild(0));
+    assertThrows(ArrayIndexOutOfBoundsException.class, () -> one.jjtGetChild(1));
+    SimpleNode copy = one.copy();
+    assertEquals(1, copy.jjtGetNumChildren());
+    assertNotSame(child, copy.jjtGetChild(0));
+    assertSame(copy, copy.jjtGetChild(0).jjtGetParent());
+
+    // the parser adds the children of a node from the last one
+    SimpleNode three = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    SimpleNode[] kids = new SimpleNode[3];
+    for (int i = 2; i >= 0; i--) {
+      kids[i] = new SimpleNode(ParserTreeConstants.JJTSCALARFLATEXPR);
+      three.jjtAddChild(kids[i], i);
+    }
+    assertEquals(3, three.jjtGetNumChildren());
+    for (int i = 0; i < 3; i++) {
+      assertSame(kids[i], three.jjtGetChild(i));
+    }
+    // and a child added after the first one turns the child into an array
+    SimpleNode two = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    two.jjtAddChild(kids[0], 0);
+    two.jjtAddChild(kids[1], 1);
+    assertEquals(2, two.jjtGetNumChildren());
+    assertSame(kids[0], two.jjtGetChild(0));
+    assertSame(kids[1], two.jjtGetChild(1));
+
+    // a released child keeps its place
+    one.releaseChildren();
+    assertEquals(1, one.jjtGetNumChildren());
+    assertNull(one.jjtGetChild(0));
+    three.releaseChild(1);
+    assertEquals(3, three.jjtGetNumChildren());
+    assertNull(three.jjtGetChild(1));
+    assertSame(kids[2], three.jjtGetChild(2));
+  }
+
   @Test
   void channelMapsAreReleasedAfterPosting(@TempDir Path dir) throws Exception {
     // the int_eq_reif and int_eq_imp constraints collected for the channels were kept for the

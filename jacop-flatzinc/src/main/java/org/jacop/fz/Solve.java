@@ -459,16 +459,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   static void releaseAllBut(SimpleNode solveItem) {
     Node kept = solveItem;
     while (kept.jjtGetParent() instanceof SimpleNode parent) {
-      if (parent.children != null) {
-        for (int i = 0; i < parent.children.length; i++) {
-          if (parent.children[i] != kept) {
-            // and its own items: a node another structure keeps (a rewritten constraint) reaches
-            // them through its parent, which would keep every item of the model live
-            if (parent.children[i] instanceof SimpleNode released && released.children != null) {
-              Arrays.fill(released.children, null);
-            }
-            parent.children[i] = null;
+      for (int i = 0; i < parent.jjtGetNumChildren(); i++) {
+        Node child = parent.jjtGetChild(i);
+        if (child != kept) {
+          // and its own items: a node another structure keeps (a rewritten constraint) reaches
+          // them through its parent, which would keep every item of the model live
+          if (child instanceof SimpleNode released) {
+            released.releaseChildren();
           }
+          parent.releaseChild(i);
         }
       }
       kept = parent;
