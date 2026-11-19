@@ -112,6 +112,7 @@ import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
@@ -1669,6 +1670,38 @@ class VeriPbProofTest {
               }
             }
             store.impose(new HybridTable(new IntVar[] {x[k], x[k + 1], x[k + 2]}, tuples));
+          }
+          store.impose(new XneqY(x[0], x[3]));
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          IntVar[] terms = {x[0], x[1], x[2], x[3], obj};
+          int[] w = new int[terms.length];
+          for (int i = 0; i < 4; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[4] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // binary tables over domains with holes, as the FlatZinc front end posts small binary tables
+  @Test
+  void binaryBitTablesAreProved() {
+    optimaAreProved(
+        200,
+        (store, random) -> {
+          IntVar[] x = new IntVar[4];
+          for (int i = 0; i < x.length; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, 7);
+            x[i].domain.in(store.level, x[i], x[i].domain.subtract(random.nextInt(8)));
+          }
+          for (int k = 0; k + 1 < x.length; k++) {
+            int[][] pairs = new int[8 + random.nextInt(10)][2];
+            for (int[] t : pairs) {
+              t[0] = random.nextInt(8);
+              t[1] = random.nextInt(8);
+            }
+            store.impose(new BinaryBitTable(x[k], x[k + 1], pairs));
           }
           store.impose(new XneqY(x[0], x[3]));
           IntVar obj = new IntVar(store, "obj", -500, 500);
