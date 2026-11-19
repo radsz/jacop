@@ -544,7 +544,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
       }
       case BOOL2INT -> args[0];
       case "int_eq_reif" -> args[0] == d.constant() ? 1L : 0L;
-      case "int_ne_reif" -> args[0] != d.constant() ? 1L : 0L;
+      case "int_ne_reif" -> args[0] == d.constant() ? 0L : 1L;
       case "int_le_reif" -> args[0] <= d.constant() ? 1L : 0L;
       case "int_lt_reif" -> args[0] < d.constant() ? 1L : 0L;
       case INT_TIMES -> args[0] * args[1];

@@ -11,8 +11,9 @@ public class SimpleNode implements Node, Cloneable {
   protected Node parent;
   // the child of a node with one child (most annotations, annotation expressions and constraint
   // items without annotations), the array of the children of a node with more, or null: an array
-  // of one child cost 24 bytes of each of about 5 million such nodes of XCSP 2022 RoomMate-sr0700;
-  // or the int[] of the values of an array literal of int literals only (see packedInts())
+  // of one child cost 24 bytes of each of about 5 million such nodes of XCSP 2022 RoomMate-sr0700.
+  // An array literal whose elements are all int literals keeps their values in an int array here,
+  // see the method packedInts.
   protected Object children;
 
   /**
