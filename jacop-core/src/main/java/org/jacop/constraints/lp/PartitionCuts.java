@@ -140,7 +140,27 @@ public final class PartitionCuts {
   }
 
   /** A cut {@code sum weights * literals <= rhs}, over indexes of {@link #literals()}. */
-  public record Cut(int[] literals, long[] weights, long rhs, double efficacy) {}
+  public record Cut(int[] literals, long[] weights, long rhs, double efficacy) {
+
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Cut c
+          && Arrays.equals(literals, c.literals)
+          && Arrays.equals(weights, c.weights)
+          && rhs == c.rhs
+          && Double.compare(efficacy, c.efficacy) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+      return 31 * (31 * Arrays.hashCode(literals) + Arrays.hashCode(weights)) + Long.hashCode(rhs);
+    }
+
+    @Override
+    public String toString() {
+      return "Cut" + Arrays.toString(literals) + Arrays.toString(weights) + " <= " + rhs;
+    }
+  }
 
   /**
    * The Booleans the cuts are stated over.

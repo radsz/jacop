@@ -767,6 +767,9 @@ public class LinearRelaxation extends Constraint
   private static final int PARTITION_ROUNDS =
       Integer.getInteger("org.jacop.lp.partitionRounds", 100);
 
+  // the tag and source of the partition rows and cuts
+  private static final String PARTITION = "partition";
+
   // the most rows between the objective and a pair literal of a partition whose cuts are made
   private static final int PARTITION_REACH = Integer.getInteger("org.jacop.lp.partitionReach", 3);
 
@@ -1438,7 +1441,7 @@ public class LinearRelaxation extends Constraint
       for (PartitionCuts p : partitions) {
         List<LinearForm> rows = p.columnRows(present);
         localForms.addAll(rows);
-        tag(tags, rows, "partition");
+        tag(tags, rows, PARTITION);
         for (LinearForm f : rows) {
           present.addAll(Arrays.asList(f.vars()));
         }
@@ -4613,8 +4616,8 @@ public class LinearRelaxation extends Constraint
       if (!partitions.isEmpty()) {
         long t0 = System.nanoTime();
         int status = partitionRounds();
-        timed("partition", t0);
-        if (status != DualSimplex.OPTIMAL) {
+        timed(PARTITION, t0);
+        if (status != LpSolver.OPTIMAL) {
           return status;
         }
       }
@@ -5364,7 +5367,7 @@ public class LinearRelaxation extends Constraint
                 for (PartitionCuts.Cut cut : p.separate(value, 4 * CUTS_PER_ROUND)) {
                   MirCut row = row(cut, list, columns[c]);
                   if (row != null) {
-                    row.source = "partition";
+                    row.source = PARTITION;
                     found.add(row);
                   }
                 }
@@ -5375,7 +5378,7 @@ public class LinearRelaxation extends Constraint
             true,
             true);
     partitionCuts += result[1];
-    if (result[0] == DualSimplex.OPTIMAL) {
+    if (result[0] == LpSolver.OPTIMAL) {
       partitionBound = lp.value(0);
     }
     return (int) result[0];
