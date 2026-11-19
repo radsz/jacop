@@ -2118,6 +2118,8 @@ class GlobalConstraints implements ParserTreeConstants {
   static final boolean NEGATIVE_TABLE_CLAUSES =
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.negativeTableClauses", "true"));
 
+  int negativeTableClauses;
+
   /** The most rows of a negative table over 0/1 variables posted as clauses. */
   static final int NEGATIVE_TABLE_CLAUSE_ROWS = 64;
 
@@ -2143,6 +2145,10 @@ class GlobalConstraints implements ParserTreeConstants {
         || tbl.length / size > NEGATIVE_TABLE_CLAUSE_ROWS
         || Arrays.stream(v).anyMatch(x -> x.min() < 0 || x.max() > 1)) {
       return false;
+    }
+    if (negativeTableClauses++ == 0
+        && (support.options.debug() || support.options.searchStatistics())) {
+      FzConsole.println("%%%mzn-stat: negativeTableClauses=1\n%%%mzn-stat-end");
     }
     for (int r = 0; r + size <= tbl.length; r += size) {
       List<IntVar> positive = new ArrayList<>();
