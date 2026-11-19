@@ -625,8 +625,9 @@ public final class CoreSearch {
         probe(unit.term, unit.level, phaseLimit);
       } else if (OBJECTIVE_PROBE && cores >= nextObjectiveProbe && slowCores()) {
         long before = sat.work();
+        long clock = sat.now();
         boolean feasible = probeObjective(phaseLimit);
-        discount(sat.work() - before);
+        discount(sat.work() - before, sat.now() - clock);
         if (!feasible) {
           return CdclSolver.SAT; // no solution better than the best one
         }
@@ -1445,9 +1446,14 @@ public final class CoreSearch {
    * stopped as stalled at 214, three below the optimum that its cores prove two cores later (lost
    * in 4 of 4 runs at 120 s).
    */
-  private void discount(long work) {
+  private void discount(long work, long nanos) {
     if (work <= 0) {
       return;
+    }
+    if (GIVE_BACK) {
+      lcg.giveBack(work, nanos);
+    } else if (sat.workLimit() != Long.MAX_VALUE) {
+      sat.setWorkLimit(sat.workLimit() + work);
     }
     if (startWork >= 0) {
       startWork += work;
@@ -1458,10 +1464,12 @@ public final class CoreSearch {
     if (markWork >= 0) {
       markWork += work;
     }
-    if (sat.workLimit() != Long.MAX_VALUE) {
-      sat.setWorkLimit(sat.workLimit() + work);
-    }
   }
+
+  // -Djacop.lcg.coreGiveBack=false: the work left out of the phase extends only its current work
+  // limit, not its clock nor the limit the phase gets once it has a solution of its own
+  static final boolean GIVE_BACK =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreGiveBack", "true"));
 
   /** Whether every soft literal was assumed and a solution was found under all of them. */
   boolean exhausted() {
@@ -1563,6 +1571,7 @@ public final class CoreSearch {
     if (lcg.coreExhaust() <= 0
         || size < 2
         || lastTotalizer == null
+        || SKIP_AT_BEST && lowerBound >= lcg.boundObjective()
         || patience > 0 && exhaustMisses >= patience * (1 + exhaustedOutputs)) {
       return true;
     }
@@ -1578,9 +1587,11 @@ public final class CoreSearch {
         sat.setConflictLimit(
             Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
         long before = sat.work();
+        long clock = sat.now();
         long workLimit = sat.workLimit();
         sat.setWorkLimit(testWorkLimit(before, workLimit));
         int[] failed;
+        long bestBefore = lcg.bestObjective();
         try {
           failed =
               lcg.solveUnder(-s.lit) == CdclSolver.UNSAT
@@ -1588,6 +1599,9 @@ public final class CoreSearch {
                   : new int[] {0, 0};
         } finally {
           sat.setWorkLimit(workLimit);
+        }
+        if (lcg.bestObjective() < bestBefore) {
+          exhaustSolutions++;
         }
         // an empty core: unsatisfiable without assumptions
         open = failed.length != 0;
@@ -1602,12 +1616,20 @@ public final class CoreSearch {
           // a test that proved nothing leaves the phase its work
           long work = sat.work() - before;
           exhaustDiscounted += work;
-          discount(work);
+          discount(work, sat.now() - clock);
         }
       }
     }
     return open;
   }
+
+  /** Statistics: exhaustion tests that found a better solution. */
+  public long exhaustSolutions;
+
+  // -Djacop.lcg.coreExhaustAtBest=true: exhaustion also tests the outputs of a core that brought
+  // the lower bound to the best solution, which the phase then proves optimal without them
+  private static final boolean SKIP_AT_BEST =
+      !Boolean.parseBoolean(System.getProperty("jacop.lcg.coreExhaustAtBest", "false"));
 
   /** The work limit of an exhaustion test that starts at the given work. */
   private long testWorkLimit(long now, long workLimit) {

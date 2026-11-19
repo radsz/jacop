@@ -179,7 +179,8 @@ public class ExactCoverDetector {
     int b;
     try {
       b = support.getInt(rhs);
-    } catch (IllegalArgumentException | ClassCastException e) {
+    } catch (RuntimeException _) {
+      // a variable right-hand side (bool_lin_eq takes var int), or no integer
       return;
     }
     if (b != 1) {

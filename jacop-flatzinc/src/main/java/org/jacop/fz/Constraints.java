@@ -260,7 +260,9 @@ public class Constraints implements ParserTreeConstants {
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
       if (CommonSubexpressions.enabled() && options.proof() == null) {
-        CommonSubexpressions cse = new CommonSubexpressions(support, solveItemVariables(astTree));
+        Set<IntVar> pinned = solveItemVariables(astTree);
+        dictionary.addDeclaredEqualities(pinned);
+        CommonSubexpressions cse = new CommonSubexpressions(support, pinned);
         cse.detect(astTree);
         if (!cse.replaced().isEmpty()) {
           replaced = new HashSet<>(cse.replaced());
@@ -851,6 +853,8 @@ public class Constraints implements ParserTreeConstants {
     for (IntVar v : new ArrayList<>(vars)) {
       vars.add(dictionary.getAlias(v));
     }
+    // the equality posted for var x = y stays on those variables
+    dictionary.addDeclaredEqualities(vars);
     return vars;
   }
 
@@ -975,16 +979,15 @@ public class Constraints implements ParserTreeConstants {
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
     IntVar v1 = support.getVariable(p1);
     IntVar v2 = support.getVariable(p2);
-    if (v1 == v2 || dictionary.isAliasTarget(v2)) {
-      // the integer variable is already the alias of a Boolean; gen_bool2int posts the equality
-      // of the two Booleans
+    if (v1 == v2 || dictionary.isAliasTarget(v2) || dictionary.isDeclaredEqual(v2)) {
+      // the integer variable is already the alias of a Boolean, or a declaration made it equal to
+      // another variable on its own object; gen_bool2int posts the equality
       return;
     }
     dictionary.addAlias(v1, v2);
-    if (v1.singleton() || v2.singleton()) {
-      v1.domain.in(store.level, v1, v2.domain);
-      v2.domain.in(store.level, v2, v1.domain);
-    }
+    // v1 stands for v2 from now on, so it takes the declared domain of v2 (var 2..20: i)
+    v1.domain.in(store.level, v1, v2.domain);
+    v2.domain.in(store.level, v2, v1.domain);
     if (debug) {
       FzConsole.println("% Alias: " + v1 + " == " + v2);
     }
@@ -1021,6 +1024,7 @@ public class Constraints implements ParserTreeConstants {
         || x.max() > 1
         || dictionary.aliasTable.containsKey(x)
         || dictionary.isAliasTarget(x)
+        || dictionary.isDeclaredEqual(x)
         || dictionary.aliasTable.containsKey(b)) {
       return false;
     }

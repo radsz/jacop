@@ -124,6 +124,28 @@ mvn -Pmin -pl jacop-core test -Dtest=WakeUpFixpointTest -Dsurefire.rerunFailingT
     -Dwakeup.trials=100000
 ```
 
+## Checking primitive and composed constraints in reifications
+
+`jacop-core/src/test/java/org/jacop/ComposedTightnessTest.java` (in the build, `tightness.trials`
+300 per case, about 5 s) posts primitive constraints and constraints composed of them (And, Or, Not,
+Eq, Xor, Implies, IfThen, IfThenElse, Reified, Bool reifications, counts, sums) on small random boxes
+with holes, decides every tuple by imposing the constraint on fixed variables, and checks
+`Reified(c, b)` with b open, b fixed to 1 or 0 after imposing, b fixed before, and c imposed alone.
+Wrong pruning, a wrong b and exceptions fail the test; missed entailment, missed disentailment,
+values left without support and a nested c that prunes less than the imposed one are counted per
+case (`-Dtightness.report=true` prints the table with a first example). Run it at volume after
+changing satisfied(), notSatisfied(), notConsistency() or a composed constraint:
+
+```
+mvn -Pmin -pl jacop-core test -Dtest=ComposedTightnessTest -Dsurefire.rerunFailingTestsCount=0 \
+    -Dtightness.trials=20000 -Dtightness.report=true [-Dtightness.cases=IfThenElseBool,Eq]
+```
+
+`-Dtightness.repeated=true` gives about a third of the positions of each case an earlier variable
+of the same kind, so one variable appears several times; only soundness counts there (a repeated
+variable may weaken a propagator), and an instance whose impose rejects the repeat is counted as
+rejected.
+
 ## Checking globals against their decompositions
 
 `jacop-benchmarks/src/test/java/org/jacop/decomposition/DecompositionCheck.java` replaces each
