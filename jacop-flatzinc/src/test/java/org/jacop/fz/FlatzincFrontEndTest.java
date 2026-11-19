@@ -45,6 +45,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -4243,6 +4245,22 @@ class FlatzincFrontEndTest {
         org.jacop.fz.constraints.Support.class.getDeclaredField("unitSums");
     sums.setAccessible(true);
     assertTrue(((List<?>) sums.get(loader.parser.cc.support)).isEmpty());
+  }
+
+  /**
+   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
+   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
+   * RoomMate-sr0700 (163 MB while the model is read).
+   */
+  @Test
+  void parseTreeNodesKeepNoParserOrValue() {
+    List<String> fields =
+        Arrays.stream(SimpleNode.class.getDeclaredFields())
+            .filter(f -> !Modifier.isStatic(f.getModifiers()))
+            .map(Field::getName)
+            .sorted()
+            .toList();
+    assertEquals(List.of("children", "id", "parent"), fields);
   }
 
   @Test
