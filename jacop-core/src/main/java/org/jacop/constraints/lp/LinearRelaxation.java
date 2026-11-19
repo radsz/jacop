@@ -2573,8 +2573,14 @@ public class LinearRelaxation extends Constraint
     return result;
   }
 
-  // the number of terms a row may grow to while its defined variables are replaced
-  private static final int MAX_EXPANDED_TERMS = 4096;
+  // the number of terms a row may grow to while its defined variables are replaced. Merging
+  // keeps a row at most as long as the distinct variables it reaches, so the cap only stops rows
+  // that are long in the model. A cap of 4096 kept the objective of XCSP 2025 BusScheduling-c2,
+  // a sum of 14,771 Booleans that lcg-split cut into sums of blocks, as the sum of its blocks:
+  // with lcg-split-tree=0, -f proved the optimum in none of 3 runs of 120 s, and in 3 of 3
+  // (17-31 s) with the whole row
+  private static final int MAX_EXPANDED_TERMS =
+      Integer.getInteger("org.jacop.lp.maxExpandedTerms", 1 << 16);
 
   // f with every defined variable replaced by its definition; definitions may use defined
   // variables, up to a small depth. Repeated variables are merged and zero weights dropped after
