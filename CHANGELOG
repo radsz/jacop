@@ -8023,7 +8023,7 @@ Version 5.0 (unreleased)
    (08 and table-08 3.3 -> 6.6 s and 4.6 -> 10.4 s). Fires on none of
    the 240 wide instances.
 
-440. JaSAT (CdclSolver) visits watches faster, with the same search: a
+445. JaSAT (CdclSolver) visits watches faster, with the same search: a
    watch is one long (clause and blocking literal), so a visit whose
    blocking literal is true is one load, and the watch is written back
    only once an earlier watch has left the list; every watch list keeps
@@ -8041,7 +8041,17 @@ Version 5.0 (unreleased)
    takes --conflicts N (stop after N conflicts) and prints the learnt
    clause count and arena size.
 
-445. Under lazy clause generation, the reason why two variables have no
+446. With -s -v (or --search-statistics), the portfolio (-p) prints the
+   statistics of each thread after its answer, in a block of
+   portfolioThread.<name>.<key> lines: how the thread ended (complete,
+   stopped, done, or running when it had not stopped 10 s after the
+   answer), its solve time, nodes, failures, restarts, propagations,
+   solutions and objective, and when it ran them, its LCG conflicts, SAT
+   propagations, average learnt clause length, conflicts before LCG gave
+   way and LNS runs. A portfolio slower than one thread can then be
+   traced to its threads (issue 797).
+
+447. Under lazy clause generation, the reason why two variables have no
    common value (an element over variables dropping an index, x = y,
    x + c = z, x + y = c, x != y) cites only the bounds that separate their
    ranges, each weakened as far as the other allows, and, when the ranges
@@ -8058,7 +8068,7 @@ Version 5.0 (unreleased)
    (costas-array and blocks-world slower over three rounds);
    -Djacop.lcg.shiftSplitBounds=true|false overrides.
 
-446. Memory of many MDDs on one diagram, in the MiniZinc library and in
+448. Memory of many MDDs on one diagram, in the MiniZinc library and in
    support search. fzn_mdd, fzn_mdd_nondet and fzn_cost_mdd pass the
    arrays of the diagram as they are: array1d made a new array at each
    call, which MiniZinc wrote again every few calls (WordDesign2-words-
@@ -8081,6 +8091,63 @@ Version 5.0 (unreleased)
    -055 to -100 stay unsolved at 600 s: LCG makes about one conflict a
    second on these diagrams, and search without learning does not find
    a solution either.
+
+449. The FlatZinc front end posts a short table (jacop_short_table_int) of
+   at least 100,000 rows as a multi-valued decision diagram
+   (ExtensionalSupportMdd) when its reduced diagram has at most a tenth
+   of the table's cells as edges. The diagram is built from the rows with
+   stars matching the domain of their column; scopes with the same table,
+   repeated-variable pattern and domains share one diagram and the table
+   is filtered once for them. A table listing a rule compiles to a few
+   hundred edges: the connectivity table of Benzenoide (XCSP 2023), 3
+   million rows of arity 8 on 331 scopes, becomes 203 edges. The
+   symmetry detection now keys an array of constants by its contents
+   when it compares the model's lex-leader constraints, instead of
+   spelling out every element for every constraint and symmetry, which
+   ran out of memory on these tables. Benzenoide-12 and -13, out of
+   memory or without a solution in 600 s before, reach 87 and 72 (the
+   best solutions of the ranked solvers of 2023 were 3,033 and 3,125).
+   -Dorg.jacop.fz.tableMdd.rows (0 turns it off) and
+   -Dorg.jacop.fz.tableMdd.ratio set the gates. References: Bryant,
+   Graph-based algorithms for Boolean function manipulation, IEEE
+   Transactions on Computers 35(8), 1986; Cheng and Yap, An MDD-based
+   generalized arc consistency algorithm for positive and negative table
+   constraints and some global constraints, Constraints 15(2), 2010.
+
+450. Disjoint and Diff2 limit a rectangle's length from the least start of
+   each segment of its start domain, not from the interval of the domain
+   that meets a forbidden region, and begin a new segment after a region
+   whose end is a hole of the domain. Disjoint lets a rectangle of zero
+   width take its place, as documented now: it fails a segment or point
+   strictly inside another rectangle, which satisfied() and the fixed
+   check accepted, and lets it lie on the common border of two touching
+   rectangles, which the merged barrier profile pruned. Disjoint and
+   DisjointNoProfile now count the same solutions as a brute force on the
+   rectangle fingerprint. ArcTimes runs its passes until the nodes queued
+   by its own pruning of a variable that is both a successor and a time
+   are done. The consistency checker gets cases for Disjoint, Diff2 with
+   zero lengths, SubcircuitCost, WeightedSubcircuits, Routes, ArcTimes,
+   GlobalCardinality, Alldifferent, Decreasing, CardinalityMatrix,
+   ConjunctionSum and UnaryEarlinessTardiness. Sum narrows
+   the variables after a hole moved a bound of the sum, EqBool over one
+   variable holds, DisjointConditional releases (condition 0) a pair whose
+   compulsory parts overlap, and MaxCliqueBound.satisfied() no longer
+   throws on an open vertex. The checker also gets cases for the Boolean
+   reifications, IfThenBool, In, Sum, SumWeight, MaxCliqueBound,
+   DisjointConditional, TableCover and SoftAlldifferent. ConditionalSelect
+   now wakes on holes, which can rule a branch out. The checker also
+   gets cases for CostRegular, MultiCostRegular, SoftGCC,
+   IfThenElseBool, SequenceMdd and CostMdd. SetConsistencyChecker does
+   the same for the set constraints: AdiffBeqC puts in b an element of a
+   that c cannot hold, CardAeqX passes holes of its cardinality variable
+   to the set, and Match keeps its list increasing and gives an element
+   of the glb to the only list variable that can take it. XmulYeqC is
+   domain consistent: with c != 0 it keeps the divisors of c whose
+   quotient is in the other factor (dividing by an interval around 0 kept
+   every value up to |c|), and with c = 0 a factor without 0 fixes the
+   other one to 0. The checker gets cases for NetworkFlow, Steiner,
+   WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
+   VectorBinpacking, XplusYgtC and XplusClteqZ.
 
 Version 4.11
 =============

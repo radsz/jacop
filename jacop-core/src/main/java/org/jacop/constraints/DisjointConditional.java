@@ -674,6 +674,30 @@ public class DisjointConditional extends AbstractDiff {
     }
   }
 
+  @Override
+  public void consistency(Store store) {
+    super.consistency(store);
+    // a pair whose compulsory parts overlap in every dimension cannot be kept apart
+    for (ExclusiveItem ei : exclusionList) {
+      IntVar cond = ei.cond();
+      if (cond.min() == 0 && cond.max() > 0) {
+        Rectangle a = rectangles[ei.i1() - 1];
+        Rectangle b = rectangles[ei.i2() - 1];
+        boolean overlap = true;
+        for (int d = 0; overlap && d < a.dim(); d++) {
+          int start = Math.max(a.origin[d].max(), b.origin[d].max());
+          int end =
+              Math.min(
+                  a.origin[d].min() + a.length[d].min(), b.origin[d].min() + b.length[d].min());
+          overlap = start < end;
+        }
+        if (overlap) {
+          cond.domain.inMax(store.level, cond, 0);
+        }
+      }
+    }
+  }
+
   Interval minForbiddenInterval(
       int start, int i, Rectangle r, List<IntRectangle> consideredRect, int minI) {
 
