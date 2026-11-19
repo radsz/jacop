@@ -8149,6 +8149,13 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. A table (HybridTable) with at least 512 live single-value classes on
+     a column whose domain has many holes copies the domain to a bit set
+     before it filters the column, instead of a binary search in the
+     domain per class. On CrosswordDesign (XCSP 2026), with word columns
+     of 130,000 values, a node is about 3x faster and 9 of 11 instances
+     end with a better crossword at 240 s.
+
 Version 4.11
 =============
 
