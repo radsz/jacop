@@ -8149,6 +8149,21 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. Under lazy clause generation the trail keeps, for every variable, a
+   copy of its domain to tell which atoms a change makes. It is now kept up
+   to date from the atoms themselves: a change adds its atoms to the copy
+   and a backtrack takes them back out, instead of copying the whole
+   domain after every change and every backtrack (the delta idea of
+   Gecode advisors and Choco delta monitors). Search is unchanged. The
+   copying was 1.9 % of the solve time at the median of the wide set and
+   up to 30 % (de Bruijn, tower, routing-flexible, fast-food); 40 s
+   profiles: fast-food ff58 6.2 -> 2.3 %, ghoulomb 12.3 -> 3.8 %, tower
+   12.3 -> 6.1 %. Wide set at 600 s: instances solved by both 2.8 % (fixed)
+   and 3.4 % (-f) faster in geometric mean, total time and solved counts
+   unchanged within the timing noise of LCG runs.
+   -Djacop.lcg.incrementalShadow=false restores the copying;
+   -Djacop.lcg.checkShadow=true checks every copy against its domain.
+
 Version 4.11
 =============
 
