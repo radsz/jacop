@@ -8174,6 +8174,18 @@ Version 5.0 (unreleased)
    still rewrites every model, and =false none. No other instance of the
    wide set or of the XCSP 2022-2025 sets has the pattern.
 
+453. The FlatZinc front end rewrites products of two functions of one small
+   index (MiniZinc's (good[p] = g) * num[p], both looked up by the chosen
+   preference p) as sum(v) f(v) * (p = v), linear over the value literals
+   of p, and unfolds clauses of implied comparisons between such functions
+   into one clause per combination of the index values. The 2020 Challenge
+   stable-goods s-d16 is proved in 57 s with -f and in 283 s by default
+   instead of not at all in 600 s; over 9 stable-goods and saeling models
+   the total time goes from 3,673 to 3,119 s with -f and from 4,251 to
+   3,922 s by default. Only stable-goods triggers it among the 240 wide
+   benchmark models. -Dorg.jacop.fz.indexFunctions=false turns it off,
+   -Dorg.jacop.fz.indexFunctions.clauses=false only the unfolding.
+
 Version 4.11
 =============
 
