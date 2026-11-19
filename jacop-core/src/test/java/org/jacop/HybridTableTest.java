@@ -580,6 +580,45 @@ class HybridTableTest {
     }
   }
 
+  /**
+   * A column of more than 512 single-value classes on a domain of many intervals is filtered
+   * through a bit set copy of the domain (CrosswordDesign word columns); GAC is checked along
+   * random dives after holes are punched into it, on interval and bit-set domains.
+   */
+  @Test
+  void manyClassesOnHoledDomainsReachGac() {
+    Random random = new Random(11);
+    for (int trial = 0; trial < 12; trial++) {
+      int keys = 1500 + random.nextInt(3000);
+      Set<List<Integer>> rows = new HashSet<>();
+      int count = 1200 + random.nextInt(1500);
+      for (int k = 0; k < count; k++) {
+        rows.add(List.of(random.nextInt(keys) - 40, random.nextInt(6), random.nextInt(4)));
+      }
+      int[][] tuples =
+          rows.stream()
+              .map(r -> r.stream().mapToInt(Integer::intValue).toArray())
+              .sorted(Arrays::compare)
+              .toArray(int[][]::new);
+      Store store = new Store();
+      IntVar[] x = new IntVar[3];
+      x[0] =
+          random.nextBoolean()
+              ? new IntVar(store, "x0", new IntervalDomain(-40, keys))
+              : new IntVar(store, "x0", -40, keys);
+      x[1] = new IntVar(store, "x1", 0, 5);
+      x[2] = new IntVar(store, "x2", 0, 3);
+      for (int h = 0; h < 60; h++) {
+        int a = random.nextInt(keys) - 40;
+        x[0].domain.inComplement(store.level, x[0], a, a + random.nextInt(4));
+      }
+      store.impose(new HybridTable(x, tuples));
+      for (int dive = 0; dive < 8; dive++) {
+        dive(store, x, tuples, random, "trial " + trial);
+      }
+    }
+  }
+
   /** It goes down a random branch, checking GAC and the restoration of the domains. */
   private static void dive(Store store, IntVar[] x, int[][] tuples, Random random, String what) {
     int[][] expected = supportedByGround(x, tuples);
