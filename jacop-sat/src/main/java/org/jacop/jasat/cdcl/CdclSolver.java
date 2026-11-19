@@ -4445,14 +4445,18 @@ public final class CdclSolver {
   // ------------------------------------------------------------------------- clause database
 
   /**
-   * Whether the learnt clauses take more than their share of the heap, checked at most every
-   * MEMORY_REDUCE_GAP conflicts and only once the arena is that large.
+   * Whether the learnt clauses take more than their share of the heap, checked only once the arena
+   * is that large and at most every k * MEMORY_REDUCE_GAP conflicts after the (k - 1)-th memory
+   * reduction. A memory reduction deletes learnt clauses of every tier, so a gap that stays fixed
+   * can delete the clauses the search needs again and again: with decisions in a fixed order a
+   * satisfiable formula then ran millions of conflicts without an answer. A gap that grows lets the
+   * search finish, and the learnt clauses grow by at most the clauses of one gap over the budget.
    */
   private boolean learntsTooLarge() {
     if (conflicts < nextMemoryCheck || memSize - wasted <= learntBudget) {
       return false;
     }
-    nextMemoryCheck = conflicts + MEMORY_REDUCE_GAP;
+    nextMemoryCheck = conflicts + MEMORY_REDUCE_GAP * (memoryReductions + 1);
     return learntInts() > learntBudget;
   }
 
