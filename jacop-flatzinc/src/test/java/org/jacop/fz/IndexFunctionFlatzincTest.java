@@ -79,8 +79,6 @@ class IndexFunctionFlatzincTest {
       fzn.append("var 0..4: r").append(g).append(":: output_var;\n");
     }
     fzn.append("array [1..").append(goods).append("] of var int: R = [r1,r2,r3];\n");
-    List<String> loads = new ArrayList<>();
-    List<String> weights = new ArrayList<>();
     for (int p = 0; p < items; p++) {
       String good = "G" + p;
       String num = "N" + p;
@@ -108,8 +106,6 @@ class IndexFunctionFlatzincTest {
             random.nextBoolean()
                 ? "int_times(" + i + ",n" + p + "," + z + ")"
                 : "int_times(n" + p + "," + i + "," + z + ")");
-        loads.add(z);
-        weights.add(String.valueOf(g));
       }
     }
     // the usage of each good plus its remainder is 4

@@ -100,24 +100,74 @@ public class IndexFunctionDetector implements ParserTreeConstants {
 
   private static final int DEPTH = 16;
 
+  private static final String BOOL2INT = "bool2int";
+  private static final String INT_TIMES = "int_times";
+  private static final String INT_PLUS = "int_plus";
+
   private final Support support;
 
   private final Set<SimpleNode> replaced = new HashSet<>();
 
-  // the definition of a variable from others; op names the FlatZinc constraint
-  private record Definition(String op, IntVar[] args, int[] array, int first, int constant) {}
+  // the definition of a variable from others; op names the FlatZinc constraint. Records of one
+  // model node each, compared by identity
+  private record Definition(String op, IntVar[] args, int[] array, int first, int constant) {
+    @Override
+    public boolean equals(Object o) {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode() {
+      return System.identityHashCode(this);
+    }
+
+    @Override
+    public String toString() {
+      return op + Arrays.toString(args);
+    }
+  }
 
   private final Map<IntVar, Definition> definitions = new IdentityHashMap<>();
 
   private final List<ASTConstElem> products = new ArrayList<>();
 
   // y = array[index - first] over an array with variables
-  private record VarElement(IntVar index, IntVar[] array, int first) {}
+  private record VarElement(IntVar index, IntVar[] array, int first) {
+    @Override
+    public boolean equals(Object o) {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode() {
+      return System.identityHashCode(this);
+    }
+
+    @Override
+    public String toString() {
+      return index + " in " + Arrays.toString(array);
+    }
+  }
 
   private final Map<IntVar, VarElement> varElements = new IdentityHashMap<>();
 
   // b -> (sum coeffs * vars) op rhs, op LE, EQ or NE
-  private record Implied(String op, int[] coeffs, IntVar[] vars, int rhs, SimpleNode node) {}
+  private record Implied(String op, int[] coeffs, IntVar[] vars, int rhs, SimpleNode node) {
+    @Override
+    public boolean equals(Object o) {
+      return this == o;
+    }
+
+    @Override
+    public int hashCode() {
+      return System.identityHashCode(this);
+    }
+
+    @Override
+    public String toString() {
+      return Arrays.toString(coeffs) + Arrays.toString(vars) + " " + op + " " + rhs;
+    }
+  }
 
   private final Map<IntVar, Implied> implied = new IdentityHashMap<>();
 
@@ -132,7 +182,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
   private int unfoldedClauses;
 
   // [x = v] literals made here, by x
-  private final Map<IntVar, Map<Integer, IntVar>> literals = new IdentityHashMap<>();
+  private final Map<IntVar, Map<Integer, IntVar>> valueLiterals = new IdentityHashMap<>();
 
   private final Map<IntVar, Map<Integer, IntVar>> made = new LinkedHashMap<>();
 
@@ -166,16 +216,12 @@ public class IndexFunctionDetector implements ParserTreeConstants {
   public Set<SimpleNode> detect(SimpleNode astTree) {
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          support.checkTimeOut();
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
-            collect((ASTConstElem) item);
-          }
+      switch (node.getId()) {
+        case JJTCONSTRAINTITEMS -> readConstraints(node);
+        case JJTSOLVEITEM, JJTMODELEND -> countAll(node);
+        default -> {
+          // other items define no constraint and use no variable of interest
         }
-      } else if (node.getId() == JJTSOLVEITEM || node.getId() == JJTMODELEND) {
-        countAll(node);
       }
     }
     if (unfoldEnabled()) {
@@ -189,15 +235,11 @@ public class IndexFunctionDetector implements ParserTreeConstants {
       IntVar a = variable(node, 0);
       IntVar b = variable(node, 1);
       IntVar z = variable(node, 2);
-      if (a.singleton() || b.singleton() || z.singleton()) {
-        continue;
+      IntVar index = a.singleton() || b.singleton() || z.singleton() ? null : index(a, b);
+      if (index != null) {
+        rewrite(index, a, b, z, partitioned);
+        replaced.add(node);
       }
-      IntVar index = index(a, b);
-      if (index == null) {
-        continue;
-      }
-      rewrite(index, a, b, z, partitioned);
-      replaced.add(node);
     }
     poseLiterals();
     if (support.options.debug()) {
@@ -219,6 +261,15 @@ public class IndexFunctionDetector implements ParserTreeConstants {
    */
   public static boolean unfoldEnabled() {
     return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.indexFunctions.clauses"));
+  }
+
+  private void readConstraints(SimpleNode items) {
+    for (int j = 0; j < items.jjtGetNumChildren(); j++) {
+      support.checkTimeOut();
+      if (((SimpleNode) items.jjtGetChild(j)).jjtGetChild(0) instanceof ASTConstElem constraint) {
+        collect(constraint);
+      }
+    }
   }
 
   private void countAll(SimpleNode node) {
@@ -400,7 +451,12 @@ public class IndexFunctionDetector implements ParserTreeConstants {
     IntVar l = conditions.get(key.toString());
     if (l == null) {
       l = new IntVar(support.store, 0, 1);
-      String rel = c.op().equals("LE") ? "<=" : c.op().equals("EQ") ? "==" : "!=";
+      String rel =
+          switch (c.op()) {
+            case "LE" -> "<=";
+            case "EQ" -> "==";
+            default -> "!=";
+          };
       support.pose(new Reified(new LinearInt(vs, ws, rel, (int) rhs), l));
       conditions.put(key.toString(), l);
     }
@@ -486,13 +542,13 @@ public class IndexFunctionDetector implements ParserTreeConstants {
         long k = args[0] - d.first();
         yield k < 0 || k >= d.array().length ? null : (long) d.array()[(int) k];
       }
-      case "bool2int" -> args[0];
+      case BOOL2INT -> args[0];
       case "int_eq_reif" -> args[0] == d.constant() ? 1L : 0L;
       case "int_ne_reif" -> args[0] != d.constant() ? 1L : 0L;
       case "int_le_reif" -> args[0] <= d.constant() ? 1L : 0L;
       case "int_lt_reif" -> args[0] < d.constant() ? 1L : 0L;
-      case "int_times" -> args[0] * args[1];
-      case "int_plus" -> args[0] + args[1];
+      case INT_TIMES -> args[0] * args[1];
+      case INT_PLUS -> args[0] + args[1];
       default -> null;
     };
   }
@@ -534,7 +590,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
 
   // the literal [x = v]: the one the model reifies, or a new one channelled to x
   private IntVar literal(IntVar x, int v) {
-    Map<Integer, IntVar> byValue = literals.computeIfAbsent(x, k -> new HashMap<>());
+    Map<Integer, IntVar> byValue = valueLiterals.computeIfAbsent(x, k -> new HashMap<>());
     IntVar b = byValue.get(v);
     if (b == null) {
       Map<Integer, IntVar> reified = support.reif.cs.get(x);
@@ -550,20 +606,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
   }
 
   private void poseLiterals() {
-    for (Map.Entry<IntVar, Map<Integer, IntVar>> e : made.entrySet()) {
-      IntVar x = e.getKey();
-      Map<Integer, IntVar> values = e.getValue();
-      if (values.size() + support.reif.size(x) > 1) {
-        for (Map.Entry<Integer, IntVar> vb : values.entrySet()) {
-          support.addReified(x, vb.getKey(), vb.getValue());
-        }
-      } else {
-        for (Map.Entry<Integer, IntVar> vb : values.entrySet()) {
-          support.pose(support.fzXeqCreified(x, vb.getKey(), vb.getValue()));
-        }
-      }
-    }
-    made.clear();
+    SetUnionDetector.poseLiterals(support, made);
   }
 
   private void collect(ASTConstElem node) {
@@ -587,7 +630,12 @@ public class IndexFunctionDetector implements ParserTreeConstants {
                   support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2)),
                   node));
       case "int_le_imp", "int_lt_imp", "int_eq_imp", "int_ne_imp" -> {
-        String op = name.equals("int_eq_imp") ? "EQ" : name.equals("int_ne_imp") ? "NE" : "LE";
+        String op =
+            switch (name) {
+              case "int_eq_imp" -> "EQ";
+              case "int_ne_imp" -> "NE";
+              default -> "LE";
+            };
         int rhs = name.equals("int_lt_imp") ? -1 : 0;
         implied.putIfAbsent(
             variable(node, 2),
@@ -601,7 +649,7 @@ public class IndexFunctionDetector implements ParserTreeConstants {
       case "array_int_element", "array_var_int_element" -> element(node, 1);
       case "jacop_array_var_int_element_nonshifted", "jacop_array_int_element_nonshifted" ->
           element(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
-      case "bool2int" -> define(variable(node, 1), "bool2int", variable(node, 0));
+      case BOOL2INT -> define(variable(node, 1), BOOL2INT, variable(node, 0));
       case "int_eq_reif", "int_ne_reif", "int_le_reif", "int_lt_reif" -> {
         IntVar x = variable(node, 0);
         IntVar c = variable(node, 1);
@@ -610,12 +658,11 @@ public class IndexFunctionDetector implements ParserTreeConstants {
           definitions.putIfAbsent(r, new Definition(name, new IntVar[] {x}, null, 0, c.value()));
         }
       }
-      case "int_times" -> {
-        define(variable(node, 2), "int_times", variable(node, 0), variable(node, 1));
+      case INT_TIMES -> {
+        define(variable(node, 2), INT_TIMES, variable(node, 0), variable(node, 1));
         products.add(node);
       }
-      case "int_plus" ->
-          define(variable(node, 2), "int_plus", variable(node, 0), variable(node, 1));
+      case INT_PLUS -> define(variable(node, 2), INT_PLUS, variable(node, 0), variable(node, 1));
       default -> {
         // not a function step
       }
