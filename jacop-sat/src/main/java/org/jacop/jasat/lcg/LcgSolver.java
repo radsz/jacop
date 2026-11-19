@@ -1005,7 +1005,7 @@ public final class LcgSolver implements ExternalPropagator {
       model.constraint(c);
     }
     for (IntVar[][] clause : proofClauses) {
-      model.clause(clause[0], clause[1]);
+      model.solverClause(clause[0], clause[1]);
     }
     proofCardinality = model.cardinalityLines();
     proofEqualities = model.equalityLines();
