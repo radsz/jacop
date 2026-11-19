@@ -4573,6 +4573,47 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * A variable of enforcement inlining keeps its only clause without a list: a list for each
+   * variable was 48 bytes of each of the 1.46 million variables of XCSP 2022 RoomMate-sr0700 while
+   * the model is read. The clauses count, list and drop their dead ones as before.
+   */
+  @Test
+  void variablesOfEnforcementInliningKeepOneClauseWithoutAList() throws Exception {
+    Class<?> info = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Info");
+    Class<?> clause = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Clause");
+    Constructor<?> makeInfo = info.getDeclaredConstructor();
+    makeInfo.setAccessible(true);
+    Constructor<?> makeClause = clause.getDeclaredConstructors()[0];
+    makeClause.setAccessible(true);
+    Method add = info.getDeclaredMethod("add", clause);
+    Method live = info.getDeclaredMethod("live");
+    Method clauses = info.getDeclaredMethod("clauses");
+    for (Method m : new Method[] {add, live, clauses}) {
+      m.setAccessible(true);
+    }
+    Field held = info.getDeclaredField("clauses");
+    held.setAccessible(true);
+    Field dead = clause.getDeclaredField("dead");
+    dead.setAccessible(true);
+
+    Object v = makeInfo.newInstance();
+    Object first = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    Object second = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    add.invoke(v, first);
+    assertSame(first, held.get(v));
+    assertEquals(List.of(first), clauses.invoke(v));
+    add.invoke(v, second);
+    assertEquals(List.of(first, second), clauses.invoke(v));
+    assertEquals(2, live.invoke(v));
+    dead.setBoolean(first, true);
+    assertEquals(1, live.invoke(v));
+    assertSame(second, held.get(v));
+    dead.setBoolean(second, true);
+    assertEquals(0, live.invoke(v));
+    assertEquals(List.of(), clauses.invoke(v));
+  }
+
+  /**
    * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
    * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
    * RoomMate-sr0700 (163 MB while the model is read).
