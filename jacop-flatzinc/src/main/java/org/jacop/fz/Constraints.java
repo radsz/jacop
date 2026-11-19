@@ -65,6 +65,7 @@ import org.jacop.fz.constraints.ConstraintFncs;
 import org.jacop.fz.constraints.ConvexAllocationDetector;
 import org.jacop.fz.constraints.CostNetworkDetector;
 import org.jacop.fz.constraints.CountPartnersDetector;
+import org.jacop.fz.constraints.CyclicDistanceDetector;
 import org.jacop.fz.constraints.DifferenceBoundsDetector;
 import org.jacop.fz.constraints.DifferenceCyclesDetector;
 import org.jacop.fz.constraints.DisjunctiveCliqueDetector;
@@ -87,6 +88,7 @@ import org.jacop.fz.constraints.NumberedPathDetector;
 import org.jacop.fz.constraints.ObjectiveScaling;
 import org.jacop.fz.constraints.PairCoverDetector;
 import org.jacop.fz.constraints.PartialCopyDetector;
+import org.jacop.fz.constraints.PermutedTasksDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
@@ -257,7 +259,9 @@ public class Constraints implements ParserTreeConstants {
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
       if (CommonSubexpressions.enabled() && options.proof() == null) {
-        CommonSubexpressions cse = new CommonSubexpressions(support, solveItemVariables(astTree));
+        Set<IntVar> pinned = solveItemVariables(astTree);
+        dictionary.addDeclaredEqualities(pinned);
+        CommonSubexpressions cse = new CommonSubexpressions(support, pinned);
         cse.detect(astTree);
         if (!cse.replaced().isEmpty()) {
           replaced = new HashSet<>(cse.replaced());
@@ -414,6 +418,18 @@ public class Constraints implements ParserTreeConstants {
           replaced.addAll(merged);
           dictionary.removeFromDefaultSearch(minOfSums.removed());
           dictionary.unusedVariables.addAll(minOfSums.removed());
+        }
+      }
+
+      // a cyclic distance min(|e|, c - |e|) also as |e + c * k|, which a bound narrows
+      if (CyclicDistanceDetector.enabled() && options.proof() == null) {
+        CyclicDistanceDetector cyclic = new CyclicDistanceDetector(support);
+        Set<SimpleNode> distances = cyclic.detect(astTree);
+        if (!distances.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(distances);
+          dictionary.removeFromDefaultSearch(cyclic.removed());
+          dictionary.unusedVariables.addAll(cyclic.removed());
         }
       }
 
@@ -593,6 +609,12 @@ public class Constraints implements ParserTreeConstants {
         new WeightedCompletionDetector(support).detect(astTree);
       }
 
+      // the unary resource of a chain of tasks over permuted resources (the job view of an open
+      // shop), redundant; --proof does not encode it
+      if (PermutedTasksDetector.enabled() && options.proof() == null) {
+        new PermutedTasksDetector(support).detect(astTree);
+      }
+
       if (CardinalityDetector.enabled()) {
         new CardinalityDetector(support).detect(astTree);
       }
@@ -760,6 +782,10 @@ public class Constraints implements ParserTreeConstants {
     if (SuccessorForestDetector.enabled() && options.proof() == null) {
       new SuccessorForestDetector(support).detect(astTree);
     }
+    dictionary.releaseConstantArrays();
+    support.releaseControlSubstitutions();
+    support.releaseUnitSums();
+    support.releaseChannelMaps();
   }
 
   // a constraint item, imposed as implied by the others when implied is true
@@ -793,6 +819,8 @@ public class Constraints implements ParserTreeConstants {
     for (IntVar v : new ArrayList<>(vars)) {
       vars.add(dictionary.getAlias(v));
     }
+    // the equality posted for var x = y stays on those variables
+    dictionary.addDeclaredEqualities(vars);
     return vars;
   }
 
@@ -917,16 +945,15 @@ public class Constraints implements ParserTreeConstants {
     ASTScalarFlatExpr p2 = (ASTScalarFlatExpr) node.jjtGetChild(1);
     IntVar v1 = support.getVariable(p1);
     IntVar v2 = support.getVariable(p2);
-    if (v1 == v2 || dictionary.isAliasTarget(v2)) {
-      // the integer variable is already the alias of a Boolean; gen_bool2int posts the equality
-      // of the two Booleans
+    if (v1 == v2 || dictionary.isAliasTarget(v2) || dictionary.isDeclaredEqual(v2)) {
+      // the integer variable is already the alias of a Boolean, or a declaration made it equal to
+      // another variable on its own object; gen_bool2int posts the equality
       return;
     }
     dictionary.addAlias(v1, v2);
-    if (v1.singleton() || v2.singleton()) {
-      v1.domain.in(store.level, v1, v2.domain);
-      v2.domain.in(store.level, v2, v1.domain);
-    }
+    // v1 stands for v2 from now on, so it takes the declared domain of v2 (var 2..20: i)
+    v1.domain.in(store.level, v1, v2.domain);
+    v2.domain.in(store.level, v2, v1.domain);
     if (debug) {
       FzConsole.println("% Alias: " + v1 + " == " + v2);
     }
@@ -963,6 +990,7 @@ public class Constraints implements ParserTreeConstants {
         || x.max() > 1
         || dictionary.aliasTable.containsKey(x)
         || dictionary.isAliasTarget(x)
+        || dictionary.isDeclaredEqual(x)
         || dictionary.aliasTable.containsKey(b)) {
       return false;
     }

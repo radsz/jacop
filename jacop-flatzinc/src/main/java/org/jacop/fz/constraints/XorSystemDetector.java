@@ -567,6 +567,17 @@ public class XorSystemDetector implements ParserTreeConstants {
   // the clauses read, at most, from the occurrences of a variable to extend a set
   static final int MAX_EXTENSION_OCCURRENCES = 256;
 
+  // -Djacop.fz.xorExtensionWork: the most clause literals that extending the sets reads (about 0.3
+  // s); the sets found within it are kept. Without it MiniZinc Challenge 2024 aircraft-disassembly
+  // B737NG-600-06 (109k clauses, no parity) read 83 million in 0.7 s and found nothing
+  static final long EXTENSION_WORK = Long.getLong("jacop.fz.xorExtensionWork", 40_000_000L);
+
+  // the literals of clauses read to extend the sets of clause columns
+  private long extensionWork;
+
+  // no extended set
+  private static final int[] NO_SET = new int[0];
+
   /**
    * The sets of variables of a clause of at least three variables, with the one more variable of
    * each clause that has all but one of its variables in it, of at most {@link #MAX_CLAUSE_XOR}
@@ -581,57 +592,94 @@ public class XorSystemDetector implements ParserTreeConstants {
     }
     List<Columns> result = new ArrayList<>();
     for (Columns c : clauses.keySet()) {
-      int[] cols = c.cols;
-      if (cols.length < 3 || cols.length >= MAX_CLAUSE_XOR) {
-        continue;
+      if (extensionWork > EXTENSION_WORK) {
+        break;
       }
-      support.checkTimeOut();
-      java.util.TreeSet<Integer> extra = new java.util.TreeSet<>();
-      int found = 0;
-      for (int v : cols) {
-        List<int[]> occ = occurrences.get(v);
-        if (occ.size() > MAX_EXTENSION_OCCURRENCES) {
-          continue;
-        }
-        for (int[] d : occ) {
-          // d shares at least two variables with c and has exactly one more; the clause is
-          // seen from its first variable in c only
-          int outside = -1;
-          int inside = 0;
-          int firstInside = -1;
-          for (int w : d) {
-            if (Arrays.binarySearch(cols, w) >= 0) {
-              inside++;
-              if (firstInside < 0) {
-                firstInside = w;
-              }
-            } else if (outside < 0) {
-              outside = w;
-            } else {
-              outside = Integer.MIN_VALUE;
-            }
-          }
-          if (firstInside == v && inside >= 2 && outside >= 0) {
-            extra.add(outside);
-            found++;
-          }
-        }
+      int[] set =
+          c.cols.length < 3 || c.cols.length >= MAX_CLAUSE_XOR
+              ? NO_SET
+              : extendedSet(c.cols, occurrences);
+      if (set.length > 0) {
+        result.add(new Columns(set));
       }
-      if (found < 2 || extra.isEmpty() || cols.length + extra.size() > MAX_CLAUSE_XOR) {
-        continue;
-      }
-      int[] set = new int[cols.length + extra.size()];
-      int n = 0;
-      for (int v : cols) {
-        set[n++] = v;
-      }
-      for (int v : extra) {
-        set[n++] = v;
-      }
-      Arrays.sort(set);
-      result.add(new Columns(set));
     }
     return result;
+  }
+
+  // the columns of a clause with the one more variable of each clause that has all but one of its
+  // variables in it, or NO_SET when fewer than two clauses do so or the set would outgrow
+  // MAX_CLAUSE_XOR; such a set is dropped as soon as it does, without reading the rest of the
+  // occurrences
+  private int[] extendedSet(int[] cols, Map<Integer, List<int[]>> occurrences) {
+    support.checkTimeOut();
+    int room = MAX_CLAUSE_XOR - cols.length;
+    int[] extra = new int[room + 1];
+    // the extra variables so far, and the clauses that gave one
+    int[] counts = {0, 0};
+    for (int v : cols) {
+      List<int[]> occ = occurrences.get(v);
+      if (counts[0] <= room && occ.size() <= MAX_EXTENSION_OCCURRENCES) {
+        extensionWork += occ.size();
+        addExtras(cols, v, occ, extra, counts);
+      }
+    }
+    int extras = counts[0];
+    if (counts[1] < 2 || extras == 0 || extras > room) {
+      return NO_SET;
+    }
+    int[] set = Arrays.copyOf(cols, cols.length + extras);
+    System.arraycopy(extra, 0, set, cols.length, extras);
+    Arrays.sort(set);
+    return set;
+  }
+
+  // adds the one more variable of each clause of occ seen from v (see outside) to extra, until it
+  // has one more than it can hold
+  private void addExtras(int[] cols, int v, List<int[]> occ, int[] extra, int[] counts) {
+    for (int[] d : occ) {
+      extensionWork += d.length;
+      int outside = outside(cols, v, d);
+      if (outside >= 0) {
+        counts[1]++;
+        if (indexOf(extra, counts[0], outside) < 0) {
+          extra[counts[0]++] = outside;
+          if (counts[0] == extra.length) {
+            return;
+          }
+        }
+      }
+    }
+  }
+
+  // the one variable of clause d outside the sorted columns, when d has at least two variables in
+  // them and v is the first of those (each clause is seen from one variable only); -1 otherwise
+  private static int outside(int[] cols, int v, int[] d) {
+    int outside = -1;
+    int inside = 0;
+    int firstInside = -1;
+    for (int w : d) {
+      if (Arrays.binarySearch(cols, w) >= 0) {
+        inside++;
+        if (firstInside < 0) {
+          firstInside = w;
+        }
+      } else if (outside < 0) {
+        outside = w;
+      } else {
+        outside = Integer.MIN_VALUE;
+      }
+    }
+    return firstInside == v && inside >= 2 && outside >= 0 ? outside : -1;
+  }
+
+  // the position of a value among the first n of an array, or -1
+  private static int indexOf(int[] a, int n, int value) {
+    for (int i = 0; i < n; i++) {
+      if (a[i] == value) {
+        return i;
+      }
+    }
+    return -1;
   }
 
   /**

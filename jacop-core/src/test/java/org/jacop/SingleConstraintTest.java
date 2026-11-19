@@ -124,6 +124,7 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxCliqueBound;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
@@ -234,6 +235,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SplitSelect;
 import org.jacop.util.DominatorTree;
+import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -4084,6 +4086,82 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void reachableWithAnOpenRootRemovesNodesNoRootValueReaches() {
+    // undirected, root in {0..2, 4}: once node 4 is out, node 3 (only a self-loop) is reached from
+    // no root value, but it stayed selectable since no node was selected yet
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 5);
+    IntVar[] es = graphBooleans(store, "e", 5);
+    IntVar root = new IntVar(store, "r", 0, 2);
+    root.addDom(4, 4);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {3, 0, 1, 1, 4}, new int[] {3, 4, 4, 2, 2}, root, ns, es, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    ns[4].domain.in(1, ns[4], 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(ns[3].singleton(0)).isTrue();
+    assertThat(root.dom().toString()).isEqualTo("{0..2}");
+  }
+
+  @Test
+  void reachableWithAnOpenRootSelectsWhatEveryRootValueGoesThrough() {
+    // undirected, root in {1..3}, node 0 selected: its edges both lead to node 1, so node 1 is on
+    // the way to every root value
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 4);
+    IntVar[] es = graphBooleans(store, "e", 5);
+    IntVar root = new IntVar(store, "r", 1, 3);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {1, 3, 1, 1, 2}, new int[] {0, 1, 1, 0, 1}, root, ns, es, false));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    ns[0].domain.in(1, ns[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(ns[1].singleton(1)).isTrue();
+
+    // directed, root in {2, 3}: node 0 is selected and its only possible incoming edge is 3 -> 0
+    store = new Store();
+    ns = graphBooleans(store, "n", 4);
+    es = graphBooleans(store, "e", 6);
+    root = new IntVar(store, "r", 2, 3);
+    store.impose(
+        new org.jacop.constraints.graph.Reachable(
+            new int[] {1, 0, 3, 3, 2, 2}, new int[] {3, 3, 2, 0, 3, 0}, root, ns, es, true));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    es[5].domain.in(1, es[5], 0, 0);
+    ns[0].domain.in(1, ns[0], 1, 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(es[3].singleton(1)).isTrue();
+  }
+
+  @Test
+  void forestRejectsACompleteAssignmentWithACycle() {
+    // a triangle of selected edges; the redundant forest accepted it
+    Store store = new Store();
+    IntVar[] ns = graphBooleans(store, "n", 3);
+    IntVar[] es = graphBooleans(store, "e", 3);
+    store.impose(
+        new org.jacop.constraints.graph.Forest(ns, es, new int[] {0, 1, 2}, new int[] {1, 2, 0}));
+    assertThat(store.consistency()).isTrue();
+    for (IntVar v : Stream.concat(Arrays.stream(ns), Arrays.stream(es)).toList()) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    assertThat(store.consistency()).isFalse();
+  }
+
+  private static IntVar[] graphBooleans(Store store, String prefix, int n) {
+    IntVar[] vs = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      vs[i] = new IntVar(store, prefix + i, 0, 1);
+    }
+    return vs;
+  }
+
+  @Test
   void amongReRunAfterLowerBorderReachesNDoesNotFail() {
     // hakank_among_global: once the lower border reaches n the remaining variables are pruned
     // out of the set and moved behind the new upper border; they are still in the variable queue.
@@ -6674,11 +6752,59 @@ class SingleConstraintTest extends TestHelper {
   // exactly what the probe of each arc by pivots of the network simplex prunes: random dives over
   // random networks with
   // parallel arcs, capacities up to 9 and a tight cost bound, compared domain by domain.
+  // an implication of a constraint that forwards no variable events kept an empty LinkedHashMap of
+  // its own: 105 MB over the 623,000 implications of XCSP 2022 RoomMate-sr0700
+  @Test
+  void queueForwardWithoutForwardingKeepsNoMapOfItsOwn() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    QueueForward<PrimitiveConstraint> none =
+        new QueueForward<>(new XlteqC(x, 4), List.<Var>of(x, y));
+    assertThat(none.isEmpty()).isTrue();
+    assertThat(none.forwardMap).isNotInstanceOf(java.util.LinkedHashMap.class).isEmpty();
+    PrimitiveConstraint and = new And(new XlteqC(x, 4), new XlteqC(y, 3));
+    QueueForward<PrimitiveConstraint> forwarding = new QueueForward<>(and, List.<Var>of(x, y));
+    assertThat(forwarding.isEmpty()).isFalse();
+    assertThat(forwarding.forwardMap).containsOnlyKeys(x, y);
+  }
+
   @Test
   void testNetworkFlowShortestPathDecisionsMatchProbes() {
-    Random random = new Random(1215);
-    for (int trial = 0; trial < 300; trial++) {
-      int nodeCount = 3 + random.nextInt(5);
+    assertNetworkFlowSettingsAgree(
+        new Random(1215),
+        300,
+        3,
+        5,
+        new String[] {"org.jacop.netflow.generalArcs", "org.jacop.netflow.shortestPaths"},
+        new String[][] {{"false", "false"}, {"true", "true"}});
+  }
+
+  // Block search pricing (the default) and Dantzig pricing reach different optimal bases; the
+  // pruning, decided by the costs of residual paths, must be the same. Networks of up to 60 arcs,
+  // so that a scan stops after a block of 16.
+  @Test
+  void testNetworkFlowBlockSearchPricingMatchesDantzig() {
+    assertNetworkFlowSettingsAgree(
+        new Random(1118),
+        300,
+        6,
+        15,
+        new String[] {"org.jacop.netflow.pricing"},
+        new String[][] {{"dantzig"}, {"block"}});
+  }
+
+  // random dives over random networks with parallel arcs, capacities up to 9 and a tight cost
+  // bound, imposed once under each setting of the given properties and compared domain by domain
+  private static void assertNetworkFlowSettingsAgree(
+      Random random,
+      int trials,
+      int minNodes,
+      int extraNodes,
+      String[] properties,
+      String[][] settings) {
+    for (int trial = 0; trial < trials; trial++) {
+      int nodeCount = minNodes + random.nextInt(extraNodes);
       int arcCount = nodeCount + random.nextInt(2 * nodeCount);
       int[][] arcs = new int[arcCount][2];
       int[] weights = new int[arcCount];
@@ -6699,12 +6825,15 @@ class SingleConstraintTest extends TestHelper {
       int costMax = (int) (flowCost * (50 + random.nextInt(60)) / 100);
       Store[] stores = new Store[2];
       IntVar[][] vars = new IntVar[2][];
-      String previous = System.getProperty("org.jacop.netflow.generalArcs");
-      String previousPaths = System.getProperty("org.jacop.netflow.shortestPaths");
+      String[] previous = new String[properties.length];
+      for (int p = 0; p < properties.length; p++) {
+        previous[p] = System.getProperty(properties[p]);
+      }
       try {
         for (int s = 0; s < 2; s++) {
-          System.setProperty("org.jacop.netflow.generalArcs", s == 0 ? "false" : "true");
-          System.setProperty("org.jacop.netflow.shortestPaths", s == 0 ? "false" : "true");
+          for (int p = 0; p < properties.length; p++) {
+            System.setProperty(properties[p], settings[s][p]);
+          }
           stores[s] = new Store();
           NetworkBuilder net = new NetworkBuilder();
           Node[] nodes = new Node[nodeCount];
@@ -6721,15 +6850,12 @@ class SingleConstraintTest extends TestHelper {
           stores[s].impose(net.build());
         }
       } finally {
-        if (previous == null) {
-          System.clearProperty("org.jacop.netflow.generalArcs");
-        } else {
-          System.setProperty("org.jacop.netflow.generalArcs", previous);
-        }
-        if (previousPaths == null) {
-          System.clearProperty("org.jacop.netflow.shortestPaths");
-        } else {
-          System.setProperty("org.jacop.netflow.shortestPaths", previousPaths);
+        for (int p = 0; p < properties.length; p++) {
+          if (previous[p] == null) {
+            System.clearProperty(properties[p]);
+          } else {
+            System.setProperty(properties[p], previous[p]);
+          }
         }
       }
       String network =
@@ -7807,13 +7933,13 @@ class SingleConstraintTest extends TestHelper {
                 "Diff2Exclusive",
                 "solutions=274199 nodes=281043 decisions=277601 wrong=3442 hash=e3ba8c5362d530ad",
                 "Disjoint",
-                "solutions=250703 nodes=258629 decisions=254646 wrong=3983 hash=688d304cb8d0f443",
+                "solutions=247963 nodes=260991 decisions=254457 wrong=6534 hash=a1fa0a58cbb797cb",
                 "DisjointNoProfile",
-                "solutions=250683 nodes=263587 decisions=257115 wrong=6472 hash=37879c275e329ec3",
+                "solutions=247963 nodes=265933 decisions=256928 wrong=9005 hash=5fb343dc7ec8745",
                 "DisjointConditional",
-                "solutions=737646 nodes=765448 decisions=751527 wrong=13921 hash=f7e9e3977ef731a1",
+                "solutions=737646 nodes=757904 decisions=747755 wrong=10149 hash=f7e9e3977ef731a1",
                 "DisjointConditionalNoProfile",
-                "solutions=737646 nodes=766920 decisions=752263 wrong=14657 hash=5f89905bc162726d"));
+                "solutions=737646 nodes=759402 decisions=748504 wrong=10898 hash=5f89905bc162726d"));
   }
 
   private static String rectangleSearchFingerprint(String kind) {
@@ -8719,6 +8845,177 @@ class SingleConstraintTest extends TestHelper {
 
     // c0 = 0, and x2 = 1 (c1 = 3, c2 = 0) or x2 = 2 (c1 = 2, c2 = 1)
     assertThat(noOfAllSolutions(store, x, counters)).isEqualTo(2);
+  }
+
+  // An implication whose conclusion holds holds whatever its condition is, but Implies and IfThen
+  // reported satisfied() only with the condition true: a reification of one stayed open, and after
+  // its b was fixed to 0 during search (rewritten to the negation) nothing failed although the
+  // conclusion, 2 x2 + 2 x3 - 2 x0 != -1, always holds (WakeUpFixpointTest seed 4624408).
+  @Test
+  void testReifiedImplicationWithAConclusionThatHoldsIsTrue() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 6);
+    IntVar x3 = new IntVar(store, "x3", -2, 3);
+    IntVar[] v = {x2, x3, x0};
+    int[] w = {2, 2, -2};
+    IntVar b = new IntVar(store, "b", 0, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new Implies(b, new LinearInt(v, w, "!=", -1)), r));
+    IntVar c = new IntVar(store, "c", 0, 1);
+    IntVar s = new IntVar(store, "s", 0, 1);
+    store.impose(new Reified(new IfThen(new XeqC(c, 1), new LinearInt(v, w, "!=", -1)), s));
+    assertThat(store.consistency()).isTrue();
+
+    assertThat(r.singleton(1)).isTrue();
+    assertThat(s.singleton(1)).isTrue();
+  }
+
+  // IfThenElse decided its condition from a branch that cannot hold only when imposed itself, so a
+  // reification with b = 1, rewritten to its nested constraint during search, missed that the then
+  // branch (2 x3 + 2 x2 - 2 x1 = -1, odd) never holds while the condition holds
+  // (WakeUpFixpointTest seed 3418738).
+  @Test
+  void testReifiedIfThenElseDecidesTheConditionFromABranchThatCannotHold() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -2, 4);
+    IntVar x1 = new IntVar(store, "x1", -1, 2);
+    IntVar x2 = new IntVar(store, "x2", -2, 1);
+    IntVar x3 = new IntVar(store, "x3", 0, 0);
+    x3.addDom(2, 3);
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    IntVar b2 = new IntVar(store, "b2", 0, 1);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(
+        new Reified(
+            new IfThenElse(
+                new SumInt(new IntVar[] {x0, x2}, "!=", x3),
+                new LinearInt(new IntVar[] {x3, x2, x1}, new int[] {2, 2, -2}, "==", -1),
+                new OrBoolVector(new IntVar[] {b1, b0}, b2)),
+            r));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 1, 1);
+    assertThat(store.consistency()).isTrue();
+
+    // the condition must fail, x0 + x2 = x3, which x0 = -2 cannot satisfy
+    assertThat(x0.min()).isEqualTo(-1);
+  }
+
+  // IfThenElseBool decided the condition from a branch that cannot hold only when imposed, so a
+  // Reified with b = 1 left it open; its negation and satisfied() missed the case of both
+  // branches being equal (ComposedTightnessTest)
+  @Test
+  void testNestedIfThenElseBoolDecidesTheConditionAndBothBranches() {
+    Store store = new Store();
+    BooleanVar c = new BooleanVar(store, "c");
+    BooleanVar t = new BooleanVar(store, "t");
+    BooleanVar e = new BooleanVar(store, "e");
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new IfThenElseBool(c, t, e), r));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 1, 1);
+    t.domain.in(store.level, t, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+    assertThat(e.min()).isOne();
+
+    Store s2 = new Store();
+    BooleanVar c2 = new BooleanVar(s2, "c");
+    BooleanVar t2 = new BooleanVar(s2, "t", 1, 1);
+    BooleanVar e2 = new BooleanVar(s2, "e", 1, 1);
+    IntVar r2 = new IntVar(s2, "r", 0, 1);
+    s2.impose(new Reified(new IfThenElseBool(c2, t2, e2), r2));
+    assertThat(s2.consistency()).isTrue();
+    // both branches hold, so the constraint holds whatever the condition
+    assertThat(r2.min()).isOne();
+
+    Store s3 = new Store();
+    BooleanVar c3 = new BooleanVar(s3, "c");
+    BooleanVar t3 = new BooleanVar(s3, "t", 1, 1);
+    BooleanVar e3 = new BooleanVar(s3, "e");
+    IntVar r3 = new IntVar(s3, "r", 0, 0);
+    s3.impose(new Reified(new IfThenElseBool(c3, t3, e3), r3));
+    assertThat(s3.consistency()).isTrue();
+    // the negation needs c = 0 and e = 0 once the then branch holds
+    assertThat(c3.max()).isZero();
+    assertThat(e3.max()).isZero();
+  }
+
+  // CountBounds.satisfied() asked for every variable to be decided, so a reification did not see
+  // that a count whose fixed occurrences reach lb and whose possible ones stay within ub holds;
+  // its negation did not prune (ComposedTightnessTest)
+  @Test
+  void testReifiedCountBoundsIsTrueOnceEveryCountFits() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", -2, -2);
+    x1.addDom(1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 2);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    // x1 cannot be 0, so at most two zeros
+    store.impose(new Reified(new CountBounds(new IntVar[] {x0, x1, x2}, 0, 0, 2), r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.min()).isOne();
+
+    Store s2 = new Store();
+    IntVar y0 = new IntVar(s2, "y0", 0, 0);
+    IntVar y1 = new IntVar(s2, "y1", 0, 2);
+    IntVar y2 = new IntVar(s2, "y2", 1, 2);
+    IntVar r2 = new IntVar(s2, "r", 0, 0);
+    // not (count = 1): with one zero fixed and at most two possible the count must be 2
+    s2.impose(new Reified(new CountBounds(new IntVar[] {y0, y1, y2}, 0, 1, 1), r2));
+    assertThat(s2.consistency()).isTrue();
+    assertThat(y1.max()).isZero();
+  }
+
+  // The negation of AtMost (at least counter + 1 values) woke only on GROUND, so a bound that
+  // removed the value from a variable left the last candidate unfixed (WakeUpFixpointTest seed
+  // 2154389).
+  @Test
+  void testNegatedAtMostWakesWhenAVariableLosesTheValue() {
+
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", -1, 4);
+    IntVar x1 = new IntVar(store, "x1", -2, 4);
+    IntVar x2 = new IntVar(store, "x2", 0, 0);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new AtMost(new IntVar[] {x2, x0, x1}, 0, 4), r));
+    assertThat(store.consistency()).isTrue();
+
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x0.max()).isEqualTo(4);
+
+    store.setLevel(store.level + 1);
+    x1.domain.in(store.level, x1, -2, 2);
+    assertThat(store.consistency()).isTrue();
+
+    // x0 is the only variable left that can be 4
+    assertThat(x0.singleton(4)).isTrue();
+  }
+
+  // GCC drops the counters of values no variable can take; with none left, toString read
+  // counters[-1] (LCG fuzz, a model grounded at impose).
+  @Test
+  void testGccWithoutACounterOfAReachableValue() {
+
+    Store store = new Store();
+    IntVar[] x = {new IntVar(store, "x0", 5, 6)};
+    IntVar[] counters = {new IntVar(store, "c0", 0, 1), new IntVar(store, "c1", 0, 1)};
+    GCC gcc = new GCC(x, counters, 0);
+
+    assertThat(gcc.toString()).contains("GCC ([x0::{5..6}], [])");
+    store.impose(gcc);
+
+    // x0 can take only the counted values 0 and 1
+    assertThat(store.consistency()).isFalse();
   }
 
   // GCC computed its counted values again at impose, so a variable ground between creating the
@@ -10546,6 +10843,57 @@ class SingleConstraintTest extends TestHelper {
   }
 
   @Test
+  void hybridTableKeyMatchesItsTuples() {
+    // the key of a table was a map of boxed values in every table (24 million entries for 300
+    // tables over 80,000 words); it is now a sorted index shared by the tables over the same tuples
+    Random random = new Random(7);
+    for (int trial = 0; trial < 300; trial++) {
+      int arity = 2 + random.nextInt(3);
+      int n = 1 + random.nextInt(30);
+      int keyed = random.nextInt(arity + 1);
+      int[][] tuples = new int[n][arity];
+      Set<List<Integer>> distinct = new HashSet<>();
+      for (int t = 0; t < n; t++) {
+        do {
+          for (int i = 0; i < arity; i++) {
+            tuples[t][i] = i == keyed ? 3 * t - 20 : random.nextInt(8);
+          }
+        } while (!distinct.add(Arrays.stream(tuples[t]).boxed().toList()));
+      }
+      Store store = new Store();
+      IntVar[] x = new IntVar[arity];
+      IntVar[] y = new IntVar[arity];
+      for (int i = 0; i < arity; i++) {
+        x[i] = new IntVar(store, -30, 100);
+        y[i] = new IntVar(store, -30, 100);
+      }
+      HybridTable first = new HybridTable(x, tuples);
+      HybridTable second = new HybridTable(y, first);
+      int expected = -1;
+      for (int i = 0; i < arity && expected < 0; i++) {
+        Set<Integer> values = new HashSet<>();
+        boolean unique = true;
+        for (int[] t : tuples) {
+          unique &= values.add(t[i]);
+        }
+        expected = unique ? i : -1;
+      }
+      for (HybridTable table : List.of(first, second)) {
+        assertThat(table.keyColumn()).isEqualTo(expected);
+        for (int v = -25; v < 100 && expected >= 0; v++) {
+          int[] row = null;
+          for (int[] t : tuples) {
+            row = t[expected] == v ? t : row;
+          }
+          for (int c = 0; c < arity; c++) {
+            assertThat(table.keyedValue(c, v, -99)).isEqualTo(row == null ? -99 : row[c]);
+          }
+        }
+      }
+    }
+  }
+
+  @Test
   void diffnKChecksBoxesFixedBeforeARaisedLevel() {
     Store store = new Store();
     IntVar[][] r = overlappingRectanglesVars(store);
@@ -10642,6 +10990,68 @@ class SingleConstraintTest extends TestHelper {
     assertThat(forests).isEqualTo(countForests(tail, head, 4));
   }
 
+  @Test
+  void forestChecksItsArgumentsAndCopies() {
+    Store store = new Store();
+    IntVar[] ns = {new IntVar(store, 0, 1), new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    IntVar[] es = {new IntVar(store, 0, 1), new IntVar(store, 0, 1)};
+    int[] tail = {0, 1};
+    int[] head = {1, 2};
+    // each bound of each check is crossed by one value
+    int[][][] edges = {
+      {{0}, {1, 2}}, {{0, 1}, {1}}, {{0, 3}, head}, {{-1, 1}, head}, {tail, {1, 3}}, {tail, {-1, 2}}
+    };
+    for (int[][] edge : edges) {
+      assertThatThrownBy(() -> new Forest(ns, es, edge[0], edge[1]))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+    for (IntVar bad : new IntVar[] {new IntVar(store, -1, 1), new IntVar(store, 0, 2)}) {
+      assertThatThrownBy(() -> new Forest(ns, new IntVar[] {es[0], bad}, tail, head))
+          .isInstanceOf(IllegalArgumentException.class);
+      assertThatThrownBy(() -> new Forest(new IntVar[] {ns[0], ns[1], bad}, es, tail, head))
+          .isInstanceOf(IllegalArgumentException.class);
+    }
+    assertThatThrownBy(() -> new Forest(null, es, tail, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(ns, null, tail, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(ns, es, null, head))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(() -> new Forest(ns, es, tail, null))
+        .isInstanceOf(IllegalArgumentException.class);
+    Forest forest = new Forest(ns, es, tail, head);
+    assertThat(forest.arguments()).hasSize(5);
+    // not yet ground: not satisfied, whatever is fixed
+    es[0].domain.in(store.level, es[0], 1, 1);
+    assertThat(forest.satisfied()).isFalse();
+    for (IntVar v : ns) {
+      v.domain.in(store.level, v, 1, 1);
+    }
+    assertThat(forest.satisfied()).isFalse();
+    es[1].domain.in(store.level, es[1], 0, 0);
+    assertThat(forest.satisfied()).isTrue();
+    Store copy = new Store();
+    Map<Var, Var> copies = new HashMap<>();
+    VarMap map =
+        new VarMap() {
+          @Override
+          public Store target() {
+            return copy;
+          }
+
+          @Override
+          @SuppressWarnings("unchecked")
+          public <V extends Var> V get(V v) {
+            return (V)
+                copies.computeIfAbsent(
+                    v, k -> new IntVar(copy, ((IntVar) k).min(), ((IntVar) k).max()));
+          }
+        };
+    Forest other = forest.copy(map);
+    assertThat(other.arguments()).hasSize(5);
+    assertThat(other.toString()).contains("Forest(").contains("[0, 1]").contains("[1, 2]");
+  }
+
   // the assignments of nodes and edges where every selected edge joins two selected nodes and the
   // selected edges have no cycle, by a plain count over all subsets
   private static int countForests(int[] tail, int[] head, int n) {
@@ -10674,5 +11084,356 @@ class SingleConstraintTest extends TestHelper {
       }
     }
     return count;
+  }
+
+  /**
+   * Every term |a * x[i] - b| of a deviation is a multiple of g = gcd(a, b) and congruent to a *
+   * x[i] - b modulo 2g, so the deviation is congruent to a * sum - n * b modulo 2g; a spread is
+   * congruent to g (a * sum - n * b) modulo 2g<sup>2</sup>. Here the deviation is a multiple of 8
+   * and the spread is even.
+   */
+  @Test
+  void balancingCostsKeepTheirResidue() {
+    Store store = new Store();
+    IntVar[] x = new IntVar[4];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 3);
+    }
+    IntVar d = new IntVar(store, "d", 0, 0);
+    d.addDom(4, 14);
+    store.impose(new Deviation(x, 4, 4, 4, d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d.min()).isZero();
+    assertThat(d.max()).isEqualTo(8);
+
+    store = new Store();
+    IntVar[] y = new IntVar[3];
+    for (int i = 0; i < y.length; i++) {
+      y[i] = new IntVar(store, "y" + i, 0, 3);
+    }
+    IntVar s = new IntVar(store, "s", 0, 7);
+    store.impose(new Spread(y, 4, s));
+    assertThat(store.consistency()).isTrue();
+    assertThat(s.singleton(6)).as(s.toString()).isTrue();
+  }
+
+  /**
+   * A present interval of a span starts no earlier than the master and ends no later, so the master
+   * lasts at least as long as it.
+   */
+  @Test
+  void spanLastsAtLeastAsLongAsAPresentInterval() {
+    Store store = new Store();
+    IntVar p0 = new IntVar(store, "mp", 1, 1);
+    IntVar s0 = new IntVar(store, "ms", 0, 3);
+    IntVar d0 = new IntVar(store, "md", 0, 2);
+    IntVar[] p = {new IntVar(store, "p0", 0, 1), new IntVar(store, "p1", 1, 1)};
+    IntVar[] st = {new IntVar(store, "s0", 0, 0), new IntVar(store, "s1", 0, 3)};
+    st[0].addDom(2, 2);
+    IntVar[] d = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 1, 2)};
+    store.impose(new org.jacop.constraints.Span(p0, s0, d0, p, st, d));
+    assertThat(store.consistency()).isTrue();
+    assertThat(d0.min()).isEqualTo(1);
+
+    // an interval longer than the master is absent, and so is the master without other intervals
+    store = new Store();
+    IntVar q0 = new IntVar(store, "mp", 0, 1);
+    IntVar[] q = {new IntVar(store, "p0", 0, 1)};
+    store.impose(
+        new org.jacop.constraints.Span(
+            q0,
+            new IntVar(store, "ms", 0, 3),
+            new IntVar(store, "md", 0, 0),
+            q,
+            new IntVar[] {new IntVar(store, "s0", 0, 3)},
+            new IntVar[] {new IntVar(store, "d0", 1, 2)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(q[0].max()).isZero();
+    assertThat(q0.max()).isZero();
+
+    // the only present interval is the master: it has the master's duration
+    store = new Store();
+    IntVar[] r = {new IntVar(store, "p0", 0, 0), new IntVar(store, "p1", 1, 1)};
+    IntVar[] e = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 1, 2)};
+    store.impose(
+        new org.jacop.constraints.Span(
+            new IntVar(store, "mp", 1, 1),
+            new IntVar(store, "ms", 0, 3),
+            new IntVar(store, "md", 2, 2),
+            r,
+            new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)},
+            e));
+    assertThat(store.consistency()).isTrue();
+    assertThat(e[1].singleton(2)).isTrue();
+  }
+
+  /**
+   * Alternative unifies the master with its present interval value by value and Span makes the
+   * master present once its duration loses 0, so a hole in a domain must wake them.
+   */
+  @Test
+  void optionalIntervalsWakeOnHoles() {
+    Store store = new Store();
+    IntVar ms = new IntVar(store, "ms", 1, 1);
+    ms.addDom(3, 3);
+    IntVar[] p = {new IntVar(store, "p0", 0, 1), new IntVar(store, "p1", 0, 1)};
+    IntVar[] d = {new IntVar(store, "d0", 0, 2), new IntVar(store, "d1", 0, 2)};
+    store.impose(
+        new org.jacop.constraints.Alternative(
+            new IntVar(store, "mp", 1, 1),
+            ms,
+            new IntVar(store, "md", 1, 1),
+            p,
+            new IntVar[] {new IntVar(store, "s0", 0, 3), new IntVar(store, "s1", 0, 3)},
+            d));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    d[1].domain.inComplement(store.level, d[1], 1);
+    assertThat(store.consistency()).isTrue();
+    assertThat(p[1].max()).isZero();
+    assertThat(p[0].min()).isEqualTo(1);
+
+    store = new Store();
+    IntVar mp = new IntVar(store, "mp", 0, 1);
+    IntVar md = new IntVar(store, "md", -1, 2);
+    store.impose(
+        new org.jacop.constraints.Span(
+            mp,
+            new IntVar(store, "ms", 0, 3),
+            md,
+            new IntVar[] {new IntVar(store, "p0", 0, 1)},
+            new IntVar[] {new IntVar(store, "s0", 0, 3)},
+            new IntVar[] {new IntVar(store, "d0", 0, 2)}));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    md.domain.inComplement(store.level, md, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(mp.min()).isEqualTo(1);
+  }
+
+  /** An EqBool over a single variable holds whatever its value, so the result is 1. */
+  @Test
+  void eqBoolOfOneVariableHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new EqBool(new IntVar[] {x}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(1);
+    assertThat(x.max() - x.min()).isEqualTo(1);
+  }
+
+  /**
+   * Sum read the bounds of the sum before narrowing it: with x0 = x2 = 3, x1 in {-2, -1} and the
+   * sum in {4, 6, 7}, the sum becomes 4 through its hole, which leaves x1 = -2, but the variables
+   * were not narrowed and the constraint stopped short of its fixpoint.
+   */
+  @Test
+  void sumFollowsTheSumThroughAHole() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 3, 3);
+    IntVar x1 = valuesVar(store, "x1", -2, -1);
+    IntVar x2 = new IntVar(store, "x2", 3, 3);
+    IntVar sum = valuesVar(store, "sum", 4, 6, 7);
+    store.impose(new Sum(new IntVar[] {x0, x1, x2}, sum));
+    assertThat(store.consistency()).isTrue();
+    assertThat(sum.value()).isEqualTo(4);
+    assertThat(x1.value()).isEqualTo(-2);
+  }
+
+  /**
+   * The condition of a DisjointConditional pair was never fixed: when the compulsory parts of the
+   * two rectangles overlap, they cannot be kept apart and the condition is 0.
+   */
+  @Test
+  void disjointConditionalReleasesAPairThatMustOverlap() {
+    Store store = new Store();
+    IntVar[][] r = {
+      {new IntVar(store, "x1", 0, 0), new IntVar(store, "y1", 0, 0), one(store), one(store)},
+      {new IntVar(store, "x2", 0, 0), new IntVar(store, "y2", 0, 0), oneTwo(store), one(store)}
+    };
+    IntVar c = new IntVar(store, "c", 0, 1);
+    store.impose(new DisjointConditional(r, List.of(List.of(1, 2)), List.of(c)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+  }
+
+  /**
+   * MaxCliqueBound.satisfied() read the value of a vertex in conflict with a vertex fixed to 1
+   * before checking that it is fixed, and threw.
+   */
+  @Test
+  void maxCliqueBoundSatisfiedWithAnOpenVertex() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 0, 1), new IntVar(store, "x2", 0, 0)
+    };
+    IntVar sum = new IntVar(store, "sum", 1, 1);
+    MaxCliqueBound c = new MaxCliqueBound(x, new int[][] {{1}, {}, {}}, sum);
+    store.impose(c);
+    assertThat(c.satisfied()).isFalse();
+  }
+
+  /**
+   * ConditionalSelect was woken only by bound changes, but a hole can rule a branch out: x0 = 3 and
+   * y loses 3 inside its bounds, so the first branch can no longer be selected and b0 = 0.
+   */
+  @Test
+  void conditionalSelectWakesOnAHole() {
+    Store store = new Store();
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    IntVar x0 = new IntVar(store, "x0", 3, 3);
+    IntVar x1 = new IntVar(store, "x1", 1, 4);
+    IntVar y = new IntVar(store, "y", 1, 4);
+    store.impose(new ConditionalSelect(new IntVar[] {b0, b1}, new IntVar[] {x0, x1}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.max()).isEqualTo(1);
+    store.setLevel(1);
+    y.domain.inComplement(1, y, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.max()).isZero();
+  }
+
+  private static IntVar valuesVar(Store store, String name, int... values) {
+    IntVar v = new IntVar(store, name);
+    for (int value : values) {
+      v.addDom(value, value);
+    }
+    return v;
+  }
+
+  /**
+   * After a forbidden region a rectangle's length was limited by the gap between the region and the
+   * interval of its start domain that met the region, not the least start before the region, and
+   * starts past the region were left out when the domain had a hole right at its end.
+   */
+  @Test
+  void disjointKeepsTheLengthsOfStartsAcrossHoles() {
+    // B (x 2, y 0 or 2) fits on top of A ([1, 3) x [0, 1)) with any height
+    Store store = new Store();
+    IntVar by = valuesVar(store, "by", 0, 2);
+    IntVar bh = valuesVar(store, "bh", 0, 1, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {valuesVar(store, "ax", 1), valuesVar(store, "bx", 2)},
+            new IntVar[] {valuesVar(store, "ay", 0), by},
+            new IntVar[] {valuesVar(store, "aw", 2), valuesVar(store, "bw", 1)},
+            new IntVar[] {valuesVar(store, "ah", 1), bh}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bh.max()).isEqualTo(2);
+
+    // B at x 0 may be 1 wide next to A ([1 or 2, +2) x [0, 2))
+    store = new Store();
+    IntVar bw = valuesVar(store, "bw", 0, 1, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {valuesVar(store, "ax", 1, 2), valuesVar(store, "bx", 0, 2)},
+            new IntVar[] {valuesVar(store, "ay", 0), valuesVar(store, "by", 0)},
+            new IntVar[] {valuesVar(store, "aw", 2), bw},
+            new IntVar[] {valuesVar(store, "ah", 2), valuesVar(store, "bh", 1, 2)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bw.max()).isPositive();
+  }
+
+  /** A rectangle of Disjoint 0 long in both dimensions is a point and may not lie in another. */
+  @Test
+  void disjointRejectsAPointInsideARectangle() {
+    Store store = new Store();
+    IntVar[] fixed = {
+      valuesVar(store, "ax", 1), valuesVar(store, "px", 2),
+      valuesVar(store, "ay", 0), valuesVar(store, "py", 1),
+      valuesVar(store, "aw", 2), valuesVar(store, "pw", 0),
+      valuesVar(store, "ah", 2), valuesVar(store, "ph", 0)
+    };
+    Disjoint c =
+        new Disjoint(
+            new IntVar[] {fixed[0], fixed[1]},
+            new IntVar[] {fixed[2], fixed[3]},
+            new IntVar[] {fixed[4], fixed[5]},
+            new IntVar[] {fixed[6], fixed[7]});
+    store.impose(c);
+    assertThat(c.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * A rectangle of width 0 may lie on the common border of two touching rectangles: B at x = 2
+   * between A (x in [0, 2)) and C (x in [2, 3)). The merged barrier of A and C left no gap, so
+   * Disjoint forced the height of B to 0 although B = (2, 1, 0, 2) is a solution.
+   */
+  @Test
+  void disjointLetsASegmentLieOnTheBorderOfTouchingRectangles() {
+    Store store = new Store();
+    IntVar bh = new IntVar(store, "bh", 0, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {
+              new IntVar(store, "ax", 0, 0),
+              new IntVar(store, "bx", 1, 2),
+              new IntVar(store, "cx", 2, 2)
+            },
+            new IntVar[] {
+              new IntVar(store, "ay", 0, 1),
+              new IntVar(store, "by", 1, 1),
+              new IntVar(store, "cy", 1, 1)
+            },
+            new IntVar[] {
+              new IntVar(store, "aw", 2, 2),
+              new IntVar(store, "bw", 0, 2),
+              new IntVar(store, "cw", 1, 1)
+            },
+            new IntVar[] {new IntVar(store, "ah", 2, 2), bh, new IntVar(store, "ch", 1, 1)},
+            false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bh.max()).isEqualTo(2);
+  }
+
+  /**
+   * A successor variable of ArcTimes that is also a time variable queues nodes while the constraint
+   * prunes it; they were dropped at the end of the pass. Here t0 = t1 = x1, so node 1 can follow
+   * neither node 0 (t1 &ge; t0 + 1) nor itself (lag 1), and node 1 cannot reach node 0 (t0 &ge; t1
+   * + 2): there is no solution, but the root propagation stopped once x1 was pruned.
+   */
+  @Test
+  void arcTimesFollowsItsOwnPruningOfASharedVariable() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 3);
+    IntVar x1 = new IntVar(store, "x1", 1, 2);
+    IntVar x2 = new IntVar(store, "x2", 2, 3);
+    IntVar t2 = new IntVar(store, "t2", 0, 4);
+    store.impose(
+        new org.jacop.constraints.ArcTimes(
+            new IntVar[] {x0, x1, x2},
+            1,
+            new IntVar[] {x1, x1, t2},
+            new long[][] {{2, 1, 1}, {2, 1, -1}, {2, 0, -1}}));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  /** XmulYeqC divided c by y's whole interval around 0, which kept every factor up to |c|. */
+  @Test
+  void xmulYeqCKeepsOnlyDivisorsOfC() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -2, 1);
+    IntVar y = new IntVar(store, "y", -2, 1);
+    store.impose(new XmulYeqC(x, y, 2));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{-2..-1}");
+    assertThat(y.dom().toString()).isEqualTo("{-2..-1}");
+
+    Store zero = new Store();
+    IntVar a = new IntVar(zero, "a", -3, -1);
+    a.addDom(1, 3);
+    IntVar b = new IntVar(zero, "b", -1, 1);
+    zero.impose(new XmulYeqC(a, b, 0));
+    assertThat(zero.consistency()).isTrue();
+    assertThat(b.value()).isZero();
+
+    Store large = new Store();
+    IntVar p = new IntVar(large, "p", -1000, 1000);
+    IntVar q = new IntVar(large, "q", -1000, 1000);
+    large.impose(new XmulYeqC(p, q, 999_983 * 2));
+    assertThat(large.consistency()).isFalse();
   }
 }

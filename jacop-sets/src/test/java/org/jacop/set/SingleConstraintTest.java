@@ -54,6 +54,7 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
+import org.jacop.set.constraints.AdiffBeqC;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.AleB;
 import org.jacop.set.constraints.AllDisjoint;
@@ -1218,6 +1219,65 @@ class SingleConstraintTest {
     assertThat(channel.explainFailure(trail, reason)).isTrue();
     assertThat(reasonVariables(trail, reason)).containsExactlyInAnyOrder(member, b[1]);
     trail.detach();
+  }
+
+  /**
+   * CardAeqX read the cardinality variable before narrowing it: s in {3}..{0, 2, 3} with 2 in s and
+   * x in {0, 1, 3, 4} leaves x = 3 through its hole, so s takes its whole lub, but s kept 0 open
+   * with cardinality 2..3.
+   */
+  @Test
+  void cardAeqXFollowsAHoleOfTheCardinality() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(3), dom(0, 2, 3)));
+    IntVar x = new IntVar(store, "x", dom(0, 1, 3, 4));
+    store.impose(new CardAeqX(s, x));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    s.domain.inGlb(1, s, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.value()).isEqualTo(3);
+    assertThat(s.domain.glb().getSize()).isEqualTo(3);
+  }
+
+  /** Match: the list is increasing, so x2 = 0 leaves x1 = -1 and puts -1 in s. */
+  @Test
+  void matchKeepsTheListIncreasing() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(0), dom(-1, 0, 1, 2)));
+    IntVar x1 = new IntVar(store, "x1", dom(-1, 0));
+    IntVar x2 = new IntVar(store, "x2", 0, 0);
+    IntVar x3 = new IntVar(store, "x3", 1, 2);
+    store.impose(new Match(s, new IntVar[] {x1, x2, x3}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.value()).isEqualTo(-1);
+    assertThat(s.dom().glb().contains(-1)).isTrue();
+  }
+
+  /** Match: 2 is in s and only x3 can take it. */
+  @Test
+  void matchGivesAGlbElementToTheOnlyVariableThatCanTakeIt() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(2), dom(-1, 0, 1, 2, 4)));
+    IntVar x1 = new IntVar(store, "x1", -1, 1);
+    IntVar x2 = new IntVar(store, "x2", dom(0, 1, 4));
+    IntVar x3 = new IntVar(store, "x3", dom(1, 2, 4));
+    store.impose(new Match(s, new IntVar[] {x1, x2, x3}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x3.value()).isEqualTo(2);
+    assertThat(s.dom().lub().contains(4)).isFalse();
+  }
+
+  /** AdiffBeqC: an element of a that c = a \ b cannot hold must be in b. */
+  @Test
+  void adiffBeqCPutsInBWhatCCannotHold() {
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(2), dom(2)));
+    SetVar b = new SetVar(store, "b", new BoundSetDomain(dom(), dom(1, 2)));
+    SetVar c = new SetVar(store, "c", new BoundSetDomain(dom(), dom()));
+    store.impose(new AdiffBeqC(a, b, c));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.domain.glb().contains(2)).isTrue();
   }
 
   private static List<IntVar> reasonVariables(AtomicTrail trail, EntryList reason) {

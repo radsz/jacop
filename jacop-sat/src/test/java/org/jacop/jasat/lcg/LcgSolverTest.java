@@ -539,6 +539,115 @@ class LcgSolverTest {
   }
 
   @Test
+  void booleanTablesAsPrimeImplicatesAgreeWithBruteForce() {
+    // tables of 2 to 6 columns over two-valued variables (some {0, 1}, some two other values, one
+    // possibly fixed), written as the clauses of their prime implicates next to other
+    // constraints; tuples may name values outside the domains
+    Random rnd = new Random(91);
+    long encoded = 0;
+    int sat = 0;
+    int unsat = 0;
+    for (int instance = 0; instance < 1500; instance++) {
+      Store store = new Store();
+      int n = 4 + rnd.nextInt(4);
+      IntVar[] x = new IntVar[n];
+      for (int i = 0; i < n; i++) {
+        int lo = rnd.nextInt(3) == 0 ? rnd.nextInt(3) - 1 : 0;
+        int hi = lo + 1 + (rnd.nextInt(3) == 0 ? rnd.nextInt(3) : 0);
+        x[i] = new IntVar(store, "x" + i, lo, lo);
+        x[i].domain.unionAdapt(hi, hi);
+        x[i].refreshBounds();
+      }
+      if (rnd.nextInt(5) == 0) {
+        x[0] = new IntVar(store, "c", 1, 1);
+      }
+      List<Relation> relations = new ArrayList<>();
+      for (int c = 1 + rnd.nextInt(3); c > 0; c--) {
+        IntVar[] scope = Arrays.copyOf(x, 2 + rnd.nextInt(n - 1));
+        Collections.shuffle(Arrays.asList(scope), rnd);
+        int[][] tuples = new int[1 + rnd.nextInt(3 << scope.length)][scope.length];
+        for (int[] tuple : tuples) {
+          for (int k = 0; k < tuple.length; k++) {
+            tuple[k] =
+                rnd.nextInt(8) == 0
+                    ? 7
+                    : scope[k].min() + rnd.nextInt(2) * (scope[k].max() - scope[k].min());
+          }
+        }
+        IntVar[] sc = scope;
+        int[] position = new int[scope.length];
+        for (int k = 0; k < scope.length; k++) {
+          position[k] = Arrays.asList(x).indexOf(scope[k]);
+        }
+        relations.add(
+            new Relation(
+                new HybridTable(sc, tuples),
+                t ->
+                    Arrays.stream(tuples)
+                        .anyMatch(
+                            row ->
+                                IntStream.range(0, row.length)
+                                    .allMatch(k -> row[k] == t[position[k]]))));
+      }
+      if (rnd.nextBoolean()) {
+        relations.add(relation(x, rnd));
+      }
+      boolean expected = bruteForce(x, relations, new int[n], 0);
+      for (Relation r : relations) {
+        store.impose(r.constraint);
+      }
+      LcgSolver solver = new LcgSolver(store);
+      solver.setChecking(true);
+      solver.setTableClauses("none");
+      solver.setCompressedTableClauses(false);
+      solver.setBooleanTableClauses(true);
+      int status = solver.solve();
+      assertThat(status)
+          .as("instance %d", instance)
+          .isEqualTo(expected ? CdclSolver.SAT : CdclSolver.UNSAT);
+      if (expected) {
+        int[] t = new int[n];
+        for (int i = 0; i < n; i++) {
+          t[i] = solver.value(x[i]);
+        }
+        for (Relation r : relations) {
+          assertThat(r.test.test(t)).as("instance %d: %s", instance, r.constraint).isTrue();
+        }
+        sat++;
+      } else {
+        unsat++;
+      }
+      encoded += solver.booleanTablesAsClauses;
+    }
+    assertThat(sat).isGreaterThan(100);
+    assertThat(unsat).isGreaterThan(100);
+    assertThat(encoded).isGreaterThan(500);
+  }
+
+  @Test
+  void primeCubesOfForbiddenPoints() {
+    // x0 + x1 + x2 != 1: the forbidden points 001, 010, 100 merge with no other, three primes
+    boolean[] allowed = new boolean[8];
+    for (int p = 0; p < 8; p++) {
+      allowed[p] = Integer.bitCount(p) != 1;
+    }
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 100).orElseThrow()).hasSize(3);
+    // x0 or x1 (x2 free): one prime cube, x0 = 0 and x1 = 0
+    for (int p = 0; p < 8; p++) {
+      allowed[p] = (p & 3) != 0;
+    }
+    List<long[]> primes = LcgSolver.forbiddenPrimeCubes(allowed, 3, 100).orElseThrow();
+    assertThat(primes).hasSize(1);
+    assertThat(primes.get(0)).containsExactly(3, 0);
+    // the limit
+    for (int p = 0; p < 8; p++) {
+      allowed[p] = Integer.bitCount(p) % 2 == 0;
+    }
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 3)).isEmpty();
+    assertThat(LcgSolver.forbiddenPrimeCubes(allowed, 3, 4).orElseThrow()).hasSize(4);
+  }
+
+  @Test
   void rootActionWaitsForItsTimeOverEarlierRestarts() {
     // the action of atRootAfter runs at a restart to the root once its time has come, not at the
     // first restart before it: under free search, which restarts at once, a relaxation suspended
@@ -660,6 +769,8 @@ class LcgSolverTest {
       LcgSolver solver = new LcgSolver(store);
       solver.setChecking(true);
       solver.setCompressedTableClauses(true);
+      // two-valued tables would go to the prime implicate encoding first
+      solver.setBooleanTableClauses(false);
       int status = solver.solve();
       assertThat(status)
           .as("instance %d", instance)
@@ -4898,6 +5009,87 @@ class LcgSolverTest {
   }
 
   /**
+   * Neighbourhood runs pause while the best solution stops improving ({@link
+   * LcgSolver#setLnsStall}), so that the time goes to the proof, and the optimum is still found and
+   * proved. Under free search they took more than half of the time after the optimum on
+   * java-routing trip_8_3 and fox-geese-corn 17 (MiniZinc Challenge), whose proofs then did not
+   * come in 600 s.
+   */
+  @Test
+  void lnsStallPausesNeighbourhoodRuns() {
+    Random rnd = new Random(31);
+    long runsPaused = 0;
+    long runsAlways = 0;
+    long skips = 0;
+    for (int k = 0; k < 30; k++) {
+      int n = 6;
+      int[][] neq = new int[n * n][];
+      int edges = 0;
+      for (int i = 0; i < n; i++) {
+        for (int j = i + 1; j < n; j++) {
+          if (rnd.nextInt(3) == 0) {
+            neq[edges++] = new int[] {i, j};
+          }
+        }
+      }
+      int[] w = new int[n + 1];
+      for (int i = 0; i < n; i++) {
+        w[i] = rnd.nextInt(11) - 3;
+      }
+      w[n] = -1;
+      int best = Integer.MAX_VALUE;
+      int[] v = new int[n];
+      for (int code = 0; code < 46656; code++) {
+        int c = code;
+        int sum = 0;
+        for (int i = 0; i < n; i++) {
+          v[i] = c % 6;
+          c /= 6;
+          sum += w[i] * v[i];
+        }
+        boolean ok = true;
+        for (int e = 0; e < edges; e++) {
+          ok &= v[neq[e][0]] != v[neq[e][1]];
+        }
+        if (ok) {
+          best = Math.min(best, sum);
+        }
+      }
+      for (boolean pause : new boolean[] {false, true}) {
+        Store store = new Store();
+        IntVar[] x = new IntVar[n];
+        for (int i = 0; i < n; i++) {
+          x[i] = new IntVar(store, "x" + i, 0, 5);
+        }
+        for (int e = 0; e < edges; e++) {
+          store.impose(new XneqY(x[neq[e][0]], x[neq[e][1]]));
+        }
+        IntVar cost = new IntVar(store, "cost", -1000, 1000);
+        IntVar[] terms = Arrays.copyOf(x, n + 1);
+        terms[n] = cost;
+        store.impose(new LinearInt(terms, w, "==", 0));
+        LcgSolver solver = new LcgSolver(store);
+        solver.setChecking(true);
+        solver.setLowerBoundSearch(0.5, 2);
+        solver.setLns(new AdaptiveLns(store, x, cost, new Random(k)), 4.0, 2);
+        // a pause as soon as any time passes without a better solution
+        solver.setLnsStall(pause ? 1e-9 : 0, 0);
+        assertThat(solver.minimize(cost)).isEqualTo(CdclSolver.SAT);
+        assertThat(solver.value(cost)).isEqualTo(best);
+        if (pause) {
+          runsPaused += solver.lnsRuns;
+          skips += solver.lnsStallSkips;
+        } else {
+          runsAlways += solver.lnsRuns;
+          assertThat(solver.lnsStallSkips).isZero();
+        }
+      }
+    }
+    assertThat(skips).isPositive();
+    assertThat(runsPaused).isLessThan(runsAlways);
+  }
+
+  /**
    * A stop during the runs in large neighbourhoods ends them: the runs that follow return at once
    * without a conflict and must not count as neighbourhoods too large. The slow-LCG hand-over of
    * free search stopped LCG in its runs on MaximumAgreementForest2-exact12 (XCSP 2026), which went
@@ -5125,6 +5317,27 @@ class LcgSolverTest {
     assertThat(exhausted).isPositive();
   }
 
+  /**
+   * With a time limit the phases of the core-guided schedule have work limits: an exhaustion test
+   * takes only a share of the work its phase has left, and one that refutes nothing gives its work
+   * back. Neither may change the optimum.
+   */
+  @Test
+  void cappedExhaustionKeepsTheOptimum() {
+    Random rnd = new Random(37);
+    long exhausted = 0;
+    for (int instance = 0; instance < 60; instance++) {
+      long seed = rnd.nextLong();
+      long[] stats = new long[1];
+      Integer expected = maxSatOptimum(seed, -1, stats);
+      assertThat(maxSatOptimum(seed, DEFAULT_EXHAUST, stats, 1 + instance % 20))
+          .as("instance %d (seed %d)", instance, seed)
+          .isEqualTo(expected);
+      exhausted += stats[0];
+    }
+    assertThat(exhausted).isPositive();
+  }
+
   private static final int DEFAULT_EXHAUST = Integer.MAX_VALUE;
 
   /** Core exhaustion is on by default. */
@@ -5150,6 +5363,15 @@ class LcgSolverTest {
    * outputs to {@code stats[0]}.
    */
   private static Integer maxSatOptimum(long seed, int exhaust, long[] stats) {
+    return maxSatOptimum(seed, exhaust, stats, 0);
+  }
+
+  /**
+   * As {@link #maxSatOptimum(long, int, long[])}, with a time limit in milliseconds for the
+   * core-guided schedule (0 = none): its phases then have work limits, which also cap each
+   * exhaustion test, and the work of the tests that refute nothing is given back to the phase.
+   */
+  private static Integer maxSatOptimum(long seed, int exhaust, long[] stats, long timeLimit) {
     Random rnd = new Random(seed);
     Store store = new Store();
     int n = 14 + rnd.nextInt(8);
@@ -5194,6 +5416,7 @@ class LcgSolverTest {
     if (exhaust != DEFAULT_EXHAUST) {
       solver.setCoreExhaust(exhaust);
     }
+    solver.setTimeLimit(timeLimit);
     int status = solver.minimize(cost);
     assertThat(status).isNotEqualTo(CdclSolver.UNKNOWN);
     if (solver.coreSearch() != null) {
@@ -5638,6 +5861,42 @@ class LcgSolverTest {
    * the test pass before, so the phase always ran its whole share: city-position spent half of its
    * time on cores that raised the bound to 435 against an optimum of 3,493.
    */
+  /**
+   * A core that the assumptions meet at their first conflict ends the solver's call before it
+   * checks its work limit, so the core-guided phase checks the limit itself between cores. Here
+   * every core is one clause of three soft literals, all false under the assumptions: the phase
+   * used to find all 300 of them, far past its share of the work, and now stops at that share.
+   */
+  @Test
+  void corePhaseStopsAtItsWorkLimitWhenEveryCoreFailsAtOnce() {
+    Store store = new Store();
+    int n = 300;
+    IntVar[] x = new IntVar[3 * n + 1];
+    int[] w = new int[3 * n + 1];
+    for (int i = 0; i < 3 * n; i++) {
+      x[i] = new BooleanVar(store, "x" + i);
+      w[i] = 1;
+    }
+    for (int i = 0; i < n; i++) {
+      IntVar[] clause = {x[3 * i], x[3 * i + 1], x[3 * i + 2]};
+      store.impose(new LinearInt(clause, new int[] {1, 1, 1}, ">=", 1));
+    }
+    IntVar cost = new IntVar(store, "cost", 0, 3 * n);
+    x[3 * n] = cost;
+    w[3 * n] = -1;
+    store.impose(new LinearInt(x, w, "==", 0));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setCoreSearch(0.5, 1_000_000, 100_000_000);
+    // 100,000 units of work at the nominal rate: since the exhaustion tests that refute nothing are
+    // left out of the phase's work (#837), the cores alone must take more than its share
+    solver.setTimeLimit(50);
+    // the deadline only ends branch and bound, which does not prove the bound of 300 in time
+    solver.sat().setDeadline(System.nanoTime() + 1_000_000_000L);
+    solver.minimize(cost);
+    assertThat(solver.coreSearch().limitStops).isPositive();
+    assertThat(solver.coreSearch().cores).isLessThan(n);
+  }
+
   @Test
   void corePhaseWithoutItsOwnSolutionStopsAfterAThird() {
     // 12 pigeons; hole 0 takes any number of them and costs 1 each, holes 1 to 11 take one each.

@@ -1189,6 +1189,13 @@ Cuts:
   slacks (false: MIR of the aggregate of the rows alone); default true.
 - org.jacop.lp.knapsackRows: the weight and profit rows of Knapsack
   (jacop_knapsack) are linearised rows of the LP; default true.
+- org.jacop.lp.coverCuts: lifted cover cuts of the rows as 0/1
+  knapsacks (CoverCuts) in the root cut rounds; default false.
+- org.jacop.lp.coverSearch: with coverCuts, cover cuts alone also in
+  search, every few optimal solves; default false.
+- org.jacop.lp.coverScaled: the cover cuts lift with the fractional
+  function of Gu, Nemhauser and Savelsbergh scaled to integers (false:
+  its integral rounding down); default true.
 - org.jacop.lp.capacityCuts: rounded capacity cuts of Routes at the
   root; default true.
 - org.jacop.lp.capacityRounds: their rounds; default 50.
@@ -1348,6 +1355,10 @@ Simplex choice and bases:
   after the first org.jacop.lp.cutRounds while each still moves the
   bound: at most this many rounds in all, within this many seconds;
   default 50 and 1.
+- org.jacop.lp.cutStalls: root cut rounds that leave the bound
+  unchanged and still go on to the next round; the cuts of stalled
+  rounds that never move the bound are dropped again; default 2 (0 stops
+  at the first such round).
 - org.jacop.lp.sparseCuts: the rows of a dense tableau with no room for
   a round of cuts move to the sparse simplex for the cut rounds; default
   true.
@@ -1381,6 +1392,20 @@ Simplex choice and bases:
 - org.jacop.lp.extraLimits: the rows of the other constraints are
   dropped when this many solves with them (and one in twenty) stop at
   the pivot limit; a large value keeps them; default 3.
+- org.jacop.lp.satisfactionProbation: the extra rows of a satisfaction
+  model stay on probation for this many solves and are then kept only if
+  at least org.jacop.lp.failRate of the solves since failed the node; 0
+  keeps them only when the root LP is infeasible; default 64.
+- org.jacop.lp.probationLimits: rows on probation are dropped at once
+  when this many solves with them stopped at the pivot limit and none
+  failed a node (rotating workforce Example1370: the base rows prove it
+  infeasible in 1 s, with the extra rows the backed-off solves never
+  ended the probation); default 16.
+- org.jacop.lp.failRate: the share of solves failing the node above which
+  the relaxation is taken to pay for itself; 0 turns it off; default 0.1.
+- org.jacop.lp.keyedTables: the columns of a table with a key column (the
+  element constraints over one index merged into one table) are linked to
+  the value encoding of the key, y = sum_v t(v) b_v; default true.
 - org.jacop.lp.extraSparse: those rows of a dense tableau whose search
   solves get few pivots move to the sparse simplex when it is cheaper
   per pivot; default true.

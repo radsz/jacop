@@ -436,6 +436,32 @@ class IntensionTableFlatzincTest {
     }
   }
 
+  @Test
+  void variableDeclaredEqualToAnotherStaysLinked() throws IOException {
+    // x_4 = X_29 is posted as an equality outside the constraint items; X_29 must stay outer, or
+    // the two elements become one table without it and x_4 loses its link to int_abs (fuzz seed
+    // 2024524: x_1 = 0, x_2 = 2, x_3 = 1, x_4 = -1 printed for a model without solutions)
+    String model =
+        """
+        predicate jacop_array_var_int_element_nonshifted(var int: idx,array [int] of var int: xs,\
+        var int: y,int: min_index);
+        var -4..1: x_1:: output_var;
+        var 1..3: x_2:: output_var;
+        var 1..3: x_3:: output_var;
+        var -1..3: X_INTRODUCED_29_;
+        var -3..3: x_4:: output_var = X_INTRODUCED_29_;
+        array [1..3] of var int: X_INTRODUCED_26_ = [x_3,x_1,x_1];
+        constraint int_abs(x_4,x_3);
+        constraint jacop_array_var_int_element_nonshifted(x_2,X_INTRODUCED_26_,X_INTRODUCED_29_,1);
+        constraint jacop_array_var_int_element_nonshifted(x_3,[0,-1,0,2,4],X_INTRODUCED_29_,1);
+        solve :: int_search([x_1,x_2,x_3,x_4],first_fail,indomain_median,complete) satisfy;
+        """;
+    for (String lcg : new String[] {"on", "off"}) {
+      String out = run(model, null, "--lcg", lcg);
+      assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    }
+  }
+
   private String run(String model, String property, String... options) throws IOException {
     Path fzn = tmp.resolve("model.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);

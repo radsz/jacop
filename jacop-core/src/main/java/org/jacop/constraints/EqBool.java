@@ -151,7 +151,8 @@ public class EqBool extends PrimitiveConstraint {
     if (x0 > 0 && x1 > 0) {
       result.domain.inValue(store.level, result, negated ? 1 : 0);
     }
-    if (x0 == list.length || x1 == list.length) {
+    // a single variable is always equal to itself
+    if (x0 == list.length || x1 == list.length || list.length == 1) {
       result.domain.inValue(store.level, result, negated ? 0 : 1);
     }
   }

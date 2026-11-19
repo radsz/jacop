@@ -540,6 +540,10 @@ public class LinearRelaxation extends Constraint
       Integer.getInteger("org.jacop.lp.satisfactionProbation", 64);
   private boolean probation;
 
+  // the solves at the pivot limit, with no node failed, after which rows on probation are dropped
+  private static final int PROBATION_LIMITS =
+      Integer.getInteger("org.jacop.lp.probationLimits", 16);
+
   // the share of solves that fail the node above which the relaxation is taken to pay for itself:
   // its solves that deduce nothing are charged a PRUNE_DISCOUNT-th of their work, and its extra
   // rows are not dropped for the pivot limits they hit
@@ -576,6 +580,11 @@ public class LinearRelaxation extends Constraint
   private static final boolean CUTS_ENABLED =
       !FALSE.equals(System.getProperty("org.jacop.lp.cuts"));
   private static final int CUT_ROUNDS = Integer.getInteger("org.jacop.lp.cutRounds", 5);
+  // root cut rounds that leave the bound unchanged and still go on: the first rounds of a dual
+  // degenerate LP often move only the basis, and the cuts of the next round then move the bound
+  // (MIPLIB p2756: 2689.7 -> 3102 for the optimum 3124 with 2). When the stalled rounds are used
+  // up, every cut since the first stall of the last run of stalls is dropped again
+  private static final int CUT_STALLS = Integer.getInteger("org.jacop.lp.cutStalls", 2);
   // rounds after the first CUT_ROUNDS, while each still moves the bound: at most this many rounds
   // in all, within CUT_EXTRA_NANOS of the end of the first CUT_ROUNDS
   private static final int CUT_ROUNDS_MAX = Integer.getInteger("org.jacop.lp.cutRoundsMax", 50);
@@ -791,6 +800,14 @@ public class LinearRelaxation extends Constraint
   /** Statistics: rounds of root cuts whose re-solve stopped at its pivot limit. */
   public long cutLimits;
 
+  /** Statistics: root cut rounds that left the bound unchanged and were kept for the next round. */
+  public long cutStalls;
+
+  /** Statistics: root cut rounds that moved the bound after a stalled round. */
+  public long cutStallsRecovered;
+
+  private int stallLimit = CUT_STALLS;
+
   // zero-half cuts in the cut rounds, from sets of tight rows whose sum is odd on the right side
   // (ZeroHalfCuts), rounded with the MIR of divisor 2. Off by default
   // (-Dorg.jacop.lp.zeroHalf=true):
@@ -799,6 +816,14 @@ public class LinearRelaxation extends Constraint
   // best solutions of 3 families worse: the extra rows cost each solve more than they prune. Not
   // final, so that tests can switch it on
   static boolean zeroHalfOn = Boolean.getBoolean("org.jacop.lp.zeroHalf");
+  // lifted cover cuts of the rows as 0/1 knapsacks (CoverCuts) in the cut rounds, and in search
+  // with org.jacop.lp.mirSearch. Off by default (-Dorg.jacop.lp.coverCuts=true); not final, so that
+  // tests can switch it on
+  static boolean coverOn = Boolean.getBoolean("org.jacop.lp.coverCuts");
+  // with coverOn, the cover cuts alone also in search, every mirPeriod optimal solves as the MIR
+  // cuts of mirSearch (which takes the cover cuts with its own); off by default
+  // (-Dorg.jacop.lp.coverSearch=true)
+  private static final boolean COVER_SEARCH = Boolean.getBoolean("org.jacop.lp.coverSearch");
   // the most slack of a row the zero-half separator takes, the most rows, and the most sets
   private static final double ZERO_HALF_SLACK = 0.1;
   private static final int ZERO_HALF_ROWS = 2000;
@@ -810,6 +835,9 @@ public class LinearRelaxation extends Constraint
 
   /** Statistics: zero-half cuts added (in the cut rounds and in search). */
   public long zeroHalfCuts;
+
+  /** The number of lifted cover cuts added ({@link CoverCuts}). */
+  public long coverCuts;
 
   /** Statistics: MIR cuts of the rows weighted by their dual values added (rounds and search). */
   public long dualCuts;
@@ -2999,6 +3027,21 @@ public class LinearRelaxation extends Constraint
     return calls > 0;
   }
 
+  /**
+   * Imposes the relaxation. The source of each row is read only by the statistics of {@code
+   * -Dorg.jacop.lp.sourceStats}; without them it is dropped here, since it held a string for every
+   * row during the whole search (210,000 on rcpsp_max psp_ubo500_33).
+   *
+   * @param store the store
+   */
+  @Override
+  public void impose(Store store) {
+    if (sources == null) {
+      formSource = Map.of();
+    }
+    super.impose(store);
+  }
+
   @Override
   public void consistency(Store store) {
     if (refutation && calls > 0) {
@@ -3282,7 +3325,22 @@ public class LinearRelaxation extends Constraint
   private int[] sentMin = new int[0];
   private int[] sentMax = new int[0];
 
+  // rows on probation whose solves stop at the limit and have failed no node yet are dropped: the
+  // backed-off solves may never reach the end of the probation, and the base rows alone can fail
+  // nodes (rotating workforce Example1370: 892 extra rows, 32 of 34 solves at the limit in 20 s;
+  // without them the regular flow rows prove it infeasible in 1 s)
+  private void endProbation() {
+    if (probation
+        && beforeExtra != null
+        && failures == extraFailures
+        && limits - extraLimits >= PROBATION_LIMITS) {
+      probation = false;
+      dropExtraRows();
+    }
+  }
+
   private void sendBounds() {
+    endProbation();
     int n = lp.columns();
     boolean all = boundsOf != lp || sentMin.length != n;
     if (all) {
@@ -3368,7 +3426,7 @@ public class LinearRelaxation extends Constraint
       status = cutRounds();
     }
     if (status == LpSolver.OPTIMAL
-        && MIR_SEARCH
+        && (MIR_SEARCH || COVER_SEARCH && coverOn)
         && mirRows != null
         && mirColumns == lp.columns()
         && objective != null
@@ -4489,6 +4547,11 @@ public class LinearRelaxation extends Constraint
     boolean slack = slackGomory;
     double start = lp.value(0);
     long extraDeadline = 0;
+    int stalls = 0;
+    // the simplex before the first stalled round of the current run of stalls, and the cuts since
+    LpSolver stallKept = null;
+    int[] stallRows = null;
+    int stallCuts = 0;
     for (int round = 0; round < Math.max(CUT_ROUNDS, CUT_ROUNDS_MAX); round++) {
       if (round >= CUT_ROUNDS) {
         // further rounds only while the cuts still move the bound, and for a short time
@@ -4515,9 +4578,32 @@ public class LinearRelaxation extends Constraint
               : rootSolve(lp, roundPivots(size), rootWork() / CUT_ROUNDS);
       if (status == DualSimplex.OPTIMAL
           && Math.abs(lp.value(0) - before) <= 1e-6 * (1 + Math.abs(before))) {
+        if (stalls < stallLimit) {
+          // a degenerate optimum: the cuts may only have moved the basis, the next round goes on
+          // from it
+          stalls++;
+          cutStalls++;
+          if (stallKept == null) {
+            stallKept = kept;
+            stallRows = keptRows;
+            stallCuts = 0;
+          }
+          stallCuts += chosen.size();
+          continue;
+        }
         // cuts that do not move the bound only make each solve dearer: back to the LP before them
-        dropCuts(chosen.size(), kept, keptRows);
+        if (stallKept != null) {
+          dropCuts(stallCuts + chosen.size(), stallKept, stallRows);
+          stallKept = null;
+        } else {
+          dropCuts(chosen.size(), kept, keptRows);
+        }
         break;
+      }
+      if (stallKept != null && status == LpSolver.OPTIMAL) {
+        cutStallsRecovered++;
+        stallKept = null;
+        stallRows = null;
       }
       if (status == LpSolver.LIMIT) {
         cutLimits++;
@@ -4545,6 +4631,10 @@ public class LinearRelaxation extends Constraint
       if (round >= CUT_ROUNDS - 1 && gain < CUT_PROGRESS * Math.abs(lp.value(0) - start)) {
         break;
       }
+    }
+    if (stallKept != null && status == LpSolver.OPTIMAL) {
+      // the rounds ended on stalled rounds: their cuts never moved the bound
+      dropCuts(stallCuts, stallKept, stallRows);
     }
     slackGomory = slack;
     timed("mir", mirStart);
@@ -4725,6 +4815,16 @@ public class LinearRelaxation extends Constraint
    */
   public void setSlackGomory(boolean on) {
     slackGomory = on;
+  }
+
+  /**
+   * Sets how many root cut rounds that leave the bound unchanged the rounds go past (property
+   * org.jacop.lp.cutStalls, 2 by default; 0 stops at the first such round).
+   *
+   * @param limit the stalled rounds kept
+   */
+  public void setCutStalls(int limit) {
+    stallLimit = limit;
   }
 
   /**
@@ -5446,7 +5546,8 @@ public class LinearRelaxation extends Constraint
             Arrays.copyOf(rootHi, n),
             mirRows,
             mirSeen,
-            MIR_SEARCH_WEIGHT);
+            MIR_SEARCH_WEIGHT,
+            !MIR_SEARCH);
     List<MirCut> chosen =
         found.size() > MIR_SEARCH_CUTS ? found.subList(0, MIR_SEARCH_CUTS) : found;
     for (MirCut c : found.subList(chosen.size(), found.size())) {
@@ -5533,6 +5634,17 @@ public class LinearRelaxation extends Constraint
    */
   private List<MirCut> separateCuts(
       long[] lo, long[] hi, Aggregate[] unitRows, Set<List<Long>> seen, long maxWeight) {
+    return separateCuts(lo, hi, unitRows, seen, maxWeight, false);
+  }
+
+  // as above; with coversOnly, the cover cuts alone
+  private List<MirCut> separateCuts(
+      long[] lo,
+      long[] hi,
+      Aggregate[] unitRows,
+      Set<List<Long>> seen,
+      long maxWeight,
+      boolean coversOnly) {
     int n = lp.columns();
     double[] value = new double[n];
     for (int j = 0; j < n; j++) {
@@ -5542,7 +5654,7 @@ public class LinearRelaxation extends Constraint
     List<Integer> sources = new ArrayList<>();
     for (int j = 0; j < n; j++) {
       double f = value[j] - Math.floor(value[j]);
-      if (lp.basicRow(j) >= 0 && f > 0.01 && f < 0.99) {
+      if (!coversOnly && lp.basicRow(j) >= 0 && f > 0.01 && f < 0.99) {
         sources.add(j);
       }
     }
@@ -5566,7 +5678,7 @@ public class LinearRelaxation extends Constraint
       labelled(found, foundBefore, "gomory");
     }
     Set<MirCut> dual = Collections.newSetFromMap(new IdentityHashMap<>());
-    if (dualAggregateOn) {
+    if (dualAggregateOn && !coversOnly) {
       int before = found.size();
       dualAggregate(value, lo, hi, found);
       dual.addAll(found.subList(before, found.size()));
@@ -5574,16 +5686,25 @@ public class LinearRelaxation extends Constraint
     Set<MirCut> zeroHalf = Collections.newSetFromMap(new IdentityHashMap<>());
     // a refutation also takes the zero-half cuts: they are the odd-cycle inequalities of the
     // cardinality refutations (domset hexgrid)
-    if (zeroHalfOn || pseudoObjective) {
+    if ((zeroHalfOn || pseudoObjective) && !coversOnly) {
       int foundBefore = found.size();
       zeroHalf(value, lo, hi, found, zeroHalf);
       labelled(found, foundBefore, "zerohalf");
     }
     int unitBefore = found.size();
-    for (Aggregate row : unitRows) {
-      mir(row, value, lo, hi, found);
+    for (int i = 0; i < unitRows.length && !coversOnly; i++) {
+      mir(unitRows[i], value, lo, hi, found);
     }
     labelled(found, unitBefore, "mir");
+    Set<MirCut> covers = Collections.newSetFromMap(new IdentityHashMap<>());
+    if (coverOn) {
+      int coverBefore = found.size();
+      for (Aggregate row : unitRows) {
+        cover(row, value, lo, hi, found);
+      }
+      covers.addAll(found.subList(coverBefore, found.size()));
+      labelled(found, coverBefore, "cover");
+    }
     if (maxWeight < Long.MAX_VALUE) {
       List<MirCut> small = new ArrayList<>(found.size());
       for (MirCut c : found) {
@@ -5595,6 +5716,9 @@ public class LinearRelaxation extends Constraint
           }
           if (d != c && dual.contains(c)) {
             dual.add(d);
+          }
+          if (d != c && covers.contains(c)) {
+            covers.add(d);
           }
         }
       }
@@ -5621,6 +5745,9 @@ public class LinearRelaxation extends Constraint
         }
         if (dual.contains(c)) {
           dualCuts++;
+        }
+        if (covers.contains(c)) {
+          coverCuts++;
         }
       }
     }
@@ -5807,6 +5934,32 @@ public class LinearRelaxation extends Constraint
     long[] lambda = scaled(y, gomoryScale);
     if (lambda != null) {
       mir(aggregate(lambda), value, lo, hi, found);
+    }
+  }
+
+  // the lifted cover cuts of both sides of a row (CoverCuts)
+  private static void cover(Aggregate g, double[] value, long[] lo, long[] hi, List<MirCut> found) {
+    if (g == null || g.columns().length < 2) {
+      return;
+    }
+    if (g.hasUpper()) {
+      MirCut c = CoverCuts.separate(g.columns(), g.coef(), g.upper(), value, lo, hi);
+      if (c != null) {
+        found.add(c);
+      }
+    }
+    if (g.hasLower() && g.lower() != Long.MIN_VALUE) {
+      long[] neg = new long[g.coef().length];
+      for (int k = 0; k < neg.length; k++) {
+        if (g.coef()[k] == Long.MIN_VALUE) {
+          return;
+        }
+        neg[k] = -g.coef()[k];
+      }
+      MirCut c = CoverCuts.separate(g.columns(), neg, -g.lower(), value, lo, hi);
+      if (c != null) {
+        found.add(c);
+      }
     }
   }
 

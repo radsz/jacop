@@ -625,8 +625,9 @@ public final class CoreSearch {
         probe(unit.term, unit.level, phaseLimit);
       } else if (OBJECTIVE_PROBE && cores >= nextObjectiveProbe && slowCores()) {
         long before = sat.work();
+        long clock = sat.now();
         boolean feasible = probeObjective(phaseLimit);
-        discount(sat.work() - before);
+        discount(sat.work() - before, sat.now() - clock);
         if (!feasible) {
           return CdclSolver.SAT; // no solution better than the best one
         }
@@ -645,7 +646,7 @@ public final class CoreSearch {
         return CdclSolver.SAT;
       }
       lcg.reportBound(Math.max(lowerBound, objectiveFloor));
-      if (tooSlow()) {
+      if (tooSlow() || pastLimits()) {
         return CdclSolver.UNKNOWN;
       }
     }
@@ -1024,6 +1025,23 @@ public final class CoreSearch {
     }
     return false;
   }
+
+  /**
+   * Whether the phase is past the solver's deadline or work limit. The solver checks both only
+   * after a conflict it learns from: a core that the assumptions meet at their first conflict ends
+   * the call before any check, so a phase whose cores are all found that way runs on past its
+   * limits (MiniZinc Challenge train instance.2: 33 s for a probe given 2 s of a 60 s run).
+   */
+  private boolean pastLimits() {
+    if (sat.now() > sat.deadline() || sat.work() >= sat.workLimit()) {
+      limitStops++;
+      return true;
+    }
+    return false;
+  }
+
+  /** Statistics: the phases ended by {@link #pastLimits} between two cores. */
+  public long limitStops;
 
   /** Statistics: the phases ended because the bound stalled over their second half. */
   public long stallStops;
@@ -1428,9 +1446,14 @@ public final class CoreSearch {
    * stopped as stalled at 214, three below the optimum that its cores prove two cores later (lost
    * in 4 of 4 runs at 120 s).
    */
-  private void discount(long work) {
+  private void discount(long work, long nanos) {
     if (work <= 0) {
       return;
+    }
+    if (GIVE_BACK) {
+      lcg.giveBack(work, nanos);
+    } else if (sat.workLimit() != Long.MAX_VALUE) {
+      sat.setWorkLimit(sat.workLimit() + work);
     }
     if (startWork >= 0) {
       startWork += work;
@@ -1441,10 +1464,12 @@ public final class CoreSearch {
     if (markWork >= 0) {
       markWork += work;
     }
-    if (sat.workLimit() != Long.MAX_VALUE) {
-      sat.setWorkLimit(sat.workLimit() + work);
-    }
   }
+
+  // -Djacop.lcg.coreGiveBack=false: the work left out of the phase extends only its current work
+  // limit, not its clock nor the limit the phase gets once it has a solution of its own
+  static final boolean GIVE_BACK =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreGiveBack", "true"));
 
   /** Whether every soft literal was assumed and a solution was found under all of them. */
   boolean exhausted() {
@@ -1501,12 +1526,43 @@ public final class CoreSearch {
   // cores whose first output exhaustion tested without refuting it
   private long exhaustMisses;
 
+  /** Statistics: the work of exhaustion tests that refuted nothing, left out of the phase. */
+  public long exhaustDiscounted;
+
+  // -Djacop.lcg.coreExhaustDiscount=false counts the work of exhaustion tests that refute nothing
+  // against the phase, as before
+  private static final boolean EXHAUST_DISCOUNT =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreExhaustDiscount", "true"));
+
+  // -Djacop.lcg.coreExhaustShare=S: the share of the work its phase has left that one exhaustion
+  // test may take; 0 = no limit but the phase's own
+  private static final double EXHAUST_SHARE =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreExhaustShare", "0.25"));
+
+  // -Djacop.lcg.coreExhaustRatio=R: one exhaustion test may take at most R times the work the
+  // phase did so far (its own work, without branch and bound between its runs); 0 = no such limit
+  private static final double EXHAUST_RATIO =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreExhaustRatio", "8"));
+
+  // the least work a test may take under the ratio
+  private static final long EXHAUST_MIN_WORK = 10_000;
+
   /**
    * Core exhaustion as in RC2 (Ignatiev, Morgado and Marques-Silva, JSAT 11, 2019): after a core of
    * at least two literals is relaxed, the outputs "at least j of them false" of its new totalizer,
    * j = 2, 3, ..., are each assumed alone, at most {@link LcgSolver#setCoreExhaust} of them and at
    * most 1000 conflicts a call, and relaxed as unit cores while they are refuted. That raises the
    * bound at once by what a run of cores over the same literals would raise it.
+   *
+   * <p>A test is a search without the other assumptions, and on some models it costs far more than
+   * the cores. On skill-allocation mzn_1m_1 (MiniZinc Challenge 2020) the first core of 64 literals
+   * came at its first conflict, and the test of its second output took 440 conflicts and all the
+   * work of the phase without a refutation: the phase stopped without a solution of its own after
+   * that one core, and branch and bound needed 200,000 to 600,000 nodes where the second core and a
+   * solution at the bound end the search after 31,000 (2x the time). So a test takes at most {@link
+   * #EXHAUST_SHARE} of the work its phase has left and {@link #EXHAUST_RATIO} times the work the
+   * phase did so far, and the work of a test that refutes nothing is not counted against the phase
+   * ({@link #discount}), as for the objective's probes.
    *
    * @return false when the solver became unsatisfiable at the root
    */
@@ -1515,6 +1571,7 @@ public final class CoreSearch {
     if (lcg.coreExhaust() <= 0
         || size < 2
         || lastTotalizer == null
+        || SKIP_AT_BEST && lowerBound >= lcg.boundObjective()
         || patience > 0 && exhaustMisses >= patience * (1 + exhaustedOutputs)) {
       return true;
     }
@@ -1529,8 +1586,23 @@ public final class CoreSearch {
         long cap = sat.conflicts + TRIM_CONFLICTS;
         sat.setConflictLimit(
             Math.min(lcg.conflictCap(), Math.min(phaseLimit, cap < 0 ? Long.MAX_VALUE : cap)));
-        int[] failed =
-            lcg.solveUnder(-s.lit) == CdclSolver.UNSAT ? sat.failedAssumptions() : new int[] {0, 0};
+        long before = sat.work();
+        long clock = sat.now();
+        long workLimit = sat.workLimit();
+        sat.setWorkLimit(testWorkLimit(before, workLimit));
+        int[] failed;
+        long bestBefore = lcg.bestObjective();
+        try {
+          failed =
+              lcg.solveUnder(-s.lit) == CdclSolver.UNSAT
+                  ? sat.failedAssumptions()
+                  : new int[] {0, 0};
+        } finally {
+          sat.setWorkLimit(workLimit);
+        }
+        if (lcg.bestObjective() < bestBefore) {
+          exhaustSolutions++;
+        }
         // an empty core: unsatisfiable without assumptions
         open = failed.length != 0;
         refuted = failed.length == 1;
@@ -1540,10 +1612,36 @@ public final class CoreSearch {
         if (refuted) {
           exhaustedOutputs++;
           open = relax(failed, true);
+        } else if (EXHAUST_DISCOUNT) {
+          // a test that proved nothing leaves the phase its work
+          long work = sat.work() - before;
+          exhaustDiscounted += work;
+          discount(work, sat.now() - clock);
         }
       }
     }
     return open;
+  }
+
+  /** Statistics: exhaustion tests that found a better solution. */
+  public long exhaustSolutions;
+
+  // -Djacop.lcg.coreExhaustAtBest=true: exhaustion also tests the outputs of a core that brought
+  // the lower bound to the best solution, which the phase then proves optimal without them
+  private static final boolean SKIP_AT_BEST =
+      !Boolean.parseBoolean(System.getProperty("jacop.lcg.coreExhaustAtBest", "false"));
+
+  /** The work limit of an exhaustion test that starts at the given work. */
+  private long testWorkLimit(long now, long workLimit) {
+    long limit = workLimit;
+    if (workLimit != Long.MAX_VALUE && EXHAUST_SHARE > 0) {
+      limit = now + (long) (EXHAUST_SHARE * Math.max(0, workLimit - now));
+    }
+    if (EXHAUST_RATIO > 0 && startWork >= 0) {
+      long own = Math.max(EXHAUST_MIN_WORK, (long) (EXHAUST_RATIO * Math.max(0, now - startWork)));
+      limit = Math.min(limit, now + own);
+    }
+    return limit;
   }
 
   /** Relaxes a core of assumptions; returns false when the solver is unsatisfiable at the root. */

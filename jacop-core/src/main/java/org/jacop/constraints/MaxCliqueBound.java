@@ -751,11 +751,13 @@ public class MaxCliqueBound extends Constraint
     if (!sum.singleton()) {
       return false;
     }
-    long s = 0;
-    for (int i = 0; i < x.length; i++) {
-      if (!x[i].singleton()) {
+    for (IntVar v : x) {
+      if (!v.singleton()) {
         return false;
       }
+    }
+    long s = 0;
+    for (int i = 0; i < x.length; i++) {
       if (x[i].value() > 0) {
         for (int j : conflicts[i]) {
           if (x[j].value() > 0) {

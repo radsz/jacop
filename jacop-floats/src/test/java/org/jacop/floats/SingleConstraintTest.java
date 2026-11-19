@@ -75,6 +75,7 @@ import org.jacop.floats.constraints.PltQ;
 import org.jacop.floats.constraints.PlteqQ;
 import org.jacop.floats.constraints.PmulCeqR;
 import org.jacop.floats.constraints.PmulQeqR;
+import org.jacop.floats.constraints.PneqQ;
 import org.jacop.floats.constraints.PplusCeqR;
 import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.constraints.RoundPeqX;
@@ -862,6 +863,28 @@ class SingleConstraintTest {
     } finally {
       FloatDomain.setStep(0.0);
       FloatDomain.setPrecision(precision);
+    }
+  }
+
+  /**
+   * P = P always holds and P != P never does, also for a box that is only ground within the
+   * precision.
+   */
+  @Test
+  void equalityOfAVariableWithItselfIsDecided() {
+    for (boolean equal : new boolean[] {true, false}) {
+      Store store = new Store();
+      FloatVar x = new FloatVar(store, "x", 1.0, 2.0);
+      IntVar b = new IntVar(store, "b", 0, 1);
+      store.impose(new Reified(equal ? new PeqQ(x, x) : new PneqQ(x, x), b));
+      assertThat(store.consistency()).isTrue();
+      assertThat(b.singleton(equal ? 1 : 0)).as("b of %s", equal ? "x = x" : "x != x").isTrue();
+
+      Store wrong = new Store();
+      FloatVar y = new FloatVar(wrong, "y", 1.0, 1.0 + 1e-12);
+      IntVar c = new IntVar(wrong, "c", equal ? 0 : 1, equal ? 0 : 1);
+      wrong.impose(new Reified(equal ? new PeqQ(y, y) : new PneqQ(y, y), c));
+      assertThat(wrong.consistency()).as("%s with c = %s", equal ? "y = y" : "y != y", c).isFalse();
     }
   }
 

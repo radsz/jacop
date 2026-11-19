@@ -90,6 +90,10 @@ public class Tables {
   final HashMap<String, Double> floatTable = new HashMap<>();
   final HashMap<String, int[]> intArrayTable =
       new HashMap<>(); // boolean are also stored here as 0/1 values
+  // arrays of parameters read as arrays of constants while the constraints are posted: each
+  // detector that looked at an element read the array again, boxing every entry (2000 elements
+  // over one array of 20,000 integers: 5 GB of Integer allocated by six detectors)
+  private final HashMap<String, IntVar[]> constantArrayTable = new HashMap<>();
   final HashMap<String, double[]> floatArrayTable = new HashMap<>();
   final HashMap<String, IntDomain> setTable = new HashMap<>();
   final HashMap<String, IntDomain[]> setArrayTable = new HashMap<>();
@@ -168,6 +172,13 @@ public class Tables {
   public org.jacop.fz.constraints.ProgressionTilingDetector.Tiling progressionTiling;
 
   /**
+   * The positions of the values of the Hamiltonian paths written as a numbering ({@link
+   * org.jacop.fz.constraints.NumberedPathDetector}): positions[k] is the cell (1-based) of value k
+   * + 1. The satisfaction search of a model without an annotation follows the path over them.
+   */
+  public final List<IntVar[]> pathPositions = new ArrayList<>();
+
+  /**
    * The bound of a model of maximum clique and nothing else ({@link
    * org.jacop.fz.constraints.MaxCliqueDetector}), whose search without an annotation branches on
    * its vertices, or null.
@@ -238,6 +249,7 @@ public class Tables {
   // pairs of variables a declaration makes equal (var int: x = y), with the bounds each had
   // before the equality was imposed
   private final List<IntVar[]> declaredEqualities = new ArrayList<>();
+  private final Set<IntVar> declaredEqual = Collections.newSetFromMap(new IdentityHashMap<>());
   private final IdentityHashMap<IntVar, long[]> boundsBeforeEquality = new IdentityHashMap<>();
   // the factor the objective was divided by (ObjectiveScaling), and the identifiers of the
   // variables that hold the divided values
@@ -253,6 +265,8 @@ public class Tables {
    */
   void noteDeclaredEquality(IntVar x, IntVar y) {
     declaredEqualities.add(new IntVar[] {x, y});
+    declaredEqual.add(x);
+    declaredEqual.add(y);
     boundsBeforeEquality.putIfAbsent(x, new long[] {x.min(), x.max()});
     boundsBeforeEquality.putIfAbsent(y, new long[] {y.min(), y.max()});
   }
@@ -264,6 +278,31 @@ public class Tables {
    */
   public List<IntVar[]> declaredEqualities() {
     return declaredEqualities;
+  }
+
+  /**
+   * Whether a declaration makes the variable equal to another one. Such a variable must not become
+   * an alias or be folded away, since the equality posted for the declaration stays on it.
+   *
+   * @param v the variable
+   * @return true if v is in a pair of {@link #declaredEqualities()}
+   */
+  public boolean isDeclaredEqual(IntVar v) {
+    return declaredEqual.contains(v);
+  }
+
+  /**
+   * Adds the variables of the pairs declarations make equal. A detector that removes or merges
+   * variables must keep them, like the variables of the alias table, since the equality posted for
+   * a declaration is not among the model's constraint items.
+   *
+   * @param into the set the variables are added to
+   */
+  public void addDeclaredEqualities(Collection<IntVar> into) {
+    for (IntVar[] pair : declaredEqualities) {
+      into.add(pair[0]);
+      into.add(pair[1]);
+    }
   }
 
   /**
@@ -1116,9 +1155,13 @@ public class Tables {
     if (a == null) {
       int[] intA = intArrayTable.get(ident);
       if (intA != null) {
-        a = new IntVar[intA.length];
-        for (int i = 0; i < intA.length; i++) {
-          a[i] = getConstant(intA[i]);
+        a = constantArrayTable.get(ident);
+        if (a == null) {
+          a = new IntVar[intA.length];
+          for (int i = 0; i < intA.length; i++) {
+            a[i] = getConstant(intA[i]);
+          }
+          constantArrayTable.put(ident, a);
         }
       } else {
         return null;
@@ -1129,6 +1172,14 @@ public class Tables {
       }
     }
     return a;
+  }
+
+  /**
+   * It forgets the arrays of parameters read as arrays of constants by {@link
+   * #getVariableArray(String)}, once the constraints are posted.
+   */
+  void releaseConstantArrays() {
+    constantArrayTable.clear();
   }
 
   /**
