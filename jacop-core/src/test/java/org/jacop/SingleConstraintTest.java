@@ -59,6 +59,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import lombok.extern.slf4j.Slf4j;
 import org.jacop.api.Copyable;
+import org.jacop.api.Stateful;
 import org.jacop.api.VarMap;
 import org.jacop.constraints.AbsXeqY;
 import org.jacop.constraints.AllDifferentLists;
@@ -2089,6 +2090,150 @@ class SingleConstraintTest extends TestHelper {
         }
       }
     }
+  }
+
+  // Regular and Among undo only the store levels at which they changed, so the store does not call
+  // them at every backtrack. Here a dive level prunes a variable of a Regular on a large graph
+  // (which compacts its adjacency arrays), of an Among, of both or of neither, so many levels leave
+  // a constraint untouched; the domains must stay equal to those of the decompositions after every
+  // step and every backtrack.
+  @Test
+  void testRegularAndAmongUndoOnlyTheLevelsWhereTheyChanged() {
+
+    Random random = new Random(5);
+    for (int trial = 0; trial < 4; trial++) {
+      int n = 40 + random.nextInt(30);
+      Store store = new Store();
+      Store reference = new Store();
+      IntVar[] x = new IntVar[n];
+      IntVar[] y = new IntVar[n];
+      IntVar[] z = new IntVar[6];
+      IntVar[] zReference = new IntVar[z.length];
+      Fsm fsm = randomFsm(random, 120 + random.nextInt(60));
+      for (int i = 0; i < n; i++) {
+        x[i] = new IntVar(store, "x" + i, 0, 3);
+        y[i] = new IntVar(reference, "x" + i, 0, 3);
+      }
+      for (int i = 0; i < z.length; i++) {
+        z[i] = new IntVar(store, "z" + i, 0, 3);
+        zReference[i] = new IntVar(reference, "z" + i, 0, 3);
+      }
+      List<Constraint> imposed = new ArrayList<>();
+      Regular regular = new Regular(fsm, x);
+      store.impose(regular);
+      imposed.add(regular);
+      new Regular(fsm, y).imposeDecomposition(reference);
+      // The Among counts the values 0 and 1 among two variables of the Regular and the z variables.
+      IntVar[] counted = {x[0], x[1], z[0], z[1], z[2], z[3]};
+      IntVar[] countedReference = {
+        y[0], y[1], zReference[0], zReference[1], zReference[2], zReference[3]
+      };
+      IntVar count = new IntVar(store, "count", 1, 3);
+      IntVar countReference = new IntVar(reference, "count", 1, 3);
+      Among among = new Among(counted, new IntervalDomain(0, 1), count);
+      store.impose(among);
+      imposed.add(among);
+      IntVar[] in = new IntVar[counted.length];
+      for (int i = 0; i < counted.length; i++) {
+        in[i] = new IntVar(reference, "in" + i, 0, 1);
+        reference.impose(new Reified(new XlteqC(countedReference[i], 1), in[i]));
+      }
+      reference.impose(new SumBool(in, "==", countReference));
+      for (Constraint c : imposed) {
+        assertThat(store.removeLevelListeners).doesNotContain((Stateful) c);
+      }
+
+      List<IntVar> all = new ArrayList<>(Arrays.asList(x));
+      List<IntVar> allReference = new ArrayList<>(Arrays.asList(y));
+      all.addAll(Arrays.asList(z));
+      allReference.addAll(Arrays.asList(zReference));
+      all.add(count);
+      allReference.add(countReference);
+      String instance = "trial " + trial;
+      boolean consistent = store.consistency();
+      assertThat(consistent).as(instance).isEqualTo(reference.consistency());
+      assertThat(all.toString()).as(instance).isEqualTo(allReference.toString());
+      // Level 1 fixes most variables of the Regular, so most of its edges are removed below it and
+      // it compacts its arrays after dives that visit many removed edges.
+      store.setLevel(1);
+      reference.setLevel(1);
+      for (int i = 2; consistent && i < 3 * n / 4; i++) {
+        int[] values = valuesOf(x[i]);
+        int value = values[random.nextInt(values.length)];
+        x[i].domain.in(1, x[i], value, value);
+        y[i].domain.in(1, y[i], value, value);
+        consistent = store.consistency();
+        assertThat(consistent).as(instance).isEqualTo(reference.consistency());
+      }
+      for (int dive = 0; consistent && dive < 300; dive++) {
+        boolean ok = true;
+        while (ok) {
+          List<Integer> free =
+              IntStream.range(0, all.size()).filter(i -> !all.get(i).singleton()).boxed().toList();
+          if (free.isEmpty()) {
+            break;
+          }
+          int i = free.get(random.nextInt(free.size()));
+          int[] values = valuesOf(all.get(i));
+          int value = values[random.nextInt(values.length)];
+          store.setLevel(store.level + 1);
+          reference.setLevel(reference.level + 1);
+          IntVar v = all.get(i);
+          IntVar w = allReference.get(i);
+          if (random.nextInt(5) == 0) {
+            v.domain.in(store.level, v, value, value);
+            w.domain.in(reference.level, w, value, value);
+          } else {
+            v.domain.inComplement(store.level, v, value);
+            w.domain.inComplement(reference.level, w, value);
+          }
+          ok = store.consistency();
+          assertThat(ok).as(instance).isEqualTo(reference.consistency());
+          if (ok) {
+            assertThat(all.toString()).as(instance).isEqualTo(allReference.toString());
+          }
+        }
+        // Back to a random level from 2 on, so that many dives share the levels above it, and
+        // sometimes to level 1.
+        int deepest = store.level;
+        int target =
+            deepest < 2 || random.nextInt(40) == 0
+                ? Math.min(1, deepest)
+                : 2 + random.nextInt(deepest - 1);
+        while (store.level > target) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+          reference.removeLevel(reference.level);
+          reference.setLevel(reference.level - 1);
+        }
+        assertThat(all.toString()).as(instance).isEqualTo(allReference.toString());
+      }
+    }
+  }
+
+  private static Fsm randomFsm(Random random, int states) {
+    Fsm fsm = new Fsm();
+    FsmState[] s = new FsmState[states];
+    for (int q = 0; q < states; q++) {
+      s[q] = new FsmState();
+      fsm.allStates.add(s[q]);
+    }
+    fsm.initState = s[0];
+    for (int q = 0; q < states; q++) {
+      if (random.nextInt(4) > 0) {
+        fsm.finalStates.add(s[q]);
+      }
+      for (int c = 0; c < 4; c++) {
+        Set<Integer> successors = new HashSet<>();
+        for (int k = random.nextInt(3); k >= 0; k--) {
+          successors.add(random.nextInt(states));
+        }
+        for (int next : successors) {
+          s[q].addTransition(new FsmTransition(new IntervalDomain(c, c), s[next]));
+        }
+      }
+    }
+    return fsm;
   }
 
   // Regular on random (possibly non-deterministic) automata must keep every domain equal to the
@@ -8904,6 +9049,74 @@ class SingleConstraintTest extends TestHelper {
 
     // the condition must fail, x0 + x2 = x3, which x0 = -2 cannot satisfy
     assertThat(x0.min()).isEqualTo(-1);
+  }
+
+  // IfThenElseBool decided the condition from a branch that cannot hold only when imposed, so a
+  // Reified with b = 1 left it open; its negation and satisfied() missed the case of both
+  // branches being equal (ComposedTightnessTest)
+  @Test
+  void testNestedIfThenElseBoolDecidesTheConditionAndBothBranches() {
+    Store store = new Store();
+    BooleanVar c = new BooleanVar(store, "c");
+    BooleanVar t = new BooleanVar(store, "t");
+    BooleanVar e = new BooleanVar(store, "e");
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new IfThenElseBool(c, t, e), r));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 1, 1);
+    t.domain.in(store.level, t, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+    assertThat(e.min()).isOne();
+
+    Store s2 = new Store();
+    BooleanVar c2 = new BooleanVar(s2, "c");
+    BooleanVar t2 = new BooleanVar(s2, "t", 1, 1);
+    BooleanVar e2 = new BooleanVar(s2, "e", 1, 1);
+    IntVar r2 = new IntVar(s2, "r", 0, 1);
+    s2.impose(new Reified(new IfThenElseBool(c2, t2, e2), r2));
+    assertThat(s2.consistency()).isTrue();
+    // both branches hold, so the constraint holds whatever the condition
+    assertThat(r2.min()).isOne();
+
+    Store s3 = new Store();
+    BooleanVar c3 = new BooleanVar(s3, "c");
+    BooleanVar t3 = new BooleanVar(s3, "t", 1, 1);
+    BooleanVar e3 = new BooleanVar(s3, "e");
+    IntVar r3 = new IntVar(s3, "r", 0, 0);
+    s3.impose(new Reified(new IfThenElseBool(c3, t3, e3), r3));
+    assertThat(s3.consistency()).isTrue();
+    // the negation needs c = 0 and e = 0 once the then branch holds
+    assertThat(c3.max()).isZero();
+    assertThat(e3.max()).isZero();
+  }
+
+  // CountBounds.satisfied() asked for every variable to be decided, so a reification did not see
+  // that a count whose fixed occurrences reach lb and whose possible ones stay within ub holds;
+  // its negation did not prune (ComposedTightnessTest)
+  @Test
+  void testReifiedCountBoundsIsTrueOnceEveryCountFits() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", -2, -2);
+    x1.addDom(1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 2);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    // x1 cannot be 0, so at most two zeros
+    store.impose(new Reified(new CountBounds(new IntVar[] {x0, x1, x2}, 0, 0, 2), r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.min()).isOne();
+
+    Store s2 = new Store();
+    IntVar y0 = new IntVar(s2, "y0", 0, 0);
+    IntVar y1 = new IntVar(s2, "y1", 0, 2);
+    IntVar y2 = new IntVar(s2, "y2", 1, 2);
+    IntVar r2 = new IntVar(s2, "r", 0, 0);
+    // not (count = 1): with one zero fixed and at most two possible the count must be 2
+    s2.impose(new Reified(new CountBounds(new IntVar[] {y0, y1, y2}, 0, 1, 1), r2));
+    assertThat(s2.consistency()).isTrue();
+    assertThat(y1.max()).isZero();
   }
 
   // The negation of AtMost (at least counter + 1 values) woke only on GROUND, so a bound that

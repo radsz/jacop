@@ -39,6 +39,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BiConsumer;
@@ -789,14 +790,22 @@ class GlobalConstraints implements ParserTreeConstants {
   // and dominance reasons of Subcircuit it does not. The decomposition does not state that the
   // successors differ, and --proof implies -b, which leaves out the implied Alldistinct, so the
   // all-different is posted here: without it two nodes could share a successor (tpp and mario
-  // proved optima below the true ones).
+  // proved optima below the true ones). The successors leave the positions open, and only fixed
+  // positions rule out a second cycle, so the positions are search variables: a search that is not
+  // lazy clause generation (-a, or the hand-over after a slow LCG) labelled the successors alone
+  // and accepted two cycles (mario_t_hard_5 proved 4482 with nodes 1 and 2 on a cycle of their
+  // own).
   private void subcircuit(IntVar[] v) {
     if (support.options.proof() == null) {
       support.pose(new Subcircuit(v));
       return;
     }
-    for (Constraint c : Subcircuit.decomposition(store, v)) {
+    IntVar[] position = new IntVar[v.length];
+    for (Constraint c : Subcircuit.decomposition(store, v, position)) {
       support.pose(c);
+    }
+    for (IntVar p : position) {
+      support.dictionary.addSearchVar(p);
     }
     support.pose(new Alldiff(v));
   }
@@ -811,6 +820,12 @@ class GlobalConstraints implements ParserTreeConstants {
     subcircuit(v);
     addImpliedAlldistinct(v);
     if (support.options.proof() == null) {
+      if (Arrays.asList(v).contains(cost)) {
+        // SubcircuitCost needs a cost apart from the successors
+        IntVar copy = new IntVar(store, cost.dom().cloneLight());
+        support.pose(new XeqY(cost, copy));
+        cost = copy;
+      }
       support.pose(new SubcircuitCost(v, costs, cost));
       return;
     }
@@ -2096,6 +2111,28 @@ class GlobalConstraints implements ParserTreeConstants {
       position.putIfAbsent(x, position.size());
     }
     IntVar[] nv = position.keySet().toArray(new IntVar[0]);
+    // a large table posted on many scopes is filtered and compiled once per pattern of repeated
+    // variables and domains (Benzenoide: four million rows on 361 scopes)
+    List<Object> scopeKey = null;
+    int minRows = tableMddRows();
+    if (minRows > 0 && tbl.length / size >= minRows && support.options.proof() == null) {
+      scopeKey = new ArrayList<>();
+      scopeKey.add(new SameArray(tbl));
+      scopeKey.add(star);
+      for (IntVar x : v) {
+        scopeKey.add(position.get(x));
+      }
+      for (IntVar x : nv) {
+        scopeKey.add(x.dom().toString());
+      }
+      ShortTableMdd.Diagram known = scopeDiagrams.get(scopeKey);
+      if (known != null) {
+        support.delayedConstraints.add(
+            new ExtensionalSupportMdd(nv, known.level(), known.from(), known.label(), known.to()));
+        return;
+      }
+    }
+    IntVar[] scope = nv;
     List<int[]> kept = new ArrayList<>();
     for (int i = 0; i < tbl.length / size; i++) {
       int[] row = new int[nv.length];
@@ -2176,6 +2213,13 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       return;
     }
+    ShortTableMdd.Diagram diagram = postAsDiagram(nv, kept, star);
+    if (diagram != null) {
+      if (scopeKey != null && nv == scope) {
+        scopeDiagrams.put(scopeKey, diagram);
+      }
+      return;
+    }
     // short tables with the same rows after the filtering (CrosswordDesign, XCSP 2026, posts each
     // of its dictionary tables of up to 330,000 rows on 24 slots) share the bit-sets of the first
     HybridTable same = shortTables.get(new ShortTableRows(kept, star));
@@ -2187,6 +2231,95 @@ class GlobalConstraints implements ParserTreeConstants {
       shortTables.put(new ShortTableRows(kept, star), table);
     }
     support.pose(table);
+  }
+
+  /**
+   * It returns the fewest rows of a (short) table compiled into a diagram, see {@link
+   * ShortTableMdd}. Set by {@code org.jacop.fz.tableMdd.rows} (default 100,000; 0 turns the
+   * compilation off).
+   *
+   * @return the fewest rows.
+   */
+  static int tableMddRows() {
+    return Integer.getInteger("org.jacop.fz.tableMdd.rows", 100_000);
+  }
+
+  /**
+   * The diagram of a table is posted when it has at most rows * arity / TABLE_MDD_RATIO edges. Set
+   * by {@code org.jacop.fz.tableMdd.ratio} (default 10).
+   */
+  static int tableMddRatio() {
+    return Integer.getInteger("org.jacop.fz.tableMdd.ratio", 10);
+  }
+
+  // diagrams posted for a table array, star, pattern of repeated variables and domains
+  private final Map<List<Object>, ShortTableMdd.Diagram> scopeDiagrams = new HashMap<>();
+
+  /** An array compared by identity: MiniZinc and the parser keep one array per table. */
+  private record SameArray(int[] array) {
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof SameArray(int[] other) && other == array;
+    }
+
+    @Override
+    public int hashCode() {
+      return System.identityHashCode(array);
+    }
+
+    @Override
+    public String toString() {
+      return "SameArray[" + array.length + "]";
+    }
+  }
+
+  // diagrams of large tables by rows and column domains, null when the table did not compile
+  private final Map<List<Object>, Optional<ShortTableMdd.Diagram>> tableDiagrams = new HashMap<>();
+
+  /**
+   * It posts a large table as a multi-valued decision diagram when the diagram is much smaller than
+   * the rows (Benzenoide, XCSP 2023: a million rows of arity 8 on 361 scopes, about 11 GB as
+   * tables, in a diagram of a few hundred edges). Tables with the same rows on variables with the
+   * same domains share one diagram.
+   *
+   * @param x the variables, all different.
+   * @param rows the rows, star matching every value.
+   * @param star the star value.
+   * @return the diagram posted, or null when the table was not posted.
+   */
+  ShortTableMdd.Diagram postAsDiagram(IntVar[] x, List<int[]> rows, int star) {
+    int minRows = tableMddRows();
+    if (minRows <= 0 || rows.size() < minRows || support.options.proof() != null) {
+      return null;
+    }
+    IntDomain[] domains = new IntDomain[x.length];
+    List<Object> key = new ArrayList<>();
+    key.add(new ShortTableRows(rows, star));
+    for (int i = 0; i < x.length; i++) {
+      domains[i] = x[i].dom().cloneLight();
+      key.add(domains[i].toString());
+    }
+    long limit = Math.min(Integer.MAX_VALUE, (long) rows.size() * x.length / tableMddRatio());
+    if (!tableDiagrams.containsKey(key)) {
+      Optional<ShortTableMdd.Diagram> compiled =
+          Optional.ofNullable(ShortTableMdd.compile(rows, star, domains, (int) limit));
+      tableDiagrams.put(key, compiled);
+      if (support.options.debug()) {
+        FzConsole.println(
+            "% table of "
+                + rows.size()
+                + " rows as diagram: "
+                + compiled.map(d -> d.from().length + " edges").orElse("too large"));
+      }
+    }
+    Optional<ShortTableMdd.Diagram> diagram = tableDiagrams.get(key);
+    if (diagram.isEmpty()) {
+      return null;
+    }
+    ShortTableMdd.Diagram mdd = diagram.get();
+    support.delayedConstraints.add(
+        new ExtensionalSupportMdd(x, mdd.level(), mdd.from(), mdd.label(), mdd.to()));
+    return mdd;
   }
 
   /**
@@ -2946,6 +3079,15 @@ class GlobalConstraints implements ParserTreeConstants {
     for (int s = 0; s < b.length; s++) {
       rows[s] = Arrays.copyOfRange(a, s * x.length, (s + 1) * x.length);
     }
+    List<IntVar> xs = Arrays.asList(x);
+    for (int s = 0; s < ok.length; s++) {
+      if (xs.contains(ok[s])) {
+        // ScenarioChance needs its indicators apart from x
+        IntVar copy = new IntVar(store, ok[s].dom().cloneLight());
+        support.pose(new XeqY(ok[s], copy));
+        ok[s] = copy;
+      }
+    }
     support.delayedConstraints.add(
         new ScenarioChance(x, rows, b, weights, alpha, ok.length == 0 ? null : ok));
   }
@@ -2970,6 +3112,12 @@ class GlobalConstraints implements ParserTreeConstants {
         p[j] = prob[i * k + j];
       }
       w[i] = new Dist(Arrays.copyOfRange(value, i * k, (i + 1) * k), p, den);
+    }
+    if (Arrays.asList(x).contains(c)) {
+      // ChanceSum needs a capacity apart from the loads
+      IntVar copy = new IntVar(store, c.dom().cloneLight());
+      support.pose(new XeqY(c, copy));
+      c = copy;
     }
     support.delayedConstraints.add(new ChanceSum(x, w, c, alpha, den));
   }
