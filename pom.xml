@@ -317,6 +317,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ComposedTightnessTest.java</include>
                                 <include>**/ConsistencyChecker.java</include>
                                 <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
@@ -594,6 +595,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ComposedTightnessTest.java</include>
                                 <include>**/ConsistencyChecker.java</include>
                                 <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
@@ -871,6 +873,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ComposedTightnessTest.java</include>
                                 <include>**/ConsistencyChecker.java</include>
                                 <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
@@ -1148,6 +1151,7 @@ setup to run configuration. -->
                                 <include>**/NegativeAndReifiedTableTest.java</include>
                                 <include>**/PropagationStrengthTest.java</include>
                                 <include>**/WakeUpFixpointTest.java</include>
+                                <include>**/ComposedTightnessTest.java</include>
                                 <include>**/ConsistencyChecker.java</include>
                                 <include>**/MutationGapsTest.java</include>
                                 <include>**/XorSystemTest.java</include>
