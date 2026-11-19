@@ -8338,7 +8338,18 @@ Version 5.0 (unreleased)
    rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
    11,670.
 
-457. The linear relaxation expands a row whose sums lcg-split or linear
+452. Under LCG free search (-f), the core-guided phase is no longer skipped
+   after a probe without a solution of its own when the search makes
+   fewer than 50 conflicts per second of work (too slow for branch and
+   bound to prove the optimum) and the probe's cores raise the lower bound
+   fast enough to meet the best solution within the phase. On MiniZinc
+   Challenge ma-path-finding (2017, 2022) this proves 8 of 9 instances in
+   600 s instead of 5 (g16_p10_a30 in 281 s, g16_p20_a30 in 366 s); the
+   rule fires on no instance of wide-quick and on one of the 187
+   optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
+   turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
+
+458. The linear relaxation expands a row whose sums lcg-split or linear
    overlap factoring defined up to 65,536 terms (was 4,096; property
    org.jacop.lp.maxExpandedTerms). Merging repeated variables at every
    level (jacop #815) keeps a row at most as long as the distinct
