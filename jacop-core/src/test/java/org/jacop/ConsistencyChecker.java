@@ -1388,6 +1388,115 @@ class ConsistencyChecker {
         vars);
   }
 
+  private static Model unaryTransition(Store store, Random random, boolean withOptional) {
+    int n = 3;
+    IntVar[] starts = vars(store, "s", n, 0, 6, random);
+    IntVar[] durations = vars(store, "d", n, 0, 2, random);
+    int[] family = new int[n];
+    for (int i = 0; i < n; i++) {
+      family[i] = random.nextInt(2);
+    }
+    int[][] transitions = new int[2][2];
+    for (int[] row : transitions) {
+      for (int g = 0; g < 2; g++) {
+        row[g] = random.nextInt(3);
+      }
+    }
+    IntVar[] optional = withOptional ? bools(store, "o", n) : null;
+    Object constraint =
+        withOptional
+            ? new org.jacop.constraints.cumulative.UnaryTransition(
+                starts, durations, family, transitions, optional)
+            : new org.jacop.constraints.cumulative.UnaryTransition(
+                starts, durations, family, transitions);
+    return new Model(
+        constraint,
+        t -> {
+          for (int i = 0; i < n; i++) {
+            for (int j = i + 1; j < n; j++) {
+              if (withOptional && (t[2 * n + i] == 0 || t[2 * n + j] == 0)) {
+                continue;
+              }
+              boolean before = t[i] + t[n + i] + transitions[family[i]][family[j]] <= t[j];
+              boolean after = t[j] + t[n + j] + transitions[family[j]][family[i]] <= t[i];
+              if (!before && !after) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        withOptional ? concat(starts, durations, optional) : concat(starts, durations));
+  }
+
+  private static Model multiCumulative(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    int resources = 2;
+    IntVar[] starts = vars(store, "s", n, 0, 4, random);
+    int[] durations = new int[n];
+    int[][] heights = new int[resources][n];
+    for (int i = 0; i < n; i++) {
+      durations[i] = random.nextInt(4);
+      for (int r = 0; r < resources; r++) {
+        heights[r][i] = random.nextInt(3);
+      }
+    }
+    IntVar[] limits = vars(store, "l", resources, 0, 4, random);
+    return new Model(
+        new org.jacop.constraints.cumulative.MultiCumulative(starts, durations, heights, limits),
+        t -> {
+          for (int r = 0; r < resources; r++) {
+            for (int time = 0; time <= 8; time++) {
+              int use = 0;
+              for (int i = 0; i < n; i++) {
+                if (t[i] <= time && time < t[i] + durations[i]) {
+                  use += heights[r][i];
+                }
+              }
+              if (use > t[n + r]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(starts, limits));
+  }
+
+  private static Model vectorBinpacking(Store store, Random random) {
+    int items = 3 + random.nextInt(2);
+    int bins = 2;
+    int dims = 2;
+    IntVar[] bin = vars(store, "b", items, 1, bins, random);
+    int[][] w = new int[dims][items];
+    IntVar[][] load = new IntVar[dims][bins];
+    for (int d = 0; d < dims; d++) {
+      for (int i = 0; i < items; i++) {
+        w[d][i] = random.nextInt(4);
+      }
+      load[d] = vars(store, "l" + d + "_", bins, 0, 6, random);
+    }
+    return new Model(
+        new org.jacop.constraints.binpacking.VectorBinpacking(bin, load, w, 1),
+        t -> {
+          for (int d = 0; d < dims; d++) {
+            for (int b = 0; b < bins; b++) {
+              int sum = 0;
+              for (int i = 0; i < items; i++) {
+                if (t[i] == b + 1) {
+                  sum += w[d][i];
+                }
+              }
+              if (sum != t[items + d * bins + b]) {
+                return false;
+              }
+            }
+          }
+          return true;
+        },
+        concat(bin, load[0], load[1]));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2533,7 +2642,47 @@ class ConsistencyChecker {
             (s, r) -> weightedGraph(s, r, "spanning", true)),
         new Case(
             "BoundedPath(undirected)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", false)),
-        new Case("BoundedPath(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", true)));
+        new Case("BoundedPath(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", true)),
+        new Case("UnaryTransition(all)", Level.NONE, (s, r) -> unaryTransition(s, r, false)),
+        new Case("UnaryTransition(optional)", Level.NONE, (s, r) -> unaryTransition(s, r, true)),
+        new Case("MultiCumulative", Level.NONE, ConsistencyChecker::multiCumulative),
+        new Case("VectorBinpacking", Level.NONE, ConsistencyChecker::vectorBinpacking),
+        new Case(
+            "XmulYeqC",
+            Level.NONE,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar y = aVar(s, "y", -4, 4, r);
+              int c = r.nextInt(13) - 6;
+              return new Model(
+                  new org.jacop.constraints.XmulYeqC(x, y, c),
+                  t -> t[0] * t[1] == c,
+                  new IntVar[] {x, y});
+            }),
+        new Case(
+            "XplusYgtC",
+            Level.NONE,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar y = aVar(s, "y", -4, 4, r);
+              int c = r.nextInt(9) - 4;
+              return new Model(
+                  new org.jacop.constraints.XplusYgtC(x, y, c),
+                  t -> t[0] + t[1] > c,
+                  new IntVar[] {x, y});
+            }),
+        new Case(
+            "XplusClteqZ",
+            Level.NONE,
+            (s, r) -> {
+              IntVar x = aVar(s, "x", -4, 4, r);
+              IntVar z = aVar(s, "z", -4, 4, r);
+              int c = r.nextInt(7) - 3;
+              return new Model(
+                  new org.jacop.constraints.XplusClteqZ(x, c, z),
+                  t -> t[0] + c <= t[1],
+                  new IntVar[] {x, z});
+            }));
   }
 
   /**
