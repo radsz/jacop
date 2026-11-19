@@ -85,6 +85,8 @@ public final class CdclSolver {
   private static final int DELETED = 2;
   private static final int USED = 4;
   private static final int VIVIFIED = 32;
+  // set only in the old arena by compact(), on a clause already copied to the new one
+  private static final int MOVED = 64;
   private static final int TIER_SHIFT = 3;
   private static final int TIER_MASK = 3 << TIER_SHIFT;
   private static final int LBD_SHIFT = 8;
@@ -214,13 +216,18 @@ public final class CdclSolver {
   private int numOriginals;
   private int[] learnts = new int[64];
   private int numLearnts;
-  // the watch list of a literal no clause has watched yet, shared and never written
-  private static final int[] NO_WATCHES = new int[0];
+  // the watch lists of a literal no clause has watched yet (empty: the end in slot 0 is 1), shared
+  // and never written
+  private static final int[] NO_WATCHES = {1};
+  private static final long[] NO_LONG_WATCHES = {1};
 
-  private int[][] watches = new int[0][];
-  private int[] watchSize = new int[0];
+  // per literal: slot 0 holds the end of the list, then one long per watched clause from slot 1,
+  // the clause in the high half and the blocking literal in the low half (see watch): a visit reads
+  // and keeps a watch with one load and one store, and the end shares a cache line with the array
+  // header, so adding a watch touches one line fewer
+  private long[][] watches = new long[0][];
+  // per literal: slot 0 holds the end of the list, then the other literals of binary clauses
   private int[][] binWatches = new int[0][];
-  private int[] binSize = new int[0];
   private boolean ok = true;
 
   // --- conflict and analysis scratch
@@ -668,9 +675,7 @@ public final class CdclSolver {
       eliminatedVar = Arrays.copyOf(eliminatedVar, c);
       observed = Arrays.copyOf(observed, c);
       watches = Arrays.copyOf(watches, 2 * c);
-      watchSize = Arrays.copyOf(watchSize, 2 * c);
       binWatches = Arrays.copyOf(binWatches, 2 * c);
-      binSize = Arrays.copyOf(binSize, 2 * c);
     }
     if (qPrev.length < n || qNext.length < n || qStamp.length < n) { // grown together
       int c = Math.max(n, 2 * qPrev.length);
@@ -699,7 +704,7 @@ public final class CdclSolver {
     }
     // a literal gets its watch lists when a clause first watches it: under LCG most literals are
     // atoms in no clause, and four small arrays each filled a 3 GB heap on a 4096-variable alldiff
-    Arrays.fill(watches, 2 * numVars, 2 * n, NO_WATCHES);
+    Arrays.fill(watches, 2 * numVars, 2 * n, NO_LONG_WATCHES);
     Arrays.fill(binWatches, 2 * numVars, 2 * n, NO_WATCHES);
     for (int v = numVars; v < n; v++) {
       order.insert(v);
@@ -1424,16 +1429,28 @@ public final class CdclSolver {
     return ref;
   }
 
+  /** A watch of clause ref with a blocking literal, as stored in the watch lists. */
+  private static long watch(int blocker, int ref) {
+    return (long) ref << 32 | blocker;
+  }
+
+  private static int watchRef(long w) {
+    return (int) (w >>> 32);
+  }
+
+  private static int watchBlocker(long w) {
+    return (int) w;
+  }
+
   private void addWatch(int lit, int blocker, int ref) {
-    int[] ws = watches[lit];
-    int n = watchSize[lit];
-    if (n + 2 > ws.length) {
-      ws = Arrays.copyOf(ws, Math.max(4, 2 * ws.length));
+    long[] ws = watches[lit];
+    int n = (int) ws[0];
+    if (n == ws.length) {
+      ws = Arrays.copyOf(ws, Math.max(3, 2 * n - 1));
       watches[lit] = ws;
     }
-    ws[n] = blocker;
-    ws[n + 1] = ref;
-    watchSize[lit] = n + 2;
+    ws[n] = watch(blocker, ref);
+    ws[0] = n + 1L;
   }
 
   private void attach(int ref) {
@@ -1450,13 +1467,13 @@ public final class CdclSolver {
 
   private void addBinWatch(int lit, int other) {
     int[] ws = binWatches[lit];
-    int n = binSize[lit];
+    int n = ws[0];
     if (n == ws.length) {
-      ws = Arrays.copyOf(ws, 2 * n + 2);
+      ws = Arrays.copyOf(ws, 2 * n + 1);
       binWatches[lit] = ws;
     }
     ws[n] = other;
-    binSize[lit] = n + 1;
+    ws[0] = n + 1;
   }
 
   private boolean isLocked(int ref) {
@@ -1603,7 +1620,7 @@ public final class CdclSolver {
       int falseLit = trail[qhead++] ^ 1;
       propagations++;
       int[] bs = binWatches[falseLit];
-      for (int b = binSize[falseLit] - 1; b >= 0; b--) {
+      for (int b = bs[0] - 1; b > 0; b--) {
         int other = bs[b];
         int ov = localVals[other];
         if (ov > 0) {
@@ -1622,28 +1639,24 @@ public final class CdclSolver {
           assign(other, -2 - falseLit);
         }
       }
-      int[] ws = watches[falseLit];
-      int n = watchSize[falseLit];
-      int i = 0;
-      int j = 0;
+      long[] ws = watches[falseLit];
+      int n = (int) ws[0];
+      int i = 1;
+      int j = 1;
       while (i < n) {
-        int blocker = ws[i];
-        int ref = ws[i + 1];
-        i += 2;
-        int bv = localVals[blocker];
-        if (bv > 0) {
-          // the pair stays where it is: the list is only read until a pair before it moves
-          if (j != i - 2) {
-            ws[j] = blocker;
-            ws[j + 1] = ref;
+        long wt = ws[i++];
+        int blocker = watchBlocker(wt);
+        if (localVals[blocker] > 0) {
+          if (j != i - 1) {
+            ws[j] = wt; // kept in place while no watch has left the list
           }
-          j += 2;
+          j++;
           continue;
         }
+        int ref = watchRef(wt);
         if (ref == ignoredRef) {
           // the clause vivification is testing takes no part in its probes
-          ws[j++] = blocker;
-          ws[j++] = ref;
+          ws[j++] = wt;
           continue;
         }
         int lits = ref + HEADER;
@@ -1654,8 +1667,7 @@ public final class CdclSolver {
         int first = localMem[lits];
         int fv = localVals[first];
         if (first != blocker && fv > 0) {
-          ws[j++] = first;
-          ws[j++] = ref;
+          ws[j++] = watch(first, ref);
           continue;
         }
         int size = localMem[ref + SIZE];
@@ -1679,7 +1691,7 @@ public final class CdclSolver {
         }
         if (found >= 0) {
           // a position past 16 bits (clauses over 65,535 literals) keeps the old start
-          if (found <= MAX_POS) {
+          if (found != pos && found <= MAX_POS) {
             localMem[ref + META] = (meta & NOT_POS) | (found << POS_SHIFT);
           }
           int w = localMem[lits + found];
@@ -1688,15 +1700,15 @@ public final class CdclSolver {
           addWatch(w, first, ref);
           continue;
         }
-        ws[j++] = first;
-        ws[j++] = ref;
+        ws[j++] = watch(first, ref);
         if (fv < 0) {
           conflict = ref;
           break;
         }
         if (chrono) {
+          // no level is above the current one: stop at the first literal there (usually falseLit)
           int lvl = 0;
-          for (k = 1; k < size; k++) {
+          for (k = 1; k < size && lvl < decisionLevel; k++) {
             lvl = Math.max(lvl, litLevel(localMem[lits + k]));
           }
           assignAt(first, ref, lvl);
@@ -1713,12 +1725,16 @@ public final class CdclSolver {
             ws[j++] = ws[i++];
           }
         }
-        watchSize[falseLit] = j;
+        if (j != n) {
+          ws[0] = j;
+        }
         qhead = trailSize;
         conflictRef = conflict;
         return conflict;
       }
-      watchSize[falseLit] = j;
+      if (j != n) {
+        ws[0] = j;
+      }
     }
     return NO_CONFLICT;
   }
@@ -3106,12 +3122,12 @@ public final class CdclSolver {
   }
 
   private void removeWatch(int lit, int ref) {
-    int[] ws = watches[lit];
-    int n = watchSize[lit];
-    for (int i = 0; i < n; i += 2) {
-      if (ws[i + 1] == ref) {
-        System.arraycopy(ws, i + 2, ws, i, n - i - 2);
-        watchSize[lit] = n - 2;
+    long[] ws = watches[lit];
+    int n = (int) ws[0];
+    for (int i = 1; i < n; i++) {
+      if (watchRef(ws[i]) == ref) {
+        System.arraycopy(ws, i + 1, ws, i, n - i - 1);
+        ws[0] = n - 1L;
         return;
       }
     }
@@ -3733,7 +3749,7 @@ public final class CdclSolver {
    */
   public void retire(int variable) {
     int v = variable - 1;
-    if (vals[2 * v] != 0 || binSize[2 * v] != 0 || binSize[2 * v + 1] != 0) {
+    if (vals[2 * v] != 0 || binWatches[2 * v][0] != 1 || binWatches[2 * v + 1][0] != 1) {
       throw new IllegalStateException(
           "variable " + variable + " is assigned or in a binary clause");
     }
@@ -3802,9 +3818,9 @@ public final class CdclSolver {
       // that the search afterwards is the one without lucky assignments, units aside
       byte[] phases = Arrays.copyOf(savedSign, numVars);
       int[] arena = Arrays.copyOf(mem, memSize);
-      int[][] watched = new int[2 * numVars][];
+      long[][] watched = new long[2 * numVars][];
       for (int l = 0; l < 2 * numVars; l++) {
-        watched[l] = Arrays.copyOf(watches[l], watchSize[l]);
+        watched[l] = Arrays.copyOf(watches[l], (int) watches[l][0]);
       }
       long props = propagations;
       int result = UNKNOWN;
@@ -3829,20 +3845,24 @@ public final class CdclSolver {
       if (result == UNKNOWN) {
         System.arraycopy(phases, 0, savedSign, 0, numVars);
         System.arraycopy(arena, 0, mem, 0, arena.length);
-        for (int l = 0; l < 2 * numVars; l++) {
-          int n = watched[l].length;
-          if (n > 0 && watches[l].length < n) {
-            watches[l] = watched[l];
-          } else if (n > 0) {
-            System.arraycopy(watched[l], 0, watches[l], 0, n);
-          }
-          watchSize[l] = n;
-        }
+        restoreWatches(watched);
         propagations = props;
       }
       return result;
     } finally {
       luckyNanos += System.nanoTime() - begin;
+    }
+  }
+
+  /** Puts back the watch lists copied by {@link #lucky()}; slot 0 of each copy holds its length. */
+  private void restoreWatches(long[][] watched) {
+    for (int l = 0; l < 2 * numVars; l++) {
+      int n = watched[l].length;
+      if (watches[l].length < n) {
+        watches[l] = watched[l];
+      } else {
+        System.arraycopy(watched[l], 0, watches[l], 0, n);
+      }
     }
   }
 
@@ -4457,6 +4477,16 @@ public final class CdclSolver {
     purge();
   }
 
+  /** The number of learnt clauses of three or more literals kept now. */
+  int learntCount() {
+    return numLearnts;
+  }
+
+  /** The size of the clause arena in ints, deleted clauses not yet collected included. */
+  int arenaSize() {
+    return memSize;
+  }
+
   /** The number of variables eliminated now. */
   int eliminatedCount() {
     return numEliminated;
@@ -4635,8 +4665,14 @@ public final class CdclSolver {
       }
     }
     numOriginalBinaries = 0;
-    Arrays.fill(watchSize, 0);
-    Arrays.fill(binSize, 0);
+    for (int lit = 0; lit < 2 * numVars; lit++) {
+      if (watches[lit][0] != 1) {
+        watches[lit][0] = 1;
+      }
+      if (binWatches[lit][0] != 1) {
+        binWatches[lit][0] = 1;
+      }
+    }
     if (sat) {
       keepLearnts(gone);
     }
@@ -4732,7 +4768,7 @@ public final class CdclSolver {
         for (int sign = 0; sign < 2 && result >= 0 && vals[2 * v] == 0; sign++) {
           int p = 2 * v + sign;
           // a root: p has binary implications and no binary clause implies it
-          if (binSize[p ^ 1] != 0 && binSize[p] == 0) {
+          if (binWatches[p ^ 1][0] != 1 && binWatches[p][0] == 1) {
             result = probeRoot(p);
           }
         }
@@ -6029,17 +6065,17 @@ public final class CdclSolver {
       return;
     }
     for (int lit = 0; lit < 2 * numVars; lit++) {
-      int[] ws = watches[lit];
-      int n = watchSize[lit];
-      int j = 0;
-      for (int i = 0; i < n; i += 2) {
-        int ref = ws[i + 1];
-        if ((mem[ref + META] & DELETED) == 0) {
+      long[] ws = watches[lit];
+      int n = (int) ws[0];
+      int j = 1;
+      for (int i = 1; i < n; i++) {
+        if ((mem[watchRef(ws[i]) + META] & DELETED) == 0) {
           ws[j++] = ws[i];
-          ws[j++] = ref;
         }
       }
-      watchSize[lit] = j;
+      if (j != n) {
+        ws[0] = j;
+      }
     }
   }
 
@@ -6057,15 +6093,27 @@ public final class CdclSolver {
   private void compact() {
     int[] to = new int[Math.max(1 << 16, (memSize - wasted) * 3 / 2)];
     int top = 0;
+    // watched clauses first, in the order propagation visits them: the watch lists of the most
+    // active variables first, each list's clauses side by side (CaDiCaL's arena moving)
+    long[] byActivity = new long[numVars];
+    for (int v = 0; v < numVars; v++) {
+      byActivity[v] = (long) Float.floatToRawIntBits((float) Math.log1p(activity[v])) << 32 | v;
+    }
+    Arrays.sort(byActivity);
+    for (int o = numVars - 1; o >= 0; o--) {
+      int v = (int) byActivity[o];
+      for (int lit = 2 * v; lit <= 2 * v + 1; lit++) {
+        long[] ws = watches[lit];
+        int n = (int) ws[0];
+        for (int i = 1; i < n; i++) {
+          top = moveClause(watchRef(ws[i]), to, top);
+        }
+      }
+    }
     int off = 0;
     while (off < memSize) {
-      int size = mem[off + SIZE];
-      int len = HEADER + size;
-      if ((mem[off + META] & DELETED) == 0) {
-        System.arraycopy(mem, off, to, top, len);
-        mem[off + ACT] = top; // forwarding address
-        top += len;
-      }
+      int len = HEADER + mem[off + SIZE];
+      top = moveClause(off, to, top);
       off += len;
     }
     for (int i = 0; i < numOriginals; i++) {
@@ -6082,17 +6130,18 @@ public final class CdclSolver {
       }
     }
     for (int lit = 0; lit < 2 * numVars; lit++) {
-      int[] ws = watches[lit];
-      int n = watchSize[lit];
-      int j = 0;
-      for (int i = 0; i < n; i += 2) {
-        int ref = ws[i + 1];
+      long[] ws = watches[lit];
+      int n = (int) ws[0];
+      int j = 1;
+      for (int i = 1; i < n; i++) {
+        int ref = watchRef(ws[i]);
         if ((mem[ref + META] & DELETED) == 0) {
-          ws[j++] = ws[i];
-          ws[j++] = mem[ref + ACT];
+          ws[j++] = watch(watchBlocker(ws[i]), mem[ref + ACT]);
         }
       }
-      watchSize[lit] = j;
+      if (j != n) {
+        ws[0] = j;
+      }
     }
     int j = 0;
     for (int i = 0; i < numLowWatched; i += 3) {
@@ -6107,6 +6156,24 @@ public final class CdclSolver {
     mem = to;
     memSize = top;
     wasted = 0;
+  }
+
+  /**
+   * Copies a live clause of the arena to {@code to} at {@code top} unless it is deleted or already
+   * moved, and leaves its new reference in its old ACT field.
+   *
+   * @return the new top of {@code to}
+   */
+  private int moveClause(int ref, int[] to, int top) {
+    int meta = mem[ref + META];
+    if ((meta & (DELETED | MOVED)) != 0) {
+      return top;
+    }
+    int len = HEADER + mem[ref + SIZE];
+    System.arraycopy(mem, ref, to, top, len);
+    mem[ref + META] = meta | MOVED;
+    mem[ref + ACT] = top; // forwarding address
+    return top + len;
   }
 
   // ---------------------------------------------------------------------------- self-check
@@ -6175,7 +6242,7 @@ public final class CdclSolver {
     }
     int[] pair = new int[2];
     for (int l = 0; l < 2 * numVars; l++) {
-      for (int b = 0; b < binSize[l]; b++) {
+      for (int b = 1; b < binWatches[l][0]; b++) {
         pair[0] = l;
         pair[1] = binWatches[l][b];
         checkClause(pair, 0, 2, "binary");
@@ -6187,8 +6254,8 @@ public final class CdclSolver {
     for (int k = 0; k < 2; k++) {
       int w = mem[ref + HEADER + k];
       boolean found = false;
-      for (int i = 0; i < watchSize[w] && !found; i += 2) {
-        found = watches[w][i + 1] == ref;
+      for (int i = 1; i < watches[w][0] && !found; i++) {
+        found = watchRef(watches[w][i]) == ref;
       }
       if (!found) {
         throw new IllegalStateException(
@@ -6243,7 +6310,7 @@ public final class CdclSolver {
     if (r < NO_REASON) {
       int other = -2 - r;
       boolean found = false;
-      for (int b = 0; b < binSize[lit] && !found; b++) {
+      for (int b = 1; b < binWatches[lit][0] && !found; b++) {
         found = binWatches[lit][b] == other;
       }
       if (!found) {
