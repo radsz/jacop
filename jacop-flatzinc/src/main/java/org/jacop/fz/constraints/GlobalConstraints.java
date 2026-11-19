@@ -2003,6 +2003,9 @@ class GlobalConstraints implements ParserTreeConstants {
     return Boolean.parseBoolean(System.getProperty("org.jacop.fz.tableSums", "true"));
   }
 
+  /** The fewest columns of a posted constant column sum. */
+  static final int MIN_TABLE_SUM_TERMS = 3;
+
   /** The most rows times columns squared a table is scanned for constant column sums. */
   static final long TABLE_SUMS_WORK = 10_000_000L;
 
@@ -2030,6 +2033,11 @@ class GlobalConstraints implements ParserTreeConstants {
     }
     int[][] sums = tableSums.computeIfAbsent(t, GlobalConstraints::constantColumnSums);
     for (int[] sum : sums) {
+      if ((sum[0] < 0 ? k : k - 1) < MIN_TABLE_SUM_TERMS) {
+        // a sum of two columns says no more than the table does about them, and it changed the
+        // search of StripPacking-C1P3 (XCSP 2018, w + h of a rotated item) from 4 s to none
+        continue;
+      }
       // sum[0] is the column left out (-1 for none), sum[1] the constant
       IntVar[] x = new IntVar[sum[0] < 0 ? k : k - 1];
       int[] w = new int[x.length];
