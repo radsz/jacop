@@ -1240,6 +1240,34 @@ class SingleConstraintTest {
     assertThat(s.domain.glb().getSize()).isEqualTo(3);
   }
 
+  /** Match: the list is increasing, so x2 = 0 leaves x1 = -1 and puts -1 in s. */
+  @Test
+  void matchKeepsTheListIncreasing() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(0), dom(-1, 0, 1, 2)));
+    IntVar x1 = new IntVar(store, "x1", dom(-1, 0));
+    IntVar x2 = new IntVar(store, "x2", 0, 0);
+    IntVar x3 = new IntVar(store, "x3", 1, 2);
+    store.impose(new Match(s, new IntVar[] {x1, x2, x3}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x1.value()).isEqualTo(-1);
+    assertThat(s.dom().glb().contains(-1)).isTrue();
+  }
+
+  /** Match: 2 is in s and only x3 can take it. */
+  @Test
+  void matchGivesAGlbElementToTheOnlyVariableThatCanTakeIt() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(2), dom(-1, 0, 1, 2, 4)));
+    IntVar x1 = new IntVar(store, "x1", -1, 1);
+    IntVar x2 = new IntVar(store, "x2", dom(0, 1, 4));
+    IntVar x3 = new IntVar(store, "x3", dom(1, 2, 4));
+    store.impose(new Match(s, new IntVar[] {x1, x2, x3}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x3.value()).isEqualTo(2);
+    assertThat(s.dom().lub().contains(4)).isFalse();
+  }
+
   /** AdiffBeqC: an element of a that c = a \ b cannot hold must be in b. */
   @Test
   void adiffBeqCPutsInBWhatCCannotHold() {
