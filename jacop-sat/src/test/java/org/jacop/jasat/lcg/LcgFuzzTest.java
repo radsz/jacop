@@ -370,7 +370,6 @@ class LcgFuzzTest {
     // most models unsatisfiable, with few explanations to check)
     private void ground(IntVar v) {
       int choice = ground.nextInt(8);
-      System.out.println("DBG " + v.id() + " " + choice + " " + v.dom());
       if (choice == 0) {
         int value = valueOf(v);
         v.domain.in(store.level, v, value, value);
