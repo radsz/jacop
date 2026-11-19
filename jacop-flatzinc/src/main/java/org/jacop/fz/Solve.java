@@ -154,10 +154,13 @@ import org.jacop.search.SmallestMin;
 import org.jacop.search.SplitSelect;
 import org.jacop.search.WeightedDegree;
 import org.jacop.search.free.DomWdeg;
+import org.jacop.search.free.FrbaDom;
 import org.jacop.search.free.FreeSearch;
 import org.jacop.search.free.IndomainBoundImpact;
 import org.jacop.search.free.IndomainLastSolution;
 import org.jacop.search.free.LastConflict;
+import org.jacop.search.free.PickDom;
+import org.jacop.search.free.RoundRobinSelect;
 import org.jacop.search.free.SearchMonitor;
 import org.jacop.search.lns.AdaptiveLns;
 import org.jacop.search.ls.BinCompletion;
@@ -6837,17 +6840,21 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         selects.add(new SimpleSelect<>(bools, new AfcMax<>(store), values));
       }
     } else if (vars.length > 0) {
-      DomWdeg.Weighting weighting =
-          switch (heuristic) {
-            case "cacd" -> DomWdeg.Weighting.CACD;
-            case "chs" -> DomWdeg.Weighting.CHS;
-            default -> DomWdeg.Weighting.WDEG;
-          };
-      DomWdeg domWdeg = new DomWdeg(vars, values, weighting).flushEvery(flushEvery);
-      monitors.add(domWdeg);
-      SelectChoicePoint<IntVar> select = domWdeg;
+      SelectChoicePoint<IntVar> select;
+      if ("rr".equals(heuristic)) {
+        // ACE-rr: the heuristics take turns over the runs and all learn from every run
+        List<SelectChoicePoint<IntVar>> rotation = new ArrayList<>();
+        for (String name : options.freeConfig("rr-set", "cacd;pick;frba").split(";")) {
+          rotation.add(conflictHeuristic(name, vars, values));
+        }
+        select =
+            new RoundRobinSelect(rotation, Integer.parseInt(options.freeConfig("rr-runs", "1")));
+      } else {
+        select = conflictHeuristic(heuristic, vars, values);
+      }
+      monitors.add((SearchMonitor) select);
       if (lastConflict > 0) {
-        LastConflict lc = new LastConflict(domWdeg, values, lastConflict);
+        LastConflict lc = new LastConflict(select, values, lastConflict);
         monitors.add(lc);
         select = lc;
       }
@@ -6859,6 +6866,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (floats.length > 0) {
       selects.add(new SplitSelectFloat<>(store, floats, new LargestDomainFloat<>()));
     }
+  }
+
+  /**
+   * The conflict-driven variable heuristic of free search named by --free-config heuristic (or an
+   * entry of rr-set): domwdeg, cacd, chs, pick (pick/dom) or frba (frba/dom).
+   */
+  private SelectChoicePoint<IntVar> conflictHeuristic(
+      String name, IntVar[] vars, Indomain<IntVar> values) {
+    return switch (name) {
+      case "pick" ->
+          new PickDom(vars, values, Integer.parseInt(options.freeConfig("pick-mode", "3")));
+      case "frba" -> new FrbaDom(vars, values);
+      case "cacd" -> new DomWdeg(vars, values, DomWdeg.Weighting.CACD).flushEvery(flushEvery);
+      case "chs" -> new DomWdeg(vars, values, DomWdeg.Weighting.CHS).flushEvery(flushEvery);
+      case "domwdeg", "wdeg" ->
+          new DomWdeg(vars, values, DomWdeg.Weighting.WDEG).flushEvery(flushEvery);
+      default -> throw new IllegalArgumentException("heuristic=" + name);
+    };
   }
 
   /**
