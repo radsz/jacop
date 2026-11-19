@@ -85,6 +85,9 @@ abstract class AbstractDiff extends Constraint
   // use to collect information on possible length of rectangles for pruning
   private List<Integer> durMax;
 
+  // the least start of the segment of starts that the last entry of durMax bounds
+  private int segmentStart;
+
   /** It constructs the shared part of a rectangle constraint. */
   protected AbstractDiff() {}
 
@@ -199,6 +202,7 @@ abstract class AbstractDiff extends Constraint
 
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MAX_INT);
+    segmentStart = r.origin[i].min();
 
     if (!profileCandidates.isEmpty() && doProfile) {
       profileNarrowing(i, r, profileCandidates);
@@ -206,6 +210,7 @@ abstract class AbstractDiff extends Constraint
 
     durMax = new ArrayList<>();
     durMax.add(IntDomain.MAX_INT);
+    segmentStart = r.origin[i].min();
 
     if (usedRect.isEmpty()) {
       return;
@@ -289,27 +294,34 @@ abstract class AbstractDiff extends Constraint
   }
 
   private void computeNewMaxDuration(IntVar start, int excludeMin, int excludeMax) {
-    int dMax = findMaxDurationFromIntervals(start, excludeMin, excludeMax);
-    if (dMax < durMax.getLast()) {
-      durMax.set(durMax.size() - 1, dMax);
+    // a start of the current segment, before the excluded interval, leaves at most excludeMin -
+    // start for the length, and the least start of the segment (not of the interval of the domain
+    // that meets the exclusion, which a hole may separate from it) leaves the most
+    if (segmentStart <= excludeMin && meets(start, excludeMin, excludeMax)) {
+      int dMax = excludeMin - segmentStart;
+      if (dMax < durMax.getLast()) {
+        durMax.set(durMax.size() - 1, dMax);
+      }
     }
-    if (start.dom().contains(excludeMax)) {
+    // the starts after the excluded interval begin a new segment, whose length is not limited yet;
+    // the start domain may have a hole at excludeMax itself
+    if (start.max() >= excludeMax) {
       durMax.add(IntDomain.MAX_INT);
+      segmentStart = Math.max(segmentStart, start.dom().nextValue(excludeMax - 1));
     }
     if (traceOn) {
       log.debug("+++ {}", durMax);
     }
   }
 
-  private int findMaxDurationFromIntervals(IntVar start, int excludeMin, int excludeMax) {
-    int dMax = IntDomain.MAX_INT;
+  private static boolean meets(IntVar start, int excludeMin, int excludeMax) {
     for (IntervalEnumeration ie = start.dom().intervalEnumeration(); ie.hasMoreElements(); ) {
       Interval i = ie.nextElement();
       if (excludeMax >= i.min() && excludeMin <= i.max()) {
-        return excludeMin - i.min();
+        return true;
       }
     }
-    return dMax;
+    return false;
   }
 
   void narrowRectangle(
@@ -358,11 +370,46 @@ abstract class AbstractDiff extends Constraint
       }
     }
 
-    boolean excludedState = checkBarrierFit(barrier, minJ, maxJ, durJ);
+    boolean excludedState =
+        durJ == 0
+            ? !pointFits(i, consideredRect, j, minJ, maxJ, barierPosition)
+            : checkBarrierFit(barrier, minJ, maxJ, durJ);
     if (excludedState) {
       fillBarrierGapsAndSetMinPosition(barrier, minJ, maxJ, durJ, 0);
     }
     return excludedState;
+  }
+
+  /**
+   * Checks whether a rectangle of zero length in dimension j fits between the hindering rectangles.
+   * The merged barrier profile cannot tell: two touching rectangles leave no gap in it, yet a
+   * segment may lie on their common border.
+   */
+  private static boolean pointFits(
+      int i, List<IntRectangle> consideredRect, int j, int minJ, int maxJ, int barierPosition) {
+    if (fitsAt(i, consideredRect, j, minJ, barierPosition)) {
+      return true;
+    }
+    for (IntRectangle hinder : consideredRect) {
+      int end = hinder.origins[j] + hinder.lengths[j];
+      if (end > minJ && end <= maxJ && fitsAt(i, consideredRect, j, end, barierPosition)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static boolean fitsAt(
+      int i, List<IntRectangle> consideredRect, int j, int x, int barierPosition) {
+    for (IntRectangle hinder : consideredRect) {
+      int hinderJ = hinder.origins[j];
+      if (hinder.origins[i] + hinder.lengths[i] - barierPosition > 0
+          && hinderJ < x
+          && x < hinderJ + hinder.lengths[j]) {
+        return false;
+      }
+    }
+    return true;
   }
 
   private void fillBarrierGapsAndSetMinPosition(

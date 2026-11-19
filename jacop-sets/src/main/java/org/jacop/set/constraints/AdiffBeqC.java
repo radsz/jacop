@@ -76,6 +76,11 @@ public class AdiffBeqC extends AbstractSetOpBeqC implements Copyable<AdiffBeqC> 
       b.domain.inLub(store.level, b, b.domain.lub().subtract(c.domain.glb()));
     }
 
+    // an element of a that c cannot hold must be removed by b
+    if (changedA || changedC) {
+      b.domain.inGlb(store.level, b, a.domain.glb().subtract(c.domain.lub()));
+    }
+
     if (changedA || changedB) {
       c.domain.inGlb(store.level, c, a.domain.glb().subtract(b.domain.lub()));
       c.domain.inLub(store.level, c, a.domain.lub().subtract(b.domain.glb()));
