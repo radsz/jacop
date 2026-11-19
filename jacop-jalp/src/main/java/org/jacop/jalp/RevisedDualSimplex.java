@@ -480,6 +480,7 @@ public final class RevisedDualSimplex {
     shiftIdx = o.shiftIdx.clone();
     shiftAmt = o.shiftAmt.clone();
     shiftsRemoved = o.shiftsRemoved;
+    pivotsLeft = o.pivotsLeft;
     roundOffShare = o.roundOffShare;
     reuseFreshFactors = o.reuseFreshFactors;
     refreshedFromFactors = o.refreshedFromFactors;
