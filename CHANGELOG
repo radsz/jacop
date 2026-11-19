@@ -8338,7 +8338,7 @@ Version 5.0 (unreleased)
    rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
    11,670.
 
-452. Under LCG free search (-f), the core-guided phase is no longer skipped
+456. Under LCG free search (-f), the core-guided phase is no longer skipped
    after a probe without a solution of its own when the search makes
    fewer than 50 conflicts per second of work (too slow for branch and
    bound to prove the optimum) and the probe's cores raise the lower bound
@@ -8348,6 +8348,21 @@ Version 5.0 (unreleased)
    rule fires on no instance of wide-quick and on one of the 187
    optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
    turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
+
+457. FlatZinc objective presolve contracts disjunctions: when the
+   literals of r <-> or(b) exclude each other, now also because they
+   share an at-most-one sum(b) <= 1 or an exactly-one set, and all have
+   the same cost in the objective, their terms become one term on r
+   (sum(c * b) = c * r). CP-SAT's presolve makes the same step through
+   its exactly-one sets (Perron, Didier and Gay, The CP-SAT-LP Solver,
+   CP 2023). In MiniZinc Challenge 2026 kitchen the cost of each placed
+   fixture becomes a cost per used segment, 272 objective terms -> 156,
+   and learnt clauses and cores no longer name single fixtures. With -f
+   at 600 s larger.instance (optimum 470) is proved in 3 of 5 runs
+   (355 to 405 s), never before in 5 runs; kitchen_b1 35 -> 16 s; the
+   other three instances are unchanged. On the 240 wide instances it
+   fires only on kitchen. -Dorg.jacop.presolve.objectiveContraction=false
+   turns it off.
 
 Version 4.11
 =============
