@@ -120,6 +120,13 @@ public final class RevisedDualSimplex {
 
   // the artificial bounds: the first, the factor they grow by and the largest
   private static final double BIG_START = 1e6;
+
+  // the largest reduced cost past the tolerance that a cost shift absorbs, in the scaled problem
+  // (org.jacop.jalp.shiftMax; 0 turns cost shifting off)
+  private static final double SHIFT_MAX =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.shiftMax", "1e-5"));
+  // the cost shifts made since the costs were last set
+  private int costShifts;
   private static final double BIG_GROWTH = 100;
   private static final double BIG_MAX = 1e14;
 
@@ -462,6 +469,7 @@ public final class RevisedDualSimplex {
     savedHi = null;
     boundsPerturbed = false;
     perturbed = o.perturbed;
+    costShifts = o.costShifts;
     roundOffShare = o.roundOffShare;
     reuseFreshFactors = o.reuseFreshFactors;
     refreshedFromFactors = o.refreshedFromFactors;
@@ -567,6 +575,11 @@ public final class RevisedDualSimplex {
 
   // the costs of the scaled problem, perturbed or not
   private void setCosts(boolean perturb) {
+    if (costShifts > 0) {
+      // the shifted costs of the slacks go back to 0 (the structural ones are set below)
+      Arrays.fill(cost, n, cost.length, 0);
+      costShifts = 0;
+    }
     Random rnd = new Random(seed);
     for (int j = 0; j < n; j++) {
       double c = givenCost[j] * colScale[j];
@@ -2340,6 +2353,9 @@ public final class RevisedDualSimplex {
   private void place(int j) {
     if (row[j] < 0) {
       boolean was = upper[j];
+      if (shiftsCost(j)) {
+        return;
+      }
       if (d[j] > DUAL_TOL) {
         upper[j] = false;
       } else if (d[j] < -DUAL_TOL) {
@@ -2352,6 +2368,32 @@ public final class RevisedDualSimplex {
         markMoved(j);
       }
     }
+  }
+
+  /**
+   * Shifts the cost of nonbasic column j so that its reduced cost is 0 when the sign of the reduced
+   * cost, past the dual tolerance by at most SHIFT_MAX, would move it from its finite bound to an
+   * artificial one (cost shifting, Koberstein 2005; HiGHS). The reduced costs kept up by the pivots
+   * leave slacks of inequality rows a few 1e-9 on the wrong side, and each such move put a value of
+   * 1e6 into the basic values: comp07-2idx took 159,258 pivots, its infeasibility up to 1e12. The
+   * shifts are part of the perturbation: they go with it at the end of an exact solve.
+   */
+  private boolean shiftsCost(int j) {
+    if (!perturbed || cleaning || SHIFT_MAX <= 0 || lo[j] == hi[j]) {
+      return false;
+    }
+    double v = d[j];
+    boolean toArtificial =
+        upper[j]
+            ? v > DUAL_TOL && isArtificial(j, false) && !isArtificial(j, true)
+            : v < -DUAL_TOL && isArtificial(j, true) && !isArtificial(j, false);
+    if (!toArtificial || Math.abs(v) > SHIFT_MAX) {
+      return false;
+    }
+    cost[j] -= v;
+    d[j] = 0;
+    costShifts++;
+    return true;
   }
 
   // moves the basic values with the nonbasic columns whose values changed since the last call
