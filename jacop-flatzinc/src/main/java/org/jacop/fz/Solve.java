@@ -4225,7 +4225,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     CdclSolver sat = solver.sat();
     long end = sat.deadline();
     long lcgShare = Math.max(1, sat.now() - lcgStart);
-    long cpMillis = Math.max(1000, lcgShare / 1_000_000L);
+    // each turn lasts at least a share of the time limit (lcg-cop-turn): short turns rebuild the
+    // store for free search and restart LCG's schedule too often
+    double turn = Double.parseDouble(options.freeConfig("lcg-cop-turn", "0.1"));
+    long cpMillis =
+        Math.max(Math.max(1000, lcgShare / 1_000_000L), (long) (turn * options.getTimeOut()));
+    boolean equalTurns = "1".equals(options.freeConfig("lcg-cop-equal", "1"));
     freeSearchBuildOnly = true;
     try {
       executeFreeSearch(cost);
@@ -4279,7 +4284,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         // free search still improves: another slice of it
         continue;
       }
-      lcgShare *= 2;
+      if (equalTurns) {
+        // LCG gets as long as the slice of free search that found nothing better
+        lcgShare = cpMillis * 1_000_000L;
+      } else {
+        lcgShare *= 2;
+      }
       cpMillis *= 2;
       if (options.debug()) {
         IO.println("%% LCG goes on under the bound " + bestPrintedCost.get());
