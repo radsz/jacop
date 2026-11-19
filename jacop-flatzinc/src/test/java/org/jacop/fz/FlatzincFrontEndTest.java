@@ -45,7 +45,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -1140,7 +1142,7 @@ class FlatzincFrontEndTest {
     assertEquals("x = 3;\n----------\n==========\n", out[0]);
     assertTrue(out[1].contains("1 variable domain reaches beyond"), out[1]);
     assertTrue(out[1].contains("(first: x 0..4722438400)"), out[1]);
-    // bounded only through a non-linear constraint: no claim
+    // bounded through a function of a bounded variable: still optimal
     out =
         run(
             """
@@ -1149,7 +1151,18 @@ class FlatzincFrontEndTest {
             constraint int_abs(y, x);
             solve maximize x;
             """);
-    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
+    assertTrue(out[0].endsWith("x = 3;\n----------\n==========\n"), out[0]);
+    // bounded only through a constraint the bounds of the rows do not read: no claim
+    out =
+        run(
+            """
+            var 0..4722438400: x :: output_var;
+            var 0..3: y;
+            constraint set_in(x, {0, 1, 4, 9});
+            constraint int_le(y, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].endsWith("x = 9;\n----------\n"), out[0]);
 
     // no claim of unsatisfiability: the solutions may lie in the values cut off
     out =
@@ -1194,16 +1207,17 @@ class FlatzincFrontEndTest {
             solve maximize c;
             """);
     assertEquals("c = 10;\ny = 5;\n----------\n==========\n", out[0]);
-    // without a row that bounds them: no claim
+    // without a row or a function the bounds read: no claim
     out =
         run(
             """
             var 0..2014326920: c :: output_var;
             var 1..5: y :: output_var;
-            constraint int_times(y, y, c);
+            constraint set_in(c, {1, 4, 9, 16, 25});
+            constraint int_le(y, c);
             solve maximize c;
             """);
-    assertTrue(out[0].endsWith("c = 25;\ny = 5;\n----------\n"), out[0]);
+    assertTrue(out[0].endsWith("c = 25;\ny = 1;\n----------\n"), out[0]);
     // an array element of the objective's array narrowed too; a[2] <= 4 bounds it
     out =
         run(
@@ -1403,6 +1417,145 @@ class FlatzincFrontEndTest {
     assertTrue(out[1].contains("domain 600000000..700000000 at line 1"), out[1]);
     assertTrue(out[1].contains("lies outside the integer range"), out[1]);
     assertEquals(1, lastStatus);
+  }
+
+  /**
+   * A linear row over fixed variables is decided when it is posted; its sum was taken in int, so
+   * 2147483647 * 1 - 2147483647 * 3 wrapped to 2 and the row failed.
+   */
+  @Test
+  void linearRowOverFixedVariablesIsSummedWithoutOverflow() throws IOException {
+    String row = "[2147483647, -2147483647], [x, y], -2147483647";
+    String fixed = "var 1..1: x :: output_var;\nvar 3..3: y :: output_var;\n";
+    String[] out = run(fixed + "constraint int_lin_le(" + row + ");\nsolve satisfy;\n");
+    assertEquals("x = 1;\ny = 3;\n----------\n", out[0]);
+    out = run(fixed + "constraint int_lin_eq(" + row + ");\nsolve satisfy;\n");
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+    for (String[] reified :
+        new String[][] {{"eq", "false"}, {"ne", "true"}, {"lt", "true"}, {"le", "true"}}) {
+      out =
+          run(
+              fixed
+                  + "var bool: b :: output_var;\nconstraint int_lin_"
+                  + reified[0]
+                  + "_reif("
+                  + row
+                  + ", b);\nsolve satisfy;\n");
+      assertEquals("x = 1;\ny = 3;\nb = " + reified[1] + ";\n----------\n", out[0], reified[0]);
+    }
+  }
+
+  /**
+   * A variable named twice in a linear row, as merged aliases leave it, has its coefficients added;
+   * a sum beyond int wrapped around: 2^31 * i <= 2^30 accepted i = 1.
+   */
+  @Test
+  void repeatedVariableWithCoefficientsSummingBeyondIntKeepsTheRow() throws IOException {
+    String[] out =
+        run(
+            """
+            var 0..1: i :: output_var;
+            constraint int_lin_le([1073741824, 1073741824], [i, i], 1073741824);
+            solve satisfy;
+            """,
+            "-a");
+    assertEquals("i = 0;\n----------\n==========\n", out[0]);
+    // the same row reached through equal subexpressions: x = y makes b1 and b2 one variable
+    assertEquals(
+        12,
+        solveAll(
+                """
+                var 0..3: x :: output_var;
+                var 0..3: y :: output_var;
+                var bool: b1;
+                var bool: b2;
+                var 0..1: i1;
+                var 0..1: i2;
+                constraint int_eq_reif(x, y, b1);
+                constraint int_eq_reif(y, x, b2);
+                constraint bool2int(b1, i1);
+                constraint bool2int(b2, i2);
+                constraint int_lin_le([2147483647, 2147483647], [i1, i2], 2147483647);
+                solve satisfy;
+                """)
+            .size());
+  }
+
+  /**
+   * A variable declared without bounds (var int) is created over JaCoP's integer range, so a value
+   * beyond the range, which MiniZinc's 64-bit integers allow, is cut off as for a narrowed domain:
+   * no unsatisfiability or optimality is claimed unless the rows of the model keep the variable
+   * within the range.
+   */
+  @Test
+  void unboundedVariableBeyondTheRangeClaimsNothing() throws IOException {
+    // m = 1000000000 * x is a solution of the model; JaCoP's range cuts it off
+    String[] out =
+        run(
+            """
+            var int: m :: output_var;
+            var 1..2: x :: output_var;
+            constraint int_lin_eq([1, -1000000000], [m, x], 0);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+    out =
+        run(
+            """
+            var int: m;
+            var 0..2000: x :: output_var;
+            constraint int_lin_eq([1, -1000000], [m, x], 0);
+            constraint int_le(600, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].contains("=====UNKNOWN====="), out[0]);
+    // an array declared without bounds
+    out =
+        run(
+            """
+            array [1..2] of var int: a;
+            var 1..2: x :: output_var;
+            constraint int_lin_eq([1, -1000000000], [a[1], x], 0);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+
+    // kept within the range by the rows and the functions of the model: the claims stand
+    out =
+        run(
+            """
+            var int: m :: output_var;
+            var 0..5: x :: output_var;
+            constraint int_lin_eq([1, -1], [m, x], 10);
+            constraint int_le(m, 3);
+            solve satisfy;
+            """);
+    assertEquals("=====UNSATISFIABLE=====\n", out[0]);
+    out =
+        run(
+            """
+            var int: m :: output_var;
+            var 0..2: x :: output_var;
+            constraint int_lin_eq([1, -1], [m, x], 10);
+            solve satisfy;
+            """,
+            "-a");
+    assertTrue(out[0].endsWith("----------\n==========\n"), out[0]);
+    out =
+        run(
+            """
+            array [1..3] of int: c = [4, 9, 2];
+            var int: m :: output_var;
+            var int: e;
+            var int: p;
+            var 1..3: i;
+            var 0..5: x;
+            constraint array_int_element(i, c, e);
+            constraint int_times(x, x, p);
+            constraint jacop_maximum(m, [e, p]);
+            solve maximize m;
+            """);
+    assertTrue(out[0].endsWith("m = 25;\n----------\n==========\n"), out[0]);
   }
 
   @Test
@@ -4504,6 +4657,73 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * A scalar expression keeps its identifier, string or float in one field: they are the largest
+   * part of the parse tree (7.8 million of XCSP 2022 RoomMate-sr0700, 48 bytes each with a field
+   * for each, 40 now), and a node holds only one of them.
+   */
+  @Test
+  void scalarExpressionsKeepOneFieldForIdentStringOrFloat() {
+    List<String> fields =
+        Arrays.stream(ASTScalarFlatExpr.class.getDeclaredFields())
+            .filter(f -> !Modifier.isStatic(f.getModifiers()))
+            .map(Field::getName)
+            .sorted()
+            .toList();
+    assertEquals(List.of("intValue", "text", "type"), fields);
+    ASTScalarFlatExpr ident = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    ident.setType(2);
+    ident.setIdent("x");
+    assertEquals("x", ident.getIdent());
+    assertNull(ident.getString());
+    assertEquals(0.0, ident.getFloat());
+    ASTScalarFlatExpr string = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    string.setType(4);
+    string.setString("\"s\"");
+    assertEquals("\"s\"", string.getString());
+    assertNull(string.getIdent());
+    ASTScalarFlatExpr real = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    real.setType(5);
+    real.setFloat(2.5);
+    assertEquals(2.5, real.getFloat());
+    assertNull(real.getIdent());
+    assertNull(real.getString());
+    ASTScalarFlatExpr access = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    access.setType(3);
+    access.setIdent("a");
+    access.setInt(4);
+    assertEquals("a", access.getIdent());
+    assertEquals(4, access.getInt());
+  }
+
+  /**
+   * The body of a half-reified constraint of enforcement inlining is kept as a compact set, not as
+   * the identity set it is collected in, whose table of 64 slots took 272 bytes for the one or two
+   * variables of most bodies (53 MB of XCSP 2022 RoomMate-sr0300 while the model is read).
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  void halfReifiedBodiesOfEnforcementInliningAreCompact() throws Exception {
+    Class<?> imp = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Imp");
+    Constructor<?> make = imp.getDeclaredConstructors()[0];
+    make.setAccessible(true);
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Set<IntVar> collected = Collections.newSetFromMap(new IdentityHashMap<>());
+    collected.add(x);
+    collected.add(y);
+    Object made = make.newInstance(null, b, collected);
+    Method body = imp.getDeclaredMethod("body");
+    body.setAccessible(true);
+    Set<IntVar> kept = (Set<IntVar>) body.invoke(made);
+    assertEquals(Set.of(x, y), kept);
+    assertTrue(kept.contains(x));
+    assertFalse(kept.contains(b));
+    assertFalse(kept.getClass().getName().contains("SetFromMap"), kept.getClass().getName());
+  }
+
+  /**
    * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
    * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
    * RoomMate-sr0700 (163 MB while the model is read).
@@ -4517,6 +4737,56 @@ class FlatzincFrontEndTest {
             .sorted()
             .toList();
     assertEquals(List.of("children", "id", "parent"), fields);
+  }
+
+  /**
+   * A node with one child keeps the child itself, not an array of one: most annotations, annotation
+   * expressions and constraint items without annotations have one child, an array of 24 bytes for
+   * each of about 5 million nodes of XCSP 2022 RoomMate-sr0700. The children read, copy and release
+   * as before.
+   */
+  @Test
+  void nodesWithOneChildKeepNoArray() {
+    SimpleNode one = new SimpleNode(ParserTreeConstants.JJTANNOTATION);
+    SimpleNode child = new SimpleNode(ParserTreeConstants.JJTANNEXPR);
+    child.jjtSetParent(one);
+    one.jjtAddChild(child, 0);
+    assertFalse(one.children instanceof Node[]);
+    assertEquals(1, one.jjtGetNumChildren());
+    assertSame(child, one.jjtGetChild(0));
+    assertThrows(ArrayIndexOutOfBoundsException.class, () -> one.jjtGetChild(1));
+    SimpleNode copy = one.copy();
+    assertEquals(1, copy.jjtGetNumChildren());
+    assertNotSame(child, copy.jjtGetChild(0));
+    assertSame(copy, copy.jjtGetChild(0).jjtGetParent());
+
+    // the parser adds the children of a node from the last one
+    SimpleNode three = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    SimpleNode[] kids = new SimpleNode[3];
+    for (int i = 2; i >= 0; i--) {
+      kids[i] = new SimpleNode(ParserTreeConstants.JJTSCALARFLATEXPR);
+      three.jjtAddChild(kids[i], i);
+    }
+    assertEquals(3, three.jjtGetNumChildren());
+    for (int i = 0; i < 3; i++) {
+      assertSame(kids[i], three.jjtGetChild(i));
+    }
+    // and a child added after the first one turns the child into an array
+    SimpleNode two = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    two.jjtAddChild(kids[0], 0);
+    two.jjtAddChild(kids[1], 1);
+    assertEquals(2, two.jjtGetNumChildren());
+    assertSame(kids[0], two.jjtGetChild(0));
+    assertSame(kids[1], two.jjtGetChild(1));
+
+    // a released child keeps its place
+    one.releaseChildren();
+    assertEquals(1, one.jjtGetNumChildren());
+    assertNull(one.jjtGetChild(0));
+    three.releaseChild(1);
+    assertEquals(3, three.jjtGetNumChildren());
+    assertNull(three.jjtGetChild(1));
+    assertSame(kids[2], three.jjtGetChild(2));
   }
 
   @Test
