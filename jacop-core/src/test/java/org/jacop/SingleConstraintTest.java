@@ -11293,4 +11293,30 @@ class SingleConstraintTest extends TestHelper {
             new long[][] {{2, 1, 1}, {2, 1, -1}, {2, 0, -1}}));
     assertThat(store.consistency()).isFalse();
   }
+
+  /** XmulYeqC divided c by y's whole interval around 0, which kept every factor up to |c|. */
+  @Test
+  void xmulYeqCKeepsOnlyDivisorsOfC() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -2, 1);
+    IntVar y = new IntVar(store, "y", -2, 1);
+    store.impose(new XmulYeqC(x, y, 2));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{-2..-1}");
+    assertThat(y.dom().toString()).isEqualTo("{-2..-1}");
+
+    Store zero = new Store();
+    IntVar a = new IntVar(zero, "a", -3, -1);
+    a.addDom(1, 3);
+    IntVar b = new IntVar(zero, "b", -1, 1);
+    zero.impose(new XmulYeqC(a, b, 0));
+    assertThat(zero.consistency()).isTrue();
+    assertThat(b.value()).isZero();
+
+    Store large = new Store();
+    IntVar p = new IntVar(large, "p", -1000, 1000);
+    IntVar q = new IntVar(large, "q", -1000, 1000);
+    large.impose(new XmulYeqC(p, q, 999_983 * 2));
+    assertThat(large.consistency()).isFalse();
+  }
 }

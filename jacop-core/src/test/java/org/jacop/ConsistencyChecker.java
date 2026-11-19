@@ -2649,7 +2649,7 @@ class ConsistencyChecker {
         new Case("VectorBinpacking", Level.NONE, ConsistencyChecker::vectorBinpacking),
         new Case(
             "XmulYeqC",
-            Level.NONE,
+            Level.DOMAIN,
             (s, r) -> {
               IntVar x = aVar(s, "x", -4, 4, r);
               IntVar y = aVar(s, "y", -4, 4, r);
