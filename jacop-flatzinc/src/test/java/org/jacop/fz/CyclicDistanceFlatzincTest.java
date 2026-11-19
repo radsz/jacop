@@ -31,6 +31,7 @@
 package org.jacop.fz;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayOutputStream;
@@ -39,6 +40,7 @@ import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -246,6 +248,28 @@ class CyclicDistanceFlatzincTest {
       }
     }
     assertTrue(rewritten > 10, "rewritten " + rewritten);
+  }
+
+  @Test
+  void longEquationsAreReadInLinearTime() throws IOException {
+    // the definitions of the terms of a long equation (the 1,176,224 terms of rcpsp-wet-diverse
+    // j90_48_4) were each copied with the other terms: 30,000 terms took 7 GB
+    int n = 30_000;
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder ones = new StringBuilder("[");
+    StringBuilder vars = new StringBuilder("[");
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 0..1: x").append(i).append(";\n");
+      ones.append("1,");
+      vars.append('x').append(i).append(',');
+    }
+    fzn.append("var 0..").append(n).append(": obj:: output_var;\n");
+    fzn.append("constraint int_lin_eq(").append(ones).append("-1],").append(vars);
+    fzn.append("obj],0);\nconstraint int_le(obj,3);\nsolve satisfy;\n");
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60), () -> run(fzn.toString(), null, "--lcg", "off"));
+    assertTrue(out.contains("----------"), out);
   }
 
   private static int solutions(String out) {

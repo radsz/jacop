@@ -8358,7 +8358,12 @@ Version 5.0 (unreleased)
    smaller instances (67 to 299 distances) keep the minimum, and with it
    the proofs of caterpillar13 and 16. -Dorg.jacop.fz.cyclicDistance=true
    still rewrites every model, and =false none. No other instance of the
-   wide set or of the XCSP 2022-2025 sets has the pattern.
+   wide set or of the XCSP 2022-2025 sets has the pattern. Since the
+   detector now reads every model, it keeps the definitions of the terms
+   of a linear equation by position instead of copying the other terms
+   for each one: an equation of n terms took n^2 time and memory (the
+   1,176,224-term objective of rcpsp-wet-diverse j90_48_4 ran out of
+   memory at -Xmx4G in this pass).
 
 463. The FlatZinc front end rewrites products of two functions of one small
    index (MiniZinc's (good[p] = g) * num[p], both looked up by the chosen
