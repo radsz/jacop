@@ -277,6 +277,67 @@ class FreeFirstFlatzincTest {
     }
   }
 
+  /**
+   * The objective as a chain of partial sums, cost = q1 + s1, s1 = q2 + s2, ..., the shape of a
+   * long sum whose declared bound reaches beyond JaCoP's range (XCSP 2023 GBACP-UD01, four levels):
+   * the squares at the end of the chain are terms of the objective too. Following three linear
+   * constraints from the cost found none of the 333 squares of GBACP-UD01 and free search never ran
+   * first there.
+   */
+  @Test
+  void squaresBehindPartialSums() throws IOException {
+    Random random = new Random(Long.getLong("freefirst.seed", 20261116L));
+    int trials = Integer.getInteger("freefirst.trials", 12);
+    int fired = 0;
+    for (int t = 0; t < trials; t++) {
+      Model model = randomModel(random);
+      // the root solves some models before free search could run: then neither form runs it
+      boolean sum = run(model.fzn(), true, "").contains("freeFirstSquares=");
+      String out = run(chainedObjective(model.fzn()), true, "");
+      String context = "trial " + t + "\n" + out;
+      assertEquals(sum, out.contains("freeFirstSquares="), context);
+      fired += sum ? 1 : 0;
+      List<Integer> costs = costs(out);
+      assertEquals(model.optimum(), costs.get(costs.size() - 1), context);
+    }
+    assertTrue(fired > 0, "free search never ran first");
+  }
+
+  private static final Pattern OBJECTIVE =
+      Pattern.compile(
+          "constraint int_lin_eq\\(\\[[1,]*-1\\],\\[([a-z0-9_,]*),cost\\],0\\):: defines_var\\(cost\\);");
+
+  /** The model with its sum of squares rewritten as a chain of partial sums. */
+  private static String chainedObjective(String fzn) {
+    Matcher m = OBJECTIVE.matcher(fzn);
+    assertTrue(m.find(), fzn);
+    String[] terms = m.group(1).split(",");
+    StringBuilder vars = new StringBuilder();
+    StringBuilder chain = new StringBuilder();
+    String sum = "cost";
+    for (int k = 0; k < terms.length - 1; k++) {
+      String rest = k == terms.length - 2 ? terms[k + 1] : "s" + k;
+      if (!rest.equals(terms[k + 1])) {
+        vars.append("var 0..1000000: ").append(rest).append(";\n");
+      }
+      chain
+          .append("constraint int_lin_eq([1,1,-1],[")
+          .append(terms[k])
+          .append(',')
+          .append(rest)
+          .append(',')
+          .append(sum)
+          .append("],0);\n");
+      sum = rest;
+    }
+    String model = fzn.substring(0, m.start()) + chain + fzn.substring(m.end());
+    model =
+        model.replace(
+            "var int: cost:: output_var:: is_defined_var;", "var int: cost:: output_var;");
+    int first = model.indexOf("constraint ");
+    return model.substring(0, first) + vars + model.substring(first);
+  }
+
   @Test
   void offLeavesLcgAlone() throws IOException {
     Model model = randomModel(new Random(7));
