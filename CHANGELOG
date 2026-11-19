@@ -8149,7 +8149,21 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
-451. JaLP proves infeasibility that its presolve sees without simplex
+451. Regular, ExtensionalSupportMdd and Among (set and int forms) no
+   longer listen to the removal of every store level. They record a level
+   with Store.recordChange when they first change their state there, and
+   the store calls their removeLevel only for those levels. Before, every
+   backtrack called all of them; on XCSP 2018 NurseRostering-10 (2,080
+   regular and 1,328 among constraints) those calls, mostly cache misses
+   on untouched state, took 46 % of the time. The search is the same
+   (fixed search, and free search under -Djacop.virtualClock=true). With
+   -f on 34 models with regular or among (11 wide, 23 XCSP 2022-2025), it
+   explores 13 % more nodes in 240 s (geomean) and 9.5 % more in 600 s;
+   at 600 s NurseRostering-10 goes from 5,584 to 5,147 (field best 5,054)
+   and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
+   (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
+
+452. JaLP proves infeasibility that its presolve sees without simplex
    pivots where it can. When the presolve finds the bounds infeasible, or
    its reduced LP ends infeasible, BoundProof propagates the row activity
    bounds over the whole LP with a trail and resolves the conflict
