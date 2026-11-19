@@ -1108,6 +1108,13 @@ Proofs (--proof):
 - jacop.lcg.coreProbeHalfWay: the core probe is not skipped when it
   raised the cores' lower bound at least half way to the best solution
   of branch and bound; default true.
+- jacop.lcg.coreProbeRate: the core probe is not skipped when the search
+  makes fewer than jacop.lcg.coreProbeSlowRate conflicts per second of
+  work and the probe raised the cores' lower bound fast enough to meet
+  the best solution within the core-guided phase; default true.
+- jacop.lcg.coreProbeSlowRate: the conflicts per second of work (2,000
+  units per ms) below which jacop.lcg.coreProbeRate counts the search as
+  slow; default 50.
 - jacop.lcg.coreExtendRecent: extensions of the core-guided phase
   measure the bound's recent rate; false the rate since the phase's
   start only; default true.
