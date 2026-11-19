@@ -883,6 +883,34 @@ class RevisedDualSimplexTest {
   }
 
   @Test
+  void aColumnSingletonHoldsItsRowAtTheBoundItsCostPushesTo() {
+    // edge design: x_e in [0, 1] opens edge e at cost 3 or 5, the flow f_e on it is at most
+    // 4 x_e and costs 1 or 0.25, 6 units flow: x_e only in its capacity row, pushed down by its
+    // cost to the bound the row implies, so the row becomes the equation f_e = 4 x_e and goes
+    int[][] cols = {{0, 2}, {1, 3}, {2, 3}};
+    double[][] vals = {{-4, 1}, {-4, 1}, {1, 1}};
+    double[] rowLo = {-INF, -INF, 6};
+    double[] rowHi = {0, 0, 6};
+    double[] cost = {3, 5, 1, 0.25};
+    for (boolean presolve : new boolean[] {false, true}) {
+      RevisedDualSimplex lp = new RevisedDualSimplex(cols, vals, rowLo, rowHi, cost, true);
+      lp.setExact(true);
+      lp.setPresolve(presolve);
+      lp.setBounds(0, 0, 1);
+      lp.setBounds(1, 0, 1);
+      assertThat(lp.solve(1000)).isEqualTo(RevisedDualSimplex.OPTIMAL);
+      if (presolve) {
+        assertThat(lp.presolvedRows()).isLessThan(2);
+      }
+      // a unit of flow costs 3 / 4 + 1 on edge 0 and 5 / 4 + 0.25 on edge 1, which carries 4
+      assertThat(lp.objective()).isCloseTo(9.5, org.assertj.core.data.Offset.offset(1e-9));
+      assertThat(lp.value(0)).isCloseTo(0.5, org.assertj.core.data.Offset.offset(1e-9));
+      assertThat(lp.value(1)).isCloseTo(1, org.assertj.core.data.Offset.offset(1e-9));
+      assertThat(lp.value(3)).isCloseTo(4, org.assertj.core.data.Offset.offset(1e-9));
+    }
+  }
+
+  @Test
   void theRefactorizationRulesAgree() {
     Random rnd = new Random(11);
     int runs = Math.max(3, Integer.getInteger("jalp.test.runs", 3000) / 300);
