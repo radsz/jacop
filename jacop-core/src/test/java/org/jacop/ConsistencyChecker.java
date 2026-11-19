@@ -1332,6 +1332,62 @@ class ConsistencyChecker {
         concat(x, new IntVar[] {cost}));
   }
 
+  private static Model networkFlow(Store store, Random random, boolean varWeight) {
+    int nodes = 3 + random.nextInt(2);
+    int arcs = 3 + random.nextInt(3);
+    int[] from = new int[arcs];
+    int[] to = new int[arcs];
+    int[] weight = new int[arcs];
+    for (int k = 0; k < arcs; k++) {
+      from[k] = random.nextInt(nodes);
+      to[k] = (from[k] + 1 + random.nextInt(nodes - 1)) % nodes;
+      weight[k] = random.nextInt(5) - 1;
+    }
+    int[] balance = new int[nodes];
+    balance[0] = random.nextInt(3);
+    balance[1 + random.nextInt(nodes - 1)] -= balance[0];
+    IntVar[] x = new IntVar[arcs];
+    for (int k = 0; k < arcs; k++) {
+      x[k] = aVar(store, "f" + k, 0, 3, random);
+    }
+    IntVar w = varWeight ? aVar(store, "w", -1, 2, random) : null;
+    IntVar cost = aVar(store, "cost", -4, 12, random);
+    org.jacop.constraints.netflow.NetworkBuilder net =
+        new org.jacop.constraints.netflow.NetworkBuilder();
+    org.jacop.constraints.netflow.simplex.Node[] node =
+        new org.jacop.constraints.netflow.simplex.Node[nodes];
+    for (int i = 0; i < nodes; i++) {
+      node[i] = net.addNode("n" + i, balance[i]);
+    }
+    for (int k = 0; k < arcs; k++) {
+      if (varWeight && k == 0) {
+        net.addArc(node[from[k]], node[to[k]], w, x[k]);
+      } else {
+        net.addArc(node[from[k]], node[to[k]], weight[k], x[k]);
+      }
+    }
+    net.setCostVariable(cost);
+    IntVar[] vars = varWeight ? concat(x, new IntVar[] {w, cost}) : concat(x, new IntVar[] {cost});
+    return new Model(
+        new org.jacop.constraints.netflow.NetworkFlow(net),
+        t -> {
+          int[] out = new int[nodes];
+          long total = 0;
+          for (int k = 0; k < arcs; k++) {
+            out[from[k]] += t[k];
+            out[to[k]] -= t[k];
+            total += (long) (varWeight && k == 0 ? t[arcs] : weight[k]) * t[k];
+          }
+          for (int i = 0; i < nodes; i++) {
+            if (out[i] != balance[i]) {
+              return false;
+            }
+          }
+          return total == t[t.length - 1];
+        },
+        vars);
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2461,7 +2517,9 @@ class ConsistencyChecker {
         new Case("SoftGCC", Level.NONE, ConsistencyChecker::softGcc),
         new Case("IfThenElseBool", Level.DOMAIN, ConsistencyChecker::ifThenElseBool),
         new Case("SequenceMdd", Level.NONE, ConsistencyChecker::sequenceMdd),
-        new Case("CostMdd", Level.NONE, ConsistencyChecker::costMdd));
+        new Case("CostMdd", Level.NONE, ConsistencyChecker::costMdd),
+        new Case("NetworkFlow(const)", Level.NONE, (s, r) -> networkFlow(s, r, false)),
+        new Case("NetworkFlow(var weight)", Level.NONE, (s, r) -> networkFlow(s, r, true)));
   }
 
   /**
