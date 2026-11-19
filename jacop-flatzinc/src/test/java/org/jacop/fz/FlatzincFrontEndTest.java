@@ -45,7 +45,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -4504,6 +4506,73 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * A scalar expression keeps its identifier, string or float in one field: they are the largest
+   * part of the parse tree (7.8 million of XCSP 2022 RoomMate-sr0700, 48 bytes each with a field
+   * for each, 40 now), and a node holds only one of them.
+   */
+  @Test
+  void scalarExpressionsKeepOneFieldForIdentStringOrFloat() {
+    List<String> fields =
+        Arrays.stream(ASTScalarFlatExpr.class.getDeclaredFields())
+            .filter(f -> !Modifier.isStatic(f.getModifiers()))
+            .map(Field::getName)
+            .sorted()
+            .toList();
+    assertEquals(List.of("intValue", "text", "type"), fields);
+    ASTScalarFlatExpr ident = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    ident.setType(2);
+    ident.setIdent("x");
+    assertEquals("x", ident.getIdent());
+    assertNull(ident.getString());
+    assertEquals(0.0, ident.getFloat());
+    ASTScalarFlatExpr string = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    string.setType(4);
+    string.setString("\"s\"");
+    assertEquals("\"s\"", string.getString());
+    assertNull(string.getIdent());
+    ASTScalarFlatExpr real = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    real.setType(5);
+    real.setFloat(2.5);
+    assertEquals(2.5, real.getFloat());
+    assertNull(real.getIdent());
+    assertNull(real.getString());
+    ASTScalarFlatExpr access = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    access.setType(3);
+    access.setIdent("a");
+    access.setInt(4);
+    assertEquals("a", access.getIdent());
+    assertEquals(4, access.getInt());
+  }
+
+  /**
+   * The body of a half-reified constraint of enforcement inlining is kept as a compact set, not as
+   * the identity set it is collected in, whose table of 64 slots took 272 bytes for the one or two
+   * variables of most bodies (53 MB of XCSP 2022 RoomMate-sr0300 while the model is read).
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  void halfReifiedBodiesOfEnforcementInliningAreCompact() throws Exception {
+    Class<?> imp = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Imp");
+    Constructor<?> make = imp.getDeclaredConstructors()[0];
+    make.setAccessible(true);
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Set<IntVar> collected = Collections.newSetFromMap(new IdentityHashMap<>());
+    collected.add(x);
+    collected.add(y);
+    Object made = make.newInstance(null, b, collected);
+    Method body = imp.getDeclaredMethod("body");
+    body.setAccessible(true);
+    Set<IntVar> kept = (Set<IntVar>) body.invoke(made);
+    assertEquals(Set.of(x, y), kept);
+    assertTrue(kept.contains(x));
+    assertFalse(kept.contains(b));
+    assertFalse(kept.getClass().getName().contains("SetFromMap"), kept.getClass().getName());
+  }
+
+  /**
    * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
    * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
    * RoomMate-sr0700 (163 MB while the model is read).
@@ -4517,6 +4586,56 @@ class FlatzincFrontEndTest {
             .sorted()
             .toList();
     assertEquals(List.of("children", "id", "parent"), fields);
+  }
+
+  /**
+   * A node with one child keeps the child itself, not an array of one: most annotations, annotation
+   * expressions and constraint items without annotations have one child, an array of 24 bytes for
+   * each of about 5 million nodes of XCSP 2022 RoomMate-sr0700. The children read, copy and release
+   * as before.
+   */
+  @Test
+  void nodesWithOneChildKeepNoArray() {
+    SimpleNode one = new SimpleNode(ParserTreeConstants.JJTANNOTATION);
+    SimpleNode child = new SimpleNode(ParserTreeConstants.JJTANNEXPR);
+    child.jjtSetParent(one);
+    one.jjtAddChild(child, 0);
+    assertFalse(one.children instanceof Node[]);
+    assertEquals(1, one.jjtGetNumChildren());
+    assertSame(child, one.jjtGetChild(0));
+    assertThrows(ArrayIndexOutOfBoundsException.class, () -> one.jjtGetChild(1));
+    SimpleNode copy = one.copy();
+    assertEquals(1, copy.jjtGetNumChildren());
+    assertNotSame(child, copy.jjtGetChild(0));
+    assertSame(copy, copy.jjtGetChild(0).jjtGetParent());
+
+    // the parser adds the children of a node from the last one
+    SimpleNode three = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    SimpleNode[] kids = new SimpleNode[3];
+    for (int i = 2; i >= 0; i--) {
+      kids[i] = new SimpleNode(ParserTreeConstants.JJTSCALARFLATEXPR);
+      three.jjtAddChild(kids[i], i);
+    }
+    assertEquals(3, three.jjtGetNumChildren());
+    for (int i = 0; i < 3; i++) {
+      assertSame(kids[i], three.jjtGetChild(i));
+    }
+    // and a child added after the first one turns the child into an array
+    SimpleNode two = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);
+    two.jjtAddChild(kids[0], 0);
+    two.jjtAddChild(kids[1], 1);
+    assertEquals(2, two.jjtGetNumChildren());
+    assertSame(kids[0], two.jjtGetChild(0));
+    assertSame(kids[1], two.jjtGetChild(1));
+
+    // a released child keeps its place
+    one.releaseChildren();
+    assertEquals(1, one.jjtGetNumChildren());
+    assertNull(one.jjtGetChild(0));
+    three.releaseChild(1);
+    assertEquals(3, three.jjtGetNumChildren());
+    assertNull(three.jjtGetChild(1));
+    assertSame(kids[2], three.jjtGetChild(2));
   }
 
   @Test

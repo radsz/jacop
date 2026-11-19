@@ -4649,6 +4649,44 @@ class LcgSolverTest {
     return values;
   }
 
+  /**
+   * A variable gets a literal map of a kind only with its first literal of that kind: three maps
+   * for every variable from the start took 210 MB of XCSP 2022 RoomMate-sr0700, most of them never
+   * used. The maps before the search are the one shared empty map, which answers like an empty map
+   * of its own, and the solver still solves.
+   */
+  @Test
+  void literalMapsAreMadeAtTheFirstLiteral() throws ReflectiveOperationException {
+    Store store = new Store();
+    int n = 50;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 9);
+    }
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, "==", 9));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    Set<LiteralMap> before = Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    for (String kind : new String[] {"ge", "eq", "linked"}) {
+      java.lang.reflect.Field field = LcgSolver.class.getDeclaredField(kind);
+      field.setAccessible(true);
+      for (LiteralMap map : (LiteralMap[]) field.get(solver)) {
+        if (map != null) {
+          before.add(map);
+        }
+      }
+    }
+    assertThat(before).containsExactly(LiteralMap.NO_LITERALS);
+    assertThat(LiteralMap.NO_LITERALS.get(0)).isEqualTo(LiteralMap.NONE);
+    assertThat(LiteralMap.NO_LITERALS.lower(5)).isEqualTo(LiteralMap.NONE);
+    assertThat(LiteralMap.NO_LITERALS.higher(-5)).isEqualTo(LiteralMap.NONE);
+    assertThat(LiteralMap.NO_LITERALS.ceilingValue(-5)).isEqualTo(Long.MAX_VALUE);
+    assertThat(LiteralMap.NO_LITERALS.floorValue(5)).isEqualTo(Long.MIN_VALUE);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(x[0]) + solver.value(x[1])).isEqualTo(9);
+    assertThat(LiteralMap.NO_LITERALS.get(0)).isEqualTo(LiteralMap.NONE);
+  }
+
   @Test
   void literalMapAgreesWithTreeMap() {
     Random rnd = new Random(3);
