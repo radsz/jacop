@@ -8390,7 +8390,34 @@ Version 5.0 (unreleased)
    optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
    turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
 
-466. The FlatZinc front end compiles a satisfaction model whose integer
+466. The FlatZinc front end posts a multi-valued decision diagram (mdd)
+   that states exactly x_1 + ... + x_n = S over the current domains as
+   that sum. The check is exact: every edge carries one value, every node
+   one partial sum, the diagram is deterministic, and its accepted tuples
+   are counted and compared with the tuples of the domains whose sum is
+   S. XCSP 2023 MagicSquare-mdd writes every line of the square this way
+   (partial-sum diagrams as in Perez and Regin, "Efficient operations on
+   MDDs for building constraint programming models", IJCAI 2015); the
+   order-10 square needed 5.7 GB and found no square in 600 s, and is
+   now solved in 5 s; at 600 s JaCoP solves all 7 instances instead of 2
+   (the 2023 field solved 3). Off under --proof;
+   -Dorg.jacop.fz.mddLinear=false turns it off.
+
+467. Under LCG a closed global cardinality with fixed counts (the counts
+   add up to the number of variables), over variables of at most 4
+   values, becomes clauses before search: a sequential counter per value
+   (Abio and Stuckey, "Conflict directed lazy decomposition", CP 2012).
+   The default unary counters stop at 4000 clauses per constraint, and
+   the 7 day-of-week GCCs of XCSP 2025 RotatingRostering-052-2-3 need
+   about 9,900 each, so they stayed propagators and the instance was
+   unknown at 600 s; it is now unsatisfiable in 9 s. On the 19 XCSP
+   instances where the rule fires, 18 are decided at 600 s instead of 15
+   (EFPA-6-4-4-13 and -14 found) and the total time drops from 2576 s to
+   1141 s. Open GCCs (RotatingWorkforce2) are left alone: as clauses they
+   searched slower. -Djacop.lcg.gccClauses=false turns it off and
+   -Djacop.lcg.gccClauses.dom sets the domain size.
+
+468. The FlatZinc front end compiles a satisfaction model whose integer
    variables have at most three values (and one at least with a value other
    than 0 and 1) into clauses and solves them with JaSAT, under --lcg and
    free search, for one solution and without proof logging. Values get
@@ -8411,7 +8438,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.clausal.maxDomain, .maxLiterals and .mddNodes set the
    gates.
 
-467. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
+469. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
    on by default for models with at least 400 cyclic distances
    (-Dorg.jacop.fz.cyclicDistance.minDistances, default 400). There
    proofs are out of reach and the upper bound counts: at 600 s with -f,
@@ -8422,7 +8449,7 @@ Version 5.0 (unreleased)
    still rewrites every model, and =false none. No other instance of the
    wide set or of the XCSP 2022-2025 sets has the pattern.
 
-468. The FlatZinc front end rewrites products of two functions of one small
+470. The FlatZinc front end rewrites products of two functions of one small
    index (MiniZinc's (good[p] = g) * num[p], both looked up by the chosen
    preference p) as sum(v) f(v) * (p = v), linear over the value literals
    of p, and unfolds clauses of implied comparisons between such functions
@@ -8434,7 +8461,7 @@ Version 5.0 (unreleased)
    benchmark models. -Dorg.jacop.fz.indexFunctions=false turns it off,
    -Dorg.jacop.fz.indexFunctions.clauses=false only the unfolding.
 
-469. Tables of more than TableCliques.MAX_ARITY (6) columns over the same
+471. Tables of more than TableCliques.MAX_ARITY (6) columns over the same
    tuples share one tuple array, their reformulation and the cells and
    bit-sets of their HybridTable, as smaller tables already did.
    pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on
@@ -8442,7 +8469,7 @@ Version 5.0 (unreleased)
    the model ran out of memory at -Xmx4G while posting; it is now proved
    unsatisfiable.
 
-470. The FlatZinc parser keeps an array literal whose elements are all int
+472. The FlatZinc parser keeps an array literal whose elements are all int
    literals as one int[] instead of one node per element (48 bytes each);
    a node is made for an element only when it is read. Reading
    pigeonsPlus-08-08 (six arrays of 46 million entries) took 165 s and
@@ -8450,7 +8477,7 @@ Version 5.0 (unreleased)
    proved unsatisfiable in 60 s at -Xmx4G (out of memory before), the
    highest live heap after a collection going from 4.1 GB to 2.5 GB.
 
-471. A search that follows the root solution of the linear relaxation
+473. A search that follows the root solution of the linear relaxation
    (LpGuidedSelect) no longer scans every column at each decision when
    the relaxation has no value column: it decides only from value
    columns, so it fell back to its other heuristic every time after the
@@ -8459,7 +8486,7 @@ Version 5.0 (unreleased)
    decisions); at 600 s the objective goes from 10295 to 8260. The search
    is unchanged.
 
-472. Large neighbourhood search under -f (AdaptiveLns) finds the decision
+474. Large neighbourhood search under -f (AdaptiveLns) finds the decision
    variables near a node of the constraint graph with a walk that expands
    only the nodes on a shortest path to a decision variable, using the
    distances of all nodes computed once; it finds the same variables in
@@ -8468,7 +8495,7 @@ Version 5.0 (unreleased)
    walks took 61 % of a 300 s run; now 1.4 %, with 20 times the nodes
    (objective 45397 -> 66765 at 300 s, the best known 69664 at 600 s).
 
-473. Free search (-f) on models with vehicle routes: LNS uses only route
+475. Free search (-f) on models with vehicle routes: LNS uses only route
    removal, related (Shaw) removal and random neighbourhoods (the graph,
    propagation, objective, constraint and line neighbourhoods are off
    unless lns-kinds names them), and takes lns-share-routes 10 instead of
