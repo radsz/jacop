@@ -38,9 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -117,6 +119,68 @@ class CdclSolverTest {
       value[v] = s.modelValue(v);
     }
     return value;
+  }
+
+  /**
+   * A tight learnt budget reduced the learnt clauses for memory every 16 conflicts, whatever their
+   * tier. With decisions in a fixed order (as a fixed search under LCG makes them) the search lost
+   * every clause it needed and restarted into the same subtree: this satisfiable random 3-SAT
+   * formula of CdclFuzzTest seed 210002968 ran 2 million conflicts and 111,000 memory reductions
+   * without an answer, and its proof outgrew 2 GB. The gap between memory reductions now grows.
+   */
+  @Test
+  void memoryReductionsLeaveTheSearchRoomToFinish() throws IOException {
+    List<int[]> f = new ArrayList<>();
+    int vars;
+    try (BufferedReader in =
+        new BufferedReader(
+            new InputStreamReader(
+                CdclSolverTest.class.getResourceAsStream("memory-thrash.cnf"),
+                StandardCharsets.US_ASCII))) {
+      vars = Integer.parseInt(in.readLine().split(" ")[2]);
+      for (String line = in.readLine(); line != null; line = in.readLine()) {
+        String[] lits = line.trim().split(" ");
+        int[] c = new int[lits.length - 1];
+        for (int i = 0; i < c.length; i++) {
+          c[i] = Integer.parseInt(lits[i]);
+        }
+        f.add(c);
+      }
+    }
+    CdclSolver s = new CdclSolver();
+    s.setChronoLimit(100);
+    s.setReduceBase(10);
+    s.setLearntBudget(64);
+    s.setFactoring(false);
+    s.setSweeping(false);
+    s.setProbing(false);
+    s.setConflictLimit(500_000);
+    s.ensureVars(vars);
+    f.forEach(s::addClause);
+    Random phases = new Random(210002968L);
+    boolean[] positive = new boolean[vars + 1];
+    for (int v = 1; v <= vars; v++) {
+      positive[v] = phases.nextBoolean();
+      s.observe(v);
+    }
+    s.setLazyChronoLimit(0);
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int decide() {
+            for (int v = 1; v <= vars; v++) {
+              if (s.value(v) == 0) {
+                return positive[v] ? v : -v;
+              }
+            }
+            return 0;
+          }
+        });
+    assertEquals(CdclSolver.SAT, s.solve(), "solved within the conflict limit");
+    for (int[] c : f) {
+      assertTrue(Arrays.stream(c).anyMatch(l -> s.modelValue(Math.abs(l)) == l > 0), "a model");
+    }
+    assertTrue(s.memoryReductions > 0, "the budget made memory reductions");
   }
 
   /** Pigeons into holes: each pigeon in some hole, at most one pigeon per hole. */
@@ -688,6 +752,75 @@ class CdclSolverTest {
     assertTrue(e.run());
     // each clause scans the 31 occurrences of one of its literals
     assertTrue(e.effort() >= 651 * 31, "effort " + e.effort());
+  }
+
+  @Test
+  void eliminationResolvesOnlyGateClausesAgainstTheOthers() {
+    // x (variable 0) = a (variable 1), and x occurs in 4 other clauses of each sign. The 24
+    // resolvents of all clauses exceed the 10 clauses they replace, but only the 8 of a defining
+    // clause with another clause are needed (Een and Biere, SAT 2005)
+    int numVars = 18;
+    int x = 0;
+    int a = 2;
+    int[][] clauses = new int[10][];
+    clauses[0] = new int[] {x + 1, a};
+    clauses[1] = new int[] {x, a + 1};
+    for (int i = 0; i < 4; i++) {
+      clauses[2 + i] = new int[] {x, 4 * (1 + i), 4 * (1 + i) + 2};
+      clauses[6 + i] = new int[] {x + 1, 4 * (1 + i) + 1, 4 * (1 + i) + 3};
+    }
+    boolean[] frozen = new boolean[numVars];
+    Arrays.fill(frozen, true);
+    frozen[0] = false;
+    for (boolean gates : new boolean[] {false, true}) {
+      Eliminator e =
+          new Eliminator(
+              numVars,
+              clauses,
+              clauses.length,
+              frozen,
+              null,
+              new Eliminator.Limits(0, 0, 100, gates));
+      assertTrue(e.run());
+      assertEquals(gates, e.eliminated()[0], "x eliminated with gates " + gates);
+      assertEquals(gates ? 1 : 0, e.numGateEliminations());
+      assertEquals(gates ? 8 : 10, e.clauses().length);
+    }
+  }
+
+  @Test
+  void eliminationBoundAllowsMoreResolventsThanClauses() {
+    // x (variable 0) occurs in 3 clauses of each sign over distinct other variables: 9 resolvents
+    // replace 6 clauses, so x is eliminated from bound 3 on, and the bound rises to it when a
+    // round finds nothing
+    int numVars = 13;
+    int[][] clauses = new int[6][];
+    for (int i = 0; i < 3; i++) {
+      clauses[i] = new int[] {0, 2 * (1 + i)};
+      clauses[3 + i] = new int[] {1, 2 * (4 + i)};
+    }
+    boolean[] frozen = new boolean[numVars];
+    Arrays.fill(frozen, true);
+    frozen[0] = false;
+    for (int max : new int[] {0, 2, 4, 16}) {
+      Eliminator e =
+          new Eliminator(
+              numVars,
+              clauses,
+              clauses.length,
+              frozen,
+              null,
+              new Eliminator.Limits(0, max, 100, false));
+      assertTrue(e.run());
+      assertEquals(max >= 3, e.eliminated()[0], "x eliminated with largest bound " + max);
+    }
+    Eliminator minisat = new Eliminator(numVars, clauses, clauses.length, frozen, null);
+    assertTrue(minisat.run());
+    assertFalse(minisat.eliminated()[0], "MiniSat elimination adds no clauses");
+    assertEquals(1, Eliminator.nextBound(0, 16));
+    assertEquals(8, Eliminator.nextBound(4, 16));
+    assertEquals(16, Eliminator.nextBound(16, 16));
+    assertEquals(5, Eliminator.nextBound(4, 5));
   }
 
   @Test

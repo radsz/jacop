@@ -3572,6 +3572,21 @@ class LcgSolverTest {
   }
 
   /**
+   * The same models with every graph explained as a large one: the far cuts found from the reached
+   * nodes or the nodes reaching the last level, and failures from the labels of each node, give the
+   * same reasons as the walks (the same number of atoms).
+   */
+  @Test
+  void layeredGraphCutsOfLargeGraphsAreTheWalkedOnes() {
+    System.setProperty("jacop.lcg.graphCutsLargeNodes", "0");
+    try {
+      layeredGraphsAgreeWithBruteForce(false);
+    } finally {
+      System.clearProperty("jacop.lcg.graphCutsLargeNodes");
+    }
+  }
+
+  /**
    * Regular (some automata nondeterministic) and decision diagrams given to the solver as clauses
    * against brute force: no explanation is left to the constraints, which are out of the store.
    */
@@ -3669,6 +3684,7 @@ class LcgSolverTest {
     int unsat = 0;
     long own = 0;
     long generic = 0;
+    long atoms = 0;
     for (int instance = 0; instance < 1500; instance++) {
       Store store = new Store();
       int n = 5;
@@ -3713,12 +3729,13 @@ class LcgSolverTest {
         if (counts != null) {
           own += counts[0] - counts[1] + counts[3] - counts[4];
           generic += counts[1] + counts[4];
+          atoms += counts[2] + counts[5];
         }
       }
     }
     System.out.printf(
-        "layered graphs%s: %d sat, %d unsat, %d own and %d generic explanations%n",
-        clauses ? " as clauses" : "", sat, unsat, own, generic);
+        "layered graphs%s: %d sat, %d unsat, %d own and %d generic explanations, %d atoms%n",
+        clauses ? " as clauses" : "", sat, unsat, own, generic, atoms);
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
@@ -3727,6 +3744,9 @@ class LcgSolverTest {
       assertThat(own).isZero();
     } else {
       assertThat(own).isGreaterThan(300);
+      // the cuts are found by one walk each way since the cut explanation of WordDesign2-words-mdd
+      // (XCSP 2023) was made faster; the atoms are those of the four walks per cut before it
+      assertThat(atoms).isEqualTo(751);
     }
   }
 
@@ -4647,6 +4667,44 @@ class LcgSolverTest {
       }
     }
     return values;
+  }
+
+  /**
+   * A variable gets a literal map of a kind only with its first literal of that kind: three maps
+   * for every variable from the start took 210 MB of XCSP 2022 RoomMate-sr0700, most of them never
+   * used. The maps before the search are the one shared empty map, which answers like an empty map
+   * of its own, and the solver still solves.
+   */
+  @Test
+  void literalMapsAreMadeAtTheFirstLiteral() throws ReflectiveOperationException {
+    Store store = new Store();
+    int n = 50;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 9);
+    }
+    store.impose(new LinearInt(new IntVar[] {x[0], x[1]}, new int[] {1, 1}, "==", 9));
+    LcgSolver solver = new LcgSolver(store);
+    solver.setChecking(true);
+    Set<LiteralMap> before = Collections.newSetFromMap(new java.util.IdentityHashMap<>());
+    for (String kind : new String[] {"ge", "eq", "linked"}) {
+      java.lang.reflect.Field field = LcgSolver.class.getDeclaredField(kind);
+      field.setAccessible(true);
+      for (LiteralMap map : (LiteralMap[]) field.get(solver)) {
+        if (map != null) {
+          before.add(map);
+        }
+      }
+    }
+    assertThat(before).containsExactly(LiteralMap.NO_LITERALS);
+    assertThat(LiteralMap.NO_LITERALS.get(0)).isEqualTo(LiteralMap.NONE);
+    assertThat(LiteralMap.NO_LITERALS.lower(5)).isEqualTo(LiteralMap.NONE);
+    assertThat(LiteralMap.NO_LITERALS.higher(-5)).isEqualTo(LiteralMap.NONE);
+    assertThat(LiteralMap.NO_LITERALS.ceilingValue(-5)).isEqualTo(Long.MAX_VALUE);
+    assertThat(LiteralMap.NO_LITERALS.floorValue(5)).isEqualTo(Long.MIN_VALUE);
+    assertThat(solver.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(solver.value(x[0]) + solver.value(x[1])).isEqualTo(9);
+    assertThat(LiteralMap.NO_LITERALS.get(0)).isEqualTo(LiteralMap.NONE);
   }
 
   @Test
