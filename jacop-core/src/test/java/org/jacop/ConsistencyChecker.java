@@ -1497,6 +1497,68 @@ class ConsistencyChecker {
         concat(bin, load[0], load[1]));
   }
 
+  private static Model colouredSpanningTree(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    int m = n + random.nextInt(3);
+    int[] from = new int[m];
+    int[] to = new int[m];
+    int[] weights = new int[m];
+    int[] colours = new int[m];
+    int total = 0;
+    for (int e = 0; e < m; e++) {
+      from[e] = random.nextInt(n);
+      to[e] = (from[e] + 1 + random.nextInt(n - 1)) % n;
+      weights[e] = random.nextInt(4);
+      colours[e] = random.nextInt(3) - 1;
+      total += weights[e];
+    }
+    int[] caps = {random.nextInt(3), random.nextInt(3)};
+    IntVar[] es = bools(store, "e", m);
+    IntVar cost = aVar(store, "cost", 0, total, random);
+    List<Constraint> parts =
+        new ArrayList<>(
+            new org.jacop.constraints.graph.WeightedSpanningTree(
+                    n, from, to, weights, null, es, cost, 0, false)
+                .decompose(store));
+    for (int c = 0; c < caps.length; c++) {
+      final int colour = c;
+      IntVar[] ofColour =
+          IntStream.range(0, m)
+              .filter(e -> colours[e] == colour)
+              .mapToObj(e -> es[e])
+              .toArray(IntVar[]::new);
+      if (ofColour.length > 0) {
+        parts.add(new SumInt(ofColour, "<=", new IntVar(store, caps[c], caps[c])));
+      }
+    }
+    parts.add(
+        new org.jacop.constraints.graph.ColouredSpanningTreeBound(
+            n, from, to, weights, colours, caps, es, cost, 0));
+    return new Model(
+        parts,
+        t -> {
+          int[] full = new int[n + m + 2];
+          Arrays.fill(full, 0, n, 1);
+          System.arraycopy(t, 0, full, n, m);
+          int[] used = new int[caps.length];
+          int sum = 0;
+          for (int e = 0; e < m; e++) {
+            sum += t[e] * weights[e];
+            if (colours[e] >= 0) {
+              used[colours[e]] += t[e];
+            }
+          }
+          for (int c = 0; c < caps.length; c++) {
+            if (used[c] > caps[c]) {
+              return false;
+            }
+          }
+          full[n + m] = 0;
+          return sum == t[m] && graphHolds(full, "tree", false, n, from, to);
+        },
+        concat(es, new IntVar[] {cost}));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2643,6 +2705,7 @@ class ConsistencyChecker {
         new Case(
             "BoundedPath(undirected)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", false)),
         new Case("BoundedPath(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", true)),
+        new Case("ColouredSpanningTree", Level.NONE, ConsistencyChecker::colouredSpanningTree),
         new Case("UnaryTransition(all)", Level.NONE, (s, r) -> unaryTransition(s, r, false)),
         new Case("UnaryTransition(optional)", Level.NONE, (s, r) -> unaryTransition(s, r, true)),
         new Case("MultiCumulative", Level.NONE, ConsistencyChecker::multiCumulative),
