@@ -249,6 +249,7 @@ public class Tables {
   // pairs of variables a declaration makes equal (var int: x = y), with the bounds each had
   // before the equality was imposed
   private final List<IntVar[]> declaredEqualities = new ArrayList<>();
+  private final Set<IntVar> declaredEqual = Collections.newSetFromMap(new IdentityHashMap<>());
   private final IdentityHashMap<IntVar, long[]> boundsBeforeEquality = new IdentityHashMap<>();
   // the factor the objective was divided by (ObjectiveScaling), and the identifiers of the
   // variables that hold the divided values
@@ -264,6 +265,8 @@ public class Tables {
    */
   void noteDeclaredEquality(IntVar x, IntVar y) {
     declaredEqualities.add(new IntVar[] {x, y});
+    declaredEqual.add(x);
+    declaredEqual.add(y);
     boundsBeforeEquality.putIfAbsent(x, new long[] {x.min(), x.max()});
     boundsBeforeEquality.putIfAbsent(y, new long[] {y.min(), y.max()});
   }
@@ -275,6 +278,17 @@ public class Tables {
    */
   public List<IntVar[]> declaredEqualities() {
     return declaredEqualities;
+  }
+
+  /**
+   * Whether a declaration makes the variable equal to another one. Such a variable must not become
+   * an alias or be folded away, since the equality posted for the declaration stays on it.
+   *
+   * @param v the variable
+   * @return true if v is in a pair of {@link #declaredEqualities()}
+   */
+  public boolean isDeclaredEqual(IntVar v) {
+    return declaredEqual.contains(v);
   }
 
   /**

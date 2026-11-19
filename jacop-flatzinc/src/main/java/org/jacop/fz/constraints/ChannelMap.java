@@ -49,16 +49,16 @@ import org.jacop.core.IntVar;
  */
 class ChannelMap {
 
-  final Map<IntVar, Map<Integer, IntVar>> cs = new LinkedHashMap<>();
+  Map<IntVar, Map<Integer, IntVar>> cs = new LinkedHashMap<>();
 
   final int minSize = 1;
 
   // (x, v, b) triples collected by add, so that callers can tell them apart from other
   // reifications of x = v that were not collected (for example bool_eq_reif).
-  private final Set<Entry> collected = new HashSet<>();
+  private Set<Entry> collected = new HashSet<>();
 
   // the collected pairs (x, v) of each Boolean b
-  private final Map<IntVar, List<Entry>> byBoolean = new HashMap<>();
+  private Map<IntVar, List<Entry>> byBoolean = new HashMap<>();
 
   private record Entry(IntVar x, int v, IntVar b) {}
 
@@ -66,6 +66,17 @@ class ChannelMap {
 
   public ChannelMap(Support support) {
     this.support = support;
+  }
+
+  /**
+   * Forgets the collected constraints once all constraints are posted; the channels posted from
+   * them keep the maps they need. 115 MB on XCSP 2022 RoomMate-sr0700 (490,000 implications).
+   */
+  void release() {
+    // new maps, since a cleared one keeps its table
+    cs = new LinkedHashMap<>();
+    collected = new HashSet<>();
+    byBoolean = new HashMap<>();
   }
 
   public void add(IntVar x, int v, IntVar b) {
