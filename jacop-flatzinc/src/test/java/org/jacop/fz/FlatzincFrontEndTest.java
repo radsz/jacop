@@ -1142,7 +1142,7 @@ class FlatzincFrontEndTest {
     assertEquals("x = 3;\n----------\n==========\n", out[0]);
     assertTrue(out[1].contains("1 variable domain reaches beyond"), out[1]);
     assertTrue(out[1].contains("(first: x 0..4722438400)"), out[1]);
-    // bounded only through a non-linear constraint: no claim
+    // bounded through a function of a bounded variable: still optimal
     out =
         run(
             """
@@ -1151,7 +1151,18 @@ class FlatzincFrontEndTest {
             constraint int_abs(y, x);
             solve maximize x;
             """);
-    assertTrue(out[0].endsWith("x = 3;\n----------\n"), out[0]);
+    assertTrue(out[0].endsWith("x = 3;\n----------\n==========\n"), out[0]);
+    // bounded only through a constraint the bounds of the rows do not read: no claim
+    out =
+        run(
+            """
+            var 0..4722438400: x :: output_var;
+            var 0..3: y;
+            constraint set_in(x, {0, 1, 4, 9});
+            constraint int_le(y, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].endsWith("x = 9;\n----------\n"), out[0]);
 
     // no claim of unsatisfiability: the solutions may lie in the values cut off
     out =
@@ -1196,16 +1207,17 @@ class FlatzincFrontEndTest {
             solve maximize c;
             """);
     assertEquals("c = 10;\ny = 5;\n----------\n==========\n", out[0]);
-    // without a row that bounds them: no claim
+    // without a row or a function the bounds read: no claim
     out =
         run(
             """
             var 0..2014326920: c :: output_var;
             var 1..5: y :: output_var;
-            constraint int_times(y, y, c);
+            constraint set_in(c, {1, 4, 9, 16, 25});
+            constraint int_le(y, c);
             solve maximize c;
             """);
-    assertTrue(out[0].endsWith("c = 25;\ny = 5;\n----------\n"), out[0]);
+    assertTrue(out[0].endsWith("c = 25;\ny = 1;\n----------\n"), out[0]);
     // an array element of the objective's array narrowed too; a[2] <= 4 bounds it
     out =
         run(
@@ -1405,6 +1417,145 @@ class FlatzincFrontEndTest {
     assertTrue(out[1].contains("domain 600000000..700000000 at line 1"), out[1]);
     assertTrue(out[1].contains("lies outside the integer range"), out[1]);
     assertEquals(1, lastStatus);
+  }
+
+  /**
+   * A linear row over fixed variables is decided when it is posted; its sum was taken in int, so
+   * 2147483647 * 1 - 2147483647 * 3 wrapped to 2 and the row failed.
+   */
+  @Test
+  void linearRowOverFixedVariablesIsSummedWithoutOverflow() throws IOException {
+    String row = "[2147483647, -2147483647], [x, y], -2147483647";
+    String fixed = "var 1..1: x :: output_var;\nvar 3..3: y :: output_var;\n";
+    String[] out = run(fixed + "constraint int_lin_le(" + row + ");\nsolve satisfy;\n");
+    assertEquals("x = 1;\ny = 3;\n----------\n", out[0]);
+    out = run(fixed + "constraint int_lin_eq(" + row + ");\nsolve satisfy;\n");
+    assertTrue(out[0].endsWith("=====UNSATISFIABLE=====\n"), out[0]);
+    for (String[] reified :
+        new String[][] {{"eq", "false"}, {"ne", "true"}, {"lt", "true"}, {"le", "true"}}) {
+      out =
+          run(
+              fixed
+                  + "var bool: b :: output_var;\nconstraint int_lin_"
+                  + reified[0]
+                  + "_reif("
+                  + row
+                  + ", b);\nsolve satisfy;\n");
+      assertEquals("x = 1;\ny = 3;\nb = " + reified[1] + ";\n----------\n", out[0], reified[0]);
+    }
+  }
+
+  /**
+   * A variable named twice in a linear row, as merged aliases leave it, has its coefficients added;
+   * a sum beyond int wrapped around: 2^31 * i <= 2^30 accepted i = 1.
+   */
+  @Test
+  void repeatedVariableWithCoefficientsSummingBeyondIntKeepsTheRow() throws IOException {
+    String[] out =
+        run(
+            """
+            var 0..1: i :: output_var;
+            constraint int_lin_le([1073741824, 1073741824], [i, i], 1073741824);
+            solve satisfy;
+            """,
+            "-a");
+    assertEquals("i = 0;\n----------\n==========\n", out[0]);
+    // the same row reached through equal subexpressions: x = y makes b1 and b2 one variable
+    assertEquals(
+        12,
+        solveAll(
+                """
+                var 0..3: x :: output_var;
+                var 0..3: y :: output_var;
+                var bool: b1;
+                var bool: b2;
+                var 0..1: i1;
+                var 0..1: i2;
+                constraint int_eq_reif(x, y, b1);
+                constraint int_eq_reif(y, x, b2);
+                constraint bool2int(b1, i1);
+                constraint bool2int(b2, i2);
+                constraint int_lin_le([2147483647, 2147483647], [i1, i2], 2147483647);
+                solve satisfy;
+                """)
+            .size());
+  }
+
+  /**
+   * A variable declared without bounds (var int) is created over JaCoP's integer range, so a value
+   * beyond the range, which MiniZinc's 64-bit integers allow, is cut off as for a narrowed domain:
+   * no unsatisfiability or optimality is claimed unless the rows of the model keep the variable
+   * within the range.
+   */
+  @Test
+  void unboundedVariableBeyondTheRangeClaimsNothing() throws IOException {
+    // m = 1000000000 * x is a solution of the model; JaCoP's range cuts it off
+    String[] out =
+        run(
+            """
+            var int: m :: output_var;
+            var 1..2: x :: output_var;
+            constraint int_lin_eq([1, -1000000000], [m, x], 0);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+    out =
+        run(
+            """
+            var int: m;
+            var 0..2000: x :: output_var;
+            constraint int_lin_eq([1, -1000000], [m, x], 0);
+            constraint int_le(600, x);
+            solve maximize x;
+            """);
+    assertTrue(out[0].contains("=====UNKNOWN====="), out[0]);
+    // an array declared without bounds
+    out =
+        run(
+            """
+            array [1..2] of var int: a;
+            var 1..2: x :: output_var;
+            constraint int_lin_eq([1, -1000000000], [a[1], x], 0);
+            solve satisfy;
+            """);
+    assertTrue(out[0].endsWith("=====UNKNOWN=====\n"), out[0]);
+
+    // kept within the range by the rows and the functions of the model: the claims stand
+    out =
+        run(
+            """
+            var int: m :: output_var;
+            var 0..5: x :: output_var;
+            constraint int_lin_eq([1, -1], [m, x], 10);
+            constraint int_le(m, 3);
+            solve satisfy;
+            """);
+    assertEquals("=====UNSATISFIABLE=====\n", out[0]);
+    out =
+        run(
+            """
+            var int: m :: output_var;
+            var 0..2: x :: output_var;
+            constraint int_lin_eq([1, -1], [m, x], 10);
+            solve satisfy;
+            """,
+            "-a");
+    assertTrue(out[0].endsWith("----------\n==========\n"), out[0]);
+    out =
+        run(
+            """
+            array [1..3] of int: c = [4, 9, 2];
+            var int: m :: output_var;
+            var int: e;
+            var int: p;
+            var 1..3: i;
+            var 0..5: x;
+            constraint array_int_element(i, c, e);
+            constraint int_times(x, x, p);
+            constraint jacop_maximum(m, [e, p]);
+            solve maximize m;
+            """);
+    assertTrue(out[0].endsWith("m = 25;\n----------\n==========\n"), out[0]);
   }
 
   @Test
