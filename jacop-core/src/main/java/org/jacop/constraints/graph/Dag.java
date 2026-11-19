@@ -116,29 +116,9 @@ public class Dag extends Constraint implements SatisfiedPresent, Copyable<Dag>, 
     checkInputForNullness("es", es);
     checkInputForNullness("from", from);
     checkInputForNullness("to", to);
-    if (from.length != es.length || to.length != es.length) {
-      throw new IllegalArgumentException(
-          "Dag: from, to and es must have the same length, got "
-              + from.length
-              + ", "
-              + to.length
-              + " and "
-              + es.length);
-    }
+    checkGraph(from, to, ns, es, base);
     this.n = ns.length;
     this.m = es.length;
-    for (int e = 0; e < m; e++) {
-      if (from[e] < base || from[e] >= base + n || to[e] < base || to[e] >= base + n) {
-        throw new IllegalArgumentException(
-            "Dag: edge " + e + " has a node outside " + base + ".." + (base + n - 1));
-      }
-    }
-    for (IntVar v : ns) {
-      checkBoolean("ns", v);
-    }
-    for (IntVar v : es) {
-      checkBoolean("es", v);
-    }
     this.numberId = idNumber.incrementAndGet();
     this.queueIndex = 1;
     this.from = Arrays.copyOf(from, m);
@@ -195,11 +175,33 @@ public class Dag extends Constraint implements SatisfiedPresent, Copyable<Dag>, 
     this(from, to, ns, es, 0);
   }
 
-  private static void checkBoolean(String name, IntVar v) {
-    if (v.min() < 0 || v.max() > 1) {
+  // the edges and the Booleans of a graph with nodes base .. base + ns.length - 1
+  private static void checkGraph(int[] from, int[] to, IntVar[] ns, IntVar[] es, int base) {
+    if (from.length != es.length || to.length != es.length) {
       throw new IllegalArgumentException(
-          "Dag: " + name + " must be 0/1 variables, got " + v.domain);
+          "Dag needs a tail and a head for each of its " + es.length + " edges");
     }
+    int last = base + ns.length - 1;
+    for (int e = 0; e < es.length; e++) {
+      int lo = Math.min(from[e], to[e]);
+      int hi = Math.max(from[e], to[e]);
+      if (lo < base || hi > last) {
+        throw new IllegalArgumentException(
+            "Dag: edge " + e + " has a node outside " + base + ".." + last);
+      }
+    }
+    IntVar[][] groups = {ns, es};
+    for (IntVar[] group : groups) {
+      for (IntVar v : group) {
+        if (v.min() < 0 || v.max() > 1) {
+          throw new IllegalArgumentException("Dag needs 0/1 variables, got " + v);
+        }
+      }
+    }
+  }
+
+  private static boolean ground(IntVar[] vars) {
+    return Arrays.stream(vars).allMatch(IntVar::singleton);
   }
 
   /**
@@ -344,15 +346,8 @@ public class Dag extends Constraint implements SatisfiedPresent, Copyable<Dag>, 
 
   @Override
   public boolean satisfied() {
-    for (IntVar v : ns) {
-      if (!v.singleton()) {
-        return false;
-      }
-    }
-    for (IntVar v : es) {
-      if (!v.singleton()) {
-        return false;
-      }
+    if (!ground(ns) || !ground(es)) {
+      return false;
     }
     for (int e = 0; e < m; e++) {
       if (es[e].value() == 1
