@@ -1210,6 +1210,62 @@ class ConsistencyChecker {
         b);
   }
 
+  private static Model sequenceMdd(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    boolean pred = random.nextBoolean();
+    IntVar[] arcs = vars(store, "a", n, 0, n - 1, random);
+    IntVar[] in = vars(store, "in", n, 0, 6, random);
+    IntVar[] out = vars(store, "out", n, 0, 6, random);
+    int none = org.jacop.constraints.SequenceMdd.NONE;
+    int[][] travel = new int[n][n];
+    for (int[] row : travel) {
+      for (int j = 0; j < n; j++) {
+        row[j] = random.nextInt(5) == 0 ? none : random.nextInt(3);
+      }
+    }
+    int[] delta = new int[n];
+    for (int j = 0; j < n; j++) {
+      delta[j] = random.nextInt(5) == 0 ? none : random.nextInt(2);
+    }
+    return new Model(
+        new org.jacop.constraints.SequenceMdd(
+            arcs, pred, 0, in, out, travel, delta, 0, 1 + random.nextInt(3)),
+        t -> {
+          int[] succ = new int[n];
+          for (int i = 0; i < n; i++) {
+            if (pred) {
+              succ[t[i]] = i;
+            } else {
+              succ[i] = t[i];
+            }
+          }
+          if (pred && Arrays.stream(t, 0, n).distinct().count() != n) {
+            return false;
+          }
+          int at = 0;
+          for (int k = 0; k < n; k++) {
+            int next = succ[at];
+            if (travel[at][next] != none && t[n + next] < t[2 * n + at] + travel[at][next]) {
+              return false;
+            }
+            at = next;
+            if (at == 0 && k < n - 1) {
+              return false;
+            }
+          }
+          if (at != 0) {
+            return false;
+          }
+          for (int j = 1; j < n; j++) {
+            if (delta[j] != none && t[2 * n + j] < t[n + j] + delta[j]) {
+              return false;
+            }
+          }
+          return true;
+        },
+        concat(arcs, in, out));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2337,7 +2393,8 @@ class ConsistencyChecker {
         new Case("CostRegular", Level.NONE, (s, r) -> costRegular(s, r, false)),
         new Case("MultiCostRegular", Level.NONE, (s, r) -> costRegular(s, r, true)),
         new Case("SoftGCC", Level.NONE, ConsistencyChecker::softGcc),
-        new Case("IfThenElseBool", Level.DOMAIN, ConsistencyChecker::ifThenElseBool));
+        new Case("IfThenElseBool", Level.DOMAIN, ConsistencyChecker::ifThenElseBool),
+        new Case("SequenceMdd", Level.NONE, ConsistencyChecker::sequenceMdd));
   }
 
   /**
