@@ -37,6 +37,7 @@ import org.jacop.constraints.Constraint;
 import org.jacop.constraints.DecomposedConstraint;
 import org.jacop.constraints.XplusCeqZ;
 import org.jacop.constraints.graph.BoundedPath;
+import org.jacop.constraints.graph.Dag;
 import org.jacop.constraints.graph.Path;
 import org.jacop.constraints.graph.Reachable;
 import org.jacop.constraints.graph.Steiner;
@@ -254,6 +255,12 @@ class GraphConstraints implements ParserTreeConstants {
             vars(node, 3),
             integer(node, 4),
             directed));
+  }
+
+  /** jacop_dag: from, to, ns, es, base. */
+  void gen_jacop_dag(SimpleNode node) {
+    support.pose(
+        new Dag(ints(node, 0), ints(node, 1), vars(node, 2), vars(node, 3), integer(node, 4)));
   }
 
   /** jacop_tree and jacop_dtree: from, to, r, ns, es, base. */
