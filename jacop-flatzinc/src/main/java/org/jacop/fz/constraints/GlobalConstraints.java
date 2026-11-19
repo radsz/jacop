@@ -1403,6 +1403,9 @@ class GlobalConstraints implements ParserTreeConstants {
     for (ValueEnumeration e = union.valueEnumeration(); e.hasMoreElements(); ) {
       gccCounter[k++] = counterOf.get(e.nextElement());
     }
+    if (support.options.proof() != null) {
+      CardinalityDetector.separateCounters(support, xs, gccCounter);
+    }
     support.pose(new GCC(xs, gccCounter));
   }
 
@@ -3328,6 +3331,11 @@ class GlobalConstraints implements ParserTreeConstants {
     // files compiled with older versions of the library number them from the lowest node in arc.
     int minNode = Math.min(1, Arrays.stream(arc).min().getAsInt());
 
+    if (support.options.proof() != null && Arrays.stream(weight).allMatch(IntVar::singleton)) {
+      networkFlowRows(arc, minNode, flow, weight, balance, cost);
+      return;
+    }
+
     NetworkBuilder net = new NetworkBuilder();
 
     Node[] netNode = new Node[balance.length];
@@ -3343,6 +3351,51 @@ class GlobalConstraints implements ParserTreeConstants {
     net.setCostVariable(cost);
 
     support.pose(new NetworkFlow(net));
+  }
+
+  // --proof: the network flow as its rows, which the OPB model states and a proof derives from:
+  // at each node the flow out less the flow in is the balance, and the cost is the weighted sum of
+  // the flows. NetworkFlow's reduced-cost pruning has no proof, so the OPB model left it out and
+  // the proof stopped (nfc, mapping); the rows prune less but keep the proof.
+  private void networkFlowRows(
+      int[] arc, int minNode, IntVar[] flow, IntVar[] weight, int[] balance, IntVar cost) {
+    List<List<IntVar>> vars = new ArrayList<>();
+    List<List<Integer>> coefficients = new ArrayList<>();
+    for (int i = 0; i < balance.length; i++) {
+      vars.add(new ArrayList<>());
+      coefficients.add(new ArrayList<>());
+    }
+    for (int i = 0; i < flow.length; i++) {
+      int from = arc[2 * i] - minNode;
+      int to = arc[2 * i + 1] - minNode;
+      vars.get(from).add(flow[i]);
+      coefficients.get(from).add(1);
+      vars.get(to).add(flow[i]);
+      coefficients.get(to).add(-1);
+    }
+    for (int i = 0; i < balance.length; i++) {
+      // a node with no arc has no row; its balance must be 0
+      if (vars.get(i).isEmpty()) {
+        if (balance[i] != 0) {
+          throw Store.failException;
+        }
+        continue;
+      }
+      support.pose(
+          new LinearInt(
+              vars.get(i).toArray(new IntVar[0]),
+              coefficients.get(i).stream().mapToInt(Integer::intValue).toArray(),
+              "==",
+              balance[i]));
+    }
+    IntVar[] terms = Arrays.copyOf(flow, flow.length + 1);
+    terms[flow.length] = cost;
+    int[] w = new int[flow.length + 1];
+    for (int i = 0; i < flow.length; i++) {
+      w[i] = weight[i].value();
+    }
+    w[flow.length] = -1;
+    support.pose(new LinearInt(terms, w, "==", 0));
   }
 
   void gen_jacop_lex_less_int(SimpleNode node) {
