@@ -43,7 +43,9 @@ import org.jacop.core.Store;
  * Disjoint constraint assures that any two rectangles from a vector of rectangles does not overlap
  * in at least one direction.
  *
- * <p>Zero-width rectangles does not overlap with any other rectangle.
+ * <p>Unlike {@link Diff2}, a rectangle of zero width still takes its place: two rectangles overlap
+ * when, in both dimensions, each starts before the other ends, so a segment or a point may not lie
+ * strictly inside another rectangle, though it may lie on its border.
  *
  * @author Krzysztof Kuchcinski and Radoslaw Szymanek
  * @version 5.0
@@ -225,6 +227,36 @@ public class Disjoint extends AbstractDiff {
     }
   }
 
+  /**
+   * The narrowing builds forbidden regions from the lengths of the other rectangles, so a point,
+   * zero long in both dimensions, forbids nothing; a complete assignment is therefore also checked
+   * pair by pair.
+   */
+  @Override
+  public void consistency(Store store) {
+    super.consistency(store);
+    for (int i = 0; i < rectangles.length; i++) {
+      if (rectangles[i].settled()) {
+        for (int j = i + 1; j < rectangles.length; j++) {
+          if (rectangles[j].settled() && groundOverlap(rectangles[i], rectangles[j])) {
+            throw Store.failException;
+          }
+        }
+      }
+    }
+  }
+
+  private static boolean groundOverlap(Rectangle a, Rectangle b) {
+    for (int d = 0; d < a.dim; d++) {
+      int aStart = a.origin[d].value();
+      int bStart = b.origin[d].value();
+      if (aStart + a.length[d].value() <= bStart || bStart + b.length[d].value() <= aStart) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   @Override
   void narrowRectangles(Set<IntVar> fdvQueue) {
     narrowRectanglesEval(evalRects, fdvQueue, true, true);
@@ -255,7 +287,29 @@ public class Disjoint extends AbstractDiff {
 
   @Override
   public boolean satisfied() {
-    return satisfiedEval(evalRects);
+    // the evaluation sees no overlap with a point, so it is trusted only without zero lengths
+    boolean zeroLength = false;
+    boolean ground = true;
+    for (Rectangle r : rectangles) {
+      ground &= r.settled();
+      for (int d = 0; d < r.dim; d++) {
+        zeroLength |= r.length[d].min() <= 0;
+      }
+    }
+    if (!zeroLength) {
+      return satisfiedEval(evalRects);
+    }
+    if (!ground) {
+      return false;
+    }
+    for (int i = 0; i < rectangles.length; i++) {
+      for (int j = i + 1; j < rectangles.length; j++) {
+        if (groundOverlap(rectangles[i], rectangles[j])) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   @Override

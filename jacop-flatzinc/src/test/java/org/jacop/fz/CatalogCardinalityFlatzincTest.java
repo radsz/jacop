@@ -153,6 +153,26 @@ class CatalogCardinalityFlatzincTest {
     }
   }
 
+  // bool_lin_eq takes a var int right-hand side; the detector read it with getInt, whose
+  // RuntimeException it did not catch, and the run stopped (FlatZinc mutation harness)
+  @Test
+  void aVariableRightHandSideIsNoLineSum() throws IOException {
+    String model =
+        """
+        var bool: a :: output_var;
+        var bool: b :: output_var;
+        var bool: c :: output_var;
+        var 0..3: k :: output_var;
+        constraint bool_lin_le([1,1],[b,c],1);
+        constraint bool_lin_le([1,1],[a,c],1);
+        constraint bool_lin_eq([1,1,1],[a,b,c],k);
+        constraint bool_lin_eq([1,1],[a,b],k);
+        solve maximize k;
+        """;
+    String out = run(model, true);
+    assertTrue(out.contains("k = 2;") && out.contains("=========="), out);
+  }
+
   @Test
   void detectedMatrixKeepsAllSolutions() throws IOException {
     Random random = new Random(11);
