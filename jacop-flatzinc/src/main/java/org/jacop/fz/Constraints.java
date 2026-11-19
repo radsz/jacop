@@ -259,7 +259,9 @@ public class Constraints implements ParserTreeConstants {
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
       if (CommonSubexpressions.enabled() && options.proof() == null) {
-        CommonSubexpressions cse = new CommonSubexpressions(support, solveItemVariables(astTree));
+        Set<IntVar> pinned = solveItemVariables(astTree);
+        dictionary.addDeclaredEqualities(pinned);
+        CommonSubexpressions cse = new CommonSubexpressions(support, pinned);
         cse.detect(astTree);
         if (!cse.replaced().isEmpty()) {
           replaced = new HashSet<>(cse.replaced());

@@ -1702,6 +1702,16 @@ class FlatzincFrontEndTest {
                 + "constraint bool2int(b, i);\nsolve satisfy;\n"));
   }
 
+  // common subexpressions made s of var s = w an alias of g for int_eq(g, s), which left w free
+  @Test
+  void aVariableOfADeclaredEqualityIsNoCommonSubexpressionAlias()
+      throws IOException, ParseException {
+    assertEquals(
+        2,
+        allSolutions(
+            "var 0..3: w :: output_var;\nvar 0..3: s = w;\nvar 0..3: g :: output_var;\n"
+                + "constraint int_eq(g, s);\nconstraint int_le(2, s);\nsolve satisfy;\n"));
+  }
 
 
   // the output of a run of the model with the given options, in this JVM (no watchdog)
