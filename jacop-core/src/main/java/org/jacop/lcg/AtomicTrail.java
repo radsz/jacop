@@ -78,6 +78,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private int[] level = new int[256];
   private Constraint[] reason = new Constraint[256];
   private int[] previous = new int[256]; // the variable's previous entry, or -1
+  // the size of the variable's shadow before the entry (incremental shadows only)
+  private int[] sizeBefore = new int[256];
   private int size;
 
   // per variable (by id): the domain the entries so far describe, as its bounds and, when it has
@@ -89,6 +91,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
   private int removingValue;
   private int[] shadowMin = new int[0];
   private int[] shadowMax = new int[0];
+  private int[] rootMin = new int[0];
+  private int[] rootMax = new int[0];
   private IntDomain[] root = new IntDomain[0]; // the domain when recording started
   private int[] last = new int[0];
   // the variable's GE entries (at 2 * id) and LE entries (at 2 * id + 1) in trail order, so that
@@ -147,6 +151,18 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
    * them while the changes are recorded; {@code -Djacop.lcg.holeLimit} changes it.
    */
   public static final int HOLE_LIMIT = Integer.getInteger("jacop.lcg.holeLimit", 10_000);
+
+  /**
+   * Whether a shadow is kept up to date from the atoms themselves instead of being copied from the
+   * domain after every change and every backtrack ({@code -Djacop.lcg.incrementalShadow}). The runs
+   * of a shadow then describe the root domain without the removed values, whatever the bounds, so
+   * that undoing an atom on backtrack is a local update.
+   */
+  static final boolean INCREMENTAL_SHADOW =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.incrementalShadow", "true"));
+
+  // checks every shadow against its domain (testing only)
+  static final boolean CHECK_SHADOW = Boolean.getBoolean("jacop.lcg.checkShadow");
 
   /**
    * Intersects the domain of x with d, as {@code x.domain.in} does, but while a trail records the
@@ -229,6 +245,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       shadowSize = Arrays.copyOf(shadowSize, n);
       shadowMin = Arrays.copyOf(shadowMin, n);
       shadowMax = Arrays.copyOf(shadowMax, n);
+      rootMin = Arrays.copyOf(rootMin, n);
+      rootMax = Arrays.copyOf(rootMax, n);
       root = Arrays.copyOf(root, n);
       last = Arrays.copyOf(last, n);
       Arrays.fill(last, old, n, -1);
@@ -246,6 +264,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         d = d.previousDomain;
       }
       root[i] = d.cloneLight();
+      rootMin[i] = root[i].min();
+      rootMax[i] = root[i].max();
       setShadow(i, root[i]);
     }
     return i;
@@ -294,6 +314,10 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
 
   @Override
   public void domainChanged(IntVar x, int event) {
+    if (INCREMENTAL_SHADOW) {
+      domainChangedIncremental(x);
+      return;
+    }
     int i = slot(x);
     IntDomain now = x.dom();
     int min = now.min();
@@ -334,6 +358,223 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     setShadow(i, now);
   }
 
+  // the incremental variant of domainChanged: the shadow's runs are the root domain without the
+  // removed values (whatever the bounds), and shadowSize counts their values within the bounds
+  private void domainChangedIncremental(IntVar x) {
+    int i = slot(x);
+    IntDomain now = x.dom();
+    int min = now.min();
+    int max = now.max();
+    if (x == removing) {
+      removing = null;
+      if (min == shadowMin[i]
+          && max == shadowMax[i]
+          && now.getSize() == shadowSize[i] - 1
+          && !now.contains(removingValue)
+          && removeFromShadow(i, removingValue)) {
+        add(x, i, NE, removingValue);
+        sizeBefore[size - 1] = shadowSize[i] + 1;
+        if (CHECK_SHADOW) {
+          checkShadow(i, now);
+        }
+        return;
+      }
+    }
+    boolean full = now.getSize() == (long) max - min + 1;
+    if (min > shadowMin[i]) {
+      add(x, i, GE, min);
+      if (!full) {
+        shadowSize[i] -= countRuns(i, shadowMin[i], min - 1);
+      }
+      shadowMin[i] = min;
+    }
+    if (max < shadowMax[i]) {
+      add(x, i, LE, max);
+      if (!full) {
+        shadowSize[i] -= countRuns(i, max + 1, shadowMax[i]);
+      }
+      shadowMax[i] = max;
+    }
+    int size = now.getSize();
+    if (full) {
+      // no value of [min, max] is missing, so none was removed there now
+      shadowSize[i] = size;
+    } else if (size != shadowSize[i]) {
+      int n = numRuns[i];
+      if (n == 0) {
+        addHoles(x, i, now, min, max);
+      } else {
+        int[] r = runs[i];
+        int k = firstRunEndingAtOrAfter(r, n, min);
+        for (; k < n && r[k] <= max; k += 2) {
+          addHoles(x, i, now, Math.max(r[k], min), Math.min(r[k + 1], max));
+        }
+      }
+      spliceRuns(i, now, min, max);
+      shadowSize[i] = size;
+    }
+    if (CHECK_SHADOW) {
+      checkShadow(i, now);
+    }
+  }
+
+  // the index (even) of the first run of variable i's shadow that ends at or after v, or numRuns
+  private static int firstRunEndingAtOrAfter(int[] r, int n, int v) {
+    int lo = 0;
+    int hi = n / 2; // runs [lo, hi) are candidates
+    while (lo < hi) {
+      int mid = (lo + hi) >>> 1;
+      if (r[2 * mid + 1] < v) {
+        lo = mid + 1;
+      } else {
+        hi = mid;
+      }
+    }
+    return 2 * lo;
+  }
+
+  // the number of values of variable i's shadow runs in [lo, hi]
+  private int countRuns(int i, int lo, int hi) {
+    if (lo > hi) {
+      return 0;
+    }
+    int n = numRuns[i];
+    if (n == 0) {
+      return Math.max(0, Math.min(hi, rootMax[i]) - Math.max(lo, rootMin[i]) + 1);
+    }
+    int[] r = runs[i];
+    int c = 0;
+    for (int k = firstRunEndingAtOrAfter(r, n, lo); k < n && r[k] <= hi; k += 2) {
+      c += Math.min(hi, r[k + 1]) - Math.max(lo, r[k]) + 1;
+    }
+    return c;
+  }
+
+  // replaces the runs of variable i's shadow within [min, max] by the runs of d there
+  private void spliceRuns(int i, IntDomain d, int min, int max) {
+    int n = numRuns[i];
+    int[] r = runs[i];
+    if (n == 0) {
+      if (r == null || r.length < 2) {
+        r = new int[16];
+        runs[i] = r;
+      }
+      r[0] = rootMin[i];
+      r[1] = rootMax[i];
+      n = 2;
+    }
+    int first = firstRunEndingAtOrAfter(r, n, min);
+    int end = first; // the first run starting after max
+    while (end < n && r[end] <= max) {
+      end += 2;
+    }
+    // the parts of runs first and end - 2 outside [min, max] stay
+    int[] mid = scratch;
+    int m = 0;
+    if (first < n && r[first] < min) {
+      mid = ensure(mid, m + 2);
+      mid[m++] = r[first];
+      mid[m++] = min - 1;
+    }
+    for (int v = min; ; ) {
+      int e = d.runEnd(v);
+      mid = ensure(mid, m + 2);
+      mid[m++] = v;
+      mid[m++] = e;
+      if (e >= max) {
+        break;
+      }
+      v = d.nextValue(e);
+    }
+    if (end > first && r[end - 1] > max) {
+      mid = ensure(mid, m + 2);
+      mid[m++] = max + 1;
+      mid[m++] = r[end - 1];
+    }
+    scratch = mid;
+    int total = n - (end - first) + m;
+    if (total > r.length) {
+      r = Arrays.copyOf(r, Math.max(total, 2 * r.length));
+      runs[i] = r;
+    }
+    System.arraycopy(r, end, r, first + m, n - end);
+    System.arraycopy(mid, 0, r, first, m);
+    numRuns[i] = total;
+  }
+
+  private int[] scratch = new int[16];
+
+  private static int[] ensure(int[] a, int n) {
+    return n <= a.length ? a : Arrays.copyOf(a, 2 * n);
+  }
+
+  // undoes the atom (kind k, value v) of variable i, the last one of its entries, on the shadow
+  private void undoShadow(int i, int k, int v) {
+    if (k == GE) {
+      int b = 2 * i;
+      shadowMin[i] = numBounds[b] > 0 ? value[bounds[b][numBounds[b] - 1]] : rootMin[i];
+    } else if (k == LE) {
+      int b = 2 * i + 1;
+      shadowMax[i] = numBounds[b] > 0 ? value[bounds[b][numBounds[b] - 1]] : rootMax[i];
+    } else {
+      insertRun(i, v);
+    }
+  }
+
+  // adds value v, not in them, to variable i's shadow runs
+  private void insertRun(int i, int v) {
+    int n = numRuns[i];
+    int[] r = runs[i];
+    int k = firstRunEndingAtOrAfter(r, n, v); // the first run after v
+    boolean joinsBefore = k > 0 && r[k - 1] == v - 1;
+    boolean joinsAfter = k < n && r[k] == v + 1;
+    if (joinsBefore && joinsAfter) {
+      r[k - 1] = r[k + 1];
+      System.arraycopy(r, k + 2, r, k, n - k - 2);
+      numRuns[i] = n - 2;
+    } else if (joinsBefore) {
+      r[k - 1] = v;
+    } else if (joinsAfter) {
+      r[k] = v;
+    } else {
+      if (n + 2 > r.length) {
+        r = Arrays.copyOf(r, 2 * r.length);
+        runs[i] = r;
+      }
+      System.arraycopy(r, k, r, k + 2, n - k);
+      r[k] = v;
+      r[k + 1] = v;
+      numRuns[i] = n + 2;
+    }
+  }
+
+  // testing only: throws when the shadow of variable i is not domain d
+  private void checkShadow(int i, IntDomain d) {
+    int lo = shadowMin[i];
+    int hi = shadowMax[i];
+    boolean ok = lo == d.min() && hi == d.max() && shadowSize[i] == d.getSize();
+    for (int v = lo; ok && v <= hi; v++) {
+      ok = d.contains(v) == (countRuns(i, v, v) == 1);
+    }
+    if (!ok) {
+      throw new IllegalStateException(
+          "shadow of "
+              + entryVarName(i)
+              + " ["
+              + lo
+              + ", "
+              + hi
+              + "] size "
+              + shadowSize[i]
+              + " differs from "
+              + d);
+    }
+  }
+
+  private String entryVarName(int i) {
+    return last[i] >= 0 && entryVar[last[i]] != null ? entryVar[last[i]].id() : "#" + i;
+  }
+
   /**
    * Removes an inner value from a shadow without rebuilding it; false when the value is not in the
    * shadow. The bounds stay.
@@ -350,8 +591,8 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         r = new int[16];
         runs[i] = r;
       }
-      r[0] = shadowMin[i];
-      r[1] = shadowMax[i];
+      r[0] = INCREMENTAL_SHADOW ? rootMin[i] : shadowMin[i];
+      r[1] = INCREMENTAL_SHADOW ? rootMax[i] : shadowMax[i];
       n = 2;
       k = 0;
     } else {
@@ -420,6 +661,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
       level = Arrays.copyOf(level, n);
       reason = Arrays.copyOf(reason, n);
       previous = Arrays.copyOf(previous, n);
+      sizeBefore = Arrays.copyOf(sizeBefore, n);
     }
     entryVar[size] = x;
     kind[size] = k;
@@ -428,6 +670,7 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     Constraint propagating = store.currentConstraint;
     reason[size] = propagating == null ? null : propagating.reasonOwner();
     previous[size] = last[i];
+    sizeBefore[size] = shadowSize[i];
     last[i] = size;
     if (k == NE) {
       removals.put(i, v, size);
@@ -465,7 +708,13 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
         removals.remove(i, value[size]);
         numHoles[i]--;
       }
-      if (last[i] < 0 || level[last[i]] < removedLevel) {
+      if (INCREMENTAL_SHADOW) {
+        undoShadow(i, kind[size], value[size]);
+        shadowSize[i] = sizeBefore[size];
+        if (CHECK_SHADOW && !deferring && (last[i] < 0 || level[last[i]] < removedLevel)) {
+          checkShadow(i, x.dom());
+        }
+      } else if (last[i] < 0 || level[last[i]] < removedLevel) {
         // the variable's last removed entry: its domain is restored
         if (deferring) {
           if (!stale[i]) {
