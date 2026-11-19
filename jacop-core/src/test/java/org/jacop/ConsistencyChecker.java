@@ -115,6 +115,7 @@ import org.jacop.constraints.cumulative.EnergyPrecedence;
 import org.jacop.constraints.cumulative.HornFlow;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.FailException;
+import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
 import org.jacop.core.Store;
@@ -1266,6 +1267,71 @@ class ConsistencyChecker {
         concat(arcs, in, out));
   }
 
+  private static Model costMdd(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    // nodes 1..N by level; node 1 is the root, node 0 the terminal
+    List<Integer> levelList = new ArrayList<>();
+    List<int[]> byLevel = new ArrayList<>();
+    for (int l = 1; l <= n; l++) {
+      int width = l == 1 ? 1 : 1 + random.nextInt(2);
+      int[] ids = new int[width];
+      for (int w = 0; w < width; w++) {
+        levelList.add(l);
+        ids[w] = levelList.size();
+      }
+      byLevel.add(ids);
+    }
+    List<int[]> edges = new ArrayList<>(); // from, lo, hi, cost, to
+    for (int l = 0; l < n; l++) {
+      for (int u : byLevel.get(l)) {
+        int[] next = l + 1 < n ? byLevel.get(l + 1) : new int[] {0};
+        for (int e = 1 + random.nextInt(2); e > 0; e--) {
+          int lo = random.nextInt(3);
+          int hi = lo + random.nextInt(2);
+          edges.add(
+              new int[] {u, lo, hi, random.nextInt(4) - 1, next[random.nextInt(next.length)]});
+        }
+      }
+    }
+    int[] level = levelList.stream().mapToInt(Integer::intValue).toArray();
+    int m = edges.size();
+    int[] from = new int[m];
+    IntDomain[] label = new IntDomain[m];
+    int[] edgeCost = new int[m];
+    int[] to = new int[m];
+    for (int e = 0; e < m; e++) {
+      int[] d = edges.get(e);
+      from[e] = d[0];
+      label[e] = new IntervalDomain(d[1], d[2]);
+      edgeCost[e] = d[3];
+      to[e] = d[4];
+    }
+    IntVar[] x = vars(store, "x", n, 0, 3, random);
+    IntVar cost = aVar(store, "cost", -n, 2 * n, random);
+    return new Model(
+        new org.jacop.constraints.regular.CostMdd(x, level, from, label, edgeCost, to, cost),
+        t -> {
+          // (node, cost so far) pairs reachable after each variable
+          java.util.Set<Long> at = new java.util.HashSet<>();
+          at.add(((long) 1 << 32) | (0 & 0xffffffffL));
+          for (int i = 0; i < n; i++) {
+            java.util.Set<Long> next = new java.util.HashSet<>();
+            for (long state : at) {
+              int node = (int) (state >> 32);
+              int c = (int) state;
+              for (int[] d : edges) {
+                if (d[0] == node && d[1] <= t[i] && t[i] <= d[2]) {
+                  next.add(((long) d[4] << 32) | ((c + d[3]) & 0xffffffffL));
+                }
+              }
+            }
+            at = next;
+          }
+          return at.contains(t[n] & 0xffffffffL);
+        },
+        concat(x, new IntVar[] {cost}));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2394,7 +2460,8 @@ class ConsistencyChecker {
         new Case("MultiCostRegular", Level.NONE, (s, r) -> costRegular(s, r, true)),
         new Case("SoftGCC", Level.NONE, ConsistencyChecker::softGcc),
         new Case("IfThenElseBool", Level.DOMAIN, ConsistencyChecker::ifThenElseBool),
-        new Case("SequenceMdd", Level.NONE, ConsistencyChecker::sequenceMdd));
+        new Case("SequenceMdd", Level.NONE, ConsistencyChecker::sequenceMdd),
+        new Case("CostMdd", Level.NONE, ConsistencyChecker::costMdd));
   }
 
   /**
