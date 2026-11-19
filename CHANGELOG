@@ -8349,7 +8349,7 @@ Version 5.0 (unreleased)
    optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
    turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
 
-456. Free search (-f) on models with vehicle routes: LNS uses only route
+457. Free search (-f) on models with vehicle routes: LNS uses only route
    removal, related (Shaw) removal and random neighbourhoods (the graph,
    propagation, objective, constraint and line neighbourhoods are off
    unless lns-kinds names them), and takes lns-share-routes 10 instead of
