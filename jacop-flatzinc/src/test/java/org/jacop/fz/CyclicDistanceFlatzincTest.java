@@ -155,6 +155,31 @@ class CyclicDistanceFlatzincTest {
   }
 
   /**
+   * A distance whose a, b or e is declared equal to another variable (var int: q = a0): the
+   * equality is posted on that variable outside the constraint items, so the detector must keep it
+   * like an alias, or q loses its link when a0 is dropped.
+   */
+  @Test
+  void variablesOfDeclaredEqualitiesAreKept() throws IOException {
+    Random random = new Random(63);
+    int trials = Integer.getInteger("cyclic.trials", 200) / 4;
+    for (int trial = 0; trial < trials; trial++) {
+      String model = randomModel(random, false);
+      String target = new String[] {"a0", "b0", "e0"}[random.nextInt(3)];
+      int at = model.indexOf("constraint ");
+      model =
+          model.substring(0, at)
+              + "var int: q:: output_var = "
+              + target
+              + ";\n"
+              + model.substring(at);
+      String on = run(model, true, "-a");
+      String off = run(model, false, "-a");
+      assertEquals(solutions(off), solutions(on), "trial " + trial + "\n" + model);
+    }
+  }
+
+  /**
    * A distance whose a, b or e is declared with a domain narrower than |e|, c - a or the difference
    * it stands for: the declaration is a constraint, which the replacement of a and b and the
    * substitution of e would drop. The solutions must stay those of the detector off (13 or 19 here,

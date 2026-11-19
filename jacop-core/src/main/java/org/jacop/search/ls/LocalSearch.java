@@ -151,7 +151,7 @@ public final class LocalSearch {
   private final int[] hintValues;
   private final long stallSteps;
   private final long patienceMillis;
-  private final Collection<? extends Constraint> extra;
+  private Collection<? extends Constraint> extra;
   private final boolean jump;
   private final boolean permutations;
   private final int scheduling;
@@ -369,7 +369,8 @@ public final class LocalSearch {
 
   /**
    * Runs the local search until a solution is found (for satisfaction), the time limit, or {@link
-   * #stop()}.
+   * #stop()}. It runs once: its model is dropped when it returns, and the best solution and the
+   * counters stay.
    *
    * @return how the search ended.
    */
@@ -385,9 +386,12 @@ public final class LocalSearch {
     }
     build();
     if (scheduleOnly && schedule == null && flowShop == null) {
+      release();
       return Status.NOT_APPLICABLE;
     }
     if (timeUp()) {
+      // building took the time (418,000 clauses of j60_19_6)
+      release();
       return Status.UNKNOWN;
     }
     // the failures of local search's propagation must not train the heuristics of a later search
@@ -421,7 +425,37 @@ public final class LocalSearch {
         store.activityManagement(true);
       }
     }
+    release();
     return solution != null ? Status.SATISFIED : Status.UNKNOWN;
+  }
+
+  // drops the model of the search once it has ended: the caller keeps this object for the best
+  // solution and the counters, and the model (the extra clauses, the rows, the copies in the
+  // scratch store) held 260 MB on rcpsp-wet-diverse j60_19_6 under -f for the whole search after
+  private void release() {
+    extra = null;
+    scratch = null;
+    copies = null;
+    measures = null;
+    domains = null;
+    weight = null;
+    viol = null;
+    scope = null;
+    coef = null;
+    rhs = null;
+    rel = null;
+    enforcer = null;
+    enforcedValue = null;
+    lhs = null;
+    occ = null;
+    occCoef = null;
+    occKind = null;
+    occCounted = null;
+    selOcc = null;
+    selBy = null;
+    defFunction = null;
+    defInputs = null;
+    dependents = null;
   }
 
   /** Stops the search; it may be called from another thread. */

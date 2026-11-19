@@ -35,14 +35,18 @@ import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.jacop.constraints.Alldistinct;
 import org.jacop.constraints.AmongSeq;
+import org.jacop.constraints.BoolClause;
+import org.jacop.constraints.Constraint;
 import org.jacop.constraints.Count;
 import org.jacop.constraints.CountValuesBounds;
 import org.jacop.constraints.ElementVariableFast;
@@ -134,6 +138,66 @@ class LocalSearchTest {
       }
       assertTrue(Math.abs(sum - target) <= 5, sum + " vs " + target);
     }
+  }
+
+  /**
+   * The model of the search is dropped when it returns; the best solution and the counters stay.
+   * Kept, the clauses given as extra constraints, the rows and the copies of the scratch store held
+   * 260 MB of rcpsp-wet-diverse j60_19_6 (MiniZinc Challenge 2019) under -f for the rest of the
+   * run, since the caller keeps the search for its solution and statistics.
+   */
+  @Test
+  void dropsItsModelWhenItReturns() throws Exception {
+    Store store = new Store();
+    int n = 6;
+    IntVar[] x = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    IntVar[] q = new IntVar[n];
+    for (int i = 0; i < n; i++) {
+      q[i] = new IntVar(store, "q" + i, 0, n - 1);
+    }
+    store.impose(new Alldistinct(q));
+    List<Constraint> clauses = new ArrayList<>();
+    for (int i = 0; i + 1 < n; i++) {
+      // x[i] or not x[i + 1]
+      clauses.add(new BoolClause(new IntVar[] {x[i]}, new IntVar[] {x[i + 1]}));
+    }
+    assertTrue(store.consistency());
+    IntVar[] all = new IntVar[2 * n];
+    System.arraycopy(x, 0, all, 0, n);
+    System.arraycopy(q, 0, all, n, n);
+    LocalSearch ls =
+        LocalSearch.builder(store)
+            .order(all)
+            .extraConstraints(clauses)
+            .timeLimit(LIMIT)
+            .seed(3)
+            .build();
+    assertEquals(LocalSearch.Status.SATISFIED, ls.solve());
+    for (String name : new String[] {"extra", "scope", "coef", "occ", "domains"}) {
+      Field f = LocalSearch.class.getDeclaredField(name);
+      f.setAccessible(true);
+      assertNull(f.get(ls), name);
+    }
+    int[] v = ls.getSolution(all);
+    assertNotNull(v);
+    for (int i = 0; i + 1 < n; i++) {
+      assertTrue(v[i] == 1 || v[i + 1] == 0, Arrays.toString(v));
+    }
+    assertEquals(n, Arrays.stream(v, n, 2 * n).distinct().count(), Arrays.toString(v));
+    assertTrue(ls.getSolutions() > 0);
+    assertNotNull(ls.toString());
+    // also when the time is up once the model is built, as on j60_19_6, where building it took
+    // the whole share of local search
+    LocalSearch stopped =
+        LocalSearch.builder(store).order(all).extraConstraints(clauses).timeLimit(LIMIT).build();
+    stopped.stop();
+    assertEquals(LocalSearch.Status.UNKNOWN, stopped.solve());
+    Field extra = LocalSearch.class.getDeclaredField("extra");
+    extra.setAccessible(true);
+    assertNull(extra.get(stopped));
   }
 
   /**
