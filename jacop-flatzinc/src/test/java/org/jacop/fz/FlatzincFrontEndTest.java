@@ -4805,14 +4805,31 @@ class FlatzincFrontEndTest {
     FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
     loader.load();
     org.jacop.fz.constraints.Support support = loader.parser.cc.support;
-    java.lang.reflect.Field substituted =
-        org.jacop.fz.constraints.Support.class.getDeclaredField("substitutedControls");
-    substituted.setAccessible(true);
-    assertFalse(((Map<?, ?>) substituted.get(support)).isEmpty(), "a control was eliminated");
     java.lang.reflect.Field nodes =
         org.jacop.fz.constraints.Support.class.getDeclaredField("controlSubstitutions");
     nodes.setAccessible(true);
     assertTrue(((Map<?, ?>) nodes.get(support)).isEmpty());
+    // the substitutions by eliminated control went too: only detectors read them while posting
+    // (4.5 MB of rcpsp_max psp_ubo500_33 during the search)
+    java.lang.reflect.Field substituted =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("substitutedControls");
+    substituted.setAccessible(true);
+    assertTrue(((Map<?, ?>) substituted.get(support)).isEmpty());
+    // a control was eliminated: without enforcement inlining the store holds more constraints
+    String old = System.setProperty("org.jacop.fz.enforcementInlining", "false");
+    try {
+      FlatzincLoader plain = new FlatzincLoader(new String[] {file.toString()});
+      plain.load();
+      assertTrue(
+          plain.getStore().numberConstraints() > loader.getStore().numberConstraints(),
+          plain.getStore().numberConstraints() + " vs " + loader.getStore().numberConstraints());
+    } finally {
+      if (old == null) {
+        System.clearProperty("org.jacop.fz.enforcementInlining");
+      } else {
+        System.setProperty("org.jacop.fz.enforcementInlining", old);
+      }
+    }
   }
 
   @Test
