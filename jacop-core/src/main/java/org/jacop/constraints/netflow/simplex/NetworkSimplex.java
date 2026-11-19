@@ -78,6 +78,9 @@ public class NetworkSimplex {
   // the set of nodes with non-zero balance
   public final Set<Node> infeasibleNodes;
   public final List<Arc> allArcs;
+  // block search pricing; setting the system property org.jacop.netflow.pricing to dantzig scans
+  // every arc at each pivot instead. It is read when the network is made, so that a test can
+  // compare the two
   protected final PivotRule pivotRule;
   public int numArcs;
   // second 'return' value of augmentFlow method
@@ -103,7 +106,10 @@ public class NetworkSimplex {
     this.lower = allArcs.toArray(new Arc[0]);
     this.root = new Node("(root)", 0);
     this.numArcs = lower.length;
-    this.pivotRule = new Danzig(this);
+    this.pivotRule =
+        "dantzig".equals(System.getProperty("org.jacop.netflow.pricing"))
+            ? new Danzig(this)
+            : new BlockSearch(this);
     this.infeasibleNodes = new LinkedHashSet<>();
 
     // initialize index pointers

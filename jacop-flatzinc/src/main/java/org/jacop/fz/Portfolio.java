@@ -39,6 +39,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -143,6 +144,23 @@ final class Portfolio {
 
   /** How long the portfolio waits for its stopped threads to end after printing the answer. */
   private static final long JOIN_MILLIS = 10_000;
+
+  // the statistics of a thread printed per thread with --search-statistics (the solver's own keys)
+  private static final List<String> WORKER_STATISTICS =
+      List.of(
+          "solveTime",
+          "nodes",
+          "failures",
+          "restarts",
+          "propagations",
+          "solutions",
+          "objective",
+          "lcgSatConflicts",
+          "lcgSatPropagations",
+          "lcgLearntAvg",
+          "lcgSlowConflicts",
+          "lnsRuns",
+          "lnsImproved");
 
   private static final String UNSATISFIABLE = "=====UNSATISFIABLE=====";
 
@@ -348,7 +366,38 @@ final class Portfolio {
         break;
       }
     }
+    if (options.searchStatistics()) {
+      out.print(workerStatistics());
+      out.flush();
+    }
     return 0;
+  }
+
+  /**
+   * The statistics of each thread, as {@code portfolioThread.<name>.<key>} lines in a block of
+   * their own after the answer, so that a slow or idle thread of a portfolio can be told apart: the
+   * keys of {@link #WORKER_STATISTICS} the thread printed last, and how it ended. A thread that has
+   * not ended within the wait after the answer shows what it printed so far.
+   *
+   * @return the block, empty when no thread printed any
+   */
+  private String workerStatistics() {
+    StringBuilder s = new StringBuilder();
+    for (Worker w : workers) {
+      Map<String, String> stats = w.capture.statistics();
+      String prefix = "%%%mzn-stat: portfolioThread." + w.name + ".";
+      s.append(prefix).append("ended=").append(w.ending()).append('\n');
+      for (String key : WORKER_STATISTICS) {
+        String value = stats.get(key);
+        if (value != null) {
+          s.append(prefix).append(key).append('=').append(value).append('\n');
+        }
+      }
+    }
+    if (!s.isEmpty()) {
+      s.append("%%%mzn-stat-end\n");
+    }
+    return s.toString();
   }
 
   /**
@@ -507,6 +556,11 @@ final class Portfolio {
       }
     }
     a.addAll(flags);
+    if (options.searchStatistics() && !a.contains("--search-statistics")) {
+      // the thread prints its statistics into its capture, for workerStatistics(); -s -v leaves
+      // only -v to the thread
+      a.add("--search-statistics");
+    }
     if (options.getTimeOut() > 0) {
       a.add("-t");
       a.add(Integer.toString(options.getRemainingTimeOut()));
@@ -749,6 +803,9 @@ final class Portfolio {
     private final List<Runnable> stops = new CopyOnWriteArrayList<>();
     private volatile boolean stopped;
     private Thread thread;
+    // what the thread printed, set before the thread starts
+    private final StatusCapture capture = new StatusCapture();
+    private volatile boolean ended;
 
     Worker(String name, List<String> args) {
       this.name = name;
@@ -756,7 +813,6 @@ final class Portfolio {
     }
 
     private void run(String file, SimpleNode model) {
-      StatusCapture capture = new StatusCapture();
       CAPTURE.set(capture);
       boolean ran = false;
       try {
@@ -775,6 +831,7 @@ final class Portfolio {
         FzConsole.printlnErr("%% portfolio thread " + name + " stopped: " + e);
       } finally {
         CAPTURE.remove();
+        ended = true;
         ended(ran && !stopped && capture.complete);
       }
     }
@@ -889,6 +946,21 @@ final class Portfolio {
       return stopped;
     }
 
+    /**
+     * How the thread ended, as the statistics give it: complete (its search proved the answer),
+     * stopped (by the portfolio, which had its answer), done (it ended on its own, for example at
+     * its time-out) or running (it had not ended when the statistics were printed).
+     */
+    private String ending() {
+      if (!ended) {
+        return "running";
+      }
+      if (capture.complete) {
+        return "complete";
+      }
+      return stopped ? "stopped" : "done";
+    }
+
     private void stop() {
       stopped = true;
       for (Runnable r : stops) {
@@ -983,11 +1055,19 @@ final class Portfolio {
     }
   }
 
-  /** The output of a thread: only the line that says its search is complete matters. */
+  /**
+   * The output of a thread: the line that says its search is complete, and the statistics lines of
+   * {@link #WORKER_STATISTICS}, the last value of each.
+   */
   private static final class StatusCapture extends OutputStream {
 
+    private static final String STAT = "%%%mzn-stat: ";
+    // longer than any status line and any statistics line kept
+    private static final int LINE_LIMIT = 128;
+
     private final StringBuilder line = new StringBuilder();
-    boolean complete;
+    private final Map<String, String> statistics = new HashMap<>();
+    volatile boolean complete;
 
     @Override
     public void write(int b) {
@@ -995,10 +1075,32 @@ final class Portfolio {
         String l = line.toString().strip();
         if (SEARCH_COMPLETE.equals(l) || UNSATISFIABLE.equals(l)) {
           complete = true;
+        } else if (l.startsWith(STAT)) {
+          statistic(l);
         }
         line.setLength(0);
-      } else if (line.length() < 64) {
+      } else if (line.length() < LINE_LIMIT) {
         line.append((char) b);
+      }
+    }
+
+    private void statistic(String l) {
+      int eq = l.indexOf('=');
+      if (eq < 0 || line.length() >= LINE_LIMIT) {
+        return;
+      }
+      String key = l.substring(STAT.length(), eq);
+      if (WORKER_STATISTICS.contains(key)) {
+        synchronized (statistics) {
+          statistics.put(key, l.substring(eq + 1));
+        }
+      }
+    }
+
+    /** A copy of the statistics kept so far. */
+    Map<String, String> statistics() {
+      synchronized (statistics) {
+        return new HashMap<>(statistics);
       }
     }
 

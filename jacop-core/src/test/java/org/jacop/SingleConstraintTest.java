@@ -125,6 +125,7 @@ import org.jacop.constraints.LinearBool;
 import org.jacop.constraints.LinearInt;
 import org.jacop.constraints.LinearIntDom;
 import org.jacop.constraints.Max;
+import org.jacop.constraints.MaxCliqueBound;
 import org.jacop.constraints.MaxSimple;
 import org.jacop.constraints.Member;
 import org.jacop.constraints.Min;
@@ -235,6 +236,7 @@ import org.jacop.search.SimpleSelect;
 import org.jacop.search.SimpleSolutionListener;
 import org.jacop.search.SplitSelect;
 import org.jacop.util.DominatorTree;
+import org.jacop.util.QueueForward;
 import org.jacop.util.fsm.Fsm;
 import org.jacop.util.fsm.FsmState;
 import org.jacop.util.fsm.FsmTransition;
@@ -6895,11 +6897,59 @@ class SingleConstraintTest extends TestHelper {
   // exactly what the probe of each arc by pivots of the network simplex prunes: random dives over
   // random networks with
   // parallel arcs, capacities up to 9 and a tight cost bound, compared domain by domain.
+  // an implication of a constraint that forwards no variable events kept an empty LinkedHashMap of
+  // its own: 105 MB over the 623,000 implications of XCSP 2022 RoomMate-sr0700
+  @Test
+  void queueForwardWithoutForwardingKeepsNoMapOfItsOwn() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 9);
+    IntVar y = new IntVar(store, "y", 0, 9);
+    QueueForward<PrimitiveConstraint> none =
+        new QueueForward<>(new XlteqC(x, 4), List.<Var>of(x, y));
+    assertThat(none.isEmpty()).isTrue();
+    assertThat(none.forwardMap).isNotInstanceOf(java.util.LinkedHashMap.class).isEmpty();
+    PrimitiveConstraint and = new And(new XlteqC(x, 4), new XlteqC(y, 3));
+    QueueForward<PrimitiveConstraint> forwarding = new QueueForward<>(and, List.<Var>of(x, y));
+    assertThat(forwarding.isEmpty()).isFalse();
+    assertThat(forwarding.forwardMap).containsOnlyKeys(x, y);
+  }
+
   @Test
   void testNetworkFlowShortestPathDecisionsMatchProbes() {
-    Random random = new Random(1215);
-    for (int trial = 0; trial < 300; trial++) {
-      int nodeCount = 3 + random.nextInt(5);
+    assertNetworkFlowSettingsAgree(
+        new Random(1215),
+        300,
+        3,
+        5,
+        new String[] {"org.jacop.netflow.generalArcs", "org.jacop.netflow.shortestPaths"},
+        new String[][] {{"false", "false"}, {"true", "true"}});
+  }
+
+  // Block search pricing (the default) and Dantzig pricing reach different optimal bases; the
+  // pruning, decided by the costs of residual paths, must be the same. Networks of up to 60 arcs,
+  // so that a scan stops after a block of 16.
+  @Test
+  void testNetworkFlowBlockSearchPricingMatchesDantzig() {
+    assertNetworkFlowSettingsAgree(
+        new Random(1118),
+        300,
+        6,
+        15,
+        new String[] {"org.jacop.netflow.pricing"},
+        new String[][] {{"dantzig"}, {"block"}});
+  }
+
+  // random dives over random networks with parallel arcs, capacities up to 9 and a tight cost
+  // bound, imposed once under each setting of the given properties and compared domain by domain
+  private static void assertNetworkFlowSettingsAgree(
+      Random random,
+      int trials,
+      int minNodes,
+      int extraNodes,
+      String[] properties,
+      String[][] settings) {
+    for (int trial = 0; trial < trials; trial++) {
+      int nodeCount = minNodes + random.nextInt(extraNodes);
       int arcCount = nodeCount + random.nextInt(2 * nodeCount);
       int[][] arcs = new int[arcCount][2];
       int[] weights = new int[arcCount];
@@ -6920,12 +6970,15 @@ class SingleConstraintTest extends TestHelper {
       int costMax = (int) (flowCost * (50 + random.nextInt(60)) / 100);
       Store[] stores = new Store[2];
       IntVar[][] vars = new IntVar[2][];
-      String previous = System.getProperty("org.jacop.netflow.generalArcs");
-      String previousPaths = System.getProperty("org.jacop.netflow.shortestPaths");
+      String[] previous = new String[properties.length];
+      for (int p = 0; p < properties.length; p++) {
+        previous[p] = System.getProperty(properties[p]);
+      }
       try {
         for (int s = 0; s < 2; s++) {
-          System.setProperty("org.jacop.netflow.generalArcs", s == 0 ? "false" : "true");
-          System.setProperty("org.jacop.netflow.shortestPaths", s == 0 ? "false" : "true");
+          for (int p = 0; p < properties.length; p++) {
+            System.setProperty(properties[p], settings[s][p]);
+          }
           stores[s] = new Store();
           NetworkBuilder net = new NetworkBuilder();
           Node[] nodes = new Node[nodeCount];
@@ -6942,15 +6995,12 @@ class SingleConstraintTest extends TestHelper {
           stores[s].impose(net.build());
         }
       } finally {
-        if (previous == null) {
-          System.clearProperty("org.jacop.netflow.generalArcs");
-        } else {
-          System.setProperty("org.jacop.netflow.generalArcs", previous);
-        }
-        if (previousPaths == null) {
-          System.clearProperty("org.jacop.netflow.shortestPaths");
-        } else {
-          System.setProperty("org.jacop.netflow.shortestPaths", previousPaths);
+        for (int p = 0; p < properties.length; p++) {
+          if (previous[p] == null) {
+            System.clearProperty(properties[p]);
+          } else {
+            System.setProperty(properties[p], previous[p]);
+          }
         }
       }
       String network =
@@ -8028,13 +8078,13 @@ class SingleConstraintTest extends TestHelper {
                 "Diff2Exclusive",
                 "solutions=274199 nodes=281043 decisions=277601 wrong=3442 hash=e3ba8c5362d530ad",
                 "Disjoint",
-                "solutions=250703 nodes=258629 decisions=254646 wrong=3983 hash=688d304cb8d0f443",
+                "solutions=247963 nodes=260991 decisions=254457 wrong=6534 hash=a1fa0a58cbb797cb",
                 "DisjointNoProfile",
-                "solutions=250683 nodes=263587 decisions=257115 wrong=6472 hash=37879c275e329ec3",
+                "solutions=247963 nodes=265933 decisions=256928 wrong=9005 hash=5fb343dc7ec8745",
                 "DisjointConditional",
-                "solutions=737646 nodes=765448 decisions=751527 wrong=13921 hash=f7e9e3977ef731a1",
+                "solutions=737646 nodes=757904 decisions=747755 wrong=10149 hash=f7e9e3977ef731a1",
                 "DisjointConditionalNoProfile",
-                "solutions=737646 nodes=766920 decisions=752263 wrong=14657 hash=5f89905bc162726d"));
+                "solutions=737646 nodes=759402 decisions=748504 wrong=10898 hash=5f89905bc162726d"));
   }
 
   private static String rectangleSearchFingerprint(String kind) {
@@ -11236,5 +11286,231 @@ class SingleConstraintTest extends TestHelper {
     md.domain.inComplement(store.level, md, 0);
     assertThat(store.consistency()).isTrue();
     assertThat(mp.min()).isEqualTo(1);
+  }
+
+  /** An EqBool over a single variable holds whatever its value, so the result is 1. */
+  @Test
+  void eqBoolOfOneVariableHolds() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 1);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    store.impose(new EqBool(new IntVar[] {x}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(y.min()).isEqualTo(1);
+    assertThat(x.max() - x.min()).isEqualTo(1);
+  }
+
+  /**
+   * Sum read the bounds of the sum before narrowing it: with x0 = x2 = 3, x1 in {-2, -1} and the
+   * sum in {4, 6, 7}, the sum becomes 4 through its hole, which leaves x1 = -2, but the variables
+   * were not narrowed and the constraint stopped short of its fixpoint.
+   */
+  @Test
+  void sumFollowsTheSumThroughAHole() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 3, 3);
+    IntVar x1 = valuesVar(store, "x1", -2, -1);
+    IntVar x2 = new IntVar(store, "x2", 3, 3);
+    IntVar sum = valuesVar(store, "sum", 4, 6, 7);
+    store.impose(new Sum(new IntVar[] {x0, x1, x2}, sum));
+    assertThat(store.consistency()).isTrue();
+    assertThat(sum.value()).isEqualTo(4);
+    assertThat(x1.value()).isEqualTo(-2);
+  }
+
+  /**
+   * The condition of a DisjointConditional pair was never fixed: when the compulsory parts of the
+   * two rectangles overlap, they cannot be kept apart and the condition is 0.
+   */
+  @Test
+  void disjointConditionalReleasesAPairThatMustOverlap() {
+    Store store = new Store();
+    IntVar[][] r = {
+      {new IntVar(store, "x1", 0, 0), new IntVar(store, "y1", 0, 0), one(store), one(store)},
+      {new IntVar(store, "x2", 0, 0), new IntVar(store, "y2", 0, 0), oneTwo(store), one(store)}
+    };
+    IntVar c = new IntVar(store, "c", 0, 1);
+    store.impose(new DisjointConditional(r, List.of(List.of(1, 2)), List.of(c)));
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+  }
+
+  /**
+   * MaxCliqueBound.satisfied() read the value of a vertex in conflict with a vertex fixed to 1
+   * before checking that it is fixed, and threw.
+   */
+  @Test
+  void maxCliqueBoundSatisfiedWithAnOpenVertex() {
+    Store store = new Store();
+    IntVar[] x = {
+      new IntVar(store, "x0", 1, 1), new IntVar(store, "x1", 0, 1), new IntVar(store, "x2", 0, 0)
+    };
+    IntVar sum = new IntVar(store, "sum", 1, 1);
+    MaxCliqueBound c = new MaxCliqueBound(x, new int[][] {{1}, {}, {}}, sum);
+    store.impose(c);
+    assertThat(c.satisfied()).isFalse();
+  }
+
+  /**
+   * ConditionalSelect was woken only by bound changes, but a hole can rule a branch out: x0 = 3 and
+   * y loses 3 inside its bounds, so the first branch can no longer be selected and b0 = 0.
+   */
+  @Test
+  void conditionalSelectWakesOnAHole() {
+    Store store = new Store();
+    IntVar b0 = new IntVar(store, "b0", 0, 1);
+    IntVar b1 = new IntVar(store, "b1", 0, 1);
+    IntVar x0 = new IntVar(store, "x0", 3, 3);
+    IntVar x1 = new IntVar(store, "x1", 1, 4);
+    IntVar y = new IntVar(store, "y", 1, 4);
+    store.impose(new ConditionalSelect(new IntVar[] {b0, b1}, new IntVar[] {x0, x1}, y));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.max()).isEqualTo(1);
+    store.setLevel(1);
+    y.domain.inComplement(1, y, 3);
+    assertThat(store.consistency()).isTrue();
+    assertThat(b0.max()).isZero();
+  }
+
+  private static IntVar valuesVar(Store store, String name, int... values) {
+    IntVar v = new IntVar(store, name);
+    for (int value : values) {
+      v.addDom(value, value);
+    }
+    return v;
+  }
+
+  /**
+   * After a forbidden region a rectangle's length was limited by the gap between the region and the
+   * interval of its start domain that met the region, not the least start before the region, and
+   * starts past the region were left out when the domain had a hole right at its end.
+   */
+  @Test
+  void disjointKeepsTheLengthsOfStartsAcrossHoles() {
+    // B (x 2, y 0 or 2) fits on top of A ([1, 3) x [0, 1)) with any height
+    Store store = new Store();
+    IntVar by = valuesVar(store, "by", 0, 2);
+    IntVar bh = valuesVar(store, "bh", 0, 1, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {valuesVar(store, "ax", 1), valuesVar(store, "bx", 2)},
+            new IntVar[] {valuesVar(store, "ay", 0), by},
+            new IntVar[] {valuesVar(store, "aw", 2), valuesVar(store, "bw", 1)},
+            new IntVar[] {valuesVar(store, "ah", 1), bh}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bh.max()).isEqualTo(2);
+
+    // B at x 0 may be 1 wide next to A ([1 or 2, +2) x [0, 2))
+    store = new Store();
+    IntVar bw = valuesVar(store, "bw", 0, 1, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {valuesVar(store, "ax", 1, 2), valuesVar(store, "bx", 0, 2)},
+            new IntVar[] {valuesVar(store, "ay", 0), valuesVar(store, "by", 0)},
+            new IntVar[] {valuesVar(store, "aw", 2), bw},
+            new IntVar[] {valuesVar(store, "ah", 2), valuesVar(store, "bh", 1, 2)}));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bw.max()).isPositive();
+  }
+
+  /** A rectangle of Disjoint 0 long in both dimensions is a point and may not lie in another. */
+  @Test
+  void disjointRejectsAPointInsideARectangle() {
+    Store store = new Store();
+    IntVar[] fixed = {
+      valuesVar(store, "ax", 1), valuesVar(store, "px", 2),
+      valuesVar(store, "ay", 0), valuesVar(store, "py", 1),
+      valuesVar(store, "aw", 2), valuesVar(store, "pw", 0),
+      valuesVar(store, "ah", 2), valuesVar(store, "ph", 0)
+    };
+    Disjoint c =
+        new Disjoint(
+            new IntVar[] {fixed[0], fixed[1]},
+            new IntVar[] {fixed[2], fixed[3]},
+            new IntVar[] {fixed[4], fixed[5]},
+            new IntVar[] {fixed[6], fixed[7]});
+    store.impose(c);
+    assertThat(c.satisfied()).isFalse();
+    assertThat(store.consistency()).isFalse();
+  }
+
+  /**
+   * A rectangle of width 0 may lie on the common border of two touching rectangles: B at x = 2
+   * between A (x in [0, 2)) and C (x in [2, 3)). The merged barrier of A and C left no gap, so
+   * Disjoint forced the height of B to 0 although B = (2, 1, 0, 2) is a solution.
+   */
+  @Test
+  void disjointLetsASegmentLieOnTheBorderOfTouchingRectangles() {
+    Store store = new Store();
+    IntVar bh = new IntVar(store, "bh", 0, 2);
+    store.impose(
+        new Disjoint(
+            new IntVar[] {
+              new IntVar(store, "ax", 0, 0),
+              new IntVar(store, "bx", 1, 2),
+              new IntVar(store, "cx", 2, 2)
+            },
+            new IntVar[] {
+              new IntVar(store, "ay", 0, 1),
+              new IntVar(store, "by", 1, 1),
+              new IntVar(store, "cy", 1, 1)
+            },
+            new IntVar[] {
+              new IntVar(store, "aw", 2, 2),
+              new IntVar(store, "bw", 0, 2),
+              new IntVar(store, "cw", 1, 1)
+            },
+            new IntVar[] {new IntVar(store, "ah", 2, 2), bh, new IntVar(store, "ch", 1, 1)},
+            false));
+    assertThat(store.consistency()).isTrue();
+    assertThat(bh.max()).isEqualTo(2);
+  }
+
+  /**
+   * A successor variable of ArcTimes that is also a time variable queues nodes while the constraint
+   * prunes it; they were dropped at the end of the pass. Here t0 = t1 = x1, so node 1 can follow
+   * neither node 0 (t1 &ge; t0 + 1) nor itself (lag 1), and node 1 cannot reach node 0 (t0 &ge; t1
+   * + 2): there is no solution, but the root propagation stopped once x1 was pruned.
+   */
+  @Test
+  void arcTimesFollowsItsOwnPruningOfASharedVariable() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 1, 3);
+    IntVar x1 = new IntVar(store, "x1", 1, 2);
+    IntVar x2 = new IntVar(store, "x2", 2, 3);
+    IntVar t2 = new IntVar(store, "t2", 0, 4);
+    store.impose(
+        new org.jacop.constraints.ArcTimes(
+            new IntVar[] {x0, x1, x2},
+            1,
+            new IntVar[] {x1, x1, t2},
+            new long[][] {{2, 1, 1}, {2, 1, -1}, {2, 0, -1}}));
+    assertThat(store.consistency()).isFalse();
+  }
+
+  /** XmulYeqC divided c by y's whole interval around 0, which kept every factor up to |c|. */
+  @Test
+  void xmulYeqCKeepsOnlyDivisorsOfC() {
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", -2, 1);
+    IntVar y = new IntVar(store, "y", -2, 1);
+    store.impose(new XmulYeqC(x, y, 2));
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.dom().toString()).isEqualTo("{-2..-1}");
+    assertThat(y.dom().toString()).isEqualTo("{-2..-1}");
+
+    Store zero = new Store();
+    IntVar a = new IntVar(zero, "a", -3, -1);
+    a.addDom(1, 3);
+    IntVar b = new IntVar(zero, "b", -1, 1);
+    zero.impose(new XmulYeqC(a, b, 0));
+    assertThat(zero.consistency()).isTrue();
+    assertThat(b.value()).isZero();
+
+    Store large = new Store();
+    IntVar p = new IntVar(large, "p", -1000, 1000);
+    IntVar q = new IntVar(large, "q", -1000, 1000);
+    large.impose(new XmulYeqC(p, q, 999_983 * 2));
+    assertThat(large.consistency()).isFalse();
   }
 }

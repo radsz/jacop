@@ -45,6 +45,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,6 +57,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -4187,6 +4190,113 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("a = array1d(1..2, [1, 1]);"), out);
       assertTrue(out.contains("a = array1d(1..2, [0, 0]);"), out);
       assertFalse(out.contains("true,") || out.contains("false,"), out);
+    }
+  }
+
+  @Test
+  void constraintNodesWithAnInlinedControlAreReleasedAfterPosting(@TempDir Path dir)
+      throws Exception {
+    // the constraint nodes posted with an eliminated control stayed in a map for the whole search
+    // and, through their parents, the parse tree of every such constraint: 38 MB of rcpsp_max
+    // psp_ubo500_33 (99,000 disjunctions b1 -> s1 + d1 <= s2, b2 -> s2 + d2 <= s1, b1 \/ b2)
+    String model =
+        """
+        var 0..10: s1:: output_var;
+        var 0..10: s2:: output_var;
+        var bool: b1;
+        var bool: b2;
+        constraint int_lin_le_imp([1,-1],[s1,s2],-3,b1);
+        constraint int_lin_le_imp([1,-1],[s2,s1],-4,b2);
+        constraint bool_clause([b1,b2],[]);
+        solve satisfy;
+        """;
+    Path file = dir.resolve("disjunction.fzn");
+    Files.writeString(file, model);
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    org.jacop.fz.constraints.Support support = loader.parser.cc.support;
+    java.lang.reflect.Field substituted =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("substitutedControls");
+    substituted.setAccessible(true);
+    assertFalse(((Map<?, ?>) substituted.get(support)).isEmpty(), "a control was eliminated");
+    java.lang.reflect.Field nodes =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("controlSubstitutions");
+    nodes.setAccessible(true);
+    assertTrue(((Map<?, ?>) nodes.get(support)).isEmpty());
+  }
+
+  @Test
+  void unitSumsAreReleasedAfterPosting(@TempDir Path dir) throws Exception {
+    // every sum of unit coefficients was kept for the AlldiffSum and partition sum detectors for
+    // the whole search: 1.6 million records, 146 MB, on XCSP 2022 DiamondFree-80
+    StringBuilder m = new StringBuilder();
+    for (int i = 0; i < 6; i++) {
+      m.append("var 0..1: b").append(i).append(":: output_var;\n");
+    }
+    m.append("constraint int_lin_le([1,1,1],[b0,b1,b2],2);\n");
+    m.append("constraint int_lin_le([1,1,1],[b3,b4,b5],2);\n");
+    m.append("constraint int_lin_le([1,1,1],[b0,b3,b5],1);\n");
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("sums.fzn");
+    Files.writeString(file, m.toString());
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    java.lang.reflect.Field sums =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("unitSums");
+    sums.setAccessible(true);
+    assertTrue(((List<?>) sums.get(loader.parser.cc.support)).isEmpty());
+  }
+
+  /**
+   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
+   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
+   * RoomMate-sr0700 (163 MB while the model is read).
+   */
+  @Test
+  void parseTreeNodesKeepNoParserOrValue() {
+    List<String> fields =
+        Arrays.stream(SimpleNode.class.getDeclaredFields())
+            .filter(f -> !Modifier.isStatic(f.getModifiers()))
+            .map(Field::getName)
+            .sorted()
+            .toList();
+    assertEquals(List.of("children", "id", "parent"), fields);
+  }
+
+  @Test
+  void channelMapsAreReleasedAfterPosting(@TempDir Path dir) throws Exception {
+    // the int_eq_reif and int_eq_imp constraints collected for the channels were kept for the
+    // whole search: 115 MB on XCSP 2022 RoomMate-sr0700 (490,000 implications)
+    String model =
+        """
+        var 1..3: x:: output_var;
+        var bool: a;
+        var bool: b;
+        var bool: c;
+        var bool: d;
+        constraint int_eq_reif(x,1,a);
+        constraint int_eq_reif(x,2,b);
+        constraint int_eq_imp(x,2,c);
+        constraint int_eq_imp(x,3,d);
+        constraint bool_clause([a,b,c,d],[]);
+        solve satisfy;
+        """;
+    Path file = dir.resolve("channels.fzn");
+    Files.writeString(file, model);
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    org.jacop.fz.constraints.Support support = loader.parser.cc.support;
+    Class<?> channelMap = Class.forName("org.jacop.fz.constraints.ChannelMap");
+    java.lang.reflect.Field cs = channelMap.getDeclaredField("cs");
+    java.lang.reflect.Field byBoolean = channelMap.getDeclaredField("byBoolean");
+    cs.setAccessible(true);
+    byBoolean.setAccessible(true);
+    for (String name : new String[] {"reif", "imply"}) {
+      java.lang.reflect.Field f = org.jacop.fz.constraints.Support.class.getDeclaredField(name);
+      f.setAccessible(true);
+      Object map = f.get(support);
+      assertTrue(((Map<?, ?>) cs.get(map)).isEmpty(), name);
+      assertTrue(((Map<?, ?>) byBoolean.get(map)).isEmpty(), name);
     }
   }
 
