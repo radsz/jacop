@@ -207,10 +207,11 @@ class GlobalConstraints implements ParserTreeConstants {
   // the tasks of the cumulative constraints read so far, see taskKey
   private final Set<List<IntVar>> cumulativeTasks = new HashSet<>();
 
-  // Tables over at most TableCliques.MAX_ARITY variables with the same tuples (after the filtering
-  // by the domains) share one tuple array, the reformulation of the table and, through the first
-  // HybridTable posted for them, the bit-sets built from the tuples. Models such as CrazyFrog post
-  // one large binary table on a thousand pairs of variables.
+  // Tables with the same tuples (after the filtering by the domains) share one tuple array, the
+  // reformulation of the table and, through the first HybridTable posted for them, the bit-sets
+  // built from the tuples. Models such as CrazyFrog post one large binary table on a thousand pairs
+  // of variables, and pigeonsPlus (XCSP 2017) one table of 5.8 million rows on eight lists of eight
+  // variables, which ran out of 4 GB when each table had its own tuples and cells.
   private final Map<TableTuples, int[][]> internedTables = new HashMap<>();
   private final Map<int[][], HybridTable> tableByTuples = new IdentityHashMap<>();
   private final Map<int[][], TableReformulation.Result> reformulations = new IdentityHashMap<>();
@@ -2060,9 +2061,9 @@ class GlobalConstraints implements ParserTreeConstants {
     if (vu.length != v.length) {
       poseTableWithUniqueVars(v, t, vu);
     } else {
+      t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
+      tableByTuples.putIfAbsent(t, null);
       if (v.length <= TableCliques.MAX_ARITY) {
-        t = internedTables.computeIfAbsent(new TableTuples(t), TableTuples::tuples);
-        tableByTuples.putIfAbsent(t, null);
         support.dictionary.addTable(v, t);
       }
       poseImpliedTableSums(v, t);

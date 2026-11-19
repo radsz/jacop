@@ -11,7 +11,9 @@ public class SimpleNode implements Node, Cloneable {
   protected Node parent;
   // the child of a node with one child (most annotations, annotation expressions and constraint
   // items without annotations), the array of the children of a node with more, or null: an array
-  // of one child cost 24 bytes of each of about 5 million such nodes of XCSP 2022 RoomMate-sr0700
+  // of one child cost 24 bytes of each of about 5 million such nodes of XCSP 2022 RoomMate-sr0700.
+  // An array literal whose elements are all int literals keeps their values in an int array here,
+  // see the method packedInts.
   protected Object children;
 
   /**
@@ -68,6 +70,8 @@ public class SimpleNode implements Node, Cloneable {
         copied[i] = copyOf(all[i], c);
       }
       c.children = copied;
+    } else if (children instanceof int[] values) {
+      c.children = values;
     } else if (children instanceof Node only) {
       c.children = copyOf(only, c);
     }
@@ -105,6 +109,7 @@ public class SimpleNode implements Node, Cloneable {
 
   /** {@inheritDoc} */
   public void jjtAddChild(Node n, int i) {
+    unpack();
     if (children == null && i == 0) {
       children = n;
       return;
@@ -129,6 +134,11 @@ public class SimpleNode implements Node, Cloneable {
     if (children instanceof Node[] all) {
       return all[i];
     }
+    if (children instanceof int[] values) {
+      ASTScalarFlatExpr literal = intLiteral(values[i]);
+      literal.jjtSetParent(this);
+      return literal;
+    }
     if (i != 0 || children == null) {
       throw new ArrayIndexOutOfBoundsException(i);
     }
@@ -140,6 +150,9 @@ public class SimpleNode implements Node, Cloneable {
     if (children instanceof Node[] all) {
       return all.length;
     }
+    if (children instanceof int[] values) {
+      return values.length;
+    }
     return children == null ? 0 : 1;
   }
 
@@ -149,6 +162,7 @@ public class SimpleNode implements Node, Cloneable {
    * @param i the position of the child
    */
   void releaseChild(int i) {
+    unpack();
     if (children instanceof Node[] all) {
       all[i] = null;
     } else if (i == 0 && children != null) {
@@ -160,6 +174,10 @@ public class SimpleNode implements Node, Cloneable {
 
   /** Drops every child, which keeps its place: the number of children stays. */
   void releaseChildren() {
+    if (children instanceof int[]) {
+      // packed int literals are no nodes: a node is made only when a child is read
+      return;
+    }
     for (int i = 0; i < jjtGetNumChildren(); i++) {
       releaseChild(i);
     }
@@ -212,6 +230,51 @@ public class SimpleNode implements Node, Cloneable {
    */
   public int getId() {
     return id;
+  }
+
+  /**
+   * The values of the children of an array literal whose elements are all int literals, which the
+   * parser keeps in one array instead of one node each. Its children are then made on each {@link
+   * #jjtGetChild(int)}: a new int literal node each time, which nothing may change.
+   *
+   * @return the values of the children, or null when the children are nodes
+   */
+  public int[] packedInts() {
+    return children instanceof int[] values ? values : null;
+  }
+
+  /**
+   * It sets the children of an array literal to int literals.
+   *
+   * @param values the values of the int literals, in order
+   */
+  void setPackedInts(int[] values) {
+    children = values;
+  }
+
+  // the packed children as nodes, before a change of the children
+  private void unpack() {
+    if (children instanceof int[] values) {
+      Node[] all = new Node[values.length];
+      for (int i = 0; i < values.length; i++) {
+        all[i] = intLiteral(values[i]);
+        all[i].jjtSetParent(this);
+      }
+      children = all;
+    }
+  }
+
+  /**
+   * An int literal node without a parent.
+   *
+   * @param value the value
+   * @return the node
+   */
+  static ASTScalarFlatExpr intLiteral(int value) {
+    ASTScalarFlatExpr literal = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    literal.setType(0);
+    literal.setInt(value);
+    return literal;
   }
 
   /** Removes all child nodes. */

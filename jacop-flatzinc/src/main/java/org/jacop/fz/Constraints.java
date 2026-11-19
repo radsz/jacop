@@ -76,6 +76,7 @@ import org.jacop.fz.constraints.ExactCoverDetector;
 import org.jacop.fz.constraints.GiantTourDetector;
 import org.jacop.fz.constraints.IncreasingDetector;
 import org.jacop.fz.constraints.IndexDisjunctionDetector;
+import org.jacop.fz.constraints.IndexFunctionDetector;
 import org.jacop.fz.constraints.IntensionTableDetector;
 import org.jacop.fz.constraints.KnapsackDetector;
 import org.jacop.fz.constraints.LinearOverlapDetector;
@@ -453,6 +454,15 @@ public class Constraints implements ParserTreeConstants {
           replaced.addAll(distances);
           dictionary.removeFromDefaultSearch(cyclic.removed());
           dictionary.unusedVariables.addAll(cyclic.removed());
+        }
+      }
+
+      // a product of two functions of one index variable as a sum over the index's value literals
+      if (IndexFunctionDetector.enabled() && options.proof() == null) {
+        Set<SimpleNode> products = new IndexFunctionDetector(support).detect(astTree);
+        if (!products.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(products);
         }
       }
 

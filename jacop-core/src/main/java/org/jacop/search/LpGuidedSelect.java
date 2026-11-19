@@ -108,10 +108,22 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
   private int[] order;
   private int orderVersion = -1;
 
+  // whether the first rootValueColumnsOf columns hold a value column: the columns of the relaxation
+  // are fixed once it is set up, so this is computed once per number of root solution columns.
+  // Without one the scan of a root selection never decides (no value column, so its share test
+  // fails); it scanned all 12,440 columns at each of 1.3 million decisions on
+  // physician-scheduling instance10 (18 % of the run) to fall back every time
+  private int rootValueColumnsOf = -1;
+  private boolean rootValueColumns;
+
   @Override
   public Var getChoiceVariable(int index) {
     if (!root && lp.large()) {
       return chooseInOrder(index);
+    }
+    if (root && !hasRootValueColumns()) {
+      fromLp = false;
+      return fallback == null ? null : fallback.getChoiceVariable(index);
     }
     IntVar best = null;
     double bestScore = Double.POSITIVE_INFINITY;
@@ -178,6 +190,20 @@ public class LpGuidedSelect implements SelectChoicePoint<Var> {
     }
     fromLp = false;
     return fallback == null ? null : fallback.getChoiceVariable(index);
+  }
+
+  private boolean hasRootValueColumns() {
+    int n = lp.rootSolutionColumns();
+    if (n != rootValueColumnsOf) {
+      rootValueColumnsOf = n;
+      rootValueColumns = false;
+      IntVar objective = lp.objective();
+      for (int j = 0; j < n && !rootValueColumns; j++) {
+        IntVar x = lp.column(j);
+        rootValueColumns = x != objective && x instanceof LpColumn c && !c.isArc() && !c.isFree();
+      }
+    }
+    return rootValueColumns;
   }
 
   // the decision of the scan of getChoiceVariable over the columns in the order of their values,
