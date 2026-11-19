@@ -464,6 +464,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
@@ -750,6 +751,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
@@ -1030,6 +1032,7 @@ setup to run configuration. -->
                                 <include>**/LocalSearchFlatzincTest.java</include>
                                 <include>**/LcgSlowFallbackFlatzincTest.java</include>
                                 <include>**/FreeFirstFlatzincTest.java</include>
+                                <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>

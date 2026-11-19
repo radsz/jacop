@@ -1213,6 +1213,49 @@ class LinearRelaxationTest {
   }
 
   /**
+   * In a tree of sums (LinearSplit) the row of an inner block also holds the sums of the blocks
+   * below it. When that row comes before theirs, every sum still gets its own row as definition:
+   * taking the row's first variable to define defined a lower sum by it and left the inner sum a
+   * free column (XCSP 2025 BusScheduling-c2: 536 of 7,199 sums, no first solution in 120 s).
+   */
+  @Test
+  void substitutionDefinesEverySumOfATreeWhoseInnerRowComesFirst() {
+    Store store = new Store();
+    // the rows are read by variable: the inner sum is made first
+    IntVar inner = new IntVar(store, "m", 0, 6);
+    IntVar[] leaf = new IntVar[3];
+    for (int b = 0; b < leaf.length; b++) {
+      leaf[b] = new IntVar(store, "s" + b, 0, 2);
+    }
+    IntVar[] x = new IntVar[6];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = new IntVar(store, "x" + i, 0, 1);
+    }
+    store.impose(
+        new LinearInt(
+            new IntVar[] {leaf[0], leaf[1], leaf[2], inner}, new int[] {1, 1, 1, -1}, "==", 0));
+    for (int b = 0; b < leaf.length; b++) {
+      store.impose(
+          new LinearInt(
+              new IntVar[] {x[2 * b], x[2 * b + 1], leaf[b]}, new int[] {1, 1, -1}, "==", 0));
+    }
+    IntVar y = new IntVar(store, "y", 0, 3);
+    store.impose(new LinearInt(new IntVar[] {inner, y}, new int[] {1, 1}, "<=", 2));
+    // a relaxation of a single row is none
+    store.impose(new LinearInt(new IntVar[] {x[0], x[5]}, new int[] {1, 1}, ">=", 1));
+    Set<IntVar> sums = new HashSet<>(Arrays.asList(leaf));
+    sums.add(inner);
+    LinearRelaxation r = LinearRelaxation.of(store, null, false, List.of(), sums);
+    assertThat(r).isNotNull();
+    for (LinearForm f : r.allRows()) {
+      assertThat(Arrays.asList(f.vars())).as("%s", f).doesNotContainAnyElementsOf(sums);
+    }
+    assertThat(r.allRows())
+        .anyMatch(
+            f -> f.vars().length == x.length + 1 && f.relation() == LinearForm.LE && f.c() == 2);
+  }
+
+  /**
    * Chained definitions that use the variables of the level below twice merge their terms: each
    * level replaced {@code y_k} and {@code z_k} by both {@code y_k-1} and {@code z_k-1}, so without
    * merging a row over the top level doubled at every level (XCSP 2022 CarSequencing-table ran out
