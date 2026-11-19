@@ -4448,6 +4448,45 @@ class FlatzincFrontEndTest {
    * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
    * RoomMate-sr0700 (163 MB while the model is read).
    */
+  /**
+   * A scalar expression keeps its identifier, string or float in one field: they are the largest
+   * part of the parse tree (7.8 million of XCSP 2022 RoomMate-sr0700, 48 bytes each with a field
+   * for each, 40 now), and a node holds only one of them.
+   */
+  @Test
+  void scalarExpressionsKeepOneFieldForIdentStringOrFloat() {
+    List<String> fields =
+        Arrays.stream(ASTScalarFlatExpr.class.getDeclaredFields())
+            .filter(f -> !Modifier.isStatic(f.getModifiers()))
+            .map(Field::getName)
+            .sorted()
+            .toList();
+    assertEquals(List.of("intValue", "text", "type"), fields);
+    ASTScalarFlatExpr ident = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    ident.setType(2);
+    ident.setIdent("x");
+    assertEquals("x", ident.getIdent());
+    assertNull(ident.getString());
+    assertEquals(0.0, ident.getFloat());
+    ASTScalarFlatExpr string = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    string.setType(4);
+    string.setString("\"s\"");
+    assertEquals("\"s\"", string.getString());
+    assertNull(string.getIdent());
+    ASTScalarFlatExpr real = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    real.setType(5);
+    real.setFloat(2.5);
+    assertEquals(2.5, real.getFloat());
+    assertNull(real.getIdent());
+    assertNull(real.getString());
+    ASTScalarFlatExpr access = new ASTScalarFlatExpr(ParserTreeConstants.JJTSCALARFLATEXPR);
+    access.setType(3);
+    access.setIdent("a");
+    access.setInt(4);
+    assertEquals("a", access.getIdent());
+    assertEquals(4, access.getInt());
+  }
+
   @Test
   void parseTreeNodesKeepNoParserOrValue() {
     List<String> fields =
