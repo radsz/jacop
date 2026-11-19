@@ -8149,6 +8149,18 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. The FlatZinc front end posts a multi-valued decision diagram (mdd)
+   that states exactly x_1 + ... + x_n = S over the current domains as
+   that sum. The check is exact: every edge carries one value, every node
+   one partial sum, the diagram is deterministic, and its accepted tuples
+   are counted and compared with the tuples of the domains whose sum is
+   S. XCSP 2023 MagicSquare-mdd writes every line of the square this way
+   (partial-sum diagrams as in Perez and Regin, "Efficient operations on
+   MDDs for building constraint programming models", IJCAI 2015); the
+   order-10 square needed 5.7 GB and found no square in 600 s, and is
+   now solved in about 9 s, with 6 of the 7 instances solved. Off under
+   --proof; -Dorg.jacop.fz.mddLinear=false turns it off.
+
 Version 4.11
 =============
 

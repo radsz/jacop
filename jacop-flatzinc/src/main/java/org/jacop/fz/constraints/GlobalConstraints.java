@@ -105,6 +105,7 @@ import org.jacop.constraints.Stretch;
 import org.jacop.constraints.Subcircuit;
 import org.jacop.constraints.SubcircuitCost;
 import org.jacop.constraints.SumBool;
+import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SymmetricAlldifferent;
 import org.jacop.constraints.SymmetricGCC;
 import org.jacop.constraints.TableCliques;
@@ -3196,6 +3197,16 @@ class GlobalConstraints implements ParserTreeConstants {
     int[] from = support.getIntArray((SimpleNode) node.jjtGetChild(2));
     IntDomain[] label = support.getSetArray((SimpleNode) node.jjtGetChild(3));
     int[] to = support.getIntArray((SimpleNode) node.jjtGetChild(4));
+
+    // a diagram that states exactly x_1 + ... + x_n = S is posted as that sum (MagicSquare-mdd);
+    // --proof keeps the diagram
+    if (MddLinearSum.enabled() && support.options.proof() == null) {
+      Long s = MddLinearSum.sum(x, level, from, label, to);
+      if (s != null && s >= IntDomain.MIN_INT && s <= IntDomain.MAX_INT) {
+        support.pose(new SumInt(x, "==", support.dictionary.getConstant(s.intValue())));
+        return;
+      }
+    }
 
     // the layered graph must not have duplicated variables
     IntVar[] xx = removeDuplicates(x);
