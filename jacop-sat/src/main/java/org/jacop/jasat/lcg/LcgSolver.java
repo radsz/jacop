@@ -5875,15 +5875,16 @@ public final class LcgSolver implements ExternalPropagator {
   public long defaultCounters;
 
   /**
-   * Whether a global cardinality with fixed counts ({@code CountValuesBounds}) over variables of at
-   * most {@link #GCC_DOM} values becomes clauses before search, with the larger limit of {@code
-   * jacop.lcg.clauses.counter}, by the system property {@code jacop.lcg.gccClauses} (default true).
-   * It is a sequential counter per counted value, so a learnt clause can state partial counts (Abio
-   * and Stuckey, CP 2012; Abio, Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, CP 2013). A
-   * default counter is limited to {@link #COUNTERS_LIMIT} clauses for the whole constraint and is
-   * encoded lazily; a rostering GCC counts each of its few values over many days and needs more
-   * (XCSP 2025 RotatingRostering-052-2-3: 7 GCCs over 52 variables of 4 values, about 9,900 clauses
-   * each, unknown at 600 s as propagators, unsatisfiable in about 10 s as clauses).
+   * Whether a closed global cardinality with fixed counts ({@code CountValuesBounds}, the counts
+   * add up to the number of variables) over variables of at most {@link #GCC_DOM} values becomes
+   * clauses before search, with the larger limit of {@code jacop.lcg.clauses.counter}, by the
+   * system property {@code jacop.lcg.gccClauses} (default true). It is a sequential counter per
+   * counted value, so a learnt clause can state partial counts (Abio and Stuckey, CP 2012; Abio,
+   * Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, CP 2013). A default counter is limited
+   * to {@link #COUNTERS_LIMIT} clauses for the whole constraint and is encoded lazily; a rostering
+   * GCC counts each of its few values over many days and needs more (XCSP 2025
+   * RotatingRostering-052-2-3: 7 GCCs over 52 variables of 4 values, about 9,900 clauses each,
+   * unknown at 600 s as propagators, unsatisfiable in about 10 s as clauses).
    */
   static final boolean GCC_CLAUSES = !FALSE.equals(System.getProperty("jacop.lcg.gccClauses"));
 
@@ -5899,6 +5900,17 @@ public final class LcgSolver implements ExternalPropagator {
         || c.getClass() != org.jacop.constraints.CountValuesBounds.class
         || CLAUSE_SET.contains(c.getClass().getSimpleName())
         || !argumentsFit(c)) {
+      return false;
+    }
+    // a closed GCC: every variable takes one of the counted values, each a fixed number of times
+    // (the days of a rotating roster); an open one, such as the shifts of a rotating workforce
+    // with free days off, searches slower as clauses (RotatingWorkforce2-100-00 16 s to unknown)
+    org.jacop.constraints.CountValuesBounds gcc = (org.jacop.constraints.CountValuesBounds) c;
+    long total = 0;
+    for (int[] b : gcc.countBounds()) {
+      total += b[1];
+    }
+    if (!gcc.fixedCounts() || total != gcc.listLength()) {
       return false;
     }
     for (org.jacop.core.Var v : c.arguments()) {

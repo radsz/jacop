@@ -3897,8 +3897,8 @@ class LcgSolverTest {
   }
 
   /**
-   * Global cardinalities with fixed counts over variables of at most four values become clauses
-   * before search ({@code jacop.lcg.gccClauses}); the answers must match brute force.
+   * Closed global cardinalities with fixed counts over variables of at most four values become
+   * clauses before search ({@code jacop.lcg.gccClauses}); the answers must match brute force.
    */
   @Test
   void smallDomainGccAsClausesAgreesWithBruteForce() {
@@ -3911,7 +3911,7 @@ class LcgSolverTest {
       int n = 5 + rnd.nextInt(3);
       IntVar[] x = new IntVar[n];
       for (int i = 0; i < n; i++) {
-        x[i] = new IntVar(store, "x" + i, 0, 1 + rnd.nextInt(3));
+        x[i] = new IntVar(store, "x" + i, rnd.nextInt(4) == 0 ? 1 : 0, 3);
       }
       List<Relation> relations = new ArrayList<>();
       for (int c = 1 + rnd.nextInt(2); c > 0; c--) {
@@ -3923,12 +3923,15 @@ class LcgSolverTest {
         for (int k = 0; k < at.length; k++) {
           q[k] = x[at[k]];
         }
-        int[] values = rnd.nextBoolean() ? new int[] {0, 1, 2, 3} : new int[] {rnd.nextInt(2), 2};
+        // mostly closed GCCs (the counts add up to the list), which become clauses
+        int[] values = {0, 1, 2, 3};
         int[] lb = new int[values.length];
-        int[] ub = new int[values.length];
-        for (int k = 0; k < values.length; k++) {
-          lb[k] = rnd.nextInt(2);
-          ub[k] = lb[k] + rnd.nextInt(3);
+        for (int k = 0; k < at.length; k++) {
+          lb[rnd.nextInt(values.length)]++;
+        }
+        int[] ub = lb.clone();
+        if (rnd.nextInt(4) == 0) {
+          ub[rnd.nextInt(values.length)]++;
         }
         relations.add(
             new Relation(
