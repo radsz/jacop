@@ -513,13 +513,16 @@ class LinearConstraints implements ParserTreeConstants {
     int p3 = support.getInt((ASTScalarFlatExpr) node.jjtGetChild(2));
     if (repeated(p2)) {
       // merged aliases (CommonSubexpressions) can name a variable twice
-      Map<IntVar, Integer> terms = new LinkedHashMap<>();
+      Map<IntVar, Long> terms = new LinkedHashMap<>();
       for (int i = 0; i < p2.length; i++) {
-        terms.merge(p2[i], p1[i], Integer::sum);
+        terms.merge(p2[i], (long) p1[i], Long::sum);
       }
       terms.values().removeIf(c -> c == 0);
-      p2 = terms.keySet().toArray(new IntVar[0]);
-      p1 = terms.values().stream().mapToInt(Integer::intValue).toArray();
+      // a merged coefficient beyond int is left to the constraint, which merges in long
+      if (terms.values().stream().allMatch(c -> c == (int) (long) c)) {
+        p2 = terms.keySet().toArray(new IntVar[0]);
+        p1 = terms.values().stream().mapToInt(Long::intValue).toArray();
+      }
     }
 
     Integer s = evaluateConstantLinearTerm(p1, p2);

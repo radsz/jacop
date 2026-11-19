@@ -1418,6 +1418,42 @@ class FlatzincFrontEndTest {
   }
 
   /**
+   * A variable named twice in a linear row, as merged aliases leave it, has its coefficients added;
+   * a sum beyond int wrapped around: 2^31 * i <= 2^30 accepted i = 1.
+   */
+  @Test
+  void repeatedVariableWithCoefficientsSummingBeyondIntKeepsTheRow() throws IOException {
+    String[] out =
+        run(
+            """
+            var 0..1: i :: output_var;
+            constraint int_lin_le([1073741824, 1073741824], [i, i], 1073741824);
+            solve satisfy;
+            """,
+            "-a");
+    assertEquals("i = 0;\n----------\n==========\n", out[0]);
+    // the same row reached through equal subexpressions: x = y makes b1 and b2 one variable
+    assertEquals(
+        12,
+        solveAll(
+                """
+                var 0..3: x :: output_var;
+                var 0..3: y :: output_var;
+                var bool: b1;
+                var bool: b2;
+                var 0..1: i1;
+                var 0..1: i2;
+                constraint int_eq_reif(x, y, b1);
+                constraint int_eq_reif(y, x, b2);
+                constraint bool2int(b1, i1);
+                constraint bool2int(b2, i2);
+                constraint int_lin_le([2147483647, 2147483647], [i1, i2], 2147483647);
+                solve satisfy;
+                """)
+            .size());
+  }
+
+  /**
    * A variable declared without bounds (var int) is created over JaCoP's integer range, so a value
    * beyond the range, which MiniZinc's 64-bit integers allow, is cut off as for a narrowed domain:
    * no unsatisfiability or optimality is claimed unless the rows of the model keep the variable
