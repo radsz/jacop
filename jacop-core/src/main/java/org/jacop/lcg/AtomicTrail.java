@@ -548,6 +548,11 @@ public final class AtomicTrail implements DomainChangeRecorder, RemoveLevelLate 
     }
   }
 
+  // testing only: throws when the shadow of x is not its domain
+  void checkShadow(IntVar x) {
+    checkShadow(slot(x), x.dom());
+  }
+
   // testing only: throws when the shadow of variable i is not domain d
   private void checkShadow(int i, IntDomain d) {
     int lo = shadowMin[i];
