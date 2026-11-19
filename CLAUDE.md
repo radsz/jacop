@@ -141,6 +141,11 @@ mvn -Pmin -pl jacop-core test -Dtest=ComposedTightnessTest -Dsurefire.rerunFaili
     -Dtightness.trials=20000 -Dtightness.report=true [-Dtightness.cases=IfThenElseBool,Eq]
 ```
 
+`-Dtightness.repeated=true` gives about a third of the positions of each case an earlier variable
+of the same kind, so one variable appears several times; only soundness counts there (a repeated
+variable may weaken a propagator), and an instance whose impose rejects the repeat is counted as
+rejected.
+
 ## Checking globals against their decompositions
 
 `jacop-benchmarks/src/test/java/org/jacop/decomposition/DecompositionCheck.java` replaces each

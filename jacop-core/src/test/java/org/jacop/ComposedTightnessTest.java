@@ -122,6 +122,7 @@ class ComposedTightnessTest {
   static final long SEED = Long.getLong("tightness.seed", 1L);
   static final String ONLY = System.getProperty("tightness.cases", "");
   static final boolean REPORT = Boolean.getBoolean("tightness.report");
+  static final boolean REPEATED = Boolean.getBoolean("tightness.repeated");
 
   static final int INTS = 3;
   static final int BOOLS = 3;
@@ -151,6 +152,26 @@ class ComposedTightnessTest {
       a[i] = v[p[i]];
     }
     return a;
+  }
+
+  /**
+   * The variables a case is built on. With tightness.repeated, about a third of the positions take
+   * an earlier variable of the same kind instead of their own, so the constraint sees one variable
+   * at several positions; the variable left out then keeps all its values.
+   */
+  static IntVar[] view(IntVar[] v, long seed) {
+    if (!REPEATED) {
+      return v;
+    }
+    Random r = new Random(seed * 31 + 7);
+    IntVar[] w = v.clone();
+    for (int i = 1; i < w.length; i++) {
+      int first = i < INTS ? 0 : INTS;
+      if (i > first && r.nextInt(3) == 0) {
+        w[i] = w[first + r.nextInt(i - first)];
+      }
+    }
+    return w;
   }
 
   static int c(Random r) {
@@ -353,7 +374,7 @@ class ComposedTightnessTest {
     for (int i = 0; i < v.length; i++) {
       v[i] = i < INTS ? new IntVar(s, "x" + i, t[i], t[i]) : new BooleanVar(s, "b" + i, t[i], t[i]);
     }
-    PrimitiveConstraint c = cs.make.apply(new Random(seed), v);
+    PrimitiveConstraint c = cs.make.apply(new Random(seed), view(v, seed));
     try {
       s.impose(c);
       return s.consistency();
@@ -401,7 +422,7 @@ class ComposedTightnessTest {
   IntDomain[] run(Case cs, long seed, IntDomain[] d, Mode mode, int[] bOut) {
     Store s = new Store();
     IntVar[] v = vars(s, d);
-    PrimitiveConstraint c = cs.make.apply(new Random(seed), v);
+    PrimitiveConstraint c = cs.make.apply(new Random(seed), view(v, seed));
     BooleanVar b = new BooleanVar(s, "r", mode == Mode.TRUE_EARLY ? 1 : 0, 1);
     try {
       if (mode == Mode.IMPOSED) {
@@ -491,7 +512,7 @@ class ComposedTightnessTest {
       }
       try {
         // the constructor may reject the arguments
-        cs.make.apply(new Random(seed), vars(new Store(), d));
+        cs.make.apply(new Random(seed), view(vars(new Store(), d), seed));
       } catch (IllegalArgumentException _) {
         st.rejected++;
         continue;
@@ -501,11 +522,20 @@ class ComposedTightnessTest {
       enumerate(d, 0, new int[n], all);
       List<int[]> yes = new ArrayList<>();
       List<int[]> no = new ArrayList<>();
-      for (int[] t : all) {
-        (holds(cs, seed, t) ? yes : no).add(t);
+      try {
+        for (int[] t : all) {
+          (holds(cs, seed, t) ? yes : no).add(t);
+        }
+      } catch (IllegalArgumentException _) {
+        // impose may reject a repeated variable (XplusCneqZ on x + 0 != x)
+        st.instances--;
+        st.rejected++;
+        continue;
       }
       StringBuilder w = new StringBuilder();
-      w.append(cs.make.apply(new Random(seed), vars(new Store(), d))).append(" seed ").append(seed);
+      w.append(cs.make.apply(new Random(seed), view(vars(new Store(), d), seed)))
+          .append(" seed ")
+          .append(seed);
       String where = w.toString();
       try {
         int[] bOpen = new int[1];
