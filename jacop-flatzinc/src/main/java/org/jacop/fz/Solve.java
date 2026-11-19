@@ -3596,10 +3596,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   /**
    * Alternates search without learning with LCG on a satisfaction model, after the probe found that
    * learning cuts little ({@link #learningCutsLittle}) or that LCG makes few conflicts a second.
-   * Free search without learning gets twice the time LCG had before the probe stopped it after weak
-   * learning (lcg-sat-cp-share), as much after slow learning (lcg-sat-slow-share), then LCG goes on
-   * with its learnt clauses for twice its first share, and both shares double until one of them
-   * decides the model or the time is up. Each slice goes on with the same free search, its
+   * Free search without learning gets three times the time LCG had before the probe stopped it
+   * after weak learning (lcg-sat-cp-share), as much after slow learning (lcg-sat-slow-share), then
+   * LCG goes on with its learnt clauses for twice its first share, and both shares double until one
+   * of them decides the model or the time is up. Each slice goes on with the same free search, its
    * restarts, weights and saved phases. Before, the probe handed the model over for good: XCSP 2022
    * BlockedQueens-48-1721237620 and BlockedQueens-50-1642399343, which LCG proves unsatisfiable in
    * 312 and 93 s, stayed open at 600 s without learning. Each slice of search without learning runs
@@ -4021,7 +4021,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         lcgSliceShare =
             Double.parseDouble(
                 options.freeConfig(
-                    weak ? "lcg-sat-cp-share" : "lcg-sat-slow-share", weak ? "2" : "1"));
+                    weak ? "lcg-sat-cp-share" : "lcg-sat-slow-share", weak ? "3" : "1"));
         lcgSliceDue = true;
         solver.sat().interrupt();
       }
