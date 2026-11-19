@@ -4446,11 +4446,6 @@ class FlatzincFrontEndTest {
   }
 
   /**
-   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
-   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
-   * RoomMate-sr0700 (163 MB while the model is read).
-   */
-  /**
    * A scalar expression keeps its identifier, string or float in one field: they are the largest
    * part of the parse tree (7.8 million of XCSP 2022 RoomMate-sr0700, 48 bytes each with a field
    * for each, 40 now), and a node holds only one of them.
@@ -4517,6 +4512,11 @@ class FlatzincFrontEndTest {
     assertFalse(kept.getClass().getName().contains("SetFromMap"), kept.getClass().getName());
   }
 
+  /**
+   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
+   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
+   * RoomMate-sr0700 (163 MB while the model is read).
+   */
   @Test
   void parseTreeNodesKeepNoParserOrValue() {
     List<String> fields =
