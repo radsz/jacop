@@ -258,6 +258,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
+                                <include>**/PartitionCutsTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>
@@ -537,6 +538,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
+                                <include>**/PartitionCutsTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>
@@ -816,6 +818,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
+                                <include>**/PartitionCutsTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>
@@ -1095,6 +1098,7 @@ setup to run configuration. -->
                                 <include>**/MirCutTest.java</include>
                                 <include>**/ZeroHalfCutsTest.java</include>
                                 <include>**/CoverCutsTest.java</include>
+                                <include>**/PartitionCutsTest.java</include>
                                 <include>**/CapacityCutsTest.java</include>
                                 <include>**/CombCutsTest.java</include>
                                 <include>**/AlldifferentRowsTest.java</include>

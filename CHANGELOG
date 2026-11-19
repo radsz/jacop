@@ -8149,6 +8149,19 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. The linear relaxation separates cuts of the clique partitioning
+   polytope at the root when the objective weighs pair indicators
+   b <-> x[i] = x[j] (community detection: modularity objectives): the
+   triangle inequalities of Groetschel and Wakabayashi (Mathematical
+   Programming 45, 1989), the clique inequalities of a partition into at
+   most k classes of Chopra and Rao (Mathematical Programming 59, 1993) and
+   the 2-partition inequalities with one node on one side. A value Boolean
+   b <-> x = v counts as the pair of x with an anchor node of value v, so
+   a node fixed by value precedence keeps its pairs. Community detection
+   Zakhary.s12.k3 of the Challenge 2024 is proved at the root (-f 110 s
+   -> 2 s), mexican.s26.k4 in 1 s instead of 93 s.
+   -Dorg.jacop.lp.partitionCuts=false turns them off.
+
 Version 4.11
 =============
 

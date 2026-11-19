@@ -1360,6 +1360,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + r.treeCuts
             + "\n%%%mzn-stat: lpTreeBound="
             + r.treeBound
+            + "\n%%%mzn-stat: lpPartitions="
+            + r.partitionConstraints()
+            + "\n%%%mzn-stat: lpPartitionCuts="
+            + r.partitionCuts
+            + "\n%%%mzn-stat: lpPartitionBound="
+            + r.partitionBound
             + "\n%%%mzn-stat: lpJumpSolves="
             + r.jumpSolves
             + "\n%%%mzn-stat: lpJumpPivots="
