@@ -3663,7 +3663,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int status = solver.solve();
     if (status == CdclSolver.SAT) {
       int level = store.level;
-      if (!cnf.fix(store, solver) || !store.consistency() || !clausesHold()) {
+      if (!cnf.fix(store, solver) || !store.consistency() || !fixRest() || !clausesHold()) {
         // not a solution of the store: a compilation error, reported, and solved without it
         FzConsole.printlnErr(
             "%% clausal model: solution rejected by the store; solving without it");
@@ -3677,6 +3677,19 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     lcgStatus = status;
     if (status == CdclSolver.SAT) {
       printSolution();
+    }
+    return true;
+  }
+
+  // fixes the declared variables the clauses do not cover (in no constraint) to their least values
+  private boolean fixRest() {
+    for (Var v : declaredVariables()) {
+      if (v instanceof IntVar x && !x.singleton()) {
+        x.domain.in(store.level, x, x.min(), x.min());
+        if (!store.consistency()) {
+          return false;
+        }
+      }
     }
     return true;
   }

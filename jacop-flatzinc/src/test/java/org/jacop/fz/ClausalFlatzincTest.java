@@ -229,6 +229,16 @@ class ClausalFlatzincTest {
       assertEquals(
           without.contains("=====UNSATISFIABLE====="), u, "seed " + seed + "\n" + fzn + with);
       assertEquals(!u, with.contains("----------"), "seed " + seed + "\n" + fzn + with);
+      if (!u) {
+        // every variable gets a value, also one in no constraint, which the clauses leave out
+        for (String line : fzn.split("\n")) {
+          if (line.startsWith("var ")) {
+            String name = line.substring(line.indexOf(": ") + 2, line.indexOf(" ::"));
+            assertTrue(
+                with.contains(name + " = "), "seed " + seed + " " + name + "\n" + fzn + with);
+          }
+        }
+      }
       compiled += with.contains("clausalModel=true") ? 1 : 0;
       unsat += u ? 1 : 0;
     }
