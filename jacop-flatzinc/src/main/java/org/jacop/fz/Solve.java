@@ -6691,11 +6691,28 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         freeLns.solution(lcgHinted, lcgHint);
       }
       if (freeLns != null) {
-        // on vehicle routes the neighbourhoods get three times the work of the other runs, not
-        // 0.8: branch and bound over hundreds of successors rarely improves a tour, route and
-        // related removal do. CVRPLIB X-n110-k13 and X-n120-k6 (giant tour of the 2015 Challenge
-        // model) at 240 s: 45,337 to 37,706 and 58,171 to 50,976
-        String share = freeLns.hasRoutes() ? options.freeConfig("lns-share-routes", "3") : "0.8";
+        // on vehicle routes the neighbourhoods get ten times the work of the other runs, not 0.8:
+        // branch and bound over hundreds of successors rarely improves a tour, route and related
+        // removal do. CVRPLIB X-n110-k13 and X-n120-k6 (giant tour of the 2015 Challenge model) at
+        // 240 s: 45,337 to 37,706 and 58,171 to 50,976 with share 3; at 120 s on X-n110-k13 share
+        // 10 with the kinds below gave 24,000-28,000 against 30,000-31,000 with share 3
+        String share = freeLns.hasRoutes() ? options.freeConfig("lns-share-routes", "10") : "0.8";
+        if (freeLns.hasRoutes() && options.freeConfig("lns-kinds", "").isEmpty()) {
+          // nor do the generic neighbourhoods: on X-n110-k13 at 120 s they took 44 % of the runs
+          // for 6 of 101 improvements, and the floor of the adaptive scores kept them there; with
+          // route and related removal only (and random, which stays) and share 10 the cost went
+          // from 37,000-41,000 to 24,000-28,000
+          for (AdaptiveLns.Kind k :
+              new AdaptiveLns.Kind[] {
+                AdaptiveLns.Kind.GRAPH,
+                AdaptiveLns.Kind.PROPAGATION,
+                AdaptiveLns.Kind.OBJECTIVE,
+                AdaptiveLns.Kind.CONSTRAINTS,
+                AdaptiveLns.Kind.LINES
+              }) {
+            freeLns.disable(k);
+          }
+        }
         builder.lns(
             freeLns,
             Double.parseDouble(options.freeConfig("lns-share", share)),
