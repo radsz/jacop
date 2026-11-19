@@ -49,7 +49,6 @@ import org.jacop.fz.ASTAnnotation;
 import org.jacop.fz.ASTConstElem;
 import org.jacop.fz.ASTScalarFlatExpr;
 import org.jacop.fz.FzConsole;
-import org.jacop.fz.Node;
 import org.jacop.fz.ParserTreeConstants;
 import org.jacop.fz.SimpleNode;
 
@@ -176,7 +175,7 @@ public class SequenceDetector implements ParserTreeConstants {
    * @param astTree the root of the parsed model.
    */
   public void detect(SimpleNode astTree) {
-    support.forEachConstraint(astTree, this::collect);
+    support.forEachConstraintItem(astTree, this::collect);
     if (windows.size() < MIN_WINDOWS) {
       return;
     }
@@ -310,9 +309,9 @@ public class SequenceDetector implements ParserTreeConstants {
     return List.of(w.kind(), w.bound(), new IdentityList(part));
   }
 
-  private void collect(ASTConstElem node) {
+  private void collect(SimpleNode item, ASTConstElem node) {
     switch (node.getName()) {
-      case "int_lin_le", "int_lin_eq" -> window(node, "int_lin_eq".equals(node.getName()));
+      case "int_lin_le", "int_lin_eq" -> window(item, node, "int_lin_eq".equals(node.getName()));
       case "array_int_element", "array_var_int_element" -> channel(node, 1);
       case "jacop_array_var_int_element_nonshifted" ->
           channel(node, support.getInt((ASTScalarFlatExpr) node.jjtGetChild(3)));
@@ -322,7 +321,7 @@ public class SequenceDetector implements ParserTreeConstants {
     }
   }
 
-  private void window(ASTConstElem node, boolean equation) {
+  private void window(SimpleNode item, ASTConstElem node, boolean equation) {
     int[] a = support.getIntArray((SimpleNode) node.jjtGetChild(0));
     if (a.length < 2 || Math.abs(a[0]) != 1) {
       return;
@@ -354,13 +353,12 @@ public class SequenceDetector implements ParserTreeConstants {
       kind = AT_LEAST;
       bound = -rhs;
     }
-    windows.add(new Window(y.clone(), kind, bound, definesVariable(node) ? null : node));
+    windows.add(new Window(y.clone(), kind, bound, definesVariable(item) ? null : node));
   }
 
-  // the annotations are children of the constraint item, the parent of the element
-  private static boolean definesVariable(ASTConstElem node) {
-    Node item = node.jjtGetParent();
-    for (int i = 0; item != null && i < item.jjtGetNumChildren(); i++) {
+  // the annotations are children of the constraint item, after its element
+  private static boolean definesVariable(SimpleNode item) {
+    for (int i = 0; i < item.jjtGetNumChildren(); i++) {
       if (item.jjtGetChild(i) instanceof ASTAnnotation ann
           && "defines_var".equals(ann.getAnnId())) {
         return true;
