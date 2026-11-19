@@ -98,6 +98,10 @@ public abstract class AbstractPeqQ extends PrimitiveConstraint {
    */
   protected void complementConsistency(Store store) {
 
+    if (p == q) {
+      throw Store.failException;
+    }
+
     if (q.singleton()) {
       p.domain.inComplement(store.level, p, q.value());
     }
@@ -110,12 +114,13 @@ public abstract class AbstractPeqQ extends PrimitiveConstraint {
   /**
    * Checks if the constraint is satisfied when both variables are grounded and equal.
    *
-   * @return true if both variables are grounded and equal within precision
+   * @return true if p and q are one variable, or both are grounded and equal within precision
    */
   protected boolean satisfiedWhenEqual() {
-    return grounded()
-        && Math.abs(p.min() - q.max()) <= FloatDomain.precision()
-        && Math.abs(p.max() - q.min()) <= FloatDomain.precision();
+    return p == q
+        || grounded()
+            && Math.abs(p.min() - q.max()) <= FloatDomain.precision()
+            && Math.abs(p.max() - q.min()) <= FloatDomain.precision();
   }
 
   /**
@@ -124,6 +129,6 @@ public abstract class AbstractPeqQ extends PrimitiveConstraint {
    * @return true if the domains do not intersect
    */
   protected boolean satisfiedWhenDisjoint() {
-    return !p.domain.isIntersecting(q.domain);
+    return p != q && !p.domain.isIntersecting(q.domain);
   }
 }

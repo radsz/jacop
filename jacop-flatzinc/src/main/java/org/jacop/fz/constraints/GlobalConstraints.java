@@ -812,6 +812,12 @@ class GlobalConstraints implements ParserTreeConstants {
     subcircuit(v);
     addImpliedAlldistinct(v);
     if (support.options.proof() == null) {
+      if (Arrays.asList(v).contains(cost)) {
+        // SubcircuitCost needs a cost apart from the successors
+        IntVar copy = new IntVar(store, cost.dom().cloneLight());
+        support.pose(new XeqY(cost, copy));
+        cost = copy;
+      }
       support.pose(new SubcircuitCost(v, costs, cost));
       return;
     }
@@ -3065,6 +3071,15 @@ class GlobalConstraints implements ParserTreeConstants {
     for (int s = 0; s < b.length; s++) {
       rows[s] = Arrays.copyOfRange(a, s * x.length, (s + 1) * x.length);
     }
+    List<IntVar> xs = Arrays.asList(x);
+    for (int s = 0; s < ok.length; s++) {
+      if (xs.contains(ok[s])) {
+        // ScenarioChance needs its indicators apart from x
+        IntVar copy = new IntVar(store, ok[s].dom().cloneLight());
+        support.pose(new XeqY(ok[s], copy));
+        ok[s] = copy;
+      }
+    }
     support.delayedConstraints.add(
         new ScenarioChance(x, rows, b, weights, alpha, ok.length == 0 ? null : ok));
   }
@@ -3089,6 +3104,12 @@ class GlobalConstraints implements ParserTreeConstants {
         p[j] = prob[i * k + j];
       }
       w[i] = new Dist(Arrays.copyOfRange(value, i * k, (i + 1) * k), p, den);
+    }
+    if (Arrays.asList(x).contains(c)) {
+      // ChanceSum needs a capacity apart from the loads
+      IntVar copy = new IntVar(store, c.dom().cloneLight());
+      support.pose(new XeqY(c, copy));
+      c = copy;
     }
     support.delayedConstraints.add(new ChanceSum(x, w, c, alpha, den));
   }
