@@ -8068,6 +8068,31 @@ Version 5.0 (unreleased)
    (costas-array and blocks-world slower over three rounds);
    -Djacop.lcg.shiftSplitBounds=true|false overrides.
 
+448. JaLP shifts costs instead of moving columns to artificial bounds, and
+   its presolve holds inequality rows at the bound that a column singleton
+   pushes them to. A nonbasic column whose reduced cost ends up on the
+   wrong side of the tolerance by at most 1e-5 (as the slacks of
+   inequality rows do, by a few 1e-9, after the dual updates) has its cost
+   shifted to make the reduced cost 0, where it was moved to its 1e6
+   artificial bound before and took the basic values with it (cost
+   shifting, A. Koberstein, "The dual simplex method, techniques for a fast
+   and stable implementation", PhD thesis, Paderborn 2005; as in HiGHS).
+   The shifts are taken back at the optimum; when a column would then move
+   to an artificial bound, the primal simplex takes it into the basis
+   (-Dorg.jacop.jalp.shiftMax=0 turns shifting off). The presolve makes an
+   inequality row with two columns an equation when one is a column
+   singleton whose cost pushes it to a bound that the row implies (the
+   dual bound of a column singleton, Andersen and Andersen 1995, section
+   3.5), so that the doubleton equation substitutes it
+   (-Dorg.jacop.jalp.presolveTight=false). LP bench, 687 LPs at 120 s:
+   648 -> 653 solved, 0 wrong, 0.948 of the time on LPs over 0.5 s;
+   comp07-2idx 159,258 pivots -> 2,992 (TIME -> 3.3 s), thor50dday
+   45,687 -> 845 pivots (108 -> 4 s), dano3mip 75 -> 27 s, the n370
+   family 5,600 -> 230 pivots, ns1116954, supportcase10/42 and cont4 now
+   solved; pilot87 and neos-1354092 take 2x the pivots. The pivots of
+   JaCoP's own root LPs (jacop-root, 215) do not change; on the 21 wide
+   runs where it fires, 600 s, the same solved and total time.
+
 Version 4.11
 =============
 
