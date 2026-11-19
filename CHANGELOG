@@ -8149,6 +8149,24 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. Explanations of large layered graphs (MDD, regular, cost MDD) under
+   lazy clause generation are found with less work, with the same
+   reasons. The four cuts of an explanation (nearest and far, source or
+   target first; Gange, Stuckey and Szymanek, MDD propagators with
+   explanation, Constraints 16(4), 2011) are walked together, one bit per
+   cut on each node, with the labels of a level looked up per value block
+   and the arrays of a walk kept per thread. On graphs of at least 4,096
+   nodes a far cut, which walks through the unreachable nodes or dead
+   ends, most of the graph deep in the search, is found from the other
+   side when that is smaller: the edges of removed values out of the
+   reached nodes (or into the nodes reaching the last level), each kept
+   when a depth-first search finds a path of unreachable nodes (dead ends)
+   to the cut; the nearest cuts of a failure are read from per-node masks
+   of the labels of its edges. On WordDesign2-words-mdd-055 (XCSP 2023,
+   1,485 MDDs on a diagram of 525,720 nodes and 1.83 million edges) an
+   explanation takes about 7 ms instead of 60 ms, and LCG makes about 11
+   conflicts a second instead of 1.
+
 Version 4.11
 =============
 
