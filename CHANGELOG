@@ -8158,8 +8158,23 @@ Version 5.0 (unreleased)
    (partial-sum diagrams as in Perez and Regin, "Efficient operations on
    MDDs for building constraint programming models", IJCAI 2015); the
    order-10 square needed 5.7 GB and found no square in 600 s, and is
-   now solved in about 9 s, with 6 of the 7 instances solved. Off under
-   --proof; -Dorg.jacop.fz.mddLinear=false turns it off.
+   now solved in 5 s; at 600 s JaCoP solves all 7 instances instead of 2
+   (the 2023 field solved 3). Off under --proof;
+   -Dorg.jacop.fz.mddLinear=false turns it off.
+
+452. Under LCG a closed global cardinality with fixed counts (the counts
+   add up to the number of variables), over variables of at most 4
+   values, becomes clauses before search: a sequential counter per value
+   (Abio and Stuckey, "Conflict directed lazy decomposition", CP 2012).
+   The default unary counters stop at 4000 clauses per constraint, and
+   the 7 day-of-week GCCs of XCSP 2025 RotatingRostering-052-2-3 need
+   about 9,900 each, so they stayed propagators and the instance was
+   unknown at 600 s; it is now unsatisfiable in 9 s. On the 19 XCSP
+   instances where the rule fires, 18 are decided at 600 s instead of 15
+   (EFPA-6-4-4-13 and -14 found) and the total time drops from 2576 s to
+   1141 s. Open GCCs (RotatingWorkforce2) are left alone: as clauses they
+   searched slower. -Djacop.lcg.gccClauses=false turns it off and
+   -Djacop.lcg.gccClauses.dom sets the domain size.
 
 Version 4.11
 =============
