@@ -112,9 +112,12 @@ public class CardAeqX extends Constraint
     }
 
     cardinality.domain.in(store.level, cardinality, min, max);
-    a.domain.inCardinality(store.level, a, min, max);
+    // a hole of the cardinality variable can move its bounds further
+    a.domain.inCardinality(store.level, a, cardinality.min(), cardinality.max());
 
-    // T13 else //T14
+    // T13 else //T14; the domains are read again, since narrowing them above may have replaced them
+    aDom = a.domain;
+    card = cardinality.domain;
     if (aDom.glb().getSize() == card.max()) {
       a.domain.inLub(store.level, a, aDom.glb());
     } else if (aDom.lub().getSize() == card.min()) {

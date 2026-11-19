@@ -1167,7 +1167,13 @@ public final class LcgSolver implements ExternalPropagator {
         if (freeCounter[k] >= 0) {
           count[k] =
               proofCounterBounds(
-                  freeCounter[k], restricted[k], values[k], dom, literals, counterLiterals[k]);
+                  freeCounter[k],
+                  restricted[k],
+                  values[k],
+                  dom,
+                  null,
+                  literals,
+                  counterLiterals[k]);
         }
       }
     }
@@ -1419,23 +1425,37 @@ public final class LcgSolver implements ExternalPropagator {
    */
   private void proofCountBounds(Count c, EntryList atoms, int from, int entry) {
     IntVar[] list = c.countedVariables();
-    int n = list.length;
-    int[] ids = new int[n + 1];
+    int counter = trail.id(c.functionalResult());
+    // a variable listed k times is one term of weight k in the row, as OpbEncoder writes it
     Map<Integer, Integer> position = new HashMap<>();
-    for (int j = 0; j <= n; j++) {
-      ids[j] = trail.id(j < n ? list[j] : c.functionalResult());
-      if (position.put(ids[j], j) != null) {
-        return; // the counter in the list, or a variable twice: not encoded as one row
+    int[] ids = new int[list.length + 1];
+    int[] weight = new int[list.length];
+    int n = 0;
+    for (IntVar x : list) {
+      int id = trail.id(x);
+      if (id == counter) {
+        return; // the counter in the list: not encoded as one row
+      }
+      Integer j = position.putIfAbsent(id, n);
+      if (j == null) {
+        ids[n] = id;
+        weight[n++] = 1;
+      } else {
+        weight[j]++;
       }
     }
+    position.put(counter, n);
+    ids[n] = counter;
+    ids = Arrays.copyOf(ids, n + 1);
     IntDomain[] dom = new IntDomain[n + 1];
     StringBuilder[] literals = new StringBuilder[n + 1];
     hypotheses(position, ids, atoms, from, entry, dom, literals);
     proofCounterBounds(
-        ids[n],
+        counter,
         dom[n],
         c.countedValue(),
         Arrays.copyOf(dom, n),
+        Arrays.copyOf(weight, n),
         Arrays.copyOf(literals, n),
         literals[n]);
   }
@@ -1448,6 +1468,7 @@ public final class LcgSolver implements ExternalPropagator {
    * of 2 in [2, 0, x] with x != 2 is 1, a hole of a counter in {0, 2}). The hole can be the model's
    * or a hypothesis's (counter != 1 with the count pinned to 1).
    *
+   * @param weight how many times each variable is listed, or null for once each
    * @return the restricted domain within the bounds written
    */
   private IntDomain proofCounterBounds(
@@ -1455,6 +1476,7 @@ public final class LcgSolver implements ExternalPropagator {
       IntDomain restricted,
       int value,
       IntDomain[] dom,
+      int[] weight,
       StringBuilder[] literals,
       StringBuilder own) {
     IntDomain d = proofDomains[counter];
@@ -1468,9 +1490,10 @@ public final class LcgSolver implements ExternalPropagator {
     StringBuilder clause = new StringBuilder(own == null ? "" : own);
     for (int j = 0; j < dom.length; j++) {
       if (dom[j].contains(value)) {
-        possible++;
+        int w = weight == null ? 1 : weight[j];
+        possible += w;
         if (dom[j].singleton()) {
-          fixed++;
+          fixed += w;
         }
       }
       clause.append(literals[j]);
@@ -4031,6 +4054,8 @@ public final class LcgSolver implements ExternalPropagator {
       if (workEnd == Long.MAX_VALUE) {
         return coreSearch.run(sat.conflicts + conflicts, coreCallLimit);
       }
+      runDeadline = deadline;
+      givenBack = 0;
       long full = setPhaseLimits(share, deadline);
       int result;
       if (CORE_NO_SOLUTION > 0) {
@@ -4040,7 +4065,7 @@ public final class LcgSolver implements ExternalPropagator {
         result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
         if (result == CdclSolver.UNKNOWN && sat.work() >= sat.workLimit()) {
           if (ownSolution()) {
-            sat.setWorkLimit(full);
+            sat.setWorkLimit(CoreSearch.GIVE_BACK ? full + givenBack : full);
             result = coreSearch.run(Long.MAX_VALUE, coreCallLimit);
           } else {
             coreSearch.noSolutionStops++;
@@ -4084,11 +4109,37 @@ public final class LcgSolver implements ExternalPropagator {
     return limit;
   }
 
+  // the deadline of the run around a phase of the core-guided schedule, and the work the phase was
+  // given back since it started (see #giveBack)
+  private long runDeadline = Long.MAX_VALUE;
+  private long givenBack;
+
+  /**
+   * Gives a phase of the core-guided schedule back the given work and time, which its searches
+   * spent on tests that proved nothing (core exhaustion that refutes nothing, the objective's
+   * probes): its work limit and its clock move by as much, the clock no later than the run's
+   * deadline, and the work also counts once the phase, with a solution of its own, goes on past the
+   * share it gets without one ({@link #CORE_NO_SOLUTION}). HaplotypeAssembly (MaxSAT Evaluation
+   * 2024) gave back 77M work, 38 s at {@link #WORK_PER_MS}, and its phase stopped twice on the
+   * clock.
+   */
+  void giveBack(long work, long nanos) {
+    givenBack += work;
+    if (sat.workLimit() != Long.MAX_VALUE) {
+      sat.setWorkLimit(sat.workLimit() + work);
+    }
+    long deadline = sat.deadline();
+    if (runDeadline != Long.MAX_VALUE && deadline < runDeadline && nanos > 0) {
+      sat.setDeadline(deadline > runDeadline - nanos ? runDeadline : deadline + nanos);
+    }
+  }
+
   /** Restores the limits of the run after a phase of the core-guided schedule. */
   private void endPhase(long deadline) {
     if (sat.deadline() < deadline && sat.now() > sat.deadline()) {
       clockStops++;
     }
+    runDeadline = Long.MAX_VALUE;
     sat.setDeadline(deadline);
     sat.setWorkLimit(Long.MAX_VALUE);
     sat.setConflictLimit(conflictCap);

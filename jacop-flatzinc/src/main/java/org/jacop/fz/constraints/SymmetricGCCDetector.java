@@ -295,7 +295,8 @@ public class SymmetricGCCDetector {
     int b;
     try {
       b = support.getInt(rhs);
-    } catch (IllegalArgumentException | ClassCastException e) {
+    } catch (RuntimeException _) {
+      // a variable right-hand side (bool_lin_eq takes var int), or no integer
       return;
     }
     // a counter: 1 on 0/1 variables and -1 on one other variable, = 0

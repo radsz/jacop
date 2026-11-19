@@ -28,6 +28,8 @@
 
 package org.jacop.constraints.table;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -42,6 +44,8 @@ import org.jacop.core.Var;
 import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.lcg.Explainable;
+import org.jacop.lcg.PbEncodable;
+import org.jacop.lcg.PbModel;
 
 /**
  * A binary table (x, y) in R kept domain consistent with bit-sets: the supports of each value of x
@@ -58,7 +62,7 @@ import org.jacop.lcg.Explainable;
  * @version 5.0
  */
 public class BinaryBitTable extends Constraint
-    implements UsesQueueVariable, SatisfiedPresent, Explainable {
+    implements UsesQueueVariable, SatisfiedPresent, Explainable, PbEncodable {
 
   static final AtomicInteger idNumber = new AtomicInteger(0);
 
@@ -484,6 +488,31 @@ public class BinaryBitTable extends Constraint
         }
       }
     }
+    return true;
+  }
+
+  /**
+   * Writes the allowed pairs within the root domains by the support encoding, over which unit
+   * propagation reaches the arc consistency this propagator keeps, so that --proof covers the
+   * binary tables posted as this constraint.
+   *
+   * @param model the model
+   * @return true, the pairs are encoded
+   */
+  @Override
+  public boolean encode(PbModel model) {
+    if (getClass() != BinaryBitTable.class) {
+      return false;
+    }
+    IntDomain dx = model.domain(x);
+    IntDomain dy = model.domain(y);
+    List<int[]> kept = new ArrayList<>();
+    for (int[] t : tuples) {
+      if (dx.contains(t[0]) && dy.contains(t[1]) && (x != y || t[0] == t[1])) {
+        kept.add(t);
+      }
+    }
+    PbModel.table(model, new IntVar[] {x, y}, kept);
     return true;
   }
 

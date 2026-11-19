@@ -148,8 +148,23 @@ public class CountBounds extends AbstractCount
       return;
     }
 
-    if (start == list.length && numberEq >= lb) {
+    if (numberEq >= lb && numberEq + numberMayBe <= ub) {
+      // every remaining count lies in [lb, ub]
       throw Store.failException;
+    }
+
+    if (numberEq >= lb && numberEq + numberMayBe == ub + 1) {
+      // the count can only leave [lb, ub] above ub, with every undecided variable taking the value
+      for (int i = start; i < list.length; i++) {
+        IntVar v = list[i];
+        v.domain.inValue(store.level, v, value);
+      }
+    } else if (numberEq + numberMayBe <= ub && numberEq == lb - 1) {
+      // the count can only leave [lb, ub] below lb, with no undecided variable taking the value
+      for (int i = start; i < list.length; i++) {
+        IntVar v = list[i];
+        v.domain.inComplement(store.level, v, value);
+      }
     }
 
     updateState(numberEq, start);
@@ -158,7 +173,8 @@ public class CountBounds extends AbstractCount
   @Override
   public boolean satisfied() {
     SatisfactionCounts sc = countSatisfaction(value);
-    return sc.eq() + sc.notEq() == list.length && sc.eq() >= lb && sc.eq() <= ub;
+    // every count between the fixed occurrences and those still possible lies in [lb, ub]
+    return sc.eq() >= lb && list.length - sc.notEq() <= ub;
   }
 
   @Override
