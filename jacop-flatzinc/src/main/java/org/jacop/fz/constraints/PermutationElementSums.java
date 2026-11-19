@@ -146,14 +146,15 @@ public final class PermutationElementSums {
     }
     for (int from = 0; from < 2; from++) {
       int[] c = function(tbl, from);
-      if (c != null) {
+      if (c.length > 0) {
         add(v[from], Arrays.copyOfRange(c, 1, c.length), v[1 - from], c[0]);
       }
     }
   }
 
   // the column 1 - from of the pairs tbl as a function of column from, {first, c...} with c[a -
-  // first] the image of a, or null when a value has two images or a value between the smallest and
+  // first] the image of a, or an empty array when a value has two images or a value between the
+  // smallest and
   // the largest has none
   private static int[] function(int[] tbl, int from) {
     int min = Integer.MAX_VALUE;
@@ -165,7 +166,7 @@ public final class PermutationElementSums {
     long size = (long) max - min + 1;
     if (size > MAX_ARRAY || size != tbl.length / 2) {
       // a hole or a value with two images
-      return null;
+      return new int[0];
     }
     int[] c = new int[(int) size + 1];
     boolean[] set = new boolean[(int) size];
@@ -173,7 +174,7 @@ public final class PermutationElementSums {
     for (int i = 0; i < tbl.length; i += 2) {
       int a = tbl[i + from] - min;
       if (set[a]) {
-        return null;
+        return new int[0];
       }
       set[a] = true;
       c[a + 1] = tbl[i + 1 - from];
@@ -240,7 +241,11 @@ public final class PermutationElementSums {
     for (Map.Entry<ArrayKey, List<Element>> g : groups.entrySet()) {
       List<Element> es = g.getValue();
       if (es.size() >= 2) {
-        post(es, union, es.size() == x.length && union.getSize() == x.length);
+        boolean permutation = es.size() == x.length && union.getSize() == x.length;
+        if (permutation && countsEnabled()) {
+          postCounts(es, union);
+        }
+        post(es, union, permutation);
       }
     }
   }
@@ -276,7 +281,12 @@ public final class PermutationElementSums {
     Element e0 = es.get(0);
     Map<Integer, Integer> count = new TreeMap<>();
     for (ValueEnumeration it = union.valueEnumeration(); it.hasMoreElements(); ) {
-      count.merge(e0.c[(int) ((long) it.nextElement() - e0.first)], 1, Integer::sum);
+      long i = (long) it.nextElement() - e0.first;
+      if (i < 0 || i >= e0.c.length) {
+        // an index the element constraints remove
+        return;
+      }
+      count.merge(e0.c[(int) i], 1, Integer::sum);
     }
     if (count.size() > MAX_COUNTED || 2 * count.size() > union.getSize()) {
       // too many values, or most values once (processing times of a flow shop): the counts then
@@ -311,9 +321,6 @@ public final class PermutationElementSums {
         return;
       }
       values[n++] = e0.c[(int) i];
-    }
-    if (permutation && countsEnabled()) {
-      postCounts(es, union);
     }
     Arrays.sort(values);
     int k = es.size();
