@@ -117,12 +117,14 @@ public class ProductOfSumsDetector implements ParserTreeConstants {
   }
 
   /**
-   * It tells if the rewrite is on.
+   * Whether sums of conjunctions are rewritten as products of sums.
    *
-   * @return false if the system property org.jacop.fz.productOfSums is false.
+   * @return true unless org.jacop.fz.productOfSums is set to false.
    */
   public static boolean enabled() {
-    return !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.productOfSums"));
+    return !Boolean.FALSE
+        .toString()
+        .equalsIgnoreCase(System.getProperty("org.jacop.fz.productOfSums"));
   }
 
   /**
@@ -132,19 +134,12 @@ public class ProductOfSumsDetector implements ParserTreeConstants {
    * @return the conjunction and bool2int nodes it replaces, which must not be posted.
    */
   public Set<SimpleNode> detect(SimpleNode astTree) {
+    support.forEachConstraint(astTree, this::collect);
+    // the variables of the search annotations, the objective and the output stay
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
-      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
-      if (node.getId() == JJTCONSTRAINTITEMS) {
-        for (int j = 0; j < node.jjtGetNumChildren(); j++) {
-          support.checkTimeOut();
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
-          if (item.getId() == JJTCONSTELEM) {
-            collect((ASTConstElem) item);
-          }
-        }
-      } else if (node.getId() == JJTSOLVEITEM || node.getId() == JJTMODELEND) {
-        // variables of the search annotations and the objective stay
-        countAll(node);
+      SimpleNode item = (SimpleNode) astTree.jjtGetChild(i);
+      if (item.getId() == JJTSOLVEITEM || item.getId() == JJTMODELEND) {
+        countAll(item);
       }
     }
     if (conjunctions.size() >= minTerms) {
