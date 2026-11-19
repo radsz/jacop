@@ -1193,10 +1193,38 @@ final class OpbEncoder implements PbModel {
   private void line(String constraint) {
     constraints.append(constraint).append(" ;\n");
     numConstraints++;
+    sizeByOwner.merge(owner(), (long) constraint.length() + 3, Long::sum);
     if (constraints.length() > MAX_CHARS) {
       // the order and channelling lines cost several lines per value, more than their term count
-      throw new TooLarge("the OPB model is over " + MAX_CHARS + " characters");
+      throw new TooLarge("the OPB model is over " + MAX_CHARS + " characters" + largestOwners());
     }
+  }
+
+  // the text of the model by what wrote it: a constraint class, or the variables' encodings
+  private final Map<String, Long> sizeByOwner = new HashMap<>();
+
+  private String owner() {
+    return current == null ? "variables" : current.getClass().getSimpleName();
+  }
+
+  // the three largest writers of the model and their shares, which say what a cap stopped
+  private String largestOwners() {
+    long total = sizeByOwner.values().stream().mapToLong(Long::longValue).sum();
+    if (total == 0) {
+      return "";
+    }
+    StringBuilder s = new StringBuilder(" (");
+    sizeByOwner.entrySet().stream()
+        .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+        .limit(3)
+        .forEach(
+            e ->
+                s.append(s.length() > 2 ? ", " : "")
+                    .append(e.getKey())
+                    .append(' ')
+                    .append(100 * e.getValue() / total)
+                    .append('%'));
+    return s.append(')').toString();
   }
 
   // the longest model text, well below the largest array a StringBuilder can hold
@@ -1206,7 +1234,10 @@ final class OpbEncoder implements PbModel {
     numTerms += terms;
     if (numTerms > maxTerms) {
       throw new TooLarge(
-          "the OPB model is over " + maxTerms + " terms (system property jacop.lcg.proofTerms)");
+          "the OPB model is over "
+              + maxTerms
+              + " terms (system property jacop.lcg.proofTerms)"
+              + largestOwners());
     }
   }
 
