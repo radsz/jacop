@@ -4,8 +4,6 @@
 
 package org.jacop.fz;
 
-import java.util.Arrays;
-
 /** Simple AST node for flatzinc parser. */
 public class SimpleNode implements Node, Cloneable {
 
@@ -112,14 +110,15 @@ public class SimpleNode implements Node, Cloneable {
       return;
     }
     Node[] all;
-    if (children instanceof Node[] array) {
+    if (children instanceof Node[] array && i < array.length) {
       all = array;
     } else {
-      all = new Node[1];
-      all[0] = (Node) children;
-    }
-    if (i >= all.length) {
-      all = Arrays.copyOf(all, i + 1);
+      all = new Node[Math.max(jjtGetNumChildren(), i + 1)];
+      if (children instanceof Node[] array) {
+        System.arraycopy(array, 0, all, 0, array.length);
+      } else if (children != null) {
+        all[0] = (Node) children;
+      }
     }
     all[i] = n;
     children = all;
