@@ -3838,6 +3838,52 @@ public final class LcgSolver implements ExternalPropagator {
   public long probeHalfWays;
 
   /**
+   * Whether the search is too slow for branch and bound to prove the optimum (fewer than
+   * jacop.lcg.coreProbeSlowRate conflicts per second of work), while the cores of the probe raised
+   * the lower bound fast enough to meet the best solution of branch and bound within the work of
+   * the core-guided phase ({@link CoreSearch#canReach}, from the mark set before the probe). The
+   * probe then found no solution of its own because the solutions are far from its bound, not
+   * because the cores are weak, and slow branch and bound gives way to search without learning,
+   * which proves nothing: on multi-agent path finding (MiniZinc Challenge 2022 ins_g16_p10_a30) the
+   * probe raised the bound from 30 to 110 in 2 % of the work and stopped without a solution;
+   * skipping the phase left the proof to branch and bound, which did not prove the optimum 334 in
+   * 1200 s, while the phase proves it in 119 s.
+   */
+  private boolean probeRateReaches() {
+    if (!PROBE_RATE) {
+      return false;
+    }
+    long bestCost = bestObjective();
+    if (bestCost == Long.MAX_VALUE
+        || (double) sat.conflicts * 1000 * WORK_PER_MS >= PROBE_SLOW_RATE * sat.work()
+        || coreSearch.lowerBound <= coreSearch.markBound()
+        || !coreSearch.canReach(bestCost, (long) (coreShare * workLeft()))) {
+      return false;
+    }
+    probeRateKeeps++;
+    return true;
+  }
+
+  // -Djacop.lcg.coreProbeRate=false: the probe skip also when the cores of the probe rose fast
+  // enough to meet the best solution within the phase
+  private static final boolean PROBE_RATE =
+      Boolean.parseBoolean(System.getProperty("jacop.lcg.coreProbeRate", "true"));
+
+  // the conflicts per second of work (WORK_PER_MS * 1000) under which the search counts as too slow
+  // for branch and bound to prove the optimum (see probeRateReaches): ma-path-finding made 3 to 9
+  // by
+  // the probe's end, the instances where the skip pays (city-position, gt-sort, trains,
+  // java-routing, fox-geese-corn) 260 to 470
+  private static final double PROBE_SLOW_RATE =
+      Double.parseDouble(System.getProperty("jacop.lcg.coreProbeSlowRate", "50"));
+
+  /**
+   * Statistics: core-guided phases run after a probe without a solution of its own, as the probe
+   * raised the lower bound fast enough (see {@link #probeRateReaches}).
+   */
+  public long probeRateKeeps;
+
+  /**
    * Whether the core-guided probe raised the lower bound at least as far as it is still below the
    * best solution, so that the rest of the phase runs even without a solution of the probe's own:
    * on MaxSAT Evaluation 2024's xai-mindset2 iris the probe's cores took the bound from 0 to 77 in
@@ -3961,6 +4007,7 @@ public final class LcgSolver implements ExternalPropagator {
       }
       if (coreProbeShare > 0) {
         long stops = coreSearch.noSolutionStops;
+        coreSearch.mark();
         result = runCores(coreProbeShare, coreDelayBudget, false);
         if (result != CdclSolver.UNKNOWN || sat.now() > sat.deadline()) {
           return result;
@@ -3976,7 +4023,8 @@ public final class LcgSolver implements ExternalPropagator {
           && probeWithoutSolution
           && best != null
           && best != given
-          && !halfWayAfterProbe()) {
+          && !halfWayAfterProbe()
+          && !probeRateReaches()) {
         // the probe found no solution of its own while branch and bound did: the rest of the phase
         // stops the same way after a third of its work and gives the time back
         probeSkips++;
