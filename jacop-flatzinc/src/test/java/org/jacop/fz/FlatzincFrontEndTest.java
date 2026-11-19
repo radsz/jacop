@@ -5067,6 +5067,113 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void tablesOfSevenColumnsOverOneRelationShareTheirCells(@TempDir Path dir) throws Exception {
+    // only tables of at most TableCliques.MAX_ARITY (6) columns shared their tuples:
+    // pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on eight lists of eight
+    // variables, and with its own tuples and cells for each table it ran out of 4 GB. The rows here
+    // (sum divisible by 3) have no exact reformulation.
+    StringJoiner cells = new StringJoiner(",");
+    int count = 0;
+    for (int code = 0; code < 2187; code++) {
+      int sum = 0;
+      StringJoiner row = new StringJoiner(",");
+      for (int i = 0, rest = code; i < 7; i++, rest /= 3) {
+        sum += rest % 3;
+        row.add(Integer.toString(rest % 3));
+      }
+      if (sum % 3 == 0) {
+        cells.add(row.toString());
+        count++;
+      }
+    }
+    StringBuilder m = new StringBuilder();
+    m.append("array [1..").append(7 * count).append("] of int: t = [").append(cells).append("];\n");
+    for (int i = 0; i < 21; i++) {
+      m.append("var 0..2: x").append(i).append(":: output_var;\n");
+    }
+    m.append("constraint jacop_table_int([x0,x1,x2,x3,x4,x5,x6],t);\n");
+    m.append("constraint jacop_table_int([x7,x8,x9,x10,x11,x12,x13],t);\n");
+    // the same rows written in the constraint, read from the packed array literal
+    m.append("constraint jacop_table_int([x14,x15,x16,x17,x18,x19,x20],[")
+        .append(cells)
+        .append("]);\n");
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("tables.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    java.lang.reflect.Field shared = HybridTable.class.getDeclaredField("shared");
+    shared.setAccessible(true);
+    List<HybridTable> tables = new ArrayList<>();
+    Set<Object> indexes = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof HybridTable h && h.columnCount() == 7) {
+        tables.add(h);
+        indexes.add(shared.get(h));
+      }
+    }
+    assertEquals(3, tables.size());
+    assertEquals(1, indexes.size());
+  }
+
+  @Test
+  void arrayLiteralsOfIntLiteralsArePackedAndReadAsNodes() {
+    // the parser keeps an array literal of int literals as one int[] (a table of pigeonsPlus-11-07
+    // has 70 million entries, 3.4 GB as nodes); its children are read as int literal nodes
+    SimpleNode array = new SimpleNode(ParserTreeConstants.JJTARRAYLITERAL);
+    array.setPackedInts(new int[] {3, -1, 7});
+    assertEquals(3, array.jjtGetNumChildren());
+    ASTScalarFlatExpr second = (ASTScalarFlatExpr) array.jjtGetChild(1);
+    assertEquals(0, second.getType());
+    assertEquals(-1, second.getInt());
+    assertSame(array, second.jjtGetParent());
+    SimpleNode copy = array.copy();
+    assertSame(array.packedInts(), copy.packedInts());
+    // a change of a child turns the packed children into nodes
+    ASTScalarFlatExpr replaced = SimpleNode.intLiteral(5);
+    array.jjtAddChild(replaced, 2);
+    assertNull(array.packedInts());
+    assertEquals(3, ((ASTScalarFlatExpr) array.jjtGetChild(0)).getInt());
+    assertSame(replaced, array.jjtGetChild(2));
+    assertEquals(7, ((ASTScalarFlatExpr) copy.jjtGetChild(2)).getInt());
+  }
+
+  @Test
+  void arrayLiteralsMixingIntLiteralsWithOtherElementsKeepTheirOrder() throws IOException {
+    // ints then a variable then ints, negative ints, sets that start with an int literal
+    String fzn =
+        """
+        array [1..4] of int: c = [2,-1,3,1];
+        array [1..2] of set of int: s = [1..2,3..4];
+        var 0..4: x:: output_var;
+        var 0..4: y:: output_var;
+        array [1..4] of var int: v = [1,x,-2,y];
+        constraint int_lin_eq(c,v,-7);
+        constraint set_in(x,s[2]);
+        constraint int_lin_le([1,1],[x,y],5);
+        solve satisfy;
+        """;
+    // 2 - x - 6 + y = -7: y = x - 3
+    Set<String> expected = new TreeSet<>();
+    for (int x = 3; x <= 4; x++) {
+      for (int y = 0; y <= 4; y++) {
+        if (2 - x - 6 + y == -7 && x + y <= 5) {
+          expected.add("x = " + x + "; y = " + y + ";");
+        }
+      }
+    }
+    assertEquals(expected, solveAll(fzn));
+  }
+
+  @Test
   void regularsOverOneAutomatonShareItsGraph(@TempDir Path dir) throws Exception {
     // each regular built its own automaton and layered graph: 200 regulars over one automaton of
     // 500 states held 1.5 GB. They share one automaton, and the graph over equal domains.

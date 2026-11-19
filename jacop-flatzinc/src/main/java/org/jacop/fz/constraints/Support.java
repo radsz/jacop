@@ -314,6 +314,11 @@ public class Support implements ParserTreeConstants {
   }
 
   private int[] getIntArrayFromLiteral(SimpleNode node) {
+    int[] packed = node.packedInts();
+    if (packed != null) {
+      intPresent = true;
+      return packed.clone();
+    }
     int count = node.jjtGetNumChildren();
     int[] aa = new int[count];
     for (int i = 0; i < count; i++) {
