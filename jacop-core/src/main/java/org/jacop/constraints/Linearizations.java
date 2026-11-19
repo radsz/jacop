@@ -1162,6 +1162,8 @@ public final class Linearizations {
     private final List<IntVar> order = new ArrayList<>();
     private List<LinearForm> out = new ArrayList<>();
     private int made;
+    // the arc columns of the flow models of the edge arrays seen, by identity
+    private final Map<int[], Integer> arcCounts = new IdentityHashMap<>();
     // whether count bounds and set membership are encoded
     private boolean sets;
     // the reified comparisons linked so far
@@ -1270,7 +1272,12 @@ public final class Linearizations {
      * The arc columns of a flow model: an edge whose (level, value) labels no other edge is the
      * value column itself, unless the variable is fixed; all other edges are arcs.
      */
-    private static int arcColumns(IntVar[] list, int[] edges, int size) {
+    private int arcColumns(IntVar[] list, int[] edges, int size) {
+      // the diagrams of one graph over equal domains share their edges and so their count
+      return arcCounts.computeIfAbsent(edges, k -> countArcColumns(list, k, size));
+    }
+
+    private static int countArcColumns(IntVar[] list, int[] edges, int size) {
       long[] keys = new long[size];
       for (int e = 0; e < size; e++) {
         keys[e] = ((long) edges[4 * e] << 32) | (edges[4 * e + 2] & 0xffffffffL);
