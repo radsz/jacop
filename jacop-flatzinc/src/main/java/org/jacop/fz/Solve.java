@@ -4007,7 +4007,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // fixed search keeps LCG once it has a solution
       return false;
     } else if (solutionFound) {
-      long before = costs.peekFirst()[1];
+      long before = lcgCostAt(now - stallNanos, costs.peekFirst()[1]);
       long raised =
           boundGained(now, stallNanos, lcgBoundGain, cost) ? lcgBoundRaised : Long.MIN_VALUE;
       if (stillProgressing(now, stallNanos, gain, raised, before, cost)) {
@@ -4025,6 +4025,45 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return true;
+  }
+
+  // the best cost printed before each solution of LCG that improved it, with the time of that
+  // solution (CdclSolver.now of the LCG solver)
+  private final ArrayDeque<long[]> lcgImprovements = new ArrayDeque<>();
+
+  /**
+   * The best cost printed at a time {@code t} of the LCG solver, from the solutions LCG improved it
+   * with. The checks of LCG's speed sample the best cost only from the first check on, so a check
+   * made right after LCG found its first or a better solution saw no gain over its window. With -f
+   * at 240 s, celar graph11 (MiniZinc Challenge 2013) gave way at 24 s and ended at 13,387, and
+   * with the solutions before the first check counted it keeps LCG and ends at 3,080;
+   * team-assignment data3_5_31 (2022) was not proved and is proved in 63 s.
+   *
+   * @param t the start of the window
+   * @param sampled the best cost the checks sampled at the start of the window
+   * @return the best cost printed at t, or {@code sampled} when LCG improved on nothing since t
+   */
+  private long lcgCostAt(long t, long sampled) {
+    synchronized (lcgImprovements) {
+      return costAt(lcgImprovements, t, sampled);
+    }
+  }
+
+  /**
+   * The best cost at a time {@code t}, from the improvements made since.
+   *
+   * @param improvements the time of each improvement and the best cost before it, in time order
+   * @param t the time
+   * @param sampled the best cost sampled at or after t
+   * @return the best cost before the first improvement after t, or {@code sampled} if there is none
+   */
+  static long costAt(Iterable<long[]> improvements, long t, long sampled) {
+    for (long[] improvement : improvements) {
+      if (improvement[0] > t) {
+        return Math.max(improvement[1], sampled);
+      }
+    }
+    return sampled;
   }
 
   // the share of the gap a bound raise must close to keep a slow LCG (lcg-slow-bound-gain): on
@@ -8906,6 +8945,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (costVariable instanceof IntVar cost && cost.singleton()) {
       if (lcg != null) {
         lcgLastCost = cost.value();
+        int previous = bestPrintedCost.get();
+        if (cost.value() < previous) {
+          synchronized (lcgImprovements) {
+            lcgImprovements.addLast(new long[] {lcg.sat().now(), previous});
+          }
+        }
       }
       bestPrintedCost.accumulateAndGet(cost.value(), Math::min);
     }
