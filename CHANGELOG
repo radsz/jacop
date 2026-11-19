@@ -8372,6 +8372,14 @@ Version 5.0 (unreleased)
    benchmark models. -Dorg.jacop.fz.indexFunctions=false turns it off,
    -Dorg.jacop.fz.indexFunctions.clauses=false only the unfolding.
 
+464. Tables of more than TableCliques.MAX_ARITY (6) columns over the same
+   tuples share one tuple array, their reformulation and the cells and
+   bit-sets of their HybridTable, as smaller tables already did.
+   pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on
+   eight lists of eight variables: every table built its own copy and
+   the model ran out of memory at -Xmx4G while posting; it is now proved
+   unsatisfiable.
+
 Version 4.11
 =============
 

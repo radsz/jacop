@@ -5064,6 +5064,64 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void tablesOfSevenColumnsOverOneRelationShareTheirCells(@TempDir Path dir) throws Exception {
+    // only tables of at most TableCliques.MAX_ARITY (6) columns shared their tuples:
+    // pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on eight lists of eight
+    // variables, and with its own tuples and cells for each table it ran out of 4 GB. The rows here
+    // (sum divisible by 3) have no exact reformulation.
+    StringJoiner cells = new StringJoiner(",");
+    int count = 0;
+    for (int code = 0; code < 2187; code++) {
+      int sum = 0;
+      StringJoiner row = new StringJoiner(",");
+      for (int i = 0, rest = code; i < 7; i++, rest /= 3) {
+        sum += rest % 3;
+        row.add(Integer.toString(rest % 3));
+      }
+      if (sum % 3 == 0) {
+        cells.add(row.toString());
+        count++;
+      }
+    }
+    StringBuilder m = new StringBuilder();
+    m.append("array [1..").append(7 * count).append("] of int: t = [").append(cells).append("];\n");
+    for (int i = 0; i < 21; i++) {
+      m.append("var 0..2: x").append(i).append(":: output_var;\n");
+    }
+    m.append("constraint jacop_table_int([x0,x1,x2,x3,x4,x5,x6],t);\n");
+    m.append("constraint jacop_table_int([x7,x8,x9,x10,x11,x12,x13],t);\n");
+    // the same rows written in the constraint, read from the packed array literal
+    m.append("constraint jacop_table_int([x14,x15,x16,x17,x18,x19,x20],[")
+        .append(cells)
+        .append("]);\n");
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("tables.fzn");
+    Files.writeString(file, m.toString());
+    PrintStream out = System.out;
+    Store store;
+    try (PrintStream quiet = new PrintStream(OutputStream.nullOutputStream())) {
+      System.setOut(quiet);
+      FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+      loader.load();
+      store = loader.getStore();
+    } finally {
+      System.setOut(out);
+    }
+    java.lang.reflect.Field shared = HybridTable.class.getDeclaredField("shared");
+    shared.setAccessible(true);
+    List<HybridTable> tables = new ArrayList<>();
+    Set<Object> indexes = Collections.newSetFromMap(new IdentityHashMap<>());
+    for (org.jacop.constraints.Constraint c : store.getConstraints()) {
+      if (c instanceof HybridTable h && h.columnCount() == 7) {
+        tables.add(h);
+        indexes.add(shared.get(h));
+      }
+    }
+    assertEquals(3, tables.size());
+    assertEquals(1, indexes.size());
+  }
+
+  @Test
   void regularsOverOneAutomatonShareItsGraph(@TempDir Path dir) throws Exception {
     // each regular built its own automaton and layered graph: 200 regulars over one automaton of
     // 500 states held 1.5 GB. They share one automaton, and the graph over equal domains.
