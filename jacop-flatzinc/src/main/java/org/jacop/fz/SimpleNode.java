@@ -10,8 +10,6 @@ public class SimpleNode implements Node, Cloneable {
   protected final int id;
   protected Node parent;
   protected Node[] children;
-  protected Object value;
-  protected Parser parser;
 
   /**
    * Constructs a simple node with the specified id.
@@ -23,14 +21,15 @@ public class SimpleNode implements Node, Cloneable {
   }
 
   /**
-   * Constructs a simple node with the specified parser and id.
+   * Constructs a simple node with the specified parser and id. The parser is not kept: the nodes of
+   * a model are its largest part while it is read (16 million scalar expressions of XCSP 2022
+   * RoomMate-sr1000), and neither the parser nor a value of a node is read.
    *
    * @param p the parser
    * @param i the node id
    */
   public SimpleNode(Parser p, int i) {
     this(i);
-    parser = p;
   }
 
   /**
@@ -115,16 +114,6 @@ public class SimpleNode implements Node, Cloneable {
   /** {@inheritDoc} */
   public int jjtGetNumChildren() {
     return children == null ? 0 : children.length;
-  }
-
-  /** {@inheritDoc} */
-  public void jjtSetValue(Object value) {
-    this.value = value;
-  }
-
-  /** {@inheritDoc} */
-  public Object jjtGetValue() {
-    return value;
   }
 
   /* You can override these two methods in subclasses of SimpleNode to

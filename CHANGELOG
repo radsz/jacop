@@ -8068,7 +8068,42 @@ Version 5.0 (unreleased)
    (costas-array and blocks-world slower over three rounds);
    -Djacop.lcg.shiftSplitBounds=true|false overrides.
 
-448. Sampling dives for float objectives (FloatDive): a float search that
+448. Disjoint and Diff2 limit a rectangle's length from the least start of
+   each segment of its start domain, not from the interval of the domain
+   that meets a forbidden region, and begin a new segment after a region
+   whose end is a hole of the domain. Disjoint lets a rectangle of zero
+   width take its place, as documented now: it fails a segment or point
+   strictly inside another rectangle, which satisfied() and the fixed
+   check accepted, and lets it lie on the common border of two touching
+   rectangles, which the merged barrier profile pruned. Disjoint and
+   DisjointNoProfile now count the same solutions as a brute force on the
+   rectangle fingerprint. ArcTimes runs its passes until the nodes queued
+   by its own pruning of a variable that is both a successor and a time
+   are done. The consistency checker gets cases for Disjoint, Diff2 with
+   zero lengths, SubcircuitCost, WeightedSubcircuits, Routes, ArcTimes,
+   GlobalCardinality, Alldifferent, Decreasing, CardinalityMatrix,
+   ConjunctionSum and UnaryEarlinessTardiness. Sum narrows
+   the variables after a hole moved a bound of the sum, EqBool over one
+   variable holds, DisjointConditional releases (condition 0) a pair whose
+   compulsory parts overlap, and MaxCliqueBound.satisfied() no longer
+   throws on an open vertex. The checker also gets cases for the Boolean
+   reifications, IfThenBool, In, Sum, SumWeight, MaxCliqueBound,
+   DisjointConditional, TableCover and SoftAlldifferent. ConditionalSelect
+   now wakes on holes, which can rule a branch out. The checker also
+   gets cases for CostRegular, MultiCostRegular, SoftGCC,
+   IfThenElseBool, SequenceMdd and CostMdd. SetConsistencyChecker does
+   the same for the set constraints: AdiffBeqC puts in b an element of a
+   that c cannot hold, CardAeqX passes holes of its cardinality variable
+   to the set, and Match keeps its list increasing and gives an element
+   of the glb to the only list variable that can take it. XmulYeqC is
+   domain consistent: with c != 0 it keeps the divisors of c whose
+   quotient is in the other factor (dividing by an interval around 0 kept
+   every value up to |c|), and with c = 0 a factor without 0 fixes the
+   other one to 0. The checker gets cases for NetworkFlow, Steiner,
+   WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
+   VectorBinpacking, XplusYgtC and XplusClteqZ.
+
+449. Sampling dives for float objectives (FloatDive): a float search that
    has not proved its optimum after 10 % of the time-out alternates runs
    of branch and bound (node budget 10,000, doubling) with batches of
    dives under the bound best - gap. A dive narrows the float search
