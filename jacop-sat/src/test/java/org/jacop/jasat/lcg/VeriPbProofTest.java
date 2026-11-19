@@ -886,6 +886,27 @@ class VeriPbProofTest {
   }
 
   @Test
+  void clauseOverAVariableNarrowedToZeroOneAtTheRootIsWritten() {
+    // x in 0..6 is 0/1 after the root propagation when the clause x = 1 or y = 0 is added, but the
+    // model states x over 0..6 before that propagation: writing the clause threw "x::{0..1} is
+    // not a 0/1 variable" (MiniZinc fuzz seed 2029932, --proof)
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 6);
+    IntVar y = new IntVar(store, "y", 0, 1);
+    AtomicTrail rootTrail = new AtomicTrail(store);
+    store.imposeWithConsistency(new XlteqC(x, 1));
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setRootTrail(rootTrail);
+    lcg.setProof(model, proof);
+    lcg.addClause(new IntVar[] {x}, new IntVar[] {y});
+    lcg.addClause(new IntVar[] {y}, new IntVar[0]);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
+    assertThat(x.value()).isOne();
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
   void countOfARepeatedVariableIntoAHoleIsDerived() {
     // x4 = 1 fixes x0 = 0, so the count of 1 in [x0, x4, x0] is 1, a hole of c in {0, 2, 3}: the
     // bounds of c were not written for a list holding x0 twice, one term of weight 2 in the row

@@ -565,6 +565,33 @@ final class OpbEncoder implements PbModel {
     line(guardPrefix() + s + ">= " + Math.subtractExact(rhs, constant));
   }
 
+  /**
+   * Writes a clause that {@link LcgSolver#addClause} gave the solver as {@code [x >= 1]} literals:
+   * one of the positive variables is at least 1 or one of the negative ones is below 1. Its
+   * variables were 0/1 when the clause was added, but the domains of the model may be wider: with a
+   * root trail they are the domains before the root propagation that narrowed them.
+   *
+   * @param positive variables of which one may be at least 1
+   * @param negative variables of which one may be below 1
+   */
+  void solverClause(IntVar[] positive, IntVar[] negative) {
+    StringBuilder s = new StringBuilder();
+    for (int sign = 1; sign >= -1; sign -= 2) {
+      for (IntVar x : sign > 0 ? positive : negative) {
+        int i = id.applyAsInt(x);
+        IntDomain d = root[i];
+        if (d.min() >= 1 || d.max() < 1) {
+          if (d.min() >= 1 == sign > 0) {
+            return;
+          }
+          continue;
+        }
+        s.append("1 ").append(sign > 0 ? ge(i, 1) : "~" + ge(i, 1)).append(' ');
+      }
+    }
+    line(guardPrefix() + s + ">= 1");
+  }
+
   @Override
   public void clause(IntVar[] positive, IntVar[] negative) {
     StringBuilder s = new StringBuilder();
