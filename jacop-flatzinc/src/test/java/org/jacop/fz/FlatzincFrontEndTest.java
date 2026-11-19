@@ -1693,13 +1693,23 @@ class FlatzincFrontEndTest {
     assertEquals(
         2,
         allSolutions(
-            "var bool: b :: output_var;\nvar 0..1: w :: output_var;\nvar 0..1: i = w;\n"
-                + "constraint bool2int(b, i);\nsolve satisfy;\n"));
+            """
+            var bool: b :: output_var;
+            var 0..1: w :: output_var;
+            var 0..1: i = w;
+            constraint bool2int(b, i);
+            solve satisfy;
+            """));
     assertEquals(
         2,
         allSolutions(
-            "var bool: b :: output_var;\nvar 0..1: i;\nvar 0..1: w :: output_var = i;\n"
-                + "constraint bool2int(b, i);\nsolve satisfy;\n"));
+            """
+            var bool: b :: output_var;
+            var 0..1: i;
+            var 0..1: w :: output_var = i;
+            constraint bool2int(b, i);
+            solve satisfy;
+            """));
   }
 
   // common subexpressions made s of var s = w an alias of g for int_eq(g, s), which left w free
@@ -1709,8 +1719,14 @@ class FlatzincFrontEndTest {
     assertEquals(
         2,
         allSolutions(
-            "var 0..3: w :: output_var;\nvar 0..3: s = w;\nvar 0..3: g :: output_var;\n"
-                + "constraint int_eq(g, s);\nconstraint int_le(2, s);\nsolve satisfy;\n"));
+            """
+            var 0..3: w :: output_var;
+            var 0..3: s = w;
+            var 0..3: g :: output_var;
+            constraint int_eq(g, s);
+            constraint int_le(2, s);
+            solve satisfy;
+            """));
   }
 
   // affine folding replaced z of var z = w by 2x + 1 in the rows, which left w free
@@ -1719,9 +1735,15 @@ class FlatzincFrontEndTest {
     assertEquals(
         10,
         allSolutions(
-            "var 0..3: x :: output_var;\nvar 0..3: y :: output_var;\nvar 0..20: w :: output_var;\n"
-                + "var 0..20: z = w;\nconstraint int_lin_eq([1,-2],[z,x],1);\n"
-                + "constraint int_lin_le([1,1],[z,y],6);\nsolve satisfy;\n"));
+            """
+            var 0..3: x :: output_var;
+            var 0..3: y :: output_var;
+            var 0..20: w :: output_var;
+            var 0..20: z = w;
+            constraint int_lin_eq([1,-2],[z,x],1);
+            constraint int_lin_le([1,1],[z,y],6);
+            solve satisfy;
+            """));
   }
 
   // the output of a run of the model with the given options, in this JVM (no watchdog)

@@ -357,7 +357,7 @@ class ComposedTightnessTest {
     try {
       s.impose(c);
       return s.consistency();
-    } catch (org.jacop.core.FailException e) {
+    } catch (org.jacop.core.FailException _) {
       return false;
     }
   }
@@ -426,7 +426,7 @@ class ComposedTightnessTest {
           return null;
         }
       }
-    } catch (org.jacop.core.FailException e) {
+    } catch (org.jacop.core.FailException _) {
       return null;
     }
     IntDomain[] out = new IntDomain[v.length];
@@ -486,16 +486,13 @@ class ComposedTightnessTest {
           d[i] = dom(dr);
         } else {
           int k = dr.nextInt(4);
-          d[i] =
-              k == 0
-                  ? new IntervalDomain(0, 0)
-                  : k == 1 ? new IntervalDomain(1, 1) : new IntervalDomain(0, 1);
+          d[i] = new IntervalDomain(k == 1 ? 1 : 0, k == 0 ? 0 : 1);
         }
       }
       try {
         // the constructor may reject the arguments
         cs.make.apply(new Random(seed), vars(new Store(), d));
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         st.rejected++;
         continue;
       }
