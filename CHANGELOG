@@ -8149,6 +8149,27 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. The FlatZinc front end compiles a satisfaction model whose integer
+   variables have at most three values (and one at least with a value other
+   than 0 and 1) into clauses and solves them with JaSAT, under --lcg and
+   free search, for one solution and without proof logging. Values get
+   order and direct literals (Tamura, Taga, Kitagawa and Banbara,
+   Compiling finite linear CSP into SAT, Constraints 14(2), 2009);
+   products become support clauses after narrowing the value sets; longer
+   sums become an MDD over the partial sums (Abio, Nieuwenhuis, Oliveras,
+   Rodriguez-Carbonell and Mayer-Eichberger, A new look at BDDs for
+   pseudo-Boolean constraints, JAIR 45, 2012), or binary adders when the
+   diagram is too large; counts, alldifferent, lex chains, value
+   precedence, tables and regular get their usual encodings. The store is
+   built as before: a model of the clauses is fixed in the store and
+   checked, and is otherwise dropped and the model solved as before. On the
+   30 XCSP CSP instances where it fires (FastMatrixMultiplication,
+   Hadamard, Hamming, BinaryPuzzle), 600 s, 20 decided in 6,413 s become
+   24 in 4,645 s; none of the 240 instances of the wide benchmark set
+   fires. -Dorg.jacop.fz.clausal=false turns it off;
+   -Dorg.jacop.fz.clausal.maxDomain, .maxLiterals and .mddNodes set the
+   gates.
+
 Version 4.11
 =============
 
