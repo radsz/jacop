@@ -8338,7 +8338,7 @@ Version 5.0 (unreleased)
    rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
    11,670.
 
-452. Under LCG free search (-f), the core-guided phase is no longer skipped
+456. Under LCG free search (-f), the core-guided phase is no longer skipped
    after a probe without a solution of its own when the search makes
    fewer than 50 conflicts per second of work (too slow for branch and
    bound to prove the optimum) and the probe's cores raise the lower bound
@@ -8349,7 +8349,25 @@ Version 5.0 (unreleased)
    optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
    turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
 
-457. Free search (-f) on models with vehicle routes: LNS uses only route
+457. A search that follows the root solution of the linear relaxation
+   (LpGuidedSelect) no longer scans every column at each decision when
+   the relaxation has no value column: it decides only from value
+   columns, so it fell back to its other heuristic every time after the
+   scan. On MiniZinc Challenge 2021 physician-scheduling instance10 the
+   scan took 18 % of the run (12,440 columns at each of 1.3 million
+   decisions); at 600 s the objective goes from 10295 to 8260. The search
+   is unchanged.
+
+458. Large neighbourhood search under -f (AdaptiveLns) finds the decision
+   variables near a node of the constraint graph with a walk that expands
+   only the nodes on a shortest path to a decision variable, using the
+   distances of all nodes computed once; it finds the same variables in
+   the same order. On MiniZinc Challenge 2019 rcpsp-wet-diverse j60_19_6
+   each walk visited about a million constraint memberships and the
+   walks took 61 % of a 300 s run; now 1.4 %, with 20 times the nodes
+   (objective 45397 -> 66765 at 300 s, the best known 69664 at 600 s).
+
+459. Free search (-f) on models with vehicle routes: LNS uses only route
    removal, related (Shaw) removal and random neighbourhoods (the graph,
    propagation, objective, constraint and line neighbourhoods are off
    unless lns-kinds names them), and takes lns-share-routes 10 instead of
