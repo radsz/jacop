@@ -108,7 +108,7 @@ public final class SaturatedProducts {
    */
   public static Set<IntVar> find(Support support, SimpleNode astTree, IntVar objective) {
     Tables dictionary = support.dictionary;
-    if (!dictionary.domainsClamped()
+    if (!dictionary.boundedDomainsClamped()
         || support.options != null && support.options.proof() != null) {
       return Set.of();
     }

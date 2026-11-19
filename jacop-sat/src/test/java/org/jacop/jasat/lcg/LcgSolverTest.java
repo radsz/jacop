@@ -3572,6 +3572,21 @@ class LcgSolverTest {
   }
 
   /**
+   * The same models with every graph explained as a large one: the far cuts found from the reached
+   * nodes or the nodes reaching the last level, and failures from the labels of each node, give the
+   * same reasons as the walks (the same number of atoms).
+   */
+  @Test
+  void layeredGraphCutsOfLargeGraphsAreTheWalkedOnes() {
+    System.setProperty("jacop.lcg.graphCutsLargeNodes", "0");
+    try {
+      layeredGraphsAgreeWithBruteForce(false);
+    } finally {
+      System.clearProperty("jacop.lcg.graphCutsLargeNodes");
+    }
+  }
+
+  /**
    * Regular (some automata nondeterministic) and decision diagrams given to the solver as clauses
    * against brute force: no explanation is left to the constraints, which are out of the store.
    */
@@ -3669,6 +3684,7 @@ class LcgSolverTest {
     int unsat = 0;
     long own = 0;
     long generic = 0;
+    long atoms = 0;
     for (int instance = 0; instance < 1500; instance++) {
       Store store = new Store();
       int n = 5;
@@ -3713,12 +3729,13 @@ class LcgSolverTest {
         if (counts != null) {
           own += counts[0] - counts[1] + counts[3] - counts[4];
           generic += counts[1] + counts[4];
+          atoms += counts[2] + counts[5];
         }
       }
     }
     System.out.printf(
-        "layered graphs%s: %d sat, %d unsat, %d own and %d generic explanations%n",
-        clauses ? " as clauses" : "", sat, unsat, own, generic);
+        "layered graphs%s: %d sat, %d unsat, %d own and %d generic explanations, %d atoms%n",
+        clauses ? " as clauses" : "", sat, unsat, own, generic, atoms);
     assertThat(sat).isGreaterThan(100);
     assertThat(unsat).isGreaterThan(100);
     assertThat(generic).isZero();
@@ -3727,6 +3744,9 @@ class LcgSolverTest {
       assertThat(own).isZero();
     } else {
       assertThat(own).isGreaterThan(300);
+      // the cuts are found by one walk each way since the cut explanation of WordDesign2-words-mdd
+      // (XCSP 2023) was made faster; the atoms are those of the four walks per cut before it
+      assertThat(atoms).isEqualTo(751);
     }
   }
 

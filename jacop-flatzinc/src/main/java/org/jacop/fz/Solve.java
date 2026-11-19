@@ -3089,6 +3089,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (refutation != null) {
         ignored.add(refutation);
+        if (!refutation.solved()) {
+          // nothing woke the refutation at the root (no domain changed), and JaSAT will not run it:
+          // solve it now (hole-10 of XCSP 2017, the pigeon-hole as conflict tables, is refuted
+          // here in a few pivots, while JaSAT does not finish)
+          try {
+            refutation.consistency(store);
+          } catch (FailException e) {
+            lcgStatus = CdclSolver.UNSAT;
+            return false;
+          }
+        }
       }
       PureClauseModel cnf =
           PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
@@ -7987,7 +7998,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         && !timeoutOccurred
         && isSearchComplete()
         && relaxedSearchComplete()
-        && !dictionary.domainsClamped()) {
+        && !clampedDomainsHideSolutions()) {
       IO.println(SEPARATOR_LINE);
     } else if (timeoutOccurred) {
       IO.println(TIME_OUT_MSG);
@@ -8470,7 +8481,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (!sat.collectedClauses().isEmpty()) {
       postCollectedClauses();
       if (!store.consistency()) {
-        IO.println(dictionary.domainsClamped() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
+        IO.println(clampedDomainsHideSolutions() ? "=====UNKNOWN=====" : "=====UNSATISFIABLE=====");
         throw new TrivialSolution();
       }
     }
@@ -8481,7 +8492,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     }
 
     if ((options.getAll() || costVariable != null)
-        && (costVariable != null ? clampedDomainsKeepOptimum() : !dictionary.domainsClamped())) {
+        && (costVariable != null ? clampedDomainsKeepOptimum() : !clampedDomainsHideSolutions())) {
       IO.println(SEPARATOR_LINE);
     }
 
