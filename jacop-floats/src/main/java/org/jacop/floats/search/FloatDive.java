@@ -72,7 +72,7 @@ public final class FloatDive {
   // a domain wider than this is sampled in [-LARGE, LARGE]
   private static final double LARGE = 1e3;
 
-  private static final double SIGMA = 0.1;
+  private static final double INITIAL_SIGMA = 0.1;
 
   private final Store store;
 
@@ -88,7 +88,7 @@ public final class FloatDive {
   // the point of the last dive that improved the cost, or null
   private double[] center;
 
-  private double sigma = SIGMA;
+  private double sigma = INITIAL_SIGMA;
 
   // the last dive sampled around center
   private boolean local;
@@ -134,29 +134,8 @@ public final class FloatDive {
       }
     }
     local = center != null && random.nextBoolean();
-    double h = FloatDomain.precision() / 2;
     for (int i = 0; i < vars.length; i++) {
-      if (!(vars[i] instanceof FloatVar v) || v == cost || v.singleton()) {
-        continue;
-      }
-      boolean ok = false;
-      for (int t = 0; t < TRIES && !ok; t++) {
-        steps++;
-        int level = store.level + 1;
-        store.setLevel(level);
-        try {
-          double c = sample(v, i);
-          v.domain.in(level, v, Math.max(v.min(), c - h), Math.min(v.max(), c + h));
-          ok = store.consistency();
-        } catch (FailException _) {
-          store.clearChanged();
-        }
-        if (!ok) {
-          store.removeLevel(level);
-          store.setLevel(level - 1);
-        }
-      }
-      if (!ok) {
+      if (vars[i] instanceof FloatVar v && v != cost && !v.singleton() && !narrow(v, i)) {
         return false;
       }
     }
@@ -165,6 +144,30 @@ public final class FloatDive {
       point[i] = vars[i] instanceof FloatVar v ? (v.min() + v.max()) / 2 : Double.NaN;
     }
     return true;
+  }
+
+  // narrows v to a box of the precision around a sample, at a new level, in up to TRIES tries
+  private boolean narrow(FloatVar v, int i) {
+    double h = FloatDomain.precision() / 2;
+    for (int t = 0; t < TRIES; t++) {
+      steps++;
+      int level = store.level + 1;
+      store.setLevel(level);
+      boolean ok = false;
+      try {
+        double c = sample(v, i);
+        v.domain.in(level, v, Math.max(v.min(), c - h), Math.min(v.max(), c + h));
+        ok = store.consistency();
+      } catch (FailException _) {
+        store.clearChanged();
+      }
+      if (ok) {
+        return true;
+      }
+      store.removeLevel(level);
+      store.setLevel(level - 1);
+    }
+    return false;
   }
 
   private double sample(FloatVar v, int i) {
@@ -194,7 +197,7 @@ public final class FloatDive {
     if (local) {
       sigma *= 0.95;
       if (sigma < 1e-9) {
-        sigma = SIGMA;
+        sigma = INITIAL_SIGMA;
       }
     }
   }

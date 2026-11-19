@@ -118,7 +118,7 @@ class FloatDiveTest {
           better = true;
           best = cost.max();
         }
-      } catch (FailException e) {
+      } catch (FailException _) {
         store.clearChanged();
       }
       while (store.level > base) {
