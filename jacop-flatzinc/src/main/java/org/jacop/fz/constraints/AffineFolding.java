@@ -30,9 +30,12 @@
 
 package org.jacop.fz.constraints;
 
+import java.util.AbstractSet;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -461,8 +464,56 @@ public class AffineFolding implements ParserTreeConstants {
     }
     for (IntVar v : vars) {
       if (v != null && !v.singleton()) {
-        occurrences.computeIfAbsent(v, x -> new HashSet<>()).add(c);
+        occurrences.computeIfAbsent(v, x -> new Occurrences()).add(c);
       }
+    }
+  }
+
+  /**
+   * The constraints a variable occurs in, in the order they are read. The arguments of one
+   * constraint are read one after the other, so a constraint is a repeat only of the last one
+   * added. A HashSet for each variable (with its map and table) took 250 MB of the 1.46 million
+   * Boolean variables of XCSP 2022 RoomMate-sr0700 while the model was read.
+   */
+  static final class Occurrences extends AbstractSet<ASTConstElem> {
+    private ASTConstElem[] elements = new ASTConstElem[2];
+    private int size;
+
+    @Override
+    public boolean add(ASTConstElem c) {
+      if (size > 0 && elements[size - 1] == c) {
+        return false;
+      }
+      if (size == elements.length) {
+        elements = Arrays.copyOf(elements, 2 * size);
+      }
+      elements[size++] = c;
+      return true;
+    }
+
+    @Override
+    public Iterator<ASTConstElem> iterator() {
+      return Arrays.asList(elements).subList(0, size).iterator();
+    }
+
+    @Override
+    public int size() {
+      return size;
+    }
+
+    // equal to any set with the same constraints, as a set is
+    @Override
+    public boolean equals(Object o) {
+      return o instanceof Set<?> other && other.size() == size && containsAll(other);
+    }
+
+    @Override
+    public int hashCode() {
+      int h = 0;
+      for (int k = 0; k < size; k++) {
+        h += elements[k].hashCode();
+      }
+      return h;
     }
   }
 }

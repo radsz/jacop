@@ -166,7 +166,8 @@ public class ConditionalSelect extends Constraint
 
   @Override
   public int getDefaultConsistencyPruningEvent() {
-    return IntDomain.BOUND;
+    // a hole of y or of x[i] can leave the two without a common value, which rules a branch out
+    return IntDomain.ANY;
   }
 
   @Override

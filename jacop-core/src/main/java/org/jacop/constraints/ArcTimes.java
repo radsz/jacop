@@ -93,6 +93,10 @@ public class ArcTimes extends Constraint
   // nodes whose arcs in are to be checked again
   private final boolean[] headDirty;
   private final int[] heads;
+
+  // the nodes and heads of the current pass, copied out of the queues
+  private final int[] pass;
+  private final int[] passHeads;
   private int headCount;
   private boolean all = true;
 
@@ -155,6 +159,8 @@ public class ArcTimes extends Constraint
     queue = new int[n];
     headDirty = new boolean[n];
     heads = new int[n];
+    pass = new int[n];
+    passHeads = new int[n];
     this.queueIndex = 1;
     List<Var> scope = new ArrayList<>(Arrays.asList(this.x));
     for (IntVar tv : nodesOfTime.keySet()) {
@@ -202,12 +208,28 @@ public class ArcTimes extends Constraint
         for (int v = 0; v < n; v++) {
           check(store, v);
         }
-      } else {
-        for (int i = 0; i < queued; i++) {
-          check(store, queue[i]);
+      }
+      // a successor variable that is also a time variable queues nodes again while a pass prunes
+      // it, and the constraint is not woken by its own pruning, so passes repeat until none is
+      // queued
+      while (queued > 0 || headCount > 0) {
+        int count = queued;
+        System.arraycopy(queue, 0, pass, 0, count);
+        for (int i = 0; i < count; i++) {
+          dirty[pass[i]] = false;
         }
-        for (int i = 0; i < headCount; i++) {
-          into(store, heads[i]);
+        queued = 0;
+        int headsCount = headCount;
+        System.arraycopy(heads, 0, passHeads, 0, headsCount);
+        for (int i = 0; i < headsCount; i++) {
+          headDirty[passHeads[i]] = false;
+        }
+        headCount = 0;
+        for (int i = 0; i < count; i++) {
+          check(store, pass[i]);
+        }
+        for (int i = 0; i < headsCount; i++) {
+          into(store, passHeads[i]);
         }
       }
     } finally {
