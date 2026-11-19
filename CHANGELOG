@@ -8393,6 +8393,20 @@ Version 5.0 (unreleased)
    proved unsatisfiable in 60 s at -Xmx4G (out of memory before), the
    highest live heap after a collection going from 4.1 GB to 2.5 GB.
 
+466. The FlatZinc front end writes a sum of conjunctions over all pairs of
+   two sets of Boolean variables, sum(i in A, j in B) w *
+   bool2int(a[i] /\ b[j]), as w * sum(a) * sum(b) when the conjunctions
+   and their bool2int have no other use (ProductOfSumsDetector, system
+   property org.jacop.fz.productOfSums, groups of at least
+   org.jacop.fz.productOfSums.minTerms = 64 conjunctions). The
+   hypervolume objective of diverse solution models (2019 Challenge
+   rcpsp-wet-diverse, after Ingmar, Garcia de la Banda, Stuckey and
+   Tack, Modelling diversity of solutions, AAAI 2020) flattens to this
+   form: j90_48_4 posts 1,176,224 conjunctions, which become two
+   SumBool and one XmulYeqZ. With -f at -Xmx4G it ran out of memory
+   before the search; it now finds objective 694,296 within 600 s with a
+   live heap of 1.5 GB.
+
 Version 4.11
 =============
 

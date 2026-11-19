@@ -92,6 +92,7 @@ import org.jacop.fz.constraints.PartialCopyDetector;
 import org.jacop.fz.constraints.PermutedTasksDetector;
 import org.jacop.fz.constraints.PrecedenceCostDetector;
 import org.jacop.fz.constraints.PrecedenceDetector;
+import org.jacop.fz.constraints.ProductOfSumsDetector;
 import org.jacop.fz.constraints.ProgressionTilingDetector;
 import org.jacop.fz.constraints.RegularFlowDetector;
 import org.jacop.fz.constraints.RoutesDetector;
@@ -499,6 +500,20 @@ public class Constraints implements ParserTreeConstants {
           if (!zeroSums.outputSums().isEmpty()) {
             dictionary.zeroSums = zeroSums.outputSums();
           }
+        }
+      }
+
+      // a sum of conjunctions over all pairs of two sets of Booleans as the product of their
+      // counts;
+      // --proof encodes the rows as given
+      if (ProductOfSumsDetector.enabled() && options.proof() == null) {
+        ProductOfSumsDetector productOfSums = new ProductOfSumsDetector(support, replaced);
+        Set<SimpleNode> conjunctions = productOfSums.detect(astTree);
+        if (!conjunctions.isEmpty()) {
+          replaced = new HashSet<>(replaced);
+          replaced.addAll(conjunctions);
+          dictionary.removeFromDefaultSearch(productOfSums.removed());
+          dictionary.unusedVariables.addAll(productOfSums.removed());
         }
       }
 

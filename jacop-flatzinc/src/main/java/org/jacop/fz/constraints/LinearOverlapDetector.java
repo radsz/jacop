@@ -182,6 +182,7 @@ public class LinearOverlapDetector implements ParserTreeConstants {
         astTree,
         item -> {
           if (!skipped.contains(item)
+              && !support.linearRewrites.containsKey(item)
               && (PLAIN.contains(item.getName())
                   || reified && HALF_OR_REIFIED.contains(item.getName()))) {
             collect(item);
