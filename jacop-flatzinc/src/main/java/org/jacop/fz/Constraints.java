@@ -174,11 +174,22 @@ public class Constraints implements ParserTreeConstants {
     // forces on it, instead of being narrowed
     ObjectiveScaling.apply(support, astTree);
     if (dictionary.domainsClamped()) {
-      System.err.println(dictionary.clampedDomainsWarning());
+      if (dictionary.boundedDomainsClamped()) {
+        System.err.println(dictionary.clampedDomainsWarning());
+      }
       dictionary.recordDeclaredDomains();
       dictionary.setSaturationCandidates(
           SaturatedProducts.find(
               support, astTree, ObjectiveScaling.objective(dictionary, astTree)));
+      // reads the rows as declared, before the detectors replace constraints, to show the
+      // narrowing of domains harmless at the end or when the model fails while it is translated
+      dictionary.setClampedBounds(
+          new ClampedBounds(
+              support,
+              astTree,
+              dictionary.narrowedVariables(),
+              dictionary::declaredBounds,
+              dictionary.saturatedProducts()));
     }
 
     Options options = support.options;
@@ -560,16 +571,6 @@ public class Constraints implements ParserTreeConstants {
 
       support.releaseLinearRewrites();
       support.reportAlldiffChannels();
-      if (dictionary.domainsClamped()) {
-        // reads the rows as declared, to show the narrowing of domains harmless at the end
-        dictionary.setClampedBounds(
-            new ClampedBounds(
-                support,
-                astTree,
-                dictionary.narrowedVariables(),
-                dictionary::declaredBounds,
-                dictionary.saturatedProducts()));
-      }
       cf.poseCounts();
       cf.poseDiffnProjections();
 

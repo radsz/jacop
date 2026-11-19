@@ -120,6 +120,20 @@ public final class RevisedDualSimplex {
 
   // the artificial bounds: the first, the factor they grow by and the largest
   private static final double BIG_START = 1e6;
+
+  // the largest reduced cost past the tolerance that a cost shift absorbs, in the scaled problem
+  // (org.jacop.jalp.shiftMax; 0 turns cost shifting off)
+  private static final double SHIFT_MAX =
+      Double.parseDouble(System.getProperty("org.jacop.jalp.shiftMax", "1e-5"));
+  // the cost shifts in force: the columns shifted, and the shift of each column (cost minus the
+  // cost without the shifts)
+  private int costShifts;
+  private int[] shiftIdx = new int[0];
+  private double[] shiftAmt = new double[0];
+  // the shifts were taken back in this answer: no new ones until it ends
+  private boolean shiftsRemoved;
+  // the pivots left to the dual solve when it reached an optimum, for a primal clean-up
+  private int pivotsLeft;
   private static final double BIG_GROWTH = 100;
   private static final double BIG_MAX = 1e14;
 
@@ -462,6 +476,11 @@ public final class RevisedDualSimplex {
     savedHi = null;
     boundsPerturbed = false;
     perturbed = o.perturbed;
+    costShifts = o.costShifts;
+    shiftIdx = o.shiftIdx.clone();
+    shiftAmt = o.shiftAmt.clone();
+    shiftsRemoved = o.shiftsRemoved;
+    pivotsLeft = o.pivotsLeft;
     roundOffShare = o.roundOffShare;
     reuseFreshFactors = o.reuseFreshFactors;
     refreshedFromFactors = o.refreshedFromFactors;
@@ -567,6 +586,7 @@ public final class RevisedDualSimplex {
 
   // the costs of the scaled problem, perturbed or not
   private void setCosts(boolean perturb) {
+    unshift();
     Random rnd = new Random(seed);
     for (int j = 0; j < n; j++) {
       double c = givenCost[j] * colScale[j];
@@ -709,6 +729,7 @@ public final class RevisedDualSimplex {
 
   // appends rows with basic slacks; the factorization and the values must be rebuilt after
   private void appendRows(int[][] columns, double[][] weights, double[] rowLo, double[] rowHi) {
+    unshiftForRows();
     int k = columns.length;
     int m2 = m + k;
     int cols2 = cols + k;
@@ -977,6 +998,7 @@ public final class RevisedDualSimplex {
     if (ended) {
       // a new answer: the bases of the solves that the limit cut off before count no more
       guard.reset();
+      shiftsRemoved = false;
     }
     shrinkArtificial();
     int status = dualSolve(limit);
@@ -1064,6 +1086,7 @@ public final class RevisedDualSimplex {
       ops += 3L * m;
       int r = leavingRow();
       if (r < 0) {
+        pivotsLeft = limit - iter;
         int status = atOptimum();
         if (status >= 0) {
           return status;
@@ -1396,9 +1419,27 @@ public final class RevisedDualSimplex {
     }
     if (exact && perturbed) {
       // the costs as given: the columns whose reduced cost changed sign move to their other bound
+      boolean shifted = costShifts > 0;
       cleaning = true;
       setCosts(false);
       computeDuals();
+      if (shifted && primalCleanUp()) {
+        return LIMIT;
+      }
+      placeNonbasic();
+      updateBeta();
+      return -1;
+    }
+    if (costShifts > 0) {
+      // the optimum of the shifted costs: the shifts go, and the dual simplex goes on without
+      // new ones (a reduced problem of the presolve must end optimal for the costs that the whole
+      // problem has, or the whole problem starts far from its optimum: brazil3)
+      unshift();
+      shiftsRemoved = true;
+      computeDuals();
+      if (primalCleanUp()) {
+        return LIMIT;
+      }
       placeNonbasic();
       updateBeta();
       return -1;
@@ -1771,6 +1812,7 @@ public final class RevisedDualSimplex {
    */
   public int[] removeRows(int[] rows) {
     flushReduced();
+    unshiftForRows();
     boolean[] gone = new boolean[m];
     int removed = 0;
     for (int i : rows) {
@@ -2340,6 +2382,9 @@ public final class RevisedDualSimplex {
   private void place(int j) {
     if (row[j] < 0) {
       boolean was = upper[j];
+      if (shiftsCost(j)) {
+        return;
+      }
       if (d[j] > DUAL_TOL) {
         upper[j] = false;
       } else if (d[j] < -DUAL_TOL) {
@@ -2352,6 +2397,104 @@ public final class RevisedDualSimplex {
         markMoved(j);
       }
     }
+  }
+
+  /**
+   * Shifts the cost of nonbasic column j so that its reduced cost is 0 when the sign of the reduced
+   * cost, past the dual tolerance by at most SHIFT_MAX, would move it from its finite bound to an
+   * artificial one (cost shifting, Koberstein 2005; HiGHS). The reduced costs kept up by the pivots
+   * leave slacks of inequality rows a few 1e-9 on the wrong side, and each such move put a value of
+   * 1e6 into the basic values: comp07-2idx took 159,258 pivots, its infeasibility up to 1e12. The
+   * shifts are part of the perturbation: they go with it at the end of an exact solve.
+   */
+  private boolean shiftsCost(int j) {
+    if (!perturbed || cleaning || shiftsRemoved || SHIFT_MAX <= 0 || lo[j] == hi[j]) {
+      return false;
+    }
+    double v = d[j];
+    boolean toArtificial =
+        upper[j]
+            ? v > DUAL_TOL && isArtificial(j, false) && !isArtificial(j, true)
+            : v < -DUAL_TOL && isArtificial(j, true) && !isArtificial(j, false);
+    if (!toArtificial || Math.abs(v) > SHIFT_MAX) {
+      return false;
+    }
+    if (shiftAmt.length < cols) {
+      shiftAmt = Arrays.copyOf(shiftAmt, cols);
+    }
+    if (shiftAmt[j] == 0) {
+      if (shiftIdx.length == costShifts) {
+        shiftIdx = Arrays.copyOf(shiftIdx, Math.max(16, 2 * costShifts));
+      }
+      shiftIdx[costShifts++] = j;
+    }
+    shiftAmt[j] -= v;
+    cost[j] -= v;
+    d[j] = 0;
+    return true;
+  }
+
+  // takes the cost shifts back; the reduced costs are then those of the costs without them only
+  // after computeDuals
+  private void unshift() {
+    for (int k = 0; k < costShifts; k++) {
+      int j = shiftIdx[k];
+      cost[j] -= shiftAmt[j];
+      shiftAmt[j] = 0;
+    }
+    costShifts = 0;
+  }
+
+  // the shifts go before the rows change, so that they never follow a slack to another row
+  private void unshiftForRows() {
+    if (costShifts > 0) {
+      unshift();
+      if (factorValid) {
+        computeDuals();
+      }
+    }
+  }
+
+  /**
+   * After the cost shifts went: when a column at a finite bound would now move to an artificial
+   * one, and the basic values with it, the primal simplex takes such columns in instead, from the
+   * basis that is primal feasible, as HiGHS cleans up after removing its cost shifts. The reduced
+   * costs are computed again after it.
+   *
+   * @return true when the primal simplex stopped at the limit of pivots left
+   */
+  private boolean primalCleanUp() {
+    if (!pullsToArtificial()) {
+      return false;
+    }
+    int status = primalPivots(Math.max(1, pivotsLeft));
+    if (savedLo != null) {
+      restoreBounds();
+    }
+    placed = false;
+    dualsChecked = false;
+    if (status == LIMIT) {
+      return true;
+    }
+    // optimal or not, the dual simplex checks the basis again
+    computeDuals();
+    return false;
+  }
+
+  // whether a nonbasic column at a finite bound has a reduced cost that would place it at an
+  // artificial one
+  private boolean pullsToArtificial() {
+    for (int j = 0; j < cols; j++) {
+      if (row[j] >= 0 || lo[j] == hi[j]) {
+        continue;
+      }
+      if (upper[j]
+          ? d[j] > DUAL_TOL && isArtificial(j, false) && !isArtificial(j, true)
+          : d[j] < -DUAL_TOL && isArtificial(j, true) && !isArtificial(j, false)) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // moves the basic values with the nonbasic columns whose values changed since the last call
