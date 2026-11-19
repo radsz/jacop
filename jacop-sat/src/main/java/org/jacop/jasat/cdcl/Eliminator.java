@@ -37,17 +37,22 @@ import java.util.Arrays;
  * Subsumption, self-subsuming strengthening and bounded variable elimination on the irredundant
  * clauses at level 0, as in MiniSat's SimpSolver. Literals are internal ({@code 2*var+sign}).
  *
- * <p>A variable is eliminated when the non-tautological resolvents on it are no more than the
- * clauses they replace and none is longer than {@link #RESOLVENT_LIMIT}. The removed clauses go on
- * an extension stack, from which {@link #extend} completes a model of the simplified formula.
+ * <p>A variable is eliminated when the non-tautological resolvents on it outnumber the clauses they
+ * replace by at most a bound and none is longer than a limit. The bound follows the schedule 0, 1,
+ * 2, 4, 8, 16 of Kissat's {@code eliminatebound} (Biere, Järvisalo, Kiesl, "Preprocessing in SAT
+ * Solving", Handbook of Satisfiability, 2nd ed., 2021): within a run it rises up to a given maximum
+ * each time a round eliminates nothing, and {@link CdclSolver} raises it by one step between runs.
+ * After the first round only the variables whose clauses changed are tried again. The removed
+ * clauses go on an extension stack, from which {@link #extend} completes a model of the simplified
+ * formula.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
  */
 final class Eliminator {
 
-  // the longest resolvent an elimination may add
-  private static final int RESOLVENT_LIMIT = 20;
+  // the bounds an elimination may add over the clauses it removes, raised in this order
+  private static final int[] BOUNDS = {0, 1, 2, 4, 8, 16};
   // variables with more occurrences in one polarity are not tried
   private static final int OCC_LIMIT = 1000;
   // clauses longer than this are not used to subsume others
@@ -59,6 +64,20 @@ final class Eliminator {
 
   private final int numVars;
   private final boolean[] frozen;
+  // the longest resolvent an elimination may add
+  private final int resolventLimit;
+  // the largest bound to raise to
+  private final int maxBound;
+  // the bound in use: resolvents may outnumber the clauses they replace by this many
+  private int bound;
+  // variables whose clauses changed since they were last tried
+  private final boolean[] touched;
+  // whether to look for gate definitions, the extractor over the current clause array, and how
+  // many eliminations used a gate
+  private final boolean useGates;
+  private GateExtractor gates;
+  private int[][] gatesOver;
+  private int numGateEliminations;
   private final ProofOutput proof;
 
   private int[][] clauses;
@@ -84,8 +103,7 @@ final class Eliminator {
   private int numEliminated;
 
   /**
-   * Creates an eliminator over the given clauses, which must have at least two literals, no
-   * duplicate literal, no tautology, and no assigned literal.
+   * An eliminator as in MiniSat: bound 0, resolvents of at most 20 literals, no gates.
    *
    * @param numVars the number of variables
    * @param input the clauses
@@ -94,8 +112,41 @@ final class Eliminator {
    * @param proof the DRAT output, or null
    */
   Eliminator(int numVars, int[][] input, int numInput, boolean[] frozen, ProofOutput proof) {
+    this(numVars, input, numInput, frozen, proof, 0, 0, 20, false);
+  }
+
+  /**
+   * Creates an eliminator with a bound schedule and gates over the given clauses, which must have
+   * at least two literals, no duplicate literal, no tautology, and no assigned literal.
+   *
+   * @param numVars the number of variables
+   * @param input the clauses
+   * @param numInput how many of them are used
+   * @param frozen the variables that must not be eliminated
+   * @param proof the DRAT output, or null
+   * @param bound the bound to start from (see {@link #bound()})
+   * @param maxBound the largest bound to raise to when a round eliminates nothing
+   * @param resolventLimit the longest resolvent an elimination may add
+   * @param useGates whether to resolve only gate clauses against the others when a variable is the
+   *     output of a gate
+   */
+  Eliminator(
+      int numVars,
+      int[][] input,
+      int numInput,
+      boolean[] frozen,
+      ProofOutput proof,
+      int bound,
+      int maxBound,
+      int resolventLimit,
+      boolean useGates) {
+    this.useGates = useGates;
     this.numVars = numVars;
     this.frozen = frozen;
+    this.bound = Math.min(bound, maxBound);
+    this.maxBound = maxBound;
+    this.resolventLimit = resolventLimit;
+    touched = new boolean[numVars];
     this.proof = proof;
     clauses = new int[Math.max(16, numInput + numInput / 2)][];
     sigs = new long[clauses.length];
@@ -137,9 +188,11 @@ final class Eliminator {
       enqueue(i);
     }
     subsumeQueue();
-    for (int round = 0; round < 3 && !unsat && effort < EFFORT_LIMIT; round++) {
+    Arrays.fill(touched, true);
+    while (!unsat && effort < EFFORT_LIMIT) {
+      int[] vars = candidates();
       int before = numEliminated;
-      for (int v : candidates()) {
+      for (int v : vars) {
         if (unsat || effort >= EFFORT_LIMIT) {
           break;
         }
@@ -147,11 +200,48 @@ final class Eliminator {
           subsumeQueue();
         }
       }
-      if (numEliminated == before) {
+      if (numEliminated > before) {
+        continue;
+      }
+      if (unsat || effort >= EFFORT_LIMIT || bound >= maxBound) {
         break;
       }
+      // nothing left at this bound: raise it and try every variable again
+      bound = nextBound(bound, maxBound);
+      Arrays.fill(touched, true);
     }
     return !unsat;
+  }
+
+  /**
+   * The bound after the given one in the schedule 0, 1, 2, 4, 8, 16, capped at maxBound.
+   *
+   * @param bound the bound
+   * @param maxBound the cap
+   * @return the next bound
+   */
+  static int nextBound(int bound, int maxBound) {
+    for (int b : BOUNDS) {
+      if (b > bound) {
+        return Math.min(b, maxBound);
+      }
+    }
+    return maxBound;
+  }
+
+  /** The number of eliminations that resolved only gate clauses against the others. */
+  int numGateEliminations() {
+    return numGateEliminations;
+  }
+
+  /** Whether the run tried every candidate within its effort limit. */
+  boolean completed() {
+    return !unsat && effort < EFFORT_LIMIT;
+  }
+
+  /** The bound reached, from which the next run starts. */
+  int bound() {
+    return bound;
   }
 
   /** The remaining clauses, units excluded. */
@@ -243,6 +333,7 @@ final class Eliminator {
   }
 
   private void addOcc(int l, int i) {
+    touched[l >> 1] = true;
     int[] o = occ[l];
     if (occSize[l] == o.length) {
       o = Arrays.copyOf(o, Math.max(4, 2 * o.length));
@@ -252,6 +343,7 @@ final class Eliminator {
   }
 
   private void removeOcc(int l, int i) {
+    touched[l >> 1] = true;
     int[] o = occ[l];
     int n = occSize[l];
     effort += n;
@@ -419,11 +511,15 @@ final class Eliminator {
 
   // ------------------------------------------------------------------------------- elimination
 
-  /** The variables to try, fewest resolution pairs first. */
+  /** The touched variables to try, fewest resolution pairs first; clears their marks. */
   private int[] candidates() {
     long[] keys = new long[numVars];
     int n = 0;
     for (int v = 0; v < numVars; v++) {
+      if (!touched[v]) {
+        continue;
+      }
+      touched[v] = false;
       int p = occSize[2 * v];
       int q = occSize[2 * v + 1];
       if (!frozen[v] && !eliminated[v] && value[2 * v] == 0 && p + q > 0) {
@@ -451,23 +547,49 @@ final class Eliminator {
     }
     int[] ps = Arrays.copyOf(occ[pos], np);
     int[] ns = Arrays.copyOf(occ[neg], nn);
+    // with a gate on v, only resolvents of a gate clause with a non-gate clause are needed: those
+    // of two gate clauses are tautologies and those of two other clauses are implied (Een, Biere,
+    // "Effective Preprocessing in SAT through Variable and Clause Elimination", SAT 2005)
+    boolean[] gp = null;
+    boolean[] gn = null;
+    if (useGates) {
+      GateExtractor.Gate g = gate(pos);
+      if (g != null) {
+        int[] defining = g.clauses.clone();
+        Arrays.sort(defining);
+        gp = new boolean[np];
+        gn = new boolean[nn];
+        for (int k = 0; k < np; k++) {
+          gp[k] = Arrays.binarySearch(defining, ps[k]) >= 0;
+        }
+        for (int k = 0; k < nn; k++) {
+          gn[k] = Arrays.binarySearch(defining, ns[k]) >= 0;
+        }
+      }
+    }
     int resolvents = 0;
-    for (int a : ps) {
-      for (int b : ns) {
-        int size = resolventSize(clauses[a], clauses[b], v);
+    for (int i = 0; i < np; i++) {
+      for (int j = 0; j < nn; j++) {
+        if (gp != null && gp[i] == gn[j]) {
+          continue;
+        }
+        int size = resolventSize(clauses[ps[i]], clauses[ns[j]], v);
         if (size < 0) {
           continue;
         }
-        if (size > RESOLVENT_LIMIT || ++resolvents > np + nn) {
+        if (size > resolventLimit || ++resolvents > np + nn + bound) {
           return false;
         }
       }
     }
     int[] found = new int[16];
     int numFound = 0;
-    for (int a : ps) {
-      for (int b : ns) {
-        int[] r = resolvent(clauses[a], clauses[b], v);
+    for (int i = 0; i < np; i++) {
+      for (int j = 0; j < nn; j++) {
+        if (gp != null && gp[i] == gn[j]) {
+          continue;
+        }
+        int[] r = resolvent(clauses[ps[i]], clauses[ns[j]], v);
         if (r == null) {
           continue;
         }
@@ -484,6 +606,9 @@ final class Eliminator {
         }
       }
     }
+    if (gp != null) {
+      numGateEliminations++;
+    }
     for (int a : ps) {
       save(clauses[a], pos);
       delete(a);
@@ -499,6 +624,21 @@ final class Eliminator {
     }
     propagateUnits();
     return true;
+  }
+
+  /** A gate with output pos or its negation (an OR gate on pos), or null. */
+  private GateExtractor.Gate gate(int pos) {
+    if (gates == null || gatesOver != clauses) {
+      gates = new GateExtractor(clauses, occ, occSize, numVars);
+      gatesOver = clauses;
+    }
+    long before = gates.effort;
+    GateExtractor.Gate g = gates.find(pos);
+    if (g == null) {
+      g = gates.find(pos ^ 1);
+    }
+    effort += gates.effort - before;
+    return g;
   }
 
   /** Pushes clause c on the extension stack with its literal of the eliminated variable first. */
