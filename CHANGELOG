@@ -8149,7 +8149,21 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
-451. Free search before LCG (entry 426) finds the squares of an objective
+451. Regular, ExtensionalSupportMdd and Among (set and int forms) no
+   longer listen to the removal of every store level. They record a level
+   with Store.recordChange when they first change their state there, and
+   the store calls their removeLevel only for those levels. Before, every
+   backtrack called all of them; on XCSP 2018 NurseRostering-10 (2,080
+   regular and 1,328 among constraints) those calls, mostly cache misses
+   on untouched state, took 46 % of the time. The search is the same
+   (fixed search, and free search under -Djacop.virtualClock=true). With
+   -f on 34 models with regular or among (11 wide, 23 XCSP 2022-2025), it
+   explores 13 % more nodes in 240 s (geomean) and 9.5 % more in 600 s;
+   at 600 s NurseRostering-10 goes from 5,584 to 5,147 (field best 5,054)
+   and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
+   (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
+
+452. Free search before LCG (entry 426) finds the squares of an objective
    behind partial sums: the walk from the cost variable follows up to
    eight linear constraints instead of three, and x + y = z as well. An
    objective whose declared bound reaches beyond JaCoP's range is posted
@@ -8161,7 +8175,7 @@ Version 5.0 (unreleased)
    GBACP instances 0.50. No wide instance changes: only two gbac
    instances have a squared objective, found at both depths.
 
-452. jacop_nvalue over variables whose domains fall into blocks that share
+453. jacop_nvalue over variables whose domains fall into blocks that share
    no value is posted as one count of distinct values (Values) per block
    and a sum of the counts. Each count then has the bound of its own
    block (the NValue bounds of Bessiere, Hebrard, Hnich, Kiziltan and
@@ -8178,7 +8192,7 @@ Version 5.0 (unreleased)
    MiniZinc Challenge or the 53 XCSP instances with one.
    -Dorg.jacop.fz.nvalueBlocks=false turns it off.
 
-453. The speed check of LCG free search (entry 291) counts the solutions
+454. The speed check of LCG free search (entry 291) counts the solutions
    LCG found before its first check. It sampled the best cost only from
    that check on, so a check made right after LCG improved its cost saw
    no gain over its window and LCG gave way. With -f at 600 s: celar
@@ -8186,7 +8200,7 @@ Version 5.0 (unreleased)
    70 -> 60; unit-commitment L10 equal over two runs, L12 1,484,650 ->
    1,489,050. On the wide-quick set at 240 s only celar graph11 changes.
 
-454. The linear relaxation defines every block sum of a tree of sums
+455. The linear relaxation defines every block sum of a tree of sums
    (entry 425) by its own row. It took the first variable it could define
    in a row, and the row of an inner block also holds the sums of the
    blocks below it: when that row came first, a lower sum was defined by
