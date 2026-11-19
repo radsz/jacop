@@ -1610,15 +1610,18 @@ class FlatzincFrontEndTest {
     // LCG's deadline was the whole -t counted from the start of LCG search, so a run whose model
     // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
     // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
-    // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
-    // s (400 variables were solved in 2 s once activity bumped every analysed variable).
+    // portfolio answered at -t + 2 s. Random 3-SAT just above the threshold (ratio 4.6,
+    // unsatisfiable
+    // with high probability) keeps LCG busy for more than 60 s. At ratio 4.3 the formula is
+    // satisfiable: found after 25 s on one machine, but in under 2 s on the CI runners (and 400
+    // variables were solved in 2 s once activity bumped every analysed variable).
     Random r = new Random(1);
     int n = 600;
     StringBuilder model = new StringBuilder();
     for (int i = 0; i < n; i++) {
       model.append("var bool: x").append(i).append(";\n");
     }
-    for (int c = 0; c < 2580; c++) {
+    for (int c = 0; c < 2760; c++) {
       StringJoiner pos = new StringJoiner(",");
       StringJoiner neg = new StringJoiner(",");
       Set<Integer> vars = new TreeSet<>();
