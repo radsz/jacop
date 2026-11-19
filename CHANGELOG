@@ -8068,7 +8068,53 @@ Version 5.0 (unreleased)
    (costas-array and blocks-world slower over three rounds);
    -Djacop.lcg.shiftSplitBounds=true|false overrides.
 
-448. Disjoint and Diff2 limit a rectangle's length from the least start of
+448. Memory of many MDDs on one diagram, in the MiniZinc library and in
+   support search. fzn_mdd, fzn_mdd_nondet and fzn_cost_mdd pass the
+   arrays of the diagram as they are: array1d made a new array at each
+   call, which MiniZinc wrote again every few calls (WordDesign2-words-
+   mdd-025, XCSP 2023: 31 copies of 1.8 million edges, a FlatZinc of
+   1.1 GB that took 7 GB and 170 s to flatten; now 36 MB in 6 s). The
+   support search of a layered graph keeps the nodes without support as
+   a list with a bitset instead of three arrays over the nodes, and the
+   constraints of a store on one built graph share the stamps of the
+   search, which are only read during one call (66 KB instead of 6 MB
+   per constraint on that diagram). The symmetry pass reads an array
+   longer than 64 once however many constraints share it, and the flow
+   encodings of the linear relaxation take the edges on a path and
+   their arc columns once per built graph over equal domains: both read
+   the 1.8 million edges again for each MDD (setup of -055, 1,485 MDDs,
+   164 s -> 9 s). The explanations of a layered graph keep the edges of
+   a level by value and skip the values gone from the domain (20 % more
+   LCG conflicts per second on -035, same explanations). All sizes,
+   -035 to -100 (4,951 MDDs), now set up in 6 to 23 s within 6 GB;
+   -035 and -045 are solved (-045 ran out of memory at 6 GB before),
+   -055 to -100 stay unsolved at 600 s: LCG makes about one conflict a
+   second on these diagrams, and search without learning does not find
+   a solution either.
+
+449. The FlatZinc front end posts a short table (jacop_short_table_int) of
+   at least 100,000 rows as a multi-valued decision diagram
+   (ExtensionalSupportMdd) when its reduced diagram has at most a tenth
+   of the table's cells as edges. The diagram is built from the rows with
+   stars matching the domain of their column; scopes with the same table,
+   repeated-variable pattern and domains share one diagram and the table
+   is filtered once for them. A table listing a rule compiles to a few
+   hundred edges: the connectivity table of Benzenoide (XCSP 2023), 3
+   million rows of arity 8 on 331 scopes, becomes 203 edges. The
+   symmetry detection now keys an array of constants by its contents
+   when it compares the model's lex-leader constraints, instead of
+   spelling out every element for every constraint and symmetry, which
+   ran out of memory on these tables. Benzenoide-12 and -13, out of
+   memory or without a solution in 600 s before, reach 87 and 72 (the
+   best solutions of the ranked solvers of 2023 were 3,033 and 3,125).
+   -Dorg.jacop.fz.tableMdd.rows (0 turns it off) and
+   -Dorg.jacop.fz.tableMdd.ratio set the gates. References: Bryant,
+   Graph-based algorithms for Boolean function manipulation, IEEE
+   Transactions on Computers 35(8), 1986; Cheng and Yap, An MDD-based
+   generalized arc consistency algorithm for positive and negative table
+   constraints and some global constraints, Constraints 15(2), 2010.
+
+450. Disjoint and Diff2 limit a rectangle's length from the least start of
    each segment of its start domain, not from the interval of the domain
    that meets a forbidden region, and begin a new segment after a region
    whose end is a hole of the domain. Disjoint lets a rectangle of zero
@@ -8103,7 +8149,21 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
-449. Free search (-f) on models with vehicle routes: LNS uses only route
+451. Regular, ExtensionalSupportMdd and Among (set and int forms) no
+   longer listen to the removal of every store level. They record a level
+   with Store.recordChange when they first change their state there, and
+   the store calls their removeLevel only for those levels. Before, every
+   backtrack called all of them; on XCSP 2018 NurseRostering-10 (2,080
+   regular and 1,328 among constraints) those calls, mostly cache misses
+   on untouched state, took 46 % of the time. The search is the same
+   (fixed search, and free search under -Djacop.virtualClock=true). With
+   -f on 34 models with regular or among (11 wide, 23 XCSP 2022-2025), it
+   explores 13 % more nodes in 240 s (geomean) and 9.5 % more in 600 s;
+   at 600 s NurseRostering-10 goes from 5,584 to 5,147 (field best 5,054)
+   and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
+   (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
+
+452. Free search (-f) on models with vehicle routes: LNS uses only route
    removal, related (Shaw) removal and random neighbourhoods (the graph,
    propagation, objective, constraint and line neighbourhoods are off
    unless lns-kinds names them), and takes lns-share-routes 10 instead of

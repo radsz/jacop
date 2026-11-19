@@ -112,6 +112,7 @@ import org.jacop.constraints.diffn.Nooverlap;
 import org.jacop.constraints.knapsack.Knapsack;
 import org.jacop.constraints.lp.LinearRelaxation;
 import org.jacop.constraints.regular.Regular;
+import org.jacop.constraints.table.BinaryBitTable;
 import org.jacop.constraints.table.HybridTable;
 import org.jacop.core.BooleanVar;
 import org.jacop.core.IntDomain;
@@ -880,6 +881,25 @@ class VeriPbProofTest {
     LcgSolver lcg = new LcgSolver(store);
     lcg.setProof(model, proof);
     assertThat(lcg.minimize(x1)).isEqualTo(CdclSolver.SAT);
+    String pbp = proof.toString(StandardCharsets.US_ASCII);
+    assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  @Test
+  void countOfARepeatedVariableIntoAHoleIsDerived() {
+    // x4 = 1 fixes x0 = 0, so the count of 1 in [x0, x4, x0] is 1, a hole of c in {0, 2, 3}: the
+    // bounds of c were not written for a list holding x0 twice, one term of weight 2 in the row
+    // (fuzz seed 57069766, repeated variables)
+    Store store = new Store();
+    IntVar x0 = values(store, "x0", 0, 1, 3);
+    IntVar x4 = new IntVar(store, "x4", 1, 2);
+    IntVar c = values(store, "c", 0, 2, 3);
+    store.impose(new ElementIntegerFast(x4, new int[] {0, 3}, x0, 0));
+    store.impose(new Count(new IntVar[] {x0, x4, x0}, c, 1));
+    assertThat(store.consistency()).isTrue();
+    LcgSolver lcg = new LcgSolver(store);
+    lcg.setProof(model, proof);
+    assertThat(lcg.solve()).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
   }
@@ -1669,6 +1689,38 @@ class VeriPbProofTest {
               }
             }
             store.impose(new HybridTable(new IntVar[] {x[k], x[k + 1], x[k + 2]}, tuples));
+          }
+          store.impose(new XneqY(x[0], x[3]));
+          IntVar obj = new IntVar(store, "obj", -500, 500);
+          IntVar[] terms = {x[0], x[1], x[2], x[3], obj};
+          int[] w = new int[terms.length];
+          for (int i = 0; i < 4; i++) {
+            w[i] = random.nextInt(9) - 4;
+          }
+          w[4] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
+  }
+
+  // binary tables over domains with holes, as the FlatZinc front end posts small binary tables
+  @Test
+  void binaryBitTablesAreProved() {
+    optimaAreProved(
+        200,
+        (store, random) -> {
+          IntVar[] x = new IntVar[4];
+          for (int i = 0; i < x.length; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, 7);
+            x[i].domain.in(store.level, x[i], x[i].domain.subtract(random.nextInt(8)));
+          }
+          for (int k = 0; k + 1 < x.length; k++) {
+            int[][] pairs = new int[8 + random.nextInt(10)][2];
+            for (int[] t : pairs) {
+              t[0] = random.nextInt(8);
+              t[1] = random.nextInt(8);
+            }
+            store.impose(new BinaryBitTable(x[k], x[k + 1], pairs));
           }
           store.impose(new XneqY(x[0], x[3]));
           IntVar obj = new IntVar(store, "obj", -500, 500);

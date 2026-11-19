@@ -85,6 +85,10 @@ public class Among extends Constraint
   private final IntVar n;
 
   final LinkedHashSet<IntVar> variableQueue = new LinkedHashSet<>();
+
+  // The queue is cleared when a level at which it got its first variable is removed; the store
+  // calls removeLevel only for those levels instead of for every level.
+  private Store imposedStore;
   // number if x that belongs to K (Kset)
   // As search progress this time stamp can only increase
   // because if X was in between lbS and ubS than
@@ -135,6 +139,17 @@ public class Among extends Constraint
   @Override
   public void removeLevel(int level) {
     variableQueue.clear();
+  }
+
+  /**
+   * The store calls removeLevel only for the levels at which the queue of changed variables got its
+   * first variable, so the constraint does not listen to the removal of every level.
+   *
+   * @return false.
+   */
+  @Override
+  public boolean isStateful() {
+    return false;
   }
 
   @Override
@@ -261,6 +276,7 @@ public class Among extends Constraint
   @Override
   public void impose(Store store) {
 
+    imposedStore = store;
     super.impose(store);
 
     this.lowerBorder = new TimeStampInt(store, 0);
@@ -276,6 +292,9 @@ public class Among extends Constraint
     }
 
     if (v != n) {
+      if (variableQueue.isEmpty()) {
+        imposedStore.recordChange(this);
+      }
       variableQueue.add((IntVar) v);
     }
   }
