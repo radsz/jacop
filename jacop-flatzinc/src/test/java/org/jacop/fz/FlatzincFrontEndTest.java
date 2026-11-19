@@ -1610,15 +1610,18 @@ class FlatzincFrontEndTest {
     // LCG's deadline was the whole -t counted from the start of LCG search, so a run whose model
     // took long to read and set up overran -t by that long (nside, rcpsp-wet-diverse, the
     // ma-path-finding instances, by 1 to 3 s at 60 s); with -p every LCG thread did, and the
-    // portfolio answered at -t + 2 s. Random 3-SAT at the threshold keeps LCG busy for more than 30
-    // s (400 variables were solved in 2 s once activity bumped every analysed variable).
+    // portfolio answered at -t + 2 s. Random 3-SAT just above the threshold (ratio 4.6,
+    // unsatisfiable
+    // with high probability) keeps LCG busy for more than 60 s. At ratio 4.3 the formula is
+    // satisfiable: found after 25 s on one machine, but in under 2 s on the CI runners (and 400
+    // variables were solved in 2 s once activity bumped every analysed variable).
     Random r = new Random(1);
     int n = 600;
     StringBuilder model = new StringBuilder();
     for (int i = 0; i < n; i++) {
       model.append("var bool: x").append(i).append(";\n");
     }
-    for (int c = 0; c < 2580; c++) {
+    for (int c = 0; c < 2760; c++) {
       StringJoiner pos = new StringJoiner(",");
       StringJoiner neg = new StringJoiner(",");
       Set<Integer> vars = new TreeSet<>();
@@ -1762,13 +1765,13 @@ class FlatzincFrontEndTest {
     link(items, kept, 0);
     link(items, other, 1);
 
-    Solve.releaseAllBut(solve);
+    Solve.releaseAllBut(root, solve);
 
     assertNull(root.jjtGetChild(0));
     assertSame(end, root.jjtGetChild(1));
     assertSame(solve, end.jjtGetChild(0));
-    // kept still reaches its item list, but the list no longer holds the other items
-    assertSame(items, kept.jjtGetParent());
+    // the list no longer holds the items, and a kept item does not reach its list
+    assertThrows(UnsupportedOperationException.class, kept::jjtGetParent);
     for (int i = 0; i < items.jjtGetNumChildren(); i++) {
       assertNull(items.jjtGetChild(i));
     }
@@ -3723,11 +3726,12 @@ class FlatzincFrontEndTest {
   @Test
   void lcgFreeSearchReturnsToClausesAfterEachPruningOnSatisfactionModels() throws IOException {
     // the full fixpoint of the store (#317) paid on optimisation models but not on satisfaction
-    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s
+    // models: nonogram non_fast_3 took 39 to 57 s instead of 4 to 6 s; four values, so the model
+    // is not compiled to clauses (org.jacop.fz.clausal.maxDomain)
     String model =
         """
-        var 1..3: x :: output_var;
-        var 1..3: y :: output_var;
+        var 1..4: x :: output_var;
+        var 1..4: y :: output_var;
         constraint int_lin_le([1,1], [x,y], 4);
         constraint int_ne(x, y);
         %s;
@@ -4901,9 +4905,51 @@ class FlatzincFrontEndTest {
   }
 
   /**
-   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
-   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
-   * RoomMate-sr0700 (163 MB while the model is read).
+   * A variable of enforcement inlining keeps its only clause without a list: a list for each
+   * variable was 48 bytes of each of the 1.46 million variables of XCSP 2022 RoomMate-sr0700 while
+   * the model is read. The clauses count, list and drop their dead ones as before.
+   */
+  @Test
+  void variablesOfEnforcementInliningKeepOneClauseWithoutAList() throws Exception {
+    Class<?> info = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Info");
+    Class<?> clause = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Clause");
+    Constructor<?> makeInfo = info.getDeclaredConstructor();
+    makeInfo.setAccessible(true);
+    Constructor<?> makeClause = clause.getDeclaredConstructors()[0];
+    makeClause.setAccessible(true);
+    Method add = info.getDeclaredMethod("add", clause);
+    Method live = info.getDeclaredMethod("live");
+    Method clauses = info.getDeclaredMethod("clauses");
+    for (Method m : new Method[] {add, live, clauses}) {
+      m.setAccessible(true);
+    }
+    Field held = info.getDeclaredField("clauses");
+    held.setAccessible(true);
+    Field dead = clause.getDeclaredField("dead");
+    dead.setAccessible(true);
+
+    Object v = makeInfo.newInstance();
+    Object first = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    Object second = makeClause.newInstance(null, new ArrayList<>(), new ArrayList<>());
+    add.invoke(v, first);
+    assertSame(first, held.get(v));
+    assertEquals(List.of(first), clauses.invoke(v));
+    add.invoke(v, second);
+    assertEquals(List.of(first, second), clauses.invoke(v));
+    assertEquals(2, live.invoke(v));
+    dead.setBoolean(first, true);
+    assertEquals(1, live.invoke(v));
+    assertSame(second, held.get(v));
+    dead.setBoolean(second, true);
+    assertEquals(0, live.invoke(v));
+    assertEquals(List.of(), clauses.invoke(v));
+  }
+
+  /**
+   * A node of the parse tree keeps its id and its children only: the parser and a value of the
+   * node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022 RoomMate-sr0700
+   * (163 MB while the model is read), and the parent took the 7.8 million scalar expressions from
+   * 32 to 40 bytes each; the readers of a parent now get it from the root.
    */
   @Test
   void parseTreeNodesKeepNoParserOrValue() {
@@ -4913,7 +4959,7 @@ class FlatzincFrontEndTest {
             .map(Field::getName)
             .sorted()
             .toList();
-    assertEquals(List.of("children", "id", "parent"), fields);
+    assertEquals(List.of("children", "id"), fields);
   }
 
   /**
@@ -4922,6 +4968,53 @@ class FlatzincFrontEndTest {
    * each of about 5 million nodes of XCSP 2022 RoomMate-sr0700. The children read, copy and release
    * as before.
    */
+  /**
+   * A detector that reads the annotations of a constraint (the sequence detector skips the window
+   * rows that define a variable) gets the constraint item with its element, since a node does not
+   * keep its parent.
+   */
+  @Test
+  void constraintElementsComeWithTheirItems(@TempDir Path dir) throws Exception {
+    Path fzn = dir.resolve("items.fzn");
+    Files.writeString(
+        fzn,
+        """
+        var 0..1: a;
+        var 0..1: b;
+        var 0..2: s :: is_defined_var;
+        constraint int_lin_eq([1,1,-1],[a,b,s],0) :: defines_var(s);
+        constraint int_lin_le([1,1],[a,b],1);
+        solve satisfy;
+        """,
+        StandardCharsets.UTF_8);
+    SimpleNode tree;
+    Parser parser;
+    try (java.io.FileInputStream in = new java.io.FileInputStream(fzn.toFile())) {
+      parser = new Parser(in);
+      parser.setOptions(new Options(new String[] {fzn.toString()}));
+      tree = parser.parseModel();
+    }
+    Method each =
+        org.jacop.fz.constraints.Support.class.getDeclaredMethod(
+            "forEachConstraintItem", SimpleNode.class, java.util.function.BiConsumer.class);
+    each.setAccessible(true);
+    List<SimpleNode> items = new ArrayList<>();
+    List<ASTConstElem> elements = new ArrayList<>();
+    java.util.function.BiConsumer<SimpleNode, ASTConstElem> collect =
+        (item, element) -> {
+          items.add(item);
+          elements.add(element);
+        };
+    each.invoke(parser.cc.support, tree, collect);
+    assertEquals(2, items.size());
+    for (int i = 0; i < 2; i++) {
+      assertSame(elements.get(i), items.get(i).jjtGetChild(0));
+    }
+    assertEquals(2, items.get(0).jjtGetNumChildren());
+    assertEquals("defines_var", ((ASTAnnotation) items.get(0).jjtGetChild(1)).getAnnId());
+    assertEquals(1, items.get(1).jjtGetNumChildren());
+  }
+
   @Test
   void nodesWithOneChildKeepNoArray() {
     SimpleNode one = new SimpleNode(ParserTreeConstants.JJTANNOTATION);
@@ -4935,7 +5028,6 @@ class FlatzincFrontEndTest {
     SimpleNode copy = one.copy();
     assertEquals(1, copy.jjtGetNumChildren());
     assertNotSame(child, copy.jjtGetChild(0));
-    assertSame(copy, copy.jjtGetChild(0).jjtGetParent());
 
     // the parser adds the children of a node from the last one
     SimpleNode three = new SimpleNode(ParserTreeConstants.JJTCONSTELEM);

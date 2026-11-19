@@ -468,6 +468,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
+                                <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -757,6 +758,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
+                                <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>
@@ -1040,6 +1042,7 @@ setup to run configuration. -->
                                 <include>**/FreeFirstFlatzincTest.java</include>
                                 <include>**/NValueBlocksFlatzincTest.java</include>
                                 <include>**/PureClauseFlatzincTest.java</include>
+                                <include>**/ClausalFlatzincTest.java</include>
                                 <include>**/RootProbingFlatzincTest.java</include>
                                 <include>**/FixedCompletionFlatzincTest.java</include>
                                 <include>**/GoalsFlatzincTest.java</include>

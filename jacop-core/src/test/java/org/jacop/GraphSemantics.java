@@ -49,6 +49,38 @@ final class GraphSemantics {
     return true;
   }
 
+  /** The selected edges form a directed acyclic subgraph (no selected self-loop). */
+  static boolean dag(int[] from, int[] to, int[] ns, int[] es) {
+    if (!subgraph(from, to, ns, es)) {
+      return false;
+    }
+    int n = ns.length;
+    int[] indegree = new int[n];
+    for (int e = 0; e < es.length; e++) {
+      if (es[e] == 1) {
+        indegree[to[e]]++;
+      }
+    }
+    int[] stack = new int[n];
+    int sp = 0;
+    for (int v = 0; v < n; v++) {
+      if (indegree[v] == 0) {
+        stack[sp++] = v;
+      }
+    }
+    int done = 0;
+    while (sp > 0) {
+      int v = stack[--sp];
+      done++;
+      for (int e = 0; e < es.length; e++) {
+        if (es[e] == 1 && from[e] == v && --indegree[to[e]] == 0) {
+          stack[sp++] = to[e];
+        }
+      }
+    }
+    return done == n;
+  }
+
   private static boolean isNode(int[] ns, int r) {
     return r >= 0 && r < ns.length && ns[r] == 1;
   }
