@@ -8178,6 +8178,26 @@ Version 5.0 (unreleased)
    MiniZinc Challenge or the 53 XCSP instances with one.
    -Dorg.jacop.fz.nvalueBlocks=false turns it off.
 
+453. The speed check of LCG free search (entry 291) counts the solutions
+   LCG found before its first check. It sampled the best cost only from
+   that check on, so a check made right after LCG improved its cost saw
+   no gain over its window and LCG gave way. With -f at 600 s: celar
+   graph11 (MiniZinc Challenge 2013) 8,749 -> 3,080, ptv pax_period_20_5a
+   70 -> 60; unit-commitment L10 equal over two runs, L12 1,484,650 ->
+   1,489,050. On the wide-quick set at 240 s only celar graph11 changes.
+
+454. The linear relaxation defines every block sum of a tree of sums
+   (entry 425) by its own row. It took the first variable it could define
+   in a row, and the row of an inner block also holds the sums of the
+   blocks below it: when that row came first, a lower sum was defined by
+   it and the inner sum stayed a free column. On XCSP 2025 BusScheduling-c2
+   536 of 7,199 sums were free and the LP gave no guidance. Of the 21 wide
+   instances with a tree, 10 had free sums. With -f at 240 s on those 10
+   and the 12 BusScheduling instances: total 2,108 -> 1,911 s,
+   BusScheduling-r5 proved (240 -> 19 s), t2 19 -> 6 s, c1a 42 -> 73 s,
+   rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
+   11,670.
+
 Version 4.11
 =============
 
