@@ -811,6 +811,12 @@ class GlobalConstraints implements ParserTreeConstants {
     subcircuit(v);
     addImpliedAlldistinct(v);
     if (support.options.proof() == null) {
+      if (Arrays.asList(v).contains(cost)) {
+        // SubcircuitCost needs a cost apart from the successors
+        IntVar copy = new IntVar(store, cost.dom().cloneLight());
+        support.pose(new XeqY(cost, copy));
+        cost = copy;
+      }
       support.pose(new SubcircuitCost(v, costs, cost));
       return;
     }

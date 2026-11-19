@@ -1795,6 +1795,24 @@ class FlatzincFrontEndTest {
     assertEquals(apart, shared);
   }
 
+  // SubcircuitCost rejects a cost that is also a successor; jacop_subcircuit_cost(x, d, x2) stopped
+  @Test
+  void aSubcircuitCostThatIsASuccessorIsCopied() throws IOException, ParseException {
+    String vars =
+        """
+        var 1..3: x1 :: output_var;
+        var 1..3: x2 :: output_var;
+        var 1..3: x3 :: output_var;
+        var 1..3: c :: output_var;
+        constraint int_eq(c, x2);
+        """;
+    String sub = "constraint jacop_subcircuit_cost([x1,x2,x3],[0,1,2,0,0,1,2,1,0],%s);\n";
+    int shared = allSolutions(vars + sub.formatted("x2") + "solve satisfy;\n");
+    int apart = allSolutions(vars + sub.formatted("c") + "solve satisfy;\n");
+    assertTrue(apart > 0);
+    assertEquals(apart, shared);
+  }
+
   // the output of a run of the model with the given options, in this JVM (no watchdog)
   private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
