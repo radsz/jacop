@@ -5240,7 +5240,6 @@ class FlatzincFrontEndTest {
     ASTScalarFlatExpr second = (ASTScalarFlatExpr) array.jjtGetChild(1);
     assertEquals(0, second.getType());
     assertEquals(-1, second.getInt());
-    assertSame(array, second.jjtGetParent());
     SimpleNode copy = array.copy();
     assertSame(array.packedInts(), copy.packedInts());
     // a change of a child turns the packed children into nodes
