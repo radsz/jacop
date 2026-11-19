@@ -8149,6 +8149,26 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. The permutation element sums of the FlatZinc front end (entry 404)
+   also take binary tables whose one column is a total function of the
+   other, and, when the indices are a permutation of their values, post
+   the count of each value next to the sum: y[k] = c[x[k]] with the x[k]
+   a permutation of U takes each value v exactly |{u in U : c[u] = v}|
+   times (CountValues with fixed counters, for at most 64 distinct values
+   and at most half as many as indices). This is the cardinality form of the aggregated
+   assignment formulation of element and all_different (P. Refalo, Linear
+   formulation of constraint programming models and hybrid solvers, CP
+   2000). In the mystery shopper problem (CSPLib prob004, XCSP 2024
+   MisteryShopper) the visitor group of each visit is a table of the
+   visitor, the visitors of a week are a permutation, and the groups that
+   visit a visitee over the W weeks are all different, so each group must
+   make as many visits as there are visitees, W times its size; the counts
+   and the all_different constraints make the linear relaxation infeasible
+   when the groups differ in size. The 9 UNSAT instances (and 6-12-1, which
+   no 2024 solver decided) are proved in 0.5-1.1 s; JaCoP found nothing in
+   600 s before. -Dorg.jacop.fz.permutationElementCounts=false turns the
+   counts off.
+
 Version 4.11
 =============
 

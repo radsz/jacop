@@ -278,8 +278,9 @@ public final class PermutationElementSums {
     for (ValueEnumeration it = union.valueEnumeration(); it.hasMoreElements(); ) {
       count.merge(e0.c[(int) ((long) it.nextElement() - e0.first)], 1, Integer::sum);
     }
-    if (count.size() > MAX_COUNTED || count.size() == union.getSize()) {
-      // too many values, or each value once: the elements are then a permutation themselves
+    if (count.size() > MAX_COUNTED || 2 * count.size() > union.getSize()) {
+      // too many values, or most values once (processing times of a flow shop): the counts then
+      // add little to the sum and slowed the search (Taillard ta011, ta016)
       return;
     }
     int[] values = new int[count.size()];
