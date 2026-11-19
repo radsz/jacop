@@ -116,7 +116,7 @@ public final class ObjectiveScaling {
    * @return the scale of the objective, 1 when it is not scaled
    */
   public static long apply(Support support, SimpleNode model) {
-    if (!support.dictionary.domainsClamped()
+    if (!support.dictionary.boundedDomainsClamped()
         || support.options != null && support.options.proof() != null) {
       // a proof derives the model as the FlatZinc file states it
       return 1;

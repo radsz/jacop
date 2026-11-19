@@ -38,9 +38,11 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -117,6 +119,68 @@ class CdclSolverTest {
       value[v] = s.modelValue(v);
     }
     return value;
+  }
+
+  /**
+   * A tight learnt budget reduced the learnt clauses for memory every 16 conflicts, whatever their
+   * tier. With decisions in a fixed order (as a fixed search under LCG makes them) the search lost
+   * every clause it needed and restarted into the same subtree: this satisfiable random 3-SAT
+   * formula of CdclFuzzTest seed 210002968 ran 2 million conflicts and 111,000 memory reductions
+   * without an answer, and its proof outgrew 2 GB. The gap between memory reductions now grows.
+   */
+  @Test
+  void memoryReductionsLeaveTheSearchRoomToFinish() throws IOException {
+    List<int[]> f = new ArrayList<>();
+    int vars;
+    try (BufferedReader in =
+        new BufferedReader(
+            new InputStreamReader(
+                CdclSolverTest.class.getResourceAsStream("memory-thrash.cnf"),
+                StandardCharsets.US_ASCII))) {
+      vars = Integer.parseInt(in.readLine().split(" ")[2]);
+      for (String line = in.readLine(); line != null; line = in.readLine()) {
+        String[] lits = line.trim().split(" ");
+        int[] c = new int[lits.length - 1];
+        for (int i = 0; i < c.length; i++) {
+          c[i] = Integer.parseInt(lits[i]);
+        }
+        f.add(c);
+      }
+    }
+    CdclSolver s = new CdclSolver();
+    s.setChronoLimit(100);
+    s.setReduceBase(10);
+    s.setLearntBudget(64);
+    s.setFactoring(false);
+    s.setSweeping(false);
+    s.setProbing(false);
+    s.setConflictLimit(500_000);
+    s.ensureVars(vars);
+    f.forEach(s::addClause);
+    Random phases = new Random(210002968L);
+    boolean[] positive = new boolean[vars + 1];
+    for (int v = 1; v <= vars; v++) {
+      positive[v] = phases.nextBoolean();
+      s.observe(v);
+    }
+    s.setLazyChronoLimit(0);
+    s.connect(
+        new ExternalPropagator() {
+          @Override
+          public int decide() {
+            for (int v = 1; v <= vars; v++) {
+              if (s.value(v) == 0) {
+                return positive[v] ? v : -v;
+              }
+            }
+            return 0;
+          }
+        });
+    assertEquals(CdclSolver.SAT, s.solve(), "solved within the conflict limit");
+    for (int[] c : f) {
+      assertTrue(Arrays.stream(c).anyMatch(l -> s.modelValue(Math.abs(l)) == l > 0), "a model");
+    }
+    assertTrue(s.memoryReductions > 0, "the budget made memory reductions");
   }
 
   /** Pigeons into holes: each pigeon in some hole, at most one pigeon per hole. */

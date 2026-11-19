@@ -8149,7 +8149,32 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
-451. Regular, ExtensionalSupportMdd and Among (set and int forms) no
+451. JaLP shifts costs instead of moving columns to artificial bounds, and
+   its presolve holds inequality rows at the bound that a column singleton
+   pushes them to. A nonbasic column whose reduced cost ends up on the
+   wrong side of the tolerance by at most 1e-5 (as the slacks of
+   inequality rows do, by a few 1e-9, after the dual updates) has its cost
+   shifted to make the reduced cost 0, where it was moved to its 1e6
+   artificial bound before and took the basic values with it (cost
+   shifting, A. Koberstein, "The dual simplex method, techniques for a fast
+   and stable implementation", PhD thesis, Paderborn 2005; as in HiGHS).
+   The shifts are taken back at the optimum; when a column would then move
+   to an artificial bound, the primal simplex takes it into the basis
+   (-Dorg.jacop.jalp.shiftMax=0 turns shifting off). The presolve makes an
+   inequality row with two columns an equation when one is a column
+   singleton whose cost pushes it to a bound that the row implies (the
+   dual bound of a column singleton, Andersen and Andersen 1995, section
+   3.5), so that the doubleton equation substitutes it
+   (-Dorg.jacop.jalp.presolveTight=false). LP bench, 687 LPs at 120 s:
+   648 -> 653 solved, 0 wrong, 0.948 of the time on LPs over 0.5 s;
+   comp07-2idx 159,258 pivots -> 2,992 (TIME -> 3.3 s), thor50dday
+   45,687 -> 845 pivots (108 -> 4 s), dano3mip 75 -> 27 s, the n370
+   family 5,600 -> 230 pivots, ns1116954, supportcase10/42 and cont4 now
+   solved; pilot87 and neos-1354092 take 2x the pivots. The pivots of
+   JaCoP's own root LPs (jacop-root, 215) do not change; on the 21 wide
+   runs where it fires, 600 s, the same solved and total time.
+
+452. Regular, ExtensionalSupportMdd and Among (set and int forms) no
    longer listen to the removal of every store level. They record a level
    with Store.recordChange when they first change their state there, and
    the store calls their removeLevel only for those levels. Before, every
@@ -8163,7 +8188,7 @@ Version 5.0 (unreleased)
    and NurseRostering-07 from 1,377 to 1,297, with 3 better, 1 worse
    (Warehouse-60-120-01, 6,496 vs 6,504) and 20 equal results.
 
-452. Sampling dives for float objectives (FloatDive): a float search that
+453. Sampling dives for float objectives (FloatDive): a float search that
    has not proved its optimum after 10 % of the time-out alternates runs
    of branch and bound (node budget 10,000, doubling) with batches of
    dives under the bound best - gap. A dive narrows the float search
@@ -8188,7 +8213,26 @@ Version 5.0 (unreleased)
    time unchanged. -Dorg.jacop.fz.floatDives=false turns them off;
    org.jacop.fz.floatDiveStart (0.1) and floatDiveNodes (10000) tune them.
 
-453. A search that follows the root solution of the linear relaxation
+453. Explanations of large layered graphs (MDD, regular, cost MDD) under
+   lazy clause generation are found with less work, with the same
+   reasons. The four cuts of an explanation (nearest and far, source or
+   target first; Gange, Stuckey and Szymanek, MDD propagators with
+   explanation, Constraints 16(4), 2011) are walked together, one bit per
+   cut on each node, with the labels of a level looked up per value block
+   and the arrays of a walk kept per thread. On graphs of at least 4,096
+   nodes a far cut, which walks through the unreachable nodes or dead
+   ends, most of the graph deep in the search, is found from the other
+   side when that is smaller: the edges of removed values out of the
+   reached nodes (or into the nodes reaching the last level), each kept
+   when a depth-first search finds a path of unreachable nodes (dead ends)
+   to the cut; the nearest cuts of a failure are read from per-node masks
+   of the labels of its edges. On WordDesign2-words-mdd-055 (XCSP 2023,
+   1,485 MDDs on a diagram of 525,720 nodes and 1.83 million edges) an
+   explanation takes about 7 ms instead of 60 ms, and LCG makes about 11
+   conflicts a second instead of 1; WordDesign2-words-mdd-035 and 045
+   are solved in about 70 s instead of 485 s.
+
+454. A search that follows the root solution of the linear relaxation
    (LpGuidedSelect) no longer scans every column at each decision when
    the relaxation has no value column: it decides only from value
    columns, so it fell back to its other heuristic every time after the
@@ -8197,7 +8241,7 @@ Version 5.0 (unreleased)
    decisions); at 600 s the objective goes from 10295 to 8260. The search
    is unchanged.
 
-454. Large neighbourhood search under -f (AdaptiveLns) finds the decision
+455. Large neighbourhood search under -f (AdaptiveLns) finds the decision
    variables near a node of the constraint graph with a walk that expands
    only the nodes on a shortest path to a decision variable, using the
    distances of all nodes computed once; it finds the same variables in

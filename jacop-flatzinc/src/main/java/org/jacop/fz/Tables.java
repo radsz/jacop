@@ -224,8 +224,10 @@ public class Tables {
    * @param declared the declared bounds, as written in the model
    * @param low whether the lower bound was raised
    * @param high whether the upper bound was lowered
+   * @param unbounded whether the variable was declared without bounds (var int)
    */
-  record ClampedDomain(String ident, String declared, boolean low, boolean high) {}
+  record ClampedDomain(
+      String ident, String declared, boolean low, boolean high, boolean unbounded) {}
 
   /**
    * It constructs the storage object to store different objects, like int, array of ints, sets, ...
@@ -244,6 +246,16 @@ public class Tables {
 
   void noteClampedDomain(ClampedDomain d) {
     clampedDomains.add(d);
+  }
+
+  /**
+   * Notes a variable declared without bounds (var int), created over JaCoP's integer range: its
+   * values beyond the range are cut off as for a narrowed declared domain.
+   *
+   * @param ident the identifier of the variable or of the array of variables
+   */
+  void noteUnboundedDomain(String ident) {
+    clampedDomains.add(new ClampedDomain(ident, "int", true, true, true));
   }
 
   // pairs of variables a declaration makes equal (var int: x = y), with the bounds each had
@@ -313,7 +325,7 @@ public class Tables {
    */
   public long[] clampedDeclaredBounds(IntVar v) {
     for (ClampedDomain d : clampedDomains) {
-      if (variableTable.get(d.ident()) == v) {
+      if (!d.unbounded() && variableTable.get(d.ident()) == v) {
         return declaredInterval(d.declared());
       }
     }
@@ -431,6 +443,9 @@ public class Tables {
   }
 
   private static long[] declaredInterval(String interval) {
+    if (interval.equals("int")) {
+      return new long[] {-ClampedBounds.INF, ClampedBounds.INF};
+    }
     int dots = interval.indexOf("..");
     return new long[] {
       saturated(new BigInteger(interval.substring(0, dots).trim())),
@@ -555,6 +570,36 @@ public class Tables {
   }
 
   /**
+   * Tells whether a domain declared with bounds was narrowed to JaCoP's integer range, leaving
+   * aside the variables declared without bounds.
+   *
+   * @return true if a domain declared with bounds was narrowed.
+   */
+  public boolean boundedDomainsClamped() {
+    for (ClampedDomain d : clampedDomains) {
+      if (!d.unbounded()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Tells whether a failure may come from the values cut off by narrowing domains to JaCoP's
+   * integer range, so that it proves no unsatisfiability.
+   *
+   * @return false if no domain was narrowed, or only unbounded ones that the rows of the model show
+   *     to lie within the range.
+   */
+  public boolean failureMayComeFromNarrowing() {
+    if (boundedDomainsClamped()) {
+      return true;
+    }
+    return !clampedDomains.isEmpty()
+        && !clampsHarmless(null, -ClampedBounds.INF, ClampedBounds.INF);
+  }
+
+  /**
    * Tells whether only the objective was narrowed, and only on its worse side, so that no value cut
    * off can be better than a solution found.
    *
@@ -577,8 +622,9 @@ public class Tables {
    * @return the warning, as a FlatZinc comment line.
    */
   String clampedDomainsWarning() {
-    int n = clampedDomains.size();
-    ClampedDomain first = clampedDomains.getFirst();
+    List<ClampedDomain> bounded = clampedDomains.stream().filter(d -> !d.unbounded()).toList();
+    int n = bounded.size();
+    ClampedDomain first = bounded.getFirst();
     return "%% Warning: "
         + n
         + (n == 1 ? " variable domain reaches" : " variable domains reach")
