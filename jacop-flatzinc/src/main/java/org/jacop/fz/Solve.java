@@ -111,6 +111,7 @@ import org.jacop.jasat.cdcl.CdclSolver;
 import org.jacop.jasat.lcg.CoreSearch;
 import org.jacop.jasat.lcg.LcgSolver;
 import org.jacop.lcg.LinearForm;
+import org.jacop.lcg.ShiftExplanation;
 import org.jacop.presolve.AtMostOneRule;
 import org.jacop.presolve.AtMostOnes;
 import org.jacop.presolve.BooleanProducts;
@@ -233,6 +234,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   LcgSolver lcg;
   // the solver of a model of clauses alone, which JaSAT solves without lazy clause generation
   private CdclSolver pureSat;
+
+  // a variable of the pure clause model fixed by its complement symmetry
+  private boolean pureComplementFixed;
   int lcgStatus;
 
   // the linear relaxation (--lp), or null
@@ -508,6 +512,24 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         return;
       }
     }
+    // free search: -f, or no search annotation (searchCountOne sets it for the search later)
+    boolean free =
+        opt.freeSearch()
+            || item.jjtGetNumChildren() == 1
+                && opt.freeSearchWithoutAnnotation()
+                && !opt.complementarySearch();
+    if (satisfy
+        && opt.lcg()
+        && free
+        && opt.proof() == null
+        && opt.portfolioWorker() == null
+        && PureClauseModel.complementSymmetric(store, sat.collectedClauses())) {
+      // clauses closed under complement go to JaSAT with one variable fixed instead
+      if (opt.debug()) {
+        FzConsole.println("% complement symmetric clauses: no lex-leader symmetry breaking");
+      }
+      return;
+    }
     List<Var> order = new ArrayList<>();
     for (int i = 0; i < item.jjtGetNumChildren() - 1; i++) {
       annotationVariables((SimpleNode) item.jjtGetChild(i), order);
@@ -703,6 +725,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   public void search(ASTSolveItem node, Tables table, Options opt) {
 
     options = opt;
+    // split-bounds disjointness reasons: on for fixed search, where binpack_11 goes from 293k to
+    // 7.5k failures and wide-quick at 240 s takes 0.944 of the time; off under -f, where costas
+    // and blocks-world lost on three paired rounds at 600 s (total 1.038). Set before any solver
+    // (root probing, decomposition bounds) explains.
+    ShiftExplanation.setSplitBounds(!options.freeSearch());
     initProbe();
     dictionary = table;
     output = table;
@@ -2058,6 +2085,20 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   private void searchCountOne(ASTSolveItem node) {
+    ASTSolveKind solve = (ASTSolveKind) node.jjtGetChild(0);
+    if (pathSearch(getKind(solve.getKind()))) {
+      // the cells of the values 1, 2, ... in turn, the lowest cell first: the search follows the
+      // path from its first cell, and the Circuit of the successors prunes the cells it cut off
+      SearchItem<T> path = new SearchItem<>(store, dictionary);
+      path.inputOrderMin(dictionary.pathPositions.getFirst());
+      if (options.debug()) {
+        IO.println("%% numbered path search over the positions of the values");
+      }
+      solveKind = getKind(solve.getKind());
+      annotatedSearch = path;
+      run_single_search(solveKind, solve, path);
+      return;
+    }
     if (options.freeSearchWithoutAnnotation() && !options.complementarySearch()) {
       // nothing to follow: the model is solved as with -f
       options.freeSearch = true;
@@ -2593,6 +2634,25 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       return false;
     }
     return store.consistency();
+  }
+
+  /**
+   * Whether a model without an annotation searches the path of a numbering ({@link
+   * org.jacop.fz.constraints.NumberedPathDetector}): one solution of a satisfaction model with one
+   * such path, not under -f, without on_restart built-ins. On the Hidato-table instances of the
+   * XCSP 2022 competition, which give no cell (a Hamiltonian path of the king's graph), the 12x12,
+   * 14x14 and 15x15 grids take 3-4 s instead of 30-590 s with the Circuit alone. The system
+   * property org.jacop.fz.numberedPath.search=false keeps the default search.
+   */
+  private boolean pathSearch(int kind) {
+    return dictionary.pathPositions.size() == 1
+        && kind == 0
+        && !options.freeSearch()
+        && !options.getAll()
+        && options.getNumberSolutions() <= 1
+        && dictionary.onRestart == null
+        && options.proof() == null
+        && !"false".equalsIgnoreCase(System.getProperty("org.jacop.fz.numberedPath.search"));
   }
 
   /**
@@ -3170,10 +3230,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if ((ls != null || scheduled != null || probed || freeFirstValues != null)
         && costVar instanceof IntVar cost) {
       // the solution of local search was printed already; the core-guided phase, which ignores
-      // the bound, or the first descent, before the bound is taken, can find one no better
+      // the bound, or the first descent, before the bound is taken, can find one no better. The
+      // incumbent may be the hint of local search or of the probe, worse than the best solution
+      // free search without learning printed before them: it printed 10 again after 10
       lcg.onSolution(
           () -> {
-            if (cost.value() < lcgLastCost) {
+            if (cost.value() < Math.min(lcgLastCost, bestPrintedCost.get())) {
               printSolution();
             }
           });
@@ -3417,6 +3479,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           lns,
           Double.parseDouble(options.freeConfig("lns-share", "3")),
           Long.parseLong(options.freeConfig("lns-conflicts", "200")));
+      // the runs pause once the best solution stops improving: then it is often optimal, and the
+      // time goes to the proof
+      lcg.setLnsStall(
+          Double.parseDouble(options.freeConfig("lns-stall", "2")),
+          Long.parseLong(options.freeConfig("lns-stall-min", "30000")));
     }
     if (!free && annotated != null) {
       // restarts under the annotation: off (followed down each branch, as without learning),
@@ -3533,6 +3600,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    */
   private boolean executePureClauseSearch(PureClauseModel cnf) {
     pureSat = cnf.solver;
+    pureComplementFixed = cnf.complementFixed != 0;
     if (options.debug()) {
       FzConsole.println("% pure clause model: " + cnf.numVars() + " variables solved by JaSAT");
     }
@@ -3834,8 +3902,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             level,
             jump,
             lbd,
-            Double.parseDouble(options.freeConfig("lcg-sat-jump", "1.5")),
-            Double.parseDouble(options.freeConfig("lcg-sat-lbd", "0.4")));
+            Double.parseDouble(options.freeConfig("lcg-sat-jump", "1.3")),
+            Double.parseDouble(options.freeConfig("lcg-sat-lbd", "0.35")));
     if (report) {
       IO.println(
           String.format(
@@ -3869,7 +3937,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
    * the searches that plain CP solves sooner jump back 1.0 to 1.4 levels a conflict with an LBD of
    * 0.45 to 1.0 times the depth; those where learning wins clearly (whirlpool, PegSolitaire,
    * Pb-fpga, nonogram, GracefulGraph) jump 1.8 to 15 levels with LBDs of 0.1 to 0.45 times the
-   * depth.
+   * depth. Searches jumping 1.3 to 1.45 levels lose when they give way on unseen instances (XCSP
+   * 2026 CSP and CSPLib: Dominoes, ColoredGrid, RectPacking, car sequencing), so the defaults (jump
+   * below 1.3, LBD at least 0.35 times the depth) were fitted on both sets with a cross-validation
+   * split by problem family (osolpro benchmarks/satisfaction-holdout).
    *
    * @param conflicts the conflicts so far
    * @param level the mean decision level of a conflict
@@ -4923,6 +4994,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (pureSat != null) {
         IO.println("%%%mzn-stat: pureClauseModel=true");
+        if (pureComplementFixed) {
+          IO.println("%%%mzn-stat: complementSymmetry=true");
+        }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
         if (lcgSlowDeferred > 0) {
@@ -5142,6 +5216,7 @@ public class Solve<T extends Var> implements ParserTreeConstants {
             + bisectStatistics(lcg)
             + coreStatistics()
             + lnsStatistics(lcg.lns())
+            + (lcg.lnsStallSkips > 0 ? "\n%%%mzn-stat: lcgLnsStallSkips=" + lcg.lnsStallSkips : "")
             + sharingStatistics(lcg)
             + "\n%%%mzn-stat-end\n"
             + perClass);

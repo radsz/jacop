@@ -66,8 +66,11 @@ class FreeFirstFlatzincTest {
   private record Model(String fzn, int optimum) {}
 
   private static Model randomModel(Random random) {
-    int n = 4 + random.nextInt(3);
-    int p = 2 + random.nextInt(2);
+    return randomModel(random, 4 + random.nextInt(3), 2 + random.nextInt(2), true);
+  }
+
+  /** A random model of n courses in p periods; its optimum by enumeration, or -1 without. */
+  private static Model randomModel(Random random, int n, int p, boolean enumerate) {
     int[] size = new int[n];
     for (int i = 0; i < n; i++) {
       size[i] = 1 + random.nextInt(6);
@@ -173,6 +176,9 @@ class FreeFirstFlatzincTest {
         .append("cost],0):: defines_var(cost);\n");
     s.append("solve minimize cost;\n");
 
+    if (!enumerate) {
+      return new Model(s.toString(), -1);
+    }
     // the optimum by enumeration of the periods
     int best = Integer.MAX_VALUE;
     int[] x = new int[n];
@@ -228,6 +234,47 @@ class FreeFirstFlatzincTest {
     }
     assertTrue(
         fired >= trials, "free search ran first in " + fired + " of " + 2 * trials + " runs");
+  }
+
+  /**
+   * After free search without learning, the search before the linear relaxation of LCG free search
+   * (Solve.freeLpProbe, here on every model with org.jacop.fz.lpProbeSize=0) and LCG after it print
+   * only solutions better than its best one. LCG compared with the cost of its incumbent, the hint
+   * of the probe, which can be worse, and printed a solution as good as the best one again.
+   */
+  @Test
+  void lpProbeAfterFreeSearchImprovesOnIt() throws IOException {
+    Random random = new Random(Long.getLong("freefirst.seed", 20261118L));
+    int trials = Integer.getInteger("freefirst.trials", 12);
+    // the build turns the probe off (see the parent pom); here it runs on every relaxation
+    String oldSize = System.getProperty("org.jacop.fz.lpProbeSize");
+    String oldMs = System.getProperty("org.jacop.fz.lpProbe");
+    System.setProperty("org.jacop.fz.lpProbeSize", "0");
+    System.setProperty("org.jacop.fz.lpProbe", "200");
+    try {
+      for (int t = 0; t < trials; t++) {
+        Model model = randomModel(random, 14 + random.nextInt(6), 4, false);
+        // 100 ms of free search first: LCG and its probe go on from its solutions
+        String out = run(model.fzn(), true, "free-first=0.005");
+        String context = "trial " + t + "\n" + model.fzn() + "\n" + out;
+        List<Integer> costs = costs(out);
+        assertTrue(!costs.isEmpty(), context);
+        for (int k = 1; k < costs.size(); k++) {
+          assertTrue(costs.get(k) < costs.get(k - 1), context);
+        }
+      }
+    } finally {
+      restore("org.jacop.fz.lpProbeSize", oldSize);
+      restore("org.jacop.fz.lpProbe", oldMs);
+    }
+  }
+
+  private static void restore(String key, String value) {
+    if (value == null) {
+      System.clearProperty(key);
+    } else {
+      System.setProperty(key, value);
+    }
   }
 
   @Test

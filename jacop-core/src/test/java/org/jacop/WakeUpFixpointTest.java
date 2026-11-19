@@ -49,6 +49,7 @@ import org.jacop.constraints.Alldiff;
 import org.jacop.constraints.Alldifferent;
 import org.jacop.constraints.AlldifferentExcept;
 import org.jacop.constraints.Alldistinct;
+import org.jacop.constraints.Alternative;
 import org.jacop.constraints.Among;
 import org.jacop.constraints.AmongVar;
 import org.jacop.constraints.And;
@@ -97,6 +98,7 @@ import org.jacop.constraints.OrBoolSimple;
 import org.jacop.constraints.OrBoolVector;
 import org.jacop.constraints.PrimitiveConstraint;
 import org.jacop.constraints.Reified;
+import org.jacop.constraints.Span;
 import org.jacop.constraints.SumBool;
 import org.jacop.constraints.SumInt;
 import org.jacop.constraints.SumWeight;
@@ -748,7 +750,7 @@ class WakeUpFixpointTest {
       }
       String rel = new String[] {"==", "<=", ">="}[random.nextInt(3)];
       int element = (l + 1) % INTS == i ? j : (l + 1) % INTS;
-      return switch (random.nextInt(38)) {
+      return switch (random.nextInt(42)) {
         case 0 -> (x, b, r) -> new XmulYeqZ(x[i], x[j], x[k]);
         case 1 -> (x, b, r) -> new XdivYeqZ(x[i], x[j], x[k]);
         case 2 -> (x, b, r) -> new XmodYeqZ(x[i], x[j], x[k]);
@@ -804,6 +806,42 @@ class WakeUpFixpointTest {
           int[] weights = {nonZero(3), nonZero(3), nonZero(3), nonZero(3)};
           yield (x, b, r) -> new SumWeight(new IntVar[] {x[i], x[j], x[k], x[l]}, weights, c);
         }
+        case 37 ->
+            (x, b, r) ->
+                new Alternative(
+                    b[u],
+                    x[i],
+                    x[j],
+                    new IntVar[] {b[v]},
+                    new IntVar[] {x[k]},
+                    new IntVar[] {x[l]});
+        case 38 ->
+            (x, b, r) ->
+                new Alternative(
+                    b[u],
+                    x[i],
+                    x[j],
+                    new IntVar[] {b[v], b[w]},
+                    new IntVar[] {x[k], x[l]},
+                    new IntVar[] {r[0], r[1]});
+        case 39 ->
+            (x, b, r) ->
+                new Span(
+                    b[u],
+                    x[i],
+                    x[j],
+                    new IntVar[] {b[v]},
+                    new IntVar[] {x[k]},
+                    new IntVar[] {x[l]});
+        case 40 ->
+            (x, b, r) ->
+                new Span(
+                    b[u],
+                    x[i],
+                    x[j],
+                    new IntVar[] {b[v], b[w]},
+                    new IntVar[] {x[k], x[l]},
+                    new IntVar[] {r[0], r[1]});
         default -> {
           PrimitiveBuilder c1 = composed(1);
           PrimitiveBuilder c2 = composed(1);

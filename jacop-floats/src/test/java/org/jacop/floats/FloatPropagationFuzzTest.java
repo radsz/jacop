@@ -32,8 +32,12 @@
 package org.jacop.floats;
 
 import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -41,8 +45,11 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
 import java.util.Random;
+import java.util.function.DoubleUnaryOperator;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.function.ToDoubleFunction;
+import java.util.function.ToIntFunction;
 import java.util.function.UnaryOperator;
 import java.util.stream.Stream;
 import org.jacop.constraints.Constraint;
@@ -100,31 +107,39 @@ import org.jacop.floats.core.FloatIntervalDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.search.DepthFirstSearch;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Checks the float propagators against the real relation they stand for, by brute force over
- * sampled points.
+ * sampled points, with no tolerance.
  *
  * <p>Each trial draws a solution of the relation (or, under {@link Not}, a point that violates it),
  * builds a random box of intervals around it (some variables singleton, some float domains with a
- * hole) and samples further points of the box that satisfy the relation: these are the witnesses.
- * The constraint is imposed, plain or under {@link Not} or {@link Reified} when it is primitive,
- * and a random dive splits the intervals until every variable is singleton. At every node:
+ * hole) and samples further points of the box: these are the witnesses. A witness is a box of
+ * doubles that is known to contain a real solution. For a predicate it is a point that satisfies
+ * the relation exactly over the reals (checked in {@link BigDecimal}); for a function it is the
+ * point of the arguments and an enclosure of the real value of the function, exact or rounded
+ * outward to the next doubles for +, -, *, / and the other rational operations, and widened by the
+ * error bound of {@link Math} (1 ulp, 2.5 for sinh, cosh and tanh) for the transcendental ones. The
+ * constraint is imposed, plain or under {@link Not} or {@link Reified} when it is primitive, and a
+ * random dive splits the intervals until every variable is singleton. At every node:
  *
  * <ul>
- *   <li>propagation keeps every witness that agrees with the decisions (up to a relative 1e-9), and
- *       fails only where no such witness exists: interval propagation is sound;
- *   <li>a node where every variable is singleton satisfies the relation up to 1e-6: no wrong
- *       solution is accepted;
+ *   <li>propagation keeps a part of every witness that lies inside the decisions, and fails only
+ *       where no such witness exists: interval propagation is sound over the reals;
+ *   <li>a node where every variable is singleton is a box that may contain a solution, by exact
+ *       interval evaluation of the relation over it: no wrong solution is accepted;
  *   <li>nothing but {@link FailException} is thrown;
  *   <li>removing a level restores exactly the domains it started from.
  * </ul>
  *
- * <p>Trials per case are {@code floats.fuzz.trials} (lower in the {@code min} profile). To run it
- * at volume or on chosen cases:
+ * <p>The only slack is the documented one of float domains: an interval narrower than {@link
+ * FloatDomain#precision()} is one value, so a witness counts as kept when the domain comes within
+ * the precision of it. Trials per case are {@code floats.fuzz.trials} (lower in the {@code min}
+ * profile). To run it at volume or on chosen cases:
  *
  * <pre>
  * mvn -Pmin -pl jacop-floats test -Dtest=FloatPropagationFuzzTest \
@@ -146,15 +161,6 @@ class FloatPropagationFuzzTest {
 
   /** At most this many decisions in one dive (a split halves one interval). */
   private static final int MAX_DECISIONS = 400;
-
-  /** Relative slack within which a witness counts as kept, for the rounding of the reference. */
-  private static final double KEEP_TOLERANCE = 1e-9;
-
-  /** A sampled point is a witness of a predicate only if it holds by this relative margin. */
-  private static final double STRICT_MARGIN = 1e-7;
-
-  /** A point of singleton domains is accepted if the relation holds within this margin. */
-  private static final double GROUND_TOLERANCE = 1e-6;
 
   /** Prints, per case, how many trials reached a ground node, failed, or had witnesses. */
   private static final boolean STATS = Boolean.getBoolean("floats.fuzz.stats");
@@ -178,10 +184,11 @@ class FloatPropagationFuzzTest {
    * @param lo for each coordinate, the low end of the range a solution is drawn from
    * @param hi for each coordinate, the high end of that range
    * @param fix for a functional relation, recomputes the dependent coordinates of a point so that
-   *     it is a solution (null when there is none); null for a predicate, whose witnesses are the
-   *     points that satisfy it by a margin
-   * @param margin how well a point satisfies the relation: positive if it holds by that relative
-   *     margin, negative if it is violated by it
+   *     it is near a solution (null when there is none); null for a predicate
+   * @param enclose for a functional relation, replaces the dependent coordinates of a box by an
+   *     enclosure of their real values over the other coordinates of the box; null for a predicate
+   * @param holds whether the relation holds over a box: 1 at every real point of it, -1 at none, 0
+   *     when the evaluation cannot tell
    * @param build the constraints over variables of the coordinates
    * @param primitive whether the constraint is one {@link PrimitiveConstraint}, which is also
    *     checked under {@link Not} and {@link Reified}
@@ -193,10 +200,48 @@ class FloatPropagationFuzzTest {
       double[] lo,
       double[] hi,
       UnaryOperator<double[]> fix,
-      ToDoubleFunction<double[]> margin,
+      UnaryOperator<Iv[]> enclose,
+      ToIntFunction<Iv[]> holds,
       Function<Var[], Constraint[]> build,
       boolean primitive,
       int dep) {}
+
+  /**
+   * A box of doubles that contains a real solution: a point in every coordinate but the computed
+   * ones.
+   */
+  record Witness(double[] lo, double[] hi) {
+
+    /** The box, or null when a coordinate is unbounded or empty. */
+    static Witness of(Iv[] box) {
+      double[] lo = new double[box.length];
+      double[] hi = new double[box.length];
+      for (int i = 0; i < box.length; i++) {
+        if (box[i] == null || !box[i].bounded()) {
+          return null;
+        }
+        lo[i] = box[i].dlo();
+        hi[i] = box[i].dhi();
+      }
+      return new Witness(lo, hi);
+    }
+
+    double mid(int i) {
+      return lo[i] == hi[i] ? lo[i] : lo[i] / 2 + hi[i] / 2;
+    }
+
+    @Override
+    public String toString() {
+      StringBuilder b = new StringBuilder("[");
+      for (int i = 0; i < lo.length; i++) {
+        b.append(i == 0 ? "" : ", ").append(lo[i]);
+        if (lo[i] != hi[i]) {
+          b.append("..").append(hi[i]);
+        }
+      }
+      return b.append(']').toString();
+    }
+  }
 
   static Stream<Arguments> cases() {
     return allCases().stream()
@@ -235,6 +280,25 @@ class FloatPropagationFuzzTest {
         });
   }
 
+  /**
+   * Imposes 2x - 3y - z = 0 with x and y fixed: the constant that x and y fold into is 16 ulps off
+   * its real value when rounded, which cut off the real z (and failed with z >= that real value).
+   */
+  @Test
+  void linearFoldsFixedVariablesExactly() {
+    Store store = new Store();
+    double x = -4.900545980347655;
+    double y = -3.369761905148869;
+    // 2x - 3y exactly
+    double z = 0.30819375475129807;
+    FloatVar[] list = {
+      new FloatVar(store, "x", x, x), new FloatVar(store, "y", y, y), new FloatVar(store, "z", z, 1)
+    };
+    store.impose(new LinearFloat(list, new double[] {2, -3, -1}, "==", 0));
+    assertTrue(store.consistency());
+    assertTrue(list[2].dom().contains(z), list[2].toString());
+  }
+
   /** Trials per case of the optimisation check, which runs a whole search per trial. */
   private static final int OPT_TRIALS = Integer.getInteger("floats.fuzz.opt.trials", 20);
 
@@ -254,8 +318,8 @@ class FloatPropagationFuzzTest {
 
   /**
    * Minimises one variable with {@link SplitSelectFloat} and a step, and checks that the optimum
-   * found is no worse than any witness by more than the step: a cost bound or a split that loses
-   * solutions would end the search with a worse optimum.
+   * found is no worse than any witness by more than the step and the precision: a cost bound or a
+   * split that loses solutions would end the search with a worse optimum.
    */
   @ParameterizedTest(name = "{0}")
   @MethodSource("floatFunctionalCases")
@@ -290,7 +354,7 @@ class FloatPropagationFuzzTest {
 
   private static String minimise(Case c, Random random, double step) {
     Trial t = new Trial(c, Wrap.PLAIN);
-    double[] seedPoint = seedPoint(t, random);
+    Witness seedPoint = seedPoint(t, random);
     if (seedPoint == null) {
       return null;
     }
@@ -328,17 +392,17 @@ class FloatPropagationFuzzTest {
       return null;
     }
     double best = found ? search.getCostValueFloat() : Double.POSITIVE_INFINITY;
-    for (double[] w : t.witnesses) {
-      double slack = step + 1e-6 * (1 + Math.abs(w[cost]));
-      // a witness on the boundary of the box can be a solution only up to rounding
-      if (agrees(t, w, false) && best > w[cost] + slack) {
+    for (Witness w : t.witnesses) {
+      // the cost of a solution is the middle of a singleton interval, at most the precision wide
+      double slack = step + FloatDomain.precision();
+      if (agrees(t, w) && best > w.hi()[cost] + slack) {
         return "minimising "
             + vars[cost].id()
             + " ended with "
             + (found ? best : "no solution")
             + ", but "
-            + Arrays.toString(w)
-            + " is a solution\n    "
+            + w
+            + " holds a solution\n    "
             + where;
       }
     }
@@ -355,7 +419,7 @@ class FloatPropagationFuzzTest {
     final Store store = new Store();
     // the variables in coordinate order; under REIFIED the last one is the 0/1 variable
     Var[] vars;
-    final List<double[]> witnesses = new ArrayList<>();
+    final List<Witness> witnesses = new ArrayList<>();
     // the bounds the decisions of the dive so far allow, per coordinate
     double[] lo;
     double[] hi;
@@ -371,15 +435,71 @@ class FloatPropagationFuzzTest {
       return c.isFloat().length + (wrap == Wrap.REIFIED ? 1 : 0);
     }
 
-    /** Whether a full point (with the 0/1 coordinate under REIFIED) is a model of the wrapping. */
-    double margin(double[] x) {
-      double m = c.margin().applyAsDouble(Arrays.copyOf(x, c.isFloat().length));
+    /** Whether the wrapping holds over a full box (with the 0/1 coordinate under REIFIED). */
+    int holds(Iv[] box) {
+      int n = c.isFloat().length;
+      int h = c.holds().applyAsInt(Arrays.copyOf(box, n));
       return switch (wrap) {
-        case PLAIN -> m;
-        case NOT -> -m;
-        case REIFIED -> x[x.length - 1] == 1 ? m : -m;
+        case PLAIN -> h;
+        case NOT -> -h;
+        case REIFIED -> {
+          Iv b = box[n];
+          if (!b.isPoint()) {
+            yield 0;
+          }
+          yield b.lo().signum() == 0 ? -h : h;
+        }
       };
     }
+
+    boolean wantTrue(double[] x) {
+      int n = c.isFloat().length;
+      return wrap == Wrap.PLAIN || wrap == Wrap.REIFIED && x[n] == 1;
+    }
+
+    /**
+     * The witness of a point: for a functional relation that should hold, the point with the
+     * enclosures of its dependent coordinates; otherwise the point itself if the wrapping holds at
+     * it exactly. Null if there is none.
+     */
+    Witness witness(double[] x) {
+      int n = c.isFloat().length;
+      if (wantTrue(x) && c.fix() != null) {
+        double[] fixed = c.fix().apply(Arrays.copyOf(x, n));
+        if (fixed == null) {
+          return null;
+        }
+        Iv[] box = points(x);
+        Iv[] e = c.enclose().apply(points(fixed));
+        System.arraycopy(e, 0, box, 0, n);
+        return Witness.of(box);
+      }
+      return holds(widened(x)) == 1 ? Witness.of(points(x)) : null;
+    }
+
+    /**
+     * The point with its float coordinates widened by the precision: a predicate witness must hold
+     * over all of it, since a float interval narrower than the precision is one value, so that x !=
+     * c may be taken for x == c when x lies within the precision of c.
+     */
+    Iv[] widened(double[] x) {
+      Iv[] box = points(x);
+      BigDecimal p = new BigDecimal(FloatDomain.precision());
+      for (int i = 0; i < c.isFloat().length; i++) {
+        if (c.isFloat()[i]) {
+          box[i] = Iv.of(box[i].lo().subtract(p), box[i].hi().add(p));
+        }
+      }
+      return box;
+    }
+  }
+
+  private static Iv[] points(double[] x) {
+    Iv[] box = new Iv[x.length];
+    for (int i = 0; i < x.length; i++) {
+      box[i] = Iv.of(x[i]);
+    }
+    return box;
   }
 
   private static String trial(Case c, Random random) {
@@ -389,7 +509,7 @@ class FloatPropagationFuzzTest {
       wrap = w == 2 ? Wrap.NOT : w == 3 ? Wrap.REIFIED : Wrap.PLAIN;
     }
     Trial t = new Trial(c, wrap);
-    double[] seedPoint = seedPoint(t, random);
+    Witness seedPoint = seedPoint(t, random);
     if (seedPoint == null) {
       return null;
     }
@@ -427,8 +547,8 @@ class FloatPropagationFuzzTest {
     };
   }
 
-  /** A point that the wrapping accepts, drawn from the ranges of the case. */
-  private static double[] seedPoint(Trial t, Random random) {
+  /** A witness of the wrapping, drawn from the ranges of the case. */
+  private static Witness seedPoint(Trial t, Random random) {
     Case c = t.c;
     int n = c.isFloat().length;
     for (int attempt = 0; attempt < 200; attempt++) {
@@ -439,17 +559,9 @@ class FloatPropagationFuzzTest {
       if (t.wrap == Wrap.REIFIED) {
         x[n] = random.nextInt(2);
       }
-      boolean wantTrue = t.wrap == Wrap.PLAIN || t.wrap == Wrap.REIFIED && x[n] == 1;
-      if (wantTrue && c.fix() != null) {
-        double[] fixed = c.fix().apply(Arrays.copyOf(x, n));
-        if (fixed == null) {
-          continue;
-        }
-        System.arraycopy(fixed, 0, x, 0, n);
-        return x;
-      }
-      if (t.margin(x) > STRICT_MARGIN) {
-        return x;
+      Witness w = t.witness(x);
+      if (w != null) {
+        return w;
       }
     }
     return null;
@@ -464,35 +576,39 @@ class FloatPropagationFuzzTest {
     return random.nextInt(4) == 0 ? Math.round(x * 4) / 4.0 : x;
   }
 
-  /** Creates the variables over random intervals around the seed point. */
-  private static void buildBox(Trial t, double[] seed, Random random) {
+  /** Creates the variables over random intervals around the seed witness. */
+  private static void buildBox(Trial t, Witness seed, Random random) {
     int n = t.arity();
     t.vars = new Var[n];
     t.lo = new double[n];
     t.hi = new double[n];
     for (int i = 0; i < n; i++) {
       boolean isFloat = i < t.c.isFloat().length && t.c.isFloat()[i];
-      double v = seed[i];
+      double v = seed.mid(i);
       if (!isFloat) {
+        int value = (int) Math.round(v);
         int below = random.nextInt(4) == 0 ? 0 : random.nextInt(4);
         int above = random.nextInt(4) == 0 ? 0 : random.nextInt(4);
         if (i == t.c.isFloat().length) {
           // the 0/1 variable of Reified
-          below = (int) v - random.nextInt((int) v + 1);
-          above = random.nextInt(2 - (int) v);
+          below = value - random.nextInt(value + 1);
+          above = random.nextInt(2 - value);
         }
-        IntVar x = new IntVar(t.store, "x" + i, (int) v - below, (int) v + above);
+        IntVar x = new IntVar(t.store, "x" + i, value - below, value + above);
         t.vars[i] = x;
         t.lo[i] = x.min();
         t.hi[i] = x.max();
         continue;
       }
-      double lo = v - width(v, random);
-      double hi = v + width(v, random);
+      double lo = seed.lo()[i] - width(v, random);
+      double hi = seed.hi()[i] + width(v, random);
       FloatIntervalDomain d = new FloatIntervalDomain();
       double holeLo = lo + (hi - lo) * random.nextDouble();
       double holeHi = holeLo + (hi - holeLo) * random.nextDouble() * 0.5;
-      if (random.nextInt(6) == 0 && holeLo > lo && holeHi < hi && (v < holeLo || v > holeHi)) {
+      if (random.nextInt(6) == 0
+          && holeLo > lo
+          && holeHi < hi
+          && (seed.hi()[i] < holeLo || seed.lo()[i] > holeHi)) {
         d.unionAdapt(lo, holeLo);
         d.unionAdapt(holeHi, hi);
       } else {
@@ -516,30 +632,28 @@ class FloatPropagationFuzzTest {
     };
   }
 
-  /** The seed point and the sampled points of the box that the wrapping accepts. */
-  private static void sampleWitnesses(Trial t, double[] seed, Random random) {
-    t.witnesses.add(seed);
+  /** The seed witness and the witnesses of points sampled in the box. */
+  private static void sampleWitnesses(Trial t, Witness seed, Random random) {
+    if (inDomains(t, seed)) {
+      t.witnesses.add(seed);
+    }
     COUNTS.get()[0]++;
-    int n = t.c.isFloat().length;
     for (int s = 0; s < SAMPLES; s++) {
-      double[] x = new double[t.arity()];
-      for (int i = 0; i < x.length; i++) {
-        x[i] = sampleIn(t.vars[i], random);
-      }
-      boolean wantTrue = t.wrap == Wrap.PLAIN || t.wrap == Wrap.REIFIED && x[n] == 1;
-      if (wantTrue && t.c.fix() != null) {
-        double[] fixed = t.c.fix().apply(Arrays.copyOf(x, n));
-        if (fixed == null) {
-          continue;
-        }
-        System.arraycopy(fixed, 0, x, 0, n);
-        if (inDomains(t, x)) {
-          t.witnesses.add(x);
-        }
-      } else if (t.margin(x) > STRICT_MARGIN) {
-        t.witnesses.add(x);
+      Witness w = sampledWitness(t, random);
+      if (w != null) {
+        t.witnesses.add(w);
       }
     }
+  }
+
+  /** The witness of a point sampled in the current domains, if it lies in them, or null. */
+  private static Witness sampledWitness(Trial t, Random random) {
+    double[] x = new double[t.arity()];
+    for (int i = 0; i < x.length; i++) {
+      x[i] = sampleIn(t.vars[i], random);
+    }
+    Witness w = t.witness(x);
+    return w != null && inDomains(t, w) ? w : null;
   }
 
   private static double sampleIn(Var v, Random random) {
@@ -558,15 +672,24 @@ class FloatPropagationFuzzTest {
     };
   }
 
-  /** Whether each coordinate of x is in the domain of its variable, exactly. */
-  private static boolean inDomains(Trial t, double[] x) {
-    for (int i = 0; i < x.length; i++) {
+  /** Whether each coordinate box of w lies in the domain of its variable, exactly. */
+  private static boolean inDomains(Trial t, Witness w) {
+    for (int i = 0; i < w.lo().length; i++) {
       Var v = t.vars[i];
+      double lo = w.lo()[i];
+      double hi = w.hi()[i];
       if (v instanceof IntVar iv) {
-        if (x[i] != Math.rint(x[i]) || !iv.domain.contains((int) x[i])) {
+        if (lo != hi || lo != Math.rint(lo) || !iv.domain.contains((int) lo)) {
           return false;
         }
-      } else if (!((FloatVar) v).dom().contains(x[i])) {
+        continue;
+      }
+      FloatDomain d = ((FloatVar) v).dom();
+      boolean inside = false;
+      for (int k = 0; k < d.noIntervals() && !inside; k++) {
+        inside = d.leftElement(k) <= lo && hi <= d.rightElement(k);
+      }
+      if (!inside) {
         return false;
       }
     }
@@ -655,10 +778,10 @@ class FloatPropagationFuzzTest {
         COUNTS.get()[1] += t.witnesses.size();
         COUNTS.get()[3]++;
         // both branches failed: the node has no solution, which denser sampling checks
-        double[] missed = resample(t, random);
+        Witness missed = resample(t, random);
         if (missed != null) {
           return "both branches failed on the solution "
-              + Arrays.toString(missed)
+              + missed
               + "\n    "
               + where
               + "\n    path:"
@@ -685,26 +808,12 @@ class FloatPropagationFuzzTest {
     return null;
   }
 
-  /** A point of the current domains that the wrapping accepts, sampled densely, or null. */
-  private static double[] resample(Trial t, Random random) {
-    int n = t.c.isFloat().length;
+  /** A witness in the current domains that the decisions allow, sampled densely, or null. */
+  private static Witness resample(Trial t, Random random) {
     for (int s = 0; s < 50 * SAMPLES; s++) {
-      double[] x = new double[t.arity()];
-      for (int i = 0; i < x.length; i++) {
-        x[i] = sampleIn(t.vars[i], random);
-      }
-      boolean wantTrue = t.wrap == Wrap.PLAIN || t.wrap == Wrap.REIFIED && x[n] == 1;
-      if (wantTrue && t.c.fix() != null) {
-        double[] fixed = t.c.fix().apply(Arrays.copyOf(x, n));
-        if (fixed == null) {
-          continue;
-        }
-        System.arraycopy(fixed, 0, x, 0, n);
-      } else if (t.margin(x) <= STRICT_MARGIN) {
-        continue;
-      }
-      if (inDomains(t, x) && agrees(t, x, false)) {
-        return x;
+      Witness w = sampledWitness(t, random);
+      if (w != null && agrees(t, w)) {
+        return w;
       }
     }
     return null;
@@ -774,65 +883,61 @@ class FloatPropagationFuzzTest {
       return checkFailure(t, what, where);
     }
     t.failed = false;
-    for (double[] w : t.witnesses) {
-      if (agrees(t, w, true)) {
+    for (Witness w : t.witnesses) {
+      if (agrees(t, w)) {
         int lost = lostCoordinate(t, w);
         if (lost >= 0) {
-          return what
-              + " removed the solution "
-              + Arrays.toString(w)
-              + ": "
-              + t.vars[lost]
-              + "\n    "
-              + where;
+          return what + " removed the solution " + w + ": " + t.vars[lost] + "\n    " + where;
         }
       }
     }
     return null;
   }
 
-  /** A failure is right only if no witness agrees with the decisions. */
+  /** A failure is right only if no witness lies inside the decisions. */
   private static String checkFailure(Trial t, String what, String where) {
-    for (double[] w : t.witnesses) {
-      if (agrees(t, w, false)) {
-        return what + " failed with the solution " + Arrays.toString(w) + "\n    " + where;
+    for (Witness w : t.witnesses) {
+      if (agrees(t, w)) {
+        return what + " failed with the solution " + w + "\n    " + where;
       }
     }
     return null;
   }
 
-  /**
-   * Whether a witness lies within the bounds the decisions allow; strictly inside them by the keep
-   * tolerance unless loose is set.
-   */
-  private static boolean agrees(Trial t, double[] w, boolean loose) {
-    for (int i = 0; i < w.length; i++) {
-      double tol = t.vars[i] instanceof IntVar ? 0 : KEEP_TOLERANCE * (1 + Math.abs(w[i]));
-      if (loose) {
-        tol = 0;
-      }
-      if (w[i] < t.lo[i] + tol || w[i] > t.hi[i] - tol) {
+  /** Whether the box of a witness lies inside the bounds the decisions allow. */
+  private static boolean agrees(Trial t, Witness w) {
+    for (int i = 0; i < w.lo().length; i++) {
+      if (w.lo()[i] < t.lo[i] || w.hi()[i] > t.hi[i]) {
         return false;
       }
     }
     return true;
   }
 
-  /** The first coordinate of w that its variable's domain lost, or -1. */
-  private static int lostCoordinate(Trial t, double[] w) {
-    for (int i = 0; i < w.length; i++) {
+  /**
+   * The first coordinate whose box no longer meets the domain of its variable, or -1. Float domains
+   * count as meeting a box that they come within the precision of.
+   */
+  private static int lostCoordinate(Trial t, Witness w) {
+    for (int i = 0; i < w.lo().length; i++) {
       Var v = t.vars[i];
+      double lo = w.lo()[i];
+      double hi = w.hi()[i];
       if (v instanceof IntVar x) {
-        if (!x.domain.contains((int) w[i])) {
+        boolean kept = false;
+        for (int k = (int) Math.ceil(lo); k <= hi && !kept; k++) {
+          kept = x.domain.contains(k);
+        }
+        if (!kept) {
           return i;
         }
         continue;
       }
       FloatDomain d = ((FloatVar) v).dom();
-      double tol = KEEP_TOLERANCE * (1 + Math.abs(w[i])) + FloatDomain.precision();
+      double slack = FloatDomain.precision();
       boolean kept = false;
       for (int k = 0; k < d.noIntervals() && !kept; k++) {
-        kept = w[i] >= d.leftElement(k) - tol && w[i] <= d.rightElement(k) + tol;
+        kept = lo <= d.rightElement(k) + slack && d.leftElement(k) - slack <= hi;
       }
       if (!kept) {
         return i;
@@ -841,19 +946,24 @@ class FloatPropagationFuzzTest {
     return -1;
   }
 
-  /** A node where every variable is singleton must be a solution, up to the ground tolerance. */
+  /**
+   * A node where every variable is singleton must be a box that may hold a solution. A float
+   * interval narrower than the precision is one value, and propagation stops narrowing at the
+   * precision, so the box counts as holding a solution that lies within the precision of it.
+   */
   private static String checkGround(Trial t, String where) {
-    double[] x = new double[t.vars.length];
-    for (int i = 0; i < x.length; i++) {
+    Iv[] box = new Iv[t.vars.length];
+    for (int i = 0; i < box.length; i++) {
       if (t.vars[i] instanceof IntVar v) {
-        x[i] = v.value();
+        box[i] = Iv.of(v.value());
       } else {
         FloatVar f = (FloatVar) t.vars[i];
-        x[i] = (f.min() + f.max()) / 2;
+        BigDecimal p = new BigDecimal(FloatDomain.precision());
+        box[i] = Iv.of(new BigDecimal(f.min()).subtract(p), new BigDecimal(f.max()).add(p));
       }
     }
-    if (t.margin(x) < -GROUND_TOLERANCE) {
-      return "accepted " + Arrays.toString(x) + ", which is not a solution\n    " + where;
+    if (t.holds(box) < 0) {
+      return "accepted " + Arrays.toString(box) + ", which holds no solution\n    " + where;
     }
     return null;
   }
@@ -872,6 +982,312 @@ class FloatPropagationFuzzTest {
   }
 
   // ---------------------------------------------------------------------------------------------
+  // exact interval arithmetic
+
+  private static final MathContext DOWN = new MathContext(60, RoundingMode.FLOOR);
+  private static final MathContext UP = new MathContext(60, RoundingMode.CEILING);
+
+  /** The largest double at most r. */
+  static double down(BigDecimal r) {
+    double d = r.doubleValue();
+    if (Double.isFinite(d) && new BigDecimal(d).compareTo(r) > 0) {
+      d = Math.nextDown(d);
+    }
+    return d;
+  }
+
+  /** The smallest double at least r. */
+  static double up(BigDecimal r) {
+    double d = r.doubleValue();
+    if (Double.isFinite(d) && new BigDecimal(d).compareTo(r) < 0) {
+      d = Math.nextUp(d);
+    }
+    return d;
+  }
+
+  /** The double k ulps away from v, down if k is negative. */
+  static double widen(double v, int k) {
+    for (int i = 0; i < Math.abs(k); i++) {
+      v = k < 0 ? Math.nextDown(v) : Math.nextUp(v);
+    }
+    return v;
+  }
+
+  /**
+   * A closed interval of reals with exact ends: lo null is minus infinity, hi null plus infinity.
+   */
+  record Iv(BigDecimal lo, BigDecimal hi) {
+
+    static final Iv ALL = new Iv(null, null);
+
+    static Iv of(double v) {
+      return of(v, v);
+    }
+
+    static Iv of(double lo, double hi) {
+      if (Double.isNaN(lo) || Double.isNaN(hi)) {
+        return ALL;
+      }
+      return new Iv(
+          Double.isInfinite(lo) ? null : new BigDecimal(lo),
+          Double.isInfinite(hi) ? null : new BigDecimal(hi));
+    }
+
+    static Iv of(BigDecimal lo, BigDecimal hi) {
+      return new Iv(lo, hi);
+    }
+
+    boolean bounded() {
+      return lo != null && hi != null;
+    }
+
+    boolean isPoint() {
+      return bounded() && lo.compareTo(hi) == 0;
+    }
+
+    double dlo() {
+      return lo == null ? Double.NEGATIVE_INFINITY : down(lo);
+    }
+
+    double dhi() {
+      return hi == null ? Double.POSITIVE_INFINITY : up(hi);
+    }
+
+    boolean containsZero() {
+      return (lo == null || lo.signum() <= 0) && (hi == null || hi.signum() >= 0);
+    }
+
+    Iv hull(Iv o) {
+      if (o == null) {
+        return this;
+      }
+      return new Iv(
+          lo == null || o.lo == null ? null : lo.min(o.lo),
+          hi == null || o.hi == null ? null : hi.max(o.hi));
+    }
+
+    @Override
+    public String toString() {
+      return isPoint() ? String.valueOf(dlo()) : dlo() + ".." + dhi();
+    }
+  }
+
+  static Iv add(Iv a, Iv b) {
+    if (!a.bounded() || !b.bounded()) {
+      return Iv.ALL;
+    }
+    return Iv.of(a.lo().add(b.lo()), a.hi().add(b.hi()));
+  }
+
+  static Iv neg(Iv a) {
+    return new Iv(a.hi() == null ? null : a.hi().negate(), a.lo() == null ? null : a.lo().negate());
+  }
+
+  static Iv sub(Iv a, Iv b) {
+    return add(a, neg(b));
+  }
+
+  static Iv mul(Iv a, Iv b) {
+    if (!a.bounded() || !b.bounded()) {
+      return Iv.ALL;
+    }
+    BigDecimal[] p = {
+      a.lo().multiply(b.lo()), a.lo().multiply(b.hi()),
+      a.hi().multiply(b.lo()), a.hi().multiply(b.hi())
+    };
+    BigDecimal lo = p[0];
+    BigDecimal hi = p[0];
+    for (BigDecimal q : p) {
+      lo = lo.min(q);
+      hi = hi.max(q);
+    }
+    return Iv.of(lo, hi);
+  }
+
+  static Iv div(Iv a, Iv b) {
+    if (!a.bounded() || !b.bounded() || b.containsZero()) {
+      return Iv.ALL;
+    }
+    BigDecimal[] x = {a.lo(), a.hi()};
+    BigDecimal[] y = {b.lo(), b.hi()};
+    BigDecimal lo = null;
+    BigDecimal hi = null;
+    for (BigDecimal p : x) {
+      for (BigDecimal q : y) {
+        BigDecimal l = p.divide(q, DOWN);
+        BigDecimal h = p.divide(q, UP);
+        lo = lo == null ? l : lo.min(l);
+        hi = hi == null ? h : hi.max(h);
+      }
+    }
+    return Iv.of(lo, hi);
+  }
+
+  static Iv pow(Iv a, int k) {
+    if (!a.bounded()) {
+      return Iv.ALL;
+    }
+    BigDecimal l = a.lo().pow(k);
+    BigDecimal h = a.hi().pow(k);
+    if (k % 2 == 1) {
+      return Iv.of(l, h);
+    }
+    BigDecimal top = l.max(h);
+    return a.containsZero() ? Iv.of(BigDecimal.ZERO, top) : Iv.of(l.min(h), top);
+  }
+
+  static Iv abs(Iv a) {
+    if (!a.bounded()) {
+      return Iv.ALL;
+    }
+    if (a.lo().signum() >= 0) {
+      return a;
+    }
+    if (a.hi().signum() <= 0) {
+      return neg(a);
+    }
+    return Iv.of(BigDecimal.ZERO, a.lo().negate().max(a.hi()));
+  }
+
+  static Iv max(Iv[] xs) {
+    BigDecimal lo = null;
+    BigDecimal hi = null;
+    for (Iv x : xs) {
+      if (!x.bounded()) {
+        return Iv.ALL;
+      }
+      lo = lo == null ? x.lo() : lo.max(x.lo());
+      hi = hi == null ? x.hi() : hi.max(x.hi());
+    }
+    return Iv.of(lo, hi);
+  }
+
+  static Iv min(Iv[] xs) {
+    return neg(max(Arrays.stream(xs).map(FloatPropagationFuzzTest::neg).toArray(Iv[]::new)));
+  }
+
+  static Iv linear(double[] w, Iv[] x) {
+    Iv s = Iv.of(0);
+    for (int i = 0; i < w.length; i++) {
+      s = add(s, mul(Iv.of(w[i]), x[i]));
+    }
+    return s;
+  }
+
+  /**
+   * A monotone function computed with {@link Math} within ulps of the real value, over an interval:
+   * its values at the ends, widened by the error bound.
+   */
+  static Iv mono(Iv a, DoubleUnaryOperator f, int ulps, boolean increasing) {
+    if (!a.bounded()) {
+      return Iv.ALL;
+    }
+    double l = f.applyAsDouble(increasing ? a.dlo() : a.dhi());
+    double h = f.applyAsDouble(increasing ? a.dhi() : a.dlo());
+    if (!Double.isFinite(l) || !Double.isFinite(h)) {
+      return Iv.ALL;
+    }
+    return Iv.of(widen(l, -ulps), widen(h, ulps));
+  }
+
+  /**
+   * A smooth function that need not be monotone, over an interval at most 1e-9 wide: its values at
+   * the ends, widened by the error bound. Inside so short an interval the function departs from the
+   * hull of the ends by its second derivative times the square of the width, below an ulp of the
+   * values here (the extrema of sin, cos and cosh are near 1).
+   */
+  static Iv smooth(Iv a, DoubleUnaryOperator f, int ulps) {
+    if (!a.bounded() || a.dhi() - a.dlo() > 1e-9) {
+      return Iv.ALL;
+    }
+    double l = f.applyAsDouble(a.dlo());
+    double h = f.applyAsDouble(a.dhi());
+    if (!Double.isFinite(l) || !Double.isFinite(h)) {
+      return Iv.ALL;
+    }
+    return Iv.of(widen(Math.min(l, h), -ulps), widen(Math.max(l, h), ulps));
+  }
+
+  /**
+   * The inverse of an increasing function computed with {@link Math} within ulps, over an interval:
+   * doubles below and above the real inverse at each end, found by stepping out from a guess until
+   * the forward function, widened by its error bound, brackets the end.
+   */
+  static Iv inverse(Iv a, DoubleUnaryOperator f, int ulps, DoubleUnaryOperator guess) {
+    if (!a.bounded()) {
+      return Iv.ALL;
+    }
+    double lo = bracket(a.dlo(), f, ulps, guess, -1);
+    double hi = bracket(a.dhi(), f, ulps, guess, 1);
+    return Iv.of(lo, hi);
+  }
+
+  private static double bracket(
+      double x, DoubleUnaryOperator f, int ulps, DoubleUnaryOperator guess, int side) {
+    double y = guess.applyAsDouble(x);
+    if (!Double.isFinite(y)) {
+      return side * Double.POSITIVE_INFINITY;
+    }
+    double step = Math.ulp(y);
+    for (int k = 0; k < 2000; k++) {
+      double v = f.applyAsDouble(y);
+      // f(y) < x (side -1) or f(y) > x (side 1) for sure, so y is beyond the real inverse
+      if (side < 0 ? widen(v, ulps) < x : widen(v, -ulps) > x) {
+        return y;
+      }
+      y += side * step;
+      step *= 2;
+    }
+    return side * Double.POSITIVE_INFINITY;
+  }
+
+  /** A monotone step function of doubles over an interval: its values at the ends. */
+  static Iv steps(Iv a, DoubleUnaryOperator g) {
+    if (!a.bounded()) {
+      return Iv.ALL;
+    }
+    return Iv.of(g.applyAsDouble(a.dlo()), g.applyAsDouble(a.dhi()));
+  }
+
+  private static boolean disjoint(Iv a, Iv b) {
+    return a.hi() != null && b.lo() != null && a.hi().compareTo(b.lo()) < 0
+        || b.hi() != null && a.lo() != null && b.hi().compareTo(a.lo()) < 0;
+  }
+
+  /** a = b over boxes: 1 at every point, -1 at none, 0 otherwise. */
+  static int eq(Iv a, Iv b) {
+    if (a.isPoint() && b.isPoint() && a.lo().compareTo(b.lo()) == 0) {
+      return 1;
+    }
+    return disjoint(a, b) ? -1 : 0;
+  }
+
+  static int ne(Iv a, Iv b) {
+    return -eq(a, b);
+  }
+
+  /** a <= b over boxes. */
+  static int le(Iv a, Iv b) {
+    if (a.hi() != null && b.lo() != null && a.hi().compareTo(b.lo()) <= 0) {
+      return 1;
+    }
+    return a.lo() != null && b.hi() != null && a.lo().compareTo(b.hi()) > 0 ? -1 : 0;
+  }
+
+  /** a < b over boxes. */
+  static int lt(Iv a, Iv b) {
+    if (a.hi() != null && b.lo() != null && a.hi().compareTo(b.lo()) < 0) {
+      return 1;
+    }
+    return a.lo() != null && b.hi() != null && a.lo().compareTo(b.hi()) >= 0 ? -1 : 0;
+  }
+
+  /** Both hold: 1 if both surely do, -1 if one surely does not. */
+  static int and(int a, int b) {
+    return a < 0 || b < 0 ? -1 : a > 0 && b > 0 ? 1 : 0;
+  }
+
+  // ---------------------------------------------------------------------------------------------
   // the cases
 
   private static final boolean F = true;
@@ -885,21 +1301,10 @@ class FloatPropagationFuzzTest {
     return v;
   }
 
-  /** Margin of a = b, scaled by their size. */
-  private static double eq(double a, double b) {
-    return -Math.abs(a - b) / (1 + Math.abs(a) + Math.abs(b));
-  }
-
-  /** Margin of a <= b (and of a < b, which differ only on a set the samples do not hit). */
-  private static double le(double a, double b) {
-    return (b - a) / (1 + Math.abs(a) + Math.abs(b));
-  }
-
-  private static double ne(double a, double b) {
-    return a == b ? -1 : Math.abs(a - b) / (1 + Math.abs(a) + Math.abs(b));
-  }
-
-  /** A functional case: coordinate {@code dep} is f of the others. */
+  /**
+   * A functional case: coordinate {@code dep} is f of the others, which {@code real} encloses over
+   * a box (null when the box holds no argument that f is defined on).
+   */
   private static Case function(
       String name,
       boolean[] kinds,
@@ -907,6 +1312,7 @@ class FloatPropagationFuzzTest {
       double[] hi,
       int dep,
       ToDoubleFunction<double[]> f,
+      Function<Iv[], Iv> real,
       Function<Var[], Constraint> build,
       boolean primitive) {
     return new Case(
@@ -923,9 +1329,22 @@ class FloatPropagationFuzzTest {
           y[dep] = v;
           return y;
         },
-        x -> {
-          double v = f.applyAsDouble(x);
-          return Double.isFinite(v) ? eq(x[dep], v) : -1;
+        box -> {
+          Iv[] y = box.clone();
+          y[dep] = real.apply(box);
+          return y;
+        },
+        box -> {
+          Iv e = real.apply(box);
+          if (e == null) {
+            return -1;
+          }
+          for (int i = 0; i < box.length; i++) {
+            if (i != dep && !box[i].isPoint()) {
+              return eq(e, box[dep]) < 0 ? -1 : 0;
+            }
+          }
+          return eq(e, box[dep]);
         },
         v -> new Constraint[] {build.apply(v)},
         primitive,
@@ -937,11 +1356,20 @@ class FloatPropagationFuzzTest {
       boolean[] kinds,
       double[] lo,
       double[] hi,
-      ToDoubleFunction<double[]> margin,
+      ToIntFunction<Iv[]> holds,
       Function<Var[], Constraint> build,
       boolean primitive) {
     return new Case(
-        name, kinds, lo, hi, null, margin, v -> new Constraint[] {build.apply(v)}, primitive, -1);
+        name,
+        kinds,
+        lo,
+        hi,
+        null,
+        null,
+        holds,
+        v -> new Constraint[] {build.apply(v)},
+        primitive,
+        -1);
   }
 
   private static FloatVar fv(Var v) {
@@ -955,15 +1383,6 @@ class FloatPropagationFuzzTest {
   /** Round half away from zero, as {@link RoundPeqX} defines it. */
   private static double roundAway(double p) {
     return Math.signum(p) * Math.floor(Math.abs(p) + 0.5);
-  }
-
-  /** Margin of x = g(p) for a step function g: true, false, or 0 within 1e-9 of a step. */
-  private static double step(double x, double p, ToDoubleFunction<Double> g) {
-    double d = 1e-9 * (1 + Math.abs(p));
-    if (x == g.applyAsDouble(p)) {
-      return 1;
-    }
-    return x == g.applyAsDouble(p - d) || x == g.applyAsDouble(p + d) ? 0 : -1;
   }
 
   /**
@@ -991,14 +1410,6 @@ class FloatPropagationFuzzTest {
         k++;
       }
     }
-    Function<double[], double[]> partB =
-        x -> {
-          double[] y = new double[nb];
-          for (int j = 0; j < nb; j++) {
-            y[j] = x[map[j]];
-          }
-          return y;
-        };
     return new Case(
         a.name() + " & " + b.name(),
         kinds,
@@ -1011,7 +1422,7 @@ class FloatPropagationFuzzTest {
           }
           double[] z = x.clone();
           System.arraycopy(ya, 0, z, 0, na);
-          double[] yb = b.fix().apply(partB.apply(z));
+          double[] yb = b.fix().apply(part(z, map));
           if (yb == null) {
             return null;
           }
@@ -1020,15 +1431,19 @@ class FloatPropagationFuzzTest {
           }
           return z;
         },
-        x ->
-            Math.min(
-                a.margin().applyAsDouble(Arrays.copyOf(x, na)),
-                b.margin().applyAsDouble(partB.apply(x))),
-        v -> {
-          Var[] vb = new Var[nb];
+        box -> {
+          Iv[] z = box.clone();
+          System.arraycopy(a.enclose().apply(Arrays.copyOf(box, na)), 0, z, 0, na);
+          Iv[] yb = b.enclose().apply(part(z, map));
           for (int j = 0; j < nb; j++) {
-            vb[j] = v[map[j]];
+            z[map[j]] = yb[j];
           }
+          return z;
+        },
+        box ->
+            and(a.holds().applyAsInt(Arrays.copyOf(box, na)), b.holds().applyAsInt(part(box, map))),
+        v -> {
+          Var[] vb = part(v, map);
           Constraint[] ca = a.build().apply(Arrays.copyOf(v, na));
           Constraint[] cb = b.build().apply(vb);
           Constraint[] all = Arrays.copyOf(ca, ca.length + cb.length);
@@ -1037,6 +1452,22 @@ class FloatPropagationFuzzTest {
         },
         false,
         -1);
+  }
+
+  private static double[] part(double[] x, int[] map) {
+    double[] y = new double[map.length];
+    for (int j = 0; j < map.length; j++) {
+      y[j] = x[map[j]];
+    }
+    return y;
+  }
+
+  private static <T> T[] part(T[] x, int[] map) {
+    T[] y = Arrays.copyOf(x, map.length);
+    for (int j = 0; j < map.length; j++) {
+      y[j] = x[map[j]];
+    }
+    return y;
   }
 
   /**
@@ -1060,7 +1491,6 @@ class FloatPropagationFuzzTest {
       if (!chain && from == a.dep()) {
         continue;
       }
-      // b's argument that the shared variable becomes: never b's result, same kind
       int into = random.nextInt(b.isFloat().length);
       if (into == b.dep() || a.isFloat()[from] != b.isFloat()[into]) {
         continue;
@@ -1076,6 +1506,12 @@ class FloatPropagationFuzzTest {
     return cases;
   }
 
+  /** Error bound of {@link Math#sinh}, {@link Math#cosh} and {@link Math#tanh}, rounded up. */
+  private static final int HYPERBOLIC_ULPS = 3;
+
+  /** Error bound of the other {@link Math} functions used here, one ulp, with one to spare. */
+  private static final int ULPS = 2;
+
   static List<Case> singleCases() {
     List<Case> cases = new ArrayList<>();
     double[] a3 = r(-10, -10, -10);
@@ -1083,7 +1519,6 @@ class FloatPropagationFuzzTest {
     double[] a2 = r(-10, -10);
     double[] b2 = r(10, 10);
 
-    // arithmetic
     cases.add(
         function(
             "PplusQeqR",
@@ -1092,6 +1527,7 @@ class FloatPropagationFuzzTest {
             b3,
             2,
             x -> x[0] + x[1],
+            x -> add(x[0], x[1]),
             v -> new PplusQeqR(fv(v[0]), fv(v[1]), fv(v[2])),
             true));
     cases.add(
@@ -1102,6 +1538,7 @@ class FloatPropagationFuzzTest {
             b3,
             2,
             x -> x[0] - x[1],
+            x -> sub(x[0], x[1]),
             v -> new PminusQeqR(fv(v[0]), fv(v[1]), fv(v[2])),
             true));
     cases.add(
@@ -1112,6 +1549,7 @@ class FloatPropagationFuzzTest {
             b3,
             2,
             x -> x[0] * x[1],
+            x -> mul(x[0], x[1]),
             v -> new PmulQeqR(fv(v[0]), fv(v[1]), fv(v[2])),
             false));
     cases.add(
@@ -1122,9 +1560,11 @@ class FloatPropagationFuzzTest {
             b3,
             2,
             x -> x[1] == 0 ? Double.NaN : x[0] / x[1],
+            x -> div(x[0], x[1]),
             v -> new PdivQeqR(fv(v[0]), fv(v[1]), fv(v[2])),
             false));
     for (double c : new double[] {-2.5, -1, 0.5, 3}) {
+      Iv k = Iv.of(c);
       cases.add(
           function(
               "PplusCeqR " + c,
@@ -1133,6 +1573,7 @@ class FloatPropagationFuzzTest {
               b2,
               1,
               x -> x[0] + c,
+              x -> add(x[0], k),
               v -> new PplusCeqR(fv(v[0]), c, fv(v[1])),
               true));
       cases.add(
@@ -1143,6 +1584,7 @@ class FloatPropagationFuzzTest {
               b2,
               1,
               x -> x[0] - c,
+              x -> sub(x[0], k),
               v -> new PminusCeqR(fv(v[0]), c, fv(v[1])),
               true));
       cases.add(
@@ -1153,6 +1595,7 @@ class FloatPropagationFuzzTest {
               b2,
               1,
               x -> x[0] * c,
+              x -> mul(x[0], k),
               v -> new PmulCeqR(fv(v[0]), c, fv(v[1])),
               false));
       cases.add(
@@ -1163,10 +1606,10 @@ class FloatPropagationFuzzTest {
               b2,
               1,
               x -> x[0] / c,
+              x -> div(x[0], k),
               v -> new PdivCeqR(fv(v[0]), c, fv(v[1])),
               false));
     }
-    // the same variable twice
     cases.add(
         function(
             "PmulQeqR x*x",
@@ -1175,6 +1618,7 @@ class FloatPropagationFuzzTest {
             b2,
             1,
             x -> x[0] * x[0],
+            x -> pow(x[0], 2),
             v -> new PmulQeqR(fv(v[0]), fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1185,6 +1629,7 @@ class FloatPropagationFuzzTest {
             b2,
             1,
             x -> x[0] + x[0],
+            x -> mul(x[0], Iv.of(2)),
             v -> new PplusQeqR(fv(v[0]), fv(v[0]), fv(v[1])),
             true));
     cases.add(
@@ -1195,10 +1640,10 @@ class FloatPropagationFuzzTest {
             b2,
             1,
             x -> x[0] == 0 ? Double.NaN : 1,
+            x -> x[0].containsZero() ? Iv.ALL : Iv.of(1),
             v -> new PdivQeqR(fv(v[0]), fv(v[0]), fv(v[1])),
             false));
 
-    // functions
     cases.add(
         function(
             "AbsPeqR",
@@ -1207,6 +1652,7 @@ class FloatPropagationFuzzTest {
             b2,
             1,
             x -> Math.abs(x[0]),
+            x -> abs(x[0]),
             v -> new AbsPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1217,6 +1663,7 @@ class FloatPropagationFuzzTest {
             r(20, 20),
             1,
             x -> x[0] < 0 ? Double.NaN : Math.sqrt(x[0]),
+            x -> real(x[0], 0, Math::sqrt, ULPS),
             v -> new SqrtPeqR(fv(v[0]), fv(v[1])),
             false));
     for (double e : new double[] {2, 3, 4, 5, 0.5, 1.5, 0.25}) {
@@ -1229,10 +1676,17 @@ class FloatPropagationFuzzTest {
               integral ? r(4, 1100) : r(20, 100),
               1,
               x -> !integral && x[0] < 0 ? Double.NaN : Math.pow(x[0], e),
+              x -> integral ? pow(x[0], (int) e) : real(x[0], 0, p -> Math.pow(p, e), ULPS),
               v -> new PowPeqR(fv(v[0]), e, fv(v[1])),
               false));
     }
     for (HyperbolicPeqR.Function h : HyperbolicPeqR.Function.values()) {
+      DoubleUnaryOperator fh =
+          switch (h) {
+            case SINH -> Math::sinh;
+            case COSH -> Math::cosh;
+            case TANH -> Math::tanh;
+          };
       cases.add(
           function(
               "HyperbolicPeqR " + h,
@@ -1240,33 +1694,33 @@ class FloatPropagationFuzzTest {
               r(-4, -30),
               r(4, 30),
               1,
+              x -> fh.applyAsDouble(x[0]),
               x ->
-                  switch (h) {
-                    case SINH -> Math.sinh(x[0]);
-                    case COSH -> Math.cosh(x[0]);
-                    case TANH -> Math.tanh(x[0]);
-                  },
+                  h == HyperbolicPeqR.Function.COSH
+                      ? smooth(x[0], fh, HYPERBOLIC_ULPS)
+                      : mono(x[0], fh, HYPERBOLIC_ULPS, true),
               v -> new HyperbolicPeqR(fv(v[0]), h, fv(v[1])),
               false));
       if (h == HyperbolicPeqR.Function.COSH) {
-        // acosh is cosh with the arguments swapped and a non-negative result, the case above
         continue;
       }
-      // the inverse function, asinh or atanh
+      boolean tanh = h == HyperbolicPeqR.Function.TANH;
+      DoubleUnaryOperator guess =
+          tanh
+              ? p -> 0.5 * Math.log1p(2 * p / (1 - p))
+              : p -> Math.copySign(Math.log(Math.abs(p) + Math.sqrt(p * p + 1)), p);
       cases.add(
           function(
               "HyperbolicPeqR inverse " + h,
               kinds(F, F),
-              h == HyperbolicPeqR.Function.TANH ? r(-1, -4) : r(-30, -4),
-              h == HyperbolicPeqR.Function.TANH ? r(1, 4) : r(30, 4),
+              r(tanh ? -1 : -30, -4),
+              r(tanh ? 1 : 30, 4),
               1,
+              x -> tanh && Math.abs(x[0]) >= 1 ? Double.NaN : guess.applyAsDouble(x[0]),
               x ->
-                  switch (h) {
-                    case SINH -> Math.log(x[0] + Math.sqrt(x[0] * x[0] + 1));
-                    case COSH -> Double.NaN;
-                    case TANH ->
-                        Math.abs(x[0]) >= 1 ? Double.NaN : 0.5 * Math.log((1 + x[0]) / (1 - x[0]));
-                  },
+                  tanh && (x[0].dlo() <= -1 || x[0].dhi() >= 1)
+                      ? Iv.ALL
+                      : inverse(x[0], fh, HYPERBOLIC_ULPS, guess),
               v -> new HyperbolicPeqR(fv(v[1]), h, fv(v[0])),
               false));
     }
@@ -1278,6 +1732,7 @@ class FloatPropagationFuzzTest {
             r(5, 5),
             1,
             x -> Math.exp(x[0]),
+            x -> mono(x[0], Math::exp, ULPS, true),
             v -> new ExpPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1288,6 +1743,7 @@ class FloatPropagationFuzzTest {
             r(50, 5),
             1,
             x -> x[0] <= 0 ? Double.NaN : Math.log(x[0]),
+            x -> x[0].dlo() <= 0 ? Iv.ALL : mono(x[0], Math::log, ULPS, true),
             v -> new LnPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1298,6 +1754,7 @@ class FloatPropagationFuzzTest {
             r(8, 1),
             1,
             x -> Math.sin(x[0]),
+            x -> smooth(x[0], Math::sin, ULPS),
             v -> new SinPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1308,6 +1765,7 @@ class FloatPropagationFuzzTest {
             r(8, 1),
             1,
             x -> Math.cos(x[0]),
+            x -> smooth(x[0], Math::cos, ULPS),
             v -> new CosPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1318,6 +1776,7 @@ class FloatPropagationFuzzTest {
             r(4, 10),
             1,
             x -> Math.tan(x[0]),
+            x -> smooth(x[0], Math::tan, ULPS),
             v -> new TanPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1328,6 +1787,7 @@ class FloatPropagationFuzzTest {
             r(1, 2),
             1,
             x -> Math.asin(x[0]),
+            x -> x[0].dlo() < -1 || x[0].dhi() > 1 ? Iv.ALL : mono(x[0], Math::asin, ULPS, true),
             v -> new AsinPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1338,6 +1798,7 @@ class FloatPropagationFuzzTest {
             r(1, 3),
             1,
             x -> Math.acos(x[0]),
+            x -> x[0].dlo() < -1 || x[0].dhi() > 1 ? Iv.ALL : mono(x[0], Math::acos, ULPS, false),
             v -> new AcosPeqR(fv(v[0]), fv(v[1])),
             false));
     cases.add(
@@ -1348,10 +1809,10 @@ class FloatPropagationFuzzTest {
             r(20, 2),
             1,
             x -> Math.atan(x[0]),
+            x -> mono(x[0], Math::atan, ULPS, true),
             v -> new AtanPeqR(fv(v[0]), fv(v[1])),
             false));
 
-    // int and float
     cases.add(
         function(
             "XeqP",
@@ -1360,43 +1821,43 @@ class FloatPropagationFuzzTest {
             r(6, 6),
             1,
             x -> x[0],
+            x -> x[0],
             v -> new XeqP(iv(v[0]), fv(v[1])),
             false));
     cases.add(
-        new Case(
+        function(
             "RoundPeqX",
             kinds(F, I),
             r(-6, -6),
             r(6, 6),
-            x -> new double[] {x[0], roundAway(x[0])},
-            x -> step(x[1], x[0], FloatPropagationFuzzTest::roundAway),
-            v -> new Constraint[] {new RoundPeqX(fv(v[0]), iv(v[1]))},
-            false,
-            1));
+            1,
+            x -> roundAway(x[0]),
+            x -> steps(x[0], FloatPropagationFuzzTest::roundAway),
+            v -> new RoundPeqX(fv(v[0]), iv(v[1])),
+            false));
     cases.add(
-        new Case(
+        function(
             "FloorPeqX",
             kinds(F, I),
             r(-6, -6),
             r(6, 6),
-            x -> new double[] {x[0], Math.floor(x[0])},
-            x -> step(x[1], x[0], Math::floor),
-            v -> new Constraint[] {new FloorPeqX(fv(v[0]), iv(v[1]))},
-            false,
-            1));
+            1,
+            x -> Math.floor(x[0]),
+            x -> steps(x[0], Math::floor),
+            v -> new FloorPeqX(fv(v[0]), iv(v[1])),
+            false));
     cases.add(
-        new Case(
+        function(
             "CeilPeqX",
             kinds(F, I),
             r(-6, -6),
             r(6, 6),
-            x -> new double[] {x[0], Math.ceil(x[0])},
-            x -> step(x[1], x[0], Math::ceil),
-            v -> new Constraint[] {new CeilPeqX(fv(v[0]), iv(v[1]))},
-            false,
-            1));
+            1,
+            x -> Math.ceil(x[0]),
+            x -> steps(x[0], Math::ceil),
+            v -> new CeilPeqX(fv(v[0]), iv(v[1])),
+            false));
 
-    // comparisons
     cases.add(
         predicate(
             "PeqQ",
@@ -1406,7 +1867,6 @@ class FloatPropagationFuzzTest {
             x -> eq(x[0], x[1]),
             v -> new PeqQ(fv(v[0]), fv(v[1])),
             true));
-    // PeqQ has no witness from sampling, so its solutions come from x = y
     cases.add(
         function(
             "PeqQ functional",
@@ -1414,6 +1874,7 @@ class FloatPropagationFuzzTest {
             a2,
             b2,
             1,
+            x -> x[0],
             x -> x[0],
             v -> new PeqQ(fv(v[0]), fv(v[1])),
             true));
@@ -1432,7 +1893,7 @@ class FloatPropagationFuzzTest {
             kinds(F, F),
             a2,
             b2,
-            x -> le(x[0], x[1]),
+            x -> lt(x[0], x[1]),
             v -> new PltQ(fv(v[0]), fv(v[1])),
             true));
     cases.add(
@@ -1450,7 +1911,7 @@ class FloatPropagationFuzzTest {
             kinds(F, F),
             a2,
             b2,
-            x -> le(x[1], x[0]),
+            x -> lt(x[1], x[0]),
             v -> new PgtQ(fv(v[0]), fv(v[1])),
             true));
     cases.add(
@@ -1463,16 +1924,25 @@ class FloatPropagationFuzzTest {
             v -> new PgteqQ(fv(v[0]), fv(v[1])),
             true));
     for (double c : new double[] {-1.5, 0, 2.25}) {
+      Iv k = Iv.of(c);
       cases.add(
           function(
-              "PeqC " + c, kinds(F), r(-10), r(10), 0, x -> c, v -> new PeqC(fv(v[0]), c), true));
+              "PeqC " + c,
+              kinds(F),
+              r(-10),
+              r(10),
+              0,
+              x -> c,
+              x -> k,
+              v -> new PeqC(fv(v[0]), c),
+              true));
       cases.add(
           predicate(
               "PneqC " + c,
               kinds(F),
               r(-10),
               r(10),
-              x -> ne(x[0], c),
+              x -> ne(x[0], k),
               v -> new PneqC(fv(v[0]), c),
               true));
       cases.add(
@@ -1481,7 +1951,7 @@ class FloatPropagationFuzzTest {
               kinds(F),
               r(-10),
               r(10),
-              x -> le(x[0], c),
+              x -> lt(x[0], k),
               v -> new PltC(fv(v[0]), c),
               true));
       cases.add(
@@ -1490,7 +1960,7 @@ class FloatPropagationFuzzTest {
               kinds(F),
               r(-10),
               r(10),
-              x -> le(x[0], c),
+              x -> le(x[0], k),
               v -> new PlteqC(fv(v[0]), c),
               true));
       cases.add(
@@ -1499,7 +1969,7 @@ class FloatPropagationFuzzTest {
               kinds(F),
               r(-10),
               r(10),
-              x -> le(c, x[0]),
+              x -> lt(k, x[0]),
               v -> new PgtC(fv(v[0]), c),
               true));
       cases.add(
@@ -1508,12 +1978,11 @@ class FloatPropagationFuzzTest {
               kinds(F),
               r(-10),
               r(10),
-              x -> le(c, x[0]),
+              x -> le(k, x[0]),
               v -> new PgteqC(fv(v[0]), c),
               true));
     }
 
-    // linear
     double[][] weightSets = {{1, 1}, {2, -3}, {0.5, 1.5, -1}, {-1, -1, -1, 1}, {1e-3, 1}};
     for (double[] w : weightSets) {
       int n = w.length;
@@ -1531,6 +2000,7 @@ class FloatPropagationFuzzTest {
             }
             return s;
           };
+      Function<Iv[], Iv> exactSum = x -> linear(w, x);
       String ws = Arrays.toString(w);
       Function<Var[], FloatVar[]> list = v -> Arrays.copyOf(v, n, FloatVar[].class);
       cases.add(
@@ -1541,22 +2011,20 @@ class FloatPropagationFuzzTest {
               hi,
               n,
               sum,
+              exactSum,
               v -> new LinearFloat(list.apply(v), w, "==", fv(v[n])),
               true));
+      Iv oneHalf = Iv.of(1.5);
       cases.add(
-          new Case(
+          predicate(
               "LinearFloat == const " + ws,
               Arrays.copyOf(k, n),
               Arrays.copyOf(lo, n),
               Arrays.copyOf(hi, n),
-              null,
-              x -> eq(sum.applyAsDouble(x), 1.5),
-              v ->
-                  new Constraint[] {
-                    new LinearFloat(Arrays.copyOf(v, n, FloatVar[].class), w, "==", 1.5)
-                  },
-              true,
-              -1));
+              x -> eq(exactSum.apply(x), oneHalf),
+              v -> new LinearFloat(Arrays.copyOf(v, n, FloatVar[].class), w, "==", 1.5),
+              true));
+      Iv twoHalf = Iv.of(2.5);
       for (String rel : new String[] {"<", "<=", ">", ">=", "!="}) {
         cases.add(
             predicate(
@@ -1564,14 +2032,7 @@ class FloatPropagationFuzzTest {
                 k,
                 lo,
                 hi,
-                x -> {
-                  double s = sum.applyAsDouble(x);
-                  return switch (rel) {
-                    case "<", "<=" -> le(s, x[n]);
-                    case ">", ">=" -> le(x[n], s);
-                    default -> ne(s, x[n]);
-                  };
-                },
+                x -> compare(exactSum.apply(x), rel, x[n]),
                 v -> new LinearFloat(list.apply(v), w, rel, fv(v[n])),
                 true));
         cases.add(
@@ -1580,14 +2041,7 @@ class FloatPropagationFuzzTest {
                 Arrays.copyOf(k, n),
                 Arrays.copyOf(lo, n),
                 Arrays.copyOf(hi, n),
-                x -> {
-                  double s = sum.applyAsDouble(x);
-                  return switch (rel) {
-                    case "<", "<=" -> le(s, 2.5);
-                    case ">", ">=" -> le(2.5, s);
-                    default -> ne(s, 2.5);
-                  };
-                },
+                x -> compare(exactSum.apply(x), rel, twoHalf),
                 v -> new LinearFloat(Arrays.copyOf(v, n, FloatVar[].class), w, rel, 2.5),
                 true));
       }
@@ -1600,9 +2054,9 @@ class FloatPropagationFuzzTest {
             r(10, 10, 10, 10),
             3,
             x -> x[0] + x[1] + x[2],
+            x -> add(add(x[0], x[1]), x[2]),
             v -> new SumFloat(new FloatVar[] {fv(v[0]), fv(v[1]), fv(v[2])}, "==", fv(v[3])),
             true));
-    // a linear constraint with the same variable twice
     cases.add(
         function(
             "LinearFloat x+x-y",
@@ -1611,12 +2065,12 @@ class FloatPropagationFuzzTest {
             b2,
             1,
             x -> 2 * x[0],
+            x -> mul(x[0], Iv.of(2)),
             v ->
                 new LinearFloat(
                     new FloatVar[] {fv(v[0]), fv(v[0])}, new double[] {1, 1}, "==", fv(v[1])),
             true));
 
-    // min, max
     for (int n = 1; n <= 3; n++) {
       int m = n;
       boolean[] k = new boolean[n + 1];
@@ -1633,6 +2087,7 @@ class FloatPropagationFuzzTest {
               hi,
               n,
               x -> Arrays.stream(x, 0, m).max().orElseThrow(),
+              x -> max(Arrays.copyOf(x, m)),
               v -> new Max(Arrays.copyOf(v, m, FloatVar[].class), fv(v[m])),
               false));
       cases.add(
@@ -1643,11 +2098,11 @@ class FloatPropagationFuzzTest {
               hi,
               n,
               x -> Arrays.stream(x, 0, m).min().orElseThrow(),
+              x -> min(Arrays.copyOf(x, m)),
               v -> new Min(Arrays.copyOf(v, m, FloatVar[].class), fv(v[m])),
               false));
     }
 
-    // element
     double[] list = {-2.5, 0.75, 4, 0.75, -7, 3.125};
     cases.add(
         function(
@@ -1657,6 +2112,7 @@ class FloatPropagationFuzzTest {
             r(list.length, 10),
             1,
             x -> x[0] >= 1 && x[0] <= list.length ? list[(int) x[0] - 1] : Double.NaN,
+            x -> element(x[0], 1, i -> Iv.of(list[i - 1]), list.length),
             v -> new ElementFloat(iv(v[0]), list, fv(v[1])),
             false));
     cases.add(
@@ -1667,6 +2123,7 @@ class FloatPropagationFuzzTest {
             r(list.length - 1, 10),
             1,
             x -> x[0] >= 0 && x[0] < list.length ? list[(int) x[0]] : Double.NaN,
+            x -> element(x[0], 0, i -> Iv.of(list[i]), list.length - 1),
             v -> new ElementFloat(iv(v[0]), list, fv(v[1]), -1),
             false));
     cases.add(
@@ -1677,10 +2134,38 @@ class FloatPropagationFuzzTest {
             r(3, 10, 10, 10, 10),
             4,
             x -> x[0] >= 1 && x[0] <= 3 ? x[(int) x[0]] : Double.NaN,
+            x -> element(x[0], 1, i -> x[i], 3),
             v ->
                 new ElementFloatVariable(
                     iv(v[0]), new FloatVar[] {fv(v[1]), fv(v[2]), fv(v[3])}, fv(v[4])),
             false));
     return cases;
+  }
+
+  /** A function on [from, ...) over an interval, or nothing at all below from. */
+  private static Iv real(Iv a, double from, DoubleUnaryOperator f, int ulps) {
+    return a.dlo() < from ? Iv.ALL : mono(a, f, ulps, true);
+  }
+
+  private static int compare(Iv s, String rel, Iv x) {
+    return switch (rel) {
+      case "<" -> lt(s, x);
+      case "<=" -> le(s, x);
+      case ">" -> lt(x, s);
+      case ">=" -> le(x, s);
+      default -> ne(s, x);
+    };
+  }
+
+  /** The hull of the entries first..last that an index interval allows, or null if none. */
+  private static Iv element(Iv index, int first, IntFunction<Iv> entry, int last) {
+    int lo = (int) Math.max(first, Math.ceil(index.dlo()));
+    int hi = (int) Math.min(last, Math.floor(index.dhi()));
+    Iv e = null;
+    for (int i = lo; i <= hi; i++) {
+      Iv v = entry.apply(i);
+      e = e == null ? v : v.hull(e);
+    }
+    return e;
   }
 }
