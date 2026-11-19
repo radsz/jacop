@@ -8165,7 +8165,8 @@ Version 5.0 (unreleased)
    of the labels of its edges. On WordDesign2-words-mdd-055 (XCSP 2023,
    1,485 MDDs on a diagram of 525,720 nodes and 1.83 million edges) an
    explanation takes about 7 ms instead of 60 ms, and LCG makes about 11
-   conflicts a second instead of 1.
+   conflicts a second instead of 1; WordDesign2-words-mdd-035 and 045
+   are solved in about 70 s instead of 485 s.
 
 Version 4.11
 =============
