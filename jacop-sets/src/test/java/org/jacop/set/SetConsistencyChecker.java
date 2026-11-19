@@ -93,7 +93,7 @@ class SetConsistencyChecker {
       Constraint constraint;
       try {
         constraint = c.impose().apply(store, x);
-      } catch (IllegalArgumentException e) {
+      } catch (IllegalArgumentException _) {
         continue;
       }
       List<String> path = new ArrayList<>();
@@ -102,7 +102,7 @@ class SetConsistencyChecker {
       boolean ok;
       try {
         ok = store.consistency();
-      } catch (FailException e) {
+      } catch (FailException _) {
         ok = false;
       }
       for (int depth = 0; depth < 12; depth++) {
@@ -131,7 +131,7 @@ class SetConsistencyChecker {
         before = box(c, x);
         try {
           ok = store.consistency();
-        } catch (FailException e) {
+        } catch (FailException _) {
           ok = false;
         }
       }
@@ -185,10 +185,11 @@ class SetConsistencyChecker {
     }
     List<List<int[]>> values = values(c);
     for (int i = 0; i < x.length; i++) {
-      final int var = i;
+      final int position = i;
       if (x[i] instanceof IntVar v) {
         for (int value : elements(v.dom())) {
-          if (solutions.stream().noneMatch(t -> values.get(var).get(t[var])[0] == value)) {
+          if (solutions.stream()
+              .noneMatch(t -> values.get(position).get(t[position])[0] == value)) {
             return v.id() + " = " + value + " has no support, " + show(x);
           }
         }
@@ -198,8 +199,10 @@ class SetConsistencyChecker {
           if (s.dom().glb().contains(e)) {
             continue;
           }
-          boolean in = solutions.stream().anyMatch(t -> contains(values.get(var).get(t[var]), e));
-          boolean out = solutions.stream().anyMatch(t -> !contains(values.get(var).get(t[var]), e));
+          boolean in =
+              solutions.stream().anyMatch(t -> contains(values.get(position).get(t[position]), e));
+          boolean out =
+              solutions.stream().anyMatch(t -> !contains(values.get(position).get(t[position]), e));
           if (!in || !out) {
             return e + (in ? " out of " : " in ") + s.id() + " has no support, " + show(x);
           }

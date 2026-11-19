@@ -1313,7 +1313,7 @@ class ConsistencyChecker {
         t -> {
           // (node, cost so far) pairs reachable after each variable
           java.util.Set<Long> at = new java.util.HashSet<>();
-          at.add(((long) 1 << 32) | (0 & 0xffffffffL));
+          at.add((long) 1 << 32);
           for (int i = 0; i < n; i++) {
             java.util.Set<Long> next = new java.util.HashSet<>();
             for (long state : at) {

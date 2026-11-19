@@ -135,15 +135,33 @@ public class Match extends Constraint implements SatisfiedPresent {
       propagateListElementFromLub(store, glbA, lubA, sizeOfaGlb, sizeOfaLub, i);
     }
 
-    // the list holds the elements of a in increasing order
+    propagateOrder(store);
+    giveLoneGlbElements(store);
+
+    IntDomain lubFromList = list[0].domain.cloneLight();
+    for (int i = 0; i < list.length; i++) {
+      if (list[i].singleton()) {
+        a.domain.inGlb(store.level, a, list[i].value());
+      }
+      if (i > 0) {
+        lubFromList.unionAdapt(list[i].domain);
+      }
+    }
+    a.domain.inLub(store.level, a, lubFromList);
+  }
+
+  /** The list holds the elements of a in increasing order. */
+  private void propagateOrder(Store store) {
     for (int i = 1; i < list.length; i++) {
       list[i].domain.inMin(store.level, list[i], list[i - 1].min() + 1);
     }
     for (int i = list.length - 2; i >= 0; i--) {
       list[i].domain.inMax(store.level, list[i], list[i + 1].max() - 1);
     }
+  }
 
-    // an element of the glb that only one list variable can take is taken by it
+  /** An element of the glb that only one list variable can take is taken by it. */
+  private void giveLoneGlbElements(Store store) {
     for (ValueEnumeration ve = a.domain.glb().valueEnumeration(); ve.hasMoreElements(); ) {
       int el = ve.nextElement();
       IntVar holder = null;
@@ -160,17 +178,6 @@ public class Match extends Constraint implements SatisfiedPresent {
         holder.domain.in(store.level, holder, el, el);
       }
     }
-
-    IntDomain lubFromList = list[0].domain.cloneLight();
-    for (int i = 0; i < list.length; i++) {
-      if (list[i].singleton()) {
-        a.domain.inGlb(store.level, a, list[i].value());
-      }
-      if (i > 0) {
-        lubFromList.unionAdapt(list[i].domain);
-      }
-    }
-    a.domain.inLub(store.level, a, lubFromList);
   }
 
   private void propagateListElementFromLub(
