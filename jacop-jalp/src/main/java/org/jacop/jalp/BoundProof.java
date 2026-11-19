@@ -46,8 +46,8 @@ import java.util.Arrays;
  * {@code y A x} of the rows whose range over the given column bounds misses the range of {@code y}
  * times the row bounds. That {@code y} is a Farkas ray, checked from scratch before it is given.
  *
- * <p>Presolves find most infeasible LPs this way (HiGHS proves 16 of the 29 infeasible Netlib LPs
- * in its presolve); a dual simplex needs up to thousands of pivots for them.
+ * <p>Presolves find many infeasible LPs this way (HiGHS proves 13 of the 29 infeasible Netlib LPs
+ * in its presolve, this proof 12); a dual simplex needs up to thousands of pivots for them.
  *
  * @author Radoslaw Szymanek
  * @version 5.0
