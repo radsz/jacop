@@ -3577,10 +3577,89 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // learning, which runs in this frame, would keep the solver and its clauses
       slowCheck = null;
     }
+    if (lcgSliceDue && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
+      return alternateWithoutLearning();
+    }
     if (lcgSlow && lcgStatus == CdclSolver.UNKNOWN && !tooLateForFreeSearch(lcg)) {
       return free ? continueWithoutLcg(costVar) : continueFixedWithoutLcg(costVar);
     }
     return numberSolutions > 0;
+  }
+
+  // set when the satisfaction probe stopped LCG for a slice of search without learning
+  private volatile boolean lcgSliceDue;
+  // the slices of search without learning that a satisfaction search alternated with LCG
+  private int lcgSatSlices;
+
+  /**
+   * Alternates search without learning with LCG on a satisfaction model, after the probe found that
+   * learning cuts little ({@link #learningCutsLittle}). Free search without learning gets as much
+   * time as LCG had before the probe stopped it (times lcg-sat-cp-share), then LCG goes on with its
+   * learnt clauses for twice its first share, and both shares double until one of them decides the
+   * model or the time is up. Before, the probe handed the model over for good: XCSP 2022
+   * BlockedQueens-48-1721237620 and BlockedQueens-50-1642399343, which LCG proves unsatisfiable in
+   * 312 and 93 s, stayed open at 600 s without learning. Each slice of search without learning runs
+   * in a store level of its own, with the constraints and clauses that only the LCG solver held
+   * posted there ({@link LcgSolver#lend}); removing the level gives the store back to LCG as it
+   * left it.
+   *
+   * @return whether a solution was found
+   */
+  private boolean alternateWithoutLearning() {
+    lcgSliceDue = false;
+    CdclSolver sat = lcg.sat();
+    long end = sat.deadline();
+    long lcgShare = Math.max(1, sat.now() - lcgStart);
+    double cpShare = Double.parseDouble(options.freeConfig("lcg-sat-cp-share", "1"));
+    long cpMillis = Math.max(1, (long) (cpShare * lcgShare / 1_000_000L));
+    while (true) {
+      lcgSatSlices++;
+      if (options.debug()) {
+        IO.println(
+            "%% LCG stopped after "
+                + sat.conflicts
+                + " conflicts; "
+                + cpMillis
+                + " ms of free search without learning");
+      }
+      int root = store.level;
+      store.setLevel(root + 1);
+      Runnable giveBack = lcg.lend();
+      try {
+        for (IntVar[][] clause : this.sat.collectedClauses()) {
+          store.impose(new BoolClause(clause[0], clause[1]));
+        }
+        freeSliceMillis = cpMillis;
+        executeFreeSearch(null);
+      } finally {
+        freeSliceMillis = 0;
+        store.removeLevel(root + 1);
+        store.setLevel(root);
+        giveBack.run();
+      }
+      if (freeSearchStatus == FreeSearch.Status.UNSATISFIABLE) {
+        lcgStatus = CdclSolver.UNSAT;
+        return false;
+      }
+      if (numberSolutions > 0) {
+        lcgStatus = CdclSolver.SAT;
+        return true;
+      }
+      if (options.getTimeOut() > 0 && options.getRemainingTimeOut() <= 0) {
+        return false;
+      }
+      lcgShare *= 2;
+      cpMillis *= 2;
+      sat.setDeadline(end - sat.now() > lcgShare ? sat.now() + lcgShare : end);
+      try {
+        lcgStatus = lcg.solve();
+      } finally {
+        sat.setDeadline(end);
+      }
+      if (lcgStatus != CdclSolver.UNKNOWN || sat.now() >= end) {
+        return numberSolutions > 0;
+      }
+    }
   }
 
   /**
@@ -3908,9 +3987,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
               weak));
     }
     if (act && weak && !tooLateForFreeSearch(solver)) {
-      lcgSlow = true;
-      lcgSlowUnsolved = true;
-      solver.stop();
+      if ("once".equals(options.freeConfig("lcg-sat-handover", "slices"))) {
+        // the hand-over of jacop #755: search without learning to the end
+        lcgSlow = true;
+        lcgSlowUnsolved = true;
+        solver.stop();
+      } else {
+        lcgSliceDue = true;
+        solver.sat().interrupt();
+      }
       return false;
     }
     return !tooLateForFreeSearch(solver);
@@ -4988,6 +5073,10 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
       } else if (options.searchStatistics()) {
         printLcgExplanationStatistics();
+        if (lcgSatSlices > 0) {
+          // slices of search without learning between runs of LCG on a satisfaction model
+          IO.println("%%%mzn-stat: lcgSatSlices=" + lcgSatSlices);
+        }
         if (lcgSlowDeferred > 0) {
           // LCG made too few conflicts but kept finding better solutions or bounds
           IO.println("%%%mzn-stat: lcgSlowDeferred=" + lcgSlowDeferred);
@@ -6571,14 +6660,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           slowLcg != null
               ? Math.max(1, (slowLcg.sat().deadline() - slowLcg.sat().now()) / 1_000_000L)
               : options.getTimeOut();
-      builder.timeLimit(Duration.ofMillis(left));
+      builder.timeLimit(
+          Duration.ofMillis(freeSliceMillis > 0 ? Math.min(freeSliceMillis, left) : left));
     } else if (options.getTimeOut() > 0) {
       // the time left now, not when the search starts: building the neighbourhoods and the
       // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
       builder.deadline(
           System.currentTimeMillis()
-              + (freeFirstMillis > 0
-                  ? Math.min(freeFirstMillis, options.getRemainingTimeOut())
+              + (freeFirstMillis > 0 || freeSliceMillis > 0
+                  ? Math.min(
+                      freeFirstMillis > 0 ? freeFirstMillis : freeSliceMillis,
+                      options.getRemainingTimeOut())
                   : options.getRemainingTimeOut()));
     }
     IntVar[] recorded = freeFirstMillis > 0 ? hintedVariables() : null;
@@ -6657,6 +6749,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // with a balancing objective, the time free search without learning runs before LCG, in
   // milliseconds (0 = none), and the best solution it found, which LCG starts from
   private long freeFirstMillis;
+  // the time of a slice of free search without learning between runs of LCG, in milliseconds (0 =
+  // none), see alternateWithoutLearning
+  private long freeSliceMillis;
   private IntVar[] freeFirstVars;
   private int[] freeFirstValues;
   private int freeFirstCost;
