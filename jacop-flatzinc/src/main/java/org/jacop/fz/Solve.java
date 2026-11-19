@@ -101,6 +101,7 @@ import org.jacop.floats.constraints.PplusQeqR;
 import org.jacop.floats.core.FloatDomain;
 import org.jacop.floats.core.FloatVar;
 import org.jacop.floats.search.FloatCid;
+import org.jacop.floats.search.FloatDive;
 import org.jacop.floats.search.LargestDomainFloat;
 import org.jacop.floats.search.SplitSelectFloat;
 import org.jacop.fz.constraints.ClampedBounds;
@@ -7414,6 +7415,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     int solutionLimit = listener == null ? -1 : listener.solutionLimit;
     int base = store.level;
     boolean found = false;
+    // sampling dives for a search still running after FLOAT_DIVE_START of the time-out
+    // (FloatDiveSchedule)
+    FloatDiveSchedule dives =
+        FLOAT_DIVES && select instanceof SplitSelectFloat<?>
+            ? new FloatDiveSchedule(label, select, cost, listener, solutionLimit, base)
+            : null;
     while (true) {
       double best = label.getCostValueFloat();
       boolean farStep = !bisect[0] && best != Double.MAX_VALUE && far(lo[0], best, farOff[0]);
@@ -7431,6 +7438,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         }
         continue;
       }
+      int dived = dives == null ? 0 : dives.batch(best);
+      if (dived != 0) {
+        found |= dived > 0;
+        if (dived < 0 || label.timeOutOccured) {
+          break;
+        }
+        continue;
+      }
       boolean result = false;
       // the first run stops after FLOAT_CRAWL solutions and a run of the bisection at its first
       // solution, to start again from the root under the next bound: a depth-first search that
@@ -7440,6 +7455,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       boolean budget = bisect[0] || farStep;
       if (budget) {
         label.setNodesOut(label.getNodes() + Math.max(STEP_NODES, label.getNodes()));
+      }
+      if (dives != null) {
+        dives.startRun(budget);
       }
       int stopAt = -1;
       if (listener != null && FLOAT_RESTART) {
@@ -7465,6 +7483,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       // found it
       result |= label.getCostValueFloat() < best;
       found |= result;
+      if (dives != null && dives.endRun()) {
+        continue;
+      }
       if (budget) {
         label.setNodesOut(Long.MAX_VALUE);
         if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
@@ -7588,6 +7609,237 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       pointProbeSolutions++;
     }
     return better;
+  }
+
+  // sampling dives of a float cost (FloatDive)
+  private static final boolean FLOAT_DIVES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.floatDives", "true"));
+
+  // the share of the time-out after which a float cost that is not optimal yet gets dives
+  private static final double FLOAT_DIVE_START =
+      Double.parseDouble(System.getProperty("org.jacop.fz.floatDiveStart", "0.1"));
+
+  // the node budget of the first run of branch and bound once the dives started; it doubles each
+  // time a run uses it up
+  private static final long FLOAT_DIVE_NODES = Long.getLong("org.jacop.fz.floatDiveNodes", 10_000);
+
+  // the dives of the float cost, for the statistics
+  private FloatDive floatDive;
+
+  /**
+   * Sampling dives ({@link FloatDive}) for a float cost whose search is still running after
+   * FLOAT_DIVE_START of the time-out: that run is cut, and from then on runs of branch and bound,
+   * each with a doubled node budget, alternate with batches of dives under the bound best - gap.
+   * ex6_1_3 (Ibex optim/hard): branch and bound crawled along a flat valley at -0.3243 for 600 s,
+   * the dives reach the optimum -0.3525 in its corners, where interval bounds cannot lead a
+   * depth-first search. A batch spends as many calls of consistency as the run before it, times a
+   * share that halves after each batch that finds nothing; below 1/64 the dives stop and branch and
+   * bound runs to its end. A batch that finds a better solution runs again. Not from the start: a
+   * run from the root under the bound of a dive's solution near the optimum can take far longer
+   * than the branch and bound it replaces (ex6_1_2: 900 nodes in 25 s, against 21,000 nodes in 6 s
+   * for the whole proof), and so does a run that starts again after its node budget.
+   */
+  private final class FloatDiveSchedule {
+
+    private final DepthFirstSearch<T> label;
+
+    private final SelectChoicePoint<T> select;
+
+    private final FloatVar cost;
+
+    private final SimpleSolutionListener<T> listener;
+
+    private final int solutionLimit;
+
+    private final int base;
+
+    // the time left when the dives start, in milliseconds; 0 without a time-out
+    private final long diveAt;
+
+    private boolean diving;
+
+    private long nodes = FLOAT_DIVE_NODES;
+
+    private double share = 1;
+
+    // the calls of consistency of the last run of branch and bound
+    private long runCalls;
+
+    private long calls;
+
+    // the run is cut when the dives start
+    private boolean cut;
+
+    // the run has the node budget of the dives
+    private boolean run;
+
+    // the last dive failed with the bound at the root
+    private boolean rootFailed;
+
+    FloatDiveSchedule(
+        DepthFirstSearch<T> label,
+        SelectChoicePoint<T> select,
+        FloatVar cost,
+        SimpleSolutionListener<T> listener,
+        int solutionLimit,
+        int base) {
+      this.label = label;
+      this.select = select;
+      this.cost = cost;
+      this.listener = listener;
+      this.solutionLimit = solutionLimit;
+      this.base = base;
+      this.diveAt =
+          options.getTimeOut() > 0 ? (long) (options.getTimeOut() * (1 - FLOAT_DIVE_START)) : 0;
+    }
+
+    /**
+     * Runs a batch of dives once they started.
+     *
+     * @param best the best cost so far
+     * @return 1 if a dive found a better solution, -1 at the time-out, 0 otherwise
+     */
+    int batch(double best) {
+      if (!diving) {
+        return 0;
+      }
+      double limit = best == Double.MAX_VALUE ? Double.MAX_VALUE : best - gap(best);
+      if (probe(limit, Math.max(1, (long) (share * runCalls)))) {
+        share = 1;
+        return 1;
+      }
+      if (label.timeOutOccured) {
+        return -1;
+      }
+      share /= 2;
+      diving = share >= 1.0 / 64;
+      return 0;
+    }
+
+    /**
+     * Sets the node budget or the cut of the next run of branch and bound.
+     *
+     * @param budget the run has a node budget of its own
+     */
+    void startRun(boolean budget) {
+      run = diving && !budget;
+      calls = store.numberConsistencyCalls;
+      if (run) {
+        label.setNodesOut(label.getNodes() + nodes);
+      }
+      long left = options.getRemainingTimeOut();
+      cut = !diving && share == 1 && diveAt > 0 && left > diveAt;
+      if (cut) {
+        label.setTimeOutMilliseconds(left - diveAt);
+      }
+    }
+
+    /**
+     * Ends a run of branch and bound.
+     *
+     * @return true if it was cut for the dives or used up their node budget, so the search goes on
+     */
+    boolean endRun() {
+      runCalls = store.numberConsistencyCalls - calls;
+      if (cut) {
+        setSearchTimeout(label);
+        diving = resume();
+        return diving;
+      }
+      if (run) {
+        label.setNodesOut(Long.MAX_VALUE);
+        if (resume()) {
+          nodes *= 2;
+          return true;
+        }
+      }
+      return false;
+    }
+
+    // a run stopped by its limit before the time-out goes on
+    private boolean resume() {
+      if (label.timeOutOccured && options.getRemainingTimeOut() > 1) {
+        label.timeOutOccured = false;
+        return true;
+      }
+      return false;
+    }
+
+    /**
+     * Dives under a bound on the cost until one finds a better solution, the dives have spent the
+     * calls of consistency or the bound fails at the root.
+     *
+     * @return true when a dive found a better solution
+     */
+    private boolean probe(double limit, long budget) {
+      if (floatDive == null) {
+        floatDive =
+            new FloatDive(
+                store,
+                ((SplitSelectFloat<?>) select).searchVariables,
+                cost,
+                options.getRandomSeed());
+      }
+      double before = label.getCostValueFloat();
+      long end = store.numberConsistencyCalls + budget;
+      boolean better = false;
+      boolean more = true;
+      while (more) {
+        if (options.getRemainingTimeOut() == 1) {
+          label.timeOutOccured = true;
+        } else {
+          better = dive(limit) && label.getCostValueFloat() < before;
+        }
+        if (better) {
+          floatDive.improved();
+        } else {
+          floatDive.failed();
+        }
+        more =
+            !better && !rootFailed && !label.timeOutOccured && store.numberConsistencyCalls < end;
+      }
+      return better;
+    }
+
+    /**
+     * Makes one dive and, when it narrows every float search variable, hands the box to the search,
+     * which labels what is left (integer variables) within a few nodes and records the solution.
+     *
+     * @return true if the search found a solution
+     */
+    private boolean dive(double limit) {
+      boolean found = false;
+      store.setLevel(base + 1);
+      // a bound that fails at the root fails every dive
+      rootFailed = true;
+      try {
+        if (limit != Double.MAX_VALUE) {
+          cost.domain.inMax(store.level, cost, limit);
+        }
+        rootFailed = !store.consistency();
+        if (!rootFailed && floatDive.dive()) {
+          if (listener != null) {
+            listener.setSolutionLimit(listener.solutionsNo() + 1);
+          }
+          label.setNodesOut((long) label.getNodes() + POINT_PROBE_NODES);
+          found = label.labeling(store, select, cost);
+        }
+      } catch (FailException _) {
+        store.clearChanged();
+      } finally {
+        while (store.level > base) {
+          store.removeLevel(store.level);
+          store.setLevel(store.level - 1);
+        }
+        if (listener != null) {
+          listener.setSolutionLimit(solutionLimit);
+        }
+        label.setNodesOut(Long.MAX_VALUE);
+        // the node limit stops the search as a time-out does
+        resume();
+      }
+      return found;
+    }
   }
 
   // the precision of the optimum: relative to its magnitude, as the gaps of Ibex and SCIP
@@ -7835,6 +8087,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       IO.println("%%%mzn-stat: floatLpFailures=" + c[2]);
       IO.println("%%%mzn-stat: floatLpPointProbes=" + pointProbes);
       IO.println("%%%mzn-stat: floatLpPointSolutions=" + pointProbeSolutions);
+    }
+    if (floatDive != null && options.getStatistics()) {
+      IO.println(
+          "%%%mzn-stat: floatDives="
+              + floatDive.dives()
+              + "\n%%%mzn-stat: floatDiveSteps="
+              + floatDive.steps()
+              + "\n%%%mzn-stat: floatDiveSolutions="
+              + floatDive.improvements());
     }
 
     printLinearRelaxationStatistics();
