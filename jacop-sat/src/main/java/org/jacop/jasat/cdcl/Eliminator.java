@@ -75,6 +75,8 @@ final class Eliminator {
   // whether to look for gate definitions, the extractor over the current clause array, and how
   // many eliminations used a gate
   private final boolean useGates;
+  // MiniSat mode: at most three rounds, each over every variable
+  private boolean minisat;
   private GateExtractor gates;
   private int[][] gatesOver;
   private int numGateEliminations;
@@ -113,6 +115,7 @@ final class Eliminator {
    */
   Eliminator(int numVars, int[][] input, int numInput, boolean[] frozen, ProofOutput proof) {
     this(numVars, input, numInput, frozen, proof, 0, 0, 20, false);
+    minisat = true;
   }
 
   /**
@@ -189,7 +192,10 @@ final class Eliminator {
     }
     subsumeQueue();
     Arrays.fill(touched, true);
-    while (!unsat && effort < EFFORT_LIMIT) {
+    for (int round = 0; !unsat && effort < EFFORT_LIMIT && (!minisat || round < 3); round++) {
+      if (minisat) {
+        Arrays.fill(touched, true);
+      }
       int[] vars = candidates();
       int before = numEliminated;
       for (int v : vars) {

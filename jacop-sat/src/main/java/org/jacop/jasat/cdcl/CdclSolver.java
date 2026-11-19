@@ -4678,17 +4678,20 @@ public final class CdclSolver {
       }
     }
     long elimBegin = System.nanoTime();
+    // with an external propagator (lazy clause generation) elimination stays as in MiniSat
     Eliminator e =
-        new Eliminator(
-            numVars,
-            sat ? input : new int[0][],
-            sat ? n : 0,
-            frozen,
-            proof,
-            eliminationBound,
-            eliminationBound,
-            resolventLimit,
-            eliminationGates);
+        external != null
+            ? new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof)
+            : new Eliminator(
+                numVars,
+                sat ? input : new int[0][],
+                sat ? n : 0,
+                frozen,
+                proof,
+                eliminationBound,
+                eliminationBound,
+                resolventLimit,
+                eliminationGates);
     sat = sat && e.run();
     gateEliminations += e.numGateEliminations();
     // the bound rises by one step after each complete run, so the first run before the search
@@ -5045,7 +5048,8 @@ public final class CdclSolver {
    * something, or new root facts or irredundant clauses appeared since.
    */
   private boolean eliminationDue() {
-    return !eliminationFruitless
+    return external != null
+        || !eliminationFruitless
         || trailSize > eliminationTrail
         || numOriginals + numOriginalBinaries != eliminationOriginals;
   }
