@@ -3595,10 +3595,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
 
   /**
    * Alternates search without learning with LCG on a satisfaction model, after the probe found that
-   * learning cuts little ({@link #learningCutsLittle}). Free search without learning gets as much
-   * time as LCG had before the probe stopped it (times lcg-sat-cp-share), then LCG goes on with its
-   * learnt clauses for twice its first share, and both shares double until one of them decides the
-   * model or the time is up. Before, the probe handed the model over for good: XCSP 2022
+   * learning cuts little ({@link #learningCutsLittle}) or that LCG makes few conflicts a second.
+   * Free search without learning gets twice the time LCG had before the probe stopped it after weak
+   * learning (lcg-sat-cp-share), as much after slow learning (lcg-sat-slow-share), then LCG goes on
+   * with its learnt clauses for twice its first share, and both shares double until one of them
+   * decides the model or the time is up. Each slice goes on with the same free search, its
+   * restarts, weights and saved phases. Before, the probe handed the model over for good: XCSP 2022
    * BlockedQueens-48-1721237620 and BlockedQueens-50-1642399343, which LCG proves unsatisfiable in
    * 312 and 93 s, stayed open at 600 s without learning. Each slice of search without learning runs
    * in a store level of its own, with the constraints and clauses that only the LCG solver held
@@ -3613,7 +3615,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long end = sat.deadline();
     long lcgShare = Math.max(1, sat.now() - lcgStart);
     long cpMillis = Math.max(1, (long) (lcgSliceShare * lcgShare / 1_000_000L));
-    FreeSearch sliceSearch = null;
+    // the search is built at the root, below the levels of the slices: the time stamps of its
+    // branchings (input order of the annotation) live at the level they were made at
+    freeSearchBuildOnly = true;
+    try {
+      executeFreeSearch(null);
+    } finally {
+      freeSearchBuildOnly = false;
+    }
+    FreeSearch sliceSearch = freeSearch;
     while (true) {
       lcgSatSlices++;
       if (options.debug()) {
@@ -3631,19 +3641,12 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         for (IntVar[][] clause : this.sat.collectedClauses()) {
           store.impose(new BoolClause(clause[0], clause[1]));
         }
-        if (sliceSearch == null) {
-          freeSliceMillis = cpMillis;
-          executeFreeSearch(null);
-          sliceSearch = freeSearch;
-        } else {
-          // the same search goes on: its restarts, dom/wdeg weights and saved phases
-          freeSearchStatus =
-              sliceSearch.resume(
-                  System.currentTimeMillis() + Math.min(cpMillis, options.getRemainingTimeOut()),
-                  FreeSearch.VIRTUAL_CLOCK ? cpMillis : 0);
-        }
+        // every slice goes on with the same search: its restarts, dom/wdeg weights and saved phases
+        freeSearchStatus =
+            sliceSearch.resume(
+                System.currentTimeMillis() + Math.min(cpMillis, options.getRemainingTimeOut()),
+                FreeSearch.VIRTUAL_CLOCK ? cpMillis : 0);
       } finally {
-        freeSliceMillis = 0;
         store.removeLevel(root + 1);
         store.setLevel(root);
         giveBack.run();
@@ -6686,17 +6689,14 @@ public class Solve<T extends Var> implements ParserTreeConstants {
           slowLcg != null
               ? Math.max(1, (slowLcg.sat().deadline() - slowLcg.sat().now()) / 1_000_000L)
               : options.getTimeOut();
-      builder.timeLimit(
-          Duration.ofMillis(freeSliceMillis > 0 ? Math.min(freeSliceMillis, left) : left));
+      builder.timeLimit(Duration.ofMillis(left));
     } else if (options.getTimeOut() > 0) {
       // the time left now, not when the search starts: building the neighbourhoods and the
       // search took 2.1 s on ma-path-finding ins_g16_p10_a20, which overran -t by as much
       builder.deadline(
           System.currentTimeMillis()
-              + (freeFirstMillis > 0 || freeSliceMillis > 0
-                  ? Math.min(
-                      freeFirstMillis > 0 ? freeFirstMillis : freeSliceMillis,
-                      options.getRemainingTimeOut())
+              + (freeFirstMillis > 0
+                  ? Math.min(freeFirstMillis, options.getRemainingTimeOut())
                   : options.getRemainingTimeOut()));
     }
     IntVar[] recorded = freeFirstMillis > 0 ? hintedVariables() : null;
@@ -6759,6 +6759,9 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     if (options.debug()) {
       IO.println("% FreeSearch(" + restarts + ") " + selects);
     }
+    if (freeSearchBuildOnly) {
+      return false;
+    }
     freeSearchStatus = freeSearch.solve();
     if (recorded != null && freeSearch.getSolution() != null) {
       freeFirstVars = recorded;
@@ -6775,9 +6778,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   // with a balancing objective, the time free search without learning runs before LCG, in
   // milliseconds (0 = none), and the best solution it found, which LCG starts from
   private long freeFirstMillis;
-  // the time of a slice of free search without learning between runs of LCG, in milliseconds (0 =
-  // none), see alternateWithoutLearning
-  private long freeSliceMillis;
+  // set while alternateWithoutLearning builds the free search that its slices run
+  private boolean freeSearchBuildOnly;
   private IntVar[] freeFirstVars;
   private int[] freeFirstValues;
   private int freeFirstCost;
