@@ -223,6 +223,12 @@ public abstract class LayeredGraphConstraint extends Constraint
 
   private int currentLevel;
 
+  // The store of the constraint and the levels at which its state changed, each recorded once with
+  // the store, so the store calls removeLevel only for those levels instead of for every level.
+  private Store imposedStore;
+  private int[] changedLevels = new int[16];
+  private int changedTop;
+
   // Nodes that lost all their incoming edges (forward lists) or all their outgoing edges
   // (backward lists) and must be removed. In large graphs they are kept as linked lists per level:
   // the first node of level l is
@@ -2087,8 +2093,38 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
   }
 
+  /**
+   * Records with the store that the state changes at this level, once per level.
+   *
+   * @param level the current store level.
+   */
+  private void changedAt(int level) {
+    if (changedTop == 0 || changedLevels[changedTop - 1] != level) {
+      if (changedTop == changedLevels.length) {
+        changedLevels = Arrays.copyOf(changedLevels, 2 * changedTop);
+      }
+      changedLevels[changedTop++] = level;
+      imposedStore.recordChange(this);
+    }
+  }
+
+  /**
+   * The store calls removeLevel only for the levels recorded by changedAt, so the constraint does
+   * not listen to the removal of every level.
+   *
+   * @return false.
+   */
+  @Override
+  public boolean isStateful() {
+    return false;
+  }
+
   @Override
   public void removeLevel(int level) {
+
+    while (changedTop > 0 && changedLevels[changedTop - 1] >= level) {
+      changedTop--;
+    }
 
     while (markTop > 0 && markLevel[markTop - 1] >= level) {
       int start = markPosition[--markTop];
@@ -2146,6 +2182,7 @@ public abstract class LayeredGraphConstraint extends Constraint
       position = p == null ? -1 : p;
     }
     if (position >= 0 && !levelQueued[position]) {
+      changedAt(level);
       levelQueued[position] = true;
       levelQueue[levelQueueSize++] = position;
     }
@@ -2155,6 +2192,7 @@ public abstract class LayeredGraphConstraint extends Constraint
   public void consistency(Store store) {
 
     currentLevel = store.level;
+    changedAt(currentLevel);
     if (epochLevel != currentLevel) {
       if (++epoch > STAMP_MASK) {
         // Stamps are restored from the trail too, so they are cleared there as well.
@@ -2320,6 +2358,7 @@ public abstract class LayeredGraphConstraint extends Constraint
     }
     levelQueue = new int[list.length];
     levelQueued = new boolean[list.length];
+    imposedStore = store;
 
     super.impose(store);
   }

@@ -2038,6 +2038,66 @@ class FlatzincFrontEndTest {
   }
 
   @Test
+  void networkFlowUnderProofIsProved() throws IOException {
+    // Two units from node 1 to node 3, directly at cost 5 or through node 2 at cost 1 + 1. Under
+    // --proof NetworkFlow had no OPB encoding and the proof stopped; with fixed weights it is now
+    // posted as its rows, which the proof derives from.
+    String fzn =
+        """
+        var 0..2: f1:: output_var;
+        var 0..2: f2:: output_var;
+        var 0..2: f3:: output_var;
+        var 0..20: cost:: output_var;
+        array [1..3] of var int: f = [f1,f2,f3];
+        array [1..3] of var int: w = [5,1,1];
+        constraint jacop_networkflow([1,3,1,2,2,3],f,w,[2,0,-2],cost);
+        solve minimize cost;
+        """;
+    String prefix = tmp.resolve("networkflow").toString();
+    String out = run(fzn, "--proof", prefix)[0];
+    assertTrue(out.contains("cost = 4;"), out);
+    assertTrue(!out.contains("does not support"), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("conclusion BOUNDS 4 4"), proof);
+  }
+
+  @Test
+  void selfCountingUnderProofIsProved() throws IOException {
+    // A magic sequence of length 4: x[i] counts the value i in x, as in nmseq. The cardinality
+    // detector's GCC had counters among its counted variables, which the OPB model left out, so
+    // the proof stopped; under --proof those counters are now copies linked by equalities.
+    StringBuilder fzn = new StringBuilder();
+    StringBuilder constraints = new StringBuilder();
+    for (int i = 0; i < 4; i++) {
+      fzn.append("var 0..3: x").append(i).append(":: output_var;\n");
+    }
+    int b = 0;
+    for (int i = 0; i < 4; i++) {
+      StringBuilder ints = new StringBuilder();
+      for (int j = 0; j < 4; j++) {
+        fzn.append("var bool: b").append(b).append(";\n");
+        fzn.append("var 0..1: i").append(b).append(";\n");
+        constraints.append("constraint int_eq_reif(x").append(j).append(",").append(i);
+        constraints.append(",b").append(b).append(");\n");
+        constraints.append("constraint bool2int(b").append(b).append(",i").append(b).append(");\n");
+        ints.append(j == 0 ? "" : ",").append("i").append(b);
+        b++;
+      }
+      constraints.append("constraint int_lin_eq([1,1,1,1,-1],[").append(ints).append(",x");
+      constraints.append(i).append("],0);\n");
+    }
+    fzn.append(constraints);
+    fzn.append("solve satisfy;\n");
+    String prefix = tmp.resolve("selfcounting").toString();
+    String out = run(fzn.toString(), "--proof", prefix, "-debug")[0];
+    assertTrue(out.contains("redundant GCC"), out);
+    assertTrue(out.contains("----------"), out);
+    assertTrue(!out.contains("does not support"), out);
+    String proof = Files.readString(Path.of(prefix + ".pbp"), StandardCharsets.UTF_8);
+    assertTrue(proof.contains("end pseudo-Boolean proof"), proof);
+  }
+
+  @Test
   void rootFailureUnderFreeSearchIsProved() throws IOException {
     // s is false (x5 <= x1 cannot hold), so r is true, and the row of r fails over the bounds:
     // the store of the LCG solver fails at the root. Under -f the root probing ran first, saw the
