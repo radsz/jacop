@@ -237,6 +237,56 @@ class SymmetryBreakingFlatzincTest {
   }
 
   @Test
+  void modelLexLeadersKeyAHugeTableOnce() throws IOException {
+    // Benzenoide (XCSP 2023): a table of four million tuples on 728 constraints and lex-leader
+    // constraints in the model; the key of each constraint spelt out every tuple, 70 MB each, and
+    // the keys of all constraints did not fit in 12 GB. Here 40 scopes of a table of 200,000
+    // tuples and lex-leader constraints for the swaps of the first scope with the others: each
+    // swap maps the model onto itself, and every constraint is keyed under each of them.
+    int tuples = 200_000;
+    int tables = 40;
+    StringBuilder fzn =
+        new StringBuilder("array [1..").append(3 * tuples).append("] of int: t = [");
+    for (int i = 0; i < tuples; i++) {
+      fzn.append(i > 0 ? "," : "")
+          .append(i % 7)
+          .append(',')
+          .append(i % 11)
+          .append(',')
+          .append(i / 77);
+    }
+    fzn.append("];\n");
+    for (int k = 0; k < tables; k++) {
+      fzn.append("var 0..6: a").append(k).append(":: output_var;\nvar 0..10: b").append(k);
+      fzn.append(";\nvar 0..").append((tuples - 1) / 77).append(": c").append(k).append(";\n");
+    }
+    for (int k = 0; k < tables; k++) {
+      fzn.append("constraint jacop_table_int([a").append(k).append(",b").append(k);
+      fzn.append(",c").append(k).append("], t);\n");
+    }
+    // lex-leader constraints for the swaps of the first scope with each other scope
+    List<String> all = new ArrayList<>();
+    for (int k = 0; k < tables; k++) {
+      all.addAll(List.of("a" + k, "b" + k, "c" + k));
+    }
+    for (int k = 1; k < tables; k++) {
+      List<String> swapped = new ArrayList<>(all);
+      Collections.swap(swapped, 0, 3 * k);
+      Collections.swap(swapped, 1, 3 * k + 1);
+      Collections.swap(swapped, 2, 3 * k + 2);
+      fzn.append("constraint jacop_lex_lesseq_int([").append(String.join(",", all));
+      fzn.append("],[").append(String.join(",", swapped)).append("]);\n");
+    }
+    fzn.append("solve satisfy;\n");
+    long start = System.nanoTime();
+    String out =
+        FlatzincTestRunner.run(tmp, fzn.toString(), "--search-statistics", "--symmetry", "on");
+    long seconds = (System.nanoTime() - start) / 1_000_000_000L;
+    assertTrue(out.contains("----------"), out);
+    assertTrue(seconds < 60, seconds + " s");
+  }
+
+  @Test
   void tablesWithTheSameTuplesAreInterchangeable() throws IOException {
     // an array of constants is one key in the graph, the same for arrays with the same elements,
     // given by name or written out

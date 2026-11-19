@@ -9051,6 +9051,74 @@ class SingleConstraintTest extends TestHelper {
     assertThat(x0.min()).isEqualTo(-1);
   }
 
+  // IfThenElseBool decided the condition from a branch that cannot hold only when imposed, so a
+  // Reified with b = 1 left it open; its negation and satisfied() missed the case of both
+  // branches being equal (ComposedTightnessTest)
+  @Test
+  void testNestedIfThenElseBoolDecidesTheConditionAndBothBranches() {
+    Store store = new Store();
+    BooleanVar c = new BooleanVar(store, "c");
+    BooleanVar t = new BooleanVar(store, "t");
+    BooleanVar e = new BooleanVar(store, "e");
+    IntVar r = new IntVar(store, "r", 0, 1);
+    store.impose(new Reified(new IfThenElseBool(c, t, e), r));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(store.level + 1);
+    r.domain.in(store.level, r, 1, 1);
+    t.domain.in(store.level, t, 0, 0);
+    assertThat(store.consistency()).isTrue();
+    assertThat(c.max()).isZero();
+    assertThat(e.min()).isOne();
+
+    Store s2 = new Store();
+    BooleanVar c2 = new BooleanVar(s2, "c");
+    BooleanVar t2 = new BooleanVar(s2, "t", 1, 1);
+    BooleanVar e2 = new BooleanVar(s2, "e", 1, 1);
+    IntVar r2 = new IntVar(s2, "r", 0, 1);
+    s2.impose(new Reified(new IfThenElseBool(c2, t2, e2), r2));
+    assertThat(s2.consistency()).isTrue();
+    // both branches hold, so the constraint holds whatever the condition
+    assertThat(r2.min()).isOne();
+
+    Store s3 = new Store();
+    BooleanVar c3 = new BooleanVar(s3, "c");
+    BooleanVar t3 = new BooleanVar(s3, "t", 1, 1);
+    BooleanVar e3 = new BooleanVar(s3, "e");
+    IntVar r3 = new IntVar(s3, "r", 0, 0);
+    s3.impose(new Reified(new IfThenElseBool(c3, t3, e3), r3));
+    assertThat(s3.consistency()).isTrue();
+    // the negation needs c = 0 and e = 0 once the then branch holds
+    assertThat(c3.max()).isZero();
+    assertThat(e3.max()).isZero();
+  }
+
+  // CountBounds.satisfied() asked for every variable to be decided, so a reification did not see
+  // that a count whose fixed occurrences reach lb and whose possible ones stay within ub holds;
+  // its negation did not prune (ComposedTightnessTest)
+  @Test
+  void testReifiedCountBoundsIsTrueOnceEveryCountFits() {
+    Store store = new Store();
+    IntVar x0 = new IntVar(store, "x0", 0, 2);
+    IntVar x1 = new IntVar(store, "x1", -2, -2);
+    x1.addDom(1, 2);
+    IntVar x2 = new IntVar(store, "x2", 0, 2);
+    IntVar r = new IntVar(store, "r", 0, 1);
+    // x1 cannot be 0, so at most two zeros
+    store.impose(new Reified(new CountBounds(new IntVar[] {x0, x1, x2}, 0, 0, 2), r));
+    assertThat(store.consistency()).isTrue();
+    assertThat(r.min()).isOne();
+
+    Store s2 = new Store();
+    IntVar y0 = new IntVar(s2, "y0", 0, 0);
+    IntVar y1 = new IntVar(s2, "y1", 0, 2);
+    IntVar y2 = new IntVar(s2, "y2", 1, 2);
+    IntVar r2 = new IntVar(s2, "r", 0, 0);
+    // not (count = 1): with one zero fixed and at most two possible the count must be 2
+    s2.impose(new Reified(new CountBounds(new IntVar[] {y0, y1, y2}, 0, 1, 1), r2));
+    assertThat(s2.consistency()).isTrue();
+    assertThat(y1.max()).isZero();
+  }
+
   // The negation of AtMost (at least counter + 1 values) woke only on GROUND, so a bound that
   // removed the value from a variable left the last candidate unfixed (WakeUpFixpointTest seed
   // 2154389).
