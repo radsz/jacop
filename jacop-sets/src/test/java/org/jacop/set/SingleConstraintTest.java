@@ -54,6 +54,7 @@ import org.jacop.lcg.AtomicTrail;
 import org.jacop.lcg.EntryList;
 import org.jacop.set.SetImposeGroundingHarness.Case;
 import org.jacop.set.SetImposeGroundingHarness.Spec;
+import org.jacop.set.constraints.AdiffBeqC;
 import org.jacop.set.constraints.AintersectBeqC;
 import org.jacop.set.constraints.AleB;
 import org.jacop.set.constraints.AllDisjoint;
@@ -1218,6 +1219,18 @@ class SingleConstraintTest {
     assertThat(channel.explainFailure(trail, reason)).isTrue();
     assertThat(reasonVariables(trail, reason)).containsExactlyInAnyOrder(member, b[1]);
     trail.detach();
+  }
+
+  /** AdiffBeqC: an element of a that c = a \ b cannot hold must be in b. */
+  @Test
+  void adiffBeqCPutsInBWhatCCannotHold() {
+    Store store = new Store();
+    SetVar a = new SetVar(store, "a", new BoundSetDomain(dom(2), dom(2)));
+    SetVar b = new SetVar(store, "b", new BoundSetDomain(dom(), dom(1, 2)));
+    SetVar c = new SetVar(store, "c", new BoundSetDomain(dom(), dom()));
+    store.impose(new AdiffBeqC(a, b, c));
+    assertThat(store.consistency()).isTrue();
+    assertThat(b.domain.glb().contains(2)).isTrue();
   }
 
   private static List<IntVar> reasonVariables(AtomicTrail trail, EntryList reason) {
