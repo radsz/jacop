@@ -8090,8 +8090,12 @@ Version 5.0 (unreleased)
    reifications, IfThenBool, In, Sum, SumWeight, MaxCliqueBound,
    DisjointConditional, TableCover and SoftAlldifferent. ConditionalSelect
    now wakes on holes, which can rule a branch out. The checker also
-   gets cases for CostRegular, MultiCostRegular, SoftGCC and
-   IfThenElseBool.
+   gets cases for CostRegular, MultiCostRegular, SoftGCC,
+   IfThenElseBool, SequenceMdd and CostMdd. SetConsistencyChecker does
+   the same for the set constraints: AdiffBeqC puts in b an element of a
+   that c cannot hold, CardAeqX passes holes of its cardinality variable
+   to the set, and Match keeps its list increasing and gives an element
+   of the glb to the only list variable that can take it.
 
 Version 4.11
 =============
