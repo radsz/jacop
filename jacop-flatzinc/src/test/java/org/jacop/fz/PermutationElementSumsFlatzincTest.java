@@ -275,9 +275,11 @@ class PermutationElementSumsFlatzincTest {
   private static String randomTableModel(Random random) {
     int n = 3 + random.nextInt(3);
     int u = n + (random.nextInt(4) == 0 ? 1 : 0);
+    // two groups half of the time: the counts are posted only for at most u / 2 distinct values
+    int groups = 2 + random.nextInt(2);
     int[] f = new int[u];
     for (int j = 0; j < u; j++) {
-      f[j] = random.nextInt(3);
+      f[j] = random.nextInt(groups);
     }
     StringBuilder fzn = new StringBuilder();
     StringBuilder xs = new StringBuilder();
