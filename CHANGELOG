@@ -8352,7 +8352,15 @@ Version 5.0 (unreleased)
    rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
    11,670.
 
-462. Under LCG free search (-f), the core-guided phase is no longer skipped
+
+462. A table (HybridTable) with at least 512 live single-value classes on
+     a column whose domain has many holes copies the domain to a bit set
+     before it filters the column, instead of a binary search in the
+     domain per class. On CrosswordDesign (XCSP 2026), with word columns
+     of 130,000 values, a node is about 3x faster and 9 of 11 instances
+     end with a better crossword at 240 s.
+
+463. Under LCG free search (-f), the core-guided phase is no longer skipped
    after a probe without a solution of its own when the search makes
    fewer than 50 conflicts per second of work (too slow for branch and
    bound to prove the optimum) and the probe's cores raise the lower bound
@@ -8363,7 +8371,7 @@ Version 5.0 (unreleased)
    optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
    turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
 
-463. The FlatZinc front end compiles a satisfaction model whose integer
+464. The FlatZinc front end compiles a satisfaction model whose integer
    variables have at most three values (and one at least with a value other
    than 0 and 1) into clauses and solves them with JaSAT, under --lcg and
    free search, for one solution and without proof logging. Values get
@@ -8384,7 +8392,7 @@ Version 5.0 (unreleased)
    -Dorg.jacop.fz.clausal.maxDomain, .maxLiterals and .mddNodes set the
    gates.
 
-464. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
+465. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
    on by default for models with at least 400 cyclic distances
    (-Dorg.jacop.fz.cyclicDistance.minDistances, default 400). There
    proofs are out of reach and the upper bound counts: at 600 s with -f,
@@ -8395,7 +8403,7 @@ Version 5.0 (unreleased)
    still rewrites every model, and =false none. No other instance of the
    wide set or of the XCSP 2022-2025 sets has the pattern.
 
-465. The FlatZinc front end rewrites products of two functions of one small
+466. The FlatZinc front end rewrites products of two functions of one small
    index (MiniZinc's (good[p] = g) * num[p], both looked up by the chosen
    preference p) as sum(v) f(v) * (p = v), linear over the value literals
    of p, and unfolds clauses of implied comparisons between such functions
@@ -8407,7 +8415,7 @@ Version 5.0 (unreleased)
    benchmark models. -Dorg.jacop.fz.indexFunctions=false turns it off,
    -Dorg.jacop.fz.indexFunctions.clauses=false only the unfolding.
 
-466. Tables of more than TableCliques.MAX_ARITY (6) columns over the same
+467. Tables of more than TableCliques.MAX_ARITY (6) columns over the same
    tuples share one tuple array, their reformulation and the cells and
    bit-sets of their HybridTable, as smaller tables already did.
    pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on
@@ -8415,7 +8423,7 @@ Version 5.0 (unreleased)
    the model ran out of memory at -Xmx4G while posting; it is now proved
    unsatisfiable.
 
-467. The FlatZinc parser keeps an array literal whose elements are all int
+468. The FlatZinc parser keeps an array literal whose elements are all int
    literals as one int[] instead of one node per element (48 bytes each);
    a node is made for an element only when it is read. Reading
    pigeonsPlus-08-08 (six arrays of 46 million entries) took 165 s and
@@ -8423,7 +8431,7 @@ Version 5.0 (unreleased)
    proved unsatisfiable in 60 s at -Xmx4G (out of memory before), the
    highest live heap after a collection going from 4.1 GB to 2.5 GB.
 
-468. A search that follows the root solution of the linear relaxation
+469. A search that follows the root solution of the linear relaxation
    (LpGuidedSelect) no longer scans every column at each decision when
    the relaxation has no value column: it decides only from value
    columns, so it fell back to its other heuristic every time after the
@@ -8432,7 +8440,7 @@ Version 5.0 (unreleased)
    decisions); at 600 s the objective goes from 10295 to 8260. The search
    is unchanged.
 
-469. Large neighbourhood search under -f (AdaptiveLns) finds the decision
+470. Large neighbourhood search under -f (AdaptiveLns) finds the decision
    variables near a node of the constraint graph with a walk that expands
    only the nodes on a shortest path to a decision variable, using the
    distances of all nodes computed once; it finds the same variables in
@@ -8441,7 +8449,7 @@ Version 5.0 (unreleased)
    walks took 61 % of a 300 s run; now 1.4 %, with 20 times the nodes
    (objective 45397 -> 66765 at 300 s, the best known 69664 at 600 s).
 
-470. Free search (-f) on models with vehicle routes: LNS uses only route
+471. Free search (-f) on models with vehicle routes: LNS uses only route
    removal, related (Shaw) removal and random neighbourhoods (the graph,
    propagation, objective, constraint and line neighbourhoods are off
    unless lns-kinds names them), and takes lns-share-routes 10 instead of
