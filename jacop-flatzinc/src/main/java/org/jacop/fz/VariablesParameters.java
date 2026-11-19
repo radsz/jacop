@@ -184,6 +184,9 @@ public class VariablesParameters implements ParserTreeConstants {
     }
   }
 
+  private static final boolean UNBOUNDED_CLAMPED =
+      Boolean.getBoolean("org.jacop.fz.unboundedClamped");
+
   private void noteClampedDomain(String ident) {
     if (clampedInterval != null) {
       dictionary.noteClampedDomain(
@@ -279,6 +282,12 @@ public class VariablesParameters implements ParserTreeConstants {
         ident = ((ASTVarDeclItem) node).getIdent();
         varInt = new IntVar(store, ident, MIN_INT, MAX_INT);
         initAndRegisterIntVar(store, ident, varInt, node, initChild, table, outputVar);
+        if (UNBOUNDED_CLAMPED && table.getVariable(ident) == varInt && !varInt.singleton()) {
+          // an unbounded declaration is narrowed to JaCoP's range too
+          dictionary.noteClampedDomain(
+              new Tables.ClampedDomain(
+                  ident, "-9223372036854775807..9223372036854775807", true, true));
+        }
         break;
       case 1: // int interval
         generateIntIntervalVariable(store, node, initChild, table, outputVar);
