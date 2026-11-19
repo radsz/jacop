@@ -58,6 +58,7 @@ import org.jacop.fz.constraints.BalanceDetector;
 import org.jacop.fz.constraints.CardinalityDetector;
 import org.jacop.fz.constraints.CircuitCostDetector;
 import org.jacop.fz.constraints.ClampedBounds;
+import org.jacop.fz.constraints.ClausalCompiler;
 import org.jacop.fz.constraints.ColouredTreeDetector;
 import org.jacop.fz.constraints.CommonSubexpressions;
 import org.jacop.fz.constraints.ConjunctionSumDetector;
@@ -229,6 +230,16 @@ public class Constraints implements ParserTreeConstants {
       // Boolean constraints become clauses of the LCG solver, or of the SAT solver of -sat once
       // presolve has preprocessed them; Solve posts them
       sat.collectClauses();
+    }
+    // a satisfaction model over small domains under free search is also compiled into one CNF,
+    // which Solve gives to JaSAT; the store is built as usual, to check the solution
+    if (ClausalCompiler.enabled()
+        && options.lcg()
+        && options.proof() == null
+        && !manySolutions
+        && satisfaction(astTree)
+        && freeSearchModel(astTree, options)) {
+      dictionary.clausalModel = ClausalCompiler.compile(support, astTree);
     }
     if (options.proof() != null && options.lcg()) {
       // the constraints propagate as they are imposed; the proof derives their changes from the
@@ -1093,6 +1104,26 @@ public class Constraints implements ParserTreeConstants {
   private boolean hasFloatVariables() {
     for (int i = 0; i < store.size(); i++) {
       if (store.vars[i] instanceof FloatVar) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // whether the model is solved by free search: -f, or no search annotation (as Solve decides)
+  private static boolean freeSearchModel(Node node, Options options) {
+    if (options.freeSearch()) {
+      return true;
+    }
+    if (!options.freeSearchWithoutAnnotation() || options.complementarySearch()) {
+      return false;
+    }
+    for (int i = node.jjtGetNumChildren() - 1; i >= 0; i--) {
+      Node child = node.jjtGetChild(i);
+      if (child instanceof ASTSolveItem item) {
+        return item.jjtGetNumChildren() == 1;
+      }
+      if (child instanceof ASTModelEnd && freeSearchModel(child, options)) {
         return true;
       }
     }
