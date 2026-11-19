@@ -45,7 +45,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -4485,6 +4487,34 @@ class FlatzincFrontEndTest {
     access.setInt(4);
     assertEquals("a", access.getIdent());
     assertEquals(4, access.getInt());
+  }
+
+  /**
+   * The body of a half-reified constraint of enforcement inlining is kept as a compact set, not as
+   * the identity set it is collected in, whose table of 64 slots took 272 bytes for the one or two
+   * variables of most bodies (53 MB of XCSP 2022 RoomMate-sr0300 while the model is read).
+   */
+  @Test
+  @SuppressWarnings("unchecked")
+  void halfReifiedBodiesOfEnforcementInliningAreCompact() throws Exception {
+    Class<?> imp = Class.forName("org.jacop.fz.constraints.EnforcementInliner$Imp");
+    Constructor<?> make = imp.getDeclaredConstructors()[0];
+    make.setAccessible(true);
+    Store store = new Store();
+    IntVar x = new IntVar(store, "x", 0, 3);
+    IntVar y = new IntVar(store, "y", 0, 3);
+    IntVar b = new IntVar(store, "b", 0, 1);
+    Set<IntVar> collected = Collections.newSetFromMap(new IdentityHashMap<>());
+    collected.add(x);
+    collected.add(y);
+    Object made = make.newInstance(null, b, collected);
+    Method body = imp.getDeclaredMethod("body");
+    body.setAccessible(true);
+    Set<IntVar> kept = (Set<IntVar>) body.invoke(made);
+    assertEquals(Set.of(x, y), kept);
+    assertTrue(kept.contains(x));
+    assertFalse(kept.contains(b));
+    assertFalse(kept.getClass().getName().contains("SetFromMap"), kept.getClass().getName());
   }
 
   @Test
