@@ -1746,6 +1746,26 @@ class FlatzincFrontEndTest {
             """));
   }
 
+  // ChanceSum rejects a capacity that is also one of its loads; the front end stopped on
+  // chance_sum(x, ..., c) with c among x (FlatZinc mutation harness, substituted variables)
+  @Test
+  void aChanceSumCapacityAmongItsLoadsIsCopied() throws IOException, ParseException {
+    String chance =
+        "constraint jacop_chance_sum([x1,x2,%s],[1,3,2,2,0,5],[1,3,2,2,3,1],2,4,%s,3);\n";
+    String vars =
+        """
+        var 0..2: x1 :: output_var;
+        var 0..2: x2 :: output_var;
+        var 0..2: x3 :: output_var;
+        var 0..2: c :: output_var;
+        constraint int_eq(c, x3);
+        """;
+    int shared = allSolutions(vars + chance.formatted("c", "c") + "solve satisfy;\n");
+    int apart = allSolutions(vars + chance.formatted("x3", "c") + "solve satisfy;\n");
+    assertTrue(apart > 0);
+    assertEquals(apart, shared);
+  }
+
   // the output of a run of the model with the given options, in this JVM (no watchdog)
   private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();

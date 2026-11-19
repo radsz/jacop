@@ -2971,6 +2971,12 @@ class GlobalConstraints implements ParserTreeConstants {
       }
       w[i] = new Dist(Arrays.copyOfRange(value, i * k, (i + 1) * k), p, den);
     }
+    if (Arrays.asList(x).contains(c)) {
+      // ChanceSum needs a capacity apart from the loads
+      IntVar copy = new IntVar(store, c.dom().cloneLight());
+      support.pose(new XeqY(c, copy));
+      c = copy;
+    }
     support.delayedConstraints.add(new ChanceSum(x, w, c, alpha, den));
   }
 
