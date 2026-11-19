@@ -148,6 +148,8 @@ import org.junit.jupiter.api.Test;
 /** VeriPB proofs of LCG searches, checked by {@link RupChecker}. */
 class VeriPbProofTest {
 
+  private static final int SELF_COUNTING_SEEDS = Integer.getInteger("proof.selfCounting", 300);
+
   private final ByteArrayOutputStream model = new ByteArrayOutputStream();
   private final ByteArrayOutputStream proof = new ByteArrayOutputStream();
 
@@ -927,6 +929,43 @@ class VeriPbProofTest {
     assertThat(lcg.minimize(obj)).isEqualTo(CdclSolver.SAT);
     String pbp = proof.toString(StandardCharsets.US_ASCII);
     assertThat(new RupChecker().check(opb(), pbp)).isNull();
+  }
+
+  // self-counting cardinalities as the FlatZinc front end posts them under --proof (the magic
+  // sequences of nmseq): x[i] counts the value i in x through a copy of x[i] linked by an equality,
+  // and some counters are other variables
+  @Test
+  void selfCountingCardinalitiesAreProved() {
+    optimaAreProved(
+        SELF_COUNTING_SEEDS,
+        (store, random) -> {
+          int n = 4 + random.nextInt(3);
+          IntVar[] x = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            x[i] = new IntVar(store, "x" + i, 0, n - 1);
+            if (random.nextBoolean()) {
+              x[i].domain.in(store.level, x[i], x[i].domain.subtract(random.nextInt(n)));
+            }
+          }
+          IntVar[] counters = new IntVar[n];
+          for (int i = 0; i < n; i++) {
+            counters[i] = new IntVar(store, "c" + i, 0, n);
+            if (random.nextInt(3) != 0) {
+              store.impose(new XeqY(x[i], counters[i]));
+            }
+          }
+          store.impose(new GCC(x, counters, 0));
+          IntVar obj = new IntVar(store, "obj", -100, 100);
+          IntVar[] terms = Arrays.copyOf(x, n + 1);
+          terms[n] = obj;
+          int[] w = new int[n + 1];
+          for (int i = 0; i < n; i++) {
+            w[i] = random.nextInt(7) - 3;
+          }
+          w[n] = -1;
+          store.impose(new LinearInt(terms, w, "==", 0));
+          return obj;
+        });
   }
 
   @Test
