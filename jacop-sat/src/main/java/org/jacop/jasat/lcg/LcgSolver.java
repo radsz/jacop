@@ -5560,6 +5560,9 @@ public final class LcgSolver implements ExternalPropagator {
         if (c instanceof Alldistinct) {
           permutationsAsClauses++;
         }
+      } else if (gccCandidate(c) && encodeAsClauses(c)) {
+        constraintsAsClauses++;
+        gccsAsClauses++;
       } else if (!LAZY_COUNTERS && defaultCounter(c) && encodeAsCounter(c)) {
         defaultCounters++;
         constraintsAsClauses++;
@@ -5870,6 +5873,41 @@ public final class LcgSolver implements ExternalPropagator {
 
   /** Statistics: counting constraints that became unary counters by default. */
   public long defaultCounters;
+
+  /**
+   * Whether a global cardinality with fixed counts ({@code CountValuesBounds}) over variables of at
+   * most {@link #GCC_DOM} values becomes clauses before search, with the larger limit of {@code
+   * jacop.lcg.clauses.counter}, by the system property {@code jacop.lcg.gccClauses} (default true).
+   * It is a sequential counter per counted value, so a learnt clause can state partial counts (Abio
+   * and Stuckey, CP 2012; Abio, Nieuwenhuis, Oliveras, Rodriguez-Carbonell and Stuckey, CP 2013). A
+   * default counter is limited to {@link #COUNTERS_LIMIT} clauses for the whole constraint and is
+   * encoded lazily; a rostering GCC counts each of its few values over many days and needs more
+   * (XCSP 2025 RotatingRostering-052-2-3: 7 GCCs over 52 variables of 4 values, about 9,900 clauses
+   * each, unknown at 600 s as propagators, unsatisfiable in about 10 s as clauses).
+   */
+  static final boolean GCC_CLAUSES = !FALSE.equals(System.getProperty("jacop.lcg.gccClauses"));
+
+  /** The most values of a variable of such a GCC, {@code jacop.lcg.gccClauses.dom}. */
+  static final int GCC_DOM = Integer.getInteger("jacop.lcg.gccClauses.dom", 4);
+
+  /** Statistics: global cardinalities given to the solver as clauses by {@link #GCC_CLAUSES}. */
+  public long gccsAsClauses;
+
+  private boolean gccCandidate(Constraint c) {
+    if (!GCC_CLAUSES
+        || !COUNTERS
+        || c.getClass() != org.jacop.constraints.CountValuesBounds.class
+        || CLAUSE_SET.contains(c.getClass().getSimpleName())
+        || !argumentsFit(c)) {
+      return false;
+    }
+    for (org.jacop.core.Var v : c.arguments()) {
+      if (v.getSize() > GCC_DOM) {
+        return false;
+      }
+    }
+    return true;
+  }
 
   private boolean defaultCounter(Constraint c) {
     return COUNTERS
