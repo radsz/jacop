@@ -266,6 +266,7 @@ public class Constraints implements ParserTreeConstants {
           pureClique = true;
         }
       }
+      cf.setClauseModel(clauseModel(astTree));
       // a search variable that became an alias is searched as its Boolean
       dictionary.searchAliasTargets(dictionary.binaryEqAliases);
       // the same function of the same inputs is computed once; --proof encodes the model as given
@@ -791,6 +792,39 @@ public class Constraints implements ParserTreeConstants {
 
   // a constraint item, imposed as implied by the others when implied is true
   /** The integer variables named by the solve item: the objective and the search annotations. */
+  private static final Set<String> CLAUSE_CONSTRAINTS =
+      Set.of(
+          "jacop_negative_table_int",
+          "bool_clause",
+          "array_bool_or",
+          "array_bool_and",
+          "bool2int",
+          "bool_not",
+          "bool_eq",
+          "bool_le",
+          "bool_lt",
+          "bool_or",
+          "bool_and");
+
+  /* Whether every constraint of the model is a clause or a negative table, which over 0/1
+   * variables is a set of clauses. */
+  private static boolean clauseModel(SimpleNode astTree) {
+    for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
+      SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
+      if (node.getId() != JJTCONSTRAINTITEMS) {
+        continue;
+      }
+      for (int j = 0; j < node.jjtGetNumChildren(); j++) {
+        SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+        if (item.getId() != JJTCONSTELEM
+            || !CLAUSE_CONSTRAINTS.contains(((ASTConstElem) item).getName())) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   private Set<IntVar> solveItemVariables(SimpleNode astTree) {
     Set<IntVar> vars = Collections.newSetFromMap(new IdentityHashMap<>());
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
