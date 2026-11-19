@@ -1713,6 +1713,16 @@ class FlatzincFrontEndTest {
                 + "constraint int_eq(g, s);\nconstraint int_le(2, s);\nsolve satisfy;\n"));
   }
 
+  // affine folding replaced z of var z = w by 2x + 1 in the rows, which left w free
+  @Test
+  void aVariableOfADeclaredEqualityIsNotFolded() throws IOException, ParseException {
+    assertEquals(
+        10,
+        allSolutions(
+            "var 0..3: x :: output_var;\nvar 0..3: y :: output_var;\nvar 0..20: w :: output_var;\n"
+                + "var 0..20: z = w;\nconstraint int_lin_eq([1,-2],[z,x],1);\n"
+                + "constraint int_lin_le([1,1],[z,y],6);\nsolve satisfy;\n"));
+  }
 
   // the output of a run of the model with the given options, in this JVM (no watchdog)
   private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {

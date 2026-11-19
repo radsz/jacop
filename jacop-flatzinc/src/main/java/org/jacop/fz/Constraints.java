@@ -816,6 +816,8 @@ public class Constraints implements ParserTreeConstants {
     for (IntVar v : new ArrayList<>(vars)) {
       vars.add(dictionary.getAlias(v));
     }
+    // the equality posted for var x = y stays on those variables
+    dictionary.addDeclaredEqualities(vars);
     return vars;
   }
 
