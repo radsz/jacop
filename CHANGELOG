@@ -8149,6 +8149,28 @@ Version 5.0 (unreleased)
    WeightedSpanningTree, BoundedPath, UnaryTransition, MultiCumulative,
    VectorBinpacking, XplusYgtC and XplusClteqZ.
 
+451. JaSAT (CdclSolver) eliminates variables with a rising bound and with
+   gates, as Kissat: the bound (resolvents allowed over the clauses they
+   replace) is 0 before the search and rises through 1, 2, 4, 8 to 16
+   with each complete elimination run during search, resolvents may have
+   up to 100 literals, and when a variable is the output of an AND, XOR,
+   ITE gate or an equivalence (GateExtractor) only the resolvents of its
+   defining clauses with the other clauses are added (Een, Biere,
+   "Effective Preprocessing in SAT through Variable and Clause
+   Elimination", SAT 2005; Biere, Jarvisalo, Kiesl, "Preprocessing in SAT
+   Solving", Handbook of Satisfiability, 2nd ed., 2021). Later rounds try
+   only the variables whose clauses changed, and a run during search is
+   skipped when the last one found nothing and no new root fact or clause
+   came. With an external propagator (lazy clause generation) elimination
+   stays as before. On the 90 SAT Competition 2024/25 CNFs at 240 s JaSAT
+   solves 44 instead of 39 (seed 1: 45 instead of 41) in 0.94x (0.977x)
+   the time; on the structured UNSAT ones it made 2-3x the propagations
+   per conflict of Kissat because it eliminated far fewer variables
+   (algorithm-equivalence-checking 344 vs 124), now 136. At 600 s on 36
+   affected instances 31 instead of 26 are solved (planning,
+   grs-fp-comm, quasigroup-completion faster or new), total 0.71x.
+   CdclMain takes --elim-bound, --elim-clause-limit and --elim-gates.
+
 Version 4.11
 =============
 
