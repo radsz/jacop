@@ -3027,6 +3027,21 @@ public class LinearRelaxation extends Constraint
     return calls > 0;
   }
 
+  /**
+   * Imposes the relaxation. The source of each row is read only by the statistics of {@code
+   * -Dorg.jacop.lp.sourceStats}; without them it is dropped here, since it held a string for every
+   * row during the whole search (210,000 on rcpsp_max psp_ubo500_33).
+   *
+   * @param store the store
+   */
+  @Override
+  public void impose(Store store) {
+    if (sources == null) {
+      formSource = Map.of();
+    }
+    super.impose(store);
+  }
+
   @Override
   public void consistency(Store store) {
     if (refutation && calls > 0) {
