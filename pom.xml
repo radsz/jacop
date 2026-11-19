@@ -294,6 +294,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -575,6 +576,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -856,6 +858,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>
@@ -1137,6 +1140,7 @@ setup to run configuration. -->
                                 <include>**/TspRoutesFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationFlatzincTest.java</include>
                                 <include>**/TspEdgeEliminationTest.java</include>
+                                <include>**/TspKOptTest.java</include>
                                 <include>**/OrBoolWatchedTest.java</include>
                                 <include>**/SetImposeGroundingTest.java</include>
                                 <include>**/AccumulatedFailureCountTest.java</include>

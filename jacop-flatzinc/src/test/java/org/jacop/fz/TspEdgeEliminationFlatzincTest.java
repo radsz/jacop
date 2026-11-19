@@ -62,11 +62,16 @@ class TspEdgeEliminationFlatzincTest {
 
   private static final String MARK = "% TSP edge elimination: ";
 
+  private static final String KOPT = "org.jacop.fz.tspKOpt";
+
+  private static final String KOPT_MARK = "% TSP k-opt dominance";
+
   @TempDir Path tmp;
 
   @AfterEach
   void modeDefault() {
     System.clearProperty(PROPERTY);
+    System.clearProperty(KOPT);
     System.clearProperty("org.jacop.fz.tsp");
   }
 
@@ -172,6 +177,26 @@ class TspEdgeEliminationFlatzincTest {
       System.clearProperty("org.jacop.fz.tsp");
     }
     assertTrue(fired >= 20, "too few eliminations: " + fired);
+  }
+
+  @Test
+  @Timeout(180)
+  void kOptKeepsTheOptimum() throws IOException {
+    Random random = new Random(31);
+    for (int trial = 0; trial < 30; trial++) {
+      String model = randomModel(random, false, false);
+      System.setProperty(KOPT, "false");
+      String without = optimum(run(model));
+      System.clearProperty(KOPT);
+      String out = run(model, "-debug");
+      assertTrue(out.contains(KOPT_MARK), "trial " + trial);
+      assertEquals(without, optimum(out), "trial " + trial + "\n" + model);
+      assertEquals(without, optimum(run(model, "-f")), "trial " + trial + " -f\n" + model);
+      assertEquals(
+          without, optimum(run(model, "--lcg", "off")), "trial " + trial + " no lcg\n" + model);
+    }
+    assertFalse(run(randomModel(random, true, false), "-debug").contains(KOPT_MARK));
+    assertFalse(run(randomModel(random, false, true), "-debug").contains(KOPT_MARK));
   }
 
   @Test
