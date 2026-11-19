@@ -2946,6 +2946,15 @@ class GlobalConstraints implements ParserTreeConstants {
     for (int s = 0; s < b.length; s++) {
       rows[s] = Arrays.copyOfRange(a, s * x.length, (s + 1) * x.length);
     }
+    List<IntVar> xs = Arrays.asList(x);
+    for (int s = 0; s < ok.length; s++) {
+      if (xs.contains(ok[s])) {
+        // ScenarioChance needs its indicators apart from x
+        IntVar copy = new IntVar(store, ok[s].dom().cloneLight());
+        support.pose(new XeqY(ok[s], copy));
+        ok[s] = copy;
+      }
+    }
     support.delayedConstraints.add(
         new ScenarioChance(x, rows, b, weights, alpha, ok.length == 0 ? null : ok));
   }

@@ -1766,6 +1766,35 @@ class FlatzincFrontEndTest {
     assertEquals(apart, shared);
   }
 
+  // ScenarioChance rejects an indicator that is also in x; bool2int(b, y) makes b and y one
+  // variable, so an indicator b whose 0/1 value y is in x stopped the run
+  @Test
+  void aScenarioChanceIndicatorAmongItsVariablesIsCopied() throws IOException, ParseException {
+    String common =
+        """
+        var 0..1: y :: output_var;
+        var -1..2: z :: output_var;
+        var bool: b :: output_var;
+        var bool: d :: output_var;
+        """;
+    String chance = "constraint jacop_scenario_chance([y,z],[1,1,1,-1],[1,0],[3,7],10,3,[b,d]);\n";
+    int shared =
+        allSolutions(common + "constraint bool2int(b, y);\n" + chance + "solve satisfy;\n");
+    int apart =
+        allSolutions(
+            common
+                + """
+                var 0..1: w;
+                constraint bool2int(b, w);
+                constraint int_le(w, y);
+                constraint int_le(y, w);
+                """
+                + chance
+                + "solve satisfy;\n");
+    assertTrue(apart > 0);
+    assertEquals(apart, shared);
+  }
+
   // the output of a run of the model with the given options, in this JVM (no watchdog)
   private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
