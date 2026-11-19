@@ -1221,6 +1221,25 @@ class SingleConstraintTest {
     trail.detach();
   }
 
+  /**
+   * CardAeqX read the cardinality variable before narrowing it: s in {3}..{0, 2, 3} with 2 in s and
+   * x in {0, 1, 3, 4} leaves x = 3 through its hole, so s takes its whole lub, but s kept 0 open
+   * with cardinality 2..3.
+   */
+  @Test
+  void cardAeqXFollowsAHoleOfTheCardinality() {
+    Store store = new Store();
+    SetVar s = new SetVar(store, "s", new BoundSetDomain(dom(3), dom(0, 2, 3)));
+    IntVar x = new IntVar(store, "x", dom(0, 1, 3, 4));
+    store.impose(new CardAeqX(s, x));
+    assertThat(store.consistency()).isTrue();
+    store.setLevel(1);
+    s.domain.inGlb(1, s, 2);
+    assertThat(store.consistency()).isTrue();
+    assertThat(x.value()).isEqualTo(3);
+    assertThat(s.domain.glb().getSize()).isEqualTo(3);
+  }
+
   /** AdiffBeqC: an element of a that c = a \ b cannot hold must be in b. */
   @Test
   void adiffBeqCPutsInBWhatCCannotHold() {
