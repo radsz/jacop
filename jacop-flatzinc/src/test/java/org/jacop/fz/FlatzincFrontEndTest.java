@@ -2813,6 +2813,68 @@ class FlatzincFrontEndTest {
     assertEquals(12, withDetection.size(), withDetection.toString());
   }
 
+  /** The pigeon-hole problem as XCSP3 writes it: conflict tables over 0/1, n holes. */
+  private static String conflictTableHoles(int pigeons, int n) {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("predicate jacop_negative_table_int(array [int] of var int: x,");
+    fzn.append("array [int] of int: t);\n");
+    fzn.append("array [1..").append(n).append("] of int: T1 = [0");
+    fzn.append(",0".repeat(n - 1)).append("];\n");
+    fzn.append("array [1..2] of int: T2 = [1,1];\n");
+    for (int p = 0; p < pigeons; p++) {
+      for (int h = 0; h < n; h++) {
+        // a Boolean seen through its 0/1 integer, as MiniZinc flattens bool2int arguments
+        fzn.append("var bool: b").append(p).append('_').append(h).append(" :: output_var;\n");
+        fzn.append("var 0..1: x").append(p).append('_').append(h).append(" :: is_defined_var;\n");
+      }
+    }
+    for (int p = 0; p < pigeons; p++) {
+      for (int h = 0; h < n; h++) {
+        fzn.append("constraint bool2int(b").append(p).append('_').append(h).append(",x").append(p);
+        fzn.append('_').append(h).append(") :: defines_var(x").append(p).append('_').append(h);
+        fzn.append(");\n");
+      }
+    }
+    for (int p = 0; p < pigeons; p++) {
+      fzn.append("constraint jacop_negative_table_int([");
+      for (int h = 0; h < n; h++) {
+        fzn.append(h == 0 ? "" : ",").append('x').append(p).append('_').append(h);
+      }
+      fzn.append("],T1);\n");
+    }
+    for (int h = 0; h < n; h++) {
+      for (int p = 0; p < pigeons; p++) {
+        for (int q = p + 1; q < pigeons; q++) {
+          fzn.append("constraint jacop_negative_table_int([x").append(p).append('_');
+          fzn.append(h).append(",x").append(q).append('_').append(h).append("],T2);\n");
+        }
+      }
+    }
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void negativeTablesOverBooleansAreClausesTheRootRefutationSees() throws IOException {
+    // hole-10 (XCSP 2017): the forbidden rows of 0/1 tables are clauses, so the model is a pure
+    // clause model; its root clause refutation must run before JaSAT takes it (nothing at the
+    // root woke it), and refutes the pigeons at once, where JaSAT does not finish
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60),
+            () ->
+                run(
+                    conflictTableHoles(11, 10),
+                    "--lcg",
+                    "on",
+                    "--search-statistics",
+                    "-t",
+                    "5000"))[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("lpRefutation=refuted"), out);
+    // 3 pigeons in 3 holes, at least one hole each and none shared: 3! = 6 ways, as clauses too
+    assertEquals(6, solveAll(conflictTableHoles(3, 3)).size());
+  }
+
   /** Courses of credit 1..n over 3 periods, as XCSP3 BACP rows: credit in the period column. */
   private static String tableCourses(int n) {
     StringBuilder par = new StringBuilder();

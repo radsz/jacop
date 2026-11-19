@@ -819,7 +819,9 @@ public final class ConstraintFncs {
 
   /** Handles the jacop_negative_table_int FlatZinc constraint. */
   public void jacop_negative_table_int(SimpleNode n) {
-    gc.gen_jacop_negative_table_int(n);
+    if (!gc.negativeTableAsClauses(n, bc::poseClause)) {
+      gc.gen_jacop_negative_table_int(n);
+    }
   }
 
   /** Handles the jacop_table_int_reif FlatZinc constraint. */

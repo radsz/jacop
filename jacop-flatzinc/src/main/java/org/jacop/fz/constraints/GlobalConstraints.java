@@ -2112,6 +2112,61 @@ class GlobalConstraints implements ParserTreeConstants {
       Boolean.parseBoolean(System.getProperty("org.jacop.fz.shortTableClauses", "true"));
 
   /**
+   * Whether negative tables over 0/1 variables are posted as clauses, {@code
+   * org.jacop.fz.negativeTableClauses} (default true).
+   */
+  static final boolean NEGATIVE_TABLE_CLAUSES =
+      Boolean.parseBoolean(System.getProperty("org.jacop.fz.negativeTableClauses", "true"));
+
+  /** The most rows of a negative table over 0/1 variables posted as clauses. */
+  static final int NEGATIVE_TABLE_CLAUSE_ROWS = 64;
+
+  /**
+   * Posts a negative table over 0/1 variables as one clause per row: a forbidden row is the clause
+   * that some variable differs from its value in the row. XCSP writes the pigeon-hole problem so
+   * (hole-10 of the 2017 competition: 561 tables forbidding (1, 1) for two pigeons in one hole); as
+   * clauses, the clause refutation of the root LP sees the at-most-one cliques and proves it at
+   * once, as CP-SAT does, where the binary tables took millions of failures.
+   *
+   * @param node the jacop_negative_table_int node: x and the rows flattened row by row.
+   * @param clause posts the clause of the positive and the negative literals
+   * @return false when the table is not over 0/1 variables and was not posted
+   */
+  boolean negativeTableAsClauses(SimpleNode node, BiConsumer<IntVar[], IntVar[]> clause) {
+    if (!NEGATIVE_TABLE_CLAUSES || support.options.proof() != null) {
+      return false;
+    }
+    IntVar[] v = support.getVarArray((SimpleNode) node.jjtGetChild(0));
+    int[] tbl = support.getIntArray((SimpleNode) node.jjtGetChild(1));
+    int size = v.length;
+    if (size == 0
+        || tbl.length / size > NEGATIVE_TABLE_CLAUSE_ROWS
+        || Arrays.stream(v).anyMatch(x -> x.min() < 0 || x.max() > 1)) {
+      return false;
+    }
+    for (int r = 0; r + size <= tbl.length; r += size) {
+      List<IntVar> positive = new ArrayList<>();
+      List<IntVar> negative = new ArrayList<>();
+      boolean possible = true;
+      for (int c = 0; c < size && possible; c++) {
+        int value = tbl[r + c];
+        if (value == 0) {
+          positive.add(v[c]);
+        } else if (value == 1) {
+          negative.add(v[c]);
+        } else {
+          // the row cannot match: nothing is forbidden
+          possible = false;
+        }
+      }
+      if (possible) {
+        clause.accept(positive.toArray(new IntVar[0]), negative.toArray(new IntVar[0]));
+      }
+    }
+    return true;
+  }
+
+  /**
    * Posts as a clause a short table over 0/1 variables whose every row fixes one variable and
    * leaves the others free: the table then allows x[j] = v for one of its rows, the disjunction of
    * these literals. XCSP writes CNF formulas so (Crypto1 of the 2022 competition: 31,334 tables of

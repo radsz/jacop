@@ -2999,6 +2999,17 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (refutation != null) {
         ignored.add(refutation);
+        if (!refutation.solved()) {
+          // nothing woke the refutation at the root (no domain changed), and JaSAT will not run it:
+          // solve it now (hole-10 of XCSP 2017, the pigeon-hole as conflict tables, is refuted
+          // here in a few pivots, while JaSAT does not finish)
+          try {
+            refutation.consistency(store);
+          } catch (FailException e) {
+            lcgStatus = CdclSolver.UNSAT;
+            return false;
+          }
+        }
       }
       PureClauseModel cnf =
           PureClauseModel.of(store, sat.collectedClauses(), ignored, this::declaredVariables);
