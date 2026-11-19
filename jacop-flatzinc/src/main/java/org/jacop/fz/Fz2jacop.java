@@ -269,7 +269,8 @@ public class Fz2jacop {
   }
 
   private void handleFailException(Options opt, Parser parser) {
-    if (parser.getTables().domainsClamped()) {
+    boolean narrowing = parser.getTables().failureMayComeFromNarrowing();
+    if (narrowing) {
       // the failure may come from the values cut off by narrowing a domain to JaCoP's range
       IO.println("=====UNKNOWN=====");
     } else {
@@ -279,7 +280,7 @@ public class Fz2jacop {
       // the model failed while it was translated, before the propagation the proof derives
       IO.println("%% --proof: no proof written, the model fails while it is translated");
     }
-    if (!opt.getOutputFilename().isEmpty() && !parser.getTables().domainsClamped()) {
+    if (!opt.getOutputFilename().isEmpty() && !narrowing) {
       try {
         Files.writeString(Path.of(opt.getOutputFilename()), "=====UNSATISFIABLE=====");
       } catch (IOException e1) {

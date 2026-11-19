@@ -103,6 +103,8 @@ public final class ClampedBounds {
   // functional constraints whose result is bounded by its arguments: {kind, result, args...}, or
   // for an element over constants {ELEMENT_CONST, result, low, high}
   private final List<long[]> functions = new ArrayList<>();
+  // the narrowed products posted saturated
+  private final Set<IntVar> saturated;
   private static final int TIMES = 0;
   private static final int MAX = 1;
   private static final int MIN = 2;
@@ -111,6 +113,7 @@ public final class ClampedBounds {
   private static final int MOD = 5;
   private static final int ELEMENT_CONST = 6;
   private static final int HULL = 7;
+  private static final int POW = 8;
 
   /**
    * Collects the linear rows of the model and the occurrences of its narrowed variables.
@@ -120,7 +123,8 @@ public final class ClampedBounds {
    * @param narrowed the narrowed variables, after aliases
    * @param declared the declared bounds {low, high} of a variable, as written in the model
    * @param saturated the narrowed products posted saturated (XmulYeqZSaturated), which lose no
-   *     solution: they are left out
+   *     solution: they are left out; read when the narrowing is checked, as the products are posted
+   *     after the rows are read
    */
   public ClampedBounds(
       Support support,
@@ -129,10 +133,8 @@ public final class ClampedBounds {
       Function<IntVar, long[]> declared,
       Set<IntVar> saturated) {
     this.declared = declared;
+    this.saturated = saturated;
     for (IntVar v : narrowed) {
-      if (saturated.contains(v)) {
-        continue;
-      }
       int id = id(v);
       if (!otherOccurrences.containsKey(id)) {
         clamped.add(id);
@@ -228,7 +230,7 @@ public final class ClampedBounds {
     String name = node.getName();
     try {
       switch (name) {
-        case "int_times", "int_max", "int_min", "int_div", "int_mod" -> {
+        case "int_times", "int_max", "int_min", "int_div", "int_mod", "int_pow" -> {
           IntVar x = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
           IntVar y = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(2));
@@ -238,6 +240,7 @@ public final class ClampedBounds {
                 case "int_max" -> MAX;
                 case "int_min" -> MIN;
                 case "int_div" -> DIV;
+                case "int_pow" -> POW;
                 default -> MOD;
               };
           functions.add(new long[] {kind, id(z), id(x), id(y)});
@@ -247,7 +250,7 @@ public final class ClampedBounds {
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(1));
           functions.add(new long[] {ABS, id(z), id(x)});
         }
-        case "jacop_maximum", "jacop_minimum", "array_int_maximum", "array_int_minimum" -> {
+        case "jacop_maximum", "jacop_minimum" -> {
           IntVar z = support.getVariable((ASTScalarFlatExpr) node.jjtGetChild(0));
           IntVar[] x = support.getVarArray((SimpleNode) node.jjtGetChild(1));
           functions.add(withArgs(name.endsWith("maximum") ? MAX : MIN, z, x));
@@ -356,6 +359,11 @@ public final class ClampedBounds {
           low = -m;
           high = m;
         }
+        case POW -> {
+          long[] b = power(lo[(int) f[2]], hi[(int) f[2]], lo[(int) f[3]], hi[(int) f[3]]);
+          low = b[0];
+          high = b[1];
+        }
         default -> {
           low = f[2];
           high = f[3];
@@ -410,6 +418,10 @@ public final class ClampedBounds {
    *     objective value.
    */
   public boolean harmless(IntVar objective, long low, long high) {
+    if (keptWithinRange()) {
+      // bounds on the objective only narrow the propagated bounds further
+      return true;
+    }
     int n = vars.size();
     long[] lo = Arrays.copyOf(declaredLow, n);
     long[] hi = Arrays.copyOf(declaredHigh, n);
@@ -429,6 +441,9 @@ public final class ClampedBounds {
     }
     List<Integer> moved = new ArrayList<>();
     for (int id : clamped) {
+      if (saturated.contains(vars.get(id))) {
+        continue;
+      }
       boolean cutLow = declaredLow[id] < IntDomain.MIN_INT;
       boolean cutHigh = declaredHigh[id] > IntDomain.MAX_INT;
       boolean lowKept = !cutLow || lo[id] >= IntDomain.MIN_INT;
@@ -443,6 +458,30 @@ public final class ClampedBounds {
       }
     }
     return true;
+  }
+
+  // whether the rows and functions keep every narrowed variable within JaCoP's range, whatever
+  // the objective; computed once, as the solver asks again at every better solution
+  private volatile Boolean keptWithinRange;
+
+  private boolean keptWithinRange() {
+    Boolean kept = keptWithinRange;
+    if (kept == null) {
+      long[] lo = Arrays.copyOf(declaredLow, vars.size());
+      long[] hi = Arrays.copyOf(declaredHigh, vars.size());
+      kept = true;
+      if (propagate(lo, hi)) {
+        for (int id : clamped) {
+          if (!saturated.contains(vars.get(id))
+              && (lo[id] < IntDomain.MIN_INT || hi[id] > IntDomain.MAX_INT)) {
+            kept = false;
+            break;
+          }
+        }
+      }
+      keptWithinRange = kept;
+    }
+    return kept;
   }
 
   // a narrowed variable whose cut values can be replaced by the end of JaCoP's range
@@ -594,6 +633,38 @@ public final class ClampedBounds {
   }
 
   // saturating product
+  // bounds of x^e for x in xLow..xHigh and a fixed exponent e >= 0; unbounded otherwise
+  private static long[] power(long xLow, long xHigh, long eLow, long eHigh) {
+    if (eLow != eHigh || eLow < 0 || eLow > 64) {
+      return new long[] {-INF, INF};
+    }
+    long low = 1;
+    long high = 1;
+    long a = Math.max(Math.abs(xLow), Math.abs(xHigh));
+    for (int i = 0; i < eLow; i++) {
+      high = multiply(high, a);
+    }
+    if (eLow == 0) {
+      return new long[] {1, 1};
+    }
+    if (eLow % 2 == 0) {
+      // even: from the value nearest zero to the largest magnitude
+      long near = xLow <= 0 && xHigh >= 0 ? 0 : Math.min(Math.abs(xLow), Math.abs(xHigh));
+      for (int i = 0; i < eLow; i++) {
+        low = multiply(low, near);
+      }
+      return new long[] {low, high};
+    }
+    // odd: increasing
+    low = xLow;
+    high = xHigh;
+    for (int i = 1; i < eLow; i++) {
+      low = multiply(low, xLow);
+      high = multiply(high, xHigh);
+    }
+    return new long[] {low, high};
+  }
+
   static long multiply(long a, long b) {
     if (a == 0 || b == 0) {
       return 0;
