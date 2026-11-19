@@ -1559,6 +1559,56 @@ class ConsistencyChecker {
         concat(es, new IntVar[] {cost}));
   }
 
+  private static Model knapsackDP(Store store, Random random) {
+    int n = 2 + random.nextInt(3);
+    int[] w = random.ints(n, 0, 4).toArray();
+    int[] p = random.ints(n, 0, 5).toArray();
+    IntVar[] q = vars(store, "q", n, 0, 2, random);
+    IntVar cap = aVar(store, "c", 0, 12, random);
+    IntVar profit = aVar(store, "p", 0, 16, random);
+    return new Model(
+        new org.jacop.constraints.knapsack.KnapsackDP(p, w, q, cap, profit),
+        t -> {
+          int sw = 0;
+          int sp = 0;
+          for (int i = 0; i < n; i++) {
+            sw += w[i] * t[i];
+            sp += p[i] * t[i];
+          }
+          return sw == t[n] && sp == t[n + 1];
+        },
+        concat(q, new IntVar[] {cap, profit}));
+  }
+
+  private static Model subcircuitCostPair(Store store, Random random) {
+    int n = 3 + random.nextInt(2);
+    IntVar[] x = vars(store, "x", n, 1, n, random);
+    int[][] c1 = costMatrix(n, random);
+    int[][] c2 = costMatrix(n, random);
+    IntVar cost1 = aVar(store, "cost1", 0, 4 * n, random);
+    IntVar cost2 = aVar(store, "cost2", 0, 4 * n, random);
+    return new Model(
+        List.of(
+            new org.jacop.constraints.Subcircuit(x),
+            // the pair only bounds the sums, which other constraints define
+            new org.jacop.constraints.SubcircuitCost(x, c1, cost1),
+            new org.jacop.constraints.SubcircuitCost(x, c2, cost2),
+            new org.jacop.constraints.SubcircuitCostPair(x, c1, cost1, c2, cost2, 1)),
+        t -> {
+          if (!circuitHolds(t, n, true)) {
+            return false;
+          }
+          int total1 = 0;
+          int total2 = 0;
+          for (int i = 0; i < n; i++) {
+            total1 += c1[i][t[i] - 1];
+            total2 += c2[i][t[i] - 1];
+          }
+          return t[n] == total1 && t[n + 1] == total2;
+        },
+        concat(x, new IntVar[] {cost1, cost2}));
+  }
+
   private static IntVar[] concat(IntVar[]... parts) {
     return Arrays.stream(parts).flatMap(Arrays::stream).toArray(IntVar[]::new);
   }
@@ -2706,6 +2756,8 @@ class ConsistencyChecker {
             "BoundedPath(undirected)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", false)),
         new Case("BoundedPath(directed)", Level.NONE, (s, r) -> weightedGraph(s, r, "path", true)),
         new Case("ColouredSpanningTree", Level.NONE, ConsistencyChecker::colouredSpanningTree),
+        new Case("KnapsackDP", Level.NONE, ConsistencyChecker::knapsackDP),
+        new Case("SubcircuitCostPair", Level.NONE, ConsistencyChecker::subcircuitCostPair),
         new Case("UnaryTransition(all)", Level.NONE, (s, r) -> unaryTransition(s, r, false)),
         new Case("UnaryTransition(optional)", Level.NONE, (s, r) -> unaryTransition(s, r, true)),
         new Case("MultiCumulative", Level.NONE, ConsistencyChecker::multiCumulative),
