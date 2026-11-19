@@ -261,10 +261,11 @@ public class CyclicDistanceDetector implements ParserTreeConstants {
     return false;
   }
 
-  // in no alias and not output
+  // in no alias, no declared equality and not output
   private boolean free(IntVar x) {
     return !support.dictionary.aliasTable.containsKey(x)
         && !support.dictionary.aliasTable.containsValue(x)
+        && !support.dictionary.isDeclaredEqual(x)
         && !support.dictionary.isOutput(x);
   }
 
