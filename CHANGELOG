@@ -8272,6 +8272,26 @@ Version 5.0 (unreleased)
    conflicts a second instead of 1; WordDesign2-words-mdd-035 and 045
    are solved in about 70 s instead of 485 s.
 
+456. New constraint Dag(from, to, ns, es, base): the selected edges of a
+   directed graph form a directed acyclic graph and select their nodes
+   (MiniZinc dag, until now decomposed into longest-path distances). It
+   fails on a cycle of selected edges and removes every edge that would
+   close one (an edge u -> v when the selected edges lead from v to u),
+   which is domain consistent for acyclicity; the graph variable view is
+   that of Dooms, Deville and Dupont, "CP(Graph): Introducing a graph
+   computation domain in constraint programming" (CP 2005). Under lazy
+   clause generation it explains a removed edge by the selected edges of
+   the path, and a failure by the edges of the cycle.
+
+457. New constraint PiecewiseLinear(x, y, xKnot, yKnot) for float
+   variables: (x, y) lies on the polygonal line through the knots
+   (MiniZinc piecewise_linear, until now decomposed into a 0/1 variable
+   and a fraction per segment). It is bounds consistent on the union of
+   the segments, with outward rounding (interval projection of Benhamou
+   and Older, J. Logic Programming 32, 1997, on each segment; disjunctive
+   hull of the segments as in Refalo, "Tight cooperation and its
+   application in piecewise linear optimization", CP 1999).
+
 Version 4.11
 =============
 
