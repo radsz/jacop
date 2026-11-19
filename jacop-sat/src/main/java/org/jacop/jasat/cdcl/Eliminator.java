@@ -105,6 +105,20 @@ final class Eliminator {
   private int numEliminated;
 
   /**
+   * The limits of an elimination run.
+   *
+   * @param bound the bound to start from (see {@link #bound()})
+   * @param maxBound the largest bound to raise to when a round eliminates nothing
+   * @param resolventLimit the longest resolvent an elimination may add
+   * @param gates whether to resolve only gate clauses against the others when a variable is the
+   *     output of a gate
+   */
+  record Limits(int bound, int maxBound, int resolventLimit, boolean gates) {
+    /** MiniSat's elimination: bound 0, resolvents of at most 20 literals, no gates. */
+    static final Limits MINISAT = new Limits(0, 0, 20, false);
+  }
+
+  /**
    * An eliminator as in MiniSat: bound 0, resolvents of at most 20 literals, no gates.
    *
    * @param numVars the number of variables
@@ -114,7 +128,7 @@ final class Eliminator {
    * @param proof the DRAT output, or null
    */
   Eliminator(int numVars, int[][] input, int numInput, boolean[] frozen, ProofOutput proof) {
-    this(numVars, input, numInput, frozen, proof, 0, 0, 20, false);
+    this(numVars, input, numInput, frozen, proof, Limits.MINISAT);
     minisat = true;
   }
 
@@ -127,11 +141,7 @@ final class Eliminator {
    * @param numInput how many of them are used
    * @param frozen the variables that must not be eliminated
    * @param proof the DRAT output, or null
-   * @param bound the bound to start from (see {@link #bound()})
-   * @param maxBound the largest bound to raise to when a round eliminates nothing
-   * @param resolventLimit the longest resolvent an elimination may add
-   * @param useGates whether to resolve only gate clauses against the others when a variable is the
-   *     output of a gate
+   * @param limits the bound schedule, the longest resolvent and whether to use gates
    */
   Eliminator(
       int numVars,
@@ -139,16 +149,13 @@ final class Eliminator {
       int numInput,
       boolean[] frozen,
       ProofOutput proof,
-      int bound,
-      int maxBound,
-      int resolventLimit,
-      boolean useGates) {
-    this.useGates = useGates;
+      Limits limits) {
+    this.useGates = limits.gates();
     this.numVars = numVars;
     this.frozen = frozen;
-    this.bound = Math.min(bound, maxBound);
-    this.maxBound = maxBound;
-    this.resolventLimit = resolventLimit;
+    this.bound = Math.min(limits.bound(), limits.maxBound());
+    this.maxBound = limits.maxBound();
+    this.resolventLimit = limits.resolventLimit();
     touched = new boolean[numVars];
     this.proof = proof;
     clauses = new int[Math.max(16, numInput + numInput / 2)][];
@@ -198,23 +205,19 @@ final class Eliminator {
       }
       int[] vars = candidates();
       int before = numEliminated;
-      for (int v : vars) {
-        if (unsat || effort >= EFFORT_LIMIT) {
-          break;
-        }
-        if (tryEliminate(v)) {
+      for (int k = 0; k < vars.length && !unsat && effort < EFFORT_LIMIT; k++) {
+        if (tryEliminate(vars[k])) {
           subsumeQueue();
         }
       }
-      if (numEliminated > before) {
-        continue;
+      if (numEliminated == before) {
+        if (unsat || effort >= EFFORT_LIMIT || bound >= maxBound) {
+          break;
+        }
+        // nothing left at this bound: raise it and try every variable again
+        bound = nextBound(bound, maxBound);
+        Arrays.fill(touched, true);
       }
-      if (unsat || effort >= EFFORT_LIMIT || bound >= maxBound) {
-        break;
-      }
-      // nothing left at this bound: raise it and try every variable again
-      bound = nextBound(bound, maxBound);
-      Arrays.fill(touched, true);
     }
     return !unsat;
   }
@@ -576,14 +579,8 @@ final class Eliminator {
     int resolvents = 0;
     for (int i = 0; i < np; i++) {
       for (int j = 0; j < nn; j++) {
-        if (gp != null && gp[i] == gn[j]) {
-          continue;
-        }
-        int size = resolventSize(clauses[ps[i]], clauses[ns[j]], v);
-        if (size < 0) {
-          continue;
-        }
-        if (size > resolventLimit || ++resolvents > np + nn + bound) {
+        int size = needed(gp, gn, i, j) ? resolventSize(clauses[ps[i]], clauses[ns[j]], v) : -1;
+        if (size >= 0 && (size > resolventLimit || ++resolvents > np + nn + bound)) {
           return false;
         }
       }
@@ -592,10 +589,7 @@ final class Eliminator {
     int numFound = 0;
     for (int i = 0; i < np; i++) {
       for (int j = 0; j < nn; j++) {
-        if (gp != null && gp[i] == gn[j]) {
-          continue;
-        }
-        int[] r = resolvent(clauses[ps[i]], clauses[ns[j]], v);
+        int[] r = needed(gp, gn, i, j) ? resolvent(clauses[ps[i]], clauses[ns[j]], v) : null;
         if (r == null) {
           continue;
         }
@@ -630,6 +624,15 @@ final class Eliminator {
     }
     propagateUnits();
     return true;
+  }
+
+  /**
+   * Whether the resolvent of the i-th positive and j-th negative clause is needed: always without a
+   * gate, and with one only for a gate clause with a non-gate clause (the others are tautologies or
+   * implied).
+   */
+  private static boolean needed(boolean[] gp, boolean[] gn, int i, int j) {
+    return gp == null || gp[i] != gn[j];
   }
 
   /** A gate with output pos or its negation (an OR gate on pos), or null. */

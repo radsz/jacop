@@ -167,7 +167,7 @@ public final class CdclMain {
     solver.setSubstitution(substitute);
     solver.setCongruence(congruence);
     if (elimBound >= 0) {
-      solver.setEliminationBound(elimBound);
+      solver.setMaxEliminationBound(elimBound);
     }
     if (elimClauseLimit >= 0) {
       solver.setResolventLimit(elimClauseLimit);

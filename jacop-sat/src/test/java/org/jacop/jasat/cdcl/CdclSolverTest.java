@@ -710,7 +710,13 @@ class CdclSolverTest {
     frozen[0] = false;
     for (boolean gates : new boolean[] {false, true}) {
       Eliminator e =
-          new Eliminator(numVars, clauses, clauses.length, frozen, null, 0, 0, 100, gates);
+          new Eliminator(
+              numVars,
+              clauses,
+              clauses.length,
+              frozen,
+              null,
+              new Eliminator.Limits(0, 0, 100, gates));
       assertTrue(e.run());
       assertEquals(gates, e.eliminated()[0], "x eliminated with gates " + gates);
       assertEquals(gates ? 1 : 0, e.numGateEliminations());
@@ -734,7 +740,13 @@ class CdclSolverTest {
     frozen[0] = false;
     for (int max : new int[] {0, 2, 4, 16}) {
       Eliminator e =
-          new Eliminator(numVars, clauses, clauses.length, frozen, null, 0, max, 100, false);
+          new Eliminator(
+              numVars,
+              clauses,
+              clauses.length,
+              frozen,
+              null,
+              new Eliminator.Limits(0, max, 100, false));
       assertTrue(e.run());
       assertEquals(max >= 3, e.eliminated()[0], "x eliminated with largest bound " + max);
     }

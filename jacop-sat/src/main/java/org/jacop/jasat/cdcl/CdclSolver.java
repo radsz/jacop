@@ -4208,7 +4208,7 @@ public final class CdclSolver {
    *
    * @param bound the largest bound
    */
-  public void setEliminationBound(int bound) {
+  public void setMaxEliminationBound(int bound) {
     maxEliminationBound = Math.max(0, bound);
   }
 
@@ -4679,19 +4679,14 @@ public final class CdclSolver {
     }
     long elimBegin = System.nanoTime();
     // with an external propagator (lazy clause generation) elimination stays as in MiniSat
+    int[][] elimInput = sat ? input : new int[0][];
+    int elimCount = sat ? n : 0;
+    Eliminator.Limits limits =
+        new Eliminator.Limits(eliminationBound, eliminationBound, resolventLimit, eliminationGates);
     Eliminator e =
         external != null
-            ? new Eliminator(numVars, sat ? input : new int[0][], sat ? n : 0, frozen, proof)
-            : new Eliminator(
-                numVars,
-                sat ? input : new int[0][],
-                sat ? n : 0,
-                frozen,
-                proof,
-                eliminationBound,
-                eliminationBound,
-                resolventLimit,
-                eliminationGates);
+            ? new Eliminator(numVars, elimInput, elimCount, frozen, proof)
+            : new Eliminator(numVars, elimInput, elimCount, frozen, proof, limits);
     sat = sat && e.run();
     gateEliminations += e.numGateEliminations();
     // the bound rises by one step after each complete run, so the first run before the search
