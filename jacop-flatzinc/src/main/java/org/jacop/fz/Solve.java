@@ -4208,6 +4208,34 @@ public class Solve<T extends Var> implements ParserTreeConstants {
   }
 
   /**
+   * Runs the free search of the slices to the end of the time limit, in a store level of its own
+   * lent by the solver, after a turn of LCG made no progress.
+   */
+  private boolean continueOptimisationAlone(FreeSearch sliceSearch, LcgSolver solver) {
+    int root = store.level;
+    store.setLevel(root + 1);
+    Runnable giveBack = solver.lend();
+    try {
+      for (IntVar[][] clause : this.sat.collectedClauses()) {
+        store.impose(new BoolClause(clause[0], clause[1]));
+      }
+      long left = options.getRemainingTimeOut();
+      freeSearchStatus =
+          sliceSearch.resume(
+              System.currentTimeMillis() + left, FreeSearch.VIRTUAL_CLOCK ? left : 0);
+    } finally {
+      store.removeLevel(root + 1);
+      store.setLevel(root);
+      giveBack.run();
+    }
+    if (freeSearchStatus == FreeSearch.Status.OPTIMAL
+        || freeSearchStatus == FreeSearch.Status.UNSATISFIABLE) {
+      lcgStatus = CdclSolver.SAT;
+    }
+    return numberSolutions > 0;
+  }
+
+  /**
    * Alternates free search without learning with LCG on an optimisation model, after LCG gave way
    * as slow with a solution ({@link #sliceInsteadOfHandOver}). A slice of free search lasts as long
    * as LCG ran before it; while a slice finds a better solution the next one is free search again,
@@ -4227,10 +4255,11 @@ public class Solve<T extends Var> implements ParserTreeConstants {
     long lcgShare = Math.max(1, sat.now() - lcgStart);
     // each turn lasts at least a share of the time limit (lcg-cop-turn): short turns rebuild the
     // store for free search and restart LCG's schedule too often
-    double turn = Double.parseDouble(options.freeConfig("lcg-cop-turn", "0.1"));
+    double turn = Double.parseDouble(options.freeConfig("lcg-cop-turn", "0"));
     long cpMillis =
         Math.max(Math.max(1000, lcgShare / 1_000_000L), (long) (turn * options.getTimeOut()));
-    boolean equalTurns = "1".equals(options.freeConfig("lcg-cop-equal", "1"));
+    boolean productive = "1".equals(options.freeConfig("lcg-cop-productive", "1"));
+    boolean equalTurns = "1".equals(options.freeConfig("lcg-cop-equal", "0"));
     freeSearchBuildOnly = true;
     try {
       executeFreeSearch(cost);
@@ -4295,6 +4324,8 @@ public class Solve<T extends Var> implements ParserTreeConstants {
         IO.println("%% LCG goes on under the bound " + bestPrintedCost.get());
       }
       solver.unstop();
+      long raisedBefore = lcgBoundRaised;
+      int bestBefore = bestPrintedCost.get();
       sat.setDeadline(end - sat.now() > lcgShare ? sat.now() + lcgShare : end);
       try {
         lcgStatus = solver.minimize(cost);
@@ -4308,6 +4339,15 @@ public class Solve<T extends Var> implements ParserTreeConstants {
       }
       if (sat.now() >= end) {
         return numberSolutions > 0;
+      }
+      if (productive && lcgBoundRaised == raisedBefore && bestPrintedCost.get() >= bestBefore) {
+        // a turn of LCG that neither raised the bound nor improved the best solution: free search
+        // without learning to the end
+        if (options.debug()) {
+          IO.println("%% LCG turn without progress; free search without learning to the end");
+        }
+        lcgSlow = true;
+        return continueOptimisationAlone(sliceSearch, solver);
       }
     }
   }
