@@ -1461,7 +1461,7 @@ public class Support implements ParserTreeConstants {
   public record ControlSubstitution(IntVar from, IntVar to, boolean negated) {}
 
   /** The constraint nodes posted with a substituted control. */
-  final Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
+  Map<SimpleNode, ControlSubstitution> controlSubstitutions = new IdentityHashMap<>();
 
   /** The substitutions by eliminated control, for detectors that read controls as literals. */
   final Map<IntVar, ControlSubstitution> substitutedControls = new IdentityHashMap<>();
@@ -1490,6 +1490,30 @@ public class Support implements ParserTreeConstants {
    */
   public ControlSubstitution controlSubstitution(SimpleNode node) {
     return controlSubstitutions.isEmpty() ? null : controlSubstitutions.get(node);
+  }
+
+  /**
+   * Forgets the constraint nodes posted with a substituted control once all constraints are posted,
+   * since through their parents they hold the parse tree of every such constraint.
+   */
+  public void releaseControlSubstitutions() {
+    // a new map, since a cleared one keeps its table
+    controlSubstitutions = new IdentityHashMap<>();
+  }
+
+  /**
+   * Forgets the sums recorded for {@link #poseAlldiffSums()} once all constraints are posted: one
+   * record per sum of unit coefficients, 146 MB on XCSP 2022 DiamondFree-80 (1.6 million sums).
+   */
+  public void releaseUnitSums() {
+    unitSums.clear();
+    unitSums.trimToSize();
+  }
+
+  /** Forgets the equalities collected for the channel constraints once all are posted. */
+  public void releaseChannelMaps() {
+    reif.release();
+    imply.release();
   }
 
   /**

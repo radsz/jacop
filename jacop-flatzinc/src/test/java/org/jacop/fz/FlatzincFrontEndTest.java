@@ -45,6 +45,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -55,6 +57,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.StringJoiner;
@@ -66,6 +69,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.jacop.constraints.regular.Regular;
 import org.jacop.constraints.table.HybridTable;
+import org.jacop.core.FailException;
 import org.jacop.core.IntDomain;
 import org.jacop.core.IntVar;
 import org.jacop.core.IntervalDomain;
@@ -513,6 +517,20 @@ class FlatzincFrontEndTest {
       }
     }
     assertEquals(expected, solveAll(model));
+  }
+
+  @Test
+  void mddLibraryPassesTheDiagramArraysAsTheyAre() throws IOException {
+    // array1d makes a new array at each call and MiniZinc keeps only a few for reuse: with it,
+    // WordDesign2-words-mdd-025 (XCSP 2023) got 31 copies of its diagram of 1.8 million edges in
+    // the FlatZinc (1.1 GB, 7 GB to flatten) and the larger sizes did not flatten at all.
+    Path lib = Path.of("src/main/minizinc/org/jacop/minizinc");
+    for (String file : List.of("fzn_mdd.mzn", "fzn_mdd_nondet.mzn", "fzn_cost_mdd.mzn")) {
+      String text = Files.readString(lib.resolve(file), StandardCharsets.UTF_8);
+      for (String array : List.of("level", "from", "label", "cost", "to")) {
+        assertFalse(text.contains("array1d(" + array + ")"), file + " copies " + array);
+      }
+    }
   }
 
   @Test
@@ -1677,6 +1695,164 @@ class FlatzincFrontEndTest {
     }
   }
 
+  // the number of solutions of a model with -a and no symmetry breaking
+  private int allSolutions(String model) throws IOException, ParseException {
+    Path fzn = tmp.resolve("declared.fzn");
+    Files.writeString(fzn, model, StandardCharsets.UTF_8);
+    String out;
+    try {
+      out =
+          runInThisJvm(new Options(new String[] {"-a", "--symmetry", "off", fzn.toString()}), fzn);
+    } catch (FailException _) {
+      // failed while the model was read, which Fz2jacop prints as unsatisfiable
+      return 0;
+    }
+    return out.split("----------", -1).length - 1;
+  }
+
+  // var i = w posts i = w on the two variables before the constraint items are read; bool2int then
+  // made i an alias of b, which left w free (FlatZinc mutation harness, declared-equality mutants)
+  @Test
+  void aVariableOfADeclaredEqualityIsNoAliasOfABoolean() throws IOException, ParseException {
+    assertEquals(
+        2,
+        allSolutions(
+            """
+            var bool: b :: output_var;
+            var 0..1: w :: output_var;
+            var 0..1: i = w;
+            constraint bool2int(b, i);
+            solve satisfy;
+            """));
+    assertEquals(
+        2,
+        allSolutions(
+            """
+            var bool: b :: output_var;
+            var 0..1: i;
+            var 0..1: w :: output_var = i;
+            constraint bool2int(b, i);
+            solve satisfy;
+            """));
+  }
+
+  // common subexpressions made s of var s = w an alias of g for int_eq(g, s), which left w free
+  @Test
+  void aVariableOfADeclaredEqualityIsNoCommonSubexpressionAlias()
+      throws IOException, ParseException {
+    assertEquals(
+        2,
+        allSolutions(
+            """
+            var 0..3: w :: output_var;
+            var 0..3: s = w;
+            var 0..3: g :: output_var;
+            constraint int_eq(g, s);
+            constraint int_le(2, s);
+            solve satisfy;
+            """));
+  }
+
+  // affine folding replaced z of var z = w by 2x + 1 in the rows, which left w free
+  @Test
+  void aVariableOfADeclaredEqualityIsNotFolded() throws IOException, ParseException {
+    assertEquals(
+        10,
+        allSolutions(
+            """
+            var 0..3: x :: output_var;
+            var 0..3: y :: output_var;
+            var 0..20: w :: output_var;
+            var 0..20: z = w;
+            constraint int_lin_eq([1,-2],[z,x],1);
+            constraint int_lin_le([1,1],[z,y],6);
+            solve satisfy;
+            """));
+  }
+
+  // ChanceSum rejects a capacity that is also one of its loads; the front end stopped on
+  // chance_sum(x, ..., c) with c among x (FlatZinc mutation harness, substituted variables)
+  @Test
+  void aChanceSumCapacityAmongItsLoadsIsCopied() throws IOException, ParseException {
+    String chance =
+        "constraint jacop_chance_sum([x1,x2,%s],[1,3,2,2,0,5],[1,3,2,2,3,1],2,4,%s,3);\n";
+    String vars =
+        """
+        var 0..2: x1 :: output_var;
+        var 0..2: x2 :: output_var;
+        var 0..2: x3 :: output_var;
+        var 0..2: c :: output_var;
+        constraint int_eq(c, x3);
+        """;
+    int shared = allSolutions(vars + chance.formatted("c", "c") + "solve satisfy;\n");
+    int apart = allSolutions(vars + chance.formatted("x3", "c") + "solve satisfy;\n");
+    assertTrue(apart > 0);
+    assertEquals(apart, shared);
+  }
+
+  // ScenarioChance rejects an indicator that is also in x; bool2int(b, y) makes b and y one
+  // variable, so an indicator b whose 0/1 value y is in x stopped the run
+  @Test
+  void aScenarioChanceIndicatorAmongItsVariablesIsCopied() throws IOException, ParseException {
+    String common =
+        """
+        var 0..1: y :: output_var;
+        var -1..2: z :: output_var;
+        var bool: b :: output_var;
+        var bool: d :: output_var;
+        """;
+    String chance = "constraint jacop_scenario_chance([y,z],[1,1,1,-1],[1,0],[3,7],10,3,[b,d]);\n";
+    int shared =
+        allSolutions(common + "constraint bool2int(b, y);\n" + chance + "solve satisfy;\n");
+    int apart =
+        allSolutions(
+            common
+                + """
+                var 0..1: w;
+                constraint bool2int(b, w);
+                constraint int_le(w, y);
+                constraint int_le(y, w);
+                """
+                + chance
+                + "solve satisfy;\n");
+    assertTrue(apart > 0);
+    assertEquals(apart, shared);
+  }
+
+  // SubcircuitCost rejects a cost that is also a successor; jacop_subcircuit_cost(x, d, x2) stopped
+  @Test
+  void aSubcircuitCostThatIsASuccessorIsCopied() throws IOException, ParseException {
+    String vars =
+        """
+        var 1..3: x1 :: output_var;
+        var 1..3: x2 :: output_var;
+        var 1..3: x3 :: output_var;
+        var 1..3: c :: output_var;
+        constraint int_eq(c, x2);
+        """;
+    String sub = "constraint jacop_subcircuit_cost([x1,x2,x3],[0,1,2,0,0,1,2,1,0],%s);\n";
+    int shared = allSolutions(vars + sub.formatted("x2") + "solve satisfy;\n");
+    int apart = allSolutions(vars + sub.formatted("c") + "solve satisfy;\n");
+    assertTrue(apart > 0);
+    assertEquals(apart, shared);
+  }
+
+  // bool2int(b, i) made i an alias of b without the declared domain of i, so b took 0 and 1 for
+  // an i declared 1..20 or 2..20 (FlatZinc mutation harness, substituted variables)
+  @Test
+  void aBooleanAliasKeepsTheDomainOfItsInteger() throws IOException, ParseException {
+    String model =
+        """
+        var %s: i;
+        var bool: b :: output_var;
+        constraint bool2int(b, i);
+        solve satisfy;
+        """;
+    assertEquals(2, allSolutions(model.formatted("0..20")));
+    assertEquals(1, allSolutions(model.formatted("1..20")));
+    assertEquals(0, allSolutions(model.formatted("2..20")));
+  }
+
   // the output of a run of the model with the given options, in this JVM (no watchdog)
   private static String runInThisJvm(Options opt, Path fzn) throws IOException, ParseException {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -1836,6 +2012,29 @@ class FlatzincFrontEndTest {
     String out = run(fzn, "--proof", prefix)[0];
     assertTrue(out.contains("=====UNSATISFIABLE====="), out);
     assertTrue(run(fzn)[0].contains("=====UNSATISFIABLE====="));
+  }
+
+  @Test
+  void subcircuitUnderProofLabelsPositions() throws IOException {
+    // Two cycles, 1 -> 2 -> 1 and 3 -> 4 -> 3. The --proof decomposition rules out the second cycle
+    // only once the positions are fixed, and the successors leave them open. -a ignores --proof but
+    // keeps its decomposition, and its search labelled the successors alone, so it printed the two
+    // cycles (as the hand-over after a slow LCG did on mario_t_hard_5, which proved 4482).
+    String fzn =
+        """
+        var {2}: x1:: output_var;
+        var {1}: x2:: output_var;
+        var {4}: x3:: output_var;
+        var {3}: x4:: output_var;
+        array [1..4] of var int: x = [x1,x2,x3,x4];
+        constraint jacop_subcircuit(x);
+        solve satisfy;
+        """;
+    String prefix = tmp.resolve("subcircuitcycles").toString();
+    String all = run(fzn, "-a", "--proof", prefix)[0];
+    assertTrue(all.contains("=====UNSATISFIABLE====="), all);
+    String proof = run(fzn, "--proof", prefix)[0];
+    assertTrue(proof.contains("=====UNSATISFIABLE====="), proof);
   }
 
   @Test
@@ -4187,6 +4386,113 @@ class FlatzincFrontEndTest {
       assertTrue(out.contains("a = array1d(1..2, [1, 1]);"), out);
       assertTrue(out.contains("a = array1d(1..2, [0, 0]);"), out);
       assertFalse(out.contains("true,") || out.contains("false,"), out);
+    }
+  }
+
+  @Test
+  void constraintNodesWithAnInlinedControlAreReleasedAfterPosting(@TempDir Path dir)
+      throws Exception {
+    // the constraint nodes posted with an eliminated control stayed in a map for the whole search
+    // and, through their parents, the parse tree of every such constraint: 38 MB of rcpsp_max
+    // psp_ubo500_33 (99,000 disjunctions b1 -> s1 + d1 <= s2, b2 -> s2 + d2 <= s1, b1 \/ b2)
+    String model =
+        """
+        var 0..10: s1:: output_var;
+        var 0..10: s2:: output_var;
+        var bool: b1;
+        var bool: b2;
+        constraint int_lin_le_imp([1,-1],[s1,s2],-3,b1);
+        constraint int_lin_le_imp([1,-1],[s2,s1],-4,b2);
+        constraint bool_clause([b1,b2],[]);
+        solve satisfy;
+        """;
+    Path file = dir.resolve("disjunction.fzn");
+    Files.writeString(file, model);
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    org.jacop.fz.constraints.Support support = loader.parser.cc.support;
+    java.lang.reflect.Field substituted =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("substitutedControls");
+    substituted.setAccessible(true);
+    assertFalse(((Map<?, ?>) substituted.get(support)).isEmpty(), "a control was eliminated");
+    java.lang.reflect.Field nodes =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("controlSubstitutions");
+    nodes.setAccessible(true);
+    assertTrue(((Map<?, ?>) nodes.get(support)).isEmpty());
+  }
+
+  @Test
+  void unitSumsAreReleasedAfterPosting(@TempDir Path dir) throws Exception {
+    // every sum of unit coefficients was kept for the AlldiffSum and partition sum detectors for
+    // the whole search: 1.6 million records, 146 MB, on XCSP 2022 DiamondFree-80
+    StringBuilder m = new StringBuilder();
+    for (int i = 0; i < 6; i++) {
+      m.append("var 0..1: b").append(i).append(":: output_var;\n");
+    }
+    m.append("constraint int_lin_le([1,1,1],[b0,b1,b2],2);\n");
+    m.append("constraint int_lin_le([1,1,1],[b3,b4,b5],2);\n");
+    m.append("constraint int_lin_le([1,1,1],[b0,b3,b5],1);\n");
+    m.append("solve satisfy;\n");
+    Path file = dir.resolve("sums.fzn");
+    Files.writeString(file, m.toString());
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    java.lang.reflect.Field sums =
+        org.jacop.fz.constraints.Support.class.getDeclaredField("unitSums");
+    sums.setAccessible(true);
+    assertTrue(((List<?>) sums.get(loader.parser.cc.support)).isEmpty());
+  }
+
+  /**
+   * A node of the parse tree keeps its id, its parent and its children only: the parser and a value
+   * of the node, never read, cost 8 bytes of each of the 20 million nodes of XCSP 2022
+   * RoomMate-sr0700 (163 MB while the model is read).
+   */
+  @Test
+  void parseTreeNodesKeepNoParserOrValue() {
+    List<String> fields =
+        Arrays.stream(SimpleNode.class.getDeclaredFields())
+            .filter(f -> !Modifier.isStatic(f.getModifiers()))
+            .map(Field::getName)
+            .sorted()
+            .toList();
+    assertEquals(List.of("children", "id", "parent"), fields);
+  }
+
+  @Test
+  void channelMapsAreReleasedAfterPosting(@TempDir Path dir) throws Exception {
+    // the int_eq_reif and int_eq_imp constraints collected for the channels were kept for the
+    // whole search: 115 MB on XCSP 2022 RoomMate-sr0700 (490,000 implications)
+    String model =
+        """
+        var 1..3: x:: output_var;
+        var bool: a;
+        var bool: b;
+        var bool: c;
+        var bool: d;
+        constraint int_eq_reif(x,1,a);
+        constraint int_eq_reif(x,2,b);
+        constraint int_eq_imp(x,2,c);
+        constraint int_eq_imp(x,3,d);
+        constraint bool_clause([a,b,c,d],[]);
+        solve satisfy;
+        """;
+    Path file = dir.resolve("channels.fzn");
+    Files.writeString(file, model);
+    FlatzincLoader loader = new FlatzincLoader(new String[] {file.toString()});
+    loader.load();
+    org.jacop.fz.constraints.Support support = loader.parser.cc.support;
+    Class<?> channelMap = Class.forName("org.jacop.fz.constraints.ChannelMap");
+    java.lang.reflect.Field cs = channelMap.getDeclaredField("cs");
+    java.lang.reflect.Field byBoolean = channelMap.getDeclaredField("byBoolean");
+    cs.setAccessible(true);
+    byBoolean.setAccessible(true);
+    for (String name : new String[] {"reif", "imply"}) {
+      java.lang.reflect.Field f = org.jacop.fz.constraints.Support.class.getDeclaredField(name);
+      f.setAccessible(true);
+      Object map = f.get(support);
+      assertTrue(((Map<?, ?>) cs.get(map)).isEmpty(), name);
+      assertTrue(((Map<?, ?>) byBoolean.get(map)).isEmpty(), name);
     }
   }
 
