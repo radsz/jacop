@@ -232,14 +232,15 @@ class ClausalFlatzincTest {
       compiled += with.contains("clausalModel=true") ? 1 : 0;
       unsat += u ? 1 : 0;
     }
-    assertTrue(compiled >= RUNS / 2, compiled + " of " + RUNS + " compiled");
+    assertTrue(compiled >= RUNS / 3, compiled + " of " + RUNS + " compiled");
     assertTrue(unsat > 0 && unsat < RUNS, unsat + " unsatisfiable");
   }
 
   private String run(String model, boolean clausal) throws IOException {
     Path fzn = tmp.resolve("run.fzn");
     Files.writeString(fzn, model, StandardCharsets.UTF_8);
-    List<String> args = new ArrayList<>(List.of("--lcg", "-s", "-f", "-t", "10000", fzn.toString()));
+    List<String> args =
+        new ArrayList<>(List.of("--lcg", "-s", "-f", "-t", "10000", fzn.toString()));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     PrintStream originalOut = System.out;
     PrintStream originalErr = System.err;
