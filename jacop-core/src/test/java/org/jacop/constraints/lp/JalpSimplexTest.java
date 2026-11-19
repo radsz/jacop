@@ -219,7 +219,9 @@ class JalpSimplexTest {
       pivots += sparse.pivots();
     }
     assertThat(optimal).isGreaterThan(300);
-    assertThat(pivots).isGreaterThan(5000);
+    // the infeasible first solves are proved by bound propagation, without pivots (2,411 pivots
+    // then, more than 5,000 before)
+    assertThat(pivots).isGreaterThan(2000);
   }
 
   @Test

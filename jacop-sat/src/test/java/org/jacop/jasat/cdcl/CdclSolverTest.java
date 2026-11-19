@@ -755,6 +755,75 @@ class CdclSolverTest {
   }
 
   @Test
+  void eliminationResolvesOnlyGateClausesAgainstTheOthers() {
+    // x (variable 0) = a (variable 1), and x occurs in 4 other clauses of each sign. The 24
+    // resolvents of all clauses exceed the 10 clauses they replace, but only the 8 of a defining
+    // clause with another clause are needed (Een and Biere, SAT 2005)
+    int numVars = 18;
+    int x = 0;
+    int a = 2;
+    int[][] clauses = new int[10][];
+    clauses[0] = new int[] {x + 1, a};
+    clauses[1] = new int[] {x, a + 1};
+    for (int i = 0; i < 4; i++) {
+      clauses[2 + i] = new int[] {x, 4 * (1 + i), 4 * (1 + i) + 2};
+      clauses[6 + i] = new int[] {x + 1, 4 * (1 + i) + 1, 4 * (1 + i) + 3};
+    }
+    boolean[] frozen = new boolean[numVars];
+    Arrays.fill(frozen, true);
+    frozen[0] = false;
+    for (boolean gates : new boolean[] {false, true}) {
+      Eliminator e =
+          new Eliminator(
+              numVars,
+              clauses,
+              clauses.length,
+              frozen,
+              null,
+              new Eliminator.Limits(0, 0, 100, gates));
+      assertTrue(e.run());
+      assertEquals(gates, e.eliminated()[0], "x eliminated with gates " + gates);
+      assertEquals(gates ? 1 : 0, e.numGateEliminations());
+      assertEquals(gates ? 8 : 10, e.clauses().length);
+    }
+  }
+
+  @Test
+  void eliminationBoundAllowsMoreResolventsThanClauses() {
+    // x (variable 0) occurs in 3 clauses of each sign over distinct other variables: 9 resolvents
+    // replace 6 clauses, so x is eliminated from bound 3 on, and the bound rises to it when a
+    // round finds nothing
+    int numVars = 13;
+    int[][] clauses = new int[6][];
+    for (int i = 0; i < 3; i++) {
+      clauses[i] = new int[] {0, 2 * (1 + i)};
+      clauses[3 + i] = new int[] {1, 2 * (4 + i)};
+    }
+    boolean[] frozen = new boolean[numVars];
+    Arrays.fill(frozen, true);
+    frozen[0] = false;
+    for (int max : new int[] {0, 2, 4, 16}) {
+      Eliminator e =
+          new Eliminator(
+              numVars,
+              clauses,
+              clauses.length,
+              frozen,
+              null,
+              new Eliminator.Limits(0, max, 100, false));
+      assertTrue(e.run());
+      assertEquals(max >= 3, e.eliminated()[0], "x eliminated with largest bound " + max);
+    }
+    Eliminator minisat = new Eliminator(numVars, clauses, clauses.length, frozen, null);
+    assertTrue(minisat.run());
+    assertFalse(minisat.eliminated()[0], "MiniSat elimination adds no clauses");
+    assertEquals(1, Eliminator.nextBound(0, 16));
+    assertEquals(8, Eliminator.nextBound(4, 16));
+    assertEquals(16, Eliminator.nextBound(16, 16));
+    assertEquals(5, Eliminator.nextBound(4, 5));
+  }
+
+  @Test
   void probeKeepsARootConflictFoundAfterAnExternalClauseUndidItsLevel() {
     // The probe of 1 sets 3 false at level 1; the external clause (3 or 4), with 4 false at the
     // root, then asserts 3 at level 0, which undoes the probe's level, and 3 at the root falsifies

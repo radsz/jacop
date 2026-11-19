@@ -3172,6 +3172,183 @@ class FlatzincFrontEndTest {
     }
   }
 
+  /** Pigeons x0..x(n-1) in 1..holes, pairwise different by binary tables (minus one pair). */
+  private static String tablePigeons(int n, int holes, boolean dropPair) {
+    StringBuilder ne = new StringBuilder();
+    for (int a = 1; a <= holes; a++) {
+      for (int b = 1; b <= holes; b++) {
+        if (a != b && !(dropPair && a == 1 && b == 2)) {
+          ne.append(ne.isEmpty() ? "" : ",").append(a).append(',').append(b);
+        }
+      }
+    }
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    fzn.append("array [1..").append(ne.toString().split(",").length).append("] of int: T = [");
+    fzn.append(ne).append("];\n");
+    for (int i = 0; i < n; i++) {
+      fzn.append("var 1..").append(holes).append(": x").append(i).append(" :: output_var;\n");
+    }
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        fzn.append("constraint jacop_table_int([x").append(i).append(",x").append(j);
+        fzn.append("],T);\n");
+      }
+    }
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void binaryTablesOfDisequalitiesBecomeAllDifferent() throws IOException {
+    // XCSP3 pigeonsPlus writes x_i != x_j as binary tables; read as disequalities they give an
+    // all-different over 13 pigeons in 12 holes, which fails at the root; the tables alone search
+    // for hours (pigeonsPlus-11-04 took millions of failures)
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60),
+            () -> run(tablePigeons(13, 12, false), "--lcg", "off", "-t", "5000"))[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+  }
+
+  @Test
+  void binaryTableMissingOnlySomeEqualPairsIsNoDisequality() throws IOException {
+    // (1,2) is missing as well, so the table is no disequality: the solutions stay those of the
+    // tables (4 pigeons in 4 holes, 1 never at a smaller index than 2: 12 of 24)
+    String model = tablePigeons(4, 4, true);
+    Set<String> withDetection = solveAll(model);
+    System.setProperty("org.jacop.fz.alldifferent", "false");
+    try {
+      assertEquals(solveAll(model), withDetection);
+    } finally {
+      System.clearProperty("org.jacop.fz.alldifferent");
+    }
+    assertEquals(12, withDetection.size(), withDetection.toString());
+  }
+
+  /** The pigeon-hole problem as XCSP3 writes it: conflict tables over 0/1, n holes. */
+  private static String conflictTableHoles(int pigeons, int n) {
+    StringBuilder fzn = new StringBuilder();
+    fzn.append("predicate jacop_negative_table_int(array [int] of var int: x,");
+    fzn.append("array [int] of int: t);\n");
+    fzn.append("array [1..").append(n).append("] of int: T1 = [0");
+    fzn.append(",0".repeat(n - 1)).append("];\n");
+    fzn.append("array [1..2] of int: T2 = [1,1];\n");
+    for (int p = 0; p < pigeons; p++) {
+      for (int h = 0; h < n; h++) {
+        // a Boolean seen through its 0/1 integer, as MiniZinc flattens bool2int arguments
+        fzn.append("var bool: b").append(p).append('_').append(h).append(" :: output_var;\n");
+        fzn.append("var 0..1: x").append(p).append('_').append(h).append(" :: is_defined_var;\n");
+      }
+    }
+    for (int p = 0; p < pigeons; p++) {
+      for (int h = 0; h < n; h++) {
+        fzn.append("constraint bool2int(b").append(p).append('_').append(h).append(",x").append(p);
+        fzn.append('_').append(h).append(") :: defines_var(x").append(p).append('_').append(h);
+        fzn.append(");\n");
+      }
+    }
+    for (int p = 0; p < pigeons; p++) {
+      fzn.append("constraint jacop_negative_table_int([");
+      for (int h = 0; h < n; h++) {
+        fzn.append(h == 0 ? "" : ",").append('x').append(p).append('_').append(h);
+      }
+      fzn.append("],T1);\n");
+    }
+    for (int h = 0; h < n; h++) {
+      for (int p = 0; p < pigeons; p++) {
+        for (int q = p + 1; q < pigeons; q++) {
+          fzn.append("constraint jacop_negative_table_int([x").append(p).append('_');
+          fzn.append(h).append(",x").append(q).append('_').append(h).append("],T2);\n");
+        }
+      }
+    }
+    return fzn.append("solve satisfy;\n").toString();
+  }
+
+  @Test
+  void negativeTablesOverBooleansAreClausesTheRootRefutationSees() throws IOException {
+    // hole-10 (XCSP 2017): the forbidden rows of 0/1 tables are clauses, so the model is a pure
+    // clause model; its root clause refutation must run before JaSAT takes it (nothing at the
+    // root woke it), and refutes the pigeons at once, where JaSAT does not finish
+    String out =
+        assertTimeoutPreemptively(
+            Duration.ofSeconds(60),
+            () ->
+                run(
+                    conflictTableHoles(11, 10),
+                    "--lcg",
+                    "on",
+                    "--search-statistics",
+                    "-t",
+                    "5000"))[0];
+    assertTrue(out.contains("=====UNSATISFIABLE====="), out);
+    assertTrue(out.contains("lpRefutation=refuted"), out);
+    // 3 pigeons in 3 holes, at least one hole each and none shared: 3! = 6 ways, as clauses too
+    assertEquals(6, solveAll(conflictTableHoles(3, 3)).size());
+    assertTrue(
+        run(conflictTableHoles(3, 3), "--search-statistics")[0].contains("negativeTableClauses=1"));
+    // with a constraint other than a clause the tables stay tables (StillLife: sums and tables ran
+    // 1.4-3x slower with the tables as clauses)
+    String mixed =
+        conflictTableHoles(3, 3)
+            .replace("solve ", "constraint int_lin_le([1,1],[x0_0,x1_1],2);\nsolve ");
+    assertFalse(run(mixed, "--search-statistics")[0].contains("negativeTableClauses"));
+    assertEquals(6, solveAll(mixed).size());
+  }
+
+  /** Courses of credit 1..n over 3 periods, as XCSP3 BACP rows: credit in the period column. */
+  private static String tableCourses(int n) {
+    StringBuilder par = new StringBuilder();
+    StringBuilder var = new StringBuilder();
+    StringBuilder con = new StringBuilder();
+    par.append("predicate jacop_table_int(array [int] of var int: x,array [int] of int: t);\n");
+    par.append("predicate jacop_maximum(var int: m,array [int] of var int: x);\n");
+    for (int i = 1; i <= n; i++) {
+      par.append("array [1..12] of int: T").append(i).append(" = [").append(i);
+      par.append(",0,0,0,0,").append(i).append(",0,1,0,0,").append(i).append(",2];\n");
+      for (int j = 0; j < 3; j++) {
+        var.append("var 0..").append(i).append(": c").append(i).append('_').append(j);
+        var.append(" :: output_var;\n");
+      }
+      var.append("var 0..2: p").append(i).append(" :: output_var;\n");
+      con.append("constraint jacop_table_int([c").append(i).append("_0,c").append(i);
+      con.append("_1,c").append(i).append("_2,p").append(i).append("],T").append(i).append(");\n");
+    }
+    for (int j = 0; j < 3; j++) {
+      var.append("var 0..100: l").append(j).append(" :: output_var;\n");
+      StringBuilder w = new StringBuilder("-1");
+      StringBuilder x = new StringBuilder("l").append(j);
+      for (int i = 1; i <= n; i++) {
+        w.append(",1");
+        x.append(",c").append(i).append('_').append(j);
+      }
+      con.append("constraint int_lin_eq([").append(w).append("],[").append(x).append("],0);\n");
+    }
+    var.append("var 0..100: m :: output_var;\n");
+    con.append("constraint jacop_maximum(m,[l0,l1,l2]);\n");
+    return par.append(var).append(con).append("solve minimize m;\n").toString();
+  }
+
+  @Test
+  void tableColumnsWithConstantSumPostTheSum() throws IOException {
+    // every row of a course table holds its credit in one period column, so the credit columns
+    // sum to the credit; the sum is posted (Bacp-m1-08a, XCSP 2018, proved in 0.2 s instead of
+    // not in 240 s) and the optimum stays the same
+    String model = tableCourses(4);
+    String out = run(model, "-s", "--search-statistics")[0];
+    assertTrue(out.contains("%%%mzn-stat: impliedTableSums=1"), out);
+    // credits 1..4 over 3 periods: the largest load is at least 10 / 3, so 4
+    assertTrue(out.contains("m = 4;") && out.contains("=========="), out);
+    System.setProperty("org.jacop.fz.tableSums", "false");
+    try {
+      String off = run(model, "--search-statistics")[0];
+      assertFalse(off.contains("impliedTableSums"), off);
+      assertTrue(off.contains("m = 4;") && off.contains("=========="), off);
+    } finally {
+      System.clearProperty("org.jacop.fz.tableSums");
+    }
+  }
+
   @Test
   void intComparisonWithConstantAndFixedBooleanKeepsExactlyTheSolutions() throws IOException {
     // int_ne_reif(x, c, false) left x unconstrained instead of fixing it to c, and the half-reified
