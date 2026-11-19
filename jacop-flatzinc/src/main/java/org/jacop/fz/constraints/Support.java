@@ -42,6 +42,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.ToIntFunction;
 import org.jacop.api.Copyable;
@@ -314,6 +315,11 @@ public class Support implements ParserTreeConstants {
   }
 
   private int[] getIntArrayFromLiteral(SimpleNode node) {
+    int[] packed = node.packedInts();
+    if (packed != null) {
+      intPresent = true;
+      return packed.clone();
+    }
     int count = node.jjtGetNumChildren();
     int[] aa = new int[count];
     for (int i = 0; i < count; i++) {
@@ -814,14 +820,26 @@ public class Support implements ParserTreeConstants {
    * @param action what is done with each constraint.
    */
   void forEachConstraint(SimpleNode astTree, Consumer<ASTConstElem> action) {
+    forEachConstraintItem(astTree, (item, element) -> action.accept(element));
+  }
+
+  /**
+   * Calls an action on each constraint element of the model with its constraint item, whose other
+   * children are the annotations of the constraint (a node does not keep its parent).
+   *
+   * @param astTree the root of the parsed model
+   * @param action the action, on the constraint item and its element
+   */
+  void forEachConstraintItem(SimpleNode astTree, BiConsumer<SimpleNode, ASTConstElem> action) {
     for (int i = 0; i < astTree.jjtGetNumChildren(); i++) {
       SimpleNode node = (SimpleNode) astTree.jjtGetChild(i);
       if (node.getId() == JJTCONSTRAINTITEMS) {
         for (int j = 0; j < node.jjtGetNumChildren(); j++) {
           checkTimeOut();
-          SimpleNode item = (SimpleNode) ((SimpleNode) node.jjtGetChild(j)).jjtGetChild(0);
+          SimpleNode constraint = (SimpleNode) node.jjtGetChild(j);
+          SimpleNode item = (SimpleNode) constraint.jjtGetChild(0);
           if (item.getId() == JJTCONSTELEM) {
-            action.accept((ASTConstElem) item);
+            action.accept(constraint, (ASTConstElem) item);
           }
         }
       }

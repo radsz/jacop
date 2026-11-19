@@ -248,6 +248,22 @@ public abstract class Domain {
   public abstract void putSearchConstraint(int storeLevel, Var v, Constraint constraint);
 
   /**
+   * Returns the number of model constraints attached to the domain, the ones entailed during search
+   * included, in time proportional to the number of pruning events.
+   *
+   * @return the number of model constraints in the lists of the domain.
+   */
+  public int modelConstraintsAttached() {
+    int size = 0;
+    if (modelConstraintsToEvaluate != null) {
+      for (int count : modelConstraintsToEvaluate) {
+        size += count;
+      }
+    }
+    return size;
+  }
+
+  /**
    * It returns the number of constraints which are associated with variable and are not yet
    * satisfied, that is neither detached nor marked as entailed.
    *

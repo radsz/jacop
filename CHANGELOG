@@ -8289,7 +8289,22 @@ Version 5.0 (unreleased)
    0.04 s); pivots on the 658 feasible LPs of the LP bench are unchanged.
    -Dorg.jacop.jalp.boundProof=false turns it off.
 
-452. Free search before LCG (entry 426) finds the squares of an objective
+457. Under lazy clause generation the trail keeps, for every variable, a
+   copy of its domain to tell which atoms a change makes. It is now kept up
+   to date from the atoms themselves: a change adds its atoms to the copy
+   and a backtrack takes them back out, instead of copying the whole
+   domain after every change and every backtrack (the delta idea of
+   Gecode advisors and Choco delta monitors). Search is unchanged. The
+   copying was 1.9 % of the solve time at the median of the wide set and
+   up to 30 % (de Bruijn, tower, routing-flexible, fast-food); 40 s
+   profiles: fast-food ff58 6.2 -> 2.3 %, ghoulomb 12.3 -> 3.8 %, tower
+   12.3 -> 6.1 %. Wide set at 600 s: instances solved by both 2.8 % (fixed)
+   and 3.4 % (-f) faster in geometric mean, total time and solved counts
+   unchanged within the timing noise of LCG runs.
+   -Djacop.lcg.incrementalShadow=false restores the copying;
+   -Djacop.lcg.checkShadow=true checks every copy against its domain.
+
+458. Free search before LCG (entry 426) finds the squares of an objective
    behind partial sums: the walk from the cost variable follows up to
    eight linear constraints instead of three, and x + y = z as well. An
    objective whose declared bound reaches beyond JaCoP's range is posted
@@ -8301,7 +8316,7 @@ Version 5.0 (unreleased)
    GBACP instances 0.50. No wide instance changes: only two gbac
    instances have a squared objective, found at both depths.
 
-453. jacop_nvalue over variables whose domains fall into blocks that share
+459. jacop_nvalue over variables whose domains fall into blocks that share
    no value is posted as one count of distinct values (Values) per block
    and a sum of the counts. Each count then has the bound of its own
    block (the NValue bounds of Bessiere, Hebrard, Hnich, Kiziltan and
@@ -8318,15 +8333,14 @@ Version 5.0 (unreleased)
    MiniZinc Challenge or the 53 XCSP instances with one.
    -Dorg.jacop.fz.nvalueBlocks=false turns it off.
 
-454. The speed check of LCG free search (entry 291) counts the solutions
-   LCG found before its first check. It sampled the best cost only from
+460. The speed check of LCG free search (entry 291) counts the solutions626
    that check on, so a check made right after LCG improved its cost saw
    no gain over its window and LCG gave way. With -f at 600 s: celar
    graph11 (MiniZinc Challenge 2013) 8,749 -> 3,080, ptv pax_period_20_5a
    70 -> 60; unit-commitment L10 equal over two runs, L12 1,484,650 ->
    1,489,050. On the wide-quick set at 240 s only celar graph11 changes.
 
-455. The linear relaxation defines every block sum of a tree of sums
+461. The linear relaxation defines every block sum of a tree of sums
    (entry 425) by its own row. It took the first variable it could define
    in a row, and the row of an inner block also holds the sums of the
    blocks below it: when that row came first, a lower sum was defined by
@@ -8338,7 +8352,7 @@ Version 5.0 (unreleased)
    rcpsp-wet-diverse j60_19_6 58,529 -> 5,788, celar graph11 16,734 ->
    11,670.
 
-456. New constraint Dag(from, to, ns, es, base): the selected edges of a
+462. New constraint Dag(from, to, ns, es, base): the selected edges of a
    directed graph form a directed acyclic graph and select their nodes
    (MiniZinc dag, until now decomposed into longest-path distances). It
    fails on a cycle of selected edges and removes every edge that would
@@ -8349,7 +8363,7 @@ Version 5.0 (unreleased)
    clause generation it explains a removed edge by the selected edges of
    the path, and a failure by the edges of the cycle.
 
-457. New constraint PiecewiseLinear(x, y, xKnot, yKnot) for float
+463. New constraint PiecewiseLinear(x, y, xKnot, yKnot) for float
    variables: (x, y) lies on the polygonal line through the knots
    (MiniZinc piecewise_linear, until now decomposed into a 0/1 variable
    and a fraction per segment). It is bounds consistent on the union of
@@ -8357,6 +8371,115 @@ Version 5.0 (unreleased)
    and Older, J. Logic Programming 32, 1997, on each segment; disjunctive
    hull of the segments as in Refalo, "Tight cooperation and its
    application in piecewise linear optimization", CP 1999).
+
+464. A table (HybridTable) with at least 512 live single-value classes on
+     a column whose domain has many holes copies the domain to a bit set
+     before it filters the column, instead of a binary search in the
+     domain per class. On CrosswordDesign (XCSP 2026), with word columns
+     of 130,000 values, a node is about 3x faster and 9 of 11 instances
+     end with a better crossword at 240 s.
+
+465. Under LCG free search (-f), the core-guided phase is no longer skipped
+   after a probe without a solution of its own when the search makes
+   fewer than 50 conflicts per second of work (too slow for branch and
+   bound to prove the optimum) and the probe's cores raise the lower bound
+   fast enough to meet the best solution within the phase. On MiniZinc
+   Challenge ma-path-finding (2017, 2022) this proves 8 of 9 instances in
+   600 s instead of 5 (g16_p10_a30 in 281 s, g16_p20_a30 in 366 s); the
+   rule fires on no instance of wide-quick and on one of the 187
+   optimisation instances of the wide set. -Djacop.lcg.coreProbeRate=false
+   turns it off, -Djacop.lcg.coreProbeSlowRate sets the rate.
+
+466. The FlatZinc front end compiles a satisfaction model whose integer
+   variables have at most three values (and one at least with a value other
+   than 0 and 1) into clauses and solves them with JaSAT, under --lcg and
+   free search, for one solution and without proof logging. Values get
+   order and direct literals (Tamura, Taga, Kitagawa and Banbara,
+   Compiling finite linear CSP into SAT, Constraints 14(2), 2009);
+   products become support clauses after narrowing the value sets; longer
+   sums become an MDD over the partial sums (Abio, Nieuwenhuis, Oliveras,
+   Rodriguez-Carbonell and Mayer-Eichberger, A new look at BDDs for
+   pseudo-Boolean constraints, JAIR 45, 2012), or binary adders when the
+   diagram is too large; counts, alldifferent, lex chains, value
+   precedence, tables and regular get their usual encodings. The store is
+   built as before: a model of the clauses is fixed in the store and
+   checked, and is otherwise dropped and the model solved as before. On the
+   30 XCSP CSP instances where it fires (FastMatrixMultiplication,
+   Hadamard, Hamming, BinaryPuzzle), 600 s, 20 decided in 6,413 s become
+   24 in 4,645 s; none of the 240 instances of the wide benchmark set
+   fires. -Dorg.jacop.fz.clausal=false turns it off;
+   -Dorg.jacop.fz.clausal.maxDomain, .maxLiterals and .mddNodes set the
+   gates.
+
+467. The cyclic distance rewrite of the FlatZinc front end (entry 437) is
+   on by default for models with at least 400 cyclic distances
+   (-Dorg.jacop.fz.cyclicDistance.minDistances, default 400). There
+   proofs are out of reach and the upper bound counts: at 600 s with -f,
+   XCSP 2022 CyclicBandwidth caterpillar29 goes from 71 to 24,
+   caterpillar35 from 103 to 29 and mesh2D25x26 from 106 to 25. The nine
+   smaller instances (67 to 299 distances) keep the minimum, and with it
+   the proofs of caterpillar13 and 16. -Dorg.jacop.fz.cyclicDistance=true
+   still rewrites every model, and =false none. No other instance of the
+   wide set or of the XCSP 2022-2025 sets has the pattern.
+
+468. The FlatZinc front end rewrites products of two functions of one small
+   index (MiniZinc's (good[p] = g) * num[p], both looked up by the chosen
+   preference p) as sum(v) f(v) * (p = v), linear over the value literals
+   of p, and unfolds clauses of implied comparisons between such functions
+   into one clause per combination of the index values. The 2020 Challenge
+   stable-goods s-d16 is proved in 57 s with -f and in 283 s by default
+   instead of not at all in 600 s; over 9 stable-goods and saeling models
+   the total time goes from 3,673 to 3,119 s with -f and from 4,251 to
+   3,922 s by default. Only stable-goods triggers it among the 240 wide
+   benchmark models. -Dorg.jacop.fz.indexFunctions=false turns it off,
+   -Dorg.jacop.fz.indexFunctions.clauses=false only the unfolding.
+
+469. Tables of more than TableCliques.MAX_ARITY (6) columns over the same
+   tuples share one tuple array, their reformulation and the cells and
+   bit-sets of their HybridTable, as smaller tables already did.
+   pigeonsPlus-08-08 (XCSP 2017) posts one table of 5.8 million rows on
+   eight lists of eight variables: every table built its own copy and
+   the model ran out of memory at -Xmx4G while posting; it is now proved
+   unsatisfiable.
+
+470. The FlatZinc parser keeps an array literal whose elements are all int
+   literals as one int[] instead of one node per element (48 bytes each);
+   a node is made for an element only when it is read. Reading
+   pigeonsPlus-08-08 (six arrays of 46 million entries) took 165 s and
+   up to 2 GB of nodes per array; with both changes the instance is
+   proved unsatisfiable in 60 s at -Xmx4G (out of memory before), the
+   highest live heap after a collection going from 4.1 GB to 2.5 GB.
+
+471. A search that follows the root solution of the linear relaxation
+   (LpGuidedSelect) no longer scans every column at each decision when
+   the relaxation has no value column: it decides only from value
+   columns, so it fell back to its other heuristic every time after the
+   scan. On MiniZinc Challenge 2021 physician-scheduling instance10 the
+   scan took 18 % of the run (12,440 columns at each of 1.3 million
+   decisions); at 600 s the objective goes from 10295 to 8260. The search
+   is unchanged.
+
+472. Large neighbourhood search under -f (AdaptiveLns) finds the decision
+   variables near a node of the constraint graph with a walk that expands
+   only the nodes on a shortest path to a decision variable, using the
+   distances of all nodes computed once; it finds the same variables in
+   the same order. On MiniZinc Challenge 2019 rcpsp-wet-diverse j60_19_6
+   each walk visited about a million constraint memberships and the
+   walks took 61 % of a 300 s run; now 1.4 %, with 20 times the nodes
+   (objective 45397 -> 66765 at 300 s, the best known 69664 at 600 s).
+
+473. Free search (-f) on models with vehicle routes: LNS uses only route
+   removal, related (Shaw) removal and random neighbourhoods (the graph,
+   propagation, objective, constraint and line neighbourhoods are off
+   unless lns-kinds names them), and takes lns-share-routes 10 instead of
+   3 of free search's calls. On CVRPLIB X-n110-k13 (giant tour of the
+   MiniZinc Challenge 2015 model) the generic neighbourhoods took 44 % of
+   the runs for 6 of 101 improvements. Paired runs, -f: the 10 X instances
+   at 600 s 9 better and 1 worse (X-n110-k13 19,389 -> 18,722, X-n115-k10
+   17,240 -> 14,877, X-n120-k6 20,089 -> 16,397); 38 routing instances at
+   240 s 18 better, 11 worse, time 7,167 -> 7,080 s; the 88 wide-set
+   instances with element or circuit at 240 s 6,369 -> 6,387 s, with only
+   3 of them running route neighbourhoods (the rest run unchanged code).
 
 Version 4.11
 =============
